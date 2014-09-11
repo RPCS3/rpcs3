@@ -364,6 +364,7 @@
     <ClInclude Include="Emu\SysCalls\Modules.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellCamera.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />

@@ -93,6 +93,22 @@ public:
 		return "Unknown";
 	}
 
+	std::string ThreadStatusToString()
+	{
+		switch (ThreadStatus())
+		{
+		case CPUThread_Ready: return "Ready";
+		case CPUThread_Running: return "Running";
+		case CPUThread_Paused: return "Paused";
+		case CPUThread_Stopped: return "Stopped";
+		case CPUThread_Sleeping: return "Sleeping";
+		case CPUThread_Break: return "Break";
+		case CPUThread_Step: return "Step";
+
+		default: return "Unknown status";
+		}
+	}
+
 	std::string GetTypeString() const { return CPUThreadTypeToString(m_type); }
 
 	virtual std::string GetThreadName() const

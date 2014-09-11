@@ -131,7 +131,13 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellDmux.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellFiber.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellFont.cpp">
@@ -152,10 +158,22 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellJpgDec.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellKb.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellL10n.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellNetCtl.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellOvis.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellPamf.cpp">
@@ -173,10 +191,19 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp">
@@ -365,9 +392,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellBgdl.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellCelp8Enc.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -401,9 +425,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicExport.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellOvis.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellPhotoDecode.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -421,9 +442,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp">
-      <Filter>Emu\Cell\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
@@ -584,15 +602,6 @@
     <ClCompile Include="Ini.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSync2.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellFiber.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rFile.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -610,18 +619,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Memory\vm.cpp">
       <Filter>Emu\Memory</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellKb.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -676,10 +673,25 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellCamera.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellGame.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellGem.h">
@@ -691,7 +703,22 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellKb.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellPad.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h">
@@ -700,16 +727,28 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSync.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h">
@@ -743,6 +782,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sceNpTus.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h">
@@ -1048,23 +1090,8 @@
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellGame.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSync.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\SysCalls\LogBase.h">
       <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
       <Filter>Emu\RSX\Null</Filter>
@@ -1126,14 +1153,8 @@
     <ClInclude Include="..\Utilities\AutoPause.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Ini.h">
       <Filter>Utilities</Filter>
@@ -1146,15 +1167,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h">
       <Filter>Emu\Io\Null</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\MTRingbuffer.h">
       <Filter>Utilities</Filter>
@@ -1191,18 +1203,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Memory\vm_var.h">
       <Filter>Emu\Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellPad.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellKb.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="restore_new.h">
       <Filter>Header Files</Filter>

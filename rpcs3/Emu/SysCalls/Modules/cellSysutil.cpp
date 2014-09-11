@@ -750,9 +750,11 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	// TODO ?
 
 	funcStat(result, get, set);
-	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
-		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+
+	if (result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK &&
+        result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
 		return CELL_HDDGAME_ERROR_CBRESULT;
+    }
 
 	// TODO ?
 
@@ -832,7 +834,7 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
-	*memSize = 1024 * 1024 * 1; // 1 MB
+	*memSize = 1 * 1024 * 1024; // 1 MB
 	return CELL_OK;
 }
 

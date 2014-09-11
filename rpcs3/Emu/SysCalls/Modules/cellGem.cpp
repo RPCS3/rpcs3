@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "cellGem.h"
@@ -6,6 +7,18 @@
 void cellGem_init();
 //Module cellGem(0x005a, cellGem_init);
 Module *cellGem = nullptr;
+
+struct cellGemInternal
+{
+	bool m_bInitialized;
+
+	cellGemInternal()
+		: m_bInitialized(false)
+	{
+	}
+};
+
+cellGemInternal cellGemInstance;
 
 int cellGemCalibrate()
 {
@@ -117,8 +130,7 @@ s32 cellGemGetMemorySize(be_t<s32> max_connect)
 	if (max_connect > CELL_GEM_MAX_NUM)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 
-	// Return in kilobytes, megabytes or something else? (currently kilobytes)
-	return max_connect * 4000;
+	return 1024 * 1024 * max_connect; // 1 MB * max_connect
 }
 
 int cellGemGetRGB()
@@ -157,9 +169,15 @@ int cellGemHSVtoRGB()
 	return CELL_OK;
 }
 
-int cellGemInit()
+int cellGemInit(vm::ptr<CellGemAttribute> attribute)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem->Warning("cellGemInit(attribute_addr=0x%x)", attribute.addr());
+
+	if (cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
+
+	cellGemInstance.m_bInitialized = true;
+
 	return CELL_OK;
 }
 

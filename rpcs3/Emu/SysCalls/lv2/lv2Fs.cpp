@@ -534,7 +534,7 @@ s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, v
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
-	*block_count = 10485760; // ?
+	*block_count = 10 * 1024 * 1024; // ?
 
 	return CELL_OK;
 }
@@ -589,9 +589,13 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 	fs_config.m_ring_buffer = *ringbuf;
 
-	if(ringbuf->ringbuf_size < 0x40000000) // If the size is less than 1MB
+    // If the size is less than 1MB
+	if(ringbuf->ringbuf_size < 0x40000000) {
 		fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 64 * 1024 - 1) / (64 * 1024)) * (64 * 1024);
-	fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+    }
+    else {
+	    fs_config.m_alloc_mem_size = (((u32)ringbuf->ringbuf_size + 1024 * 1024 - 1) / (1024 * 1024)) * (1024 * 1024);
+    }
 
 	// alloc memory
 	fs_config.m_buffer = (u32)Memory.Alloc(fs_config.m_alloc_mem_size, 1024);
@@ -692,15 +696,20 @@ s32 cellFsStReadStop(u32 fd)
 
 s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 {
-	sys_fs->Todo("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr = 0x%x)", fd, buf_addr, size, rsize.addr());
+	sys_fs->Warning("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr=0x%x)", fd, buf_addr, size, rsize.addr());
 
 	LV2_LOCK(0);
 	
 	vfsStream* file;
 	if(!sys_fs->CheckId(fd, file)) return CELL_ESRCH;
 
+	// TODO: use ringbuffer (fs_config)
 	fs_config.m_regid += size;
-	*rsize = fs_config.m_regid;
+
+	if (file->Eof())
+		return CELL_FS_ERANGE;
+
+	*rsize = file->Read(vm::get_ptr<void>(buf_addr), size);
 
 	return CELL_OK;
 }

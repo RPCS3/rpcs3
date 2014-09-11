@@ -114,6 +114,9 @@ public:
 	IniEntry<bool> AudioDumpToFile;
 	IniEntry<bool> AudioConvertToU16;
 
+	// Camera
+	IniEntry<u8> CameraType;
+
 	// Input/Output
 	IniEntry<u8> PadHandlerMode;
 	IniEntry<u8> KeyboardHandlerMode;
@@ -183,6 +186,9 @@ public:
 		AudioDumpToFile.Init("Audio_AudioDumpToFile", path);
 		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
 
+		// Camera
+		CameraType.Init("Camera_Type", path);
+
 		// Input/Output
 		PadHandlerMode.Init("IO_PadHandlerMode", path);
 		KeyboardHandlerMode.Init("IO_KeyboardHandlerMode", path);
@@ -247,6 +253,9 @@ public:
 		AudioOutMode.Load(1);
 		AudioDumpToFile.Load(false);
 		AudioConvertToU16.Load(false);
+
+		// Camera
+		CameraType.Load(2);
 
 		// Input/Ouput
 		PadHandlerMode.Load(1);
@@ -313,6 +322,9 @@ public:
 		AudioOutMode.Save();
 		AudioDumpToFile.Save();
 		AudioConvertToU16.Save();
+
+		// Camera
+		CameraType.Save();
 
 		// Input/Output
 		PadHandlerMode.Save();

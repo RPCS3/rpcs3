@@ -21,7 +21,7 @@ int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVp
 	// TODO: check cfgParam and output values
 
 	attr->delay = 0;
-	attr->memSize = 4 * 1024 * 1024;
+	attr->memSize = 4 * 1024 * 1024; // 4 MB
 	attr->vpostVerLower = 0x280000; // from dmux
 	attr->vpostVerUpper = 0x260000;
 

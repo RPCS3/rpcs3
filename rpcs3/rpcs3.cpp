@@ -152,11 +152,7 @@ void Rpcs3App::OnArguments()
 	//   rpcs3-*.exe               Initializes RPCS3
 	//   rpcs3-*.exe [(S)ELF]      Initializes RPCS3, then loads and runs the specified (S)ELF file.
 
-	if (Rpcs3App::argc > 1)
-	{
-		// Force this value to be true
-		Ini.HLEExitOnStop.SetValue(true);
-
+	if (Rpcs3App::argc > 1) {
 		Emu.SetPath(fmt::ToUTF8(argv[1]));
 		Emu.Load();
 		Emu.Run();
