@@ -7,7 +7,7 @@
 
 #include "git-version.h"
 #include "Ini.h"
-#include "Emu/Syscalls/Modules/cellSysutil.h"
+#include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Gui/PADManager.h"
 #include "Gui/VHDDManager.h"
