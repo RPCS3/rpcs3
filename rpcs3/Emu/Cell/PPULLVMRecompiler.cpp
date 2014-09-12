@@ -2881,7 +2881,7 @@ Value * PPULLVMRecompilerWorker::Call(const char * name, Func function, Args... 
 PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
     : m_ppu(ppu)
     , m_interpreter(ppu) {
-    m_worker.RunAllTests(&m_ppu, (u64)Memory.GetBaseAddr(), &m_interpreter);
+    //m_worker.RunAllTests(&m_ppu, (u64)Memory.GetBaseAddr(), &m_interpreter);
 }
 
 PPULLVMRecompiler::~PPULLVMRecompiler() {
