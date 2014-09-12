@@ -24,7 +24,7 @@ Module *sysPrxForUser = nullptr;
 extern u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
-{	
+{
 	sysPrxForUser->Warning("_sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);
 
 	u32 heap_id = sysPrxForUser->GetNewId(new HeapInfo(heap_addr, align, size));
@@ -145,6 +145,18 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 	// TODO: use segment info
 	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
+
+	return CELL_OK;
+}
+
+int sys_get_random_number(u32 addr, u64 size)
+{
+	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr, size);
+
+	if (size > 4096)
+		size = 4096;
+
+	vm::write32(addr, rand() % size);
 
 	return CELL_OK;
 }
@@ -319,6 +331,9 @@ s32 _unnamed_E75C40F2(u32 dest)
 
 void sysPrxForUser_init()
 {
+	// Setup random number generator
+	srand(time(NULL));
+
 	REG_FUNC(sysPrxForUser, sys_initialize_tls);
 	
 	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
@@ -377,6 +392,8 @@ void sysPrxForUser_init()
 	sysPrxForUser->AddFunc(0xe9a1bd84, sys_lwcond_signal_all);
 	sysPrxForUser->AddFunc(0x52aadadf, sys_lwcond_signal_to);
 	sysPrxForUser->AddFunc(0x2a6d9d51, sys_lwcond_wait);
+
+	sysPrxForUser->AddFunc(0x71a8472a, sys_get_random_number);
 
 	sysPrxForUser->AddFunc(0x8c2bb498, sys_spinlock_initialize);
 	sysPrxForUser->AddFunc(0xa285139d, sys_spinlock_lock);
