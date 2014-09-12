@@ -153,7 +153,10 @@ int sys_get_random_number(u32 addr, u64 size)
 {
 	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr, size);
 
-	addr = rand() % size;
+	if (size > 4096)
+		size = 4096;
+
+	vm::write32(addr, rand() % size);
 
 	return CELL_OK;
 }
