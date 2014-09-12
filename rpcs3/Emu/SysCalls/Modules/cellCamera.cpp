@@ -29,7 +29,6 @@ int cellCameraInit()
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
 
 	// TODO: Check if camera is connected, if not return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND
-
 	cellCameraInstance.m_bInitialized = true;
 
 	return CELL_OK;
@@ -37,7 +36,13 @@ int cellCameraInit()
 
 int cellCameraEnd()
 {
-	UNIMPLEMENTED_FUNC(cellCamera);
+	cellCamera->Warning("cellCameraEnd()");
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
+	cellCameraInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 

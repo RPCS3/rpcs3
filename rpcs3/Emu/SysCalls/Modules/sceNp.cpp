@@ -13,15 +13,67 @@
 //Module sceNp(0x0016, sceNp_init);
 Module *sceNp = nullptr;
 
+struct sceNpInternal
+{
+	bool m_bSceNpInitialized;
+	bool m_bSceNp2Initialized;
+	bool m_bScoreInitialized;
+
+	sceNpInternal()
+		: m_bSceNpInitialized(false),
+		  m_bSceNp2Initialized(false),
+		  m_bScoreInitialized(false)
+	{
+	}
+};
+
+sceNpInternal sceNpInstance;
+
 int sceNpInit(u32 mem_size, u32 mem_addr)
 {
-	sceNp->Log("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+	sceNp->Warning("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+
+	if (sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+
+	sceNpInstance.m_bSceNpInitialized = true;
+
+	return CELL_OK;
+}
+
+int sceNp2Init(u32 mem_size, u32 mem_addr)
+{
+	sceNp->Warning("sceNp2Init(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+
+	if (sceNpInstance.m_bSceNp2Initialized)
+		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+
+	sceNpInstance.m_bSceNp2Initialized = true;
+
 	return CELL_OK;
 }
 
 int sceNpTerm()
 {
-	sceNp->Log("sceNpTerm");
+	sceNp->Warning("sceNpTerm()");
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
+	sceNpInstance.m_bSceNpInitialized = false;
+
+	return CELL_OK;
+}
+
+int sceNp2Term()
+{
+	sceNp->Warning("sceNp2Term()");
+
+	if (!sceNpInstance.m_bSceNp2Initialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
+	sceNpInstance.m_bSceNp2Initialized = false;
+
 	return CELL_OK;
 }
 
@@ -128,10 +180,12 @@ int sceNpManagerGetStatus(vm::ptr<be_t<u32>> status)
 {
 	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
-	// TODO: Check if sceNpInit() was called, if not return SCE_NP_ERROR_NOT_INITIALIZED
+	if (!sceNpInstance.m_bSceNp2Initialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 
 	// TODO: Support different statuses
 	*status = SCE_NP_MANAGER_STATUS_OFFLINE;
+
 	return CELL_OK;
 }
 
@@ -389,7 +443,13 @@ int sceNpBasicGetFriendPresenceByIndex()
 
 int sceNpScoreInit()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpScoreInit()");
+
+	if (sceNpInstance.m_bScoreInitialized)
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+
+	sceNpInstance.m_bScoreInitialized = true;
+
 	return CELL_OK;
 }
 
@@ -834,7 +894,13 @@ int sceNpSignalingTerminateConnection()
 
 int sceNpScoreTerm()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpScoreTerm()");
+
+	if (!sceNpInstance.m_bScoreInitialized)
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+
+	sceNpInstance.m_bScoreInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -1445,7 +1511,9 @@ int sceNpSignalingDestroyCtx()
 void sceNp_init()
 {
 	sceNp->AddFunc(0xbd28fdbf, sceNpInit);
+	sceNp->AddFunc(0x41251f74, sceNp2Init);
 	sceNp->AddFunc(0x4885aa18, sceNpTerm);
+	sceNp->AddFunc(0xaadb7c12, sceNp2Term);
 	sceNp->AddFunc(0xad218faf, sceNpDrmIsAvailable);
 	sceNp->AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
 	sceNp->AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);

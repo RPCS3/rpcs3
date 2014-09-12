@@ -58,7 +58,13 @@ int cellGemEnableMagnetometer()
 
 int cellGemEnd()
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem->Warning("cellGemEnd()");
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
+	cellGemInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
