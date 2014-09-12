@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/Cell/PPUThread.h"
 
-namespace vm
+namespace cb_detail
 {
 	enum _func_arg_type
 	{
@@ -132,14 +132,17 @@ namespace vm
 			return _func_res<RT>::get_value(CPU);
 		}
 	};
+}
 
+namespace vm
+{
 	template<typename AT, typename RT, typename... T>
 	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::call(PPUThread& CPU, T... args) const
 	{
 		const u32 pc = vm::get_ref<be_t<u32>>(m_addr);
 		const u32 rtoc = vm::get_ref<be_t<u32>>(m_addr + 4);
 
-		return _func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
+		return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 	}
 
 	template<typename AT, typename RT, typename... T>
@@ -148,3 +151,8 @@ namespace vm
 		return call(GetCurrentPPUThread(), args...);
 	}
 }
+
+template<typename RT, typename... T>
+struct cb_caller : public cb_detail::_func_caller<RT, T...>
+{
+};

@@ -25,10 +25,10 @@ void NamedThreadBase::SetThreadName(const std::string& name)
 	m_name = name;
 }
 
-void NamedThreadBase::WaitForAnySignal() // wait 1 ms for something
+void NamedThreadBase::WaitForAnySignal(u64 time) // wait for Notify() signal or sleep
 {
 	std::unique_lock<std::mutex> lock(m_signal_mtx);
-	m_signal_cv.wait_for(lock, std::chrono::milliseconds(1));
+	m_signal_cv.wait_for(lock, std::chrono::milliseconds(time));
 }
 
 void NamedThreadBase::Notify() // wake up waiting thread or nothing

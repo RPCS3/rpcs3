@@ -222,20 +222,6 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
 }
 
-u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
-{
-	GPR[3] = arg1;
-	GPR[4] = arg2;
-	GPR[5] = arg3;
-	GPR[6] = arg4;
-	GPR[7] = arg5;
-	GPR[8] = arg6;
-	GPR[9] = arg7;
-	GPR[10] = arg8;
-	
-	return FastCall2(addr, rtoc);
-}
-
 u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
 {
 	auto old_status = m_status;

@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsStreamMemory.h"
@@ -224,14 +225,21 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 	return dest;
 }
 
-u32 spu_printf_agcb;
-u32 spu_printf_dgcb;
-u32 spu_printf_atcb;
-u32 spu_printf_dtcb;
+typedef s32(*spu_printf_cb_t)(u32 arg);
 
-s32 _sys_spu_printf_initialize(u32 agcb, u32 dgcb, u32 atcb, u32 dtcb)
+vm::ptr<spu_printf_cb_t> spu_printf_agcb;
+vm::ptr<spu_printf_cb_t> spu_printf_dgcb;
+vm::ptr<spu_printf_cb_t> spu_printf_atcb;
+vm::ptr<spu_printf_cb_t> spu_printf_dtcb;
+
+s32 _sys_spu_printf_initialize(
+	vm::ptr<spu_printf_cb_t> agcb,
+	vm::ptr<spu_printf_cb_t> dgcb,
+	vm::ptr<spu_printf_cb_t> atcb,
+	vm::ptr<spu_printf_cb_t> dtcb)
 {
-	sysPrxForUser->Warning("_sys_spu_printf_initialize(agcb=0x%x, dgcb=0x%x, atcb=0x%x, dtcb=0x%x)", agcb, dgcb, atcb, dtcb);
+	sysPrxForUser->Warning("_sys_spu_printf_initialize(agcb_addr=0x%x, dgcb_addr=0x%x, atcb_addr=0x%x, dtcb_addr=0x%x)",
+		agcb.addr(), dgcb.addr(), atcb.addr(), dtcb.addr());
 
 	// prx: register some callbacks
 	spu_printf_agcb = agcb;
@@ -245,10 +253,10 @@ s32 _sys_spu_printf_finalize()
 {
 	sysPrxForUser->Warning("_sys_spu_printf_finalize()");
 
-	spu_printf_agcb = 0;
-	spu_printf_dgcb = 0;
-	spu_printf_atcb = 0;
-	spu_printf_dtcb = 0;
+	spu_printf_agcb.set(0);
+	spu_printf_dgcb.set(0);
+	spu_printf_atcb.set(0);
+	spu_printf_dtcb.set(0);
 	return CELL_OK;
 }
 
@@ -261,7 +269,7 @@ s64 _sys_spu_printf_attach_group(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_agcb), vm::read32(spu_printf_agcb + 4), arg);
+	return spu_printf_agcb(arg);
 }
 
 s64 _sys_spu_printf_detach_group(u32 arg)
@@ -273,7 +281,7 @@ s64 _sys_spu_printf_detach_group(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_dgcb), vm::read32(spu_printf_dgcb + 4), arg);
+	return spu_printf_dgcb(arg);
 }
 
 s64 _sys_spu_printf_attach_thread(u32 arg)
@@ -285,7 +293,7 @@ s64 _sys_spu_printf_attach_thread(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_atcb), vm::read32(spu_printf_atcb + 4), arg);
+	return spu_printf_atcb(arg);
 }
 
 s64 _sys_spu_printf_detach_thread(u32 arg)
@@ -297,7 +305,7 @@ s64 _sys_spu_printf_detach_thread(u32 arg)
 		return CELL_ESTAT;
 	}
 
-	return GetCurrentPPUThread().FastCall(vm::read32(spu_printf_dtcb), vm::read32(spu_printf_dtcb + 4), arg);
+	return spu_printf_dtcb(arg);
 }
 
 s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt, u32 a1, u32 a2) // va_args...
@@ -426,8 +434,8 @@ void sysPrxForUser_init()
 
 void sysPrxForUser_load()
 {
-	spu_printf_agcb = 0;
-	spu_printf_dgcb = 0;
-	spu_printf_atcb = 0;
-	spu_printf_dtcb = 0;
+	spu_printf_agcb.set(0);
+	spu_printf_dgcb.set(0);
+	spu_printf_atcb.set(0);
+	spu_printf_dtcb.set(0);
 }

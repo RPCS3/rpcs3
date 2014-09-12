@@ -561,7 +561,8 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					PPUThread& ppu = *(PPUThread*)t;
 					ppu.FastStop();
 					ppu.Run();
-					ppu.FastCall(ppu.PC, ppu.GPR[2], ppu.m_interrupt_arg);
+					ppu.GPR[3] = ppu.m_interrupt_arg;
+					ppu.FastCall2(ppu.PC, ppu.GPR[2]);
 				}
 			}
 		}

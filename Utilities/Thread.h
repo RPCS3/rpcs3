@@ -21,7 +21,7 @@ public:
 	virtual std::string GetThreadName() const;
 	virtual void SetThreadName(const std::string& name);
 
-	void WaitForAnySignal();
+	void WaitForAnySignal(u64 time = 1);
 
 	void Notify();
 };
