@@ -283,11 +283,12 @@ void CPUThread::ExecOnce()
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
-	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000)
+	CPUThread* t = GetCurrentCPUThread();
+	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000 && t)
 	{
 		// TODO: allow recovering from a page fault
 		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx (%s))",
-			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall, SysCalls::GetHLEFuncName((u32)GetCurrentCPUThread()->m_last_syscall).c_str());
+			(u32)addr, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
 	}
 	else
 	{
@@ -317,7 +318,7 @@ void CPUThread::Task()
 	std::vector<u64> trace;
 
 #ifdef _WIN32
-	_set_se_translator(_se_translator);
+	auto old_se_translator = _set_se_translator(_se_translator);
 #else
 	// TODO: linux version
 #endif
@@ -369,6 +370,12 @@ void CPUThread::Task()
 		LOG_ERROR(GENERAL, "Exception: %s", e);
 		Emu.Pause();
 	}
+
+#ifdef _WIN32
+	_set_se_translator(old_se_translator);
+#else
+	// TODO: linux version
+#endif
 
 	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);
 

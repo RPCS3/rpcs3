@@ -61,10 +61,16 @@ void CallbackManager::Init()
 	m_cb_thread->SetEntry(cb_shit);
 	m_cb_thread->SetPrio(1001); // ???
 	m_cb_thread->SetStackSize(0x10000);
-	m_cb_thread->Run();
 
 	thread cb_async_thread("CallbackManager::Async() thread", [this]()
 	{
+		while (Emu.IsReady())
+		{
+			m_cb_thread->WaitForAnySignal();
+		}
+		
+		m_cb_thread->Run();
+
 		SetCurrentNamedThread(m_cb_thread);
 
 		while (!Emu.IsStopped())
