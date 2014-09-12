@@ -9,15 +9,39 @@
 //Module cellNetCtl(0x0014, cellNetCtl_init);
 Module *cellNetCtl;
 
+struct cellNetCtlInternal
+{
+	bool m_bInitialized;
+
+	cellNetCtlInternal()
+		: m_bInitialized(false)
+	{
+	}
+};
+
+cellNetCtlInternal cellNetCtlInstance;
+
 int cellNetCtlInit()
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Warning("cellNetCtlInit()");
+
+	if (cellNetCtlInstance.m_bInitialized)
+		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
+
+	cellNetCtlInstance.m_bInitialized = true;
+
 	return CELL_OK;
 }
 
 int cellNetCtlTerm()
 {
-	UNIMPLEMENTED_FUNC(cellNetCtl);
+	cellNetCtl->Warning("cellNetCtlTerm()");
+
+	if (!cellNetCtlInstance.m_bInitialized)
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+
+	cellNetCtlInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
