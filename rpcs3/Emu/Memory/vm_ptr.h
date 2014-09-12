@@ -1,5 +1,7 @@
 #pragma once
 
+class PPUThread;
+
 namespace vm
 {
 	template<typename T, int lvl = 1, typename AT = u32>
@@ -319,7 +321,9 @@ namespace vm
 	public:
 		typedef RT(*type)(T...);
 
-		RT operator()(T... args) const; // defined in Callback.h (CB_FUNC.h)
+		RT call(PPUThread& CPU, T... args) const; // call using specified PPU thread context, defined in Callback.h (CB_FUNC.h)
+
+		RT operator()(T... args) const; // call using current PPU thread context, defined in Callback.h (CB_FUNC.h)
 
 		AT addr() const
 		{

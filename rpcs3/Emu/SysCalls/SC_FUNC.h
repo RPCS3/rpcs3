@@ -59,7 +59,7 @@ namespace detail
 	{
 		static_assert(f_count <= 12, "TODO: Unsupported stack argument type (float)");
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
-		static_assert(sizeof(T) <= 8, "Invalid function argument type (ARG_STACK)");
+		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_STACK");
 
 		static __forceinline T func(PPUThread& CPU)
 		{
@@ -126,6 +126,7 @@ namespace detail
 	template<int g_count, int f_count, int v_count>
 	static __forceinline std::tuple<> iterate(PPUThread& CPU)
 	{
+		// terminator
 		return std::tuple<>();
 	}
 
@@ -143,6 +144,7 @@ namespace detail
 		const int g = g_count + (is_float || is_vector ? 0 : 1);
 		const int f = f_count + (is_float ? 1 : 0);
 		const int v = v_count + (is_vector ? 1 : 0);
+
 		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
 	}
 
