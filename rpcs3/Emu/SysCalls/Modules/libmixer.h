@@ -109,7 +109,7 @@ enum
 	CELL_SSPLAYER_STATE_ON = 0x20,
 };
 
-typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples);
+typedef s32(*CellSurMixerNotifyCallbackFunction)(vm::ptr<void> arg, u32 counter, u32 samples);
 
 struct CellSSPlayerConfig
 {

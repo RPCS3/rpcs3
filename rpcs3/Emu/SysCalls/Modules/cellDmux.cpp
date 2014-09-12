@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "cellPamf.h"
@@ -292,13 +293,16 @@ u32 dmuxOpen(Demuxer* data)
 {
 	Demuxer& dmux = *data;
 
-	dmux.dmuxCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-
 	u32 dmux_id = cellDmux->GetNewId(data);
 
 	dmux.id = dmux_id;
 
+	dmux.dmuxCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
+	dmux.dmuxCb->SetEntry(0x10000);
+	dmux.dmuxCb->SetPrio(1001);
+	dmux.dmuxCb->SetStackSize(0x10000);
+	dmux.dmuxCb->Run();
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{
@@ -340,11 +344,8 @@ u32 dmuxOpen(Demuxer* data)
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					/*Callback cb;
-					cb.SetAddr(dmux.cbFunc);
-					cb.Handle(dmux.id, dmuxMsg.addr(), dmux.cbArg);
-					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
-					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, true, dmux.id, dmuxMsg.addr(), dmux.cbArg);
+					dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+
 					updates_signaled++;
 				}
 				else switch (code.ToLE())
@@ -424,11 +425,7 @@ u32 dmuxOpen(Demuxer* data)
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							/*Callback cb;
-							cb.SetAddr(es.cbFunc);
-							cb.Handle(dmux.id, es.id, esMsg.addr(), es.cbArg);
-							cb.Branch(false);*/
-							dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.addr(), es.cbArg);
+							es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 						}
 						else
 						{
@@ -477,11 +474,7 @@ u32 dmuxOpen(Demuxer* data)
 								auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 								esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 								esMsg->supplementalInfo = stream.userdata;
-								/*Callback cb;
-								cb.SetAddr(es.cbFunc);
-								cb.Handle(dmux.id, es.id, esMsg.addr(), es.cbArg);
-								cb.Branch(false);*/
-								dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.addr(), es.cbArg);
+								es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 							}
 
 							if (pes.new_au)
@@ -589,12 +582,7 @@ u32 dmuxOpen(Demuxer* data)
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					/*Callback cb;
-					cb.SetAddr(dmux.cbFunc);
-					cb.Handle(dmux.id, dmuxMsg.addr(), dmux.cbArg);
-					cb.Branch(task.type == dmuxResetStreamAndWaitDone);*/
-					dmux.dmuxCb->ExecAsCallback(dmux.cbFunc, task.type == dmuxResetStreamAndWaitDone,
-						dmux.id, dmuxMsg.addr(), dmux.cbArg);
+					dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
 					updates_signaled++;
 					dmux.is_running = false;
@@ -675,22 +663,14 @@ u32 dmuxOpen(Demuxer* data)
 						auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 						esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 						esMsg->supplementalInfo = stream.userdata;
-						/*Callback cb;
-						cb.SetAddr(es.cbFunc);
-						cb.Handle(dmux.id, es.id, esMsg.addr(), es.cbArg);
-						cb.Branch(false);*/
-						dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.addr(), es.cbArg);
+						es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 					}
 
 					// callback
 					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 					esMsg->supplementalInfo = stream.userdata;
-					/*Callback cb;
-					cb.SetAddr(es.cbFunc);
-					cb.Handle(dmux.id, es.id, esMsg.addr(), es.cbArg);
-					cb.Branch(false);*/
-					dmux.dmuxCb->ExecAsCallback(es.cbFunc, false, dmux.id, es.id, esMsg.addr(), es.cbArg);
+					es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 				}
 				break;
 
@@ -752,7 +732,7 @@ int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmux
 
 	// TODO: check demuxerResource and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -770,7 +750,7 @@ int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDm
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -788,7 +768,7 @@ int cellDmuxOpen2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellD
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg_addr));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -959,7 +939,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 
 	ElementaryStream* es = new ElementaryStream(dmux, esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
-		esCb->cbEsMsgFunc, esCb->cbArg_addr, esSpecificInfo_addr);
+		vm::ptr<CellDmuxCbEsMsg>::make(esCb->cbEsMsgFunc.addr()), esCb->cbArg, esSpecificInfo_addr);
 
 	u32 id = cellDmux->GetNewId(es);
 	es->id = id;

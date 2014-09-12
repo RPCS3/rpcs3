@@ -57,6 +57,7 @@ void CallbackManager::Init()
 	vm::write32(cb_shit, Emu.m_ppu_thr_stop);
 	vm::write32(cb_shit + 4, 0);
 
+	m_cb_thread->SetName("Callback Thread");
 	m_cb_thread->SetEntry(cb_shit);
 	m_cb_thread->SetPrio(1001); // ???
 	m_cb_thread->SetStackSize(0x10000);

@@ -360,11 +360,11 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-typedef s32(*CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, int msgData, u32 cbArg);
+typedef s32(*CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
 
 struct CellAdecCb
 {
-	be_t<u32> cbFunc;
+	vm::bptr<CellAdecCbMsg> cbFunc;
 	be_t<u32> cbArg;
 };
 
@@ -1108,16 +1108,16 @@ public:
 	const AudioCodecType type;
 	const u32 memAddr;
 	const u32 memSize;
-	const u32 cbFunc;
+	const vm::ptr<CellAdecCbMsg> cbFunc;
 	const u32 cbArg;
 	u32 memBias;
 
 	AdecTask task;
 	u64 last_pts, first_pts;
 
-	CPUThread* adecCb;
+	PPUThread* adecCb;
 
-	AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg);
+	AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg);
 
 	~AudioDecoder();
 };

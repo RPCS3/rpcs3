@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Audio/cellAudio.h"
@@ -14,8 +15,8 @@ Module *libmixer = nullptr;
 CellSurMixerConfig surMixer;
 
 #define SUR_PORT (7)
-u32 surMixerCb;
-u32 surMixerCbArg;
+vm::ptr<CellSurMixerNotifyCallbackFunction> surMixerCb;
+vm::ptr<void> surMixerCbArg;
 std::mutex mixer_mutex;
 float mixdata[8*256];
 u64 mixcount;
@@ -323,15 +324,18 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 		(u32)surMixer.chStrips1, (u32)surMixer.chStrips2, (u32)surMixer.chStrips6, (u32)surMixer.chStrips8);
 
 	mixcount = 0;
-	surMixerCb = 0;
+	surMixerCb.set(0);
 
 	thread t("Surmixer Thread", []()
 	{
 		AudioPortConfig& port = m_config.m_ports[SUR_PORT];
 
-		CPUThread* mixerCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-
-		mixerCb->SetName("Surmixer Callback");
+		PPUThread& cb_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+		cb_thread.SetName("Surmixer Callback Thread");
+		cb_thread.SetEntry(0x10000);
+		cb_thread.SetPrio(1001);
+		cb_thread.SetStackSize(0x10000);
+		cb_thread.Run();
 
 		while (port.m_is_audio_port_opened)
 		{
@@ -352,7 +356,10 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 				//u64 stamp0 = get_system_time();
 
 				memset(mixdata, 0, sizeof(mixdata));
-				if (surMixerCb) mixerCb->ExecAsCallback(surMixerCb, true, surMixerCbArg, mixcount, 256);
+				if (surMixerCb)
+				{
+					surMixerCb.call(cb_thread, surMixerCbArg, mixcount, 256);
+				}
 
 				//u64 stamp1 = get_system_time();
 
@@ -456,7 +463,8 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 			ssp.clear();
 		}
 		
-		Emu.GetCPU().RemoveThread(mixerCb->GetId());
+		Emu.GetCPU().RemoveThread(cb_thread.GetId());
+		surMixerCb.set(0);
 	});
 	t.detach();
 
@@ -477,19 +485,31 @@ int cellSurMixerChStripGetAANPortNo(vm::ptr<be_t<u32>> port, u32 type, u32 index
 	return CELL_OK;
 }
 
-int cellSurMixerSetNotifyCallback(u32 func, u32 arg)
+int cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func, vm::ptr<void> arg)
 {
-	libmixer->Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x) (surMixerCb=0x%x)", func, arg, surMixerCb);
+	libmixer->Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x)", func.addr(), arg.addr());
+
+	if (surMixerCb)
+	{
+		libmixer->Error("cellSurMixerSetNotifyCallback: surMixerCb already set (addr=0x%x)", surMixerCb.addr());
+	}
 	surMixerCb = func;
 	surMixerCbArg = arg;
 	return CELL_OK;
 }
 
-int cellSurMixerRemoveNotifyCallback(u32 func)
+int cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func)
 {
-	libmixer->Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x) (surMixerCb=0x%x)", func, surMixerCb);
-	surMixerCb = 0;
-	surMixerCbArg = 0;
+	libmixer->Warning("cellSurMixerRemoveNotifyCallback(func_addr=0x%x)", func.addr());
+
+	if (surMixerCb.addr() != func.addr())
+	{
+		libmixer->Error("cellSurMixerRemoveNotifyCallback: surMixerCb had different value (addr=0x%x)", surMixerCb.addr());
+	}
+	else
+	{
+		surMixerCb.set(0);
+	}
 	return CELL_OK;
 }
 
