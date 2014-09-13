@@ -203,8 +203,10 @@ int cellAtracGetInternalErrorInfo(vm::ptr<CellAtracHandle> pHandle, vm::ptr<be_t
 	return CELL_OK;
 }
 
-void cellAtrac_init()
+void cellAtrac_init(Module *pxThis)
 {
+	cellAtrac = pxThis;
+
 	cellAtrac->AddFunc(0x66afc68e, cellAtracSetDataAndGetMemSize);
 
 	cellAtrac->AddFunc(0xfa293e88, cellAtracCreateDecoder);

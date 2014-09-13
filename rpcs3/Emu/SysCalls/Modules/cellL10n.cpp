@@ -14,8 +14,6 @@
 #include <iconv.h>
 #endif
 
-//void cellL10n_init();
-//Module cellL10n(0x001e, cellL10n_init);
 Module *cellL10n = nullptr;
 
 int UTF16stoUTF8s(vm::lptrl<const char16_t> utf16, vm::ptr<be_t<u32>> utf16_len, vm::ptr<char> utf8, vm::ptr<be_t<u32>> utf8_len)
@@ -337,8 +335,10 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<be_t<u32>> src
 #endif
 }
 
-void cellL10n_init()
+void cellL10n_init(Module *pxThis)
 {
+	cellL10n = pxThis;
+
 	// NOTE: I think this module should be LLE'd instead of implementing all its functions
 
 	// cellL10n->AddFunc(0x005200e6, UCS2toEUCJP);

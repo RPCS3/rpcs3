@@ -17,8 +17,6 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "sysPrxForUser.h"
 
-//void sysPrxForUser_init();
-//Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 Module *sysPrxForUser = nullptr;
 
 extern u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
@@ -74,7 +72,7 @@ int sys_process_is_stack(u32 p)
 	sysPrxForUser->Log("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
-	return (p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr()) ? 1 : 0;
+	return (p >= Memory.PS3.StackMem.GetStartAddr() && p <= Memory.PS3.StackMem.GetEndAddr()) ? 1 : 0;
 }
 
 s64 sys_prx_exitspawn_with_level()
@@ -329,8 +327,10 @@ s32 _unnamed_E75C40F2(u32 dest)
 	return CELL_ENOENT;
 }
 
-void sysPrxForUser_init()
+void sysPrxForUser_init(Module *pxThis)
 {
+	sysPrxForUser = pxThis;
+
 	// Setup random number generator
 	srand(time(NULL));
 

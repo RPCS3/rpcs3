@@ -33,12 +33,16 @@ class MemoryBase
 public:
 	MemoryBlock* UserMemory;
 
-	DynamicMemoryBlock MainMem;
-	DynamicMemoryBlock PRXMem;
-	DynamicMemoryBlock RSXCMDMem;
-	DynamicMemoryBlock MmaperMem;
-	DynamicMemoryBlock RSXFBMem;
-	DynamicMemoryBlock StackMem;
+	struct
+	{
+		DynamicMemoryBlock MainMem;
+		DynamicMemoryBlock PRXMem;
+		DynamicMemoryBlock RSXCMDMem;
+		DynamicMemoryBlock MmaperMem;
+		DynamicMemoryBlock RSXFBMem;
+		DynamicMemoryBlock StackMem;
+	} PS3;
+
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
@@ -116,7 +120,8 @@ public:
 		{
 			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 			{
-				if (m_pages[i] != 0) return false; // TODO: define page parameters
+				if (m_pages[i] == 0) //page not allocated
+					return false; // TODO: define page parameters
 			}
 			return true;
 		}

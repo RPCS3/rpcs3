@@ -121,14 +121,17 @@ void Loader::Open(vfsFileBase& stream)
 
 LoaderBase* Loader::SearchLoader()
 {
-	if(!m_stream) return nullptr;
+	if(!m_stream) 
+		return nullptr;
 
-	LoaderBase* l;
-
-	if((l=new ELFLoader(*m_stream))->LoadInfo()) return l;
+	LoaderBase* l = new ELFLoader(*m_stream);
+	if(l->LoadInfo()) 
+		return l;
 	delete l;
 
-	if((l=new SELFLoader(*m_stream))->LoadInfo()) return l;
+	l = new SELFLoader(*m_stream);
+	if(l->LoadInfo()) 
+		return l;
 	delete l;
 
 	return nullptr;

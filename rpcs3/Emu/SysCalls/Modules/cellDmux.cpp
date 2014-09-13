@@ -7,8 +7,6 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-//void cellDmux_init();
-//Module cellDmux(0x0007, cellDmux_init);
 Module *cellDmux = nullptr;
 
 PesHeader::PesHeader(DemuxerStream& stream)
@@ -1139,8 +1137,10 @@ int cellDmuxFlushEs(u32 esHandle)
 	return CELL_OK;
 }
 
-void cellDmux_init()
+void cellDmux_init(Module *pxThis)
 {
+	cellDmux = pxThis;
+
 	cellDmux->AddFunc(0xa2d4189b, cellDmuxQueryAttr);
 	cellDmux->AddFunc(0x3f76e3cd, cellDmuxQueryAttr2);
 	cellDmux->AddFunc(0x68492de9, cellDmuxOpen);

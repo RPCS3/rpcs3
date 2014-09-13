@@ -4,8 +4,6 @@
 
 #include "cellGem.h"
 
-void cellGem_init();
-//Module cellGem(0x005a, cellGem_init);
 Module *cellGem = nullptr;
 
 struct cellGemInternal
@@ -253,8 +251,10 @@ int cellGemWriteExternalPort()
 	return CELL_OK;
 }
 
-void cellGem_init()
+void cellGem_init(Module *pxThis)
 {
+	cellGem = pxThis;
+
 	//cellGem->AddFunc(, cellGemAttributeInit);
 	cellGem->AddFunc(0xafa99ead, cellGemCalibrate);
 	cellGem->AddFunc(0x9b9714a4, cellGemClearStatusFlags);

@@ -9,10 +9,6 @@
 //#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 
-//void cellGcmSys_init();
-//void cellGcmSys_load();
-//void cellGcmSys_unload();
-//Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
 Module *cellGcmSys = nullptr;
 
 const u32 tiled_pitches[] = {
@@ -79,7 +75,7 @@ void InitOffsetTable()
 u32 cellGcmGetLabelAddress(u8 index)
 {
 	cellGcmSys->Log("cellGcmGetLabelAddress(index=%d)", index);
-	return (u32)Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
+	return (u32)Memory.PS3.RSXCMDMem.GetStartAddr() + 0x10 * index;
 }
 
 vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 location)
@@ -91,7 +87,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 			cellGcmSys->Error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 			return vm::ptr<CellGcmReportData>::make(0);
 		}
-		return vm::ptr<CellGcmReportData>::make((u32)Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+		return vm::ptr<CellGcmReportData>::make((u32)Memory.PS3.RSXFBMem.GetStartAddr() + index * 0x10);
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
@@ -115,7 +111,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 		cellGcmSys->Error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 		return 0;
 	}
-	return vm::read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+	return vm::read64(Memory.PS3.RSXFBMem.GetStartAddr() + index * 0x10);
 }
 
 int cellGcmGetCurrentField()
@@ -146,7 +142,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(Memory.RSXFBMem.GetStartAddr()); // TODO
+	return vm::ptr<CellGcmReportData>::make(Memory.PS3.RSXFBMem.GetStartAddr()); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -174,7 +170,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		cellGcmSys->Error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 		return 0;
 	}
-	return (u32)Memory.RSXFBMem.GetStartAddr() + index * 0x10;
+	return (u32)Memory.PS3.RSXFBMem.GetStartAddr() + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -194,7 +190,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 			cellGcmSys->Error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
 			return 0;
 		}
-		return vm::read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+		return vm::read64(Memory.PS3.RSXFBMem.GetStartAddr() + index * 0x10);
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
@@ -332,8 +328,8 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	if(!local_size && !local_addr)
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = (u32)Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.AllocAlign(local_size);
+		local_addr = (u32)Memory.PS3.RSXFBMem.GetStartAddr();
+		Memory.PS3.RSXFBMem.AllocAlign(local_size);
 	}
 
 	cellGcmSys->Warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -365,7 +361,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_config.memoryFrequency = 650000000;
 	current_config.coreFrequency = 500000000;
 
-	Memory.RSXCMDMem.AllocAlign(cmdSize);
+	Memory.PS3.RSXCMDMem.AllocAlign(cmdSize);
 
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
@@ -374,7 +370,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_context.current = current_context.begin;
 	current_context.callback = Emu.GetRSXCallback() - 4;
 
-	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
+	gcm_info.context_addr = (u32)Memory.PS3.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
 
 	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
@@ -812,8 +808,9 @@ s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
 	u32 result;
 
 	// Address in local memory
-	if (Memory.RSXFBMem.IsInMyRange(address)) {
-		result = (u32)(address - Memory.RSXFBMem.GetStartAddr());
+	if (Memory.PS3.RSXFBMem.IsInMyRange(address))
+	{
+		result = (u32)(address - Memory.PS3.RSXFBMem.GetStartAddr());
 	}
 	// Address in main memory else check 
 	else
@@ -900,8 +897,8 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	if (!local_size && !local_addr)
 	{
 		local_size = 0xf900000; //TODO
-		local_addr = (u32)Memory.RSXFBMem.GetStartAddr();
-		Memory.RSXFBMem.AllocAlign(local_size);
+		local_addr = (u32)Memory.PS3.RSXFBMem.GetStartAddr();
+		Memory.PS3.RSXFBMem.AllocAlign(local_size);
 		vm::write32(address, local_addr);
 		vm::write32(size, local_size);
 	}
@@ -1107,7 +1104,7 @@ int cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, 
 		ctx.addr(), id, label_index, label_value);
 
 	int res = cellGcmSetPrepareFlip(ctx, id);
-	vm::write32(Memory.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
+	vm::write32(Memory.PS3.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 
@@ -1182,8 +1179,10 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 //----------------------------------------------------------------------------
 
-void cellGcmSys_init()
+void cellGcmSys_init(Module *pxThis)
 {
+	cellGcmSys = pxThis;
+
 	// Data Retrieval
 	cellGcmSys->AddFunc(0xc8f3bd09, cellGcmGetCurrentField);
 	cellGcmSys->AddFunc(0xf80196c1, cellGcmGetLabelAddress);

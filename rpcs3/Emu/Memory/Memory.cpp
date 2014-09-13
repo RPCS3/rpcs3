@@ -125,12 +125,12 @@ void MemoryBase::Init(MemoryType type)
 	switch (type)
 	{
 	case Memory_PS3:
-		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
-		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
-		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
-		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
-		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
+		MemoryBlocks.push_back(PS3.MainMem.SetRange(0x00010000, 0x2FFF0000));
+		MemoryBlocks.push_back(UserMemory = PS3.PRXMem.SetRange(0x30000000, 0x10000000));
+		MemoryBlocks.push_back(PS3.RSXCMDMem.SetRange(0x40000000, 0x10000000));
+		MemoryBlocks.push_back(PS3.MmaperMem.SetRange(0xB0000000, 0x10000000));
+		MemoryBlocks.push_back(PS3.RSXFBMem.SetRange(0xC0000000, 0x10000000));
+		MemoryBlocks.push_back(PS3.StackMem.SetRange(0xD0000000, 0x10000000));
 		break;
 
 	case Memory_PSV:

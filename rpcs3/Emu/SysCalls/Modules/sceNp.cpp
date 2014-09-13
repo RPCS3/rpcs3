@@ -9,8 +9,6 @@
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
-//void sceNp_init();
-//Module sceNp(0x0016, sceNp_init);
 Module *sceNp = nullptr;
 
 struct sceNpInternal
@@ -1508,8 +1506,10 @@ int sceNpSignalingDestroyCtx()
 	return CELL_OK;
 }
 
-void sceNp_init()
+void sceNp_init(Module *pxThis)
 {
+	sceNp = pxThis;
+
 	sceNp->AddFunc(0xbd28fdbf, sceNpInit);
 	sceNp->AddFunc(0x41251f74, sceNp2Init);
 	sceNp->AddFunc(0x4885aa18, sceNpTerm);

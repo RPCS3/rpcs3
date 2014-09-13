@@ -4,8 +4,6 @@
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/Modules.h"
 
-//void cellSysmodule_init();
-//Module cellSysmodule("cellSysmodule", cellSysmodule_init);
 Module *cellSysmodule = nullptr;
 
 enum
@@ -212,8 +210,10 @@ int cellSysmoduleIsLoaded(u16 id)
 	return m->IsLoaded() ? CELL_SYSMODULE_LOADED : CELL_SYSMODULE_ERROR_UNLOADED;
 }
 
-void cellSysmodule_init()
+void cellSysmodule_init(Module *pxThis)
 {
+	cellSysmodule = pxThis;
+
 	cellSysmodule->AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
 	cellSysmodule->AddFunc(0x96c07adf, cellSysmoduleFinalize);
 	cellSysmodule->AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);

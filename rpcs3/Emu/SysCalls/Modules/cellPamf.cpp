@@ -539,8 +539,10 @@ int cellPamfEpIteratorMove(vm::ptr<CellPamfEpIterator> pIt, s32 steps, vm::ptr<C
 	return CELL_OK;
 }
 
-void cellPamf_init()
+void cellPamf_init(Module *pxThis)
 {
+	cellPamf = pxThis;
+
 	cellPamf->AddFunc(0xca8181c1, cellPamfGetHeaderSize);
 	cellPamf->AddFunc(0x90fc9a59, cellPamfGetHeaderSize2);
 	cellPamf->AddFunc(0x44f5c9e3, cellPamfGetStreamOffsetAndSize);

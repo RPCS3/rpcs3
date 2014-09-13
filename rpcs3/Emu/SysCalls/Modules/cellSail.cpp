@@ -762,8 +762,10 @@ int cellSailPlayerUnregisterSource()
 	return CELL_OK;
 }
 
-void cellSail_init()
+void cellSail_init(Module *pxThis)
 {
+	cellSail = pxThis;
+
 	cellSail->AddFunc(0x346ebba3, cellSailMemAllocatorInitialize);
 
 	cellSail->AddFunc(0x4cc54f8e, cellSailFutureInitialize);

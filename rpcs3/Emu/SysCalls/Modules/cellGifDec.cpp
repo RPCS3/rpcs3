@@ -7,8 +7,6 @@
 #include "Emu/SysCalls/lv2/lv2Fs.h"
 #include "cellGifDec.h"
 
-//void cellGifDec_init();
-//Module cellGifDec(0xf010, cellGifDec_init);
 Module *cellGifDec = nullptr;
 
 int cellGifDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
@@ -277,8 +275,10 @@ int cellGifDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-void cellGifDec_init()
+void cellGifDec_init(Module *pxThis)
 {
+	cellGifDec = pxThis;
+
 	cellGifDec->AddFunc(0xb60d42a5, cellGifDecCreate);
 	cellGifDec->AddFunc(0x4711cb7f, cellGifDecExtCreate);
 	cellGifDec->AddFunc(0x75745079, cellGifDecOpen);

@@ -246,7 +246,7 @@ void Emulator::Load()
 			{
 			case MACHINE_SPU:
 				Memory.Init(Memory_PS3);
-				Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr(), 0x40000);
+				Memory.PS3.MainMem.AllocFixed(Memory.PS3.MainMem.GetStartAddr(), 0x40000);
 			break;
 
 			case MACHINE_PPC64:
@@ -328,10 +328,10 @@ void Emulator::Load()
 	switch(l.GetMachine())
 	{
 	case MACHINE_SPU:
-		LOG_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
+		LOG_NOTICE(LOADER, "offset = 0x%llx", Memory.PS3.MainMem.GetStartAddr());
 		LOG_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
-		thread.SetOffset(Memory.MainMem.GetStartAddr());
-		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
+		thread.SetOffset(Memory.PS3.MainMem.GetStartAddr());
+		thread.SetEntry(l.GetEntry() - Memory.PS3.MainMem.GetStartAddr());
 	break;
 
 	case MACHINE_PPC64:
@@ -339,12 +339,12 @@ void Emulator::Load()
 		m_ppu_callback_thr = &GetCPU().AddThread(CPU_THREAD_PPU);
 
 		thread.SetEntry(l.GetEntry());
-		Memory.StackMem.AllocAlign(0x1000);
+		Memory.PS3.StackMem.AllocAlign(0x1000);
 		thread.InitStack();
 		thread.AddArgv(m_elf_path); // it doesn't work
 		//thread.AddArgv("-emu");
 
-		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
+		m_rsx_callback = (u32)Memory.PS3.MainMem.AllocAlign(4 * 4) + 4;
 		vm::write32(m_rsx_callback - 4, m_rsx_callback);
 
 		auto callback_data = vm::ptr<be_t<u32>>::make(m_rsx_callback);
@@ -352,7 +352,7 @@ void Emulator::Load()
 		callback_data[1] = SC(2);
 		callback_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_exit = (u32)Memory.MainMem.AllocAlign(4 * 4);
+		m_ppu_thr_exit = (u32)Memory.PS3.MainMem.AllocAlign(4 * 4);
 
 		auto ppu_thr_exit_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_exit);
 		//ppu_thr_exit_data += ADDI(3, 0, 0); // why it kills return value (GPR[3]) ?
@@ -360,13 +360,13 @@ void Emulator::Load()
 		ppu_thr_exit_data[1] = SC(2);
 		ppu_thr_exit_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_stop = (u32)Memory.MainMem.AllocAlign(2 * 4);
+		m_ppu_thr_stop = (u32)Memory.PS3.MainMem.AllocAlign(2 * 4);
 
 		auto ppu_thr_stop_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_stop);
 		ppu_thr_stop_data[0] = SC(4);
 		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 
-		vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+		vm::write64(Memory.PS3.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 	}
 	break;
 

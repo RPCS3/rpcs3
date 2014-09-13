@@ -7,8 +7,6 @@
 #include "Emu/Event.h"
 #include "cellSync.h"
 
-//void cellSync_init();
-//Module cellSync("cellSync", cellSync_init);
 Module *cellSync = nullptr;
 
 #ifdef PRX_DEBUG
@@ -2156,8 +2154,10 @@ s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::pt
 	return syncLFQueueDetachLv2EventQueue(spus, num, queue);
 }
 
-void cellSync_init()
+void cellSync_init(Module *pxThis)
 {
+	cellSync = pxThis;
+
 	cellSync->AddFunc(0xa9072dee, cellSyncMutexInitialize);
 	cellSync->AddFunc(0x1bb675c2, cellSyncMutexLock);
 	cellSync->AddFunc(0xd06918c4, cellSyncMutexTryLock);

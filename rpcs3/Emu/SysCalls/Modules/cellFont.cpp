@@ -6,10 +6,6 @@
 #include "Emu/FS/vfsFile.h"
 #include "cellFont.h"
 
-//void cellFont_init();
-//void cellFont_load();
-//void cellFont_unload();
-//Module cellFont(0x0019, cellFont_init, cellFont_load, cellFont_unload);
 Module *cellFont = nullptr;
 
 CCellFontInternal* s_fontInternalInstance = nullptr;
@@ -583,8 +579,10 @@ int cellFontGetCharGlyphMetricsVertical()
 	return CELL_FONT_OK;
 }
 
-void cellFont_init()
+void cellFont_init(Module *pxThis)
 {
+	cellFont = pxThis;
+
 	cellFont->AddFunc(0x25c107e6, cellFontInit);
 	cellFont->AddFunc(0x6bf6f832, cellFontSetFontsetOpenMode);
 	cellFont->AddFunc(0x6cfada83, cellFontSetFontOpenMode);

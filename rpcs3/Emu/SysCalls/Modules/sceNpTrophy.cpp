@@ -14,9 +14,6 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
-//void sceNpTrophy_unload();
-//void sceNpTrophy_init();
-//Module sceNpTrophy(0xf035, sceNpTrophy_init, nullptr, sceNpTrophy_unload);
 Module *sceNpTrophy = nullptr;
 
 // Internal Structs
@@ -425,8 +422,10 @@ void sceNpTrophy_unload()
 	s_npTrophyInstance.m_bInitialized = false;
 }
 
-void sceNpTrophy_init()
+void sceNpTrophy_init(Module *pxThis)
 {
+	sceNpTrophy = pxThis;
+
 	sceNpTrophy->AddFunc(0x079f0e87, sceNpTrophyGetGameProgress);
 	sceNpTrophy->AddFunc(0x1197b52c, sceNpTrophyRegisterContext);
 	sceNpTrophy->AddFunc(0x1c25470d, sceNpTrophyCreateHandle);

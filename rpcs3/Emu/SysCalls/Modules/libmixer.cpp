@@ -7,8 +7,6 @@
 #include "Emu/Audio/cellAudio.h"
 #include "libmixer.h"
 
-//void libmixer_init();
-//Module libmixer("libmixer", libmixer_init);
 Module *libmixer = nullptr;
 
 CellSurMixerConfig surMixer;
@@ -620,8 +618,10 @@ void cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 	(float&)CPU.FPR[0] = 0.0f;
 }
 
-void libmixer_init()
+void libmixer_init(Module *pxThis)
 {
+	libmixer = pxThis;
+
 	REG_SUB(libmixer, "surmxAAN", cellAANAddData,
 		0xffffffff7c691b78,
 		0xffffffff7c0802a6,

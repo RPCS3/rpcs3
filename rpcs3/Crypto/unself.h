@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Loader/SELF.h"
-#include "Loader/ELF.h"
+#include "Loader/ELF64.h"
+#include "Loader/ELF32.h"
 #include "key_vault.h"
 
 struct AppInfo 

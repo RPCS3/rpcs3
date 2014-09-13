@@ -6,9 +6,6 @@
 #include "sceNp.h"
 #include "sceNpClans.h"
 
-//void sceNpClans_unload();
-//void sceNpClans_init();
-//Module sceNpClans(0x003a, sceNpClans_init, nullptr, sceNpClans_unload);
 Module *sceNpClans = nullptr;
 
 int sceNpClansInit()
@@ -250,8 +247,10 @@ void sceNpClans_unload()
 	// TODO: Unload Clans module
 }
 
-void sceNpClans_init()
+void sceNpClans_init(Module *pxThis)
 {
+	sceNpClans = pxThis;
+
 	sceNpClans->AddFunc(0x9b820047, sceNpClansInit);
 	sceNpClans->AddFunc(0x42332cb7, sceNpClansTerm);
 	sceNpClans->AddFunc(0x9a72232d, sceNpClansCreateRequest);

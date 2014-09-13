@@ -127,7 +127,7 @@ void PPUThread::InitRegs()
 	GPR[8] = entry;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
+	GPR[13] = Memory.PS3.PRXMem.GetStartAddr() + 0x7060;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];
