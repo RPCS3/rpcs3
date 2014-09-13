@@ -16,7 +16,7 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 	ELFLoader l(stream);
 	l.LoadInfo();
 	const u32 alloc_size = 256 * 1024;
-	u32 spu_offset = (u32)Memory.MainMem.AllocAlign(alloc_size);
+	u32 spu_offset = (u32)Memory.PS3.MainMem.AllocAlign(alloc_size);
 	l.LoadData(spu_offset);
 	spu_ep = l.GetEntry();
 	return spu_offset;

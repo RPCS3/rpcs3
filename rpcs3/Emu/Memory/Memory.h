@@ -33,12 +33,16 @@ class MemoryBase
 public:
 	MemoryBlock* UserMemory;
 
-	DynamicMemoryBlock MainMem;
-	DynamicMemoryBlock PRXMem;
-	DynamicMemoryBlock RSXCMDMem;
-	DynamicMemoryBlock MmaperMem;
-	DynamicMemoryBlock RSXFBMem;
-	DynamicMemoryBlock StackMem;
+	struct
+	{
+		DynamicMemoryBlock MainMem;
+		DynamicMemoryBlock PRXMem;
+		DynamicMemoryBlock RSXCMDMem;
+		DynamicMemoryBlock MmaperMem;
+		DynamicMemoryBlock RSXFBMem;
+		DynamicMemoryBlock StackMem;
+	} PS3;
+
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 

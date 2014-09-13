@@ -74,7 +74,7 @@ int sys_process_is_stack(u32 p)
 	sysPrxForUser->Log("sys_process_is_stack(p=0x%x)", p);
 
 	// prx: compare high 4 bits with "0xD"
-	return (p >= Memory.StackMem.GetStartAddr() && p <= Memory.StackMem.GetEndAddr()) ? 1 : 0;
+	return (p >= Memory.PS3.StackMem.GetStartAddr() && p <= Memory.PS3.StackMem.GetEndAddr()) ? 1 : 0;
 }
 
 s64 sys_prx_exitspawn_with_level()

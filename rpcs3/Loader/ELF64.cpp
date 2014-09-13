@@ -334,7 +334,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				phdr.p_paddr, phdr.p_vaddr);
 		}
 
-		if(!Memory.MainMem.IsInMyRange(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
+		if(!Memory.PS3.MainMem.IsInMyRange(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 		{
 #ifdef LOADER_DEBUG
 			LOG_WARNING(LOADER, "Skipping...");
@@ -348,7 +348,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 			case 0x00000001: //LOAD
 				if(phdr.p_memsz)
 				{
-					if (!Memory.MainMem.AllocFixed(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
+					if (!Memory.PS3.MainMem.AllocFixed(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 					{
 						LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, offset + phdr.p_vaddr, phdr.p_memsz);
 					}
@@ -444,8 +444,8 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					LOG_NOTICE(LOADER, "*** text: 0x%x", stub.s_text.ToLE());
 #endif
 					static const u32 section = 4 * 3;
-					u64 tbl = Memory.MainMem.AllocAlign(stub.s_imports * 4 * 2);
-					u64 dst = Memory.MainMem.AllocAlign(stub.s_imports * section);
+					u64 tbl = Memory.PS3.MainMem.AllocAlign(stub.s_imports * 4 * 2);
+					u64 dst = Memory.PS3.MainMem.AllocAlign(stub.s_imports * section);
 
 					for(u32 i=0; i<stub.s_imports; ++i)
 					{

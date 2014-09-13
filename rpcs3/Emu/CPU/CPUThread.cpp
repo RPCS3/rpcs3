@@ -70,7 +70,7 @@ void CPUThread::CloseStack()
 {
 	if(m_stack_addr)
 	{
-		Memory.StackMem.Free(m_stack_addr);
+		Memory.PS3.StackMem.Free(m_stack_addr);
 		m_stack_addr = 0;
 	}
 

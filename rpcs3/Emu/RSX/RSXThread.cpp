@@ -45,7 +45,7 @@ u32 GetAddress(u32 offset, u32 location)
 {
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return (u32)Memory.RSXFBMem.GetStartAddr() + offset;
+	case CELL_GCM_LOCATION_LOCAL: return (u32)Memory.PS3.RSXFBMem.GetStartAddr() + offset;
 	case CELL_GCM_LOCATION_MAIN: return (u32)Memory.RSXIOMem.RealAddr(Memory.RSXIOMem.GetStartAddr() + offset); // TODO: Error Check?
 	}
 
@@ -262,7 +262,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if(m_set_semaphore_offset)
 		{
 			m_set_semaphore_offset = false;
-			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
+			vm::write32(Memory.PS3.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
 		}
 	}
 	break;
@@ -275,7 +275,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			u32 value = ARGS(0);
 			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
 
-			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
+			vm::write32(Memory.PS3.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
 		}
 	}
 	break;
