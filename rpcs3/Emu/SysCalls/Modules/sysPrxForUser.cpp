@@ -17,8 +17,6 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "sysPrxForUser.h"
 
-//void sysPrxForUser_init();
-//Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 Module *sysPrxForUser = nullptr;
 
 extern u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
@@ -329,8 +327,10 @@ s32 _unnamed_E75C40F2(u32 dest)
 	return CELL_ENOENT;
 }
 
-void sysPrxForUser_init()
+void sysPrxForUser_init(Module *pxThis)
 {
+	sysPrxForUser = pxThis;
+
 	// Setup random number generator
 	srand(time(NULL));
 

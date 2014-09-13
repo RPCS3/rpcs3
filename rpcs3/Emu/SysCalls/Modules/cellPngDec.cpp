@@ -7,8 +7,6 @@
 #include "cellPngDec.h"
 #include <map>
 
-//void cellPngDec_init();
-//Module cellPngDec(0x0018, cellPngDec_init);
 Module *cellPngDec = nullptr;
 
 static std::map<u32, CellPngDecMainHandle *> cellPngDecMap;
@@ -369,8 +367,10 @@ int cellPngDecExtSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellP
 	return cellPngDecSetParameter(mainHandle, subHandle, inParam, outParam);
 }
 
-void cellPngDec_init()
+void cellPngDec_init(Module *pxThis)
 {
+	cellPngDec = pxThis;
+
 	cellPngDec->AddFunc(0x157d30c5, cellPngDecCreate);
 	cellPngDec->AddFunc(0x820dae1a, cellPngDecDestroy);
 	cellPngDec->AddFunc(0xd2bc5bfd, cellPngDecOpen);

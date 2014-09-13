@@ -17,8 +17,6 @@ extern "C"
 
 #include "sys_net.h"
 
-//void sys_net_init();
-//Module sys_net((u16)0x0000, sys_net_init);
 Module *sys_net = nullptr;
 
 vm::ptr<be_t<s32>> g_lastError = vm::ptr<be_t<s32>>::make(0);
@@ -501,8 +499,10 @@ int sys_net_free_thread_context()
 	return CELL_OK;
 }
 
-void sys_net_init()
+void sys_net_init(Module *pxThis)
 {
+	sys_net = pxThis;
+
 	// The names of the following functions are modified to avoid overloading problems
 	sys_net->AddFunc(0xc94f6939, sys_net_accept);
 	sys_net->AddFunc(0xb0a59804, sys_net_bind);

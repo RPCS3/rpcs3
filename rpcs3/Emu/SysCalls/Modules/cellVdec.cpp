@@ -16,8 +16,6 @@ extern "C"
 #include "cellPamf.h"
 #include "cellVdec.h"
 
-//void cellVdec_init();
-//Module cellVdec(0x0005, cellVdec_init);
 Module *cellVdec = nullptr;
 
 VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
@@ -798,8 +796,10 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	return CELL_OK;
 }
 
-void cellVdec_init()
+void cellVdec_init(Module *pxThis)
 {
+	cellVdec = pxThis;
+
 	cellVdec->AddFunc(0xff6f6ebe, cellVdecQueryAttr);
 	cellVdec->AddFunc(0xc982a84a, cellVdecQueryAttrEx);
 	cellVdec->AddFunc(0xb6bbcd5d, cellVdecOpen);

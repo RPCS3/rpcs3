@@ -16,8 +16,6 @@ extern "C"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
-//void cellAdec_init();
-//Module cellAdec(0x0006, cellAdec_init);
 Module *cellAdec = nullptr;
 
 AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
@@ -815,8 +813,10 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<be_t<u32>> pcmItem_ptr)
 	return CELL_OK;
 }
 
-void cellAdec_init()
+void cellAdec_init(Module * pxThis)
 {
+	cellAdec = pxThis;
+
 	REG_FUNC(cellAdec, cellAdecQueryAttr);
 	REG_FUNC(cellAdec, cellAdecOpen);
 	REG_FUNC(cellAdec, cellAdecOpenEx);

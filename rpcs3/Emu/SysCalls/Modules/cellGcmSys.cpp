@@ -9,10 +9,6 @@
 //#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 
-//void cellGcmSys_init();
-//void cellGcmSys_load();
-//void cellGcmSys_unload();
-//Module cellGcmSys(0x0010, cellGcmSys_init, cellGcmSys_load, cellGcmSys_unload);
 Module *cellGcmSys = nullptr;
 
 const u32 tiled_pitches[] = {
@@ -1183,8 +1179,10 @@ int cellGcmCallback(u32 context_addr, u32 count)
 
 //----------------------------------------------------------------------------
 
-void cellGcmSys_init()
+void cellGcmSys_init(Module *pxThis)
 {
+	cellGcmSys = pxThis;
+
 	// Data Retrieval
 	cellGcmSys->AddFunc(0xc8f3bd09, cellGcmGetCurrentField);
 	cellGcmSys->AddFunc(0xf80196c1, cellGcmGetLabelAddress);

@@ -5,8 +5,6 @@
 
 #include "cellCamera.h"
 
-void cellCamera_init();
-//Module cellCamera(0x0023, cellCamera_init);
 Module *cellCamera = nullptr;
 
 struct cellCameraInternal
@@ -224,8 +222,10 @@ int cellCameraRemoveNotifyEventQueue2()
 	return CELL_OK;
 }
 
-void cellCamera_init()
+void cellCamera_init(Module* pxThis)
 {
+	cellCamera = pxThis;
+
 	cellCamera->AddFunc(0xbf47c5dd, cellCameraInit);
 	cellCamera->AddFunc(0x5ad46570, cellCameraEnd);
 	cellCamera->AddFunc(0x85e1b8da, cellCameraOpen);

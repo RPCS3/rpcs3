@@ -11,8 +11,6 @@
 #include "Emu/Audio/AudioDumper.h"
 #include "Emu/Audio/cellAudio.h"
 
-//void cellAudio_init();
-//Module cellAudio(0x0011, cellAudio_init);
 Module *cellAudio = nullptr;
 
 static std::mutex audioMutex;
@@ -886,8 +884,10 @@ int cellAudioUnsetPersonalDevice(int iPersonalStream)
 	return CELL_OK;
 }
 
-void cellAudio_init()
+void cellAudio_init(Module *pxThis)
 {
+	cellAudio = pxThis;
+
 	cellAudio->AddFunc(0x0b168f92, cellAudioInit);
 	cellAudio->AddFunc(0x4129fe2d, cellAudioPortClose);
 	cellAudio->AddFunc(0x5b1e2c73, cellAudioPortStop);

@@ -10,8 +10,6 @@ extern "C"
 
 #include "cellVpost.h"
 
-//void cellVpost_init();
-//Module cellVpost(0x0008, cellVpost_init);
 Module *cellVpost = nullptr;
 
 int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
@@ -153,8 +151,10 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	return CELL_OK;
 }
 
-void cellVpost_init()
+void cellVpost_init(Module *pxThis)
 {
+	cellVpost = pxThis;
+
 	cellVpost->AddFunc(0x95e788c3, cellVpostQueryAttr);
 	cellVpost->AddFunc(0xcd33f3e2, cellVpostOpen);
 	cellVpost->AddFunc(0x40524325, cellVpostOpenEx);

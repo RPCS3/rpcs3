@@ -4,9 +4,6 @@
 
 #include "sceNpCommerce2.h"
 
-//void sceNpCommerce2_unload();
-//void sceNpCommerce2_init();
-//Module sceNpCommerce2(0x0044, sceNpCommerce2_init, nullptr, sceNpCommerce2_unload);
 Module *sceNpCommerce2 = nullptr;
 
 int sceNpCommerce2ExecuteStoreBrowse()
@@ -296,8 +293,10 @@ void sceNpCommerce2_unload()
 	// TODO: Unload SNS module
 }
 
-void sceNpCommerce2_init()
+void sceNpCommerce2_init(Module *pxThis)
 {
+	sceNpCommerce2 = pxThis;
+
 	sceNpCommerce2->AddFunc(0xeef51be0, sceNpCommerce2ExecuteStoreBrowse);
 	sceNpCommerce2->AddFunc(0x1fa1b312, sceNpCommerce2GetStoreBrowseUserdata);
 	sceNpCommerce2->AddFunc(0x3539d233, sceNpCommerce2Init);

@@ -5,8 +5,6 @@
 #include "Utilities/rTime.h"
 #include "cellRtc.h"
 
-//void cellRtc_init();
-//Module cellRtc(0x0009, cellRtc_init);
 Module *cellRtc = nullptr;
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, int years)
@@ -447,8 +445,10 @@ int cellRtcCompareTick(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1)
 	else return CELL_OK;
 }
 
-void cellRtc_init()
+void cellRtc_init(Module *pxThis)
 {
+	cellRtc = pxThis;
+
 	cellRtc->AddFunc(0x9dafc0d9, cellRtcGetCurrentTick);
 	cellRtc->AddFunc(0x32c941cf, cellRtcGetCurrentClock);
 	cellRtc->AddFunc(0x2cce9cf5, cellRtcGetCurrentClockLocalTime);
