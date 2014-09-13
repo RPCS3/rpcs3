@@ -5,14 +5,14 @@
 #include "Emu/IdManager.h"
 #include "Utilities/Log.h"
 
-struct SemaphoreAttribites
+struct SemaphoreAttributes
 {
 	std::string name;
 	u32 count;
 	u32 max_count;
 
-	SemaphoreAttribites() {}
-	SemaphoreAttribites(const std::string& _name, u32 _count, u32 _max_count) : name(_name), count(_count), max_count(_max_count) {}
+	SemaphoreAttributes() {}
+	SemaphoreAttributes(const std::string& _name, u32 _count, u32 _max_count) : name(_name), count(_count), max_count(_max_count) {}
 };
 
 struct LwMutexAttributes
@@ -33,14 +33,14 @@ private:
 	std::map<u32, std::string> m_mutex_name;
 	std::map<u32, std::string> m_lw_cond_name;
 	std::map<u32, LwMutexAttributes> m_lw_mutex_attr;
-	std::map<u32, SemaphoreAttribites> m_semaph_attr;
+	std::map<u32, SemaphoreAttributes> m_semaph_attr;
 
 public:
 
 	// semaphores
 	void AddSemaphoreData(const u32 id, const std::string& name, const u32 count, const u32 max_count)
 	{
-		m_semaph_attr[id] = *(new SemaphoreAttribites(name, count, max_count));
+		m_semaph_attr[id] = *(new SemaphoreAttributes(name, count, max_count));
 	}
 
 	void EraseSemaphoreData(const u32 id)
@@ -48,7 +48,7 @@ public:
 		m_semaph_attr.erase(id);
 	}
 
-	SemaphoreAttribites& GetSemaphoreData(const u32 id)
+	SemaphoreAttributes& GetSemaphoreData(const u32 id)
 	{
 		return m_semaph_attr[id];
 	}
