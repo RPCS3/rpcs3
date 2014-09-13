@@ -3,12 +3,12 @@
 
 class ModuleManager
 {
-	Module* m_modules[3][0xff];
-	uint m_max_module_id;
-	uint m_module_2_count;
+	Module* m_modules[3][0xff];//keep pointer to modules split in 3 categories according to their id
+	uint m_max_module_id; //max index in m_modules[2][], m_modules[1][] and m_modules[0][]
+	uint m_module_2_count; //max index in m_modules[2][]
 	std::mutex m_funcs_lock;
 	std::vector<ModuleFunc *> m_modules_funcs_list;
-	std::vector<Module> m_mod_init;
+	std::vector<Module> m_mod_init; //owner of Module
 	bool initialized;
 public:
 	ModuleManager();
@@ -16,7 +16,7 @@ public:
 
 	void init();
 	void AddFunc(ModuleFunc *func);
-	void SetModule(int id, Module* module, bool with_data);
+	void SetModule(u16 id, Module* module);//insert into m_modules
 	bool IsLoadedFunc(u32 id) const;
 	bool CallFunc(u32 num);
 	bool UnloadFunc(u32 id);

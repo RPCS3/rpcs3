@@ -5,8 +5,6 @@
 
 #include "cellSync2.h"
 
-//void cellSync2_init();
-//Module cellSync2(0x0055, cellSync2_init);
 Module* cellSync2 = nullptr;
 
 #ifdef PRX_DEBUG
@@ -417,8 +415,10 @@ s64 cellSync2QueueGetDepth()
 #endif
 }
 
-void cellSync2_init()
+void cellSync2_init(Module *pxThis)
 {
+	cellSync2 = pxThis;
+
 	cellSync2->AddFunc(0x55836e73, _cellSync2MutexAttributeInitialize);
 	cellSync2->AddFunc(0xd51bfae7, cellSync2MutexEstimateBufferSize);
 	cellSync2->AddFunc(0xeb81a467, cellSync2MutexInitialize);

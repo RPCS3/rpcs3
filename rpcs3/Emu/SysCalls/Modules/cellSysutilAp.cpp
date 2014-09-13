@@ -2,8 +2,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-//void cellSysutilAp_init();
-//Module cellSysutilAp(0x0039, cellSysutilAp_init);
 Module *cellSysutilAp = nullptr;
 
 // Return Codes
@@ -37,8 +35,10 @@ int cellSysutilApOff()
 	return CELL_OK;
 }
 
-void cellSysutilAp_init()
+void cellSysutilAp_init(Module *pxThis)
 {
+	cellSysutilAp = pxThis;
+
 	cellSysutilAp->AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
 	cellSysutilAp->AddFunc(0x3343824c, cellSysutilApOn);
 	cellSysutilAp->AddFunc(0x90c2bb19, cellSysutilApOff);

@@ -6,8 +6,6 @@
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
-//void cellNetCtl_init();
-//Module cellNetCtl(0x0014, cellNetCtl_init);
 Module *cellNetCtl;
 
 struct cellNetCtlInternal
@@ -113,8 +111,10 @@ int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	return CELL_OK;
 }
 
-void cellNetCtl_init()
+void cellNetCtl_init(Module *pxThis)
 {
+	cellNetCtl = pxThis;
+
 	cellNetCtl->AddFunc(0xbd5a59fc, cellNetCtlInit);
 	cellNetCtl->AddFunc(0x105ee2cb, cellNetCtlTerm);
 

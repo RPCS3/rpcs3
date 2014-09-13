@@ -7,8 +7,6 @@
 #include "Emu/FS/vfsFileBase.h"
 #include "cellUserInfo.h"
 
-//void cellUserInfo_init();
-//Module cellUserInfo(0x0032, cellUserInfo_init);
 Module *cellUserInfo = nullptr;
 
 int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
@@ -76,8 +74,10 @@ int cellUserInfoGetList(vm::ptr<be_t<u32>> listNum, vm::ptr<CellUserInfoUserList
 	return CELL_OK;
 }
 
-void cellUserInfo_init()
+void cellUserInfo_init(Module *pxThis)
 {
+	cellUserInfo = pxThis;
+
 	cellUserInfo->AddFunc(0x2b761140, cellUserInfoGetStat);
 	cellUserInfo->AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
 	cellUserInfo->AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);

@@ -10,8 +10,6 @@
 #include "Loader/PSF.h"
 #include "cellGame.h"
 
-//void cellGame_init();
-//Module cellGame(0x003e, cellGame_init);
 Module *cellGame = nullptr;
 
 std::string contentInfo = "";
@@ -471,8 +469,10 @@ int cellGameThemeInstallFromBuffer()
 	return CELL_OK;
 }
 
-void cellGame_init()
+void cellGame_init(Module *pxThis)
 {
+	cellGame = pxThis;
+
 	// (TODO: Disc Exchange functions missing)
 
 	cellGame->AddFunc(0xf52639ea, cellGameBootCheck);
