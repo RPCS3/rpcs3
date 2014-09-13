@@ -42,6 +42,8 @@ s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, id);
 
+	Emu.GetSyncPrimManager().AddSemaphoreData(id, std::string(attr->name, 8), initial_count, max_count);
+
 	return CELL_OK;
 }
 
@@ -61,6 +63,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 	}
 
 	Emu.GetIdManager().RemoveID(sem_id);
+	Emu.GetSyncPrimManager().EraseSemaphoreData(sem_id);
 	return CELL_OK;
 }
 

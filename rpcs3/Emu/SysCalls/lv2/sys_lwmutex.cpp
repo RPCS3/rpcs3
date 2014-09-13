@@ -45,6 +45,8 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	sys_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d",
 		std::string(attr->name, 8).c_str(), (u32) lwmutex->attribute, sq_id);
 
+	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, std::string(attr->name, 8), GetCurrentPPUThread().GetId());
+
 	return CELL_OK;
 }
 
@@ -63,6 +65,7 @@ s32 sys_lwmutex_destroy(vm::ptr<sys_lwmutex_t> lwmutex)
 		lwmutex->attribute = 0xDEADBEEF;
 		lwmutex->sleep_queue = 0;
 		Emu.GetIdManager().RemoveID(sq_id);
+		Emu.GetSyncPrimManager().EraseLwMutexData(sq_id);
 	default: return res;
 	}
 }

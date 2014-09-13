@@ -408,6 +408,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\Static.h" />
+    <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Ini.h" />
