@@ -251,10 +251,12 @@ u32 adecOpen(AudioDecoder* data)
 
 	adec.adecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	adec.adecCb->SetName("Audio Decoder[" + std::to_string(adec_id) + "] Callback");
-	adec.adecCb->SetEntry(0x10000);
+	adec.adecCb->SetEntry(0);
 	adec.adecCb->SetPrio(1001);
 	adec.adecCb->SetStackSize(0x10000);
-	adec.adecCb->Run();
+	adec.adecCb->InitStack();
+	adec.adecCb->InitRegs();
+	adec.adecCb->DoRun();
 
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{

@@ -5,7 +5,7 @@ class CallbackManager
 {
 	std::vector<std::function<s32()>> m_cb_list;
 	std::vector<std::function<void()>> m_async_list;
-	CPUThread* m_cb_thread;
+	PPUThread* m_cb_thread;
 	std::mutex m_mutex;
 
 public:

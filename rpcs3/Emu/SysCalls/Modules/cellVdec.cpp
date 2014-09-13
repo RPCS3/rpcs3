@@ -186,10 +186,12 @@ u32 vdecOpen(VideoDecoder* data)
 
 	vdec.vdecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	vdec.vdecCb->SetName("Video Decoder[" + std::to_string(vdec_id) + "] Callback");
-	vdec.vdecCb->SetEntry(0x10000);
+	vdec.vdecCb->SetEntry(0);
 	vdec.vdecCb->SetPrio(1001);
 	vdec.vdecCb->SetStackSize(0x10000);
-	vdec.vdecCb->Run();
+	vdec.vdecCb->InitStack();
+	vdec.vdecCb->InitRegs();
+	vdec.vdecCb->DoRun();
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{

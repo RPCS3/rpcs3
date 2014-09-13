@@ -299,10 +299,12 @@ u32 dmuxOpen(Demuxer* data)
 
 	dmux.dmuxCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
-	dmux.dmuxCb->SetEntry(0x10000);
+	dmux.dmuxCb->SetEntry(0);
 	dmux.dmuxCb->SetPrio(1001);
 	dmux.dmuxCb->SetStackSize(0x10000);
-	dmux.dmuxCb->Run();
+	dmux.dmuxCb->InitStack();
+	dmux.dmuxCb->InitRegs();
+	dmux.dmuxCb->DoRun();
 
 	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&]()
 	{

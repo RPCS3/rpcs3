@@ -174,7 +174,7 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	default: sys_ppu_thread.Error("sys_ppu_thread_create(): unknown flags value (0x%llx)", flags); return CELL_EPERM;
 	}
 
-	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	*thread_id = new_thread.GetId();
 	new_thread.SetEntry(entry);
@@ -192,6 +192,12 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	{
 		new_thread.Run();
 		new_thread.Exec();
+	}
+	else
+	{
+		new_thread.InitStack();
+		new_thread.InitRegs();
+		new_thread.DoRun();
 	}
 
 	return CELL_OK;

@@ -792,7 +792,6 @@ public:
 	u64 FastCall2(u64 addr, u64 rtoc);
 	void FastStop();
 
-protected:
 	virtual void DoReset() override;
 	virtual void DoRun() override;
 	virtual void DoPause() override;

@@ -287,8 +287,8 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000 && t)
 	{
 		// TODO: allow recovering from a page fault
-		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx (%s))",
-			(u32)addr, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
+		throw fmt::Format("Access violation: addr = 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
+			(u32)addr, t->IsAlive() ? 1 : 0, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
 	}
 	else
 	{

@@ -332,10 +332,12 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 		PPUThread& cb_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		cb_thread.SetName("Surmixer Callback Thread");
-		cb_thread.SetEntry(0x10000);
+		cb_thread.SetEntry(0);
 		cb_thread.SetPrio(1001);
 		cb_thread.SetStackSize(0x10000);
-		cb_thread.Run();
+		cb_thread.InitStack();
+		cb_thread.InitRegs();
+		cb_thread.DoRun();
 
 		while (port.m_is_audio_port_opened)
 		{
