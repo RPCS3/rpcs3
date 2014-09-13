@@ -137,49 +137,11 @@ struct CCellRescInternal
 	bool m_isDummyFlipped;
 	u8 m_cgParamIndex[RESC_PARAM_NUM];
 	u64 m_commandIdxCaF, m_rcvdCmdIdx;
-	u32 s_applicationFlipHandler;
-	u32 s_applicationVBlankHandler;
+	vm::ptr<void(*)(const u32)> s_applicationFlipHandler;
+	vm::ptr<void(*)(const u32)> s_applicationVBlankHandler;
 
 	CCellRescInternal()
 		: m_bInitialized(false)
 	{
 	}
 };
-
-
-CCellRescInternal* s_rescInternalInstance = nullptr;
-
-// Extern Functions
-extern int cellGcmSetFlipMode(u32 mode);
-extern void cellGcmSetFlipHandler(u32 handler_addr);
-extern void cellGcmSetVBlankHandler(u32 handler_addr);
-extern int cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
-extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern int cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
-extern int cellGcmSetSecondVFrequency(u32 freq);
-extern u32 cellGcmGetLabelAddress(u8 index);
-extern u32 cellGcmGetTiledPitchSize(u32 size);
-
-// Local Functions
-int cellRescGetNumColorBuffers(u32 dstMode, u32 palTemporalMode, u32 reserved);
-
-// Help Functions
-inline bool IsPal()            { return s_rescInternalInstance->m_dstMode == CELL_RESC_720x576; }
-inline bool IsPal60Hsync()     { return (IsPal() && s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC); }
-inline bool IsPalDrop()        { return (IsPal() && s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_DROP); }
-inline bool IsPalInterpolate() {
-	return (IsPal() && ((s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE)
-		|| (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_30_DROP)
-		|| (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_INTERPOLATE_DROP_FLEXIBLE)));
-}
-inline bool IsNotPalInterpolate() { return !IsPalInterpolate(); }
-inline bool IsPalTemporal() { return (IsPal() && s_rescInternalInstance->m_initConfig.palTemporalMode != CELL_RESC_PAL_50); }
-inline bool IsNotPalTemporal() { return !IsPalTemporal(); }
-inline bool IsNotPal() { return !IsPal(); }
-inline bool IsGcmFlip()  {
-	return (IsNotPal() || (IsPal() && (s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_50
-		|| s_rescInternalInstance->m_initConfig.palTemporalMode == CELL_RESC_PAL_60_FOR_HSYNC)));
-}
-inline int GetNumColorBuffers(){ return IsPalInterpolate() ? 6 : (IsPalDrop() ? 3 : 2); }
-inline bool IsInterlace()      { return s_rescInternalInstance->m_initConfig.interlaceMode == CELL_RESC_INTERLACE_FILTER; }
-inline bool IsTextureNR()      { return !IsInterlace(); }

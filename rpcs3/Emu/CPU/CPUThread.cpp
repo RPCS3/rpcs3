@@ -283,11 +283,12 @@ void CPUThread::ExecOnce()
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
-	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000)
+	CPUThread* t = GetCurrentCPUThread();
+	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000 && t)
 	{
 		// TODO: allow recovering from a page fault
-		throw fmt::Format("Access violation: addr = 0x%x (last_syscall=0x%llx (%s))",
-			(u32)addr, (u64)GetCurrentCPUThread()->m_last_syscall, SysCalls::GetHLEFuncName((u32)GetCurrentCPUThread()->m_last_syscall).c_str());
+		throw fmt::Format("Access violation: addr = 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
+			(u32)addr, t->IsAlive() ? 1 : 0, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
 	}
 	else
 	{
@@ -317,7 +318,7 @@ void CPUThread::Task()
 	std::vector<u64> trace;
 
 #ifdef _WIN32
-	_set_se_translator(_se_translator);
+	auto old_se_translator = _set_se_translator(_se_translator);
 #else
 	// TODO: linux version
 #endif
@@ -370,48 +371,13 @@ void CPUThread::Task()
 		Emu.Pause();
 	}
 
+#ifdef _WIN32
+	_set_se_translator(old_se_translator);
+#else
+	// TODO: linux version
+#endif
+
 	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
-}
-
-s64 CPUThread::ExecAsCallback(u64 pc, bool wait, u64 a1, u64 a2, u64 a3, u64 a4) // not multithread-safe
-{
-	while (m_alive)
-	{
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(PPU, "ExecAsCallback() aborted");
-			return CELL_ECANCELED; // doesn't mean anything
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-
-	Stop();
-	Reset();
-
-	SetEntry(pc);
-	SetPrio(1001);
-	SetStackSize(0x10000);
-	SetExitStatus(CELL_OK);
-
-	SetArg(0, a1);
-	SetArg(1, a2);
-	SetArg(2, a3);
-	SetArg(3, a4);
-	Run();
-
-	Exec();
-
-	while (wait && m_alive)
-	{
-		if (Emu.IsStopped())
-		{
-			LOG_WARNING(PPU, "ExecAsCallback(wait=%s) aborted", wait ? "true" : "false");
-			return CELL_EABORT; // doesn't mean anything
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-
-	return wait * m_exit_status;
 }

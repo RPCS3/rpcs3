@@ -556,12 +556,17 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 			m_intrtag[2].stat |= 1;
 			if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
 			{
-				if (t->GetType() == CPU_THREAD_PPU && !t->IsAlive())
+				if (t->GetType() == CPU_THREAD_PPU)
 				{
+					if (t->IsAlive())
+					{
+						LOG_ERROR(Log::SPU, "%s(%s): interrupt thread was alive", __FUNCTION__, spu_ch_name[ch]);
+						Emu.Pause();
+						return;
+					}
 					PPUThread& ppu = *(PPUThread*)t;
-					ppu.FastStop();
-					ppu.Run();
-					ppu.FastCall(ppu.PC, ppu.GPR[2], ppu.m_interrupt_arg);
+					ppu.GPR[3] = ppu.m_interrupt_arg;
+					ppu.FastCall2(vm::read32(ppu.entry), vm::read32(ppu.entry + 4));
 				}
 			}
 		}

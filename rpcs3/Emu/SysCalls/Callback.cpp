@@ -1,152 +1,98 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
+#include "ErrorCodes.h"
 #include "Emu/System.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-
 #include "Callback.h"
 
-Callback::Callback(u32 slot, u64 addr)
-	: m_addr(addr)
-	, m_slot(slot)
-	, a1(0)
-	, a2(0)
-	, a3(0)
-	, a4(0)
-	, a5(0)
-	, m_has_data(false)
-	, m_name("Callback")
+void CallbackManager::Register(const std::function<s32()>& func)
 {
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	m_cb_list.push_back(func);
 }
 
-u32 Callback::GetSlot() const
+void CallbackManager::Async(const std::function<void()>& func)
 {
-	return m_slot;
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	m_async_list.push_back(func);
+	m_cb_thread->Notify();
 }
 
-u64 Callback::GetAddr() const
+bool CallbackManager::Check(s32& result)
 {
-	return m_addr;
-}
+	std::function<s32()> func = nullptr;
 
-void Callback::SetSlot(u32 slot)
-{
-	m_slot = slot;
-}
-
-void Callback::SetAddr(u64 addr)
-{
-	m_addr = addr;
-}
-
-bool Callback::HasData() const
-{
-	return m_has_data;
-}
-
-void Callback::Handle(u64 _a1, u64 _a2, u64 _a3, u64 _a4, u64 _a5)
-{
-	a1 = _a1;
-	a2 = _a2;
-	a3 = _a3;
-	a4 = _a4;
-	a5 = _a5;
-	m_has_data = true;
-}
-
-u64 Callback::Branch(bool wait)
-{
-	m_has_data = false;
-
-	static std::mutex cb_mutex;
-
-	CPUThread& thr = Emu.GetCallbackThread();
-
-again:
-
-	while (thr.IsAlive())
 	{
-		if (Emu.IsStopped())
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (m_cb_list.size())
 		{
-			LOG_WARNING(HLE, "Callback::Branch() aborted");
-			return 0;
+			func = m_cb_list[0];
+			m_cb_list.erase(m_cb_list.begin());
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
-
-	std::lock_guard<std::mutex> lock(cb_mutex);
-
-	if (thr.IsAlive())
+	
+	if (func)
 	{
-		goto again;
+		result = func();
+		return true;
 	}
-	if (Emu.IsStopped())
+	else
 	{
-		LOG_WARNING(HLE, "Callback::Branch() aborted");
-		return 0;
+		return false;
 	}
+}
 
-	thr.Stop();
-	thr.Reset();
+void CallbackManager::Init()
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
 
-	thr.SetEntry(m_addr);
-	thr.SetPrio(1001);
-	thr.SetStackSize(0x10000);
-	thr.SetName(m_name);
+	m_cb_thread = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	m_cb_thread->SetName("Callback Thread");
+	m_cb_thread->SetEntry(0);
+	m_cb_thread->SetPrio(1001);
+	m_cb_thread->SetStackSize(0x10000);
+	m_cb_thread->InitStack();
+	m_cb_thread->InitRegs();
+	m_cb_thread->DoRun();
 
-	thr.SetArg(0, a1);
-	thr.SetArg(1, a2);
-	thr.SetArg(2, a3);
-	thr.SetArg(3, a4);
-	thr.Run();
-	((PPUThread&)thr).GPR[7] = a5;
-
-	thr.Exec();
-
-	if (!wait)
+	thread cb_async_thread("CallbackManager::Async() thread", [this]()
 	{
-		return 0;
-	}
+		SetCurrentNamedThread(m_cb_thread);
 
-	while (thr.IsAlive())
-	{
-		if (Emu.IsStopped())
+		while (!Emu.IsStopped())
 		{
-			LOG_WARNING(HLE, "Callback::Branch(true) aborted (end)");
-			return 0;
+			std::function<void()> func = nullptr;
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+
+				if (m_async_list.size())
+				{
+					func = m_async_list[0];
+					m_async_list.erase(m_async_list.begin());
+				}
+			}
+
+			if (func)
+			{
+				func();
+				continue;
+			}
+			m_cb_thread->WaitForAnySignal();
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
+	});
 
-	return thr.GetExitStatus();
+	cb_async_thread.detach();
 }
 
-void Callback::SetName(const std::string& name)
+void CallbackManager::Clear()
 {
-	m_name = name;
-}
+	std::lock_guard<std::mutex> lock(m_mutex);
 
-Callback::operator bool() const
-{
-	return GetAddr() != 0;
-}
-
-Callback2::Callback2(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)
-{
-	a2 = userdata;
-}
-
-void Callback2::Handle(u64 status)
-{
-	Callback::Handle(status, a2, 0);
-}
-
-Callback3::Callback3(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)
-{
-	a3 = userdata;
-}
-
-void Callback3::Handle(u64 status, u64 param)
-{
-	Callback::Handle(status, param, a3);
+	m_cb_list.clear();
+	m_async_list.clear();
 }

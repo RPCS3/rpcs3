@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 extern std::mutex g_mutex_avcodec_open2;
 
@@ -20,7 +21,7 @@ extern "C"
 //Module cellAdec(0x0006, cellAdec_init);
 Module *cellAdec = nullptr;
 
-AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, u32 func, u32 arg)
+AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
 	, memAddr(addr)
 	, memSize(size)
@@ -122,7 +123,7 @@ next:
 				buf_size -= adec.reader.size;
 				res += adec.reader.size;
 
-				adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
+				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
 				adec.job.Pop(adec.task);
 
@@ -244,13 +245,18 @@ u32 adecOpen(AudioDecoder* data)
 {
 	AudioDecoder& adec = *data;
 
-	adec.adecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-
 	u32 adec_id = cellAdec->GetNewId(data);
 
 	adec.id = adec_id;
 
+	adec.adecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	adec.adecCb->SetName("Audio Decoder[" + std::to_string(adec_id) + "] Callback");
+	adec.adecCb->SetEntry(0);
+	adec.adecCb->SetPrio(1001);
+	adec.adecCb->SetStackSize(0x10000);
+	adec.adecCb->InitStack();
+	adec.adecCb->InitRegs();
+	adec.adecCb->DoRun();
 
 	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
 	{
@@ -304,12 +310,7 @@ u32 adecOpen(AudioDecoder* data)
 			{
 				// TODO: finalize
 				cellAdec->Warning("adecEndSeq:");
-
-				/*Callback cb;
-				cb.SetAddr(adec.cbFunc);
-				cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
-				cb.Branch(true); // ???*/
-				adec.adecCb->ExecAsCallback(adec.cbFunc, true, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
+				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
 				adec.is_running = false;
 				adec.just_finished = true;
@@ -446,7 +447,7 @@ u32 adecOpen(AudioDecoder* data)
 						frame.data = nullptr;
 						adec.frames.Push(frame);
 
-						adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+						adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 
 						break;
 					}*/
@@ -538,19 +539,11 @@ u32 adecOpen(AudioDecoder* data)
 						adec.frames.Push(frame);
 						frame.data = nullptr; // to prevent destruction
 
-						/*Callback cb;
-						cb.SetAddr(adec.cbFunc);
-						cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
-						cb.Branch(false);*/
-						adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+						adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 					}
 				}
-						
-				/*Callback cb;
-				cb.SetAddr(adec.cbFunc);
-				cb.Handle(adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
-				cb.Branch(false);*/
-				adec.adecCb->ExecAsCallback(adec.cbFunc, false, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
+
+				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
 			}
 			break;
 
@@ -621,7 +614,7 @@ int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, vm::ptr<CellAdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
 
 	return CELL_OK;
 }
@@ -633,7 +626,7 @@ int cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, vm::ptr<CellAdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
 
 	return CELL_OK;
 }

@@ -222,22 +222,20 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-typedef u32(*CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg_addr);
+typedef u32(*CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
 struct CellDmuxCb
 {
-	// CellDmuxCbMsg callback
-	be_t<u32> cbMsgFunc; 
-	be_t<u32> cbArg_addr;
+	vm::bptr<CellDmuxCbMsg> cbMsgFunc; 
+	be_t<u32> cbArg;
 };
 
-typedef u32(*CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg_addr);
+typedef u32(*CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
 struct CellDmuxEsCb
 {
-	// CellDmuxCbEsMsg callback
-	be_t<u32> cbEsMsgFunc;
-	be_t<u32> cbArg_addr;
+	vm::bptr<CellDmuxCbEsMsg> cbEsMsgFunc;
+	be_t<u32> cbArg;
 };
 
 struct CellDmuxAttr
@@ -413,15 +411,15 @@ public:
 	SQueue<u32, 16> fbSetStream;
 	const u32 memAddr;
 	const u32 memSize;
-	const u32 cbFunc;
+	const vm::ptr<CellDmuxCbMsg> cbFunc;
 	const u32 cbArg;
 	u32 id;
 	volatile bool is_finished;
 	volatile bool is_running;
 
-	CPUThread* dmuxCb;
+	PPUThread* dmuxCb;
 
-	Demuxer(u32 addr, u32 size, u32 func, u32 arg)
+	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
 		: is_finished(false)
 		, is_running(false)
 		, memAddr(addr)
@@ -458,11 +456,11 @@ public:
 	const u32 fidMinor;
 	const u32 sup1;
 	const u32 sup2;
-	const u32 cbFunc;
+	const vm::ptr<CellDmuxCbEsMsg> cbFunc;
 	const u32 cbArg;
 	const u32 spec; //addr
 
-	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, u32 cbFunc, u32 cbArg, u32 spec)
+	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 		: dmux(dmux)
 		, memAddr(a128(addr))
 		, memSize(size - (addr - memAddr))

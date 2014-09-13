@@ -4,6 +4,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "RSXThread.h"
+
+#include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())
@@ -293,8 +295,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			if(m_flip_handler)
 			{
-				m_flip_handler.Handle(1, 0, 0);
-				m_flip_handler.Branch(false);
+				auto cb = m_flip_handler;
+				Emu.GetCallbackManager().Async([cb]()
+				{
+					cb(1);
+				});
 			}
 
 			//Emu.Pause();
@@ -1975,8 +1980,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case GCM_SET_USER_COMMAND:
 	{
 		const u32 cause = ARGS(0);
-		m_user_handler.Handle(cause);
-		m_user_handler.Branch(false);
+		auto cb = m_user_handler;
+		Emu.GetCallbackManager().Async([cb, cause]()
+		{
+			cb(cause);
+		});
 	}
 	break;
 
@@ -2090,21 +2098,11 @@ void RSXThread::Begin(u32 draw_mode)
 	m_draw_mode = draw_mode;
 	m_draw_array_count = 0;
 	m_draw_array_first = ~0;
-
-	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.size())
-	{
-		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0121, 0);
-	}
 }
 
 void RSXThread::End()
 {
 	ExecCMD();
-
-	if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.size())
-	{
-		//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
-	}
 
 	m_indexed_array.Reset();
 	m_fragment_constants.clear();
@@ -2126,7 +2124,7 @@ void RSXThread::Task()
 
 	OnInitThread();
 
-	m_last_flip_time = get_system_time();
+	m_last_flip_time = get_system_time() - 1000000;
 	volatile bool is_vblank_stopped = false;
 
 	thread vblank("VBlank thread", [&]()
@@ -2148,8 +2146,11 @@ void RSXThread::Task()
 				m_vblank_count++;
 				if (m_vblank_handler)
 				{
-					m_vblank_handler.Handle(1);
-					m_vblank_handler.Branch(false);
+					auto cb = m_vblank_handler;
+					Emu.GetCallbackManager().Async([cb]()
+					{
+						cb(1);
+					});
 				}
 				continue;
 			}

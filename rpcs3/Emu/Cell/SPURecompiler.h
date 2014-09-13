@@ -288,7 +288,7 @@ public:
 	const XmmLink& XmmGet(s8 reg, s8 target = -1) // get xmm register with specific SPU reg
 	{
 		assert(reg >= 0);
-		XmmLink* res = nullptr;
+		const XmmLink* res = nullptr;
 		if (reg == target)
 		{
 			for (u32 i = 0; i < 16; i++)
@@ -311,7 +311,7 @@ public:
 		}
 		if (!res)
 		{
-			res = &(XmmLink&)XmmAlloc(target);
+			res = &XmmAlloc(target);
 			/*if (target != res->reg)
 			{
 				c.movdqa(*res->data, cpu_xmm(GPR[reg]));
@@ -327,7 +327,7 @@ public:
 					c.movdqa(*res->data, cpu_xmm(GPR[reg]));
 				}
 			}
-			res->reg = -1; // ???
+			const_cast<XmmLink*>(res)->reg = -1; // ???
 			LOG4_OPCODE("* cached GPR[%d] not found", reg);
 		}
 		return *res;
@@ -335,9 +335,9 @@ public:
 
 	const XmmLink& XmmCopy(const XmmLink& from, s8 pref = -1) // XmmAlloc + mov
 	{
-		XmmLink* res = &(XmmLink&)XmmAlloc(pref);
+		const XmmLink* res = &XmmAlloc(pref);
 		c.movdqa(*res->data, *from.data);
-		res->reg = -1; // ???
+		const_cast<XmmLink*>(res)->reg = -1; // ???
 		LOG4_OPCODE("*");
 		return *res;
 	}

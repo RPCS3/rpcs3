@@ -167,12 +167,12 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
-typedef void(*CellVdecCbMsg)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr);
+typedef u32(*CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information
 struct CellVdecCb
 {
-	be_t<u32> cbFunc;
+	vm::bptr<CellVdecCbMsg> cbFunc;
 	be_t<u32> cbArg;
 };
 
@@ -717,7 +717,7 @@ public:
 	const u32 profile;
 	const u32 memAddr;
 	const u32 memSize;
-	const u32 cbFunc;
+	const vm::ptr<CellVdecCbMsg> cbFunc;
 	const u32 cbArg;
 	u32 memBias;
 
@@ -725,9 +725,9 @@ public:
 	u64 last_pts, first_pts, first_dts;
 	AVRational rfr, afr;
 
-	CPUThread* vdecCb;
+	PPUThread* vdecCb;
 
-	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg);
+	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
 
 	~VideoDecoder();
 };

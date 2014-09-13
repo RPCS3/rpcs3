@@ -1,4 +1,5 @@
 #include "stdafx_gui.h"
+#include "Emu/Memory/Memory.h"
 #include "GLGSFrame.h"
 #include "Utilities/Timer.h"
 

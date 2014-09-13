@@ -456,11 +456,11 @@ int cellGcmSetFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 
-void cellGcmSetFlipHandler(u32 handler_addr)
+void cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)> handler)
 {
-	cellGcmSys->Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
+	cellGcmSys->Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
+	Emu.GetGSManager().GetRender().m_flip_handler = handler;
 }
 
 int cellGcmSetFlipMode(u32 mode)
@@ -596,18 +596,18 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	return CELL_OK;
 }
 
-void cellGcmSetUserHandler(u32 handler_addr)
+void cellGcmSetUserHandler(vm::ptr<void(*)(const u32)> handler)
 {
-	cellGcmSys->Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler_addr);
+	cellGcmSys->Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_user_handler.SetAddr(handler_addr);
+	Emu.GetGSManager().GetRender().m_user_handler = handler;
 }
 
-void cellGcmSetVBlankHandler(u32 handler_addr)
+void cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)> handler)
 {
-	cellGcmSys->Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler_addr);
+	cellGcmSys->Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_vblank_handler.SetAddr(handler_addr);
+	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
 }
 
 int cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)

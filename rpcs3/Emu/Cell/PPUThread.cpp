@@ -61,8 +61,8 @@ void PPUThread::AddArgv(const std::string& arg)
 
 void PPUThread::InitRegs()
 {
-	const u32 pc = vm::read32(entry);
-	const u32 rtoc = vm::read32(entry + 4);
+	const u32 pc = entry ? vm::read32(entry) : 0;
+	const u32 rtoc = entry ? vm::read32(entry + 4) : 0;
 
 	//ConLog.Write("entry = 0x%x", entry);
 	//ConLog.Write("rtoc = 0x%x", rtoc);
@@ -222,24 +222,11 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
 }
 
-u64 PPUThread::FastCall(u64 addr, u64 rtoc, u64 arg1, u64 arg2, u64 arg3, u64 arg4, u64 arg5, u64 arg6, u64 arg7, u64 arg8)
-{
-	GPR[3] = arg1;
-	GPR[4] = arg2;
-	GPR[5] = arg3;
-	GPR[6] = arg4;
-	GPR[7] = arg5;
-	GPR[8] = arg6;
-	GPR[9] = arg7;
-	GPR[10] = arg8;
-	
-	return FastCall2(addr, rtoc);
-}
-
 u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
+	auto old_stack = GPR[1]; // only saved and restored (may be wrong)
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
 	auto old_thread = GetCurrentNamedThread();
@@ -254,6 +241,7 @@ u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
 
 	m_status = old_status;
 	PC = old_PC;
+	GPR[1] = old_stack;
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);

@@ -43,7 +43,6 @@ Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
 	, m_rsx_callback(0)
-	, m_ppu_callback_thr(0)
 	, m_thread_manager(new CPUThreadManager())
 	, m_pad_manager(new PadManager())
 	, m_keyboard_manager(new KeyboardManager())
@@ -336,8 +335,6 @@ void Emulator::Load()
 
 	case MACHINE_PPC64:
 	{
-		m_ppu_callback_thr = &GetCPU().AddThread(CPU_THREAD_PPU);
-
 		thread.SetEntry(l.GetEntry());
 		Memory.StackMem.AllocAlign(0x1000);
 		thread.InitStack();
@@ -375,6 +372,8 @@ void Emulator::Load()
 	break;
 	}
 
+	m_status = Ready;
+
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 	GetAudioManager().Init();
@@ -382,7 +381,6 @@ void Emulator::Load()
 
 	thread.Run();
 
-	m_status = Ready;
 	SendDbgCommand(DID_READY_EMU);
 }
 

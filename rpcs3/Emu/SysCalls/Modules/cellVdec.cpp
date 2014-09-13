@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Callback.h"
 
 std::mutex g_mutex_avcodec_open2;
 
@@ -20,7 +21,7 @@ extern "C"
 //Module cellVdec(0x0005, cellVdec_init);
 Module *cellVdec = nullptr;
 
-VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
+VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 	: type(type)
 	, profile(profile)
 	, memAddr(addr)
@@ -122,11 +123,7 @@ next:
 				buf_size -= vdec.reader.size;
 				res += vdec.reader.size;
 
-				/*Callback cb;
-				cb.SetAddr(vdec.cbFunc);
-				cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
-				cb.Branch(false);*/
-				vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 
 				vdec.job.Pop(vdec.task);
 
@@ -183,13 +180,18 @@ u32 vdecOpen(VideoDecoder* data)
 {
 	VideoDecoder& vdec = *data;
 
-	vdec.vdecCb = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-
 	u32 vdec_id = cellVdec->GetNewId(data);
 
 	vdec.id = vdec_id;
 
+	vdec.vdecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 	vdec.vdecCb->SetName("Video Decoder[" + std::to_string(vdec_id) + "] Callback");
+	vdec.vdecCb->SetEntry(0);
+	vdec.vdecCb->SetPrio(1001);
+	vdec.vdecCb->SetStackSize(0x10000);
+	vdec.vdecCb->InitStack();
+	vdec.vdecCb->InitRegs();
+	vdec.vdecCb->DoRun();
 
 	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
 	{
@@ -240,11 +242,7 @@ u32 vdecOpen(VideoDecoder* data)
 				// TODO: finalize
 				cellVdec->Warning("vdecEndSeq:");
 
-				vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
-				/*Callback cb;
-				cb.SetAddr(vdec.cbFunc);
-				cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
-				cb.Branch(true); // ???*/
+				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 
 				vdec.is_running = false;
 				vdec.just_finished = true;
@@ -439,19 +437,11 @@ u32 vdecOpen(VideoDecoder* data)
 						vdec.frames.Push(frame); // !!!!!!!!
 						frame.data = nullptr; // to prevent destruction
 
-						vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
-						/*Callback cb;
-						cb.SetAddr(vdec.cbFunc);
-						cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
-						cb.Branch(false);*/
+						vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
 					}
 				}
 
-				vdec.vdecCb->ExecAsCallback(vdec.cbFunc, false, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
-				/*Callback cb;
-				cb.SetAddr(vdec.cbFunc);
-				cb.Handle(vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
-				cb.Branch(false);*/
+				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 			}
 			break;
 
@@ -501,7 +491,7 @@ int cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResourc
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
 
-	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, vm::ptr<CellVdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
 
 	return CELL_OK;
 }
@@ -511,7 +501,7 @@ int cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecRes
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
 
-	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, vm::ptr<CellVdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
 
 	return CELL_OK;
 }

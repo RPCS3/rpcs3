@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
 #include "GSManager.h"

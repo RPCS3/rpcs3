@@ -1210,5 +1210,11 @@
     <ClInclude Include="define_new_memleakdetect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellPng.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\CB_FUNC.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
