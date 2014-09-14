@@ -2,9 +2,6 @@
 
 bool SM_IsAborted();
 void SM_Sleep();
-size_t SM_GetCurrentThreadId();
-u32 SM_GetCurrentCPUThreadId();
-be_t<u32> SM_GetCurrentCPUThreadIdBE();
 
 enum SMutexResult
 {
@@ -134,44 +131,5 @@ public:
 	}
 };
 
-template<typename T, typename Tid, Tid (get_tid)()>
-class SMutexLockerBase
-{
-	T& sm;
-public:
-	const Tid tid;
-
-	__forceinline SMutexLockerBase(T& _sm)
-		: sm(_sm)
-		, tid(get_tid())
-	{
-		if (!tid)
-		{
-			if (!SM_IsAborted())
-			{
-				assert(!"SMutexLockerBase: thread id == 0");
-			}
-			return;
-		}
-		sm.lock(tid);
-	}
-
-	__forceinline ~SMutexLockerBase()
-	{
-		if (tid) sm.unlock(tid);
-	}
-};
-
-typedef SMutexBase<size_t>
-	SMutexGeneral;
 typedef SMutexBase<u32>
 	SMutex;
-typedef SMutexBase<be_t<u32>>
-	SMutexBE;
-
-typedef SMutexLockerBase<SMutexGeneral, size_t, SM_GetCurrentThreadId>
-	SMutexGeneralLocker;
-typedef SMutexLockerBase<SMutex, u32, SM_GetCurrentCPUThreadId>
-	SMutexLocker;
-typedef SMutexLockerBase<SMutexBE, be_t<u32>, SM_GetCurrentCPUThreadIdBE>
-	SMutexBELocker;

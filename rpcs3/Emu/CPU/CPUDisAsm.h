@@ -41,7 +41,7 @@ protected:
 
 public:
 	std::string last_opcode;
-	u64 dump_pc;
+	u32 dump_pc;
 	u8* offset;
 
 protected:

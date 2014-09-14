@@ -43,7 +43,7 @@ namespace vm
 			{
 				Memory.Free(m_addr);
 				m_addr = 0;
-				m_ptr = vm::get_ptr<T>(0);
+				m_ptr = vm::get_ptr<T>(0u);
 			}
 		}
 		
@@ -364,7 +364,7 @@ namespace vm
 			{
 				Memory.Free(m_addr);
 				m_addr = 0;
-				m_ptr = vm::get_ptr<T>(0);
+				m_ptr = vm::get_ptr<T>(0u);
 			}
 		}
 

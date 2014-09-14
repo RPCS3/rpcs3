@@ -33,6 +33,6 @@ s32 sys_tty_write(s32 ch, vm::ptr<const void> buf, u32 len, vm::ptr<u32> pwritel
 		LOG_ERROR(TTY, "%s", data.c_str());
 	}
 		
-	*pwritelen = data.size();
+	*pwritelen = (u32)data.size();
 	return CELL_OK;
 }

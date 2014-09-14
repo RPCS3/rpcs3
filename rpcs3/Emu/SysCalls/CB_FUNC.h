@@ -108,7 +108,16 @@ namespace cb_detail
 	template<>
 	struct _func_res<u128>
 	{
-		__forceinline static u128 get_value(const PPUThread& CPU)
+		__forceinline static const u128 get_value(const PPUThread& CPU)
+		{
+			return CPU.VPR[2];
+		}
+	};
+
+	template<>
+	struct _func_res<const u128>
+	{
+		__forceinline static const u128 get_value(const PPUThread& CPU)
 		{
 			return CPU.VPR[2];
 		}

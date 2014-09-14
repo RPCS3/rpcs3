@@ -72,11 +72,11 @@ private:
 
 		if(Ini.HLELogging.GetValue())
 		{
-			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%llx",
+			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%x",
 				sc, SysCalls::GetHLEFuncName((u32)sc).c_str(), CPU.GPR[3], CPU.PC);
 		}
 #ifdef HLE_CALL_DEBUG
-		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%llx", sc, CPU.GPR[3], CPU.PC);
+		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%x", sc, CPU.GPR[3], CPU.PC);
 #endif
 
 		CPU.m_last_syscall = old_sc;
@@ -2081,7 +2081,7 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
-			const u64 nextLR = CPU.PC + 4;
+			const u32 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd), lk);
 			if(lk) CPU.LR = nextLR;
 		}
@@ -2096,7 +2096,7 @@ private:
 			Emu.GetSFuncManager().StaticExecute((u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%llx",
+				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
 					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
@@ -2107,7 +2107,7 @@ private:
 	}
 	void B(s32 ll, u32 aa, u32 lk)
 	{
-		const u64 nextLR = CPU.PC + 4;
+		const u32 nextLR = CPU.PC + 4;
 		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, ll), lk);
 		if(lk) CPU.LR = nextLR;
 	}
@@ -2119,8 +2119,8 @@ private:
 	{
 		if (CheckCondition(bo, bi))
 		{
-			const u64 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, CPU.LR), true);
+			const u32 nextLR = CPU.PC + 4;
+			CPU.SetBranch(branchTarget(0, (u32)CPU.LR), true);
 			if(lk) CPU.LR = nextLR;
 		}
 	}
@@ -2172,8 +2172,8 @@ private:
 	{
 		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
 		{
-			const u64 nextLR = CPU.PC + 4;
-			CPU.SetBranch(branchTarget(0, CPU.CTR), true);
+			const u32 nextLR = CPU.PC + 4;
+			CPU.SetBranch(branchTarget(0, (u32)CPU.CTR), true);
 			if(lk) CPU.LR = nextLR;
 		}
 	}	
@@ -2944,10 +2944,10 @@ private:
 	void LVLX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		const u8 eb = addr & 0xf;
+		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3043,9 +3043,9 @@ private:
 	void STVLX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		const u8 eb = addr & 0xf;
+		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16 - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3113,10 +3113,10 @@ private:
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		const u8 eb = addr & 0xf;
+		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16 - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(addr + i);
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3195,9 +3195,9 @@ private:
 	void STVLXL(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		const u8 eb = addr & 0xf;
+		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16 - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(addr + i, CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3983,7 +3983,7 @@ private:
 
 	void UNK(const std::string& err, bool pause = true)
 	{
-		LOG_ERROR(PPU, err + fmt::Format(" #pc: 0x%llx", CPU.PC));
+		LOG_ERROR(PPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
 
 		if(!pause) return;
 

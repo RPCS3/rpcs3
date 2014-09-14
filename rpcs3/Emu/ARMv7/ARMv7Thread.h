@@ -74,13 +74,12 @@ public:
 			return GPR[n];
 		}
 		
-		return (u32)PC;
+		return PC;
 	}
 
 public:
 	virtual void InitRegs(); 
 	virtual void InitStack();
-	virtual u64 GetFreeStackSize() const;
 	virtual void SetArg(const uint pos, const u64 arg);
 
 public:

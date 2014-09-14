@@ -34,7 +34,7 @@ void xor_(unsigned char *dest, unsigned char *src1, unsigned char *src2, int siz
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str)
 {
-	u32 length = strlen(hex_str);
+	u32 length = (u32)strlen(hex_str);
 	u64 tmp = 0;
 	u64 result = 0;
 	char c;
@@ -58,7 +58,7 @@ u64 hex_to_u64(const char* hex_str)
 
 void hex_to_bytes(unsigned char *data, const char *hex_str)
 {
-	u32 str_length = strlen(hex_str);
+	u32 str_length = (u32)strlen(hex_str);
 	u32 data_length = str_length / 2;
 	char tmp_buf[3] = {0, 0, 0};
 

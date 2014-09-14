@@ -16,7 +16,6 @@ PPCThread* GetCurrentPPCThread()
 
 PPCThread::PPCThread(CPUThreadType type) : CPUThread(type)
 {
-	memset(m_args, 0, sizeof(m_args));
 }
 
 PPCThread::~PPCThread()
@@ -31,9 +30,7 @@ void PPCThread::InitStack()
 {
 	if(m_stack_addr) return;
 	if(m_stack_size == 0) m_stack_size = 0x10000;
-	m_stack_addr = Memory.StackMem.AllocAlign(m_stack_size, 0x100);
-
-	m_stack_point = m_stack_addr + m_stack_size;
+	m_stack_addr = (u32)Memory.StackMem.AllocAlign(m_stack_size, 0x100);
 	/*
 	m_stack_point += m_stack_size - 0x10;
 	m_stack_point &= -0x10;

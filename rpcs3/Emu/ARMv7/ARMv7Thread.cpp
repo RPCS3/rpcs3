@@ -18,7 +18,7 @@ void ARMv7Thread::InitRegs()
 	memset(GPR, 0, sizeof(GPR[0]) * 15);
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
-	SP = (u32)m_stack_point;
+	SP = m_stack_addr + m_stack_size;
 }
 
 void ARMv7Thread::InitStack()
@@ -26,15 +26,8 @@ void ARMv7Thread::InitStack()
 	if(!m_stack_addr)
 	{
 		m_stack_size = 0x10000;
-		m_stack_addr = Memory.Alloc(0x10000, 1);
+		m_stack_addr = (u32)Memory.Alloc(0x10000, 1);
 	}
-
-	m_stack_point = m_stack_addr + m_stack_size;
-}
-
-u64 ARMv7Thread::GetFreeStackSize() const
-{
-	return SP - GetStackAddr();
 }
 
 void ARMv7Thread::SetArg(const uint pos, const u64 arg)

@@ -783,13 +783,10 @@ public:
 		return false;
 	}
 
-	virtual void AddArgv(const std::string& arg) override;
-
 public:
-	virtual void InitRegs(); 
-	virtual u64 GetFreeStackSize() const;
+	virtual void InitRegs();
 	u64 GetStackArg(s32 i);
-	u64 FastCall2(u64 addr, u64 rtoc);
+	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
 
 	virtual void DoReset() override;

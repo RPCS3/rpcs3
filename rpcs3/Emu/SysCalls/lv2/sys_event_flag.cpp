@@ -113,12 +113,13 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
 	{
-		SMutexLocker lock(ef->m_mutex);
+		ef->m_mutex.lock(tid);
 		if (ef->m_type == SYS_SYNC_WAITER_SINGLE && ef->waiters.size() > 0)
 		{
+			ef->m_mutex.unlock(tid);
 			return CELL_EPERM;
 		}
 		EventFlagWaiter rec;
@@ -144,8 +145,10 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 
 			if (result) *result = flags;
 
+			ef->m_mutex.unlock(tid);
 			return CELL_OK;
 		}
+		ef->m_mutex.unlock(tid);
 	}
 
 	u64 counter = 0;
@@ -155,8 +158,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 	{
 		if (ef->signal.unlock(tid, tid) == SMR_OK)
 		{
-			SMutexLocker lock(ef->m_mutex);
-
+			ef->m_mutex.lock(tid);
 			u64 flags = ef->flags;
 
 			for (u32 i = 0; i < ef->waiters.size(); i++)
@@ -187,11 +189,13 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 
 					if (result) *result = flags;
 
+					ef->m_mutex.unlock(tid);
 					return CELL_OK;
 				}
 			}
 
 			ef->signal.unlock(tid);
+			ef->m_mutex.unlock(tid);
 			return CELL_ECANCELED;
 		}
 
@@ -199,7 +203,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 
 		if (counter++ > max_counter)
 		{
-			SMutexLocker lock(ef->m_mutex);
+			ef->m_mutex.lock(tid);
 
 			for (u32 i = 0; i < ef->waiters.size(); i++)
 			{
@@ -210,6 +214,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 				}
 			}
 
+			ef->m_mutex.unlock(tid);
 			return CELL_ETIMEDOUT;
 		}
 		if (Emu.IsStopped())
@@ -245,7 +250,8 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	SMutexLocker lock(ef->m_mutex);
+	const u32 tid = GetCurrentPPUThread().GetId();
+	ef->m_mutex.lock(tid);
 
 	u64 flags = ef->flags;
 
@@ -263,9 +269,11 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>
 
 		if (result) *result = flags;
 
+		ef->m_mutex.unlock(tid);
 		return CELL_OK;
 	}
 
+	ef->m_mutex.unlock(tid);
 	return CELL_EBUSY;
 }
 
@@ -301,9 +309,10 @@ s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	SMutexLocker lock(ef->m_mutex);
+	const u32 tid = GetCurrentPPUThread().GetId();
+	ef->m_mutex.lock(tid);
 	ef->flags &= bitptn;
-
+	ef->m_mutex.unlock(tid);
 	return CELL_OK;
 }
 
@@ -316,14 +325,17 @@ s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num)
 
 	std::vector<u32> tids;
 
+	const u32 tid = GetCurrentPPUThread().GetId();
+
 	{
-		SMutexLocker lock(ef->m_mutex);
+		ef->m_mutex.lock(tid);
 		tids.resize(ef->waiters.size());
 		for (u32 i = 0; i < ef->waiters.size(); i++)
 		{
 			tids[i] = ef->waiters[i].tid;
 		}
 		ef->waiters.clear();
+		ef->m_mutex.unlock(tid);
 	}
 
 	for (u32 i = 0; i < tids.size(); i++)
@@ -349,8 +361,9 @@ s32 sys_event_flag_get(u32 eflag_id, vm::ptr<be_t<u64>> flags)
 	EventFlag* ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
-	SMutexLocker lock(ef->m_mutex);
+	const u32 tid = GetCurrentPPUThread().GetId();
+	ef->m_mutex.lock(tid);
 	*flags = ef->flags;
-
+	ef->m_mutex.unlock(tid);
 	return CELL_OK;
 }

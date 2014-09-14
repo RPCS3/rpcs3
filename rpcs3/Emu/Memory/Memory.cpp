@@ -299,7 +299,7 @@ void MemoryBlock::Init()
 	range_start = 0;
 	range_size = 0;
 
-	mem = vm::get_ptr<u8>(0);
+	mem = vm::get_ptr<u8>(0u);
 }
 
 void MemoryBlock::InitMemory()

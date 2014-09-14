@@ -1,7 +1,7 @@
 #pragma once
 #include "Loader.h"
 
-class vfsStream;
+struct vfsStream;
 
 enum ElfClass
 {

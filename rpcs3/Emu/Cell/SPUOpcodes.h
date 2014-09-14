@@ -229,7 +229,7 @@ namespace SPU_opcodes
 class SPUOpcodes
 {
 public:
-	static u32 branchTarget(const u64 pc, const s32 imm)
+	static u32 branchTarget(const u32 pc, const s32 imm)
 	{
 		return (pc + (imm << 2)) & 0x3fffc;
 	}

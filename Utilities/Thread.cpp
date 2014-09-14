@@ -12,7 +12,27 @@ NamedThreadBase* GetCurrentNamedThread()
 
 void SetCurrentNamedThread(NamedThreadBase* value)
 {
-	g_tls_this_thread = value;
+	auto old_value = g_tls_this_thread;
+
+	if (old_value == value)
+	{
+		return;
+	}
+
+	if (value && value->m_tls_assigned.exchange(true))
+	{
+		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", value->GetThreadName().c_str());
+		g_tls_this_thread = nullptr;
+	}
+	else
+	{
+		g_tls_this_thread = value;
+	}
+
+	if (old_value)
+	{
+		old_value->m_tls_assigned = false;
+	}
 }
 
 std::string NamedThreadBase::GetThreadName() const
@@ -73,14 +93,15 @@ void ThreadBase::Start()
 		}
 		catch (const char* e)
 		{
-			LOG_ERROR(HLE, "%s: %s", GetThreadName().c_str(), e);
+			LOG_ERROR(GENERAL, "%s: %s", GetThreadName().c_str(), e);
 		}
 		catch (const std::string& e)
 		{
-			LOG_ERROR(HLE, "%s: %s", GetThreadName().c_str(), e.c_str());
+			LOG_ERROR(GENERAL, "%s: %s", GetThreadName().c_str(), e.c_str());
 		}
 
 		m_alive = false;
+		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 	});
 }
@@ -160,13 +181,14 @@ void thread::start(std::function<void()> func)
 		}
 		catch (const char* e)
 		{
-			LOG_ERROR(HLE, "%s: %s", name.c_str(), e);
+			LOG_ERROR(GENERAL, "%s: %s", name.c_str(), e);
 		}
 		catch (const std::string& e)
 		{
-			LOG_ERROR(HLE, "%s: %s", name.c_str(), e.c_str());
+			LOG_ERROR(GENERAL, "%s: %s", name.c_str(), e.c_str());
 		}
 
+		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 	});
 }

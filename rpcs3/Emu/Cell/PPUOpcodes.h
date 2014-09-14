@@ -451,7 +451,7 @@ namespace PPU_opcodes
 class PPUOpcodes
 {
 public:
-	static u64 branchTarget(const u64 pc, const u64 imm)
+	static u32 branchTarget(const u32 pc, const u32 imm)
 	{
 		return pc + (imm & ~0x3ULL);
 	}

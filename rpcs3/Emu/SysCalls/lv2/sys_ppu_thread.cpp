@@ -178,7 +178,6 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 
 	*thread_id = new_thread.GetId();
 	new_thread.SetEntry(entry);
-	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
 	//new_thread.flags = flags;
@@ -191,6 +190,7 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	if (!is_interrupt)
 	{
 		new_thread.Run();
+		new_thread.GPR[3] = arg;
 		new_thread.Exec();
 	}
 	else

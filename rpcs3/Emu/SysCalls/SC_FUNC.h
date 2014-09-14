@@ -92,7 +92,16 @@ namespace detail
 	template<>
 	struct bind_result<u128>
 	{
-		static __forceinline void func(PPUThread& CPU, u128 result)
+		static __forceinline void func(PPUThread& CPU, const u128 result)
+		{
+			CPU.VPR[2] = result;
+		}
+	};
+
+	template<>
+	struct bind_result<const u128>
+	{
+		static __forceinline void func(PPUThread& CPU, const u128 result)
 		{
 			CPU.VPR[2] = result;
 		}

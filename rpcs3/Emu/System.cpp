@@ -333,16 +333,11 @@ void Emulator::Load()
 		LOG_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
 		thread.SetOffset(Memory.MainMem.GetStartAddr());
 		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
+		thread.Run();
 	break;
 
 	case MACHINE_PPC64:
 	{
-		thread.SetEntry(l.GetEntry());
-		Memory.StackMem.AllocAlign(0x1000);
-		thread.InitStack();
-		thread.AddArgv(m_elf_path); // it doesn't work
-		//thread.AddArgv("-emu");
-
 		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
 		vm::write32(m_rsx_callback - 4, m_rsx_callback);
 
@@ -366,11 +361,29 @@ void Emulator::Load()
 		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 
 		vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+
+		thread.SetEntry(l.GetEntry());
+		thread.SetStackSize(0x10000);
+		thread.SetPrio(0x50);
+		thread.Run();
+
+		u32 arg1 = Memory.MainMem.AllocAlign(m_elf_path.size() + 1 + 0x20, 0x10) + 0x20;
+		memcpy(vm::get_ptr<char>(arg1), m_elf_path.c_str(), m_elf_path.size() + 1);
+		u32 argv = arg1 - 0x20;
+		vm::write64(argv, arg1);
+
+		static_cast<PPUThread&>(thread).GPR[3] = 1; // arg count
+		static_cast<PPUThread&>(thread).GPR[4] = argv; // probably, args**
+		static_cast<PPUThread&>(thread).GPR[5] = argv + 0x10; // unknown
+		static_cast<PPUThread&>(thread).GPR[6] = 0; // unknown
+		static_cast<PPUThread&>(thread).GPR[12] = Emu.GetMallocPageSize(); // ???
+		//thread.AddArgv("-emu");
 	}
 	break;
 
 	default:
 		thread.SetEntry(l.GetEntry());
+		thread.Run();
 	break;
 	}
 
@@ -380,8 +393,6 @@ void Emulator::Load()
 	GetCallbackManager().Init();
 	GetAudioManager().Init();
 	GetEventManager().Init();
-
-	thread.Run();
 
 	SendDbgCommand(DID_READY_EMU);
 }

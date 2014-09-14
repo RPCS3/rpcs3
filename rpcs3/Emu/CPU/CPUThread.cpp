@@ -11,7 +11,7 @@
 
 CPUThread* GetCurrentCPUThread()
 {
-	return (CPUThread*)GetCurrentNamedThread();
+	return dynamic_cast<CPUThread*>(GetCurrentNamedThread());
 }
 
 CPUThread::CPUThread(CPUThreadType type)
@@ -75,7 +75,6 @@ void CPUThread::CloseStack()
 	}
 
 	m_stack_size = 0;
-	m_stack_point = 0;
 }
 
 void CPUThread::SetId(const u32 id)
@@ -131,7 +130,7 @@ int CPUThread::ThreadStatus()
 	return CPUThread_Running;
 }
 
-void CPUThread::SetEntry(const u64 pc)
+void CPUThread::SetEntry(const u32 pc)
 {
 	entry = pc;
 }
@@ -150,7 +149,7 @@ void CPUThread::NextPc(u8 instr_size)
 	}
 }
 
-void CPUThread::SetBranch(const u64 pc, bool record_branch)
+void CPUThread::SetBranch(const u32 pc, bool record_branch)
 {
 	m_is_branch = true;
 	nPC = pc;
@@ -159,7 +158,7 @@ void CPUThread::SetBranch(const u64 pc, bool record_branch)
 		CallStackBranch(pc);
 }
 
-void CPUThread::SetPc(const u64 pc)
+void CPUThread::SetPc(const u32 pc)
 {
 	PC = pc;
 }

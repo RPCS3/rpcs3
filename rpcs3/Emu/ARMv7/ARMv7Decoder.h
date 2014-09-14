@@ -18,11 +18,11 @@ public:
 		return imm << 1;
 	}
 
-	virtual u8 DecodeMemory(const u64 address)
+	virtual u8 DecodeMemory(const u32 address)
 	{
 		using namespace ARMv7_opcodes;
-		const u16 code0 = vm::psv::read16((u32)address);
-		const u16 code1 = vm::psv::read16((u32)address + 2);
+		const u16 code0 = vm::psv::read16(address);
+		const u16 code1 = vm::psv::read16(address + 2);
 
 		switch(code0 >> 12) //15 - 12
 		{
