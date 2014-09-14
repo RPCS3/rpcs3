@@ -2530,7 +2530,7 @@ private:
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd] = vm::read128((u64)(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL));
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2706,7 +2706,7 @@ private:
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((u64)(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]);
+		vm::write128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL), CPU.VPR[vs]);
 	}
 	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2804,7 +2804,7 @@ private:
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd] = vm::read128((u64)(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
+		CPU.VPR[vd] = vm::read128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL));
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
@@ -2905,7 +2905,7 @@ private:
 	}
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((u64)(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL, CPU.VPR[vs]);
+		vm::write128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL), CPU.VPR[vs]);
 	}
 	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
