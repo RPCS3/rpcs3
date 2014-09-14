@@ -63,6 +63,7 @@ s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> a
 	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		std::string(attr->name, 8).c_str(), (u32) attr->protocol, (is_recursive ? "true" : "false"), id);
 
+	Emu.GetSyncPrimManager().AddSyncPrimData(TYPE_MUTEX, id, std::string(attr->name, 8));
 	// TODO: unlock mutex when owner thread does exit
 
 	return CELL_OK;
@@ -98,6 +99,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 	mutex->m_mutex.unlock(tid, ~0);
 	Emu.GetIdManager().RemoveID(mutex_id);
+	Emu.GetSyncPrimManager().EraseSyncPrimData(TYPE_MUTEX, mutex_id);
 	return CELL_OK;
 }
 

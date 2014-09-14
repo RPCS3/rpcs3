@@ -54,6 +54,7 @@ Emulator::Emulator()
 	, m_event_manager(new EventManager())
 	, m_sfunc_manager(new StaticFuncManager())
 	, m_module_manager(new ModuleManager())
+	, m_sync_prim_manager(new SyncPrimManager())
 	, m_vfs(new VFS())
 {
 }
@@ -71,6 +72,7 @@ Emulator::~Emulator()
 	delete m_event_manager;
 	delete m_sfunc_manager;
 	delete m_module_manager;
+	delete m_sync_prim_manager;
 	delete m_vfs;
 }
 
@@ -480,6 +482,7 @@ void Emulator::Stop()
 	GetCallbackManager().Clear();
 	GetModuleManager().UnloadModules();
 	GetSFuncManager().StaticFinalize();
+	GetSyncPrimManager().Close();
 
 	CurGameInfo.Reset();
 	Memory.Close();

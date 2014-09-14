@@ -1216,5 +1216,8 @@
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
+      <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

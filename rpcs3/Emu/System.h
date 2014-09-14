@@ -1,5 +1,7 @@
 #pragma once
+
 #include "Loader/Loader.h"
+#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 enum Status
 {
@@ -21,6 +23,7 @@ class CPUThread;
 class EventManager;
 class ModuleManager;
 class StaticFuncManager;
+class SyncPrimManager;
 struct VFS;
 
 struct EmuInfo
@@ -99,6 +102,7 @@ class Emulator
 	EventManager* m_event_manager;
 	StaticFuncManager* m_sfunc_manager;
 	ModuleManager* m_module_manager;
+	SyncPrimManager* m_sync_prim_manager;
 	VFS* m_vfs;
 
 	EmuInfo m_info;
@@ -133,6 +137,7 @@ public:
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
+	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
 
 	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
 	{

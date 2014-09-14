@@ -21,6 +21,8 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 	sys_lwcond.Warning("*** lwcond created [%s] (lwmutex_addr=0x%x): id = %d", 
 		std::string(attr->name, 8).c_str(), lwmutex.addr(), (u32) lwcond->lwcond_queue);
 
+	Emu.GetSyncPrimManager().AddSyncPrimData(TYPE_LWCOND, id, std::string(attr->name, 8));
+
 	return CELL_OK;
 }
 
@@ -42,6 +44,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 	}
 
 	Emu.GetIdManager().RemoveID(id);
+	Emu.GetSyncPrimManager().EraseSyncPrimData(TYPE_LWCOND, id);
 	return CELL_OK;
 }
 

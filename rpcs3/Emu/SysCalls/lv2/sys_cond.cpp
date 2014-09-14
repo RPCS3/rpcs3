@@ -36,6 +36,7 @@ s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_a
 	*cond_id = id;
 	mutex->cond_count++;
 	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
+	Emu.GetSyncPrimManager().AddSyncPrimData(TYPE_COND, id, std::string(attr->name, 8));
 
 	return CELL_OK;
 }
@@ -57,6 +58,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 	cond->mutex->cond_count--;
 	Emu.GetIdManager().RemoveID(cond_id);
+	Emu.GetSyncPrimManager().EraseSyncPrimData(TYPE_COND, cond_id);
 	return CELL_OK;
 }
 
