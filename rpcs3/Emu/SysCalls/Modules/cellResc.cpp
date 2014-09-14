@@ -1249,8 +1249,10 @@ int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 }
 
 
-void cellResc_init()
+void cellResc_init(Module *pxThis)
 {
+	cellResc = pxThis;
+
 	cellResc->AddFunc(0x25c107e6, cellRescSetConvertAndFlip);
 	cellResc->AddFunc(0x0d3c22ce, cellRescSetWaitFlip);
 	cellResc->AddFunc(0x2ea94661, cellRescSetFlipHandler);

@@ -5,8 +5,6 @@
 #include "Emu/Cell/SPURSManager.h"
 #include "cellSpurs.h"
 
-//void cellSpurs_init();
-//Module cellSpurs(0x000a, cellSpurs_init);
 Module *cellSpurs = nullptr;
 
 #ifdef PRX_DEBUG
@@ -1559,8 +1557,10 @@ s64 cellSpursSemaphoreGetTasksetAddress()
 #endif
 }
 
-void cellSpurs_init()
+void cellSpurs_init(Module *pxThis)
 {
+	cellSpurs = pxThis;
+
 	// Core 
 	REG_FUNC(cellSpurs, cellSpursInitialize);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute);

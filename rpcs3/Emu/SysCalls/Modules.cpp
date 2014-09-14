@@ -22,35 +22,14 @@ u32 getFunctionId(const char* name)
 	return (u32&)output[0];
 }
 
-Module::Module(u16 id, const char* name)
+Module::Module(u16 id, const char* name, void(*load)(), void(*unload)())
 	: m_is_loaded(false)
 	, m_name(name)
-	, m_id(id)
-	, m_load_func(nullptr)
-	, m_unload_func(nullptr)
-{
-	Emu.GetModuleManager().SetModule(m_id, this, false);
-}
-
-Module::Module(const char* name, void (*init)(), void (*load)(), void (*unload)())
-	: m_is_loaded(false)
-	, m_name(name)
-	, m_id(-1)
-	, m_load_func(load)
-	, m_unload_func(unload)
-{
-	Emu.GetModuleManager().SetModule(m_id, this, init != nullptr);
-	if(init) init();
-}
-
-Module::Module(u16 id, void (*init)(), void (*load)(), void (*unload)())
-	: m_is_loaded(false)
 	, m_id(id)
 	, m_load_func(load)
 	, m_unload_func(unload)
 {
-	Emu.GetModuleManager().SetModule(m_id, this, init != nullptr);
-	if(init) init();
+	Emu.GetModuleManager().SetModule(m_id, this);
 }
 
 Module::Module(Module &&other)
@@ -120,7 +99,8 @@ void Module::UnLoad()
 
 bool Module::Load(u32 id)
 {
-	if(Emu.GetModuleManager().IsLoadedFunc(id)) return false;
+	if(Emu.GetModuleManager().IsLoadedFunc(id)) 
+		return false;
 
 	for(u32 i=0; i<m_funcs_list.size(); ++i)
 	{

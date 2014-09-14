@@ -59,9 +59,7 @@ class Module : public LogBase
 public:
 	std::vector<ModuleFunc*> m_funcs_list;
 
-	Module(u16 id, const char* name);
-	Module(const char* name, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
-	Module(u16 id, void (*init)(), void (*load)() = nullptr, void (*unload)() = nullptr);
+	Module(u16 id, const char* name, void(*load)() = nullptr, void(*unload)() = nullptr);
 
 	Module(Module &other) = delete;
 	Module(Module &&other);

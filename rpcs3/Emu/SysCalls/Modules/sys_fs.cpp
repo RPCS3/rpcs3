@@ -291,8 +291,10 @@ int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 	return CELL_OK;
 }
 
-void sys_fs_init()
+void sys_fs_init(Module *pxThis)
 {
+	sys_fs = pxThis;
+
 	sys_fs->AddFunc(0x718bf5f8, cellFsOpen);
 	sys_fs->AddFunc(0xb1840b53, cellFsSdataOpen);
 	sys_fs->AddFunc(0x6d3bb15b, cellFsSdataOpenByFd);

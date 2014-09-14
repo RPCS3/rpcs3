@@ -6,8 +6,6 @@
 #include "Emu/SysCalls/lv2/lv2Fs.h"
 #include "cellJpgDec.h"
 
-//void cellJpgDec_init();
-//Module cellJpgDec(0x000f, cellJpgDec_init);
 Module *cellJpgDec = nullptr;
 
 int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
@@ -322,8 +320,10 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgD
 }
 
 
-void cellJpgDec_init()
+void cellJpgDec_init(Module *pxThis)
 {
+	cellJpgDec = pxThis;
+
 	cellJpgDec->AddFunc(0xa7978f59, cellJpgDecCreate);
 	cellJpgDec->AddFunc(0x8b300f66, cellJpgDecExtCreate);
 	cellJpgDec->AddFunc(0x976ca5c2, cellJpgDecOpen);

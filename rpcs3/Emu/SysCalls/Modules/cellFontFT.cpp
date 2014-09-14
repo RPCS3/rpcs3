@@ -5,10 +5,6 @@
 #include "cellFont.h"
 #include "cellFontFT.h"
 
-//void cellFontFT_init();
-//void cellFontFT_load();
-//void cellFontFT_unload();
-//Module cellFontFT(0x001a, cellFontFT_init, cellFontFT_load, cellFontFT_unload);
 Module *cellFontFT = nullptr;
 
 CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
@@ -38,8 +34,10 @@ int cellFontFTGetInitializedRevisionFlags()
 	return CELL_OK;
 }
 
-void cellFontFT_init()
+void cellFontFT_init(Module *pxThis)
 {
+	cellFontFT = pxThis;
+
 	cellFontFT->AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
 	cellFontFT->AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
 	cellFontFT->AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);

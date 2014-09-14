@@ -21,9 +21,6 @@
 
 typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
-
-//void cellSysutil_init();
-//Module cellSysutil(0x0015, cellSysutil_init);
 Module *cellSysutil = nullptr;
 
 int cellSysutilGetSystemParamInt(int id, vm::ptr<be_t<u32>> value)
@@ -844,8 +841,10 @@ extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u3
 extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
-void cellSysutil_init()
+void cellSysutil_init(Module *pxThis)
 {
+	cellSysutil = pxThis;
+
 	cellSysutil->AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
 	cellSysutil->AddFunc(0x938013a0, cellSysutilGetSystemParamString);
 

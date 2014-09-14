@@ -5,8 +5,6 @@
 
 #include "cellFiber.h"
 
-//void cellFiber_init();
-//Module cellFiber(0x0043, cellFiber_init);
 Module* cellFiber = nullptr;
 
 int _cellFiberPpuInitialize()
@@ -293,8 +291,10 @@ int cellFiberPpuUtilWorkerControlInitializeWithAttribute()
 	return CELL_OK;
 }
 
-void cellFiber_init()
+void cellFiber_init(Module *pxThis)
 {
+	cellFiber = pxThis;
+
 	cellFiber->AddFunc(0x55870804, _cellFiberPpuInitialize);
 
 	cellFiber->AddFunc(0x9e25c72d, _cellFiberPpuSchedulerAttributeInitialize);

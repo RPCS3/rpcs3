@@ -696,8 +696,10 @@ s64 cellSpursJobQueueUnsetExceptionEventHandler()
 #endif
 }
 
-void cellSpursJq_init()
+void cellSpursJq_init(Module *pxThis)
 {
+	cellSpursJq = pxThis;
+
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeInitialize);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeSetMaxGrab);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeSetSubmitWithEntryLock);

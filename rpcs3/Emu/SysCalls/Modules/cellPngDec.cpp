@@ -8,8 +8,6 @@
 #include "cellPngDec.h"
 #include <map>
 
-//void cellPngDec_init();
-//Module cellPngDec(0x0018, cellPngDec_init);
 Module *cellPngDec = nullptr;
 
 #ifdef PRX_DEBUG
@@ -769,8 +767,10 @@ s32 cellPngDecGetTextChunk(
 #endif
 }
 
-void cellPngDec_init()
+void cellPngDec_init(Module *pxThis)
 {
+	cellPngDec = pxThis;
+
 	REG_FUNC(cellPngDec, cellPngDecGetUnknownChunks);
 	REG_FUNC(cellPngDec, cellPngDecClose);
 	REG_FUNC(cellPngDec, cellPngDecGetpCAL);

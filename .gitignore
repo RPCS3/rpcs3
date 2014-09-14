@@ -64,8 +64,7 @@ rpcs3/git-version.h
 
 # Ignore other system generated files
 bin/dev_hdd0/*.txt
-x64/Debug/emucore.lib
-x64/Release/emucore.lib
+x64/*
 rpcs3/x64/*
 
 .DS_Store

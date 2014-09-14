@@ -5,9 +5,6 @@
 #include "sceNp.h"
 #include "sceNpTus.h"
 
-//void sceNpTus_unload();
-//void sceNpTus_init();
-//Module sceNpTus(0x0045, sceNpTus_init, nullptr, sceNpTus_unload);
 Module *sceNpTus = nullptr;
 
 int sceNpTusInit()
@@ -339,8 +336,10 @@ void sceNpTus_unload()
 	// TODO: Unload Tus module
 }
 
-void sceNpTus_init()
+void sceNpTus_init(Module *pxThis)
 {
+	sceNpTus = pxThis;
+
 	sceNpTus->AddFunc(0x8f87a06b, sceNpTusInit);
 	sceNpTus->AddFunc(0x225aed26, sceNpTusTerm);
 	sceNpTus->AddFunc(0x7caf58ee, sceNpTusCreateTitleCtx);
