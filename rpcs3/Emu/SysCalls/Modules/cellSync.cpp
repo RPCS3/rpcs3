@@ -1565,7 +1565,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 
 	s32 depth = (u32)queue->m_depth;
 	s32 size = (u32)queue->m_size;
-	memcpy(vm::get_ptr<void>((queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), buffer.get_ptr(), size);
+	memcpy(vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), buffer.get_ptr(), size);
 
 	s32 res;
 	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
@@ -1957,7 +1957,7 @@ s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer
 
 	s32 depth = (u32)queue->m_depth;
 	s32 size = (u32)queue->m_size;
-	memcpy(buffer.get_ptr(), vm::get_ptr<void>((queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), size);
+	memcpy(buffer.get_ptr(), vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), size);
 
 	s32 res;
 	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
