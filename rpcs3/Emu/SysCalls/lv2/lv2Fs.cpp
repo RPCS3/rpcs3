@@ -227,7 +227,7 @@ s32 cellFsClosedir(u32 fd)
 
 s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.get_ptr(), sb.addr());
+	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr=0x%x)", path.get_ptr(), sb.addr());
 
 	LV2_LOCK(0);
 
@@ -270,7 +270,7 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.addr());
+	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr=0x%x)", fd, sb.addr());
 
 	LV2_LOCK(0);
 
@@ -632,8 +632,8 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 
 	*ringbuf = fs_config.m_ring_buffer;
 
-	sys_fs->Warning("*** fs stream config: block_size=0x%llx, copy=%d, ringbuf_size = 0x%llx, transfer_rate = 0x%llx",
-		ringbuf->block_size, ringbuf->copy,ringbuf->ringbuf_size, ringbuf->transfer_rate);
+	sys_fs->Warning("*** fs stream config: block_size=0x%llx, copy=%d, ringbuf_size=0x%llx, transfer_rate=0x%llx",
+		(u64)ringbuf->block_size, (u32)ringbuf->copy, (u64)ringbuf->ringbuf_size, (u64)ringbuf->transfer_rate);
 	return CELL_OK;
 }
 
@@ -716,7 +716,7 @@ s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 
 s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr, vm::ptr<be_t<u64>> size)
 {
-	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr = 0x%x)", fd, addr.addr(), size.addr());
+	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr=0x%x)", fd, addr.addr(), size.addr());
 
 	LV2_LOCK(0);
 
@@ -728,7 +728,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr, vm::ptr<be_t<u64
 
 s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 {
-	sys_fs->Todo("cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size = 0x%llx)", fd, addr_addr, size);
+	sys_fs->Todo("cellFsStReadPutCurrentAddr(fd=%d, addr_addr=0x%x, size=0x%llx)", fd, addr_addr, size);
 
 	LV2_LOCK(0);
 	
@@ -740,7 +740,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size)
 
 s32 cellFsStReadWait(u32 fd, u64 size)
 {
-	sys_fs->Todo("cellFsStReadWait(fd=%d, size = 0x%llx)", fd, size);
+	sys_fs->Todo("cellFsStReadWait(fd=%d, size=0x%llx)", fd, size);
 
 	LV2_LOCK(0);
 	
@@ -752,7 +752,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 
 s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void (*)(int xfd, u64 xsize)> func)
 {
-	sys_fs->Todo("cellFsStReadWaitCallback(fd=%d, size = 0x%llx, func_addr = 0x%x)", fd, size, func.addr());
+	sys_fs->Todo("cellFsStReadWaitCallback(fd=%d, size=0x%llx, func_addr=0x%x)", fd, size, func.addr());
 
 	LV2_LOCK(0);
 

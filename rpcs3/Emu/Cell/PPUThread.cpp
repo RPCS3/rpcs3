@@ -51,14 +51,6 @@ void PPUThread::DoReset()
 	cycle = 0;
 }
 
-void PPUThread::AddArgv(const std::string& arg)
-{
-	m_stack_point -= arg.length() + 1;
-	m_stack_point = AlignAddr(m_stack_point, 0x10) - 0x10;
-	m_argv_addr.push_back(m_stack_point);
-	memcpy(vm::get_ptr<char>(m_stack_point), arg.c_str(), arg.size() + 1);
-}
-
 void PPUThread::InitRegs()
 {
 	const u32 pc = entry ? vm::read32(entry) : 0;
@@ -91,57 +83,15 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	m_stack_point = AlignAddr(m_stack_point, 0x200) - 0x200;
-
-	GPR[1] = m_stack_point;
+	GPR[1] = AlignAddr(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
-	/*
-	for(int i=4; i<32; ++i)
-	{
-		if(i != 6)
-			GPR[i] = (i+1) * 0x10000;
-	}
-	*/
-	if(m_argv_addr.size())
-	{
-		u64 argc = m_argv_addr.size();
-		m_stack_point -= 0xc + 4 * argc;
-		u64 argv = m_stack_point;
-
-		auto argv_list = vm::ptr<be_t<u64>>::make((u32)argv);
-		for(int i=0; i<argc; ++i) argv_list[i] = m_argv_addr[i];
-
-		GPR[3] = argc;
-		GPR[4] = argv;
-		GPR[5] = argv ? argv + 0xc + 4 * argc : 0; //unk
-	}
-	else
-	{
-		GPR[3] = m_args[0];
-		GPR[4] = m_args[1];
-		GPR[5] = m_args[2];
-		GPR[6] = m_args[3];
-	}
-
-	GPR[0] = pc;
-	GPR[8] = entry;
-	GPR[11] = 0x80;
-	GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
-	GPR[28] = GPR[4];
-	GPR[29] = GPR[3];
-	GPR[31] = GPR[5];
 
 	LR = Emu.GetPPUThreadExit();
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
 	TB = 0;
-}
-
-u64 PPUThread::GetFreeStackSize() const
-{
-	return (GetStackAddr() + GetStackSize()) - GPR[1];
 }
 
 void PPUThread::DoRun()
@@ -222,7 +172,7 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
 }
 
-u64 PPUThread::FastCall2(u64 addr, u64 rtoc)
+u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;

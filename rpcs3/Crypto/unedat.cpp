@@ -444,7 +444,7 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	int title_hash_result = 0;
 	int dev_hash_result = 0;
 
-	int file_name_length = strlen(file_name);
+	int file_name_length = (int)strlen(file_name);
 	unsigned char *buf = new unsigned char[0x30 + file_name_length];
 	unsigned char key[0x10];
 

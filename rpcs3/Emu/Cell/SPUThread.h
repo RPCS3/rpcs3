@@ -559,7 +559,6 @@ public:
 
 public:
 	virtual void InitRegs();
-	virtual u64 GetFreeStackSize() const;
 	virtual void Task();
 
 protected:

@@ -88,9 +88,9 @@ bool rMkpath(const std::string &path)
 		if(dir.size() == 0)
 			continue;
 #ifdef _WIN32
-		if((ret = _mkdir(dir.c_str())) && errno != EEXIST){
+		if((ret = _mkdir(dir.c_str()) != 0) && errno != EEXIST){
 #else
-		if((ret = mkdir(dir.c_str(), 0777)) && errno != EEXIST){
+		if((ret = mkdir(dir.c_str(), 0777) != 0) && errno != EEXIST){
 #endif
 			return !ret;
 		}
@@ -269,7 +269,7 @@ size_t rFile::Write(const void *buffer, size_t count)
 
 bool rFile::Write(const std::string &text)
 {
-	return reinterpret_cast<wxFile*>(handle)->Write(reinterpret_cast<const void*>(text.c_str()),text.size());
+	return reinterpret_cast<wxFile*>(handle)->Write(reinterpret_cast<const void*>(text.c_str()),text.size()) != 0;
 }
 
 bool rFile::Close()

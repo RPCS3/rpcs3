@@ -63,6 +63,7 @@ void GLGSFrame::Flip(void* context)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
+		// can freeze on exit
 		SetTitle(wxString::Format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 		m_frames = 0;
 		fps_t.Start();

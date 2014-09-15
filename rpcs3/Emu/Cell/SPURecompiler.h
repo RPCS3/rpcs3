@@ -102,7 +102,7 @@ public:
 
 	virtual void Decode(const u32 code);
 
-	virtual u8 DecodeMemory(const u64 address);
+	virtual u8 DecodeMemory(const u32 address);
 };
 
 #define c (*compiler)
@@ -138,7 +138,7 @@ public:
 { \
 	static void opcode(u32 a0, u32 a1, u32 a2, u32 a3) \
 { \
-	SPUThread& CPU = *(SPUThread*)GetCurrentCPUThread();
+	SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
 
 #define WRAPPER_END(a0, a1, a2, a3) /*LOG2_OPCODE();*/ } \
 }; \
@@ -436,12 +436,12 @@ private:
 		{
 			static void STOP(u32 code)
 			{
-				SPUThread& CPU = *(SPUThread*)GetCurrentCPUThread();
+				SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
 				CPU.StopAndSignal(code);
 				LOG2_OPCODE();
 			}
 		};
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		X86CallNode* call = c.call(imm_ptr(reinterpret_cast<void*>(&STOP_wrapper::STOP)), kFuncConvHost, FuncBuilder1<void, u32>());
 		call->setArg(0, imm_u(code));
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
@@ -454,7 +454,7 @@ private:
 	}
 	void SYNC(u32 Cbit)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		// This instruction must be used following a store instruction that modifies the instruction stream.
 		c.mfence();
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
@@ -473,7 +473,7 @@ private:
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
 		CPU.ReadChannel(CPU.GPR[rt], ra);
 		WRAPPER_END(rt, ra, 0, 0);
@@ -481,7 +481,7 @@ private:
 	}
 	void RCHCNT(u32 rt, u32 ra)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
 		CPU.GPR[rt].clear();
 		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
@@ -1089,7 +1089,7 @@ private:
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(ra, rt, yy, zz);
 		CPU.WriteChannel(ra, CPU.GPR[rt]);
 		WRAPPER_END(ra, rt, 0, 0);
@@ -1137,10 +1137,10 @@ private:
 			return;
 		}
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
-		c.mov(*addr, (u32)CPU.PC + 4);
+		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
 		c.cmovne(*pos_var, *addr);
@@ -1155,10 +1155,10 @@ private:
 			return;
 		}
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
-		c.mov(*addr, (u32)CPU.PC + 4);
+		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
 		c.cmove(*pos_var, *addr);
@@ -1173,10 +1173,10 @@ private:
 			return;
 		}
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
-		c.mov(*addr, (u32)CPU.PC + 4);
+		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmovne(*pos_var, *addr);
@@ -1191,10 +1191,10 @@ private:
 			return;
 		}
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
-		c.mov(*addr, (u32)CPU.PC + 4);
+		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmove(*pos_var, *addr);
@@ -1240,7 +1240,7 @@ private:
 			return;
 		}
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
@@ -1257,7 +1257,7 @@ private:
 
 		XmmInvalidate(rt);
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.xor_(*pos_var, *pos_var);
@@ -1265,7 +1265,7 @@ private:
 		c.mov(cpu_dword(GPR[rt]._u32[1]), *pos_var);
 		c.mov(cpu_dword(GPR[rt]._u32[2]), *pos_var);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
-		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
+		c.mov(cpu_dword(GPR[rt]._u32[3]), CPU.PC + 4);
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
@@ -2734,7 +2734,7 @@ private:
 	//0 - 8
 	void BRZ(u32 rt, s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*addr, (CPU.PC >> 2) + 1);
@@ -2763,7 +2763,7 @@ private:
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*addr, (CPU.PC >> 2) + 1);
@@ -2774,7 +2774,7 @@ private:
 	}
 	void BRHZ(u32 rt, s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*addr, (CPU.PC >> 2) + 1);
@@ -2785,7 +2785,7 @@ private:
 	}
 	void BRHNZ(u32 rt, s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*addr, (CPU.PC >> 2) + 1);
@@ -2814,7 +2814,7 @@ private:
 	}
 	void BRA(s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*pos_var, branchTarget(0, i16) >> 2);
@@ -2844,20 +2844,20 @@ private:
 	{
 		XmmInvalidate(rt);
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.xor_(*addr, *addr); // zero
 		c.mov(cpu_dword(GPR[rt]._u32[0]), *addr);
 		c.mov(cpu_dword(GPR[rt]._u32[1]), *addr);
 		c.mov(cpu_dword(GPR[rt]._u32[2]), *addr);
-		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
+		c.mov(cpu_dword(GPR[rt]._u32[3]), CPU.PC + 4);
 		c.mov(*pos_var, branchTarget(0, i16) >> 2);
 		LOG_OPCODE();
 	}
 	void BR(s32 i16)
 	{
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
@@ -2884,14 +2884,14 @@ private:
 	{
 		XmmInvalidate(rt);
 
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 
 		c.xor_(*addr, *addr); // zero
 		c.mov(cpu_dword(GPR[rt]._u32[0]), *addr);
 		c.mov(cpu_dword(GPR[rt]._u32[1]), *addr);
 		c.mov(cpu_dword(GPR[rt]._u32[2]), *addr);
-		c.mov(cpu_dword(GPR[rt]._u32[3]), (u32)CPU.PC + 4);
+		c.mov(cpu_dword(GPR[rt]._u32[3]), CPU.PC + 4);
 		c.mov(*pos_var, branchTarget(CPU.PC, i16) >> 2);
 		LOG_OPCODE();
 	}
@@ -3780,7 +3780,7 @@ private:
 	void UNK(const std::string& err)
 	{
 		LOG_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
-		c.mov(cpu_qword(PC), (u32)CPU.PC);
+		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 		Emu.Pause();
 	}

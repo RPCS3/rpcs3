@@ -5,16 +5,17 @@ static std::thread::id main_thread;
 class NamedThreadBase
 {
 	std::string m_name;
-
 	std::condition_variable m_signal_cv;
 	std::mutex m_signal_mtx;
 
 public:
-	NamedThreadBase(const std::string& name) : m_name(name)
+	std::atomic<bool> m_tls_assigned;
+
+	NamedThreadBase(const std::string& name) : m_name(name), m_tls_assigned(false)
 	{
 	}
 
-	NamedThreadBase()
+	NamedThreadBase() : m_tls_assigned(false)
 	{
 	}
 

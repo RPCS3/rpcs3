@@ -69,18 +69,10 @@ void SPUThread::DoReset()
 void SPUThread::InitRegs()
 {
 	GPR[1]._u32[3] = 0x40000 - 120;
-	GPR[3]._u64[1] = m_args[0];
-	GPR[4]._u64[1] = m_args[1];
-	GPR[5]._u64[1] = m_args[2];
-	GPR[6]._u64[1] = m_args[3];
 
 	cfg.Reset();
 
 	dmac.ls_offset = m_offset;
-	/*dmac.proxy_pos = 0;
-	dmac.queue_pos = 0;
-	dmac.proxy_lock = 0;
-	dmac.queue_lock = 0;*/
 
 	SPU.Status.SetValue(SPU_STATUS_STOPPED);
 
@@ -94,11 +86,6 @@ void SPUThread::InitRegs()
 
 	m_event_mask = 0;
 	m_events = 0;
-}
-
-u64 SPUThread::GetFreeStackSize() const
-{
-	return (GetStackAddr() + GetStackSize()) - GPR[1]._u32[3];
 }
 
 void SPUThread::DoRun()
@@ -282,7 +269,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		auto rec = vm::ptr<list_element>::make((u32)dmac.ls_offset + list_addr + i * 8);
+		auto rec = vm::ptr<list_element>::make(dmac.ls_offset + list_addr + i * 8);
 
 		u32 size = rec->ts;
 		if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)

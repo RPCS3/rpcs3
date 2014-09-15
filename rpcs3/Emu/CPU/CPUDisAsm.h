@@ -18,7 +18,7 @@ protected:
 		switch(m_mode)
 		{
 			case CPUDisAsm_DumpMode:
-				last_opcode = fmt::Format("\t%08llx:\t%02x %02x %02x %02x\t%s\n", dump_pc,
+				last_opcode = fmt::Format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
@@ -26,7 +26,7 @@ protected:
 			break;
 
 			case CPUDisAsm_InterpreterMode:
-				last_opcode = fmt::Format("[%08llx]  %02x %02x %02x %02x: %s", dump_pc,
+				last_opcode = fmt::Format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
@@ -41,7 +41,7 @@ protected:
 
 public:
 	std::string last_opcode;
-	u64 dump_pc;
+	u32 dump_pc;
 	u8* offset;
 
 protected:

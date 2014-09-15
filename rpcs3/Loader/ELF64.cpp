@@ -350,7 +350,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				{
 					if (!Memory.MainMem.AllocFixed(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 					{
-						LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, offset + phdr.p_vaddr, phdr.p_memsz);
+						LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, offset + phdr.p_vaddr, (u32)phdr.p_memsz);
 					}
 					else if (phdr.p_filesz)
 					{

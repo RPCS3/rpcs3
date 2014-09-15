@@ -190,7 +190,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 
 void RawSPUThread::InitRegs()
 {
-	dmac.ls_offset = m_offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
+	dmac.ls_offset = m_offset = (u32)GetStartAddr() + RAW_SPU_LS_OFFSET;
 	SPUThread::InitRegs();
 }
 

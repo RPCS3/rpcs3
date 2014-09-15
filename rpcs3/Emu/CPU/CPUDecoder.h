@@ -5,7 +5,7 @@
 class CPUDecoder
 {
 public:
-	virtual u8 DecodeMemory(const u64 address)=0;
+	virtual u8 DecodeMemory(const u32 address)=0;
 
 	virtual ~CPUDecoder() = default;
 };

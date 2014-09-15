@@ -4,12 +4,6 @@
 
 union u128
 {
-	struct
-	{
-		u64 hi;
-		u64 lo;
-	};
-
 	u64 _u64[2];
 	s64 _s64[2];
 	u32 _u32[4];
@@ -92,31 +86,27 @@ union u128
 
 	//operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
 
-	static u128 from128(u64 hi, u64 lo)
-	{
-		u128 ret = { hi, lo };
-		return ret;
-	}
-
-	static u128 from64(u64 src)
-	{
-		u128 ret = { 0, src };
-		return ret;
-	}
-
-	static u128 from32(u32 src)
+	static u128 from64(u64 _0, u64 _1 = 0)
 	{
 		u128 ret;
-		ret._u32[0] = src;
-		ret._u32[1] = 0;
-		ret._u32[2] = 0;
-		ret._u32[3] = 0;
+		ret._u64[0] = _0;
+		ret._u64[1] = _1;
+		return ret;
+	}
+
+	static u128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
+	{
+		u128 ret;
+		ret._u32[0] = _0;
+		ret._u32[1] = _1;
+		ret._u32[2] = _2;
+		ret._u32[3] = _3;
 		return ret;
 	}
 
 	static u128 fromBit(u32 bit)
 	{
-		u128 ret;
+		u128 ret = {};
 		ret._bit[bit] = true;
 		return ret;
 	}
@@ -128,42 +118,42 @@ union u128
 
 	bool operator == (const u128& right) const
 	{
-		return (lo == right.lo) && (hi == right.hi);
+		return (_u64[0] == right._u64[0]) && (_u64[1] == right._u64[1]);
 	}
 
 	bool operator != (const u128& right) const
 	{
-		return (lo != right.lo) || (hi != right.hi);
+		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
 
 	u128 operator | (const u128& right) const
 	{
-		return from128(hi | right.hi, lo | right.lo);
+		return from64(_u64[0] | right._u64[0], _u64[1] | right._u64[1]);
 	}
 
 	u128 operator & (const u128& right) const
 	{
-		return from128(hi & right.hi, lo & right.lo);
+		return from64(_u64[0] & right._u64[0], _u64[1] & right._u64[1]);
 	}
 
 	u128 operator ^ (const u128& right) const
 	{
-		return from128(hi ^ right.hi, lo ^ right.lo);
+		return from64(_u64[0] ^ right._u64[0], _u64[1] ^ right._u64[1]);
 	}
 
 	u128 operator ~ () const
 	{
-		return from128(~hi, ~lo);
+		return from64(~_u64[0], ~_u64[1]);
 	}
 
 	void clear()
 	{
-		hi = lo = 0;
+		_u64[1] = _u64[0] = 0;
 	}
 
 	std::string to_hex() const
 	{
-		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return fmt::Format("%16llx%16llx", _u64[1], _u64[0]);
 	}
 
 	std::string to_xyzw() const
@@ -174,8 +164,8 @@ union u128
 	static __forceinline u128 byteswap(const u128 val)
 	{
 		u128 ret;
-		ret.lo = _byteswap_uint64(val.hi);
-		ret.hi = _byteswap_uint64(val.lo);
+		ret._u64[0] = _byteswap_uint64(val._u64[1]);
+		ret._u64[1] = _byteswap_uint64(val._u64[0]);
 		return ret;
 	}
 };
@@ -539,6 +529,24 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se16(x) _se<u16, decltype(x), x>::value
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
+
+// template that helps to define be_t arrays in unions
+template<typename T, size_t size>
+class be_array_t
+{
+	be_t<T> data[size];
+
+public:
+	__forceinline be_t<T>& operator [] (size_t index)
+	{
+		return data[index];
+	}
+
+	__forceinline const be_t<T>& operator [] (size_t index) const
+	{
+		return data[index];
+	}
+};
 
 template<typename T> __forceinline static u8 Read8(T& f)
 {

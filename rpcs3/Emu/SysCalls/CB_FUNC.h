@@ -11,6 +11,11 @@ namespace cb_detail
 		ARG_STACK,
 	};
 
+	// Current implementation can handle only fixed amount of stack arguments.
+	// This constant can be increased if necessary.
+	// It's possible to calculate suitable stack frame size in template, but too complicated.
+	static const auto FIXED_STACK_FRAME_SIZE = 0x100;
+
 	template<typename T, _func_arg_type type, int g_count, int f_count, int v_count>
 	struct _func_arg;
 
@@ -50,25 +55,29 @@ namespace cb_detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct _func_arg<T, ARG_STACK, g_count, f_count, v_count>
 	{
-		static_assert(g_count <= 8, "TODO: Unsupported stack argument type (general)");
 		static_assert(f_count <= 12, "TODO: Unsupported stack argument type (float)");
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_STACK");
 
 		__forceinline static void set_value(PPUThread& CPU, const T arg)
 		{
-			// TODO
+			const int stack_pos = 0x70 + (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
+			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
+			u64 value = 0;
+			(T&)value = arg;
+			vm::write64(CPU.GPR[1] + stack_pos, value);
 		}
 	};
 
 	template<int g_count, int f_count, int v_count>
-	__forceinline static void _bind_func_args(PPUThread& CPU)
+	__forceinline static bool _bind_func_args(PPUThread& CPU)
 	{
 		// terminator
+		return false;
 	}
 
 	template<int g_count, int f_count, int v_count, typename T1, typename... T>
-	__forceinline static void _bind_func_args(PPUThread& CPU, T1 arg1, T... args)
+	__forceinline static bool _bind_func_args(PPUThread& CPU, T1 arg1, T... args)
 	{
 		static_assert(!std::is_pointer<T1>::value, "Invalid callback argument type (pointer)");
 		static_assert(!std::is_reference<T1>::value, "Invalid callback argument type (reference)");
@@ -82,7 +91,8 @@ namespace cb_detail
 		const int v = v_count + (is_vector ? 1 : 0);
 		
 		_func_arg<T1, t, g, f, v>::set_value(CPU, arg1);
-		_bind_func_args<g, f, v>(CPU, args...);
+		// return true if stack was used
+		return _bind_func_args<g, f, v>(CPU, args...) || (t == ARG_STACK);
 	}
 
 	template<typename RT>
@@ -108,7 +118,16 @@ namespace cb_detail
 	template<>
 	struct _func_res<u128>
 	{
-		__forceinline static u128 get_value(const PPUThread& CPU)
+		__forceinline static const u128 get_value(const PPUThread& CPU)
+		{
+			return CPU.VPR[2];
+		}
+	};
+
+	template<>
+	struct _func_res<const u128>
+	{
+		__forceinline static const u128 get_value(const PPUThread& CPU)
 		{
 			return CPU.VPR[2];
 		}
@@ -127,8 +146,10 @@ namespace cb_detail
 	{
 		__forceinline static RT call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 		{
-			_bind_func_args<0, 0, 0>(CPU, args...);
+			const bool stack = _bind_func_args<0, 0, 0>(CPU, args...);
+			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
 			CPU.FastCall2(pc, rtoc);
+			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 			return _func_res<RT>::get_value(CPU);
 		}
 	};

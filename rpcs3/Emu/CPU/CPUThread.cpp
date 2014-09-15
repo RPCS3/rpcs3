@@ -11,7 +11,7 @@
 
 CPUThread* GetCurrentCPUThread()
 {
-	return (CPUThread*)GetCurrentNamedThread();
+	return dynamic_cast<CPUThread*>(GetCurrentNamedThread());
 }
 
 CPUThread::CPUThread(CPUThreadType type)
@@ -75,7 +75,6 @@ void CPUThread::CloseStack()
 	}
 
 	m_stack_size = 0;
-	m_stack_point = 0;
 }
 
 void CPUThread::SetId(const u32 id)
@@ -131,7 +130,7 @@ int CPUThread::ThreadStatus()
 	return CPUThread_Running;
 }
 
-void CPUThread::SetEntry(const u64 pc)
+void CPUThread::SetEntry(const u32 pc)
 {
 	entry = pc;
 }
@@ -150,7 +149,7 @@ void CPUThread::NextPc(u8 instr_size)
 	}
 }
 
-void CPUThread::SetBranch(const u64 pc, bool record_branch)
+void CPUThread::SetBranch(const u32 pc, bool record_branch)
 {
 	m_is_branch = true;
 	nPC = pc;
@@ -159,7 +158,7 @@ void CPUThread::SetBranch(const u64 pc, bool record_branch)
 		CallStackBranch(pc);
 }
 
-void CPUThread::SetPc(const u64 pc)
+void CPUThread::SetPc(const u32 pc)
 {
 	PC = pc;
 }
@@ -288,7 +287,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	{
 		// TODO: allow recovering from a page fault
 		throw fmt::Format("Access violation: addr = 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
-			(u32)addr, t->IsAlive() ? 1 : 0, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
+			(u32)addr, t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
 	}
 	else
 	{
@@ -315,7 +314,7 @@ void CPUThread::Task()
 		}
 	}
 
-	std::vector<u64> trace;
+	std::vector<u32> trace;
 
 #ifdef _WIN32
 	auto old_se_translator = _set_se_translator(_se_translator);
@@ -377,7 +376,7 @@ void CPUThread::Task()
 	// TODO: linux version
 #endif
 
-	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);
+	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%x", v);
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
 }

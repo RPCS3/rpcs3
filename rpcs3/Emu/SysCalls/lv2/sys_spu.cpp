@@ -82,7 +82,7 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 
 	// Copy SPU image:
 	// TODO: use correct segment info
-	auto spu_offset = Memory.Alloc(256 * 1024, 4096);
+	u32 spu_offset = (u32)Memory.Alloc(256 * 1024, 4096);
 	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
 
 	CPUThread& new_thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
@@ -90,15 +90,15 @@ s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num,
 	new_thread.SetOffset(spu_offset);
 	new_thread.SetEntry(spu_ep);
 	new_thread.SetName(name);
-	new_thread.SetArg(0, a1);
-	new_thread.SetArg(1, a2);
-	new_thread.SetArg(2, a3);
-	new_thread.SetArg(3, a4);
 	new_thread.Run();
+	static_cast<SPUThread&>(new_thread).GPR[3] = u128::from64(0, a1);
+	static_cast<SPUThread&>(new_thread).GPR[4] = u128::from64(0, a2);
+	static_cast<SPUThread&>(new_thread).GPR[5] = u128::from64(0, a3);
+	static_cast<SPUThread&>(new_thread).GPR[6] = u128::from64(0, a4);
 
 	u32 id = new_thread.GetId();
 	*thread = group_info->list[spu_num] = id;
-	(*(SPUThread*)&new_thread).group = group_info;
+	static_cast<SPUThread&>(new_thread).group = group_info;
 
 	sys_spu.Warning("*** New SPU Thread [%s] (img_offset=0x%x, ls_offset=0x%x, ep=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
 		(attr->name ? attr->name.get_ptr() : ""), (u32)img->segs_addr, ((SPUThread&)new_thread).dmac.ls_offset, spu_ep, a1, a2, a3, a4, id);
@@ -117,10 +117,12 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 		return CELL_ESRCH;
 	}
 
-	thr->SetArg(0, arg->arg1);
-	thr->SetArg(1, arg->arg2);
-	thr->SetArg(2, arg->arg3);
-	thr->SetArg(3, arg->arg4);
+	SPUThread& spu = *(SPUThread*)thr;
+
+	spu.GPR[3] = u128::from64(0, arg->arg1);
+	spu.GPR[4] = u128::from64(0, arg->arg2);
+	spu.GPR[5] = u128::from64(0, arg->arg3);
+	spu.GPR[6] = u128::from64(0, arg->arg4);
 
 	return CELL_OK;
 }

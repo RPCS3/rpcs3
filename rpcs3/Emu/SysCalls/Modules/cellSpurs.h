@@ -77,7 +77,6 @@ enum TaskConstants
 };
 
 class SPURSManager;
-class SPURSManagerAttribute;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
 
@@ -94,7 +93,36 @@ struct CellSpurs2
 
 struct CellSpursAttribute
 {
-	SPURSManagerAttribute *attr;
+	static const auto align = 8;
+	static const auto size = 512;
+
+	union
+	{
+		// raw data
+		u8 _u8[size];
+		be_array_t<u32, size / sizeof(u32)> _u32;
+
+		// real structure
+		struct
+		{
+			be_t<u32> revision;    // 0x0
+			be_t<u32> sdkVersion;  // 0x4
+			be_t<u32> nSpus;       // 0x8
+			be_t<s32> spuPriority; // 0xC
+			be_t<s32> ppuPriority; // 0x10
+			bool exitIfNoWork;     // 0x14
+			char prefix[15];       // 0x15 (not a NTS)
+			be_t<u32> prefixSize;  // 0x24
+			be_t<u32> flags;       // 0x28
+			be_t<u32> container;   // 0x2C
+			// ...
+		} m;
+
+		// alternative implementation
+		struct
+		{
+		} c;
+	};
 };
 
 struct CellSpursEventFlag

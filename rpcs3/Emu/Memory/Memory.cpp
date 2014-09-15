@@ -256,7 +256,7 @@ MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 #endif
 	if (mem != real_addr)
 	{
-		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%llx, size=0x%llx)", addr, size);
+		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%llx, size=0x%x)", addr, size);
 		Emu.Pause();
 	}
 	else
@@ -277,7 +277,7 @@ void MemBlockInfo::Free()
 		if (::mprotect(mem, size, PROT_NONE))
 #endif
 		{
-			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%llx, size=0x%llx)", addr, size);
+			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%llx, size=0x%x)", addr, size);
 			Emu.Pause();
 		}
 	}
@@ -299,7 +299,7 @@ void MemoryBlock::Init()
 	range_start = 0;
 	range_size = 0;
 
-	mem = vm::get_ptr<u8>(0);
+	mem = vm::get_ptr<u8>(0u);
 }
 
 void MemoryBlock::InitMemory()

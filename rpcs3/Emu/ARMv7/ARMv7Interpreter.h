@@ -310,7 +310,7 @@ protected:
 
 	void BL(u32 imm, u8 intstr_size)
 	{
-		CPU.LR = ((u32)CPU.PC + intstr_size) | 1;
+		CPU.LR = (CPU.PC + intstr_size) | 1;
 		CPU.SetBranch(CPU.PC + intstr_size + imm);
 	}
 

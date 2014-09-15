@@ -30,15 +30,14 @@ protected:
 	u32 m_error;
 	u32 m_id;
 	u64 m_prio;
-	u64 m_offset;
+	u32 m_offset;
 	CPUThreadType m_type;
 	bool m_joinable;
 	bool m_joining;
 	bool m_is_step;
 
-	u64 m_stack_addr;
+	u32 m_stack_addr;
 	u32 m_stack_size;
-	u64 m_stack_point;
 
 	u64 m_exit_status;
 
@@ -50,22 +49,19 @@ public:
 	virtual void InitStack()=0;
 	virtual void CloseStack();
 
-	u64 GetStackAddr() const { return m_stack_addr; }
+	u32 GetStackAddr() const { return m_stack_addr; }
 	u32 GetStackSize() const { return m_stack_size; }
-	virtual u64 GetFreeStackSize() const=0;
 
-	void SetStackAddr(u64 stack_addr) { m_stack_addr = stack_addr; }
+	void SetStackAddr(u32 stack_addr) { m_stack_addr = stack_addr; }
 	void SetStackSize(u32 stack_size) { m_stack_size = stack_size; }
-
-	virtual void SetArg(const uint pos, const u64 arg) = 0;
 
 	void SetId(const u32 id);
 	void SetName(const std::string& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
-	void SetOffset(const u64 offset) { m_offset = offset; }
+	void SetOffset(const u32 offset) { m_offset = offset; }
 	void SetExitStatus(const u64 status) { m_exit_status = status; }
 
-	u64 GetOffset() const { return m_offset; }
+	u32 GetOffset() const { return m_offset; }
 	u64 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 
@@ -118,9 +114,9 @@ public:
 	}
 
 public:
-	u64 entry;
-	u64 PC;
-	u64 nPC;
+	u32 entry;
+	u32 PC;
+	u32 nPC;
 	u64 cycle;
 	bool m_is_branch;
 
@@ -155,9 +151,9 @@ public:
 	int ThreadStatus();
 
 	void NextPc(u8 instr_size);
-	void SetBranch(const u64 pc, bool record_branch = false);
-	void SetPc(const u64 pc);
-	void SetEntry(const u64 entry);
+	void SetBranch(const u32 pc, bool record_branch = false);
+	void SetPc(const u32 pc);
+	void SetEntry(const u32 entry);
 
 	void SetError(const u32 error);
 
@@ -185,8 +181,6 @@ public:
 	void Resume();
 	void Stop();
 
-	virtual void AddArgv(const std::string& arg) {}
-
 	virtual std::string RegsToString() = 0;
 	virtual std::string ReadRegString(const std::string& reg) = 0;
 	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
@@ -196,8 +190,8 @@ public:
 
 	struct CallStackItem
 	{
-		u64 pc;
-		u64 branch_pc;
+		u32 pc;
+		u32 branch_pc;
 	};
 
 	std::vector<CallStackItem> m_call_stack;
@@ -208,13 +202,13 @@ public:
 
 		for(uint i=0; i<m_call_stack.size(); ++i)
 		{
-			ret += fmt::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
+			ret += fmt::Format("0x%x -> 0x%x\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
 		}
 
 		return ret;
 	}
 
-	void CallStackBranch(u64 pc)
+	void CallStackBranch(u32 pc)
 	{
 		//look if we're jumping back and if so pop the stack back to that position
 		auto res = std::find_if(m_call_stack.rbegin(), m_call_stack.rend(),
@@ -237,7 +231,7 @@ public:
 		m_call_stack.push_back(new_item);
 	}
 
-	virtual u64 CallStackGetNextPC(u64 pc)
+	virtual u32 CallStackGetNextPC(u32 pc)
 	{
 		return pc + 4;
 	}

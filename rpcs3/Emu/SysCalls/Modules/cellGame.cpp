@@ -200,12 +200,12 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
-	cellGame->Warning("cellGameDataCheckCreate2(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
+	cellGame->Warning("cellGameDataCheckCreate(2)(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
 		version, dirName.addr(), errDialog, funcStat.addr(), container);
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
-		cellGame->Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_PARAM");
+		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_PARAM");
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
@@ -215,7 +215,7 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 
 	if (!Emu.GetVFS().ExistsDir(dir))
 	{
-		cellGame->Todo("cellGameDataCheckCreate2(): creating directory '%s'", dir.c_str());
+		cellGame->Todo("cellGameDataCheckCreate(2)(): creating directory '%s'", dir.c_str());
 		// TODO: create data
 		return CELL_GAMEDATA_RET_OK;
 	}
@@ -223,14 +223,14 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 	vfsFile f(dir + "/PARAM.SFO");
 	if (!f.IsOpened())
 	{
-		cellGame->Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot open PARAM.SFO)");
+		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot open PARAM.SFO)");
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
 	PSFLoader psf(f);
 	if (!psf.Load(false))
 	{
-		cellGame->Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
+		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
@@ -269,36 +269,36 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 	if (cbSet->setParam)
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Todo("cellGameDataCheckCreate2(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr());
+		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr());
 	}
 
 	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 		// TODO: do not process game data
-		cellGame->Warning("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
+		cellGame->Warning("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 
 	case CELL_GAMEDATA_CBRESULT_OK:
 		return CELL_GAMEDATA_RET_OK;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
-		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
+		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
-		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
+		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NODATA:
-		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
+		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
-		cellGame->Error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
+		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	default:
-		cellGame->Error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x)");
+		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned unknown error (code=0x%x)");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 	}
 }

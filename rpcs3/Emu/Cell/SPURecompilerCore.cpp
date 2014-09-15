@@ -179,10 +179,10 @@ void SPURecompilerCore::Compile(u16 pos)
 	first = false;
 }
 
-u8 SPURecompilerCore::DecodeMemory(const u64 address)
+u8 SPURecompilerCore::DecodeMemory(const u32 address)
 {
 	assert(CPU.dmac.ls_offset == address - CPU.PC);
-	const u64 m_offset = CPU.dmac.ls_offset;
+	const u32 m_offset = CPU.dmac.ls_offset;
 	const u16 pos = (u16)(CPU.PC >> 2);
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);
