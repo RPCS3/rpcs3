@@ -432,6 +432,7 @@ private:
 		}
 
 		// Bit n°2 of CR6
+		CPU.SetCR(6, 0);
 		CPU.SetCRBit(6, 0x2, allInBounds);
 	}
 	void VCMPEQFP(u32 vd, u32 va, u32 vb)

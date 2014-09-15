@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/MC/MCDisassembler.h"
 
+struct PPURegState;
+
 /// LLVM based PPU emulator
 class PPULLVMRecompiler : public CPUDecoder, protected PPUOpcodes {
 public:
@@ -449,6 +451,12 @@ private:
     /// Module to which all generated code is output to
     llvm::Module * m_module;
 
+    /// Function in m_module that corresponds to ExecuteThisCall
+    llvm::Function * m_execute_this_call_fn;
+
+    /// A comment metadata node for m_execute_this_call_fn
+    llvm::MDNode * m_execute_this_call_fn_comment_md_node;
+
     /// Global variable in m_module that corresponds to m_ppu.GPR
     llvm::GlobalVariable * m_pc;
 
@@ -475,6 +483,18 @@ private:
 
     /// PPU Interpreter
     PPUInterpreter m_interpreter;
+
+    /// Time spent compiling
+    std::chrono::duration<double> m_compilation_time;
+
+    /// Time spent executing
+    std::chrono::duration<double> m_execution_time;
+
+    /// Contains the number of times the interpreter was invoked for an instruction
+    std::map<std::string, u64> m_interpreter_invocation_stats;
+
+    /// List of std::function pointers created by ThisCall()
+    std::list<std::function<void()> *> m_this_call_ptrs_list;
 
     /// Get a bit
     llvm::Value * GetBit(llvm::Value * val, u32 n);
@@ -557,33 +577,23 @@ private:
     /// Set VR to the specified value
     void SetVr(u32 vr, llvm::Value * val_x128);
 
-    /// Call a member function with no arguments
-    template<class F, class C>
-    void ThisCall0(const char * name, F function, C * this_p);
+    /// Call a member function
+    template<class F, class C, class... Args>
+    void ThisCall(const char * name, F function, C * this_ptr, Args... args);
 
-    /// Call a member function with one argument
-    template<class F, class C, class T1>
-    void ThisCall1(const char * name, F function, C * this_p, T1 arg1);
+    /// Execute a this call
+    static void ExecuteThisCall(std::function<void()> * function);
 
-    /// Call a member function with two arguments
-    template<class F, class C, class T1, class T2>
-    void ThisCall2(const char * name, F function, C * this_p, T1 arg1, T2 arg2);
+    /// Convert args to a string
+    template<class T, class... Args>
+    static std::string ArgsToString(T arg1, Args... args);
 
-    /// Call a member function with three arguments
-    template<class F, class C, class T1, class T2, class T3>
-    void ThisCall3(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3);
+    /// Terminator for ArgsToString(T arg1, Args... args);
+    static std::string ArgsToString();
 
-    /// Call a member function with four arguments
-    template<class F, class C, class T1, class T2, class T3, class T4>
-    void ThisCall4(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-
-    /// Call a member function with five arguments
-    template<class F, class C, class T1, class T2, class T3, class T4, class T5>
-    void ThisCall5(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
-
-    /// Call a member function with six arguments
-    template<class F, class C, class T1, class T2, class T3, class T4, class T5, class T6>
-    void ThisCall6(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
+    /// Test an instruction against the interpreter
+    template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
+    void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args);
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
