@@ -50,12 +50,16 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
 static std::string module;
 static std::string registers;
 static u64 lastAddress;
+static std::chrono::duration<double> compilation_time;
+static std::chrono::duration<double> execution_time;
 
 u8 PPULLVMRecompiler::DecodeMemory(const u64 address) {
     auto function_name = fmt::Format("fn_0x%llx", address);
     auto function      = m_module->getFunction(function_name);
 
     if (!function) {
+        std::chrono::high_resolution_clock::time_point compilation_start = std::chrono::high_resolution_clock::now();
+
         u64 offset = 0;
         function   = cast<Function>(m_module->getOrInsertFunction(function_name, Type::getVoidTy(m_llvm_context), (Type *)nullptr));
         auto block = BasicBlock::Create(m_llvm_context, "start", function);
@@ -72,15 +76,22 @@ u8 PPULLVMRecompiler::DecodeMemory(const u64 address) {
 
         m_ir_builder.CreateRetVoid();
 
+        m_execution_engine->runJITOnFunction(function);
         //module = "";
         //raw_string_ostream stream(module);
         //stream << *m_module;
+
+        std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
+        compilation_time += std::chrono::duration_cast<std::chrono::duration<double>>(compilation_end - compilation_start);
     }
 
     //lastAddress = address;
     //registers   = m_ppu.RegsToString();
+    std::chrono::high_resolution_clock::time_point execution_start = std::chrono::high_resolution_clock::now();
     std::vector<GenericValue> args;
     m_execution_engine->runFunction(function, args);
+    std::chrono::high_resolution_clock::time_point execution_end = std::chrono::high_resolution_clock::now();
+    execution_time += std::chrono::duration_cast<std::chrono::duration<double>>(execution_end - execution_start);
     return 0;
 }
 

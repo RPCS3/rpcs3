@@ -29,6 +29,9 @@
 *.res
 *.dump
 *.wav
+*.tmp
+llvm_build/lib/Target/X86/*.inc
+llvm_build/include/llvm/IR/Intrinsics.gen
 
 /build
 
@@ -36,6 +39,8 @@
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
+/llvm_build/Debug
+/llvm_build/Release
 
 /wxWidgets/lib
 /bin/rpcs3.ini
