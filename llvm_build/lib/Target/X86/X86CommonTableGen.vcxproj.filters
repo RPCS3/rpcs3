@@ -1,68 +1,68 @@
 ﻿<?xml version="1.0" encoding="Windows-1252"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt" />
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenRegisterInfo.inc.tmp.rule">
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Target\X86\CMakeLists.txt" />
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenRegisterInfo.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenRegisterInfo.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenRegisterInfo.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenDisassemblerTables.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenDisassemblerTables.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenDisassemblerTables.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenDisassemblerTables.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenInstrInfo.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenInstrInfo.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenInstrInfo.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenInstrInfo.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmWriter.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmWriter.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmWriter.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmWriter.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmWriter1.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmWriter1.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmWriter1.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmWriter1.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmMatcher.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmMatcher.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenAsmMatcher.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenAsmMatcher.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenDAGISel.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenDAGISel.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenDAGISel.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenDAGISel.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenFastISel.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenFastISel.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenFastISel.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenFastISel.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenCallingConv.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenCallingConv.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenCallingConv.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenCallingConv.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenSubtargetInfo.inc.tmp.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenSubtargetInfo.inc.tmp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\eddd522571ef7ac3ef594efdc01652f8\X86GenSubtargetInfo.inc.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\47cd220a9ccda1992a493096aec38188\X86GenSubtargetInfo.inc.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\..\..\CMakeFiles\a1f1839c021268635151fe196470bcdd\X86CommonTableGen.rule">
+    <CustomBuild Include="..\..\..\CMakeFiles\8440b9b9805d840519fd55bd0c42b5bf\X86CommonTableGen.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -71,7 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
-      <UniqueIdentifier>{4BF339D9-6A3E-40FA-8E07-6D1290466722}</UniqueIdentifier>
+      <UniqueIdentifier>{27F60422-EB63-4469-9456-F3FB0402A12B}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -563,6 +563,15 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>cd ..\llvm_build
+cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
+</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Build LLVM</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <ClCompile>
@@ -578,6 +587,15 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>cd ..\llvm_build
+cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
+</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Build LLVM</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -613,6 +631,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PreBuildEvent>
+      <Command>cd ..\llvm_build
+cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
+msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release
+</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Build LLVM</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

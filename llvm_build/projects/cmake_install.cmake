@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/projects
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/projects
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

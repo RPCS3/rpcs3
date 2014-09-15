@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/lib/Bitcode
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Bitcode
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -29,8 +29,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("D:/Projects/rpcs3/llvm_build/lib/Bitcode/Reader/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Bitcode/Writer/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Bitcode/Reader/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Bitcode/Writer/cmake_install.cmake")
 
 endif()
 

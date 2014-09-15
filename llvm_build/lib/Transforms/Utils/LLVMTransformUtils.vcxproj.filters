@@ -1,124 +1,124 @@
 ﻿<?xml version="1.0" encoding="Windows-1252"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\AddDiscriminators.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\AddDiscriminators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\ASanStackFrameLayout.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\ASanStackFrameLayout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\BasicBlockUtils.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\BasicBlockUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\BreakCriticalEdges.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\BreakCriticalEdges.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\BuildLibCalls.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\BuildLibCalls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\BypassSlowDivision.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\BypassSlowDivision.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CtorUtils.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CtorUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CloneFunction.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CloneFunction.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CloneModule.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CloneModule.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CmpInstAnalysis.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CmpInstAnalysis.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CodeExtractor.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CodeExtractor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\DemoteRegToStack.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\DemoteRegToStack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\GlobalStatus.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\GlobalStatus.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\InlineFunction.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\InlineFunction.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\InstructionNamer.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\InstructionNamer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\IntegerDivision.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\IntegerDivision.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LCSSA.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LCSSA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\Local.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\Local.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LoopSimplify.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LoopSimplify.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LoopUnroll.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LoopUnroll.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LoopUnrollRuntime.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LoopUnrollRuntime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LowerExpectIntrinsic.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LowerExpectIntrinsic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LowerInvoke.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LowerInvoke.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LowerSwitch.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\LowerSwitch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\Mem2Reg.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\Mem2Reg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\MetaRenamer.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\MetaRenamer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\ModuleUtils.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\ModuleUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\PromoteMemoryToRegister.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\PromoteMemoryToRegister.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\SSAUpdater.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\SSAUpdater.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\SimplifyCFG.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\SimplifyCFG.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\FlattenCFG.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\FlattenCFG.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\SimplifyIndVar.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\SimplifyIndVar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\SimplifyInstructions.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\SimplifyInstructions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\SimplifyLibCalls.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\SimplifyLibCalls.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\UnifyFunctionExitNodes.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\UnifyFunctionExitNodes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\Utils.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\ValueMapper.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\ValueMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Transforms\Utils\CMakeLists.txt" />
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\Utils\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{1E328BBF-159A-48BC-8C7E-6B6237ADBBFD}</UniqueIdentifier>
+      <UniqueIdentifier>{49044119-F6F3-4751-BBC4-7E7D89AE0A53}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

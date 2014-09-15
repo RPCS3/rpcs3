@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{86BAC22E-49CB-4EFB-8591-5CFE12FF2563}</ProjectGUID>
+    <ProjectGUID>{18AF4932-5301-4653-8E79-17C28FC94F42}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>LLVMSupport</ProjectName>
@@ -38,11 +38,11 @@
   <PropertyGroup Label="UserMacros" />
     <PropertyGroup>
       <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\Debug\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Debug\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMSupport.dir\Debug\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMSupport</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\Release\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Release\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMSupport.dir\Release\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMSupport</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalOptions> -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <CompileAs>CompileAsCpp</CompileAs>
@@ -70,10 +70,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -84,7 +84,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalOptions> -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
       <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
@@ -103,10 +103,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3\llvm\lib\Support;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -115,10 +115,10 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Support\CMakeLists.txt">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/Support/CMakeLists.txt</Message>
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Support/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -126,12 +126,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/lib/Support/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Support\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Support\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Support/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/Support/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Support/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -139,563 +139,563 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/lib/Support/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Support\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Support\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Support/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\Support\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\regcclass.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\regcname.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\regex2.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\regex_impl.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\regutils.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Host.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Memory.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Mutex.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Path.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Process.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Program.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\RWMutex.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Signals.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\ThreadLocal.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\TimeValue.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Unix\Watchdog.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\DynamicLibrary.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Host.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Memory.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Mutex.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Path.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Process.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Program.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\RWMutex.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Signals.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\ThreadLocal.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\TimeValue.inc" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Support\Windows\Watchdog.inc" />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\APFloat.cpp" >
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regcclass.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regcname.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regex2.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regex_impl.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regutils.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Host.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Memory.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Mutex.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Path.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Process.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Program.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\RWMutex.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Signals.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\ThreadLocal.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\TimeValue.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unix\Watchdog.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\DynamicLibrary.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Host.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Memory.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Mutex.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Path.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Process.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Program.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\RWMutex.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Signals.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\ThreadLocal.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\TimeValue.inc" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Windows\Watchdog.inc" />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\APFloat.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\APInt.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\APInt.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\APSInt.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\APSInt.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ARMBuildAttrs.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ARMBuildAttrs.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ARMWinEH.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ARMWinEH.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Allocator.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Allocator.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\BlockFrequency.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\BlockFrequency.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\BranchProbability.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\BranchProbability.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\circular_raw_ostream.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\circular_raw_ostream.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\CommandLine.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CommandLine.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Compression.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Compression.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ConvertUTF.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ConvertUTF.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ConvertUTFWrapper.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ConvertUTFWrapper.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\CrashRecoveryContext.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\CrashRecoveryContext.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\DataExtractor.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\DataExtractor.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\DataStream.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\DataStream.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Debug.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Debug.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\DeltaAlgorithm.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\DeltaAlgorithm.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\DAGDeltaAlgorithm.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\DAGDeltaAlgorithm.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Dwarf.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Dwarf.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ErrorHandling.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ErrorHandling.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\FileUtilities.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\FileUtilities.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\FileOutputBuffer.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\FileOutputBuffer.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\FoldingSet.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\FoldingSet.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\FormattedStream.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\FormattedStream.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\GraphWriter.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\GraphWriter.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Hashing.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Hashing.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IntEqClasses.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IntEqClasses.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IntervalMap.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IntervalMap.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IntrusiveRefCntPtr.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IntrusiveRefCntPtr.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IsInf.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IsInf.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IsNAN.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IsNAN.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\LEB128.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\LEB128.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\LineIterator.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\LineIterator.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Locale.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Locale.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\LockFileManager.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\LockFileManager.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ManagedStatic.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ManagedStatic.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\MemoryBuffer.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\MemoryBuffer.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\MemoryObject.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\MemoryObject.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\MD5.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\MD5.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\PluginLoader.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\PluginLoader.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\PrettyStackTrace.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\PrettyStackTrace.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\RandomNumberGenerator.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\RandomNumberGenerator.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Regex.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Regex.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ScaledNumber.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ScaledNumber.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SmallPtrSet.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SmallPtrSet.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SmallVector.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SmallVector.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SourceMgr.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SourceMgr.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SpecialCaseList.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SpecialCaseList.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Statistic.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Statistic.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StreamableMemoryObject.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StreamableMemoryObject.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StringExtras.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StringExtras.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StringMap.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StringMap.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StringPool.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StringPool.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StringRef.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StringRef.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\StringRefMemoryObject.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\StringRefMemoryObject.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SystemUtils.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SystemUtils.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Timer.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Timer.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ToolOutputFile.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ToolOutputFile.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Triple.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Triple.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Twine.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Twine.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Unicode.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Unicode.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\YAMLParser.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\YAMLParser.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\YAMLTraits.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\YAMLTraits.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\raw_os_ostream.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\raw_os_ostream.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\raw_ostream.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\raw_ostream.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\regcomp.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regcomp.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\regerror.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regerror.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\regexec.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regexec.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\regfree.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regfree.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\regstrlcpy.c" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\regstrlcpy.c" >
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CompileAsC</CompileAs>
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Atomic.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Atomic.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\DynamicLibrary.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\DynamicLibrary.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Errno.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Errno.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Host.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Host.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\IncludeFile.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\IncludeFile.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Memory.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Memory.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Mutex.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Mutex.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Path.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Path.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Process.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Process.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Program.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Program.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\RWMutex.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\RWMutex.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\SearchForAddressOfSpecialSymbol.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\SearchForAddressOfSpecialSymbol.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Signals.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Signals.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\TargetRegistry.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\TargetRegistry.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\ThreadLocal.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\ThreadLocal.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Threading.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Threading.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\TimeValue.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\TimeValue.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Valgrind.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Valgrind.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Support\Watchdog.cpp" >
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Support\Watchdog.cpp" >
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
       <RuntimeTypeInfo Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RuntimeTypeInfo>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> /EHs-c- %(AdditionalOptions)</AdditionalOptions>
@@ -703,8 +703,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
-      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>D350ED08-7D56-477A-B812-9E79AAE29E09</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

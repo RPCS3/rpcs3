@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/cmake/modules
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -31,7 +31,7 @@ if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspeci
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/llvm/cmake/LLVMExports.cmake")
     file(DIFFERENT EXPORT_FILE_CHANGED FILES
          "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/llvm/cmake/LLVMExports.cmake"
-         "D:/Projects/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports.cmake")
+         "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports.cmake")
     if(EXPORT_FILE_CHANGED)
       file(GLOB OLD_CONFIG_FILES "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/llvm/cmake/LLVMExports-*.cmake")
       if(OLD_CONFIG_FILES)
@@ -40,24 +40,24 @@ if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspeci
       endif()
     endif()
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports.cmake")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports.cmake")
   if("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Dd][Ee][Bb][Uu][Gg])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports-debug.cmake")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports-debug.cmake")
   endif()
   if("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Rr][Ee][Ll][Ee][Aa][Ss][Ee])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports-release.cmake")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/cmake/modules/CMakeFiles/Export/share/llvm/cmake/LLVMExports-release.cmake")
   endif()
 endif()
 
 if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE FILE FILES
-    "D:/Projects/rpcs3/llvm_build/cmake/modules/CMakeFiles/LLVMConfig.cmake"
-    "D:/Projects/rpcs3/llvm_build/share/llvm/cmake/LLVMConfigVersion.cmake"
-    "D:/Projects/rpcs3/llvm/cmake/modules/LLVM-Config.cmake"
+    "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/cmake/modules/CMakeFiles/LLVMConfig.cmake"
+    "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/share/llvm/cmake/LLVMConfigVersion.cmake"
+    "D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/LLVM-Config.cmake"
     )
 endif()
 
 if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE DIRECTORY FILES "D:/Projects/rpcs3/llvm/cmake/modules/." FILES_MATCHING REGEX "/[^/]*\\.cmake$" REGEX "/\\.svn$" EXCLUDE REGEX "/llvmconfig\\.cmake$" EXCLUDE REGEX "/llvmconfigversion\\.cmake$" EXCLUDE REGEX "/llvm\\-config\\.cmake$" EXCLUDE REGEX "/gethosttriple\\.cmake$" EXCLUDE REGEX "/versionfromvcs\\.cmake$" EXCLUDE REGEX "/checkatomic\\.cmake$" EXCLUDE)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/llvm/cmake" TYPE DIRECTORY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/." FILES_MATCHING REGEX "/[^/]*\\.cmake$" REGEX "/\\.svn$" EXCLUDE REGEX "/llvmconfig\\.cmake$" EXCLUDE REGEX "/llvmconfigversion\\.cmake$" EXCLUDE REGEX "/llvm\\-config\\.cmake$" EXCLUDE REGEX "/gethosttriple\\.cmake$" EXCLUDE REGEX "/versionfromvcs\\.cmake$" EXCLUDE REGEX "/checkatomic\\.cmake$" EXCLUDE)
 endif()
 

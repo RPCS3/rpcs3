@@ -1,76 +1,76 @@
 ﻿<?xml version="1.0" encoding="Windows-1252"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\ArgumentPromotion.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\ArgumentPromotion.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\BarrierNoopPass.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\BarrierNoopPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\ConstantMerge.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\ConstantMerge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\DeadArgumentElimination.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\DeadArgumentElimination.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\ExtractGV.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\ExtractGV.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\FunctionAttrs.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\FunctionAttrs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\GlobalDCE.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\GlobalDCE.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\GlobalOpt.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\GlobalOpt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\IPConstantPropagation.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\IPConstantPropagation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\IPO.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\IPO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\InlineAlways.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\InlineAlways.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\InlineSimple.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\InlineSimple.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\Inliner.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\Inliner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\Internalize.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\Internalize.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\LoopExtractor.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\LoopExtractor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\MergeFunctions.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\MergeFunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\PartialInlining.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\PartialInlining.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\PassManagerBuilder.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\PassManagerBuilder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\PruneEH.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\PruneEH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\StripDeadPrototypes.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\StripDeadPrototypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\StripSymbols.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\StripSymbols.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Transforms\IPO\CMakeLists.txt" />
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\Transforms\IPO\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{1E328BBF-159A-48BC-8C7E-6B6237ADBBFD}</UniqueIdentifier>
+      <UniqueIdentifier>{49044119-F6F3-4751-BBC4-7E7D89AE0A53}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

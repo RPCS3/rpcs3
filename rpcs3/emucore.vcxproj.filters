@@ -629,6 +629,9 @@
     <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

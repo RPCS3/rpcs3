@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{D2E52B9D-6550-43F1-9825-9C62C06B11DA}</ProjectGUID>
+    <ProjectGUID>{BA405F73-03D5-4634-9BCF-16A283E4CED8}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>INSTALL</ProjectName>
@@ -43,7 +43,7 @@
     </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\ExecutionEngine;D:\Projects\rpcs3\llvm\lib\ExecutionEngine;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\ExecutionEngine;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\ExecutionEngine;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -65,7 +65,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\ExecutionEngine;D:\Projects\rpcs3\llvm\lib\ExecutionEngine;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\ExecutionEngine;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\ExecutionEngine;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -86,7 +86,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\CMakeFiles\7613ff11eac25dffccad47b9ed19ec34\INSTALL_force.rule">
+    <CustomBuild Include="..\..\CMakeFiles\0043833602b75da88202fca2524a0665\INSTALL_force.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 cd .
@@ -97,8 +97,8 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/7613ff11eac25dffccad47b9ed19ec34/INSTALL_force.rule;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\ExecutionEngine\CMakeFiles\INSTALL_force</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm_build/CMakeFiles/0043833602b75da88202fca2524a0665/INSTALL_force.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\ExecutionEngine\CMakeFiles\INSTALL_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -110,14 +110,14 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/7613ff11eac25dffccad47b9ed19ec34/INSTALL_force.rule;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\ExecutionEngine\CMakeFiles\INSTALL_force</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm_build/CMakeFiles/0043833602b75da88202fca2524a0665/INSTALL_force.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\ExecutionEngine\CMakeFiles\INSTALL_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ALL_BUILD.vcxproj">
-      <Project>681ACAC2-256D-48A1-BCAD-BD607D22BDB4</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ALL_BUILD.vcxproj">
+      <Project>915E4697-EF63-450D-AC00-1A9A16E4DFE2</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

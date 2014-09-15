@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/lib/Transforms/Utils
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Transforms/Utils
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -29,9 +29,9 @@ endif()
 
 if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
   if("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Dd][Ee][Bb][Uu][Gg])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Debug/lib/LLVMTransformUtils.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Debug/lib/LLVMTransformUtils.lib")
   elseif("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Rr][Ee][Ll][Ee][Aa][Ss][Ee])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Release/lib/LLVMTransformUtils.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Release/lib/LLVMTransformUtils.lib")
   endif()
 endif()
 

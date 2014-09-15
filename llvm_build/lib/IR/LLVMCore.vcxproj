@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{E383113C-EA5C-4321-A957-8B421782A070}</ProjectGUID>
+    <ProjectGUID>{C3BCF495-B210-455D-B775-052D722BC5C5}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>LLVMCore</ProjectName>
@@ -38,11 +38,11 @@
   <PropertyGroup Label="UserMacros" />
     <PropertyGroup>
       <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\Debug\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Debug\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMCore.dir\Debug\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMCore</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\Release\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Release\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMCore.dir\Release\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMCore</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <CompileAs>CompileAsCpp</CompileAs>
@@ -71,10 +71,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -85,7 +85,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
       <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
@@ -105,10 +105,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3\llvm\lib\IR;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,10 +117,10 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\IR\CMakeLists.txt">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/IR/CMakeLists.txt</Message>
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/IR/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -128,12 +128,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/lib/IR/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\IR\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/IR/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/IR/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/IR/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -141,71 +141,71 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/lib/IR/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\IR\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/IR/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\AsmWriter.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\AttributeImpl.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\ConstantFold.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\ConstantsContext.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\LeaksContext.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\LLVMContextImpl.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\IR\SymbolTableListTraitsImpl.h" />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\AsmWriter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Attributes.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\AutoUpgrade.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\BasicBlock.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Comdat.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\ConstantFold.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\ConstantRange.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Constants.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Core.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DIBuilder.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DataLayout.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DebugInfo.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DebugLoc.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DiagnosticInfo.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\DiagnosticPrinter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Dominators.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Function.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\GCOV.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\GVMaterializer.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Globals.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\IRBuilder.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\IRPrintingPasses.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\InlineAsm.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Instruction.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Instructions.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\IntrinsicInst.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\LLVMContext.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\LLVMContextImpl.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\LeakDetector.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\LegacyPassManager.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\MDBuilder.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Mangler.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Metadata.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Module.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Pass.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\PassManager.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\PassRegistry.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Type.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\TypeFinder.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Use.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\User.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Value.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\ValueSymbolTable.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\ValueTypes.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\IR\Verifier.cpp"  />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\AsmWriter.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\AttributeImpl.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ConstantFold.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ConstantsContext.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LeaksContext.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LLVMContextImpl.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\SymbolTableListTraitsImpl.h" />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\AsmWriter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Attributes.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\AutoUpgrade.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\BasicBlock.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Comdat.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ConstantFold.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ConstantRange.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Constants.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Core.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DIBuilder.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DataLayout.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DebugInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DebugLoc.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DiagnosticInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\DiagnosticPrinter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Dominators.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Function.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\GCOV.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\GVMaterializer.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Globals.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\IRBuilder.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\IRPrintingPasses.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\InlineAsm.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Instruction.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Instructions.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\IntrinsicInst.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LLVMContext.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LLVMContextImpl.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LeakDetector.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\LegacyPassManager.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\MDBuilder.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Mangler.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Metadata.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Module.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Pass.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\PassManager.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\PassRegistry.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Type.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\TypeFinder.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Use.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\User.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Value.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ValueSymbolTable.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\ValueTypes.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\IR\Verifier.cpp"  />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
-      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>D350ED08-7D56-477A-B812-9E79AAE29E09</Project>
     </ProjectReference>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/include/llvm/IR/intrinsics_gen.vcxproj">
-      <Project>287EED9A-FBDD-4CB8-85D8-39AEB6245704</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/include/llvm/IR/intrinsics_gen.vcxproj">
+      <Project>1E777602-37B3-4F1D-BF18-F11C829D5134</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

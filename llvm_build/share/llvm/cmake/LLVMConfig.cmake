@@ -2,10 +2,10 @@
 
 
 # LLVM_BUILD_* values available only from LLVM build tree.
-set(LLVM_BUILD_BINARY_DIR "D:/Projects/rpcs3/llvm_build")
-set(LLVM_BUILD_LIBRARY_DIR "D:/Projects/rpcs3/llvm_build/$(Configuration)/lib")
-set(LLVM_BUILD_MAIN_INCLUDE_DIR "D:/Projects/rpcs3/llvm/include")
-set(LLVM_BUILD_MAIN_SRC_DIR "D:/Projects/rpcs3/llvm")
+set(LLVM_BUILD_BINARY_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm_build")
+set(LLVM_BUILD_LIBRARY_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/$(Configuration)/lib")
+set(LLVM_BUILD_MAIN_INCLUDE_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm/include")
+set(LLVM_BUILD_MAIN_SRC_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm")
 
 
 set(LLVM_VERSION_MAJOR 3)
@@ -89,14 +89,14 @@ set(LLVM_ENABLE_PIC ON)
 set(LLVM_ON_UNIX 0)
 set(LLVM_ON_WIN32 1)
 
-set(LLVM_INCLUDE_DIRS "D:/Projects/rpcs3/llvm/include;D:/Projects/rpcs3/llvm_build/include")
-set(LLVM_LIBRARY_DIRS "D:/Projects/rpcs3/llvm_build/$(Configuration)/lib")
+set(LLVM_INCLUDE_DIRS "D:/Projects/rpcs3-experiment/rpcs3/llvm/include;D:/Projects/rpcs3-experiment/rpcs3/llvm_build/include")
+set(LLVM_LIBRARY_DIRS "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/$(Configuration)/lib")
 set(LLVM_DEFINITIONS "-D__STDC_LIMIT_MACROS" "-D__STDC_CONSTANT_MACROS")
-set(LLVM_CMAKE_DIR "D:/Projects/rpcs3/llvm/cmake/modules")
-set(LLVM_TOOLS_BINARY_DIR "D:/Projects/rpcs3/llvm_build/$(Configuration)/bin")
+set(LLVM_CMAKE_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules")
+set(LLVM_TOOLS_BINARY_DIR "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/$(Configuration)/bin")
 
 if(NOT TARGET LLVMSupport)
-  include("D:/Projects/rpcs3/llvm_build/share/llvm/cmake/LLVMExports.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/share/llvm/cmake/LLVMExports.cmake")
 endif()
 
 include(${LLVM_CMAKE_DIR}/LLVM-Config.cmake)

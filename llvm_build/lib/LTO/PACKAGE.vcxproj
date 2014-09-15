@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{924CDF46-DBFE-4464-B179-3E3DD376B4AA}</ProjectGUID>
+    <ProjectGUID>{43B8E2C6-E5B7-4C4E-8EFC-216FC221256F}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>PACKAGE</ProjectName>
@@ -43,7 +43,7 @@
     </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\LTO;D:\Projects\rpcs3\llvm\lib\LTO;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\LTO;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\LTO;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -53,7 +53,7 @@
     <PostBuildEvent>
       <Message></Message>
       <Command>setlocal
-cd D:\Projects\rpcs3\llvm_build
+cd D:\Projects\rpcs3-experiment\rpcs3\llvm_build
 if %errorlevel% neq 0 goto :cmEnd
 D:
 if %errorlevel% neq 0 goto :cmEnd
@@ -69,7 +69,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\LTO;D:\Projects\rpcs3\llvm\lib\LTO;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\LTO;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\LTO;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -79,7 +79,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <PostBuildEvent>
       <Message></Message>
       <Command>setlocal
-cd D:\Projects\rpcs3\llvm_build
+cd D:\Projects\rpcs3-experiment\rpcs3\llvm_build
 if %errorlevel% neq 0 goto :cmEnd
 D:
 if %errorlevel% neq 0 goto :cmEnd
@@ -94,7 +94,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\CMakeFiles\4614bc75f72f9be93b6f2b192f0ebb02\PACKAGE_force.rule">
+    <CustomBuild Include="..\..\CMakeFiles\b6a954eb109b9a887912f81bd07bab30\PACKAGE_force.rule">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"> </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 cd .
@@ -105,8 +105,8 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/4614bc75f72f9be93b6f2b192f0ebb02/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\LTO\CMakeFiles\PACKAGE_force</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm_build/CMakeFiles/b6a954eb109b9a887912f81bd07bab30/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\LTO\CMakeFiles\PACKAGE_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'"> </Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
@@ -118,14 +118,14 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/4614bc75f72f9be93b6f2b192f0ebb02/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\LTO\CMakeFiles\PACKAGE_force</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm_build/CMakeFiles/b6a954eb109b9a887912f81bd07bab30/PACKAGE_force.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\LTO\CMakeFiles\PACKAGE_force</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ALL_BUILD.vcxproj">
-      <Project>681ACAC2-256D-48A1-BCAD-BD607D22BDB4</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ALL_BUILD.vcxproj">
+      <Project>915E4697-EF63-450D-AC00-1A9A16E4DFE2</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

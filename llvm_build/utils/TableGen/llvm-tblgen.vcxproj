@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{8B29688C-5D8C-412E-85F5-012FBF12B1DE}</ProjectGUID>
+    <ProjectGUID>{12A07AAC-8C43-4914-8D3C-A148BB18B773}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>llvm-tblgen</ProjectName>
@@ -38,13 +38,13 @@
   <PropertyGroup Label="UserMacros" />
     <PropertyGroup>
       <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\Debug\bin\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Debug\bin\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">llvm-tblgen.dir\Debug\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">llvm-tblgen</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
       <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
       <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\Release\bin\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Release\bin\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">llvm-tblgen.dir\Release\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">llvm-tblgen</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
@@ -54,7 +54,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <CompileAs>CompileAsCpp</CompileAs>
@@ -75,10 +75,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -90,8 +90,8 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;..\..\Debug\lib\LLVMSupport.lib;..\..\Debug\lib\LLVMTableGen.lib;..\..\Debug\lib\LLVMSupport.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ImportLibrary>D:/Projects/rpcs3/llvm_build/Debug/lib/llvm-tblgen.lib</ImportLibrary>
-      <ProgramDataBaseFile>D:/Projects/rpcs3/llvm_build/Debug/bin/llvm-tblgen.pdb</ProgramDataBaseFile>
+      <ImportLibrary>D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Debug/lib/llvm-tblgen.lib</ImportLibrary>
+      <ProgramDataBaseFile>D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Debug/bin/llvm-tblgen.pdb</ProgramDataBaseFile>
       <StackReserveSize>10000000</StackReserveSize>
       <SubSystem>Console</SubSystem>
       <Version></Version>
@@ -103,7 +103,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
       <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
@@ -123,10 +123,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -138,8 +138,8 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib;..\..\Release\lib\LLVMSupport.lib;..\..\Release\lib\LLVMTableGen.lib;..\..\Release\lib\LLVMSupport.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <ImportLibrary>D:/Projects/rpcs3/llvm_build/Release/lib/llvm-tblgen.lib</ImportLibrary>
-      <ProgramDataBaseFile>D:/Projects/rpcs3/llvm_build/Release/bin/llvm-tblgen.pdb</ProgramDataBaseFile>
+      <ImportLibrary>D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Release/lib/llvm-tblgen.lib</ImportLibrary>
+      <ProgramDataBaseFile>D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Release/bin/llvm-tblgen.pdb</ProgramDataBaseFile>
       <StackReserveSize>10000000</StackReserveSize>
       <SubSystem>Console</SubSystem>
       <Version></Version>
@@ -149,10 +149,10 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\utils\TableGen\CMakeLists.txt">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/utils/TableGen/CMakeLists.txt</Message>
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/utils/TableGen/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -160,12 +160,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/utils/TableGen/CMakeLists.txt;D:\Projects\rpcs3\llvm\utils\TableGen\CMakeLists.txt;D:\Projects\rpcs3\llvm\utils\TableGen\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/utils/TableGen/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/utils/TableGen/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/utils/TableGen/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -173,67 +173,67 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/utils/TableGen/CMakeLists.txt;D:\Projects\rpcs3\llvm\utils\TableGen\CMakeLists.txt;D:\Projects\rpcs3\llvm\utils\TableGen\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/utils/TableGen/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\utils\TableGen\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\AsmWriterInst.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenDAGPatterns.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenInstruction.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenIntrinsics.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenRegisters.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenSchedule.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenTarget.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelMatcher.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\SequenceToOffsetTable.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\TableGenBackends.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86DisassemblerShared.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86DisassemblerTables.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86ModRMFilters.h" />
-    <ClInclude Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86RecognizableInstr.h" />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\AsmMatcherEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\AsmWriterEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\AsmWriterInst.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CallingConvEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeEmitterGen.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenDAGPatterns.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenInstruction.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenMapTable.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenRegisters.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenSchedule.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CodeGenTarget.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelMatcherEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelMatcherGen.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelMatcherOpt.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DAGISelMatcher.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DFAPacketizerEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\DisassemblerEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\FastISelEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\FixedLenDecoderEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\InstrInfoEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\IntrinsicEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\OptParserEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\PseudoLoweringEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\RegisterInfoEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\SubtargetEmitter.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\TableGen.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86DisassemblerTables.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86ModRMFilters.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\X86RecognizableInstr.cpp"  />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\utils\TableGen\CTagsEmitter.cpp"  />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\AsmWriterInst.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenDAGPatterns.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenInstruction.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenIntrinsics.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenRegisters.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenSchedule.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenTarget.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelMatcher.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\SequenceToOffsetTable.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\TableGenBackends.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86DisassemblerShared.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86DisassemblerTables.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86ModRMFilters.h" />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86RecognizableInstr.h" />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\AsmMatcherEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\AsmWriterEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\AsmWriterInst.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CallingConvEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeEmitterGen.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenDAGPatterns.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenInstruction.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenMapTable.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenRegisters.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenSchedule.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CodeGenTarget.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelMatcherEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelMatcherGen.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelMatcherOpt.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DAGISelMatcher.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DFAPacketizerEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\DisassemblerEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\FastISelEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\FixedLenDecoderEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\InstrInfoEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\IntrinsicEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\OptParserEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\PseudoLoweringEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\RegisterInfoEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\SubtargetEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\TableGen.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86DisassemblerTables.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86ModRMFilters.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\X86RecognizableInstr.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\utils\TableGen\CTagsEmitter.cpp"  />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Support/LLVMSupport.vcxproj">
-      <Project>86BAC22E-49CB-4EFB-8591-5CFE12FF2563</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Support/LLVMSupport.vcxproj">
+      <Project>18AF4932-5301-4653-8E79-17C28FC94F42</Project>
     </ProjectReference>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/TableGen/LLVMTableGen.vcxproj">
-      <Project>8725F0C9-D5E1-4BAD-B92C-39A77A8ACBDE</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/TableGen/LLVMTableGen.vcxproj">
+      <Project>25556CA7-A123-4D00-A890-D0313204E491</Project>
     </ProjectReference>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
-      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>D350ED08-7D56-477A-B812-9E79AAE29E09</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

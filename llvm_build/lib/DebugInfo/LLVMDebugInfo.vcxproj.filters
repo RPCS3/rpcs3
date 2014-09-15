@@ -1,105 +1,105 @@
 ﻿<?xml version="1.0" encoding="Windows-1252"?>
 <Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DIContext.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DIContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFAbbreviationDeclaration.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFAbbreviationDeclaration.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFCompileUnit.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFCompileUnit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFContext.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugAbbrev.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugAbbrev.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugArangeSet.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugArangeSet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugAranges.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugAranges.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugFrame.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugInfoEntry.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugInfoEntry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugLine.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugLine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugLoc.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugLoc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugRangeList.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugRangeList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFFormValue.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFFormValue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFTypeUnit.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFTypeUnit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFUnit.cpp">
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFUnit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFAbbreviationDeclaration.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFAbbreviationDeclaration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFCompileUnit.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFCompileUnit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFContext.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugAbbrev.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugAbbrev.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugAranges.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugAranges.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugArangeSet.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugArangeSet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugFrame.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugInfoEntry.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugInfoEntry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugLine.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugLine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugLoc.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugLoc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFDebugRangeList.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFDebugRangeList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFRelocMap.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFRelocMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFTypeUnit.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFTypeUnit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\DWARFUnit.h">
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\DWARFUnit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\DebugInfo\CMakeLists.txt" />
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\DebugInfo\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{1E328BBF-159A-48BC-8C7E-6B6237ADBBFD}</UniqueIdentifier>
+      <UniqueIdentifier>{49044119-F6F3-4751-BBC4-7E7D89AE0A53}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{CCC6067E-E9BD-4269-97A7-9E34A6B00010}</UniqueIdentifier>
+      <UniqueIdentifier>{F479464E-5854-4287-9D42-A1E6DA632875}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

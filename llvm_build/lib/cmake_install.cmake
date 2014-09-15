@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/lib
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/lib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -29,23 +29,23 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("D:/Projects/rpcs3/llvm_build/lib/IR/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/IRReader/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/CodeGen/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Bitcode/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Transforms/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Linker/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Analysis/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/LTO/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/MC/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Object/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Option/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/DebugInfo/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/AsmParser/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/LineEditor/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/ProfileData/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/IR/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/IRReader/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/CodeGen/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Bitcode/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Transforms/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Linker/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Analysis/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/LTO/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/MC/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Object/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Option/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/DebugInfo/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/ExecutionEngine/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/AsmParser/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/LineEditor/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/ProfileData/cmake_install.cmake")
 
 endif()
 

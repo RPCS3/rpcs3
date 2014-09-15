@@ -30,8 +30,7 @@
 *.dump
 *.wav
 *.tmp
-llvm_build/lib/Target/X86/*.inc
-llvm_build/include/llvm/IR/Intrinsics.gen
+llvm_build/*
 
 /build
 

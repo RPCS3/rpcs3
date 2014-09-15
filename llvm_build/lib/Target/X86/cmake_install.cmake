@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/lib/Target/X86
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Target/X86
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -29,20 +29,20 @@ endif()
 
 if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
   if("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Dd][Ee][Bb][Uu][Gg])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Debug/lib/LLVMX86CodeGen.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Debug/lib/LLVMX86CodeGen.lib")
   elseif("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Rr][Ee][Ll][Ee][Aa][Ss][Ee])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Release/lib/LLVMX86CodeGen.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Release/lib/LLVMX86CodeGen.lib")
   endif()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/AsmParser/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/Disassembler/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/InstPrinter/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/MCTargetDesc/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/TargetInfo/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/Target/X86/Utils/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/AsmParser/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/Disassembler/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/InstPrinter/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/MCTargetDesc/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/TargetInfo/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/Target/X86/Utils/cmake_install.cmake")
 
 endif()
 

@@ -1,4 +1,4 @@
-# Install script for directory: D:/Projects/rpcs3/llvm/lib/MC
+# Install script for directory: D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/MC
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -29,17 +29,17 @@ endif()
 
 if(NOT CMAKE_INSTALL_COMPONENT OR "${CMAKE_INSTALL_COMPONENT}" STREQUAL "Unspecified")
   if("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Dd][Ee][Bb][Uu][Gg])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Debug/lib/LLVMMC.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Debug/lib/LLVMMC.lib")
   elseif("${CMAKE_INSTALL_CONFIG_NAME}" MATCHES "^([Rr][Ee][Ll][Ee][Aa][Ss][Ee])$")
-    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3/llvm_build/Release/lib/LLVMMC.lib")
+    file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "D:/Projects/rpcs3-experiment/rpcs3/llvm_build/Release/lib/LLVMMC.lib")
   endif()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("D:/Projects/rpcs3/llvm_build/lib/MC/MCAnalysis/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/MC/MCParser/cmake_install.cmake")
-  include("D:/Projects/rpcs3/llvm_build/lib/MC/MCDisassembler/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/MC/MCAnalysis/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/MC/MCParser/cmake_install.cmake")
+  include("D:/Projects/rpcs3-experiment/rpcs3/llvm_build/lib/MC/MCDisassembler/cmake_install.cmake")
 
 endif()
 

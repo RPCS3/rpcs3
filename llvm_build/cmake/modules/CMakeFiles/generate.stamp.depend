@@ -1,5 +1,5 @@
 # CMake generation dependency list for this directory.
-D:/Projects/rpcs3/llvm/cmake/modules/CMakeLists.txt
-D:/Projects/rpcs3/llvm/cmake/modules/LLVMConfig.cmake.in
-D:/Projects/rpcs3/llvm/cmake/modules/LLVMConfig.cmake.in
-D:/Projects/rpcs3/llvm/cmake/modules/LLVMConfigVersion.cmake.in
+D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/CMakeLists.txt
+D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/LLVMConfig.cmake.in
+D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/LLVMConfig.cmake.in
+D:/Projects/rpcs3-experiment/rpcs3/llvm/cmake/modules/LLVMConfigVersion.cmake.in

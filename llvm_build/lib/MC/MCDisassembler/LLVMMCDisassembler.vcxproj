@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGUID>{CE2F2A88-5AEA-471C-83C1-ABAA767E089B}</ProjectGUID>
+    <ProjectGUID>{AF303389-3C5C-41E1-8589-A2417BA2F2A0}</ProjectGUID>
     <Keyword>Win32Proj</Keyword>
     <Platform>x64</Platform>
     <ProjectName>LLVMMCDisassembler</ProjectName>
@@ -38,11 +38,11 @@
   <PropertyGroup Label="UserMacros" />
     <PropertyGroup>
       <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\Debug\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Debug\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMMCDisassembler.dir\Debug\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMMCDisassembler</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
-      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\Release\lib\</OutDir>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\Release\lib\</OutDir>
       <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMMCDisassembler.dir\Release\</IntDir>
       <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMMCDisassembler</TargetName>
       <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <CompileAs>CompileAsCpp</CompileAs>
@@ -71,10 +71,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -85,7 +85,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <CompileAs>CompileAsCpp</CompileAs>
       <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
@@ -105,10 +105,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler;D:\Projects\rpcs3-experiment\rpcs3\llvm_build\include;D:\Projects\rpcs3-experiment\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,10 +117,10 @@
     </Midl>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt</Message>
+    <CustomBuild Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -128,12 +128,12 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3-experiment/rpcs3/llvm -BD:/Projects/rpcs3-experiment/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -141,18 +141,18 @@ endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
 exit /b %1
 :cmDone
 if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/MC/MCDisassembler/CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3-experiment\rpcs3\llvm_build\lib\MC\MCDisassembler\CMakeFiles\generate.stamp</Outputs>
       <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\Disassembler.h" />
-    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\Disassembler.cpp"  />
+    <ClInclude Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\Disassembler.h" />
+    <ClCompile Include="D:\Projects\rpcs3-experiment\rpcs3\llvm\lib\MC\MCDisassembler\Disassembler.cpp"  />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
-      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    <ProjectReference Include="D:/Projects/rpcs3-experiment/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>D350ED08-7D56-477A-B812-9E79AAE29E09</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

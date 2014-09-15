@@ -1,13 +1,5 @@
 # CMake generation dependency list for this directory.
-D:/Projects/rpcs3/llvm/lib/Target/X86/CMakeLists.txt
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeDetermineASM_MASMCompiler.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeDetermineASMCompiler.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeDetermineCompiler.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeDetermineCompilerId.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeFindBinUtils.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeASMCompiler.cmake.in
-D:/Projects/rpcs3/llvm_build/CMakeFiles/3.0.1/CMakeASM_MASMCompiler.cmake
+D:/Projects/rpcs3-experiment/rpcs3/llvm/lib/Target/X86/CMakeLists.txt
+D:/Projects/rpcs3-experiment/rpcs3/llvm_build/CMakeFiles/3.0.2/CMakeASM_MASMCompiler.cmake
 C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeASM_MASMInformation.cmake
 C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeASMInformation.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeTestASM_MASMCompiler.cmake
-C:/Program Files (x86)/CMake/share/cmake-3.0/Modules/CMakeTestASMCompiler.cmake
