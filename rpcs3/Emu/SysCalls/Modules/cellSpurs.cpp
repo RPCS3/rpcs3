@@ -3,6 +3,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
+#include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/Cell/SPURSManager.h"
 #include "cellSpurs.h"
 
@@ -20,18 +21,18 @@ s64 spursInit(
 	s32 nSpus,
 	s32 spuPriority,
 	s32 ppuPriority,
-	u32 flags,
+	u32 flags, // SpursAttrFlags
 	const char prefix[],
 	u32 prefixSize,
 	u32 container,
-	u32 arg11,
-	u32 arg12,
-	u32 arg13)
+	const u8 swlPriority[],
+	u32 swlMaxSpu,
+	u32 swlIsPreem)
 {
 	// internal function
 #ifdef PRX_DEBUG
 	return cb_caller<s32,vm::ptr<CellSpurs2>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>::call(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
-		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, Memory.RealToVirtualAddr(prefix), prefixSize, container, arg11, arg12, arg13);
+		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, Memory.RealToVirtualAddr(prefix), prefixSize, container, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
 #else
 	//spurs->spurs = new SPURSManager(attr);
 	return CELL_OK;
@@ -53,11 +54,11 @@ s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 		nSpus,
 		spuPriority,
 		ppuPriority,
-		exitIfNoWork ? 1 : 0,
+		exitIfNoWork ? SAF_EXIT_IF_NO_WORK : SAF_NONE,
 		nullptr,
 		0,
 		0,
-		0,
+		nullptr,
 		0,
 		0);
 #endif
@@ -90,13 +91,13 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 		attr->m.nSpus,
 		attr->m.spuPriority,
 		attr->m.ppuPriority,
-		(u32)attr->m.flags | (attr->m.exitIfNoWork ? 1 : 0),
+		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0),
 		attr->m.prefix,
 		attr->m.prefixSize,
 		attr->m.container,
-		attr.addr() + 0x38,
-		attr->_u32[16],
-		attr->_u32[17]);
+		attr->m.swlPriority,
+		attr->m.swlMaxSpu,
+		attr->m.swlIsPreem);
 #endif
 }
 
@@ -127,13 +128,13 @@ s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs2> spurs, vm::ptr<const C
 		attr->m.nSpus,
 		attr->m.spuPriority,
 		attr->m.ppuPriority,
-		(u32)attr->m.flags | (attr->m.exitIfNoWork ? 1 : 0) | 4,
+		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0) | 4, // +add unknown flag
 		attr->m.prefix,
 		attr->m.prefixSize,
 		attr->m.container,
-		attr.addr() + 0x38,
-		attr->_u32[16],
-		attr->_u32[17]);
+		attr->m.swlPriority,
+		attr->m.swlMaxSpu,
+		attr->m.swlIsPreem);
 #endif
 }
 
@@ -180,13 +181,14 @@ s64 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 	{
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
-	if ((u32)attr->m.flags & 0x20000000) // check unknown flag
+
+	if (attr->m.flags.ToLE() & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	attr->_u32[11] = container;
-	attr->m.flags |= 0x40000000; // set unknown flag
+	attr->m.container = container;
+	attr->m.flags |= SAF_SPU_MEMORY_CONTAINER_SET;
 	return CELL_OK;
 #endif
 }
@@ -220,11 +222,21 @@ s64 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::ptr<co
 
 s64 cellSpursAttributeEnableSpuPrintfIfAvailable(vm::ptr<CellSpursAttribute> attr)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.addr());
+
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0x7150, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!attr)
+	{
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+	if (attr.addr() % 8)
+	{
+		return CELL_SPURS_CORE_ERROR_ALIGN;
+	}
+
+	attr->m.flags |= SAF_SPU_PRINTF_ENABLED;
 	return CELL_OK;
 #endif
 }
@@ -245,45 +257,82 @@ s64 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s3
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (type == 0x18)
+	if (type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
 	{
-		if (attr->m.flags & 0x40000000) // check unknown flag
+		if (attr->m.flags.ToLE() & SAF_SPU_MEMORY_CONTAINER_SET)
 		{
 			return CELL_SPURS_CORE_ERROR_STAT;
 		}
-
-		attr->m.flags |= 0x20000000; // set unknown flag
-		return CELL_OK;
+		attr->m.flags |= SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT; // set
 	}
-	else if (type)
+	else if (type == SYS_SPU_THREAD_GROUP_TYPE_NORMAL)
+	{
+		attr->m.flags &= ~SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT; // clear
+	}
+	else
 	{
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
-	else // if type == 0
-	{
-		attr->m.flags &= ~0x20000000; // clear unknown flag
-		return CELL_OK;
-	}
+	return CELL_OK;
 #endif
 }
 
-s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::ptr<const u8> priority, u32 maxSpu, vm::ptr<const bool> isPreemptible)
+s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::ptr<const u8[8]> priority, u32 maxSpu, vm::ptr<const bool[8]> isPreemptible)
 {
 	cellSpurs->Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
 		attr.addr(), priority.addr(), maxSpu, isPreemptible.addr());
 
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0xF410, libsre_rtoc);
 #else
-	for (s32 i = 0; i < CELL_SPURS_MAX_SPU; i++)
+	if (!attr)
 	{
-		if (priority[i] != 1 || maxSpu == 0)
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+	if (attr.addr() % 8)
+	{
+		return CELL_SPURS_CORE_ERROR_ALIGN;
+	}
+
+	const u32 nSpus = attr->m.nSpus;
+	if (!nSpus)
+	{
+		return CELL_SPURS_CORE_ERROR_INVAL;
+	}
+	for (u32 i = 0; i < nSpus; i++)
+	{
+		if ((*priority)[i] == 1)
 		{
-			cellSpurs->Error("cellSpursAttributeEnableSystemWorkload : CELL_SPURS_CORE_ERROR_INVAL");
-			return CELL_SPURS_CORE_ERROR_INVAL;
+			if (!maxSpu)
+			{
+				return CELL_SPURS_CORE_ERROR_INVAL;
+			}
+			if (nSpus == 1 || attr->m.exitIfNoWork)
+			{
+				return CELL_SPURS_CORE_ERROR_PERM;
+			}
+			if (attr->m.flags.ToLE() & SAF_SYSTEM_WORKLOAD_ENABLED)
+			{
+				return CELL_SPURS_CORE_ERROR_BUSY;
+			}
+
+			attr->m.flags |= SAF_SYSTEM_WORKLOAD_ENABLED; // set flag
+			*(u64*)attr->m.swlPriority = *(u64*)*priority; // copy system workload priorities
+
+			u32 isPreem = 0; // generate mask from isPreemptible values
+			for (u32 j = 0; j < nSpus; j++)
+			{
+				if ((*isPreemptible)[j])
+				{
+					isPreem |= (1 << j);
+				}
+			}
+			attr->m.swlMaxSpu = maxSpu; // write max spu for system workload
+			attr->m.swlIsPreem = isPreem; // write isPreemptible mask
+			return CELL_OK;
 		}
 	}
-	return CELL_OK;
+	return CELL_SPURS_CORE_ERROR_INVAL;
 #endif
 }
 
