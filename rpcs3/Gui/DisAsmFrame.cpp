@@ -91,7 +91,7 @@ void DisAsmFrame::AddLine(const wxString line)
 		return;
 	}
 
-	m_disasm_list->SetItem(count, 0, wxString::Format("%llx", CPU.PC));
+	m_disasm_list->SetItem(count, 0, wxString::Format("%x", CPU.PC));
 	m_disasm_list->SetItem(count, 1, line);
 
 	++count;
@@ -480,11 +480,11 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 
 	diag.SetSizerAndFit( s_panel );
 
-	p_pc->SetLabel(wxString::Format("%llx", CPU.PC));
+	p_pc->SetLabel(wxString::Format("%x", CPU.PC));
 
 	if(diag.ShowModal() == wxID_OK)
 	{
-		sscanf(fmt::ToUTF8(p_pc->GetLabel()).c_str(), "%llx", &CPU.PC);
+		sscanf(fmt::ToUTF8(p_pc->GetLabel()).c_str(), "%x", &CPU.PC);
 		Resume();
 	}
 }

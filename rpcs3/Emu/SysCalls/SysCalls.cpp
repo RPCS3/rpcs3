@@ -922,7 +922,7 @@ void default_syscall()
 	{
 		//tty
 		case 988:
-			LOG_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
+			LOG_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%x",
 				CPU.GPR[3], CPU.GPR[4], CPU.PC);
 			CPU.GPR[3] = 0;
 		return;

@@ -456,7 +456,7 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetValue(wxString::Format("%llx", CPU->PC));
+	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{

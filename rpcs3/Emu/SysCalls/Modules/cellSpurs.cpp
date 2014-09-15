@@ -180,8 +180,7 @@ s64 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 	{
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
-	CellSpursAttribute a = *attr;
-	if ((u32)a.m.flags & 0x20000000) // check unknown flag
+	if ((u32)attr->m.flags & 0x20000000) // check unknown flag
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}

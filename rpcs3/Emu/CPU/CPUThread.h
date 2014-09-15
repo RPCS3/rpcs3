@@ -202,7 +202,7 @@ public:
 
 		for(uint i=0; i<m_call_stack.size(); ++i)
 		{
-			ret += fmt::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
+			ret += fmt::Format("0x%x -> 0x%x\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
 		}
 
 		return ret;

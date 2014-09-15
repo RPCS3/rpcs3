@@ -287,7 +287,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	{
 		// TODO: allow recovering from a page fault
 		throw fmt::Format("Access violation: addr = 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
-			(u32)addr, t->IsAlive() ? 1 : 0, (u64)t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
+			(u32)addr, t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
 	}
 	else
 	{
@@ -314,7 +314,7 @@ void CPUThread::Task()
 		}
 	}
 
-	std::vector<u64> trace;
+	std::vector<u32> trace;
 
 #ifdef _WIN32
 	auto old_se_translator = _set_se_translator(_se_translator);
@@ -376,7 +376,7 @@ void CPUThread::Task()
 	// TODO: linux version
 #endif
 
-	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%llx", v);
+	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%x", v);
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
 }
