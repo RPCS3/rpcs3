@@ -168,34 +168,35 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb) {
     // of any one of the operands.
     u32  tmp1_v4i32[4] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF};
     auto tmp2_v4i32    = m_ir_builder.CreateLShr(va_v4i32, 31);
-    auto tmp3_v4i32    = m_ir_builder.CreateAdd(tmp2_v4i32, ConstantDataVector::get(m_llvm_context, tmp1_v4i32));
+    tmp2_v4i32         = m_ir_builder.CreateAdd(tmp2_v4i32, ConstantDataVector::get(m_llvm_context, tmp1_v4i32));
+    auto tmp2_v16i8    = m_ir_builder.CreateBitCast(tmp2_v4i32, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
 
     // Next, we find if the addition can actually result in an overflow. Since an overflow can only happen if the operands
-    // have the same sign, we bitwise AND both the operands. If the sign bit of the result is 1 then the operands have the
-    // same sign and so may cause an overflow.
-    auto tmp4_v4i32 = m_ir_builder.CreateAnd(va_v4i32, vb_v4i32);
+    // have the same sign, we bitwise XOR both the operands. If the sign bit of the result is 0 then the operands have the
+    // same sign and so may cause an overflow. We invert the result so that the sign bit is 1 when the operands have the
+    // same sign.
+    auto tmp3_v4i32        = m_ir_builder.CreateXor(va_v4i32, vb_v4i32);
+    u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    tmp3_v4i32             = m_ir_builder.CreateXor(tmp3_v4i32, ConstantDataVector::get(m_llvm_context, not_mask_v4i32));
 
     // Perform the sum.
     auto sum_v4i32 = m_ir_builder.CreateAdd(va_v4i32, vb_v4i32);
+    auto sum_v16i8 = m_ir_builder.CreateBitCast(sum_v4i32, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
 
     // If an overflow occurs, then the sign of the sum will be different from the sign of the operands. So, we xor the
     // result with one of the operands. The sign bit of the result will be 1 if the sign bit of the sum and the sign bit of the
-    // result is different. This result is again ANDed with tmp4 (the sign bit of tmp4 is 1 only if the operands have the same
+    // result is different. This result is again ANDed with tmp3 (the sign bit of tmp3 is 1 only if the operands have the same
     // sign and so can cause an overflow).
-    auto tmp5_v4i32 = m_ir_builder.CreateXor(va_v4i32, sum_v4i32);
-    auto tmp6_v4i32 = m_ir_builder.CreateAnd(tmp4_v4i32, tmp5_v4i32);
-    auto tmp7_v4i32 = m_ir_builder.CreateAShr(tmp6_v4i32, 31);
+    auto tmp4_v4i32 = m_ir_builder.CreateXor(va_v4i32, sum_v4i32);
+    tmp4_v4i32      = m_ir_builder.CreateAnd(tmp3_v4i32, tmp4_v4i32);
+    tmp4_v4i32      = m_ir_builder.CreateAShr(tmp4_v4i32, 31);
+    auto tmp4_v16i8 = m_ir_builder.CreateBitCast(tmp4_v4i32, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
 
-    // tmp7 is equal to 0xFFFFFFFF if an overflow occured and 0x00000000 otherwise. tmp9 is bitwise inverse of tmp7.
-    u32  tmp8_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-    auto tmp9_v4i32    = m_ir_builder.CreateXor(tmp7_v4i32, ConstantDataVector::get(m_llvm_context, tmp8_v4i32));
-    auto tmp10_v4i32   = m_ir_builder.CreateAnd(tmp3_v4i32, tmp7_v4i32);
-    auto tmp11_v4i32   = m_ir_builder.CreateAnd(sum_v4i32, tmp9_v4i32);
-    auto tmp12_v4i32   = m_ir_builder.CreateOr(tmp10_v4i32, tmp11_v4i32);
-    SetVr(vd, tmp12_v4i32);
+    // tmp4 is equal to 0xFFFFFFFF if an overflow occured and 0x00000000 otherwise.
+    auto res_v16i8 = m_ir_builder.CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse41_pblendvb), sum_v16i8, tmp2_v16i8, tmp4_v16i8);
+    SetVr(vd, res_v16i8);
 
     // TODO: Set SAT
-    // TODO: Optimize with pblend
 }
 
 void PPULLVMRecompiler::VADDUBM(u32 vd, u32 va, u32 vb) {
@@ -210,6 +211,8 @@ void PPULLVMRecompiler::VADDUBS(u32 vd, u32 va, u32 vb) {
     auto vb_v16i8  = GetVrAsIntVec(vb, 8);
     auto sum_v16i8 = m_ir_builder.CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_paddus_b), va_v16i8, vb_v16i8);
     SetVr(vd, sum_v16i8);
+
+    // TODO: Set SAT
 }
 
 void PPULLVMRecompiler::VADDUHM(u32 vd, u32 va, u32 vb) {
@@ -224,6 +227,8 @@ void PPULLVMRecompiler::VADDUHS(u32 vd, u32 va, u32 vb) {
     auto vb_v8i16  = GetVrAsIntVec(vb, 16);
     auto sum_v8i16 = m_ir_builder.CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_paddus_w), va_v8i16, vb_v8i16);
     SetVr(vd, sum_v8i16);
+
+    // TODO: Set SAT
 }
 
 void PPULLVMRecompiler::VADDUWM(u32 vd, u32 va, u32 vb) {
@@ -246,20 +251,19 @@ void PPULLVMRecompiler::VADDUWS(u32 vd, u32 va, u32 vb) {
 }
 
 void PPULLVMRecompiler::VAND(u32 vd, u32 va, u32 vb) {
-    auto va_v1i128  = GetVrAsIntVec(va, 128);
-    auto vb_v1i128  = GetVrAsIntVec(vb, 128);
-    auto res_v1i128 = m_ir_builder.CreateAnd(va_v1i128, vb_v1i128);
-    SetVr(vd, res_v1i128);
+    auto va_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    auto res_v4i32 = m_ir_builder.CreateAnd(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void PPULLVMRecompiler::VANDC(u32 vd, u32 va, u32 vb) {
-    auto va_v1i128  = GetVrAsIntVec(va, 128);
-    auto vb_v1i128  = GetVrAsIntVec(vb, 128);
-    vb_v1i128       = m_ir_builder.CreateXor(vb_v1i128, m_ir_builder.getInt(APInt(128, "-1", 10)));
-    auto res_v1i128 = m_ir_builder.CreateAnd(va_v1i128, vb_v1i128);
-    SetVr(vd, res_v1i128);
-
-    // TODO: Check if this generates ANDC
+    auto va_v4i32          = GetVrAsIntVec(va, 32);
+    auto vb_v4i32          = GetVrAsIntVec(vb, 32);
+    u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+    vb_v4i32               = m_ir_builder.CreateXor(vb_v4i32, ConstantDataVector::get(m_llvm_context, not_mask_v4i32));
+    auto res_v4i32         = m_ir_builder.CreateAnd(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void PPULLVMRecompiler::VAVGSB(u32 vd, u32 va, u32 vb) {
@@ -271,7 +275,7 @@ void PPULLVMRecompiler::VAVGSB(u32 vd, u32 va, u32 vb) {
     u16  one_v16i16[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     sum_v16i16          = m_ir_builder.CreateAdd(sum_v16i16, ConstantDataVector::get(m_llvm_context, one_v16i16));
     auto avg_v16i16     = m_ir_builder.CreateAShr(sum_v16i16, 1);
-    auto avg_v16i8      = m_ir_builder.CreateBitCast(avg_v16i16, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
+    auto avg_v16i8      = m_ir_builder.CreateTrunc(avg_v16i16, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
     SetVr(vd, avg_v16i8);
 }
 
@@ -284,7 +288,7 @@ void PPULLVMRecompiler::VAVGSH(u32 vd, u32 va, u32 vb) {
     u32  one_v8i32[8] = {1, 1, 1, 1, 1, 1, 1, 1};
     sum_v8i32         = m_ir_builder.CreateAdd(sum_v8i32, ConstantDataVector::get(m_llvm_context, one_v8i32));
     auto avg_v8i32    = m_ir_builder.CreateAShr(sum_v8i32, 1);
-    auto avg_v8i16    = m_ir_builder.CreateBitCast(avg_v8i32, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
+    auto avg_v8i16    = m_ir_builder.CreateTrunc(avg_v8i32, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
     SetVr(vd, avg_v8i16);
 }
 
@@ -297,7 +301,7 @@ void PPULLVMRecompiler::VAVGSW(u32 vd, u32 va, u32 vb) {
     u64  one_v4i64[4] = {1, 1, 1, 1};
     sum_v4i64         = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
     auto avg_v4i64    = m_ir_builder.CreateAShr(sum_v4i64, 1);
-    auto avg_v4i32    = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+    auto avg_v4i32    = m_ir_builder.CreateTrunc(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     SetVr(vd, avg_v4i32);
 }
 
@@ -324,7 +328,7 @@ void PPULLVMRecompiler::VAVGUW(u32 vd, u32 va, u32 vb) {
     u64  one_v4i64[4] = {1, 1, 1, 1};
     sum_v4i64         = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
     auto avg_v4i64    = m_ir_builder.CreateLShr(sum_v4i64, 1);
-    auto avg_v4i32    = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+    auto avg_v4i32    = m_ir_builder.CreateTrunc(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     SetVr(vd, avg_v4i32);
 }
 
