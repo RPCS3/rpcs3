@@ -7,9 +7,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/MC/MCDisassembler.h"
 
-using namespace llvm;
-
+/// LLVM based PPU emulator
 class PPULLVMRecompiler : public CPUDecoder, protected PPUOpcodes
 {
 public:
@@ -420,22 +420,56 @@ protected:
 	void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
-	PPUThread       & m_ppu;
-	PPUDecoder      * m_decoder;
-	bool              m_hit_branch_instruction;
+	/// PPU processor context
+	PPUThread & m_ppu;
 
-	LLVMContext       m_llvm_context;
-	IRBuilder<>       m_ir_builder;
-	llvm::Module    * m_module;
-	GlobalVariable  * m_gpr;
-	GlobalVariable  * m_vpr;
-	GlobalVariable  * m_vscr;
-	ExecutionEngine * m_execution_engine;
+	/// PPU instruction decoder
+	PPUDecoder m_decoder;
 
-	Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
-	Value * GetVrAsFloatVec(u32 vr);
-	Value * GetVrAsDoubleVec(u32 vr);
-	void SetVr(u32 vr, Value * val);
+	/// A flag used to detect branch instructions.
+	/// This is set to false at the start of compilation of a block.
+	/// When a branch instruction is encountered, this is set to true by the decode function.
+	bool m_hit_branch_instruction;
 
-	void RunTests();
+	/// LLVM context
+	llvm::LLVMContext m_llvm_context;
+
+	/// LLVM IR builder
+	llvm::IRBuilder<> m_ir_builder;
+
+	/// Module to which all generated code is output to
+	llvm::Module * m_module;
+
+	/// Global variable in m_module that corresponds to m_ppu.GPR
+	llvm::GlobalVariable * m_gpr;
+
+	/// Global variable in m_module that corresponds to m_ppu.VPR
+	llvm::GlobalVariable * m_vpr;
+
+	/// Global variable in m_module that corresponds to m_ppu.VSCR
+	llvm::GlobalVariable * m_vscr;
+
+	/// JIT execution engine
+	llvm::ExecutionEngine * m_execution_engine;
+
+	/// Disassembler
+	LLVMDisasmContextRef m_disassembler;
+
+	/// Load VR and convert it to an integer vector
+	llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
+
+	/// Load VR and convert it to a float vector with 4 elements
+	llvm::Value * GetVrAsFloatVec(u32 vr);
+
+	/// Load VR and convert it to a double vector with 2 elements
+	llvm::Value * GetVrAsDoubleVec(u32 vr);
+
+	/// Set VR to the specified value
+	void SetVr(u32 vr, llvm::Value * val);
+
+	/// Execute all unit tests
+	void RunUnitTests();
+
+	/// Excute an unit test
+	void RunUnitTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
 };

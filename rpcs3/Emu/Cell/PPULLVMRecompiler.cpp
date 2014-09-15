@@ -1,19 +1,25 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#undef _
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/CodeGen/MachineCodeInfo.h"
+
+using namespace llvm;
 
 PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
 	: m_ppu(ppu)
-	, m_decoder(new PPUDecoder(this))
+	, m_decoder(this)
 	, m_ir_builder(m_llvm_context)
 {
 	InitializeNativeTarget();
+	InitializeNativeTargetDisassembler();
 
 	m_module = new Module("Module", m_llvm_context);
 	m_gpr    = new GlobalVariable(*m_module, ArrayType::get(Type::getInt64Ty(m_llvm_context), 32), false, GlobalValue::ExternalLinkage, nullptr, "gpr");
@@ -24,38 +30,42 @@ PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
 	m_execution_engine->addGlobalMapping(m_gpr, m_ppu.GPR);
 	m_execution_engine->addGlobalMapping(m_vpr, m_ppu.VPR);
 	m_execution_engine->addGlobalMapping(m_vscr, &m_ppu.VSCR);
+
+	m_disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+
+	RunUnitTests();
 }
 
 PPULLVMRecompiler::~PPULLVMRecompiler()
 {
+	LLVMDisasmDispose(m_disassembler);
 	delete m_execution_engine;
 	llvm_shutdown();
-	delete m_decoder;
 }
 
 u8 PPULLVMRecompiler::DecodeMemory(const u64 address)
 {
-	std::string function_name = fmt::Format("fn_%llx", address);
-	Function * function = m_module->getFunction(function_name);
+	auto function_name = fmt::Format("fn_0x%llx", address);
+	auto function      = m_module->getFunction(function_name);
 
 	if (!function)
 	{
-		function = cast<Function>(m_module->getOrInsertFunction(function_name, Type::getVoidTy(m_llvm_context), (Type *)nullptr));
-		BasicBlock * block = BasicBlock::Create(m_llvm_context, "start", function);
+		function   = cast<Function>(m_module->getOrInsertFunction(function_name, Type::getVoidTy(m_llvm_context), (Type *)nullptr));
+		auto block = BasicBlock::Create(m_llvm_context, "start", function);
 		m_ir_builder.SetInsertPoint(block);
 
 		//m_hit_branch_instruction = false;
 		//while (!m_hit_branch_instruction)
 		//{
 		//	u32 instr = Memory.Read32(address);
-		//	m_decoder->Decode(instr);
+		//	m_decoder.Decode(instr);
 		//}
 
 		VADDSWS(14, 23, 25);
 
 		// TODO: Add code to set PC
 		m_ir_builder.CreateRetVoid();
-		std::string s;
+		std::string        s;
 		raw_string_ostream s2(s);
 
 		s2 << *m_module;
@@ -93,7 +103,7 @@ void PPULLVMRecompiler::TDI(u32 to, u32 ra, s32 simm16)
 
 void PPULLVMRecompiler::TWI(u32 to, u32 ra, s32 simm16)
 {
-	s32 a = m_ppu.GPR[ra];
+	s32 a = (s32)m_ppu.GPR[ra];
 
 	if ((a < simm16 && (to & 0x10)) ||
 		(a > simm16 && (to & 0x8)) ||
@@ -125,10 +135,10 @@ void PPULLVMRecompiler::VADDCUW(u32 vd, u32 va, u32 vb)
 	auto va_v4i32 = GetVrAsIntVec(va, 32);
 	auto vb_v4i32 = GetVrAsIntVec(vb, 32);
 
-	u32 not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-	va_v4i32              = m_ir_builder.CreateXor(va_v4i32, ConstantDataVector::get(m_llvm_context, not_mask_v4i32));
-	auto cmpv4i1          = m_ir_builder.CreateICmpULT(va_v4i32, vb_v4i32);
-	auto cmpv4i32         = m_ir_builder.CreateZExt(cmpv4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+	u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+	va_v4i32               = m_ir_builder.CreateXor(va_v4i32, ConstantDataVector::get(m_llvm_context, not_mask_v4i32));
+	auto cmpv4i1           = m_ir_builder.CreateICmpULT(va_v4i32, vb_v4i32);
+	auto cmpv4i32          = m_ir_builder.CreateZExt(cmpv4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
 	SetVr(vd, cmpv4i32);
 
 	// TODO: Implement with overflow intrinsics and check if the generated code is better
@@ -173,9 +183,9 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb)
 	// If two +ve numbers are being added and cause an overflow, the result would be 0x7FFFFFFF. Addition of a -ve
 	// number and a +ve number cannot cause overflow. So the result in case of an overflow is 0x7FFFFFFF + sign bit
 	// of any one of the operands.
-	u32 tmp1_v4i32[4] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF};
-	auto tmp2_v4i32   = m_ir_builder.CreateLShr(va_v4i32, 31);
-	auto tmp3_v4i32   = m_ir_builder.CreateAdd(tmp2_v4i32, ConstantDataVector::get(m_llvm_context, tmp1_v4i32));
+	u32  tmp1_v4i32[4] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF};
+	auto tmp2_v4i32    = m_ir_builder.CreateLShr(va_v4i32, 31);
+	auto tmp3_v4i32    = m_ir_builder.CreateAdd(tmp2_v4i32, ConstantDataVector::get(m_llvm_context, tmp1_v4i32));
 
 	// Next, we find if the addition can actually result in an overflow. Since an overflow can only happen if the operands
 	// have the same sign, we bitwise AND both the operands. If the sign bit of the result is 1 then the operands have the
@@ -194,11 +204,11 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb)
 	auto tmp7_v4i32 = m_ir_builder.CreateAShr(tmp6_v4i32, 31);
 
 	// tmp7 is equal to 0xFFFFFFFF if an overflow occured and 0x00000000 otherwise. tmp9 is bitwise inverse of tmp7.
-	u32 tmp8_v4i32[4] ={0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-	auto tmp9_v4i32   = m_ir_builder.CreateXor(tmp7_v4i32, ConstantDataVector::get(m_llvm_context, tmp8_v4i32));
-	auto tmp10_v4i32  = m_ir_builder.CreateAnd(tmp3_v4i32, tmp7_v4i32);
-	auto tmp11_v4i32  = m_ir_builder.CreateAnd(sum_v4i32, tmp9_v4i32);
-	auto tmp12_v4i32  = m_ir_builder.CreateOr(tmp10_v4i32, tmp11_v4i32);
+	u32  tmp8_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+	auto tmp9_v4i32    = m_ir_builder.CreateXor(tmp7_v4i32, ConstantDataVector::get(m_llvm_context, tmp8_v4i32));
+	auto tmp10_v4i32   = m_ir_builder.CreateAnd(tmp3_v4i32, tmp7_v4i32);
+	auto tmp11_v4i32   = m_ir_builder.CreateAnd(sum_v4i32, tmp9_v4i32);
+	auto tmp12_v4i32   = m_ir_builder.CreateOr(tmp10_v4i32, tmp11_v4i32);
 	SetVr(vd, tmp12_v4i32);
 
 	// TODO: Set SAT
@@ -279,43 +289,43 @@ void PPULLVMRecompiler::VANDC(u32 vd, u32 va, u32 vb)
 
 void PPULLVMRecompiler::VAVGSB(u32 vd, u32 va, u32 vb)
 {
-	auto va_v16i8      = GetVrAsIntVec(va, 8);
-	auto vb_v16i8      = GetVrAsIntVec(vb, 8);
-	auto va_v16i16     = m_ir_builder.CreateSExt(va_v16i8, VectorType::get(Type::getInt16Ty(m_llvm_context), 16));
-	auto vb_v16i16     = m_ir_builder.CreateSExt(vb_v16i8, VectorType::get(Type::getInt16Ty(m_llvm_context), 16));
-	auto sum_v16i16    = m_ir_builder.CreateAdd(va_v16i16, vb_v16i16);
-	u16 one_v16i16[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-	sum_v16i16         = m_ir_builder.CreateAdd(sum_v16i16, ConstantDataVector::get(m_llvm_context, one_v16i16));
-	auto avg_v16i16    = m_ir_builder.CreateAShr(sum_v16i16, 1);
-	auto avg_v16i8     = m_ir_builder.CreateBitCast(avg_v16i16, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
+	auto va_v16i8       = GetVrAsIntVec(va, 8);
+	auto vb_v16i8       = GetVrAsIntVec(vb, 8);
+	auto va_v16i16      = m_ir_builder.CreateSExt(va_v16i8, VectorType::get(Type::getInt16Ty(m_llvm_context), 16));
+	auto vb_v16i16      = m_ir_builder.CreateSExt(vb_v16i8, VectorType::get(Type::getInt16Ty(m_llvm_context), 16));
+	auto sum_v16i16     = m_ir_builder.CreateAdd(va_v16i16, vb_v16i16);
+	u16  one_v16i16[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+	sum_v16i16          = m_ir_builder.CreateAdd(sum_v16i16, ConstantDataVector::get(m_llvm_context, one_v16i16));
+	auto avg_v16i16     = m_ir_builder.CreateAShr(sum_v16i16, 1);
+	auto avg_v16i8      = m_ir_builder.CreateBitCast(avg_v16i16, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
 	SetVr(vd, avg_v16i8);
 }
 
 void PPULLVMRecompiler::VAVGSH(u32 vd, u32 va, u32 vb)
 {
-	auto va_v8i16    = GetVrAsIntVec(va, 16);
-	auto vb_v8i16    = GetVrAsIntVec(vb, 16);
-	auto va_v8i32    = m_ir_builder.CreateSExt(va_v8i16, VectorType::get(Type::getInt32Ty(m_llvm_context), 8));
-	auto vb_v8i32    = m_ir_builder.CreateSExt(vb_v8i16, VectorType::get(Type::getInt32Ty(m_llvm_context), 8));
-	auto sum_v8i32   = m_ir_builder.CreateAdd(va_v8i32, vb_v8i32);
-	u32 one_v8i32[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-	sum_v8i32        = m_ir_builder.CreateAdd(sum_v8i32, ConstantDataVector::get(m_llvm_context, one_v8i32));
-	auto avg_v8i32   = m_ir_builder.CreateAShr(sum_v8i32, 1);
-	auto avg_v8i16   = m_ir_builder.CreateBitCast(avg_v8i32, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
+	auto va_v8i16     = GetVrAsIntVec(va, 16);
+	auto vb_v8i16     = GetVrAsIntVec(vb, 16);
+	auto va_v8i32     = m_ir_builder.CreateSExt(va_v8i16, VectorType::get(Type::getInt32Ty(m_llvm_context), 8));
+	auto vb_v8i32     = m_ir_builder.CreateSExt(vb_v8i16, VectorType::get(Type::getInt32Ty(m_llvm_context), 8));
+	auto sum_v8i32    = m_ir_builder.CreateAdd(va_v8i32, vb_v8i32);
+	u32  one_v8i32[8] = {1, 1, 1, 1, 1, 1, 1, 1};
+	sum_v8i32         = m_ir_builder.CreateAdd(sum_v8i32, ConstantDataVector::get(m_llvm_context, one_v8i32));
+	auto avg_v8i32    = m_ir_builder.CreateAShr(sum_v8i32, 1);
+	auto avg_v8i16    = m_ir_builder.CreateBitCast(avg_v8i32, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
 	SetVr(vd, avg_v8i16);
 }
 
 void PPULLVMRecompiler::VAVGSW(u32 vd, u32 va, u32 vb)
 {
-	auto va_v4i32    = GetVrAsIntVec(va, 32);
-	auto vb_v4i32    = GetVrAsIntVec(vb, 32);
-	auto va_v4i64    = m_ir_builder.CreateSExt(va_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
-	auto vb_v4i64    = m_ir_builder.CreateSExt(vb_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
-	auto sum_v4i64   = m_ir_builder.CreateAdd(va_v4i64, vb_v4i64);
-	u64 one_v4i64[4] = {1, 1, 1, 1};
-	sum_v4i64        = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
-	auto avg_v4i64   = m_ir_builder.CreateAShr(sum_v4i64, 1);
-	auto avg_v4i32   = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+	auto va_v4i32     = GetVrAsIntVec(va, 32);
+	auto vb_v4i32     = GetVrAsIntVec(vb, 32);
+	auto va_v4i64     = m_ir_builder.CreateSExt(va_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
+	auto vb_v4i64     = m_ir_builder.CreateSExt(vb_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
+	auto sum_v4i64    = m_ir_builder.CreateAdd(va_v4i64, vb_v4i64);
+	u64  one_v4i64[4] = {1, 1, 1, 1};
+	sum_v4i64         = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
+	auto avg_v4i64    = m_ir_builder.CreateAShr(sum_v4i64, 1);
+	auto avg_v4i32    = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
 	SetVr(vd, avg_v4i32);
 }
 
@@ -337,15 +347,15 @@ void PPULLVMRecompiler::VAVGUH(u32 vd, u32 va, u32 vb)
 
 void PPULLVMRecompiler::VAVGUW(u32 vd, u32 va, u32 vb)
 {
-	auto va_v4i32    = GetVrAsIntVec(va, 32);
-	auto vb_v4i32    = GetVrAsIntVec(vb, 32);
-	auto va_v4i64    = m_ir_builder.CreateZExt(va_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
-	auto vb_v4i64    = m_ir_builder.CreateZExt(vb_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
-	auto sum_v4i64   = m_ir_builder.CreateAdd(va_v4i64, vb_v4i64);
-	u64 one_v4i64[4] = {1, 1, 1, 1};
-	sum_v4i64        = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
-	auto avg_v4i64   = m_ir_builder.CreateLShr(sum_v4i64, 1);
-	auto avg_v4i32   = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
+	auto va_v4i32     = GetVrAsIntVec(va, 32);
+	auto vb_v4i32     = GetVrAsIntVec(vb, 32);
+	auto va_v4i64     = m_ir_builder.CreateZExt(va_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
+	auto vb_v4i64     = m_ir_builder.CreateZExt(vb_v4i32, VectorType::get(Type::getInt64Ty(m_llvm_context), 4));
+	auto sum_v4i64    = m_ir_builder.CreateAdd(va_v4i64, vb_v4i64);
+	u64  one_v4i64[4] = {1, 1, 1, 1};
+	sum_v4i64         = m_ir_builder.CreateAdd(sum_v4i64, ConstantDataVector::get(m_llvm_context, one_v4i64));
+	auto avg_v4i64    = m_ir_builder.CreateLShr(sum_v4i64, 1);
+	auto avg_v4i32    = m_ir_builder.CreateBitCast(avg_v4i64, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
 	SetVr(vd, avg_v4i32);
 }
 
@@ -4005,7 +4015,73 @@ void PPULLVMRecompiler::SetVr(u32 vr, Value * val)
 	m_ir_builder.CreateStore(val_i128, vr_i128_ptr);
 }
 
-void PPULLVMRecompiler::RunTests()
+void PPULLVMRecompiler::RunUnitTests()
 {
+	LOG_NOTICE(PPU, "Running Unit Tests");
 
+	RunUnitTest("MFVSCR",
+				[this] ()
+				{
+					MFVSCR(1);
+				},
+				[this] ()
+				{
+					m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[0] = 0x9ABCDEF0;
+					m_ppu.VSCR.VSCR = 0x12345678;
+				},
+				[this](std::string & msg)
+				{
+					msg = fmt::Format("VPR[1] = %s", m_ppu.VPR[1].ToString(true).c_str());
+					return m_ppu.VPR[1].Equals(0x12345678, 0, 0, 0);
+				});
+}
+
+void PPULLVMRecompiler::RunUnitTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result)
+{
+	// Create the unit test function
+	auto function = cast<Function>(m_module->getOrInsertFunction(name, Type::getVoidTy(m_llvm_context), (Type *)nullptr));
+	auto block    = BasicBlock::Create(m_llvm_context, "start", function);
+	m_ir_builder.SetInsertPoint(block);
+	test_case();
+	m_ir_builder.CreateRetVoid();
+	verifyFunction(*function);
+
+	// Print the IR
+	std::string        ir;
+	raw_string_ostream ir_ostream(ir);
+	function->print(ir_ostream);
+	LOG_NOTICE(PPU, "[UT %s] LLVM IR:%s", name, ir.c_str());
+
+	// Generate the function
+	MachineCodeInfo mci;
+	m_execution_engine->runJITOnFunction(function, &mci);
+
+	// Disassember the generated function
+	LOG_NOTICE(PPU, "[UT %s] Disassembly:", name);
+	for (uint64_t pc = 0; pc < mci.size();)
+	{
+		char str[1024];
+
+		pc += LLVMDisasmInstruction(m_disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
+		LOG_NOTICE(PPU, "[UT %s] %s.", name, str);
+	}
+
+	// Run the test
+	input();
+	std::vector<GenericValue> args;
+	m_execution_engine->runFunction(function, args);
+
+	// Verify results
+	std::string msg;
+	bool        pass = check_result(msg);
+	if (pass)
+	{
+		LOG_NOTICE(PPU, "[UT %s] Test passed. %s.", name, msg.c_str());
+	}
+	else
+	{
+		LOG_ERROR(PPU, "[UT %s] Test failed. %s.", name, msg.c_str());
+	}
+
+	m_execution_engine->freeMachineCodeForFunction(function);
 }
