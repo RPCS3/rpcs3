@@ -3,6 +3,7 @@
 
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUInterpreter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -449,6 +450,9 @@ private:
     llvm::Module * m_module;
 
     /// Global variable in m_module that corresponds to m_ppu.GPR
+    llvm::GlobalVariable * m_pc;
+
+    /// Global variable in m_module that corresponds to m_ppu.GPR
     llvm::GlobalVariable * m_gpr;
 
     /// Global variable in m_module that corresponds to m_ppu.CR
@@ -468,6 +472,9 @@ private:
 
     /// Disassembler
     LLVMDisasmContextRef m_disassembler;
+
+    /// PPU Interpreter
+    PPUInterpreter m_interpreter;
 
     /// Get a bit
     llvm::Value * GetBit(llvm::Value * val, u32 n);
@@ -549,6 +556,34 @@ private:
 
     /// Set VR to the specified value
     void SetVr(u32 vr, llvm::Value * val_x128);
+
+    /// Call a member function with no arguments
+    template<class F, class C>
+    void ThisCall0(const char * name, F function, C * this_p);
+
+    /// Call a member function with one argument
+    template<class F, class C, class T1>
+    void ThisCall1(const char * name, F function, C * this_p, T1 arg1);
+
+    /// Call a member function with two arguments
+    template<class F, class C, class T1, class T2>
+    void ThisCall2(const char * name, F function, C * this_p, T1 arg1, T2 arg2);
+
+    /// Call a member function with three arguments
+    template<class F, class C, class T1, class T2, class T3>
+    void ThisCall3(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3);
+
+    /// Call a member function with four arguments
+    template<class F, class C, class T1, class T2, class T3, class T4>
+    void ThisCall4(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
+
+    /// Call a member function with five arguments
+    template<class F, class C, class T1, class T2, class T3, class T4, class T5>
+    void ThisCall5(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
+
+    /// Call a member function with six arguments
+    template<class F, class C, class T1, class T2, class T3, class T4, class T5, class T6>
+    void ThisCall6(const char * name, F function, C * this_p, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);

@@ -1,6 +1,12 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "rpcs3/Ini.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Static.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Emu/Memory/Memory.h"
 
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -50,6 +56,7 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 
 class PPUInterpreter : public PPUOpcodes
 {
+    friend class PPULLVMRecompiler;
 private:
 	PPUThread& CPU;
 
