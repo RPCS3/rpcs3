@@ -22,12 +22,14 @@ PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
     m_module = new Module("Module", m_llvm_context);
     m_gpr    = new GlobalVariable(*m_module, ArrayType::get(Type::getInt64Ty(m_llvm_context), 32), false, GlobalValue::ExternalLinkage, nullptr, "gpr");
     m_cr     = new GlobalVariable(*m_module, Type::getInt32Ty(m_llvm_context), false, GlobalValue::ExternalLinkage, nullptr, "cr");
+    m_xer    = new GlobalVariable(*m_module, Type::getInt64Ty(m_llvm_context), false, GlobalValue::ExternalLinkage, nullptr, "xer");
     m_vpr    = new GlobalVariable(*m_module, ArrayType::get(Type::getIntNTy(m_llvm_context, 128), 32), false, GlobalValue::ExternalLinkage, nullptr, "vpr");
     m_vscr   = new GlobalVariable(*m_module, Type::getInt32Ty(m_llvm_context), false, GlobalValue::ExternalLinkage, nullptr, "vscr");
 
     m_execution_engine = EngineBuilder(m_module).create();
     m_execution_engine->addGlobalMapping(m_gpr, m_ppu.GPR);
     m_execution_engine->addGlobalMapping(m_cr, &m_ppu.CR);
+    m_execution_engine->addGlobalMapping(m_xer, &m_ppu.XER);
     m_execution_engine->addGlobalMapping(m_vpr, m_ppu.VPR);
     m_execution_engine->addGlobalMapping(m_vscr, &m_ppu.VSCR);
 
@@ -384,12 +386,7 @@ void PPULLVMRecompiler::VCMPBFP_(u32 vd, u32 va, u32 vb) {
     auto vd_v4i32     = m_ir_builder.CreateBitCast(vd_v16i8, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     auto vd_mask_i32  = m_ir_builder.CreateExtractElement(vd_v4i32, m_ir_builder.getInt32(0));
     auto cmp_i1       = m_ir_builder.CreateICmpEQ(vd_mask_i32, m_ir_builder.getInt32(0));
-    auto cmp_i32      = m_ir_builder.CreateZExt(cmp_i1, Type::getInt32Ty(m_llvm_context));
-    cmp_i32           = m_ir_builder.CreateShl(cmp_i32, 5);
-    auto cr_i32       = (Value *)m_ir_builder.CreateLoad(m_cr);
-    cr_i32            = m_ir_builder.CreateAnd(cr_i32, 0xFFFFFF0F);
-    cr_i32            = m_ir_builder.CreateOr(cr_i32, cmp_i32);
-    m_ir_builder.CreateStore(cr_i32, m_cr);
+    SetCrField(6, nullptr, nullptr, cmp_i1, nullptr, false);
 }
 
 void PPULLVMRecompiler::VCMPEQFP(u32 vd, u32 va, u32 vb) {
@@ -402,95 +399,46 @@ void PPULLVMRecompiler::VCMPEQFP(u32 vd, u32 va, u32 vb) {
 
 void PPULLVMRecompiler::VCMPEQFP_(u32 vd, u32 va, u32 vb) {
     VCMPEQFP(vd, va, vb);
-
-    auto vd_v16i8    = GetVrAsIntVec(vd, 8);
-    auto cr_i32      = (Value *)m_ir_builder.CreateLoad(m_cr);
-    cr_i32           = m_ir_builder.CreateAnd(cr_i32, 0xFFFFFF0F);
-    auto vd_mask_i32 = m_ir_builder.CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_pmovmskb_128), vd_v16i8);
-    auto cmp_i1      = m_ir_builder.CreateICmpEQ(vd_mask_i32, m_ir_builder.getInt32(0));
-    auto cmp_i32     = m_ir_builder.CreateZExt(cmp_i1, Type::getInt32Ty(m_llvm_context));
-    cmp_i32          = m_ir_builder.CreateShl(cmp_i32, 5);
-    cr_i32           = m_ir_builder.CreateOr(cr_i32, cmp_i32);
-    cmp_i1           = m_ir_builder.CreateICmpEQ(vd_mask_i32, m_ir_builder.getInt32(0xFFFF));
-    cmp_i32          = m_ir_builder.CreateZExt(cmp_i1, Type::getInt32Ty(m_llvm_context));
-    cmp_i32          = m_ir_builder.CreateShl(cmp_i32, 7);
-    cr_i32           = m_ir_builder.CreateOr(cr_i32, cmp_i32);
-    m_ir_builder.CreateStore(cr_i32, m_cr);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPEQUB(u32 vd, u32 va, u32 vb) {
-    auto va_v16i8   = GetVrAsIntVec(va, 8);
-    auto vb_v16i8   = GetVrAsIntVec(va, 8);
-    auto cmp_v16i1  = m_ir_builder.CreateICmpEQ(va_v16i8, vb_v16i8);
-    auto cmp_v16i32 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
-    SetVr(vd, cmp_v16i32);
+    auto va_v16i8  = GetVrAsIntVec(va, 8);
+    auto vb_v16i8  = GetVrAsIntVec(vb, 8);
+    auto cmp_v16i1 = m_ir_builder.CreateICmpEQ(va_v16i8, vb_v16i8);
+    auto cmp_v16i8 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
+    SetVr(vd, cmp_v16i8);
 }
 
 void PPULLVMRecompiler::VCMPEQUB_(u32 vd, u32 va, u32 vb) {
-    int all_equal = 0x8;
-    int none_equal = 0x2;
-
-    for (uint b = 0; b < 16; b++) {
-        if (m_ppu.VPR[va]._u8[b] == m_ppu.VPR[vb]._u8[b]) {
-            m_ppu.VPR[vd]._u8[b] = 0xff;
-            none_equal = 0;
-        } else {
-            m_ppu.VPR[vd]._u8[b] = 0;
-            all_equal = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_equal | none_equal;
+    VCMPEQUB(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPEQUH(u32 vd, u32 va, u32 vb) {
     auto va_v8i16  = GetVrAsIntVec(va, 16);
-    auto vb_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
     auto cmp_v8i1  = m_ir_builder.CreateICmpEQ(va_v8i16, vb_v8i16);
     auto cmp_v8i16 = m_ir_builder.CreateSExt(cmp_v8i1, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
     SetVr(vd, cmp_v8i16);
 }
 
 void PPULLVMRecompiler::VCMPEQUH_(u32 vd, u32 va, u32 vb) {
-    int all_equal = 0x8;
-    int none_equal = 0x2;
-
-    for (uint h = 0; h < 8; h++) {
-        if (m_ppu.VPR[va]._u16[h] == m_ppu.VPR[vb]._u16[h]) {
-            m_ppu.VPR[vd]._u16[h] = 0xffff;
-            none_equal = 0;
-        } else {
-            m_ppu.VPR[vd]._u16[h] = 0;
-            all_equal = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_equal | none_equal;
+    VCMPEQUH(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPEQUW(u32 vd, u32 va, u32 vb) {
     auto va_v4i32  = GetVrAsIntVec(va, 32);
-    auto vb_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
     auto cmp_v4i1  = m_ir_builder.CreateICmpEQ(va_v4i32, vb_v4i32);
     auto cmp_v4i32 = m_ir_builder.CreateSExt(cmp_v4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     SetVr(vd, cmp_v4i32);
 }
 
 void PPULLVMRecompiler::VCMPEQUW_(u32 vd, u32 va, u32 vb) {
-    int all_equal = 0x8;
-    int none_equal = 0x2;
-
-    for (uint w = 0; w < 4; w++) {
-        if (m_ppu.VPR[va]._u32[w] == m_ppu.VPR[vb]._u32[w]) {
-            m_ppu.VPR[vd]._u32[w] = 0xffffffff;
-            none_equal = 0;
-        } else {
-            m_ppu.VPR[vd]._u32[w] = 0;
-            all_equal = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_equal | none_equal;
+    VCMPEQUW(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGEFP(u32 vd, u32 va, u32 vb) {
@@ -502,20 +450,8 @@ void PPULLVMRecompiler::VCMPGEFP(u32 vd, u32 va, u32 vb) {
 }
 
 void PPULLVMRecompiler::VCMPGEFP_(u32 vd, u32 va, u32 vb) {
-    int all_ge = 0x8;
-    int none_ge = 0x2;
-
-    for (uint w = 0; w < 4; w++) {
-        if (m_ppu.VPR[va]._f[w] >= m_ppu.VPR[vb]._f[w]) {
-            m_ppu.VPR[vd]._u32[w] = 0xffffffff;
-            none_ge = 0;
-        } else {
-            m_ppu.VPR[vd]._u32[w] = 0;
-            all_ge = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_ge | none_ge;
+    VCMPGEFP(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTFP(u32 vd, u32 va, u32 vb) {
@@ -527,170 +463,86 @@ void PPULLVMRecompiler::VCMPGTFP(u32 vd, u32 va, u32 vb) {
 }
 
 void PPULLVMRecompiler::VCMPGTFP_(u32 vd, u32 va, u32 vb) {
-    int all_ge = 0x8;
-    int none_ge = 0x2;
-
-    for (uint w = 0; w < 4; w++) {
-        if (m_ppu.VPR[va]._f[w] > m_ppu.VPR[vb]._f[w]) {
-            m_ppu.VPR[vd]._u32[w] = 0xffffffff;
-            none_ge = 0;
-        } else {
-            m_ppu.VPR[vd]._u32[w] = 0;
-            all_ge = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_ge | none_ge;
+    VCMPGTFP(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTSB(u32 vd, u32 va, u32 vb) {
-    auto va_v16i8   = GetVrAsIntVec(va, 8);
-    auto vb_v16i8   = GetVrAsIntVec(va, 8);
-    auto cmp_v16i1  = m_ir_builder.CreateICmpSGT(va_v16i8, vb_v16i8);
-    auto cmp_v16i32 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
-    SetVr(vd, cmp_v16i32);
+    auto va_v16i8  = GetVrAsIntVec(va, 8);
+    auto vb_v16i8  = GetVrAsIntVec(vb, 8);
+    auto cmp_v16i1 = m_ir_builder.CreateICmpSGT(va_v16i8, vb_v16i8);
+    auto cmp_v16i8 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
+    SetVr(vd, cmp_v16i8);
 }
 
 void PPULLVMRecompiler::VCMPGTSB_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint b = 0; b < 16; b++) {
-        if (m_ppu.VPR[va]._s8[b] > m_ppu.VPR[vb]._s8[b]) {
-            m_ppu.VPR[vd]._u8[b] = 0xff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u8[b] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTSB(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTSH(u32 vd, u32 va, u32 vb) {
     auto va_v8i16  = GetVrAsIntVec(va, 16);
-    auto vb_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
     auto cmp_v8i1  = m_ir_builder.CreateICmpSGT(va_v8i16, vb_v8i16);
     auto cmp_v8i16 = m_ir_builder.CreateSExt(cmp_v8i1, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
     SetVr(vd, cmp_v8i16);
 }
 
 void PPULLVMRecompiler::VCMPGTSH_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint h = 0; h < 8; h++) {
-        if (m_ppu.VPR[va]._s16[h] > m_ppu.VPR[vb]._s16[h]) {
-            m_ppu.VPR[vd]._u16[h] = 0xffff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u16[h] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTSH(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTSW(u32 vd, u32 va, u32 vb) {
     auto va_v4i32  = GetVrAsIntVec(va, 32);
-    auto vb_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
     auto cmp_v4i1  = m_ir_builder.CreateICmpSGT(va_v4i32, vb_v4i32);
     auto cmp_v4i32 = m_ir_builder.CreateSExt(cmp_v4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     SetVr(vd, cmp_v4i32);
 }
 
 void PPULLVMRecompiler::VCMPGTSW_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint w = 0; w < 4; w++) {
-        if (m_ppu.VPR[va]._s32[w] > m_ppu.VPR[vb]._s32[w]) {
-            m_ppu.VPR[vd]._u32[w] = 0xffffffff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u32[w] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTSW(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTUB(u32 vd, u32 va, u32 vb) {
-    auto va_v16i8   = GetVrAsIntVec(va, 8);
-    auto vb_v16i8   = GetVrAsIntVec(va, 8);
-    auto cmp_v16i1  = m_ir_builder.CreateICmpUGT(va_v16i8, vb_v16i8);
-    auto cmp_v16i32 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
-    SetVr(vd, cmp_v16i32);
+    auto va_v16i8  = GetVrAsIntVec(va, 8);
+    auto vb_v16i8  = GetVrAsIntVec(vb, 8);
+    auto cmp_v16i1 = m_ir_builder.CreateICmpUGT(va_v16i8, vb_v16i8);
+    auto cmp_v16i8 = m_ir_builder.CreateSExt(cmp_v16i1, VectorType::get(Type::getInt8Ty(m_llvm_context), 16));
+    SetVr(vd, cmp_v16i8);
 }
 
 void PPULLVMRecompiler::VCMPGTUB_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint b = 0; b < 16; b++) {
-        if (m_ppu.VPR[va]._u8[b] > m_ppu.VPR[vb]._u8[b]) {
-            m_ppu.VPR[vd]._u8[b] = 0xff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u8[b] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTUB(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTUH(u32 vd, u32 va, u32 vb) {
     auto va_v8i16  = GetVrAsIntVec(va, 16);
-    auto vb_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
     auto cmp_v8i1  = m_ir_builder.CreateICmpUGT(va_v8i16, vb_v8i16);
     auto cmp_v8i16 = m_ir_builder.CreateSExt(cmp_v8i1, VectorType::get(Type::getInt16Ty(m_llvm_context), 8));
     SetVr(vd, cmp_v8i16);
 }
 
 void PPULLVMRecompiler::VCMPGTUH_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint h = 0; h < 8; h++) {
-        if (m_ppu.VPR[va]._u16[h] > m_ppu.VPR[vb]._u16[h]) {
-            m_ppu.VPR[vd]._u16[h] = 0xffff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u16[h] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTUH(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCMPGTUW(u32 vd, u32 va, u32 vb) {
     auto va_v4i32  = GetVrAsIntVec(va, 32);
-    auto vb_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
     auto cmp_v4i1  = m_ir_builder.CreateICmpUGT(va_v4i32, vb_v4i32);
     auto cmp_v4i32 = m_ir_builder.CreateSExt(cmp_v4i1, VectorType::get(Type::getInt32Ty(m_llvm_context), 4));
     SetVr(vd, cmp_v4i32);
 }
 
 void PPULLVMRecompiler::VCMPGTUW_(u32 vd, u32 va, u32 vb) {
-    int all_gt = 0x8;
-    int none_gt = 0x2;
-
-    for (uint w = 0; w < 4; w++) {
-        if (m_ppu.VPR[va]._u32[w] > m_ppu.VPR[vb]._u32[w]) {
-            m_ppu.VPR[vd]._u32[w] = 0xffffffff;
-            none_gt = 0;
-        } else {
-            m_ppu.VPR[vd]._u32[w] = 0;
-            all_gt = 0;
-        }
-    }
-
-    m_ppu.CR.cr6 = all_gt | none_gt;
+    VCMPGTUW(vd, va, vb);
+    SetCr6AfterVectorCompare(vd);
 }
 
 void PPULLVMRecompiler::VCTSXS(u32 vd, u32 uimm5, u32 vb) {
@@ -1692,25 +1544,46 @@ void PPULLVMRecompiler::MULLI(u32 rd, u32 ra, s32 simm16) {
 }
 
 void PPULLVMRecompiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
-    const u64 RA = m_ppu.GPR[ra];
-    const u64 IMM = (s64)simm16;
-    m_ppu.GPR[rd] = ~RA + IMM + 1;
-
-    m_ppu.XER.CA = m_ppu.IsCarry(~RA, IMM, 1);
+    auto ra_i64   = GetGpr(ra);
+    auto res_s    = m_ir_builder.CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::ssub_with_overflow), m_ir_builder.getInt64((s64)simm16), ra_i64);
+    auto diff_i64 = m_ir_builder.CreateExtractValue(res_s, {0});
+    auto carry_i1 = m_ir_builder.CreateExtractValue(res_s, {1});
+    SetGpr(rd, diff_i64);
+    SetXerCa(carry_i1);
 }
 
 void PPULLVMRecompiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
-    m_ppu.UpdateCRnU(l, crfd, m_ppu.GPR[ra], uimm16);
+    auto ra_i64 = GetGpr(ra);
+    if (l == 0) {
+        ra_i64 = m_ir_builder.CreateAnd(ra_i64, 0xFFFFFFFF);
+    }
+
+    auto lt_i1 = m_ir_builder.CreateICmpULT(ra_i64, m_ir_builder.getInt64(uimm16));
+    auto gt_i1 = m_ir_builder.CreateICmpUGT(ra_i64, m_ir_builder.getInt64(uimm16));
+    auto eq_i1 = m_ir_builder.CreateICmpEQ(ra_i64, m_ir_builder.getInt64(uimm16));
+    SetCrField(crfd, lt_i1, gt_i1, eq_i1);
 }
 
 void PPULLVMRecompiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
-    m_ppu.UpdateCRnS(l, crfd, m_ppu.GPR[ra], simm16);
+    auto ra_i64 = GetGpr(ra);
+    if (l == 0) {
+        auto ra_i32 = m_ir_builder.CreateTrunc(ra_i64, Type::getInt32Ty(m_llvm_context));
+        ra_i64      = m_ir_builder.CreateSExt(ra_i64, Type::getInt64Ty(m_llvm_context));
+    }
+
+    auto lt_i1 = m_ir_builder.CreateICmpSLT(ra_i64, m_ir_builder.getInt64((s64)simm16));
+    auto gt_i1 = m_ir_builder.CreateICmpSGT(ra_i64, m_ir_builder.getInt64((s64)simm16));
+    auto eq_i1 = m_ir_builder.CreateICmpEQ(ra_i64, m_ir_builder.getInt64((s64)simm16));
+    SetCrField(crfd, lt_i1, gt_i1, eq_i1);
 }
 
 void PPULLVMRecompiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
-    const u64 RA = m_ppu.GPR[ra];
-    m_ppu.GPR[rd] = RA + simm16;
-    m_ppu.XER.CA = m_ppu.IsCarry(RA, simm16);
+    auto ra_i64   = GetGpr(ra);
+    auto res_s    = m_ir_builder.CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::sadd_with_overflow), m_ir_builder.getInt64((s64)simm16), ra_i64);
+    auto sum_i64  = m_ir_builder.CreateExtractValue(res_s, {0});
+    auto carry_i1 = m_ir_builder.CreateExtractValue(res_s, {1});
+    SetGpr(rd, sum_i64);
+    SetXerCa(carry_i1);
 }
 
 void PPULLVMRecompiler::ADDIC_(u32 rd, u32 ra, s32 simm16) {
@@ -3374,10 +3247,90 @@ Value * PPULLVMRecompiler::GetGpr(u32 r) {
     return m_ir_builder.CreateLoad(r_ptr);
 }
 
-Value * PPULLVMRecompiler::SetGpr(u32 r, llvm::Value * val) {
+void PPULLVMRecompiler::SetGpr(u32 r, llvm::Value * val) {
     auto r_ptr   = m_ir_builder.CreateConstGEP2_32(m_gpr, 0, r);
     auto val_i64 = m_ir_builder.CreateBitCast(val, Type::getInt64Ty(m_llvm_context));
-    return m_ir_builder.CreateStore(val, r_ptr);
+    m_ir_builder.CreateStore(val, r_ptr);
+}
+
+llvm::Value * PPULLVMRecompiler::GetCr() {
+    return m_ir_builder.CreateLoad(m_cr);
+}
+
+void PPULLVMRecompiler::SetCr(llvm::Value * val) {
+    auto val_i32 = m_ir_builder.CreateBitCast(val, Type::getInt32Ty(m_llvm_context));
+    m_ir_builder.CreateStore(val_i32, m_cr);
+}
+
+void PPULLVMRecompiler::SetCrField(u32 n, Value * lt_i1, Value * gt_i1, Value * eq_i1, Value * so_i1, bool takeSoFromXer) {
+    auto cr_i32 = GetCr();
+    cr_i32      = m_ir_builder.CreateAnd(cr_i32, ~(0xF0000000 >> (n * 4)));
+
+    if (lt_i1) {
+        auto lt_i32 = m_ir_builder.CreateZExt(lt_i1, Type::getInt32Ty(m_llvm_context));
+        lt_i32      = m_ir_builder.CreateShl(lt_i32, ((7 - n) * 4) + 3);
+        cr_i32      = m_ir_builder.CreateOr(cr_i32, lt_i32);
+    }
+
+    if (gt_i1) {
+        auto gt_i32 = m_ir_builder.CreateZExt(gt_i1, Type::getInt32Ty(m_llvm_context));
+        gt_i32      = m_ir_builder.CreateShl(gt_i32, ((7 - n) * 4) + 2);
+        cr_i32      = m_ir_builder.CreateOr(cr_i32, gt_i32);
+    }
+
+    if (eq_i1) {
+        auto eq_i32 = m_ir_builder.CreateZExt(eq_i1, Type::getInt32Ty(m_llvm_context));
+        eq_i32      = m_ir_builder.CreateShl(eq_i32, ((7 - n) * 4) + 1);
+        cr_i32      = m_ir_builder.CreateOr(cr_i32, eq_i32);
+    }
+
+    if (so_i1) {
+        auto so_i32 = m_ir_builder.CreateZExt(so_i1, Type::getInt32Ty(m_llvm_context));
+        so_i32      = m_ir_builder.CreateShl(so_i32, ((7 - n) * 4));
+        cr_i32      = m_ir_builder.CreateOr(cr_i32, so_i32);
+    } else if (takeSoFromXer) {
+        auto xer_i64 = GetXer();
+        xer_i64      = m_ir_builder.CreateAnd(xer_i64, 0x20000000);
+        xer_i64      = m_ir_builder.CreateLShr(xer_i64, (n * 4) + 1);
+        auto xer_i32 = m_ir_builder.CreateTrunc(xer_i64, Type::getInt32Ty(m_llvm_context));
+        cr_i32       = m_ir_builder.CreateOr(cr_i32, xer_i32);
+    }
+
+    SetCr(cr_i32);
+}
+
+void PPULLVMRecompiler::SetCrField(u32 n, u32 r) {
+    auto r_i64 = GetGpr(r);
+    auto lt_i1 = m_ir_builder.CreateICmpSLT(r_i64, m_ir_builder.getInt64(0));
+    auto gt_i1 = m_ir_builder.CreateICmpSGT(r_i64, m_ir_builder.getInt64(0));
+    auto eq_i1 = m_ir_builder.CreateICmpEQ(r_i64, m_ir_builder.getInt64(0));
+    SetCrField(n, lt_i1, gt_i1, eq_i1);
+}
+
+void PPULLVMRecompiler::SetCr6AfterVectorCompare(u32 vr) {
+    auto vr_v16i8    = GetVrAsIntVec(vr, 8);
+    auto vr_mask_i32 = m_ir_builder.CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_pmovmskb_128), vr_v16i8);
+    auto cmp0_i1     = m_ir_builder.CreateICmpEQ(vr_mask_i32, m_ir_builder.getInt32(0));
+    auto cmp1_i1     = m_ir_builder.CreateICmpEQ(vr_mask_i32, m_ir_builder.getInt32(0xFFFF));
+    SetCrField(6, cmp1_i1, nullptr, cmp0_i1, nullptr, false);
+}
+
+llvm::Value * PPULLVMRecompiler::GetXer() {
+    return m_ir_builder.CreateLoad(m_xer);
+}
+
+void PPULLVMRecompiler::SetXer(llvm::Value * val) {
+    auto val_i64 = m_ir_builder.CreateBitCast(val, Type::getInt64Ty(m_llvm_context));
+    m_ir_builder.CreateStore(val_i64, m_xer);
+}
+
+void PPULLVMRecompiler::SetXerCa(Value * ca_i1) {
+    auto xer_i64 = GetXer();
+    auto ca_i64  = m_ir_builder.CreateZExt(ca_i1, Type::getInt64Ty(m_llvm_context));
+    ca_i64       = m_ir_builder.CreateShl(ca_i64, 29);
+    xer_i64      = m_ir_builder.CreateAnd(xer_i64, 0xFFFFFFFFDFFFFFFF);
+    xer_i64      = m_ir_builder.CreateOr(xer_i64, ca_i64);
+    SetXer(xer_i64);
 }
 
 Value * PPULLVMRecompiler::GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits) {

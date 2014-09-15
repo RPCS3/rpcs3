@@ -454,6 +454,9 @@ private:
     /// Global variable in m_module that corresponds to m_ppu.CR
     llvm::GlobalVariable * m_cr;
 
+    /// Global variable in m_module that corresponds to m_ppu.XER
+    llvm::GlobalVariable * m_xer;
+
     /// Global variable in m_module that corresponds to m_ppu.VPR
     llvm::GlobalVariable * m_vpr;
 
@@ -466,11 +469,35 @@ private:
     /// Disassembler
     LLVMDisasmContextRef m_disassembler;
 
-    /// Load GPR and convert it to a i64
+    /// Load GPR and convert it to an i64
     llvm::Value * GetGpr(u32 r);
 
     /// Set GPR to specified value
-    llvm::Value * SetGpr(u32 r, llvm::Value * val);
+    void SetGpr(u32 r, llvm::Value * val);
+
+    /// Load CR and convert it to an i32
+    llvm::Value * GetCr();
+
+    /// Set CR
+    void SetCr(llvm::Value * val);
+
+    /// Set CR field
+    void SetCrField(u32 n, llvm::Value * lt_i1, llvm::Value * gt_i1, llvm::Value * eq_i1, llvm::Value * so_i1 = nullptr, bool takeSoFromXer = true);
+
+    /// Set CR field based on value in GPR
+    void SetCrField(u32 n, u32 r);
+
+    /// Set CR6 based on the result of the vector compare instruction
+    void SetCr6AfterVectorCompare(u32 vr);
+
+    /// Load XER and convert it to an i64
+    llvm::Value * GetXer();
+
+    /// Set XER
+    void SetXer(llvm::Value * val);
+
+    /// Set the CA bit of XER
+    void SetXerCa(llvm::Value * ca_i1);
 
     /// Load VR and convert it to an integer vector
     llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);

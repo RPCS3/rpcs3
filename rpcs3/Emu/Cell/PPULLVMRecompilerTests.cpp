@@ -638,4 +638,213 @@ void PPULLVMRecompiler::RunAllTests() {
         return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0x00000000) && (m_ppu.GetCR(6) == 0);
     };
     RunTest("VCMPEQFP_.3", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPEQUB(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12345678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12348765;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000);
+    };
+    RunTest("VCMPEQUB.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPEQUH(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12345678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12348765;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000);
+    };
+    RunTest("VCMPEQUH.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPEQUW(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = 0x12345678;
+        m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x87654321;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12345678;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0x00000000);
+    };
+    RunTest("VCMPEQUW.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGEFP(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._f[0] = 50.0f;
+        m_ppu.VPR[1]._f[1] = 100.0f;
+        m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 200.0f;
+        m_ppu.VPR[2]._f[0] = m_ppu.VPR[2]._f[1] = m_ppu.VPR[2]._f[2] = m_ppu.VPR[2]._f[3] = 100.0f;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString().c_str(),
+                          m_ppu.VPR[2].ToString().c_str());
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF);
+    };
+    RunTest("VCMPGEFP.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTFP(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._f[0] = 50.0f;
+        m_ppu.VPR[1]._f[1] = 100.0f;
+        m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 200.0f;
+        m_ppu.VPR[2]._f[0] = m_ppu.VPR[2]._f[1] = m_ppu.VPR[2]._f[2] = m_ppu.VPR[2]._f[3] = 100.0f;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString().c_str(),
+                          m_ppu.VPR[2].ToString().c_str());
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0x00000000, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF);
+    };
+    RunTest("VCMPGTFP.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTSB(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12345678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x0034FF79;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFF00FF00, (u32)0xFF00FF00, (u32)0xFF00FF00, (u32)0xFF00FF00);
+    };
+    RunTest("VCMPGTSB.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTSH(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12345678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12348765;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0x0000FFFF, (u32)0x0000FFFF, (u32)0x0000FFFF, (u32)0x0000FFFF);
+    };
+    RunTest("VCMPGTSH.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTSW(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = 0x12345678;
+        m_ppu.VPR[1]._u32[1] = 0x12345679;
+        m_ppu.VPR[1]._u32[2] = 0x12345677;
+        m_ppu.VPR[1]._u32[3] = 0x87654321;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12345678;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0x00000000);
+    };
+    RunTest("VCMPGTSW.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTUB(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12345678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x0034FF79;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFF000000, (u32)0xFF000000, (u32)0xFF000000, (u32)0xFF000000);
+    };
+    RunTest("VCMPGTUB.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTUH(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = m_ppu.VPR[1]._u32[1] = m_ppu.VPR[1]._u32[2] = m_ppu.VPR[1]._u32[3] = 0x12355678;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12348765;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000, (u32)0xFFFF0000);
+    };
+    RunTest("VCMPGTUH.1", test_case, input, check_result);
+
+    ///////////////////////////////////////////////////////////////////////////
+    test_case = [this]() {
+        VCMPGTUW(0, 1, 2);
+    };
+    input = [this]() {
+        m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
+        m_ppu.VPR[1]._u32[0] = 0x12345678;
+        m_ppu.VPR[1]._u32[1] = 0x12345679;
+        m_ppu.VPR[1]._u32[2] = 0x12345677;
+        m_ppu.VPR[1]._u32[3] = 0x87654321;
+        m_ppu.VPR[2]._u32[0] = m_ppu.VPR[2]._u32[1] = m_ppu.VPR[2]._u32[2] = m_ppu.VPR[2]._u32[3] = 0x12345678;
+    };
+    check_result = [this](std::string & msg) {
+        msg = fmt::Format("VPR[0]=%s, VPR[1]=%s, VPR[2]=%s",
+                          m_ppu.VPR[0].ToString(true).c_str(),
+                          m_ppu.VPR[1].ToString(true).c_str(),
+                          m_ppu.VPR[2].ToString(true).c_str());
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0xFFFFFFFF);
+    };
+    RunTest("VCMPGTUW.1", test_case, input, check_result);
 }
