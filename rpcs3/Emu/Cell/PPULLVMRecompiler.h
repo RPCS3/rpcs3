@@ -469,23 +469,53 @@ private:
     /// Disassembler
     LLVMDisasmContextRef m_disassembler;
 
+    /// Get a bit
+    llvm::Value * GetBit(llvm::Value * val, u32 n);
+
+    /// Clear a bit
+    llvm::Value * ClrBit(llvm::Value * val, u32 n);
+
+    /// Set a bit
+    llvm::Value * SetBit(llvm::Value * val, u32 n, llvm::Value * bit, bool doClear = true);
+
+    /// Get a nibble
+    llvm::Value * GetNibble(llvm::Value * val, u32 n);
+
+    /// Clear a nibble
+    llvm::Value * ClrNibble(llvm::Value * val, u32 n);
+
+    /// Set a nibble
+    llvm::Value * SetNibble(llvm::Value * val, u32 n, llvm::Value * nibble, bool doClear = true);
+
+    /// Set a nibble
+    llvm::Value * SetNibble(llvm::Value * val, u32 n, llvm::Value * b0, llvm::Value * b1, llvm::Value * b2, llvm::Value * b3, bool doClear = true);
+
     /// Load GPR and convert it to an i64
     llvm::Value * GetGpr(u32 r);
 
     /// Set GPR to specified value
-    void SetGpr(u32 r, llvm::Value * val);
+    void SetGpr(u32 r, llvm::Value * val_x64);
 
     /// Load CR and convert it to an i32
     llvm::Value * GetCr();
 
+    /// Load CR and get field CRn
+    llvm::Value * GetCrField(u32 n);
+
     /// Set CR
-    void SetCr(llvm::Value * val);
+    void SetCr(llvm::Value * val_x32);
 
     /// Set CR field
-    void SetCrField(u32 n, llvm::Value * lt_i1, llvm::Value * gt_i1, llvm::Value * eq_i1, llvm::Value * so_i1 = nullptr, bool takeSoFromXer = true);
+    void SetCrField(u32 n, llvm::Value * field);
 
-    /// Set CR field based on value in GPR
-    void SetCrField(u32 n, u32 r);
+    /// Set CR field
+    void SetCrField(u32 n, llvm::Value * b0, llvm::Value * b1, llvm::Value * b2, llvm::Value * b3);
+
+    /// Set CR field based on signed comparison
+    void SetCrFieldSignedCmp(u32 n, llvm::Value * a, llvm::Value * b);
+
+    /// Set CR field based on unsigned comparison
+    void SetCrFieldUnsignedCmp(u32 n, llvm::Value * a, llvm::Value * b);
 
     /// Set CR6 based on the result of the vector compare instruction
     void SetCr6AfterVectorCompare(u32 vr);
@@ -493,11 +523,20 @@ private:
     /// Load XER and convert it to an i64
     llvm::Value * GetXer();
 
+    /// Load XER and return the CA bit
+    llvm::Value * GetXerCa();
+
+    /// Load XER and return the SO bit
+    llvm::Value * GetXerSo();
+
     /// Set XER
-    void SetXer(llvm::Value * val);
+    void SetXer(llvm::Value * val_x64);
 
     /// Set the CA bit of XER
-    void SetXerCa(llvm::Value * ca_i1);
+    void SetXerCa(llvm::Value * ca);
+
+    /// Set the SO bit of XER
+    void SetXerSo(llvm::Value * so);
 
     /// Load VR and convert it to an integer vector
     llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
@@ -509,7 +548,7 @@ private:
     llvm::Value * GetVrAsDoubleVec(u32 vr);
 
     /// Set VR to the specified value
-    void SetVr(u32 vr, llvm::Value * val);
+    void SetVr(u32 vr, llvm::Value * val_x128);
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);

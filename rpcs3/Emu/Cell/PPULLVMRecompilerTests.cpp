@@ -527,7 +527,7 @@ void PPULLVMRecompiler::RunAllTests() {
         VCMPBFP_(0, 1, 2);
     };
     input = [this]() {
-        m_ppu.SetCR(6, 0xF);
+        m_ppu.CR.CR = 0xFFFFFFFF;
         m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
         m_ppu.VPR[1]._f[0] = m_ppu.VPR[1]._f[1] = 150.0f;
         m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 50.0f;
@@ -538,7 +538,7 @@ void PPULLVMRecompiler::RunAllTests() {
                           m_ppu.VPR[0].ToString(true).c_str(),
                           m_ppu.VPR[1].ToString().c_str(),
                           m_ppu.VPR[2].ToString().c_str(), m_ppu.CR.CR);
-        return m_ppu.VPR[0].Equals((u32)0x80000000, (u32)0x80000000, (u32)0x00000000, (u32)0x00000000) && (m_ppu.GetCR(6) == 0);
+        return m_ppu.VPR[0].Equals((u32)0x80000000, (u32)0x80000000, (u32)0x00000000, (u32)0x00000000) && (m_ppu.CR.CR == 0xFFFFFF0F);
     };
     RunTest("VCMPBFP_.1", test_case, input, check_result);
 
@@ -547,7 +547,7 @@ void PPULLVMRecompiler::RunAllTests() {
         VCMPBFP_(0, 1, 2);
     };
     input = [this]() {
-        m_ppu.SetCR(6, 0xF);
+        m_ppu.CR.CR = 0xFFFFFFFF;
         m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
         m_ppu.VPR[1]._f[0] = m_ppu.VPR[1]._f[1] = 50.0f;
         m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 50.0f;
@@ -558,7 +558,7 @@ void PPULLVMRecompiler::RunAllTests() {
                           m_ppu.VPR[0].ToString(true).c_str(),
                           m_ppu.VPR[1].ToString().c_str(),
                           m_ppu.VPR[2].ToString().c_str(), m_ppu.CR.CR);
-        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0x00000000, (u32)0x00000000, (u32)0x00000000) && (m_ppu.GetCR(6) == 2);
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0x00000000, (u32)0x00000000, (u32)0x00000000) && (m_ppu.CR.CR == 0xFFFFFF2F);
     };
     RunTest("VCMPBFP_.2", test_case, input, check_result);
 
@@ -586,7 +586,7 @@ void PPULLVMRecompiler::RunAllTests() {
         VCMPEQFP_(0, 1, 2);
     };
     input = [this]() {
-        m_ppu.SetCR(6, 0xF);
+        m_ppu.CR.CR = 0xFFFFFFFF;
         m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
         m_ppu.VPR[1]._f[0] = m_ppu.VPR[1]._f[1] = m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 50.0f;
         m_ppu.VPR[2]._f[0] = m_ppu.VPR[2]._f[1] = m_ppu.VPR[2]._f[2] = m_ppu.VPR[2]._f[3] = 100.0f;
@@ -596,7 +596,7 @@ void PPULLVMRecompiler::RunAllTests() {
                           m_ppu.VPR[0].ToString(true).c_str(),
                           m_ppu.VPR[1].ToString().c_str(),
                           m_ppu.VPR[2].ToString().c_str(), m_ppu.CR.CR);
-        return m_ppu.VPR[0].Equals((u32)0, (u32)0, (u32)0, (u32)0) && (m_ppu.GetCR(6) == 2);
+        return m_ppu.VPR[0].Equals((u32)0x00000000, (u32)0x00000000, (u32)0x00000000, (u32)0x00000000) && (m_ppu.CR.CR == 0xFFFFFF2F);
     };
     RunTest("VCMPEQFP_.1", test_case, input, check_result);
 
@@ -605,7 +605,7 @@ void PPULLVMRecompiler::RunAllTests() {
         VCMPEQFP_(0, 1, 2);
     };
     input = [this]() {
-        m_ppu.SetCR(6, 0xF);
+        m_ppu.CR.CR = 0xFFFFFFFF;
         m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
         m_ppu.VPR[1]._f[0] = m_ppu.VPR[1]._f[1] = m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 100.0f;
         m_ppu.VPR[2]._f[0] = m_ppu.VPR[2]._f[1] = m_ppu.VPR[2]._f[2] = m_ppu.VPR[2]._f[3] = 100.0f;
@@ -615,7 +615,7 @@ void PPULLVMRecompiler::RunAllTests() {
                           m_ppu.VPR[0].ToString(true).c_str(),
                           m_ppu.VPR[1].ToString().c_str(),
                           m_ppu.VPR[2].ToString().c_str(), m_ppu.CR.CR);
-        return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF) && (m_ppu.GetCR(6) == 8);
+        return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0xFFFFFFFF) && (m_ppu.CR.CR == 0xFFFFFF8F);
     };
     RunTest("VCMPEQFP_.2", test_case, input, check_result);
 
@@ -624,7 +624,7 @@ void PPULLVMRecompiler::RunAllTests() {
         VCMPEQFP_(0, 1, 2);
     };
     input = [this]() {
-        m_ppu.SetCR(6, 0xF);
+        m_ppu.CR.CR = 0xFFFFFFFF;
         m_ppu.VPR[0]._u32[0] = m_ppu.VPR[0]._u32[1] = m_ppu.VPR[0]._u32[2] = m_ppu.VPR[0]._u32[3] = 0x00000000;
         m_ppu.VPR[1]._f[0] = m_ppu.VPR[1]._f[1] = 100.0f;
         m_ppu.VPR[1]._f[2] = m_ppu.VPR[1]._f[3] = 50.0f;
@@ -635,7 +635,7 @@ void PPULLVMRecompiler::RunAllTests() {
                           m_ppu.VPR[0].ToString(true).c_str(),
                           m_ppu.VPR[1].ToString().c_str(),
                           m_ppu.VPR[2].ToString().c_str(), m_ppu.CR.CR);
-        return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0x00000000) && (m_ppu.GetCR(6) == 0);
+        return m_ppu.VPR[0].Equals((u32)0xFFFFFFFF, (u32)0xFFFFFFFF, (u32)0x00000000, (u32)0x00000000) && (m_ppu.CR.CR == 0xFFFFFF0F);
     };
     RunTest("VCMPEQFP_.3", test_case, input, check_result);
 
