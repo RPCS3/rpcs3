@@ -94,7 +94,35 @@ struct CellSpurs2
 
 struct CellSpursAttribute
 {
-	SPURSManagerAttribute *attr;
+	static const auto align = 8;
+	static const auto size = 512;
+
+	union
+	{
+		// raw data
+		u8 _u8[size / sizeof(u8)];
+
+		struct
+		{
+			be_t<u32> raw[size / sizeof(u32)];
+		} _u32;
+
+		// real structure
+		struct
+		{
+			be_t<u32> arg1;
+			be_t<u32> arg2;
+			be_t<u32> nSpus;
+			be_t<s32> spuPriority;
+			be_t<s32> ppuPriority;
+		} m;
+
+		// alternative implementation
+		struct
+		{
+			SPURSManagerAttribute *attr;
+		} c;
+	};
 };
 
 struct CellSpursEventFlag

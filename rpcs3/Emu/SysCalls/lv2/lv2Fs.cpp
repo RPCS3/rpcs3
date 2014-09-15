@@ -227,7 +227,7 @@ s32 cellFsClosedir(u32 fd)
 
 s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr: 0x%x)", path.get_ptr(), sb.addr());
+	sys_fs->Warning("cellFsStat(path=\"%s\", sb_addr=0x%x)", path.get_ptr(), sb.addr());
 
 	LV2_LOCK(0);
 
@@ -270,7 +270,7 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr: 0x%x)", fd, sb.addr());
+	sys_fs->Warning("cellFsFstat(fd=%d, sb_addr=0x%x)", fd, sb.addr());
 
 	LV2_LOCK(0);
 
