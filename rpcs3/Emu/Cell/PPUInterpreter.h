@@ -56,7 +56,7 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 
 class PPUInterpreter : public PPUOpcodes
 {
-    friend class PPULLVMRecompiler;
+    friend class PPULLVMRecompilerWorker;
 private:
 	PPUThread& CPU;
 
@@ -2207,7 +2207,7 @@ private:
 	}
 	void ORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] | (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] | ((u64)uimm16 << 16);
 	}
 	void XORI(u32 ra, u32 rs, u32 uimm16)
 	{
@@ -2215,7 +2215,7 @@ private:
 	}
 	void XORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] ^ (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] ^ ((u64)uimm16 << 16);
 	}
 	void ANDI_(u32 ra, u32 rs, u32 uimm16)
 	{
@@ -2224,7 +2224,7 @@ private:
 	}
 	void ANDIS_(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] & (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] & ((u64)uimm16 << 16);
 		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)

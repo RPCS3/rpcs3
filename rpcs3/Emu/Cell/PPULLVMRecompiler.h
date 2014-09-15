@@ -13,21 +13,29 @@
 
 struct PPURegState;
 
-/// LLVM based PPU emulator
-class PPULLVMRecompiler : public CPUDecoder, protected PPUOpcodes {
+/// PPU recompiler
+class PPULLVMRecompilerWorker : protected PPUOpcodes {
 public:
-    PPULLVMRecompiler() = delete;
-    PPULLVMRecompiler(PPUThread & ppu);
+    typedef void(*CompiledBlock)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
-    PPULLVMRecompiler(const PPULLVMRecompiler & other) = delete;
-    PPULLVMRecompiler(PPULLVMRecompiler && other) = delete;
+    PPULLVMRecompilerWorker();
 
-    virtual ~PPULLVMRecompiler();
+    PPULLVMRecompilerWorker(const PPULLVMRecompilerWorker & other) = delete;
+    PPULLVMRecompilerWorker(PPULLVMRecompilerWorker && other) = delete;
 
-    PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
-    PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
+    virtual ~PPULLVMRecompilerWorker();
 
-    u8 DecodeMemory(const u64 address) override;
+    PPULLVMRecompilerWorker & operator = (const PPULLVMRecompilerWorker & other) = delete;
+    PPULLVMRecompilerWorker & operator = (PPULLVMRecompilerWorker && other) = delete;
+
+    /// Compile a block of code
+    void Compile(u64 address);
+
+    /// Get a function pointer to a compiled block
+    CompiledBlock GetCompiledBlock(u64 address);
+
+    /// Execute all tests
+    void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
 protected:
     void NULL_OP() override;
@@ -431,19 +439,52 @@ protected:
     void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
-    /// PPU processor context
-    PPUThread & m_ppu;
-
     /// PPU instruction decoder
     PPUDecoder m_decoder;
 
-    /// PPU Interpreter
-    PPUInterpreter m_interpreter;
+    /// Map from address to compiled block
+    std::map<u64, CompiledBlock> m_address_to_compiled_block_map;
+
+    /// LLVM context
+    llvm::LLVMContext * m_llvm_context;
+
+    /// LLVM IR builder
+    llvm::IRBuilder<> * m_ir_builder;
+
+    /// Module to which all generated code is output to
+    llvm::Module * m_module;
+
+    /// JIT execution engine
+    llvm::ExecutionEngine * m_execution_engine;
+
+    /// Disassembler
+    LLVMDisasmContextRef m_disassembler;
 
     /// A flag used to detect branch instructions.
     /// This is set to false at the start of compilation of a block.
     /// When a branch instruction is encountered, this is set to true by the decode function.
     bool m_hit_branch_instruction;
+
+    /// The function being compiled
+    llvm::Function * m_function;
+
+    /// Time spent compiling
+    std::chrono::duration<double> m_compilation_time;
+
+    /// Time spent idling
+    std::chrono::duration<double> m_idling_time;
+
+    /// Contains the number of times the interpreter fallback was used
+    std::map<std::string, u64> m_interpreter_fallback_stats;
+
+    /// Get PPU state pointer
+    llvm::Value * GetPPUState();
+
+    /// Get base address
+    llvm::Value * GetBaseAddress();
+
+    /// Get interpreter pointer
+    llvm::Value * GetInterpreter();
 
     /// Get a bit
     llvm::Value * GetBit(llvm::Value * val, u32 n);
@@ -473,7 +514,7 @@ private:
     void SetPc(llvm::Value * val_i64);
 
     /// Load GPR
-    llvm::Value * GetGpr(u32 r);
+    llvm::Value * GetGpr(u32 r, u32 num_bits = 64);
 
     /// Set GPR
     void SetGpr(u32 r, llvm::Value * val_x64);
@@ -538,77 +579,57 @@ private:
     /// Set VR to the specified value
     void SetVr(u32 vr, llvm::Value * val_x128);
 
+    /// Read from memory
+    llvm::Value * ReadMemory(llvm::Value * addr_i64, u32 bits, bool bswap = true);
+
+    /// Write to memory
+    void WriteMemory(llvm::Value * addr_i64, llvm::Value * val_ix, bool bswap = true);
+
+    /// Call an interpreter function
+    template<class Func, class... Args>
+    llvm::Value * InterpreterCall(const char * name, Func function, Args... args);
+
+    /// Convert a C++ type to an LLVM type
+    template<class T>
+    llvm::Type * CppToLlvmType();
+
+    /// Call a function
+    template<class Func, class... Args>
+    llvm::Value * Call(const char * name, Func function, Args... args);
+
     /// Test an instruction against the interpreter
     template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
     void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args);
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
+};
 
-    /// Execute all tests
-    void RunAllTests();
+/// A dynarec PPU emulator that uses LLVM as the backend
+class PPULLVMRecompiler : public CPUDecoder {
+public:
+    PPULLVMRecompiler(PPUThread & ppu);
+    PPULLVMRecompiler() = delete;
 
-    /// Call a member function
-    template<class F, class C, class... Args>
-    void ThisCall(const char * name, F function, C * this_ptr, Args... args);
+    PPULLVMRecompiler(const PPULLVMRecompilerWorker & other) = delete;
+    PPULLVMRecompiler(PPULLVMRecompilerWorker && other) = delete;
 
-    /// Number of instances
-    static u32 s_num_instances;
+    virtual ~PPULLVMRecompiler();
 
-    /// Map from address to compiled code
-    static std::map<u64, void *> s_address_to_code_map;
+    PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
+    PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
 
-    /// Mutex for s_address_to_code_map
-    static std::mutex s_address_to_code_map_mutex;
+    u8 DecodeMemory(const u64 address);
 
-    /// LLVM mutex
-    static std::mutex s_llvm_mutex;
+private:
+    /// PPU processor context
+    PPUThread & m_ppu;
 
-    /// LLVM context
-    static llvm::LLVMContext * s_llvm_context;
+    /// PPU Interpreter
+    PPUInterpreter m_interpreter;
 
-    /// LLVM IR builder
-    static llvm::IRBuilder<> * s_ir_builder;
-
-    /// Module to which all generated code is output to
-    static llvm::Module * s_module;
-
-    /// Function in m_module that corresponds to ExecuteThisCall
-    static llvm::Function * s_execute_this_call_fn;
-
-    /// A metadata node for s_execute_this_call_fn that records the function name and args
-    static llvm::MDNode * s_execute_this_call_fn_name_and_args_md_node;
-
-    /// JIT execution engine
-    static llvm::ExecutionEngine * s_execution_engine;
-
-    /// Disassembler
-    static LLVMDisasmContextRef s_disassembler;
-
-    /// The pointer to the PPU state
-    static llvm::Value * s_state_ptr;
-
-    /// Time spent compiling
-    static std::chrono::duration<double> s_compilation_time;
-
-    /// Time spent executing
-    static std::chrono::duration<double> s_execution_time;
-
-    /// Contains the number of times the interpreter was invoked for an instruction
-    static std::map<std::string, u64> s_interpreter_invocation_stats;
-
-    /// List of std::function pointers created by ThisCall()
-    static std::list<std::function<void()> *> s_this_call_ptrs_list;
-
-    /// Execute a this call
-    static void ExecuteThisCall(std::function<void()> * function);
-
-    /// Convert args to a string
-    template<class T, class... Args>
-    static std::string ArgsToString(T arg1, Args... args);
-
-    /// Terminator for ArgsToString(T arg1, Args... args);
-    static std::string ArgsToString();
+    /// The actual compiler
+    PPULLVMRecompilerWorker m_worker;
 };
 
 #endif // PPU_LLVM_RECOMPILER_H
