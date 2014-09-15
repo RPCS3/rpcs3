@@ -13,31 +13,33 @@
 
 struct PPURegState;
 
-/// PPU recompiler
-class PPULLVMRecompilerWorker : protected PPUOpcodes {
+/// PPU to LLVM recompiler
+class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes {
 public:
     typedef void(*CompiledBlock)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
-    PPULLVMRecompilerWorker();
+    PPULLVMRecompiler();
 
-    PPULLVMRecompilerWorker(const PPULLVMRecompilerWorker & other) = delete;
-    PPULLVMRecompilerWorker(PPULLVMRecompilerWorker && other) = delete;
+    PPULLVMRecompiler(const PPULLVMRecompiler & other) = delete;
+    PPULLVMRecompiler(PPULLVMRecompiler && other) = delete;
 
-    virtual ~PPULLVMRecompilerWorker();
+    virtual ~PPULLVMRecompiler();
 
-    PPULLVMRecompilerWorker & operator = (const PPULLVMRecompilerWorker & other) = delete;
-    PPULLVMRecompilerWorker & operator = (PPULLVMRecompilerWorker && other) = delete;
+    PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
+    PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
 
-    /// Compile a block of code
-    void Compile(u64 address);
-
-    /// Get a function pointer to a compiled block
+    /// Get a pointer to a compiled block
     CompiledBlock GetCompiledBlock(u64 address);
 
     /// Execute all tests
     void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
+    void Task() override;
+
 protected:
+    /// Compile a block of code
+    void Compile(u64 address);
+
     void NULL_OP() override;
     void NOP() override;
 
@@ -442,8 +444,18 @@ private:
     /// PPU instruction decoder
     PPUDecoder m_decoder;
 
+    /// Mutex for accessing m_address_to_compiled_block_map
+    /// TODO: Use a RW lock instead of mutex
+    std::mutex m_address_to_compiled_block_map_mutex;
+
     /// Map from address to compiled block
     std::map<u64, CompiledBlock> m_address_to_compiled_block_map;
+
+    /// Mutex for accessing m_pending_blocks_set;
+    std::mutex m_pending_blocks_set_mutex;
+
+    /// Set of blocks pending compilation
+    std::set<u64> m_pending_blocks_set;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -605,19 +617,19 @@ private:
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
 };
 
-/// A dynarec PPU emulator that uses LLVM as the backend
-class PPULLVMRecompiler : public CPUDecoder {
+/// PPU emulator that uses LLVM to convert PPU instructions to host CPU instructions
+class PPULLVMEmulator : public CPUDecoder {
 public:
-    PPULLVMRecompiler(PPUThread & ppu);
-    PPULLVMRecompiler() = delete;
+    PPULLVMEmulator(PPUThread & ppu);
+    PPULLVMEmulator() = delete;
 
-    PPULLVMRecompiler(const PPULLVMRecompilerWorker & other) = delete;
-    PPULLVMRecompiler(PPULLVMRecompilerWorker && other) = delete;
+    PPULLVMEmulator(const PPULLVMEmulator & other) = delete;
+    PPULLVMEmulator(PPULLVMEmulator && other) = delete;
 
-    virtual ~PPULLVMRecompiler();
+    virtual ~PPULLVMEmulator();
 
-    PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
-    PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
+    PPULLVMEmulator & operator = (const PPULLVMEmulator & other) = delete;
+    PPULLVMEmulator & operator = (PPULLVMEmulator && other) = delete;
 
     u8 DecodeMemory(const u64 address);
 
@@ -626,10 +638,19 @@ private:
     PPUThread & m_ppu;
 
     /// PPU Interpreter
-    PPUInterpreter m_interpreter;
+    PPUInterpreter * m_interpreter;
 
-    /// The actual compiler
-    PPULLVMRecompilerWorker m_worker;
+    /// PPU instruction Decoder
+    PPUDecoder m_decoder;
+
+    /// Number of instances of this class
+    static u32 s_num_instances;
+
+    /// Mutex used prevent multiple instances of the recompiler from being created
+    static std::mutex s_recompiler_mutex;
+
+    /// PPU to LLVM recompiler
+    static PPULLVMRecompiler * s_recompiler;
 };
 
 #endif // PPU_LLVM_RECOMPILER_H

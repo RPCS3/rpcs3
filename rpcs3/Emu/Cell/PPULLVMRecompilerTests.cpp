@@ -9,7 +9,7 @@
 using namespace llvm;
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER(fn, tc, input, ...) \
-VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &PPULLVMRecompilerWorker::fn, &PPUInterpreter::fn, input, __VA_ARGS__)
+VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &PPULLVMRecompiler::fn, &PPUInterpreter::fn, input, __VA_ARGS__)
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(fn, s, n, ...) {  \
     PPURegState input;                                                              \
@@ -160,7 +160,7 @@ static u64              s_base_address = 0;
 static PPUInterpreter * s_interpreter  = nullptr;
 
 template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-void PPULLVMRecompilerWorker::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args) {
+void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args) {
     auto test_case = [&]() {
         (this->*recomp_fn)(args...);
     };
@@ -188,7 +188,7 @@ void PPULLVMRecompilerWorker::VerifyInstructionAgainstInterpreter(const char * n
     RunTest(name, test_case, input, check_result);
 }
 
-void PPULLVMRecompilerWorker::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
+void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
     // Create the unit test function
     m_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
                                                            m_ir_builder->getInt8PtrTy() /*ppu_state*/,
@@ -256,7 +256,7 @@ void PPULLVMRecompilerWorker::RunTest(const char * name, std::function<void()> t
     m_execution_engine->freeMachineCodeForFunction(m_function);
 }
 
-void PPULLVMRecompilerWorker::RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter) {
+void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter) {
     s_ppu_state    = ppu_state;
     s_base_address = base_address;
     s_interpreter  = interpreter;

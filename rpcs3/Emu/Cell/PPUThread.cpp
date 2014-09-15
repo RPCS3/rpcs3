@@ -112,7 +112,7 @@ void PPUThread::DoRun()
 	break;
 
 	case 3:
-		m_dec = new PPULLVMRecompiler(*this);
+		m_dec = new PPULLVMEmulator(*this);
 	break;
 
 	default:
