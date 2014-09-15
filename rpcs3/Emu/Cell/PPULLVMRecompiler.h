@@ -466,6 +466,12 @@ private:
     /// Disassembler
     LLVMDisasmContextRef m_disassembler;
 
+    /// Load GPR and convert it to a i64
+    llvm::Value * GetGpr(u32 r);
+
+    /// Set GPR to specified value
+    llvm::Value * SetGpr(u32 r, llvm::Value * val);
+
     /// Load VR and convert it to an integer vector
     llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
 

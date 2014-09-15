@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/Intrinsics.h"
 
-
 using namespace llvm;
 
 PPULLVMRecompiler::PPULLVMRecompiler(PPUThread & ppu)
@@ -1685,9 +1684,13 @@ void PPULLVMRecompiler::VXOR(u32 vd, u32 va, u32 vb) {
     m_ppu.VPR[vd]._u32[2] = m_ppu.VPR[va]._u32[2] ^ m_ppu.VPR[vb]._u32[2];
     m_ppu.VPR[vd]._u32[3] = m_ppu.VPR[va]._u32[3] ^ m_ppu.VPR[vb]._u32[3];
 }
+
 void PPULLVMRecompiler::MULLI(u32 rd, u32 ra, s32 simm16) {
-    m_ppu.GPR[rd] = (s64)m_ppu.GPR[ra] * simm16;
+    auto ra_i64  = GetGpr(ra);
+    auto res_i64 = m_ir_builder.CreateMul(ra_i64, m_ir_builder.getInt64((s64)simm16));
+    SetGpr(rd, res_i64);
 }
+
 void PPULLVMRecompiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
     const u64 RA = m_ppu.GPR[ra];
     const u64 IMM = (s64)simm16;
@@ -1695,23 +1698,28 @@ void PPULLVMRecompiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
 
     m_ppu.XER.CA = m_ppu.IsCarry(~RA, IMM, 1);
 }
+
 void PPULLVMRecompiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
     m_ppu.UpdateCRnU(l, crfd, m_ppu.GPR[ra], uimm16);
 }
+
 void PPULLVMRecompiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
     m_ppu.UpdateCRnS(l, crfd, m_ppu.GPR[ra], simm16);
 }
+
 void PPULLVMRecompiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
     const u64 RA = m_ppu.GPR[ra];
     m_ppu.GPR[rd] = RA + simm16;
     m_ppu.XER.CA = m_ppu.IsCarry(RA, simm16);
 }
+
 void PPULLVMRecompiler::ADDIC_(u32 rd, u32 ra, s32 simm16) {
     const u64 RA = m_ppu.GPR[ra];
     m_ppu.GPR[rd] = RA + simm16;
     m_ppu.XER.CA = m_ppu.IsCarry(RA, simm16);
     m_ppu.UpdateCR0<s64>(m_ppu.GPR[rd]);
 }
+
 void PPULLVMRecompiler::ADDI(u32 rd, u32 ra, s32 simm16) {
     auto rd_ptr  = m_ir_builder.CreateConstGEP2_32(m_gpr, 0, rd);
     auto imm_val = m_ir_builder.getInt64((int64_t)simm16);
@@ -1725,9 +1733,11 @@ void PPULLVMRecompiler::ADDI(u32 rd, u32 ra, s32 simm16) {
         m_ir_builder.CreateStore(sum, rd_ptr);
     }
 }
+
 void PPULLVMRecompiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
     m_ppu.GPR[rd] = ra ? ((s64)m_ppu.GPR[ra] + (simm16 << 16)) : (simm16 << 16);
 }
+
 void PPULLVMRecompiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     //if (CheckCondition(bo, bi))
     //{
@@ -1736,6 +1746,7 @@ void PPULLVMRecompiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     //	if (lk) m_ppu.LR = nextLR;
     //}
 }
+
 void PPULLVMRecompiler::SC(u32 sc_code) {
     //switch (sc_code)
     //{
@@ -1754,14 +1765,17 @@ void PPULLVMRecompiler::SC(u32 sc_code) {
     //default: UNK(fmt::Format("Unknown sc: %x", sc_code));
     //}
 }
+
 void PPULLVMRecompiler::B(s32 ll, u32 aa, u32 lk) {
     const u64 nextLR = m_ppu.PC + 4;
     m_ppu.SetBranch(branchTarget(aa ? 0 : m_ppu.PC, ll), lk);
     if (lk) m_ppu.LR = nextLR;
 }
+
 void PPULLVMRecompiler::MCRF(u32 crfd, u32 crfs) {
     m_ppu.SetCR(crfd, m_ppu.GetCR(crfs));
 }
+
 void PPULLVMRecompiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
     //if (CheckCondition(bo, bi))
     //{
@@ -1770,41 +1784,51 @@ void PPULLVMRecompiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
     //	if (lk) m_ppu.LR = nextLR;
     //}
 }
+
 void PPULLVMRecompiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = 1 ^ (m_ppu.IsCR(crba) | m_ppu.IsCR(crbb));
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CRANDC(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = m_ppu.IsCR(crba) & (1 ^ m_ppu.IsCR(crbb));
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::ISYNC() {
     _mm_mfence();
 }
+
 void PPULLVMRecompiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = m_ppu.IsCR(crba) ^ m_ppu.IsCR(crbb);
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = 1 ^ (m_ppu.IsCR(crba) & m_ppu.IsCR(crbb));
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CRAND(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = m_ppu.IsCR(crba) & m_ppu.IsCR(crbb);
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CREQV(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = 1 ^ (m_ppu.IsCR(crba) ^ m_ppu.IsCR(crbb));
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CRORC(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = m_ppu.IsCR(crba) | (1 ^ m_ppu.IsCR(crbb));
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::CROR(u32 crbd, u32 crba, u32 crbb) {
     const u8 v = m_ppu.IsCR(crba) | m_ppu.IsCR(crbb);
     m_ppu.SetCRBit2(crbd, v & 0x1);
 }
+
 void PPULLVMRecompiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
     if (bo & 0x10 || m_ppu.IsCR(bi) == (bo & 0x8)) {
         const u64 nextLR = m_ppu.PC + 4;
@@ -1812,56 +1836,70 @@ void PPULLVMRecompiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
         if (lk) m_ppu.LR = nextLR;
     }
 }
+
 void PPULLVMRecompiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
     //const u64 mask = rotate_mask[32 + mb][32 + me];
     //m_ppu.GPR[ra] = (m_ppu.GPR[ra] & ~mask) | (rotl32(m_ppu.GPR[rs], sh) & mask);
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
     //m_ppu.GPR[ra] = rotl32(m_ppu.GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, bool rc) {
     //m_ppu.GPR[ra] = rotl32(m_ppu.GPR[rs], m_ppu.GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::ORI(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] | uimm16;
 }
+
 void PPULLVMRecompiler::ORIS(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] | (uimm16 << 16);
 }
+
 void PPULLVMRecompiler::XORI(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] ^ uimm16;
 }
+
 void PPULLVMRecompiler::XORIS(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] ^ (uimm16 << 16);
 }
+
 void PPULLVMRecompiler::ANDI_(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] & uimm16;
     m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::ANDIS_(u32 ra, u32 rs, u32 uimm16) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] & (uimm16 << 16);
     m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     //m_ppu.GPR[ra] = rotl64(m_ppu.GPR[rs], sh) & rotate_mask[mb][63];
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc) {
     //m_ppu.GPR[ra] = rotl64(m_ppu.GPR[rs], sh) & rotate_mask[0][me];
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     //m_ppu.GPR[ra] = rotl64(m_ppu.GPR[rs], sh) & rotate_mask[mb][63 - sh];
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     //const u64 mask = rotate_mask[mb][63 - sh];
     //m_ppu.GPR[ra] = (m_ppu.GPR[ra] & ~mask) | (rotl64(m_ppu.GPR[rs], sh) & mask);
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc) {
     if (is_r) // rldcr
     {
@@ -1871,9 +1909,11 @@ void PPULLVMRecompiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, boo
         RLDICL(ra, rs, m_ppu.GPR[rb], m_eb, rc);
     }
 }
+
 void PPULLVMRecompiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
     m_ppu.UpdateCRnS(l, crfd, m_ppu.GPR[ra], m_ppu.GPR[rb]);
 }
+
 void PPULLVMRecompiler::TW(u32 to, u32 ra, u32 rb) {
     //s32 a = m_ppu.GPR[ra];
     //s32 b = m_ppu.GPR[rb];
@@ -1887,6 +1927,7 @@ void PPULLVMRecompiler::TW(u32 to, u32 ra, u32 rb) {
     //	UNK(fmt::Format("Trap! (tw %x, r%d, r%d)", to, ra, rb));
     //}
 }
+
 void PPULLVMRecompiler::LVSL(u32 vd, u32 ra, u32 rb) {
     const u64 addr = ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb];
 
@@ -1913,12 +1954,14 @@ void PPULLVMRecompiler::LVSL(u32 vd, u32 ra, u32 rb) {
     m_ppu.VPR[vd]._u64[0] = lvsl_values[addr & 0xf][0];
     m_ppu.VPR[vd]._u64[1] = lvsl_values[addr & 0xf][1];
 }
+
 void PPULLVMRecompiler::LVEBX(u32 vd, u32 ra, u32 rb) {
     //const u64 addr = ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb];
     //m_ppu.VPR[vd].Clear();
     //m_ppu.VPR[vd]._u8[addr & 0xf] = Memory.Read8(addr);
     m_ppu.VPR[vd]._u128 = Memory.Read128((ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb]) & ~0xfULL);
 }
+
 void PPULLVMRecompiler::SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
     //const u64 RA = m_ppu.GPR[ra];
     //const u64 RB = m_ppu.GPR[rb];
@@ -1927,6 +1970,7 @@ void PPULLVMRecompiler::SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
     //if (oe) UNK("subfco");
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[rd]);
 }
+
 void PPULLVMRecompiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
     //const s64 RA = m_ppu.GPR[ra];
     //const s64 RB = m_ppu.GPR[rb];
@@ -1935,16 +1979,19 @@ void PPULLVMRecompiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
     //if (oe) UNK("addco");
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[rd]);
 }
+
 void PPULLVMRecompiler::MULHDU(u32 rd, u32 ra, u32 rb, bool rc) {
     m_ppu.GPR[rd] = __umulh(m_ppu.GPR[ra], m_ppu.GPR[rb]);
     if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[rd]);
 }
+
 void PPULLVMRecompiler::MULHWU(u32 rd, u32 ra, u32 rb, bool rc) {
     u32 a = m_ppu.GPR[ra];
     u32 b = m_ppu.GPR[rb];
     m_ppu.GPR[rd] = ((u64)a * (u64)b) >> 32;
     if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[rd]);
 }
+
 void PPULLVMRecompiler::MFOCRF(u32 a, u32 rd, u32 crm) {
     /*
     if(a)
@@ -1974,17 +2021,21 @@ void PPULLVMRecompiler::MFOCRF(u32 a, u32 rd, u32 crm) {
     m_ppu.GPR[rd] = m_ppu.CR.CR;
     //}
 }
+
 void PPULLVMRecompiler::LWARX(u32 rd, u32 ra, u32 rb) {
     m_ppu.R_ADDR = ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb];
     m_ppu.R_VALUE = (u32&)Memory[m_ppu.R_ADDR];
     m_ppu.GPR[rd] = re32((u32)m_ppu.R_VALUE);
 }
+
 void PPULLVMRecompiler::LDX(u32 rd, u32 ra, u32 rb) {
     m_ppu.GPR[rd] = Memory.Read64(ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb]);
 }
+
 void PPULLVMRecompiler::LWZX(u32 rd, u32 ra, u32 rb) {
     m_ppu.GPR[rd] = Memory.Read32(ra ? m_ppu.GPR[ra] + m_ppu.GPR[rb] : m_ppu.GPR[rb]);
 }
+
 void PPULLVMRecompiler::SLW(u32 ra, u32 rs, u32 rb, bool rc) {
     //u32 n = m_ppu.GPR[rb] & 0x1f;
     //u32 r = rotl32((u32)m_ppu.GPR[rs], n);
@@ -1994,6 +2045,7 @@ void PPULLVMRecompiler::SLW(u32 ra, u32 rs, u32 rb, bool rc) {
 
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::CNTLZW(u32 ra, u32 rs, bool rc) {
     u32 i;
     for (i = 0; i < 32; i++) {
@@ -2004,6 +2056,7 @@ void PPULLVMRecompiler::CNTLZW(u32 ra, u32 rs, bool rc) {
 
     if (rc) m_ppu.SetCRBit(CR_LT, false);
 }
+
 void PPULLVMRecompiler::SLD(u32 ra, u32 rs, u32 rb, bool rc) {
     //u32 n = m_ppu.GPR[rb] & 0x3f;
     //u64 r = rotl64(m_ppu.GPR[rs], n);
@@ -2013,10 +2066,12 @@ void PPULLVMRecompiler::SLD(u32 ra, u32 rs, u32 rb, bool rc) {
 
     //if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::AND(u32 ra, u32 rs, u32 rb, bool rc) {
     m_ppu.GPR[ra] = m_ppu.GPR[rs] & m_ppu.GPR[rb];
     if (rc) m_ppu.UpdateCR0<s64>(m_ppu.GPR[ra]);
 }
+
 void PPULLVMRecompiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
     m_ppu.UpdateCRnU(l, crfd, m_ppu.GPR[ra], m_ppu.GPR[rb]);
 }
@@ -3312,6 +3367,17 @@ void PPULLVMRecompiler::FCFID(u32 frd, u32 frb, bool rc) {
 
 void PPULLVMRecompiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //UNK(fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
+}
+
+Value * PPULLVMRecompiler::GetGpr(u32 r) {
+    auto r_ptr = m_ir_builder.CreateConstGEP2_32(m_gpr, 0, r);
+    return m_ir_builder.CreateLoad(r_ptr);
+}
+
+Value * PPULLVMRecompiler::SetGpr(u32 r, llvm::Value * val) {
+    auto r_ptr   = m_ir_builder.CreateConstGEP2_32(m_gpr, 0, r);
+    auto val_i64 = m_ir_builder.CreateBitCast(val, Type::getInt64Ty(m_llvm_context));
+    return m_ir_builder.CreateStore(val, r_ptr);
 }
 
 Value * PPULLVMRecompiler::GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits) {
