@@ -61,6 +61,7 @@
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
+    <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp" />
