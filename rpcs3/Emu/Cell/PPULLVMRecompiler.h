@@ -558,6 +558,18 @@ private:
     /// Set CR6 based on the result of the vector compare instruction
     void SetCr6AfterVectorCompare(u32 vr);
 
+    /// Get LR
+    llvm::Value * GetLr();
+
+    /// Set LR
+    void SetLr(llvm::Value * val_x64);
+
+    /// Get CTR
+    llvm::Value * GetCtr();
+
+    /// Set CTR
+    void SetCtr(llvm::Value * val_x64);
+
     /// Load XER and convert it to an i64
     llvm::Value * GetXer();
 
@@ -575,6 +587,18 @@ private:
 
     /// Set the SO bit of XER
     void SetXerSo(llvm::Value * so);
+
+    /// Get USPRG0
+    llvm::Value * GetUsprg0();
+
+    /// Set USPRG0
+    void SetUsprg0(llvm::Value * val_x64);
+
+    /// Get FPR
+    llvm::Value * GetFpr(u32 r, u32 bits = 64);
+
+    /// Set FPR
+    void SetFpr(u32 r, llvm::Value * val);
 
     /// Load VSCR
     llvm::Value * GetVscr();
@@ -618,6 +642,15 @@ private:
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
+
+    /// A mask used in rotate instructions
+    static u64 s_rotate_mask[64][64];
+
+    /// A flag indicating whether s_rotate_mask has been initialised or not
+    static bool s_rotate_mask_inited;
+
+    /// Initialse s_rotate_mask
+    static void InitRotateMask();
 };
 
 /// PPU emulator that uses LLVM to convert PPU instructions to host CPU instructions
