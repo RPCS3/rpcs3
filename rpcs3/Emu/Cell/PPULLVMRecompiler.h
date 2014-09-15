@@ -10,6 +10,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/MC/MCDisassembler.h"
+#include "llvm/PassManager.h"
 
 struct PPURegState;
 
@@ -464,6 +465,9 @@ private:
 
     /// JIT execution engine
     llvm::ExecutionEngine * m_execution_engine;
+
+    /// Function pass manager
+    llvm::FunctionPassManager * m_fpm;
 
     /// Disassembler
     LLVMDisasmContextRef m_disassembler;

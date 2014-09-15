@@ -9,8 +9,14 @@
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Filesystem.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
 
@@ -25,12 +31,34 @@ PPULLVMRecompiler::PPULLVMRecompiler()
     m_llvm_context = new LLVMContext();
     m_ir_builder   = new IRBuilder<>(*m_llvm_context);
     m_module       = new llvm::Module("Module", *m_llvm_context);
+    m_fpm          = new FunctionPassManager(m_module);
 
     EngineBuilder engine_builder(m_module);
     engine_builder.setMCPU(sys::getHostCPUName());
     engine_builder.setEngineKind(EngineKind::JIT);
     engine_builder.setOptLevel(CodeGenOpt::Default);
     m_execution_engine = engine_builder.create();
+
+    m_fpm->add(new DataLayoutPass(m_module));
+    m_fpm->add(createNoAAPass());
+    m_fpm->add(createBasicAliasAnalysisPass());
+    m_fpm->add(createNoTargetTransformInfoPass());
+    m_fpm->add(createEarlyCSEPass());
+    m_fpm->add(createTailCallEliminationPass());
+    m_fpm->add(createReassociatePass());
+    m_fpm->add(createInstructionCombiningPass());
+    m_fpm->add(new DominatorTreeWrapperPass());
+    m_fpm->add(new MemoryDependenceAnalysis());
+    m_fpm->add(createGVNPass());
+    m_fpm->add(createInstructionCombiningPass());
+    m_fpm->add(new MemoryDependenceAnalysis());
+    m_fpm->add(createDeadStoreEliminationPass());
+    m_fpm->add(new LoopInfo());
+    m_fpm->add(new ScalarEvolution());
+    m_fpm->add(createSLPVectorizerPass());
+    m_fpm->add(createInstructionCombiningPass());
+    m_fpm->add(createCFGSimplificationPass());
+    m_fpm->doInitialization();
 
     m_disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
 }
@@ -52,6 +80,7 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
 
     LLVMDisasmDispose(m_disassembler);
     delete m_execution_engine;
+    delete m_fpm;
     delete m_ir_builder;
     delete m_llvm_context;
 }
@@ -1308,11 +1337,36 @@ void PPULLVMRecompiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::MULHDU(u32 rd, u32 ra, u32 rb, bool rc) {
-    InterpreterCall("MULHDU", &PPUInterpreter::MULHDU, rd, ra, rb, rc);
+    auto ra_i64     = GetGpr(ra);
+    auto rb_i64     = GetGpr(rb);
+    auto ra_i128    = m_ir_builder->CreateZExt(ra_i64, m_ir_builder->getIntNTy(128));
+    auto rb_i128    = m_ir_builder->CreateZExt(rb_i64, m_ir_builder->getIntNTy(128));
+    auto prod_i128  = m_ir_builder->CreateMul(ra_i128, rb_i128);
+    auto prod_v2i64 = m_ir_builder->CreateBitCast(prod_i128, VectorType::get(m_ir_builder->getInt64Ty(), 2));
+    auto prod_i64   = m_ir_builder->CreateExtractElement(prod_v2i64, m_ir_builder->getInt32(1));
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+
+    // TODO: Check what code this generates
+    //InterpreterCall("MULHDU", &PPUInterpreter::MULHDU, rd, ra, rb, rc);
 }
 
 void PPULLVMRecompiler::MULHWU(u32 rd, u32 ra, u32 rb, bool rc) {
-    InterpreterCall("MULHWU", &PPUInterpreter::MULHWU, rd, ra, rb, rc);
+    auto ra_i32   = GetGpr(ra, 32);
+    auto rb_i32   = GetGpr(rb, 32);
+    auto ra_i64   = m_ir_builder->CreateZExt(ra_i32, m_ir_builder->getInt64Ty());
+    auto rb_i64   = m_ir_builder->CreateZExt(rb_i32, m_ir_builder->getInt64Ty());
+    auto prod_i64 = m_ir_builder->CreateMul(ra_i64, rb_i64);
+    prod_i64      = m_ir_builder->CreateLShr(prod_i64, 32);
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("MULHWU", &PPUInterpreter::MULHWU, rd, ra, rb, rc);
 }
 
 void PPULLVMRecompiler::MFOCRF(u32 a, u32 rd, u32 crm) {
@@ -1396,7 +1450,19 @@ void PPULLVMRecompiler::LVEHX(u32 vd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
-    InterpreterCall("SUBF", &PPUInterpreter::SUBF, rd, ra, rb, oe, rc);
+    auto ra_i64   = GetGpr(ra);
+    auto rb_i64   = GetGpr(rb);
+    auto diff_i64 = m_ir_builder->CreateSub(rb_i64, ra_i64);
+    SetGpr(rd, diff_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, diff_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("SUBF", &PPUInterpreter::SUBF, rd, ra, rb, oe, rc);
 }
 
 void PPULLVMRecompiler::LDUX(u32 rd, u32 ra, u32 rb) {
@@ -1443,11 +1509,36 @@ void PPULLVMRecompiler::LVEWX(u32 vd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::MULHD(u32 rd, u32 ra, u32 rb, bool rc) {
-    InterpreterCall("MULHD", &PPUInterpreter::MULHD, rd, ra, rb, rc);
+    auto ra_i64     = GetGpr(ra);
+    auto rb_i64     = GetGpr(rb);
+    auto ra_i128    = m_ir_builder->CreateSExt(ra_i64, m_ir_builder->getIntNTy(128));
+    auto rb_i128    = m_ir_builder->CreateSExt(rb_i64, m_ir_builder->getIntNTy(128));
+    auto prod_i128  = m_ir_builder->CreateMul(ra_i128, rb_i128);
+    auto prod_v2i64 = m_ir_builder->CreateBitCast(prod_i128, VectorType::get(m_ir_builder->getInt64Ty(), 2));
+    auto prod_i64   = m_ir_builder->CreateExtractElement(prod_v2i64, m_ir_builder->getInt32(1));
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+
+    // TODO: Check what code this generates
+    //InterpreterCall("MULHD", &PPUInterpreter::MULHD, rd, ra, rb, rc);
 }
 
 void PPULLVMRecompiler::MULHW(u32 rd, u32 ra, u32 rb, bool rc) {
-    InterpreterCall("MULHW", &PPUInterpreter::MULHW, rd, ra, rb, rc);
+    auto ra_i32   = GetGpr(ra, 32);
+    auto rb_i32   = GetGpr(rb, 32);
+    auto ra_i64   = m_ir_builder->CreateSExt(ra_i32, m_ir_builder->getInt64Ty());
+    auto rb_i64   = m_ir_builder->CreateSExt(rb_i32, m_ir_builder->getInt64Ty());
+    auto prod_i64 = m_ir_builder->CreateMul(ra_i64, rb_i64);
+    prod_i64      = m_ir_builder->CreateAShr(prod_i64, 32);
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("MULHW", &PPUInterpreter::MULHW, rd, ra, rb, rc);
 }
 
 void PPULLVMRecompiler::LDARX(u32 rd, u32 ra, u32 rb) {
@@ -1476,7 +1567,18 @@ void PPULLVMRecompiler::LVX(u32 vd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::NEG(u32 rd, u32 ra, u32 oe, bool rc) {
-    InterpreterCall("NEG", &PPUInterpreter::NEG, rd, ra, oe, rc);
+    auto ra_i64   = GetGpr(ra);
+    auto diff_i64 = m_ir_builder->CreateSub(m_ir_builder->getInt64(0), ra_i64);
+    SetGpr(rd, diff_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, diff_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("NEG", &PPUInterpreter::NEG, rd, ra, oe, rc);
 }
 
 void PPULLVMRecompiler::LBZUX(u32 rd, u32 ra, u32 rb) {
@@ -1492,7 +1594,16 @@ void PPULLVMRecompiler::LBZUX(u32 rd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::NOR(u32 ra, u32 rs, u32 rb, bool rc) {
-    InterpreterCall("NOR", &PPUInterpreter::NOR, ra, rs, rb, rc);
+    auto rs_i64  = GetGpr(rs);
+    auto rb_i64  = GetGpr(rb);
+    auto res_i64 = m_ir_builder->CreateOr(rs_i64, rb_i64);
+    res_i64      = m_ir_builder->CreateXor(res_i64, (s64)-1);
+    SetGpr(ra, res_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("NOR", &PPUInterpreter::NOR, ra, rs, rb, rc);
 }
 
 void PPULLVMRecompiler::STVEBX(u32 vs, u32 ra, u32 rb) {
@@ -1597,7 +1708,17 @@ void PPULLVMRecompiler::SUBFME(u32 rd, u32 ra, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
-    InterpreterCall("MULLD", &PPUInterpreter::MULLD, rd, ra, rb, oe, rc);
+    auto ra_i64   = GetGpr(ra);
+    auto rb_i64   = GetGpr(rb);
+    auto prod_i64 = m_ir_builder->CreateMul(ra_i64, rb_i64);
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+
+    // TODO implement oe
+    //InterpreterCall("MULLD", &PPUInterpreter::MULLD, rd, ra, rb, oe, rc);
 }
 
 void PPULLVMRecompiler::ADDME(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -1605,7 +1726,19 @@ void PPULLVMRecompiler::ADDME(u32 rd, u32 ra, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
-    InterpreterCall("MULLW", &PPUInterpreter::MULLW, rd, ra, rb, oe, rc);
+    auto ra_i32   = GetGpr(ra, 32);
+    auto rb_i32   = GetGpr(rb, 32);
+    auto ra_i64   = m_ir_builder->CreateSExt(ra_i32, m_ir_builder->getInt64Ty());
+    auto rb_i64   = m_ir_builder->CreateSExt(rb_i32, m_ir_builder->getInt64Ty());
+    auto prod_i64 = m_ir_builder->CreateMul(ra_i64, rb_i64);
+    SetGpr(rd, prod_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
+    }
+
+    // TODO implement oe
+    //InterpreterCall("MULLW", &PPUInterpreter::MULLW, rd, ra, rb, oe, rc);
 }
 
 void PPULLVMRecompiler::DCBTST(u32 ra, u32 rb, u32 th) {
@@ -2503,11 +2636,12 @@ void PPULLVMRecompiler::Compile(const u64 address) {
         }
 
         m_ir_builder->CreateRetVoid();
-        m_execution_engine->runJITOnFunction(m_function);
+        m_fpm->run(*m_function);
     }
 
+    CompiledBlock block = (CompiledBlock)m_execution_engine->getPointerToFunction(m_function);
     m_address_to_compiled_block_map_mutex.lock();
-    m_address_to_compiled_block_map[address] = (CompiledBlock)m_execution_engine->getPointerToFunction(m_function);
+    m_address_to_compiled_block_map[address] = block;
     m_address_to_compiled_block_map_mutex.unlock();
 
     std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
