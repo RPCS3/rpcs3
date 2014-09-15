@@ -1,0 +1,261 @@
+﻿<?xml version="1.0" encoding="Windows-1252"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{022FF3F5-0845-4544-A7E5-C5C352123625}</ProjectGUID>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>LLVMX86CodeGen</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+    <PropertyGroup>
+      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\Debug\lib\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMX86CodeGen.dir\Debug\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMX86CodeGen</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\Release\lib\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMX86CodeGen.dir\Release\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMX86CodeGen</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatSpecificWarningsAsErrors>4238</TreatSpecificWarningsAsErrors>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatSpecificWarningsAsErrors>4238</TreatSpecificWarningsAsErrors>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat></DebugInformationFormat>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build\lib\Target\X86;D:\Projects\rpcs3\llvm\lib\Target\X86;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/Target/X86/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/lib/Target/X86/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASMCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASM_MASMInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASMInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestASMCompiler.cmake;D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/lib/Target/X86/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/lib/Target/X86/CMakeLists.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASMCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASM_MASMInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeASMInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestASM_MASMCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestASMCompiler.cmake;D:\Projects\rpcs3\llvm\lib\Target\X86\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86CompilationCallback_Win64.asm">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating X86CompilationCallback_Win64.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\ml64.exe" /Fo D:/Projects/rpcs3/llvm_build/lib/Target/X86/X86CompilationCallback_Win64.obj /c D:/Projects/rpcs3/llvm/lib/Target/X86/X86CompilationCallback_Win64.asm
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/lib/Target/X86/X86CompilationCallback_Win64.asm;D:\Projects\rpcs3\llvm\lib\Target\X86\X86CompilationCallback_Win64.asm;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\lib\Target\X86\X86CompilationCallback_Win64.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating X86CompilationCallback_Win64.obj</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\x86_amd64\ml64.exe" /Fo D:/Projects/rpcs3/llvm_build/lib/Target/X86/X86CompilationCallback_Win64.obj /c D:/Projects/rpcs3/llvm/lib/Target/X86/X86CompilationCallback_Win64.asm
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/lib/Target/X86/X86CompilationCallback_Win64.asm;D:\Projects\rpcs3\llvm\lib\Target\X86\X86CompilationCallback_Win64.asm;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\lib\Target\X86\X86CompilationCallback_Win64.obj</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86CallingConv.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86Instr3DNow.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrArithmetic.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrAVX512.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrCMovSetCC.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrCompiler.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrControl.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrExtension.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrFMA.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrFormats.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrFPStack.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrInfo.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrMMX.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrShiftRotate.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrSSE.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrSVM.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrSystem.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrTSX.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrVMX.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrXOP.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86RegisterInfo.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86SchedHaswell.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86SchedSandyBridge.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86Schedule.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86ScheduleAtom.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86ScheduleSLM.td" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86AsmPrinter.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86CallingConv.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86FrameLowering.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrBuilder.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrInfo.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86ISelLowering.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86JITInfo.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86MachineFunctionInfo.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86RegisterInfo.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86Relocations.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86SelectionDAGInfo.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86Subtarget.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86TargetMachine.h" />
+    <ClInclude Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86TargetObjectFile.h" />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86AsmPrinter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86AtomicExpandPass.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86CodeEmitter.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86FastISel.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86FloatingPoint.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86FrameLowering.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86ISelDAGToDAG.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86ISelLowering.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86InstrInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86JITInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86MCInstLower.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86MachineFunctionInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86PadShortFunction.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86RegisterInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86SelectionDAGInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86Subtarget.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86TargetMachine.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86TargetObjectFile.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86TargetTransformInfo.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86VZeroUpper.cpp"  />
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Target\X86\X86FixupLEAs.cpp"  />
+    <Object Include="X86CompilationCallback_Win64.obj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/X86CommonTableGen.vcxproj">
+      <Project>514E5171-D5DF-4D5E-BF00-988A8BA84214</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/include/llvm/IR/intrinsics_gen.vcxproj">
+      <Project>287EED9A-FBDD-4CB8-85D8-39AEB6245704</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

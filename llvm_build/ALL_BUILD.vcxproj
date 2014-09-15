@@ -1,0 +1,264 @@
+﻿<?xml version="1.0" encoding="Windows-1252"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{681ACAC2-256D-48A1-BCAD-BD607D22BDB4}</ProjectGUID>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>ALL_BUILD</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+    <PropertyGroup>
+      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build;D:\Projects\rpcs3\llvm;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\rpcs3\llvm_build;D:\Projects\rpcs3\llvm;D:\Projects\rpcs3\llvm_build\include;D:\Projects\rpcs3\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm/CMakeLists.txt;D:\Projects\rpcs3\llvm\CMakeLists.txt;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeSystem.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeClDeps.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-CXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeClDeps.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeGenericSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\WindowsPaths.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeRCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeRCInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompilerABI.c;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCXXCompiler.cmake;D:\Projects\rpcs3\llvm\cmake\modules\VersionFromVCS.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CPack.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CPackComponent.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Templates\CPackConfig.cmake.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Templates\CPackConfig.cmake.in;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVMDefinitions.cmake;D:\Projects\rpcs3\llvm\cmake\config-ix.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckIncludeFile.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckIncludeFileCXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckLibraryExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckSymbolExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckFunctionExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\TestBigEndian.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMStdlib.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;D:\Projects\rpcs3\llvm\cmake\modules\CheckAtomic.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;D:\Projects\rpcs3\llvm\cmake\modules\GetHostTriple.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMOptions.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMStdlib.cmake;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVMDefinitions.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;D:\Projects\rpcs3\llvm\cmake\modules\ChooseMSVCCRT.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPythonInterp.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPackageMessage.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseArguments.cmake;D:\Projects\rpcs3\llvm_build\LLVMBuild.cmake;D:\Projects\rpcs3\llvm\LLVMBuild.txt;D:\Projects\rpcs3\llvm\bindings\LLVMBuild.txt;D:\Projects\rpcs3\llvm\docs\LLVMBuild.txt;D:\Projects\rpcs3\llvm\examples\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Analysis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Analysis\IPA\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\Reader\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\Writer\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\AsmPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\SelectionDAG\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\DebugInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\Interpreter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\JIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\MCJIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\RuntimeDyld\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\IntelJITEvents\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\OProfileJIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LineEditor\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Linker\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\IR\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\IRReader\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LTO\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCAnalysis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Object\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Option\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ProfileData\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Support\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\TableGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\CppBackend\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\CppBackend\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\IPO\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\InstCombine\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Instrumentation\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Vectorize\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\ObjCARC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\projects\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\bugpoint\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\lli\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\lli\ChildTarget\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-ar\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-as\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-bcanalyzer\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-cov\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-diff\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-dis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-dwarfdump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-extract\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-jitlistener\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-link\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-lto\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-mc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-nm\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-objdump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-profdata\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-rtdyld\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-size\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\macho-dump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\opt\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-mcmarkup\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\TableGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\unittest\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\configutil.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\main.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\componentinfo.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\util.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\__init__.py;D:\Projects\rpcs3\llvm\include\llvm\Config\AsmPrinters.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\AsmParsers.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\Disassemblers.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\Targets.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\config.h.cmake;D:\Projects\rpcs3\llvm\include\llvm\Config\llvm-config.h.cmake;D:\Projects\rpcs3\llvm\include\llvm\Support\DataTypes.h.cmake;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVM.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVMParseArguments.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVMProcessSources.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\AddFileDependencies.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseArguments.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVM-Config.cmake;D:\Projects\rpcs3\llvm\cmake\modules\TableGen.cmake;D:\Projects\rpcs3\llvm\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/rpcs3/llvm/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files (x86)\CMake\bin\cmake.exe" -HD:/Projects/rpcs3/llvm -BD:/Projects/rpcs3/llvm_build --check-stamp-file D:\Projects\rpcs3\llvm_build\CMakeFiles\generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm/CMakeLists.txt;D:\Projects\rpcs3\llvm\CMakeLists.txt;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeSystem.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeClDeps.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-CXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerId.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CompilerId\VS-10.vcxproj.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeFindBinUtils.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeClDeps.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeGenericSystem.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\WindowsPaths.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeRCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeRCInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestRCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompilerABI.c;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXInformation.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\Platform\Windows-MSVC.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCXXCompiler.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeTestCompilerCommon.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeDetermineCompilerABI.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseImplicitLinkInfo.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompilerABI.cpp;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCXXCompiler.cmake.in;D:\Projects\rpcs3\llvm_build\CMakeFiles\3.0.1\CMakeCXXCompiler.cmake;D:\Projects\rpcs3\llvm\cmake\modules\VersionFromVCS.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CPack.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CPackComponent.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Templates\CPackConfig.cmake.in;C:\Program Files (x86)\CMake\share\cmake-3.0\Templates\CPackConfig.cmake.in;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVMDefinitions.cmake;D:\Projects\rpcs3\llvm\cmake\config-ix.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckIncludeFile.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckIncludeFileCXX.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckLibraryExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckSymbolExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckFunctionExists.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\TestBigEndian.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMStdlib.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;D:\Projects\rpcs3\llvm\cmake\modules\CheckAtomic.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;D:\Projects\rpcs3\llvm\cmake\modules\GetHostTriple.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMOptions.cmake;D:\Projects\rpcs3\llvm\cmake\modules\HandleLLVMStdlib.cmake;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVMDefinitions.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXCompilerFlag.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CheckCXXSourceCompiles.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;D:\Projects\rpcs3\llvm\cmake\modules\ChooseMSVCCRT.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPythonInterp.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPackageHandleStandardArgs.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\FindPackageMessage.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseArguments.cmake;D:\Projects\rpcs3\llvm_build\LLVMBuild.cmake;D:\Projects\rpcs3\llvm\LLVMBuild.txt;D:\Projects\rpcs3\llvm\bindings\LLVMBuild.txt;D:\Projects\rpcs3\llvm\docs\LLVMBuild.txt;D:\Projects\rpcs3\llvm\examples\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Analysis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Analysis\IPA\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\Reader\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Bitcode\Writer\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\AsmPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\CodeGen\SelectionDAG\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\DebugInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\Interpreter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\JIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\MCJIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\RuntimeDyld\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\IntelJITEvents\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ExecutionEngine\OProfileJIT\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LineEditor\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Linker\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\IR\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\IRReader\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\LTO\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCAnalysis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCDisassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\MC\MCParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Object\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Option\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\ProfileData\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Support\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\TableGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\ARM\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\AArch64\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\CppBackend\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\CppBackend\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Hexagon\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\MSP430\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\NVPTX\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Mips\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\PowerPC\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\R600\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\Sparc\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\SystemZ\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\AsmParser\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\X86\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\Disassembler\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\InstPrinter\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\MCTargetDesc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Target\XCore\TargetInfo\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\IPO\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\InstCombine\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Instrumentation\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\Vectorize\LLVMBuild.txt;D:\Projects\rpcs3\llvm\lib\Transforms\ObjCARC\LLVMBuild.txt;D:\Projects\rpcs3\llvm\projects\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\bugpoint\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\lli\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\lli\ChildTarget\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-ar\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-as\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-bcanalyzer\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-cov\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-diff\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-dis\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-dwarfdump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-extract\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-jitlistener\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-link\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-lto\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-mc\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-nm\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-objdump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-profdata\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-rtdyld\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-size\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\macho-dump\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\opt\LLVMBuild.txt;D:\Projects\rpcs3\llvm\tools\llvm-mcmarkup\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\TableGen\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\unittest\LLVMBuild.txt;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\configutil.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\main.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\componentinfo.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\util.py;D:\Projects\rpcs3\llvm\utils\llvm-build\llvmbuild\__init__.py;D:\Projects\rpcs3\llvm\include\llvm\Config\AsmPrinters.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\AsmParsers.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\Disassemblers.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\Targets.def.in;D:\Projects\rpcs3\llvm\include\llvm\Config\config.h.cmake;D:\Projects\rpcs3\llvm\include\llvm\Config\llvm-config.h.cmake;D:\Projects\rpcs3\llvm\include\llvm\Support\DataTypes.h.cmake;D:\Projects\rpcs3\llvm\cmake\modules\AddLLVM.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVMParseArguments.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVMProcessSources.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\AddFileDependencies.cmake;C:\Program Files (x86)\CMake\share\cmake-3.0\Modules\CMakeParseArguments.cmake;D:\Projects\rpcs3\llvm\cmake\modules\LLVM-Config.cmake;D:\Projects\rpcs3\llvm\cmake\modules\TableGen.cmake;D:\Projects\rpcs3\llvm\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="CMakeFiles\99a1c2774bab37b38071da92d5ea6a8c\ALL_BUILD.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Build all projects</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/99a1c2774bab37b38071da92d5ea6a8c/ALL_BUILD.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\rpcs3\llvm_build\CMakeFiles\ALL_BUILD</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Build all projects</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:/Projects/rpcs3/llvm_build/CMakeFiles/99a1c2774bab37b38071da92d5ea6a8c/ALL_BUILD.rule;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\rpcs3\llvm_build\CMakeFiles\ALL_BUILD</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeFiles\ALL_BUILD" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Analysis/LLVMAnalysis.vcxproj">
+      <Project>8343C725-5972-409D-B3FD-2A5FAA1D5C5C</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/AsmParser/LLVMAsmParser.vcxproj">
+      <Project>F9D100BB-16EA-428D-B709-793BE0B511D1</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/CodeGen/AsmPrinter/LLVMAsmPrinter.vcxproj">
+      <Project>BBFC51F7-1D4F-43CC-9798-87CCBC33DBB2</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Bitcode/Reader/LLVMBitReader.vcxproj">
+      <Project>81C46697-F282-48FE-993E-0B9FDA21E9C7</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Bitcode/Writer/LLVMBitWriter.vcxproj">
+      <Project>751A14B1-0397-4959-A61C-C7ED1E153BFC</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/CodeGen/LLVMCodeGen.vcxproj">
+      <Project>4E2CE753-5481-4521-87AC-3E02F99405EC</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/IR/LLVMCore.vcxproj">
+      <Project>E383113C-EA5C-4321-A957-8B421782A070</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/DebugInfo/LLVMDebugInfo.vcxproj">
+      <Project>A8CD982D-DAB9-4345-B230-AFF310FF9D2E</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/LLVMExecutionEngine.vcxproj">
+      <Project>4BF6E9E0-7ED3-43CC-81E7-337152E30021</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/IRReader/LLVMIRReader.vcxproj">
+      <Project>4EC6F015-3FBC-4190-97AC-2D8B2794D04A</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/InstCombine/LLVMInstCombine.vcxproj">
+      <Project>975BB935-3CF7-4860-A24E-62F39D9DC7EB</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/Instrumentation/LLVMInstrumentation.vcxproj">
+      <Project>40663C95-6697-49FE-A402-0BD373883FFA</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/Interpreter/LLVMInterpreter.vcxproj">
+      <Project>9C138DA7-1BE7-4DAB-90F3-2F00501C10EE</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/JIT/LLVMJIT.vcxproj">
+      <Project>EC5A2528-F0A7-445E-85CD-F6D7B0D4340E</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/LTO/LLVMLTO.vcxproj">
+      <Project>C52AF063-7610-4E4F-AB94-C2F3B7397324</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/LineEditor/LLVMLineEditor.vcxproj">
+      <Project>7B7597E6-6BE2-4805-94A2-D0FE30A92151</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Linker/LLVMLinker.vcxproj">
+      <Project>052C9484-820D-4DCF-A660-C09432AE228A</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/MC/LLVMMC.vcxproj">
+      <Project>AAC354E1-A2B7-4FCC-9CB7-500824721D84</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/MC/MCAnalysis/LLVMMCAnalysis.vcxproj">
+      <Project>13E99356-9DF8-4C6E-BCAC-BD75111DEF35</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/MC/MCDisassembler/LLVMMCDisassembler.vcxproj">
+      <Project>CE2F2A88-5AEA-471C-83C1-ABAA767E089B</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/MCJIT/LLVMMCJIT.vcxproj">
+      <Project>ABCB1FEF-5E07-4FE3-8286-1AAD09D88055</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/MC/MCParser/LLVMMCParser.vcxproj">
+      <Project>8DC66021-A50C-412A-84DA-63EF49702C25</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/ObjCARC/LLVMObjCARCOpts.vcxproj">
+      <Project>EE7EC6E9-B173-4C83-95E3-3831E943F6D6</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Object/LLVMObject.vcxproj">
+      <Project>4A146CA5-D610-48B2-87DF-0BB03EDEBAAA</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Option/LLVMOption.vcxproj">
+      <Project>359B0E09-7A11-458D-82AB-3FE3AACF5A06</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ProfileData/LLVMProfileData.vcxproj">
+      <Project>8EA5EBA5-DA91-4E84-BB89-3D9119712E0B</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/ExecutionEngine/RuntimeDyld/LLVMRuntimeDyld.vcxproj">
+      <Project>1829F961-4B79-414E-8DB9-5062D146B890</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/Scalar/LLVMScalarOpts.vcxproj">
+      <Project>060F77BA-DD46-4C4B-899F-D35D768A1A37</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/CodeGen/SelectionDAG/LLVMSelectionDAG.vcxproj">
+      <Project>FBCBA6A3-13A5-4212-B88D-87A3EB8789AD</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Support/LLVMSupport.vcxproj">
+      <Project>86BAC22E-49CB-4EFB-8591-5CFE12FF2563</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/TableGen/LLVMTableGen.vcxproj">
+      <Project>8725F0C9-D5E1-4BAD-B92C-39A77A8ACBDE</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/LLVMTarget.vcxproj">
+      <Project>9C14B1E9-ADA9-4328-8804-663B52102386</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/Utils/LLVMTransformUtils.vcxproj">
+      <Project>21A9AE70-68DD-43EA-ABC2-CBF14064AD78</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/Vectorize/LLVMVectorize.vcxproj">
+      <Project>D7B40A9A-44F6-4919-B75F-39E70EC099F9</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/AsmParser/LLVMX86AsmParser.vcxproj">
+      <Project>E4D3147B-EEC2-4F36-B583-CD679FEF1932</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/InstPrinter/LLVMX86AsmPrinter.vcxproj">
+      <Project>EDB757AF-693F-472D-9BAD-7447449C0231</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/LLVMX86CodeGen.vcxproj">
+      <Project>022FF3F5-0845-4544-A7E5-C5C352123625</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/MCTargetDesc/LLVMX86Desc.vcxproj">
+      <Project>28558096-C540-421E-8533-332B6B4EE66F</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/Disassembler/LLVMX86Disassembler.vcxproj">
+      <Project>9071A7EB-DBA6-4AD2-8FAF-F21A8FFB0E89</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/TargetInfo/LLVMX86Info.vcxproj">
+      <Project>1EAF884F-FECF-4D9B-AD99-34D83E230235</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Target/X86/Utils/LLVMX86Utils.vcxproj">
+      <Project>EDE64E29-6CBE-4D86-956E-29F0F93B351D</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Analysis/IPA/LLVMipa.vcxproj">
+      <Project>E6224F2C-5E3E-40F9-915D-0F5DA7C93A40</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/lib/Transforms/IPO/LLVMipo.vcxproj">
+      <Project>9A90BEDD-592D-463F-B2DE-5E7914059166</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/ZERO_CHECK.vcxproj">
+      <Project>1E9A56BB-21C5-418B-B623-AD2B3F153307</Project>
+    </ProjectReference>
+    <ProjectReference Include="D:/Projects/rpcs3/llvm_build/utils/TableGen/llvm-tblgen.vcxproj">
+      <Project>8B29688C-5D8C-412E-85F5-012FBF12B1DE</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

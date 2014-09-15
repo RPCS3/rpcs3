@@ -1,0 +1,1707 @@
+﻿<?xml version="1.0" encoding="Windows-1252"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Hello\Hello.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\APFloat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\APInt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\APSInt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ArrayRef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\BitVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DAGDeltaAlgorithm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DeltaAlgorithm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DenseMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DenseMapInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DenseSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\DepthFirstIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\edit_distance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\EquivalenceClasses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\FoldingSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\GraphTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\Hashing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ilist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ilist_node.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ImmutableList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ImmutableMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ImmutableSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\IndexedMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\IntEqClasses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\IntervalMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\IntrusiveRefCntPtr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\iterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\iterator_range.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\MapVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\None.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\Optional.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\PackedVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\PointerIntPair.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\PointerUnion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\PostOrderIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\PriorityQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SCCIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\ScopedHashTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SetOperations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SetVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SmallBitVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SmallPtrSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SmallSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SmallString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SmallVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SparseBitVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SparseMultiSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\SparseSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\Statistic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\STLExtras.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\StringExtras.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\StringMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\StringRef.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\StringSet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\StringSwitch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\TinyPtrVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\Triple.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\Twine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\UniqueVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ADT\VariadicFunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\AliasAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\AliasSetTracker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\BlockFrequencyInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\BlockFrequencyInfoImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\BranchProbabilityInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CallGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CallGraphSCCPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CallPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CaptureTracking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CFG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CFGPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CGSCCPassManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\CodeMetrics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ConstantFolding.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ConstantsScanner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\DependenceAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\DominanceFrontier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\DominanceFrontierImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\DomPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\DOTGraphTraitsPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\FindUsedTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\InlineCost.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\InstructionSimplify.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\Interval.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\IntervalIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\IntervalPartition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\IVUsers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\JumpInstrTableInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LazyCallGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LazyValueInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LibCallAliasAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LibCallSemantics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\Lint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\Loads.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LoopInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LoopInfoImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LoopIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\LoopPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\MemoryBuiltins.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\MemoryDependenceAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\Passes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\PHITransAddr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\PostDominators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\PtrUseVisitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\RegionInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\RegionInfoImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\RegionIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\RegionPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\RegionPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ScalarEvolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ScalarEvolutionExpander.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ScalarEvolutionExpressions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ScalarEvolutionNormalization.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\SparsePropagation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\TargetFolder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\TargetTransformInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\Trace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Analysis\ValueTracking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\AsmParser\Parser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\BitCodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\BitcodeWriterPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\BitstreamReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\BitstreamWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\LLVMBitCodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Bitcode\ReaderWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\Analysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\AsmPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\CalcSpillWeights.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\CallingConvLower.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\CommandFlags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\DAGCombine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\DFAPacketizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\EdgeBundles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\FastISel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\FunctionLoweringInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\GCMetadata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\GCMetadataPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\GCs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\GCStrategy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\IntrinsicLowering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ISDOpcodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\JITCodeEmitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\JumpInstrTables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LatencyPriorityQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LexicalScopes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LinkAllAsmWriterComponents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LinkAllCodegenComponents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveInterval.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveIntervalAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveIntervalUnion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LivePhysRegs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveRangeEdit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveRegMatrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveStackAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\LiveVariables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineBasicBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineBlockFrequencyInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineBranchProbabilityInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineCodeEmitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineCodeInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineConstantPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineDominanceFrontier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineDominators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineFrameInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineFunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineFunctionAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineFunctionPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineInstr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineInstrBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineInstrBundle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineJumpTableInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineLoopInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineMemOperand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineModuleInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineModuleInfoImpls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineOperand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachinePassRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachinePostDominators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineRegionInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineRegisterInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineRelocation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineScheduler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineSSAUpdater.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineTraceMetrics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachineValueType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\MachORelocation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\Passes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\CostAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\Graph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\Math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\ReductionRules.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\RegAllocSolver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PBQP\Solution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\PseudoSourceValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RegAllocPBQP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RegAllocRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RegisterClassInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RegisterPressure.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RegisterScavenging.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ResourcePriorityQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\RuntimeLibcalls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ScheduleDAG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ScheduleDAGInstrs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ScheduleDFS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ScheduleHazardRecognizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\SchedulerRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ScoreboardHazardRecognizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\SelectionDAG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\SelectionDAGISel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\SelectionDAGNodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\SlotIndexes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\StackMapLivenessAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\StackMaps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\StackProtector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\TargetLoweringObjectFileImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\TargetSchedule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\ValueTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\CodeGen\VirtRegMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\DebugInfo\DIContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\DebugInfo\DWARFFormValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\ExecutionEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\GenericValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\Interpreter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\JIT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\JITEventListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\JITMemoryManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\MCJIT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\ObjectBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\ObjectCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\ObjectImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\OProfileWrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\RTDyldMemoryManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\RuntimeDyld.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\RuntimeDyldChecker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ExecutionEngine\SectionMemoryManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\InitializePasses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Argument.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\AssemblyAnnotationWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Attributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\AutoUpgrade.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\BasicBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\CallingConv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\CallSite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\CFG.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Comdat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Constant.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\ConstantFolder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\ConstantRange.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DataLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DebugInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DebugLoc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DerivedTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DiagnosticInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DiagnosticPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\DIBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Dominators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Function.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GetElementPtrTypeIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GlobalAlias.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GlobalObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GlobalValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GlobalVariable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\GVMaterializer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\InlineAsm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\InstIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\InstrTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Instruction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Instructions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\InstVisitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\IntrinsicInst.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Intrinsics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\IRBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\IRPrintingPasses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\LeakDetector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\LegacyPassManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\LegacyPassManagers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\LegacyPassNameParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\LLVMContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Mangler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\MDBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Metadata.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Module.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\NoFolder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\OperandTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Operator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\PassManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\PatternMatch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\PredIteratorCache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\SymbolTableListTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\TypeBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\TypeFinder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Use.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\User.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Value.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\ValueHandle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\ValueMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\ValueSymbolTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IR\Verifier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\IRReader\IRReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\LineEditor\LineEditor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\LinkAllIR.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\LinkAllPasses.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Linker\Linker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\LTO\LTOCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\LTO\LTOModule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\ConstantPools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MachineLocation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAnalysis\MCAtom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAnalysis\MCFunction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAnalysis\MCModule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAnalysis\MCModuleYAML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmInfoCOFF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmInfoDarwin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmInfoELF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAsmLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCAssembler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCCodeEmitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCCodeGenInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCDirectives.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCDisassembler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCDwarf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCELF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCELFObjectWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCELFStreamer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCELFSymbolFlags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCExpr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCExternalSymbolizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCFixedLenDisassembler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCFixup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCFixupKindInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInst.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstrAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstrDesc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstrInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCInstrItineraries.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCLabel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCLinkerOptimizationHint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCMachObjectWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCMachOSymbolFlags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCObjectDisassembler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCObjectFileInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCObjectStreamer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCObjectSymbolizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCObjectWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\AsmCond.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\AsmLexer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\MCAsmLexer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\MCAsmParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\MCAsmParserExtension.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCParser\MCParsedAsmOperand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCRegisterInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCRelocationInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSchedule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSectionCOFF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSectionELF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSectionMachO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCStreamer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSubtargetInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSymbol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCSymbolizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCTargetAsmParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCTargetOptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCTargetOptionsCommandFlags.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCWin64EH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCWinCOFFObjectWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCWinCOFFStreamer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\MCWinEH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\SectionKind.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\StringTableBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\SubtargetFeature.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\MC\YAML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\Archive.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\Binary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\COFF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\COFFYAML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\ELF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\ELFObjectFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\ELFTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\ELFYAML.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\Error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\IRObjectFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\MachO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\MachOUniversal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\ObjectFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\RelocVisitor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Object\SymbolicFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Option\Arg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Option\ArgList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Option\Option.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Option\OptSpecifier.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Option\OptTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Pass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\PassAnalysisSupport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\PassInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\PassManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\PassRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\PassSupport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ProfileData\InstrProf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ProfileData\InstrProfReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\ProfileData\InstrProfWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\AIXDataTypesFix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\AlignOf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ARMBuildAttributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ARMEHABI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ARMWinEH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ArrayRecycler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Atomic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\BlockFrequency.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\BranchProbability.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Capacity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Casting.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\CBindingWrapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\circular_raw_ostream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\CodeGen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\COFF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\CommandLine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Compiler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Compression.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ConvertUTF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\CrashRecoveryContext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\DataExtractor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\DataStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\DOTGraphTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Dwarf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\DynamicLibrary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ELF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Endian.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\EndianStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Errc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Errno.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ErrorHandling.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ErrorOr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\FileOutputBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\FileSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\FileUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Format.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\FormattedStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\GCOV.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\GenericDomTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\GenericDomTreeConstruction.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\GraphWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Host.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\IncludeFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\LEB128.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\LineIterator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Locale.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\LockFileManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MachO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ManagedStatic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MathExtras.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MD5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MemoryBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MemoryObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Mutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\MutexGuard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\OnDiskHashTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\OutputBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\PluginLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\PointerLikeTypeTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\PrettyStackTrace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Process.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Program.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\RandomNumberGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\raw_ostream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\raw_os_ostream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Recycler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\RecyclingAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Regex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Registry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\RegistryParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\RWMutex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SaveAndRestore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ScaledNumber.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Signals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SMLoc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Solaris.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SourceMgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SpecialCaseList.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\StreamableMemoryObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\StringPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\StringRefMemoryObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SwapByteOrder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\SystemUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\TargetRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\TargetSelect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Threading.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ThreadLocal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\TimeValue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\ToolOutputFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\type_traits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Unicode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\UnicodeCharRanges.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Valgrind.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Watchdog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\Win64EH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\WindowsError.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\YAMLParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Support\YAMLTraits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\Error.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\Main.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\Record.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\SetTheory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\StringMatcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\StringToOffsetTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\TableGen\TableGenBackend.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\CostTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetCallingConv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetFrameLowering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetInstrInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetIntrinsicInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetJITInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetLibraryInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetLowering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetLoweringObjectFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetMachine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetOpcodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetOptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetRegisterInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetSelectionDAGInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Target\TargetSubtargetInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Instrumentation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\IPO\InlinerPass.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\IPO\PassManagerBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\IPO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\ObjCARC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Scalar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\ASanStackFrameLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\BasicBlockUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\BuildLibCalls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\BypassSlowDivision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\Cloning.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\CmpInstAnalysis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\CodeExtractor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\CtorUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\GlobalStatus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\IntegerDivision.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\Local.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\LoopUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\ModuleUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\PromoteMemToReg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\SimplifyIndVar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\SimplifyLibCalls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\SSAUpdater.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\SSAUpdaterImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\UnifyFunctionExitNodes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\UnrollLoop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\ValueMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Utils\VectorUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\Projects\rpcs3\llvm\include\llvm\Transforms\Vectorize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\include\llvm\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{1E328BBF-159A-48BC-8C7E-6B6237ADBBFD}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{CCC6067E-E9BD-4269-97A7-9E34A6B00010}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

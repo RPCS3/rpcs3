@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="Windows-1252"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Transforms\Hello\CMakeLists.txt" />
+    <CustomBuild Include="..\..\..\CMakeFiles\71b1eca8d84463827174a242aafb2622\LLVMHello.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeFiles\LLVMHello" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{4BF339D9-6A3E-40FA-8E07-6D1290466722}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

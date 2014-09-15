@@ -1,0 +1,127 @@
+﻿<?xml version="1.0" encoding="Windows-1252"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\ADCE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\ConstantHoisting.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\ConstantProp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\CorrelatedValuePropagation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\DCE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\DeadStoreElimination.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\EarlyCSE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\FlattenCFGPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\GVN.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\IndVarSimplify.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\JumpThreading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LICM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoadCombine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopDeletion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopIdiomRecognize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopInstSimplify.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopRerollPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopRotation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopStrengthReduce.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopUnrollPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LoopUnswitch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\LowerAtomic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\MemCpyOptimizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\MergedLoadStoreMotion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\PartiallyInlineLibCalls.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\Reassociate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\Reg2Mem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\SCCP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\SROA.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\SampleProfile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\Scalar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\ScalarReplAggregates.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\Scalarizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\SeparateConstOffsetFromGEP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\SimplifyCFGPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\Sink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\StructurizeCFG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\TailRecursionElimination.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\rpcs3\llvm\lib\Transforms\Scalar\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{1E328BBF-159A-48BC-8C7E-6B6237ADBBFD}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
