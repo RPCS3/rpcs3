@@ -530,6 +530,24 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
 
+// template that helps to define be_t arrays in unions
+template<typename T, size_t size>
+class be_array_t
+{
+	be_t<T> data[size];
+
+public:
+	__forceinline be_t<T>& operator [] (size_t index)
+	{
+		return data[index];
+	}
+
+	__forceinline const be_t<T>& operator [] (size_t index) const
+	{
+		return data[index];
+	}
+};
+
 template<typename T> __forceinline static u8 Read8(T& f)
 {
 	u8 ret;

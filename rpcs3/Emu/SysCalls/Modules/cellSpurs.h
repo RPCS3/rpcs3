@@ -77,7 +77,6 @@ enum TaskConstants
 };
 
 class SPURSManager;
-class SPURSManagerAttribute;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
 
@@ -100,27 +99,28 @@ struct CellSpursAttribute
 	union
 	{
 		// raw data
-		u8 _u8[size / sizeof(u8)];
-
-		struct
-		{
-			be_t<u32> raw[size / sizeof(u32)];
-		} _u32;
+		u8 _u8[size];
+		be_array_t<u32, size / sizeof(u32)> _u32;
 
 		// real structure
 		struct
 		{
-			be_t<u32> arg1;
-			be_t<u32> arg2;
-			be_t<u32> nSpus;
-			be_t<s32> spuPriority;
-			be_t<s32> ppuPriority;
+			be_t<u32> revision;    // 0x0
+			be_t<u32> sdkVersion;  // 0x4
+			be_t<u32> nSpus;       // 0x8
+			be_t<s32> spuPriority; // 0xC
+			be_t<s32> ppuPriority; // 0x10
+			bool exitIfNoWork;     // 0x14
+			char prefix[15];       // 0x15 (not a NTS)
+			be_t<u32> prefixSize;  // 0x24
+			be_t<u32> flags;       // 0x28
+			be_t<u32> container;   // 0x2C
+			// ...
 		} m;
 
 		// alternative implementation
 		struct
 		{
-			SPURSManagerAttribute *attr;
 		} c;
 	};
 };

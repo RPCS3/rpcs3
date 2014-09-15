@@ -2,28 +2,6 @@
 
 #include "Emu/SysCalls/Modules/cellSpurs.h"
 
-// Internal class to shape a SPURS attribute.
-class SPURSManagerAttribute
-{
-public:
-	SPURSManagerAttribute(int nSpus, int spuPriority, int ppuPriority, bool exitIfNoWork);
-
-	int _setNamePrefix(const char *name, u32 size);
-
-	int _setSpuThreadGroupType(int type);
-
-	int _setMemoryContainerForSpuThread(u32 container);
-
-protected:
-	be_t<int> nSpus; 
-	be_t<int> spuThreadGroupPriority; 
-	be_t<int> ppuThreadPriority; 
-	bool exitIfNoWork;
-	char namePrefix[CELL_SPURS_NAME_MAX_LENGTH+1];
-	be_t<int> threadGroupType;
-	be_t<u32> container;
-};
-
 class SPURSManagerEventFlag
 {
 public:
@@ -68,12 +46,9 @@ protected:
 class SPURSManager
 {
 public:
-	SPURSManager(SPURSManagerAttribute *attr);
+	SPURSManager();
 
 	void Finalize();
 	void AttachLv2EventQueue(u32 queue, vm::ptr<u8> port, int isDynamic);
 	void DetachLv2EventQueue(u8 port);
-
-protected:
-	SPURSManagerAttribute *attr;
 };
