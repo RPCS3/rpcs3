@@ -1,10 +1,14 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
-#include "Emu/Cell/PPUDisAsm.h"
-#include <thread>
-extern gcmInfo gcm_info;
 
 PPUThread& GetCurrentPPUThread()
 {
@@ -47,18 +51,10 @@ void PPUThread::DoReset()
 	cycle = 0;
 }
 
-void PPUThread::AddArgv(const std::string& arg)
-{
-	m_stack_point -= arg.length() + 1;
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x10) - 0x10;
-	m_argv_addr.AddCpy(m_stack_point);
-	Memory.WriteString(m_stack_point, arg);
-}
-
 void PPUThread::InitRegs()
 {
-	const u32 pc = Memory.Read32(entry);
-	const u32 rtoc = Memory.Read32(entry + 4);
+	const u32 pc = entry ? vm::read32(entry) : 0;
+	const u32 rtoc = entry ? vm::read32(entry + 4) : 0;
 
 	//ConLog.Write("entry = 0x%x", entry);
 	//ConLog.Write("rtoc = 0x%x", rtoc);
@@ -70,7 +66,7 @@ void PPUThread::InitRegs()
 
 	if(thread_num < 0)
 	{
-		ConLog.Error("GetThreadNumById failed.");
+		LOG_ERROR(PPU, "GetThreadNumById failed.");
 		Emu.Pause();
 		return;
 	}
@@ -81,63 +77,21 @@ void PPUThread::InitRegs()
 
 	if(tls_size >= Emu.GetTLSMemsz())
 	{
-		ConLog.Error("Out of TLS memory.");
+		LOG_ERROR(PPU, "Out of TLS memory.");
 		Emu.Pause();
 		return;
 	}
 	*/
 
-	m_stack_point = Memory.AlignAddr(m_stack_point, 0x200) - 0x200;
-
-	GPR[1] = m_stack_point;
+	GPR[1] = AlignAddr(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
-	/*
-	for(int i=4; i<32; ++i)
-	{
-		if(i != 6)
-			GPR[i] = (i+1) * 0x10000;
-	}
-	*/
-	if(m_argv_addr.GetCount())
-	{
-		u64 argc = m_argv_addr.GetCount();
-		m_stack_point -= 0xc + 4 * argc;
-		u64 argv = m_stack_point;
-
-		mem64_ptr_t argv_list(argv);
-		for(int i=0; i<argc; ++i) argv_list += m_argv_addr[i];
-
-		GPR[3] = argc;
-		GPR[4] = argv;
-		GPR[5] = argv ? argv + 0xc + 4 * argc : 0; //unk
-	}
-	else
-	{
-		GPR[3] = m_args[0];
-		GPR[4] = m_args[1];
-		GPR[5] = m_args[2];
-		GPR[6] = m_args[3];
-	}
-
-	GPR[0] = pc;
-	GPR[8] = entry;
-	GPR[11] = 0x80;
-	GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
-	GPR[28] = GPR[4];
-	GPR[29] = GPR[3];
-	GPR[31] = GPR[5];
 
 	LR = Emu.GetPPUThreadExit();
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
 	TB = 0;
-}
-
-u64 PPUThread::GetFreeStackSize() const
-{
-	return (GetStackAddr() + GetStackSize()) - GPR[1];
 }
 
 void PPUThread::DoRun()
@@ -150,8 +104,15 @@ void PPUThread::DoRun()
 
 	case 1:
 	case 2:
-		m_dec = new PPUDecoder(*new PPUInterpreter(*this));
+	{
+		auto ppui = new PPUInterpreter(*this);
+		m_dec = new PPUDecoder(ppui);
+	}
 	break;
+
+	default:
+		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		Emu.Pause();
 	}
 }
 
@@ -178,7 +139,7 @@ bool FPRdouble::IsINF(PPCdouble d)
 
 bool FPRdouble::IsNaN(PPCdouble d)
 {
-	return wxIsNaN(d) ? 1 : 0;
+	return std::isnan((double)d) ? 1 : 0;
 }
 
 bool FPRdouble::IsQNaN(PPCdouble d)
@@ -204,4 +165,41 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 	if(a == b) return CR_EQ;
 
 	return CR_SO;
+}
+
+u64 PPUThread::GetStackArg(s32 i)
+{
+	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
+}
+
+u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
+{
+	auto old_status = m_status;
+	auto old_PC = PC;
+	auto old_stack = GPR[1]; // only saved and restored (may be wrong)
+	auto old_rtoc = GPR[2];
+	auto old_LR = LR;
+	auto old_thread = GetCurrentNamedThread();
+
+	m_status = Running;
+	PC = addr;
+	GPR[2] = rtoc;
+	LR = Emu.m_ppu_thr_stop;
+	SetCurrentNamedThread(this);
+
+	Task();
+
+	m_status = old_status;
+	PC = old_PC;
+	GPR[1] = old_stack;
+	GPR[2] = old_rtoc;
+	LR = old_LR;
+	SetCurrentNamedThread(old_thread);
+
+	return GPR[3];
+}
+
+void PPUThread::FastStop()
+{
+	m_status = Stopped;
 }

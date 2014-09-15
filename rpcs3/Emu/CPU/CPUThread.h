@@ -1,25 +1,6 @@
 #pragma once
-#include "Emu/Memory/MemoryBlock.h"
-#include "Emu/CPU/CPUDecoder.h"
-#include "Utilities/SMutex.h"
 
-struct reservation_struct
-{
-	SMutex mutex; // mutex for updating reservation_owner and data
-	u32 owner; // id of thread that got reservation
-	u32 addr;
-	u32 size;
-	u32 data32;
-	u64 data64;
-	u128 data[8];
-
-	__forceinline void clear()
-	{
-		owner = 0;
-	}
-};
-
-extern reservation_struct reservation;
+#include "Utilities/Thread.h"
 
 enum CPUThreadType :unsigned char
 {
@@ -40,6 +21,8 @@ enum CPUThreadStatus
 	CPUThread_Step,
 };
 
+class CPUDecoder;
+
 class CPUThread : public ThreadBase
 {
 protected:
@@ -47,15 +30,14 @@ protected:
 	u32 m_error;
 	u32 m_id;
 	u64 m_prio;
-	u64 m_offset;
+	u32 m_offset;
 	CPUThreadType m_type;
 	bool m_joinable;
 	bool m_joining;
 	bool m_is_step;
 
-	u64 m_stack_addr;
-	u64 m_stack_size;
-	u64 m_stack_point;
+	u32 m_stack_addr;
+	u32 m_stack_size;
 
 	u64 m_exit_status;
 
@@ -67,22 +49,19 @@ public:
 	virtual void InitStack()=0;
 	virtual void CloseStack();
 
-	u64 GetStackAddr() const { return m_stack_addr; }
-	u64 GetStackSize() const { return m_stack_size; }
-	virtual u64 GetFreeStackSize() const=0;
+	u32 GetStackAddr() const { return m_stack_addr; }
+	u32 GetStackSize() const { return m_stack_size; }
 
-	void SetStackAddr(u64 stack_addr) { m_stack_addr = stack_addr; }
-	void SetStackSize(u64 stack_size) { m_stack_size = stack_size; }
-
-	virtual void SetArg(const uint pos, const u64 arg) = 0;
+	void SetStackAddr(u32 stack_addr) { m_stack_addr = stack_addr; }
+	void SetStackSize(u32 stack_size) { m_stack_size = stack_size; }
 
 	void SetId(const u32 id);
 	void SetName(const std::string& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
-	void SetOffset(const u64 offset) { m_offset = offset; }
+	void SetOffset(const u32 offset) { m_offset = offset; }
 	void SetExitStatus(const u64 status) { m_exit_status = status; }
 
-	u64 GetOffset() const { return m_offset; }
+	u32 GetOffset() const { return m_offset; }
 	u64 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 
@@ -110,6 +89,22 @@ public:
 		return "Unknown";
 	}
 
+	std::string ThreadStatusToString()
+	{
+		switch (ThreadStatus())
+		{
+		case CPUThread_Ready: return "Ready";
+		case CPUThread_Running: return "Running";
+		case CPUThread_Paused: return "Paused";
+		case CPUThread_Stopped: return "Stopped";
+		case CPUThread_Sleeping: return "Sleeping";
+		case CPUThread_Break: return "Break";
+		case CPUThread_Step: return "Step";
+
+		default: return "Unknown status";
+		}
+	}
+
 	std::string GetTypeString() const { return CPUThreadTypeToString(m_type); }
 
 	virtual std::string GetThreadName() const
@@ -119,11 +114,16 @@ public:
 	}
 
 public:
-	u64 entry;
-	u64 PC;
-	u64 nPC;
+	u32 entry;
+	u32 PC;
+	u32 nPC;
 	u64 cycle;
 	bool m_is_branch;
+
+	bool m_is_interrupt;
+	bool m_has_interrupt;
+	u64 m_interrupt_arg;
+	u64 m_last_syscall;
 
 protected:
 	CPUThread(CPUThreadType type);
@@ -133,7 +133,7 @@ public:
 
 	u32 m_wait_thread_id;
 
-	wxCriticalSection m_cs_sync;
+	std::mutex m_cs_sync;
 	bool m_sync_wait;
 	void Wait(bool wait);
 	void Wait(const CPUThread& thr);
@@ -144,29 +144,29 @@ public:
 	{
 		while(func(ThreadStatus()))
 		{
-			Sleep(1);
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 	}
 
 	int ThreadStatus();
 
 	void NextPc(u8 instr_size);
-	void SetBranch(const u64 pc, bool record_branch = false);
-	void SetPc(const u64 pc);
-	void SetEntry(const u64 entry);
+	void SetBranch(const u32 pc, bool record_branch = false);
+	void SetPc(const u32 pc);
+	void SetEntry(const u32 entry);
 
 	void SetError(const u32 error);
 
-	static wxArrayString ErrorToString(const u32 error);
-	wxArrayString ErrorToString() { return ErrorToString(m_error); }
+	static std::vector<std::string> ErrorToString(const u32 error);
+	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsOk()		const { return m_error == 0; }
-	bool IsRunning()	const { return m_status == Running; }
-	bool IsPaused()		const { return m_status == Paused; }
-	bool IsStopped()	const { return m_status == Stopped; }
+	bool IsOk()	const { return m_error == 0; }
+	bool IsRunning() const;
+	bool IsPaused() const;
+	bool IsStopped() const;
 
 	bool IsJoinable() const { return m_joinable; }
-	bool IsJoining()  const { return m_joining; }
+	bool IsJoining() const { return m_joining; }
 	void SetJoinable(bool joinable) { m_joinable = joinable; }
 	void SetJoining(bool joining) { m_joining = joining; }
 
@@ -181,8 +181,6 @@ public:
 	void Resume();
 	void Stop();
 
-	virtual void AddArgv(const std::string& arg) {}
-
 	virtual std::string RegsToString() = 0;
 	virtual std::string ReadRegString(const std::string& reg) = 0;
 	virtual bool WriteRegString(const std::string& reg, std::string value) = 0;
@@ -192,49 +190,51 @@ public:
 
 	struct CallStackItem
 	{
-		u64 pc;
-		u64 branch_pc;
+		u32 pc;
+		u32 branch_pc;
 	};
 
-	Stack<CallStackItem> m_call_stack;
+	std::vector<CallStackItem> m_call_stack;
 
 	std::string CallStackToString()
 	{
 		std::string ret = "Call Stack:\n==========\n";
 
-		for(uint i=0; i<m_call_stack.GetCount(); ++i)
+		for(uint i=0; i<m_call_stack.size(); ++i)
 		{
-			ret += fmt::Format("0x%llx -> 0x%llx\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
+			ret += fmt::Format("0x%x -> 0x%x\n", m_call_stack[i].pc, m_call_stack[i].branch_pc);
 		}
 
 		return ret;
 	}
 
-	void CallStackBranch(u64 pc)
+	void CallStackBranch(u32 pc)
 	{
-		for(int i=m_call_stack.GetCount() - 1; i >= 0; --i)
-		{
-			if(CallStackGetNextPC(m_call_stack[i].pc) == pc)
+		//look if we're jumping back and if so pop the stack back to that position
+		auto res = std::find_if(m_call_stack.rbegin(), m_call_stack.rend(),
+			[&pc, this](CallStackItem &it)
 			{
-				m_call_stack.RemoveAt(i, m_call_stack.GetCount() - i);
-				return;
-			}
+				return CallStackGetNextPC(it.pc) == pc;
+			});
+		if (res != m_call_stack.rend())
+		{
+			m_call_stack.erase((res + 1).base(), m_call_stack.end());
+			return;
 		}
-
+		
+		//add a new entry otherwise
 		CallStackItem new_item;
-
+		
 		new_item.branch_pc = pc;
 		new_item.pc = PC;
-
-		m_call_stack.Push(new_item);
+			
+		m_call_stack.push_back(new_item);
 	}
 
-	virtual u64 CallStackGetNextPC(u64 pc)
+	virtual u32 CallStackGetNextPC(u32 pc)
 	{
 		return pc + 4;
 	}
-
-	s64 ExecAsCallback(u64 pc, bool wait, u64 a1 = 0, u64 a2 = 0, u64 a3 = 0, u64 a4 = 0);
 
 protected:
 	virtual void DoReset()=0;

@@ -1,10 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPCDisAsm.h"
-#include "Emu/Cell/PPCThread.h"
-#include "Gui/DisAsmFrame.h"
-#include "Emu/Memory/Memory.h"
 
 class PPUDisAsm
 	: public PPUOpcodes
@@ -1034,7 +1030,7 @@ private:
 		
 		Write(fmt::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
-	void SC(s32 sc_code)
+	void SC(u32 sc_code)
 	{
 		switch(sc_code)
 		{
@@ -1320,6 +1316,10 @@ private:
 	{
 		DisAsm_R3_RC("andc", ra, rs, rb, rc);
 	}
+	void TD(u32 to, u32 ra, u32 rb)
+	{
+		DisAsm_INT1_R2("td", to, ra, rb);
+	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("lvewx", vd, ra, rb);
@@ -1454,9 +1454,9 @@ private:
 	{
 		DisAsm_R3_OE_RC("mullw", rd, ra, rb, oe, rc);
 	}
-	void DCBTST(u32 th, u32 ra, u32 rb)
+	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
-		DisAsm_R3("dcbtst", th, ra, rb);
+		DisAsm_R3("dcbtst", ra, rb, th);
 	}
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
@@ -1625,6 +1625,10 @@ private:
 	{
 		DisAsm_R3("ldbrx", rd, ra, rb);
 	}
+	void LSWX(u32 rd, u32 ra, u32 rb)
+	{
+		DisAsm_R3("lswx", rd, ra, rb);
+	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		DisAsm_R3("lwbrx", rd, ra, rb);
@@ -1669,6 +1673,10 @@ private:
 	{
 		DisAsm_V1_R2("stvlx", vs, ra, rb);
 	}
+	void STSWX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("swswx", rs, ra, rb);
+	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
 		DisAsm_R3("stwbrx", rs, ra, rb);
@@ -1681,6 +1689,10 @@ private:
 	{
 		DisAsm_V1_R2("stvrx", sd, ra, rb);
 	}
+	void STFSUX(u32 frs, u32 ra, u32 rb)
+	{
+		DisAsm_F1_R2("stfsux", frs, ra, rb);
+	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
 		DisAsm_R2_INT1("stswi", rd, ra, nb);
@@ -1688,6 +1700,10 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		DisAsm_F1_R2("stfdx", frs, ra, rb);
+	}
+	void STFDUX(u32 frs, u32 ra, u32 rb)
+	{
+		DisAsm_F1_R2("stfdux", frs, ra, rb);
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{
@@ -1764,10 +1780,13 @@ private:
 	{
 		DisAsm_R2_RC("extsw", ra, rs, rc);
 	}
-	/*0x3d6*///ICBI
-	void DCBZ(u32 ra, u32 rs)
+	void ICBI(u32 ra, u32 rb)
 	{
-		DisAsm_R2("dcbz", ra, rs);
+		DisAsm_R2("icbi", ra, rb);
+	}
+	void DCBZ(u32 ra, u32 rb)
+	{
+		DisAsm_R2("dcbz", ra, rb);
 	}	
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{

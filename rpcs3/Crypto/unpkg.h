@@ -1,6 +1,4 @@
 #pragma once
-#include "utils.h"
-#include "key_vault.h"
 
 // Constants
 #define PKG_HEADER_SIZE 0xC0 //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
@@ -47,4 +45,6 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-extern int Unpack(wxFile& dec_pkg_f, std::string src, std::string dst);
+class rFile;
+
+extern int Unpack(rFile& dec_pkg_f, std::string src, std::string dst);

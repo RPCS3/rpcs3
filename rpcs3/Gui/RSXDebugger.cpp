@@ -1,9 +1,18 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "rpcs3/Ini.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
 #include "RSXDebugger.h"
-#include "Emu/GS/sysutil_video.h"
-#include "Emu/GS/GCM.h"
+#include "Emu/RSX/sysutil_video.h"
+#include "Emu/RSX/GSManager.h"
+//#include "Emu/RSX/GCM.h"
 
 #include "MemoryViewer.h"
+
+#include <wx/notebook.h>
 
 // TODO: Clear the object when restarting the emulator
 std::vector<RSXDebuggerProgram> m_debug_programs;
@@ -22,39 +31,39 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	, exit(false)
 {
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
-	wxBoxSizer& s_panel = *new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
 
 	//Tools
-	wxBoxSizer& s_tools = *new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_tools = new wxBoxSizer(wxVERTICAL);
 
 	// Controls
-	wxStaticBoxSizer& s_controls = *new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
+	wxStaticBoxSizer* s_controls = new wxStaticBoxSizer(wxHORIZONTAL, this, "RSX Debugger Controls");
 
 	// Controls: Address
-	wxStaticBoxSizer& s_controls_addr = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");
+	wxStaticBoxSizer* s_controls_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address:");
 	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60,-1));
 	t_addr->SetMaxLength(8);
-	s_controls_addr.Add(t_addr);
+	s_controls_addr->Add(t_addr);
 
 	// Controls: Go to
-	wxStaticBoxSizer& s_controls_goto = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Go to:");
+	wxStaticBoxSizer* s_controls_goto = new wxStaticBoxSizer(wxHORIZONTAL, this, "Go to:");
 	wxButton* b_goto_get = new wxButton(this, wxID_ANY, "Get", wxDefaultPosition, wxSize(40,-1));
 	wxButton* b_goto_put = new wxButton(this, wxID_ANY, "Put", wxDefaultPosition, wxSize(40,-1));
-	s_controls_goto.Add(b_goto_get);
-	s_controls_goto.Add(b_goto_put);
+	s_controls_goto->Add(b_goto_get);
+	s_controls_goto->Add(b_goto_put);
 
 	// Controls: Breaks
-	wxStaticBoxSizer& s_controls_breaks = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Break on:");
+	wxStaticBoxSizer* s_controls_breaks = new wxStaticBoxSizer(wxHORIZONTAL, this, "Break on:");
 	wxButton* b_break_frame = new wxButton(this, wxID_ANY, "Frame",     wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_text  = new wxButton(this, wxID_ANY, "Texture",   wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_draw  = new wxButton(this, wxID_ANY, "Draw",      wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_prim  = new wxButton(this, wxID_ANY, "Primitive", wxDefaultPosition, wxSize(60,-1));
 	wxButton* b_break_inst  = new wxButton(this, wxID_ANY, "Command",   wxDefaultPosition, wxSize(60,-1));
-	s_controls_breaks.Add(b_break_frame);
-	s_controls_breaks.Add(b_break_text);
-	s_controls_breaks.Add(b_break_draw);
-	s_controls_breaks.Add(b_break_prim);
-	s_controls_breaks.Add(b_break_inst);
+	s_controls_breaks->Add(b_break_frame);
+	s_controls_breaks->Add(b_break_text);
+	s_controls_breaks->Add(b_break_draw);
+	s_controls_breaks->Add(b_break_prim);
+	s_controls_breaks->Add(b_break_inst);
 
 	// TODO: This feature is not yet implemented
 	b_break_frame->Disable();
@@ -63,9 +72,9 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	b_break_prim->Disable();
 	b_break_inst->Disable();
 	
-	s_controls.Add(&s_controls_addr);
-	s_controls.Add(&s_controls_goto);
-	s_controls.Add(&s_controls_breaks);
+	s_controls->Add(s_controls_addr);
+	s_controls->Add(s_controls_goto);
+	s_controls->Add(s_controls_breaks);
 
 	//Tabs
 	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(482,475));
@@ -134,22 +143,22 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	}
 
 	//Tools: Tools = Controls + Notebook Tabs
-	s_tools.AddSpacer(10);
-	s_tools.Add(&s_controls);
-	s_tools.AddSpacer(10);
-	s_tools.Add(nb_rsx);
-	s_tools.AddSpacer(10);
+	s_tools->AddSpacer(10);
+	s_tools->Add(s_controls);
+	s_tools->AddSpacer(10);
+	s_tools->Add(nb_rsx);
+	s_tools->AddSpacer(10);
 
 	//Buffers
-	wxBoxSizer& s_buffers1 = *new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer& s_buffers2 = *new wxBoxSizer(wxVERTICAL);
-	wxStaticBoxSizer& s_buffers_colorA  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
-	wxStaticBoxSizer& s_buffers_colorB  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
-	wxStaticBoxSizer& s_buffers_colorC  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
-	wxStaticBoxSizer& s_buffers_colorD  = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
-	wxStaticBoxSizer& s_buffers_depth   = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Depth Buffer");
-	wxStaticBoxSizer& s_buffers_stencil = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Stencil Buffer");
-	wxStaticBoxSizer& s_buffers_text    = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
+	wxBoxSizer* s_buffers1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_buffers2 = new wxBoxSizer(wxVERTICAL);
+	wxStaticBoxSizer* s_buffers_colorA  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer A");
+	wxStaticBoxSizer* s_buffers_colorB  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer B");
+	wxStaticBoxSizer* s_buffers_colorC  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer C");
+	wxStaticBoxSizer* s_buffers_colorD  = new wxStaticBoxSizer(wxHORIZONTAL, this, "Color Buffer D");
+	wxStaticBoxSizer* s_buffers_depth   = new wxStaticBoxSizer(wxHORIZONTAL, this, "Depth Buffer");
+	wxStaticBoxSizer* s_buffers_stencil = new wxStaticBoxSizer(wxHORIZONTAL, this, "Stencil Buffer");
+	wxStaticBoxSizer* s_buffers_text    = new wxStaticBoxSizer(wxHORIZONTAL, this, "Texture");
 
 	//Buffers and textures
 	CellVideoOutResolution res  = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
@@ -166,62 +175,62 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	p_buffer_depth   = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_panel_width, m_panel_height));
 	p_buffer_stencil = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_panel_width, m_panel_height));
 	p_buffer_tex     = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(m_text_width, m_text_height));
-	s_buffers_colorA.Add(p_buffer_colorA); 
-	s_buffers_colorB.Add(p_buffer_colorB); 
-	s_buffers_colorC.Add(p_buffer_colorC); 
-	s_buffers_colorD.Add(p_buffer_colorD); 
-	s_buffers_depth.Add(p_buffer_depth);
-	s_buffers_stencil.Add(p_buffer_stencil);
-	s_buffers_text.Add(p_buffer_tex);
+	s_buffers_colorA->Add(p_buffer_colorA); 
+	s_buffers_colorB->Add(p_buffer_colorB); 
+	s_buffers_colorC->Add(p_buffer_colorC); 
+	s_buffers_colorD->Add(p_buffer_colorD); 
+	s_buffers_depth->Add(p_buffer_depth);
+	s_buffers_stencil->Add(p_buffer_stencil);
+	s_buffers_text->Add(p_buffer_tex);
 	
 	//Merge and display everything
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_colorA);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_colorC);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_depth);
-	s_buffers1.AddSpacer(10);
-	s_buffers1.Add(&s_buffers_text);
-	s_buffers1.AddSpacer(10);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_colorA);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_colorC);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_depth);
+	s_buffers1->AddSpacer(10);
+	s_buffers1->Add(s_buffers_text);
+	s_buffers1->AddSpacer(10);
 
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_colorB);
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_colorD);
-	s_buffers2.AddSpacer(10);
-	s_buffers2.Add(&s_buffers_stencil);
-	s_buffers2.AddSpacer(10);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_colorB);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_colorD);
+	s_buffers2->AddSpacer(10);
+	s_buffers2->Add(s_buffers_stencil);
+	s_buffers2->AddSpacer(10);
 
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_tools);
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_buffers1);
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_buffers2);
-	s_panel.AddSpacer(10);
-	SetSizerAndFit(&s_panel);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_tools);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_buffers1);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_buffers2);
+	s_panel->AddSpacer(10);
+	SetSizerAndFit(s_panel);
 
 	//Events
-	m_app_connector.Connect(wxID_ANY, wxEVT_KEY_DOWN, wxKeyEventHandler(RSXDebugger::OnKeyDown), nullptr, this);
-	Connect(t_addr->GetId(),   wxEVT_COMMAND_TEXT_ENTER,       wxCommandEventHandler(RSXDebugger::OnChangeToolsAddr));
+	Bind(wxEVT_KEY_DOWN, &RSXDebugger::OnKeyDown, this);
+	t_addr->Bind(wxEVT_TEXT_ENTER, &RSXDebugger::OnChangeToolsAddr, this);
 
-	Connect(b_goto_get->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToGet));
-	Connect(b_goto_put->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::GoToPut));
+	b_goto_get->Bind(wxEVT_BUTTON, &RSXDebugger::GoToGet, this);
+	b_goto_put->Bind(wxEVT_BUTTON, &RSXDebugger::GoToPut, this);
 
-	p_buffer_colorA->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorB->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorC->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	p_buffer_colorD->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
-	//Connect(p_buffer_depth->GetId(),   wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
-	//Connect(p_buffer_stencil->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(RSXDebugger::OnClickBuffer));
-	p_buffer_tex->Connect(wxID_ANY, wxEVT_LEFT_DOWN, wxMouseEventHandler(RSXDebugger::OnClickBuffer), nullptr, this);
+	p_buffer_colorA->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorB->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorC->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_colorD->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
+	//p_buffer_depth->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
+	//p_buffer_stencil->Bind(wxEVT_BUTTON, &RSXDebugger::OnClickBuffer, this);
+	p_buffer_tex->Bind(wxEVT_LEFT_DOWN, &RSXDebugger::OnClickBuffer, this);
 
-	m_list_commands->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(RSXDebugger::OnScrollMemory), nullptr, this);
-	m_list_flags->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetFlags), nullptr, this);
-	m_list_programs->Connect(wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::SetPrograms), nullptr, this);
+	m_list_commands->Bind(wxEVT_MOUSEWHEEL, &RSXDebugger::OnScrollMemory, this);
+	m_list_flags->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::SetFlags, this);
+	m_list_programs->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::SetPrograms, this);
 
-	m_list_texture->Connect(wxID_ANY, wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(RSXDebugger::OnSelectTexture), nullptr, this);
+	m_list_texture->Bind(wxEVT_LIST_ITEM_ACTIVATED, &RSXDebugger::OnSelectTexture, this);
 	
 	//Fill the frame
 	UpdateInformation();
@@ -259,7 +268,7 @@ void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 			u32 offset;
 			if(Memory.IsGoodAddr(m_addr))
 			{
-				u32 cmd = Memory.Read32(m_addr);
+				u32 cmd = vm::read32(m_addr);
 				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
 					|| cmd == CELL_GCM_METHOD_FLAG_RETURN ? 0 : (cmd >> 18) & 0x7ff;
 
@@ -286,17 +295,17 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const mem_ptr_t<gcmBuffer> buffers = render.m_gcm_buffers_addr;
+	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
 
-	if(!buffers.IsGood())
+	if(!buffers)
 		return;
 
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render.m_local_mem_addr + re(buffers[id].offset); \
-		if(Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
-			MemoryViewerPanel::ShowImage(this, addr, 3, re(buffers[id].width), re(buffers[id].height), true); \
+		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
+		if (Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
+			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
 	} \
 
@@ -321,21 +330,29 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 void RSXDebugger::GoToGet(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get);
-	t_addr->SetValue(wxString::Format("%08x", m_addr));
-	UpdateInformation();
-	event.Skip();
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
+	u64 realAddr;
+	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
+		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
+		t_addr->SetValue(wxString::Format("%08x", m_addr));
+		UpdateInformation();
+		event.Skip();
+	}
+	// TODO: We should probably throw something? 
 }
 
 void RSXDebugger::GoToPut(wxCommandEvent& event)
 {
 	if (!RSXReady()) return;
-	CellGcmControl* ctrl = (CellGcmControl*)&Memory[Emu.GetGSManager().GetRender().m_ctrlAddress];
-	m_addr = Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put);
-	t_addr->SetValue(wxString::Format("%08x", m_addr));
-	UpdateInformation();
-	event.Skip();
+	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
+	u64 realAddr;
+	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
+		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
+		t_addr->SetValue(wxString::Format("%08x", m_addr));
+		UpdateInformation();
+		event.Skip();
+	}
+	// TODO: We should probably throw something? 
 }
 
 void RSXDebugger::UpdateInformation()
@@ -365,7 +382,7 @@ void RSXDebugger::GetMemory()
 	
 		if (ioAddr && Memory.IsGoodAddr(addr))
 		{
-			u32 cmd = Memory.Read32(addr);
+			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
@@ -395,16 +412,16 @@ void RSXDebugger::GetBuffers()
 		if(!Memory.IsGoodAddr(render.m_gcm_buffers_addr))
 			continue;
 
-		gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(render.m_gcm_buffers_addr);
-		u32 RSXbuffer_addr = render.m_local_mem_addr + re(buffers[bufferId].offset);
+		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
+		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!Memory.IsGoodAddr(RSXbuffer_addr))
 			continue;
 
-		unsigned char* RSXbuffer = (unsigned char*)Memory.VirtualToRealAddr(RSXbuffer_addr);
+		auto RSXbuffer = vm::get_ptr<unsigned char>(RSXbuffer_addr);
 		
-		u32 width  = re(buffers[bufferId].width);
-		u32 height = re(buffers[bufferId].height);
+		u32 width  = buffers[bufferId].width;
+		u32 height = buffers[bufferId].height;
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 
 		// ABGR to RGB and flip vertically
@@ -429,7 +446,9 @@ void RSXDebugger::GetBuffers()
 
 		wxImage img(width, height, buffer);
 		wxClientDC dc_canvas(pnl);
-		dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
+		
+		if (img.IsOk())
+			dc_canvas.DrawBitmap(img.Scale(m_panel_width, m_panel_height), 0, 0, false);
 	}
 
 	// Draw Texture
@@ -451,7 +470,7 @@ void RSXDebugger::GetBuffers()
 	if(!Memory.IsGoodAddr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = (unsigned char*)Memory.VirtualToRealAddr(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
 
 	u32 width  = render.m_textures[m_cur_texture].GetWidth();
 	u32 height = render.m_textures[m_cur_texture].GetHeight();
@@ -475,9 +494,10 @@ void RSXDebugger::GetFlags()
 
 	LIST_FLAGS_ADD("Alpha test",        render.m_set_alpha_test);
 	LIST_FLAGS_ADD("Blend",             render.m_set_blend);
-	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face_enable);
+	LIST_FLAGS_ADD("Scissor",           render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
+	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face);
 	LIST_FLAGS_ADD("Depth bounds test", render.m_set_depth_bounds_test);
-	LIST_FLAGS_ADD("Depth test",        render.m_depth_test_enable);
+	LIST_FLAGS_ADD("Depth test",        render.m_set_depth_test);
 	LIST_FLAGS_ADD("Dither",            render.m_set_dither);
 	LIST_FLAGS_ADD("Line smooth",       render.m_set_line_smooth);
 	LIST_FLAGS_ADD("Logic op",          render.m_set_logic_op);
@@ -486,6 +506,9 @@ void RSXDebugger::GetFlags()
 	LIST_FLAGS_ADD("Poly offset line",  render.m_set_poly_offset_line);
 	LIST_FLAGS_ADD("Poly offset point", render.m_set_poly_offset_point);
 	LIST_FLAGS_ADD("Stencil test",      render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Primitive restart", render.m_set_restart_index);
+	LIST_FLAGS_ADD("Point Sprite",	    render.m_set_point_sprite_control);
+	LIST_FLAGS_ADD("Lighting ",	    render.m_set_specular);
 
 #undef LIST_FLAGS_ADD
 }
@@ -626,19 +649,24 @@ void RSXDebugger::SetFlags(wxListEvent& event)
 	GSRender& render = Emu.GetGSManager().GetRender();
 	switch(event.m_itemIndex)
 	{
-	case 0:  render.m_set_alpha_test        ^= true; break;
-	case 1:  render.m_set_blend             ^= true; break;
-	case 2:  render.m_set_cull_face_enable  ^= true; break;
-	case 3:  render.m_set_depth_bounds_test ^= true; break;
-	case 4:  render.m_depth_test_enable     ^= true; break;
-	case 5:  render.m_set_dither            ^= true; break;
-	case 6:  render.m_set_line_smooth       ^= true; break;
-	case 7:  render.m_set_logic_op          ^= true; break;
-	case 8:  render.m_set_poly_smooth       ^= true; break;
-	case 9:  render.m_set_poly_offset_fill  ^= true; break;
-	case 10: render.m_set_poly_offset_line  ^= true; break;
-	case 11: render.m_set_poly_offset_point ^= true; break;
-	case 12: render.m_set_stencil_test      ^= true; break;
+	case 0:  render.m_set_alpha_test		^= true; break;
+	case 1:  render.m_set_blend			^= true; break;
+	case 2:  render.m_set_cull_face			^= true; break;
+	case 3:  render.m_set_depth_bounds_test		^= true; break;
+	case 4:  render.m_set_depth_test		^= true; break;
+	case 5:  render.m_set_dither			^= true; break;
+	case 6:  render.m_set_line_smooth		^= true; break;
+	case 7:  render.m_set_logic_op			^= true; break;
+	case 8:  render.m_set_poly_smooth		^= true; break;
+	case 9:  render.m_set_poly_offset_fill		^= true; break;
+	case 10: render.m_set_poly_offset_line		^= true; break;
+	case 11: render.m_set_poly_offset_point		^= true; break;
+	case 12: render.m_set_stencil_test		^= true; break;
+	case 13: render.m_set_point_sprite_control	^= true; break;
+	case 14: render.m_set_restart_index		^= true; break;
+	case 15: render.m_set_specular			^= true; break;
+	case 16: render.m_set_scissor_horizontal	^= true; break;
+	case 17: render.m_set_scissor_vertical		^= true; break;
 	}
 
 	UpdateInformation();
@@ -780,7 +808,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 {
 	wxString disasm = wxEmptyString;
 
-#define DISASM(string, ...) if(disasm.IsEmpty()) disasm = wxString::Format((string), ##__VA_ARGS__); else disasm += (wxString(' ') + wxString::Format((string), ##__VA_ARGS__))
+#define DISASM(string, ...) { if(disasm.IsEmpty()) disasm = wxString::Format((string), ##__VA_ARGS__); else disasm += (wxString(' ') + wxString::Format((string), ##__VA_ARGS__)); }
 	if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 	{
 		u32 jumpAddr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
@@ -802,7 +830,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	}
 	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 	{
-		mem32_ptr_t args(currentAddr + 4);
+		auto args = vm::ptr<be_t<u32>>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch(cmd & 0x3ffff)

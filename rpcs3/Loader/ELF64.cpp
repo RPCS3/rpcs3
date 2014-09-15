@@ -1,9 +1,122 @@
 #include "stdafx.h"
-#include "ELF64.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
+#include "Emu/FS/vfsStream.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUInstrTable.h"
+#include "Emu/SysCalls/ModuleManager.h"
+#include "ELF64.h"
+
 using namespace PPU_instr;
 
-void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
+void Elf64_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+	e_abi_ver = Read64(f);
+	e_type = Read16(f);
+	e_machine = Read16(f);
+	e_version = Read32(f);
+	e_entry = Read64(f);
+	e_phoff = Read64(f);
+	e_shoff = Read64(f);
+	e_flags = Read32(f);
+	e_ehsize = Read16(f);
+	e_phentsize = Read16(f);
+	e_phnum = Read16(f);
+	e_shentsize = Read16(f);
+	e_shnum = Read16(f);
+	e_shstrndx = Read16(f);
+}
+
+void Elf64_Ehdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Magic: %08x", e_magic);
+	LOG_NOTICE(LOADER, "Class: %s", "ELF64");
+	LOG_NOTICE(LOADER, "Data: %s", Ehdr_DataToString(e_data).c_str());
+	LOG_NOTICE(LOADER, "Current Version: %d", e_curver);
+	LOG_NOTICE(LOADER, "OS/ABI: %s", Ehdr_OS_ABIToString(e_os_abi).c_str());
+	LOG_NOTICE(LOADER, "ABI version: %lld", e_abi_ver);
+	LOG_NOTICE(LOADER, "Type: %s", Ehdr_TypeToString(e_type).c_str());
+	LOG_NOTICE(LOADER, "Machine: %s", Ehdr_MachineToString(e_machine).c_str());
+	LOG_NOTICE(LOADER, "Version: %d", e_version);
+	LOG_NOTICE(LOADER, "Entry point address: 0x%08llx", e_entry);
+	LOG_NOTICE(LOADER, "Program headers offset: 0x%08llx", e_phoff);
+	LOG_NOTICE(LOADER, "Section headers offset: 0x%08llx", e_shoff);
+	LOG_NOTICE(LOADER, "Flags: 0x%x", e_flags);
+	LOG_NOTICE(LOADER, "Size of this header: %d", e_ehsize);
+	LOG_NOTICE(LOADER, "Size of program headers: %d", e_phentsize);
+	LOG_NOTICE(LOADER, "Number of program headers: %d", e_phnum);
+	LOG_NOTICE(LOADER, "Size of section headers: %d", e_shentsize);
+	LOG_NOTICE(LOADER, "Number of section headers: %d", e_shnum);
+	LOG_NOTICE(LOADER, "Section header string table index: %d", e_shstrndx);
+#endif
+}
+
+void Elf64_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read64(f);
+	sh_addr = Read64(f);
+	sh_offset = Read64(f);
+	sh_size = Read64(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read64(f);
+	sh_entsize = Read64(f);
+}
+
+void Elf64_Shdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Name offset: %x", sh_name);
+	LOG_NOTICE(LOADER, "Type: %d", sh_type);
+	LOG_NOTICE(LOADER, "Addr: %llx", sh_addr);
+	LOG_NOTICE(LOADER, "Offset: %llx", sh_offset);
+	LOG_NOTICE(LOADER, "Size: %llx", sh_size);
+	LOG_NOTICE(LOADER, "EntSize: %lld", sh_entsize);
+	LOG_NOTICE(LOADER, "Flags: %llx", sh_flags);
+	LOG_NOTICE(LOADER, "Link: %x", sh_link);
+	LOG_NOTICE(LOADER, "Info: %x", sh_info);
+	LOG_NOTICE(LOADER, "Address align: %llx", sh_addralign);
+#endif
+}
+
+void Elf64_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_flags = Read32(f);
+	p_offset = Read64(f);
+	p_vaddr = Read64(f);
+	p_paddr = Read64(f);
+	p_filesz = Read64(f);
+	p_memsz = Read64(f);
+	p_align = Read64(f);
+}
+
+void Elf64_Phdr::Show()
+{
+#ifdef LOADER_DEBUG
+	LOG_NOTICE(LOADER, "Type: %s", Phdr_TypeToString(p_type).c_str());
+	LOG_NOTICE(LOADER, "Offset: 0x%08llx", p_offset);
+	LOG_NOTICE(LOADER, "Virtual address: 0x%08llx", p_vaddr);
+	LOG_NOTICE(LOADER, "Physical address: 0x%08llx", p_paddr);
+	LOG_NOTICE(LOADER, "File size: 0x%08llx", p_filesz);
+	LOG_NOTICE(LOADER, "Memory size: 0x%08llx", p_memsz);
+	LOG_NOTICE(LOADER, "Flags: %s", Phdr_FlagsToString(p_flags).c_str());
+	LOG_NOTICE(LOADER, "Align: 0x%llx", p_align);
+#endif
+}
+
+void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -26,7 +139,7 @@ void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(wxFile& f, Elf64_Phdr& phdr)
+void WritePhdr(rFile& f, Elf64_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_flags);
@@ -38,7 +151,7 @@ void WritePhdr(wxFile& f, Elf64_Phdr& phdr)
 	Write64(f, phdr.p_align);
 }
 
-void WriteShdr(wxFile& f, Elf64_Shdr& shdr)
+void WriteShdr(rFile& f, Elf64_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -56,6 +169,7 @@ ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
 	, LoaderBase()
 {
+	int a = 0;
 }
 
 bool ELF64Loader::LoadInfo()
@@ -94,13 +208,13 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 	if(ehdr.e_phentsize != sizeof(Elf64_Phdr))
 	{
-		ConLog.Error("elf64 error:  e_phentsize[0x%x] != sizeof(Elf64_Phdr)[0x%x]", ehdr.e_phentsize, sizeof(Elf64_Phdr));
+		LOG_ERROR(LOADER, "elf64 error:  e_phentsize[0x%x] != sizeof(Elf64_Phdr)[0x%x]", ehdr.e_phentsize, sizeof(Elf64_Phdr));
 		return false;
 	}
 
 	if(ehdr.e_shentsize != sizeof(Elf64_Shdr))
 	{
-		ConLog.Error("elf64 error: e_shentsize[0x%x] != sizeof(Elf64_Shdr)[0x%x]", ehdr.e_shentsize, sizeof(Elf64_Shdr));
+		LOG_ERROR(LOADER, "elf64 error: e_shentsize[0x%x] != sizeof(Elf64_Shdr)[0x%x]", ehdr.e_shentsize, sizeof(Elf64_Shdr));
 		return false;
 	}
 
@@ -113,14 +227,14 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 	default:
 		machine = MACHINE_Unknown;
-		ConLog.Error("Unknown elf64 type: 0x%x", ehdr.e_machine);
+		LOG_ERROR(LOADER, "Unknown elf64 type: 0x%x", ehdr.e_machine);
 		return false;
 	}
 
-	entry = ehdr.GetEntry();
+	entry = (u32)ehdr.GetEntry();
 	if(entry == 0)
 	{
-		ConLog.Error("elf64 error: entry is null!");
+		LOG_ERROR(LOADER, "elf64 error: entry is null!");
 		return false;
 	}
 
@@ -129,11 +243,11 @@ bool ELF64Loader::LoadEhdrInfo(s64 offset)
 
 bool ELF64Loader::LoadPhdrInfo(s64 offset)
 {
-	phdr_arr.Clear();
+	phdr_arr.clear();
 
 	if(ehdr.e_phoff == 0 && ehdr.e_phnum)
 	{
-		ConLog.Error("LoadPhdr64 error: Program header offset is null!");
+		LOG_ERROR(LOADER, "LoadPhdr64 error: Program header offset is null!");
 		return false;
 	}
 
@@ -141,9 +255,8 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 
 	for(u32 i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf64_Phdr* phdr = new Elf64_Phdr();
-		phdr->Load(elf64_f);
-		phdr_arr.Move(phdr);
+		phdr_arr.emplace_back();
+		phdr_arr.back().Load(elf64_f);
 	}
 
 	return true;
@@ -151,41 +264,39 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 
 bool ELF64Loader::LoadShdrInfo(s64 offset)
 {
-	shdr_arr.Clear();
+	shdr_arr.clear();
 	shdr_name_arr.clear();
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
 	{
-		ConLog.Warning("LoadShdr64 error: Section header offset is null!");
+		LOG_NOTICE(LOADER, "LoadShdr64 error: Section header offset is null!");
 		return true;
 	}
 
 	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf64_Shdr* shdr = new Elf64_Shdr();
-		shdr->Load(elf64_f);
-		shdr_arr.Move(shdr);
+		shdr_arr.emplace_back();
+		shdr_arr.back().Load(elf64_f);
 	}
 
-	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
+	if(ehdr.e_shstrndx >= shdr_arr.size())
 	{
-		ConLog.Warning("LoadShdr64 error: shstrndx too big!");
+		LOG_WARNING(LOADER, "LoadShdr64 error: shstrndx too big!");
 		return true;
 	}
 
-	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		elf64_f.Seek((offset < 0 ? shdr_arr[ehdr.e_shstrndx].sh_offset : shdr_arr[ehdr.e_shstrndx].sh_offset - ehdr.e_shoff + offset) + shdr_arr[i].sh_name);
-		Array<char> name;
+		std::string name;
 		while(!elf64_f.Eof())
 		{
 			char c;
 			elf64_f.Read(&c, 1);
 			if(c == 0) break;
-			name.AddCpy(c);
+			name.push_back(c);
 		}
-		name.AddCpy('\0');
-		shdr_name_arr.push_back(std::string(name.GetPtr()));
+		shdr_name_arr.push_back(name);
 	}
 
 	return true;
@@ -194,98 +305,91 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 bool ELF64Loader::LoadEhdrData(u64 offset)
 {
 #ifdef LOADER_DEBUG
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 	ehdr.Show();
-	ConLog.SkipLn();
+	LOG_NOTICE(LOADER, "");
 #endif
 	return true;
 }
 
 bool ELF64Loader::LoadPhdrData(u64 offset)
 {
-	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
+	for(auto& phdr: phdr_arr)
 	{
-		phdr_arr[i].Show();
+		phdr.Show();
 
-		if(phdr_arr[i].p_vaddr < min_addr)
+		if (phdr.p_vaddr < min_addr)
 		{
-			min_addr = phdr_arr[i].p_vaddr;
+			min_addr = (u32)phdr.p_vaddr;
 		}
 
-		if(phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz > max_addr)
+		if (phdr.p_vaddr + phdr.p_memsz > max_addr)
 		{
-			max_addr = phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz;
+			max_addr = (u32)(phdr.p_vaddr + phdr.p_memsz);
 		}
 
-		if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
+		if (phdr.p_vaddr != phdr.p_paddr)
 		{
-			ConLog.Warning
-			( 
-				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
-				phdr_arr[i].p_paddr, phdr_arr[i].p_vaddr
-			);
+			LOG_WARNING(LOADER,	"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+				phdr.p_paddr, phdr.p_vaddr);
 		}
 
-		if(!Memory.MainMem.IsInMyRange(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
+		if(!Memory.MainMem.IsInMyRange(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 		{
 #ifdef LOADER_DEBUG
-			ConLog.Warning("Skipping...");
-			ConLog.SkipLn();
+			LOG_WARNING(LOADER, "Skipping...");
+			LOG_WARNING(LOADER, "");
 #endif
 			continue;
 		}
 
-		switch(phdr_arr[i].p_type)
+		switch(phdr.p_type)
 		{
 			case 0x00000001: //LOAD
-				if(phdr_arr[i].p_memsz)
+				if(phdr.p_memsz)
 				{
-					Memory.MainMem.AllocFixed(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
-
-					if(phdr_arr[i].p_filesz)
+					if (!Memory.MainMem.AllocFixed(offset + phdr.p_vaddr, (u32)phdr.p_memsz))
 					{
-						elf64_f.Seek(phdr_arr[i].p_offset);
-						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
-						StaticAnalyse(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz, phdr_arr[i].p_vaddr);
+						LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, offset + phdr.p_vaddr, (u32)phdr.p_memsz);
+					}
+					else if (phdr.p_filesz)
+					{
+						elf64_f.Seek(phdr.p_offset);
+						elf64_f.Read(vm::get_ptr<void>(offset + phdr.p_vaddr), phdr.p_filesz);
+						Emu.GetSFuncManager().StaticAnalyse(vm::get_ptr<void>(offset + phdr.p_vaddr), (u32)phdr.p_filesz, (u32)phdr.p_vaddr);
 					}
 				}
 			break;
 
 			case 0x00000007: //TLS
-				Emu.SetTLSData(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_filesz, phdr_arr[i].p_memsz);
+				Emu.SetTLSData(offset + phdr.p_vaddr, phdr.p_filesz, phdr.p_memsz);
 			break;
 
 			case 0x60000001: //LOOS+1
 			{
-				if(!phdr_arr[i].p_filesz) break;
+				if(!phdr.p_filesz)
+					break;
 
-				const sys_process_param& proc_param = *(sys_process_param*)&Memory[offset + phdr_arr[i].p_vaddr];
+				auto& proc_param = vm::get_ref<sys_process_param>(offset + phdr.p_vaddr);
 
-				if(re(proc_param.size) < sizeof(sys_process_param))
+				if (proc_param.size < sizeof(sys_process_param)) 
 				{
-					ConLog.Warning("Bad proc param size! [0x%x : 0x%x]", re(proc_param.size), sizeof(sys_process_param));
+					LOG_WARNING(LOADER, "Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
 				}
-	
-				if(re(proc_param.magic) != 0x13bcc5f6)
+				if (proc_param.magic != 0x13bcc5f6) 
 				{
-					ConLog.Error("Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
+					LOG_ERROR(LOADER, "Bad magic! [0x%x]", proc_param.magic);
 				}
-				else
+				else 
 				{
-					sys_process_param_info& info = Emu.GetInfo().GetProcParam();
-					info.sdk_version = re(proc_param.info.sdk_version);
-					info.primary_prio = re(proc_param.info.primary_prio);
-					info.primary_stacksize = re(proc_param.info.primary_stacksize);
-					info.malloc_pagesize = re(proc_param.info.malloc_pagesize);
-					info.ppc_seg = re(proc_param.info.ppc_seg);
-					//info.crash_dump_param_addr = re(proc_param.info.crash_dump_param_addr);
 #ifdef LOADER_DEBUG
-					ConLog.Write("*** sdk version: 0x%x", info.sdk_version);
-					ConLog.Write("*** primary prio: %d", info.primary_prio);
-					ConLog.Write("*** primary stacksize: 0x%x", info.primary_stacksize);
-					ConLog.Write("*** malloc pagesize: 0x%x", info.malloc_pagesize);
-					ConLog.Write("*** ppc seg: 0x%x", info.ppc_seg);
-					//ConLog.Write("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
+					sys_process_param_info& info = Emu.GetInfo().GetProcParam();
+					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version.ToLE());
+					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio.ToLE());
+					LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize.ToLE());
+					LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize.ToLE());
+					LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg.ToLE());
+					//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr.ToLE());
 #endif
 				}
 			}
@@ -293,114 +397,94 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 			case 0x60000002: //LOOS+2
 			{
-				if(!phdr_arr[i].p_filesz) break;
+				if(!phdr.p_filesz)
+					break;
 
-				sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)&Memory[offset + phdr_arr[i].p_vaddr];
+				sys_proc_prx_param proc_prx_param = vm::get_ref<sys_proc_prx_param>(offset + phdr.p_vaddr);
 
-				proc_prx_param.size = re(proc_prx_param.size);
-				proc_prx_param.magic = re(proc_prx_param.magic);
-				proc_prx_param.version = re(proc_prx_param.version);
-				proc_prx_param.libentstart = re(proc_prx_param.libentstart);
-				proc_prx_param.libentend = re(proc_prx_param.libentend);
-				proc_prx_param.libstubstart = re(proc_prx_param.libstubstart);
-				proc_prx_param.libstubend = re(proc_prx_param.libstubend);
-				proc_prx_param.ver = re(proc_prx_param.ver);
 
 #ifdef LOADER_DEBUG
-				ConLog.Write("*** size: 0x%x", proc_prx_param.size);
-				ConLog.Write("*** magic: 0x%x", proc_prx_param.magic);
-				ConLog.Write("*** version: 0x%x", proc_prx_param.version);
-				ConLog.Write("*** libentstart: 0x%x", proc_prx_param.libentstart);
-				ConLog.Write("*** libentend: 0x%x", proc_prx_param.libentend);
-				ConLog.Write("*** libstubstart: 0x%x", proc_prx_param.libstubstart);
-				ConLog.Write("*** libstubend: 0x%x", proc_prx_param.libstubend);
-				ConLog.Write("*** ver: 0x%x", proc_prx_param.ver);
+				LOG_NOTICE(LOADER, "*** size: 0x%x", proc_prx_param.size.ToLE());
+				LOG_NOTICE(LOADER, "*** magic: 0x%x", proc_prx_param.magic.ToLE());
+				LOG_NOTICE(LOADER, "*** version: 0x%x", proc_prx_param.version.ToLE());
+				LOG_NOTICE(LOADER, "*** libentstart: 0x%x", proc_prx_param.libentstart.ToLE());
+				LOG_NOTICE(LOADER, "*** libentend: 0x%x", proc_prx_param.libentend.ToLE());
+				LOG_NOTICE(LOADER, "*** libstubstart: 0x%x", proc_prx_param.libstubstart.ToLE());
+				LOG_NOTICE(LOADER, "*** libstubend: 0x%x", proc_prx_param.libstubend.ToLE());
+				LOG_NOTICE(LOADER, "*** ver: 0x%x", proc_prx_param.ver.ToLE());
 #endif
 
-				if(proc_prx_param.magic != 0x1b434cec)
-				{
-					ConLog.Error("Bad magic! (0x%x)", proc_prx_param.magic);
+				if (proc_prx_param.magic != 0x1b434cec) {
+					LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic.ToLE());
+					break;
 				}
-				else
+
+				for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
 				{
-					for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
-					{
-						Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(offset + s);
+					Elf64_StubHeader stub = vm::get_ref<Elf64_StubHeader>(offset + s);
 
-						stub.s_size = re(stub.s_size);
-						stub.s_version = re(stub.s_version);
-						stub.s_unk0 = re(stub.s_unk0);
-						stub.s_unk1 = re(stub.s_unk1);
-						stub.s_imports = re(stub.s_imports);
-						stub.s_modulename = re(stub.s_modulename);
-						stub.s_nid = re(stub.s_nid);
-						stub.s_text = re(stub.s_text);
-
-						const std::string& module_name = Memory.ReadString(stub.s_modulename);
-						Module* module = GetModuleByName(module_name);
-						if(module)
-						{
-							//module->SetLoaded();
-						}
-						else
-						{
-							ConLog.Warning("Unknown module '%s'", module_name.c_str());
-						}
-
-#ifdef LOADER_DEBUG
-						ConLog.SkipLn();
-						ConLog.Write("*** size: 0x%x", stub.s_size);
-						ConLog.Write("*** version: 0x%x", stub.s_version);
-						ConLog.Write("*** unk0: 0x%x", stub.s_unk0);
-						ConLog.Write("*** unk1: 0x%x", stub.s_unk1);
-						ConLog.Write("*** imports: %d", stub.s_imports);
-						ConLog.Write("*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename);
-						ConLog.Write("*** nid: 0x%x", stub.s_nid);
-						ConLog.Write("*** text: 0x%x", stub.s_text);
-#endif
-						static const u32 section = 4 * 3;
-						u64 tbl = Memory.MainMem.AllocAlign(stub.s_imports * 4 * 2);
-						u64 dst = Memory.MainMem.AllocAlign(stub.s_imports * section);
-
-						for(u32 i=0; i<stub.s_imports; ++i)
-						{
-							const u32 nid = Memory.Read32(stub.s_nid + i*4);
-							const u32 text = Memory.Read32(stub.s_text + i*4);
-
-							if(module)
-							{
-								if(!module->Load(nid))
-								{
-									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name.c_str());
-									SysCalls::DoFunc(nid);
-								}
-							}
-#ifdef LOADER_DEBUG
-							ConLog.Write("import %d:", i+1);
-							ConLog.Write("*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
-							ConLog.Write("*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
-#endif
-							Memory.Write32(stub.s_text + i*4, tbl + i*8);
-
-							mem32_ptr_t out_tbl(tbl + i*8);
-							out_tbl += dst + i*section;
-							out_tbl += GetFuncNumById(nid);
-
-							mem32_ptr_t out_dst(dst + i*section);
-							out_dst += OR(11, 2, 2, 0);
-							out_dst += SC(2);
-							out_dst += BCLR(0x10 | 0x04, 0, 0, 0);
-						}
+					const std::string module_name = vm::get_ptr<const char>(stub.s_modulename);
+					Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
+					if (module) {
+						//module->SetLoaded();
 					}
+					else {
+						LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
+					}
+
 #ifdef LOADER_DEBUG
-					ConLog.SkipLn();
+					LOG_NOTICE(LOADER, "");
+					LOG_NOTICE(LOADER, "*** size: 0x%x", stub.s_size);
+					LOG_NOTICE(LOADER, "*** version: 0x%x", stub.s_version.ToLE());
+					LOG_NOTICE(LOADER, "*** unk0: 0x%x", stub.s_unk0);
+					LOG_NOTICE(LOADER, "*** unk1: 0x%x", stub.s_unk1.ToLE());
+					LOG_NOTICE(LOADER, "*** imports: %d", stub.s_imports.ToLE());
+					LOG_NOTICE(LOADER, "*** module name: %s [0x%x]", module_name.c_str(), stub.s_modulename.ToLE());
+					LOG_NOTICE(LOADER, "*** nid: 0x%016llx [0x%x]", vm::read64(stub.s_nid), stub.s_nid.ToLE());
+					LOG_NOTICE(LOADER, "*** text: 0x%x", stub.s_text.ToLE());
 #endif
+					static const u32 section = 4 * 3;
+					u64 tbl = Memory.MainMem.AllocAlign(stub.s_imports * 4 * 2);
+					u64 dst = Memory.MainMem.AllocAlign(stub.s_imports * section);
+
+					for(u32 i=0; i<stub.s_imports; ++i)
+					{
+						const u32 nid = vm::read32(stub.s_nid + i*4);
+						const u32 text = vm::read32(stub.s_text + i*4);
+
+						if (module && !module->Load(nid))
+						{
+							LOG_WARNING(LOADER, "Unimplemented function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+						}
+						else //if (Ini.HLELogging.GetValue())
+						{
+							LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+						}
+#ifdef LOADER_DEBUG
+						LOG_NOTICE(LOADER, "import %d:", i+1);
+						LOG_NOTICE(LOADER, "*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
+						LOG_NOTICE(LOADER, "*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
+#endif
+						vm::write32(stub.s_text + i*4, (u32)tbl + i*8);
+
+						auto out_tbl = vm::ptr<be_t<u32>>::make((u32)tbl + i * 8);
+						out_tbl[0] = (u32)dst + i*section;
+						out_tbl[1] = Emu.GetModuleManager().GetFuncNumById(nid);
+
+						auto out_dst = vm::ptr<be_t<u32>>::make((u32)dst + i*section);
+						out_dst[0] = OR(11, 2, 2, 0);
+						out_dst[1] = SC(2);
+						out_dst[2] = BCLR(0x10 | 0x04, 0, 0, 0);
+					}
 				}
+#ifdef LOADER_DEBUG
+				LOG_NOTICE(LOADER, "");
+#endif
 			}
 			break;
 		}
 #ifdef LOADER_DEBUG
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, "");
 #endif
 	}
 
@@ -411,20 +495,20 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 {
 	u64 max_addr = 0;
 
-	for(uint i=0; i<shdr_arr.GetCount(); ++i)
+	for(uint i=0; i<shdr_arr.size(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
 
 		if(i < shdr_name_arr.size())
 		{
 #ifdef LOADER_DEBUG
-			ConLog.Write("Name: %s", shdr_name_arr[i].c_str());
+			LOG_NOTICE(LOADER, "Name: %s", shdr_name_arr[i].c_str());
 #endif
 		}
 
 #ifdef LOADER_DEBUG
 		shdr.Show();
-		ConLog.SkipLn();
+		LOG_NOTICE(LOADER, " ");
 #endif
 		if(shdr.sh_addr + shdr.sh_size > max_addr) max_addr = shdr.sh_addr + shdr.sh_size;
 
@@ -433,28 +517,28 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 		const u64 addr = shdr.sh_addr;
 		const u64 size = shdr.sh_size;
 
-		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
+		if(size == 0 || !Memory.IsGoodAddr(offset + addr, (u32)size)) continue;
 
 		if(shdr.sh_addr && shdr.sh_addr < min_addr)
 		{
-			min_addr = shdr.sh_addr;
+			min_addr = (u32)shdr.sh_addr;
 		}
 
 		if(shdr.sh_addr + shdr.sh_size > max_addr)
 		{
-			max_addr = shdr.sh_addr + shdr.sh_size;
+			max_addr = (u32)(shdr.sh_addr + shdr.sh_size);
 		}
 
 		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
 		{
-			ConLog.Error("ELF64 ERROR: Relocation");
+			LOG_ERROR(LOADER, "ELF64 ERROR: Relocation");
 			continue;
 		}
 
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
-			//ConLog.Warning("SHT_NOBITS: addr=0x%llx, size=0x%llx", offset + addr, size);
+			//LOG_WARNING(LOADER, "SHT_NOBITS: addr=0x%llx, size=0x%llx", offset + addr, size);
 			//memset(&Memory[offset + addr], 0, size);
 		break;
 

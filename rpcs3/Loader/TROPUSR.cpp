@@ -1,7 +1,10 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Utilities/rXml.h"
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
+#include "Emu/System.h"
 #include "TROPUSR.h"
-
-#include "wx/xml/xml.h"
 
 TROPUSRLoader::TROPUSRLoader()
 {
@@ -28,8 +31,7 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 	LoadTableHeaders();
 	LoadTables();
 
-	m_file->Close();
-	m_file = NULL;
+	Close();
 	return true;
 }
 
@@ -121,19 +123,19 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
 {
 	std::string path;
-	wxXmlDocument doc;
+	rXmlDocument doc;
 	Emu.GetVFS().GetDevice(configpath.c_str(), path);
-	doc.Load(fmt::FromUTF8(path));
+	doc.Load(path);
 
 	m_table4.clear();
 	m_table6.clear();
-	for (wxXmlNode *n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
+	for (std::shared_ptr<rXmlNode> n = doc.GetRoot()->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "trophy")
 		{
-			u32 trophy_id = atoi(n->GetAttribute("id").mb_str());
+			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
 			u32 trophy_grade;
-			switch (((const char *)n->GetAttribute("ttype").mb_str())[0])
+			switch (((const char *)n->GetAttribute("ttype").c_str())[0])
 			{
 			case 'B': trophy_grade = 4; break;
 			case 'S': trophy_grade = 3; break;
@@ -142,8 +144,11 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 			default: trophy_grade = 0;
 			}
 
-			TROPUSREntry4 entry4 = {4, sizeof(TROPUSREntry4)-0x10, m_table4.size(), 0, trophy_id, trophy_grade, 0xFFFFFFFF};
-			TROPUSREntry6 entry6 = {6, sizeof(TROPUSREntry6)-0x10, m_table6.size(), 0, trophy_id, 0, 0, 0, 0, 0};
+			TROPUSREntry4 entry4 = { be_t<u32>::MakeFromBE(se32(4)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry4) - 0x10)),
+				be_t<u32>::MakeFromLE((u32)m_table4.size()), be_t<u32>::MakeFromBE(se32(0)), be_t<u32>::MakeFromLE(trophy_id),
+				be_t<u32>::MakeFromLE(trophy_grade), be_t<u32>::MakeFromBE(se32(0xFFFFFFFF)) };
+			TROPUSREntry6 entry6 = { be_t<u32>::MakeFromBE(se32(6)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry6) - 0x10)),
+				be_t<u32>::MakeFromLE((u32)m_table6.size()), be_t<u32>::MakeFromBE(0), be_t<u32>::MakeFromLE(trophy_id) };
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -151,9 +156,11 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	}
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
-	TROPUSRTableHeader table4header = {4, sizeof(TROPUSREntry4)-0x10, 1, m_table4.size(), offset, 0};
+	TROPUSRTableHeader table4header = { be_t<u32>::MakeFromBE(se32(4)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry4)-0x10)),
+		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE((u32)m_table4.size()), be_t<u64>::MakeFromLE(offset) };
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
-	TROPUSRTableHeader table6header = {6, sizeof(TROPUSREntry6)-0x10, 1, m_table6.size(), offset, 0};
+	TROPUSRTableHeader table6header = { be_t<u32>::MakeFromBE(se32(6)), be_t<u32>::MakeFromBE(se32(sizeof(TROPUSREntry6)-0x10)),
+		be_t<u32>::MakeFromBE(se32(1)), be_t<u32>::MakeFromLE((u32)m_table6.size()), be_t<u64>::MakeFromLE(offset) };
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();
@@ -162,7 +169,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 	m_header.magic = 0x818F54AD;
 	m_header.unk1 = 0x00010000;
-	m_header.tables_count = m_tableHeaders.size();
+	m_header.tables_count = (u32)m_tableHeaders.size();
 	m_header.unk2 = 0;
 
 	Save(filepath);
@@ -171,21 +178,21 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 u32 TROPUSRLoader::GetTrophiesCount()
 {
-	return m_table6.size();
+	return (u32)m_table6.size();
 }
 
 u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >=  m_table6.size())
-		ConLog.Warning("TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
 
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
 }
 
-u32 TROPUSRLoader::GetTrophyTimestamp(u32 id)
+u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
 {
-	if (id >=  m_table6.size())
-		ConLog.Warning("TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
+	if (id >= m_table6.size())
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyTimestamp: Invalid id=%d", id);
 
 	// TODO: What timestamp does sceNpTrophyGetTrophyInfo want, timestamp1 or timestamp2? 
 	return m_table6[id].timestamp2; // Let's assume the trophies are stored ordered
@@ -206,7 +213,8 @@ bool TROPUSRLoader::Close()
 {
 	if (m_file && m_file->Close())
 	{
-		m_file = NULL;
+		delete m_file;
+		m_file = nullptr;
 		return true;
 	}
 	return false;

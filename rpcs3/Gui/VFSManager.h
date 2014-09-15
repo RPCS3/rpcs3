@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/FS/VFS.h"
 
 class VFSEntrySettingsDialog : public wxDialog
 {
@@ -29,11 +30,11 @@ public:
 	void UpdateList();
 
 	void OnEntryConfig(wxCommandEvent& event);
-	void OnRightClick(wxCommandEvent& event);
+	void OnRightClick(wxMouseEvent& event);
 	void OnAdd(wxCommandEvent& event);
 	void OnRemove(wxCommandEvent& event);
 
-	void OnClose(wxCloseEvent& event);
+	void OnOK(wxCommandEvent& event);
 	void LoadEntries();
 	void SaveEntries();
 };

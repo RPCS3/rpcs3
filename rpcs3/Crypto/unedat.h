@@ -1,10 +1,9 @@
 #pragma once
-#include "utils.h"
-#include "key_vault.h"
 
 #define SDAT_FLAG 0x01000000
 #define EDAT_COMPRESSED_FLAG 0x00000001
 #define EDAT_FLAG_0x02 0x00000002
+#define EDAT_FLAG_0x04 0x00000004
 #define EDAT_ENCRYPTED_KEY_FLAG 0x00000008
 #define EDAT_FLAG_0x10 0x00000010
 #define EDAT_FLAG_0x20 0x00000020

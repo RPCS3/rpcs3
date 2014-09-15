@@ -9,11 +9,11 @@ class PPUDecoder : public PPCDecoder
 	PPUOpcodes* m_op;
 
 public:
-	PPUDecoder(PPUOpcodes& op) : m_op(&op)
+	PPUDecoder(PPUOpcodes* op) : m_op(op)
 	{
 	}
 
-	~PPUDecoder()
+	virtual ~PPUDecoder()
 	{
 		delete m_op;
 	}

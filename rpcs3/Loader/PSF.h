@@ -1,6 +1,8 @@
 #pragma once
 #include "Loader.h"
 
+struct vfsStream;
+
 struct PSFHeader
 {
 	u32 psf_magic;

@@ -1,30 +1,31 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "vfsLocalFile.h"
 
-static const wxFile::OpenMode vfs2wx_mode(vfsOpenMode mode)
+static const rFile::OpenMode vfs2wx_mode(vfsOpenMode mode)
 {
 	switch(mode)
 	{
-	case vfsRead:        return wxFile::read;
-	case vfsWrite:       return wxFile::write;
-	case vfsReadWrite:   return wxFile::read_write;
-	case vfsWriteExcl:   return wxFile::write_excl;
-	case vfsWriteAppend: return wxFile::write_append;
+	case vfsRead:        return rFile::read;
+	case vfsWrite:       return rFile::write;
+	case vfsReadWrite:   return rFile::read_write;
+	case vfsWriteExcl:   return rFile::write_excl;
+	case vfsWriteAppend: return rFile::write_append;
 	}
 
-	return wxFile::read;
+	return rFile::read;
 }
 
-static const wxSeekMode vfs2wx_seek(vfsSeekMode mode)
+static const rSeekMode vfs2wx_seek(vfsSeekMode mode)
 {
 	switch(mode)
 	{
-	case vfsSeekSet: return wxFromStart;
-	case vfsSeekCur: return wxFromCurrent;
-	case vfsSeekEnd: return wxFromEnd;
+	case vfsSeekSet: return rFromStart;
+	case vfsSeekCur: return rFromCurrent;
+	case vfsSeekEnd: return rFromEnd;
 	}
 
-	return wxFromStart;
+	return rFromStart;
 }
 
 vfsLocalFile::vfsLocalFile(vfsDevice* device) : vfsFileBase(device)
@@ -44,15 +45,15 @@ bool vfsLocalFile::Open(const std::string& path, vfsOpenMode mode)
 	// }
 	// else
 	// {
-		if(!m_file.Access(fmt::FromUTF8(path), vfs2wx_mode(mode))) return false;
+		if(!m_file.Access(path, vfs2wx_mode(mode))) return false;
 
-		return m_file.Open(fmt::FromUTF8(path), vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
+		return m_file.Open(path, vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
 	// }
 }
 
 bool vfsLocalFile::Create(const std::string& path)
 {
-	ConLog.Warning("vfsLocalFile::Create('%s')", path.c_str());
+	LOG_WARNING(HLE, "vfsLocalFile::Create('%s')", path.c_str());
 	for(uint p=1; p < path.length() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.length() && path[p] != '\0'; p++)
@@ -62,19 +63,19 @@ bool vfsLocalFile::Create(const std::string& path)
 			break;
 
 		const std::string& dir = path.substr(0, p);
-		if(!wxDirExists(fmt::FromUTF8(dir)))
+		if(!rExists(dir))
 		{
-			ConLog.Write("create dir: %s", dir.c_str());
-			wxMkdir(fmt::FromUTF8(dir));
+			LOG_NOTICE(HLE, "create dir: %s", dir.c_str());
+			rMkdir(dir);
 		}
 	}
 
 	//create file
 	const char m = path[path.length() - 1];
-	if(m != '/' && m != '\\' && !wxFileExists(fmt::FromUTF8(path))) // ???
+	if(m != '/' && m != '\\' && !rExists(path)) // ???
 	{
-		wxFile f;
-		return f.Create(fmt::FromUTF8(path));
+		rFile f;
+		return f.Create(path);
 	}
 
 	return true;
@@ -113,4 +114,9 @@ u64 vfsLocalFile::Tell() const
 bool vfsLocalFile::IsOpened() const
 {
 	return m_file.IsOpened() && vfsFileBase::IsOpened();
+}
+
+bool vfsLocalFile::Exists(const std::string& path)
+{
+	return rExists(path);
 }

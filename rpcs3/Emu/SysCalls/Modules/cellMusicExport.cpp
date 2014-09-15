@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellMusicExport_init();
 Module cellMusicExport(0xf02c, cellMusicExport_init);
@@ -60,3 +59,4 @@ void cellMusicExport_init()
 	cellMusicExport.AddFunc(0xb202f0e8, cellMusicExportFromFile);
 	cellMusicExport.AddFunc(0x92b50ebc, cellMusicExportProgress);
 }
+#endif

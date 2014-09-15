@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "rpcs3/Ini.h"
 #include "AudioManager.h"
 
 OpenALThread* m_audio_out;

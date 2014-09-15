@@ -1,5 +1,10 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
 #include "InterpreterDisAsm.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDecoder.h"
@@ -25,25 +30,25 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	, decoder(nullptr)
 	, disasm(nullptr)
 {
-	wxBoxSizer& s_p_main = *new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer& s_b_main = *new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_p_main = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_b_main = new wxBoxSizer(wxHORIZONTAL);
 
 	m_list = new wxListView(this);
 	m_choice_units = new wxChoice(this, wxID_ANY);
 
-	wxButton& b_go_to_addr = *new wxButton(this, wxID_ANY, "Go To Address");
-	wxButton& b_go_to_pc = *new wxButton(this, wxID_ANY, "Go To PC");
+	wxButton* b_go_to_addr = new wxButton(this, wxID_ANY, "Go To Address");
+	wxButton* b_go_to_pc = new wxButton(this, wxID_ANY, "Go To PC");
 
 	m_btn_step  = new wxButton(this, wxID_ANY, "Step");
 	m_btn_run   = new wxButton(this, wxID_ANY, "Run");
 	m_btn_pause = new wxButton(this, wxID_ANY, "Pause");
 
-	s_b_main.Add(&b_go_to_addr,  wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(&b_go_to_pc,    wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_step,     wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_run,      wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_btn_pause,    wxSizerFlags().Border(wxALL, 5));
-	s_b_main.Add(m_choice_units, wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(b_go_to_addr,   wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(b_go_to_pc,     wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(m_btn_step,     wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(m_btn_run,      wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(m_btn_pause,    wxSizerFlags().Border(wxALL, 5));
+	s_b_main->Add(m_choice_units, wxSizerFlags().Border(wxALL, 5));
 
 	//Registers
 	m_regs = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
@@ -59,15 +64,15 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 	m_regs ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	m_calls->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-	wxBoxSizer& s_w_list = *new wxBoxSizer(wxHORIZONTAL);
-	s_w_list.Add(m_list, 2, wxEXPAND | wxLEFT | wxDOWN, 5);
-	s_w_list.Add(m_regs, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
-	s_w_list.Add(m_calls,1, wxEXPAND | wxRIGHT | wxDOWN, 5);
+	wxBoxSizer* s_w_list = new wxBoxSizer(wxHORIZONTAL);
+	s_w_list->Add(m_list, 2, wxEXPAND | wxLEFT | wxDOWN, 5);
+	s_w_list->Add(m_regs, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
+	s_w_list->Add(m_calls,1, wxEXPAND | wxRIGHT | wxDOWN, 5);
 
-	s_p_main.Add(&s_b_main, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
-	s_p_main.Add(&s_w_list, 1, wxEXPAND | wxDOWN, 5);
+	s_p_main->Add(s_b_main, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	s_p_main->Add(s_w_list, 1, wxEXPAND | wxDOWN, 5);
 
-	SetSizer(&s_p_main);
+	SetSizer(s_p_main);
 	Layout();
 
 	m_list->InsertColumn(0, "ASM");
@@ -76,19 +81,20 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent)
 		m_list->InsertItem(m_list->GetItemCount(), wxEmptyString);
 	}
 
-	Connect(m_regs->GetId(),         wxEVT_COMMAND_TEXT_UPDATED,    wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
-	Connect(b_go_to_addr.GetId(),    wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
-	Connect(b_go_to_pc.GetId(),      wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
-	Connect(m_btn_step->GetId(),     wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoStep));
-	Connect(m_btn_run->GetId(),      wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
-	Connect(m_btn_pause->GetId(),    wxEVT_COMMAND_BUTTON_CLICKED,  wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
-	Connect(m_list->GetId(),         wxEVT_COMMAND_LIST_KEY_DOWN,   wxListEventHandler(InterpreterDisAsmFrame::InstrKey));
-	Connect(m_list->GetId(),         wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
-	Connect(m_choice_units->GetId(), wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(InterpreterDisAsmFrame::OnSelectUnit));
-	Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
-	m_app_connector.Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
-	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(InterpreterDisAsmFrame::HandleCommand), (wxObject*)0, this);
+	m_regs        ->Bind(wxEVT_TEXT,                &InterpreterDisAsmFrame::OnUpdate, this);
+	b_go_to_addr  ->Bind(wxEVT_BUTTON,              &InterpreterDisAsmFrame::Show_Val, this);
+	b_go_to_pc    ->Bind(wxEVT_BUTTON,              &InterpreterDisAsmFrame::Show_PC, this);
+	m_btn_step    ->Bind(wxEVT_BUTTON,              &InterpreterDisAsmFrame::DoStep, this);
+	m_btn_run     ->Bind(wxEVT_BUTTON,              &InterpreterDisAsmFrame::DoRun, this);
+	m_btn_pause   ->Bind(wxEVT_BUTTON,              &InterpreterDisAsmFrame::DoPause, this);
+	m_list        ->Bind(wxEVT_LIST_KEY_DOWN,       &InterpreterDisAsmFrame::InstrKey, this);
+	m_list        ->Bind(wxEVT_LIST_ITEM_ACTIVATED, &InterpreterDisAsmFrame::DClick, this);
+	m_list        ->Bind(wxEVT_MOUSEWHEEL,          &InterpreterDisAsmFrame::MouseWheel, this);
+	m_choice_units->Bind(wxEVT_CHOICE,              &InterpreterDisAsmFrame::OnSelectUnit, this);
+
+	Bind(wxEVT_SIZE, &InterpreterDisAsmFrame::OnResize, this);
+	Bind(wxEVT_KEY_DOWN, &InterpreterDisAsmFrame::OnKeyDown, this);
+	wxGetApp().Bind(wxEVT_DBG_COMMAND, &InterpreterDisAsmFrame::HandleCommand, this);
 
 	ShowAddr(CentrePc(PC));
 	UpdateUnitList();
@@ -104,9 +110,9 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 	m_choice_units->Clear();
 	auto& thrs = Emu.GetCPU().GetThreads();
 
-	for(uint i=0; i<thrs.GetCount(); ++i)
+	for(uint i=0; i<thrs.size(); ++i)
 	{
-		m_choice_units->Append(thrs[i].GetFName(), &thrs[i]);
+		m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
 	}
 
 	m_choice_units->Thaw();
@@ -127,9 +133,9 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_InterpreterMode);
+			PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_InterpreterMode);
 			decoder = new PPUDecoder(dis_asm);
-			disasm = &dis_asm;
+			disasm = dis_asm;
 		}
 		break;
 
@@ -242,7 +248,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 	}
 	else
 	{
-		disasm->offset = CPU->GetOffset();
+		disasm->offset = vm::get_ptr<u8>(CPU->GetOffset());
 		for(uint i=0, count = 4; i<m_item_count; ++i, PC += count)
 		{
 			if(!Memory.IsGoodAddr(CPU->GetOffset() + PC, 4))
@@ -274,7 +280,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 			{
 				colour = wxColour("White");
 
-				for(u32 i=0; i<Emu.GetMarkedPoints().GetCount(); ++i)
+				for(u32 i=0; i<Emu.GetMarkedPoints().size(); ++i)
 				{
 					if(Emu.GetMarkedPoints()[i] == PC)
 					{
@@ -288,22 +294,22 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 		}
 	}
 
-	while(remove_markedPC.GetCount())
+	while(remove_markedPC.size())
 	{
 		u32 mpc = remove_markedPC[0];
 
-		for(u32 i=0; i<remove_markedPC.GetCount(); ++i)
+		for(u32 i=0; i<remove_markedPC.size(); ++i)
 		{
 			if(remove_markedPC[i] == mpc)
 			{
-				remove_markedPC.RemoveAt(i--);
+				remove_markedPC.erase( remove_markedPC.begin() + i--);
 				continue;
 			}
 
 			if(remove_markedPC[i] > mpc) remove_markedPC[i]--;
 		}
 
-		Emu.GetMarkedPoints().RemoveAt(mpc);
+		Emu.GetMarkedPoints().erase(Emu.GetMarkedPoints().begin() + mpc);
 	}
 
 	m_list->SetColumnWidth(0, -1);
@@ -450,13 +456,14 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	if(CPU) p_pc->SetValue(wxString::Format("%llx", CPU->PC));
+	if(CPU) p_pc->SetValue(wxString::Format("%x", CPU->PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		u64 pc = CPU ? CPU->PC : 0x0;
-		sscanf(p_pc->GetValue(), "%llx", &pc);
-		remove_markedPC.AddCpy(Emu.GetMarkedPoints().AddCpy(pc));
+		unsigned long pc = CPU ? CPU->PC : 0x0;
+		p_pc->GetValue().ToULong(&pc, 16);
+		Emu.GetMarkedPoints().push_back(pc);
+		remove_markedPC.push_back(Emu.GetMarkedPoints().size()-1);
 		ShowAddr(CentrePc(pc));
 	}
 }
@@ -551,7 +558,7 @@ void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 
 bool InterpreterDisAsmFrame::IsBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] == pc) return true;
 	}
@@ -561,20 +568,20 @@ bool InterpreterDisAsmFrame::IsBreakPoint(u64 pc)
 
 void InterpreterDisAsmFrame::AddBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] == pc) return;
 	}
 
-	Emu.GetBreakPoints().AddCpy(pc);
+	Emu.GetBreakPoints().push_back(pc);
 }
 
 bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 {
-	for(u32 i=0; i<Emu.GetBreakPoints().GetCount(); ++i)
+	for(u32 i=0; i<Emu.GetBreakPoints().size(); ++i)
 	{
 		if(Emu.GetBreakPoints()[i] != pc) continue;
-		Emu.GetBreakPoints().RemoveAt(i);
+		Emu.GetBreakPoints().erase(Emu.GetBreakPoints().begin() + i);
 		return true;
 	}
 

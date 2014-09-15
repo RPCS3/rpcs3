@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Loader.h"
 #include "ELF.h"
 #include "SELF.h"
@@ -120,14 +121,17 @@ void Loader::Open(vfsFileBase& stream)
 
 LoaderBase* Loader::SearchLoader()
 {
-	if(!m_stream) return nullptr;
+	if(!m_stream) 
+		return nullptr;
 
-	LoaderBase* l;
-
-	if((l=new ELFLoader(*m_stream))->LoadInfo()) return l;
+	LoaderBase* l = new ELFLoader(*m_stream);
+	if(l->LoadInfo()) 
+		return l;
 	delete l;
 
-	if((l=new SELFLoader(*m_stream))->LoadInfo()) return l;
+	l = new SELFLoader(*m_stream);
+	if(l->LoadInfo()) 
+		return l;
 	delete l;
 
 	return nullptr;
@@ -141,7 +145,7 @@ bool Loader::Analyze()
 
 	if(!m_loader)
 	{
-		ConLog.Error("Unknown file type");
+		LOG_ERROR(LOADER, "Unknown file type");
 		return false;
 	}
 
@@ -158,7 +162,7 @@ bool Loader::Load()
 
 	if(!m_loader->LoadData(m_loader->GetMachine() == MACHINE_SPU ? g_spu_offset : 0))
 	{
-		ConLog.Error("Broken file");
+		LOG_ERROR(LOADER, "Broken file");
 		return false;
 	}
 

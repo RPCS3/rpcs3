@@ -1,33 +1,22 @@
-#include <stdafx.h>
-#include <Utilities/SMutex.h>
+#include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/CPU/CPUThread.h"
 
-__forceinline void SM_Sleep()
+#include "Utilities/SMutex.h"
+
+bool SM_IsAborted()
 {
-	Sleep(1);
+	return Emu.IsStopped();
 }
 
-#ifdef _WIN32
-__declspec(thread)
-#else
-thread_local
-#endif
-size_t g_this_thread_id = 0;
-
-__forceinline size_t SM_GetCurrentThreadId()
+void SM_Sleep()
 {
-	return g_this_thread_id ? g_this_thread_id : g_this_thread_id = std::hash<std::thread::id>()(std::this_thread::get_id());
-}
-
-__forceinline u32 SM_GetCurrentCPUThreadId()
-{
-	if (CPUThread* t = GetCurrentCPUThread())
+	if (NamedThreadBase* t = GetCurrentNamedThread())
 	{
-		return t->GetId();
+		t->WaitForAnySignal();
 	}
-	return 0;
-}
-
-__forceinline be_t<u32> SM_GetCurrentCPUThreadIdBE()
-{
-	return SM_GetCurrentCPUThreadId();
+	else
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
 }

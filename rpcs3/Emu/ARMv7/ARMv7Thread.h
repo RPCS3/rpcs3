@@ -51,7 +51,7 @@ public:
 		u32 IPSR;
 	} IPSR;
 
-	void write_gpr(u8 n, u32 value)
+	void write_gpr(u32 n, u32 value)
 	{
 		assert(n < 16);
 
@@ -65,7 +65,7 @@ public:
 		}
 	}
 
-	u32 read_gpr(u8 n)
+	u32 read_gpr(u32 n)
 	{
 		assert(n < 16);
 
@@ -80,7 +80,6 @@ public:
 public:
 	virtual void InitRegs(); 
 	virtual void InitStack();
-	virtual u64 GetFreeStackSize() const;
 	virtual void SetArg(const uint pos, const u64 arg);
 
 public:

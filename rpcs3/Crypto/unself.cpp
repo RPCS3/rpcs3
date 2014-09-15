@@ -1,5 +1,317 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
+#include "aes.h"
+#include "sha1.h"
+#include "utils.h"
+#include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
+
+#include <wx/mstream.h>
+#include <wx/zstream.h>
+
+void AppInfo::Load(vfsStream& f)
+{
+	authid    = Read64(f);
+	vendor_id = Read32(f);
+	self_type = Read32(f);
+	version   = Read64(f);
+	padding   = Read64(f);
+}
+
+void AppInfo::Show()
+{
+	LOG_NOTICE(LOADER, "AuthID: 0x%llx", authid);
+	LOG_NOTICE(LOADER, "VendorID: 0x%08x", vendor_id);
+	LOG_NOTICE(LOADER, "SELF type: 0x%08x", self_type);
+	LOG_NOTICE(LOADER, "Version: 0x%llx", version);
+}
+
+void SectionInfo::Load(vfsStream& f)
+{
+	offset     = Read64(f);
+	size       = Read64(f);
+	compressed = Read32(f);
+	unknown1   = Read32(f);
+	unknown2   = Read32(f);
+	encrypted  = Read32(f);
+}
+
+void SectionInfo::Show()
+{
+	LOG_NOTICE(LOADER, "Offset: 0x%llx", offset);
+	LOG_NOTICE(LOADER, "Size: 0x%llx", size);
+	LOG_NOTICE(LOADER, "Compressed: 0x%08x", compressed);
+	LOG_NOTICE(LOADER, "Unknown1: 0x%08x", unknown1);
+	LOG_NOTICE(LOADER, "Unknown2: 0x%08x", unknown2);
+	LOG_NOTICE(LOADER, "Encrypted: 0x%08x", encrypted);
+}
+
+void SCEVersionInfo::Load(vfsStream& f)
+{
+	subheader_type = Read32(f);
+	present        = Read32(f);
+	size           = Read32(f);
+	unknown        = Read32(f);
+}
+
+void SCEVersionInfo::Show()
+{
+	LOG_NOTICE(LOADER, "Sub-header type: 0x%08x", subheader_type);
+	LOG_NOTICE(LOADER, "Present: 0x%08x", present);
+	LOG_NOTICE(LOADER, "Size: 0x%08x", size);
+	LOG_NOTICE(LOADER, "Unknown: 0x%08x", unknown);
+}
+
+void ControlInfo::Load(vfsStream& f)
+{
+	type = Read32(f);
+	size = Read32(f);
+	next = Read64(f);
+
+	if (type == 1)
+	{
+		control_flags.ctrl_flag1 = Read32(f);
+		control_flags.unknown1 = Read32(f);
+		control_flags.unknown2 = Read32(f);
+		control_flags.unknown3 = Read32(f);
+		control_flags.unknown4 = Read32(f);
+		control_flags.unknown5 = Read32(f);
+		control_flags.unknown6 = Read32(f);
+		control_flags.unknown7 = Read32(f);
+	}
+	else if (type == 2)
+	{
+		if (size == 0x30)
+		{
+			f.Read(file_digest_30.digest, 20);
+			file_digest_30.unknown = Read64(f);
+		}
+		else if (size == 0x40)
+		{
+			f.Read(file_digest_40.digest1, 20);
+			f.Read(file_digest_40.digest2, 20);
+			file_digest_40.unknown = Read64(f);
+		}
+	}
+	else if (type == 3)
+	{
+		npdrm.magic = Read32(f);
+		npdrm.unknown1 = Read32(f);
+		npdrm.license = Read32(f);
+		npdrm.type = Read32(f);
+		f.Read(npdrm.content_id, 48);
+		f.Read(npdrm.digest, 16);
+		f.Read(npdrm.invdigest, 16);
+		f.Read(npdrm.xordigest, 16);
+		npdrm.unknown2 = Read64(f);
+		npdrm.unknown3 = Read64(f);
+	}
+}
+
+void ControlInfo::Show()
+{
+	LOG_NOTICE(LOADER, "Type: 0x%08x", type);
+	LOG_NOTICE(LOADER, "Size: 0x%08x", size);
+	LOG_NOTICE(LOADER, "Next: 0x%llx", next);
+
+	if (type == 1)
+	{
+		LOG_NOTICE(LOADER, "Control flag 1: 0x%08x", control_flags.ctrl_flag1);
+		LOG_NOTICE(LOADER, "Unknown1: 0x%08x", control_flags.unknown1);
+		LOG_NOTICE(LOADER, "Unknown2: 0x%08x", control_flags.unknown2);
+		LOG_NOTICE(LOADER, "Unknown3: 0x%08x", control_flags.unknown3);
+		LOG_NOTICE(LOADER, "Unknown4: 0x%08x", control_flags.unknown4);
+		LOG_NOTICE(LOADER, "Unknown5: 0x%08x", control_flags.unknown5);
+		LOG_NOTICE(LOADER, "Unknown6: 0x%08x", control_flags.unknown6);
+		LOG_NOTICE(LOADER, "Unknown7: 0x%08x", control_flags.unknown7);
+	}
+	else if (type == 2)
+	{
+		if (size == 0x30)
+		{
+			std::string digest_str;
+			for (int i = 0; i < 20; i++)
+				digest_str += fmt::Format("%02x", file_digest_30.digest[i]);
+
+			LOG_NOTICE(LOADER, "Digest: %s", digest_str.c_str());
+			LOG_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_30.unknown);
+		}
+		else if (size == 0x40)
+		{
+			std::string digest_str1;
+			std::string digest_str2;
+			for (int i = 0; i < 20; i++)
+			{
+				digest_str1 += fmt::Format("%02x", file_digest_40.digest1[i]);
+				digest_str2 += fmt::Format("%02x", file_digest_40.digest2[i]);
+			}
+
+			LOG_NOTICE(LOADER, "Digest1: %s", digest_str1.c_str());
+			LOG_NOTICE(LOADER, "Digest2: %s", digest_str2.c_str());
+			LOG_NOTICE(LOADER, "Unknown: 0x%llx", file_digest_40.unknown);
+		}
+	}
+	else if (type == 3)
+	{
+		std::string contentid_str;
+		std::string digest_str;
+		std::string invdigest_str;
+		std::string xordigest_str;
+		for (int i = 0; i < 48; i++)
+			contentid_str += fmt::Format("%02x", npdrm.content_id[i]);
+		for (int i = 0; i < 16; i++)
+		{
+			digest_str += fmt::Format("%02x", npdrm.digest[i]);
+			invdigest_str += fmt::Format("%02x", npdrm.invdigest[i]);
+			xordigest_str += fmt::Format("%02x", npdrm.xordigest[i]);
+		}
+
+		LOG_NOTICE(LOADER, "Magic: 0x%08x", npdrm.magic);
+		LOG_NOTICE(LOADER, "Unknown1: 0x%08x", npdrm.unknown1);
+		LOG_NOTICE(LOADER, "License: 0x%08x", npdrm.license);
+		LOG_NOTICE(LOADER, "Type: 0x%08x", npdrm.type);
+		LOG_NOTICE(LOADER, "ContentID: %s", contentid_str.c_str());
+		LOG_NOTICE(LOADER, "Digest: %s", digest_str.c_str());
+		LOG_NOTICE(LOADER, "Inverse digest: %s", invdigest_str.c_str());
+		LOG_NOTICE(LOADER, "XOR digest: %s", xordigest_str.c_str());
+		LOG_NOTICE(LOADER, "Unknown2: 0x%llx", npdrm.unknown2);
+		LOG_NOTICE(LOADER, "Unknown3: 0x%llx", npdrm.unknown3);
+	}
+}
+
+void MetadataInfo::Load(u8* in)
+{
+	memcpy(key, in, 0x10);
+	memcpy(key_pad, in + 0x10, 0x10);
+	memcpy(iv, in + 0x20, 0x10);
+	memcpy(iv_pad, in + 0x30, 0x10);
+}
+
+void MetadataInfo::Show()
+{
+	std::string key_str;
+	std::string key_pad_str;
+	std::string iv_str;
+	std::string iv_pad_str;
+	for (int i = 0; i < 0x10; i++)
+	{
+		key_str += fmt::Format("%02x", key[i]);
+		key_pad_str += fmt::Format("%02x", key_pad[i]);
+		iv_str += fmt::Format("%02x", iv[i]);
+		iv_pad_str += fmt::Format("%02x", iv_pad[i]);
+	}
+
+	LOG_NOTICE(LOADER, "Key: %s", key_str.c_str());
+	LOG_NOTICE(LOADER, "Key pad: %s", key_pad_str.c_str());
+	LOG_NOTICE(LOADER, "IV: %s", iv_str.c_str());
+	LOG_NOTICE(LOADER, "IV pad: %s", iv_pad_str.c_str());
+}
+
+void MetadataHeader::Load(u8* in)
+{
+	memcpy(&signature_input_length, in, 8);
+	memcpy(&unknown1, in + 8, 4);
+	memcpy(&section_count, in + 12, 4);
+	memcpy(&key_count, in + 16, 4);
+	memcpy(&opt_header_size, in + 20, 4);
+	memcpy(&unknown2, in + 24, 4);
+	memcpy(&unknown3, in + 28, 4);
+
+	// Endian swap.
+	signature_input_length = swap64(signature_input_length);
+	unknown1 = swap32(unknown1);
+	section_count = swap32(section_count);
+	key_count = swap32(key_count);
+	opt_header_size = swap32(opt_header_size);
+	unknown2 = swap32(unknown2);
+	unknown3 = swap32(unknown3);
+}
+
+void MetadataHeader::Show()
+{
+	LOG_NOTICE(LOADER, "Signature input length: 0x%llx", signature_input_length);
+	LOG_NOTICE(LOADER, "Unknown1: 0x%08x", unknown1);
+	LOG_NOTICE(LOADER, "Section count: 0x%08x", section_count);
+	LOG_NOTICE(LOADER, "Key count: 0x%08x", key_count);
+	LOG_NOTICE(LOADER, "Optional header size: 0x%08x", opt_header_size);
+	LOG_NOTICE(LOADER, "Unknown2: 0x%08x", unknown2);
+	LOG_NOTICE(LOADER, "Unknown3: 0x%08x", unknown3);
+}
+
+void MetadataSectionHeader::Load(u8* in)
+{
+	memcpy(&data_offset, in, 8);
+	memcpy(&data_size, in + 8, 8);
+	memcpy(&type, in + 16, 4);
+	memcpy(&program_idx, in + 20, 4);
+	memcpy(&hashed, in + 24, 4);
+	memcpy(&sha1_idx, in + 28, 4);
+	memcpy(&encrypted, in + 32, 4);
+	memcpy(&key_idx, in + 36, 4);
+	memcpy(&iv_idx, in + 40, 4);
+	memcpy(&compressed, in + 44, 4);
+
+	// Endian swap.
+	data_offset = swap64(data_offset);
+	data_size = swap64(data_size);
+	type = swap32(type);
+	program_idx = swap32(program_idx);
+	hashed = swap32(hashed);
+	sha1_idx = swap32(sha1_idx);
+	encrypted = swap32(encrypted);
+	key_idx = swap32(key_idx);
+	iv_idx = swap32(iv_idx);
+	compressed = swap32(compressed);
+}
+
+void MetadataSectionHeader::Show()
+{
+	LOG_NOTICE(LOADER, "Data offset: 0x%llx", data_offset);
+	LOG_NOTICE(LOADER, "Data size: 0x%llx", data_size);
+	LOG_NOTICE(LOADER, "Type: 0x%08x", type);
+	LOG_NOTICE(LOADER, "Program index: 0x%08x", program_idx);
+	LOG_NOTICE(LOADER, "Hashed: 0x%08x", hashed);
+	LOG_NOTICE(LOADER, "SHA1 index: 0x%08x", sha1_idx);
+	LOG_NOTICE(LOADER, "Encrypted: 0x%08x", encrypted);
+	LOG_NOTICE(LOADER, "Key index: 0x%08x", key_idx);
+	LOG_NOTICE(LOADER, "IV index: 0x%08x", iv_idx);
+	LOG_NOTICE(LOADER, "Compressed: 0x%08x", compressed);
+}
+
+void SectionHash::Load(vfsStream& f)
+{
+	f.Read(sha1, 20);
+	f.Read(padding, 12);
+	f.Read(hmac_key, 64);
+}
+
+void CapabilitiesInfo::Load(vfsStream& f)
+{
+	type     = Read32(f);
+	capabilities_size = Read32(f);
+	next     = Read32(f);
+	unknown1 = Read32(f);
+	unknown2 = Read64(f);
+	unknown3 = Read64(f);
+	flags    = Read64(f);
+	unknown4 = Read32(f);
+	unknown5 = Read32(f);
+}
+
+void Signature::Load(vfsStream& f)
+{
+	f.Read(r, 21);
+	f.Read(s, 21);
+	f.Read(padding, 6);
+}
+
+void SelfSection::Load(vfsStream& f)
+{
+	*data = Read32(f);
+	size = Read64(f);
+	offset = Read64(f);
+}
 
 SELFDecrypter::SELFDecrypter(vfsStream& s)
 	: self_f(s), key_v(), data_buf_length(0)
@@ -15,7 +327,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	// Check SCE magic.
 	if (!sce_hdr.CheckMagic())
 	{
-		ConLog.Error("SELF: Not a SELF file!");
+		LOG_ERROR(LOADER, "SELF: Not a SELF file!");
 		return false;
 	}
 
@@ -36,47 +348,44 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	// Read ELF program headers.
 	if (isElf32)
 	{
-		phdr32_arr.Clear();
+		phdr32_arr.clear();
 		if(elf32_hdr.e_phoff == 0 && elf32_hdr.e_phnum)
 		{
-			ConLog.Error("SELF: ELF program header offset is null!");
+			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
 			return false;
 		}
 		self_f.Seek(self_hdr.se_phdroff);
 		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
-			Elf32_Phdr* phdr = new Elf32_Phdr();
-			phdr->Load(self_f);
-			phdr32_arr.Move(phdr);
+			phdr32_arr.emplace_back();
+			phdr32_arr.back().Load(self_f);
 		}
 	}
 	else
 	{
-		phdr64_arr.Clear();
+		phdr64_arr.clear();
 		if(elf64_hdr.e_phoff == 0 && elf64_hdr.e_phnum)
 		{
-			ConLog.Error("SELF: ELF program header offset is null!");
+			LOG_ERROR(LOADER, "SELF: ELF program header offset is null!");
 			return false;
 		}
 		self_f.Seek(self_hdr.se_phdroff);
 		for(u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
-			Elf64_Phdr* phdr = new Elf64_Phdr();
-			phdr->Load(self_f);
-			phdr64_arr.Move(phdr);
+			phdr64_arr.emplace_back();
+			phdr64_arr.back().Load(self_f);
 		}
 	}
 
 
 	// Read section info.
-	secinfo_arr.Clear();
+	secinfo_arr.clear();
 	self_f.Seek(self_hdr.se_secinfoff);
 
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
-		SectionInfo* sinfo = new SectionInfo();
-		sinfo->Load(self_f);
-		secinfo_arr.Move(sinfo);
+		secinfo_arr.emplace_back();
+		secinfo_arr.back().Load(self_f);
 	}
 
 	// Read SCE version info.
@@ -84,49 +393,47 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 	scev_info.Load(self_f);
 
 	// Read control info.
-	ctrlinfo_arr.Clear();
+	ctrlinfo_arr.clear();
 	self_f.Seek(self_hdr.se_controloff);
 
 	u32 i = 0;
 	while(i < self_hdr.se_controlsize)
 	{
-		ControlInfo* cinfo = new ControlInfo();
-		cinfo->Load(self_f);
-		i += cinfo->size;
-		ctrlinfo_arr.Move(cinfo);
+		ctrlinfo_arr.emplace_back();
+		ControlInfo &cinfo = ctrlinfo_arr.back();
+		cinfo.Load(self_f);
+		i += cinfo.size;
 	}
 
 	// Read ELF section headers.
 	if (isElf32)
 	{
-		shdr32_arr.Clear();
+		shdr32_arr.clear();
 		if(elf32_hdr.e_shoff == 0 && elf32_hdr.e_shnum)
 		{
-			ConLog.Warning("SELF: ELF section header offset is null!");
+			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
 		self_f.Seek(self_hdr.se_shdroff);
 		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
-			Elf32_Shdr* shdr = new Elf32_Shdr();
-			shdr->Load(self_f);
-			shdr32_arr.Move(shdr);
+			shdr32_arr.emplace_back();
+			shdr32_arr.back().Load(self_f);
 		}
 	}
 	else
 	{
-		shdr64_arr.Clear();
+		shdr64_arr.clear();
 		if(elf64_hdr.e_shoff == 0 && elf64_hdr.e_shnum)
 		{
-			ConLog.Warning("SELF: ELF section header offset is null!");
+			LOG_WARNING(LOADER, "SELF: ELF section header offset is null!");
 			return true;
 		}
 		self_f.Seek(self_hdr.se_shdroff);
 		for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 		{
-			Elf64_Shdr* shdr = new Elf64_Shdr();
-			shdr->Load(self_f);
-			shdr64_arr.Move(shdr);
+			shdr64_arr.emplace_back();
+			shdr64_arr.back().Load(self_f);
 		}
 	}
 
@@ -135,46 +442,46 @@ bool SELFDecrypter::LoadHeaders(bool isElf32)
 
 void SELFDecrypter::ShowHeaders(bool isElf32)
 {
-	ConLog.Write("SCE header");
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SCE header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	sce_hdr.Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("SELF header");
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SELF header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	self_hdr.Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("APP INFO");
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "APP INFO");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	app_info.Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("ELF header");
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF header");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	isElf32 ? elf32_hdr.Show() : elf64_hdr.Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("ELF program headers");
-	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.GetCount() : phdr64_arr.GetCount()); i++)
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF program headers");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	for(unsigned int i = 0; i < ((isElf32) ? phdr32_arr.size() : phdr64_arr.size()); i++)
 		isElf32 ? phdr32_arr[i].Show() : phdr64_arr[i].Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("Section info");
-	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < secinfo_arr.GetCount(); i++)
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "Section info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	for(unsigned int i = 0; i < secinfo_arr.size(); i++)
 		secinfo_arr[i].Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("SCE version info");
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "SCE version info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 	scev_info.Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("Control info");
-	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ctrlinfo_arr.GetCount(); i++)
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "Control info");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 		ctrlinfo_arr[i].Show();
-	ConLog.Write("----------------------------------------------------");
-	ConLog.Write("ELF section headers");
-	ConLog.Write("----------------------------------------------------");
-	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.GetCount() : shdr64_arr.GetCount()); i++)
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	LOG_NOTICE(LOADER, "ELF section headers");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
+	for(unsigned int i = 0; i < ((isElf32) ? shdr32_arr.size() : shdr64_arr.size()); i++)
 		isElf32 ? shdr32_arr[i].Show() : shdr64_arr[i].Show();
-	ConLog.Write("----------------------------------------------------");
+	LOG_NOTICE(LOADER, "----------------------------------------------------");
 }
 
 bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
@@ -185,7 +492,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	u8 npdrm_iv[0x10];
 
 	// Parse the control info structures to find the NPDRM control info.
-	for(unsigned int i = 0; i < ctrlinfo_arr.GetCount(); i++)
+	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
 	{
 		if (ctrlinfo_arr[i].type == 3)
 		{
@@ -198,7 +505,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	// If not, the data has no NPDRM layer.
 	if (!ctrl)
 	{
-		ConLog.Warning("SELF: No NPDRM control info found!");
+		LOG_WARNING(LOADER, "SELF: No NPDRM control info found!");
 		return true;
 	}
 
@@ -211,7 +518,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 
 	if (ctrl->npdrm.license == 1)  // Network license.
 	{
-		ConLog.Error("SELF: Can't decrypt network NPDRM!");
+		LOG_ERROR(LOADER, "SELF: Can't decrypt network NPDRM!");
 		return false;
 	}
 	else if (ctrl->npdrm.license == 2)  // Local license.
@@ -219,7 +526,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 		// Try to find a RAP file to get the key.
 		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
 		{
-			ConLog.Error("SELF: Can't find RAP file for NPDRM decryption!");
+			LOG_ERROR(LOADER, "SELF: Can't find RAP file for NPDRM decryption!");
 			return false;
 		}
 	}
@@ -230,7 +537,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	}
 	else
 	{
-		ConLog.Error("SELF: Invalid NPDRM license type!");
+		LOG_ERROR(LOADER, "SELF: Invalid NPDRM license type!");
 		return false;
 	}
 
@@ -293,7 +600,7 @@ bool SELFDecrypter::LoadMetadata()
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		ConLog.Error("SELF: Failed to decrypt metadata info!");
+		LOG_ERROR(LOADER, "SELF: Failed to decrypt metadata info!");
 		return false;
 	}
 
@@ -307,12 +614,11 @@ bool SELFDecrypter::LoadMetadata()
 	meta_hdr.Load(metadata_headers);
 
 	// Load the metadata section headers.
-	meta_shdr.Clear();
+	meta_shdr.clear();
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		MetadataSectionHeader* m_shdr = new MetadataSectionHeader();
-		m_shdr->Load(metadata_headers + sizeof(meta_hdr) + sizeof(MetadataSectionHeader) * i);
-		meta_shdr.Move(m_shdr);
+		meta_shdr.emplace_back();
+		meta_shdr.back().Load(metadata_headers + sizeof(meta_hdr) + sizeof(MetadataSectionHeader) * i);
 	}
 
 	// Copy the decrypted data keys.
@@ -393,10 +699,10 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	wxFile e(elf.c_str(), wxFile::write);
+	rFile e(elf.c_str(), rFile::write);
 	if(!e.IsOpened())
 	{
-		ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
+		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 		return false;
 	}
 
@@ -427,7 +733,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != NULL)
+		if(self_hdr.se_shdroff != 0)
 		{
 			e.Seek(elf32_hdr.e_shoff);
 
@@ -488,7 +794,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		}
 
 		// Write section headers.
-		if(self_hdr.se_shdroff != NULL)
+		if(self_hdr.se_shdroff != 0)
 		{
 			e.Seek(elf64_hdr.e_shoff);
 
@@ -509,25 +815,26 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 
 	// Try to find a matching RAP file under dev_usb000.
 	std::string ci_str((const char *)content_id);
-	std::string rap_path(fmt::ToUTF8(wxGetCwd()) + "/dev_usb000/" + ci_str + ".rap");
+	// TODO: This shouldn't use current dir
+	std::string rap_path("./dev_usb000/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!wxFile::Exists(fmt::FromUTF8(rap_path)))
+	if (!rExists(rap_path))
 	{
-		ConLog.Error("This application requires a valid RAP file for decryption!");
+		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
 	// Open the RAP file and read the key.
-	wxFile rap_file(fmt::FromUTF8(rap_path), wxFile::read);
+	rFile rap_file(rap_path, rFile::read);
 
 	if (!rap_file.IsOpened())
 	{
-		ConLog.Error("Failed to load RAP file!");
+		LOG_ERROR(LOADER, "Failed to load RAP file!");
 		return false;
 	}
 
-	ConLog.Write("Loading RAP file %s", (ci_str + ".rap").c_str());
+	LOG_NOTICE(LOADER, "Loading RAP file %s", (ci_str + ".rap").c_str());
 	rap_file.Read(rap_key, 0x10);
 	rap_file.Close();
 
@@ -573,11 +880,11 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	wxFile s(fmt::FromUTF8(self));
+	rFile s(self);
 
 	if(!s.IsOpened())
 	{
-		ConLog.Error("Could not open SELF file! (%s)", self.c_str());
+		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
@@ -589,7 +896,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 	// Check for DEBUG version.
 	if(swap16(key_version) == 0x8000)
 	{
-		ConLog.Warning("Debug SELF detected! Removing fake header...");
+		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
 		s.Seek(0x10);
@@ -601,10 +908,10 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.Seek(elf_offset);
 
 		// Write the real ELF file back.
-		wxFile e(fmt::FromUTF8(elf), wxFile::write);
+		rFile e(elf, rFile::write);
 		if(!e.IsOpened())
 		{
-			ConLog.Error("Could not create ELF file! (%s)", elf.c_str());
+			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 			return false;
 		}
 
@@ -644,28 +951,28 @@ bool DecryptSelf(const std::string& elf, const std::string& self)
 		// Load the SELF file headers.
 		if (!self_dec.LoadHeaders(isElf32))
 		{
-			ConLog.Error("SELF: Failed to load SELF file headers!");
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file headers!");
 			return false;
 		}
 		
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata())
 		{
-			ConLog.Error("SELF: Failed to load SELF file metadata!");
+			LOG_ERROR(LOADER, "SELF: Failed to load SELF file metadata!");
 			return false;
 		}
 		
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
-			ConLog.Error("SELF: Failed to decrypt SELF file data!");
+			LOG_ERROR(LOADER, "SELF: Failed to decrypt SELF file data!");
 			return false;
 		}
 		
 		// Make a new ELF file from this SELF.
 		if (!self_dec.MakeElf(elf, isElf32))
 		{
-			ConLog.Error("SELF: Failed to make ELF file from SELF!");
+			LOG_ERROR(LOADER, "SELF: Failed to make ELF file from SELF!");
 			return false;
 		}
 	}

@@ -1,5 +1,33 @@
 #pragma once
 
+#define roundup(x,a) (((x)+(a)-1)&(~((a)-1)))
+#define SEVIRITY 80.f
+
+#include "Emu/RSX/GCM.h"
+
+enum
+{
+	CELL_RESC_ERROR_NOT_INITIALIZED = 0x80210301,
+	CELL_RESC_ERROR_REINITIALIZED = 0x80210302,
+	CELL_RESC_ERROR_BAD_ALIGNMENT = 0x80210303,
+	CELL_RESC_ERROR_BAD_ARGUMENT = 0x80210304,
+	CELL_RESC_ERROR_LESS_MEMORY = 0x80210305,
+	CELL_RESC_ERROR_GCM_FLIP_QUE_FULL = 0x80210306,
+	CELL_RESC_ERROR_BAD_COMBINATION = 0x80210307,
+};
+
+enum
+{
+	COLOR_BUFFER_ALIGNMENT = 128,
+	VERTEX_BUFFER_ALIGNMENT = 4,
+	FRAGMENT_SHADER_ALIGNMENT = 64,
+	VERTEX_NUMBER_NORMAL = 4,
+
+	SRC_BUFFER_NUM = 8,
+	MAX_DST_BUFFER_NUM = 6,
+	RESC_PARAM_NUM
+};
+
 enum CellRescBufferMode
 {
 	CELL_RESC_720x480   = 0x1, 
@@ -78,4 +106,42 @@ struct CellRescSrc
 	be_t<u16> width;
 	be_t<u16> height;
 	be_t<u32> offset;
+};
+
+struct RescVertex_t
+{
+	be_t<float> Px, Py;
+	be_t<float> u, v;
+	be_t<float> u2, v2;
+};
+
+struct CCellRescInternal
+{
+	CellRescInitConfig m_initConfig;
+	CellRescSrc m_rescSrc[SRC_BUFFER_NUM];
+	u32 m_dstMode;
+	CellRescDsts m_rescDsts[4], *m_pRescDsts;
+	CellRescTableElement m_interlaceElement;
+
+	u32 m_colorBuffersEA, m_vertexArrayEA, m_fragmentUcodeEA;
+	u32 m_bufIdFront;
+	s32 m_dstWidth, m_dstHeight, m_dstPitch;
+	u16 m_srcWidthInterlace, m_srcHeightInterlace;
+	u32 m_dstBufInterval, m_dstOffsets[MAX_DST_BUFFER_NUM];
+	s32 m_nVertex;
+	u32 m_bufIdFrontPrevDrop, m_bufIdPalMidPrev, m_bufIdPalMidNow;
+	u32 m_interlaceTableEA;
+	int m_interlaceTableLength;
+	float m_ratioAdjX, m_ratioAdjY, m_flexRatio;
+	bool m_bInitialized, m_bNewlyAdjustRatio;
+	bool m_isDummyFlipped;
+	u8 m_cgParamIndex[RESC_PARAM_NUM];
+	u64 m_commandIdxCaF, m_rcvdCmdIdx;
+	vm::ptr<void(*)(const u32)> s_applicationFlipHandler;
+	vm::ptr<void(*)(const u32)> s_applicationVBlankHandler;
+
+	CCellRescInternal()
+		: m_bInitialized(false)
+	{
+	}
 };

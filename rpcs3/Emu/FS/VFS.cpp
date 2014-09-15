@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "VFS.h"
+#include "vfsDirBase.h"
 #include "Emu/HDD/HDD.h"
 #include "vfsDeviceLocalFile.h"
+#include "Ini.h"
+
+#undef CreateFile // TODO: what's wrong with it?
 
 int sort_devices(const void* _a, const void* _b)
 {
@@ -14,14 +18,19 @@ int sort_devices(const void* _a, const void* _b)
 	return 0;
 }
 
+VFS::~VFS()
+{
+	UnMountAll();
+}
+
 void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device)
 {
 	UnMount(ps3_path);
 
 	device->SetPath(ps3_path, local_path);
-	m_devices.Add(device);
+	m_devices.push_back(device);
 
-	if(m_devices.GetCount() > 1)
+	if(m_devices.size() > 1)
 	{
 		//std::qsort(m_devices.GetPtr(), m_devices.GetCount(), sizeof(vfsDevice*), sort_devices);
 	}
@@ -29,12 +38,12 @@ void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsD
 
 void VFS::UnMount(const std::string& ps3_path)
 {
-	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	for(u32 i=0; i<m_devices.size(); ++i)
 	{
-		if(!m_devices[i].GetPs3Path().compare(ps3_path))
+		if(!m_devices[i]->GetPs3Path().compare(ps3_path))
 		{
-			delete &m_devices[i];
-			m_devices.RemoveFAt(i);
+			delete m_devices[i];
+			m_devices.erase(m_devices.begin() +i);
 
 			return;
 		}
@@ -43,11 +52,12 @@ void VFS::UnMount(const std::string& ps3_path)
 
 void VFS::UnMountAll()
 {
-	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	for(u32 i=0; i<m_devices.size(); ++i)
 	{
-		delete &m_devices[i];
-		m_devices.RemoveFAt(i);
+		delete m_devices[i];
 	}
+
+	m_devices.clear();
 }
 
 vfsFileBase* VFS::OpenFile(const std::string& ps3_path, vfsOpenMode mode) const
@@ -214,9 +224,9 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 	u32 max_eq;
 	s32 max_i=-1;
 
-	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	for(u32 i=0; i<m_devices.size(); ++i)
 	{
-		const u32 eq = m_devices[i].CmpPs3Path(ps3_path);
+		const u32 eq = m_devices[i]->CmpPs3Path(ps3_path);
 
 		if(max_i < 0 || eq > max_eq)
 		{
@@ -226,8 +236,8 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 	}
 
 	if(max_i < 0) return nullptr;
-	path = vfsDevice::GetWinPath(m_devices[max_i].GetLocalPath(), ps3_path.substr(max_eq, ps3_path.length() - max_eq));
-	return &m_devices[max_i];
+	path = vfsDevice::GetWinPath(m_devices[max_i]->GetLocalPath(), ps3_path.substr(max_eq, ps3_path.length() - max_eq));
+	return m_devices[max_i];
 }
 
 vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path) const
@@ -235,13 +245,13 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 	u32 max_eq;
 	s32 max_i=-1;
 
-	wxFileName file_path(fmt::FromUTF8(local_path));
+	rFileName file_path(local_path);
 	file_path.Normalize();
-	std::string mormalized_path = fmt::ToUTF8(file_path.GetFullPath());
+	std::string mormalized_path = file_path.GetFullPath();
 
-	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	for(u32 i=0; i<m_devices.size(); ++i)
 	{
-		const u32 eq = m_devices[i].CmpLocalPath(mormalized_path);
+		const u32 eq = m_devices[i]->CmpLocalPath(mormalized_path);
 
 		if(max_i < 0 || eq > max_eq)
 		{
@@ -252,8 +262,8 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 
 	if(max_i < 0) return nullptr;
 
-	path = vfsDevice::GetPs3Path(m_devices[max_i].GetPs3Path(), local_path.substr(max_eq, local_path.length() - max_eq));
-	return &m_devices[max_i];
+	path = vfsDevice::GetPs3Path(m_devices[max_i]->GetPs3Path(), local_path.substr(max_eq, local_path.length() - max_eq));
+	return m_devices[max_i];
 }
 
 void VFS::Init(const std::string& path)
@@ -281,10 +291,11 @@ void VFS::Init(const std::string& path)
 			continue;
 		}
 		
-		wxString mpath = entry.path;
-		mpath.Replace("$(EmulatorDir)", wxGetCwd());
-		mpath.Replace("$(GameDir)", fmt::FromUTF8(vfsDevice::GetRoot(path)));
-		Mount(entry.mount, fmt::ToUTF8(mpath), dev);
+		std::string mpath = entry.path;
+		// TODO: This shouldn't use current dir
+		fmt::Replace(mpath,"$(EmulatorDir)", ".");
+		fmt::Replace(mpath,"$(GameDir)", vfsDevice::GetRoot(path));
+		Mount(entry.mount, mpath, dev);
 	}
 }
 
@@ -317,8 +328,8 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	}
 	else
 	{
-		count = res.size();
-		entries_count.SaveValue(res.size());
+		count = (int)res.size();
+		entries_count.SaveValue(count);
 	}
 
 	for(int i=0; i<count; ++i)

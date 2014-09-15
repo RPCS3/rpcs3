@@ -1,6 +1,8 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
 #include "VHDDManager.h"
 #include "TextInputDialog.h"
+#include "Ini.h"
 #include <wx/busyinfo.h>
 
 VHDDListDropTarget::VHDDListDropTarget(wxListView* parent) : m_parent(parent)
@@ -32,7 +34,7 @@ wxDragResult VHDDListDropTarget::OnData(wxCoord x, wxCoord y, wxDragResult def)
 {	
 	int flags = 0;
 	int dst_indx = m_parent->HitTest(wxPoint(x, y), flags);
-	ConLog.Write("OnData(%d -> %d)", m_src_indx, dst_indx);
+	LOG_NOTICE(HLE, "OnData(%d -> %d)", m_src_indx, dst_indx);
 	return def;
 }
 
@@ -57,9 +59,9 @@ VHDDExplorer::VHDDExplorer(wxWindow* parent, const std::string& hdd_path) : wxDi
 	m_list->SetDropTarget(m_drop_target);
 	m_list->DragAcceptFiles(true);
 
-	wxBoxSizer& s_main(*new wxBoxSizer(wxVERTICAL));
-	s_main.Add(m_list, 1, wxEXPAND | wxALL, 5);
-	SetSizerAndFit(&s_main);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(m_list, 1, wxEXPAND | wxALL, 5);
+	SetSizerAndFit(s_main);
 
 	SetSize(800, 600);
 	m_list->InsertColumn(0, "Name");
@@ -69,18 +71,18 @@ VHDDExplorer::VHDDExplorer(wxWindow* parent, const std::string& hdd_path) : wxDi
 
 	m_hdd = new vfsHDD(nullptr, hdd_path);
 	UpdateList();
-	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_BEGIN_DRAG,     wxListEventHandler(VHDDExplorer::OnListDrag));
-	Connect(m_list->GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(VHDDExplorer::DClick));
-	Connect(m_list->GetId(), wxEVT_COMMAND_RIGHT_CLICK,         wxCommandEventHandler(VHDDExplorer::OnContextMenu));
-	m_list->Connect(wxEVT_DROP_FILES, wxDropFilesEventHandler(VHDDExplorer::OnDropFiles), (wxObject*)0, this);
+	m_list->Bind(wxEVT_LIST_BEGIN_DRAG,     &VHDDExplorer::OnListDrag, this);
+	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VHDDExplorer::DClick, this);
+	m_list->Bind(wxEVT_RIGHT_DOWN,          &VHDDExplorer::OnContextMenu, this);
+	m_list->Bind(wxEVT_DROP_FILES,          &VHDDExplorer::OnDropFiles, this);
 
-	Connect(id_open,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnOpen));
-	Connect(id_rename,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRename));
-	Connect(id_remove,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnRemove));
-	Connect(id_create_dir,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateDir));
-	Connect(id_create_file,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnCreateFile));
-	Connect(id_import,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnImport));
-	Connect(id_export,       wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDExplorer::OnExport));
+	Bind(wxEVT_MENU, &VHDDExplorer::OnOpen, this, id_open);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnRename, this, id_rename);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnRemove, this, id_remove);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnCreateDir, this, id_create_dir);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnCreateFile, this, id_create_file);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnImport, this, id_import);
+	Bind(wxEVT_MENU, &VHDDExplorer::OnExport, this, id_export);
 }
 
 void VHDDExplorer::UpdateList()
@@ -188,7 +190,7 @@ void VHDDExplorer::OnDropFiles(wxDropFilesEvent& event)
 
 	for(int i=0; i<count; ++i)
 	{
-		ConLog.Write("Importing '%s'", dropped[i].wx_str());
+		LOG_NOTICE(HLE, "Importing '%s'", dropped[i].wx_str());
 		Import(fmt::ToUTF8(dropped[i]), fmt::ToUTF8(wxFileName(dropped[i]).GetFullName()));
 	}
 
@@ -200,7 +202,7 @@ void VHDDExplorer::DClick(wxListEvent& event)
 	OpenDir(event.GetIndex());
 }
 
-void VHDDExplorer::OnContextMenu(wxCommandEvent& event)
+void VHDDExplorer::OnContextMenu(wxMouseEvent& event)
 {
 	wxMenu* menu = new wxMenu();
 	int idx = m_list->GetFirstSelected();
@@ -215,7 +217,7 @@ void VHDDExplorer::OnContextMenu(wxCommandEvent& event)
 	menu->Append(id_import, "Import");
 	menu->Append(id_export, "Export")->Enable(idx != wxNOT_FOUND);
 
-	PopupMenu( menu );
+	PopupMenu(menu);
 }
 
 void VHDDExplorer::OnOpen(wxCommandEvent& event)
@@ -319,28 +321,28 @@ void VHDDExplorer::OnExport(wxCommandEvent& event)
 	UpdateList();
 }
 
-VHDDSetInfoDialog::VHDDSetInfoDialog(wxWindow* parent) : wxDialog(parent, wxID_ANY, "HDD Settings", wxDefaultPosition)
+VHDDSetInfoDialog::VHDDSetInfoDialog(wxWindow* parent) : wxDialog(parent, wxID_ANY, "HDD Settings")
 {
 	m_spin_size = new wxSpinCtrl(this);
 	m_ch_type = new wxChoice(this, wxID_ANY);
 	m_spin_block_size = new wxSpinCtrl(this);
 
-	wxBoxSizer& s_sinf(*new wxBoxSizer(wxHORIZONTAL));
-	s_sinf.Add(m_spin_size, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_sinf.Add(m_ch_type, wxSizerFlags().Border(wxALL, 5).Expand());
+	wxBoxSizer* s_sinf = new wxBoxSizer(wxHORIZONTAL);
+	s_sinf->Add(m_spin_size, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_sinf->Add(m_ch_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	wxBoxSizer& s_binf(*new wxBoxSizer(wxHORIZONTAL));
-	s_binf.Add(m_spin_block_size, wxSizerFlags().Border(wxALL, 5).Expand());
+	wxBoxSizer* s_binf = new wxBoxSizer(wxHORIZONTAL);
+	s_binf->Add(m_spin_block_size, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	wxBoxSizer& s_btns(*new wxBoxSizer(wxHORIZONTAL));
-	s_btns.Add(new wxButton(this, wxID_OK), wxSizerFlags().Align(wxALIGN_LEFT).Border(wxALL, 5));
-	s_btns.Add(new wxButton(this, wxID_CANCEL), wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxALL, 5));
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK), wxSizerFlags().Align(wxALIGN_LEFT).Border(wxALL, 5));
+	s_btns->Add(new wxButton(this, wxID_CANCEL), wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxALL, 5));
 
-	wxBoxSizer& s_main(*new wxBoxSizer(wxVERTICAL));
-	s_main.Add(&s_sinf, wxSizerFlags().Align(wxALIGN_TOP).Expand());
-	s_main.Add(&s_binf, wxSizerFlags().Align(wxALIGN_TOP).Expand());
-	s_main.Add(&s_btns, wxSizerFlags().Align(wxALIGN_BOTTOM).Expand());
-	SetSizerAndFit(&s_main);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(s_sinf, wxSizerFlags().Align(wxALIGN_TOP).Expand());
+	s_main->Add(s_binf, wxSizerFlags().Align(wxALIGN_TOP).Expand());
+	s_main->Add(s_btns, wxSizerFlags().Align(wxALIGN_BOTTOM).Expand());
+	SetSizerAndFit(s_main);
 
 	m_ch_type->Append("B");
 	m_ch_type->Append("KB");
@@ -352,7 +354,8 @@ VHDDSetInfoDialog::VHDDSetInfoDialog(wxWindow* parent) : wxDialog(parent, wxID_A
 	m_ch_type->SetSelection(3);
 	m_spin_block_size->SetRange(64, 0x7fffffff);
 	m_spin_block_size->SetValue(2048);
-	Connect(wxID_OK, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VHDDSetInfoDialog::OnOk));
+
+	Bind(wxEVT_BUTTON, &VHDDSetInfoDialog::OnOk, this, wxID_OK);
 }
 
 void VHDDSetInfoDialog::OnOk(wxCommandEvent& event)
@@ -376,27 +379,34 @@ void VHDDSetInfoDialog::GetResult(u64& size, u64& block_size)
 }
 
 VHDDManagerDialog::VHDDManagerDialog(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "Virtual HDD Manager", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "Virtual HDD Manager")
 {
 	m_list = new wxListView(this);
 
-	wxBoxSizer& s_main(*new wxBoxSizer(wxVERTICAL));
-	s_main.Add(m_list, 1, wxEXPAND | wxALL, 5);
+	wxBoxSizer* s_btns = new wxBoxSizer(wxHORIZONTAL);
+	s_btns->Add(new wxButton(this, wxID_OK));
+	s_btns->AddSpacer(30);
+	s_btns->Add(new wxButton(this, wxID_CANCEL));
 
-	SetSizerAndFit(&s_main);
+	wxBoxSizer* s_main = new wxBoxSizer(wxVERTICAL);
+	s_main->Add(m_list, 1, wxEXPAND | wxALL, 5);
+       s_main->Add(s_btns,  0, wxALL | wxCENTER, 10);
+
+	SetSizerAndFit(s_main);
 	SetSize(800, 600);
 
 	m_list->InsertColumn(0, "Path");
 	//m_list->InsertColumn(1, "Size");
 	//m_list->InsertColumn(2, "Block size");
-	Connect(m_list->GetId(),    wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(VHDDManagerDialog::DClick));
-	Connect(m_list->GetId(),    wxEVT_COMMAND_RIGHT_CLICK,   wxCommandEventHandler(VHDDManagerDialog::OnContextMenu));
 
-	Connect(id_add_hdd,         wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::AddHDD));
-	Connect(id_open,            wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnOpen));
-	Connect(id_remove,          wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnRemove));
-	Connect(id_create_hdd,      wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(VHDDManagerDialog::OnCreateHDD));
-	Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(VHDDManagerDialog::OnClose));
+	m_list->Bind(wxEVT_LIST_ITEM_ACTIVATED, &VHDDManagerDialog::DClick, this);
+	m_list->Bind(wxEVT_RIGHT_DOWN, &VHDDManagerDialog::OnContextMenu, this);
+
+	Bind(wxEVT_MENU, &VHDDManagerDialog::AddHDD, this, id_add_hdd);
+	Bind(wxEVT_MENU, &VHDDManagerDialog::OnOpen, this, id_open);
+	Bind(wxEVT_MENU, &VHDDManagerDialog::OnRemove, this, id_remove);
+	Bind(wxEVT_MENU, &VHDDManagerDialog::OnCreateHDD, this, id_create_hdd);
+	Bind(wxEVT_BUTTON, &VHDDManagerDialog::OnOk, this, wxID_OK);
 	LoadPaths();
 	UpdateList();
 }
@@ -461,7 +471,7 @@ void VHDDManagerDialog::AddHDD(wxCommandEvent& event)
 	UpdateList();
 }
 
-void VHDDManagerDialog::OnContextMenu(wxCommandEvent& event)
+void VHDDManagerDialog::OnContextMenu(wxMouseEvent& event)
 {
 	wxMenu* menu = new wxMenu();
 	int idx = m_list->GetFirstSelected();
@@ -511,7 +521,7 @@ void VHDDManagerDialog::OnCreateHDD(wxCommandEvent& event)
 	}
 }
 
-void VHDDManagerDialog::OnClose(wxCloseEvent& event)
+void VHDDManagerDialog::OnOk(wxCommandEvent& event)
 {
 	SavePaths();
 	event.Skip();
@@ -521,7 +531,7 @@ void VHDDManagerDialog::LoadPaths()
 {
 	IniEntry<int> path_count;
 	path_count.Init("path_count", "HDDManager");
-	int count = 0;
+	size_t count = 0;
 	count = path_count.LoadValue(count);
 
 	for(size_t i=0; i<count; ++i)

@@ -1,4 +1,7 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+
 #include "MemoryViewer.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
@@ -10,79 +13,79 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	m_rowcount = 16;
 
 	this->SetBackgroundColour(wxColour(240,240,240)); //This fix the ugly background color under Windows
-	wxBoxSizer& s_panel = *new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
 
 	//Tools
-	wxBoxSizer& s_tools = *new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_tools = new wxBoxSizer(wxHORIZONTAL);
 
 	//Tools: Memory Viewer Options
-	wxStaticBoxSizer& s_tools_mem = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
+	wxStaticBoxSizer* s_tools_mem = new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
 
-	wxStaticBoxSizer& s_tools_mem_addr = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Address");
+	wxStaticBoxSizer* s_tools_mem_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address");
 	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60,-1));
 	t_addr->SetMaxLength(8);
-	s_tools_mem_addr.Add(t_addr);
+	s_tools_mem_addr->Add(t_addr);
 
-	wxStaticBoxSizer& s_tools_mem_bytes = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Bytes");
+	wxStaticBoxSizer* s_tools_mem_bytes = new wxStaticBoxSizer(wxHORIZONTAL, this, "Bytes");
 	sc_bytes = new wxSpinCtrl(this, wxID_ANY, "16", wxDefaultPosition, wxSize(44,-1));
 	sc_bytes->SetRange(1, 16);
-	s_tools_mem_bytes.Add(sc_bytes);
+	s_tools_mem_bytes->Add(sc_bytes);
 
-	wxStaticBoxSizer& s_tools_mem_buttons = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Control");
+	wxStaticBoxSizer* s_tools_mem_buttons = new wxStaticBoxSizer(wxHORIZONTAL, this, "Control");
 	wxButton* b_fprev = new wxButton(this, wxID_ANY, "<<", wxDefaultPosition, wxSize(21, 21));
 	wxButton* b_prev  = new wxButton(this, wxID_ANY, "<", wxDefaultPosition, wxSize(21, 21));
 	wxButton* b_next  = new wxButton(this, wxID_ANY, ">", wxDefaultPosition, wxSize(21, 21));
 	wxButton* b_fnext = new wxButton(this, wxID_ANY, ">>", wxDefaultPosition, wxSize(21, 21));
-	s_tools_mem_buttons.Add(b_fprev);
-	s_tools_mem_buttons.Add(b_prev);
-	s_tools_mem_buttons.Add(b_next);
-	s_tools_mem_buttons.Add(b_fnext);
+	s_tools_mem_buttons->Add(b_fprev);
+	s_tools_mem_buttons->Add(b_prev);
+	s_tools_mem_buttons->Add(b_next);
+	s_tools_mem_buttons->Add(b_fnext);
 
-	s_tools_mem.Add(&s_tools_mem_addr);
-	s_tools_mem.Add(&s_tools_mem_bytes);
-	s_tools_mem.Add(&s_tools_mem_buttons);
+	s_tools_mem->Add(s_tools_mem_addr);
+	s_tools_mem->Add(s_tools_mem_bytes);
+	s_tools_mem->Add(s_tools_mem_buttons);
 
 	//Tools: Raw Image Preview Options
-	wxStaticBoxSizer& s_tools_img = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Raw Image Preview");
+	wxStaticBoxSizer* s_tools_img = new wxStaticBoxSizer(wxHORIZONTAL, this, "Raw Image Preview");
 
-	wxStaticBoxSizer& s_tools_img_size = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Size");
+	wxStaticBoxSizer* s_tools_img_size = new wxStaticBoxSizer(wxHORIZONTAL, this, "Size");
 	sc_img_size_x = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60,-1));
 	sc_img_size_y = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60,-1));
-	s_tools_img_size.Add(sc_img_size_x);
-	s_tools_img_size.Add(new wxStaticText(this, wxID_ANY, " x "));
-	s_tools_img_size.Add(sc_img_size_y);
+	s_tools_img_size->Add(sc_img_size_x);
+	s_tools_img_size->Add(new wxStaticText(this, wxID_ANY, " x "));
+	s_tools_img_size->Add(sc_img_size_y);
 
 	sc_img_size_x->SetRange(1, 8192);
 	sc_img_size_y->SetRange(1, 8192);
 
-	wxStaticBoxSizer& s_tools_img_mode = *new wxStaticBoxSizer(wxHORIZONTAL, this, "Mode");
+	wxStaticBoxSizer* s_tools_img_mode = new wxStaticBoxSizer(wxHORIZONTAL, this, "Mode");
 	cbox_img_mode = new wxComboBox(this, wxID_ANY);
 	cbox_img_mode->Append("RGB");
 	cbox_img_mode->Append("ARGB");
 	cbox_img_mode->Append("RGBA");
 	cbox_img_mode->Append("ABGR");
 	cbox_img_mode->Select(1); //ARGB
-	s_tools_img_mode.Add(cbox_img_mode);
+	s_tools_img_mode->Add(cbox_img_mode);
 
-	s_tools_img.Add(&s_tools_img_size);
-	s_tools_img.Add(&s_tools_img_mode);
+	s_tools_img->Add(s_tools_img_size);
+	s_tools_img->Add(s_tools_img_mode);
 
 	//Tools: Run tools
-	wxStaticBoxSizer& s_tools_buttons = *new wxStaticBoxSizer(wxVERTICAL, this, "Tools");
+	wxStaticBoxSizer* s_tools_buttons = new wxStaticBoxSizer(wxVERTICAL, this, "Tools");
 	wxButton* b_img = new wxButton(this, wxID_ANY, "View\nimage", wxDefaultPosition, wxSize(52,-1));
-	s_tools_buttons.Add(b_img);
+	s_tools_buttons->Add(b_img);
 
 	//Tools: Tools = Memory Viewer Options + Raw Image Preview Options + Buttons
-	s_tools.AddSpacer(10);
-	s_tools.Add(&s_tools_mem);
-	s_tools.AddSpacer(10);
-	s_tools.Add(&s_tools_img);
-	s_tools.AddSpacer(10);
-	s_tools.Add(&s_tools_buttons);
-	s_tools.AddSpacer(10);
+	s_tools->AddSpacer(10);
+	s_tools->Add(s_tools_mem);
+	s_tools->AddSpacer(10);
+	s_tools->Add(s_tools_img);
+	s_tools->AddSpacer(10);
+	s_tools->Add(s_tools_buttons);
+	s_tools->AddSpacer(10);
 
 	//Memory Panel
-	wxBoxSizer& s_mem_panel = *new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_mem_panel = new wxBoxSizer(wxHORIZONTAL);
 	t_mem_addr  = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxNO_BORDER|wxTE_READONLY);
 	t_mem_hex   = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxNO_BORDER|wxTE_READONLY);
 	t_mem_ascii = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxNO_BORDER|wxTE_READONLY);
@@ -96,11 +99,11 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	t_mem_hex  ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	t_mem_ascii->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-	s_mem_panel.AddSpacer(10);
-	s_mem_panel.Add(t_mem_addr);
-	s_mem_panel.Add(t_mem_hex);
-	s_mem_panel.Add(t_mem_ascii);
-	s_mem_panel.AddSpacer(10);
+	s_mem_panel->AddSpacer(10);
+	s_mem_panel->Add(t_mem_addr);
+	s_mem_panel->Add(t_mem_hex);
+	s_mem_panel->Add(t_mem_ascii);
+	s_mem_panel->AddSpacer(10);
 
 	//Memory Panel: Set size of the wxTextCtrl's
 	int x, y;
@@ -111,27 +114,29 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	t_mem_ascii->SetMaxSize(wxSize(x * m_colcount + 6, 228));
 
 	//Merge and display everything
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_tools);
-	s_panel.AddSpacer(10);
-	s_panel.Add(&s_mem_panel, 0, 0, 100);
-	s_panel.AddSpacer(10);
-	SetSizerAndFit(&s_panel);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_tools);
+	s_panel->AddSpacer(10);
+	s_panel->Add(s_mem_panel, 0, 0, 100);
+	s_panel->AddSpacer(10);
+	SetSizerAndFit(s_panel);
 
 	//Events
-	Connect(t_addr->GetId(),   wxEVT_COMMAND_TEXT_ENTER,       wxCommandEventHandler(MemoryViewerPanel::OnChangeToolsAddr) );
-	Connect(sc_bytes->GetId(), wxEVT_COMMAND_TEXT_ENTER,       wxCommandEventHandler(MemoryViewerPanel::OnChangeToolsBytes) );
-	Connect(sc_bytes->GetId(), wxEVT_COMMAND_SPINCTRL_UPDATED, wxCommandEventHandler(MemoryViewerPanel::OnChangeToolsBytes) );
+	t_addr  ->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsAddr, this);
+	sc_bytes->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsBytes, this);
+	t_addr  ->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsAddr, this);
+	sc_bytes->Bind(wxEVT_TEXT_ENTER, &MemoryViewerPanel::OnChangeToolsBytes, this);
+	sc_bytes->Bind(wxEVT_SPINCTRL,   &MemoryViewerPanel::OnChangeToolsBytes, this);
 
-	Connect(b_prev->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::Prev));
-	Connect(b_next->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::Next));
-	Connect(b_fprev->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::fPrev));
-	Connect(b_fnext->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::fNext));
-	Connect(b_img->GetId(),   wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::OnShowImage));
+	b_prev ->Bind(wxEVT_BUTTON, &MemoryViewerPanel::Prev, this);
+	b_next ->Bind(wxEVT_BUTTON, &MemoryViewerPanel::Next, this);
+	b_fprev->Bind(wxEVT_BUTTON, &MemoryViewerPanel::fPrev, this);
+	b_fnext->Bind(wxEVT_BUTTON, &MemoryViewerPanel::fNext, this);
+	b_img  ->Bind(wxEVT_BUTTON, &MemoryViewerPanel::OnShowImage, this);
 
-	t_mem_addr ->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(MemoryViewerPanel::OnScrollMemory), NULL, this);
-	t_mem_hex  ->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(MemoryViewerPanel::OnScrollMemory), NULL, this);
-	t_mem_ascii->Connect(wxEVT_MOUSEWHEEL, wxMouseEventHandler(MemoryViewerPanel::OnScrollMemory), NULL, this);
+	t_mem_addr ->Bind(wxEVT_MOUSEWHEEL, &MemoryViewerPanel::OnScrollMemory, this);
+	t_mem_hex  ->Bind(wxEVT_MOUSEWHEEL, &MemoryViewerPanel::OnScrollMemory, this);
+	t_mem_ascii->Bind(wxEVT_MOUSEWHEEL, &MemoryViewerPanel::OnScrollMemory, this);
 	
 	//Fill the wxTextCtrl's
 	ShowMemory();
@@ -189,20 +194,26 @@ void MemoryViewerPanel::ShowMemory()
 		t_mem_addr_str += wxString::Format("%08x ", addr);
 	}
 
-	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr++)
+	for (u32 row = 0; row < m_rowcount; row++)
 	{
-		if (Memory.IsGoodAddr(addr))
+		for (u32 col = 0; col < m_colcount; col++)
 		{
-			const u8 rmem = Memory.Read8(addr);
-			t_mem_hex_str += wxString::Format("%02x ", rmem);
-			const wxString c_rmem = wxString::Format("%c", rmem);
-			t_mem_ascii_str += c_rmem.IsEmpty() ? "." : c_rmem;
+			u32 addr = m_addr + row * m_colcount + col;	
+
+			if (Memory.IsGoodAddr(addr))
+			{
+				const u8 rmem = vm::read8(addr);
+				t_mem_hex_str += wxString::Format("%02x ", rmem);
+				const bool isPrintable = rmem >= 32 && rmem <= 126;
+				t_mem_ascii_str += isPrintable ? std::string(1, rmem) : ".";
+			}
+			else
+			{
+				t_mem_hex_str += "?? ";
+				t_mem_ascii_str += "?";
+			}
 		}
-		else
-		{
-			t_mem_hex_str += "?? ";
-			t_mem_ascii_str += "?";
-		}
+		t_mem_ascii_str += "\r\n";
 	}
 
 	t_mem_addr->SetValue(t_mem_addr_str);
@@ -210,7 +221,7 @@ void MemoryViewerPanel::ShowMemory()
 	t_mem_ascii->SetValue(t_mem_ascii_str);
 }
 
-void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, int width, int height, bool flipv)
+void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
 	wxString title = wxString::Format("Raw Image @ 0x%x", addr);
 	
@@ -222,7 +233,7 @@ void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, int widt
 	f_image_viewer->Show();
 	wxClientDC dc_canvas(f_image_viewer);
 
-	unsigned char* originalBuffer  = (unsigned char*)Memory.VirtualToRealAddr(addr);
+	unsigned char* originalBuffer  = vm::get_ptr<unsigned char>(addr);
 	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 3);
 	switch(mode)
 	{

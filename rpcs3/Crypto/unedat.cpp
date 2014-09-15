@@ -1,5 +1,9 @@
 #include "stdafx.h"
+#include "utils.h"
+#include "key_vault.h"
 #include "unedat.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
@@ -73,7 +77,7 @@ bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsi
 	}
 	else
 	{
-		ConLog.Error("EDAT: Unknown crypto algorithm!\n");
+		LOG_ERROR(LOADER, "EDAT: Unknown crypto algorithm!\n");
 		return false;
 	}
 
@@ -91,7 +95,7 @@ bool crypto(int hash_mode, int crypto_mode, int version, unsigned char *in, unsi
 	}
 	else
 	{
-		ConLog.Error("EDAT: Unknown hashing algorithm!\n");
+		LOG_ERROR(LOADER, "EDAT: Unknown hashing algorithm!\n");
 		return false;
 	}
 }
@@ -132,7 +136,7 @@ unsigned char* get_block_key(int block, NPD_HEADER *npd)
 }
 
 // EDAT/SDAT functions.
-int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(rFile *in, rFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
 {
 	// Get metadata info and setup buffers.
 	int block_num = (int) ((edat->file_size + edat->block_size - 1) / edat->block_size);
@@ -155,6 +159,12 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 		int length = 0;
 		int compression_end = 0;
 
+		if ((edat->flags & EDAT_FLAG_0x04) != 0)
+		{
+			LOG_ERROR(LOADER, "EDAT: Flag 0x04 is not yet supported");
+			return -1;
+		}
+		
 		if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 		{
 			unsigned char metadata[0x20];
@@ -261,15 +271,15 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 			memset(decomp_data, 0, decomp_size);
 
 			if (verbose)
-				ConLog.Write("EDAT: Decompressing...\n");
+				LOG_NOTICE(LOADER, "EDAT: Decompressing...\n");
 			
 			int res = lz_decompress(decomp_data, dec_data, decomp_size);
 			out->Write(decomp_data, res);
 			
 			if (verbose)
 			{
-				ConLog.Write("EDAT: Compressed block size: %d\n", pad_length);
-				ConLog.Write("EDAT: Decompressed block size: %d\n", res);
+				LOG_NOTICE(LOADER, "EDAT: Compressed block size: %d\n", pad_length);
+				LOG_NOTICE(LOADER, "EDAT: Decompressed block size: %d\n", res);
 			}
 
 			edat->file_size -= res;
@@ -278,11 +288,11 @@ int decrypt_data(wxFile *in, wxFile *out, EDAT_SDAT_HEADER *edat, NPD_HEADER *np
 			{
 				if (res < 0)
 				{
-					ConLog.Error("EDAT: Decompression failed!\n");
+					LOG_ERROR(LOADER, "EDAT: Decompression failed!\n");
 					return 1;
 				}
 				else
-					ConLog.Success("EDAT: Data successfully decompressed!\n");	
+					LOG_SUCCESS(LOADER, "EDAT: Data successfully decompressed!\n");
 			}
 
 			delete[] decomp_data;
@@ -308,7 +318,7 @@ static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
 	{
 		if (edat->flags & 0x7EFFFFFE) 
 		{
-			ConLog.Error("EDAT: Bad header flags!\n");
+			LOG_ERROR(LOADER, "EDAT: Bad header flags!\n");
 			return false;
 		}
 	}
@@ -316,7 +326,7 @@ static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
 	{
 		if (edat->flags & 0x7EFFFFE0) 
 		{
-			ConLog.Error("EDAT: Bad header flags!\n");
+			LOG_ERROR(LOADER, "EDAT: Bad header flags!\n");
 			return false;
 		}
 	}
@@ -324,20 +334,20 @@ static bool check_flags(EDAT_SDAT_HEADER *edat, NPD_HEADER *npd)
 	{
 		if (edat->flags & 0x7EFFFFC0)
 		{
-			ConLog.Error("EDAT: Bad header flags!\n");
+			LOG_ERROR(LOADER, "EDAT: Bad header flags!\n");
 			return false;
 		}
 	}
 	else if (npd->version > 4)
 	{
-		ConLog.Error("EDAT: Unknown version - %d\n", npd->version);
+		LOG_ERROR(LOADER, "EDAT: Unknown version - %d\n", npd->version);
 		return false;
 	}
 
 	return true;
 }
 
-int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFile *f, bool verbose)
+int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, rFile *f, bool verbose)
 {
 	f->Seek(0);
 	unsigned char *header = new unsigned char[0xA0];
@@ -363,7 +373,7 @@ int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFi
 	int hash_mode = ((edat->flags & EDAT_ENCRYPTED_KEY_FLAG) == 0) ? 0x00000002 : 0x10000002;
 	if ((edat->flags & EDAT_DEBUG_DATA_FLAG) != 0)
 	{
-		ConLog.Warning("EDAT: DEBUG data detected!\n");
+		LOG_ERROR(LOADER, "EDAT: DEBUG data detected!\n");
 		hash_mode |= 0x01000000;
 	}
 
@@ -375,14 +385,14 @@ int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFi
 	if (!crypto(hash_mode, crypto_mode, (npd->version == 4), header, tmp, 0xA0, header_key, header_iv, key, hash_result))
 	{
 		if (verbose)
-			ConLog.Warning("EDAT: Header hash is invalid!\n");
+			LOG_WARNING(LOADER, "EDAT: Header hash is invalid!\n");
 	}
 
 	// Parse the metadata info.
 	int metadata_section_size = 0x10;
 	if (((edat->flags & EDAT_COMPRESSED_FLAG) != 0))
 	{
-		ConLog.Warning("EDAT: COMPRESSED data detected!\n");
+		LOG_WARNING(LOADER, "EDAT: COMPRESSED data detected!\n");
 		metadata_section_size = 0x20;
 	}
 
@@ -411,7 +421,7 @@ int check_data(unsigned char *key, EDAT_SDAT_HEADER *edat, NPD_HEADER *npd, wxFi
 		if (!crypto(hash_mode, crypto_mode, (npd->version == 4), data, tmp, block_size, header_key, header_iv, key, hash_result))
 		{
 			if (verbose)
-				ConLog.Warning("EDAT: Metadata hash from block 0x%08x is invalid!\n", metadata_offset + bytes_read);
+				LOG_WARNING(LOADER, "EDAT: Metadata hash from block 0x%08x is invalid!\n", metadata_offset + bytes_read);
 		}
 
 		// Adjust sizes.
@@ -434,7 +444,7 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	int title_hash_result = 0;
 	int dev_hash_result = 0;
 
-	int file_name_length = strlen(file_name);
+	int file_name_length = (int)strlen(file_name);
 	unsigned char *buf = new unsigned char[0x30 + file_name_length];
 	unsigned char key[0x10];
 
@@ -448,9 +458,9 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	if (verbose)
 	{
 		if (title_hash_result)
-			ConLog.Success("EDAT: NPD title hash is valid!\n");
+			LOG_SUCCESS(LOADER, "EDAT: NPD title hash is valid!\n");
 		else 
-			ConLog.Warning("EDAT: NPD title hash is invalid!\n");
+			LOG_WARNING(LOADER, "EDAT: NPD title hash is invalid!\n");
 	}
 
 	// Check for an empty dev_hash (can't validate if devklic is NULL);
@@ -467,7 +477,7 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 	if (isDevklicEmpty)
 	{
 		if (verbose)
-			ConLog.Warning("EDAT: NPD dev hash is empty!\n");
+			LOG_WARNING(LOADER, "EDAT: NPD dev hash is empty!\n");
 	}
 	else
 	{
@@ -480,16 +490,16 @@ void validate_data(const char* file_name, unsigned char *klicensee, NPD_HEADER *
 		if (verbose)
 		{
 			if (dev_hash_result)
-				ConLog.Success("EDAT: NPD dev hash is valid!\n");
+				LOG_SUCCESS(LOADER, "EDAT: NPD dev hash is valid!\n");
 			else 
-				ConLog.Warning("EDAT: NPD dev hash is invalid!\n");
+				LOG_WARNING(LOADER, "EDAT: NPD dev hash is invalid!\n");
 		}
 	}
 
 	delete[] buf;
 }
 
-bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
+bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER *NPD = new NPD_HEADER();
@@ -515,7 +525,7 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 	unsigned char npd_magic[4] = {0x4E, 0x50, 0x44, 0x00};  //NPD0
 	if(memcmp(NPD->magic, npd_magic, 4))
 	{
-		ConLog.Error("EDAT: File has invalid NPD header.");
+		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
 		delete NPD;
 		delete EDAT;
 		return 1;
@@ -527,16 +537,16 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 
 	if (verbose)
 	{
-		ConLog.Write("NPD HEADER\n");
-		ConLog.Write("NPD version: %d\n", NPD->version);
-		ConLog.Write("NPD license: %d\n", NPD->license);
-		ConLog.Write("NPD type: %d\n", NPD->type);
-		ConLog.Write("\n");
-		ConLog.Write("EDAT HEADER\n");
-		ConLog.Write("EDAT flags: 0x%08X\n", EDAT->flags);
-		ConLog.Write("EDAT block size: 0x%08X\n", EDAT->block_size);
-		ConLog.Write("EDAT file size: 0x%08X\n", EDAT->file_size);
-		ConLog.Write("\n");
+		LOG_NOTICE(LOADER, "NPD HEADER\n");
+		LOG_NOTICE(LOADER, "NPD version: %d\n", NPD->version);
+		LOG_NOTICE(LOADER, "NPD license: %d\n", NPD->license);
+		LOG_NOTICE(LOADER, "NPD type: %d\n", NPD->type);
+		LOG_NOTICE(LOADER, "\n");
+		LOG_NOTICE(LOADER, "EDAT HEADER\n");
+		LOG_NOTICE(LOADER, "EDAT flags: 0x%08X\n", EDAT->flags);
+		LOG_NOTICE(LOADER, "EDAT block size: 0x%08X\n", EDAT->block_size);
+		LOG_NOTICE(LOADER, "EDAT file size: 0x%08X\n", EDAT->file_size);
+		LOG_NOTICE(LOADER, "\n");
 	}
 
 	// Set decryption key.
@@ -545,7 +555,7 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 
 	if((EDAT->flags & SDAT_FLAG) == SDAT_FLAG)
 	{
-		ConLog.Warning("EDAT: SDAT detected!\n");
+		LOG_WARNING(LOADER, "EDAT: SDAT detected!\n");
 		xor_(key, NPD->dev_hash, SDAT_KEY, 0x10);
 	}
 	else
@@ -572,7 +582,7 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 			
 			if (!test)
 			{
-				ConLog.Error("EDAT: A valid RAP file is needed!");
+				LOG_ERROR(LOADER, "EDAT: A valid RAP file is needed!");
 				delete NPD;
 				delete EDAT;
 				return 1;
@@ -580,19 +590,19 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 		}
 	}
 
-	ConLog.Write("EDAT: Parsing data...\n");
+	LOG_NOTICE(LOADER, "EDAT: Parsing data...\n");
 	if (check_data(key, EDAT, NPD, input, verbose))
-		ConLog.Error("EDAT: Data parsing failed!\n");
+		LOG_ERROR(LOADER, "EDAT: Data parsing failed!\n");
 	else
-		ConLog.Success("EDAT: Data successfully parsed!\n");
+		LOG_SUCCESS(LOADER, "EDAT: Data successfully parsed!\n");
 
 	printf("\n");
 
-	ConLog.Write("EDAT: Decrypting data...\n");
+	LOG_NOTICE(LOADER, "EDAT: Decrypting data...\n");
 	if (decrypt_data(input, output, EDAT, NPD, key, verbose))
-		ConLog.Error("EDAT: Data decryption failed!");
+		LOG_ERROR(LOADER, "EDAT: Data decryption failed!");
 	else
-		ConLog.Success("EDAT: Data successfully decrypted!");
+		LOG_SUCCESS(LOADER, "EDAT: Data successfully decrypted!");
 
 	delete NPD;
 	delete EDAT;
@@ -603,9 +613,9 @@ bool extract_data(wxFile *input, wxFile *output, const char* input_file_name, un
 int DecryptEDAT(const std::string& input_file_name, const std::string& output_file_name, int mode, const std::string& rap_file_name, unsigned char *custom_klic, bool verbose)
 {
 	// Prepare the files.
-	wxFile input(input_file_name.c_str());
-	wxFile output(output_file_name.c_str(), wxFile::write);
-	wxFile rap(rap_file_name.c_str());
+	rFile input(input_file_name.c_str());
+	rFile output(output_file_name.c_str(), rFile::write);
+	rFile rap(rap_file_name.c_str());
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -645,21 +655,21 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 				memcpy(devklic, custom_klic, 0x10);
 			else
 			{
-				ConLog.Error("EDAT: Invalid custom klic!\n");
+				LOG_ERROR(LOADER, "EDAT: Invalid custom klic!\n");
 				return -1;
 			}
 
 			break;
 		}
 	default:
-		ConLog.Error("EDAT: Invalid mode!\n");
+		LOG_ERROR(LOADER, "EDAT: Invalid mode!\n");
 		return -1;
 	}
 	
 	// Check the input/output files.
 	if (!input.IsOpened() || !output.IsOpened())
 	{
-		ConLog.Error("EDAT: Failed to open files!\n");
+		LOG_ERROR(LOADER, "EDAT: Failed to open files!\n");
 		return -1;
 	}
 
@@ -681,7 +691,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	{
 		input.Close();
 		output.Close();
-		wxRemoveFile(output_file_name);
+		rRemoveFile(output_file_name);
 		return 0;
 	}
 	

@@ -1,3 +1,5 @@
+#pragma once
+
 class RegisterEditorDialog : public wxDialog
 {
 	u64 pc;
@@ -18,23 +20,23 @@ public:
 };
 
 RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* _CPU, CPUDecoder* _decoder, CPUDisAsm* _disasm)
-	: wxDialog(parent, wxID_ANY, "Edit registers", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "Edit registers")
 	, pc(_pc)
 	, CPU(_CPU)
 	, decoder(_decoder)
 	, disasm(_disasm)
 {
-	wxBoxSizer* s_panel_margin_x(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_panel_margin_y(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_panel_margin_x = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_panel_margin_y = new wxBoxSizer(wxVERTICAL);
 
-	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_t1_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_t2_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_t3_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
+	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_t1_panel = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_t2_panel = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_t3_panel = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_b_panel = new wxBoxSizer(wxHORIZONTAL);
 
 	wxStaticText* t1_text = new wxStaticText(this, wxID_ANY, "Register:     ");
-	t1_register = new wxComboBox(this, wxID_ANY, wxEmptyString);
+	t1_register = new wxComboBox(this, wxID_ANY);
 	wxStaticText* t2_text = new wxStaticText(this, wxID_ANY, "Value (Hex):");
 	t2_value = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(200,-1));
 
@@ -63,7 +65,7 @@ RegisterEditorDialog::RegisterEditorDialog(wxPanel *parent, u64 _pc, CPUThread* 
 	s_panel_margin_x->Add(s_panel_margin_y);
 	s_panel_margin_x->AddSpacer(12);
 
-	Connect(wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler(RegisterEditorDialog::updateRegister));
+	Bind(wxEVT_COMBOBOX, &RegisterEditorDialog::updateRegister, this);
 
 	switch(CPU->GetType())
 	{

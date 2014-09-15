@@ -95,7 +95,7 @@ public:
 
 	SRType DecodeImmShift(u8 type, u8 imm5, uint* shift_n)
 	{
-		SRType shift_t;
+		SRType shift_t = SRType_None;
 
 		switch(type)
 		{
@@ -119,7 +119,7 @@ public:
 
 	SRType DecodeRegShift(u8 type)
 	{
-		SRType shift_t;
+		SRType shift_t = SRType_None;
 
 		switch(type)
 		{
@@ -233,9 +233,9 @@ public:
 		return result;
 	}
 
-	bool ConditionPassed(u8 cond)
+	bool ConditionPassed(u8 cond) const
 	{
-		bool result;
+		bool result = false;
 
 		switch(cond >> 1)
 		{
@@ -260,7 +260,7 @@ public:
 protected:
 	void NULL_OP()
 	{
-		ConLog.Error("null");
+		LOG_ERROR(HLE, "null");
 		Emu.Pause();
 	}
 
@@ -275,7 +275,7 @@ protected:
 			if(regs_list & mask)
 			{
 				CPU.SP -= 4;
-				Memory.Write32(CPU.SP, CPU.read_gpr(i));
+				vm::psv::write32(CPU.SP, CPU.read_gpr(i));
 			}
 		}
 	}
@@ -286,7 +286,7 @@ protected:
 		{
 			if(regs_list & mask)
 			{
-				CPU.write_gpr(i, Memory.Read32(CPU.SP));
+				CPU.write_gpr(i, vm::psv::read32(CPU.SP));
 				CPU.SP += 4;
 			}
 		}
@@ -316,7 +316,7 @@ protected:
 
 	void UNK(const u16 code0, const u16 code1)
 	{
-		ConLog.Error("Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1);
+		LOG_ERROR(HLE, "Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1);
 		Emu.Pause();
 	}
 };

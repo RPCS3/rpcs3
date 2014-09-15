@@ -1,10 +1,11 @@
 #pragma once
 #include "vfsFileBase.h"
+#include "Utilities/rFile.h"
 
 class vfsLocalFile : public vfsFileBase
 {
 private:
-	wxFile m_file;
+	rFile m_file;
 
 public:
 	vfsLocalFile(vfsDevice* device);
@@ -12,6 +13,7 @@ public:
 	virtual bool Open(const std::string& path, vfsOpenMode mode = vfsRead) override;
 	virtual bool Create(const std::string& path) override;
 	virtual bool Close() override;
+	virtual bool Exists(const std::string& path) override;
 
 	virtual u64 GetSize() override;
 

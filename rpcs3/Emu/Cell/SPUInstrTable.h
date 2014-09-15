@@ -1,5 +1,4 @@
 #pragma once
-#include "PPCInstrTable.h"
 #include "PPCDecoder.h"
 #include "SPUOpcodes.h"
 
@@ -39,7 +38,9 @@ namespace SPU_instr
 	static CodeField<18, 31> L_18_31;
 	static CodeField<11> L_11;
 
-	static auto rrr_list = new_list<SPUOpcodes>(RRR);
+	// static auto rrr_list = new_list<SPUOpcodes>(RRR);
+	static InstrList<1 << CodeField<0, 3>::size, SPUOpcodes> rrr_list_obj(RRR, nullptr);
+	static auto rrr_list = &rrr_list_obj;
 	static auto ri18_list = new_list(rrr_list, RI18);
 	static auto ri10_list = new_list(ri18_list, RI10);
 	static auto ri16_list = new_list(ri10_list, RI16);
@@ -86,16 +87,16 @@ namespace SPU_instr
 	bind_instr(ri7_list, AVGB, RT, RA, RB);
 	bind_instr(ri7_list, MTSPR, RT, RA);
 	bind_instr(ri7_list, WRCH, RA, RT);
-	bind_instr(ri7_list, BIZ, RT, RA);
-	bind_instr(ri7_list, BINZ, RT, RA);
-	bind_instr(ri7_list, BIHZ, RT, RA);
-	bind_instr(ri7_list, BIHNZ, RT, RA);
+	bind_instr(ri7_list, BIZ, RB, RT, RA);
+	bind_instr(ri7_list, BINZ, RB, RT, RA);
+	bind_instr(ri7_list, BIHZ, RB, RT, RA);
+	bind_instr(ri7_list, BIHNZ, RB, RT, RA);
 	bind_instr(ri7_list, STOPD, RT, RA, RB);
 	bind_instr(ri7_list, STQX, RT, RA, RB);
-	bind_instr(ri7_list, BI, RA);
-	bind_instr(ri7_list, BISL, RT, RA);
+	bind_instr(ri7_list, BI, RB, RA);
+	bind_instr(ri7_list, BISL, RB, RT, RA);
 	bind_instr(ri7_list, IRET, RA);
-	bind_instr(ri7_list, BISLED, RT, RA);
+	bind_instr(ri7_list, BISLED, RB, RT, RA);
 	bind_instr(ri7_list, HBR, L_11, RO, RA);
 	bind_instr(ri7_list, GB, RT, RA);
 	bind_instr(ri7_list, GBH, RT, RA);

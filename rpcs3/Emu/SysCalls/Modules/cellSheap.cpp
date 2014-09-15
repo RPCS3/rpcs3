@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellSheap_init();
 Module cellSheap(0x000c, cellSheap_init);
@@ -146,3 +145,4 @@ void cellSheap_init()
 	cellSheap.AddFunc(0x987e260e, cellKeySheapQueueNew);
 	cellSheap.AddFunc(0x79a6abd0, cellKeySheapQueueDelete);
 }
+#endif

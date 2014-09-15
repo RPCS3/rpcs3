@@ -1,11 +1,12 @@
 #pragma once
 
+class PPCThread;
+
 class DisAsmFrame : public wxFrame
 {
 	static const uint LINES_OPCODES = 40;
 	u32 count;
 
-	AppConnector m_app_connector;
 	wxListView* m_disasm_list;
 	PPCThread& CPU;
 

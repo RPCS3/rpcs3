@@ -1,7 +1,7 @@
 #pragma once
 #include "vfsStream.h"
 
-enum vfsOpenMode
+enum vfsOpenMode : u8
 {
 	vfsRead = 0x1,
 	vfsWrite = 0x2,

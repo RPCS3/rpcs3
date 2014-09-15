@@ -1,8 +1,11 @@
-#include "stdafx.h"
-#include "DisAsmFrame.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Cell/PPCThread.h"
 #include "Emu/System.h"
+#include "DisAsmFrame.h"
+#include "Emu/FS/vfsLocalFile.h"
+#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/Cell/PPCThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -10,59 +13,56 @@
 #include "Emu/Cell/SPUDisAsm.h"
 
 DisAsmFrame::DisAsmFrame(PPCThread& cpu)
-	: wxFrame(NULL, wxID_ANY, "DisAsm")
+	: wxFrame(nullptr, wxID_ANY, "DisAsm")
 	, CPU(cpu)
 {
 	exit = false;
 	count = 0;
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
-	wxBoxSizer& s_b_panel( *new wxBoxSizer(wxHORIZONTAL) );
+	wxBoxSizer* s_panel = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_b_panel =  new wxBoxSizer(wxHORIZONTAL);
 
 	m_disasm_list = new wxListView(this);
+	m_disasm_list->Bind(wxEVT_MOUSEWHEEL, &DisAsmFrame::MouseWheel, this);
 
-	wxButton& b_fprev   = *new wxButton(this, wxID_ANY, L"<<");
-	wxButton& b_prev    = *new wxButton(this, wxID_ANY, L"<");
-	wxButton& b_next    = *new wxButton(this, wxID_ANY, L">");
-	wxButton& b_fnext   = *new wxButton(this, wxID_ANY, L">>");
+	wxButton* b_fprev = new wxButton(this, wxID_ANY, L"<<");
+	wxButton* b_prev  = new wxButton(this, wxID_ANY, L"<");
+	wxButton* b_next  = new wxButton(this, wxID_ANY, L">");
+	wxButton* b_fnext = new wxButton(this, wxID_ANY, L">>");
+	b_fprev->Bind(wxEVT_BUTTON, &DisAsmFrame::fPrev, this);
+	b_prev->Bind(wxEVT_BUTTON, &DisAsmFrame::Prev, this);
+	b_next->Bind(wxEVT_BUTTON, &DisAsmFrame::Next, this);
+	b_fnext->Bind(wxEVT_BUTTON, &DisAsmFrame::fNext, this);
 
-	wxButton& b_dump    = *new wxButton(this, wxID_ANY, L"Dump code");
+	wxButton* b_dump  = new wxButton(this, wxID_ANY, L"Dump code");
+	b_dump->Bind(wxEVT_BUTTON, &DisAsmFrame::Dump, this);
 
-	wxButton& b_setpc   = *new wxButton(this, wxID_ANY, L"Set PC");
+	wxButton* b_setpc = new wxButton(this, wxID_ANY, L"Set PC");
+	b_setpc->Bind(wxEVT_BUTTON, &DisAsmFrame::SetPc, this);
 
-	s_b_panel.Add(&b_fprev);
-	s_b_panel.Add(&b_prev);
-	s_b_panel.AddSpacer(5);
-	s_b_panel.Add(&b_next);
-	s_b_panel.Add(&b_fnext);
-	s_b_panel.AddSpacer(8);
-	s_b_panel.Add(&b_dump);
+	s_b_panel->Add(b_fprev);
+	s_b_panel->Add(b_prev);
+	s_b_panel->AddSpacer(5);
+	s_b_panel->Add(b_next);
+	s_b_panel->Add(b_fnext);
+	s_b_panel->AddSpacer(8);
+	s_b_panel->Add(b_dump);
 
-	s_panel.Add(&s_b_panel);
-	s_panel.Add(&b_setpc);
-	s_panel.Add(m_disasm_list);
+	s_panel->Add(s_b_panel);
+	s_panel->Add(b_setpc);
+	s_panel->Add(m_disasm_list);
 
 	m_disasm_list->InsertColumn(0, "PC");
 	m_disasm_list->InsertColumn(1, "ASM");
 
-	m_disasm_list->SetColumnWidth( 0, 50 );
+	m_disasm_list->SetColumnWidth(0, 50);
 
-	for(uint i=0; i<LINES_OPCODES; ++i) m_disasm_list->InsertItem(i, -1);
+	for(uint i=0; i<LINES_OPCODES; ++i)
+		m_disasm_list->InsertItem(i, -1);
 
-	SetSizerAndFit( &s_panel );
-
+	SetSizerAndFit(s_panel);
 	SetSize(50, 660);
 
-	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
-
-	m_app_connector.Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
-
-	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
-	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
-	Connect(b_fprev.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fPrev));
-	Connect(b_fnext.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fNext));
-	Connect(b_setpc.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::SetPc));
-
-	Connect(b_dump.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Dump));
+	Bind(wxEVT_SIZE, &DisAsmFrame::OnResize, this);
 }
 
 void DisAsmFrame::OnResize(wxSizeEvent& event)
@@ -91,7 +91,7 @@ void DisAsmFrame::AddLine(const wxString line)
 		return;
 	}
 
-	m_disasm_list->SetItem(count, 0, wxString::Format("%llx", CPU.PC));
+	m_disasm_list->SetItem(count, 0, wxString::Format("%x", CPU.PC));
 	m_disasm_list->SetItem(count, 1, line);
 
 	++count;
@@ -104,8 +104,10 @@ void DisAsmFrame::Resume()
 
 #include <Utilities/MTProgressDialog.h>
 #include "Loader/ELF.h"
-Array<Elf64_Shdr>* shdr_arr_64 = NULL;
-Array<Elf32_Shdr>* shdr_arr_32 = NULL;
+#include "Loader/ELF32.h"
+#include "Loader/ELF64.h"
+std::vector<Elf64_Shdr>* shdr_arr_64 = NULL;
+std::vector<Elf32_Shdr>* shdr_arr_32 = NULL;
 ELF64Loader* l_elf64 = NULL;
 ELF32Loader* l_elf32 = NULL;
 bool ElfType64 = false;
@@ -135,7 +137,7 @@ public:
 
 		*done = false;
 
-		if(Emu.GetCPU().GetThreads()[0].GetType() != CPU_THREAD_PPU)
+		if(Emu.GetCPU().GetThreads()[0]->GetType() != CPU_THREAD_PPU)
 		{
 			SPUDisAsm& dis_asm = *new SPUDisAsm(CPUDisAsm_DumpMode);
 			decoder = new SPUDecoder(dis_asm);
@@ -143,17 +145,17 @@ public:
 		}
 		else
 		{
-			PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+			PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_DumpMode);
 			decoder = new PPUDecoder(dis_asm);
-			disasm = &dis_asm;
+			disasm = dis_asm;
 		}
 	}
 
 	virtual void Task()
 	{
-		ConLog.Write("Start dump in thread %d!", (int)id);
+		LOG_NOTICE(HLE, "Start dump in thread %d!", (int)id);
 		const u32 max_value = prog_dial->GetMaxValue(id);
-		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 		for(u32 sh=0, vsize=0; sh<shdr_count; ++sh)
 		{
@@ -170,7 +172,7 @@ public:
 					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
 
 				disasm->dump_pc = sh_addr + off;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 
 				arr[id][sh].Add(fmt::FromUTF8(disasm->last_opcode));
 
@@ -179,14 +181,14 @@ public:
 			}
 		}
 
-		ConLog.Write("Finish dump in thread %d!", (int)id);
+		LOG_NOTICE(HLE, "Finish dump in thread %d!", (int)id);
 
 		*done = true;
 	}
 
 	void OnExit()
 	{
-		ConLog.Write("CleanUp dump thread (%d)!", (int)id);
+		LOG_NOTICE(HLE, "CleanUp dump thread (%d)!", (int)id);
 		safe_delete(decoder);
 	}
 };
@@ -219,10 +221,11 @@ struct WaitDumperThread : public ThreadBase
 	{
 		for(uint i=0; i<cores; i++)
 		{
-			while(done[i] == false) Sleep(1);
+			while(done[i] == false)
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
-		ConLog.Write("Saving dump is started!");
+		LOG_NOTICE(HLE, "Saving dump is started!");
 		const uint length_for_core = prog_dial.GetMaxValue(0);
 		const uint length = length_for_core * cores;
 		prog_dial.Close();
@@ -235,7 +238,7 @@ struct WaitDumperThread : public ThreadBase
 		wxFile fd;
 		fd.Open(patch, wxFile::write);
 
-		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 		for(uint sh=0, counter=0; sh<shdr_count; ++sh)
 		{
@@ -265,7 +268,7 @@ struct WaitDumperThread : public ThreadBase
 			fd.Write(wxString::Format("End of section header %d\n\n", sh));
 		}
 		
-		ConLog.Write("CleanUp dump saving!");
+		LOG_NOTICE(HLE, "CleanUp dump saving!");
 
 		for(uint c=0; c<cores; ++c)
 		{
@@ -297,13 +300,13 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	vfsLocalFile& f_elf = *new vfsLocalFile(nullptr);
 	f_elf.Open(Emu.m_path);
 
-	ConLog.Write("path: %s", Emu.m_path.c_str());
+	LOG_NOTICE(HLE, "path: %s", Emu.m_path.c_str());
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
 
 	if(!ehdr.CheckMagic())
 	{
-		ConLog.Error("Corrupted ELF!");
+		LOG_ERROR(HLE, "Corrupted ELF!");
 		return;
 	}
 	std::vector<std::string> name_arr;
@@ -320,7 +323,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		}
 		name_arr = l_elf64->shdr_name_arr;
 		shdr_arr_64 = &l_elf64->shdr_arr;
-		if(l_elf64->shdr_arr.GetCount() <= 0) return;
+		if(l_elf64->shdr_arr.size() <= 0) return;
 	break;
 
 	case CLASS_ELF32:
@@ -334,22 +337,22 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 		name_arr = l_elf32->shdr_name_arr;
 		shdr_arr_32 = &l_elf32->shdr_arr;
-		if(l_elf32->shdr_arr.GetCount() <= 0) return;
+		if(l_elf32->shdr_arr.size() <= 0) return;
 	break;
 
-	default: ConLog.Error("Corrupted ELF!"); return;
+	default: LOG_ERROR(HLE, "Corrupted ELF!"); return;
 	}
 
 	PPCDisAsm* disasm;
 	PPCDecoder* decoder;
 
-	switch(Emu.GetCPU().GetThreads()[0].GetType())
+	switch(Emu.GetCPU().GetThreads()[0]->GetType())
 	{
 	case CPU_THREAD_PPU:
 	{
-		PPUDisAsm& dis_asm = *new PPUDisAsm(CPUDisAsm_DumpMode);
+		PPUDisAsm* dis_asm = new PPUDisAsm(CPUDisAsm_DumpMode);
 		decoder = new PPUDecoder(dis_asm);
-		disasm = &dis_asm;
+		disasm = dis_asm;
 	}
 	break;
 
@@ -363,7 +366,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	break;
 	}
 
-	const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+	const u32 shdr_count = ElfType64 ? shdr_arr_64->size() : shdr_arr_32->size();
 
 	u64 max_count = 0;
 	for(u32 sh=0; sh<shdr_count; ++sh)
@@ -394,7 +397,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 			for(u64 addr=sh_addr; addr<sh_addr+sh_size; addr++, vsize++)
 			{
 				disasm->dump_pc = addr;
-				decoder->Decode(Memory.Read32(disasm->dump_pc));
+				decoder->Decode(vm::read32(disasm->dump_pc));
 				fd.Write("\t");
 				fd.Write(fmt::FromUTF8(disasm->last_opcode));
 			}
@@ -477,11 +480,11 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 
 	diag.SetSizerAndFit( s_panel );
 
-	p_pc->SetLabel(wxString::Format("%llx", CPU.PC));
+	p_pc->SetLabel(wxString::Format("%x", CPU.PC));
 
 	if(diag.ShowModal() == wxID_OK)
 	{
-		sscanf(fmt::ToUTF8(p_pc->GetLabel()).c_str(), "%llx", &CPU.PC);
+		sscanf(fmt::ToUTF8(p_pc->GetLabel()).c_str(), "%x", &CPU.PC);
 		Resume();
 	}
 }

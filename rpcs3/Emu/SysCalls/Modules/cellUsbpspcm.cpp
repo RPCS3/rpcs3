@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellUsbpspcm_init();
 Module cellUsbpspcm(0x0030, cellUsbpspcm_init);
@@ -214,3 +213,4 @@ void cellUsbpspcm_init()
 	cellUsbpspcm.AddFunc(0x816799dd, cellUsbPspcmPollData);
 	cellUsbpspcm.AddFunc(0xe76e79ab, cellUsbPspcmCancelWaitData);
 }
+#endif

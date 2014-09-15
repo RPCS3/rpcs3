@@ -167,12 +167,12 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
-typedef mem_func_ptr_t<void (*)(u32 handle_addr, CellVdecMsgType msgType, int msgData, u32 cbArg_addr)> CellVdecCbMsg;
+typedef u32(*CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information
 struct CellVdecCb
 {
-	be_t<u32> cbFunc;
+	vm::bptr<CellVdecCbMsg> cbFunc;
 	be_t<u32> cbArg;
 };
 
@@ -647,6 +647,7 @@ struct CellVdecMpeg2Info
 
 enum VdecJobType : u32
 {
+	vdecInvalid,
 	vdecStartSeq,
 	vdecEndSeq,
 	vdecDecodeAu,
@@ -675,6 +676,7 @@ struct VdecTask
 	}
 
 	VdecTask()
+		: type(vdecInvalid)
 	{
 	}
 };
@@ -697,6 +699,7 @@ public:
 	volatile bool is_running;
 	volatile bool is_finished;
 	bool just_started;
+	bool just_finished;
 
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
@@ -714,7 +717,7 @@ public:
 	const u32 profile;
 	const u32 memAddr;
 	const u32 memSize;
-	const u32 cbFunc;
+	const vm::ptr<CellVdecCbMsg> cbFunc;
 	const u32 cbArg;
 	u32 memBias;
 
@@ -722,67 +725,9 @@ public:
 	u64 last_pts, first_pts, first_dts;
 	AVRational rfr, afr;
 
-	CPUThread* vdecCb;
+	PPUThread* vdecCb;
 
-	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, u32 func, u32 arg)
-		: type(type)
-		, profile(profile)
-		, memAddr(addr)
-		, memSize(size)
-		, memBias(0)
-		, cbFunc(func)
-		, cbArg(arg)
-		, is_finished(false)
-		, is_running(false)
-		, just_started(false)
-		, ctx(nullptr)
-		, vdecCb(nullptr)
-	{
-		AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
-		if (!codec)
-		{
-			ConLog.Error("VideoDecoder(): avcodec_find_decoder(H264) failed");
-			Emu.Pause();
-			return;
-		}
-		fmt = avformat_alloc_context();
-		if (!fmt)
-		{
-			ConLog.Error("VideoDecoder(): avformat_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-		io_buf = (u8*)av_malloc(4096);
-		fmt->pb = avio_alloc_context(io_buf, 4096, 0, this, vdecRead, NULL, NULL);
-		if (!fmt->pb)
-		{
-			ConLog.Error("VideoDecoder(): avio_alloc_context failed");
-			Emu.Pause();
-			return;
-		}
-	}
+	VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg);
 
-	~VideoDecoder()
-	{
-		if (ctx)
-		{
-			for (u32 i = frames.GetCount() - 1; ~i; i--)
-			{
-				VdecFrame& vf = frames.Peek(i);
-				av_frame_unref(vf.data);
-				av_frame_free(&vf.data);
-			}
-			avcodec_close(ctx);
-			avformat_close_input(&fmt);
-		}
-		if (fmt)
-		{
-			if (io_buf)
-			{
-				av_free(io_buf);
-			}
-			if (fmt->pb) av_free(fmt->pb);
-			avformat_free_context(fmt);
-		}
-	}
+	~VideoDecoder();
 };

@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/listctrl.h>
+#include "rpcs3/Ini.h"
 #include "Emu/GameInfo.h"
 
 struct Column
@@ -28,40 +29,40 @@ struct Column
 
 struct ColumnsArr
 {
-	ArrayF<Column> m_columns;
+	std::vector<Column> m_columns;
 
 	ColumnsArr()
 	{
 		Init();
 	}
 
-	ArrayF<Column>* GetSortedColumnsByPos()
+	std::vector<Column*> GetSortedColumnsByPos()
 	{
-		static ArrayF<Column>& arr = *new ArrayF<Column>(); arr.ClearF();
-		for(u32 pos=0; pos<m_columns.GetCount(); pos++)
+		std::vector<Column*> arr;
+		for(u32 pos=0; pos<m_columns.size(); pos++)
 		{
-			for(u32 c=0; c<m_columns.GetCount(); ++c)
+			for(u32 c=0; c<m_columns.size(); ++c)
 			{
 				if(m_columns[c].pos != pos) continue;
-				arr.Add(m_columns[c]);
+				arr.push_back(&m_columns[c]);
 			}
 		}
 
-		return &arr;
+		return arr;
 	}
 
 	Column* GetColumnByPos(u32 pos)
 	{
-		ArrayF<Column>& columns = *GetSortedColumnsByPos();
-		for(u32 c=0; c<columns.GetCount(); ++c)
+		std::vector<Column *> columns = GetSortedColumnsByPos();
+		for(u32 c=0; c<columns.size(); ++c)
 		{
-			if(!columns[c].shown)
+			if(!columns[c]->shown)
 			{
 				pos++;
 				continue;
 			}
-			if(columns[c].pos != pos) continue;
-			return &columns[c];
+			if(columns[c]->pos != pos) continue;
+			return columns[c];
 		}
 
 		return NULL;
@@ -77,19 +78,22 @@ public:
 
 	void Init()
 	{
-		m_columns.Clear();
-
-		#define ADD_COLUMN(x, w, n) x = new Column(m_columns.GetCount(), w, n);	m_columns.Add(x);
-			ADD_COLUMN(m_col_name, 160, "Name");
-			ADD_COLUMN(m_col_serial, 85, "Serial");
-			ADD_COLUMN(m_col_fw, 55, "FW");
-			ADD_COLUMN(m_col_app_ver, 55, "App version");
-			ADD_COLUMN(m_col_category, 55, "Category");
-			ADD_COLUMN(m_col_path, 160, "Path");
-		#undef ADD_COLUMN
+		m_columns.clear();
+		m_columns.emplace_back(m_columns.size(), 160, "Name");
+		m_columns.emplace_back(m_columns.size(),  85, "Serial");
+		m_columns.emplace_back(m_columns.size(),  55, "FW");
+		m_columns.emplace_back(m_columns.size(),  55, "App version");
+		m_columns.emplace_back(m_columns.size(),  55, "Category");
+		m_columns.emplace_back(m_columns.size(), 160, "Path");
+		m_col_name     = &m_columns[0];
+		m_col_serial   = &m_columns[1];
+		m_col_fw       = &m_columns[2];
+		m_col_app_ver  = &m_columns[3];
+		m_col_category = &m_columns[4];
+		m_col_path     = &m_columns[5];
 	}
 
-	void Update(std::vector<GameInfo>& game_data)
+	void Update(const std::vector<GameInfo>& game_data)
 	{
 		m_col_name->data.clear();
 		m_col_serial->data.clear();
@@ -98,7 +102,7 @@ public:
 		m_col_category->data.clear();
 		m_col_path->data.clear();
 
-		if(m_columns.GetCount() == 0) return;
+		if(m_columns.size() == 0) return;
 
 		for(const auto& game : game_data)
 		{
@@ -114,11 +118,11 @@ public:
 	void Show(wxListView* list)
 	{
 		list->DeleteAllColumns();
-		ArrayF<Column>& c_col = *GetSortedColumnsByPos();
-		for(u32 i=0, c=0; i<c_col.GetCount(); ++i)
+		std::vector<Column *> c_col = GetSortedColumnsByPos();
+		for(u32 i=0, c=0; i<c_col.size(); ++i)
 		{
-			if(!c_col[i].shown) continue;
-			list->InsertColumn(c++, fmt::FromUTF8(c_col[i].name), 0, c_col[i].width);
+			if(!c_col[i]->shown) continue;
+			list->InsertColumn(c++, fmt::FromUTF8(c_col[i]->name), 0, c_col[i]->width);
 		}
 	}
 
@@ -131,14 +135,19 @@ public:
 
 			if(!col)
 			{
-				ConLog.Error("Columns loaded with error!");
+				LOG_ERROR(HLE, "Columns loaded with error!");
 				return;
 			}
 
 			for(u32 i=0; i<col->data.size(); ++i)
 			{
-				if(list->GetItemCount() <= (int)i) list->InsertItem(i, wxEmptyString);
+				if (list->GetItemCount() <= (int)i)
+				{
+					list->InsertItem(i, wxEmptyString);
+					list->SetItemData(i, i);
+				}
 				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
+
 			}			
 		}
 	}
@@ -167,7 +176,7 @@ public:
 			} \
 		}
 
-		for(u32 i=0; i<m_columns.GetCount(); ++i)
+		for(u32 i=0; i<m_columns.size(); ++i)
 		{
 			ADD_COLUMN(pos, m_columns[i].def_pos, int, "position", 1);
 			ADD_COLUMN(width, m_columns[i].def_width, int, "width", 1);
@@ -177,23 +186,23 @@ public:
 		if(isLoad)
 		{
 			//check for errors
-			for(u32 c1=0; c1<m_columns.GetCount(); ++c1)
+			for(u32 c1=0; c1<m_columns.size(); ++c1)
 			{
-				for(u32 c2=c1+1; c2<m_columns.GetCount(); ++c2)
+				for(u32 c2=c1+1; c2<m_columns.size(); ++c2)
 				{
 					if(m_columns[c1].pos == m_columns[c2].pos)
 					{
-						ConLog.Error("Columns loaded with error!");
+						LOG_ERROR(HLE, "Columns loaded with error!");
 						Init();
 						return;
 					}
 				}
 			}
 
-			for(u32 p=0; p<m_columns.GetCount(); ++p)
+			for(u32 p=0; p<m_columns.size(); ++p)
 			{
 				bool ishas = false;
-				for(u32 c=0; c<m_columns.GetCount(); ++c)
+				for(u32 c=0; c<m_columns.size(); ++c)
 				{
 					if(m_columns[c].pos != p) continue;
 					ishas = true;
@@ -202,7 +211,7 @@ public:
 
 				if(!ishas)
 				{
-					ConLog.Error("Columns loaded with error!");
+					LOG_ERROR(HLE, "Columns loaded with error!");
 					Init();
 					return;
 				}
@@ -215,10 +224,13 @@ public:
 
 class GameViewer : public wxListView
 {
+	int m_sortColumn;
+	bool m_sortAscending;
 	std::string m_path;
 	std::vector<std::string> m_games;
 	std::vector<GameInfo> m_game_data;
 	ColumnsArr m_columns;
+	wxMenu* m_popup;
 
 public:
 	GameViewer(wxWindow* parent);
@@ -234,7 +246,11 @@ public:
 	void LoadSettings();
 
 	void Refresh();
+	void RemoveGame(wxCommandEvent& event);
+	bool RemoveFolder(std::string localPath);
 
 private:
 	virtual void DClick(wxListEvent& event);
+	virtual void OnColClick(wxListEvent& event);
+	virtual void RightClick(wxListEvent& event);
 };

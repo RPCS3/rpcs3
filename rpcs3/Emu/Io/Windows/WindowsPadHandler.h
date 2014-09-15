@@ -1,19 +1,15 @@
 #pragma once
-
-#include <algorithm>
 #include "Emu/Io/PadHandler.h"
 
 class WindowsPadHandler final
 	: public wxWindow
 	, public PadHandlerBase
 {
-	AppConnector m_app_connector;
-
 public:
 	WindowsPadHandler() : wxWindow()
 	{
-		m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(WindowsPadHandler::KeyDown), (wxObject*)0, this);
-		m_app_connector.Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsPadHandler::KeyUp), (wxObject*)0, this);
+		wxGetApp().Bind(wxEVT_KEY_DOWN, &WindowsPadHandler::KeyDown, this);
+		wxGetApp().Bind(wxEVT_KEY_UP, &WindowsPadHandler::KeyUp, this);
 	}
 
 	virtual void KeyDown(wxKeyEvent& event) { Key(event.GetKeyCode(), 1); event.Skip(); }
@@ -35,8 +31,10 @@ public:
 
 	void LoadSettings()
 	{
+		//Fixed assign change, default is both sensor and press off
 		m_pads.emplace_back(
-			CELL_PAD_STATUS_CONNECTED, CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_OFF,
+			CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES,
+			CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 			CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE,
 			CELL_PAD_DEV_TYPE_STANDARD);
 

@@ -1,7 +1,7 @@
 #pragma once
-#include "ELF64.h"
-#include "ELF32.h"
-#include "Emu/FS/vfsStream.h"
+#include "Loader.h"
+
+struct vfsStream;
 
 enum ElfClass
 {
@@ -15,15 +15,9 @@ struct Elf_Ehdr
 	u32 e_magic;
 	u8  e_class;
 
-	virtual void Show()
-	{
-	}
+	virtual void Show();
 
-	virtual void Load(vfsStream& f)
-	{
-		e_magic	= Read32(f);
-		e_class	= Read8(f);
-	}
+	virtual void Load(vfsStream& f);
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 
@@ -41,14 +35,17 @@ struct Elf_Ehdr
 
 class ELFLoader : public LoaderBase
 {
-	vfsStream& elf_f;
-	LoaderBase* loader;
+	vfsStream& m_elf_file;
+	LoaderBase* m_loader;
 
 public:
 	Elf_Ehdr ehdr;
 
 	ELFLoader(vfsStream& f);
-	~ELFLoader() {Close();}
+	virtual ~ELFLoader() 
+	{
+		Close();
+	}
 
 	virtual bool LoadInfo();
 	virtual bool LoadData(u64 offset = 0);

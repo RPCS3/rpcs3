@@ -1,220 +1,163 @@
 #include "stdafx.h"
-#include "Ini.h"
+#include "Utilities/rPlatform.h"
+#include "Utilities/StrFmt.h"
 
-#ifdef _WIN32
-#include <wx/msw/iniconf.h>
-#endif
+#include "Ini.h"
+#include <cctype>
+#include <regex>
+
+#define DEF_CONFIG_NAME "./rpcs3.ini"
+
+CSimpleIniCaseA *getIniFile()
+{
+	static bool inited = false;
+	static CSimpleIniCaseA ini;
+	if (inited == false)
+	{
+		ini.SetUnicode(true);
+		ini.LoadFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
+		inited = true;
+	}
+	return &ini;
+}
+
+void saveIniFile()
+{
+	getIniFile()->SaveFile(std::string(rPlatform::getConfigDir() + DEF_CONFIG_NAME).c_str());
+}
 
 Inis Ini;
 
-static bool StringToBool(const wxString& str)
+static bool StringToBool(const std::string& str)
 {
-	if(
-		!str.CmpNoCase("enable") ||
-		!str.CmpNoCase("e") ||
-		!str.CmpNoCase("1") ||
-		!str.CmpNoCase("true") ||
-		!str.CmpNoCase("t") )
-	{
-		return true;
-	}
-
-	return false;
+	return std::regex_match(str.begin(), str.end(),
+		std::regex("1|e|t|enable|true", std::regex_constants::icase));
 }
 
-static wxString BoolToString(const bool b)
+static inline std::string BoolToString(const bool b)
 {
-	if(b) return "true";
-
-	return "false";
+	return b ? "true" : "false";
 }
 
-static wxSize StringToSize(const wxString& str)
+//takes a string of format "[number]x[number]" and returns a pair of ints
+//example input would be "123x456" and the returned value would be {123,456}
+static std::pair<int, int> StringToSize(const std::string& str)
 {
-	wxSize ret;
-
-	wxString s[2] = {wxEmptyString, wxEmptyString};
-
-	for(uint i=0, a=0; i<str.Length(); ++i)
-	{
-		if(!str(i, 1).CmpNoCase("x"))
-		{
-			if(++a >= 2) return wxDefaultSize;
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 2 && (found = str.find_first_of('x', start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
-
-		s[a] += str(i, 1);
-	}
-	
-	if(s[0].IsEmpty() || s[1].IsEmpty())
-	{
-		return wxDefaultSize;
-	}
-
-	s[0].ToLong((long*)&ret.x);
-	s[1].ToLong((long*)&ret.y);
-
-	if(ret.x <= 0 || ret.y <= 0)
-	{
-		return wxDefaultSize;
-	}
-
-	return ret;
-}
-
-static wxString SizeToString(const wxSize& size)
-{
-	return wxString::Format("%dx%d", size.x, size.y);
-}
-
-static wxPoint StringToPosition(const wxString& str)
-{
-	wxPoint ret;
-
-	wxString s[2] = {wxEmptyString, wxEmptyString};
-
-	for(uint i=0, a=0; i<str.Length(); ++i)
-	{
-		if(!str(i, 1).CmpNoCase("x"))
-		{
-			if(++a >= 2) return wxDefaultPosition;
-			continue;
+		catch (const std::invalid_argument& e) {
+			return std::make_pair(-1, -1);
 		}
-
-		s[a] += str(i, 1);
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
 	}
-	
-	if(s[0].IsEmpty() || s[1].IsEmpty())
-	{
-		return wxDefaultPosition;
-	}
+	if (vec.size() < 2 || vec[0] < 0 || vec[1] < 0)
+		return std::make_pair(-1, -1);
 
-	s[0].ToLong((long*)&ret.x);
-	s[1].ToLong((long*)&ret.y);
-
-	if(ret.x <= 0 || ret.y <= 0)
-	{
-		return wxDefaultPosition;
-	}
-
-	return ret;
+	return std::make_pair(vec[0], vec[1]);
 }
 
-static wxString PositionToString(const wxPoint& position)
+static std::string SizeToString(const std::pair<int, int>& size)
 {
-	return wxString::Format("%dx%d", position.x, position.y);
+	return fmt::Format("%dx%d", size.first, size.second);
 }
 
-static WindowInfo StringToWindowInfo(const wxString& str)
+static WindowInfo StringToWindowInfo(const std::string& str)
 {
-	WindowInfo ret = WindowInfo(wxDefaultSize, wxDefaultPosition);
-
-	wxString s[4] = {wxEmptyString, wxEmptyString, wxEmptyString, wxEmptyString};
-
-	for(uint i=0, a=0; i<str.Length(); ++i)
-	{
-		if(!str(i, 1).CmpNoCase("x") || !str(i, 1).CmpNoCase(":"))
-		{
-			if(++a >= 4) return WindowInfo::GetDefault();
-			continue;
+	std::size_t start = 0, found;
+	std::vector<int> vec;
+	for (int i = 0; i < 4 && (found = str.find_first_of("x:", start)); i++) {
+		try {
+			vec.push_back(std::stoi(str.substr(start, found == std::string::npos ? found : found - start)));
 		}
-
-		s[a] += str(i, 1);
+		catch (const std::invalid_argument& e) {
+			return WindowInfo();
+		}
+		if (found == std::string::npos)
+			break;
+		start = found + 1;
 	}
-	
-	if(s[0].IsEmpty() || s[1].IsEmpty() || s[2].IsEmpty() || s[3].IsEmpty())
-	{
-		return WindowInfo::GetDefault();
-	}
+	if (vec.size() < 4 || vec[0] <= 0 || vec[1] <= 0 || vec[2] < 0 || vec[3] < 0)
+		return WindowInfo();
 
-	s[0].ToLong((long*)&ret.size.x);
-	s[1].ToLong((long*)&ret.size.y);
-	s[2].ToLong((long*)&ret.position.x);
-	s[3].ToLong((long*)&ret.position.y);
-
-	if(ret.size.x <= 0 || ret.size.y <= 0)
-	{
-		return WindowInfo::GetDefault();
-	}
-
-	return ret;
+	return WindowInfo(std::make_pair(vec[0], vec[1]), std::make_pair(vec[2], vec[3]));
 }
 
-static wxString WindowInfoToString(const WindowInfo& wind)
+static std::string WindowInfoToString(const WindowInfo& wind)
 {
-	const int px = wind.position.x < -wind.size.x ? -1 : wind.position.x;
-	const int py = wind.position.y < -wind.size.y ? -1 : wind.position.y;
-	return wxString::Format("%dx%d:%dx%d", wind.size.x, wind.size.y, px, py);
+	const int px = wind.position.first < -wind.size.first ? -1 : wind.position.first;
+	const int py = wind.position.second < -wind.size.second ? -1 : wind.position.second;
+	return fmt::Format("%dx%d:%dx%d", wind.size.first, wind.size.second, px, py);
 }
 
 //Ini
 Ini::Ini()
 {
-#ifdef _WIN32
-	m_Config = new wxIniConfig( wxEmptyString, wxEmptyString,
-			wxGetCwd() + "/rpcs3.ini",
-			wxEmptyString, wxCONFIG_USE_LOCAL_FILE );
-#else
-		m_Config = new wxConfig("rpcs3");
-#endif
+	m_Config = getIniFile();
 }
 
-void Ini::Save(const wxString& key, int value)
+Ini::~Ini()
 {
-	m_Config->Write(key, value);
+	saveIniFile();
 }
 
-void Ini::Save(const wxString& key, bool value)
+//TODO: saving the file after each change seems like overkill but that's how wx did it
+void Ini::Save(const std::string& section, const std::string& key, int value)
 {
-	m_Config->Write(key, BoolToString(value));
+	m_Config->SetLongValue(section.c_str(), key.c_str(), value);
+	saveIniFile();
 }
 
-void Ini::Save(const wxString& key, wxSize value)
+void Ini::Save(const std::string& section, const std::string& key, bool value)
 {
-	m_Config->Write(key, SizeToString(value));
+	m_Config->SetBoolValue(section.c_str(), key.c_str(), value);
+	saveIniFile();
 }
 
-void Ini::Save(const wxString& key, wxPoint value)
+void Ini::Save(const std::string& section, const std::string& key, std::pair<int, int> value)
 {
-	m_Config->Write(key, PositionToString(value));
+	m_Config->SetValue(section.c_str(), key.c_str(), SizeToString(value).c_str());
+	saveIniFile();
 }
 
-void Ini::Save(const wxString& key, const std::string& value)
+void Ini::Save(const std::string& section, const std::string& key, const std::string& value)
 {
-	m_Config->Write(key, fmt::FromUTF8(value));
+	m_Config->SetValue(section.c_str(), key.c_str(), value.c_str());
+	saveIniFile();
 }
 
-void Ini::Save(const wxString& key, WindowInfo value)
+void Ini::Save(const std::string& section, const std::string& key, WindowInfo value)
 {
-	m_Config->Write(key, WindowInfoToString(value));
+	m_Config->SetValue(section.c_str(), key.c_str(), WindowInfoToString(value).c_str());
+	saveIniFile();
 }
 
-int Ini::Load(const wxString& key, const int def_value)
+int Ini::Load(const std::string& section, const std::string& key, const int def_value)
 {
-	return m_Config->Read(key, def_value);
+	return m_Config->GetLongValue(section.c_str(), key.c_str(), def_value);
 }
 
-bool Ini::Load(const wxString& key, const bool def_value)
+bool Ini::Load(const std::string& section, const std::string& key, const bool def_value)
 {
-	return StringToBool(m_Config->Read(key, BoolToString(def_value)));
+	return StringToBool(m_Config->GetValue(section.c_str(), key.c_str(), BoolToString(def_value).c_str()));
 }
 
-wxSize Ini::Load(const wxString& key, const wxSize def_value)
+std::pair<int, int> Ini::Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value)
 {
-	return StringToSize(m_Config->Read(key, SizeToString(def_value)));
+	return StringToSize(m_Config->GetValue(section.c_str(), key.c_str(), SizeToString(def_value).c_str()));
 }
 
-wxPoint Ini::Load(const wxString& key, const wxPoint def_value)
+std::string Ini::Load(const std::string& section, const std::string& key, const std::string& def_value)
 {
-	return StringToPosition(m_Config->Read(key, PositionToString(def_value)));
+	return std::string(m_Config->GetValue(section.c_str(), key.c_str(), def_value.c_str()));
 }
 
-std::string Ini::Load(const wxString& key, const std::string& def_value)
+WindowInfo Ini::Load(const std::string& section, const std::string& key, const WindowInfo& def_value)
 {
-	return fmt::ToUTF8(m_Config->Read(key, def_value));
-}
-
-WindowInfo Ini::Load(const wxString& key, const WindowInfo& def_value)
-{
-	return StringToWindowInfo(m_Config->Read(key, WindowInfoToString(def_value)));
+	return StringToWindowInfo(m_Config->GetValue(section.c_str(), key.c_str(), WindowInfoToString(def_value).c_str()));
 }

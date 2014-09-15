@@ -1,7 +1,6 @@
 #pragma once
 
-#include "OpenAL/include/al.h"
-#include "OpenAL/include/alc.h"
+#include "OpenAL/include/alext.h"
 
 class OpenALThread
 {
@@ -12,7 +11,7 @@ private:
 	ALuint m_buffers[g_al_buffers_count];
 	ALCdevice* m_device;
 	ALCcontext* m_context;
-	u32 m_buffer_size;
+	ALsizei m_buffer_size;
 
 public:
 	~OpenALThread();

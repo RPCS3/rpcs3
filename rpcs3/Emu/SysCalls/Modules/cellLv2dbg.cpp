@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellLv2dbg_init();
 Module cellLv2dbg(0x002e, cellLv2dbg_init);
@@ -267,3 +266,4 @@ void cellLv2dbg_init()
 	cellLv2dbg.AddFunc(0xd830062a, sys_dbg_signal_to_coredump_handler);
 	cellLv2dbg.AddFunc(0xb9da87d3, sys_dbg_get_coredump_params);
 }
+#endif

@@ -1,9 +1,11 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "PPCDecoder.h"
 
-u8 PPCDecoder::DecodeMemory(const u64 address)
+u8 PPCDecoder::DecodeMemory(const u32 address)
 {
-	Decode(Memory.Read32(address));
+	u32 instr = vm::read32(address);
+	Decode(instr);
 
-	return 4;
+	return sizeof(u32);
 }

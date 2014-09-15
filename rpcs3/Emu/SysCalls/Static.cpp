@@ -1,11 +1,10 @@
 #include "stdafx.h"
-#include "Modules.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#include "rpcs3/Ini.h"
+#include "Utilities/Log.h"
+#include "Emu/SysCalls/Modules.h"
+#include "Static.h"
 
-extern ArrayF<SFunc> g_static_funcs_list;
-
-void StaticAnalyse(void* ptr, u32 size, u32 base)
+void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 {
 	u32* data = (u32*)ptr; size /= 4;
 
@@ -15,13 +14,13 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
-		for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++)
+		for (u32 j = 0; j < m_static_funcs_list.size(); j++)
 		{
-			if ((data[i] & g_static_funcs_list[j].ops[0].mask) == g_static_funcs_list[j].ops[0].crc)
+			if ((data[i] & m_static_funcs_list[j]->ops[0].mask) == m_static_funcs_list[j]->ops[0].crc)
 			{
 				bool found = true;
 				u32 can_skip = 0;
-				for (u32 k = i, x = 0; x + 1 <= g_static_funcs_list[j].ops.GetCount(); k++, x++)
+				for (u32 k = i, x = 0; x + 1 <= m_static_funcs_list[j]->ops.size(); k++, x++)
 				{
 					if (k >= size)
 					{
@@ -36,8 +35,8 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 						continue;
 					}
 
-					const u32 mask = g_static_funcs_list[j].ops[x].mask;
-					const u32 crc = g_static_funcs_list[j].ops[x].crc;
+					const u32 mask = m_static_funcs_list[j]->ops[x].mask;
+					const u32 crc = m_static_funcs_list[j]->ops[x].crc;
 
 					if (!mask)
 					{
@@ -52,14 +51,14 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 							k--;
 							if (can_skip) // cannot define this behaviour properly
 							{
-								ConLog.Warning("StaticAnalyse(): can_skip = %d (unchanged)", can_skip);
+								LOG_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (unchanged)", can_skip);
 							}
 						}
 						else
 						{
 							if (can_skip) // cannot define this behaviour properly
 							{
-								ConLog.Warning("StaticAnalyse(): can_skip = %d (set to 0)", can_skip);
+								LOG_WARNING(LOADER, "StaticAnalyse(): can_skip = %d (set to 0)", can_skip);
 								can_skip = 0;
 							}
 						}
@@ -83,8 +82,8 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				}
 				if (found)
 				{
-					ConLog.Write("Function '%s' hooked (addr=0x%x)", g_static_funcs_list[j].name, i * 4 + base);
-					g_static_funcs_list[j].found++;
+					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
+					m_static_funcs_list[j]->found++;
 					data[i+0] = re32(0x39600000 | j); // li r11, j
 					data[i+1] = se32(0x44000003); // sc 3
 					data[i+2] = se32(0x4e800020); // blr
@@ -95,11 +94,11 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 	}
 
 	// check function groups
-	for (u32 i = 0; i < g_static_funcs_list.GetCount(); i++)
+	for (u32 i = 0; i < m_static_funcs_list.size(); i++)
 	{
-		if (g_static_funcs_list[i].found) // start from some group
+		if (m_static_funcs_list[i]->found) // start from some group
 		{
-			const u64 group = g_static_funcs_list[i].group;
+			const u64 group = m_static_funcs_list[i]->group;
 
 			enum GroupSearchResult : u32
 			{
@@ -110,24 +109,24 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 			u32 res = GSR_SUCCESS;
 
 			// analyse
-			for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++) if (g_static_funcs_list[j].group == group)
+			for (u32 j = 0; j < m_static_funcs_list.size(); j++) if (m_static_funcs_list[j]->group == group)
 			{
-				u32 count = g_static_funcs_list[j].found;
+				u32 count = m_static_funcs_list[j]->found;
 
 				if (count == 0) // not found
 				{
 					// check if this function has been found with different pattern
-					for (u32 k = 0; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
+					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
 					{
-						if (k != j && g_static_funcs_list[k].ptr == g_static_funcs_list[j].ptr)
+						if (k != j && m_static_funcs_list[k]->ptr == m_static_funcs_list[j]->ptr)
 						{
-							count += g_static_funcs_list[k].found;
+							count += m_static_funcs_list[k]->found;
 						}
 					}
 					if (count == 0)
 					{
 						res |= GSR_MISSING;
-						ConLog.Error("Function '%s' not found", g_static_funcs_list[j].name);
+						LOG_ERROR(LOADER, "Function '%s' not found", m_static_funcs_list[j]->name);
 					}
 					else if (count > 1)
 					{
@@ -137,14 +136,14 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				else if (count == 1) // found
 				{
 					// ensure that this function has NOT been found with different pattern
-					for (u32 k = 0; k < g_static_funcs_list.GetCount(); k++) if (g_static_funcs_list[k].group == group)
+					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
 					{
-						if (k != j && g_static_funcs_list[k].ptr == g_static_funcs_list[j].ptr)
+						if (k != j && m_static_funcs_list[k]->ptr == m_static_funcs_list[j]->ptr)
 						{
-							if (g_static_funcs_list[k].found)
+							if (m_static_funcs_list[k]->found)
 							{
 								res |= GSR_EXCESS;
-								ConLog.Error("Function '%s' hooked twice", g_static_funcs_list[j].name);
+								LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
 							}
 						}
 					}
@@ -152,14 +151,14 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 				else
 				{
 					res |= GSR_EXCESS;
-					ConLog.Error("Function '%s' hooked twice", g_static_funcs_list[j].name);
+					LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
 				}
 			}
 
 			// clear data
-			for (u32 j = 0; j < g_static_funcs_list.GetCount(); j++)
+			for (u32 j = 0; j < m_static_funcs_list.size(); j++)
 			{
-				if (g_static_funcs_list[j].group == group) g_static_funcs_list[j].found = 0;
+				if (m_static_funcs_list[j]->group == group) m_static_funcs_list[j]->found = 0;
 			}
 
 			char name[9] = "????????";
@@ -168,11 +167,11 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 
 			if (res == GSR_SUCCESS)
 			{
-				ConLog.Success("Function group [%s] successfully hooked", std::string(name, 9).c_str());
+				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", std::string(name, 9).c_str());
 			}
 			else
 			{
-				ConLog.Error("Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
+				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
 					(res & GSR_MISSING ? " missing;" : ""),
 					(res & GSR_EXCESS ? " excess;" : ""));
 			}
@@ -180,19 +179,39 @@ void StaticAnalyse(void* ptr, u32 size, u32 base)
 	}
 }
 
-void StaticExecute(u32 code)
+void StaticFuncManager::StaticExecute(u32 code)
 {
-	if (code < g_static_funcs_list.GetCount())
+	if (code < m_static_funcs_list.size())
 	{
-		(*g_static_funcs_list[code].func)();
+		(*m_static_funcs_list[code]->func)();
 	}
 	else
 	{
-		ConLog.Error("StaticExecute(%d): unknown function or illegal opcode", code);
+		LOG_ERROR(LOADER, "StaticExecute(%d): unknown function or illegal opcode", code);
 	}
 }
 
-void StaticFinalize()
+void StaticFuncManager::StaticFinalize()
 {
-	g_static_funcs_list.Clear();
+	for (SFunc *s : m_static_funcs_list)
+	{
+		delete s;
+	}
+	m_static_funcs_list.clear();
 }
+
+void StaticFuncManager::push_back(SFunc *ele)
+{
+	m_static_funcs_list.push_back(ele);
+}
+
+SFunc *StaticFuncManager::operator[](size_t i)
+{
+	return m_static_funcs_list[i];
+}
+
+StaticFuncManager::~StaticFuncManager()
+{
+	StaticFinalize();
+}
+

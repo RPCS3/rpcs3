@@ -9,7 +9,7 @@
 # Compiled Static libraries
 *.lai
 *.la
-*.a
+# *.a # Commented out since OpenAL Soft's binaries use this extension.
 *.opensdf
 *.sdf
 *.suo
@@ -30,6 +30,8 @@
 *.dump
 *.wav
 
+/build
+
 /libs
 /ipch
 /rpcs3/Debug
@@ -45,6 +47,10 @@
 /bin/*.exp
 rpcs3/git-version.h
 
+# Visual Studio Profiler Files
+*.vspx
+*.psess
+
 # Copyrighted files
 /bin/data/
 /bin/dev_flash/data/font
@@ -57,4 +63,9 @@ rpcs3/git-version.h
 !/bin/dev_hdd0/game/TEST12345/
 
 # Ignore other system generated files
-bin/dev_hdd0/log.txt
+bin/dev_hdd0/*.txt
+x64/*
+rpcs3/x64/*
+
+.DS_Store
+rpcs3/Emu/SysCalls/Modules/prx_*.h

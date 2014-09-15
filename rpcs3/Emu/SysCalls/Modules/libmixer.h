@@ -109,7 +109,7 @@ enum
 	CELL_SSPLAYER_STATE_ON = 0x20,
 };
 
-typedef int (*CellSurMixerNotifyCallbackFunction)(void *arg, u32 counter, u32 samples);
+typedef s32(*CellSurMixerNotifyCallbackFunction)(vm::ptr<void> arg, u32 counter, u32 samples);
 
 struct CellSSPlayerConfig
 {
@@ -119,7 +119,7 @@ struct CellSSPlayerConfig
 
 struct CellSSPlayerWaveParam 
 { 
-	void *addr;
+	be_t<u32> addr;
 	be_t<s32> format;
 	be_t<u32> samples;
 	be_t<u32> loopStartOffset;
@@ -158,10 +158,26 @@ struct CellSurMixerConfig
 struct CellSurMixerChStripParam 
 { 
 	be_t<u32> param;
-	void *attribute;
+	be_t<u32> attribute_addr;
 	be_t<s32> dBSwitch;
 	be_t<float> floatVal;
 	be_t<s32> intVal;
 };
 
-CellSSPlayerWaveParam current_SSPlayerWaveParam;
+struct SSPlayer
+{
+	bool m_created; // SSPlayerCreate/Remove
+	bool m_connected; // AANConnect/Disconnect
+	bool m_active; // SSPlayerPlay/Stop
+	u32 m_channels; // 1 or 2
+	u32 m_addr;
+	u32 m_samples;
+	u32 m_loop_start;
+	u32 m_loop_mode;
+	u32 m_position;
+	float m_level;
+	float m_speed;
+	float m_x;
+	float m_y;
+	float m_z;
+};

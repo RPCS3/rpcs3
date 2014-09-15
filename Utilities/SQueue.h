@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Utilities/SMutex.h"
+
 template<typename T, u32 SQSize = 666>
 class SQueue
 {
-	SMutexGeneral m_mutex;
+	std::mutex m_mutex;
 	u32 m_pos;
 	u32 m_count;
 	T m_data[SQSize];
@@ -24,23 +26,19 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				return false;
-			}
-
 			if (m_count >= SQSize)
 			{
 				if (Emu.IsStopped())
 				{
 					return false;
 				}
-				Sleep(1);
+
+				SM_Sleep();
 				continue;
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
+				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (m_count >= SQSize) continue;
 
@@ -55,23 +53,19 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				return false;
-			}
-
 			if (!m_count)
 			{
 				if (Emu.IsStopped())
 				{
 					return false;
 				}
-				Sleep(1);
+
+				SM_Sleep();
 				continue;
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
+				std::lock_guard<std::mutex> lock(m_mutex);
 
 				if (!m_count) continue;
 
@@ -84,19 +78,26 @@ public:
 		}
 	}
 
-	volatile u32 GetCount() // may be not safe
+	u32 GetCount()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		return m_count;
+	}
+
+	u32 GetCountUnsafe()
 	{
 		return m_count;
 	}
 
-	volatile bool IsEmpty() // may be not safe
+	bool IsEmpty()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return !m_count;
 	}
 
 	void Clear()
 	{
-		SMutexGeneralLocker lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_count = 0;
 	}
 
@@ -104,26 +105,40 @@ public:
 	{
 		while (true)
 		{
-			if (m_mutex.GetOwner() == m_mutex.GetDeadValue())
-			{
-				break;
-			}
-
-			if (!m_count)
+			if (m_count <= pos)
 			{
 				if (Emu.IsStopped())
 				{
 					break;
 				}
-				Sleep(1);
+				
+				SM_Sleep();
 				continue;
 			}
 
 			{
-				SMutexGeneralLocker lock(m_mutex);
-				if (m_count) break;
+				std::lock_guard<std::mutex> lock(m_mutex);
+				if (m_count > pos)
+				{
+					break;
+				}
 			}
 		}
 		return m_data[(m_pos + pos) % SQSize];
+	}
+
+	T& PeekIfExist(u32 pos = 0)
+	{
+		static T def_value;
+
+		std::lock_guard<std::mutex> lock(m_mutex);
+		if (m_count <= pos)
+		{
+			return def_value;
+		}
+		else
+		{
+			return m_data[(m_pos + pos) % SQSize];
+		}
 	}
 };

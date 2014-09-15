@@ -1,9 +1,7 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellOvis_init();
-Module cellOvis(0x000b, cellOvis_init);
+Module *cellOvis = nullptr;
 
 // Return Codes
 enum
@@ -37,10 +35,12 @@ int cellOvisInvalidateOverlappedSegments()
 	return CELL_OK;
 }
 
-void cellOvis_init()
+void cellOvis_init(Module *pxThis)
 {
-	cellOvis.AddFunc(0x82f294b2, cellOvisGetOverlayTableSize);
-	cellOvis.AddFunc(0xa876c911, cellOvisInitializeOverlayTable);
-	cellOvis.AddFunc(0xce6cb776, cellOvisFixSpuSegments);
-	cellOvis.AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
+	cellOvis = pxThis;
+
+	cellOvis->AddFunc(0x82f294b2, cellOvisGetOverlayTableSize);
+	cellOvis->AddFunc(0xa876c911, cellOvisInitializeOverlayTable);
+	cellOvis->AddFunc(0xce6cb776, cellOvisFixSpuSegments);
+	cellOvis->AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
 }

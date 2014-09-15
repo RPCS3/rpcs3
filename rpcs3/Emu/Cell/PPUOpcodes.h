@@ -280,6 +280,7 @@ namespace PPU_opcodes
 		LWZUX  = 0x037,
 		CNTLZD = 0x03a,
 		ANDC   = 0x03c,
+		TD     = 0x044,
 		LVEWX  = 0x047, //Load Vector Element Word Indexed
 		MULHD  = 0x049,
 		MULHW  = 0x04b,
@@ -344,6 +345,7 @@ namespace PPU_opcodes
 		DIVW   = 0x1eb,
 		LVLX   = 0x207, //Load Vector Left Indexed
 		LDBRX  = 0x214,
+		LSWX   = 0x215,
 		LWBRX  = 0x216,
 		LFSX   = 0x217,
 		SRW    = 0x218,
@@ -355,11 +357,14 @@ namespace PPU_opcodes
 		LFDX   = 0x257,
 		LFDUX  = 0x277,
 		STVLX  = 0x287, //Store Vector Left Indexed
+		STSWX  = 0x295,
 		STWBRX = 0x296,
 		STFSX  = 0x297,
 		STVRX  = 0x2a7, //Store Vector Right Indexed
+		STFSUX = 0x2b7,
 		STSWI  = 0x2d5,
 		STFDX  = 0x2d7, //Store Floating-Point Double Indexed
+		STFDUX = 0x2f7,
 		LVLXL  = 0x307, //Load Vector Left Indexed Last
 		LHBRX  = 0x316,
 		SRAW   = 0x318,
@@ -446,7 +451,7 @@ namespace PPU_opcodes
 class PPUOpcodes
 {
 public:
-	static u64 branchTarget(const u64 pc, const u64 imm)
+	static u32 branchTarget(const u32 pc, const u32 imm)
 	{
 		return pc + (imm & ~0x3ULL);
 	}
@@ -623,7 +628,7 @@ public:
 	virtual void ADDI(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void ADDIS(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) = 0;
-	virtual void SC(s32 sc_code) = 0;
+	virtual void SC(u32 sc_code) = 0;
 	virtual void B(s32 ll, u32 aa, u32 lk) = 0;
 	virtual void MCRF(u32 crfd, u32 crfs) = 0;
 	virtual void BCLR(u32 bo, u32 bi, u32 bh, u32 lk) = 0;
@@ -676,6 +681,7 @@ public:
 	virtual void LWZUX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void CNTLZD(u32 ra, u32 rs, bool rc) = 0;
 	virtual void ANDC(u32 ra, u32 rs, u32 rb, bool rc) = 0;
+	virtual void TD(u32 to, u32 ra, u32 rb) = 0;
 	virtual void LVEWX(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void MULHD(u32 rd, u32 ra, u32 rb, bool rc) = 0;
 	virtual void MULHW(u32 rd, u32 ra, u32 rb, bool rc) = 0;
@@ -706,7 +712,7 @@ public:
 	virtual void SUBFME(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void ADDME(u32 rd, u32 ra, u32 oe, bool rc) = 0;
 	virtual void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
-	virtual void DCBTST(u32 th, u32 ra, u32 rb) = 0;
+	virtual void DCBTST(u32 ra, u32 rb, u32 th) = 0;
 	virtual void STBUX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DCBT(u32 ra, u32 rb, u32 th) = 0;
@@ -739,6 +745,7 @@ public:
 	virtual void DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void LVLX(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void LDBRX(u32 rd, u32 ra, u32 rb) = 0;
+	virtual void LSWX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LWBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void LFSX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void SRW(u32 ra, u32 rs, u32 rb, bool rc) = 0;
@@ -750,11 +757,14 @@ public:
 	virtual void LFDX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void LFDUX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void STVLX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STSWX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STVRX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STFSUX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void STSWI(u32 rd, u32 ra, u32 nb) = 0;
 	virtual void STFDX(u32 frs, u32 ra, u32 rb) = 0;
+	virtual void STFDUX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void LVLXL(u32 vd, u32 ra, u32 rb) = 0;
 	virtual void LHBRX(u32 rd, u32 ra, u32 rb) = 0;
 	virtual void SRAW(u32 ra, u32 rs, u32 rb, bool rc) = 0;
@@ -772,7 +782,7 @@ public:
 	virtual void EXTSB(u32 ra, u32 rs, bool rc) = 0;
 	virtual void STFIWX(u32 frs, u32 ra, u32 rb) = 0;
 	virtual void EXTSW(u32 ra, u32 rs, bool rc) = 0;
-	//ICBI
+	virtual void ICBI(u32 ra, u32 rb) = 0;
 	virtual void DCBZ(u32 ra, u32 rb) = 0;
 	virtual void LWZ(u32 rd, u32 ra, s32 d) = 0;
 	virtual void LWZU(u32 rd, u32 ra, s32 d) = 0;

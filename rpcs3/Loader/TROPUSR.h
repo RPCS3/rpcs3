@@ -1,5 +1,7 @@
 #pragma once
 
+struct vfsStream;
+
 struct TROPUSRHeader
 {
 	be_t<u32> magic;         // 81 8F 54 AD
@@ -77,7 +79,7 @@ public:
 	virtual u32 GetTrophiesCount();
 
 	virtual u32 GetTrophyUnlockState(u32 id);
-	virtual u32 GetTrophyTimestamp(u32 id);
+	virtual u64 GetTrophyTimestamp(u32 id);
 
 	virtual bool UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2);
 };

@@ -1,8 +1,12 @@
-#include "stdafx.h"
+#include "stdafx_gui.h"
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "rpcs3.h"
 #include "PADManager.h"
 
 PADManager::PADManager(wxWindow* parent)
-	: wxDialog(parent, wxID_ANY, "PAD Settings", wxDefaultPosition)
+	: wxDialog(parent, wxID_ANY, "PAD Settings")
 	, m_button_id(0)
 	, m_key_pressed(false)
 	, m_emu_paused(false)
@@ -13,62 +17,62 @@ PADManager::PADManager(wxWindow* parent)
 		m_emu_paused = true;
 	}
 
-	wxBoxSizer* s_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxBoxSizer* s_subpanel(new wxBoxSizer(wxVERTICAL));
-	wxBoxSizer* s_subpanel2(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_panel = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel2 = new wxBoxSizer(wxVERTICAL);
 
 	// Left Analog Stick
-	wxStaticBoxSizer* s_round_stick_l(	new wxStaticBoxSizer( wxVERTICAL, this, _("Left Analog Stick") ) );
-	wxBoxSizer* s_subpanel_lstick_1(	new wxBoxSizer( wxVERTICAL) );
-	wxBoxSizer* s_subpanel_lstick_2(	new wxBoxSizer( wxHORIZONTAL) );
-	wxBoxSizer* s_subpanel_lstick_3(	new wxBoxSizer( wxVERTICAL) );
+	wxStaticBoxSizer* s_round_stick_l = new wxStaticBoxSizer(wxVERTICAL, this, _("Left Analog Stick"));
+	wxBoxSizer* s_subpanel_lstick_1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_lstick_2 = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel_lstick_3 = new wxBoxSizer(wxVERTICAL);
 
 	// D-Pad
-	wxStaticBoxSizer* s_round_pad_controls( new wxStaticBoxSizer( wxVERTICAL, this, _("D-Pad") ) );
-	wxBoxSizer* s_subpanel_pad_1(	new wxBoxSizer( wxVERTICAL) );
-	wxBoxSizer* s_subpanel_pad_2(	new wxBoxSizer( wxHORIZONTAL) );
-	wxBoxSizer* s_subpanel_pad_3(	new wxBoxSizer( wxVERTICAL) );
+	wxStaticBoxSizer* s_round_pad_controls = new wxStaticBoxSizer(wxVERTICAL, this, _("D-Pad"));
+	wxBoxSizer* s_subpanel_pad_1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_pad_2 = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel_pad_3 = new wxBoxSizer(wxVERTICAL);
 
 	// Left shifts
-	wxStaticBoxSizer* s_round_pad_shifts_l( new wxStaticBoxSizer( wxVERTICAL, this, _("Left Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_l1(		new wxStaticBoxSizer( wxVERTICAL, this, _("L1") ) );
-	wxStaticBoxSizer* s_round_pad_l2(		new wxStaticBoxSizer( wxVERTICAL, this, _("L2") ) );
-	wxStaticBoxSizer* s_round_pad_l3(		new wxStaticBoxSizer( wxVERTICAL, this, _("L3") ) );
+	wxStaticBoxSizer* s_round_pad_shifts_l = new wxStaticBoxSizer(wxVERTICAL, this, _("Left Shifts"));
+	wxStaticBoxSizer* s_round_pad_l1 = new wxStaticBoxSizer(wxVERTICAL, this, _("L1"));
+	wxStaticBoxSizer* s_round_pad_l2 = new wxStaticBoxSizer(wxVERTICAL, this, _("L2"));
+	wxStaticBoxSizer* s_round_pad_l3 = new wxStaticBoxSizer(wxVERTICAL, this, _("L3"));
 
 	// Start / Select
-	wxStaticBoxSizer* s_round_pad_system(	new wxStaticBoxSizer( wxVERTICAL, this, _("System") ) );
-	wxStaticBoxSizer* s_round_pad_select(	new wxStaticBoxSizer( wxVERTICAL, this, _("Select") ) );
-	wxStaticBoxSizer* s_round_pad_start(	new wxStaticBoxSizer( wxVERTICAL, this, _("Start") ) );
+	wxStaticBoxSizer* s_round_pad_system = new wxStaticBoxSizer(wxVERTICAL, this, _("System"));
+	wxStaticBoxSizer* s_round_pad_select = new wxStaticBoxSizer(wxVERTICAL, this, _("Select"));
+	wxStaticBoxSizer* s_round_pad_start = new wxStaticBoxSizer(wxVERTICAL, this, _("Start"));
 
 	// Right shifts
-	wxStaticBoxSizer* s_round_pad_shifts_r( new wxStaticBoxSizer( wxVERTICAL, this, _("Right Shifts") ) );
-	wxStaticBoxSizer* s_round_pad_r1(		new wxStaticBoxSizer( wxVERTICAL, this, _("R1") ) );
-	wxStaticBoxSizer* s_round_pad_r2(		new wxStaticBoxSizer( wxVERTICAL, this, _("R2") ) );
-	wxStaticBoxSizer* s_round_pad_r3(		new wxStaticBoxSizer( wxVERTICAL, this, _("R3") ) );
+	wxStaticBoxSizer* s_round_pad_shifts_r = new wxStaticBoxSizer(wxVERTICAL, this, _("Right Shifts"));
+	wxStaticBoxSizer* s_round_pad_r1 = new wxStaticBoxSizer(wxVERTICAL, this, _("R1"));
+	wxStaticBoxSizer* s_round_pad_r2 = new wxStaticBoxSizer(wxVERTICAL, this, _("R2"));
+	wxStaticBoxSizer* s_round_pad_r3 = new wxStaticBoxSizer(wxVERTICAL, this, _("R3"));
 
 	// Action buttons
-	wxStaticBoxSizer* s_round_pad_buttons(	new wxStaticBoxSizer( wxVERTICAL, this, _("Buttons") ) );
-	wxStaticBoxSizer* s_round_pad_square(	new wxStaticBoxSizer( wxVERTICAL, this, _("Square") ) );
-	wxStaticBoxSizer* s_round_pad_cross(	new wxStaticBoxSizer( wxVERTICAL, this, _("Cross") ) );
-	wxStaticBoxSizer* s_round_pad_circle(	new wxStaticBoxSizer( wxVERTICAL, this, _("Circle") ) );
-	wxStaticBoxSizer* s_round_pad_triangle( new wxStaticBoxSizer( wxVERTICAL, this, _("Triangle") ) );
-	wxBoxSizer* s_subpanel_buttons_1(		new wxBoxSizer( wxVERTICAL) );
-	wxBoxSizer* s_subpanel_buttons_2(		new wxBoxSizer( wxHORIZONTAL) );
-	wxBoxSizer* s_subpanel_buttons_3(		new wxBoxSizer( wxVERTICAL) );
+	wxStaticBoxSizer* s_round_pad_buttons = new wxStaticBoxSizer(wxVERTICAL, this, _("Buttons"));
+	wxStaticBoxSizer* s_round_pad_square = new wxStaticBoxSizer(wxVERTICAL, this, _("Square"));
+	wxStaticBoxSizer* s_round_pad_cross = new wxStaticBoxSizer(wxVERTICAL, this, _("Cross"));
+	wxStaticBoxSizer* s_round_pad_circle = new wxStaticBoxSizer(wxVERTICAL, this, _("Circle"));
+	wxStaticBoxSizer* s_round_pad_triangle = new wxStaticBoxSizer(wxVERTICAL, this, _("Triangle"));
+	wxBoxSizer* s_subpanel_buttons_1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_buttons_2 = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel_buttons_3 = new wxBoxSizer(wxVERTICAL);
 
 	// Right Analog Stick
-	wxStaticBoxSizer* s_round_stick_r(	new wxStaticBoxSizer( wxVERTICAL, this, _("Right Analog Stick") ) );
-	wxBoxSizer* s_subpanel_rstick_1(	new wxBoxSizer( wxVERTICAL) );
-	wxBoxSizer* s_subpanel_rstick_2(	new wxBoxSizer( wxHORIZONTAL) );
-	wxBoxSizer* s_subpanel_rstick_3(	new wxBoxSizer( wxVERTICAL) );
+	wxStaticBoxSizer* s_round_stick_r = new wxStaticBoxSizer(wxVERTICAL, this, _("Right Analog Stick"));
+	wxBoxSizer* s_subpanel_rstick_1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_rstick_2 = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* s_subpanel_rstick_3 = new wxBoxSizer(wxVERTICAL);
 
 	// Ok / Cancel
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
 	wxBoxSizer* s_reset_panel(new wxBoxSizer(wxHORIZONTAL));
 
-	#define ButtonParameters	wxEmptyString, wxDefaultPosition, wxSize(60,-1)
-	#define SizerFlags			wxSizerFlags().Border(wxALL, 3).Center()
+	#define ButtonParameters wxEmptyString, wxDefaultPosition, wxSize(60,-1)
+	#define SizerFlags       wxSizerFlags().Border(wxALL, 3).Center()
 
 
 	// Buttons
@@ -206,45 +210,45 @@ PADManager::PADManager(wxWindow* parent)
 	s_panel->Add(s_round_pad_buttons);
 	s_panel->Add(s_round_stick_r);
 
-	this->SetSizerAndFit(s_panel);
+	SetSizerAndFit(s_panel);
 
-	// Connect buttons
-	m_app_connector.Connect(wxID_ANY, wxEVT_KEY_UP, wxKeyEventHandler(PADManager::OnKeyUp), (wxObject*)0, this);
-	m_app_connector.Connect(wxID_ANY, wxEVT_KEY_DOWN, wxKeyEventHandler(PADManager::OnKeyDown), (wxObject*)0, this);
-	Connect(b_up_lstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_down_lstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_left_lstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_right_lstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	// Bind buttons
+	wxGetApp().Bind(wxEVT_KEY_UP, &PADManager::OnKeyUp, this);
+	wxGetApp().Bind(wxEVT_KEY_DOWN, &PADManager::OnKeyDown, this);
+	b_up_lstick   ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_down_lstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_left_lstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_right_lstick->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_up->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler (PADManager::OnButtonClicked));
-	Connect(b_down->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_left->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_right->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_up   ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_down ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_left ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_right->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 	
-	Connect(b_shift_l1->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_shift_l2->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_shift_l3->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_shift_l1->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_shift_l2->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_shift_l3->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_start->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_select->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_start ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_select->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_shift_r1->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_shift_r2->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_shift_r3->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_shift_r1->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_shift_r2->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_shift_r3->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_square->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_cross->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_circle->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_triangle->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_square  ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_cross   ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_circle  ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_triangle->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_up_rstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_down_rstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_left_rstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_right_rstick->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_up_rstick   ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_down_rstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_left_rstick ->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_right_rstick->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 
-	Connect(b_ok->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_reset->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
-	Connect(b_cancel->GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(PADManager::OnButtonClicked));
+	b_ok->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_reset->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
+	b_cancel->Bind(wxEVT_BUTTON, &PADManager::OnButtonClicked, this);
 }
 
 void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
@@ -285,7 +289,7 @@ void PADManager::OnKeyDown(wxKeyEvent &keyEvent)
 	case id_pad_rstick_up: Ini.PadHandlerRStickUp.SetValue(keyEvent.GetKeyCode()); break;
 
 	case 0: break;
-	default: ConLog.Error("Unknown button ID: %d", m_button_id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", m_button_id); break;
 	}
 
 	UpdateLabel();
@@ -319,7 +323,7 @@ void PADManager::OnButtonClicked(wxCommandEvent &event)
 		case wxID_OK: Ini.Save(); break;
 		case wxID_CANCEL: break;
 
-		default: ConLog.Error("Unknown button ID: %d", event.GetId()); break;
+		default: LOG_ERROR(HLE, "Unknown button ID: %d", event.GetId()); break;
 		}
 	}
 
@@ -332,7 +336,7 @@ const wxString PADManager::GetKeyName(const u32 keyCode)
 	
 	switch(keyCode)
 	{
-	case WXK_NONE: ConLog.Error("Invalid key code"); keyName = "ERROR!"; break;
+	case WXK_NONE: LOG_ERROR(HLE, "Invalid key code"); keyName = "ERROR!"; break;
 	case WXK_BACK: keyName = "BackSpace"; break;
 	case WXK_TAB: keyName = "Tab"; break;
 	case WXK_RETURN: keyName = "Enter"; break;
@@ -505,7 +509,7 @@ void PADManager::UpdateTimerLabel(const u32 id)
 	case id_pad_rstick_right: b_right_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	case id_pad_rstick_up: b_up_rstick->SetLabel(static_cast<char>(m_seconds + 47)); break;
 	
-	default: ConLog.Error("Unknown button ID: %d", id); break;
+	default: LOG_ERROR(HLE, "Unknown button ID: %d", id); break;
 	}
 }
 

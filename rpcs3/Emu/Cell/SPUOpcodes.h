@@ -229,7 +229,7 @@ namespace SPU_opcodes
 class SPUOpcodes
 {
 public:
-	static u32 branchTarget(const u64 pc, const s32 imm)
+	static u32 branchTarget(const u32 pc, const s32 imm)
 	{
 		return (pc + (imm << 2)) & 0x3fffc;
 	}
@@ -272,16 +272,16 @@ public:
 	virtual void AVGB(u32  rt, u32  ra, u32  rb) = 0;
 	virtual void MTSPR(u32  rt, u32  sa) = 0;
 	virtual void WRCH(u32  ra, u32  rt) = 0;
-	virtual void BIZ(u32  rt, u32  ra) = 0;
-	virtual void BINZ(u32  rt, u32  ra) = 0;
-	virtual void BIHZ(u32  rt, u32  ra) = 0;
-	virtual void BIHNZ(u32  rt, u32  ra) = 0;
+	virtual void BIZ(u32 intr, u32  rt, u32  ra) = 0;
+	virtual void BINZ(u32 intr, u32  rt, u32  ra) = 0;
+	virtual void BIHZ(u32 intr, u32  rt, u32  ra) = 0;
+	virtual void BIHNZ(u32 intr, u32  rt, u32  ra) = 0;
 	virtual void STOPD(u32  rc, u32  ra, u32  rb) = 0;
 	virtual void STQX(u32  rt, u32  ra, u32  rb) = 0;
-	virtual void BI(u32  ra) = 0;
-	virtual void BISL(u32  rt, u32  ra) = 0;
+	virtual void BI(u32 intr, u32  ra) = 0;
+	virtual void BISL(u32 intr, u32  rt, u32  ra) = 0;
 	virtual void IRET(u32  ra) = 0;
-	virtual void BISLED(u32  rt, u32  ra) = 0;
+	virtual void BISLED(u32 intr, u32  rt, u32  ra) = 0;
 	virtual void HBR(u32  p, u32  ro, u32  ra) = 0;
 	virtual void GB(u32  rt, u32  ra) = 0;
 	virtual void GBH(u32  rt, u32  ra) = 0;

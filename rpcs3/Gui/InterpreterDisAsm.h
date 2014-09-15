@@ -9,13 +9,12 @@ class InterpreterDisAsmFrame : public wxPanel
 	CPUDisAsm* disasm;
 	CPUDecoder* decoder;
 	u64 PC;
-	Array<u32> remove_markedPC;
+	std::vector<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
 	wxTextCtrl* m_calls;
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
-	AppConnector m_app_connector;
 	u32 m_item_count;
 	wxChoice* m_choice_units;
 

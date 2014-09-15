@@ -1,16 +1,12 @@
 #pragma once
 
-#include "Emu/Cell/PPUOpcodes.h"
-#include <wx/aui/aui.h>
-#include "Loader/ELF64.h"
-#include <wx/richtext/richtextctrl.h>
+#include "Gui/MainFrame.h"
 
 class CompilerELF : public FrameBase
 {
 	wxAuiManager m_aui_mgr;
 	wxStatusBar& m_status_bar;
 	bool m_disable_scroll;
-	AppConnector m_app_connector;
 
 public:
 	CompilerELF(wxWindow* parent);

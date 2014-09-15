@@ -1,25 +1,22 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellGem_init();
-Module cellGem(0x005a, cellGem_init);
+#include "cellGem.h"
 
-// Error Codes
-enum
+Module *cellGem = nullptr;
+
+struct cellGemInternal
 {
-	CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121801,
-	CELL_GEM_ERROR_ALREADY_INITIALIZED        = 0x80121802,
-	CELL_GEM_ERROR_UNINITIALIZED              = 0x80121803,
-	CELL_GEM_ERROR_INVALID_PARAMETER          = 0x80121804,
-	CELL_GEM_ERROR_INVALID_ALIGNMENT          = 0x80121805,
-	CELL_GEM_ERROR_UPDATE_NOT_FINISHED        = 0x80121806,
-	CELL_GEM_ERROR_UPDATE_NOT_STARTED         = 0x80121807,
-	CELL_GEM_ERROR_CONVERT_NOT_FINISHED       = 0x80121808,
-	CELL_GEM_ERROR_CONVERT_NOT_STARTED        = 0x80121809,
-	CELL_GEM_ERROR_WRITE_NOT_FINISHED         = 0x8012180A,
-	CELL_GEM_ERROR_NOT_A_HUE                  = 0x8012180B,
+	bool m_bInitialized;
+
+	cellGemInternal()
+		: m_bInitialized(false)
+	{
+	}
 };
+
+cellGemInternal cellGemInstance;
 
 int cellGemCalibrate()
 {
@@ -59,7 +56,13 @@ int cellGemEnableMagnetometer()
 
 int cellGemEnd()
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem->Warning("cellGemEnd()");
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
+	cellGemInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -123,10 +126,15 @@ int cellGemGetInfo()
 	return CELL_OK;
 }
 
-int cellGemGetMemorySize()
+// Should int be used, even when type is int_32t (s32)?
+s32 cellGemGetMemorySize(be_t<s32> max_connect)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
-	return CELL_OK;
+	cellGem->Warning("cellGemGetMemorySize(max_connect=%i)", max_connect);
+
+	if (max_connect > CELL_GEM_MAX_NUM)
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+
+	return 1024 * 1024 * max_connect; // 1 MB * max_connect
 }
 
 int cellGemGetRGB()
@@ -165,9 +173,15 @@ int cellGemHSVtoRGB()
 	return CELL_OK;
 }
 
-int cellGemInit()
+int cellGemInit(vm::ptr<CellGemAttribute> attribute)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem->Warning("cellGemInit(attribute_addr=0x%x)", attribute.addr());
+
+	if (cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
+
+	cellGemInstance.m_bInitialized = true;
+
 	return CELL_OK;
 }
 
@@ -237,48 +251,50 @@ int cellGemWriteExternalPort()
 	return CELL_OK;
 }
 
-void cellGem_init()
+void cellGem_init(Module *pxThis)
 {
-	//cellGem.AddFunc(, cellGemAttributeInit);
-	cellGem.AddFunc(0xafa99ead, cellGemCalibrate);
-	cellGem.AddFunc(0x9b9714a4, cellGemClearStatusFlags);
-	cellGem.AddFunc(0x1a13d010, cellGemConvertVideoFinish);
-	cellGem.AddFunc(0x6dce048c, cellGemConvertVideoStart);
-	cellGem.AddFunc(0x4219de31, cellGemEnableCameraPitchAngleCorrection);
-	cellGem.AddFunc(0x1a2518a2, cellGemEnableMagnetometer);
-	cellGem.AddFunc(0xe1f85a80, cellGemEnd);
-	cellGem.AddFunc(0x6fc4c791, cellGemFilterState);
-	cellGem.AddFunc(0xce6d7791, cellGemForceRGB);
-	cellGem.AddFunc(0x6a5b7048, cellGemGetAccelerometerPositionInDevice);
-	cellGem.AddFunc(0x2d2c2764, cellGemGetAllTrackableHues);
-	cellGem.AddFunc(0x8befac67, cellGemGetCameraState);
-	cellGem.AddFunc(0x02eb41bb, cellGemGetEnvironmentLightingColor);
-	cellGem.AddFunc(0xb8ef56a6, cellGemGetHuePixels);
-	cellGem.AddFunc(0x92cc4b34, cellGemGetImageState);
-	cellGem.AddFunc(0xd37b127a, cellGemGetInertialState);
-	cellGem.AddFunc(0x9e1dff96, cellGemGetInfo);
-	cellGem.AddFunc(0x2e0a170d, cellGemGetMemorySize);
-	cellGem.AddFunc(0x1b30cc22, cellGemGetRGB);
-	cellGem.AddFunc(0x6db6b007, cellGemGetRumble);
-	cellGem.AddFunc(0x6441d38d, cellGemGetState);
-	cellGem.AddFunc(0xfee33481, cellGemGetStatusFlags);
-	cellGem.AddFunc(0x18ea899a, cellGemGetTrackerHue);
-	//cellGem.AddFunc(, cellGemGetVideoConvertSize);
-	cellGem.AddFunc(0xc7622586, cellGemHSVtoRGB);
-	cellGem.AddFunc(0x13ea7c64, cellGemInit);
-	cellGem.AddFunc(0xe3e4f0d6, cellGemInvalidateCalibration);
-	cellGem.AddFunc(0xfb5887f9, cellGemIsTrackableHue);
-	cellGem.AddFunc(0xa03ef587, cellGemPrepareCamera);
-	cellGem.AddFunc(0xc07896f9, cellGemPrepareVideoConvert);
-	//cellGem.AddFunc(, cellGemReadExternalPortDeviceInfo);
-	cellGem.AddFunc(0xde54e2fc, cellGemReset);
-	cellGem.AddFunc(0x49609306, cellGemSetRumble);
-	cellGem.AddFunc(0x77e08704, cellGemSetYaw);
-	cellGem.AddFunc(0x928ac5f8, cellGemTrackHues);
-	cellGem.AddFunc(0x41ae9c31, cellGemUpdateFinish);
-	cellGem.AddFunc(0x0ecd2261, cellGemUpdateStart);
-	//cellGem.AddFunc(, cellGemVideoConvertAttributeInit);
-	//cellGem.AddFunc(, cellGemVideoConvertAttributeInitRgba);
-	cellGem.AddFunc(0x1f6328d8, cellGemWriteExternalPort);
+	cellGem = pxThis;
+
+	//cellGem->AddFunc(, cellGemAttributeInit);
+	cellGem->AddFunc(0xafa99ead, cellGemCalibrate);
+	cellGem->AddFunc(0x9b9714a4, cellGemClearStatusFlags);
+	cellGem->AddFunc(0x1a13d010, cellGemConvertVideoFinish);
+	cellGem->AddFunc(0x6dce048c, cellGemConvertVideoStart);
+	cellGem->AddFunc(0x4219de31, cellGemEnableCameraPitchAngleCorrection);
+	cellGem->AddFunc(0x1a2518a2, cellGemEnableMagnetometer);
+	cellGem->AddFunc(0xe1f85a80, cellGemEnd);
+	cellGem->AddFunc(0x6fc4c791, cellGemFilterState);
+	cellGem->AddFunc(0xce6d7791, cellGemForceRGB);
+	cellGem->AddFunc(0x6a5b7048, cellGemGetAccelerometerPositionInDevice);
+	cellGem->AddFunc(0x2d2c2764, cellGemGetAllTrackableHues);
+	cellGem->AddFunc(0x8befac67, cellGemGetCameraState);
+	cellGem->AddFunc(0x02eb41bb, cellGemGetEnvironmentLightingColor);
+	cellGem->AddFunc(0xb8ef56a6, cellGemGetHuePixels);
+	cellGem->AddFunc(0x92cc4b34, cellGemGetImageState);
+	cellGem->AddFunc(0xd37b127a, cellGemGetInertialState);
+	cellGem->AddFunc(0x9e1dff96, cellGemGetInfo);
+	cellGem->AddFunc(0x2e0a170d, cellGemGetMemorySize);
+	cellGem->AddFunc(0x1b30cc22, cellGemGetRGB);
+	cellGem->AddFunc(0x6db6b007, cellGemGetRumble);
+	cellGem->AddFunc(0x6441d38d, cellGemGetState);
+	cellGem->AddFunc(0xfee33481, cellGemGetStatusFlags);
+	cellGem->AddFunc(0x18ea899a, cellGemGetTrackerHue);
+	//cellGem->AddFunc(, cellGemGetVideoConvertSize);
+	cellGem->AddFunc(0xc7622586, cellGemHSVtoRGB);
+	cellGem->AddFunc(0x13ea7c64, cellGemInit);
+	cellGem->AddFunc(0xe3e4f0d6, cellGemInvalidateCalibration);
+	cellGem->AddFunc(0xfb5887f9, cellGemIsTrackableHue);
+	cellGem->AddFunc(0xa03ef587, cellGemPrepareCamera);
+	cellGem->AddFunc(0xc07896f9, cellGemPrepareVideoConvert);
+	//cellGem->AddFunc(, cellGemReadExternalPortDeviceInfo);
+	cellGem->AddFunc(0xde54e2fc, cellGemReset);
+	cellGem->AddFunc(0x49609306, cellGemSetRumble);
+	cellGem->AddFunc(0x77e08704, cellGemSetYaw);
+	cellGem->AddFunc(0x928ac5f8, cellGemTrackHues);
+	cellGem->AddFunc(0x41ae9c31, cellGemUpdateFinish);
+	cellGem->AddFunc(0x0ecd2261, cellGemUpdateStart);
+	//cellGem->AddFunc(, cellGemVideoConvertAttributeInit);
+	//cellGem->AddFunc(, cellGemVideoConvertAttributeInitRgba);
+	cellGem->AddFunc(0x1f6328d8, cellGemWriteExternalPort);
 
 }

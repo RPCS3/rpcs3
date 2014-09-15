@@ -1,57 +1,66 @@
 #include "stdafx.h"
+#include "utils.h"
+#include "aes.h"
+#include "sha1.h"
+#include "key_vault.h"
 #include "unpkg.h"
+#include "restore_new.h"
 #include <wx/progdlg.h>
+#include "define_new_memleakdetect.h"
+
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 
 // Decryption.
-bool CheckHeader(wxFile& pkg_f, PKGHeader* m_header)
+bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 {
 	if (m_header->pkg_magic != 0x7F504B47) {
-		ConLog.Error("PKG: Not a package file!");
+		LOG_ERROR(LOADER, "PKG: Not a package file!");
 		return false;
 	}
 
-	switch (m_header->pkg_type)
+	switch ((u32)m_header->pkg_type)
 	{
 	case PKG_RELEASE_TYPE_DEBUG:   break;
 	case PKG_RELEASE_TYPE_RELEASE: break;
 	default:
-		ConLog.Error("PKG: Unknown PKG type!");
+		LOG_ERROR(LOADER, "PKG: Unknown PKG type!");
 		return false;
 	}
 
-	switch (m_header->pkg_platform)
+	switch ((u32)m_header->pkg_platform)
 	{
 	case PKG_PLATFORM_TYPE_PS3: break;
 	case PKG_PLATFORM_TYPE_PSP: break;
 	default:
-		ConLog.Error("PKG: Unknown PKG type!");
+		LOG_ERROR(LOADER, "PKG: Unknown PKG type!");
 		return false;
 	}
 
 	if (m_header->header_size != PKG_HEADER_SIZE) {
-		ConLog.Error("PKG: Wrong header size!");
+		LOG_ERROR(LOADER, "PKG: Wrong header size!");
 		return false;
 	}
 
 	if (m_header->pkg_size != pkg_f.Length()) {
-		ConLog.Error("PKG: File size mismatch.");
+		LOG_ERROR(LOADER, "PKG: File size mismatch.");
 		return false;
 	}
 
 	if (m_header->data_size + m_header->data_offset + 0x60 != pkg_f.Length()) {
-		ConLog.Error("PKG: Data size mismatch.");
+		LOG_ERROR(LOADER, "PKG: Data size mismatch.");
 		return false;
 	}
 
 	return true;
 }
 
-bool LoadHeader(wxFile& pkg_f, PKGHeader* m_header)
+bool LoadHeader(rFile& pkg_f, PKGHeader* m_header)
 {
 	pkg_f.Seek(0);
 	
 	if (pkg_f.Read(m_header, sizeof(PKGHeader)) != sizeof(PKGHeader)) {
-		ConLog.Error("PKG: Package file is too short!");
+		LOG_ERROR(LOADER, "PKG: Package file is too short!");
 		return false;
 	}
 
@@ -61,7 +70,7 @@ bool LoadHeader(wxFile& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-int Decrypt(wxFile& pkg_f, wxFile& dec_pkg_f, PKGHeader* m_header)
+int Decrypt(rFile& pkg_f, rFile& dec_pkg_f, PKGHeader* m_header)
 {
 	if (!LoadHeader(pkg_f, m_header))
 		return -1;
@@ -111,8 +120,9 @@ int Decrypt(wxFile& pkg_f, wxFile& dec_pkg_f, PKGHeader* m_header)
 			{
 				aes_crypt_ecb(&c, AES_ENCRYPT, iv, ctr+j*HASH_LEN);
 
-				be_t<u64> hi = *(be_t<u64>*)&iv[0];
-				be_t<u64> lo = *(be_t<u64>*)&iv[8] + 1;
+				be_t<u64> hi = be_t<u64>::MakeFromBE(*(u64*)&iv[0]);
+				be_t<u64> lo = be_t<u64>::MakeFromBE(*(u64*)&iv[8]);
+				lo++;
 
 				if (lo == 0)
 					hi += 1;
@@ -133,20 +143,20 @@ int Decrypt(wxFile& pkg_f, wxFile& dec_pkg_f, PKGHeader* m_header)
 }
 
 // Unpacking.
-bool LoadEntries(wxFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
+bool LoadEntries(rFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
 {
 	dec_pkg_f.Seek(0);
 	dec_pkg_f.Read(m_entries, sizeof(PKGEntry) * m_header->file_count);
 	
 	if (m_entries->name_offset / sizeof(PKGEntry) != m_header->file_count) {
-		ConLog.Error("PKG: Entries are damaged!");
+		LOG_ERROR(LOADER, "PKG: Entries are damaged!");
 		return false;
 	}
 
 	return true;
 }
 
-bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
+bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 {
 	u8 buf[BUF_SIZE];
 
@@ -161,8 +171,8 @@ bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 		case PKG_FILE_ENTRY_SDAT:
 		case PKG_FILE_ENTRY_REGULAR:
 		{
-			wxFile out;
-			out.Create(dir + buf);
+			rFile out;
+			out.Create(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
 			dec_pkg_f.Seek(entry.file_offset);
 
 			for (u64 size = 0; size < entry.file_size; ) {
@@ -177,18 +187,19 @@ bool UnpackEntry(wxFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 		break;
 			
 		case PKG_FILE_ENTRY_FOLDER:
-			wxMkdir(dir + buf);
+			rMkdir(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
 		break;
 	}
 	return true;
 }
 
-int Unpack(wxFile& pkg_f, std::string src, std::string dst)
+int Unpack(rFile& pkg_f, std::string src, std::string dst)
 {
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
-	wxFile dec_pkg_f;
-	std::string decryptedFile = wxGetCwd().ToStdString() + "/dev_hdd1/" + src + ".dec";
+	rFile dec_pkg_f;
+	// TODO: This shouldn't use current dir
+	std::string decryptedFile = "./dev_hdd1/" + src + ".dec";
 
 	dec_pkg_f.Create(decryptedFile, true);
 	
@@ -197,7 +208,7 @@ int Unpack(wxFile& pkg_f, std::string src, std::string dst)
 	
 	dec_pkg_f.Close();
 
-	wxFile n_dec_pkg_f(decryptedFile, wxFile::read);
+	rFile n_dec_pkg_f(decryptedFile, rFile::read);
 
 	std::vector<PKGEntry> m_entries;
 	m_entries.resize(m_header->file_count);

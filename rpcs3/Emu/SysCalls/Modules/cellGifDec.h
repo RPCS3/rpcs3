@@ -1,6 +1,5 @@
 #pragma once
 
-
 //Return Codes
 enum
 {
@@ -16,8 +15,8 @@ enum
 
 enum CellGifDecStreamSrcSel
 {
-	CELL_GIFDEC_FILE   = 0, //Input from a file
-	CELL_GIFDEC_BUFFER = 1, //Input from a buffer
+	CELL_GIFDEC_FILE   = 0, // Input from a file
+	CELL_GIFDEC_BUFFER = 1, // Input from a buffer
 };
 
 enum CellGifDecColorSpace
@@ -54,7 +53,7 @@ struct CellGifDecInfo
 struct CellGifDecSrc
 {
 	be_t<u32> srcSelect;
-	be_t<u32> fileName;
+	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u64> fileSize;
 	be_t<u32> streamPtr;
@@ -105,10 +104,12 @@ struct CellGifDecDataCtrlParam
 	be_t<u64> outputBytesPerLine;
 };
 
-struct CellGifDecSubHandle //Custom struct
+//Custom structs
+struct CellGifDecSubHandle
 {
 	u32 fd;
 	u64 fileSize;
 	CellGifDecInfo info;
 	CellGifDecOutParam outParam;
+	CellGifDecSrc src;
 };

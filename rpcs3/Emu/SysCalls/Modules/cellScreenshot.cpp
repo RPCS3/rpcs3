@@ -1,6 +1,5 @@
 #include "stdafx.h"
-#include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/SC_FUNC.h"
+#if 0
 
 void cellScreenshot_init();
 Module cellScreenshot(0x004e, cellScreenshot_init);
@@ -56,3 +55,4 @@ void cellScreenshot_init()
 	cellScreenshot.AddFunc(0x9e33ab8f, cellScreenShotEnable);
 	cellScreenshot.AddFunc(0xfc6f4e74, cellScreenShotDisable);
 }
+#endif

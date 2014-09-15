@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/rFile.h"
 #include "vfsDirBase.h"
 
 vfsDirBase::vfsDirBase(vfsDevice* device)
@@ -31,10 +32,10 @@ bool vfsDirBase::IsOpened() const
 
 bool vfsDirBase::IsExists(const std::string& path) const
 {
-	return wxDirExists(fmt::FromUTF8(path));
+	return rExists(path);
 }
 
-const Array<DirEntryInfo>& vfsDirBase::GetEntries() const
+const std::vector<DirEntryInfo>& vfsDirBase::GetEntries() const
 {
 	return m_entries;
 }
@@ -42,7 +43,7 @@ const Array<DirEntryInfo>& vfsDirBase::GetEntries() const
 void vfsDirBase::Close()
 {
 	m_cwd = "";
-	m_entries.Clear();
+	m_entries.clear();
 }
 
 std::string vfsDirBase::GetPath() const
@@ -52,7 +53,7 @@ std::string vfsDirBase::GetPath() const
 
 const DirEntryInfo* vfsDirBase::Read()
 {
-	if (m_pos >= m_entries.GetCount())
+	if (m_pos >= m_entries.size())
 		return nullptr;
 
 	return &m_entries[m_pos++];
