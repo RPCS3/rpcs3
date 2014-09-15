@@ -16,7 +16,6 @@ using namespace llvm;
 
 PPULLVMRecompiler::PPULLVMRecompiler()
     : ThreadBase("PPULLVMRecompiler")
-    , m_decoder(this)
     , m_compilation_time(0.0)
     , m_idling_time(0.0) {
     InitializeNativeTarget();
@@ -34,8 +33,6 @@ PPULLVMRecompiler::PPULLVMRecompiler()
     m_execution_engine = engine_builder.create();
 
     m_disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
-
-    Start();
 }
 
 PPULLVMRecompiler::~PPULLVMRecompiler() {
@@ -71,18 +68,22 @@ PPULLVMRecompiler::CompiledBlock PPULLVMRecompiler::GetCompiledBlock(u64 address
     m_pending_blocks_set_mutex.lock();
     m_pending_blocks_set.insert(address);
     m_pending_blocks_set_mutex.unlock();
+
+    if (!IsAlive()) {
+        Start();
+    }
+
     Notify();
     return nullptr;
 }
 
 void PPULLVMRecompiler::Task() {
-    while (!TestDestroy()) {
-        std::chrono::high_resolution_clock::time_point idle_start = std::chrono::high_resolution_clock::now();
-        WaitForAnySignal();
-        std::chrono::high_resolution_clock::time_point idle_end = std::chrono::high_resolution_clock::now();
-        m_idling_time += std::chrono::duration_cast<std::chrono::duration<double>>(idle_end - idle_start);
+    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
-        while (!TestDestroy()) {
+    while (!TestDestroy() && !Emu.IsStopped()) {
+        WaitForAnySignal();
+
+        while (!TestDestroy() && !Emu.IsStopped()) {
             u64 address;
 
             m_pending_blocks_set_mutex.lock();
@@ -99,56 +100,13 @@ void PPULLVMRecompiler::Task() {
             Compile(address);
         }
     }
+
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    m_idling_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start - m_compilation_time);
 }
 
-void PPULLVMRecompiler::Compile(const u64 address) {
-    m_address_to_compiled_block_map_mutex.lock();
-    auto i = m_address_to_compiled_block_map.find(address);
-    m_address_to_compiled_block_map_mutex.unlock();
-
-    if (i != m_address_to_compiled_block_map.end()) {
-        return;
-    }
-
-    std::chrono::high_resolution_clock::time_point compilation_start = std::chrono::high_resolution_clock::now();
-
-    auto function_name = fmt::Format("fn_0x%llX", address);
-    m_function         = m_module->getFunction(function_name);
-    if (!m_function) {
-
-        m_function = (Function *)m_module->getOrInsertFunction(function_name, m_ir_builder->getVoidTy(),
-                                                               m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-                                                               m_ir_builder->getInt64Ty() /*base_addres*/,
-                                                               m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
-        m_function->setCallingConv(CallingConv::X86_64_Win64);
-        auto arg_i = m_function->arg_begin();
-        arg_i->setName("ppu_state");
-        (++arg_i)->setName("base_address");
-        (++arg_i)->setName("interpreter");
-
-        auto block = BasicBlock::Create(*m_llvm_context, "start", m_function);
-        m_ir_builder->SetInsertPoint(block);
-
-        u64 offset = 0;
-        m_hit_branch_instruction = false;
-        while (!m_hit_branch_instruction) {
-            u32 instr = Memory.Read32(address + offset);
-            m_decoder.Decode(instr);
-            offset += 4;
-
-            SetPc(m_ir_builder->getInt64(address + offset));
-        }
-
-        m_ir_builder->CreateRetVoid();
-        m_execution_engine->runJITOnFunction(m_function);
-    }
-
-    m_address_to_compiled_block_map_mutex.lock();
-    m_address_to_compiled_block_map[address] = (CompiledBlock)m_execution_engine->getPointerToFunction(m_function);
-    m_address_to_compiled_block_map_mutex.unlock();
-
-    std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
-    m_compilation_time += std::chrono::duration_cast<std::chrono::duration<double>>(compilation_end - compilation_start);
+void PPULLVMRecompiler::Decode(const u32 code) {
+    (*PPU_instr::main_list)(this, code);
 }
 
 void PPULLVMRecompiler::NULL_OP() {
@@ -2504,6 +2462,56 @@ void PPULLVMRecompiler::FCFID(u32 frd, u32 frb, bool rc) {
 
 void PPULLVMRecompiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
+}
+
+void PPULLVMRecompiler::Compile(const u64 address) {
+    m_address_to_compiled_block_map_mutex.lock();
+    auto i = m_address_to_compiled_block_map.find(address);
+    m_address_to_compiled_block_map_mutex.unlock();
+
+    if (i != m_address_to_compiled_block_map.end()) {
+        return;
+    }
+
+    std::chrono::high_resolution_clock::time_point compilation_start = std::chrono::high_resolution_clock::now();
+
+    auto function_name = fmt::Format("fn_0x%llX", address);
+    m_function         = m_module->getFunction(function_name);
+    if (!m_function) {
+
+        m_function = (Function *)m_module->getOrInsertFunction(function_name, m_ir_builder->getVoidTy(),
+                                                               m_ir_builder->getInt8PtrTy() /*ppu_state*/,
+                                                               m_ir_builder->getInt64Ty() /*base_addres*/,
+                                                               m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
+        m_function->setCallingConv(CallingConv::X86_64_Win64);
+        auto arg_i = m_function->arg_begin();
+        arg_i->setName("ppu_state");
+        (++arg_i)->setName("base_address");
+        (++arg_i)->setName("interpreter");
+
+        auto block = BasicBlock::Create(*m_llvm_context, "start", m_function);
+        m_ir_builder->SetInsertPoint(block);
+
+        u64 offset = 0;
+        m_hit_branch_instruction = false;
+        while (!m_hit_branch_instruction) {
+            u32 instr = Memory.Read32(address + offset);
+            Decode(instr);
+            offset += 4;
+
+            SetPc(m_ir_builder->getInt64(address + offset));
+        }
+
+        m_ir_builder->CreateRetVoid();
+        m_execution_engine->runJITOnFunction(m_function);
+    }
+
+    m_address_to_compiled_block_map_mutex.lock();
+    m_address_to_compiled_block_map[address] = (CompiledBlock)m_execution_engine->getPointerToFunction(m_function);
+    m_address_to_compiled_block_map_mutex.unlock();
+
+    std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
+    m_compilation_time += std::chrono::duration_cast<std::chrono::duration<double>>(compilation_end - compilation_start);
 }
 
 Value * PPULLVMRecompiler::GetPPUState() {

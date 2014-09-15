@@ -14,7 +14,7 @@
 struct PPURegState;
 
 /// PPU to LLVM recompiler
-class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes {
+class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPCDecoder {
 public:
     typedef void(*CompiledBlock)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
@@ -37,8 +37,7 @@ public:
     void Task() override;
 
 protected:
-    /// Compile a block of code
-    void Compile(u64 address);
+    void Decode(const u32 code) override;
 
     void NULL_OP() override;
     void NOP() override;
@@ -441,9 +440,6 @@ protected:
     void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
-    /// PPU instruction decoder
-    PPUDecoder m_decoder;
-
     /// Mutex for accessing m_address_to_compiled_block_map
     /// TODO: Use a RW lock instead of mutex
     std::mutex m_address_to_compiled_block_map_mutex;
@@ -488,6 +484,9 @@ private:
 
     /// Contains the number of times the interpreter fallback was used
     std::map<std::string, u64> m_interpreter_fallback_stats;
+
+    /// Compile a block of code
+    void Compile(u64 address);
 
     /// Get PPU state pointer
     llvm::Value * GetPPUState();
