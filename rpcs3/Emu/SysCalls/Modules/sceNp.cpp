@@ -178,7 +178,7 @@ int sceNpManagerGetStatus(vm::ptr<be_t<u32>> status)
 {
 	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
-	if (!sceNpInstance.m_bSceNp2Initialized)
+	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 
 	// TODO: Support different statuses
