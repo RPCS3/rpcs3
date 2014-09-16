@@ -60,9 +60,11 @@ public:
 
 extern bool dump_enable;
 
+class PPUThread;
+
 class SysCalls
 {
 public:
-	static void DoSyscall(u32 code);
+	static void DoSyscall(PPUThread& CPU, u32 code);
 	static std::string GetHLEFuncName(const u32 fid);
 };

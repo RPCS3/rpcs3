@@ -179,11 +179,11 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 	}
 }
 
-void StaticFuncManager::StaticExecute(u32 code)
+void StaticFuncManager::StaticExecute(PPUThread& CPU, u32 code)
 {
 	if (code < m_static_funcs_list.size())
 	{
-		(*m_static_funcs_list[code]->func)();
+		(*m_static_funcs_list[code]->func)(CPU);
 	}
 	else
 	{

@@ -103,7 +103,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		cond->signaler = GetCurrentCPUThread()->GetId();
+		cond->signaler = GetCurrentPPUThread().GetId();
 		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
 		Emu.GetCPU().NotifyThread(target);

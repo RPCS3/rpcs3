@@ -4,7 +4,7 @@
 class func_caller
 {
 public:
-	virtual void operator()() = 0;
+	virtual void operator()(PPUThread& CPU) = 0;
 	virtual ~func_caller(){};
 };
 
@@ -169,10 +169,28 @@ namespace detail
 		{
 		}
 
-		virtual void operator()()
+		virtual void operator()(PPUThread& CPU)
 		{
-			declCPU();
 			call<void>(m_call, iterate<0, 0, 0, T...>(CPU));
+		}
+	};
+
+	template<typename... T>
+	class func_binder<void, PPUThread&, T...> : public func_caller
+	{
+		typedef void(*func_t)(PPUThread&, T...);
+		const func_t m_call;
+
+	public:
+		func_binder(func_t call)
+			: func_caller()
+			, m_call(call)
+		{
+		}
+
+		virtual void operator()(PPUThread& CPU)
+		{
+			call<void>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
 		}
 	};
 
@@ -189,9 +207,8 @@ namespace detail
 		{
 		}
 
-		virtual void operator()()
+		virtual void operator()(PPUThread& CPU)
 		{
-			declCPU();
 			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
 			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 			const bool is_float = std::is_floating_point<RT>::value;
@@ -199,6 +216,31 @@ namespace detail
 			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 
 			bind_result<RT, t>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
+		}
+	};
+
+	template<typename RT, typename... T>
+	class func_binder<RT, PPUThread&, T...> : public func_caller
+	{
+		typedef RT(*func_t)(PPUThread&, T...);
+		const func_t m_call;
+
+	public:
+		func_binder(func_t call)
+			: func_caller()
+			, m_call(call)
+		{
+		}
+
+		virtual void operator()(PPUThread& CPU)
+		{
+			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
+			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
+			const bool is_float = std::is_floating_point<RT>::value;
+			const bool is_vector = std::is_same<RT, u128>::value;
+			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+
+			bind_result<RT, t>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
 		}
 	};
 }

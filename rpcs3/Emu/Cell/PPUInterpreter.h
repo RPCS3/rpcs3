@@ -68,7 +68,7 @@ private:
 		const u64 old_sc = CPU.m_last_syscall;
 
 		CPU.m_last_syscall = sc;
-		SysCalls::DoSyscall((u32)sc);
+		SysCalls::DoSyscall(CPU, (u32)sc);
 
 		if(Ini.HLELogging.GetValue())
 		{
@@ -2093,7 +2093,7 @@ private:
 		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
 		case 0x3:
-			Emu.GetSFuncManager().StaticExecute((u32)CPU.GPR[11]);
+			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
 				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
