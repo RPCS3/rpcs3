@@ -254,6 +254,35 @@ class be_t
 	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
 	T m_data;
 
+	template<typename Tto, typename Tfrom, int mode>
+	struct _convert
+	{
+		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		{
+			Tto res = be_value;
+			return (be_t<Tto>&)res;
+		}
+	};
+
+	template<typename Tto, typename Tfrom>
+	struct _convert<Tto, Tfrom, 1>
+	{
+		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		{
+			Tto res = se_t<Tto, sizeof(Tto)>::func(se_t<Tfrom, sizeof(Tfrom)>::func(be_value));
+			return (be_t<Tto>&)res;
+		}
+	};
+
+	template<typename Tto, typename Tfrom>
+	struct _convert<Tto, Tfrom, 2>
+	{
+		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		{
+			Tto res = be_value >> ((sizeof(Tfrom)-sizeof(Tto)) * 8);
+			return (be_t<Tto>&)res;
+		}
+	};
 public:
 	typedef T type;
 	
@@ -306,36 +335,6 @@ public:
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		template<typename Tto, typename Tfrom, int mode>
-		struct _convert
-		{
-			static __forceinline be_t<Tto>& func(Tfrom& be_value)
-			{
-				Tto res = be_value;
-				return (be_t<Tto>&)res;
-			}
-		};
-
-		template<typename Tto, typename Tfrom>
-		struct _convert<Tto, Tfrom, 1>
-		{
-			static __forceinline be_t<Tto>& func(Tfrom& be_value)
-			{
-				Tto res = se_t<Tto, sizeof(Tto)>::func(se_t<Tfrom, sizeof(Tfrom)>::func(be_value););
-				return (be_t<Tto>&)res;
-			}
-		};
-
-		template<typename Tto, typename Tfrom>
-		struct _convert<Tto, Tfrom, 2>
-		{
-			static __forceinline be_t<Tto>& func(Tfrom& be_value)
-			{
-				Tto res = be_value >> ((sizeof(Tfrom)-sizeof(Tto)) * 8);
-				return (be_t<Tto>&)res;
-			}
-		};
-
 		return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
