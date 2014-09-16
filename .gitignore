@@ -30,7 +30,6 @@
 *.dump
 *.wav
 *.tmp
-llvm_build/*
 
 /build
 
@@ -38,8 +37,6 @@ llvm_build/*
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
-/llvm_build/Debug
-/llvm_build/Release
 
 /wxWidgets/lib
 /bin/rpcs3.ini
