@@ -37,6 +37,7 @@
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
+/llvm_build
 
 /wxWidgets/lib
 /bin/rpcs3.ini

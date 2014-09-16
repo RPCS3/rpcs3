@@ -564,7 +564,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd ..\llvm_build
+      <Command>if not exist ..\llvm_build mkdir ..\llvm_build
+cd ..\llvm_build
 cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
 msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
 </Command>
@@ -588,7 +589,8 @@ msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>cd ..\llvm_build
+      <Command>if not exist ..\llvm_build mkdir ..\llvm_build
+cd ..\llvm_build
 cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
 msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
 </Command>
@@ -632,7 +634,8 @@ msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>cd ..\llvm_build
+      <Command>if not exist ..\llvm_build mkdir ..\llvm_build
+cd ..\llvm_build
 cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
 msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release
 </Command>
