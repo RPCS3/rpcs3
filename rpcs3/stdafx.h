@@ -26,6 +26,7 @@
 #include <memory>
 #include <vector>
 #include <set>
+#include <array>
 #include <string>
 #include <ostream>
 #include <sstream>

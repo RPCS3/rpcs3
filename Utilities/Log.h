@@ -1,5 +1,4 @@
 #pragma once
-#include <array>
 #include "Utilities/MTRingbuffer.h"
 
 //#define BUFFERED_LOGGING 1

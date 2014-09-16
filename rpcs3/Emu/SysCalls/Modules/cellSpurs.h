@@ -91,6 +91,17 @@ struct CellSpurs2
 	SPURSManager *spurs;
 };
 
+enum SpursAttrFlags : u32
+{
+	SAF_NONE            = 0x0,
+	SAF_EXIT_IF_NO_WORK = 0x1,
+
+	SAF_SYSTEM_WORKLOAD_ENABLED       = 0x02000000,
+	SAF_SPU_PRINTF_ENABLED            = 0x10000000,
+	SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT = 0x20000000,
+	SAF_SPU_MEMORY_CONTAINER_SET      = 0x40000000,
+};
+
 struct CellSpursAttribute
 {
 	static const uint align = 8;
@@ -113,9 +124,13 @@ struct CellSpursAttribute
 			bool exitIfNoWork;     // 0x14
 			char prefix[15];       // 0x15 (not a NTS)
 			be_t<u32> prefixSize;  // 0x24
-			be_t<u32> flags;       // 0x28
+			be_t<u32> flags;       // 0x28 (SpursAttrFlags)
 			be_t<u32> container;   // 0x2C
-			// ...
+			be_t<u32> unk0;        // 0x30
+			be_t<u32> unk1;        // 0x34
+			u8 swlPriority[8];     // 0x38
+			be_t<u32> swlMaxSpu;   // 0x40
+			be_t<u32> swlIsPreem;  // 0x44
 		} m;
 
 		// alternative implementation
