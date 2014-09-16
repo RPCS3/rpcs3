@@ -146,11 +146,23 @@ namespace cb_detail
 	{
 		__forceinline static RT call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 		{
-			const bool stack = _bind_func_args<0, 0, 0>(CPU, args...);
+			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
 			CPU.FastCall2(pc, rtoc);
 			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 			return _func_res<RT>::get_value(CPU);
+		}
+	};
+
+	template<typename... T>
+	struct _func_caller<void, T...>
+	{
+		__forceinline static void call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+		{
+			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
+			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
+			CPU.FastCall2(pc, rtoc);
+			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 		}
 	};
 }
@@ -174,6 +186,13 @@ namespace vm
 }
 
 template<typename RT, typename... T>
-struct cb_caller : public cb_detail::_func_caller<RT, T...>
+RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 {
-};
+	return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
+}
+
+template<typename... T>
+void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+{
+	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
+}

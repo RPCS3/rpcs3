@@ -93,14 +93,14 @@ struct CellSpurs2
 
 struct CellSpursAttribute
 {
-	static const auto align = 8;
-	static const auto size = 512;
+	static const uint align = 8;
+	static const uint size = 512;
 
 	union
 	{
 		// raw data
 		u8 _u8[size];
-		be_array_t<u32, size / sizeof(u32)> _u32;
+		struct { be_t<u32> _u32[size / sizeof(u32)]; };
 
 		// real structure
 		struct

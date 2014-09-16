@@ -68,18 +68,17 @@ int cellCameraGetDeviceGUID()
 	return CELL_OK;
 }
 
-int cellCameraGetType(s32 dev_num, CellCameraType type)
+int cellCameraGetType(s32 dev_num, vm::ptr<CellCameraType> type)
 {
 	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type);
 
-	if (Ini.CameraType.GetValue() == 1)
-		type = CELL_CAMERA_EYETOY;
-	else if (Ini.CameraType.GetValue() == 2)
-		type = CELL_CAMERA_EYETOY2;
-	else if (Ini.CameraType.GetValue() == 3)
-		type == CELL_CAMERA_USBVIDEOCLASS;
-	else
-		type = CELL_CAMERA_TYPE_UNKNOWN;
+	switch (Ini.CameraType.GetValue())
+	{
+	case 1: *type = CELL_CAMERA_EYETOY; break;
+	case 2: *type = CELL_CAMERA_EYETOY2; break;
+	case 3: *type = CELL_CAMERA_USBVIDEOCLASS; break;
+	default: *type = CELL_CAMERA_TYPE_UNKNOWN; break;
+	}
 
 	return CELL_OK;
 }

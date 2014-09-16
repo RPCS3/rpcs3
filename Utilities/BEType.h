@@ -294,38 +294,49 @@ public:
 		return ToLE();
 	}
 
+	be_t& operator = (const be_t& value) = default;
+
+	be_t& operator = (T value)
+	{
+		m_data = se_t<T, sizeof(T2)>::func(value);
+
+		return *this;
+	}
+
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		if (sizeof(T1) > sizeof(T) || std::is_floating_point<T>::value || std::is_floating_point<T1>::value)
+		template<typename Tto, typename Tfrom, int mode>
+		struct _convert
 		{
-			T1 res = se_t<T1, sizeof(T1)>::func(ToLE());
-			return (be_t<T1>&)res;
-		}
-		else if (sizeof(T1) < sizeof(T))
+			static __forceinline be_t<Tto>& func(Tfrom& be_value)
+			{
+				Tto res = be_value;
+				return (be_t<Tto>&)res;
+			}
+		};
+
+		template<typename Tto, typename Tfrom>
+		struct _convert<Tto, Tfrom, 1>
 		{
-			T1 res = ToBE() >> ((sizeof(T) - sizeof(T1)) * 8);
-			return (be_t<T1>&)res;
-		}
-		else
+			static __forceinline be_t<Tto>& func(Tfrom& be_value)
+			{
+				Tto res = se_t<Tto, sizeof(Tto)>::func(se_t<Tfrom, sizeof(Tfrom)>::func(be_value););
+				return (be_t<Tto>&)res;
+			}
+		};
+
+		template<typename Tto, typename Tfrom>
+		struct _convert<Tto, Tfrom, 2>
 		{
-			T1 res = ToBE();
-			return (be_t<T1>&)res;
-		}
-	}
+			static __forceinline be_t<Tto>& func(Tfrom& be_value)
+			{
+				Tto res = be_value >> ((sizeof(Tfrom)-sizeof(Tto)) * 8);
+				return (be_t<Tto>&)res;
+			}
+		};
 
-	be_t& operator = (const T& right)
-	{
-		m_data = se_t<T, sizeof(T2)>::func(right);
-		return *this;
-	}
-
-	be_t& operator = (const be_t& right) = default;
-
-	be_t& operator = (const be_t<const T, const T2>& right)
-	{
-		m_data = right.ToBE();
-		return *this;
+		return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
@@ -482,7 +493,7 @@ class to_be_t
 
 public:
 	//true if need swap endianes for be
-	static const bool value = (sizeof(T2) > 1) && std::is_arithmetic<T>::value;
+	static const bool value = (sizeof(T2) > 1) && (std::is_arithmetic<T>::value || std::is_enum<T>::value);
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
@@ -529,24 +540,6 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se16(x) _se<u16, decltype(x), x>::value
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
-
-// template that helps to define be_t arrays in unions
-template<typename T, size_t size>
-class be_array_t
-{
-	be_t<T> data[size];
-
-public:
-	__forceinline be_t<T>& operator [] (size_t index)
-	{
-		return data[index];
-	}
-
-	__forceinline const be_t<T>& operator [] (size_t index) const
-	{
-		return data[index];
-	}
-};
 
 template<typename T> __forceinline static u8 Read8(T& f)
 {
