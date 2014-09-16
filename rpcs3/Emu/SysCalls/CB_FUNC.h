@@ -95,49 +95,37 @@ namespace cb_detail
 		return _bind_func_args<g, f, v>(CPU, args...) || (t == ARG_STACK);
 	}
 
-	template<typename RT>
+	template<typename T, _func_arg_type type>
 	struct _func_res
 	{
-		static_assert(sizeof(RT) <= 8, "Invalid callback result type");
-		static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
-		static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
+		static_assert(type == ARG_GENERAL, "Wrong use of _func_res template");
+		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_GENERAL");
 
-		__forceinline static RT get_value(const PPUThread& CPU)
+		__forceinline static T get_value(const PPUThread& CPU)
 		{
-			if (std::is_floating_point<RT>::value)
-			{
-				return (RT)CPU.FPR[1];
-			}
-			else
-			{
-				return (RT&)CPU.GPR[3];
-			}
+			return (T&)CPU.GPR[3];
 		}
 	};
 
-	template<>
-	struct _func_res<u128>
+	template<typename T>
+	struct _func_res<T, ARG_FLOAT>
 	{
-		__forceinline static const u128 get_value(const PPUThread& CPU)
+		static_assert(sizeof(T) <= 8, "Invalid callback result type for ARG_FLOAT");
+
+		__forceinline static T get_value(const PPUThread& CPU)
 		{
-			return CPU.VPR[2];
+			return (T)CPU.FPR[1];
 		}
 	};
 
-	template<>
-	struct _func_res<const u128>
+	template<typename T>
+	struct _func_res<T, ARG_VECTOR>
 	{
-		__forceinline static const u128 get_value(const PPUThread& CPU)
-		{
-			return CPU.VPR[2];
-		}
-	};
+		static_assert(sizeof(T) == 16, "Invalid callback result type for ARG_VECTOR");
 
-	template<>
-	struct _func_res<void>
-	{
-		__forceinline static void get_value(const PPUThread& CPU)
+		__forceinline static T get_value(const PPUThread& CPU)
 		{
+			return (T&)CPU.VPR[2];
 		}
 	};
 
@@ -150,7 +138,14 @@ namespace cb_detail
 			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
 			CPU.FastCall2(pc, rtoc);
 			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
-			return _func_res<RT>::get_value(CPU);
+
+			static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
+			static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
+			const bool is_float = std::is_floating_point<RT>::value;
+			const bool is_vector = std::is_same<RT, u128>::value;
+			const _func_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+
+			return _func_res<RT, t>::get_value(CPU);
 		}
 	};
 

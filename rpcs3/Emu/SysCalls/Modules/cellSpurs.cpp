@@ -31,7 +31,7 @@ s64 spursInit(
 {
 	// internal function
 #ifdef PRX_DEBUG
-	return cb_caller<s32,vm::ptr<CellSpurs2>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>::call(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
+	return cb_call<s32, vm::ptr<CellSpurs2>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
 		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, Memory.RealToVirtualAddr(prefix), prefixSize, container, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
 #else
 	//spurs->spurs = new SPURSManager(attr);
@@ -294,7 +294,7 @@ s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	const u32 nSpus = attr->m.nSpus;
+	const u32 nSpus = attr->_u32[2];
 	if (!nSpus)
 	{
 		return CELL_SPURS_CORE_ERROR_INVAL;

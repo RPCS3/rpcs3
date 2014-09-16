@@ -11,8 +11,8 @@
 #include "lv2/sys_event.h"
 #include "lv2/sys_event_flag.h"
 #include "lv2/sys_interrupt.h"
-#include "lv2/sys_lwcond.h"
-#include "lv2/sys_lwmutex.h"
+//#include "lv2/sys_lwcond.h"
+//#include "lv2/sys_lwmutex.h"
 #include "lv2/sys_memory.h"
 #include "lv2/sys_mmapper.h"
 #include "lv2/sys_ppu_thread.h"
@@ -21,7 +21,6 @@
 #include "lv2/sys_rsx.h"
 #include "lv2/sys_rwlock.h"
 #include "lv2/sys_semaphore.h"
-#include "lv2/sys_spinlock.h"
 #include "lv2/sys_spu.h"
 #include "lv2/sys_time.h"
 #include "lv2/sys_timer.h"
@@ -138,11 +137,11 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
 	bind_func(sys_semaphore_trywait),                       //93  (0x05D)
 	bind_func(sys_semaphore_post),                          //94  (0x05E)
-	null_func,//bind_func(sys_lwmutex_create),              //95  (0x05F)
-	null_func,//bind_func(sys_lwmutex_destroy),             //96  (0x060)
-	null_func,//bind_func(sys_lwmutex_lock),                //97  (0x061)
-	null_func,//bind_func(sys_lwmutex_trylock),             //98  (0x062)
-	null_func,//bind_func(sys_lwmutex_unlock),              //99  (0x063)
+	null_func,//bind_func(sys_lwmutex_create),              //95  (0x05F) // internal, used by sys_lwmutex_create
+	null_func,//bind_func(sys_lwmutex_destroy),             //96  (0x060) // internal, used by sys_lwmutex_destroy
+	null_func,//bind_func(sys_lwmutex_lock),                //97  (0x061) // internal, used by sys_lwmutex_lock
+	null_func,//bind_func(sys_lwmutex_trylock),             //98  (0x062) // internal, used by sys_lwmutex_unlock
+	null_func,//bind_func(sys_lwmutex_unlock),              //99  (0x063) // internal, used by sys_lwmutex_trylock
 	bind_func(sys_mutex_create),                            //100 (0x064)
 	bind_func(sys_mutex_destroy),                           //101 (0x065)
 	bind_func(sys_mutex_lock),                              //102 (0x066)
@@ -160,7 +159,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_semaphore_get_value),                     //114 (0x072)
 	null_func,//bind_func(sys_semaphore_...)                //115 (0x073)
 	null_func,//bind_func(sys_semaphore_...)                //116 (0x074)
-	null_func,//bind_func(sys_semaphore_...)                //117 (0x075)
+	null_func,//bind_func(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
 	bind_func(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//bind_func(sys_event_...)                    //119 (0x077)  ROOT
 	bind_func(sys_rwlock_create),                           //120 (0x078)
