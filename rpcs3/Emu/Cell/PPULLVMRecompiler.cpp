@@ -6,6 +6,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/CodeGen/MachineCodeInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Filesystem.h"
@@ -83,8 +84,27 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
         log_file << i->first << " = " << i->second << "\n";
     }
 
-    log_file << "\nLLVM IR:\n";
-    log_file << *m_module;
+    std::set<std::pair<u64, u32>> sorted_block_info;
+    for (auto i = m_address_to_compiled_block_map.begin(); i != m_address_to_compiled_block_map.end(); i++) {
+        sorted_block_info.insert(std::make_pair(~i->second.request_count, i->first));
+    }
+
+    log_file << "\nBlock Information:\n";
+    for (auto i = sorted_block_info.begin(); i != sorted_block_info.end(); i++) {
+        auto j = m_address_to_compiled_block_map.find(i->second);
+        log_file << fmt::Format("%s: Size = %u bytes, Times requested = %llu\n", j->second.llvm_function->getName().str().c_str(), j->second.size, j->second.request_count);
+
+        log_file << "\nDisassembly:\n";
+        for (size_t pc = 0; pc < j->second.size;) {
+            char str[1024];
+
+            auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)j->second.block + pc, j->second.size - pc, (uint64_t)((uint8_t *)j->second.block + pc), str, sizeof(str));
+            log_file << str << '\n';
+            pc += size;
+        }
+    }
+
+    log_file << "\nLLVM IR:\n" << *m_module;
 
     LLVMDisasmDispose(m_disassembler);
     delete m_execution_engine;
@@ -93,18 +113,20 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
     delete m_llvm_context;
 }
 
-PPULLVMRecompiler::CompiledBlock PPULLVMRecompiler::GetCompiledBlock(u64 address) {
-    m_address_to_compiled_block_map_mutex.lock();
-    auto i = m_address_to_compiled_block_map.find(address);
-    m_address_to_compiled_block_map_mutex.unlock();
-
-    if (i != m_address_to_compiled_block_map.end()) {
-        return i->second;
+PPULLVMRecompiler::CompiledBlock PPULLVMRecompiler::GetCompiledBlock(u32 address) {
+    {
+        std::lock_guard<std::mutex> lock(m_address_to_compiled_block_map_mutex);
+        auto i = m_address_to_compiled_block_map.find(address);
+        if (i != m_address_to_compiled_block_map.end()) {
+            i->second.request_count++;
+            return i->second.block;
+        }
     }
 
-    m_pending_blocks_set_mutex.lock();
-    m_pending_blocks_set.insert(address);
-    m_pending_blocks_set_mutex.unlock();
+    {
+        std::lock_guard<std::mutex> lock(m_pending_blocks_set_mutex);
+        m_pending_blocks_set.insert(address);
+    }
 
     if (!IsAlive()) {
         Start();
@@ -121,17 +143,18 @@ void PPULLVMRecompiler::Task() {
         WaitForAnySignal();
 
         while (!TestDestroy() && !Emu.IsStopped()) {
-            u64 address;
+            u32 address;
 
-            m_pending_blocks_set_mutex.lock();
-            auto i = m_pending_blocks_set.begin();
-            m_pending_blocks_set_mutex.unlock();
+            {
+                std::lock_guard<std::mutex> lock(m_pending_blocks_set_mutex);
 
-            if (i != m_pending_blocks_set.end()) {
-                address = *i;
-                m_pending_blocks_set.erase(i);
-            } else {
-                break;
+                auto i = m_pending_blocks_set.begin();
+                if (i != m_pending_blocks_set.end()) {
+                    address = *i;
+                    m_pending_blocks_set.erase(i);
+                } else {
+                    break;
+                }
             }
 
             Compile(address);
@@ -140,6 +163,8 @@ void PPULLVMRecompiler::Task() {
 
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     m_idling_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start - m_compilation_time);
+
+    LOG_NOTICE(PPU, "Compilation thread exiting.");
 }
 
 void PPULLVMRecompiler::Decode(const u32 code) {
@@ -2966,18 +2991,10 @@ void PPULLVMRecompiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
 }
 
-void PPULLVMRecompiler::Compile(const u64 address) {
-    m_address_to_compiled_block_map_mutex.lock();
-    auto i = m_address_to_compiled_block_map.find(address);
-    m_address_to_compiled_block_map_mutex.unlock();
-
-    if (i != m_address_to_compiled_block_map.end()) {
-        return;
-    }
-
+void PPULLVMRecompiler::Compile(u32 address) {
     std::chrono::high_resolution_clock::time_point compilation_start = std::chrono::high_resolution_clock::now();
 
-    auto function_name = fmt::Format("fn_0x%llX", address);
+    auto function_name = fmt::Format("fn_0x%X", address);
     m_function         = m_module->getFunction(function_name);
     if (!m_function) {
 
@@ -2994,24 +3011,32 @@ void PPULLVMRecompiler::Compile(const u64 address) {
         auto block = BasicBlock::Create(*m_llvm_context, "start", m_function);
         m_ir_builder->SetInsertPoint(block);
 
-        u64 offset = 0;
+        u32 offset = 0;
         m_hit_branch_instruction = false;
         while (!m_hit_branch_instruction) {
-            u32 instr = Memory.Read32(address + offset);
+            u32 instr = vm::read32(address + offset);
             Decode(instr);
             offset += 4;
 
-            SetPc(m_ir_builder->getInt64(address + offset));
+            SetPc(m_ir_builder->getInt32(address + offset));
         }
 
         m_ir_builder->CreateRetVoid();
         m_fpm->run(*m_function);
-    }
 
-    CompiledBlock block = (CompiledBlock)m_execution_engine->getPointerToFunction(m_function);
-    m_address_to_compiled_block_map_mutex.lock();
-    m_address_to_compiled_block_map[address] = block;
-    m_address_to_compiled_block_map_mutex.unlock();
+        MachineCodeInfo mci;
+        m_execution_engine->runJITOnFunction(m_function, &mci);
+
+        CompiledBlockInfo block_info;
+        block_info.block         = (CompiledBlock)mci.address();
+        block_info.request_count = 0;
+        block_info.size          = mci.size();
+        block_info.llvm_function = m_function;
+        {
+            std::lock_guard<std::mutex> lock(m_address_to_compiled_block_map_mutex);
+            m_address_to_compiled_block_map[address] = block_info;
+        }
+    }
 
     std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
     m_compilation_time += std::chrono::duration_cast<std::chrono::duration<double>>(compilation_end - compilation_start);
@@ -3140,14 +3165,14 @@ Value * PPULLVMRecompiler::SetNibble(Value * val, u32 n, Value * b0, Value * b1,
 
 Value * PPULLVMRecompiler::GetPc() {
     auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, PC));
-    auto pc_i64_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    return m_ir_builder->CreateLoad(pc_i64_ptr);
+    auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    return m_ir_builder->CreateLoad(pc_i32_ptr);
 }
 
-void PPULLVMRecompiler::SetPc(Value * val_i64) {
+void PPULLVMRecompiler::SetPc(Value * val_i32) {
     auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, PC));
-    auto pc_i64_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    m_ir_builder->CreateStore(val_i64, pc_i64_ptr);
+    auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    m_ir_builder->CreateStore(val_i32, pc_i32_ptr);
 }
 
 Value * PPULLVMRecompiler::GetGpr(u32 r, u32 num_bits) {
@@ -3386,9 +3411,7 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
 
         m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(else_bb);
         m_ir_builder->SetInsertPoint(else_bb);
-        auto this_ptr  = (Value *)m_ir_builder->getInt64((u64)&Memory);
-        this_ptr       = m_ir_builder->CreateIntToPtr(this_ptr, this_ptr->getType()->getPointerTo());
-        auto val_else_i32 = Call("Read32", &MemoryBase::Read32<u64>, this_ptr, addr_i64);
+        auto val_else_i32 = Call<u32>("vm_read32", (u32(*)(u64))vm::read32, addr_i64);
         if (!bswap) {
             val_else_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_else_i32);
         }
@@ -3404,6 +3427,7 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
 }
 
 void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap) {
+    addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
     if (val_ix->getType()->getIntegerBitWidth() != 32) {
         if (val_ix->getType()->getIntegerBitWidth() > 8 && bswap) {
             val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {val_ix->getType()}), val_ix);
@@ -3420,26 +3444,24 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
-        Value * val_then_ix = val_ix;
+        Value * val_then_i32 = val_ix;
         if (bswap) {
-            val_then_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_then_ix);
+            val_then_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_then_i32);
         }
 
         auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
         auto eaddr_i32_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
-        m_ir_builder->CreateStore(val_then_ix, eaddr_i32_ptr);
+        m_ir_builder->CreateStore(val_then_i32, eaddr_i32_ptr);
         m_ir_builder->CreateBr(merge_bb);
 
         m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(else_bb);
         m_ir_builder->SetInsertPoint(else_bb);
-        Value * val_else_ix = val_ix;
+        Value * val_else_i32 = val_ix;
         if (!bswap) {
-            val_else_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_else_ix);
+            val_else_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_else_i32);
         }
 
-        auto this_ptr = (Value *)m_ir_builder->getInt64((u64)&Memory);
-        this_ptr      = m_ir_builder->CreateIntToPtr(this_ptr, this_ptr->getType()->getPointerTo());
-        Call("Write32", &MemoryBase::Write32<u64>, this_ptr, addr_i64, val_else_ix);
+        Call<void>("vm_write32", (void(*)(u64, u32))vm::write32, addr_i64, val_else_i32);
         m_ir_builder->CreateBr(merge_bb);
 
         m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(merge_bb);
@@ -3456,7 +3478,7 @@ Value * PPULLVMRecompiler::InterpreterCall(const char * name, Func function, Arg
 
     i->second++;
 
-    return Call(name, function, GetInterpreter(), m_ir_builder->getInt32(args)...);
+    return Call<void>(name, function, GetInterpreter(), m_ir_builder->getInt32(args)...);
 }
 
 template<class T>
@@ -3484,10 +3506,8 @@ Type * PPULLVMRecompiler::CppToLlvmType() {
     return nullptr;
 }
 
-template<class Func, class... Args>
+template<class ReturnType, class Func, class... Args>
 Value * PPULLVMRecompiler::Call(const char * name, Func function, Args... args) {
-    typedef std::result_of<Func(Args...)>::type ReturnType;
-
     auto fn = m_module->getFunction(name);
     if (!fn) {
         std::vector<Type *> fn_args_type = {args->getType()...};
@@ -3537,8 +3557,8 @@ PPULLVMEmulator::~PPULLVMEmulator() {
     }
 }
 
-u8 PPULLVMEmulator::DecodeMemory(const u64 address) {
-    static u64 last_instr_address = 0;
+u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
+    static u32 last_instr_address = 0;
 
     PPULLVMRecompiler::CompiledBlock compiled_block = nullptr;
     if (address != (last_instr_address + 4)) {

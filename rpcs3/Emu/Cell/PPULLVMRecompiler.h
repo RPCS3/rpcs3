@@ -30,7 +30,7 @@ public:
     PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
 
     /// Get a pointer to a compiled block
-    CompiledBlock GetCompiledBlock(u64 address);
+    CompiledBlock GetCompiledBlock(u32 address);
 
     /// Execute all tests
     void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
@@ -441,18 +441,32 @@ protected:
     void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
+    struct CompiledBlockInfo {
+        /// Pointer to the block
+        CompiledBlock block;
+
+        /// Size of the compiled block
+        size_t size;
+
+        /// Number of times this block was requested
+        u64 request_count;
+
+        /// LLVM function for this block
+        llvm::Function * llvm_function;
+    };
+
     /// Mutex for accessing m_address_to_compiled_block_map
     /// TODO: Use a RW lock instead of mutex
     std::mutex m_address_to_compiled_block_map_mutex;
 
     /// Map from address to compiled block
-    std::map<u64, CompiledBlock> m_address_to_compiled_block_map;
+    std::map<u32, CompiledBlockInfo> m_address_to_compiled_block_map;
 
     /// Mutex for accessing m_pending_blocks_set;
     std::mutex m_pending_blocks_set_mutex;
 
     /// Set of blocks pending compilation
-    std::set<u64> m_pending_blocks_set;
+    std::set<u32> m_pending_blocks_set;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -490,7 +504,7 @@ private:
     std::map<std::string, u64> m_interpreter_fallback_stats;
 
     /// Compile a block of code
-    void Compile(u64 address);
+    void Compile(u32 address);
 
     /// Get PPU state pointer
     llvm::Value * GetPPUState();
@@ -526,7 +540,7 @@ private:
     llvm::Value * GetPc();
 
     /// Set PC
-    void SetPc(llvm::Value * val_i64);
+    void SetPc(llvm::Value * val_i32);
 
     /// Load GPR
     llvm::Value * GetGpr(u32 r, u32 num_bits = 64);
@@ -633,7 +647,7 @@ private:
     llvm::Type * CppToLlvmType();
 
     /// Call a function
-    template<class Func, class... Args>
+    template<class ReturnType, class Func, class... Args>
     llvm::Value * Call(const char * name, Func function, Args... args);
 
     /// Test an instruction against the interpreter
@@ -667,7 +681,7 @@ public:
     PPULLVMEmulator & operator = (const PPULLVMEmulator & other) = delete;
     PPULLVMEmulator & operator = (PPULLVMEmulator && other) = delete;
 
-    u8 DecodeMemory(const u64 address);
+    u8 DecodeMemory(const u32 address) override;
 
 private:
     /// PPU processor context
