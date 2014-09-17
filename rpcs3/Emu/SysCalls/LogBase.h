@@ -29,12 +29,12 @@ public:
 
 	virtual const std::string& GetName() const = 0;
 
-	template<typename... Targs> void Notice(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Notice(const u32 id, const char* fmt, Targs... args) const
 	{
 		LogOutput(LogNotice, id, ": ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Notice(const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Notice(const char* fmt, Targs... args) const
 	{
 		LogOutput(LogNotice, ": ", fmt::Format(fmt, args...));
 	}
@@ -55,42 +55,42 @@ public:
 		}
 	}
 
-	template<typename... Targs> void Success(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Success(const u32 id, const char* fmt, Targs... args) const
 	{
 		LogOutput(LogSuccess, id, ": ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Success(const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Success(const char* fmt, Targs... args) const
 	{
 		LogOutput(LogSuccess, ": ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Warning(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Warning(const u32 id, const char* fmt, Targs... args) const
 	{
 		LogOutput(LogWarning, id, " warning: ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Warning(const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Warning(const char* fmt, Targs... args) const
 	{
 		LogOutput(LogWarning, " warning: ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Error(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Error(const u32 id, const char* fmt, Targs... args) const
 	{
 		LogOutput(LogError, id, " error: ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Error(const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Error(const char* fmt, Targs... args) const
 	{
 		LogOutput(LogError, " error: ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Todo(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Todo(const u32 id, const char* fmt, Targs... args) const
 	{
 		LogOutput(LogError, id, " TODO: ", fmt::Format(fmt, args...));
 	}
 
-	template<typename... Targs> void Todo(const char* fmt, Targs... args) const
+	template<typename... Targs> __noinline void Todo(const char* fmt, Targs... args) const
 	{
 		LogOutput(LogError, " TODO: ", fmt::Format(fmt, args...));
 	}

@@ -4,38 +4,6 @@
 
 extern const std::string fmt::placeholder = "???";
 
-
-//wrapper to deal with advance sprintf formating options with automatic length finding
-//can't take strings by reference because of "va_start", so overload it with char *
-std::string fmt::FormatV(const char *fmt, va_list args)
-{
-	size_t length = 256;
-	std::string str;
-
-	for (;;)
-	{
-		std::vector<char> buffptr(length);
-#if !defined(_MSC_VER)
-		size_t printlen = vsnprintf(buffptr.data(), length, fmt, args);
-#else
-		size_t printlen = vsnprintf_s(buffptr.data(), length, length - 1, fmt, args);
-#endif
-		if (printlen < length)
-		{
-			str = std::string(buffptr.data(), printlen);
-			break;
-		}
-		length *= 2;
-	}
-	return str;
-}
-
-std::string fmt::FormatV(std::string fmt, va_list args)
-{
-	std::string str = FormatV(fmt.c_str(), args);
-	return str;
-}
-
 std::string replace_first(const std::string& src, const std::string& from, const std::string& to)
 {
 	auto pos = src.find(from);

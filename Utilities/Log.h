@@ -123,7 +123,7 @@ static struct { inline operator Log::LogType() { return Log::LogType::PPU; } } P
 static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } SPU;
 static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
 
-inline void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
+inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)
 {
 	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
 	//Log::LogManager::getInstance().log({logType, severity, text})
@@ -133,8 +133,8 @@ inline void log_message(Log::LogType type, Log::LogSeverity sev, std::string tex
 }
 
 template<typename T, typename ...Ts> 
-inline void log_message(Log::LogType type, Log::LogSeverity sev, std::string text, T arg, Ts... args)
+inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text, T arg, Ts... args)
 {
-	Log::LogMessage msg{type, sev, fmt::Format(text,arg,args...)};
+	Log::LogMessage msg{type, sev, fmt::Format(text, arg, args...)};
 	Log::LogManager::getInstance().log(msg);
 }

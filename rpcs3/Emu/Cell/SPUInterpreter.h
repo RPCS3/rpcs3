@@ -1497,7 +1497,7 @@ private:
 
 	void UNK(const std::string& err)
 	{
-		LOG_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOG_ERROR(Log::SPU, "%s #pc: 0x%x", err.c_str(), CPU.PC);
 		Emu.Pause();
 		for(uint i=0; i<128; ++i) LOG_NOTICE(Log::SPU, "r%d = 0x%s", i, CPU.GPR[i].to_hex().c_str());
 	}

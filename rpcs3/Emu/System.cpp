@@ -269,7 +269,7 @@ void Emulator::Load()
 	}
 	catch(const std::string& e)
 	{
-		LOG_ERROR(LOADER, e);
+		LOG_ERROR(LOADER, "%s", e.c_str());
 		is_error = true;
 	}
 	catch(...)

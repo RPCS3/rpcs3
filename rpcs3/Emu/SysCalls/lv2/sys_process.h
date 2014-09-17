@@ -26,6 +26,7 @@ enum
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
+s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 
 // SysCalls
 s32 sys_process_getpid();
@@ -35,6 +36,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, vm::ptr<
 s32 sys_process_get_paramsfo(vm::ptr<u8> buffer);
 s32 sys_process_get_sdk_version(u32 pid, vm::ptr<be_t<s32>> version);
 s32 sys_process_get_status(u64 unk);
+s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 s32 sys_process_exit(s32 errorcode);
 s32 sys_process_kill(u32 pid);
 s32 sys_process_wait_for_child(u32 pid, vm::ptr<be_t<u32>> status, u64 unk);
