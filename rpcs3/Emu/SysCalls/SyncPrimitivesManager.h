@@ -12,7 +12,7 @@ struct SemaphoreAttributes
 	u32 max_count;
 
 	SemaphoreAttributes() {}
-	SemaphoreAttributes(const std::string& _name, u32 _count, u32 _max_count) : name(_name), count(_count), max_count(_max_count) {}
+	SemaphoreAttributes(const std::string& _name, const u32 _count, const u32 _max_count) : name(_name), count(_count), max_count(_max_count) {}
 };
 
 struct LwMutexAttributes
@@ -22,13 +22,15 @@ struct LwMutexAttributes
 	std::string status; // TODO: check status?
 
 	LwMutexAttributes() {}
-	LwMutexAttributes(const std::string& _name, u32 _owner_id, std::string _status = "INITIALIZED")
+	LwMutexAttributes(const std::string& _name, const u32 _owner_id, const std::string& _status = "INITIALIZED")
 		: name(_name), owner_id(_owner_id), status(_status) {}
 };
 
 class SyncPrimManager
 {
 private:
+	std::mutex m_mutex;
+
 	std::map<u32, std::string> m_cond_name;
 	std::map<u32, std::string> m_mutex_name;
 	std::map<u32, std::string> m_lw_cond_name;
@@ -40,66 +42,78 @@ public:
 	// semaphores
 	void AddSemaphoreData(const u32 id, const std::string& name, const u32 count, const u32 max_count)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_semaph_attr[id] = *(new SemaphoreAttributes(name, count, max_count));
 	}
 
 	void EraseSemaphoreData(const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_semaph_attr.erase(id);
 	}
 
 	SemaphoreAttributes& GetSemaphoreData(const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return m_semaph_attr[id];
 	}
 
 	// lw_mutexes
 	void AddLwMutexData(const u32 id, const std::string& name, const u32 owner_id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_lw_mutex_attr[id] = *(new LwMutexAttributes(name, owner_id));
 	}
 
 	void EraseLwMutexData(const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_lw_mutex_attr.erase(id);
 	}
 
 	LwMutexAttributes& GetLwMutexData(const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		return m_lw_mutex_attr[id];
 	}
 
 	// lw_conditions, mutexes, conditions
 	void AddSyncPrimData(const IDType type, const u32 id, const std::string& name)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		switch (type)
 		{
 		case TYPE_LWCOND: m_lw_cond_name[id] = name; break;
 		case TYPE_MUTEX: m_mutex_name[id] = name; break;
 		case TYPE_COND: m_cond_name[id] = name; break;
 
+		default: LOG_ERROR(GENERAL, "Unknown IDType = %d", type); break;
 		}
 	}
 
 	void EraseSyncPrimData(const IDType type, const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		switch (type)
 		{
 		case TYPE_LWCOND:  m_lw_cond_name.erase(id); break;
 		case TYPE_MUTEX:  m_mutex_name.erase(id); break;
 		case TYPE_COND:  m_cond_name.erase(id); break;
 
-		default: LOG_ERROR(GENERAL, "Unknown IDType = %d", type);
+		default: LOG_ERROR(GENERAL, "Unknown IDType = %d", type); break;
 		}
 	}
 
-	std::string& GetSyncPrimName(const IDType type, const u32 id)
+	std::string GetSyncPrimName(const IDType type, const u32 id)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
 		switch (type)
 		{
 		case TYPE_LWCOND:  return m_lw_cond_name[id];
 		case TYPE_MUTEX:  return m_mutex_name[id];
 		case TYPE_COND:  return m_cond_name[id];
+
+		default: return fmt::Format("Unknown IDType = %d", type);
 		}
 	}
 
