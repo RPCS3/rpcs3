@@ -332,7 +332,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
-	static const u32 width = 425;
+	static const u32 width = 385;
 	static const u32 height = 400;
 
 	// Settings panels
@@ -341,14 +341,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxPanel* p_cpu        = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_graphics   = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_audio      = new wxPanel(nb_config, wxID_ANY);
-	wxPanel* p_camera     = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_io         = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_hle        = new wxPanel(nb_config, wxID_ANY);
 
 	nb_config->AddPage(p_cpu,      wxT("Core"));
 	nb_config->AddPage(p_graphics, wxT("Graphics"));
 	nb_config->AddPage(p_audio,    wxT("Audio"));
-	nb_config->AddPage(p_camera,   wxT("Camera"));
 	nb_config->AddPage(p_io,       wxT("Input / Output"));
 	nb_config->AddPage(p_hle,      wxT("HLE / Misc."));
 	nb_config->AddPage(p_system,   wxT("System"));
@@ -357,7 +355,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxBoxSizer* s_subpanel_cpu      = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_graphics = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_audio    = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* s_subpanel_camera   = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_io       = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_hle      = new wxBoxSizer(wxVERTICAL);
 
@@ -378,11 +375,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
-	// Camera
-	wxStaticBoxSizer* s_round_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_camera, _("Camera type"));
-
 	// HLE / Misc.
+	wxStaticBoxSizer* s_round_hle_misc = new wxStaticBoxSizer(wxHORIZONTAL, p_hle, _(""));
 	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
+	wxStaticBoxSizer* s_round_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Camera type"));
 
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
@@ -396,7 +392,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
-	wxComboBox* cbox_camera_type      = new wxComboBox(p_camera, wxID_ANY);
+	wxComboBox* cbox_camera_type      = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
@@ -463,24 +459,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
-	cbox_sys_lang->Append("Japanese");
-	cbox_sys_lang->Append("English (US)");
-	cbox_sys_lang->Append("French");
-	cbox_sys_lang->Append("Spanish");
-	cbox_sys_lang->Append("German");
-	cbox_sys_lang->Append("Italian");
-	cbox_sys_lang->Append("Dutch");
-	cbox_sys_lang->Append("Portuguese (PT)");
-	cbox_sys_lang->Append("Russian");
-	cbox_sys_lang->Append("Korean");
-	cbox_sys_lang->Append("Chinese (Trad.)");
-	cbox_sys_lang->Append("Chinese (Simp.)");
-	cbox_sys_lang->Append("Finnish");
-	cbox_sys_lang->Append("Swedish");
-	cbox_sys_lang->Append("Danish");
-	cbox_sys_lang->Append("Norwegian");
-	cbox_sys_lang->Append("Polish");
-	cbox_sys_lang->Append("English (UK)");
+	static const char* s_sys_lang_table[] =
+	{
+		"Japanese", "English (US)",    "French",    "Spanish",   "German",          "Italian",
+		"Dutch",    "Portuguese (PT)", "Russian",   "Korean",    "Chinese (Trad.)", "Chinese (Simp.)",
+		"Finnish",  "Swedish",         "Danish",    "Norwegian", "Polish",          "English (UK)"
+	};
+
+	for (auto& lang : s_sys_lang_table)
+	{
+		cbox_sys_lang->Append(lang);
+	}
 
 	// Get values from .ini
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
@@ -516,6 +505,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_audio_conv->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
+	cbox_camera_type->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -531,9 +521,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	s_round_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
-
 	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_hle_misc->Add(s_round_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -560,11 +551,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	// Camera
-	s_subpanel_camera->Add(s_round_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
-
 	// HLE / Misc.
-	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(s_round_hle_misc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -588,7 +576,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	diag.SetSizerAndFit(s_subpanel_graphics, false);
 	diag.SetSizerAndFit(s_subpanel_io, false);
 	diag.SetSizerAndFit(s_subpanel_audio, false);
-	diag.SetSizerAndFit(s_subpanel_camera, false);
 	diag.SetSizerAndFit(s_subpanel_hle, false);
 	diag.SetSizerAndFit(s_subpanel_system, false);
 	diag.SetSizerAndFit(s_b_panel, false);
