@@ -529,8 +529,7 @@ int cellSurMixerStart()
 
 int cellSurMixerSetParameter(u32 param, float value)
 {
-	declCPU();
-	libmixer->Todo("cellSurMixerSetParameter(param=0x%x, value=%f, FPR[1]=%f, FPR[2]=%f)", param, value, (float&)CPU.FPR[1], (float&)CPU.FPR[2]);
+	libmixer->Todo("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
 	return CELL_OK;
 }
 
@@ -616,28 +615,25 @@ void cellSurMixerBeep(u32 arg)
 	return;
 }
 
-void cellSurMixerUtilGetLevelFromDB(float dB)
+float cellSurMixerUtilGetLevelFromDB(float dB)
 {
 	// not hooked, probably unnecessary
 	libmixer->Todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	declCPU();
-	(float&)CPU.FPR[0] = 0.0f;
+	return 0.0f;
 }
 
-void cellSurMixerUtilGetLevelFromDBIndex(int index)
+float cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
 	// not hooked, probably unnecessary
 	libmixer->Todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	declCPU();
-	(float&)CPU.FPR[0] = 0.0f;
+	return 0.0f;
 }
 
-void cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
+float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
 	// not hooked, probably unnecessary
 	libmixer->Todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	declCPU();
-	(float&)CPU.FPR[0] = 0.0f;
+	return 0.0f;
 }
 
 void libmixer_init(Module *pxThis)

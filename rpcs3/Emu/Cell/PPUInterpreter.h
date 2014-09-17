@@ -68,7 +68,7 @@ private:
 		const u64 old_sc = CPU.m_last_syscall;
 
 		CPU.m_last_syscall = sc;
-		SysCalls::DoSyscall((u32)sc);
+		SysCalls::DoSyscall(CPU, (u32)sc);
 
 		if(Ini.HLELogging.GetValue())
 		{
@@ -2093,7 +2093,7 @@ private:
 		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
 		case 0x2: SysCall(); break;
 		case 0x3:
-			Emu.GetSFuncManager().StaticExecute((u32)CPU.GPR[11]);
+			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
 				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
@@ -3983,7 +3983,7 @@ private:
 
 	void UNK(const std::string& err, bool pause = true)
 	{
-		LOG_ERROR(PPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOG_ERROR(PPU, "%s #pc: 0x%x", err.c_str(), CPU.PC);
 
 		if(!pause) return;
 
@@ -3992,17 +3992,17 @@ private:
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].to_hex().c_str(), CPU.VPR[i].to_xyzw().c_str());
-		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR);
+		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR.CR);
 		LOG_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
 		LOG_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);
-		LOG_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
+		LOG_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
 		LOG_NOTICE(PPU, "FPSCR = 0x%x "
 			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
 			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
 			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
 			"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
 			"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]",
-			CPU.FPSCR,
+			CPU.FPSCR.FPSCR,
 			fmt::by_value(CPU.FPSCR.RN),
 			fmt::by_value(CPU.FPSCR.NI), fmt::by_value(CPU.FPSCR.XE), fmt::by_value(CPU.FPSCR.ZE), fmt::by_value(CPU.FPSCR.UE), fmt::by_value(CPU.FPSCR.OE), fmt::by_value(CPU.FPSCR.VE),
 			fmt::by_value(CPU.FPSCR.VXCVI), fmt::by_value(CPU.FPSCR.VXSQRT), fmt::by_value(CPU.FPSCR.VXSOFT), fmt::by_value(CPU.FPSCR.FPRF),

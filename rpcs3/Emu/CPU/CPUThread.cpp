@@ -243,13 +243,10 @@ void CPUThread::Stop()
 
 	m_status = Stopped;
 
-	if(CPUThread* thr = GetCurrentCPUThread())
+	if(static_cast<NamedThreadBase*>(this) != GetCurrentNamedThread())
 	{
-		if(thr->GetId() != GetId())
-			ThreadBase::Stop();
-	}
-	else
 		ThreadBase::Stop();
+	}
 
 	Emu.CheckStatus();
 

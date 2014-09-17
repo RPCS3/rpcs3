@@ -149,7 +149,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	debug += "(";
 	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 	debug += ")";
-	LOG_NOTICE(RSX, "OutOfArgsCount(x=%u, count=%u): " + debug, x, count);
+	LOG_NOTICE(RSX, "OutOfArgsCount(x=%u, count=%u): %s", x, count, debug.c_str());
 
 	return 0;
 }
@@ -2086,7 +2086,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 		}
 		log += ")";
-		LOG_ERROR(RSX, "TODO: " + log);
+		LOG_ERROR(RSX, "TODO: %s", log.c_str());
 	}
 	break;
 	}

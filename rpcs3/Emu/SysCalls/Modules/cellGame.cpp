@@ -187,7 +187,6 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
-	// TODO: make it better
 	strcpy_trunc(*contentInfoPath, contentInfo);
 	strcpy_trunc(*usrdirPath, usrdir);
 

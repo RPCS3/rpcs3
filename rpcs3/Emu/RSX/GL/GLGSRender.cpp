@@ -593,8 +593,8 @@ void GLTexture::Save(RSXTexture& tex)
 	if (!rExists(dir_path)) rMkdir(dir_path);
 
 	u32 count = 0;
-	while (rExists(fmt::Format(file_fmt, count))) count++;
-	Save(tex, fmt::Format(file_fmt, count));
+	while (rExists(fmt::Format(file_fmt.c_str(), count))) count++;
+	Save(tex, fmt::Format(file_fmt.c_str(), count));
 }
 
 void GLTexture::Bind()

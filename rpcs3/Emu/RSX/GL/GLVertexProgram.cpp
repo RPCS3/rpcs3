@@ -436,7 +436,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 		"%s\n"
 		"%s";
 
-	return fmt::Format(prot, p.c_str(), fp.c_str(), f.c_str());
+	return fmt::Format(prot.c_str(), p.c_str(), fp.c_str(), f.c_str());
 }
 
 void GLVertexDecompilerThread::Task()
@@ -648,7 +648,7 @@ void GLVertexProgram::Compile()
 			delete[] buf;
 		}
 
-		LOG_NOTICE(RSX, shader);
+		LOG_NOTICE(RSX, "%s", shader.c_str());
 		Emu.Pause();
 	}
 	//else LOG_WARNING(RSX, "Vertex shader compiled successfully!");

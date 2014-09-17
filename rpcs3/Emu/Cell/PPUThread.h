@@ -807,5 +807,3 @@ protected:
 };
 
 PPUThread& GetCurrentPPUThread();
-
-#define declCPU PPUThread& CPU = GetCurrentPPUThread

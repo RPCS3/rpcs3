@@ -18,7 +18,7 @@ public:
 	void AddFunc(ModuleFunc *func);
 	void SetModule(u16 id, Module* module);//insert into m_modules
 	bool IsLoadedFunc(u32 id) const;
-	bool CallFunc(u32 num);
+	bool CallFunc(PPUThread& CPU, u32 num);
 	bool UnloadFunc(u32 id);
 	void UnloadModules();
 	u32 GetFuncNumById(u32 id);

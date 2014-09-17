@@ -251,9 +251,9 @@ void VHDDExplorer::OnCreateDir(wxCommandEvent& event)
 {
 	int i = 1;
 	static const std::string& fmt = "New Dir (%d)";
-	while(m_hdd->HasEntry(fmt::Format(fmt, i))) i++;
+	while(m_hdd->HasEntry(fmt::Format(fmt.c_str(), i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_Dir, fmt::Format(fmt, i));
+	m_hdd->Create(vfsHDD_Entry_Dir, fmt::Format(fmt.c_str(), i));
 	UpdateList();
 }
 
@@ -261,9 +261,9 @@ void VHDDExplorer::OnCreateFile(wxCommandEvent& event)
 {
 	int i = 1;
 	static const std::string& fmt = "New File (%d)";
-	while (m_hdd->HasEntry(fmt::Format(fmt, i))) i++;
+	while (m_hdd->HasEntry(fmt::Format(fmt.c_str(), i))) i++;
 
-	m_hdd->Create(vfsHDD_Entry_File, fmt::Format(fmt, i));
+	m_hdd->Create(vfsHDD_Entry_File, fmt::Format(fmt.c_str(), i));
 	UpdateList();
 }
 

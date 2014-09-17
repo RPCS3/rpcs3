@@ -3779,7 +3779,7 @@ private:
 
 	void UNK(const std::string& err)
 	{
-		LOG_ERROR(Log::SPU, err + fmt::Format(" #pc: 0x%x", CPU.PC));
+		LOG_ERROR(Log::SPU, "%s #pc: 0x%x", err.c_str(), CPU.PC);
 		c.mov(cpu_dword(PC), CPU.PC);
 		do_finalize = true;
 		Emu.Pause();

@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "sys_memory.h"
 #include "sys_process.h"
 
 SysCallBase sys_process("sys_process");
@@ -210,6 +211,24 @@ s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, vm::ptr<
 	}
 
 	return CELL_OK;
+}
+
+s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+{
+	if (!flags || flags & ~(SYS_MEMORY_ACCESS_RIGHT_SPU_THR | SYS_MEMORY_ACCESS_RIGHT_RAW_SPU))
+	{
+		return CELL_EINVAL;
+	}
+
+	// TODO
+	return CELL_OK;
+}
+
+s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+{
+	sys_process.Warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
+
+	return process_is_spu_lock_line_reservation_address(addr, flags);
 }
 
 s32 sys_process_get_paramsfo(vm::ptr<u8> buffer)

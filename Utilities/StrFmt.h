@@ -97,14 +97,8 @@ namespace fmt{
 	T by_value(T x) { return x; }
 
 	//wrapper to deal with advance sprintf formating options with automatic length finding
-	//can't take strings by reference because of "va_start", so overload it with char *
-	string FormatV(const char *fmt, va_list args);
-
-	string FormatV(string fmt, va_list args);
-
-	//wrapper to deal with advance sprintf formating options with automatic length finding
 	template<typename  ... Args>
-	string Format(const string &fmt, Args ... parameters)
+	string Format(const char* fmt, Args ... parameters)
 	{
 		size_t length = 256;
 		string str;
@@ -115,10 +109,10 @@ namespace fmt{
 #if !defined(_MSC_VER)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wformat-security"
-			size_t printlen = snprintf(buffptr.data(), length, fmt.c_str(), std::forward<Args>(parameters)...);
+			size_t printlen = snprintf(buffptr.data(), length, fmt, std::forward<Args>(parameters)...);
 #pragma clang diagnostic pop
 #else
-			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt.c_str(), std::forward<Args>(parameters)...);
+			size_t printlen = _snprintf_s(buffptr.data(), length, length - 1, fmt, std::forward<Args>(parameters)...);
 #endif
 			if (printlen < length)
 			{

@@ -11,8 +11,6 @@
 #include "lv2/sys_event.h"
 #include "lv2/sys_event_flag.h"
 #include "lv2/sys_interrupt.h"
-//#include "lv2/sys_lwcond.h"
-//#include "lv2/sys_lwmutex.h"
 #include "lv2/sys_memory.h"
 #include "lv2/sys_mmapper.h"
 #include "lv2/sys_ppu_thread.h"
@@ -37,7 +35,7 @@ namespace detail{
 	}
 }
 
-void default_syscall();
+void default_syscall(PPUThread& CPU);
 static func_caller *null_func = bind_func(default_syscall);
 
 static const int kSyscallTableLength = 1024;
@@ -62,7 +60,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 
 	bind_func(sys_process_get_number_of_object),            //12  (0x00C)
 	bind_func(sys_process_get_id),                          //13  (0x00D)
-	null_func,//bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00E)
+	bind_func(sys_process_is_spu_lock_line_reservation_address),  //14  (0x00E)
 
 	null_func, null_func, null_func,                        //15-17  UNS
 	
@@ -153,12 +151,12 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_cond_signal),                             //108 (0x06C)
 	bind_func(sys_cond_signal_all),                         //109 (0x06D)
 	bind_func(sys_cond_signal_to),                          //110 (0x06E)
-	null_func,//bind_func(sys_lwcond_create)                //111 (0x06F)
-	null_func,//bind_func(sys_lwcond_destroy)               //112 (0x070)
-	null_func,//bind_func(sys_lwcond_queue_wait)            //113 (0x071)
+	null_func,//bind_func(sys_lwcond_create)                //111 (0x06F) // internal, used by sys_lwcond_create
+	null_func,//bind_func(sys_lwcond_destroy)               //112 (0x070) // internal, used by sys_lwcond_destroy
+	null_func,//bind_func(sys_lwcond_queue_wait)            //113 (0x071) // internal, used by sys_lwcond_wait
 	bind_func(sys_semaphore_get_value),                     //114 (0x072)
-	null_func,//bind_func(sys_semaphore_...)                //115 (0x073)
-	null_func,//bind_func(sys_semaphore_...)                //116 (0x074)
+	null_func,//bind_func(sys_semaphore_...)                //115 (0x073) // internal, used by sys_lwcond_signal, sys_lwcond_signal_to
+	null_func,//bind_func(sys_semaphore_...)                //116 (0x074) // internal, used by sys_lwcond_signal_all
 	null_func,//bind_func(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
 	bind_func(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//bind_func(sys_event_...)                    //119 (0x077)  ROOT
@@ -912,9 +910,8 @@ struct SyscallTableCleaner_t
 	}
 } SyscallTableCleaner_t;
 
-void default_syscall()
+void default_syscall(PPUThread& CPU)
 {
-	declCPU();
 	u32 code = (u32)CPU.GPR[11];
 	//TODO: remove this
 	switch(code)
@@ -943,25 +940,24 @@ void default_syscall()
 	return;
 }
 
-void SysCalls::DoSyscall(u32 code)
+void SysCalls::DoSyscall(PPUThread& CPU, u32 code)
 {
 	//Auto Pause using simple singleton.
 	Debug::AutoPause::getInstance().TryPause(code);
 
 	if(code < 1024)
 	{
-		(*sc_table[code])();
+		(*sc_table[code])(CPU);
 		return;
 	}
 	
-	if(Emu.GetModuleManager().CallFunc(code))
+	if(Emu.GetModuleManager().CallFunc(CPU, code))
 	{
 		return;
 	}
 
 
 	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
-	declCPU();
 	CPU.GPR[3] = 0;
 }
 

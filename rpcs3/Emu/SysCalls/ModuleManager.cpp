@@ -224,7 +224,7 @@ bool ModuleManager::IsLoadedFunc(u32 id) const
 	return false;
 }
 
-bool ModuleManager::CallFunc(u32 num)
+bool ModuleManager::CallFunc(PPUThread& CPU, u32 num)
 {
 	func_caller* func = nullptr;
 	{
@@ -242,7 +242,7 @@ bool ModuleManager::CallFunc(u32 num)
 
 	if (func)
 	{
-		(*func)();
+		(*func)(CPU);
 		return true;
 	}
 	return false;

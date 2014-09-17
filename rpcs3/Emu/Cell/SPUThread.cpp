@@ -589,7 +589,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetCurrentCPUThread()->GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
+				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
 				{
 					SPU.In_MBox.PushUncond(CELL_EBUSY);
 					return;
@@ -627,7 +627,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 				}
 
 				// TODO: check passing spup value
-				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetCurrentCPUThread()->GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
+				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (v & 0x00ffffff), data);
 					return;
@@ -666,7 +666,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				u32 tid = GetCurrentCPUThread()->GetId();
+				const u32 tid = GetId();
 
 				ef->m_mutex.lock(tid);
 				ef->flags |= (u64)1 << flag;
@@ -714,7 +714,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				u32 tid = GetCurrentCPUThread()->GetId();
+				const u32 tid = GetId();
 
 				ef->m_mutex.lock(tid);
 				ef->flags |= (u64)1 << flag;
