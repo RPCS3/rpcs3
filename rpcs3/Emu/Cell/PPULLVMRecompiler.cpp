@@ -84,21 +84,15 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
         log_file << i->first << " = " << i->second << "\n";
     }
 
-    std::set<std::pair<u64, u32>> sorted_block_info;
-    for (auto i = m_address_to_compiled_block_map.begin(); i != m_address_to_compiled_block_map.end(); i++) {
-        sorted_block_info.insert(std::make_pair(~i->second.request_count, i->first));
-    }
-
     log_file << "\nBlock Information:\n";
-    for (auto i = sorted_block_info.begin(); i != sorted_block_info.end(); i++) {
-        auto j = m_address_to_compiled_block_map.find(i->second);
-        log_file << fmt::Format("%s: Size = %u bytes, Times requested = %llu\n", j->second.llvm_function->getName().str().c_str(), j->second.size, j->second.request_count);
+    for (auto i = m_compiled_blocks.begin(); i != m_compiled_blocks.end(); i++) {
+        log_file << fmt::Format("\n%s: Size = %u bytes, Reference count = %llu\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.reference_count);
 
-        log_file << "\nDisassembly:\n";
-        for (size_t pc = 0; pc < j->second.size;) {
+        log_file << "Disassembly:\n";
+        for (size_t pc = 0; pc < i->second.size;) {
             char str[1024];
 
-            auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)j->second.block + pc, j->second.size - pc, (uint64_t)((uint8_t *)j->second.block + pc), str, sizeof(str));
+            auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)i->second.block + pc, i->second.size - pc, (uint64_t)((uint8_t *)i->second.block + pc), str, sizeof(str));
             log_file << str << '\n';
             pc += size;
         }
@@ -113,19 +107,33 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
     delete m_llvm_context;
 }
 
-PPULLVMRecompiler::CompiledBlock PPULLVMRecompiler::GetCompiledBlock(u32 address) {
-    {
-        std::lock_guard<std::mutex> lock(m_address_to_compiled_block_map_mutex);
-        auto i = m_address_to_compiled_block_map.find(address);
-        if (i != m_address_to_compiled_block_map.end()) {
-            i->second.request_count++;
-            return i->second.block;
-        }
+PPULLVMRecompiler::CompiledBlockInfo PPULLVMRecompiler::GetCompiledBlock(u32 address) {
+    static CompiledBlockInfo unknown_block_info = {0};
+
+    std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
+
+    auto compiled_block = m_compiled_blocks.lower_bound(std::make_pair(address, 0));
+    if (compiled_block != m_compiled_blocks.end() && compiled_block->first.first == address) {
+        compiled_block->second.reference_count++;
+        return compiled_block->second;
     }
 
+    return unknown_block_info;
+}
+
+void PPULLVMRecompiler::ReleaseCompiledBlock(u32 address, u32 revision) {
+    std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
+
+    auto compiled_block = m_compiled_blocks.find(std::make_pair(address, revision));
+    if (compiled_block != m_compiled_blocks.end()) {
+        compiled_block->second.reference_count--;
+    }
+}
+
+void PPULLVMRecompiler::RequestCompilation(u32 address) {
     {
-        std::lock_guard<std::mutex> lock(m_pending_blocks_set_mutex);
-        m_pending_blocks_set.insert(address);
+        std::lock_guard<std::mutex> lock(m_pending_compilation_blocks_mutex);
+        m_pending_compilation_blocks.insert(address);
     }
 
     if (!IsAlive()) {
@@ -133,7 +141,6 @@ PPULLVMRecompiler::CompiledBlock PPULLVMRecompiler::GetCompiledBlock(u32 address
     }
 
     Notify();
-    return nullptr;
 }
 
 void PPULLVMRecompiler::Task() {
@@ -146,12 +153,12 @@ void PPULLVMRecompiler::Task() {
             u32 address;
 
             {
-                std::lock_guard<std::mutex> lock(m_pending_blocks_set_mutex);
+                std::lock_guard<std::mutex> lock(m_pending_compilation_blocks_mutex);
 
-                auto i = m_pending_blocks_set.begin();
-                if (i != m_pending_blocks_set.end()) {
+                auto i = m_pending_compilation_blocks.begin();
+                if (i != m_pending_compilation_blocks.end()) {
                     address = *i;
-                    m_pending_blocks_set.erase(i);
+                    m_pending_compilation_blocks.erase(i);
                 } else {
                     break;
                 }
@@ -1536,7 +1543,10 @@ void PPULLVMRecompiler::MULHWU(u32 rd, u32 ra, u32 rb, bool rc) {
 }
 
 void PPULLVMRecompiler::MFOCRF(u32 a, u32 rd, u32 crm) {
-    InterpreterCall("MFOCRF", &PPUInterpreter::MFOCRF, a, rd, crm);
+    auto cr_i32 = GetCr();
+    auto cr_i64 = m_ir_builder->CreateZExt(cr_i32, m_ir_builder->getInt64Ty());
+    SetGpr(rd, cr_i64);
+    //InterpreterCall("MFOCRF", &PPUInterpreter::MFOCRF, a, rd, crm);
 }
 
 void PPULLVMRecompiler::LWARX(u32 rd, u32 ra, u32 rb) {
@@ -1785,7 +1795,24 @@ void PPULLVMRecompiler::ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::MTOCRF(u32 l, u32 crm, u32 rs) {
-    InterpreterCall("MTOCRF", &PPUInterpreter::MTOCRF, l, crm, rs);
+    auto rs_i32 = GetGpr(rs, 32);
+    auto cr_i32 = GetCr();
+    u32  mask   = 0;
+
+    for (u32 i = 0; i < 8; i++) {
+        if (crm & (1 << i)) {
+            mask |= 0xF << ((7 - i) * 4);
+            if (l) {
+                break;
+            }
+        }
+    }
+
+    cr_i32 = m_ir_builder->CreateAnd(cr_i32, ~mask);
+    rs_i32 = m_ir_builder->CreateAnd(rs_i32, ~mask);
+    cr_i32 = m_ir_builder->CreateOr(cr_i32, rs_i32);
+    SetCr(cr_i32);
+    //InterpreterCall("MTOCRF", &PPUInterpreter::MTOCRF, l, crm, rs);
 }
 
 void PPULLVMRecompiler::STDX(u32 rs, u32 ra, u32 rb) {
@@ -1843,7 +1870,18 @@ void PPULLVMRecompiler::STVEWX(u32 vs, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::ADDZE(u32 rd, u32 ra, u32 oe, bool rc) {
-    InterpreterCall("ADDZE", &PPUInterpreter::ADDZE, rd, ra, oe, rc);
+    auto ra_i64   = GetGpr(ra);
+    auto ca_i64   = GetXerCa();
+    auto res_s    = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::sadd_with_overflow, {m_ir_builder->getInt64Ty()}), ra_i64, ca_i64);
+    auto sum_i64  = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    SetGpr(rd, sum_i64);
+    SetXerCa(carry_i1);
+     
+    if (rc) {
+        SetCrFieldSignedCmp(0, sum_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("ADDZE", &PPUInterpreter::ADDZE, rd, ra, oe, rc);
 }
 
 void PPULLVMRecompiler::SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2418,14 +2456,34 @@ void PPULLVMRecompiler::DSS(u32 strm, u32 a) {
 }
 
 void PPULLVMRecompiler::SRAWI(u32 ra, u32 rs, u32 sh, bool rc) {
+    //auto rs_i32  = GetGpr(rs, 32);
+    //auto res_i32 = m_ir_builder->CreateAShr(rs_i32, sh);
+    //auto res_i64 = m_ir_builder->CreateSExt(rs_i32, m_ir_builder->getInt64Ty());
+    //SetGpr(ra, res_i64);
+
+    //if (rc) {
+    //    SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    //}
+
+    // TODO: Set XER.CA
     InterpreterCall("SRAWI", &PPUInterpreter::SRAWI, ra, rs, sh, rc);
 }
 
 void PPULLVMRecompiler::SRADI1(u32 ra, u32 rs, u32 sh, bool rc) {
+    //auto rs_i64  = GetGpr(rs);
+    //auto res_i64 = m_ir_builder->CreateAShr(rs_i64, sh);
+    //SetGpr(ra, res_i64);
+
+    //if (rc) {
+    //    SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    //}
+
+    // TODO: Set XER.CA
     InterpreterCall("SRADI1", &PPUInterpreter::SRADI1, ra, rs, sh, rc);
 }
 
 void PPULLVMRecompiler::SRADI2(u32 ra, u32 rs, u32 sh, bool rc) {
+    //SRADI1(ra, rs, sh, rc);
     InterpreterCall("SRADI2", &PPUInterpreter::SRADI2, ra, rs, sh, rc);
 }
 
@@ -2805,7 +2863,13 @@ void PPULLVMRecompiler::LWA(u32 rd, u32 ra, s32 ds) {
 }
 
 void PPULLVMRecompiler::FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {
-    InterpreterCall("FDIVS", &PPUInterpreter::FDIVS, frd, fra, frb, rc);
+    auto ra_f32  = GetFpr(fra, 32);
+    auto rb_f32  = GetFpr(frb, 32);
+    auto res_f32 = m_ir_builder->CreateFDiv(ra_f32, rb_f32);
+    SetFpr(frd, res_f32);
+
+    // TODO: Set flags
+    //InterpreterCall("FDIVS", &PPUInterpreter::FDIVS, frd, fra, frb, rc);
 }
 
 void PPULLVMRecompiler::FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -2813,7 +2877,13 @@ void PPULLVMRecompiler::FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FADDS(u32 frd, u32 fra, u32 frb, bool rc) {
-    InterpreterCall("FADDS", &PPUInterpreter::FADDS, frd, fra, frb, rc);
+    auto ra_f32  = GetFpr(fra, 32);
+    auto rb_f32  = GetFpr(frb, 32);
+    auto res_f32 = m_ir_builder->CreateFAdd(ra_f32, rb_f32);
+    SetFpr(frd, res_f32);
+
+    // TODO: Set flags
+    //InterpreterCall("FADDS", &PPUInterpreter::FADDS, frd, fra, frb, rc);
 }
 
 void PPULLVMRecompiler::FSQRTS(u32 frd, u32 frb, bool rc) {
@@ -2825,14 +2895,35 @@ void PPULLVMRecompiler::FRES(u32 frd, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FMULS(u32 frd, u32 fra, u32 frc, bool rc) {
-    InterpreterCall("FMULS", &PPUInterpreter::FMULS, frd, fra, frc, rc);
+    auto ra_f32  = GetFpr(fra, 32);
+    auto rc_f32  = GetFpr(frc, 32);
+    auto res_f32 = m_ir_builder->CreateFMul(ra_f32, rc_f32);
+    SetFpr(frd, res_f32);
+
+    // TODO: Set flags
+    //InterpreterCall("FMULS", &PPUInterpreter::FMULS, frd, fra, frc, rc);
 }
 
 void PPULLVMRecompiler::FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FMADDS", &PPUInterpreter::FMADDS, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FMADDS", &PPUInterpreter::FMADDS, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
+    //auto ra_f64  = GetFpr(fra);
+    //auto rb_f64  = GetFpr(frb);
+    //auto rc_f64  = GetFpr(frc);
+    //rb_f64       = m_ir_builder->CreateNeg(rb_f64);
+    //auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    //SetFpr(frd, res_f64);
+
+    // TODO: Set flags
     InterpreterCall("FMSUBS", &PPUInterpreter::FMSUBS, frd, fra, frc, frb, rc);
 }
 
@@ -2894,7 +2985,11 @@ void PPULLVMRecompiler::FCMPU(u32 crfd, u32 fra, u32 frb) {
 }
 
 void PPULLVMRecompiler::FRSP(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FRSP", &PPUInterpreter::FRSP, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    SetFpr(frd, rb_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FRSP", &PPUInterpreter::FRSP, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FCTIW(u32 frd, u32 frb, bool rc) {
@@ -2906,21 +3001,33 @@ void PPULLVMRecompiler::FCTIWZ(u32 frd, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FDIV(u32 frd, u32 fra, u32 frb, bool rc) {
-    InterpreterCall("FDIV", &PPUInterpreter::FDIV, frd, fra, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = m_ir_builder->CreateFDiv(ra_f64, rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FDIV", &PPUInterpreter::FDIV, frd, fra, frb, rc);
 }
 
 void PPULLVMRecompiler::FSUB(u32 frd, u32 fra, u32 frb, bool rc) {
-    InterpreterCall("FSUB", &PPUInterpreter::FSUB, frd, fra, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = m_ir_builder->CreateFSub(ra_f64, rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FSUB", &PPUInterpreter::FSUB, frd, fra, frb, rc);
 }
 
 void PPULLVMRecompiler::FADD(u32 frd, u32 fra, u32 frb, bool rc) {
-    //auto ra_f64  = GetFpr(fra);
-    //auto rb_f64  = GetFpr(frb);
-    //auto res_f64 = m_ir_builder->CreateFAdd(ra_f64, rb_f64);
-    //SetFpr(frd, res_f64);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = m_ir_builder->CreateFAdd(ra_f64, rb_f64);
+    SetFpr(frd, res_f64);
 
-    // TODO: Set FPRF
-    InterpreterCall("FADD", &PPUInterpreter::FADD, frd, fra, frb, rc);
+    // TODO: Set flags
+    //InterpreterCall("FADD", &PPUInterpreter::FADD, frd, fra, frb, rc);
 }
 
 void PPULLVMRecompiler::FSQRT(u32 frd, u32 frb, bool rc) {
@@ -2932,7 +3039,13 @@ void PPULLVMRecompiler::FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FMUL(u32 frd, u32 fra, u32 frc, bool rc) {
-    InterpreterCall("FMUL", &PPUInterpreter::FMUL, frd, fra, frc, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rc_f64  = GetFpr(frc);
+    auto res_f64 = m_ir_builder->CreateFMul(ra_f64, rc_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FMUL", &PPUInterpreter::FMUL, frd, fra, frc, rc);
 }
 
 void PPULLVMRecompiler::FRSQRTE(u32 frd, u32 frb, bool rc) {
@@ -2940,11 +3053,26 @@ void PPULLVMRecompiler::FRSQRTE(u32 frd, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
+    //auto ra_f64  = GetFpr(fra);
+    //auto rb_f64  = GetFpr(frb);
+    //auto rc_f64  = GetFpr(frc);
+    //rb_f64       = m_ir_builder->CreateNeg(rb_f64);
+    //auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    //SetFpr(frd, res_f64);
+
+    // TODO: Set flags
     InterpreterCall("FMSUB", &PPUInterpreter::FMSUB, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FMADD", &PPUInterpreter::FMADD, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FMADD", &PPUInterpreter::FMADD, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -2960,11 +3088,18 @@ void PPULLVMRecompiler::FCMPO(u32 crfd, u32 fra, u32 frb) {
 }
 
 void PPULLVMRecompiler::FNEG(u32 frd, u32 frb, bool rc) {
+    //auto rb_f64  = GetFpr(frb);
+    //rb_f64       = m_ir_builder->CreateSub(ConstantFP::getZeroValueForNegation(rb_f64->getType()), rb_f64);
+    //SetGpr(frd, rb_f64);
+
+    // TODO: Set flags
     InterpreterCall("FNEG", &PPUInterpreter::FNEG, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FMR(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FMR", &PPUInterpreter::FMR, frd, frb, rc);
+    SetFpr(frd, GetFpr(frb));
+    // TODO: Set flags
+    //InterpreterCall("FMR", &PPUInterpreter::FMR, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FNABS(u32 frd, u32 frb, bool rc) {
@@ -2984,7 +3119,12 @@ void PPULLVMRecompiler::FCTIDZ(u32 frd, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FCFID(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FCFID", &PPUInterpreter::FCFID, frd, frb, rc);
+    auto rb_i64  = GetFpr(frb, 64, true);
+    auto res_f64 = m_ir_builder->CreateSIToFP(rb_i64, m_ir_builder->getDoubleTy());
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flag
+    //InterpreterCall("FCFID", &PPUInterpreter::FCFID, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
@@ -3028,13 +3168,15 @@ void PPULLVMRecompiler::Compile(u32 address) {
         m_execution_engine->runJITOnFunction(m_function, &mci);
 
         CompiledBlockInfo block_info;
-        block_info.block         = (CompiledBlock)mci.address();
-        block_info.request_count = 0;
-        block_info.size          = mci.size();
-        block_info.llvm_function = m_function;
+        block_info.block_address   = address;
+        block_info.revision        = 0xFFFFFFFF;
+        block_info.block           = (CompiledBlock)mci.address();
+        block_info.reference_count = 0;
+        block_info.size            = mci.size();
+        block_info.llvm_function   = m_function;
         {
-            std::lock_guard<std::mutex> lock(m_address_to_compiled_block_map_mutex);
-            m_address_to_compiled_block_map[address] = block_info;
+            std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
+            m_compiled_blocks[std::make_pair(address, block_info.revision)] = block_info;
         }
     }
 
@@ -3313,14 +3455,24 @@ void PPULLVMRecompiler::SetUsprg0(Value * val_x64) {
     m_ir_builder->CreateStore(val_i64, usprg0_i64_ptr);
 }
 
-Value * PPULLVMRecompiler::GetFpr(u32 r, u32 bits) {
-    auto r_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, FPR[r]));
-    auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
-    auto r_f64     = m_ir_builder->CreateLoad(r_f64_ptr);
-    if (bits == 32) {
-        return m_ir_builder->CreateFPTrunc(r_f64, m_ir_builder->getFloatTy());
+Value * PPULLVMRecompiler::GetFpr(u32 r, u32 bits, bool as_int) {
+    auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, FPR[r]));
+    if (!as_int) {
+        auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
+        auto r_f64     = m_ir_builder->CreateLoad(r_f64_ptr);
+        if (bits == 32) {
+            return m_ir_builder->CreateFPTrunc(r_f64, m_ir_builder->getFloatTy());
+        } else {
+            return r_f64;
+        }
     } else {
-        return r_f64;
+        auto r_i64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
+        auto r_i64     = m_ir_builder->CreateLoad(r_i64_ptr);
+        if (bits == 32) {
+            return m_ir_builder->CreateTrunc(r_i64, m_ir_builder->getInt32Ty());
+        } else {
+            return r_i64;
+        }
     }
 }
 
@@ -3560,15 +3712,31 @@ PPULLVMEmulator::~PPULLVMEmulator() {
 u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
     static u32 last_instr_address = 0;
 
-    PPULLVMRecompiler::CompiledBlock compiled_block = nullptr;
-    if (address != (last_instr_address + 4)) {
-        compiled_block = s_recompiler->GetCompiledBlock(address);
+    auto compiled_block = m_compiled_blocks.find(address);
+    if (compiled_block == m_compiled_blocks.end()) {
+        auto compiled_block_info = s_recompiler->GetCompiledBlock(address);
+        if (compiled_block_info.block) {
+            compiled_block = m_compiled_blocks.insert(m_compiled_blocks.end(), std::make_pair(address, std::make_pair(compiled_block_info.block, compiled_block_info.revision)));
+            m_pending_compilation_blocks.erase(address);
+        } else {
+            if (address != (last_instr_address + 4)) {
+                auto pending_compilation_block = m_pending_compilation_blocks.find(address);
+                if (pending_compilation_block != m_pending_compilation_blocks.end()) {
+                    pending_compilation_block->second++;
+                    if ((pending_compilation_block->second % 1000) == 0) {
+                        s_recompiler->RequestCompilation(address);
+                    }
+                } else {
+                    m_pending_compilation_blocks[address] = 0;
+                }
+            }
+        }
     }
 
     last_instr_address = address;
 
-    if (compiled_block) {
-        compiled_block(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
+    if (compiled_block != m_compiled_blocks.end()) {
+        compiled_block->second.first(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
         return 0;
     } else {
         return m_decoder.DecodeMemory(address);

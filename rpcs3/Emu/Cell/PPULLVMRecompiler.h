@@ -19,6 +19,26 @@ class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPC
 public:
     typedef void(*CompiledBlock)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
+    struct CompiledBlockInfo {
+        /// Address of the block
+        u32 block_address;
+
+        /// The version of the block
+        u32 revision;
+
+        /// Pointer to the block
+        CompiledBlock block;
+
+        /// Size of the compiled block
+        size_t size;
+
+        /// Reference count for the block
+        u64 reference_count;
+
+        /// LLVM function for this block
+        llvm::Function * llvm_function;
+    };
+
     PPULLVMRecompiler();
 
     PPULLVMRecompiler(const PPULLVMRecompiler & other) = delete;
@@ -29,8 +49,14 @@ public:
     PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
     PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
 
-    /// Get a pointer to a compiled block
-    CompiledBlock GetCompiledBlock(u32 address);
+    /// Get a compiled block
+    CompiledBlockInfo GetCompiledBlock(u32 address);
+
+    /// Release a compiled block
+    void ReleaseCompiledBlock(u32 address, u32 revision);
+
+    /// Request a block to be compiled
+    void RequestCompilation(u32 address);
 
     /// Execute all tests
     void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
@@ -441,32 +467,18 @@ protected:
     void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
-    struct CompiledBlockInfo {
-        /// Pointer to the block
-        CompiledBlock block;
+    /// Mutex for accessing m_compiled_blocks
+    std::mutex m_compiled_blocks_mutex;
 
-        /// Size of the compiled block
-        size_t size;
+    /// Blocks that have been compiled
+    /// Key is block address
+    std::map<std::pair<u32, u32>, CompiledBlockInfo> m_compiled_blocks;
 
-        /// Number of times this block was requested
-        u64 request_count;
+    /// Mutex for accessing m_pending_compilation_blocks;
+    std::mutex m_pending_compilation_blocks_mutex;
 
-        /// LLVM function for this block
-        llvm::Function * llvm_function;
-    };
-
-    /// Mutex for accessing m_address_to_compiled_block_map
-    /// TODO: Use a RW lock instead of mutex
-    std::mutex m_address_to_compiled_block_map_mutex;
-
-    /// Map from address to compiled block
-    std::map<u32, CompiledBlockInfo> m_address_to_compiled_block_map;
-
-    /// Mutex for accessing m_pending_blocks_set;
-    std::mutex m_pending_blocks_set_mutex;
-
-    /// Set of blocks pending compilation
-    std::set<u32> m_pending_blocks_set;
+    /// Blocks pending compilation
+    std::set<u32> m_pending_compilation_blocks;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -609,7 +621,7 @@ private:
     void SetUsprg0(llvm::Value * val_x64);
 
     /// Get FPR
-    llvm::Value * GetFpr(u32 r, u32 bits = 64);
+    llvm::Value * GetFpr(u32 r, u32 bits = 64, bool as_int = false);
 
     /// Set FPR
     void SetFpr(u32 r, llvm::Value * val);
@@ -692,6 +704,14 @@ private:
 
     /// PPU instruction Decoder
     PPUDecoder m_decoder;
+
+    /// Compiled blocks
+    /// Key is block address.
+    std::unordered_map<u32, std::pair<PPULLVMRecompiler::CompiledBlock, u32>> m_compiled_blocks;
+
+    /// Uncompiled blocks
+    /// Key is block address
+    std::unordered_map<u32, u64> m_pending_compilation_blocks;
 
     /// Number of instances of this class
     static u32 s_num_instances;
