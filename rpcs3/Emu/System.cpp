@@ -171,7 +171,6 @@ void Emulator::Load()
 
 	if(IsSelf(m_path))
 	{
-		std::string self_path = m_path;
 		std::string elf_path = rFileName(m_path).GetPath();
 
 		if (fmt::CmpNoCase(rFileName(m_path).GetFullName(),"EBOOT.BIN") == 0)
@@ -183,7 +182,7 @@ void Emulator::Load()
 			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
 		}
 
-		if(!DecryptSelf(elf_path, self_path))
+		if(!DecryptSelf(elf_path, m_path))
 			return;
 
 		m_path = elf_path;

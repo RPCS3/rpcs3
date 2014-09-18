@@ -379,6 +379,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
 	// Camera
+	wxStaticBoxSizer* s_round_camera      = new wxStaticBoxSizer(wxVERTICAL, p_camera, _("Camera"));
 	wxStaticBoxSizer* s_round_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_camera, _("Camera type"));
 
 	// HLE / Misc.
@@ -396,6 +397,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
+	wxComboBox* cbox_camera           = new wxComboBox(p_camera, wxID_ANY);
 	wxComboBox* cbox_camera_type      = new wxComboBox(p_camera, wxID_ANY);
 	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
@@ -451,6 +453,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
+
+	cbox_camera->Append("Null");
 
 	cbox_camera_type->Append("Unknown");
 	cbox_camera_type->Append("EyeToy");
@@ -508,6 +512,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out       ->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_camera          ->SetSelection(Ini.Camera.GetValue());
 	cbox_camera_type     ->SetSelection(Ini.CameraType.GetValue());
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
@@ -531,6 +536,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	s_round_camera->Add(cbox_camera, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -561,6 +567,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Camera
+	s_subpanel_camera->Add(s_round_camera, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_camera->Add(s_round_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// HLE / Misc.
@@ -612,6 +619,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
+		Ini.Camera.SetValue(cbox_camera->GetSelection());
 		Ini.CameraType.SetValue(cbox_camera_type->GetSelection());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
 		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
