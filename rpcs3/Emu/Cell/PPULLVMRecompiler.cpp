@@ -147,8 +147,9 @@ void PPULLVMRecompiler::Task() {
     std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
     while (!TestDestroy() && !Emu.IsStopped()) {
-        WaitForAnySignal();
+        WaitForAnySignal(500);
 
+        u32 num_blocks_compiled = 0;
         while (!TestDestroy() && !Emu.IsStopped()) {
             u32 address;
 
@@ -165,6 +166,12 @@ void PPULLVMRecompiler::Task() {
             }
 
             Compile(address);
+            num_blocks_compiled++;
+        }
+
+        if (num_blocks_compiled == 0) {
+            // If we get here, it means the recompilation thread is idling.
+            
         }
     }
 
@@ -3204,17 +3211,21 @@ Value * PPULLVMRecompiler::GetInterpreter() {
 Value * PPULLVMRecompiler::GetBit(Value * val, u32 n) {
     Value * bit;
 
+#ifdef PPU_LLVM_RECOMPILER_USE_BMI
     if (val->getType()->isIntegerTy(32)) {
         bit = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_bmi_pext_32), val, m_ir_builder->getInt32(1 << (31- n)));
     } else if (val->getType()->isIntegerTy(64)) {
         bit = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_bmi_pext_64), val, m_ir_builder->getInt64((u64)1 << (63 - n)));
     } else {
+#endif
         if (val->getType()->getIntegerBitWidth() != (n + 1)) {
             bit = m_ir_builder->CreateLShr(val, val->getType()->getIntegerBitWidth() - n - 1);
         }
 
         bit = m_ir_builder->CreateAnd(val, 1);
+#ifdef PPU_LLVM_RECOMPILER_USE_BMI
     }
+#endif
 
     return bit;
 }
@@ -3244,17 +3255,21 @@ Value * PPULLVMRecompiler::SetBit(Value * val, u32 n, Value * bit, bool doClear)
 Value * PPULLVMRecompiler::GetNibble(Value * val, u32 n) {
     Value * nibble;
 
+#ifdef PPU_LLVM_RECOMPILER_USE_BMI
     if (val->getType()->isIntegerTy(32)) {
         nibble = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_bmi_pext_32), val, m_ir_builder->getInt32((u64)0xF << ((7 - n) * 4)));
     } else if (val->getType()->isIntegerTy(64)) {
         nibble = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_bmi_pext_64), val, m_ir_builder->getInt64((u64)0xF << ((15 - n) * 4)));
     } else {
+#endif
         if ((val->getType()->getIntegerBitWidth() >> 2) != (n + 1)) {
             nibble = m_ir_builder->CreateLShr(val, (((val->getType()->getIntegerBitWidth() >> 2) - 1) - n) * 4);
         }
 
         nibble = m_ir_builder->CreateAnd(val, 0xF);
+#ifdef PPU_LLVM_RECOMPILER_USE_BMI
     }
+#endif
 
     return nibble;
 }
