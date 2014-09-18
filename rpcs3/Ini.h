@@ -115,6 +115,7 @@ public:
 	IniEntry<bool> AudioConvertToU16;
 
 	// Camera
+	IniEntry<u8> Camera;
 	IniEntry<u8> CameraType;
 
 	// Input/Output
@@ -187,6 +188,7 @@ public:
 		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
 
 		// Camera
+		Camera.Init("Camera", path);
 		CameraType.Init("Camera_Type", path);
 
 		// Input/Output
@@ -255,6 +257,7 @@ public:
 		AudioConvertToU16.Load(false);
 
 		// Camera
+		Camera.Load(0);
 		CameraType.Load(2);
 
 		// Input/Ouput
@@ -324,6 +327,7 @@ public:
 		AudioConvertToU16.Save();
 
 		// Camera
+		Camera.Save();
 		CameraType.Save();
 
 		// Input/Output
