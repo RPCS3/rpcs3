@@ -497,8 +497,6 @@ s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8568, libsre_rtoc);
 #else
-	spurs->spurs->Finalize();
-
 	return CELL_OK;
 #endif
 }
