@@ -540,6 +540,12 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
 
+template<typename T>
+__forceinline static const be_t<T> to_be(const T value)
+{
+	return be_t<T>::MakeFromLE(value);
+}
+
 template<typename T> __forceinline static u8 Read8(T& f)
 {
 	u8 ret;
