@@ -16,7 +16,7 @@ u32 libsre;
 u32 libsre_rtoc;
 #endif
 
-s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
+s32 syncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex)
 {
 	if (!mutex)
 	{
@@ -28,12 +28,11 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: set zero and sync
-	mutex->m_data() = 0;
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
+	mutex->exchange({});
 	return CELL_OK;
 }
 
-s32 cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
+s32 cellSyncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex)
 {
 	cellSync->Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.addr());
 

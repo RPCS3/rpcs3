@@ -208,7 +208,7 @@ s64 spursInit(
 	spurs->m.ppu1 = ppu1->GetId();
 
 	// enable exception event handler
-	if (spurs->m.enableEH.compare_and_swap(be_t<u32>::MakeFromBE(0), be_t<u32>::MakeFromBE(se32(1))).ToBE() != 0)
+	if (spurs->m.enableEH.compare_and_swap(be_t<u32>::make(0), be_t<u32>::make(1)).ToBE() == 0)
 	{
 		assert(sys_spu_thread_group_connect_event(spurs->m.spuTG, spurs->m.queue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION) == CELL_OK);
 	}

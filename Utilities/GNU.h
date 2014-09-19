@@ -45,7 +45,7 @@ void strcpy_trunc(char(&dst)[size], const char(&src)[rsize])
 #define INFINITE 0xFFFFFFFF
 #define _CRT_ALIGN(x) __attribute__((aligned(x)))
 #define InterlockedCompareExchange(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
-#define InterlockedCompareExchange64(ptr,new_val,old_val)  __sync_val_compare_and_swap(ptr,old_val,new_val)
+#define InterlockedExchange(ptr, value) __sync_lock_test_and_set(ptr, value)
 
 inline int64_t InterlockedOr64(volatile int64_t *dest, int64_t val)
 {
@@ -54,7 +54,7 @@ inline int64_t InterlockedOr64(volatile int64_t *dest, int64_t val)
 	do
 	{
 		olderval = oldval;
-		oldval = InterlockedCompareExchange64(dest, olderval | val, olderval);
+		oldval = __sync_val_compare_and_swap(dest, olderval | val, olderval);
 	} while (olderval != oldval);
 	return oldval;
 }
@@ -99,5 +99,16 @@ static __forceinline uint32_t InterlockedCompareExchange(volatile uint32_t* dest
 static __forceinline uint64_t InterlockedCompareExchange(volatile uint64_t* dest, uint64_t exch, uint64_t comp)
 {
 	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp);
+}
+#endif
+
+#ifndef InterlockedExchange
+static __forceinline uint32_t InterlockedExchange(volatile uint32_t* dest, uint32_t value)
+{
+	return _InterlockedExchange((volatile long*)dest, value);
+}
+static __forceinline uint64_t InterlockedExchange(volatile uint64_t* dest, uint64_t value)
+{
+	return _InterlockedExchange64((volatile long long*)dest, value);
 }
 #endif

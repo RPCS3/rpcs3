@@ -109,7 +109,7 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		std::string temp = (GetFName() + fmt::Format("[0x%08llx]", PC));
+		std::string temp = (GetFName() + fmt::Format("[0x%08x]", PC));
 		return temp;
 	}
 

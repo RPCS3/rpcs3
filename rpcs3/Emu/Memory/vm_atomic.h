@@ -25,14 +25,25 @@ namespace vm
 	template<typename T>
 	class _atomic_base
 	{
-		T data;
+		volatile T data;
 		typedef typename _to_atomic<T, sizeof(T)>::type atomic_type;
 
 	public:
-		T compare_and_swap(T cmp, T exch)
+		__forceinline const T compare_and_swap(const T cmp, const T exch) volatile
 		{
 			const atomic_type res = InterlockedCompareExchange((volatile atomic_type*)&data, (atomic_type&)exch, (atomic_type&)cmp);
 			return (T&)res;
+		}
+
+		__forceinline const T exchange(const T value) volatile
+		{
+			const atomic_type res = InterlockedExchange((volatile atomic_type*)&data, (atomic_type&)value);
+			return (T&)res;
+		}
+
+		__forceinline const T read_relaxed() const volatile
+		{
+			return (T&)data;
 		}
 
 	};

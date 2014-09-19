@@ -155,7 +155,7 @@ struct CellSyncLFQueue
 
 static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");
 
-s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex);
+s32 syncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex);
 
 s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count);
 

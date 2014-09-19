@@ -79,14 +79,14 @@ s32 sys_lwmutex_lock(vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)
 	//ConLog.Write("*** lock mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.addr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
 
-	return lwmutex->lock(be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId()), timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0);
+	return lwmutex->lock(be_t<u32>::make(GetCurrentPPUThread().GetId()), timeout ? ((timeout < 1000) ? 1 : (timeout / 1000)) : 0);
 }
 
 s32 sys_lwmutex_trylock(vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sys_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.addr());
 
-	return lwmutex->trylock(be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId()));
+	return lwmutex->trylock(be_t<u32>::make(GetCurrentPPUThread().GetId()));
 }
 
 s32 sys_lwmutex_unlock(vm::ptr<sys_lwmutex_t> lwmutex)
@@ -96,7 +96,7 @@ s32 sys_lwmutex_unlock(vm::ptr<sys_lwmutex_t> lwmutex)
 	//ConLog.Write("*** unlocking mutex (addr=0x%x, attr=0x%x, Nrec=%d, owner=%d, waiter=%d)",
 		//lwmutex.addr(), (u32)lwmutex->attribute, (u32)lwmutex->recursive_count, (u32)lwmutex->vars.parts.owner.GetOwner(), (u32)lwmutex->waiter);
 
-	return lwmutex->unlock(be_t<u32>::MakeFromLE(GetCurrentPPUThread().GetId()));
+	return lwmutex->unlock(be_t<u32>::make(GetCurrentPPUThread().GetId()));
 }
 
 void SleepQueue::push(u32 tid)
@@ -292,7 +292,7 @@ int sys_lwmutex_t::unlock(be_t<u32> tid)
 		recursive_count -= 1;
 		if (!recursive_count.ToBE())
 		{
-			be_t<u32> target = be_t<u32>::MakeFromBE(se32(0));
+			be_t<u32> target = be_t<u32>::make(0);
 			switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
 			{
 			case se32(SYS_SYNC_FIFO):

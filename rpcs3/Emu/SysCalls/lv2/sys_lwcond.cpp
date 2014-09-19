@@ -13,7 +13,7 @@ s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64)
 {
 	u32 id = sys_lwcond.GetNewId(new Lwcond(name_u64), TYPE_LWCOND);
 	u32 addr = Memory.RealToVirtualAddr(&lwmutex);
-	lwcond.lwmutex.set(be_t<u32>::MakeFromLE(addr));
+	lwcond.lwmutex.set(be_t<u32>::make(addr));
 	lwcond.lwcond_queue = id;
 
 	std::string name((const char*)&name_u64, 8);
@@ -154,7 +154,7 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
 	u32 tid_le = GetCurrentPPUThread().GetId();
-	be_t<u32> tid = be_t<u32>::MakeFromLE(tid_le);
+	be_t<u32> tid = be_t<u32>::make(tid_le);
 
 	SleepQueue* sq = nullptr;
 	Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq);
@@ -176,7 +176,7 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	if (sq)
 	{
-		mutex->mutex.unlock(tid, be_t<u32>::MakeFromLE(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()));
+		mutex->mutex.unlock(tid, be_t<u32>::make(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()));
 	}
 	else if (mutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
 	{
