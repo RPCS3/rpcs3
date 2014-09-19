@@ -207,6 +207,37 @@ s64 spursInit(
 	assert(ppu1);
 	spurs->m.ppu1 = ppu1->GetId();
 
+	// enable exception event handler
+	if (spurs->m.enableEH.compare_and_swap(be_t<u32>::MakeFromBE(0), be_t<u32>::MakeFromBE(se32(1))).ToBE() != 0)
+	{
+		assert(sys_spu_thread_group_connect_event(spurs->m.spuTG, spurs->m.queue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION) == CELL_OK);
+	}
+	
+	spurs->m.unk22 = 0;
+	// can also use cellLibprof if available (omitted)
+
+	// some unknown subroutine
+	spurs->m.sub3.unk1 = spurs.addr() + 0xc9;
+	spurs->m.sub3.unk2 = 3; // unknown const
+	spurs->m.sub3.port = (u64)spurs->m.port;
+
+	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload
+	{
+		s32 res;
+#ifdef PRX_DEBUG
+		res = cb_call<s32, vm::ptr<CellSpurs>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x10428, libsre_rtoc,
+			spurs, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
+#else
+		res = -1;
+#endif
+		assert(res == CELL_OK);
+	}
+	else if (flags & SAF_EXIT_IF_NO_WORK) // wakeup
+	{
+#ifdef PRX_DEBUG
+		return cb_call<s32, vm::ptr<CellSpurs>>(GetCurrentPPUThread(), libsre + 0x84D8, libsre_rtoc, spurs);
+#endif
+	}
 	return CELL_OK;
 #endif
 }
@@ -1657,7 +1688,7 @@ s64 cellSpursAddWorkload()
 #endif
 }
 
-s64 cellSpursWakeUp()
+s64 cellSpursWakeUp(vm::ptr<CellSpurs> spurs)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);

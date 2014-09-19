@@ -149,8 +149,21 @@ struct CellSpurs
 	{
 		static const uint size = 0x80;
 
-		be_t<u64> sem;
-		u8 unk_[0x78];
+		u8 unk0[0x20];
+		be_t<u64> sem; // 0x20
+		u8 unk_[0x58];
+	};
+
+	struct _sub_str2
+	{
+		static const uint size = 0x80;
+
+		be_t<u32> unk0;
+		be_t<u32> unk1;
+		be_t<u32> unk2;
+		be_t<u32> unk3;
+		be_t<u64> port; // 0x10
+		u8 unk_[0x68];
 	};
 
 	union
@@ -173,9 +186,10 @@ struct CellSpurs
 			be_t<u32> unk0;       // 0x0B0
 			u8 unknown2[0xC0 - 0xB4];
 			u8 unk6[0x10];        // 0x0C0
-			u8 unknown1[0x120 - 0x0D0];
-			_sub_str1 sub1[0x10]; // 0x120
-			u8 unknown7[0x980 - 0x920];
+			u8 unknown1[0x100 - 0x0D0];
+			_sub_str1 sub1[0x10]; // 0x100
+			be_t<u64> unk22;      // 0x900
+			u8 unknown7[0x980 - 0x908];
 			be_t<u64> semPrv;     // 0x980
 			be_t<u32> unk11;      // 0x988
 			be_t<u32> unk12;      // 0x98C
@@ -193,7 +207,9 @@ struct CellSpurs
 			u8 unknown3[0xD5C - 0xD54];
 			be_t<u32> queue;      // 0xD5C
 			be_t<u32> port;       // 0xD60
-			u8 unk19[0xC];        // 0xD64
+			be_t<u32> unk19;      // 0xD64
+			vm::atomic<u32> enableEH; // 0xD68
+			be_t<u32> unk21;      // 0xD6C
 			sys_spu_image spuImg; // 0xD70
 			be_t<u32> flags;      // 0xD80
 			be_t<s32> spuPriority;// 0xD84
@@ -206,8 +222,10 @@ struct CellSpurs
 			u8 unknown8[0xDB0 - 0xDA8];
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
-			u8 unknown6[0x1220 - 0xDD0];
-			_sub_str1 sub2[0x10]; // 0x1220
+			u8 unknown9[0xF00 - 0xDD0];
+			_sub_str2 sub3;       // 0xF00
+			u8 unknown6[0x1200 - 0xF80];
+			_sub_str1 sub2[0x10]; // 0x1200
 			// ...
 		} m;
 

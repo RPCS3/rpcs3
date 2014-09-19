@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Memory/vm_atomic.h"
 
 bool SM_IsAborted();
 void SM_Sleep();
@@ -24,9 +25,9 @@ template
 >
 class SMutexBase
 {
-	static_assert(sizeof(T) == sizeof(std::atomic<T>), "Invalid SMutexBase type");
+	static_assert(sizeof(T) == sizeof(vm::atomic_le<T>), "Invalid SMutexBase type");
 	T owner;
-	typedef std::atomic<T> AT;
+	typedef vm::atomic_le<T> AT;
 
 public:
 	static const T GetFreeValue()
@@ -46,11 +47,6 @@ public:
 		owner = GetFreeValue();
 	}
 
-	//SMutexBase()
-	//{
-	//	initialize();
-	//}
-
 	void finalize()
 	{
 		owner = GetDeadValue();
@@ -67,9 +63,9 @@ public:
 		{
 			return SMR_ABORT;
 		}
-		T old = GetFreeValue();
+		T old = reinterpret_cast<AT&>(owner).compare_and_swap(GetFreeValue(), tid);
 
-		if (!reinterpret_cast<AT&>(owner).compare_exchange_strong(old, tid))
+		if (old != GetFreeValue())
 		{
 			if (old == tid)
 			{
@@ -91,9 +87,9 @@ public:
 		{
 			return SMR_ABORT;
 		}
-		T old = tid;
+		T old = reinterpret_cast<AT&>(owner).compare_and_swap(tid, to);
 
-		if (!reinterpret_cast<AT&>(owner).compare_exchange_strong(old, to))
+		if (old != tid)
 		{
 			if (old == GetFreeValue())
 			{
@@ -132,5 +128,4 @@ public:
 	}
 };
 
-typedef SMutexBase<u32>
-	SMutex;
+typedef SMutexBase<u32> SMutex;
