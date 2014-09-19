@@ -3,8 +3,13 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
-#include "Emu/SysCalls/lv2/sys_spu.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/SysCalls/lv2/sys_memory.h"
+#include "Emu/SysCalls/lv2/sys_process.h"
+#include "Emu/SysCalls/lv2/sys_semaphore.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Cell/SPURSManager.h"
+#include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
 Module *cellSpurs = nullptr;
@@ -14,27 +19,176 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
+s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, u32 arg3, u32 arg4)
+{
+#ifdef PRX_DEBUG
+	vm::var<be_t<u32>> queue;
+	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, u32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
+		spurs, queue, arg3, arg4);
+	queue_id = queue->ToLE();
+	return res;
+#else
+	// TODO
+	queue_id = event_queue_create(SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, *(u64*)"+QUEUE+", 0, 1);
+	return CELL_OK;
+#endif
+}
+
 s64 spursInit(
-	vm::ptr<CellSpurs2> spurs,
-	u32 revision,
-	u32 sdkVersion,
-	s32 nSpus,
-	s32 spuPriority,
-	s32 ppuPriority,
+	vm::ptr<CellSpurs> spurs,
+	const u32 revision,
+	const u32 sdkVersion,
+	const s32 nSpus,
+	const s32 spuPriority,
+	const s32 ppuPriority,
 	u32 flags, // SpursAttrFlags
 	const char prefix[],
-	u32 prefixSize,
-	u32 container,
+	const u32 prefixSize,
+	const u32 container,
 	const u8 swlPriority[],
-	u32 swlMaxSpu,
-	u32 swlIsPreem)
+	const u32 swlMaxSpu,
+	const u32 swlIsPreem)
 {
-	// internal function
-#ifdef PRX_DEBUG
-	return cb_call<s32, vm::ptr<CellSpurs2>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
+#ifdef PRX_DEBUG_XXX
+	return cb_call<s32, vm::ptr<CellSpurs>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
 		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, Memory.RealToVirtualAddr(prefix), prefixSize, container, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
 #else
-	//spurs->spurs = new SPURSManager(attr);
+	// SPURS initialization (asserts should actually rollback and return the error instead)
+
+	if (!spurs)
+	{
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_CORE_ERROR_ALIGN;
+	}
+	if (prefixSize > CELL_SPURS_NAME_MAX_LENGTH)
+	{
+		return CELL_SPURS_CORE_ERROR_INVAL;
+	}
+	if (process_is_spu_lock_line_reservation_address(spurs.addr(), SYS_MEMORY_ACCESS_RIGHT_SPU_THR) != CELL_OK)
+	{
+		return CELL_SPURS_CORE_ERROR_PERM;
+	}
+
+	const bool isSecond = flags & SAF_SECOND_VERSION;
+	memset(spurs.get_ptr(), 0, CellSpurs::size1 + isSecond * CellSpurs::size2);
+	spurs->m.revision = revision;
+	spurs->m.sdkVersion = sdkVersion;
+	spurs->m.unk1 = 0xffffffffull;
+	spurs->m.unk2 = 0xffffffffull;
+	spurs->m.flags = flags;
+	memcpy(spurs->m.prefix, prefix, prefixSize);
+	spurs->m.prefixSize = (u8)prefixSize;
+
+	std::string name(prefix, prefixSize); // initialize name string
+
+	if (!isSecond)
+	{
+		spurs->m.unk0 = 0xffff;
+	}
+	spurs->m.unk6[0xC] = 0;
+	spurs->m.unk6[0xD] = 0;
+	spurs->m.unk6[0xE] = 0;
+	for (u32 i = 0; i < 8; i++)
+	{
+		spurs->m.unk6[i] = -1;
+	}
+#ifdef PRX_DEBUG
+	spurs->m.unk7 = vm::read32(libsre_rtoc - 0x7EA4); // write 64-bit pointer to unknown data
+#else
+	spurs->m.unk7 = 0x7ull << 48 | 0x7; // wrong 64-bit address
+#endif
+	spurs->m.unk8 = 0ull;
+	spurs->m.unk9 = 0x2200;
+	spurs->m.unk10 = -1;
+	u32 sem;
+	for (u32 i = 0; i < 0x10; i++)
+	{
+		sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+		assert(sem && ~sem); // should rollback if semaphore creating failed and return the error
+		spurs->m.sub1[i].sem = sem;
+	}
+	if (isSecond)
+	{
+		for (u32 i = 0; i < 0x10; i++)
+		{
+			sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+			assert(sem && ~sem);
+			spurs->m.sub2[i].sem = sem;
+		}
+	}
+	sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
+	assert(sem && ~sem);
+	spurs->m.semPrv = sem;
+	spurs->m.unk11 = -1;
+	spurs->m.unk12 = -1;
+	spurs->m.unk13 = 0;
+	spurs->m.nSpus = nSpus;
+	spurs->m.spuPriority = spuPriority;
+#ifdef PRX_DEBUG
+	assert(spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1) == CELL_OK);
+#endif
+	//char str1[0x80];
+	//memcpy(str1, prefix, prefixSize); // strcpy
+	//memcpy(str1 + prefixSize, "CellSpursKernelGroup", 21); // strcat
+
+	s32 tgt = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
+	if (flags & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
+	{
+		tgt = SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT;
+	}
+	else if (flags & SAF_UNKNOWN_FLAG_0)
+	{
+		tgt = 0xC02;
+	}
+	if (flags & SAF_SPU_MEMORY_CONTAINER_SET) tgt |= SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER;
+	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) tgt |= SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM;
+	if (flags & SAF_UNKNOWN_FLAG_7) tgt |= 0x102;
+	if (flags & SAF_UNKNOWN_FLAG_8) tgt |= 0xC02;
+	if (flags & SAF_UNKNOWN_FLAG_9) tgt |= 0x800;
+	auto tg = spu_thread_group_create(name + "CellSpursKernelGroup", nSpus, spuPriority, tgt, container);
+	spurs->m.spuTG = tg->m_id;
+
+	name += "CellSpursKernel0";
+	for (s32 i = 0; i < nSpus; i++, name[name.size() - 1]++)
+	{
+		auto spu = spu_thread_initialize(tg, i, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, u64(i) << 32, spurs.addr(), 0, 0);
+		spurs->m.spus[i] = spu->GetId();
+	}
+
+	if (flags & SAF_SPU_PRINTF_ENABLED)
+	{
+		// spu_printf: attach group
+		if (!spu_printf_agcb || spu_printf_agcb(tg->m_id) != CELL_OK)
+		{
+			// remove flag if failed
+			spurs->m.flags &= ~SAF_SPU_PRINTF_ENABLED;
+		}
+	}
+
+	assert(lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv") == CELL_OK);
+	assert(lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv") == CELL_OK);
+
+	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
+	spurs->m.unk15 = -1;
+	spurs->m.unk18 = -1;
+	spurs->_u8[0xD64] = 0;
+	spurs->_u8[0xD65] = 0;
+	spurs->_u8[0xD66] = 0;
+	spurs->m.ppuPriority = ppuPriority;
+
+	u32 queue;
+	assert(spursCreateLv2EventQueue(spurs, queue, spurs.addr() + 0xc9, 0x2a) == CELL_OK);
+	spurs->m.queue = queue;
+
+	u32 port = event_port_create(0);
+	assert(port && ~port);
+	spurs->m.port = port;
+
+	assert(sys_event_port_connect_local(port, queue) == CELL_OK);
+
 	return CELL_OK;
 #endif
 }
@@ -48,7 +202,7 @@ s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8480, libsre_rtoc);
 #else
 	return spursInit(
-		vm::ptr<CellSpurs2>::make(spurs.addr()),
+		spurs,
 		0,
 		0,
 		nSpus,
@@ -85,7 +239,7 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 	}
 	
 	return spursInit(
-		vm::ptr<CellSpurs2>::make(spurs.addr()),
+		spurs,
 		attr->m.revision,
 		attr->m.sdkVersion,
 		attr->m.nSpus,
@@ -101,7 +255,7 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 #endif
 }
 
-s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs2> spurs, vm::ptr<const CellSpursAttribute> attr)
+s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
 {
 	cellSpurs->Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
 
@@ -128,7 +282,7 @@ s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs2> spurs, vm::ptr<const C
 		attr->m.nSpus,
 		attr->m.spuPriority,
 		attr->m.ppuPriority,
-		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0) | 4, // +add unknown flag
+		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0) | SAF_SECOND_VERSION,
 		attr->m.prefix,
 		attr->m.prefixSize,
 		attr->m.container,

@@ -45,6 +45,8 @@ struct EventFlag
 		, m_protocol(protocol)
 		, m_type(type)
 	{
+		m_mutex.initialize();
+		signal.initialize();
 	}
 
 	u32 check();

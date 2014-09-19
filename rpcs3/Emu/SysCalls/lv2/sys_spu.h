@@ -1,6 +1,6 @@
 #pragma once
 
-enum
+enum : s32
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
 	SYS_SPU_THREAD_GROUP_TYPE_SEQUENTIAL = 0x01,
@@ -8,7 +8,7 @@ enum
 	SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER = 0x04,
 	SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT = 0x08,
 	SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT = 0x18,
-	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20
+	SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM = 0x20,
 };
 
 enum
@@ -18,7 +18,8 @@ enum
 	SYS_SPU_THREAD_GROUP_JOIN_TERMINATED = 0x0004
 };
 
-enum {
+enum
+{
 	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
 	SPU_THREAD_GROUP_STATUS_INITIALIZED,
 	SPU_THREAD_GROUP_STATUS_READY,
@@ -30,11 +31,11 @@ enum {
 	SPU_THREAD_GROUP_STATUS_UNKNOWN
 };
 
-enum
+enum : s32
 {
-	SYS_SPU_SEGMENT_TYPE_COPY = 0x0001,
-	SYS_SPU_SEGMENT_TYPE_FILL = 0x0002,
-	SYS_SPU_SEGMENT_TYPE_INFO = 0x0004,
+	SYS_SPU_SEGMENT_TYPE_COPY = 1,
+	SYS_SPU_SEGMENT_TYPE_FILL = 2,
+	SYS_SPU_SEGMENT_TYPE_INFO = 4,
 };
 
 struct sys_spu_thread_group_attribute
@@ -43,6 +44,13 @@ struct sys_spu_thread_group_attribute
 	vm::bptr<const char> name;
 	be_t<s32> type;
 	be_t<u32> ct; // memory container id
+};
+
+enum : u32
+{
+	SYS_SPU_THREAD_OPTION_NONE               = 0,
+	SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE  = 1,
+	SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE = 2,
 };
 
 struct sys_spu_thread_attribute
@@ -60,20 +68,43 @@ struct sys_spu_thread_argument
 	be_t<u64> arg4;
 };
 
-struct sys_spu_image
-{
-	be_t<u32> type;
-	be_t<u32> entry_point; 
-	be_t<u32> segs_addr; //temporarily used as offset of LS image after elf loading
-	be_t<int> nsegs;
-};
-
 struct sys_spu_segment
 {
-	be_t<int> type;
-	be_t<u32> ls_start;
-	be_t<int> size;
-	be_t<u64> src;
+	be_t<s32> type; // copy, fill, info
+	be_t<u32> ls; // local storage address
+	be_t<s32> size;
+
+	union
+	{
+		be_t<u32> addr; // address or fill value		
+		u64 pad;
+	};
+};
+
+static_assert(sizeof(sys_spu_segment) == 0x18, "Wrong sys_spu_segment size");
+
+enum : u32
+{
+	SYS_SPU_IMAGE_TYPE_USER   = 0,
+	SYS_SPU_IMAGE_TYPE_KERNEL = 1,
+};
+
+struct sys_spu_image
+{
+	be_t<u32> type; // user, kernel
+	be_t<u32> entry_point;
+	union
+	{
+		be_t<u32> addr; // temporarily used as offset of the whole LS image (should be removed)
+		vm::bptr<sys_spu_segment> segs;
+	};
+	be_t<s32> nsegs;
+};
+
+enum : u32
+{
+	SYS_SPU_IMAGE_PROTECT = 0,
+	SYS_SPU_IMAGE_DIRECT  = 1,
 };
 
 struct SpuGroupInfo
@@ -81,15 +112,16 @@ struct SpuGroupInfo
 	std::vector<u32> list;
 	std::atomic<u32> lock;
 	std::string m_name;
-	int m_prio;
-	int m_type;
-	int m_ct;
+	u32 m_id;
+	s32 m_prio;
+	s32 m_type;
+	u32 m_ct;
 	u32 m_count;
-	int m_state;	//SPU Thread Group State.
+	s32 m_state;	//SPU Thread Group State.
 	u32 m_exit_status;
 	bool m_group_exit;
 
-	SpuGroupInfo(const std::string& name, u32 num, int prio, int type, u32 ct)
+	SpuGroupInfo(const std::string& name, u32 num, s32 prio, s32 type, u32 ct)
 		: m_name(name)
 		, m_prio(prio)
 		, m_type(type)
@@ -106,6 +138,13 @@ struct SpuGroupInfo
 		m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;	//Then Ready to Start. Cause Reference use New i can only place this here.
 	}
 };
+
+class SPUThread;
+
+// Aux
+s32 spu_image_import(sys_spu_image& img, u32 src, u32 type);
+SpuGroupInfo* spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container);
+SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image& img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4);
 
 // SysCalls
 s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);

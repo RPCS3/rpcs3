@@ -11,43 +11,45 @@ SysCallBase sys_lwmutex("sys_lwmutex");
 
 // TODO: move SleepQueue somewhere
 
+s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name_u64)
+{
+	LV2_LOCK(0);
+
+	lwmutex.all_info() = 0;
+	lwmutex.attribute = protocol | recursive;
+	lwmutex.recursive_count = 0;
+	u32 sq_id = sys_lwmutex.GetNewId(new SleepQueue(name_u64), TYPE_LWMUTEX);
+	lwmutex.sleep_queue = sq_id;
+
+	std::string name((const char*)&name_u64, 8);
+	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", name.c_str(), protocol | recursive, sq_id);
+
+	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, name, GetCurrentPPUThread().GetId());
+	
+	return CELL_OK;
+}
+
 s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
-	sys_lwmutex.Log("sys_lwmutex_create(lwmutex_addr=0x%x, lwmutex_attr_addr=0x%x)",
-		lwmutex.addr(), attr.addr());
+	sys_lwmutex.Warning("sys_lwmutex_create(lwmutex_addr=0x%x, attr_addr=0x%x)", lwmutex.addr(), attr.addr());
 
-	switch (attr->attr_recursive.ToBE())
+	switch (attr->recursive.ToBE())
 	{
 	case se32(SYS_SYNC_RECURSIVE): break;
 	case se32(SYS_SYNC_NOT_RECURSIVE): break;
-	default: sys_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->attr_recursive); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
 	}
 
-	switch (attr->attr_protocol.ToBE())
+	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
 	case se32(SYS_SYNC_RETRY): break;
 	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
 	case se32(SYS_SYNC_FIFO): break;
-	default: sys_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->attr_protocol); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->waiter = 0;
-	lwmutex->mutex.initialize();
-	//lwmutex->waiter = lwmutex->owner.GetOwner();
-	lwmutex->pad = 0;
-	lwmutex->recursive_count = 0;
-
-	u32 sq_id = sys_lwmutex.GetNewId(new SleepQueue(attr->name_u64), TYPE_LWMUTEX);
-	lwmutex->sleep_queue = sq_id;
-
-	sys_lwmutex.Warning("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d",
-		std::string(attr->name, 8).c_str(), (u32) lwmutex->attribute, sq_id);
-
-	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, std::string(attr->name, 8), GetCurrentPPUThread().GetId());
-
-	return CELL_OK;
+	return lwmutex_create(*lwmutex, attr->protocol, attr->recursive, attr->name_u64);
 }
 
 s32 sys_lwmutex_destroy(vm::ptr<sys_lwmutex_t> lwmutex)

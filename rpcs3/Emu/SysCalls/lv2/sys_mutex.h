@@ -34,6 +34,7 @@ struct Mutex
 		, m_queue(name)
 		, cond_count(0)
 	{
+		m_mutex.initialize();
 	}
 
 	~Mutex();

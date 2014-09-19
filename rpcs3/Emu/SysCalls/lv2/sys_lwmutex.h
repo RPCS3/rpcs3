@@ -29,8 +29,8 @@ enum
 
 struct sys_lwmutex_attribute_t
 {
-	be_t<u32> attr_protocol;
-	be_t<u32> attr_recursive;
+	be_t<u32> protocol;
+	be_t<u32> recursive;
 	union
 	{
 		char name[8];
@@ -66,18 +66,25 @@ struct SleepQueue
 
 struct sys_lwmutex_t
 {
-	/* volatile */ SMutexBase<be_t<u32>> mutex;
-	/* volatile */ be_t<u32> waiter; // not used
-	u64 &all_info(){return *(reinterpret_cast<u64*>(this));}
+	SMutexBase<be_t<u32>> mutex;
+	be_t<u32> waiter; // currently not used
 	be_t<u32> attribute;
 	be_t<u32> recursive_count;
 	be_t<u32> sleep_queue;
 	be_t<u32> pad;
 
+	u64& all_info()
+	{
+		return *(reinterpret_cast<u64*>(this));
+	}
+
 	int trylock(be_t<u32> tid);
 	int unlock(be_t<u32> tid);
 	int lock(be_t<u32> tid, u64 timeout);
 };
+
+// Aux
+s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name_u64);
 
 // SysCalls
 s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr);

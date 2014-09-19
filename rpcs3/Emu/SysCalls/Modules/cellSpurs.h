@@ -1,4 +1,7 @@
 #pragma once
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_lwcond.h"
+#include "Emu/SysCalls/lv2/sys_spu.h"
 
 // Core return codes.
 enum
@@ -80,26 +83,20 @@ class SPURSManager;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
 
-// Core CellSpurs structures.
-struct CellSpurs
-{
-	SPURSManager *spurs;
-};
-
-struct CellSpurs2
-{
-	SPURSManager *spurs;
-};
-
 enum SpursAttrFlags : u32
 {
-	SAF_NONE            = 0x0,
+	SAF_NONE = 0x0,
 	SAF_EXIT_IF_NO_WORK = 0x1,
+	SAF_SECOND_VERSION = 0x4,
 
+	SAF_UNKNOWN_FLAG_9                = 0x00400000,
+	SAF_UNKNOWN_FLAG_8                = 0x00800000,
+	SAF_UNKNOWN_FLAG_7                = 0x01000000,
 	SAF_SYSTEM_WORKLOAD_ENABLED       = 0x02000000,
 	SAF_SPU_PRINTF_ENABLED            = 0x10000000,
 	SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT = 0x20000000,
 	SAF_SPU_MEMORY_CONTAINER_SET      = 0x40000000,
+	SAF_UNKNOWN_FLAG_0                = 0x80000000,
 };
 
 struct CellSpursAttribute
@@ -113,7 +110,7 @@ struct CellSpursAttribute
 		u8 _u8[size];
 		struct { be_t<u32> _u32[size / sizeof(u32)]; };
 
-		// real structure
+		// real data
 		struct
 		{
 			be_t<u32> revision;    // 0x0
@@ -139,6 +136,90 @@ struct CellSpursAttribute
 		} c;
 	};
 };
+
+// Core CellSpurs structures
+struct CellSpurs
+{
+	static const uint align = 128;
+	static const uint size = 0x2000; // size of CellSpurs2
+	static const uint size1 = 0x1000; // size of CellSpurs
+	static const uint size2 = 0x1000;
+
+	struct _sub_str1
+	{
+		static const uint size = 0x80;
+
+		be_t<u64> sem;
+		u8 unk_[0x78];
+	};
+
+	union
+	{
+		// raw data
+		u8 _u8[size];
+		std::array<be_t<u32>, size / sizeof(u32)> _u32;
+
+		// real data
+		struct
+		{
+			u8 unknown[0x6C];
+			be_t<u32> unk18;      // 0x6C
+			u8 unk17[4];          // 0x70
+			u8 flags1;            // 0x74
+			u8 unk16;             // 0x75
+			u8 nSpus;             // 0x76
+			u8 unk15;             // 0x77
+			u8 unknown0[0xB0 - 0x78];
+			be_t<u32> unk0;       // 0x0B0
+			u8 unknown2[0xC0 - 0xB4];
+			u8 unk6[0x10];        // 0x0C0
+			u8 unknown1[0x120 - 0x0D0];
+			_sub_str1 sub1[0x10]; // 0x120
+			u8 unknown7[0x980 - 0x920];
+			be_t<u64> semPrv;     // 0x980
+			be_t<u32> unk11;      // 0x988
+			be_t<u32> unk12;      // 0x98C
+			be_t<u64> unk13;      // 0x990
+			u8 unknown4[0xD00 - 0x998];
+			be_t<u64> unk7;       // 0xD00
+			be_t<u64> unk8;       // 0xD08
+			be_t<u32> unk9;       // 0xD10
+			u8 unk10;             // 0xD14
+			u8 unknown5[0xD20 - 0xD15];
+			be_t<u64> unk1;       // 0xD20
+			be_t<u64> unk2;       // 0xD28
+			be_t<u32> spuTG;      // 0xD30
+			be_t<u32> spus[8];    // 0xD34
+			u8 unknown3[0xD5C - 0xD54];
+			be_t<u32> queue;      // 0xD5C
+			be_t<u32> port;       // 0xD60
+			u8 unk19[0xC];        // 0xD64
+			sys_spu_image spuImg; // 0xD70
+			be_t<u32> flags;      // 0xD80
+			be_t<s32> spuPriority;// 0xD84
+			be_t<u32> ppuPriority;// 0xD88
+			char prefix[0x0f];    // 0xD8C
+			u8 prefixSize;        // 0xD9B
+			be_t<u32> unk5;       // 0xD9C
+			be_t<u32> revision;   // 0xDA0
+			be_t<u32> sdkVersion; // 0xDA4
+			u8 unknown8[0xDB0 - 0xDA8];
+			sys_lwmutex_t mutex;  // 0xDB0
+			sys_lwcond_t cond;    // 0xDC8
+			u8 unknown6[0x1220 - 0xDD0];
+			_sub_str1 sub2[0x10]; // 0x1220
+			// ...
+		} m;
+
+		// alternative implementation
+		struct
+		{
+			SPURSManager *spurs;
+		} c;
+	};
+};
+
+typedef CellSpurs CellSpurs2;
 
 struct CellSpursEventFlag
 {

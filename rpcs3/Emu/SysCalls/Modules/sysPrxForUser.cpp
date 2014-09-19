@@ -5,7 +5,6 @@
 #include "Emu/SysCalls/Callback.h"
 
 #include "Emu/FS/vfsFile.h"
-#include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "Emu/SysCalls/lv2/sys_spinlock.h"
@@ -20,8 +19,6 @@
 #include "sysPrxForUser.h"
 
 Module *sysPrxForUser = nullptr;
-
-extern u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {
@@ -97,18 +94,9 @@ int sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segments, int
 
 int sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
-	sysPrxForUser->Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=0x%x)", img.addr(), src, type);
+	sysPrxForUser->Warning("sys_spu_image_import(img=0x%x, src=0x%x, type=%d)", img.addr(), src, type);
 
-	vfsStreamMemory f(src);
-	u32 entry;
-	u32 offset = LoadSpuImage(f, entry);
-
-	img->type = type;
-	img->entry_point = entry;
-	img->segs_addr = offset;
-	img->nsegs = 0;
-
-	return CELL_OK;
+	return spu_image_import(*img, src, type);
 }
 
 int sys_spu_image_close(vm::ptr<sys_spu_image> img)
@@ -143,7 +131,7 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 	sysPrxForUser->Warning("sys_raw_spu_image_load(id=0x%x, img_addr=0x%x)", id, img.addr());
 
 	// TODO: use segment info
-	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->segs_addr), 256 * 1024);
+	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->addr), 256 * 1024);
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
 
 	return CELL_OK;
@@ -235,8 +223,6 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 	return dest;
 }
 
-typedef s32(*spu_printf_cb_t)(u32 arg);
-
 vm::ptr<spu_printf_cb_t> spu_printf_agcb;
 vm::ptr<spu_printf_cb_t> spu_printf_dgcb;
 vm::ptr<spu_printf_cb_t> spu_printf_atcb;
@@ -270,68 +256,63 @@ s32 _sys_spu_printf_finalize()
 	return CELL_OK;
 }
 
-s64 _sys_spu_printf_attach_group(u32 arg)
+s64 _sys_spu_printf_attach_group(u32 group)
 {
-	sysPrxForUser->Warning("_sys_spu_printf_attach_group(arg=0x%x)", arg);
+	sysPrxForUser->Warning("_sys_spu_printf_attach_group(group=%d)", group);
 
 	if (!spu_printf_agcb)
 	{
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_agcb(arg);
+	return spu_printf_agcb(group);
 }
 
-s64 _sys_spu_printf_detach_group(u32 arg)
+s64 _sys_spu_printf_detach_group(u32 group)
 {
-	sysPrxForUser->Warning("_sys_spu_printf_detach_group(arg=0x%x)", arg);
+	sysPrxForUser->Warning("_sys_spu_printf_detach_group(group=%d)", group);
 
 	if (!spu_printf_dgcb)
 	{
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dgcb(arg);
+	return spu_printf_dgcb(group);
 }
 
-s64 _sys_spu_printf_attach_thread(u32 arg)
+s64 _sys_spu_printf_attach_thread(u32 thread)
 {
-	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(arg=0x%x)", arg);
+	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(thread=%d)", thread);
 
 	if (!spu_printf_atcb)
 	{
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_atcb(arg);
+	return spu_printf_atcb(thread);
 }
 
-s64 _sys_spu_printf_detach_thread(u32 arg)
+s64 _sys_spu_printf_detach_thread(u32 thread)
 {
-	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(arg=0x%x)", arg);
+	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(thread=%d)", thread);
 
 	if (!spu_printf_dtcb)
 	{
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dtcb(arg);
+	return spu_printf_dtcb(thread);
 }
 
-s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt, u32 a1, u32 a2) // va_args...
+s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...
 {
 	sysPrxForUser->Todo("_sys_snprintf(dst_addr=0x%x, count=%d, fmt_addr=0x%x['%s'], ...)", dst.addr(), count, fmt.addr(), fmt.get_ptr());
-
-	if (std::string(fmt.get_ptr()) == "%s_%08x")
-	{
-		return snprintf(dst.get_ptr(), count, fmt.get_ptr(), vm::get_ptr<char>(a1), a2);
-	}
 
 	Emu.Pause();
 	return 0;
 }
 
-s32 _sys_printf(vm::ptr<const char> fmt)
+s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 {
 	sysPrxForUser->Todo("_sys_printf(fmt_addr=0x%x, ...)", fmt.addr());
 

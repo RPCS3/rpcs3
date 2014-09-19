@@ -175,16 +175,16 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 				return;
 			}
 
+			SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
+
 			u32 addr = (ea & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET;
 			if ((addr <= 0x3ffff) && (addr + size <= 0x40000))
 			{
-				SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
 				// LS access
 				ea = spu->dmac.ls_offset + addr;
 			}
 			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 			{
-				SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
 				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(dmac.ls_offset + lsa));
 				return;
 			}

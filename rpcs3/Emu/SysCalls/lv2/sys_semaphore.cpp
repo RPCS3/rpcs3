@@ -5,13 +5,23 @@
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_semaphore.h"
 #include "sys_time.h"
-//#include "Utilities/SMutex.h"
+#include "sys_semaphore.h"
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, int initial_count, int max_count)
+u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u64)
+{
+	LV2_LOCK(0);
+
+	const std::string name((const char*)&name_u64, 8);
+	const u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, protocol, name_u64), TYPE_SEMAPHORE);
+	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", name.c_str(), protocol, id);
+	Emu.GetSyncPrimManager().AddSemaphoreData(id, name, initial_count, max_count);
+	return id;
+}
+
+s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, s32 initial_count, s32 max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.addr(), initial_count, max_count);
@@ -37,13 +47,7 @@ s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute
 	default: sys_semaphore.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
-	*sem = id;
-	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, id);
-
-	Emu.GetSyncPrimManager().AddSemaphoreData(id, std::string(attr->name, 8), initial_count, max_count);
-
+	*sem = semaphore_create(initial_count, max_count, attr->protocol, attr->name_u64);
 	return CELL_OK;
 }
 
@@ -144,7 +148,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 	}
 }
 
-s32 sys_semaphore_post(u32 sem_id, int count)
+s32 sys_semaphore_post(u32 sem_id, s32 count)
 {
 	sys_semaphore.Log("sys_semaphore_post(sem_id=%d, count=%d)", sem_id, count);
 
@@ -159,7 +163,7 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 		return CELL_EINVAL;
 	}
 
-	if (count + sem->m_value - (int)sem->m_queue.count() > sem->max)
+	if (count + sem->m_value - (s32)sem->m_queue.count() > sem->max)
 	{
 		return CELL_EBUSY;
 	}

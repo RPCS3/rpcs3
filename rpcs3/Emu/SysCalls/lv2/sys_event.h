@@ -37,7 +37,7 @@ enum EventSourceKey : u64
 struct sys_event_queue_attr
 {
 	be_t<u32> protocol; // SYS_SYNC_PRIORITY or SYS_SYNC_FIFO
-	be_t<int> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
+	be_t<s32> type; // SYS_PPU_QUEUE or SYS_SPU_QUEUE
 	union
 	{
 		char name[8];
@@ -212,17 +212,22 @@ struct EventQueue
 		, key(key)
 		, events(size) // size: max event count this queue can hold
 	{
+		owner.initialize();
 	}
 };
 
+// Aux
+u32 event_port_create(u64 name);
+u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size);
+
 // SysCalls
-s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, int size);
-s32 sys_event_queue_destroy(u32 equeue_id, int mode);
+s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size);
+s32 sys_event_queue_destroy(u32 equeue_id, s32 mode);
 s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 timeout);
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, int size, vm::ptr<be_t<u32>> number);
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, s32 size, vm::ptr<be_t<u32>> number);
 s32 sys_event_queue_drain(u32 event_queue_id);
 
-s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, int port_type, u64 name);
+s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, s32 port_type, u64 name);
 s32 sys_event_port_destroy(u32 eport_id);
 s32 sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
 s32 sys_event_port_disconnect(u32 eport_id);

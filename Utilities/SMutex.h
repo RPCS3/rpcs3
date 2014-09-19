@@ -25,7 +25,8 @@ template
 class SMutexBase
 {
 	static_assert(sizeof(T) == sizeof(std::atomic<T>), "Invalid SMutexBase type");
-	std::atomic<T> owner;
+	T owner;
+	typedef std::atomic<T> AT;
 
 public:
 	static const T GetFreeValue()
@@ -45,10 +46,10 @@ public:
 		owner = GetFreeValue();
 	}
 
-	SMutexBase()
-	{
-		initialize();
-	}
+	//SMutexBase()
+	//{
+	//	initialize();
+	//}
 
 	void finalize()
 	{
@@ -68,7 +69,7 @@ public:
 		}
 		T old = GetFreeValue();
 
-		if (!owner.compare_exchange_strong(old, tid))
+		if (!reinterpret_cast<AT&>(owner).compare_exchange_strong(old, tid))
 		{
 			if (old == tid)
 			{
@@ -92,7 +93,7 @@ public:
 		}
 		T old = tid;
 
-		if (!owner.compare_exchange_strong(old, to))
+		if (!reinterpret_cast<AT&>(owner).compare_exchange_strong(old, to))
 		{
 			if (old == GetFreeValue())
 			{

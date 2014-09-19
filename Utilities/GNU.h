@@ -13,10 +13,18 @@
 #endif
 
 template<size_t size>
-void strcpy_trunc(char (&dst)[size], const std::string& src)
+void strcpy_trunc(char(&dst)[size], const std::string& src)
 {
 	const size_t count = (src.size() >= size) ? size - 1 /* truncation */ : src.size();
 	memcpy(dst, src.c_str(), count);
+	dst[count] = 0;
+}
+
+template<size_t size, size_t rsize>
+void strcpy_trunc(char(&dst)[size], const char(&src)[rsize])
+{
+	const size_t count = (rsize >= size) ? size - 1 /* truncation */ : rsize;
+	memcpy(dst, src, count);
 	dst[count] = 0;
 }
 

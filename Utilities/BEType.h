@@ -153,7 +153,7 @@ union u128
 
 	std::string to_hex() const
 	{
-		return fmt::Format("%16llx%16llx", _u64[1], _u64[0]);
+		return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
 	}
 
 	std::string to_xyzw() const
