@@ -1,5 +1,7 @@
 #pragma once
 
+class PPUThread;
+
 enum
 {
 	SYS_PPU_THREAD_ONCE_INIT,
@@ -11,6 +13,9 @@ enum ppu_thread_flags : u64
 	SYS_PPU_THREAD_CREATE_JOINABLE = 0x1,
 	SYS_PPU_THREAD_CREATE_INTERRUPT = 0x2,
 };
+
+// Aux
+PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name);
 
 // SysCalls
 void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode);

@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/Callback.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/SysCalls/lv2/sys_ppu_thread.h"
 #include "Emu/SysCalls/lv2/sys_memory.h"
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "Emu/SysCalls/lv2/sys_semaphore.h"
@@ -76,8 +77,8 @@ s64 spursInit(
 	memset(spurs.get_ptr(), 0, CellSpurs::size1 + isSecond * CellSpurs::size2);
 	spurs->m.revision = revision;
 	spurs->m.sdkVersion = sdkVersion;
-	spurs->m.unk1 = 0xffffffffull;
-	spurs->m.unk2 = 0xffffffffull;
+	spurs->m.ppu0 = 0xffffffffull;
+	spurs->m.ppu1 = 0xffffffffull;
 	spurs->m.flags = flags;
 	memcpy(spurs->m.prefix, prefix, prefixSize);
 	spurs->m.prefixSize = (u8)prefixSize;
@@ -149,6 +150,7 @@ s64 spursInit(
 	if (flags & SAF_UNKNOWN_FLAG_8) tgt |= 0xC02;
 	if (flags & SAF_UNKNOWN_FLAG_9) tgt |= 0x800;
 	auto tg = spu_thread_group_create(name + "CellSpursKernelGroup", nSpus, spuPriority, tgt, container);
+	assert(tg);
 	spurs->m.spuTG = tg->m_id;
 
 	name += "CellSpursKernel0";
@@ -188,6 +190,22 @@ s64 spursInit(
 	spurs->m.port = port;
 
 	assert(sys_event_port_connect_local(port, queue) == CELL_OK);
+
+	name = std::string(prefix, prefixSize);
+
+	PPUThread* ppu0 = nullptr;
+#ifdef PRX_DEBUG
+	ppu0 = ppu_thread_create(vm::read32(libsre_rtoc - 0x7E60), spurs.addr(), ppuPriority, 0x4000, true, false, name + "SpursHdlr0");
+#endif
+	assert(ppu0);
+	spurs->m.ppu0 = ppu0->GetId();
+
+	PPUThread* ppu1 = nullptr;
+#ifdef PRX_DEBUG
+	ppu1 = ppu_thread_create(vm::read32(libsre_rtoc - 0x7E24), spurs.addr(), ppuPriority, 0x8000, true, false, name + "SpursHdlr1");
+#endif
+	assert(ppu1);
+	spurs->m.ppu1 = ppu1->GetId();
 
 	return CELL_OK;
 #endif

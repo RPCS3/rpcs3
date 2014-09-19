@@ -186,8 +186,8 @@ struct CellSpurs
 			be_t<u32> unk9;       // 0xD10
 			u8 unk10;             // 0xD14
 			u8 unknown5[0xD20 - 0xD15];
-			be_t<u64> unk1;       // 0xD20
-			be_t<u64> unk2;       // 0xD28
+			be_t<u64> ppu0;       // 0xD20
+			be_t<u64> ppu1;       // 0xD28
 			be_t<u32> spuTG;      // 0xD30
 			be_t<u32> spus[8];    // 0xD34
 			u8 unknown3[0xD5C - 0xD54];
