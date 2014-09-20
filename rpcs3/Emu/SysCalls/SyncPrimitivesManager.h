@@ -78,6 +78,7 @@ public:
 		case TYPE_MUTEX: m_mutex_name[id] = name; break;
 		case TYPE_COND: m_cond_name[id] = name; break;
 
+		default: LOG_ERROR(GENERAL, "Unknown IDType = %d", type);
 		}
 	}
 
@@ -93,13 +94,17 @@ public:
 		}
 	}
 
-	std::string& GetSyncPrimName(const IDType type, const u32 id)
+	const std::string& GetSyncPrimName(const IDType type, const u32 id)
 	{
+		static const std::string empty = "";
+
 		switch (type)
 		{
 		case TYPE_LWCOND:  return m_lw_cond_name[id];
 		case TYPE_MUTEX:  return m_mutex_name[id];
 		case TYPE_COND:  return m_cond_name[id];
+
+		default: LOG_ERROR(GENERAL, "Unknown IDType = %d", type); return empty;
 		}
 	}
 

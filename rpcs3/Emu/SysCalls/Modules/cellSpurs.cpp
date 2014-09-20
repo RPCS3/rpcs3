@@ -219,7 +219,7 @@ s64 spursInit(
 	// some unknown subroutine
 	spurs->m.sub3.unk1 = spurs.addr() + 0xc9;
 	spurs->m.sub3.unk2 = 3; // unknown const
-	spurs->m.sub3.port = (u64)spurs->m.port;
+	spurs->m.sub3.port = spurs->m.port;
 
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload
 	{

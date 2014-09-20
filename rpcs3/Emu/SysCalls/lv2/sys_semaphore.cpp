@@ -55,6 +55,8 @@ s32 sys_semaphore_destroy(u32 sem_id)
 {
 	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=%d)", sem_id);
 
+	LV2_LOCK(0);
+
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{

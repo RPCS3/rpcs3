@@ -30,6 +30,8 @@ s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> a
 {
 	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.addr());
 
+	LV2_LOCK(0);
+
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_FIFO): break;
@@ -72,6 +74,8 @@ s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> a
 s32 sys_mutex_destroy(u32 mutex_id)
 {
 	sys_mutex.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
+
+	LV2_LOCK(0);
 
 	Mutex* mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
