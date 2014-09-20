@@ -31,26 +31,26 @@ enum
 
 struct CellSyncMutex
 {
-	be_t<u16> m_freed;
-	be_t<u16> m_order;
-
-	volatile u32& m_data()
+	struct data_t
 	{
-		return *reinterpret_cast<u32*>(this);
+		be_t<u16> m_rel; // release order (increased when mutex is unlocked)
+		be_t<u16> m_acq; // acquire order (increased when mutex is locked)
 	};
+
+	vm::atomic<data_t> data;
 };
 
 static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong size");
 
 struct CellSyncBarrier
 {
-	be_t<s16> m_value;
-	be_t<s16> m_count;
-
-	volatile u32& m_data()
+	struct data_t
 	{
-		return *reinterpret_cast<u32*>(this);
+		be_t<s16> m_value;
+		be_t<s16> m_count;
 	};
+
+	vm::atomic<data_t> data;
 };
 
 static_assert(sizeof(CellSyncBarrier) == 4, "CellSyncBarrier: wrong size");

@@ -29,21 +29,68 @@ namespace vm
 		typedef typename _to_atomic<T, sizeof(T)>::type atomic_type;
 
 	public:
+		// atomically compare data with cmp, replace with exch if equal, return previous data value anyway
 		__forceinline const T compare_and_swap(const T cmp, const T exch) volatile
 		{
 			const atomic_type res = InterlockedCompareExchange((volatile atomic_type*)&data, (atomic_type&)exch, (atomic_type&)cmp);
 			return (T&)res;
 		}
 
-		__forceinline const T exchange(const T value) volatile
+		// atomically compare data with cmp, replace with exch if equal, return true if data was replaced
+		__forceinline bool compare_and_swap_test(const T cmp, const T exch) volatile
 		{
-			const atomic_type res = InterlockedExchange((volatile atomic_type*)&data, (atomic_type&)value);
+			return InterlockedCompareExchange((volatile atomic_type*)&data, (atomic_type&)exch, (atomic_type&)cmp) == (atomic_type&)cmp;
+		}
+
+		// read data with memory barrier
+		__forceinline const T read_sync() const volatile 
+		{
+			const atomic_type res = InterlockedCompareExchange((volatile atomic_type*)&data, 0, 0);
 			return (T&)res;
 		}
 
+		// atomically replace data with exch, return previous data value
+		__forceinline const T exchange(const T exch) volatile
+		{
+			const atomic_type res = InterlockedExchange((volatile atomic_type*)&data, (atomic_type&)exch);
+			return (T&)res;
+		}
+
+		// read data without memory barrier
 		__forceinline const T read_relaxed() const volatile
 		{
 			return (T&)data;
+		}
+
+		// write data without memory barrier
+		__forceinline void write_relaxed(const T value) volatile
+		{
+			(T&)data = value;
+		}
+
+		// perform atomic operation on data
+		template<typename FT> __forceinline void atomic_op(const FT atomic_proc) volatile
+		{
+			while (true)
+			{
+				const T old = read_relaxed();
+				T _new = old;
+				atomic_proc(_new); // function should accept reference to T type
+				if (compare_and_swap_test(old, _new)) return;
+			}
+		}
+
+		// perform atomic operation on data with special exit condition (if intermediate result != proceed_value)
+		template<typename RT, typename FT> __forceinline RT atomic_op(const RT proceed_value, const FT atomic_proc) volatile
+		{
+			while (true)
+			{
+				const T old = read_relaxed();
+				T _new = old;
+				RT res = (RT)atomic_proc(_new); // function should accept reference to T type and return some value
+				if (res != proceed_value) return res;
+				if (compare_and_swap_test(old, _new)) return proceed_value;
+			}
 		}
 
 	};

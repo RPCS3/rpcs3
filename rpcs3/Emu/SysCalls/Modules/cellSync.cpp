@@ -16,7 +16,7 @@ u32 libsre;
 u32 libsre_rtoc;
 #endif
 
-s32 syncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex)
+s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
 	if (!mutex)
 	{
@@ -28,11 +28,11 @@ s32 syncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex)
 	}
 
 	// prx: set zero and sync
-	mutex->exchange({});
+	mutex->data.exchange({});
 	return CELL_OK;
 }
 
-s32 cellSyncMutexInitialize(vm::ptr<vm::atomic<CellSyncMutex>> mutex)
+s32 cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
 	cellSync->Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.addr());
 
@@ -52,21 +52,15 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: increase u16 and remember its old value
-	be_t<u16> old_order;
-	while (true)
+	// prx: increase m_acq and remember its old value
+	be_t<u16> order;
+	mutex->data.atomic_op([&order](CellSyncMutex::data_t& _mutex)
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
+		order = _mutex.m_acq++;
+	});
 
-		old_order = new_mutex.m_order;
-		new_mutex.m_order++; // increase m_order
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
-	// prx: wait until another u16 value == old value
-	while (old_order != mutex->m_freed)
+	// prx: wait until this old value is equal to m_rel
+	while (order != mutex->data.read_relaxed().m_rel)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
@@ -77,7 +71,7 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: sync
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
+	mutex->data.read_sync();
 	return CELL_OK;
 }
 
@@ -94,25 +88,15 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (true)
+	// prx: exit if m_acq and m_rel are not equal, increase m_acq
+	return mutex->data.atomic_op<s32>(CELL_OK, [](CellSyncMutex::data_t& _mutex) -> s32
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
-
-		// prx: compare two u16 values and exit if not equal
-		if (new_mutex.m_order != new_mutex.m_freed)
+		if (_mutex.m_acq++ != _mutex.m_rel)
 		{
 			return CELL_SYNC_ERROR_BUSY;
 		}
-		else
-		{
-			new_mutex.m_order++;
-		}
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
-	return CELL_OK;
+		return CELL_OK;
+	});
 }
 
 s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
@@ -128,18 +112,11 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
-
-	while (true)
+	mutex->data.read_sync();
+	mutex->data.atomic_op([](CellSyncMutex::data_t& _mutex)
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
-
-		new_mutex.m_freed++;
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
+		_mutex.m_rel++;
+	});
 	return CELL_OK;
 }
 
@@ -159,9 +136,7 @@ s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 	}
 
 	// prx: zeroize first u16, write total_count in second u16 and sync
-	barrier->m_value = 0;
-	barrier->m_count = total_count;
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.exchange({ be_t<s16>::make(0), be_t<s16>::make(total_count) });
 	return CELL_OK;
 }
 
@@ -186,15 +161,14 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	// prx: sync, extract m_value, repeat if < 0, increase, compare with second s16, set sign bit if equal, insert it back
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.read_sync();
 
 	while (true)
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		const auto old = barrier->data.read_relaxed();
+		auto _barrier = old;
 
-		s16 value = (s16)new_barrier.m_value;
+		s16 value = (s16)_barrier.m_value;
 		if (value < 0)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
@@ -207,12 +181,12 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		}
 
 		value++;
-		if (value == (s16)new_barrier.m_count)
+		if (value == (s16)_barrier.m_count)
 		{
 			value |= 0x8000;
 		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+		_barrier.m_value = value;
+		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 	}
 
 	return CELL_OK;
@@ -231,28 +205,27 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.read_sync();
 
 	while (true)
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		const auto old = barrier->data.read_relaxed();
+		auto _barrier = old;
 
-		s16 value = (s16)new_barrier.m_value;
+		s16 value = (s16)_barrier.m_value;
 		if (value >= 0)
 		{
 			value++;
-			if (value == (s16)new_barrier.m_count)
+			if (value == (s16)_barrier.m_count)
 			{
 				value |= 0x8000;
 			}
-			new_barrier.m_value = value;
-			if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+			_barrier.m_value = value;
+			if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 		}		
 		else
 		{
-			if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) return CELL_SYNC_ERROR_BUSY;
+			if (barrier->data.compare_and_swap_test(old, _barrier)) return CELL_SYNC_ERROR_BUSY;
 		}
 	}
 
@@ -273,15 +246,14 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	// prx: sync, extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.read_sync();
 
 	while (true)
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		const auto old = barrier->data.read_relaxed();
+		auto _barrier = old;
 
-		s16 value = (s16)new_barrier.m_value;
+		s16 value = (s16)_barrier.m_value;
 		if (value >= 0)
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
@@ -298,8 +270,8 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		{
 			value = 0;
 		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+		_barrier.m_value = value;
+		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 	}
 
 	return CELL_OK;
@@ -318,15 +290,14 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.read_sync();
 
 	while (true)
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		const auto old = barrier->data.read_relaxed();
+		auto _barrier = old;
 
-		s16 value = (s16)new_barrier.m_value;
+		s16 value = (s16)_barrier.m_value;
 		if (value >= 0)
 		{
 			return CELL_SYNC_ERROR_BUSY;
@@ -337,8 +308,8 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		{
 			value = 0;
 		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+		_barrier.m_value = value;
+		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 	}
 
 	return CELL_OK;

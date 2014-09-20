@@ -219,7 +219,7 @@ s64 spursInit(
 	// some unknown subroutine
 	spurs->m.sub3.unk1 = spurs.addr() + 0xc9;
 	spurs->m.sub3.unk2 = 3; // unknown const
-	spurs->m.sub3.port = spurs->m.port;
+	spurs->m.sub3.port = (u64)spurs->m.port;
 
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload
 	{
@@ -247,7 +247,7 @@ s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 	cellSpurs->Warning("cellSpursInitialize(spurs_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		spurs.addr(), nSpus, spuPriority, ppuPriority, exitIfNoWork ? 1 : 0);
 
-#ifdef PRX_DEBUG_XXX
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8480, libsre_rtoc);
 #else
 	return spursInit(
