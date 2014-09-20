@@ -54,9 +54,9 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 
 	// prx: increase m_acq and remember its old value
 	be_t<u16> order;
-	mutex->data.atomic_op([&order](CellSyncMutex::data_t& _mutex)
+	mutex->data.atomic_op([&order](CellSyncMutex::data_t& mutex)
 	{
-		order = _mutex.m_acq++;
+		order = mutex.m_acq++;
 	});
 
 	// prx: wait until this old value is equal to m_rel
@@ -89,9 +89,9 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: exit if m_acq and m_rel are not equal, increase m_acq
-	return mutex->data.atomic_op<s32>(CELL_OK, [](CellSyncMutex::data_t& _mutex) -> s32
+	return mutex->data.atomic_op(CELL_OK, [](CellSyncMutex::data_t& mutex) -> s32
 	{
-		if (_mutex.m_acq++ != _mutex.m_rel)
+		if (mutex.m_acq++ != mutex.m_rel)
 		{
 			return CELL_SYNC_ERROR_BUSY;
 		}
@@ -113,9 +113,9 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	mutex->data.read_sync();
-	mutex->data.atomic_op([](CellSyncMutex::data_t& _mutex)
+	mutex->data.atomic_op([](CellSyncMutex::data_t& mutex)
 	{
-		_mutex.m_rel++;
+		mutex.m_rel++;
 	});
 	return CELL_OK;
 }
@@ -147,6 +147,24 @@ s32 cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 	return syncBarrierInitialize(barrier, total_count);
 }
 
+s32 syncBarrierTryNotifyOp(CellSyncBarrier::data_t& barrier)
+{
+	// prx: extract m_value (repeat if < 0), increase, compare with second s16, set sign bit if equal, insert it back
+	s16 value = (s16)barrier.m_value;
+	if (value < 0)
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	value++;
+	if (value == (s16)barrier.m_count)
+	{
+		value |= 0x8000;
+	}
+	barrier.m_value = value;
+	return CELL_OK;
+};
+
 s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 {
 	cellSync->Log("cellSyncBarrierNotify(barrier_addr=0x%x)", barrier.addr());
@@ -160,35 +178,16 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: sync, extract m_value, repeat if < 0, increase, compare with second s16, set sign bit if equal, insert it back
 	barrier->data.read_sync();
-
-	while (true)
+	while (barrier->data.atomic_op(CELL_OK, syncBarrierTryNotifyOp))
 	{
-		const auto old = barrier->data.read_relaxed();
-		auto _barrier = old;
-
-		s16 value = (s16)_barrier.m_value;
-		if (value < 0)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.addr());
+			return CELL_OK;
 		}
-
-		value++;
-		if (value == (s16)_barrier.m_count)
-		{
-			value |= 0x8000;
-		}
-		_barrier.m_value = value;
-		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 	}
-
 	return CELL_OK;
 }
 
@@ -206,29 +205,24 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	barrier->data.read_sync();
+	return barrier->data.atomic_op(CELL_OK, syncBarrierTryNotifyOp);
+}
 
-	while (true)
+s32 syncBarrierTryWaitOp(CellSyncBarrier::data_t& barrier)
+{
+	// prx: extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
+	s16 value = (s16)barrier.m_value;
+	if (value >= 0)
 	{
-		const auto old = barrier->data.read_relaxed();
-		auto _barrier = old;
-
-		s16 value = (s16)_barrier.m_value;
-		if (value >= 0)
-		{
-			value++;
-			if (value == (s16)_barrier.m_count)
-			{
-				value |= 0x8000;
-			}
-			_barrier.m_value = value;
-			if (barrier->data.compare_and_swap_test(old, _barrier)) break;
-		}		
-		else
-		{
-			if (barrier->data.compare_and_swap_test(old, _barrier)) return CELL_SYNC_ERROR_BUSY;
-		}
+		return CELL_SYNC_ERROR_BUSY;
 	}
 
+	value--;
+	if (value == (s16)0x8000)
+	{
+		value = 0;
+	}
+	barrier.m_value = value;
 	return CELL_OK;
 }
 
@@ -245,35 +239,16 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: sync, extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
 	barrier->data.read_sync();
-
-	while (true)
+	while (barrier->data.atomic_op(CELL_OK, syncBarrierTryWaitOp))
 	{
-		const auto old = barrier->data.read_relaxed();
-		auto _barrier = old;
-
-		s16 value = (s16)_barrier.m_value;
-		if (value >= 0)
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.addr());
+			return CELL_OK;
 		}
-
-		value--;
-		if (value == (s16)0x8000)
-		{
-			value = 0;
-		}
-		_barrier.m_value = value;
-		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
 	}
-
 	return CELL_OK;
 }
 
@@ -291,28 +266,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	barrier->data.read_sync();
-
-	while (true)
-	{
-		const auto old = barrier->data.read_relaxed();
-		auto _barrier = old;
-
-		s16 value = (s16)_barrier.m_value;
-		if (value >= 0)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		value--;
-		if (value == (s16)0x8000)
-		{
-			value = 0;
-		}
-		_barrier.m_value = value;
-		if (barrier->data.compare_and_swap_test(old, _barrier)) break;
-	}
-
-	return CELL_OK;
+	return barrier->data.atomic_op(CELL_OK, syncBarrierTryWaitOp);
 }
 
 s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size)
@@ -331,10 +285,9 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	}
 
 	// prx: zeroize first u16 and second u16, write buffer_size in second u32, write buffer_addr in second u64 and sync
-	rwm->m_data() = 0;
 	rwm->m_size = buffer_size;
 	rwm->m_buffer = buffer;
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
+	rwm->data.exchange({});
 	return CELL_OK;
 }
 
@@ -343,6 +296,27 @@ s32 cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 bu
 	cellSync->Log("cellSyncRwmInitialize(rwm_addr=0x%x, buffer_addr=0x%x, buffer_size=0x%x)", rwm.addr(), buffer.addr(), buffer_size);
 
 	return syncRwmInitialize(rwm, buffer, buffer_size);
+}
+
+s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
+{
+	if (rwm.m_writers.ToBE())
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+	rwm.m_readers++;
+	return CELL_OK;
+}
+
+s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
+{
+	if (!rwm.m_readers.ToBE())
+	{
+		cellSync->Error("syncRwmReadEndOp(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", Memory.RealToVirtualAddr(&rwm), (u16)rwm.m_writers);
+		return CELL_SYNC_ERROR_ABORT;
+	}
+	rwm.m_readers--;
+	return CELL_OK;
 }
 
 s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
@@ -358,48 +332,22 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: atomically load first u32, repeat until second u16 == 0, increase first u16 and sync
-	while (true)
+	// prx: increase m_readers, wait until m_writers is zero
+	while (rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncRwmRead(rwm_addr=0x%x) aborted", rwm.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncRwmRead(rwm_addr=0x%x) aborted", rwm.addr());
+			return CELL_OK;
 		}
-		
-		new_rwm.m_readers++;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
 	}
 
 	// copy data to buffer_addr
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
-	// prx: load first u32, return 0x8041010C if first u16 == 0, atomically decrease it
-	while (true)
-	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (!new_rwm.m_readers.ToBE())
-		{
-			cellSync->Error("cellSyncRwmRead(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", rwm.addr(), (u16)new_rwm.m_writers);
-			return CELL_SYNC_ERROR_ABORT;
-		}
-
-		new_rwm.m_readers--;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
-	}
-	return CELL_OK;
+	// prx: decrease m_readers (return 0x8041010C if already zero)
+	return rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp);
 }
 
 s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
@@ -415,38 +363,22 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (true)
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_rwm.m_readers++;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+		return res;
 	}
-
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
-	while (true)
+	return rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp);
+}
+
+s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
+{
+	if (rwm.m_writers.ToBE())
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (!new_rwm.m_readers.ToBE())
-		{
-			cellSync->Error("cellSyncRwmRead(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", rwm.addr(), (u16)new_rwm.m_writers);
-			return CELL_SYNC_ERROR_ABORT;
-		}
-
-		new_rwm.m_readers--;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+		return CELL_SYNC_ERROR_BUSY;
 	}
+	rwm.m_writers = 1;
 	return CELL_OK;
 }
 
@@ -463,30 +395,18 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: atomically compare second u16 (m_writers) with 0, repeat if not 0, set 1, sync
-	while (true)
+	while (rwm->data.atomic_op(CELL_OK, syncRwmTryWriteBeginOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (I)", rwm.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (I)", rwm.addr());
+			return CELL_OK;
 		}
-
-		new_rwm.m_writers = 1;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
 	}
 
 	// prx: wait until m_readers == 0
-	while (rwm->m_readers.ToBE())
+	while (rwm->data.read_relaxed().m_readers.ToBE())
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
@@ -500,8 +420,7 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
-	rwm->m_data() = 0;
+	rwm->data.exchange({});
 	return CELL_OK;
 }
 
@@ -518,15 +437,17 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: compare m_readers | m_writers with 0, return busy if not zero, set m_writers to 1
-	if (InterlockedCompareExchange(&rwm->m_data(), se32(1), 0) != 0) return CELL_SYNC_ERROR_BUSY;
+	// prx: compare m_readers | m_writers with 0, return if not zero, set m_writers to 1
+	if (!rwm->data.compare_and_swap_test({}, {be_t<u16>::make(0), be_t<u16>::make(1)}))
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
 
 	// prx: copy data from buffer_addr
 	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
-	rwm->m_data() = 0;
+	rwm->data.exchange({});
 	return CELL_OK;
 }
 

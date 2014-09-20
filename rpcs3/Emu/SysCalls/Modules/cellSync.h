@@ -57,23 +57,30 @@ static_assert(sizeof(CellSyncBarrier) == 4, "CellSyncBarrier: wrong size");
 
 struct CellSyncRwm
 {
-	be_t<u16> m_readers;
-	be_t<u16> m_writers;
+	struct data_t
+	{
+		be_t<u16> m_readers;
+		be_t<u16> m_writers;
+	};
+
+	vm::atomic<data_t> data;
 	be_t<u32> m_size;
 	vm::bptr<void, 1, u64> m_buffer;
-
-	volatile u32& m_data()
-	{
-		return *reinterpret_cast<u32*>(this);
-	};
 };
 
 static_assert(sizeof(CellSyncRwm) == 16, "CellSyncRwm: wrong size");
 
 struct CellSyncQueue
 {
+	struct data_t
+	{
+		be_t<u32> m_v1;
+		be_t<u32> m_v2;
+	};
+
 	be_t<u32> m_v1;
 	be_t<u32> m_v2;
+	//vm::atomic<data_t> data;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
 	vm::bptr<u8, 1, u64> m_buffer;

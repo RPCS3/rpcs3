@@ -93,6 +93,42 @@ namespace vm
 			}
 		}
 
+		__forceinline const T _or(const T right) volatile
+		{
+			const atomic_type res = InterlockedOr((volatile atomic_type*)&data, (atomic_type&)right);
+			return (T&)res;
+		}
+
+		__forceinline const T _and(const T right) volatile
+		{
+			const atomic_type res = InterlockedAnd((volatile atomic_type*)&data, (atomic_type&)right);
+			return (T&)res;
+		}
+
+		__forceinline const T _xor(const T right) volatile
+		{
+			const atomic_type res = InterlockedXor((volatile atomic_type*)&data, (atomic_type&)right);
+			return (T&)res;
+		}
+
+		__forceinline const T operator |= (const T right) volatile
+		{
+			const atomic_type res = InterlockedOr((volatile atomic_type*)&data, (atomic_type&)right) | (atomic_type&)right;
+			return (T&)res;
+		}
+
+		__forceinline const T operator &= (const T right) volatile
+		{
+			const atomic_type res = InterlockedAnd((volatile atomic_type*)&data, (atomic_type&)right) & (atomic_type&)right;
+			return (T&)res;
+		}
+
+		__forceinline const T operator ^= (const T right) volatile
+		{
+			const atomic_type res = InterlockedXor((volatile atomic_type*)&data, (atomic_type&)right) ^ (atomic_type&)right;
+			return (T&)res;
+		}
+
 	};
 
 	template<typename T> struct atomic_le : public _atomic_base<T>
