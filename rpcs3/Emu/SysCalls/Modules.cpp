@@ -89,10 +89,11 @@ void Module::UnLoad()
 
 	if(m_unload_func) m_unload_func();
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
-	{
-		Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
-	}
+	// TODO: Re-enable this when needed
+	//for(u32 i=0; i<m_funcs_list.size(); ++i)
+	//{
+	//	Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
+	//}
 
 	SetLoaded(false);
 }

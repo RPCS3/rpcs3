@@ -998,9 +998,16 @@ int sceNpCommerceGetCurrencyDecimals()
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendListEntryCount()
+int sceNpBasicGetFriendListEntryCount(u32 count)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpBasicGetFriendListEntryCount(count=%d)", count);
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+
+	// TODO: Check if there are any friends
+	vm::write32(count, 0);
+
 	return CELL_OK;
 }
 
@@ -1339,9 +1346,16 @@ int sceNpBasicSendMessage()
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageEntryCount()
+int sceNpBasicGetMessageEntryCount(u32 type, u32 count)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpBasicGetMessageEntryCount(type=%d, count=%d)", type, count);
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+
+	// TODO: Check if there are messages
+	vm::write32(count, 0);
+
 	return CELL_OK;
 }
 
