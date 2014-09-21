@@ -90,6 +90,8 @@ void Module::UnLoad()
 	if(m_unload_func) m_unload_func();
 
 	// TODO: Re-enable this when needed
+	// This was disabled because some functions would get unloaded and
+	// some games tried to use them, thus only printing a TODO message
 	//for(u32 i=0; i<m_funcs_list.size(); ++i)
 	//{
 	//	Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
