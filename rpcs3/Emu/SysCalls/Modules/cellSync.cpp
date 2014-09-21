@@ -471,11 +471,10 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	}
 
 	// prx: zeroize first u64, write size in third u32, write depth in fourth u32, write address in third u64 and sync
-	queue->m_data() = 0;
 	queue->m_size = size;
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	queue->data.exchange({});
 	return CELL_OK;
 }
 
@@ -484,6 +483,26 @@ s32 cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u3
 	cellSync->Log("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.addr(), buffer.addr(), size, depth);
 
 	return syncQueueInitialize(queue, buffer, size, depth);
+}
+
+s32 syncQueueTryPushOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	// prx: compare 5th u8 with zero (break if not zero)
+	// prx: compare (second u32 (u24) + first u8) with depth (break if greater or equal)
+	if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	// prx: extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
+	// prx: insert 1 in 5th u8
+	// prx: extract second u32 (u24), increase it, insert it back
+	position = (v1 & 0xffffff);
+	queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
+	queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
+	return CELL_OK;
 }
 
 s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
@@ -501,52 +520,27 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		// prx: compare 5th u8 with zero (repeat if not zero)
-		// prx: compare (second u32 (u24) + first u8) with depth (repeat if greater or equal)
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+		return syncQueueTryPushOp(queue, depth, position);
+	}))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePush(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncQueuePush(queue_addr=0x%x) aborted", queue.addr());
+			return CELL_OK;
 		}
-
-		// prx: extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
-		// prx: insert 1 in 5th u8
-		// prx: extract second u32 (u24), increase it, insert it back
-		position = (v1 & 0xffffff);
-		new_queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		new_queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
 	// prx: memcpy(position * m_size + m_addr, buffer_addr, m_size), sync
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 
 	// prx: atomically insert 0 in 5th u8
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v2 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
 	return CELL_OK;
 }
 
@@ -565,39 +559,39 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		position = (v1 & 0xffffff);
-		new_queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		new_queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPushOp(queue, depth, position);
+	}))
+	{
+		return res;
 	}
 
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
+	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	return CELL_OK;
+}
 
-	while (true)
+s32 syncQueueTryPopOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	// prx: extract first u8, repeat if not zero
+	// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
+	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v2 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return CELL_SYNC_ERROR_BUSY;
 	}
+
+	// prx: insert 1 in first u8
+	// prx: extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
+	// prx: extract second u32 (u24), decrease it, insert it back
+	queue.m_v1 = 0x1000000 | v1;
+	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
+	queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
 	return CELL_OK;
 }
 
@@ -616,52 +610,27 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
-	while (true)
+	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		// prx: extract first u8, repeat if not zero
-		// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		return syncQueueTryPopOp(queue, depth, position);
+	}))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePop(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncQueuePop(queue_addr=0x%x) aborted", queue.addr());
+			return CELL_OK;
 		}
-
-		// prx: insert 1 in first u8
-		// prx: extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
-		// prx: extract second u32 (u24), decrease it, insert it back
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
 	// prx: (sync), memcpy(buffer_addr, position * m_size + m_addr, m_size)
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
 	// prx: atomically insert 0 in first u8
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
 	return CELL_OK;
 }
 
@@ -680,39 +649,33 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPopOp(queue, depth, position);
+	}))
+	{
+		return res;
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	return CELL_OK;
+}
 
-	while (true)
+s32 syncQueueTryPeekOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return CELL_SYNC_ERROR_BUSY;
 	}
+
+	queue.m_v1 = 0x1000000 | v1;
+	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
 	return CELL_OK;
 }
 
@@ -731,44 +694,24 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		return syncQueueTryPeekOp(queue, depth, position);
+	}))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePeek(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
+			cellSync->Warning("cellSyncQueuePeek(queue_addr=0x%x) aborted", queue.addr());
+			return CELL_OK;
 		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
-
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
 	return CELL_OK;
 }
 
@@ -787,38 +730,19 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPeekOp(queue, depth, position);
+	}))
+	{
+		return res;
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
-
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
 	return CELL_OK;
 }
 
@@ -835,9 +759,9 @@ s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 count = (u32)queue->m_v2 & 0xffffff;
+	const u32 count = (u32)queue->data.read_relaxed().m_v2 & 0xffffff;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && count <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && count <= depth);
 
 	return count;
 }
@@ -856,55 +780,50 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	}
 
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
-	while (true)
+	while (queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
+		const u32 v1 = (u32)queue.m_v1;
 		// prx: extract first u8, repeat if not zero, insert 1
 		if (v1 >> 24)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (I)", queue.addr());
-				return CELL_OK;
-			}
-			continue;
+			return CELL_SYNC_ERROR_BUSY;
 		}
-		new_queue.m_v1 = v1 | 0x1000000;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		queue.m_v1 = v1 | 0x1000000;
+		return CELL_OK;
+	}))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
+		{
+			cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (I)", queue.addr());
+			return CELL_OK;
+		}
 	}
 
-	while (true)
+	while (queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v2 = (u32)new_queue.m_v2;
+		const u32 v2 = (u32)queue.m_v2;
 		// prx: extract 5th u8, repeat if not zero, insert 1
 		if (v2 >> 24)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (II)", queue.addr());
-				return CELL_OK;
-			}
-			continue;
+			return CELL_SYNC_ERROR_BUSY;
 		}
-		new_queue.m_v2 = v2 | 0x1000000;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		queue.m_v2 = v2 | 0x1000000;
+		return CELL_OK;
+	}))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		if (Emu.IsStopped())
+		{
+			cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (II)", queue.addr());
+			return CELL_OK;
+		}
 	}
 
-	queue->m_data() = 0;
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	queue->data.exchange({});
 	return CELL_OK;
 }
 
@@ -921,28 +840,18 @@ void syncLFQueueDump(vm::ptr<CellSyncLFQueue> queue)
 
 void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
-	queue->m_h1 = 0;
-	queue->m_h2 = 0;
-	queue->m_h4 = 0;
-	queue->m_h5 = 0;
-	queue->m_h6 = 0;
-	queue->m_h8 = 0;
 	queue->m_size = size;
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
 	queue->m_direction = direction;
-	for (u32 i = 0; i < sizeof(queue->m_hs) / sizeof(queue->m_hs[0]); i++)
-	{
-		queue->m_hs[i] = 0;
-	}
+	*queue->m_hs = {};
 	queue->m_eaSignal = eaSignal;
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		queue->m_h3 = 0;
-		queue->m_h7 = 0;
-		queue->m_buffer = buffer + 1;
-		assert(queue->m_buffer.addr() % 2);
+		queue->pop1.write_relaxed({});
+		queue->push1.write_relaxed({});
+		queue->m_buffer.set(queue->m_buffer.addr() | be_t<u64>::make(1));
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
 		//m_bs[2]
@@ -955,8 +864,8 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 	}
 	else
 	{
-		//m_h3
-		//m_h7
+		queue->pop1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->pop1.read_relaxed().m_h3, be_t<u16>::make(0) });
+		queue->push1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->push1.read_relaxed().m_h7, be_t<u16>::make(0) });
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;

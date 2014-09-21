@@ -30,14 +30,14 @@ namespace vm
 
 	public:
 		// atomically compare data with cmp, replace with exch if equal, return previous data value anyway
-		__forceinline const T compare_and_swap(const T cmp, const T exch) volatile
+		__forceinline const T compare_and_swap(const T& cmp, const T& exch) volatile
 		{
 			const atomic_type res = InterlockedCompareExchange((volatile atomic_type*)&data, (atomic_type&)exch, (atomic_type&)cmp);
 			return (T&)res;
 		}
 
 		// atomically compare data with cmp, replace with exch if equal, return true if data was replaced
-		__forceinline bool compare_and_swap_test(const T cmp, const T exch) volatile
+		__forceinline bool compare_and_swap_test(const T& cmp, const T& exch) volatile
 		{
 			return InterlockedCompareExchange((volatile atomic_type*)&data, (atomic_type&)exch, (atomic_type&)cmp) == (atomic_type&)cmp;
 		}
@@ -50,7 +50,7 @@ namespace vm
 		}
 
 		// atomically replace data with exch, return previous data value
-		__forceinline const T exchange(const T exch) volatile
+		__forceinline const T exchange(const T& exch) volatile
 		{
 			const atomic_type res = InterlockedExchange((volatile atomic_type*)&data, (atomic_type&)exch);
 			return (T&)res;
@@ -63,7 +63,7 @@ namespace vm
 		}
 
 		// write data without memory barrier
-		__forceinline void write_relaxed(const T value) volatile
+		__forceinline void write_relaxed(const T& value) volatile
 		{
 			(T&)data = value;
 		}
@@ -81,7 +81,7 @@ namespace vm
 		}
 
 		// perform atomic operation on data with special exit condition (if intermediate result != proceed_value)
-		template<typename RT, typename FT> __forceinline RT atomic_op(const RT proceed_value, const FT atomic_proc) volatile
+		template<typename RT, typename FT> __forceinline RT atomic_op(const RT& proceed_value, const FT atomic_proc) volatile
 		{
 			while (true)
 			{
@@ -93,37 +93,37 @@ namespace vm
 			}
 		}
 
-		__forceinline const T _or(const T right) volatile
+		__forceinline const T _or(const T& right) volatile
 		{
 			const atomic_type res = InterlockedOr((volatile atomic_type*)&data, (atomic_type&)right);
 			return (T&)res;
 		}
 
-		__forceinline const T _and(const T right) volatile
+		__forceinline const T _and(const T& right) volatile
 		{
 			const atomic_type res = InterlockedAnd((volatile atomic_type*)&data, (atomic_type&)right);
 			return (T&)res;
 		}
 
-		__forceinline const T _xor(const T right) volatile
+		__forceinline const T _xor(const T& right) volatile
 		{
 			const atomic_type res = InterlockedXor((volatile atomic_type*)&data, (atomic_type&)right);
 			return (T&)res;
 		}
 
-		__forceinline const T operator |= (const T right) volatile
+		__forceinline const T operator |= (const T& right) volatile
 		{
 			const atomic_type res = InterlockedOr((volatile atomic_type*)&data, (atomic_type&)right) | (atomic_type&)right;
 			return (T&)res;
 		}
 
-		__forceinline const T operator &= (const T right) volatile
+		__forceinline const T operator &= (const T& right) volatile
 		{
 			const atomic_type res = InterlockedAnd((volatile atomic_type*)&data, (atomic_type&)right) & (atomic_type&)right;
 			return (T&)res;
 		}
 
-		__forceinline const T operator ^= (const T right) volatile
+		__forceinline const T operator ^= (const T& right) volatile
 		{
 			const atomic_type res = InterlockedXor((volatile atomic_type*)&data, (atomic_type&)right) ^ (atomic_type&)right;
 			return (T&)res;

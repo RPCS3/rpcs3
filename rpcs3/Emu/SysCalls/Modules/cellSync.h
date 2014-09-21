@@ -78,18 +78,11 @@ struct CellSyncQueue
 		be_t<u32> m_v2;
 	};
 
-	be_t<u32> m_v1;
-	be_t<u32> m_v2;
-	//vm::atomic<data_t> data;
+	vm::atomic<data_t> data;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
 	vm::bptr<u8, 1, u64> m_buffer;
 	be_t<u64> reserved;
-
-	volatile u64& m_data()
-	{
-		return *reinterpret_cast<u64*>(this);
-	};
 };
 
 static_assert(sizeof(CellSyncQueue) == 32, "CellSyncQueue: wrong size");
@@ -104,21 +97,54 @@ enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 
 struct CellSyncLFQueue
 {
-	be_t<u16> m_h1;      // 0x0
-	be_t<u16> m_h2;      // 0x2
-	be_t<u16> m_h3;      // 0x4
-	be_t<u16> m_h4;      // 0x6
-	be_t<u16> m_h5;      // 0x8
-	be_t<u16> m_h6;      // 0xA
-	be_t<u16> m_h7;      // 0xC
-	be_t<u16> m_h8;      // 0xE
+	struct init_t
+	{
+		be_t<u32> m_sync;
+	};
+
+	struct pop1_t
+	{
+		be_t<u16> m_h1;
+		be_t<u16> m_h2;
+		be_t<u16> m_h3;
+		be_t<u16> m_h4;
+	};
+
+	struct push1_t
+	{
+		be_t<u16> m_h5;
+		be_t<u16> m_h6;
+		be_t<u16> m_h7;
+		be_t<u16> m_h8;
+	};
+
+	union
+	{
+		struct
+		{
+			vm::atomic<pop1_t> pop1;
+			vm::atomic<push1_t> push1;
+		};
+		struct
+		{
+			be_t<u16> m_h1; // 0x0
+			be_t<u16> m_h2; // 0x2
+			be_t<u16> m_h3; // 0x4
+			be_t<u16> m_h4; // 0x6
+			be_t<u16> m_h5; // 0x8
+			be_t<u16> m_h6; // 0xA
+			be_t<u16> m_h7; // 0xC
+			be_t<u16> m_h8; // 0xE
+		};
+	};
+
 	be_t<u32> m_size;    // 0x10
 	be_t<u32> m_depth;   // 0x14
 	vm::bptr<u8, 1, u64> m_buffer; // 0x18
 	u8        m_bs[4];   // 0x20
 	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;      // 0x28
-	be_t<u32> m_sync;    // 0x2C
+	vm::atomic<init_t> init; // 0x2C
 	be_t<u16> m_hs[32];  // 0x30
 	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;      // 0x78
