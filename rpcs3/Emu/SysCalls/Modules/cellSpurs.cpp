@@ -20,12 +20,12 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
-s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, u32 arg3, u32 arg4)
+s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, u32 arg3, u32 arg4, u64 name_u64)
 {
 #ifdef PRX_DEBUG
 	vm::var<be_t<u32>> queue;
-	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, u32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
-		spurs, queue, arg3, arg4);
+	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
+		spurs, queue, arg3, arg4, vm::read32(libsre_rtoc - 0x7E2C));
 	queue_id = queue->ToLE();
 	return res;
 #else
@@ -182,7 +182,7 @@ s64 spursInit(
 	spurs->m.ppuPriority = ppuPriority;
 
 	u32 queue;
-	assert(spursCreateLv2EventQueue(spurs, queue, spurs.addr() + 0xc9, 0x2a) == CELL_OK);
+	assert(spursCreateLv2EventQueue(spurs, queue, spurs.addr() + 0xc9, 0x2a, *(u64*)"_spuPrv") == CELL_OK);
 	spurs->m.queue = queue;
 
 	u32 port = event_port_create(0);
@@ -247,7 +247,7 @@ s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 	cellSpurs->Warning("cellSpursInitialize(spurs_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		spurs.addr(), nSpus, spuPriority, ppuPriority, exitIfNoWork ? 1 : 0);
 
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8480, libsre_rtoc);
 #else
 	return spursInit(
