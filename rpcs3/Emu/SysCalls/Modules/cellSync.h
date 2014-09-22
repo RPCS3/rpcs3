@@ -97,17 +97,18 @@ enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 
 struct CellSyncLFQueue
 {
-	struct init_t
-	{
-		be_t<u32> m_sync;
-	};
-
 	struct pop1_t
 	{
 		be_t<u16> m_h1;
 		be_t<u16> m_h2;
 		be_t<u16> m_h3;
 		be_t<u16> m_h4;
+	};
+
+	struct pop3_t
+	{
+		be_t<u16> m_h1;
+		be_t<u16> m_h2;
 	};
 
 	struct push1_t
@@ -118,61 +119,37 @@ struct CellSyncLFQueue
 		be_t<u16> m_h8;
 	};
 
-	union
+	struct push3_t
 	{
-		struct
-		{
-			vm::atomic<pop1_t> pop1;
-			vm::atomic<push1_t> push1;
-		};
-		struct
-		{
-			be_t<u16> m_h1; // 0x0
-			be_t<u16> m_h2; // 0x2
-			be_t<u16> m_h3; // 0x4
-			be_t<u16> m_h4; // 0x6
-			be_t<u16> m_h5; // 0x8
-			be_t<u16> m_h6; // 0xA
-			be_t<u16> m_h7; // 0xC
-			be_t<u16> m_h8; // 0xE
-		};
+		be_t<u16> m_h5;
+		be_t<u16> m_h6;
 	};
 
+	union
+	{
+		vm::atomic<pop1_t> pop1;
+		vm::atomic<pop3_t> pop3;
+	};
+	union
+	{
+		vm::atomic<push1_t> push1;
+		vm::atomic<push3_t> push3;
+	};
 	be_t<u32> m_size;    // 0x10
 	be_t<u32> m_depth;   // 0x14
 	vm::bptr<u8, 1, u64> m_buffer; // 0x18
 	u8        m_bs[4];   // 0x20
 	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;      // 0x28
-	vm::atomic<init_t> init; // 0x2C
+	vm::atomic<u32> init; // 0x2C
 	be_t<u16> m_hs[32];  // 0x30
 	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;      // 0x78
 	be_t<u32> m_v3;      // 0x7C
 
-	volatile u32& m_data()
-	{
-		return *reinterpret_cast<u32*>((u8*)this + 0x2c);
-	}
-
-	volatile u64& m_push1()
-	{
-		return *reinterpret_cast<u64*>((u8*)this + 0x8);
-	}
-
 	volatile u32& m_push2()
 	{
 		return *reinterpret_cast<u32*>((u8*)this + 0x30);
-	}
-
-	volatile u32& m_push3()
-	{
-		return *reinterpret_cast<u32*>((u8*)this + 0x8);
-	}
-
-	volatile u64& m_pop1()
-	{
-		return *reinterpret_cast<u64*>((u8*)this + 0x0);
 	}
 
 	volatile u32& m_pop2()
@@ -180,10 +157,6 @@ struct CellSyncLFQueue
 		return *reinterpret_cast<u32*>((u8*)this + 0x50);
 	}
 
-	volatile u32& m_pop3()
-	{
-		return *reinterpret_cast<u32*>((u8*)this + 0x0);
-	}
 };
 
 static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");

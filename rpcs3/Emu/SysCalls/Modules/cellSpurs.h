@@ -185,7 +185,7 @@ struct CellSpurs
 			u8 unknown0[0xB0 - 0x78];
 			be_t<u32> unk0;       // 0x0B0
 			u8 unknown2[0xC0 - 0xB4];
-			u8 unk6[0x10];        // 0x0C0
+			u8 unk6[0x10];        // 0x0C0 (SPU port at 0xc9)
 			u8 unknown1[0x100 - 0x0D0];
 			_sub_str1 sub1[0x10]; // 0x100
 			be_t<u64> unk22;      // 0x900
@@ -219,7 +219,7 @@ struct CellSpurs
 			be_t<u32> unk5;       // 0xD9C
 			be_t<u32> revision;   // 0xDA0
 			be_t<u32> sdkVersion; // 0xDA4
-			u8 unknown8[0xDB0 - 0xDA8];
+			vm::atomic<u64> spups;// 0xDA8
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
 			u8 unknown9[0xF00 - 0xDD0];

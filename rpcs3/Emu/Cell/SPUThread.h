@@ -358,7 +358,7 @@ public:
 			}
 			else
 			{
-				InterlockedOr((volatile u64*)m_indval, ((u64)value << 32) | 1);
+				InterlockedOr(&m_indval, ((u64)value << 32) | 1);
 			}
 		}
 

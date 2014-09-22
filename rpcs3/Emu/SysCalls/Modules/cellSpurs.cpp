@@ -20,17 +20,86 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
-s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, u32 arg3, u32 arg4, u64 name_u64)
+s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated)
 {
+#ifdef PRX_DEBUG_XXX
+	return cb_call<s32, vm::ptr<CellSpurs>, u32, vm::ptr<u8>, s32, bool>(GetCurrentPPUThread(), libsre + 0xAE34, libsre_rtoc,
+		spurs, queue, port, isDynamic, wasCreated);
+#else
+	if (!spurs || !port)
+	{
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_CORE_ERROR_ALIGN;
+	}
+	if (spurs->m.unk21.ToBE())
+	{
+		return CELL_SPURS_CORE_ERROR_STAT;
+	}
+
+	u32 unk1 = 0;
 #ifdef PRX_DEBUG
+	unk1 = cb_call<u32>(GetCurrentPPUThread(), libsre + 0x10900, libsre_rtoc);
+#endif
+
+	u8 _port = 0x3f;
+	u8 port_start = 0x10;
+	u64 port_mask = 0;
+	if (isDynamic == 0)
+	{
+		_port = *port;
+		if (_port > 0x3f)
+		{
+			return CELL_SPURS_CORE_ERROR_INVAL;
+		}
+		if (unk1 <= 0x17ffff && _port > 0xf)
+		{
+			return CELL_SPURS_CORE_ERROR_PERM;
+		}
+		port_start = _port;
+	}
+
+	for (u32 i = port_start + 1; i < _port; i++)
+	{
+		port_mask |= 1ull << (i - 1);
+	}
+
+	if (s32 res = sys_spu_thread_group_connect_event_all_threads(spurs->m.spuTG, queue, port_mask, port))
+	{
+		if (res == CELL_EISCONN)
+		{
+			return CELL_SPURS_CORE_ERROR_BUSY;
+		}
+		return res;
+	}
+
+	if (!wasCreated)
+	{
+		spurs->m.spups |= be_t<u64>::make(1ull << *port); // atomic bitwise or
+	}
+
+	return CELL_OK;
+#endif
+}
+
+s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8> port, s32 size, u64 name_u64)
+{
+#ifdef PRX_DEBUG_XXX
 	vm::var<be_t<u32>> queue;
-	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
-		spurs, queue, arg3, arg4, vm::read32(libsre_rtoc - 0x7E2C));
+	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
+		spurs, queue, port, size, vm::read32(libsre_rtoc - 0x7E2C));
 	queue_id = queue->ToLE();
 	return res;
 #else
-	// TODO
-	queue_id = event_queue_create(SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, *(u64*)"+QUEUE+", 0, 1);
+	queue_id = event_queue_create(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
+	if (!queue_id)
+	{
+		return CELL_EAGAIN; // rough
+	}
+
+	assert(spursAttachLv2EventQueue(spurs, queue_id, port, 1, true) == CELL_OK);
 	return CELL_OK;
 #endif
 }
@@ -108,7 +177,7 @@ s64 spursInit(
 	for (u32 i = 0; i < 0x10; i++)
 	{
 		sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
-		assert(sem && ~sem); // should rollback if semaphore creating failed and return the error
+		assert(sem && ~sem); // should rollback if semaphore creation failed and return the error
 		spurs->m.sub1[i].sem = sem;
 	}
 	if (isSecond)
@@ -182,7 +251,7 @@ s64 spursInit(
 	spurs->m.ppuPriority = ppuPriority;
 
 	u32 queue;
-	assert(spursCreateLv2EventQueue(spurs, queue, spurs.addr() + 0xc9, 0x2a, *(u64*)"_spuPrv") == CELL_OK);
+	assert(spursCreateLv2EventQueue(spurs, queue, vm::ptr<u8>::make(spurs.addr() + 0xc9), 0x2a, *(u64*)"_spuPrv") == CELL_OK);
 	spurs->m.queue = queue;
 
 	u32 port = event_port_create(0);
@@ -618,13 +687,13 @@ s64 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::ptr<const bo
 
 s64 cellSpursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=%d, port_addr=0x%x, isDynamic=%d)",
 		spurs.addr(), queue, port.addr(), isDynamic);
+
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0xAFE0, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	return spursAttachLv2EventQueue(spurs, queue, port, isDynamic, false);
 #endif
 }
 
