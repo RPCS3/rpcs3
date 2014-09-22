@@ -1522,6 +1522,13 @@ int	_sceNpSysutilClientFree()
 	return CELL_OK;
 }
 
+void sceNp_unload()
+{
+	sceNpInstance.m_bSceNpInitialized = false;
+	sceNpInstance.m_bSceNp2Initialized = false;
+	sceNpInstance.m_bScoreInitialized = false;
+}
+
 void sceNp_init(Module *pxThis)
 {
 	sceNp = pxThis;
