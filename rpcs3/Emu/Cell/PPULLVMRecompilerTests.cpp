@@ -190,17 +190,17 @@ void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, P
 
 void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
     // Create the unit test function
-    m_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
-                                                           m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-                                                           m_ir_builder->getInt64Ty() /*base_addres*/,
-                                                           m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
-    m_function->setCallingConv(CallingConv::X86_64_Win64);
-    auto arg_i = m_function->arg_begin();
+    m_current_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
+                                                                   m_ir_builder->getInt8PtrTy() /*ppu_state*/,
+                                                                   m_ir_builder->getInt64Ty() /*base_addres*/,
+                                                                   m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
+    m_current_function->setCallingConv(CallingConv::X86_64_Win64);
+    auto arg_i = m_current_function->arg_begin();
     arg_i->setName("ppu_state");
     (++arg_i)->setName("base_address");
     (++arg_i)->setName("interpreter");
 
-    auto block = BasicBlock::Create(*m_llvm_context, "start", m_function);
+    auto block = BasicBlock::Create(*m_llvm_context, "start", m_current_function);
     m_ir_builder->SetInsertPoint(block);
 
     test_case();
@@ -210,19 +210,19 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     // Print the IR
     std::string        ir;
     raw_string_ostream ir_ostream(ir);
-    m_function->print(ir_ostream);
+    m_current_function->print(ir_ostream);
     LOG_NOTICE(PPU, "[UT %s] LLVM IR:%s", name, ir.c_str());
 
     std::string        verify;
     raw_string_ostream verify_ostream(verify);
-    if (verifyFunction(*m_function, &verify_ostream)) {
+    if (verifyFunction(*m_current_function, &verify_ostream)) {
         LOG_ERROR(PPU, "[UT %s] Verification Failed:%s", name, verify.c_str());
         return;
     }
 
     // Generate the function
     MachineCodeInfo mci;
-    m_execution_engine->runJITOnFunction(m_function, &mci);
+    m_execution_engine->runJITOnFunction(m_current_function, &mci);
 
     // Disassember the generated function
     LOG_NOTICE(PPU, "[UT %s] Disassembly:", name);
@@ -242,7 +242,7 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     base_address.IntVal = APInt(64, s_base_address);
     args.push_back(base_address);
     args.push_back(GenericValue(s_interpreter));
-    m_execution_engine->runFunction(m_function, args);
+    m_execution_engine->runFunction(m_current_function, args);
 
     // Verify results
     std::string msg;
@@ -253,7 +253,7 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
         LOG_ERROR(PPU, "[UT %s] Test failed. %s", name, msg.c_str());
     }
 
-    m_execution_engine->freeMachineCodeForFunction(m_function);
+    m_execution_engine->freeMachineCodeForFunction(m_current_function);
 }
 
 void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter) {

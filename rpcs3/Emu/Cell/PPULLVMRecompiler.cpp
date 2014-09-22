@@ -26,8 +26,7 @@ bool PPULLVMRecompiler::s_rotate_mask_inited = false;
 
 PPULLVMRecompiler::PPULLVMRecompiler()
     : ThreadBase("PPULLVMRecompiler")
-    , m_compilation_time(0.0)
-    , m_idling_time(0.0) {
+    , m_revision(0) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
@@ -77,28 +76,33 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
 
     std::string error;
     raw_fd_ostream log_file("PPULLVMRecompiler.log", error, sys::fs::F_Text);
-    log_file << "Time spent compiling = " << m_compilation_time.count() << "s\n";
-    log_file << "Time spent idling    = " << m_idling_time.count() << "s\n\n";
-    log_file << "Interpreter fallback stats:\n";
+    log_file << "Total time                      = " << m_total_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent compiling        = " << m_compilation_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent building IR  = " << m_ir_build_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent optimizing   = " << m_optimizing_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent translating  = " << m_translation_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent idling           = " << m_idling_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent doing misc tasks = " << (m_total_time.count() - m_idling_time.count() - m_compilation_time.count()) / 1000000 << "ms\n";
+    log_file << "Revision                        = " << m_revision << "\n";
+    log_file << "\nInterpreter fallback stats:\n";
     for (auto i = m_interpreter_fallback_stats.begin(); i != m_interpreter_fallback_stats.end(); i++) {
         log_file << i->first << " = " << i->second << "\n";
     }
 
-    log_file << "\nBlock Information:\n";
-    for (auto i = m_compiled_blocks.begin(); i != m_compiled_blocks.end(); i++) {
-        log_file << fmt::Format("\n%s: Size = %u bytes, Reference count = %llu\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.reference_count);
+    log_file << "\nDisassembly:\n";
+    for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
+        log_file << fmt::Format("%s: Size = %u bytes, Number of instructions = %u\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.num_instructions);
+        //for (size_t pc = 0; pc < i->second.size;) {
+        //    char str[1024];
 
-        log_file << "Disassembly:\n";
-        for (size_t pc = 0; pc < i->second.size;) {
-            char str[1024];
-
-            auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)i->second.block + pc, i->second.size - pc, (uint64_t)((uint8_t *)i->second.block + pc), str, sizeof(str));
-            log_file << str << '\n';
-            pc += size;
-        }
+        //    auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)i->second.executable + pc, i->second.size - pc,
+        //                                      (uint64_t)((uint8_t *)i->second.executable + pc), str, sizeof(str));
+        //    log_file << str << '\n';
+        //    pc += size;
+        //}
     }
 
-    log_file << "\nLLVM IR:\n" << *m_module;
+    //log_file << "\nLLVM IR:\n" << *m_module;
 
     LLVMDisasmDispose(m_disassembler);
     delete m_execution_engine;
@@ -107,33 +111,31 @@ PPULLVMRecompiler::~PPULLVMRecompiler() {
     delete m_llvm_context;
 }
 
-PPULLVMRecompiler::CompiledBlockInfo PPULLVMRecompiler::GetCompiledBlock(u32 address) {
-    static CompiledBlockInfo unknown_block_info = {0};
+std::pair<PPULLVMRecompiler::Executable, u32> PPULLVMRecompiler::GetExecutable(u32 address) {
+    std::lock_guard<std::mutex> lock(m_compiled_shared_lock);
 
-    std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
-
-    auto compiled_block = m_compiled_blocks.lower_bound(std::make_pair(address, 0));
-    if (compiled_block != m_compiled_blocks.end() && compiled_block->first.first == address) {
-        compiled_block->second.reference_count++;
-        return compiled_block->second;
+    auto compiled = m_compiled_shared.lower_bound(std::make_pair(address, 0));
+    if (compiled != m_compiled_shared.end() && compiled->first.first == address) {
+        compiled->second.second++;
+        return std::make_pair(compiled->second.first, compiled->first.second);
     }
 
-    return unknown_block_info;
+    return std::make_pair(nullptr, 0);
 }
 
-void PPULLVMRecompiler::ReleaseCompiledBlock(u32 address, u32 revision) {
-    std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
+void PPULLVMRecompiler::ReleaseExecutable(u32 address, u32 revision) {
+    std::lock_guard<std::mutex> lock(m_compiled_shared_lock);
 
-    auto compiled_block = m_compiled_blocks.find(std::make_pair(address, revision));
-    if (compiled_block != m_compiled_blocks.end()) {
-        compiled_block->second.reference_count--;
+    auto compiled = m_compiled_shared.find(std::make_pair(address, revision));
+    if (compiled != m_compiled_shared.end()) {
+        compiled->second.second--;
     }
 }
 
 void PPULLVMRecompiler::RequestCompilation(u32 address) {
     {
-        std::lock_guard<std::mutex> lock(m_pending_compilation_blocks_mutex);
-        m_pending_compilation_blocks.insert(address);
+        std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
+        m_uncompiled_shared.push_back(address);
     }
 
     if (!IsAlive()) {
@@ -143,42 +145,67 @@ void PPULLVMRecompiler::RequestCompilation(u32 address) {
     Notify();
 }
 
+u32 PPULLVMRecompiler::GetCurrentRevision() {
+    return m_revision;
+}
+
 void PPULLVMRecompiler::Task() {
-    std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
 
     while (!TestDestroy() && !Emu.IsStopped()) {
-        WaitForAnySignal(500);
+        // Wait a few ms for something to happen
+        auto idling_start = std::chrono::high_resolution_clock::now();
+        WaitForAnySignal(250);
+        auto idling_end = std::chrono::high_resolution_clock::now();
+        m_idling_time += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
 
-        u32 num_blocks_compiled = 0;
+        // Update the set of blocks that have been hit with the set of blocks that have been requested for compilation.
+        {
+            std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
+            for (auto i = m_uncompiled_shared.begin(); i != m_uncompiled_shared.end(); i++) {
+                m_hit_blocks.insert(*i);
+            }
+        }
+
+        u32 num_compiled = 0;
         while (!TestDestroy() && !Emu.IsStopped()) {
             u32 address;
 
             {
-                std::lock_guard<std::mutex> lock(m_pending_compilation_blocks_mutex);
+                std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
 
-                auto i = m_pending_compilation_blocks.begin();
-                if (i != m_pending_compilation_blocks.end()) {
+                auto i = m_uncompiled_shared.begin();
+                if (i != m_uncompiled_shared.end()) {
                     address = *i;
-                    m_pending_compilation_blocks.erase(i);
+                    m_uncompiled_shared.erase(i);
                 } else {
                     break;
                 }
             }
 
-            Compile(address);
-            num_blocks_compiled++;
+            m_hit_blocks.insert(address);
+            if (NeedsCompiling(address)) {
+                Compile(address);
+                num_compiled++;
+            }
         }
 
-        if (num_blocks_compiled == 0) {
+        if (num_compiled == 0) {
             // If we get here, it means the recompilation thread is idling.
-            
+            // We use this oppurtunity to optimize the code.
+            RemoveUnusedOldVersions();
+            for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
+                if (NeedsCompiling(i->first.first)) {
+                    Compile(i->first.first);
+                    num_compiled++;
+                }
+            }
         }
     }
 
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-    m_idling_time = std::chrono::duration_cast<std::chrono::duration<double>>(end - start - m_compilation_time);
-
-    LOG_NOTICE(PPU, "Compilation thread exiting.");
+    m_total_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    LOG_NOTICE(PPU, "PPU LLVM compiler thread exiting.");
 }
 
 void PPULLVMRecompiler::Decode(const u32 code) {
@@ -219,7 +246,7 @@ void PPULLVMRecompiler::VADDCUW(u32 vd, u32 va, u32 vb) {
     auto vb_v4i32 = GetVrAsIntVec(vb, 32);
 
     u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-    va_v4i32               = m_ir_builder->CreateXor(va_v4i32, ConstantDataVector::get(*m_llvm_context, not_mask_v4i32));
+    va_v4i32               = m_ir_builder->CreateXor(va_v4i32, ConstantDataVector::get(m_ir_builder->getContext(), not_mask_v4i32));
     auto cmpv4i1           = m_ir_builder->CreateICmpULT(va_v4i32, vb_v4i32);
     auto cmpv4i32          = m_ir_builder->CreateZExt(cmpv4i1, VectorType::get(m_ir_builder->getInt32Ty(), 4));
     SetVr(vd, cmpv4i32);
@@ -264,7 +291,7 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb) {
     // of any one of the operands.
     u32  tmp1_v4i32[4] = {0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF};
     auto tmp2_v4i32    = m_ir_builder->CreateLShr(va_v4i32, 31);
-    tmp2_v4i32         = m_ir_builder->CreateAdd(tmp2_v4i32, ConstantDataVector::get(*m_llvm_context, tmp1_v4i32));
+    tmp2_v4i32         = m_ir_builder->CreateAdd(tmp2_v4i32, ConstantDataVector::get(m_ir_builder->getContext(), tmp1_v4i32));
     auto tmp2_v16i8    = m_ir_builder->CreateBitCast(tmp2_v4i32, VectorType::get(m_ir_builder->getInt8Ty(), 16));
 
     // Next, we find if the addition can actually result in an overflow. Since an overflow can only happen if the operands
@@ -273,7 +300,7 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb) {
     // same sign.
     auto tmp3_v4i32        = m_ir_builder->CreateXor(va_v4i32, vb_v4i32);
     u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-    tmp3_v4i32             = m_ir_builder->CreateXor(tmp3_v4i32, ConstantDataVector::get(*m_llvm_context, not_mask_v4i32));
+    tmp3_v4i32             = m_ir_builder->CreateXor(tmp3_v4i32, ConstantDataVector::get(m_ir_builder->getContext(), not_mask_v4i32));
 
     // Perform the sum.
     auto sum_v4i32 = m_ir_builder->CreateAdd(va_v4i32, vb_v4i32);
@@ -357,7 +384,7 @@ void PPULLVMRecompiler::VANDC(u32 vd, u32 va, u32 vb) {
     auto va_v4i32          = GetVrAsIntVec(va, 32);
     auto vb_v4i32          = GetVrAsIntVec(vb, 32);
     u32  not_mask_v4i32[4] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
-    vb_v4i32               = m_ir_builder->CreateXor(vb_v4i32, ConstantDataVector::get(*m_llvm_context, not_mask_v4i32));
+    vb_v4i32               = m_ir_builder->CreateXor(vb_v4i32, ConstantDataVector::get(m_ir_builder->getContext(), not_mask_v4i32));
     auto res_v4i32         = m_ir_builder->CreateAnd(va_v4i32, vb_v4i32);
     SetVr(vd, res_v4i32);
 }
@@ -369,7 +396,7 @@ void PPULLVMRecompiler::VAVGSB(u32 vd, u32 va, u32 vb) {
     auto vb_v16i16      = m_ir_builder->CreateSExt(vb_v16i8, VectorType::get(m_ir_builder->getInt16Ty(), 16));
     auto sum_v16i16     = m_ir_builder->CreateAdd(va_v16i16, vb_v16i16);
     u16  one_v16i16[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-    sum_v16i16          = m_ir_builder->CreateAdd(sum_v16i16, ConstantDataVector::get(*m_llvm_context, one_v16i16));
+    sum_v16i16          = m_ir_builder->CreateAdd(sum_v16i16, ConstantDataVector::get(m_ir_builder->getContext(), one_v16i16));
     auto avg_v16i16     = m_ir_builder->CreateAShr(sum_v16i16, 1);
     auto avg_v16i8      = m_ir_builder->CreateTrunc(avg_v16i16, VectorType::get(m_ir_builder->getInt8Ty(), 16));
     SetVr(vd, avg_v16i8);
@@ -382,7 +409,7 @@ void PPULLVMRecompiler::VAVGSH(u32 vd, u32 va, u32 vb) {
     auto vb_v8i32     = m_ir_builder->CreateSExt(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
     auto sum_v8i32    = m_ir_builder->CreateAdd(va_v8i32, vb_v8i32);
     u32  one_v8i32[8] = {1, 1, 1, 1, 1, 1, 1, 1};
-    sum_v8i32         = m_ir_builder->CreateAdd(sum_v8i32, ConstantDataVector::get(*m_llvm_context, one_v8i32));
+    sum_v8i32         = m_ir_builder->CreateAdd(sum_v8i32, ConstantDataVector::get(m_ir_builder->getContext(), one_v8i32));
     auto avg_v8i32    = m_ir_builder->CreateAShr(sum_v8i32, 1);
     auto avg_v8i16    = m_ir_builder->CreateTrunc(avg_v8i32, VectorType::get(m_ir_builder->getInt16Ty(), 8));
     SetVr(vd, avg_v8i16);
@@ -395,7 +422,7 @@ void PPULLVMRecompiler::VAVGSW(u32 vd, u32 va, u32 vb) {
     auto vb_v4i64     = m_ir_builder->CreateSExt(vb_v4i32, VectorType::get(m_ir_builder->getInt64Ty(), 4));
     auto sum_v4i64    = m_ir_builder->CreateAdd(va_v4i64, vb_v4i64);
     u64  one_v4i64[4] = {1, 1, 1, 1};
-    sum_v4i64         = m_ir_builder->CreateAdd(sum_v4i64, ConstantDataVector::get(*m_llvm_context, one_v4i64));
+    sum_v4i64         = m_ir_builder->CreateAdd(sum_v4i64, ConstantDataVector::get(m_ir_builder->getContext(), one_v4i64));
     auto avg_v4i64    = m_ir_builder->CreateAShr(sum_v4i64, 1);
     auto avg_v4i32    = m_ir_builder->CreateTrunc(avg_v4i64, VectorType::get(m_ir_builder->getInt32Ty(), 4));
     SetVr(vd, avg_v4i32);
@@ -422,7 +449,7 @@ void PPULLVMRecompiler::VAVGUW(u32 vd, u32 va, u32 vb) {
     auto vb_v4i64     = m_ir_builder->CreateZExt(vb_v4i32, VectorType::get(m_ir_builder->getInt64Ty(), 4));
     auto sum_v4i64    = m_ir_builder->CreateAdd(va_v4i64, vb_v4i64);
     u64  one_v4i64[4] = {1, 1, 1, 1};
-    sum_v4i64         = m_ir_builder->CreateAdd(sum_v4i64, ConstantDataVector::get(*m_llvm_context, one_v4i64));
+    sum_v4i64         = m_ir_builder->CreateAdd(sum_v4i64, ConstantDataVector::get(m_ir_builder->getContext(), one_v4i64));
     auto avg_v4i64    = m_ir_builder->CreateLShr(sum_v4i64, 1);
     auto avg_v4i32    = m_ir_builder->CreateTrunc(avg_v4i64, VectorType::get(m_ir_builder->getInt32Ty(), 4));
     SetVr(vd, avg_v4i32);
@@ -435,7 +462,7 @@ void PPULLVMRecompiler::VCFSX(u32 vd, u32 uimm5, u32 vb) {
     if (uimm5) {
         float scale          = (float)((u64)1 << uimm5);
         float scale_v4f32[4] = {scale, scale, scale, scale};
-        res_v4f32            = m_ir_builder->CreateFDiv(res_v4f32, ConstantDataVector::get(*m_llvm_context, scale_v4f32));
+        res_v4f32            = m_ir_builder->CreateFDiv(res_v4f32, ConstantDataVector::get(m_ir_builder->getContext(), scale_v4f32));
     }
 
     SetVr(vd, res_v4f32);
@@ -448,7 +475,7 @@ void PPULLVMRecompiler::VCFUX(u32 vd, u32 uimm5, u32 vb) {
     if (uimm5) {
         float scale          = (float)((u64)1 << uimm5);
         float scale_v4f32[4] = {scale, scale, scale, scale};
-        res_v4f32            = m_ir_builder->CreateFDiv(res_v4f32, ConstantDataVector::get(*m_llvm_context, scale_v4f32));
+        res_v4f32            = m_ir_builder->CreateFDiv(res_v4f32, ConstantDataVector::get(m_ir_builder->getContext(), scale_v4f32));
     }
 
     SetVr(vd, res_v4f32);
@@ -475,7 +502,7 @@ void PPULLVMRecompiler::VCMPBFP_(u32 vd, u32 va, u32 vb) {
 
     auto vd_v16i8     = GetVrAsIntVec(vd, 8);
     u8 mask_v16i8[16] = {3, 7, 11, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    vd_v16i8          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_ssse3_pshuf_b_128), vd_v16i8, ConstantDataVector::get(*m_llvm_context, mask_v16i8));
+    vd_v16i8          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_ssse3_pshuf_b_128), vd_v16i8, ConstantDataVector::get(m_ir_builder->getContext(), mask_v16i8));
     auto vd_v4i32     = m_ir_builder->CreateBitCast(vd_v16i8, VectorType::get(m_ir_builder->getInt32Ty(), 4));
     auto vd_mask_i32  = m_ir_builder->CreateExtractElement(vd_v4i32, m_ir_builder->getInt32(0));
     auto cmp_i1       = m_ir_builder->CreateICmpEQ(vd_mask_i32, m_ir_builder->getInt32(0));
@@ -1150,8 +1177,13 @@ void PPULLVMRecompiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
 }
 
 void PPULLVMRecompiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
-    InterpreterCall("BC", &PPUInterpreter::BC, bo, bi, bd, aa, lk);
-    m_hit_branch_instruction = true;
+    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_current_instruction_address, bd));
+    CreateBranch(CheckBranchCondition(bo, bi), target_i64, lk ? true : false);
+    //m_hit_branch_instruction = true;
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
+    //InterpreterCall("BC", &PPUInterpreter::BC, bo, bi, bd, aa, lk);
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
+    //m_ir_builder->CreateRetVoid();
 }
 
 void PPULLVMRecompiler::SC(u32 sc_code) {
@@ -1159,8 +1191,12 @@ void PPULLVMRecompiler::SC(u32 sc_code) {
 }
 
 void PPULLVMRecompiler::B(s32 ll, u32 aa, u32 lk) {
-    InterpreterCall("B", &PPUInterpreter::B, ll, aa, lk);
-    m_hit_branch_instruction = true;
+    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_current_instruction_address, ll));
+    CreateBranch(nullptr, target_i64, lk ? true : false);
+    //m_hit_branch_instruction = true;
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
+    //InterpreterCall("B", &PPUInterpreter::B, ll, aa, lk);
+    //m_ir_builder->CreateRetVoid();
 }
 
 void PPULLVMRecompiler::MCRF(u32 crfd, u32 crfs) {
@@ -1174,8 +1210,14 @@ void PPULLVMRecompiler::MCRF(u32 crfd, u32 crfs) {
 }
 
 void PPULLVMRecompiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
-    InterpreterCall("BCLR", &PPUInterpreter::BCLR, bo, bi, bh, lk);
-    m_hit_branch_instruction = true;
+    auto lr_i64 = GetLr();
+    lr_i64      = m_ir_builder->CreateAnd(lr_i64, ~0x3ULL);
+    CreateBranch(CheckBranchCondition(bo, bi), lr_i64, lk ? true : false);
+    //m_hit_branch_instruction = true;
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
+    //InterpreterCall("BCLR", &PPUInterpreter::BCLR, bo, bi, bh, lk);
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
+    //m_ir_builder->CreateRetVoid();
 }
 
 void PPULLVMRecompiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
@@ -1268,8 +1310,14 @@ void PPULLVMRecompiler::CROR(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void PPULLVMRecompiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
-    InterpreterCall("BCCTR", &PPUInterpreter::BCCTR, bo, bi, bh, lk);
-    m_hit_branch_instruction = true;
+    auto ctr_i64 = GetCtr();
+    ctr_i64      = m_ir_builder->CreateAnd(ctr_i64, ~0x3ULL);
+    CreateBranch(CheckBranchCondition(bo, bi), ctr_i64, lk ? true : false);
+    //m_hit_branch_instruction = true;
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
+    //InterpreterCall("BCCTR", &PPUInterpreter::BCCTR, bo, bi, bh, lk);
+    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
+    //m_ir_builder->CreateRetVoid();
 }
 
 void PPULLVMRecompiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
@@ -3130,7 +3178,7 @@ void PPULLVMRecompiler::FCFID(u32 frd, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateSIToFP(rb_i64, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
-    // TODO: Set flag
+    // TODO: Set flags
     //InterpreterCall("FCFID", &PPUInterpreter::FCFID, frd, frb, rc);
 }
 
@@ -3138,71 +3186,186 @@ void PPULLVMRecompiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
 }
 
-void PPULLVMRecompiler::Compile(u32 address) {
-    std::chrono::high_resolution_clock::time_point compilation_start = std::chrono::high_resolution_clock::now();
-
-    auto function_name = fmt::Format("fn_0x%X", address);
-    m_function         = m_module->getFunction(function_name);
-    if (!m_function) {
-
-        m_function = (Function *)m_module->getOrInsertFunction(function_name, m_ir_builder->getVoidTy(),
-                                                               m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-                                                               m_ir_builder->getInt64Ty() /*base_addres*/,
-                                                               m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
-        m_function->setCallingConv(CallingConv::X86_64_Win64);
-        auto arg_i = m_function->arg_begin();
-        arg_i->setName("ppu_state");
-        (++arg_i)->setName("base_address");
-        (++arg_i)->setName("interpreter");
-
-        auto block = BasicBlock::Create(*m_llvm_context, "start", m_function);
-        m_ir_builder->SetInsertPoint(block);
-
-        u32 offset = 0;
-        m_hit_branch_instruction = false;
-        while (!m_hit_branch_instruction) {
-            u32 instr = vm::read32(address + offset);
-            Decode(instr);
-            offset += 4;
-
-            SetPc(m_ir_builder->getInt32(address + offset));
-        }
-
-        m_ir_builder->CreateRetVoid();
-        m_fpm->run(*m_function);
-
-        MachineCodeInfo mci;
-        m_execution_engine->runJITOnFunction(m_function, &mci);
-
-        CompiledBlockInfo block_info;
-        block_info.block_address   = address;
-        block_info.revision        = 0xFFFFFFFF;
-        block_info.block           = (CompiledBlock)mci.address();
-        block_info.reference_count = 0;
-        block_info.size            = mci.size();
-        block_info.llvm_function   = m_function;
-        {
-            std::lock_guard<std::mutex> lock(m_compiled_blocks_mutex);
-            m_compiled_blocks[std::make_pair(address, block_info.revision)] = block_info;
+BasicBlock * PPULLVMRecompiler::GetBlockInFunction(u32 address, Function * function, bool create_if_not_exist) {
+    auto         block_name = fmt::Format("instr_0x%X", address);
+    BasicBlock * block      = nullptr;
+    for (auto i = function->getBasicBlockList().begin(); i != function->getBasicBlockList().end(); i++) {
+        if (i->getName() == block_name) {
+            block = &(*i);
+            break;
         }
     }
 
-    std::chrono::high_resolution_clock::time_point compilation_end = std::chrono::high_resolution_clock::now();
-    m_compilation_time += std::chrono::duration_cast<std::chrono::duration<double>>(compilation_end - compilation_start);
+    if (!block && create_if_not_exist) {
+        block = BasicBlock::Create(m_ir_builder->getContext(), block_name, function);
+    }
+
+    return block;
+}
+
+void PPULLVMRecompiler::Compile(u32 address) {
+    auto compilation_start = std::chrono::high_resolution_clock::now();
+
+    // Get the revision number for this section
+    u32  revision = 0;
+    auto compiled = m_compiled.lower_bound(std::make_pair(address, 0));
+    if (compiled != m_compiled.end() && compiled->first.first == address) {
+        revision = ~(compiled->first.second);
+        revision++;
+    }
+
+    auto ir_build_start = std::chrono::high_resolution_clock::now();
+
+    // Create a function for this section
+    auto function_name = fmt::Format("fn_0x%X_%u", address, revision);
+    m_current_function = (Function *)m_module->getOrInsertFunction(function_name, m_ir_builder->getVoidTy(),
+                                                                   m_ir_builder->getInt8PtrTy() /*ppu_state*/,
+                                                                   m_ir_builder->getInt64Ty() /*base_addres*/,
+                                                                   m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
+    m_current_function->setCallingConv(CallingConv::X86_64_Win64);
+    auto arg_i = m_current_function->arg_begin();
+    arg_i->setName("ppu_state");
+    (++arg_i)->setName("base_address");
+    (++arg_i)->setName("interpreter");
+
+    // Add an entry block that branches to the first instruction
+    m_ir_builder->SetInsertPoint(BasicBlock::Create(m_ir_builder->getContext(), "entry", m_current_function));
+    m_ir_builder->CreateBr(GetBlockInFunction(address, m_current_function, true));
+
+    // Convert each block in this section to LLVM IR
+    m_num_instructions = 0;
+    m_current_function_uncompiled_blocks_list.clear();
+    m_current_function_unhit_blocks_list.clear();
+    m_current_function_uncompiled_blocks_list.push_back(address);
+    while (!m_current_function_uncompiled_blocks_list.empty()) {
+        m_current_instruction_address = m_current_function_uncompiled_blocks_list.front();
+        auto block                    = GetBlockInFunction(m_current_instruction_address, m_current_function, true);
+        m_hit_branch_instruction      = false;
+        m_ir_builder->SetInsertPoint(block);
+        m_current_function_uncompiled_blocks_list.pop_front();
+
+        while (!m_hit_branch_instruction) {
+            if (!block->getInstList().empty()) {
+                break;
+            }
+
+            u32 instr = vm::read32(m_current_instruction_address);
+            Decode(instr);
+            m_num_instructions++;
+
+            m_current_instruction_address += 4;
+            if (!m_hit_branch_instruction) {
+                block = GetBlockInFunction(m_current_instruction_address, m_current_function, true);
+                m_ir_builder->CreateBr(block);
+                m_ir_builder->SetInsertPoint(block);
+            }
+        }
+    }
+
+    auto ir_build_end  = std::chrono::high_resolution_clock::now();
+    m_ir_build_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - ir_build_start);
+
+    // Optimize this function
+    auto optimize_start = std::chrono::high_resolution_clock::now();
+    m_fpm->run(*m_current_function);
+    auto optimize_end  = std::chrono::high_resolution_clock::now();
+    m_optimizing_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - optimize_start);
+
+    // Translate to machine code
+    auto translate_start = std::chrono::high_resolution_clock::now();
+    MachineCodeInfo mci;
+    m_execution_engine->runJITOnFunction(m_current_function, &mci);
+    auto translate_end  = std::chrono::high_resolution_clock::now();
+    m_translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - translate_start);
+
+    // Add the executable to private and shared data stores
+    ExecutableInfo executable_info;
+    executable_info.executable                     = (Executable)mci.address();
+    executable_info.size                           = mci.size();
+    executable_info.num_instructions               = m_num_instructions;
+    executable_info.unhit_blocks_list              = std::move(m_current_function_unhit_blocks_list);
+    executable_info.llvm_function                  = m_current_function;
+    m_compiled[std::make_pair(address, ~revision)] = executable_info;
+
+    {
+        std::lock_guard<std::mutex> lock(m_compiled_shared_lock);
+        m_compiled_shared[std::make_pair(address, ~revision)] = std::make_pair(executable_info.executable, 0);
+    }
+
+    auto compilation_end  = std::chrono::high_resolution_clock::now();
+    m_compilation_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
+    m_revision++;
+}
+
+void PPULLVMRecompiler::RemoveUnusedOldVersions() {
+    u32 num_removed  = 0;
+    u32 prev_address = 0;
+    for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
+        u32 current_address = i->first.first;
+        if (prev_address == current_address) {
+            bool erase_this_entry = false;
+
+            {
+                std::lock_guard<std::mutex> lock(m_compiled_shared_lock);
+                auto j = m_compiled_shared.find(i->first);
+                if (j->second.second == 0) {
+                    m_compiled_shared.erase(j);
+                    erase_this_entry = true;
+                }
+            }
+
+            if (erase_this_entry) {
+                auto tmp = i;
+                i--;
+                m_execution_engine->freeMachineCodeForFunction(tmp->second.llvm_function);
+                tmp->second.llvm_function->eraseFromParent();
+                m_compiled.erase(tmp);
+                num_removed++;
+            }
+        }
+
+        prev_address = current_address;
+    }
+
+    if (num_removed > 0) {
+        LOG_NOTICE(PPU, "Removed %u old versions", num_removed);
+    }
+}
+
+bool PPULLVMRecompiler::NeedsCompiling(u32 address) {
+    auto i = m_compiled.lower_bound(std::make_pair(address, 0));
+    if (i != m_compiled.end() && i->first.first == address) {
+        if (i->second.num_instructions >= 300) {
+            // This section has reached its limit. Don't allow further expansion.
+            return false;
+        }
+
+        // If any of the unhit blocks in this function have been hit, then recompile this section
+        for(auto j = i->second.unhit_blocks_list.begin(); j != i->second.unhit_blocks_list.end(); j++) {
+            if (m_hit_blocks.find(*j) != m_hit_blocks.end()) {
+                return true;
+            }
+        }
+
+        return false;
+    } else {
+        // This section has not been encountered before
+        return true;
+    }
 }
 
 Value * PPULLVMRecompiler::GetPPUState() {
-    return m_function->arg_begin();
+    return m_current_function->arg_begin();
 }
 
 Value * PPULLVMRecompiler::GetBaseAddress() {
-    auto i = m_function->arg_begin();
+    auto i = m_current_function->arg_begin();
     i++;
     return i;
 }
 
 Value * PPULLVMRecompiler::GetInterpreter() {
-    auto i = m_function->arg_begin();
+    auto i = m_current_function->arg_begin();
     i++;
     i++;
     return i;
@@ -3222,7 +3385,7 @@ Value * PPULLVMRecompiler::GetBit(Value * val, u32 n) {
             bit = m_ir_builder->CreateLShr(val, val->getType()->getIntegerBitWidth() - n - 1);
         }
 
-        bit = m_ir_builder->CreateAnd(val, 1);
+        bit = m_ir_builder->CreateAnd(bit, 1);
 #ifdef PPU_LLVM_RECOMPILER_USE_BMI
     }
 #endif
@@ -3326,9 +3489,10 @@ Value * PPULLVMRecompiler::GetPc() {
     return m_ir_builder->CreateLoad(pc_i32_ptr);
 }
 
-void PPULLVMRecompiler::SetPc(Value * val_i32) {
+void PPULLVMRecompiler::SetPc(Value * val_ix) {
     auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, PC));
     auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    auto val_i32    = m_ir_builder->CreateZExtOrTrunc(val_ix, m_ir_builder->getInt32Ty());
     m_ir_builder->CreateStore(val_i32, pc_i32_ptr);
 }
 
@@ -3549,6 +3713,109 @@ void PPULLVMRecompiler::SetVr(u32 vr, Value * val_x128) {
     m_ir_builder->CreateStore(val_i128, vr_i128_ptr);
 }
 
+Value * PPULLVMRecompiler::CheckBranchCondition(u32 bo, u32 bi) {
+    bool bo0 = bo & 0x10 ? true : false;
+    bool bo1 = bo & 0x08 ? true : false;
+    bool bo2 = bo & 0x04 ? true : false;
+    bool bo3 = bo & 0x02 ? true : false;
+
+    auto ctr_i64 = GetCtr();
+    if (!bo2) {
+        ctr_i64 = m_ir_builder->CreateSub(ctr_i64, m_ir_builder->getInt64(1));
+        SetCtr(ctr_i64);
+    }
+
+    Value * ctr_ok_i1 = nullptr;
+    if (!bo2) {
+        // TODO: Check if we should compare all bits or just the lower 32 bits. This depends on MSR[SF]. Not sure what it is for PS3.
+        ctr_ok_i1 = m_ir_builder->CreateICmpNE(ctr_i64, m_ir_builder->getInt64(0));
+        if (bo3) {
+            ctr_ok_i1 = m_ir_builder->CreateXor(ctr_ok_i1, m_ir_builder->getInt1(bo3));
+        }
+    }
+
+    Value * cond_ok_i1 = nullptr;
+    if (!bo0) {
+        auto cr_bi_i32  = GetBit(GetCr(), bi);
+        cond_ok_i1      = m_ir_builder->CreateTrunc(cr_bi_i32, m_ir_builder->getInt1Ty());
+        if (!bo1) {
+            cond_ok_i1 = m_ir_builder->CreateXor(cond_ok_i1, m_ir_builder->getInt1(!bo1));
+        }
+    }
+
+    Value * cmp_i1 = nullptr;
+    if (ctr_ok_i1 && cond_ok_i1) {
+        cmp_i1 = m_ir_builder->CreateAnd(ctr_ok_i1, cond_ok_i1);
+    } else if (ctr_ok_i1) {
+        cmp_i1 = ctr_ok_i1;
+    } else if (cond_ok_i1) {
+        cmp_i1 = cond_ok_i1;
+    }
+
+    return cmp_i1;
+}
+
+void PPULLVMRecompiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk) {
+    if (lk) {
+        SetLr(m_ir_builder->getInt64(m_current_instruction_address + 4));
+    }
+
+    auto         current_block = m_ir_builder->GetInsertBlock();
+    BasicBlock * target_block  = nullptr;
+    if (dyn_cast<ConstantInt>(target_i64)) {
+        // Target address is an immediate value.
+        u32 target_address = (u32)(dyn_cast<ConstantInt>(target_i64)->getLimitedValue());
+        target_block       = GetBlockInFunction(target_address, m_current_function);
+        if (!target_block) {
+            target_block = GetBlockInFunction(target_address, m_current_function, true);
+            if ((m_hit_blocks.find(target_address) != m_hit_blocks.end() || !cmp_i1) &&  m_num_instructions < 300) {
+                // Target block has either been hit or this is an unconditional branch.
+                m_current_function_uncompiled_blocks_list.push_back(target_address);
+                m_hit_blocks.insert(target_address);
+            } else {
+                // Target block has not been encountered yet and this is not an unconditional branch
+                m_ir_builder->SetInsertPoint(target_block);
+                SetPc(target_i64);
+                m_ir_builder->CreateRetVoid();
+                m_current_function_unhit_blocks_list.push_back(target_address);
+            }
+        }
+    } else {
+        // Target addres is in a register
+        target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function);
+        m_ir_builder->SetInsertPoint(target_block);
+        SetPc(target_i64);
+        m_ir_builder->CreateRetVoid();
+    }
+
+    if (cmp_i1) {
+        // Conditional branch
+        auto next_block = GetBlockInFunction(m_current_instruction_address + 4, m_current_function);
+        if (!next_block) {
+            next_block = GetBlockInFunction(m_current_instruction_address + 4, m_current_function, true);
+            if (m_hit_blocks.find(m_current_instruction_address + 4) != m_hit_blocks.end() && m_num_instructions < 300) {
+                // Next block has already been hit.
+                m_current_function_uncompiled_blocks_list.push_back(m_current_instruction_address + 4);
+            } else {
+                // Next block has not been encountered yet
+                m_ir_builder->SetInsertPoint(next_block);
+                SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
+                m_ir_builder->CreateRetVoid();
+                m_current_function_unhit_blocks_list.push_back(m_current_instruction_address + 4);
+            }
+        }
+
+        m_ir_builder->SetInsertPoint(current_block);
+        m_ir_builder->CreateCondBr(cmp_i1, target_block, next_block);
+    } else {
+        // Unconditional branch
+        m_ir_builder->SetInsertPoint(current_block);
+        m_ir_builder->CreateBr(target_block);
+    }
+
+    m_hit_branch_instruction = true;
+}
+
 Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
     if (bits != 32) {
         auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
@@ -3560,10 +3827,22 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
 
         return val_ix;
     } else {
+        BasicBlock * next_block = nullptr;
+        for (auto i = m_current_function->begin(); i != m_current_function->end(); i++) {
+            if (&(*i) == m_ir_builder->GetInsertBlock()) {
+                i++;
+                if (i != m_current_function->end()) {
+                    next_block = &(*i);
+                }
+
+                break;
+            }
+        }
+
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_ir_builder->GetInsertBlock()->getParent());
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext());
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -3576,7 +3855,6 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
 
         m_ir_builder->CreateBr(merge_bb);
 
-        m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(else_bb);
         m_ir_builder->SetInsertPoint(else_bb);
         auto val_else_i32 = Call<u32>("vm_read32", (u32(*)(u64))vm::read32, addr_i64);
         if (!bswap) {
@@ -3584,7 +3862,6 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
         }
         m_ir_builder->CreateBr(merge_bb);
 
-        m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(merge_bb);
         m_ir_builder->SetInsertPoint(merge_bb);
         auto phi = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 2);
         phi->addIncoming(val_then_i32, then_bb);
@@ -3604,10 +3881,22 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
         auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
         m_ir_builder->CreateStore(val_ix, eaddr_ix_ptr);
     } else {
+        BasicBlock * next_block = nullptr;
+        for (auto i = m_current_function->begin(); i != m_current_function->end(); i++) {
+            if (&(*i) == m_ir_builder->GetInsertBlock()) {
+                i++;
+                if (i != m_current_function->end()) {
+                    next_block = &(*i);
+                }
+
+                break;
+            }
+        }
+
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_ir_builder->GetInsertBlock()->getParent());
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext());
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -3621,7 +3910,6 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
         m_ir_builder->CreateStore(val_then_i32, eaddr_i32_ptr);
         m_ir_builder->CreateBr(merge_bb);
 
-        m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(else_bb);
         m_ir_builder->SetInsertPoint(else_bb);
         Value * val_else_i32 = val_ix;
         if (!bswap) {
@@ -3631,7 +3919,6 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
         Call<void>("vm_write32", (void(*)(u64, u32))vm::write32, addr_i64, val_else_i32);
         m_ir_builder->CreateBr(merge_bb);
 
-        m_ir_builder->GetInsertBlock()->getParent()->getBasicBlockList().push_back(merge_bb);
         m_ir_builder->SetInsertPoint(merge_bb);
     }
 }
@@ -3659,7 +3946,7 @@ Type * PPULLVMRecompiler::CppToLlvmType() {
     } else if (std::is_same<T, short>::value || std::is_same<T, unsigned short>::value) {
         return m_ir_builder->getInt16Ty();
     } else if (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value) {
-        return m_ir_builder->getInt8Ty();
+return m_ir_builder->getInt8Ty();
     } else if (std::is_same<T, float>::value) {
         return m_ir_builder->getFloatTy();
     } else if (std::is_same<T, double>::value) {
@@ -3725,35 +4012,69 @@ PPULLVMEmulator::~PPULLVMEmulator() {
 }
 
 u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
-    static u32 last_instr_address = 0;
+    static bool s_last_instr_was_branch = false;
+    static auto s_last_cache_clear_time = std::chrono::high_resolution_clock::now();
+    auto        now                     = std::chrono::high_resolution_clock::now();
 
-    auto compiled_block = m_compiled_blocks.find(address);
-    if (compiled_block == m_compiled_blocks.end()) {
-        auto compiled_block_info = s_recompiler->GetCompiledBlock(address);
-        if (compiled_block_info.block) {
-            compiled_block = m_compiled_blocks.insert(m_compiled_blocks.end(), std::make_pair(address, std::make_pair(compiled_block_info.block, compiled_block_info.revision)));
-            m_pending_compilation_blocks.erase(address);
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - s_last_cache_clear_time).count() > 1000) {
+        static u32 s_revision = 0;
+        bool       clear_all  = false;
+
+        u32 revision = s_recompiler->GetCurrentRevision();
+        if (s_revision != revision) {
+            s_revision = revision;
+            clear_all  = true;
+        }
+
+        for (auto iter = m_address_to_executable.begin(); iter != m_address_to_executable.end();) {
+            auto tmp = iter;
+            iter++;
+            if (tmp->second.num_hits == 0 || clear_all) {
+                m_address_to_executable.erase(tmp);
+                s_recompiler->ReleaseExecutable(tmp->first, tmp->second.revision);
+            } else {
+                tmp->second.num_hits = 0;
+            }
+        }
+
+        s_last_cache_clear_time = now;
+    }
+
+    auto address_to_executable_iter = m_address_to_executable.find(address);
+    if (address_to_executable_iter == m_address_to_executable.end()) {
+        auto executable_and_revision = s_recompiler->GetExecutable(address);
+        if (executable_and_revision.first) {
+            ExecutableInfo executable_info;
+            executable_info.executable = executable_and_revision.first;
+            executable_info.revision   = executable_and_revision.second;
+            executable_info.num_hits   = 0;
+
+            address_to_executable_iter = m_address_to_executable.insert(m_address_to_executable.end(), std::make_pair(address, executable_info));
+            m_uncompiled.erase(address);
         } else {
-            if (address != (last_instr_address + 4)) {
-                auto pending_compilation_block = m_pending_compilation_blocks.find(address);
-                if (pending_compilation_block != m_pending_compilation_blocks.end()) {
-                    pending_compilation_block->second++;
-                    if ((pending_compilation_block->second % 1000) == 0) {
+            if (s_last_instr_was_branch) {
+                auto uncompiled_iter = m_uncompiled.find(address);
+                if (uncompiled_iter != m_uncompiled.end()) {
+                    uncompiled_iter->second++;
+                    if ((uncompiled_iter->second % 1000) == 0) {
                         s_recompiler->RequestCompilation(address);
                     }
                 } else {
-                    m_pending_compilation_blocks[address] = 0;
+                    m_uncompiled[address] = 0;
                 }
             }
         }
     }
 
-    last_instr_address = address;
-
-    if (compiled_block != m_compiled_blocks.end()) {
-        compiled_block->second.first(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
-        return 0;
+    u8 ret = 0;
+    if (address_to_executable_iter != m_address_to_executable.end()) {
+        address_to_executable_iter->second.executable(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
+        address_to_executable_iter->second.num_hits++;
+        s_last_instr_was_branch = true;
     } else {
-        return m_decoder.DecodeMemory(address);
+        ret                     = m_decoder.DecodeMemory(address);
+        s_last_instr_was_branch = m_ppu.m_is_branch;
     }
+
+    return ret;
 }

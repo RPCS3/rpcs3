@@ -17,27 +17,7 @@ struct PPURegState;
 /// PPU to LLVM recompiler
 class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPCDecoder {
 public:
-    typedef void(*CompiledBlock)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
-
-    struct CompiledBlockInfo {
-        /// Address of the block
-        u32 block_address;
-
-        /// The version of the block
-        u32 revision;
-
-        /// Pointer to the block
-        CompiledBlock block;
-
-        /// Size of the compiled block
-        size_t size;
-
-        /// Reference count for the block
-        u64 reference_count;
-
-        /// LLVM function for this block
-        llvm::Function * llvm_function;
-    };
+    typedef void(*Executable)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
 
     PPULLVMRecompiler();
 
@@ -49,14 +29,17 @@ public:
     PPULLVMRecompiler & operator = (const PPULLVMRecompiler & other) = delete;
     PPULLVMRecompiler & operator = (PPULLVMRecompiler && other) = delete;
 
-    /// Get a compiled block
-    CompiledBlockInfo GetCompiledBlock(u32 address);
+    /// Get the executable for the code starting at address
+    std::pair<Executable, u32> GetExecutable(u32 address);
 
-    /// Release a compiled block
-    void ReleaseCompiledBlock(u32 address, u32 revision);
+    /// Release an executable earlier obtained through GetExecutable
+    void ReleaseExecutable(u32 address, u32 revision);
 
-    /// Request a block to be compiled
+    /// Request the code at the sepcified address to be compiled
     void RequestCompilation(u32 address);
+
+    /// Get the current revision
+    u32 GetCurrentRevision();
 
     /// Execute all tests
     void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
@@ -467,18 +450,45 @@ protected:
     void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
 private:
-    /// Mutex for accessing m_compiled_blocks
-    std::mutex m_compiled_blocks_mutex;
+    struct ExecutableInfo {
+        /// Pointer to the executable
+        Executable executable;
 
-    /// Blocks that have been compiled
-    /// Key is block address
-    std::map<std::pair<u32, u32>, CompiledBlockInfo> m_compiled_blocks;
+        /// Size of the executable
+        size_t size;
 
-    /// Mutex for accessing m_pending_compilation_blocks;
-    std::mutex m_pending_compilation_blocks_mutex;
+        /// Number of PPU instructions compiled into this executable
+        u32 num_instructions;
 
-    /// Blocks pending compilation
-    std::set<u32> m_pending_compilation_blocks;
+        /// List of blocks that this executable refers to that have not been hit yet
+        std::list<u32> unhit_blocks_list;
+
+        /// LLVM function corresponding to the executable
+        llvm::Function * llvm_function;
+    };
+
+    /// Lock for accessing m_compiled_shared
+    // TODO: Use a RW lock
+    std::mutex m_compiled_shared_lock;
+
+    /// Sections that have been compiled. This data store is shared with the execution threads.
+    /// Keys are starting address of the section and ~revision. Data is pointer to the executable and its reference count.
+    std::map<std::pair<u32, u32>, std::pair<Executable, u32>> m_compiled_shared;
+
+    /// Lock for accessing m_uncompiled_shared
+    std::mutex m_uncompiled_shared_lock;
+
+    /// Current revision. This is incremented everytime a section is compiled.
+    std::atomic<u32> m_revision;
+
+    /// Sections that have not been compiled yet. This data store is shared with the execution threads.
+    std::list<u32> m_uncompiled_shared;
+
+    /// Set of all blocks that have been hit
+    std::set<u32> m_hit_blocks;
+
+    /// Sections that have been compiled. Keys are starting address of the section and ~revision.
+    std::map<std::pair<u32, u32>, ExecutableInfo> m_compiled;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -504,19 +514,52 @@ private:
     bool m_hit_branch_instruction;
 
     /// The function being compiled
-    llvm::Function * m_function;
+    llvm::Function * m_current_function;
+
+    /// List of blocks to be compiled in the current function being compiled
+    std::list<u32> m_current_function_uncompiled_blocks_list;
+
+    /// List of blocks that the current function refers to but have not been hit yet
+    std::list<u32> m_current_function_unhit_blocks_list;
+
+    /// Address of the current instruction
+    u32 m_current_instruction_address;
+
+    /// Number of instructions in this section
+    u32 m_num_instructions;
+
+    /// Time spent building the LLVM IR
+    std::chrono::nanoseconds m_ir_build_time;
+
+    /// Time spent optimizing
+    std::chrono::nanoseconds m_optimizing_time;
+
+    /// Time spent translating LLVM IR to machine code
+    std::chrono::nanoseconds m_translation_time;
 
     /// Time spent compiling
-    std::chrono::duration<double> m_compilation_time;
+    std::chrono::nanoseconds m_compilation_time;
 
     /// Time spent idling
-    std::chrono::duration<double> m_idling_time;
+    std::chrono::nanoseconds m_idling_time;
+
+    /// Total time
+    std::chrono::nanoseconds m_total_time;
 
     /// Contains the number of times the interpreter fallback was used
     std::map<std::string, u64> m_interpreter_fallback_stats;
 
-    /// Compile a block of code
+    /// Get the block in function for the instruction at the specified address.
+    llvm::BasicBlock * GetBlockInFunction(u32 address, llvm::Function * function, bool create_if_not_exist = false);
+
+    /// Compile the section startin at address
     void Compile(u32 address);
+
+    /// Remove old versions of executables that are no longer used by any execution thread
+    void RemoveUnusedOldVersions();
+
+    /// Test whether the blocks needs to be compiled
+    bool NeedsCompiling(u32 address);
 
     /// Get PPU state pointer
     llvm::Value * GetPPUState();
@@ -552,7 +595,7 @@ private:
     llvm::Value * GetPc();
 
     /// Set PC
-    void SetPc(llvm::Value * val_i32);
+    void SetPc(llvm::Value * val_ix);
 
     /// Load GPR
     llvm::Value * GetGpr(u32 r, u32 num_bits = 64);
@@ -644,6 +687,12 @@ private:
     /// Set VR to the specified value
     void SetVr(u32 vr, llvm::Value * val_x128);
 
+    /// Check condition for branch instructions
+    llvm::Value * CheckBranchCondition(u32 bo, u32 bi);
+
+    /// Create IR for a branch instruction
+    void CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk);
+
     /// Read from memory
     llvm::Value * ReadMemory(llvm::Value * addr_i64, u32 bits, bool bswap = true);
 
@@ -696,6 +745,17 @@ public:
     u8 DecodeMemory(const u32 address) override;
 
 private:
+    struct ExecutableInfo {
+        /// Pointer to the executable
+        PPULLVMRecompiler::Executable executable;
+
+        /// The revision of the executable
+        u32 revision;
+
+        /// Number of times the executable was hit
+        u32 num_hits;
+    };
+
     /// PPU processor context
     PPUThread & m_ppu;
 
@@ -705,13 +765,11 @@ private:
     /// PPU instruction Decoder
     PPUDecoder m_decoder;
 
-    /// Compiled blocks
-    /// Key is block address.
-    std::unordered_map<u32, std::pair<PPULLVMRecompiler::CompiledBlock, u32>> m_compiled_blocks;
+    /// Address to executable map. Key is address.
+    std::unordered_map<u32, ExecutableInfo> m_address_to_executable;
 
-    /// Uncompiled blocks
-    /// Key is block address
-    std::unordered_map<u32, u64> m_pending_compilation_blocks;
+    /// Sections that have not been compiled yet. Key is starting address of the section.
+    std::unordered_map<u32, u64> m_uncompiled;
 
     /// Number of instances of this class
     static u32 s_num_instances;
