@@ -314,7 +314,7 @@ int sceNpCommerce2DestroyReq()
 
 void sceNpCommerce2_unload()
 {
-	// TODO: Unload SNS module
+	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
 }
 
 void sceNpCommerce2_init(Module *pxThis)

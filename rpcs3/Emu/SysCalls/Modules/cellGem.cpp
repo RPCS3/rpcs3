@@ -251,6 +251,11 @@ int cellGemWriteExternalPort()
 	return CELL_OK;
 }
 
+void cellGem_unload()
+{
+	cellGemInstance.m_bInitialized = false;
+}
+
 void cellGem_init(Module *pxThis)
 {
 	cellGem = pxThis;

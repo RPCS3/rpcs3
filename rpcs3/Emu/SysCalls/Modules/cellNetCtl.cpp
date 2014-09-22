@@ -111,6 +111,11 @@ int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	return CELL_OK;
 }
 
+void cellNetCtl_unload()
+{
+	cellNetCtlInstance.m_bInitialized = false;
+}
+
 void cellNetCtl_init(Module *pxThis)
 {
 	cellNetCtl = pxThis;

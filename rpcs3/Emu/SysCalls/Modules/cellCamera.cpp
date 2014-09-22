@@ -221,6 +221,11 @@ int cellCameraRemoveNotifyEventQueue2()
 	return CELL_OK;
 }
 
+void cellCamera_unload()
+{
+	cellCameraInstance.m_bInitialized = false;
+}
+
 void cellCamera_init(Module* pxThis)
 {
 	cellCamera = pxThis;

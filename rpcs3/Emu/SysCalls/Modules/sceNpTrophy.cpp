@@ -67,19 +67,20 @@ struct sceNpTrophyInternal
 	}
 };
 
-sceNpTrophyInternal s_npTrophyInstance;
+sceNpTrophyInternal sceNpTrophyInstance;
 
 // Functions
 int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 {
 	sceNpTrophy->Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=%d, options=0x%llx)", pool_addr, poolSize, containerId, options);
 
-	if (s_npTrophyInstance.m_bInitialized)
+	if (sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
 	if (options)
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 
-	s_npTrophyInstance.m_bInitialized = true;
+	sceNpTrophyInstance.m_bInitialized = true;
+
 	return CELL_OK;
 }
 
@@ -88,7 +89,7 @@ int sceNpTrophyCreateContext(vm::ptr<be_t<u32>> context, vm::ptr<SceNpCommunicat
 	sceNpTrophy->Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
 		context.addr(), commID.addr(), commSign.addr(), options);
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
@@ -108,8 +109,8 @@ int sceNpTrophyCreateContext(vm::ptr<be_t<u32>> context, vm::ptr<SceNpCommunicat
 
 			if (stream && stream->IsOpened())
 			{
-				s_npTrophyInstance.contexts.emplace_back();
-				sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts.back();
+				sceNpTrophyInstance.contexts.emplace_back();
+				sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts.back();
 				ctxt.trp_stream.reset(stream);
 				ctxt.trp_name = entry->name;
 				stream = nullptr;
@@ -125,7 +126,7 @@ int sceNpTrophyCreateHandle(vm::ptr<be_t<u32>> handle)
 {
 	sceNpTrophy->Warning("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 
@@ -139,15 +140,15 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatu
 	sceNpTrophy->Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
 		context, handle, statusCb.addr(), arg_addr, options);
 
-	if (!(s_npTrophyInstance.m_bInitialized))
+	if (!(sceNpTrophyInstance.m_bInitialized))
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
-	if (context >= s_npTrophyInstance.contexts.size())
+	if (context >= sceNpTrophyInstance.contexts.size())
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -216,13 +217,13 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<be_t<u64>> 
 	sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
 		context, handle, reqspace.addr(), options);
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (context >= s_npTrophyInstance.contexts.size())
+	if (context >= sceNpTrophyInstance.contexts.size())
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -247,13 +248,13 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 	sceNpTrophy->Warning("sceNpTrophyGetGameInfo(context=%d, handle=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, details.addr(), data.addr());
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 
 	std::string path;
 	rXmlDocument doc;
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
 	doc.Load(path);
 
@@ -305,11 +306,11 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<be_t<
 	sceNpTrophy->Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
 		context, handle, trophyId, platinumId.addr());
 	
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	if (trophyId >= (s32)ctxt.tropusr->GetTrophiesCount())
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	if (ctxt.tropusr->GetTrophyUnlockState(trophyId))
@@ -327,7 +328,13 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<be_t<
 
 int sceNpTrophyTerm()
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy->Warning("sceNpTrophyTerm()");
+
+	if (!sceNpTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+
+	sceNpTrophyInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -336,11 +343,11 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 	sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
 		context, handle, flags.addr(), count.addr());
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	*count = ctxt.tropusr->GetTrophiesCount();
 	if (*count > 128)
 		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
@@ -368,13 +375,13 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 	sceNpTrophy->Warning("sceNpTrophyGetTrophyInfo(context=%u, handle=%u, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, trophyId, details.addr(), data.addr());
 
-	if (!s_npTrophyInstance.m_bInitialized)
+	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 	
 	std::string path;
 	rXmlDocument doc;
-	sceNpTrophyInternalContext& ctxt = s_npTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
 	doc.Load(path);
 
@@ -420,7 +427,7 @@ int sceNpTrophyGetGameIcon()
 
 void sceNpTrophy_unload()
 {
-	s_npTrophyInstance.m_bInitialized = false;
+	sceNpTrophyInstance.m_bInitialized = false;
 }
 
 void sceNpTrophy_init(Module *pxThis)
