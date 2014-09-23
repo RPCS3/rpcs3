@@ -33,13 +33,13 @@ public:
 	static const T GetFreeValue()
 	{
 		static const u64 value = free_value;
-		return (const T&)value;
+		return (T&)value;
 	}
 
 	static const T GetDeadValue()
 	{
 		static const u64 value = dead_value;
-		return (const T&)value;
+		return (T&)value;
 	}
 
 	void initialize()

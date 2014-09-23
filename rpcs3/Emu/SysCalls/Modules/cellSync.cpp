@@ -844,7 +844,8 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
 	queue->m_direction = direction;
-	*queue->m_hs = {};
+	*queue->m_hs1 = {};
+	*queue->m_hs2 = {};
 	queue->m_eaSignal = eaSignal;
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
@@ -857,10 +858,8 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 		//m_bs[2]
 		//m_bs[3]
 		queue->m_v1 = -1;
-		queue->m_hs[0] = -1;
-		queue->m_hs[16] = -1;
-		queue->m_v2 = 0;
-		queue->m_v3 = 0;
+		queue->push2.write_relaxed({ be_t<u16>::make(-1) });
+		queue->pop2.write_relaxed({ be_t<u16>::make(-1) });
 	}
 	else
 	{
@@ -871,9 +870,12 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 		queue->m_bs[2] = -1;
 		queue->m_bs[3] = -1;
 		queue->m_v1 = 0;
-		queue->m_v2 = 0; // written as u64
-		queue->m_v3 = 0;
+		queue->push2.write_relaxed({});
+		queue->pop2.write_relaxed({});
 	}
+
+	queue->m_v2 = 0;
+	queue->m_eq_id = 0;
 }
 
 s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
@@ -1082,14 +1084,9 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		u32 eq = (u32)queue->m_v3; // 0x7c
-		sys_event_data event;
-		assert(0);
-		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
+		assert(sys_event_queue_receive(queue->m_eq_id, {}, 0) == CELL_OK);
 		var1 = 1;
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 useEventQueue)
@@ -1134,14 +1131,13 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_push2(), 0, 0);
-		CellSyncLFQueue new_;
-		new_.m_push2() = old_data;
+		const auto old = queue->push2.read_sync();
+		auto push2 = old;
 
 		const auto old2 = queue->push3.read_relaxed();
-		auto push = old2;
+		auto push3 = old2;
 
-		s32 var1 = pointer - (u16)push.m_h5;
+		s32 var1 = pointer - (u16)push3.m_h5;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
@@ -1163,7 +1159,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)push.m_h6);
+		s32 var9 = ~(var9_ | (u16)push3.m_h6);
 		// count leading zeros in u16
 		{
 			u16 v = var9;
@@ -1176,7 +1172,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			}
 		}
 		
-		s32 var5 = (s32)(u16)push.m_h6 | var9_;
+		s32 var5 = (s32)(u16)push3.m_h6 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1186,13 +1182,13 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)push.m_h5 + var9;
+		s32 var3 = (u16)push3.m_h5 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		u16 pack = new_.m_hs[0]; // three packed 5-bit fields
+		u16 pack = push2.pack; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1230,23 +1226,23 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 				var12 = (var12 + 1) << 10;
 			}
 
-			new_.m_hs[0] = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs[1 + 2 * var11];
+			push2.pack = (pack & 0x83ff) | var12;
+			var6 = (u16)queue->m_hs1[var11];
 		}
 		else
 		{
 			var6 = -1;
 		}
 
-		push.m_h5 = (u16)var3;
-		push.m_h6 = (u16)var5;
+		push3.m_h5 = (u16)var3;
+		push3.m_h6 = (u16)var5;
 
-		if (InterlockedCompareExchange(&queue->m_push2(), new_.m_push2(), old_data) == old_data)
+		if (queue->push2.compare_and_swap_test(old, push2))
 		{
 			assert(var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				bool exch = queue->push3.compare_and_swap_test(old2, push);
+				bool exch = queue->push3.compare_and_swap_test(old2, push3);
 				assert(exch);
 				if (exch)
 				{
@@ -1256,10 +1252,10 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			}
 			else
 			{
-				pack = queue->m_hs[0];
+				pack = queue->push2.read_relaxed().pack;
 				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
-					if (queue->push3.compare_and_swap_test(old2, push))
+					if (queue->push3.compare_and_swap_test(old2, push3))
 					{
 						return CELL_OK;
 					}
@@ -1267,8 +1263,6 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			}
 		}
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
@@ -1480,14 +1474,9 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		u32 eq = (u32)queue->m_v3; // 0x7c
-		sys_event_data event;
-		assert(0);
-		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
+		assert(sys_event_queue_receive(queue->m_eq_id, {}, 0) == CELL_OK);
 		var1 = 1;
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
@@ -1532,14 +1521,13 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_pop2(), 0, 0);
-		CellSyncLFQueue new_;
-		new_.m_pop2() = old_data;
+		const auto old = queue->pop2.read_sync();
+		auto pop2 = old;
 
 		const auto old2 = queue->pop3.read_relaxed();
-		auto pop = old2;
+		auto pop3 = old2;
 
-		s32 var1 = pointer - (u16)pop.m_h1;
+		s32 var1 = pointer - (u16)pop3.m_h1;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
@@ -1561,7 +1549,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)pop.m_h2);
+		s32 var9 = ~(var9_ | (u16)pop3.m_h2);
 		// count leading zeros in u16
 		{
 			u16 v = var9;
@@ -1574,7 +1562,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			}
 		}
 
-		s32 var5 = (s32)(u16)pop.m_h2 | var9_;
+		s32 var5 = (s32)(u16)pop3.m_h2 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1584,13 +1572,13 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)pop.m_h1 + var9;
+		s32 var3 = (u16)pop3.m_h1 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		u16 pack = new_.m_hs[16]; // three packed 5-bit fields
+		u16 pack = pop2.pack; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1632,18 +1620,18 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 				var12 = (var12 + 1) << 10;
 			}
 
-			new_.m_hs[0] = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs[17 + 2 * var11];
+			pop2.pack = (pack & 0x83ff) | var12;
+			var6 = (u16)queue->m_hs2[var11];
 		}
 
-		pop.m_h1 = (u16)var3;
-		pop.m_h2 = (u16)var5;
+		pop3.m_h1 = (u16)var3;
+		pop3.m_h2 = (u16)var5;
 
-		if (InterlockedCompareExchange(&queue->m_pop2(), new_.m_pop2(), old_data) == old_data)
+		if (queue->pop2.compare_and_swap_test(old, pop2))
 		{
 			if (var6 != -1)
 			{
-				bool exch = queue->pop3.compare_and_swap_test(old2, pop);
+				bool exch = queue->pop3.compare_and_swap_test(old2, pop3);
 				assert(exch);
 				if (exch)
 				{
@@ -1653,10 +1641,10 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			}
 			else
 			{
-				pack = queue->m_hs[16];
+				pack = queue->pop2.read_relaxed().pack;
 				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
-					if (queue->pop3.compare_and_swap_test(old2, pop))
+					if (queue->pop3.compare_and_swap_test(old2, pop3))
 					{
 						return CELL_OK;
 					}
@@ -1664,8 +1652,6 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			}
 		}
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1793,7 +1779,6 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO: optimize if possible
 	while (true)
 	{
 		const auto old = queue->pop1.read_sync();
@@ -1804,7 +1789,7 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		s32 var1, var2;
 		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
 		{
-			var1 = var2 = (u16)queue->m_hs[16];
+			var1 = var2 = (u16)queue->pop2.read_relaxed().pack;
 		}
 		else
 		{
@@ -1844,7 +1829,6 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> size)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO: optimize if possible
 	while (true)
 	{
 		const auto old = queue->pop3.read_sync();
@@ -1865,8 +1849,6 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> size)
 			return CELL_OK;
 		}
 	}
-
-	assert(0);
 }
 
 s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> depth)
@@ -1937,28 +1919,36 @@ s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be
 	return CELL_OK;
 }
 
-s32 syncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	// TODO
-	assert(0);
+#ifdef PRX_DEBUG
+	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x19A8, libsre_rtoc,
+		spus, num, queue);
+#else
+	assert(!syncLFQueueAttachLv2EventQueue);
 	return CELL_OK;
+#endif
 }
 
-s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 
 	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
 }
 
-s32 syncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	// TODO
-	assert(0);
+#ifdef PRX_DEBUG
+	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x1DA0, libsre_rtoc,
+		spus, num, queue);
+#else
+	assert(!syncLFQueueDetachLv2EventQueue);
 	return CELL_OK;
+#endif
 }
 
-s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 

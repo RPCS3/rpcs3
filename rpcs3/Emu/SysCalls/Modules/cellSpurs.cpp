@@ -39,10 +39,9 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	u32 unk1 = 0;
-#ifdef PRX_DEBUG
-	unk1 = cb_call<u32>(GetCurrentPPUThread(), libsre + 0x10900, libsre_rtoc);
-#endif
+	s32 sdk_ver;
+	assert(process_get_sdk_version(process_getpid(), sdk_ver) == CELL_OK);
+	if (sdk_ver == -1) sdk_ver = 0x460000;
 
 	u8 _port = 0x3f;
 	u8 port_start = 0x10;
@@ -54,7 +53,7 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 		{
 			return CELL_SPURS_CORE_ERROR_INVAL;
 		}
-		if (unk1 <= 0x17ffff && _port > 0xf)
+		if (sdk_ver <= 0x17ffff && _port > 0xf)
 		{
 			return CELL_SPURS_CORE_ERROR_PERM;
 		}

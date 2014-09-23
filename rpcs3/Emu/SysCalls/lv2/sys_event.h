@@ -223,7 +223,7 @@ u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key
 // SysCalls
 s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size);
 s32 sys_event_queue_destroy(u32 equeue_id, s32 mode);
-s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 timeout);
+s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, u64 timeout);
 s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, s32 size, vm::ptr<be_t<u32>> number);
 s32 sys_event_queue_drain(u32 event_queue_id);
 

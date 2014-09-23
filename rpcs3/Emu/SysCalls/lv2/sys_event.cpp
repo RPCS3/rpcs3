@@ -151,10 +151,11 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 	return CELL_OK;
 }
 
-s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 timeout)
+s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, u64 timeout)
 {
-	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
-		equeue_id, event.addr(), timeout);
+	// dummy_event argument is ignored, data returned in registers
+	sys_event.Log("sys_event_queue_receive(equeue_id=%d, dummy_event_addr=0x%x, timeout=%lld)",
+		equeue_id, dummy_event.addr(), timeout);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -193,19 +194,20 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 ti
 				}
 			}
 		case SMR_SIGNAL:
-			{
-				eq->events.pop(*event);
-				eq->owner.unlock(tid);
-				sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
-					(u64)event->source, (u64)event->data1, (u64)event->data2, (u64)event->data3);
-				/* passing event data in registers */
-				PPUThread& t = GetCurrentPPUThread();
-				t.GPR[4] = event->source;
-				t.GPR[5] = event->data1;
-				t.GPR[6] = event->data2;
-				t.GPR[7] = event->data3;
-				return CELL_OK;
-			}
+		{
+			sys_event_data event;
+			eq->events.pop(event);
+			eq->owner.unlock(tid);
+			sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
+				(u64)event.source, (u64)event.data1, (u64)event.data2, (u64)event.data3);
+			/* passing event data in registers */
+			PPUThread& t = GetCurrentPPUThread();
+			t.GPR[4] = event.source;
+			t.GPR[5] = event.data1;
+			t.GPR[6] = event.data2;
+			t.GPR[7] = event.data3;
+			return CELL_OK;
+		}
 		case SMR_FAILED: break;
 		default: eq->sq.invalidate(tid); return CELL_ECANCELED;
 		}
