@@ -44,8 +44,8 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	if (sdk_ver == -1) sdk_ver = 0x460000;
 
 	u8 _port = 0x3f;
-	u8 port_start = 0x10;
 	u64 port_mask = 0;
+
 	if (isDynamic == 0)
 	{
 		_port = *port;
@@ -53,18 +53,18 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 		{
 			return CELL_SPURS_CORE_ERROR_INVAL;
 		}
-		if (sdk_ver <= 0x17ffff && _port > 0xf)
+		if (sdk_ver > 0x17ffff && _port > 0xf)
 		{
 			return CELL_SPURS_CORE_ERROR_PERM;
 		}
-		port_start = _port;
 	}
 
-	for (u32 i = port_start + 1; i < _port; i++)
+	for (u32 i = isDynamic ? 0x10 : _port; i <= _port; i++)
 	{
-		port_mask |= 1ull << (i - 1);
+		port_mask |= 1ull << (i);
 	}
 
+	assert(port_mask); // zero mask will return CELL_EINVAL
 	if (s32 res = sys_spu_thread_group_connect_event_all_threads(spurs->m.spuTG, queue, port_mask, port))
 	{
 		if (res == CELL_EISCONN)
@@ -78,7 +78,6 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	{
 		spurs->m.spups |= be_t<u64>::make(1ull << *port); // atomic bitwise or
 	}
-
 	return CELL_OK;
 #endif
 }
@@ -141,7 +140,7 @@ s64 spursInit(
 		return CELL_SPURS_CORE_ERROR_PERM;
 	}
 
-	const bool isSecond = flags & SAF_SECOND_VERSION;
+	const bool isSecond = (flags & SAF_SECOND_VERSION) != 0;
 	memset(spurs.get_ptr(), 0, CellSpurs::size1 + isSecond * CellSpurs::size2);
 	spurs->m.revision = revision;
 	spurs->m.sdkVersion = sdkVersion;
@@ -198,10 +197,9 @@ s64 spursInit(
 	spurs->m.spuPriority = spuPriority;
 #ifdef PRX_DEBUG
 	assert(spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1) == CELL_OK);
+#else
+	spurs->m.spuImg.addr = Memory.Alloc(0x40000, 4096);
 #endif
-	//char str1[0x80];
-	//memcpy(str1, prefix, prefixSize); // strcpy
-	//memcpy(str1 + prefixSize, "CellSpursKernelGroup", 21); // strcat
 
 	s32 tgt = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
 	if (flags & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
@@ -222,10 +220,17 @@ s64 spursInit(
 	spurs->m.spuTG = tg->m_id;
 
 	name += "CellSpursKernel0";
-	for (s32 i = 0; i < nSpus; i++, name[name.size() - 1]++)
+	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		auto spu = spu_thread_initialize(tg, i, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, u64(i) << 32, spurs.addr(), 0, 0);
-		spurs->m.spus[i] = spu->GetId();
+		spurs->m.spus[num] = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, 0, 0, 0, 0, [spurs, num, isSecond](SPUThread& CPU)
+		{
+#ifdef PRX_DEBUG
+			CPU.GPR[3]._u32[3] = num;
+			CPU.GPR[4]._u64[1] = spurs.addr();
+			return CPU.FastCall(CPU.PC);
+#endif
+			
+		})->GetId();
 	}
 
 	if (flags & SAF_SPU_PRINTF_ENABLED)
@@ -261,22 +266,24 @@ s64 spursInit(
 
 	name = std::string(prefix, prefixSize);
 
-	PPUThread* ppu0 = nullptr;
+	spurs->m.ppu0 = ppu_thread_create(0, 0, ppuPriority, 0x4000, true, false, name + "SpursHdlr0", [spurs](PPUThread& CPU)
+	{
 #ifdef PRX_DEBUG
-	ppu0 = ppu_thread_create(vm::read32(libsre_rtoc - 0x7E60), spurs.addr(), ppuPriority, 0x4000, true, false, name + "SpursHdlr0");
+		return cb_call<void, vm::ptr<CellSpurs>>(CPU, libsre + 0x9214, libsre_rtoc, spurs);
 #endif
-	assert(ppu0);
-	spurs->m.ppu0 = ppu0->GetId();
 
-	PPUThread* ppu1 = nullptr;
+	})->GetId();
+
+	spurs->m.ppu1 = ppu_thread_create(0, 0, ppuPriority, 0x8000, true, false, name + "SpursHdlr1", [spurs](PPUThread& CPU)
+	{
 #ifdef PRX_DEBUG
-	ppu1 = ppu_thread_create(vm::read32(libsre_rtoc - 0x7E24), spurs.addr(), ppuPriority, 0x8000, true, false, name + "SpursHdlr1");
+		return cb_call<void, vm::ptr<CellSpurs>>(CPU, libsre + 0xB40C, libsre_rtoc, spurs);
 #endif
-	assert(ppu1);
-	spurs->m.ppu1 = ppu1->GetId();
+
+	})->GetId();
 
 	// enable exception event handler
-	if (spurs->m.enableEH.compare_and_swap(be_t<u32>::make(0), be_t<u32>::make(1)).ToBE() == 0)
+	if (spurs->m.enableEH.compare_and_swap_test(be_t<u32>::make(0), be_t<u32>::make(1)))
 	{
 		assert(sys_spu_thread_group_connect_event(spurs->m.spuTG, spurs->m.queue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION) == CELL_OK);
 	}
@@ -291,12 +298,10 @@ s64 spursInit(
 
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload
 	{
-		s32 res;
+		s32 res = CELL_OK;
 #ifdef PRX_DEBUG
 		res = cb_call<s32, vm::ptr<CellSpurs>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x10428, libsre_rtoc,
 			spurs, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
-#else
-		res = -1;
 #endif
 		assert(res == CELL_OK);
 	}

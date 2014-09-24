@@ -147,7 +147,7 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	return CELL_OK;
 }
 
-PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name)
+PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name, std::function<void(PPUThread&)> task)
 {
 	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
@@ -159,6 +159,7 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(name);
+	new_thread.m_custom_task = task;
 
 	sys_ppu_thread.Notice("*** New PPU Thread [%s] (%s, entry=0x%x): id = %d", name.c_str(),
 		is_interrupt ? "interrupt" :

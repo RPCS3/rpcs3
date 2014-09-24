@@ -187,7 +187,7 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	LR = Emu.m_ppu_thr_stop;
 	SetCurrentNamedThread(this);
 
-	Task();
+	CPUThread::Task();
 
 	m_status = old_status;
 	PC = old_PC;
@@ -202,4 +202,16 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 void PPUThread::FastStop()
 {
 	m_status = Stopped;
+}
+
+void PPUThread::Task()
+{
+	if (m_custom_task)
+	{
+		m_custom_task(*this);
+	}
+	else
+	{
+		CPUThread::Task();
+	}
 }

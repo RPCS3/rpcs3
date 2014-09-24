@@ -367,6 +367,7 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	{
 		return res;
 	}
+
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
 	return rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp);
@@ -520,7 +521,8 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -559,7 +561,8 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -610,7 +613,8 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
 	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -649,7 +653,8 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -694,7 +699,8 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -730,7 +736,8 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -759,9 +766,10 @@ s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 count = (u32)queue->data.read_relaxed().m_v2 & 0xffffff;
+	const auto data = queue->data.read_relaxed();
+	const u32 count = (u32)data.m_v2 & 0xffffff;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && count <= depth);
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && count <= depth);
 
 	return count;
 }
@@ -780,7 +788,8 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	}
 
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->data.read_relaxed().m_v1 & 0xffffff) <= depth && ((u32)queue->data.read_relaxed().m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
 	while (queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32

@@ -59,7 +59,7 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path)
 	return CELL_OK;
 }
 
-SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image& img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4)
+SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image& img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task)
 {
 	if (option)
 	{
@@ -77,6 +77,7 @@ SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image
 	new_thread.SetOffset(spu_offset);
 	new_thread.SetEntry(spu_ep);
 	new_thread.SetName(name);
+	new_thread.m_custom_task = task;
 	new_thread.Run();
 	new_thread.GPR[3] = u128::from64(0, a1);
 	new_thread.GPR[4] = u128::from64(0, a2);

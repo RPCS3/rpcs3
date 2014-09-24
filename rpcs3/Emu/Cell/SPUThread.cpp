@@ -50,7 +50,15 @@ void SPUThread::Task()
 	const int round = std::fegetround();
 	std::fesetround(FE_TOWARDZERO);
 
-	CPUThread::Task();
+	if (m_custom_task)
+	{
+		m_custom_task(*this);
+	}
+	else
+	{
+		CPUThread::Task();
+	}
+	
 	if (std::fegetround() != FE_TOWARDZERO)
 	{
 		LOG_ERROR(Log::SPU, "Rounding mode has changed(%d)", std::fegetround());
@@ -68,7 +76,7 @@ void SPUThread::DoReset()
 
 void SPUThread::InitRegs()
 {
-	GPR[1]._u32[3] = 0x40000 - 120;
+	GPR[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 
 	cfg.Reset();
 
@@ -136,6 +144,23 @@ void SPUThread::DoClose()
 			port.eq = nullptr;
 		}
 	}
+}
+
+void SPUThread::FastCall(u32 ls_addr)
+{
+	// doesn't touch thread status (instead of PPUThread::FastCall2);
+	// can't be called from another thread (because it doesn't make sense);
+	// FastStop-like routine is not defined (TODO);
+
+	auto old_PC = PC;
+	auto old_stack = GPR[1]; // only saved and restored (may be wrong)
+
+	PC = ls_addr;
+
+	CPUThread::Task();
+
+	PC = old_PC;
+	GPR[1] = old_stack;
 }
 
 void SPUThread::WriteSNR(bool number, u32 value)
@@ -272,7 +297,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 		auto rec = vm::ptr<list_element>::make(dmac.ls_offset + list_addr + i * 8);
 
 		u32 size = rec->ts;
-		if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
+		if (!(rec->s.ToBE() & se16(0x8000)) && size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
 		{
 			LOG_ERROR(Log::SPU, "DMA List: invalid transfer size(%d)", size);
 			result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
@@ -280,13 +305,16 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 		}
 
 		u32 addr = rec->ea;
-		ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
 
-		if (Ini.HLELogging.GetValue() || rec->s)
+		if (size)
+			ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
+
+		if (Ini.HLELogging.GetValue() || rec->s.ToBE())
 			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
 			i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
 
-		lsa += std::max(size, (u32)16);
+		if (size)
+			lsa += std::max(size, (u32)16);
 
 		if (rec->s.ToBE() & se16(0x8000))
 		{
@@ -454,7 +482,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		}
 		else // store unconditional
 		{
-			if (R_ADDR)
+			if (R_ADDR) // may be wrong
 			{
 				m_events |= SPU_EVENT_LR;
 			}
