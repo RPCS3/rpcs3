@@ -892,7 +892,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 #ifdef PRX_DEBUG_XXX
 	return cb_caller<s32, vm::ptr<CellSyncLFQueue>, vm::ptr<u8>, u32, u32, CellSyncQueueDirection, vm::ptr<void>>::call(GetCurrentPPUThread(), libsre + 0x205C, libsre_rtoc,
 		queue, buffer, size, depth, direction, eaSignal);
-#else
+#endif
 
 	if (!queue)
 	{
@@ -991,7 +991,6 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 	// prx: sync
 	queue->init.read_sync();
 	return CELL_OK;
-#endif
 }
 
 s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
@@ -1933,10 +1932,10 @@ s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 #ifdef PRX_DEBUG
 	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x19A8, libsre_rtoc,
 		spus, num, queue);
-#else
-	assert(!syncLFQueueAttachLv2EventQueue);
-	return CELL_OK;
 #endif
+
+	assert(!"syncLFQueueAttachLv2EventQueue");
+	return CELL_OK;
 }
 
 s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
@@ -1951,10 +1950,10 @@ s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 #ifdef PRX_DEBUG
 	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x1DA0, libsre_rtoc,
 		spus, num, queue);
-#else
-	assert(!syncLFQueueDetachLv2EventQueue);
-	return CELL_OK;
 #endif
+
+	assert(!"syncLFQueueDetachLv2EventQueue");
+	return CELL_OK;
 }
 
 s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)

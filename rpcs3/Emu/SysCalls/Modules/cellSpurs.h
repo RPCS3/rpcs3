@@ -17,6 +17,27 @@ enum
 	CELL_SPURS_CORE_ERROR_NULL_POINTER = 0x80410711,
 };
 
+//
+enum
+{
+	CELL_SPURS_POLICY_MODULE_ERROR_AGAIN        = 0x80410801,
+	CELL_SPURS_POLICY_MODULE_ERROR_INVAL        = 0x80410802,
+	CELL_SPURS_POLICY_MODULE_ERROR_NOSYS        = 0x80410803,
+	CELL_SPURS_POLICY_MODULE_ERROR_NOMEM        = 0x80410804,
+	CELL_SPURS_POLICY_MODULE_ERROR_SRCH         = 0x80410805,
+	CELL_SPURS_POLICY_MODULE_ERROR_NOENT        = 0x80410806,
+	CELL_SPURS_POLICY_MODULE_ERROR_NOEXEC       = 0x80410807,
+	CELL_SPURS_POLICY_MODULE_ERROR_DEADLK       = 0x80410808,
+	CELL_SPURS_POLICY_MODULE_ERROR_PERM         = 0x80410809,
+	CELL_SPURS_POLICY_MODULE_ERROR_BUSY         = 0x8041080A,
+	CELL_SPURS_POLICY_MODULE_ERROR_ABORT        = 0x8041080C,
+	CELL_SPURS_POLICY_MODULE_ERROR_FAULT        = 0x8041080D,
+	CELL_SPURS_POLICY_MODULE_ERROR_CHILD        = 0x8041080E,
+	CELL_SPURS_POLICY_MODULE_ERROR_STAT         = 0x8041080F,
+	CELL_SPURS_POLICY_MODULE_ERROR_ALIGN        = 0x80410810,
+	CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER = 0x80410811,
+};
+
 // Task return codes.
 enum
 {
@@ -207,7 +228,7 @@ struct CellSpurs
 			u8 unknown3[0xD5C - 0xD54];
 			be_t<u32> queue;      // 0xD5C
 			be_t<u32> port;       // 0xD60
-			be_t<u32> unk19;      // 0xD64
+			vm::atomic<u8> unk19[4]; // 0xD64 (used in wakeup)
 			vm::atomic<u32> enableEH; // 0xD68
 			be_t<u32> unk21;      // 0xD6C
 			sys_spu_image spuImg; // 0xD70
@@ -238,6 +259,37 @@ struct CellSpurs
 };
 
 typedef CellSpurs CellSpurs2;
+
+typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
+
+struct CellSpursWorkloadAttribute
+{
+	static const uint align = 8;
+	static const uint size = 512;
+
+	union
+	{
+		// raw data
+		u8 _u8[size];
+
+		// real data
+		struct
+		{
+			be_t<u32> revision;
+			be_t<u32> sdkVersion;
+			vm::bptr<const void> pm;
+			be_t<u32> size;
+			be_t<u64> data;
+			u8 priority[8];
+			be_t<u32> minContention;
+			be_t<u32> maxContention;
+			vm::bptr<const char> nameClass;
+			vm::bptr<const char> nameInstance;
+			vm::bptr<CellSpursShutdownCompletionEventHook> hook;
+			vm::bptr<void> hookArg;
+		} m;
+	};
+};
 
 struct CellSpursEventFlag
 {
@@ -435,3 +487,6 @@ struct CellSpursTaskBinInfo
 	be_t<u32> __reserved__;
 	CellSpursTaskLsPattern lsPattern;
 };
+
+s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
+s64 spursWakeUp(vm::ptr<CellSpurs> spurs);

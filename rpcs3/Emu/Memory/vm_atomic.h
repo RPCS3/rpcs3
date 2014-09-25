@@ -5,9 +5,15 @@ namespace vm
 	template<typename T, size_t size = sizeof(T)>
 	struct _to_atomic
 	{
-		static_assert(size == 2 || size == 4 || size == 8, "Invalid atomic type");
+		static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Invalid atomic type");
 
 		typedef T type;
+	};
+
+	template<typename T>
+	struct _to_atomic<T, 1>
+	{
+		typedef uint8_t type;
 	};
 
 	template<typename T>
@@ -99,21 +105,21 @@ namespace vm
 			}
 		}
 
-		// atomic bitwise logical OR, returns previous data
+		// atomic bitwise OR, returns previous data
 		__forceinline const T _or(const T& right) volatile
 		{
 			const atomic_type res = InterlockedOr(&data, (atomic_type&)(right));
 			return (T&)res;
 		}
 
-		// atomic bitwise logical AND, returns previous data
+		// atomic bitwise AND, returns previous data
 		__forceinline const T _and(const T& right) volatile
 		{
 			const atomic_type res = InterlockedAnd(&data, (atomic_type&)(right));
 			return (T&)res;
 		}
 
-		// atomic bitwise logical XOR, returns previous data
+		// atomic bitwise XOR, returns previous data
 		__forceinline const T _xor(const T& right) volatile
 		{
 			const atomic_type res = InterlockedXor(&data, (atomic_type&)(right));

@@ -95,6 +95,10 @@ int clock_gettime(int foo, struct timespec *ts);
 #endif
 
 #ifndef InterlockedCompareExchange
+static __forceinline uint8_t InterlockedCompareExchange(volatile uint8_t* dest, uint8_t exch, uint8_t comp)
+{
+	return _InterlockedCompareExchange8((volatile char*)dest, exch, comp);
+}
 static __forceinline uint16_t InterlockedCompareExchange(volatile uint16_t* dest, uint16_t exch, uint16_t comp)
 {
 	return _InterlockedCompareExchange16((volatile short*)dest, exch, comp);
@@ -110,6 +114,10 @@ static __forceinline uint64_t InterlockedCompareExchange(volatile uint64_t* dest
 #endif
 
 #ifndef InterlockedExchange
+static __forceinline uint8_t InterlockedExchange(volatile uint8_t* dest, uint8_t value)
+{
+	return _InterlockedExchange8((volatile char*)dest, value);
+}
 static __forceinline uint16_t InterlockedExchange(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedExchange16((volatile short*)dest, value);
@@ -125,6 +133,10 @@ static __forceinline uint64_t InterlockedExchange(volatile uint64_t* dest, uint6
 #endif
 
 #ifndef InterlockedOr
+static __forceinline uint8_t InterlockedOr(volatile uint8_t* dest, uint8_t value)
+{
+	return _InterlockedOr8((volatile char*)dest, value);
+}
 static __forceinline uint16_t InterlockedOr(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedOr16((volatile short*)dest, value);
@@ -140,6 +152,10 @@ static __forceinline uint64_t InterlockedOr(volatile uint64_t* dest, uint64_t va
 #endif
 
 #ifndef InterlockedAnd
+static __forceinline uint8_t InterlockedAnd(volatile uint8_t* dest, uint8_t value)
+{
+	return _InterlockedAnd8((volatile char*)dest, value);
+}
 static __forceinline uint16_t InterlockedAnd(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedAnd16((volatile short*)dest, value);
@@ -155,6 +171,10 @@ static __forceinline uint64_t InterlockedAnd(volatile uint64_t* dest, uint64_t v
 #endif
 
 #ifndef InterlockedXor
+static __forceinline uint8_t InterlockedXor(volatile uint8_t* dest, uint8_t value)
+{
+	return _InterlockedXor8((volatile char*)dest, value);
+}
 static __forceinline uint16_t InterlockedXor(volatile uint16_t* dest, uint16_t value)
 {
 	return _InterlockedXor16((volatile short*)dest, value);
