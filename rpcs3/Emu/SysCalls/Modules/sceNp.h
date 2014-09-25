@@ -96,6 +96,8 @@ enum
 	SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID              = 0x8002a1b1,
 };
 
+typedef int(*SceNpBasicEventHandler)(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
+
 // NP Manager Utility statuses
 enum
 {
@@ -104,6 +106,38 @@ enum
 	SCE_NP_MANAGER_STATUS_GETTING_PROFILE = 1,
 	SCE_NP_MANAGER_STATUS_LOGGING_IN      = 2,
 	SCE_NP_MANAGER_STATUS_ONLINE          = 3,
+};
+
+// Event types
+enum
+{
+	SCE_NP_BASIC_EVENT_UNKNOWN                               = -1,
+	SCE_NP_BASIC_EVENT_OFFLINE                               = 0,
+	SCE_NP_BASIC_EVENT_PRESENCE                              = 1,
+	SCE_NP_BASIC_EVENT_MESSAGE                               = 2,
+	SCE_NP_BASIC_EVENT_ADD_FRIEND_RESULT                     = 3,
+	SCE_NP_BASIC_EVENT_INCOMING_ATTACHMENT                   = 4,
+	SCE_NP_BASIC_EVENT_INCOMING_INVITATION                   = 5,
+	SCE_NP_BASIC_EVENT_END_OF_INITIAL_PRESENCE               = 6,
+	SCE_NP_BASIC_EVENT_SEND_ATTACHMENT_RESULT                = 7,
+	SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT                = 8,
+	SCE_NP_BASIC_EVENT_OUT_OF_CONTEXT                        = 9,
+	SCE_NP_BASIC_EVENT_FRIEND_REMOVED                        = 10,
+	SCE_NP_BASIC_EVENT_ADD_BLOCKLIST_RESULT                  = 11,
+	SCE_NP_BASIC_EVENT_SEND_MESSAGE_RESULT                   = 12,
+	SCE_NP_BASIC_EVENT_SEND_INVITATION_RESULT                = 13,
+	SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT                = 14,
+	SCE_NP_BASIC_EVENT_MESSAGE_MARKED_AS_USED_RESULT         = 15,
+	SCE_NP_BASIC_EVENT_INCOMING_CUSTOM_INVITATION            = 16,
+	SCE_NP_BASIC_EVENT_INCOMING_CLAN_MESSAGE                 = 17,
+	SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT            = 18,
+	SCE_NP_BASIC_EVENT_SEND_CUSTOM_DATA_RESULT               = 19,
+	SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT               = 20,
+	SCE_NP_BASIC_EVENT_INCOMING_CUSTOM_DATA_MESSAGE          = 21,
+	SCE_NP_BASIC_EVENT_SEND_URL_ATTACHMENT_RESULT            = 22,
+	SCE_NP_BASIC_EVENT_INCOMING_BOOTABLE_INVITATION          = 23,
+	SCE_NP_BASIC_EVENT_BLOCKLIST_UPDATE                      = 24,
+	SCE_NP_BASIC_EVENT_INCOMING_BOOTABLE_CUSTOM_DATA_MESSAGE = 25,
 };
 
 // IDs for attachment data objects
