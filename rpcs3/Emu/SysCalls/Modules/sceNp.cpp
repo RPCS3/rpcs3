@@ -16,11 +16,13 @@ struct sceNpInternal
 	bool m_bSceNpInitialized;
 	bool m_bSceNp2Initialized;
 	bool m_bScoreInitialized;
+	bool m_bLookupInitialized;
 
 	sceNpInternal()
 		: m_bSceNpInitialized(false),
 		  m_bSceNp2Initialized(false),
-		  m_bScoreInitialized(false)
+		  m_bScoreInitialized(false),
+		  m_bLookupInitialized(false)
 	{
 	}
 };
@@ -282,7 +284,7 @@ int sceNpBasicAddFriend()
 	return CELL_OK;
 }
 
-int sceNpBasicGetFriendListEntryCount(u32 count)
+int sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp->Warning("sceNpBasicGetFriendListEntryCount(count=%d)", count);
 
@@ -290,7 +292,7 @@ int sceNpBasicGetFriendListEntryCount(u32 count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 
 	// TODO: Check if there are any friends
-	vm::write32(count, 0);
+	*count = 0;
 
 	return CELL_OK;
 }
@@ -415,7 +417,7 @@ int sceNpBasicGetClanMessageEntry()
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageEntryCount(u32 type, u32 count)
+int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp->Warning("sceNpBasicGetMessageEntryCount(type=%d, count=%d)", type, count);
 
@@ -423,7 +425,7 @@ int sceNpBasicGetMessageEntryCount(u32 type, u32 count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 
 	// TODO: Check if there are messages
-	vm::write32(count, 0);
+	*count = 0;
 
 	return CELL_OK;
 }
@@ -434,9 +436,16 @@ int sceNpBasicGetMessageEntry()
 	return CELL_OK;
 }
 
-int sceNpBasicGetEvent()
+int sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+
+	// TODO: Check for other error and pass other events
+	*event = SCE_NP_BASIC_EVENT_OFFLINE;
+
 	return CELL_OK;
 }
 
@@ -694,13 +703,27 @@ int sceNpFriendlistAbortGui()
 
 int sceNpLookupInit()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpLookupInit()");
+
+	// TODO: Make sure the error code returned is right,
+	//       since there are no error codes for Lookup utility.
+	if (sceNpInstance.m_bLookupInitialized)
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+
+	sceNpInstance.m_bLookupInitialized = true;
+
 	return CELL_OK;
 }
 
 int sceNpLookupTerm()
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpLookupTerm()");
+
+	if (!sceNpInstance.m_bLookupInitialized)
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+
+	sceNpInstance.m_bLookupInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -1527,6 +1550,7 @@ void sceNp_unload()
 	sceNpInstance.m_bSceNpInitialized = false;
 	sceNpInstance.m_bSceNp2Initialized = false;
 	sceNpInstance.m_bScoreInitialized = false;
+	sceNpInstance.m_bLookupInitialized = false;
 }
 
 void sceNp_init(Module *pxThis)

@@ -149,14 +149,14 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_get_random_number(u32 addr, u64 size)
+int sys_get_random_number(vm::ptr<u32> addr, u64 size)
 {
-	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr, size);
+	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr.addr(), size);
 
 	if (size > 4096)
 		size = 4096;
 
-	vm::write32(addr, rand() % size);
+	*addr = rand() % size;
 
 	return CELL_OK;
 }
