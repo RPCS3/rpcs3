@@ -2404,7 +2404,7 @@ private:
 
 		CPU.GPR[ra] = i;
 
-		if(rc) CPU.SetCRBit(CR_LT, false);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void SLD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2488,7 +2488,7 @@ private:
 		}
 
 		CPU.GPR[ra] = i;
-		if(rc) CPU.SetCRBit(CR_LT, false);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ANDC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
