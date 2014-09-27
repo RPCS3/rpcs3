@@ -11,13 +11,13 @@ using namespace Log;
 
 LogManager *gLogManager = nullptr;
 
-u32 LogMessage::size()
+u32 LogMessage::size() const
 {
 	//1 byte for NULL terminator
 	return (u32)(sizeof(LogMessage::size_type) + sizeof(LogType) + sizeof(LogSeverity) + sizeof(std::string::value_type) * mText.size() + 1);
 }
 
-void LogMessage::serialize(char *output)
+void LogMessage::serialize(char *output) const
 {
 	LogMessage::size_type size = this->size();
 	memcpy(output, &size, sizeof(LogMessage::size_type));
@@ -60,7 +60,7 @@ LogChannel::LogChannel(const std::string& name) :
 	, mLogLevel(Warning)
 {}
 
-void LogChannel::log(LogMessage msg)
+void LogChannel::log(const LogMessage &msg)
 {
 	std::lock_guard<std::mutex> lock(mListenerLock);
 	for (auto &listener : mListeners)
@@ -82,7 +82,7 @@ void LogChannel::removeListener(std::shared_ptr<LogListener> listener)
 
 struct CoutListener : LogListener
 {
-	void log(LogMessage msg)
+	void log(const LogMessage &msg)
 	{
 		std::cerr << msg.mText << std::endl;
 	}
@@ -103,13 +103,15 @@ struct FileListener : LogListener
 		}
 	}
 
-	void log(LogMessage msg)
+	void log(const LogMessage &msg)
 	{
+		std::string text = msg.mText;
 		if (mPrependChannelName)
 		{
-			msg.mText.insert(0, gTypeNameTable[static_cast<u32>(msg.mType)].mName);
+			text.insert(0, gTypeNameTable[static_cast<u32>(msg.mType)].mName);
+
 		}
-		mFile.Write(msg.mText);
+		mFile.Write(text);
 	}
 };
 

@@ -97,7 +97,7 @@ struct wxWriter : Log::LogListener
 	}
 
 	//put message into the log buffer
-	void log(Log::LogMessage msg)
+	void log(const Log::LogMessage &msg)
 	{
 		u8 logLevel = Ini.HLELogLvl.GetValue();
 		if (msg.mType != Log::TTY && logLevel != 0)
