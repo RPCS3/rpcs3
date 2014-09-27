@@ -211,7 +211,7 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	return CELL_OK;
 }
 
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<vm::atomic<u32>> once_ctrl, vm::ptr<void(*)()> init)
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void(*)()> init)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, init_addr=0x%x)", once_ctrl.addr(), init.addr());
 

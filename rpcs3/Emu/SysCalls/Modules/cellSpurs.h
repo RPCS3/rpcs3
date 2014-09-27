@@ -104,6 +104,8 @@ class SPURSManager;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
 
+struct CellSpurs;
+
 enum SpursAttrFlags : u32
 {
 	SAF_NONE = 0x0,
@@ -158,6 +160,8 @@ struct CellSpursAttribute
 	};
 };
 
+typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
+
 // Core CellSpurs structures
 struct CellSpurs
 {
@@ -172,7 +176,11 @@ struct CellSpurs
 
 		u8 unk0[0x20];
 		be_t<u64> sem; // 0x20
-		u8 unk_[0x58];
+		u8 unk1[0x8];
+		u32 pad;
+		vm::bptr<CellSpursShutdownCompletionEventHook, 1, u64> hook; // 0x30
+		vm::bptr<void, 1, u64> hookArg; // 0x38
+		u8 unk2[0x40];
 	};
 
 	struct _sub_str2
@@ -187,6 +195,41 @@ struct CellSpurs
 		u8 unk_[0x68];
 	};
 
+	struct _sub_str3
+	{
+		static const uint size = 0x20;
+
+		vm::bptr<const void, 1, u64> wklPm; // policy module
+		be_t<u64> wklArg; // spu argument
+		be_t<u32> wklSize;
+		be_t<u64> wklPriority;
+	};
+
+	struct _sub_str4
+	{
+		static const uint size = 0x10;
+
+		vm::bptr<const char, 1, u64> nameClass;
+		vm::bptr<const char, 1, u64> nameInstance;
+	};
+
+	struct _sub_x70
+	{
+		u8 unk0;
+		u8 unk1;
+		u8 unk2;
+		u8 unk3;
+		u8 flags1;
+		u8 unk5;
+		u8 nSpus;
+		u8 unk7;
+	};
+
+	struct _sub_x78
+	{
+		u64 unk;
+	};
+
 	union
 	{
 		// raw data
@@ -196,26 +239,31 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			u8 unknown[0x6C];
+			u8 wklY1[0x10];
+			u8 wklZ1[0x10];       // 0x10
+			u8 wklA1[0x10];       // 0x20
+			u8 wklB1[0x10];       // 0x30
+			u8 wklMinCnt[0x10];   // 0x40
+			u8 unknown0[0x6C - 0x50];
 			be_t<u32> unk18;      // 0x6C
-			u8 unk17[4];          // 0x70
-			u8 flags1;            // 0x74
-			u8 unk16;             // 0x75
-			u8 nSpus;             // 0x76
-			u8 unk15;             // 0x77
-			u8 unknown0[0xB0 - 0x78];
-			be_t<u32> unk0;       // 0x0B0
+			atomic_t<_sub_x70> x70; // 0x70
+			atomic_t<_sub_x78> x78; // 0x78
+			u8 wklC1[0x10];       // 0x80
+			u8 wklD1[0x10];       // 0x90
+			u8 wklE1[0x10];       // 0xA0
+			atomic_t<u32> wklMask;// 0xB0
 			u8 unknown2[0xC0 - 0xB4];
-			u8 unk6[0x10];        // 0x0C0 (SPU port at 0xc9)
+			u8 unk6[0x10];        // 0xC0 (SPU port at 0xc9)
 			u8 unknown1[0x100 - 0x0D0];
-			_sub_str1 sub1[0x10]; // 0x100
+			_sub_str1 wklF1[0x10];// 0x100
 			be_t<u64> unk22;      // 0x900
 			u8 unknown7[0x980 - 0x908];
 			be_t<u64> semPrv;     // 0x980
 			be_t<u32> unk11;      // 0x988
 			be_t<u32> unk12;      // 0x98C
 			be_t<u64> unk13;      // 0x990
-			u8 unknown4[0xD00 - 0x998];
+			u8 unknown4[0xB00 - 0x998];
+			_sub_str3 wklG1[0x10];// 0xB00
 			be_t<u64> unk7;       // 0xD00
 			be_t<u64> unk8;       // 0xD08
 			be_t<u32> unk9;       // 0xD10
@@ -228,8 +276,8 @@ struct CellSpurs
 			u8 unknown3[0xD5C - 0xD54];
 			be_t<u32> queue;      // 0xD5C
 			be_t<u32> port;       // 0xD60
-			vm::atomic<u8> unk19[4]; // 0xD64 (used in wakeup)
-			vm::atomic<u32> enableEH; // 0xD68
+			atomic_t<u8> unk19[4]; // 0xD64 (used in wakeup)
+			atomic_t<u32> enableEH; // 0xD68
 			be_t<u32> unk21;      // 0xD6C
 			sys_spu_image spuImg; // 0xD70
 			be_t<u32> flags;      // 0xD80
@@ -240,13 +288,14 @@ struct CellSpurs
 			be_t<u32> unk5;       // 0xD9C
 			be_t<u32> revision;   // 0xDA0
 			be_t<u32> sdkVersion; // 0xDA4
-			vm::atomic<u64> spups;// 0xDA8
+			atomic_t<u64> spups;// 0xDA8
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
-			u8 unknown9[0xF00 - 0xDD0];
+			u8 unknown9[0xE00 - 0xDD0];
+			_sub_str4 wklH1[0x10];// 0xE00
 			_sub_str2 sub3;       // 0xF00
 			u8 unknown6[0x1200 - 0xF80];
-			_sub_str1 sub2[0x10]; // 0x1200
+			_sub_str1 wklF2[0x10];// 0x1200
 			// ...
 		} m;
 
@@ -259,8 +308,6 @@ struct CellSpurs
 };
 
 typedef CellSpurs CellSpurs2;
-
-typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
 struct CellSpursWorkloadAttribute
 {

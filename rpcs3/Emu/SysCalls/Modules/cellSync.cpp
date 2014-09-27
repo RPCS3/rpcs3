@@ -1158,7 +1158,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 		}
 
 		s32 var9_ = 15 - var1;
-		// calculate (1 slw (15 - var1))
+		// calculate (u16)(1 slw (15 - var1))
 		if (var9_ & 0x30)
 		{
 			var9_ = 0;
@@ -1167,18 +1167,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)push3.m_h6);
-		// count leading zeros in u16
-		{
-			u16 v = var9;
-			for (var9 = 0; var9 < 16; var9++)
-			{
-				if (v & (1 << (15 - var9)))
-				{
-					break;
-				}
-			}
-		}
+		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)push3.m_h6)) - 16; // count leading zeros in u16
 		
 		s32 var5 = (s32)(u16)push3.m_h6 | var9_;
 		if (var9 & 0x30)
@@ -1548,7 +1537,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 		}
 
 		s32 var9_ = 15 - var1;
-		// calculate (1 slw (15 - var1))
+		// calculate (u16)(1 slw (15 - var1))
 		if (var9_ & 0x30)
 		{
 			var9_ = 0;
@@ -1557,18 +1546,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)pop3.m_h2);
-		// count leading zeros in u16
-		{
-			u16 v = var9;
-			for (var9 = 0; var9 < 16; var9++)
-			{
-				if (v & (1 << (15 - var9)))
-				{
-					break;
-				}
-			}
-		}
+		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)pop3.m_h2)) - 16; // count leading zeros in u16
 
 		s32 var5 = (s32)(u16)pop3.m_h2 | var9_;
 		if (var9 & 0x30)

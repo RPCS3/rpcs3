@@ -1219,7 +1219,7 @@
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\vm_atomic.h">
+    <ClInclude Include="Emu\Memory\atomic_type.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
   </ItemGroup>

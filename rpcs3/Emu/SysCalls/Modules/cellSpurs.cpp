@@ -92,7 +92,7 @@ s64 spursInit(
 
 	if (!isSecond)
 	{
-		spurs->m.unk0 = 0xffff;
+		spurs->m.wklMask.write_relaxed(be_t<u32>::make(0xffff));
 	}
 	spurs->m.unk6[0xC] = 0;
 	spurs->m.unk6[0xD] = 0;
@@ -114,7 +114,7 @@ s64 spursInit(
 	{
 		sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
 		assert(sem && ~sem); // should rollback if semaphore creation failed and return the error
-		spurs->m.sub1[i].sem = sem;
+		spurs->m.wklF1[i].sem = sem;
 	}
 	if (isSecond)
 	{
@@ -122,7 +122,7 @@ s64 spursInit(
 		{
 			sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
 			assert(sem && ~sem);
-			spurs->m.sub2[i].sem = sem;
+			spurs->m.wklF2[i].sem = sem;
 		}
 	}
 	sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
@@ -131,7 +131,10 @@ s64 spursInit(
 	spurs->m.unk11 = -1;
 	spurs->m.unk12 = -1;
 	spurs->m.unk13 = 0;
-	spurs->m.nSpus = nSpus;
+	spurs->m.x70.direct_op([nSpus](CellSpurs::_sub_x70& x70)
+	{
+		x70.nSpus = nSpus;
+	});
 	spurs->m.spuPriority = spuPriority;
 #ifdef PRX_DEBUG
 	assert(spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1) == CELL_OK);
@@ -184,8 +187,11 @@ s64 spursInit(
 	assert(lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv") == CELL_OK);
 	assert(lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv") == CELL_OK);
 
-	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
-	spurs->m.unk15 = -1;
+	spurs->m.x70.direct_op([flags, isSecond](CellSpurs::_sub_x70& x70)
+	{
+		x70.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
+		x70.unk7 = -1;
+	});
 	spurs->m.unk18 = -1;
 	spurs->_u8[0xD64] = 0;
 	spurs->_u8[0xD65] = 0;
@@ -798,16 +804,85 @@ s32 spursAddWorkload(
 	const u8 priorityTable[],
 	u32 minContention,
 	u32 maxContention,
-	const char* nameClass,
-	const char* nameInstance,
+	vm::ptr<const char> nameClass,
+	vm::ptr<const char> nameInstance,
 	vm::ptr<CellSpursShutdownCompletionEventHook> hook,
 	vm::ptr<void> hookArg)
 {
 #ifdef PRX_DEBUG
 	return cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<const void>, u32, u64, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x96EC, libsre_rtoc,
 		spurs, wid, pm, size, data, Memory.RealToVirtualAddr(priorityTable), minContention, maxContention,
-		Memory.RealToVirtualAddr(nameClass), Memory.RealToVirtualAddr(nameInstance), hook.addr(), hookArg.addr());
+		nameClass.addr(), nameInstance.addr(), hook.addr(), hookArg.addr());
 #endif
+	if (!spurs || !wid || !pm)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128 || pm.addr() % 16)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+	if (minContention == 0 || *(u64*)priorityTable & 0xf0f0f0f0f0f0f0f0ull) // check if some priority > 15
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+	if (spurs->m.unk21.ToBE())
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+	
+	u32 wnum;
+	const u32 wmax = spurs->m.x70.read_relaxed().flags1 & 0x40 ? 0x20 : 0x10; // check isSecond (TODO: check if can be changed)
+	spurs->m.wklMask.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
+	{
+		wnum = cntlz32(~(u32)value); // found empty position
+		if (wnum < wmax)
+		{
+			value |= (u32)(0x80000000ull >> wnum); // set workload bit
+		}
+	});
+
+	*wid = wnum; // store workload id
+	if (wnum >= wmax)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_AGAIN;
+	}
+
+	if (wnum <= 15)
+	{
+		assert((spurs->m.wklA1[wnum] & 0xf) == 0);
+		assert((spurs->m.wklB1[wnum] & 0xf) == 0);
+		spurs->m.wklC1[wnum] = 1;
+		spurs->m.wklD1[wnum] = 0;
+		spurs->m.wklE1[wnum] = 0;
+		spurs->m.wklG1[wnum].wklPm = pm;
+		spurs->m.wklG1[wnum].wklArg = data;
+		spurs->m.wklG1[wnum].wklSize = size;
+		spurs->m.wklG1[wnum].wklPriority = *(be_t<u64>*)priorityTable;
+		spurs->m.wklH1[wnum].nameClass = nameClass;
+		spurs->m.wklH1[wnum].nameInstance = nameInstance;
+		memset(spurs->m.wklF1[wnum].unk0, 0, 0x18);
+		// (preserve semaphore id)
+		memset(spurs->m.wklF1[wnum].unk1, 0, 0x60);
+		if (hook)
+		{
+			spurs->m.wklF1[wnum].hook = hook;
+			spurs->m.wklF1[wnum].hookArg = hookArg;
+		}
+		spurs->m.wklY1[wnum] = 0;
+		if (spurs->m.x70.read_relaxed().flags1 & 0x40)
+		{
+		}
+		else
+		{
+			spurs->m.wklZ1[wnum] = 0;
+			spurs->m.wklMinCnt[wnum] = minContention > 8 ? 8 : 0;
+		}
+	}
+	else
+	{
+
+	}
 
 	return CELL_OK;
 }
@@ -838,8 +913,8 @@ s64 cellSpursAddWorkload(
 		*priorityTable,
 		minContention,
 		maxContention,
-		nullptr,
-		nullptr,
+		{},
+		{},
 		{},
 		{});
 }
@@ -965,8 +1040,8 @@ s64 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid
 		attr->m.priority,
 		attr->m.minContention,
 		attr->m.maxContention,
-		attr->m.nameClass.get_ptr(),
-		attr->m.nameInstance.get_ptr(),
+		vm::ptr<const char>::make(attr->m.nameClass.addr()),
+		vm::ptr<const char>::make(attr->m.nameInstance.addr()),
 		vm::ptr<CellSpursShutdownCompletionEventHook>::make(attr->m.hook.addr()),
 		vm::ptr<void>::make(attr->m.hookArg.addr()));
 }

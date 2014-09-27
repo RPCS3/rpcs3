@@ -188,3 +188,37 @@ static __forceinline uint64_t InterlockedXor(volatile uint64_t* dest, uint64_t v
 	return _InterlockedXor64((volatile long long*)dest, value);
 }
 #endif
+
+static __forceinline uint32_t cntlz32(uint32_t arg)
+{
+#if defined(__GNUG__)
+	return __builtin_clzl(arg);
+#else
+	unsigned long res;
+	if (!_BitScanReverse(&res, arg))
+	{
+		return 32;
+	}
+	else
+	{
+		return res ^ 31;
+	}
+#endif
+}
+
+static __forceinline uint64_t cntlz64(uint64_t arg)
+{
+#if defined(__GNUG__)
+	return __builtin_clzll(arg);
+#else
+	unsigned long res;
+	if (!_BitScanReverse64(&res, arg))
+	{
+		return 64;
+	}
+	else
+	{
+		return res ^ 63;
+	}
+#endif
+}

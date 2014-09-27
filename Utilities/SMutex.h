@@ -1,5 +1,5 @@
 #pragma once
-#include "Emu/Memory/vm_atomic.h"
+#include "Emu/Memory/atomic_type.h"
 
 bool SM_IsAborted();
 void SM_Sleep();
@@ -25,9 +25,9 @@ template
 >
 class SMutexBase
 {
-	static_assert(sizeof(T) == sizeof(vm::atomic_le<T>), "Invalid SMutexBase type");
+	static_assert(sizeof(T) == sizeof(atomic_le_t<T>), "Invalid SMutexBase type");
 	T owner;
-	typedef vm::atomic_le<T> AT;
+	typedef atomic_le_t<T> AT;
 
 public:
 	static const T GetFreeValue()

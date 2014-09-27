@@ -311,7 +311,7 @@
     <ClInclude Include="Emu\Io\PadHandler.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
-    <ClInclude Include="Emu\Memory\vm_atomic.h" />
+    <ClInclude Include="Emu\Memory\atomic_type.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />

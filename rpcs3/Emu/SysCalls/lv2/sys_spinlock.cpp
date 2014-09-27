@@ -7,7 +7,7 @@
 
 SysCallBase sys_spinlock("sys_spinlock");
 
-void sys_spinlock_initialize(vm::ptr<vm::atomic<u32>> lock)
+void sys_spinlock_initialize(vm::ptr<atomic_t<u32>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_initialize(lock_addr=0x%x)", lock.addr());
 
@@ -15,7 +15,7 @@ void sys_spinlock_initialize(vm::ptr<vm::atomic<u32>> lock)
 	lock->exchange(be_t<u32>::make(0));
 }
 
-void sys_spinlock_lock(vm::ptr<vm::atomic<u32>> lock)
+void sys_spinlock_lock(vm::ptr<atomic_t<u32>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_lock(lock_addr=0x%x)", lock.addr());
 
@@ -39,7 +39,7 @@ void sys_spinlock_lock(vm::ptr<vm::atomic<u32>> lock)
 	}
 }
 
-s32 sys_spinlock_trylock(vm::ptr<vm::atomic<u32>> lock)
+s32 sys_spinlock_trylock(vm::ptr<atomic_t<u32>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_trylock(lock_addr=0x%x)", lock.addr());
 
@@ -52,7 +52,7 @@ s32 sys_spinlock_trylock(vm::ptr<vm::atomic<u32>> lock)
 	return CELL_OK;
 }
 
-void sys_spinlock_unlock(vm::ptr<vm::atomic<u32>> lock)
+void sys_spinlock_unlock(vm::ptr<atomic_t<u32>> lock)
 {
 	sys_spinlock.Log("sys_spinlock_unlock(lock_addr=0x%x)", lock.addr());
 
