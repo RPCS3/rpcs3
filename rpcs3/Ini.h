@@ -104,10 +104,11 @@ public:
 	IniEntry<u8> GSRenderMode;
 	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
-	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
+	IniEntry<bool> GSVSyncEnable;
+	IniEntry<bool> GS3DTV;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -177,10 +178,11 @@ public:
 		GSRenderMode.Init("GS_RenderMode", path);
 		GSResolution.Init("GS_Resolution", path);
 		GSAspectRatio.Init("GS_AspectRatio", path);
-		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
+		GSVSyncEnable.Init("GS_VSyncEnable", path);
+		GS3DTV.Init("GS_3DTV", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -246,10 +248,11 @@ public:
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
-		GSVSyncEnable.Load(false);
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
+		GSVSyncEnable.Load(false);
+		GS3DTV.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -316,10 +319,11 @@ public:
 		GSRenderMode.Save();
 		GSResolution.Save();
 		GSAspectRatio.Save();
-		GSVSyncEnable.Save();
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
+		GSVSyncEnable.Save();
+		GS3DTV.Save();
 
 		// Audio 
 		AudioOutMode.Save();

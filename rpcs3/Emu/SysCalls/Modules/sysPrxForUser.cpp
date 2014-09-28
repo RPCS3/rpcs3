@@ -85,7 +85,7 @@ s64 sys_prx_exitspawn_with_level()
 
 int sys_spu_elf_get_information(u32 elf_img, vm::ptr<be_t<u32>> entry, vm::ptr<be_t<u32>> nseg)
 {
-	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.addr(), nseg.addr());
+	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x)", elf_img, entry.addr(), nseg.addr());
 	return CELL_OK;
 }
 

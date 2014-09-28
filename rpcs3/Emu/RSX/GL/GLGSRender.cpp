@@ -1806,6 +1806,7 @@ void GLGSRender::ExecCMD()
 
 	if (m_set_two_side_light_enable)
 	{
+		// TODO: Use other glLightModel functions?
 		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 		checkForGlError("glLightModeli");
 	}

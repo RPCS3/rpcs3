@@ -492,23 +492,24 @@ void RSXDebugger::GetFlags()
 #define LIST_FLAGS_ADD(name, value) \
 	m_list_flags->InsertItem(i, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
 
-	LIST_FLAGS_ADD("Alpha test",        render.m_set_alpha_test);
-	LIST_FLAGS_ADD("Blend",             render.m_set_blend);
-	LIST_FLAGS_ADD("Scissor",           render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
-	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face);
-	LIST_FLAGS_ADD("Depth bounds test", render.m_set_depth_bounds_test);
-	LIST_FLAGS_ADD("Depth test",        render.m_set_depth_test);
-	LIST_FLAGS_ADD("Dither",            render.m_set_dither);
-	LIST_FLAGS_ADD("Line smooth",       render.m_set_line_smooth);
-	LIST_FLAGS_ADD("Logic op",          render.m_set_logic_op);
-	LIST_FLAGS_ADD("Poly smooth",       render.m_set_poly_smooth);
-	LIST_FLAGS_ADD("Poly offset fill",  render.m_set_poly_offset_fill);
-	LIST_FLAGS_ADD("Poly offset line",  render.m_set_poly_offset_line);
-	LIST_FLAGS_ADD("Poly offset point", render.m_set_poly_offset_point);
-	LIST_FLAGS_ADD("Stencil test",      render.m_set_stencil_test);
-	LIST_FLAGS_ADD("Primitive restart", render.m_set_restart_index);
-	LIST_FLAGS_ADD("Point Sprite",	    render.m_set_point_sprite_control);
-	LIST_FLAGS_ADD("Lighting ",	    render.m_set_specular);
+	LIST_FLAGS_ADD("Alpha test",         render.m_set_alpha_test);
+	LIST_FLAGS_ADD("Blend",              render.m_set_blend);
+	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
+	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
+	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
+	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
+	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
+	LIST_FLAGS_ADD("Line smooth",        render.m_set_line_smooth);
+	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
+	LIST_FLAGS_ADD("Poly smooth",        render.m_set_poly_smooth);
+	LIST_FLAGS_ADD("Poly offset fill",   render.m_set_poly_offset_fill);
+	LIST_FLAGS_ADD("Poly offset line",   render.m_set_poly_offset_line);
+	LIST_FLAGS_ADD("Poly offset point",  render.m_set_poly_offset_point);
+	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Primitive restart",  render.m_set_restart_index);
+	LIST_FLAGS_ADD("Two sided lighting", render.m_set_two_side_light_enable);
+	LIST_FLAGS_ADD("Point Sprite",	     render.m_set_point_sprite_control);
+	LIST_FLAGS_ADD("Lighting ",	         render.m_set_specular);
 
 #undef LIST_FLAGS_ADD
 }
