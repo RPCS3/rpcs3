@@ -177,7 +177,6 @@ struct CellSpurs
 		u8 unk0[0x20];
 		be_t<u64> sem; // 0x20
 		u8 unk1[0x8];
-		u32 pad;
 		vm::bptr<CellSpursShutdownCompletionEventHook, 1, u64> hook; // 0x30
 		vm::bptr<void, 1, u64> hookArg; // 0x38
 		u8 unk2[0x40];
@@ -202,6 +201,7 @@ struct CellSpurs
 		vm::bptr<const void, 1, u64> wklPm; // policy module
 		be_t<u64> wklArg; // spu argument
 		be_t<u32> wklSize;
+		atomic_t<u8> wklCopy;
 		be_t<u64> wklPriority;
 	};
 
@@ -215,9 +215,8 @@ struct CellSpurs
 
 	struct _sub_x70
 	{
-		u8 unk0;
-		u8 unk1;
-		u8 unk2;
+		be_t<u16> wklFlag1; // 0x70
+		u8 unk2; // 0x72
 		u8 unk3;
 		u8 flags1;
 		u8 unk5;
@@ -227,7 +226,8 @@ struct CellSpurs
 
 	struct _sub_x78
 	{
-		u64 unk;
+		be_t<u16> wklFlag2;
+		u8 unk[6];
 	};
 
 	union
@@ -239,22 +239,26 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			u8 wklY1[0x10];
-			u8 wklZ1[0x10];       // 0x10
-			u8 wklA1[0x10];       // 0x20
-			u8 wklB1[0x10];       // 0x30
+			u8 wklZ1[0x10];       // 0x0
+			u8 wklZ2[0x10];       // 0x10
+			u8 wklA[0x10];        // 0x20
+			u8 wklB[0x10];        // 0x30
 			u8 wklMinCnt[0x10];   // 0x40
-			u8 unknown0[0x6C - 0x50];
+			atomic_t<u32> wklMaxCnt[4]; // 0x50
+			u8 unknown0[0x6C - 0x60];
 			be_t<u32> unk18;      // 0x6C
 			atomic_t<_sub_x70> x70; // 0x70
 			atomic_t<_sub_x78> x78; // 0x78
 			u8 wklC1[0x10];       // 0x80
 			u8 wklD1[0x10];       // 0x90
 			u8 wklE1[0x10];       // 0xA0
-			atomic_t<u32> wklMask;// 0xB0
-			u8 unknown2[0xC0 - 0xB4];
+			atomic_t<u32> wklMsk1;// 0xB0
+			atomic_t<u32> wklMsk2;// 0xB4
+			atomic_t<u8> unk23[8];// 0xB8
 			u8 unk6[0x10];        // 0xC0 (SPU port at 0xc9)
-			u8 unknown1[0x100 - 0x0D0];
+			u8 wklC2[0x10];       // 0xD0
+			u8 wklD2[0x10];       // 0xE0
+			u8 wklE2[0x10];       // 0xF0
 			_sub_str1 wklF1[0x10];// 0x100
 			be_t<u64> unk22;      // 0x900
 			u8 unknown7[0x980 - 0x908];
@@ -294,9 +298,10 @@ struct CellSpurs
 			u8 unknown9[0xE00 - 0xDD0];
 			_sub_str4 wklH1[0x10];// 0xE00
 			_sub_str2 sub3;       // 0xF00
-			u8 unknown6[0x1200 - 0xF80];
+			u8 unknown6[0x1000 - 0xF80];
+			_sub_str3 wklG2[0x10];// 0x1000
 			_sub_str1 wklF2[0x10];// 0x1200
-			// ...
+			_sub_str4 wklH2[0x10];// 0x1A00
 		} m;
 
 		// alternative implementation

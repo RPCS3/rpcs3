@@ -112,8 +112,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	mutex->data.read_sync();
-	mutex->data.atomic_op([](CellSyncMutex::data_t& mutex)
+	mutex->data.atomic_op_sync([](CellSyncMutex::data_t& mutex)
 	{
 		mutex.m_rel++;
 	});
@@ -178,8 +177,7 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	barrier->data.read_sync();
-	while (barrier->data.atomic_op(CELL_OK, syncBarrierTryNotifyOp))
+	while (barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp))
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
@@ -204,8 +202,7 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	barrier->data.read_sync();
-	return barrier->data.atomic_op(CELL_OK, syncBarrierTryNotifyOp);
+	return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp);
 }
 
 s32 syncBarrierTryWaitOp(CellSyncBarrier::data_t& barrier)
@@ -239,8 +236,7 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	barrier->data.read_sync();
-	while (barrier->data.atomic_op(CELL_OK, syncBarrierTryWaitOp))
+	while (barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp))
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
@@ -265,8 +261,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	barrier->data.read_sync();
-	return barrier->data.atomic_op(CELL_OK, syncBarrierTryWaitOp);
+	return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp);
 }
 
 s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size)

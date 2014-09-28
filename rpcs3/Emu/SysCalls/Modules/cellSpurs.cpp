@@ -92,7 +92,7 @@ s64 spursInit(
 
 	if (!isSecond)
 	{
-		spurs->m.wklMask.write_relaxed(be_t<u32>::make(0xffff));
+		spurs->m.wklMsk1.write_relaxed(be_t<u32>::make(0xffff));
 	}
 	spurs->m.unk6[0xC] = 0;
 	spurs->m.unk6[0xD] = 0;
@@ -762,7 +762,7 @@ s64 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
 
 s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 {
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 	return cb_call<s32, vm::ptr<CellSpurs>>(GetCurrentPPUThread(), libsre + 0x84D8, libsre_rtoc, spurs);
 #endif
 	if (!spurs)
@@ -809,7 +809,7 @@ s32 spursAddWorkload(
 	vm::ptr<CellSpursShutdownCompletionEventHook> hook,
 	vm::ptr<void> hookArg)
 {
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 	return cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<const void>, u32, u64, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x96EC, libsre_rtoc,
 		spurs, wid, pm, size, data, Memory.RealToVirtualAddr(priorityTable), minContention, maxContention,
 		nameClass.addr(), nameInstance.addr(), hook.addr(), hookArg.addr());
@@ -833,7 +833,7 @@ s32 spursAddWorkload(
 	
 	u32 wnum;
 	const u32 wmax = spurs->m.x70.read_relaxed().flags1 & 0x40 ? 0x20 : 0x10; // check isSecond (TODO: check if can be changed)
-	spurs->m.wklMask.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
+	spurs->m.wklMsk1.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
 	{
 		wnum = cntlz32(~(u32)value); // found empty position
 		if (wnum < wmax)
@@ -848,10 +848,11 @@ s32 spursAddWorkload(
 		return CELL_SPURS_POLICY_MODULE_ERROR_AGAIN;
 	}
 
+	u32 index = wnum % 0x10;
 	if (wnum <= 15)
 	{
-		assert((spurs->m.wklA1[wnum] & 0xf) == 0);
-		assert((spurs->m.wklB1[wnum] & 0xf) == 0);
+		assert((spurs->m.wklA[wnum] & 0xf) == 0);
+		assert((spurs->m.wklB[wnum] & 0xf) == 0);
 		spurs->m.wklC1[wnum] = 1;
 		spurs->m.wklD1[wnum] = 0;
 		spurs->m.wklE1[wnum] = 0;
@@ -861,28 +862,110 @@ s32 spursAddWorkload(
 		spurs->m.wklG1[wnum].wklPriority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH1[wnum].nameClass = nameClass;
 		spurs->m.wklH1[wnum].nameInstance = nameInstance;
-		memset(spurs->m.wklF1[wnum].unk0, 0, 0x18);
-		// (preserve semaphore id)
+		memset(spurs->m.wklF1[wnum].unk0, 0, 0x18); // clear struct preserving semaphore id
 		memset(spurs->m.wklF1[wnum].unk1, 0, 0x60);
 		if (hook)
 		{
 			spurs->m.wklF1[wnum].hook = hook;
 			spurs->m.wklF1[wnum].hookArg = hookArg;
+			spurs->m.wklE1[wnum] |= 2;
 		}
-		spurs->m.wklY1[wnum] = 0;
-		if (spurs->m.x70.read_relaxed().flags1 & 0x40)
+		spurs->m.wklZ1[wnum] = 0;
+		if ((spurs->m.x70.read_relaxed().flags1 & 0x40) == 0)
 		{
-		}
-		else
-		{
-			spurs->m.wklZ1[wnum] = 0;
-			spurs->m.wklMinCnt[wnum] = minContention > 8 ? 8 : 0;
+			spurs->m.wklZ2[wnum] = 0;
+			spurs->m.wklMinCnt[wnum] = minContention > 8 ? 8 : minContention;
 		}
 	}
 	else
 	{
-
+		assert((spurs->m.wklA[index] & 0xf0) == 0);
+		assert((spurs->m.wklB[index] & 0xf0) == 0);
+		spurs->m.wklC2[index] = 1;
+		spurs->m.wklD2[index] = 0;
+		spurs->m.wklE2[index] = 0;
+		spurs->m.wklG2[index].wklPm = pm;
+		spurs->m.wklG2[index].wklArg = data;
+		spurs->m.wklG2[index].wklSize = size;
+		spurs->m.wklG2[index].wklPriority = *(be_t<u64>*)priorityTable;
+		spurs->m.wklH2[index].nameClass = nameClass;
+		spurs->m.wklH2[index].nameInstance = nameInstance;
+		memset(spurs->m.wklF2[index].unk0, 0, 0x18); // clear struct preserving semaphore id
+		memset(spurs->m.wklF2[index].unk1, 0, 0x60);
+		if (hook)
+		{
+			spurs->m.wklF2[index].hook = hook;
+			spurs->m.wklF2[index].hookArg = hookArg;
+			spurs->m.wklE2[index] |= 2;
+		}
+		spurs->m.wklZ2[index] = 0;
 	}
+
+	u32 pos = ((~wnum * 8) | (wnum / 4)) & 0x1c;
+	spurs->m.wklMaxCnt[index / 4].atomic_op([pos, maxContention](be_t<u32>& v)
+	{
+		v &= ~(0xf << pos);
+		v |= (maxContention > 8 ? 8 : maxContention) << pos;
+	});
+
+	if (wnum <= 15)
+	{
+		spurs->m.x70._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag1
+	}
+	else
+	{
+		spurs->m.x78._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
+	}
+
+	spurs->m.x70.atomic_op([wnum](CellSpurs::_sub_x70& x70)
+	{
+		if (x70.unk7 == wnum)
+		{
+			x70.unk7 = 0xff;
+		}
+	});
+
+	u32 res_wkl;
+	spurs->m.wklMsk2.atomic_op_sync([spurs, wnum, &res_wkl](be_t<u32>& v)
+	{
+		CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];
+		const u32 mask = v.ToLE() & ~(0x80000000 >> wnum);
+		res_wkl = 0;
+
+		for (u32 i = 0, m = 0x80000000, k = 0; i < 32; i++, m >>= 1)
+		{
+			if (mask & m)
+			{
+				CellSpurs::_sub_str3& current = i <= 15 ? spurs->m.wklG1[i] : spurs->m.wklG2[i & 0xf];
+				if (current.wklPm.addr() == wkl.wklPm.addr())
+				{
+					// if a workload with identical policy module found
+					res_wkl = current.wklCopy.read_relaxed();
+					break;
+				}
+				else
+				{
+					k |= 0x80000000 >> current.wklCopy.read_relaxed();
+					res_wkl = cntlz32(~k);
+				}
+			}
+		}
+
+		wkl.wklCopy.exchange((u8)res_wkl);
+	});
+	assert(res_wkl <= 31);
+
+	if (wnum <= 15)
+	{
+		spurs->m.wklC1[wnum] = 2;
+	}
+	else
+	{
+		spurs->m.wklC2[index] = 2;
+	}
+
+	spurs->m.unk23[5].exchange(-1); // write 0xff byte at 0xbd
+	spurs->m.x70._and_not({ {}, -1 }); // clear byte at 0x72
 
 	return CELL_OK;
 }

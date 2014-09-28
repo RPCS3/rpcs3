@@ -103,6 +103,36 @@ public:
 		}
 	}
 
+	// perform atomic operation on data with additional memory barrier
+	template<typename FT> __forceinline void atomic_op_sync(const FT atomic_proc) volatile
+	{
+		T old = read_sync();
+		while (true)
+		{
+			T _new = old;
+			atomic_proc(_new); // function should accept reference to T type
+			const T val = compare_and_swap(old, _new);
+			if ((atomic_type&)val == (atomic_type&)old) return;
+			old = val;
+		}
+	}
+
+	// perform atomic operation on data with additional memory barrier and special exit condition (if intermediate result != proceed_value)
+	template<typename RT, typename FT> __forceinline RT atomic_op_sync(const RT proceed_value, const FT atomic_proc) volatile
+	{
+		T old = read_sync();
+		while (true)
+		{
+			T _new = old;
+			RT res = (RT)atomic_proc(_new); // function should accept reference to T type and return some value
+			if (res != proceed_value) return res;
+			const T val = compare_and_swap(old, _new);
+			if ((atomic_type&)val == (atomic_type&)old) return proceed_value;
+			old = val;
+		}
+	}
+
+	// perform non-atomic operation on data directly without memory barriers
 	template<typename FT> __forceinline void direct_op(const FT direct_proc) volatile
 	{
 		direct_proc((T&)data);
@@ -119,6 +149,13 @@ public:
 	__forceinline const T _and(const T& right) volatile
 	{
 		const atomic_type res = InterlockedAnd(&data, (atomic_type&)(right));
+		return (T&)res;
+	}
+
+	// atomic bitwise AND NOT (inverts right argument), returns previous data
+	__forceinline const T _and_not(const T& right) volatile
+	{
+		const atomic_type res = InterlockedAnd(&data, ~(atomic_type&)(right));
 		return (T&)res;
 	}
 
