@@ -4,6 +4,7 @@
 extern void cellAdec_init(Module* pxThis);
 extern void cellAtrac_init(Module* pxThis);
 extern void cellAudio_init(Module* pxThis);
+extern void cellAvconfExt_init(Module* pxThis);
 extern void cellCamera_init(Module* pxThis);
 extern void cellCamera_unload();
 extern void cellDmux_init(Module *pxThis);
@@ -119,7 +120,7 @@ static const g_modules_list[] =
 	{ 0x002a, "cellDmuxPamf", nullptr, nullptr, nullptr },
 	{ 0x002e, "cellLv2dbg", nullptr, nullptr, nullptr },
 	{ 0x0030, "cellUsbpspcm", nullptr, nullptr, nullptr },
-	{ 0x0031, "cellAvconfExt", nullptr, nullptr, nullptr },
+	{ 0x0031, "cellAvconfExt", cellAvconfExt_init, nullptr, nullptr },
 	{ 0x0032, "cellUserInfo", cellUserInfo_init, nullptr, nullptr },
 	{ 0x0033, "cellSysutilSavedata", nullptr, nullptr, nullptr },
 	{ 0x0034, "cellSubdisplay", nullptr, nullptr, nullptr },

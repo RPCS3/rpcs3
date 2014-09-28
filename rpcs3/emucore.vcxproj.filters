@@ -131,6 +131,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+	<ClCompile Include="Emu\SysCalls\Modules\cellAvconfExt.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -345,6 +348,9 @@
       <Filter>Emu\Audio\AL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Memory\Memory.cpp">
+      <Filter>Emu\Memory</Filter>
+    </ClCompile>
+	<ClCompile Include="Emu\Memory\vm.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
     <ClCompile Include="Loader\ELF.cpp">
@@ -617,9 +623,6 @@
     <ClCompile Include="..\Utilities\rXml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Memory\vm.cpp">
-      <Filter>Emu\Memory</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -722,6 +725,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+	<ClInclude Include="Emu\SysCalls\Modules\cellPng.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h">
@@ -1209,9 +1215,6 @@
     </ClInclude>
     <ClInclude Include="define_new_memleakdetect.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Modules\cellPng.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h">
       <Filter>Emu\SysCalls</Filter>

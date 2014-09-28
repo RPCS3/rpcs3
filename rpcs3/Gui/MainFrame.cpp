@@ -406,6 +406,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
+	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
 	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
@@ -424,17 +425,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_spu_decoder->Append("SPU Interpreter");
 	cbox_spu_decoder->Append("SPU JIT (asmjit)");
 
-	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
+	cbox_gs_render->Append("Null");
+	cbox_gs_render->Append("OpenGL");
+	//cbox_gs_render->Append("Software");
+
+	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
 		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.ToLE(), ResolutionTable[i].height.ToLE()));
 	}
 
 	cbox_gs_aspect->Append("4:3");
 	cbox_gs_aspect->Append("16:9");
-
-	cbox_gs_render->Append("Null");
-	cbox_gs_render->Append("OpenGL");
-	//cbox_gs_render->Append("Software");
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
@@ -491,6 +492,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_gs_3dmonitor       ->SetValue(Ini.GS3DTV.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
 	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
@@ -555,6 +557,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_3dmonitor, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
 	s_subpanel_io->Add(s_round_io_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -609,10 +612,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
-		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
+		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
+		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
