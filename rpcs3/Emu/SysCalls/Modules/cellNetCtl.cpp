@@ -44,7 +44,7 @@ int cellNetCtlTerm()
 	return CELL_OK;
 }
 
-int cellNetCtlGetState(vm::ptr<be_t<u32>> state)
+int cellNetCtlGetState(vm::ptr<u32> state)
 {
 	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
@@ -53,7 +53,7 @@ int cellNetCtlGetState(vm::ptr<be_t<u32>> state)
 	return CELL_OK;
 }
 
-int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<be_t<s32>> hid)
+int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
 	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=0x%x)", handler.addr(), arg.addr(), hid.addr());
 
