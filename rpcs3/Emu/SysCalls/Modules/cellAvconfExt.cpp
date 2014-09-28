@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Ini.h"
-#include "rpcs3.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/RSX/sysutil_video.h"
@@ -20,12 +19,19 @@ int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 	if (!videoOut == CELL_VIDEO_OUT_PRIMARY)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 
-	// Calculate screen's diagonal size in inches
-	u32 diagonal = round(sqrt((pow(wxGetDisplaySizeMM().GetWidth(), 2) + pow(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393);
+#ifdef _WIN32
+	HDC screen = GetDC(NULL);
+	u32 diagonal = round(sqrt((pow(GetDeviceCaps(screen, HORZSIZE), 2) + pow(GetDeviceCaps(screen, VERTSIZE), 2))) * 0.0393);
+#else
+	// TODO: Linux implementation, without using wx
+	// u32 diagonal = round(sqrt((pow(wxGetDisplaySizeMM().GetWidth(), 2) + pow(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393);
+#endif
 
 	if (Ini.GS3DTV.GetValue())
 	{
+#ifdef _WIN32
 		*screenSize = diagonal;
+#endif
 		return CELL_OK;
 	}
 
