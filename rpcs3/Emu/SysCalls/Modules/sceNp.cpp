@@ -158,17 +158,15 @@ int sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-int sceNpDrmVerifyUpgradeLicense(vm::ptr<const char> content_id)
+int sceNpDrmVerifyUpgradeLicense(u32 content_id_addr)
 {
-	sceNp->Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpDrmVerifyUpgradeLicense2(vm::ptr<const char> content_id)
+int sceNpDrmVerifyUpgradeLicense2()
 {
-	sceNp->Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
@@ -341,13 +339,9 @@ int sceNpBasicAddPlayersHistoryAsync()
 	return CELL_OK;
 }
 
-int sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
+int sceNpBasicGetPlayersHistoryEntryCount()
 {
-	sceNp->Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
@@ -363,13 +357,9 @@ int sceNpBasicAddBlockListEntry()
 	return CELL_OK;
 }
 
-int sceNpBasicGetBlockListEntryCount(u32 count)
+int sceNpBasicGetBlockListEntryCount()
 {
-	sceNp->Todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
@@ -379,23 +369,15 @@ int sceNpBasicGetBlockListEntry()
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
+int sceNpBasicGetMessageAttachmentEntryCount()
 {
-	sceNp->Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+int sceNpBasicGetMessageAttachmentEntry()
 {
-	sceNp->Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
@@ -411,43 +393,27 @@ int sceNpBasicGetCustomInvitationEntry()
 	return CELL_OK;
 }
 
-int sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
+int sceNpBasicGetMatchingInvitationEntryCount()
 {
-	sceNp->Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+int sceNpBasicGetMatchingInvitationEntry()
 {
-	sceNp->Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
+int sceNpBasicGetClanMessageEntryCount()
 {
-	sceNp->Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
-int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
+int sceNpBasicGetClanMessageEntry()
 {
-	sceNp->Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
@@ -464,13 +430,9 @@ int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 	return CELL_OK;
 }
 
-int sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
+int sceNpBasicGetMessageEntry()
 {
-	sceNp->Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
-
-	if (!sceNpInstance.m_bSceNpInitialized)
-		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
-
+	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
 }
 
