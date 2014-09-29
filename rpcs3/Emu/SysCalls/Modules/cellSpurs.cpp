@@ -94,12 +94,12 @@ s64 spursInit(
 	{
 		spurs->m.wklMsk1.write_relaxed(be_t<u32>::make(0xffff));
 	}
-	spurs->m.unk6[0xC] = 0;
-	spurs->m.unk6[0xD] = 0;
-	spurs->m.unk6[0xE] = 0;
+	spurs->m.xCC = 0;
+	spurs->m.xCD = 0;
+	spurs->m.xCE = 0;
 	for (u32 i = 0; i < 8; i++)
 	{
-		spurs->m.unk6[i] = -1;
+		spurs->m.xC0[i] = -1;
 	}
 #ifdef PRX_DEBUG
 	spurs->m.unk7 = vm::read32(libsre_rtoc - 0x7EA4); // write 64-bit pointer to unknown data
@@ -131,10 +131,7 @@ s64 spursInit(
 	spurs->m.unk11 = -1;
 	spurs->m.unk12 = -1;
 	spurs->m.unk13 = 0;
-	spurs->m.x70.direct_op([nSpus](CellSpurs::_sub_x70& x70)
-	{
-		x70.nSpus = nSpus;
-	});
+	spurs->m.nSpus = nSpus;
 	spurs->m.spuPriority = spuPriority;
 #ifdef PRX_DEBUG
 	assert(spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1) == CELL_OK);
@@ -187,12 +184,9 @@ s64 spursInit(
 	assert(lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv") == CELL_OK);
 	assert(lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv") == CELL_OK);
 
-	spurs->m.x70.direct_op([flags, isSecond](CellSpurs::_sub_x70& x70)
-	{
-		x70.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
-		x70.unk7 = -1;
-	});
-	spurs->m.unk18 = -1;
+	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
+	spurs->m.flagRecv.write_relaxed(0xff);
+	spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
 	spurs->_u8[0xD64] = 0;
 	spurs->_u8[0xD65] = 0;
 	spurs->_u8[0xD66] = 0;
@@ -569,7 +563,7 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	{
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
-	if (spurs->m.unk21.ToBE())
+	if (spurs->m.exception.ToBE())
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -773,13 +767,13 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
-	if (spurs->m.unk21.ToBE())
+	if (spurs->m.exception.ToBE())
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	spurs->m.unk19[0].exchange(1);
-	if (spurs->m.unk19[1].read_sync())
+	spurs->m.xD64.exchange(1);
+	if (spurs->m.xD65.read_sync())
 	{
 		assert(sys_lwmutex_lock(vm::ptr<sys_lwmutex_t>::make(spurs.addr() + 0xdb0), 0) == 0);
 		assert(sys_lwcond_signal(vm::ptr<sys_lwcond_t>::make(spurs.addr() + 0xdc8)) == 0);
@@ -826,13 +820,13 @@ s32 spursAddWorkload(
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if (spurs->m.unk21.ToBE())
+	if (spurs->m.exception.ToBE())
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 	
 	u32 wnum;
-	const u32 wmax = spurs->m.x70.read_relaxed().flags1 & 0x40 ? 0x20 : 0x10; // check isSecond (TODO: check if can be changed)
+	const u32 wmax = spurs->m.flags1 & 0x40 ? 0x20 : 0x10; // check isSecond (TODO: check if can be changed)
 	spurs->m.wklMsk1.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
 	{
 		wnum = cntlz32(~(u32)value); // found empty position
@@ -853,7 +847,7 @@ s32 spursAddWorkload(
 	{
 		assert((spurs->m.wklA[wnum] & 0xf) == 0);
 		assert((spurs->m.wklB[wnum] & 0xf) == 0);
-		spurs->m.wklC1[wnum] = 1;
+		spurs->m.wklStat1[wnum].write_relaxed(1);
 		spurs->m.wklD1[wnum] = 0;
 		spurs->m.wklE1[wnum] = 0;
 		spurs->m.wklG1[wnum].wklPm = pm;
@@ -870,10 +864,9 @@ s32 spursAddWorkload(
 			spurs->m.wklF1[wnum].hookArg = hookArg;
 			spurs->m.wklE1[wnum] |= 2;
 		}
-		spurs->m.wklZ1[wnum] = 0;
-		if ((spurs->m.x70.read_relaxed().flags1 & 0x40) == 0)
+		if ((spurs->m.flags1 & 0x40) == 0)
 		{
-			spurs->m.wklZ2[wnum] = 0;
+			spurs->m.wklReadyCount[wnum + 16].write_relaxed(0);
 			spurs->m.wklMinCnt[wnum] = minContention > 8 ? 8 : minContention;
 		}
 	}
@@ -881,7 +874,7 @@ s32 spursAddWorkload(
 	{
 		assert((spurs->m.wklA[index] & 0xf0) == 0);
 		assert((spurs->m.wklB[index] & 0xf0) == 0);
-		spurs->m.wklC2[index] = 1;
+		spurs->m.wklStat2[index].write_relaxed(1);
 		spurs->m.wklD2[index] = 0;
 		spurs->m.wklE2[index] = 0;
 		spurs->m.wklG2[index].wklPm = pm;
@@ -898,8 +891,8 @@ s32 spursAddWorkload(
 			spurs->m.wklF2[index].hookArg = hookArg;
 			spurs->m.wklE2[index] |= 2;
 		}
-		spurs->m.wklZ2[index] = 0;
 	}
+	spurs->m.wklReadyCount[wnum].write_relaxed(0);
 
 	u32 pos = ((~wnum * 8) | (wnum / 4)) & 0x1c;
 	spurs->m.wklMaxCnt[index / 4].atomic_op([pos, maxContention](be_t<u32>& v)
@@ -910,26 +903,26 @@ s32 spursAddWorkload(
 
 	if (wnum <= 15)
 	{
-		spurs->m.x70._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag1
+		spurs->m.wklSet1._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag1
 	}
 	else
 	{
-		spurs->m.x78._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
+		spurs->m.wklSet2._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
 	}
 
-	spurs->m.x70.atomic_op([wnum](CellSpurs::_sub_x70& x70)
+	spurs->m.flagRecv.atomic_op([wnum](u8& FR)
 	{
-		if (x70.unk7 == wnum)
+		if (FR == wnum)
 		{
-			x70.unk7 = 0xff;
+			FR = 0xff;
 		}
 	});
 
 	u32 res_wkl;
-	spurs->m.wklMsk2.atomic_op_sync([spurs, wnum, &res_wkl](be_t<u32>& v)
+	CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];
+	spurs->m.wklMsk2.atomic_op_sync([spurs, &wkl, wnum, &res_wkl](be_t<u32>& v)
 	{
-		CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];
-		const u32 mask = v.ToLE() & ~(0x80000000 >> wnum);
+		const u32 mask = v.ToLE() & ~(0x80000000u >> wnum);
 		res_wkl = 0;
 
 		for (u32 i = 0, m = 0x80000000, k = 0; i < 32; i++, m >>= 1)
@@ -952,21 +945,13 @@ s32 spursAddWorkload(
 		}
 
 		wkl.wklCopy.exchange((u8)res_wkl);
+		v = mask | (0x80000000u >> wnum);
 	});
 	assert(res_wkl <= 31);
 
-	if (wnum <= 15)
-	{
-		spurs->m.wklC1[wnum] = 2;
-	}
-	else
-	{
-		spurs->m.wklC2[index] = 2;
-	}
-
-	spurs->m.unk23[5].exchange(-1); // write 0xff byte at 0xbd
-	spurs->m.x70._and_not({ {}, -1 }); // clear byte at 0x72
-
+	spurs->wklStat(wnum).exchange(2);
+	spurs->m.xBD.exchange(0xff);
+	spurs->m.x72.exchange(0);
 	return CELL_OK;
 }
 
@@ -1162,26 +1147,94 @@ s64 cellSpursShutdownWorkload()
 #endif
 }
 
-s64 _cellSpursWorkloadFlagReceiver()
+s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
+	cellSpurs->Warning("%s(spurs_addr=0x%x, wid=%d, is_set=%d)", __FUNCTION__, spurs.addr(), wid, is_set);
+
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0xF158, libsre_rtoc);
-#else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
 #endif
+	if (!spurs)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+	if (wid >= (spurs->m.flags1 & 0x40 ? 0x20u : 0x10u))
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+	if ((spurs->m.wklMsk1.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
+	}
+	if (spurs->m.exception.ToBE())
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+	if (s32 res = spurs->m.wklFlag.flag.atomic_op_sync(0, [spurs, wid, is_set](be_t<u32>& flag) -> s32
+	{
+		if (is_set)
+		{
+			if (spurs->m.flagRecv.read_relaxed() != 0xff)
+			{
+				return CELL_SPURS_POLICY_MODULE_ERROR_BUSY;
+			}
+		}
+		else
+		{
+			if (spurs->m.flagRecv.read_relaxed() != wid)
+			{
+				return CELL_SPURS_POLICY_MODULE_ERROR_PERM;
+			}
+		}
+		flag = -1;
+		return 0;
+	}))
+	{
+		return res;
+	}
+
+	spurs->m.flagRecv.atomic_op([wid, is_set](u8& FR)
+	{
+		if (is_set)
+		{
+			if (FR == 0xff)
+			{
+				FR = (u8)wid;
+			}
+		}
+		else
+		{
+			if (FR == wid)
+			{
+				FR = 0xff;
+			}
+		}
+	});
+	return CELL_OK;
 }
 
-s64 cellSpursGetWorkloadFlag()
+s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpursWorkloadFlag>> flag)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
+	cellSpurs->Warning("%s(spurs_addr=0x%x, flag_addr=0x%x)", __FUNCTION__, spurs.addr(), flag.addr());
+
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0xEC00, libsre_rtoc);
-#else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
 #endif
+	if (!spurs || !flag)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+
+	*flag = vm::bptr<CellSpursWorkloadFlag>::make(Memory.RealToVirtualAddr(&spurs->m.wklFlag));
+	return CELL_OK;
 }
 
 s64 cellSpursSendWorkloadSignal()
@@ -1206,15 +1259,36 @@ s64 cellSpursGetWorkloadData()
 #endif
 }
 
-s64 cellSpursReadyCountStore()
+s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
+	cellSpurs->Warning("%s(spurs_addr=0x%x, wid=%d, value=0x%x)", __FUNCTION__, spurs.addr(), wid, value);
+
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0xAB2C, libsre_rtoc);
-#else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
 #endif
+	if (!spurs)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+	if (wid >= (spurs->m.flags1 & 0x40 ? 0x20u : 0x10u) || value > 0xff)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+	if ((spurs->m.wklMsk1.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
+	}
+	if (spurs->m.exception.ToBE() || spurs->wklStat(wid).read_relaxed() != 2)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+
+	spurs->m.wklReadyCount[wid].exchange((u8)value);
+	return CELL_OK;
 }
 
 s64 cellSpursReadyCountAdd()

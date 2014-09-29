@@ -56,6 +56,38 @@ enum
 	CELL_SPURS_TASK_ERROR_SHUTDOWN     = 0x80410920,
 };
 
+enum
+{
+	CELL_SPURS_JOB_ERROR_AGAIN               = 0x80410A01,
+	CELL_SPURS_JOB_ERROR_INVAL               = 0x80410A02,
+	CELL_SPURS_JOB_ERROR_NOSYS               = 0x80410A03,
+	CELL_SPURS_JOB_ERROR_NOMEM               = 0x80410A04,
+	CELL_SPURS_JOB_ERROR_SRCH                = 0x80410A05,
+	CELL_SPURS_JOB_ERROR_NOENT               = 0x80410A06,
+	CELL_SPURS_JOB_ERROR_NOEXEC              = 0x80410A07,
+	CELL_SPURS_JOB_ERROR_DEADLK              = 0x80410A08,
+	CELL_SPURS_JOB_ERROR_PERM                = 0x80410A09,
+	CELL_SPURS_JOB_ERROR_BUSY                = 0x80410A0A,
+	CELL_SPURS_JOB_ERROR_JOB_DESCRIPTOR      = 0x80410A0B,
+	CELL_SPURS_JOB_ERROR_JOB_DESCRIPTOR_SIZE = 0x80410A0C,
+	CELL_SPURS_JOB_ERROR_FAULT               = 0x80410A0D,
+	CELL_SPURS_JOB_ERROR_CHILD               = 0x80410A0E,
+	CELL_SPURS_JOB_ERROR_STAT                = 0x80410A0F,
+	CELL_SPURS_JOB_ERROR_ALIGN               = 0x80410A10,
+	CELL_SPURS_JOB_ERROR_NULL_POINTER        = 0x80410A11,
+	CELL_SPURS_JOB_ERROR_MEMORY_CORRUPTED    = 0x80410A12,
+
+	CELL_SPURS_JOB_ERROR_MEMORY_SIZE         = 0x80410A17,
+	CELL_SPURS_JOB_ERROR_UNKNOWN_COMMAND     = 0x80410A18,
+	CELL_SPURS_JOB_ERROR_JOBLIST_ALIGNMENT   = 0x80410A19,
+	CELL_SPURS_JOB_ERROR_JOB_ALIGNMENT       = 0x80410A1a,
+	CELL_SPURS_JOB_ERROR_CALL_OVERFLOW       = 0x80410A1b,
+	CELL_SPURS_JOB_ERROR_ABORT               = 0x80410A1c,
+	CELL_SPURS_JOB_ERROR_DMALIST_ELEMENT     = 0x80410A1d,
+	CELL_SPURS_JOB_ERROR_NUM_CACHE           = 0x80410A1e,
+	CELL_SPURS_JOB_ERROR_INVALID_BINARY      = 0x80410A1f,
+};
+
 // SPURS defines.
 enum SPURSKernelInterfaces
 {
@@ -160,6 +192,13 @@ struct CellSpursAttribute
 	};
 };
 
+struct CellSpursWorkloadFlag
+{
+	be_t<u64> unused0;
+	be_t<u32> unused1;
+	atomic_t<u32> flag;
+};
+
 typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
 // Core CellSpurs structures
@@ -213,23 +252,6 @@ struct CellSpurs
 		vm::bptr<const char, 1, u64> nameInstance;
 	};
 
-	struct _sub_x70
-	{
-		be_t<u16> wklFlag1; // 0x70
-		u8 unk2; // 0x72
-		u8 unk3;
-		u8 flags1;
-		u8 unk5;
-		u8 nSpus;
-		u8 unk7;
-	};
-
-	struct _sub_x78
-	{
-		be_t<u16> wklFlag2;
-		u8 unk[6];
-	};
-
 	union
 	{
 		// raw data
@@ -239,27 +261,42 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			u8 wklZ1[0x10];       // 0x0
-			u8 wklZ2[0x10];       // 0x10
+			atomic_t<u8> wklReadyCount[0x20];
 			u8 wklA[0x10];        // 0x20
 			u8 wklB[0x10];        // 0x30
 			u8 wklMinCnt[0x10];   // 0x40
 			atomic_t<u32> wklMaxCnt[4]; // 0x50
-			u8 unknown0[0x6C - 0x60];
-			be_t<u32> unk18;      // 0x6C
-			atomic_t<_sub_x70> x70; // 0x70
-			atomic_t<_sub_x78> x78; // 0x78
-			u8 wklC1[0x10];       // 0x80
+			CellSpursWorkloadFlag wklFlag; // 0x60
+			atomic_t<u16> wklSet1; // 0x70
+			atomic_t<u8> x72;     // 0x72
+			u8 x73;               // 0x73
+			u8 flags1;            // 0x74
+			u8 x75;               // 0x75
+			u8 nSpus;             // 0x76
+			atomic_t<u8> flagRecv; // 0x77
+			atomic_t<u16> wklSet2; // 0x78
+			u8 x7A[6];            // 0x7A
+			atomic_t<u8> wklStat1[0x10]; // 0x80
 			u8 wklD1[0x10];       // 0x90
 			u8 wklE1[0x10];       // 0xA0
-			atomic_t<u32> wklMsk1;// 0xB0
-			atomic_t<u32> wklMsk2;// 0xB4
-			atomic_t<u8> unk23[8];// 0xB8
-			u8 unk6[0x10];        // 0xC0 (SPU port at 0xc9)
-			u8 wklC2[0x10];       // 0xD0
+			atomic_t<u32> wklMsk1; // 0xB0
+			atomic_t<u32> wklMsk2; // 0xB4
+			u8 xB8[5];            // 0xB8
+			atomic_t<u8> xBD;     // 0xBD
+			u8 xBE[2];            // 0xBE
+			u8 xC0[8];            // 0xC0
+			u8 xC8;               // 0xC8
+			u8 spuPort;           // 0xC9
+			u8 xCA;               // 0xCA
+			u8 xCB;               // 0xCB
+			u8 xCC;               // 0xCC
+			u8 xCD;               // 0xCD
+			u8 xCE;               // 0xCE
+			u8 xCF;               // 0xCF
+			atomic_t<u8> wklStat2[0x10]; // 0xD0
 			u8 wklD2[0x10];       // 0xE0
 			u8 wklE2[0x10];       // 0xF0
-			_sub_str1 wklF1[0x10];// 0x100
+			_sub_str1 wklF1[0x10]; // 0x100
 			be_t<u64> unk22;      // 0x900
 			u8 unknown7[0x980 - 0x908];
 			be_t<u64> semPrv;     // 0x980
@@ -280,9 +317,11 @@ struct CellSpurs
 			u8 unknown3[0xD5C - 0xD54];
 			be_t<u32> queue;      // 0xD5C
 			be_t<u32> port;       // 0xD60
-			atomic_t<u8> unk19[4]; // 0xD64 (used in wakeup)
+			atomic_t<u8> xD64;    // 0xD64
+			atomic_t<u8> xD65;    // 0xD65
+			atomic_t<u8> xD66;    // 0xD66
 			atomic_t<u32> enableEH; // 0xD68
-			be_t<u32> unk21;      // 0xD6C
+			be_t<u32> exception;  // 0xD6C
 			sys_spu_image spuImg; // 0xD70
 			be_t<u32> flags;      // 0xD80
 			be_t<s32> spuPriority;// 0xD84
@@ -292,7 +331,7 @@ struct CellSpurs
 			be_t<u32> unk5;       // 0xD9C
 			be_t<u32> revision;   // 0xDA0
 			be_t<u32> sdkVersion; // 0xDA4
-			atomic_t<u64> spups;// 0xDA8
+			atomic_t<u64> spups;  // 0xDA8
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
 			u8 unknown9[0xE00 - 0xDD0];
@@ -310,6 +349,18 @@ struct CellSpurs
 			SPURSManager *spurs;
 		} c;
 	};
+
+	__forceinline atomic_t<u8>& wklStat(const u32 wid)
+	{
+		if (wid & 0x10)
+		{
+			return m.wklStat2[wid & 0xf];
+		}
+		else
+		{
+			return m.wklStat1[wid & 0xf];
+		}
+	}
 };
 
 typedef CellSpurs CellSpurs2;
