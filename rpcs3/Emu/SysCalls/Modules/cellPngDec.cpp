@@ -19,7 +19,7 @@ u32 libpngdec_rtoc;
 s32 pngDecCreate(
 	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> param,
-	vm::ptr<const CellPngDecExtThreadInParam> ext = {})
+	vm::ptr<const CellPngDecExtThreadInParam> ext = vm::ptr<const CellPngDecExtThreadInParam>::make(0))
 {
 	// alloc memory (should probably use param->cbCtrlMallocFunc)
 	auto dec = CellPngDecMainHandle::make(Memory.Alloc(sizeof(PngDecoder), 128));
@@ -60,8 +60,8 @@ s32 pngDecOpen(
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo,
-	vm::ptr<const CellPngDecCbCtrlStrm> cb = {},
-	vm::ptr<const CellPngDecOpnParam> param = {})
+	vm::ptr<const CellPngDecCbCtrlStrm> cb = vm::ptr<const CellPngDecCbCtrlStrm>::make(0),
+	vm::ptr<const CellPngDecOpnParam> param = vm::ptr<const CellPngDecOpnParam>::make(0))
 {
 	// alloc memory (should probably use dec->malloc)
 	auto stream = CellPngDecSubHandle::make(Memory.Alloc(sizeof(PngStream), 128));
@@ -129,7 +129,7 @@ s32 pngDecClose(CellPngDecSubHandle stream)
 s32 pngReadHeader(
 	CellPngDecSubHandle stream,
 	vm::ptr<CellPngDecInfo> info,
-	vm::ptr<CellPngDecExtInfo> extInfo = {})
+	vm::ptr<CellPngDecExtInfo> extInfo = vm::ptr<CellPngDecExtInfo>::make(0))
 {
 	CellPngDecInfo& current_info = stream->info;
 
@@ -193,8 +193,8 @@ s32 pngDecSetParameter(
 	CellPngDecSubHandle stream,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam,
-	vm::ptr<const CellPngDecExtInParam> extInParam = {},
-	vm::ptr<CellPngDecExtOutParam> extOutParam = {})
+	vm::ptr<const CellPngDecExtInParam> extInParam = vm::ptr<const CellPngDecExtInParam>::make(0),
+	vm::ptr<CellPngDecExtOutParam> extOutParam = vm::ptr<CellPngDecExtOutParam>::make(0))
 {
 	CellPngDecInfo& current_info = stream->info;
 	CellPngDecOutParam& current_outParam = stream->outParam;
@@ -235,8 +235,8 @@ s32 pngDecodeData(
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo,
-	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp = {},
-	vm::ptr<CellPngDecDispParam> dispParam = {})
+	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp = vm::ptr<const CellPngDecCbCtrlDisp>::make(0),
+	vm::ptr<CellPngDecDispParam> dispParam = vm::ptr<CellPngDecDispParam>::make(0))
 {
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
 

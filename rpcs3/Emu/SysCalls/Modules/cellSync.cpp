@@ -1087,7 +1087,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		assert(sys_event_queue_receive(queue->m_eq_id, {}, 0) == CELL_OK);
+		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
 		var1 = 1;
 	}
 }
@@ -1466,7 +1466,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		assert(sys_event_queue_receive(queue->m_eq_id, {}, 0) == CELL_OK);
+		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
 		var1 = 1;
 	}
 }

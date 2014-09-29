@@ -141,8 +141,10 @@ struct CellSpurs;
 enum SpursAttrFlags : u32
 {
 	SAF_NONE = 0x0,
+
 	SAF_EXIT_IF_NO_WORK = 0x1,
-	SAF_SECOND_VERSION = 0x4,
+	SAF_UNKNOWN_FLAG_30 = 0x2,
+	SAF_SECOND_VERSION  = 0x4,
 
 	SAF_UNKNOWN_FLAG_9                = 0x00400000,
 	SAF_UNKNOWN_FLAG_8                = 0x00800000,
@@ -152,6 +154,14 @@ enum SpursAttrFlags : u32
 	SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT = 0x20000000,
 	SAF_SPU_MEMORY_CONTAINER_SET      = 0x40000000,
 	SAF_UNKNOWN_FLAG_0                = 0x80000000,
+};
+
+enum SpursFlags1 : u8
+{
+	SF1_NONE = 0x0,
+	
+	SF1_IS_SECOND = 0x40,
+	SF1_EXIT_IF_NO_WORK = 0x80,
 };
 
 struct CellSpursAttribute
@@ -279,8 +289,8 @@ struct CellSpurs
 			atomic_t<u8> wklStat1[0x10]; // 0x80
 			u8 wklD1[0x10];       // 0x90
 			u8 wklE1[0x10];       // 0xA0
-			atomic_t<u32> wklMsk1; // 0xB0
-			atomic_t<u32> wklMsk2; // 0xB4
+			atomic_t<u32> wklMskA; // 0xB0
+			atomic_t<u32> wklMskB; // 0xB4
 			u8 xB8[5];            // 0xB8
 			atomic_t<u8> xBD;     // 0xBD
 			u8 xBE[2];            // 0xBE
@@ -360,6 +370,16 @@ struct CellSpurs
 		{
 			return m.wklStat1[wid & 0xf];
 		}
+	}
+
+	__forceinline vm::ptr<sys_lwmutex_t> get_lwmutex()
+	{
+		return vm::ptr<sys_lwmutex_t>::make(Memory.RealToVirtualAddr(&m.mutex));
+	}
+
+	__forceinline vm::ptr<sys_lwcond_t> get_lwcond()
+	{
+		return vm::ptr<sys_lwcond_t>::make(Memory.RealToVirtualAddr(&m.cond));
 	}
 };
 

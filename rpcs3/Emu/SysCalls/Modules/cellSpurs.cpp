@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
@@ -92,7 +93,7 @@ s64 spursInit(
 
 	if (!isSecond)
 	{
-		spurs->m.wklMsk1.write_relaxed(be_t<u32>::make(0xffff));
+		spurs->m.wklMskA.write_relaxed(be_t<u32>::make(0xffff));
 	}
 	spurs->m.xCC = 0;
 	spurs->m.xCD = 0;
@@ -184,7 +185,7 @@ s64 spursInit(
 	assert(lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv") == CELL_OK);
 	assert(lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv") == CELL_OK);
 
-	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK) << 7 | (isSecond ? 0x40 : 0);
+	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK ? SF1_EXIT_IF_NO_WORK : 0) | (isSecond ? SF1_IS_SECOND : 0);
 	spurs->m.flagRecv.write_relaxed(0xff);
 	spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
 	spurs->_u8[0xD64] = 0;
@@ -206,10 +207,110 @@ s64 spursInit(
 
 	spurs->m.ppu0 = ppu_thread_create(0, 0, ppuPriority, 0x4000, true, false, name + "SpursHdlr0", [spurs](PPUThread& CPU)
 	{
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 		return cb_call<void, vm::ptr<CellSpurs>>(CPU, libsre + 0x9214, libsre_rtoc, spurs);
 #endif
+		if (spurs->m.flags & SAF_UNKNOWN_FLAG_30)
+		{
+			return;
+		}
 
+		while (true)
+		{
+			if (Emu.IsStopped())
+			{
+				cellSpurs->Warning("SPURS Handler Thread 0 aborted");
+				return;
+			}
+
+			if (spurs->m.flags1 & SF1_EXIT_IF_NO_WORK)
+			{
+				assert(sys_lwmutex_lock(spurs->get_lwmutex(), 0) == CELL_OK);
+				if (spurs->m.xD66.read_relaxed())
+				{
+					assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+					return;
+				}
+				else while (true)
+				{
+					spurs->m.xD64.exchange(0);
+					if (spurs->m.exception.ToBE() == 0)
+					{
+						bool do_break = false;
+						for (u32 i = 0; i < 16; i++)
+						{
+							if (spurs->m.wklStat1[i].read_relaxed() == 2 &&
+								spurs->m.wklG1[i].wklPriority.ToBE() != 0 &&
+								spurs->_u8[0x50 + i] & 0xf // check wklMaxCnt
+								)
+							{
+								if (spurs->m.wklReadyCount[i].read_relaxed() ||
+									spurs->m.wklSet1.read_relaxed() & (0x8000u >> i) ||
+									spurs->m.wklFlag.flag.read_relaxed() == 0 &&
+									spurs->m.flagRecv.read_relaxed() == (u8)i
+									)
+								{
+									do_break = true;
+									break;
+								}
+							}
+						}
+						if (spurs->m.flags1 & SF1_IS_SECOND) for (u32 i = 0; i < 16; i++)
+						{
+							if (spurs->m.wklStat2[i].read_relaxed() == 2 &&
+								spurs->m.wklG2[i].wklPriority.ToBE() != 0 &&
+								spurs->_u8[0x50 + i] & 0xf0 // check wklMaxCnt
+								)
+							{
+								if (spurs->m.wklReadyCount[i + 0x10].read_relaxed() ||
+									spurs->m.wklSet2.read_relaxed() & (0x8000u >> i) ||
+									spurs->m.wklFlag.flag.read_relaxed() == 0 &&
+									spurs->m.flagRecv.read_relaxed() == (u8)i + 0x10
+									)
+								{
+									do_break = true;
+									break;
+								}
+							}
+						}
+						if (do_break) break; // from while
+					}
+
+					spurs->m.xD65.exchange(1);
+					if (spurs->m.xD64.read_relaxed() == 0)
+					{
+						assert(sys_lwcond_wait(spurs->get_lwcond(), 0) == CELL_OK);
+					}
+					spurs->m.xD65.exchange(0);
+					if (spurs->m.xD66.read_relaxed())
+					{
+						assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+						return;
+					}
+				}
+				assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+			}
+
+			if (Emu.IsStopped()) continue;
+
+			assert(sys_spu_thread_group_start(spurs->m.spuTG) == CELL_OK);
+			if (s32 res = sys_spu_thread_group_join(spurs->m.spuTG, vm::ptr<be_t<u32>>::make(0), vm::ptr<be_t<u32>>::make(0)))
+			{
+				if (res == CELL_ESTAT)
+				{
+					return;
+				}
+				assert(res == CELL_OK);
+			}
+
+			if (Emu.IsStopped()) continue;
+
+			if ((spurs->m.flags1 & SF1_EXIT_IF_NO_WORK) == 0)
+			{
+				assert(spurs->m.xD66.read_relaxed() == 1 || Emu.IsStopped());
+				return;
+			}
+		}
 	})->GetId();
 
 	spurs->m.ppu1 = ppu_thread_create(0, 0, ppuPriority, 0x8000, true, false, name + "SpursHdlr1", [spurs](PPUThread& CPU)
@@ -775,9 +876,9 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 	spurs->m.xD64.exchange(1);
 	if (spurs->m.xD65.read_sync())
 	{
-		assert(sys_lwmutex_lock(vm::ptr<sys_lwmutex_t>::make(spurs.addr() + 0xdb0), 0) == 0);
-		assert(sys_lwcond_signal(vm::ptr<sys_lwcond_t>::make(spurs.addr() + 0xdc8)) == 0);
-		assert(sys_lwmutex_unlock(vm::ptr<sys_lwmutex_t>::make(spurs.addr() + 0xdb0)) == 0);
+		assert(sys_lwmutex_lock(spurs->get_lwmutex(), 0) == 0);
+		assert(sys_lwcond_signal(spurs->get_lwcond()) == 0);
+		assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == 0);
 	}
 	return CELL_OK;
 }
@@ -826,8 +927,8 @@ s32 spursAddWorkload(
 	}
 	
 	u32 wnum;
-	const u32 wmax = spurs->m.flags1 & 0x40 ? 0x20 : 0x10; // check isSecond (TODO: check if can be changed)
-	spurs->m.wklMsk1.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
+	const u32 wmax = spurs->m.flags1 & SF1_IS_SECOND ? 0x20u : 0x10u; // TODO: check if can be changed
+	spurs->m.wklMskA.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
 	{
 		wnum = cntlz32(~(u32)value); // found empty position
 		if (wnum < wmax)
@@ -842,7 +943,7 @@ s32 spursAddWorkload(
 		return CELL_SPURS_POLICY_MODULE_ERROR_AGAIN;
 	}
 
-	u32 index = wnum % 0x10;
+	u32 index = wnum & 0xf;
 	if (wnum <= 15)
 	{
 		assert((spurs->m.wklA[wnum] & 0xf) == 0);
@@ -856,15 +957,15 @@ s32 spursAddWorkload(
 		spurs->m.wklG1[wnum].wklPriority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH1[wnum].nameClass = nameClass;
 		spurs->m.wklH1[wnum].nameInstance = nameInstance;
-		memset(spurs->m.wklF1[wnum].unk0, 0, 0x18); // clear struct preserving semaphore id
-		memset(spurs->m.wklF1[wnum].unk1, 0, 0x60);
+		memset(spurs->m.wklF1[wnum].unk0, 0, 0x20); // clear struct preserving semaphore id
+		memset(spurs->m.wklF1[wnum].unk1, 0, 0x58);
 		if (hook)
 		{
 			spurs->m.wklF1[wnum].hook = hook;
 			spurs->m.wklF1[wnum].hookArg = hookArg;
 			spurs->m.wklE1[wnum] |= 2;
 		}
-		if ((spurs->m.flags1 & 0x40) == 0)
+		if ((spurs->m.flags1 & SF1_IS_SECOND) == 0)
 		{
 			spurs->m.wklReadyCount[wnum + 16].write_relaxed(0);
 			spurs->m.wklMinCnt[wnum] = minContention > 8 ? 8 : minContention;
@@ -883,8 +984,8 @@ s32 spursAddWorkload(
 		spurs->m.wklG2[index].wklPriority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH2[index].nameClass = nameClass;
 		spurs->m.wklH2[index].nameInstance = nameInstance;
-		memset(spurs->m.wklF2[index].unk0, 0, 0x18); // clear struct preserving semaphore id
-		memset(spurs->m.wklF2[index].unk1, 0, 0x60);
+		memset(spurs->m.wklF2[index].unk0, 0, 0x20); // clear struct preserving semaphore id
+		memset(spurs->m.wklF2[index].unk1, 0, 0x58);
 		if (hook)
 		{
 			spurs->m.wklF2[index].hook = hook;
@@ -920,7 +1021,7 @@ s32 spursAddWorkload(
 
 	u32 res_wkl;
 	CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];
-	spurs->m.wklMsk2.atomic_op_sync([spurs, &wkl, wnum, &res_wkl](be_t<u32>& v)
+	spurs->m.wklMskB.atomic_op_sync([spurs, &wkl, wnum, &res_wkl](be_t<u32>& v)
 	{
 		const u32 mask = v.ToLE() & ~(0x80000000u >> wnum);
 		res_wkl = 0;
@@ -951,7 +1052,7 @@ s32 spursAddWorkload(
 
 	spurs->wklStat(wnum).exchange(2);
 	spurs->m.xBD.exchange(0xff);
-	spurs->m.x72.exchange(0);
+	spurs->m.x72.exchange(0xff);
 	return CELL_OK;
 }
 
@@ -981,10 +1082,10 @@ s64 cellSpursAddWorkload(
 		*priorityTable,
 		minContention,
 		maxContention,
-		{},
-		{},
-		{},
-		{});
+		vm::ptr<const char>::make(0),
+		vm::ptr<const char>::make(0),
+		vm::ptr<CellSpursShutdownCompletionEventHook>::make(0),
+		vm::ptr<void>::make(0));
 }
 
 s64 _cellSpursWorkloadAttributeInitialize(
@@ -1162,11 +1263,11 @@ s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
-	if (wid >= (spurs->m.flags1 & 0x40 ? 0x20u : 0x10u))
+	if (wid >= (spurs->m.flags1 & SF1_IS_SECOND ? 0x20u : 0x10u))
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if ((spurs->m.wklMsk1.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	if ((spurs->m.wklMskA.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
@@ -1274,11 +1375,11 @@ s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
-	if (wid >= (spurs->m.flags1 & 0x40 ? 0x20u : 0x10u) || value > 0xff)
+	if (wid >= (spurs->m.flags1 & SF1_IS_SECOND ? 0x20u : 0x10u) || value > 0xff)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if ((spurs->m.wklMsk1.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	if ((spurs->m.wklMskA.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
