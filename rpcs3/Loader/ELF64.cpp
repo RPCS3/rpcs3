@@ -77,16 +77,16 @@ void Elf64_Shdr::Load(vfsStream& f)
 void Elf64_Shdr::Show()
 {
 #ifdef LOADER_DEBUG
-	LOG_NOTICE(LOADER, "Name offset: %x", sh_name);
+	LOG_NOTICE(LOADER, "Name offset: 0x%x", sh_name);
 	LOG_NOTICE(LOADER, "Type: %d", sh_type);
-	LOG_NOTICE(LOADER, "Addr: %llx", sh_addr);
-	LOG_NOTICE(LOADER, "Offset: %llx", sh_offset);
-	LOG_NOTICE(LOADER, "Size: %llx", sh_size);
+	LOG_NOTICE(LOADER, "Addr: 0x%llx", sh_addr);
+	LOG_NOTICE(LOADER, "Offset: 0x%llx", sh_offset);
+	LOG_NOTICE(LOADER, "Size: 0x%llx", sh_size);
 	LOG_NOTICE(LOADER, "EntSize: %lld", sh_entsize);
-	LOG_NOTICE(LOADER, "Flags: %llx", sh_flags);
-	LOG_NOTICE(LOADER, "Link: %x", sh_link);
-	LOG_NOTICE(LOADER, "Info: %x", sh_info);
-	LOG_NOTICE(LOADER, "Address align: %llx", sh_addralign);
+	LOG_NOTICE(LOADER, "Flags: 0x%llx", sh_flags);
+	LOG_NOTICE(LOADER, "Link: 0x%x", sh_link);
+	LOG_NOTICE(LOADER, "Info: 0x%x", sh_info);
+	LOG_NOTICE(LOADER, "Address align: 0x%llx", sh_addralign);
 #endif
 }
 

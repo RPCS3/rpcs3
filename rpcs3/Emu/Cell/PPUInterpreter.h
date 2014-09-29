@@ -149,7 +149,7 @@ private:
 			((u64)a < (u64)simm16 && (to & 0x2)) ||
 			((u64)a > (u64)simm16 && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (tdi %x, r%d, %x)", to, ra, simm16));
+			UNK(fmt::Format("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16));
 		}
 	}
 
@@ -163,7 +163,7 @@ private:
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (twi %x, r%d, %x)", to, ra, simm16));
+			UNK(fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16));
 		}
 	}
 
@@ -2102,7 +2102,7 @@ private:
 			break;
 		case 0x4: CPU.FastStop(); break;
 		case 0x22: UNK("HyperCall LV1"); break;
-		default: UNK(fmt::Format("Unknown sc: %x", sc_code));
+		default: UNK(fmt::Format("Unknown sc: 0x%x", sc_code));
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
@@ -2266,7 +2266,7 @@ private:
 			((u32)a < (u32)b && (to & 0x2)) ||
 			((u32)a > (u32)b && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (tw %x, r%d, r%d)", to, ra, rb));
+			UNK(fmt::Format("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb));
 		}
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb)

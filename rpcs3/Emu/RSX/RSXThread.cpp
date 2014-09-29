@@ -239,7 +239,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV406E_SET_CONTEXT_DMA_SEMAPHORE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV406E_SET_CONTEXT_DMA_SEMAPHORE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV406E_SET_CONTEXT_DMA_SEMAPHORE: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -254,7 +254,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV406E_SEMAPHORE_ACQUIRE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV406E_SEMAPHORE_ACQUIRE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV406E_SEMAPHORE_ACQUIRE: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -315,21 +315,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_NOTIFY:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_NOTIFY: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_NOTIFY: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV4097_WAIT_FOR_IDLE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_WAIT_FOR_IDLE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_WAIT_FOR_IDLE: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV4097_PM_TRIGGER:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_PM_TRIGGER: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_PM_TRIGGER: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -458,7 +458,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_VERTEX_ATTRIB_INPUT_MASK: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_VERTEX_ATTRIB_INPUT_MASK: 0x%x", ARGS(0));
 
 		//VertexData[0].prog.attributeInputMask = ARGS(0);
 	}
@@ -467,7 +467,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK: 0x%x", ARGS(0));
 
 		//VertexData[0].prog.attributeOutputMask = ARGS(0);
 		//FragmentData.prog.attributeInputMask = ARGS(0)/* & ~0x20*/;
@@ -490,7 +490,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_COLOR_MASK_MRT: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_COLOR_MASK_MRT: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -829,14 +829,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_CLEAR_RECT_HORIZONTAL:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CLEAR_RECT_HORIZONTAL: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_CLEAR_RECT_HORIZONTAL: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_CLEAR_RECT_VERTICAL:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CLEAR_RECT_VERTICAL: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_CLEAR_RECT_VERTICAL: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -933,7 +933,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 a0 = ARGS(0);
 
-		//LOG_WARNING(RSX, "NV4097_SET_BEGIN_END: %x", a0);
+		//LOG_WARNING(RSX, "NV4097_SET_BEGIN_END: 0x%x", a0);
 
 		m_read_buffer = false;
 
@@ -1066,7 +1066,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_INVALIDATE_L2:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_INVALIDATE_L2: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_INVALIDATE_L2: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1085,7 +1085,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_INVALIDATE_ZCULL:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_INVALIDATE_ZCULL: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_INVALIDATE_ZCULL: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1249,7 +1249,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_SCULL_CONTROL:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_SCULL_CONTROL: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_SCULL_CONTROL: 0x%x", ARGS(0));
 		
 		//This is stencil culling , nothing to do with stencil masking on regular color or depth buffer 
 		//const u32 a0 = ARGS(0);
@@ -1287,7 +1287,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_POINT_PARAMS_ENABLE:
 	{
 		if (ARGS(0))
-			LOG_ERROR(RSX, "NV4097_SET_POINT_PARAMS_ENABLE: %x", ARGS(0));
+			LOG_ERROR(RSX, "NV4097_SET_POINT_PARAMS_ENABLE: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1427,7 +1427,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_SURFACE_PITCH_D:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_SURFACE_PITCH_D: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_SURFACE_PITCH_D: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1467,7 +1467,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_D: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_D: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1481,14 +1481,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_CONTEXT_DMA_SEMAPHORE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_SEMAPHORE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_SEMAPHORE: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_CONTEXT_DMA_NOTIFIES:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_NOTIFIES: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_NOTIFIES: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1529,7 +1529,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u8 alphaToOne = (a0 >> 8) & 0xf;
 		const u16 sampleMask = a0 >> 16;
 		
-		LOG_WARNING(RSX, "TODO: NV4097_SET_ANTI_ALIASING_CONTROL: %x", a0);
+		LOG_WARNING(RSX, "TODO: NV4097_SET_ANTI_ALIASING_CONTROL: 0x%x", a0);
 	}
 	break;
 
@@ -1599,7 +1599,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ZCULL_CONTROL0: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_ZCULL_CONTROL0: 0x%x", ARGS(0));
 
 		//m_set_depth_func = true;
 		//m_depth_func = ARGS(0) >> 4;
@@ -1609,7 +1609,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_ZCULL_CONTROL1:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ZCULL_CONTROL1: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_ZCULL_CONTROL1: 0x%x", ARGS(0));
 
 		//m_set_depth_func = true;
 		//m_depth_func = ARGS(0) >> 4;
@@ -1619,14 +1619,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_ZCULL_STATS_ENABLE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_ZCULL_STATS_ENABLE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_SET_ZCULL_STATS_ENABLE: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV4097_ZCULL_SYNC:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_ZCULL_SYNC: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV4097_ZCULL_SYNC: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1745,7 +1745,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 offset = ARGS(0) & 0xffffff;
 		const u8 mode = ARGS(0) >> 24;
-		LOG_WARNING(RSX, "NV4097_SET_RENDER_ENABLE: Offset=%06x, Mode=%x", offset, mode);
+		LOG_WARNING(RSX, "NV4097_SET_RENDER_ENABLE: Offset=0x%06x, Mode=0x%x", offset, mode);
 	}
 	break;
 
@@ -1812,14 +1812,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV0039_PITCH_IN:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_PITCH_IN: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV0039_PITCH_IN: 0x%x", ARGS(0));
 	}
 	break;
 
 	case NV0039_BUFFER_NOTIFY:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY: 0x%x", ARGS(0));
 	}
 	break;
 
@@ -1848,7 +1848,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
 	{
 		if (ARGS(0))
-			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_IMAGE: %x", ARGS(0));
+			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_IMAGE: 0x%x", ARGS(0));
 	}
 	break;
 
