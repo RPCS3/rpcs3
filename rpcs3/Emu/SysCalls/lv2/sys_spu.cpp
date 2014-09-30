@@ -589,7 +589,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<be_t<u64>> value, u32 ty
 
 s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
-	sys_spu.Log("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
+	sys_spu.Warning("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
 
 	CPUThread* thr = Emu.GetCPU().GetThread(id);
 

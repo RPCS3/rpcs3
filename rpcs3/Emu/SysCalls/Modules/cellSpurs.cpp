@@ -241,7 +241,7 @@ s64 spursInit(
 						{
 							if (spurs->m.wklStat1[i].read_relaxed() == 2 &&
 								spurs->m.wklG1[i].wklPriority.ToBE() != 0 &&
-								spurs->_u8[0x50 + i] & 0xf // check wklMaxCnt
+								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf
 								)
 							{
 								if (spurs->m.wklReadyCount[i].read_relaxed() ||
@@ -259,7 +259,7 @@ s64 spursInit(
 						{
 							if (spurs->m.wklStat2[i].read_relaxed() == 2 &&
 								spurs->m.wklG2[i].wklPriority.ToBE() != 0 &&
-								spurs->_u8[0x50 + i] & 0xf0 // check wklMaxCnt
+								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf0
 								)
 							{
 								if (spurs->m.wklReadyCount[i + 0x10].read_relaxed() ||
@@ -995,19 +995,22 @@ s32 spursAddWorkload(
 	}
 	spurs->m.wklReadyCount[wnum].write_relaxed(0);
 
-	u32 pos = ((~wnum * 8) | (wnum / 4)) & 0x1c;
-	spurs->m.wklMaxCnt[index / 4].atomic_op([pos, maxContention](be_t<u32>& v)
-	{
-		v &= ~(0xf << pos);
-		v |= (maxContention > 8 ? 8 : maxContention) << pos;
-	});
-
 	if (wnum <= 15)
 	{
+		spurs->m.wklMaxCnt[wnum].atomic_op([maxContention](u8& v)
+		{
+			v &= ~0xf;
+			v |= (maxContention > 8 ? 8 : maxContention);
+		});
 		spurs->m.wklSet1._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag1
 	}
 	else
 	{
+		spurs->m.wklMaxCnt[index].atomic_op([maxContention](u8& v)
+		{
+			v &= ~0xf0;
+			v |= (maxContention > 8 ? 8 : maxContention) << 4;
+		});
 		spurs->m.wklSet2._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
 	}
 

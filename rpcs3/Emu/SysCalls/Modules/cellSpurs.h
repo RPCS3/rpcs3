@@ -275,7 +275,7 @@ struct CellSpurs
 			u8 wklA[0x10];        // 0x20
 			u8 wklB[0x10];        // 0x30
 			u8 wklMinCnt[0x10];   // 0x40
-			atomic_t<u32> wklMaxCnt[4]; // 0x50
+			atomic_t<u8> wklMaxCnt[0x10]; // 0x50
 			CellSpursWorkloadFlag wklFlag; // 0x60
 			atomic_t<u16> wklSet1; // 0x70
 			atomic_t<u8> x72;     // 0x72

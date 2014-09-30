@@ -205,4 +205,3 @@ namespace vm
 #include "vm_ref.h"
 #include "vm_ptr.h"
 #include "vm_var.h"
-#include "atomic_type.h"

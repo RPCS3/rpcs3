@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
