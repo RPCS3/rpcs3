@@ -237,9 +237,15 @@ int sceNpTrophyDestroyContext()
 	return CELL_OK;
 }
 
-int sceNpTrophyAbortHandle()
+int sceNpTrophyAbortHandle(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	sceNpTrophy->Todo("sceNpTrophyAbortHandle(handle=%d)", handle);
+
+	// TODO: ?
+
+	if (!sceNpTrophyInstance.m_bInitialized)
+		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
