@@ -89,7 +89,7 @@ public:
 
 		if(!CheckID(id, id_data)) return false;
 
-		data = id_data->m_data->get<T>();
+		data = id_data->GetData()->get<T>();
 
 		return true;
 	}
@@ -100,8 +100,8 @@ public:
 
 		if(!CheckID(id, id_data)) return false;
 
-		data = id_data->m_data->get<T>();
-		type = id_data->m_type;
+		data = id_data->GetData()->get<T>();
+		type = id_data->GetType();
 
 		return true;
 	}

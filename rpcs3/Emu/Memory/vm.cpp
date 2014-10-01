@@ -4,7 +4,7 @@
 #ifdef _WIN32
 #include <Windows.h>
 
-void* const m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+void* const g_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
 #include <sys/mman.h>
 
@@ -13,7 +13,7 @@ void* const m_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_N
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-void* const m_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+void* const g_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 #endif
 
 namespace vm

@@ -108,9 +108,9 @@ void MemoryBase::Init(MemoryType type)
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
 #ifdef _WIN32
-	if (!m_base_addr)
+	if (!g_base_addr)
 #else
-	if ((s64)m_base_addr == (s64)-1)
+	if ((s64)g_base_addr == (s64)-1)
 #endif
 	{
 		LOG_ERROR(MEMORY, "Initializing memory failed");
@@ -119,7 +119,7 @@ void MemoryBase::Init(MemoryType type)
 	}
 	else
 	{
-		LOG_NOTICE(MEMORY, "Initializing memory: m_base_addr = 0x%llx", (u64)m_base_addr);
+		LOG_NOTICE(MEMORY, "Initializing memory: m_base_addr = 0x%llx", (u64)g_base_addr);
 	}
 
 	switch (type)
@@ -205,7 +205,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 {
 	LV2_LOCK(0);
 
-	if ((u32)addr != addr || (u64)addr + (u64)size > 0x100000000ull)
+	if ((addr | (addr + size)) & ~0xFFFFFFFFull)
 	{
 		return false;
 	}
