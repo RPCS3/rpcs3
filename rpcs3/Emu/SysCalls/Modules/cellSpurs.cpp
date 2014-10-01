@@ -1337,7 +1337,7 @@ s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpur
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	*flag = vm::bptr<CellSpursWorkloadFlag>::make(Memory.RealToVirtualAddr(&spurs->m.wklFlag));
+	flag->set(be_t<u32>::make(Memory.RealToVirtualAddr(&spurs->m.wklFlag)));
 	return CELL_OK;
 }
 

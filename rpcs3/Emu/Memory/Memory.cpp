@@ -128,7 +128,6 @@ void MemoryBase::Init(MemoryType type)
 		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
 		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
 		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
 		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
 		break;
@@ -218,7 +217,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 	}
 
 	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
-	LOG_WARNING(MEMORY, "MemoryBase::Map(0x%llx, 0x%x)", addr, size);
+	LOG_WARNING(MEMORY, "Memory mapped at 0x%llx: size=0x%x", addr, size);
 	return true;
 }
 

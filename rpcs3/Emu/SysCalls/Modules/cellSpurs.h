@@ -271,20 +271,20 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			atomic_t<u8> wklReadyCount[0x20];
-			u8 wklA[0x10];        // 0x20
-			u8 wklB[0x10];        // 0x30
-			u8 wklMinCnt[0x10];   // 0x40
-			atomic_t<u8> wklMaxCnt[0x10]; // 0x50
+			atomic_t<u8> wklReadyCount[0x20]; // 0x0 (index = wid)
+			u8 wklA[0x10];        // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
+			u8 wklB[0x10];        // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
+			u8 wklMinCnt[0x10];   // 0x40 (seems only for first 0..15 wids)
+			atomic_t<u8> wklMaxCnt[0x10]; // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
 			CellSpursWorkloadFlag wklFlag; // 0x60
-			atomic_t<u16> wklSet1; // 0x70
+			atomic_t<u16> wklSet1; // 0x70 (bitset for 0..15 wids)
 			atomic_t<u8> x72;     // 0x72
 			u8 x73;               // 0x73
 			u8 flags1;            // 0x74
 			u8 x75;               // 0x75
 			u8 nSpus;             // 0x76
 			atomic_t<u8> flagRecv; // 0x77
-			atomic_t<u16> wklSet2; // 0x78
+			atomic_t<u16> wklSet2; // 0x78 (bitset for 16..32 wids)
 			u8 x7A[6];            // 0x7A
 			atomic_t<u8> wklStat1[0x10]; // 0x80
 			u8 wklD1[0x10];       // 0x90
@@ -314,7 +314,7 @@ struct CellSpurs
 			be_t<u32> unk12;      // 0x98C
 			be_t<u64> unk13;      // 0x990
 			u8 unknown4[0xB00 - 0x998];
-			_sub_str3 wklG1[0x10];// 0xB00
+			_sub_str3 wklG1[0x10]; // 0xB00
 			be_t<u64> unk7;       // 0xD00
 			be_t<u64> unk8;       // 0xD08
 			be_t<u32> unk9;       // 0xD10
@@ -334,8 +334,8 @@ struct CellSpurs
 			be_t<u32> exception;  // 0xD6C
 			sys_spu_image spuImg; // 0xD70
 			be_t<u32> flags;      // 0xD80
-			be_t<s32> spuPriority;// 0xD84
-			be_t<u32> ppuPriority;// 0xD88
+			be_t<s32> spuPriority; // 0xD84
+			be_t<u32> ppuPriority; // 0xD88
 			char prefix[0x0f];    // 0xD8C
 			u8 prefixSize;        // 0xD9B
 			be_t<u32> unk5;       // 0xD9C
@@ -345,12 +345,12 @@ struct CellSpurs
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
 			u8 unknown9[0xE00 - 0xDD0];
-			_sub_str4 wklH1[0x10];// 0xE00
+			_sub_str4 wklH1[0x10]; // 0xE00
 			_sub_str2 sub3;       // 0xF00
 			u8 unknown6[0x1000 - 0xF80];
-			_sub_str3 wklG2[0x10];// 0x1000
-			_sub_str1 wklF2[0x10];// 0x1200
-			_sub_str4 wklH2[0x10];// 0x1A00
+			_sub_str3 wklG2[0x10]; // 0x1000
+			_sub_str1 wklF2[0x10]; // 0x1200
+			_sub_str4 wklH2[0x10]; // 0x1A00
 		} m;
 
 		// alternative implementation
