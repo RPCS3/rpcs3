@@ -17,12 +17,14 @@ struct sceNpInternal
 	bool m_bSceNp2Initialized;
 	bool m_bScoreInitialized;
 	bool m_bLookupInitialized;
+	bool m_bSceNpUtilBandwidthTestInitialized;
 
 	sceNpInternal()
 		: m_bSceNpInitialized(false),
 		  m_bSceNp2Initialized(false),
 		  m_bScoreInitialized(false),
-		  m_bLookupInitialized(false)
+		  m_bLookupInitialized(false),
+		  m_bSceNpUtilBandwidthTestInitialized(false)
 	{
 	}
 };
@@ -1548,27 +1550,47 @@ int sceNpUtilCmpNpIdInOrder()
 	return CELL_OK;
 }
 
-int sceNpUtilBandwidthTestInitStart()
+int sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
+		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+
+	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = true;
+
 	return CELL_OK;
 }
 
 int sceNpUtilBandwidthTestGetStatus()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
 int sceNpUtilBandwidthTestShutdown()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
+	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
+
 	return CELL_OK;
 }
 
 int sceNpUtilBandwidthTestAbort()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
+
+	if (!sceNpInstance.m_bSceNpUtilBandwidthTestInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -1590,6 +1612,7 @@ void sceNp_unload()
 	sceNpInstance.m_bSceNp2Initialized = false;
 	sceNpInstance.m_bScoreInitialized = false;
 	sceNpInstance.m_bLookupInitialized = false;
+	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
 }
 
 void sceNp_init(Module *pxThis)
@@ -1598,8 +1621,10 @@ void sceNp_init(Module *pxThis)
 
 	sceNp->AddFunc(0xbd28fdbf, sceNpInit);
 	sceNp->AddFunc(0x41251f74, sceNp2Init);
+	sceNp->AddFunc(0xc2ced2b7, sceNpUtilBandwidthTestInitStart);
 	sceNp->AddFunc(0x4885aa18, sceNpTerm);
 	sceNp->AddFunc(0xaadb7c12, sceNp2Term);
+	sceNp->AddFunc(0x432b3cbf, sceNpUtilBandwidthTestShutdown);
 	sceNp->AddFunc(0xad218faf, sceNpDrmIsAvailable);
 	sceNp->AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
 	sceNp->AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
@@ -1818,9 +1843,7 @@ void sceNp_init(Module *pxThis)
 	sceNp->AddFunc(0xd0958814, sceNpSignalingGetPeerNetInfoResult);
 	sceNp->AddFunc(0xd208f91d, sceNpUtilCmpNpId);
 	sceNp->AddFunc(0xf5ff5f31, sceNpUtilCmpNpIdInOrder);
-	sceNp->AddFunc(0xc2ced2b7, sceNpUtilBandwidthTestInitStart);
 	sceNp->AddFunc(0xc880f37d, sceNpUtilBandwidthTestGetStatus);
-	sceNp->AddFunc(0x432b3cbf, sceNpUtilBandwidthTestShutdown);
 	sceNp->AddFunc(0xc99ee313, sceNpUtilBandwidthTestAbort);
 	sceNp->AddFunc(0xee0cc40c, _sceNpSysutilClientMalloc);
 	sceNp->AddFunc(0x816c6a5f, _sceNpSysutilClientFree);
