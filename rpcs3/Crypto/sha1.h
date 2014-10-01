@@ -1,4 +1,5 @@
 #pragma once
+
 /**
  * \file sha1.h
  *

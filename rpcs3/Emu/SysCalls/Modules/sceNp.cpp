@@ -108,8 +108,9 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 
 	// TODO: These shouldn't use current dir
 	std::string enc_drm_path = drm_path.get_ptr();
-	std::string dec_drm_path = "/dev_hdd1/" + titleID + "/" + drm_file_name;
-	std::string rap_path = "/dev_usb000/";
+	std::string dec_drm_path = "/dev_hdd1/cache/" + drm_file_name;
+	std::string pf_str("00000001");  // TODO: Allow multiple profiles. Use default for now.
+	std::string rap_path("../dev_hdd0/home/" + pf_str + "/exdata/");
 
 	// Search dev_usb000 for a compatible RAP file. 
 	vfsDir *raps_dir = new vfsDir(rap_path);
@@ -128,19 +129,19 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 		}
 	}
 
-	// Create a new directory under dev_hdd1/titleID to hold the decrypted data.
-	// TODO: These shouldn't use current dir
-	std::string tmp_dir = "./dev_hdd1/" + titleID;
-	if (!rExists(tmp_dir))
-		rMkdir("./dev_hdd1/" + titleID);
-
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
 	std::string enc_drm_path_local, dec_drm_path_local, rap_path_local;
 	Emu.GetVFS().GetDevice(enc_drm_path, enc_drm_path_local);
 	Emu.GetVFS().GetDevice(dec_drm_path, dec_drm_path_local);
 	Emu.GetVFS().GetDevice(rap_path, rap_path_local);
 
-	DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false);
+	if (DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false) >= 0)
+	{
+		// If decryption succeeds, replace the encrypted file with it.
+		rRemoveFile(enc_drm_path_local);
+		rRename(dec_drm_path_local, enc_drm_path_local);
+	}
+
 	return CELL_OK;
 }
 

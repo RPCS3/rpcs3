@@ -131,7 +131,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellAudio.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
-	<ClCompile Include="Emu\SysCalls\Modules\cellAvconfExt.cpp">
+    <ClCompile Include="Emu\SysCalls\Modules\cellAvconfExt.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellCamera.cpp">
@@ -350,7 +350,7 @@
     <ClCompile Include="Emu\Memory\Memory.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
-	<ClCompile Include="Emu\Memory\vm.cpp">
+    <ClCompile Include="Emu\Memory\vm.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
     <ClCompile Include="Loader\ELF.cpp">
@@ -623,6 +623,9 @@
     <ClCompile Include="..\Utilities\rXml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\ec.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -727,7 +730,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
-	<ClInclude Include="Emu\SysCalls\Modules\cellPng.h">
+    <ClInclude Include="Emu\SysCalls\Modules\cellPng.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h">
@@ -1221,6 +1224,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\ec.h">
+      <Filter>Crypto</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

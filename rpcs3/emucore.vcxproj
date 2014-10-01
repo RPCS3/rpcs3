@@ -39,6 +39,7 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
+    <ClCompile Include="Crypto\ec.cpp" />
     <ClCompile Include="Crypto\key_vault.cpp" />
     <ClCompile Include="Crypto\lz.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|Win32'">NotUsing</PrecompiledHeader>
@@ -244,6 +245,7 @@
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="Crypto\aes.h" />
+    <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
     <ClInclude Include="Crypto\lz.h" />
     <ClInclude Include="Crypto\sha1.h" />

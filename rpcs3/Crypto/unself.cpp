@@ -813,10 +813,10 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	u8 rap_key[0x10];
 	memset(rap_key, 0, 0x10);
 
-	// Try to find a matching RAP file under dev_usb000.
+	// Try to find a matching RAP file under exdata folder.
 	std::string ci_str((const char *)content_id);
-	// TODO: This shouldn't use current dir
-	std::string rap_path("./dev_usb000/" + ci_str + ".rap");
+	std::string pf_str("00000001");  // TODO: Allow multiple profiles. Use default for now.
+	std::string rap_path("dev_hdd0/home/" + pf_str + "/exdata/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
 	if (!rExists(rap_path))

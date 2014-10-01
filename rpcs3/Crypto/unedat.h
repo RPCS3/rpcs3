@@ -1,9 +1,12 @@
 #pragma once
 
+#include <stdio.h>
+#include <string.h>
+#include "utils.h"
+
 #define SDAT_FLAG 0x01000000
 #define EDAT_COMPRESSED_FLAG 0x00000001
 #define EDAT_FLAG_0x02 0x00000002
-#define EDAT_FLAG_0x04 0x00000004
 #define EDAT_ENCRYPTED_KEY_FLAG 0x00000008
 #define EDAT_FLAG_0x10 0x00000010
 #define EDAT_FLAG_0x20 0x00000020
@@ -28,6 +31,6 @@ typedef struct
 	int flags;
 	int block_size;
 	unsigned long long file_size;
-} EDAT_SDAT_HEADER;
+} EDAT_HEADER;
 
 int DecryptEDAT(const std::string& input_file_name, const std::string& output_file_name, int mode, const std::string& rap_file_name, unsigned char *custom_klic, bool verbose);
