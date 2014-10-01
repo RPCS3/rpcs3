@@ -4,7 +4,7 @@
 // Licensed under the terms of the GNU GPL, version 3
 // http://www.gnu.org/licenses/gpl-3.0.txt
 
-#define MAX_PATH _MAX_PATH
+#define MAX_PATH 4096
 
 #include <stdlib.h>
 #include "aes.h"
@@ -16,7 +16,7 @@
 u16 swap16(u16 i);
 u32 swap32(u32 i);
 u64 swap64(u64 i);
-void xor(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size);
+void xor_key(unsigned char *dest, unsigned char *src1, unsigned char *src2, int size);
 void prng(unsigned char *dest, int size);
 char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH]);
 

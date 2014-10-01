@@ -620,7 +620,7 @@ int validate_npd_hashes(const char* file_name, unsigned char *klicensee, NPD_HEA
 	else
 	{
 		// Generate klicensee xor key.
-		xor(key, klicensee, NP_OMAC_KEY_2, 0x10);
+		xor_key(key, klicensee, NP_OMAC_KEY_2, 0x10);
 
 		// Hash with generated key and compare with dev_hash.
 		dev_hash_result = cmac_hash_compare(key, 0x10, dev, 0x60, npd->dev_hash, 0x10);
@@ -699,7 +699,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 		}
 
 		// Generate SDAT key.
-		xor(key, NPD->dev_hash, SDAT_KEY, 0x10);
+		xor_key(key, NPD->dev_hash, SDAT_KEY, 0x10);
 	}
 	else
 	{
