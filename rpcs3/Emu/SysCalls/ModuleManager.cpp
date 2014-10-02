@@ -4,7 +4,9 @@
 extern void cellAdec_init(Module* pxThis);
 extern void cellAtrac_init(Module* pxThis);
 extern void cellAudio_init(Module* pxThis);
+extern void cellAvconfExt_init(Module* pxThis);
 extern void cellCamera_init(Module* pxThis);
+extern void cellCamera_unload();
 extern void cellDmux_init(Module *pxThis);
 extern void cellFiber_init(Module *pxThis);
 extern void cellFont_init(Module *pxThis);
@@ -18,10 +20,12 @@ extern void cellGcmSys_init(Module *pxThis);
 extern void cellGcmSys_load();
 extern void cellGcmSys_unload();
 extern void cellGem_init(Module *pxThis);
+extern void cellGem_unload();
 extern void cellJpgDec_init(Module *pxThis);
 extern void cellGifDec_init(Module *pxThis);
 extern void cellL10n_init(Module *pxThis);
 extern void cellNetCtl_init(Module *pxThis);
+extern void cellNetCtl_unload();
 extern void cellOvis_init(Module *pxThis);
 extern void cellPamf_init(Module *pxThis);
 extern void cellPngDec_init(Module *pxThis);
@@ -43,6 +47,7 @@ extern void cellVdec_init(Module *pxThis);
 extern void cellVpost_init(Module *pxThis);
 extern void libmixer_init(Module *pxThis);
 extern void sceNp_init(Module *pxThis);
+extern void sceNp_unload();
 extern void sceNpClans_init(Module *pxThis);
 extern void sceNpClans_unload();
 extern void sceNpCommerce2_init(Module *pxThis);
@@ -90,9 +95,9 @@ static const g_modules_list[] =
 	{ 0x0011, "cellAudio", cellAudio_init, nullptr, nullptr },
 	{ 0x0012, "cellPamf", cellPamf_init, nullptr, nullptr },
 	{ 0x0013, "cellAtrac", cellAtrac_init, nullptr, nullptr },
-	{ 0x0014, "cellNetCtl", cellNetCtl_init, nullptr, nullptr },
+	{ 0x0014, "cellNetCtl", cellNetCtl_init, nullptr, cellNetCtl_unload },
 	{ 0x0015, "cellSysutil", cellSysutil_init, cellSysutil_load, nullptr },
-	{ 0x0016, "sceNp", sceNp_init, nullptr, nullptr },
+	{ 0x0016, "sceNp", sceNp_init, nullptr, sceNp_unload },
 	{ 0x0017, "sys_io", sys_io_init, nullptr, nullptr },
 	{ 0x0018, "cellPngDec", cellPngDec_init, nullptr, nullptr },
 	{ 0x0019, "cellFont", cellFont_init, cellFont_load, cellFont_unload },
@@ -105,7 +110,7 @@ static const g_modules_list[] =
 	{ 0x0020, "cellDaisy", nullptr, nullptr, nullptr },
 	{ 0x0021, "cellKey2char", nullptr, nullptr, nullptr },
 	{ 0x0022, "cellMic", nullptr, nullptr, nullptr },
-	{ 0x0023, "cellCamera", cellCamera_init, nullptr, nullptr },
+	{ 0x0023, "cellCamera", cellCamera_init, nullptr, cellCamera_unload },
 	{ 0x0024, "cellVdecMpeg2", nullptr, nullptr, nullptr },
 	{ 0x0025, "cellVdecAvc", nullptr, nullptr, nullptr },
 	{ 0x0026, "cellAdecLpcm", nullptr, nullptr, nullptr },
@@ -115,7 +120,7 @@ static const g_modules_list[] =
 	{ 0x002a, "cellDmuxPamf", nullptr, nullptr, nullptr },
 	{ 0x002e, "cellLv2dbg", nullptr, nullptr, nullptr },
 	{ 0x0030, "cellUsbpspcm", nullptr, nullptr, nullptr },
-	{ 0x0031, "cellAvconfExt", nullptr, nullptr, nullptr },
+	{ 0x0031, "cellAvconfExt", cellAvconfExt_init, nullptr, nullptr },
 	{ 0x0032, "cellUserInfo", cellUserInfo_init, nullptr, nullptr },
 	{ 0x0033, "cellSysutilSavedata", nullptr, nullptr, nullptr },
 	{ 0x0034, "cellSubdisplay", nullptr, nullptr, nullptr },
@@ -150,7 +155,7 @@ static const g_modules_list[] =
 	{ 0x0056, "cellNpUtil", nullptr, nullptr, nullptr },
 	{ 0x0057, "cellRudp", nullptr, nullptr, nullptr },
 	{ 0x0059, "cellNpSns", sceNpSns_init, nullptr, sceNpSns_unload },
-	{ 0x005a, "cellGem", cellGem_init, nullptr, nullptr },
+	{ 0x005a, "cellGem", cellGem_init, nullptr, cellGem_unload },
 	{ 0xf00a, "cellCelpEnc", nullptr, nullptr, nullptr },
 	{ 0xf010, "cellGifDec", cellGifDec_init, nullptr, nullptr },
 	{ 0xf019, "cellAdecCelp", nullptr, nullptr, nullptr },

@@ -60,14 +60,14 @@ namespace vm
 			return make(m_addr - count * sizeof(AT));
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, AT>& operator *() const
+		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr);
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr);
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, AT>& operator [](int index) const
+		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](int index) const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, AT>>(m_addr + sizeof(AT) * index);
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr + sizeof(AT)* index);
 		}
 
 		operator bool() const

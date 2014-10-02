@@ -7,7 +7,7 @@ using std::nullptr_t;
 #define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
 #define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
-extern void* const m_base_addr;
+extern void* const g_base_addr;
 
 enum MemoryType
 {
@@ -69,7 +69,7 @@ public:
 
 	static void* const GetBaseAddr()
 	{
-		return m_base_addr;
+		return g_base_addr;
 	}
 
 	__noinline void InvalidAddress(const char* func, const u64 addr);

@@ -1804,11 +1804,9 @@ void GLGSRender::ExecCMD()
 		}
 	}
 
-	if (m_set_two_side_light_enable)
-	{
-		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-		checkForGlError("glLightModeli");
-	}
+	// TODO: Use other glLightModel functions?
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, m_set_two_side_light_enable ? GL_TRUE : GL_FALSE);
+	checkForGlError("glLightModeli");
 
 	if(m_set_shade_mode)
 	{

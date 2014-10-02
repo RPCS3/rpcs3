@@ -624,5 +624,9 @@ namespace PPU_instr
 	bind_instr(g3f_0_list, MFFS, FRD, RC);
 	bind_instr(g3f_0_list, MTFSF, FM, FRB, RC);
 
+	static auto LIS = std::bind(ADDIS, std::placeholders::_1, 0, std::placeholders::_2);
+	static auto NOP = std::bind(ORI, 0, 0, 0);
+	static auto BLR = std::bind(BCLR, 0x10 | 0x04, 0, 0, 0);
+
 	#undef bind_instr
 };

@@ -370,7 +370,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				if(!phdr.p_filesz)
 					break;
 
-				auto& proc_param = vm::get_ref<sys_process_param>(offset + phdr.p_vaddr);
+				const sys_process_param& proc_param = vm::get_ref<sys_process_param>(offset + phdr.p_vaddr);
 
 				if (proc_param.size < sizeof(sys_process_param)) 
 				{
@@ -400,7 +400,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				if(!phdr.p_filesz)
 					break;
 
-				sys_proc_prx_param proc_prx_param = vm::get_ref<sys_proc_prx_param>(offset + phdr.p_vaddr);
+				const sys_proc_prx_param& proc_prx_param = vm::get_ref<sys_proc_prx_param>(offset + phdr.p_vaddr);
 
 
 #ifdef LOADER_DEBUG
@@ -414,21 +414,24 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 				LOG_NOTICE(LOADER, "*** ver: 0x%x", proc_prx_param.ver.ToLE());
 #endif
 
-				if (proc_prx_param.magic != 0x1b434cec) {
+				if (proc_prx_param.magic != 0x1b434cec)
+				{
 					LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic.ToLE());
 					break;
 				}
 
-				for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
+				for (u32 s = proc_prx_param.libstubstart; s < proc_prx_param.libstubend; s += sizeof(Elf64_StubHeader))
 				{
-					Elf64_StubHeader stub = vm::get_ref<Elf64_StubHeader>(offset + s);
+					const Elf64_StubHeader& stub = vm::get_ref<Elf64_StubHeader>(offset + s);
 
 					const std::string module_name = vm::get_ptr<const char>(stub.s_modulename);
 					Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
-					if (module) {
+					if (module)
+					{
 						//module->SetLoaded();
 					}
-					else {
+					else
+					{
 						LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 					}
 
@@ -447,10 +450,10 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 					u64 tbl = Memory.MainMem.AllocAlign(stub.s_imports * 4 * 2);
 					u64 dst = Memory.MainMem.AllocAlign(stub.s_imports * section);
 
-					for(u32 i=0; i<stub.s_imports; ++i)
+					for (u32 i = 0; i < stub.s_imports; ++i)
 					{
-						const u32 nid = vm::read32(stub.s_nid + i*4);
-						const u32 text = vm::read32(stub.s_text + i*4);
+						const u32 nid = vm::read32(stub.s_nid + i * 4);
+						const u32 text = vm::read32(stub.s_text + i * 4);
 
 						if (module && !module->Load(nid))
 						{
@@ -471,10 +474,10 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						out_tbl[0] = (u32)dst + i*section;
 						out_tbl[1] = Emu.GetModuleManager().GetFuncNumById(nid);
 
-						auto out_dst = vm::ptr<be_t<u32>>::make((u32)dst + i*section);
+						auto out_dst = vm::ptr<be_t<u32>>::make((u32)dst + i * section);
 						out_dst[0] = OR(11, 2, 2, 0);
 						out_dst[1] = SC(2);
-						out_dst[2] = BCLR(0x10 | 0x04, 0, 0, 0);
+						out_dst[2] = BLR();
 					}
 				}
 #ifdef LOADER_DEBUG

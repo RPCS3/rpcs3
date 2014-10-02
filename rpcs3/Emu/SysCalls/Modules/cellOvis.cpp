@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
 Module *cellOvis = nullptr;
@@ -11,9 +12,9 @@ enum
 	CELL_OVIS_ERROR_ALIGN = 0x80410410,
 };
 
-int cellOvisGetOverlayTableSize()
+int cellOvisGetOverlayTableSize(vm::ptr<const char> elf)
 {
-	UNIMPLEMENTED_FUNC(cellOvis);
+	cellOvis->Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
 	return CELL_OK;
 }
 

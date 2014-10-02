@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
 #include "ModuleManager.h"
+#include "Emu/Cell/PPUInstrTable.h"
 
 u32 getFunctionId(const char* name)
 {
@@ -89,10 +90,13 @@ void Module::UnLoad()
 
 	if(m_unload_func) m_unload_func();
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
-	{
-		Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
-	}
+	// TODO: Re-enable this when needed
+	// This was disabled because some functions would get unloaded and
+	// some games tried to use them, thus only printing a TODO message
+	//for(u32 i=0; i<m_funcs_list.size(); ++i)
+	//{
+	//	Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
+	//}
 
 	SetLoaded(false);
 }
@@ -146,12 +150,12 @@ void Module::SetName(const std::string& name)
 
 bool Module::CheckID(u32 id) const
 {
-	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
+	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).GetName() == GetName();
 }
 
 bool Module::CheckID(u32 id, ID*& _id) const
 {
-	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
+	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == GetName();
 }
 
 bool Module::RemoveId(u32 id)
@@ -171,12 +175,18 @@ void Module::PushNewFuncSub(SFunc* func)
 
 void fix_import(Module* module, u32 func, u32 addr)
 {
-	vm::write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
-	vm::write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	vm::write32(addr + 0x8, 0x60000000); /* nop */
-	// leave rtoc saving at 0xC
-	vm::write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
-	vm::write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
+	using namespace PPU_instr;
+	
+	vm::ptr<u32>& ptr = (vm::ptr<u32>&)addr;
+
+	*ptr++ = LIS(11, func >> 16);
+	*ptr++ = ORI(11, 11, func & 0xffff);
+	*ptr++ = NOP();
+	++ptr;
+	*ptr++ = SC(2);
+	*ptr++ = BLR();
+	*ptr++ = NOP();
+	*ptr++ = NOP();
 
 	module->Load(func);
 }

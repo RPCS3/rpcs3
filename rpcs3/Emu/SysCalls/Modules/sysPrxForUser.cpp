@@ -82,7 +82,7 @@ s64 sys_prx_exitspawn_with_level()
 
 int sys_spu_elf_get_information(u32 elf_img, vm::ptr<be_t<u32>> entry, vm::ptr<be_t<u32>> nseg)
 {
-	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x", elf_img, entry.addr(), nseg.addr());
+	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x)", elf_img, entry.addr(), nseg.addr());
 	return CELL_OK;
 }
 
@@ -137,14 +137,17 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_get_random_number(u32 addr, u64 size)
+int sys_get_random_number(vm::ptr<u8> addr, u64 size)
 {
-	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr, size);
+	sysPrxForUser->Warning("sys_get_random_number(addr=0x%x, size=%d)", addr.addr(), size);
 
 	if (size > 4096)
 		size = 4096;
 
-	vm::write32(addr, rand() % size);
+	for (u64 i = 0; i < size - 1; i++)
+	{
+		addr[i] = rand() % 256;
+	}
 
 	return CELL_OK;
 }
