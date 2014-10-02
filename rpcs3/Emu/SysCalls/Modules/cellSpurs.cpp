@@ -102,14 +102,16 @@ s64 spursInit(
 	{
 		spurs->m.xC0[i] = -1;
 	}
+
+	// default or system workload:
 #ifdef PRX_DEBUG
-	spurs->m.unk7 = vm::read32(libsre_rtoc - 0x7EA4); // write 64-bit pointer to unknown data
+	spurs->m.wklSysG.pm.set(be_t<u64>::make(vm::read32(libsre_rtoc - 0x7EA4)));
 #else
-	spurs->m.unk7 = 0x7ull << 48 | 0x7; // wrong 64-bit address
+	spurs->m.wklSysG.pm.set(be_t<u64>::make(0x100)); // wrong 64-bit address
 #endif
-	spurs->m.unk8 = 0ull;
-	spurs->m.unk9 = 0x2200;
-	spurs->m.unk10 = -1;
+	spurs->m.wklSysG.data = 0;
+	spurs->m.wklSysG.size = 0x2200;
+	spurs->m.wklSysG.copy.write_relaxed(0xff);
 	u32 sem;
 	for (u32 i = 0; i < 0x10; i++)
 	{
@@ -161,13 +163,58 @@ s64 spursInit(
 	name += "CellSpursKernel0";
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		spurs->m.spus[num] = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, 0, 0, 0, 0, [spurs, num, isSecond](SPUThread& CPU)
+		spurs->m.spus[num] = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, 0, 0, 0, 0, [spurs, num, isSecond](SPUThread& SPU)
 		{
-#ifdef PRX_DEBUG
-			CPU.GPR[3]._u32[3] = num;
-			CPU.GPR[4]._u64[1] = spurs.addr();
-			return CPU.FastCall(CPU.PC);
+#ifdef PRX_DEBUG_XXX
+			SPU.GPR[3]._u32[3] = num;
+			SPU.GPR[4]._u64[1] = spurs.addr();
+			return SPU.FastCall(SPU.PC);
 #endif
+			SPU.WriteLS128(0x1c0, u128::from32r(0, spurs.addr(), num, 0x1f));
+
+			u32 wid = 0x20;
+			while (true)
+			{
+				if (Emu.IsStopped())
+				{
+					cellSpurs->Warning("Spurs Kernel aborted");
+					return;
+				}
+
+				// get current workload info:
+				auto& wkl = wid <= 15 ? spurs->m.wklG1[wid] : (wid <= 31 && isSecond ? spurs->m.wklG2[wid & 0xf] : spurs->m.wklSysG);
+
+				if (SPU.ReadLS64(0x1d0) != wkl.pm.addr())
+				{
+					// load executable code:
+					memcpy(vm::get_ptr<void>(SPU.ls_offset + 0xa00), wkl.pm.get_ptr(), wkl.size);
+					SPU.WriteLS64(0x1d0, wkl.pm.addr());
+					SPU.WriteLS32(0x1d8, wkl.priority.ToLE() >> 24 & 0xff); // ???
+				}
+				
+				if (!isSecond) SPU.WriteLS16(0x1e8, 0);
+
+				// run workload:
+				SPU.GPR[1]._u32[3] = 0x3FFB0;
+				SPU.GPR[3]._u32[3] = 0x100;
+				SPU.GPR[4]._u64[1] = wkl.data;
+				SPU.GPR[5]._u32[3] = 0;
+				SPU.FastCall(0xa00);
+
+				// check status:
+				auto status = SPU.SPU.Status.GetValue();
+				if (status == SPU_STATUS_STOPPED_BY_STOP)
+				{
+					return;
+				}
+				else
+				{
+					assert(status == SPU_STATUS_RUNNING);
+				}
+
+				// get workload id:
+
+			}
 			
 		})->GetId();
 	}
@@ -240,7 +287,7 @@ s64 spursInit(
 						for (u32 i = 0; i < 16; i++)
 						{
 							if (spurs->m.wklStat1[i].read_relaxed() == 2 &&
-								spurs->m.wklG1[i].wklPriority.ToBE() != 0 &&
+								spurs->m.wklG1[i].priority.ToBE() != 0 &&
 								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf
 								)
 							{
@@ -258,7 +305,7 @@ s64 spursInit(
 						if (spurs->m.flags1 & SF1_IS_SECOND) for (u32 i = 0; i < 16; i++)
 						{
 							if (spurs->m.wklStat2[i].read_relaxed() == 2 &&
-								spurs->m.wklG2[i].wklPriority.ToBE() != 0 &&
+								spurs->m.wklG2[i].priority.ToBE() != 0 &&
 								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf0
 								)
 							{
@@ -951,10 +998,10 @@ s32 spursAddWorkload(
 		spurs->m.wklStat1[wnum].write_relaxed(1);
 		spurs->m.wklD1[wnum] = 0;
 		spurs->m.wklE1[wnum] = 0;
-		spurs->m.wklG1[wnum].wklPm = pm;
-		spurs->m.wklG1[wnum].wklArg = data;
-		spurs->m.wklG1[wnum].wklSize = size;
-		spurs->m.wklG1[wnum].wklPriority = *(be_t<u64>*)priorityTable;
+		spurs->m.wklG1[wnum].pm = pm;
+		spurs->m.wklG1[wnum].data = data;
+		spurs->m.wklG1[wnum].size = size;
+		spurs->m.wklG1[wnum].priority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH1[wnum].nameClass = nameClass;
 		spurs->m.wklH1[wnum].nameInstance = nameInstance;
 		memset(spurs->m.wklF1[wnum].unk0, 0, 0x20); // clear struct preserving semaphore id
@@ -978,10 +1025,10 @@ s32 spursAddWorkload(
 		spurs->m.wklStat2[index].write_relaxed(1);
 		spurs->m.wklD2[index] = 0;
 		spurs->m.wklE2[index] = 0;
-		spurs->m.wklG2[index].wklPm = pm;
-		spurs->m.wklG2[index].wklArg = data;
-		spurs->m.wklG2[index].wklSize = size;
-		spurs->m.wklG2[index].wklPriority = *(be_t<u64>*)priorityTable;
+		spurs->m.wklG2[index].pm = pm;
+		spurs->m.wklG2[index].data = data;
+		spurs->m.wklG2[index].size = size;
+		spurs->m.wklG2[index].priority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH2[index].nameClass = nameClass;
 		spurs->m.wklH2[index].nameInstance = nameInstance;
 		memset(spurs->m.wklF2[index].unk0, 0, 0x20); // clear struct preserving semaphore id
@@ -1034,21 +1081,21 @@ s32 spursAddWorkload(
 			if (mask & m)
 			{
 				CellSpurs::_sub_str3& current = i <= 15 ? spurs->m.wklG1[i] : spurs->m.wklG2[i & 0xf];
-				if (current.wklPm.addr() == wkl.wklPm.addr())
+				if (current.pm.addr() == wkl.pm.addr())
 				{
 					// if a workload with identical policy module found
-					res_wkl = current.wklCopy.read_relaxed();
+					res_wkl = current.copy.read_relaxed();
 					break;
 				}
 				else
 				{
-					k |= 0x80000000 >> current.wklCopy.read_relaxed();
+					k |= 0x80000000 >> current.copy.read_relaxed();
 					res_wkl = cntlz32(~k);
 				}
 			}
 		}
 
-		wkl.wklCopy.exchange((u8)res_wkl);
+		wkl.copy.exchange((u8)res_wkl);
 		v = mask | (0x80000000u >> wnum);
 	});
 	assert(res_wkl <= 31);

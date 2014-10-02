@@ -49,7 +49,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	u64 time0 = 0;
 
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = vm::get_ptr<u8>(CPU.dmac.ls_offset);
+	dis_asm.offset = vm::get_ptr<u8>(CPU.ls_offset);
 
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);
@@ -103,7 +103,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const u32 opcode = vm::read32(CPU.dmac.ls_offset + pos * 4);
+		const u32 opcode = vm::read32(CPU.ls_offset + pos * 4);
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
@@ -182,8 +182,8 @@ void SPURecompilerCore::Compile(u16 pos)
 
 u8 SPURecompilerCore::DecodeMemory(const u32 address)
 {
-	assert(CPU.dmac.ls_offset == address - CPU.PC);
-	const u32 m_offset = CPU.dmac.ls_offset;
+	assert(CPU.ls_offset == address - CPU.PC);
+	const u32 m_offset = CPU.ls_offset;
 	const u16 pos = (u16)(CPU.PC >> 2);
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);

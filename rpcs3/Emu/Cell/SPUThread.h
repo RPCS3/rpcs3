@@ -420,7 +420,7 @@ public:
 		struct { u32 EAH, EAL; };
 	};
 
-	DMAC dmac;
+	u32 ls_offset;
 
 	void ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size);
 
@@ -510,6 +510,7 @@ public:
 	virtual void InitRegs();
 	virtual void Task();
 	void FastCall(u32 ls_addr);
+	void FastStop();
 
 protected:
 	virtual void DoReset();

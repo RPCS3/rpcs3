@@ -221,8 +221,6 @@ struct CellSpurs
 
 	struct _sub_str1
 	{
-		static const uint size = 0x80;
-
 		u8 unk0[0x20];
 		be_t<u64> sem; // 0x20
 		u8 unk1[0x8];
@@ -231,10 +229,10 @@ struct CellSpurs
 		u8 unk2[0x40];
 	};
 
+	static_assert(sizeof(_sub_str1) == 0x80, "Wrong _sub_str1 size");
+
 	struct _sub_str2
 	{
-		static const uint size = 0x80;
-
 		be_t<u32> unk0;
 		be_t<u32> unk1;
 		be_t<u32> unk2;
@@ -243,16 +241,18 @@ struct CellSpurs
 		u8 unk_[0x68];
 	};
 
+	static_assert(sizeof(_sub_str2) == 0x80, "Wrong _sub_str2 size");
+
 	struct _sub_str3
 	{
-		static const uint size = 0x20;
-
-		vm::bptr<const void, 1, u64> wklPm; // policy module
-		be_t<u64> wklArg; // spu argument
-		be_t<u32> wklSize;
-		atomic_t<u8> wklCopy;
-		be_t<u64> wklPriority;
+		vm::bptr<const void, 1, u64> pm; // policy module
+		be_t<u64> data; // spu argument
+		be_t<u32> size;
+		atomic_t<u8> copy;
+		be_t<u64> priority;
 	};
+
+	static_assert(sizeof(_sub_str3) == 0x20, "Wrong _sub_str3 size");
 
 	struct _sub_str4
 	{
@@ -315,11 +315,7 @@ struct CellSpurs
 			be_t<u64> unk13;      // 0x990
 			u8 unknown4[0xB00 - 0x998];
 			_sub_str3 wklG1[0x10]; // 0xB00
-			be_t<u64> unk7;       // 0xD00
-			be_t<u64> unk8;       // 0xD08
-			be_t<u32> unk9;       // 0xD10
-			u8 unk10;             // 0xD14
-			u8 unknown5[0xD20 - 0xD15];
+			_sub_str3 wklSysG;    // 0xD00
 			be_t<u64> ppu0;       // 0xD20
 			be_t<u64> ppu1;       // 0xD28
 			be_t<u32> spuTG;      // 0xD30

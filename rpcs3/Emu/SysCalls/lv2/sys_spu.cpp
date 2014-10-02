@@ -236,6 +236,7 @@ s32 sys_spu_thread_group_start(u32 id)
 		CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]);
 		if (t)
 		{
+			((SPUThread*)t)->SPU.Status.SetValue(SPU_STATUS_RUNNING);
 			t->Exec();
 		}
 	}
@@ -471,7 +472,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<be_t<u32>> cause, vm::ptr<be_t<u32
 	{
 		while (CPUThread* t = Emu.GetCPU().GetThread(group_info->list[i]))
 		{
-			if (!t->IsRunning())
+			if (!t->IsAlive())
 			{
 				if (((SPUThread*)t)->SPU.Status.GetValue() != SPU_STATUS_STOPPED_BY_STOP)
 				{

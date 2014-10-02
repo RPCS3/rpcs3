@@ -104,6 +104,16 @@ union u128
 		return ret;
 	}
 
+	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
+	{
+		u128 ret;
+		ret._u32[0] = _0;
+		ret._u32[1] = _1;
+		ret._u32[2] = _2;
+		ret._u32[3] = _3;
+		return ret;
+	}
+
 	static u128 fromBit(u32 bit)
 	{
 		u128 ret = {};
