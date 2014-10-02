@@ -177,13 +177,16 @@ void fix_import(Module* module, u32 func, u32 addr)
 {
 	using namespace PPU_instr;
 	
-	vm::write32(addr + 0x0, LIS(11, func >> 16)); /* lis r11, (func_id >> 16) */
-	vm::write32(addr + 0x4, ORI(11, 11, func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	vm::write32(addr + 0x8, NOP());
-	vm::write32(addr + 0x10, BLR());
-	vm::write32(addr + 0x14, SC(2));
-	vm::write32(addr + 0x18, NOP());
-	vm::write32(addr + 0x20, NOP());
+	vm::ptr<u32>& ptr = (vm::ptr<u32>&)addr;
+
+	*ptr++ = LIS(11, func >> 16);
+	*ptr++ = ORI(11, 11, func & 0xffff);
+	*ptr++ = NOP();
+	++ptr;
+	*ptr++ = SC(2);
+	*ptr++ = BLR();
+	*ptr++ = NOP();
+	*ptr++ = NOP();
 
 	module->Load(func);
 }
