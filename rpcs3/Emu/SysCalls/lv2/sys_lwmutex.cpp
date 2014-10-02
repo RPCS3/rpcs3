@@ -33,7 +33,8 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	}
 
 	lwmutex->attribute = attr->attr_protocol | attr->attr_recursive;
-	lwmutex->waiter = 0;
+	//waiter is currently unused by the emulator but some games apparently directly read this value
+	lwmutex->waiter = ~0;
 	lwmutex->mutex.initialize();
 	//lwmutex->waiter = lwmutex->owner.GetOwner();
 	lwmutex->pad = 0;
