@@ -87,9 +87,6 @@ int sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if ((strlen(name.get_ptr()) > SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH) || (strlen(tag.get_ptr()) > SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH))
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-
 	return CELL_OK;
 }
 
@@ -250,11 +247,6 @@ int sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	/*
-	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	*/
-
 	return CELL_OK;
 }
 
@@ -264,11 +256,6 @@ int sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
-
-	/*
-	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	*/
 
 	return CELL_OK;
 }
@@ -290,11 +277,6 @@ int sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u3
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	/*
-	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	*/
-
 	return CELL_OK;
 }
 
@@ -304,11 +286,6 @@ int sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
-
-	/*
-	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	*/
 
 	return CELL_OK;
 }
@@ -402,11 +379,6 @@ int sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,
 
 	if (data != 0)
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
-
-	/*
-	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
-	*/
 
 	//todo
 
