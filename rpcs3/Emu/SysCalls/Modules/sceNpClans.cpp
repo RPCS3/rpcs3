@@ -20,7 +20,7 @@ struct sceNpClansInternal
 
 sceNpClansInternal sceNpClansInstance;
 
-int sceNpClansInit(vm::ptr<u32> commId, vm::ptr<u32> passphrase, vm::ptr<void> pool, vm::ptr<size_t> poolSize, u32 flags)
+int sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
 	sceNpClans->Warning("sceNpClansInit(commId_addr=0x%x, passphrase_addr=0x%x, pool_addr=0x%x,poolSize_addr=0x%x, flags=%d)", commId.addr(), passphrase.addr(), pool.addr(), poolSize.addr(), flags);
 
@@ -49,7 +49,7 @@ int sceNpClansTerm()
 
 int sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle,u64 flags)
 {
-	sceNpClans->Todo("sceNpClansInit(handle_addr=0x%x, flags=%d)", handle.addr(), flags);
+	sceNpClans->Todo("sceNpClansCreateRequest(handle_addr=0x%x, flags=0x%llx)", handle.addr(), flags);
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -87,7 +87,7 @@ int sceNpClansCreateClan(vm::ptr<SceNpClansRequestHandle> handle, vm::ptr<const 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if ((*name > SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH) || (*tag > SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH))
+	if ((strlen(name.get_ptr()) > SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH) || (strlen(tag.get_ptr()) > SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH))
 		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
 
 	return CELL_OK;
@@ -243,15 +243,17 @@ int sceNpClansLeaveClan()
 	return CELL_OK;
 }
 
-int sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
+int sceNpClansKickMember(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId, vm::ptr<u32> npid, vm::ptr<SceNpClansMessage> message)
 {
 	UNIMPLEMENTED_FUNC(sceNpClans);
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if (message > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
+	/*
+	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
 		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	*/
 
 	return CELL_OK;
 }
@@ -263,8 +265,10 @@ int sceNpClansSendInvitation(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if (message > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	/*
+	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
+	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	*/
 
 	return CELL_OK;
 }
@@ -286,8 +290,10 @@ int sceNpClansSendInvitationResponse(vm::ptr<SceNpClansRequestHandle> handle, u3
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if (message > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	/*
+	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
+	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	*/
 
 	return CELL_OK;
 }
@@ -299,8 +305,10 @@ int sceNpClansSendMembershipRequest(vm::ptr<SceNpClansRequestHandle> handle, u32
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if (message > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	/*
+	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
+	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	*/
 
 	return CELL_OK;
 }
@@ -395,8 +403,10 @@ int sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,
 	if (data != 0)
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
 
-	if (message > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
-		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	/*
+	if (*(message->body) > SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH)
+	return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+	*/
 
 	//todo
 
