@@ -15,7 +15,8 @@ s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name
 {
 	LV2_LOCK(0);
 
-	lwmutex.all_info() = 0;
+	lwmutex.waiter = ~0;
+	lwmutex.mutex.initialize();
 	lwmutex.attribute = protocol | recursive;
 	lwmutex.recursive_count = 0;
 	u32 sq_id = sys_lwmutex.GetNewId(new SleepQueue(name_u64), TYPE_LWMUTEX);

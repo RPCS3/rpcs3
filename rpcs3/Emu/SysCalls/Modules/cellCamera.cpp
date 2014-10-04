@@ -53,24 +53,39 @@ int cellCameraOpen()
 int cellCameraOpenEx()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraClose()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraGetDeviceGUID()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraGetType(s32 dev_num, vm::ptr<CellCameraType> type)
 {
 	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
 
 	switch (Ini.CameraType.GetValue())
 	{
@@ -110,18 +125,30 @@ int cellCameraIsStarted()
 int cellCameraGetAttribute()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraSetAttribute()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraGetBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
@@ -134,6 +161,10 @@ int cellCameraGetBufferInfo()
 int cellCameraGetBufferInfoEx()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
@@ -164,60 +195,100 @@ int cellCameraSetExtensionUnit()
 int cellCameraReset()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraStart()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraRead()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraReadEx()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraReadComplete()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraStop()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraSetNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraRemoveNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraSetNotifyEventQueue2()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
 int cellCameraRemoveNotifyEventQueue2()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
+
+	if (!cellCameraInstance.m_bInitialized)
+		return CELL_CAMERA_ERROR_NOT_INIT;
+
 	return CELL_OK;
 }
 
