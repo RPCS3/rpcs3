@@ -1225,6 +1225,9 @@
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Memory\atomic_type.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
     </ClInclude>

@@ -338,12 +338,12 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys->Warning("cellGcmInit(): 512MB io address space used");
-		Memory.RSXIOMem.SetRange(0x50000000, 0x20000000 /*512MB*/);
+		Memory.RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
 	}
 	else
 	{
 		cellGcmSys->Warning("cellGcmInit(): 256MB io address space used");
-		Memory.RSXIOMem.SetRange(0x50000000, 0x10000000 /*256MB*/);
+		Memory.RSXIOMem.SetRange(0, 0x10000000 /*256MB*/);
 	}
 
 	if(cellGcmMapEaIoAddress(ioAddress, 0, ioSize) != CELL_OK)
@@ -833,7 +833,7 @@ u32 cellGcmGetMaxIoMapSize()
 {
 	cellGcmSys->Log("cellGcmGetMaxIoMapSize()");
 
-	return (u32)(Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetStartAddr() - Memory.RSXIOMem.GetReservedAmount());
+	return (u32)(Memory.RSXIOMem.GetEndAddr() - Memory.RSXIOMem.GetReservedAmount());
 }
 
 void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table)
@@ -850,7 +850,7 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
 
 	u64 realAddr;
 
-	if (!Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ioOffset, realAddr)) 
+	if (!Memory.RSXIOMem.getRealAddr(ioOffset, realAddr)) 
 		return CELL_GCM_ERROR_FAILURE;
 
 	vm::write64(address, realAddr);
@@ -865,7 +865,7 @@ s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
 	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
 	// Check if the mapping was successfull
-	if (Memory.RSXIOMem.Map(ea, size, Memory.RSXIOMem.GetStartAddr() + io))
+	if (Memory.RSXIOMem.Map(ea, size, io))
 	{
 		// Fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
@@ -914,16 +914,13 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
 {
 	cellGcmSys->Warning("cellGcmMapMainMemory(ea=0x%x,size=0x%x,offset_addr=0x%x)", ea, size, offset.addr());
 
-	u32 io;
-
 	if ((ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
-	//check if the mapping was successfull
-	if (io = (u32)Memory.RSXIOMem.Map(ea, size, 0))
-	{
-		// convert to offset
-		io = io - (u32)Memory.RSXIOMem.GetStartAddr();
+	u32 io = Memory.RSXIOMem.Map(ea, size);
 
+	//check if the mapping was successfull
+	if (Memory.RSXIOMem.Write32(io, 0))
+	{
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
@@ -968,8 +965,8 @@ s32 cellGcmUnmapEaIoAddress(u64 ea)
 {
 	cellGcmSys->Log("cellGcmUnmapEaIoAddress(ea=0x%llx)", ea);
 
-	u32 size = Memory.RSXIOMem.UnmapRealAddress(ea);
-	if (size)
+	u32 size;
+	if (Memory.RSXIOMem.UnmapRealAddress(ea, size))
 	{
 		u64 io;
 		ea = ea >> 20;
@@ -994,8 +991,8 @@ s32 cellGcmUnmapIoAddress(u64 io)
 {
 	cellGcmSys->Log("cellGcmUnmapIoAddress(io=0x%llx)", io);
 
-	u32 size = Memory.RSXIOMem.UnmapAddress(io);
-	if (size)
+	u32 size;
+	if (Memory.RSXIOMem.UnmapAddress(io, size))
 	{
 		u64 ea;
 		io = io >> 20;

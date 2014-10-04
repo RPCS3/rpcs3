@@ -27,6 +27,7 @@ struct Cond
 		, m_queue(name)
 		, signaler(0)
 	{
+		signal.initialize();
 	}
 };
 

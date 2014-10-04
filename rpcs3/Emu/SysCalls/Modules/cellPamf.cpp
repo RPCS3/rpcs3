@@ -105,7 +105,7 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u8 stream)
 		}
 		else
 		{
-			cellPamf->Error("pamfGetStreamChannel: stream type %x got invalid stream id=%x", pAddr->stream_headers[stream].type, pAddr->stream_headers[stream].stream_id);
+			cellPamf->Error("pamfGetStreamChannel: stream type 0x%x got invalid stream id=0x%x", pAddr->stream_headers[stream].type, pAddr->stream_headers[stream].stream_id);
 			return 0;
 		}
 	case 0xdc:

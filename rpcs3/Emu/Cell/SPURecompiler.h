@@ -78,6 +78,7 @@ public:
 	SPUInterpreter* inter;
 	JitRuntime runtime;
 	bool first;
+	bool need_check;
 
 	struct SPURecEntry
 	{
@@ -457,7 +458,7 @@ private:
 		c.mov(cpu_dword(PC), CPU.PC);
 		// This instruction must be used following a store instruction that modifies the instruction stream.
 		c.mfence();
-		c.mov(*pos_var, (CPU.PC >> 2) + 1);
+		c.mov(*pos_var, (CPU.PC >> 2) + 1 + 0x2000000);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
@@ -1142,6 +1143,7 @@ private:
 
 		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		if (ra) c.or_(*pos_var, 0x2000000 << 2); // rude (check if not LR)
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
 		c.cmovne(*pos_var, *addr);
 		c.shr(*pos_var, 2);
@@ -1160,6 +1162,7 @@ private:
 
 		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		if (ra) c.or_(*pos_var, 0x2000000 << 2); // rude (check if not LR)
 		c.cmp(cpu_dword(GPR[rt]._u32[3]), 0);
 		c.cmove(*pos_var, *addr);
 		c.shr(*pos_var, 2);
@@ -1178,6 +1181,7 @@ private:
 
 		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		if (ra) c.or_(*pos_var, 0x2000000 << 2); // rude (check if not LR)
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmovne(*pos_var, *addr);
 		c.shr(*pos_var, 2);
@@ -1196,6 +1200,7 @@ private:
 
 		c.mov(*addr, CPU.PC + 4);
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		if (ra) c.or_(*pos_var, 0x2000000 << 2); // rude (check if not LR)
 		c.cmp(cpu_word(GPR[rt]._u16[6]), 0);
 		c.cmove(*pos_var, *addr);
 		c.shr(*pos_var, 2);
@@ -1244,6 +1249,7 @@ private:
 		do_finalize = true;
 
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
+		if (ra) c.or_(*pos_var, 0x2000000 << 2); // rude (check if not LR)
 		c.shr(*pos_var, 2);
 		LOG_OPCODE();
 	}
@@ -1267,6 +1273,7 @@ private:
 		c.mov(*pos_var, cpu_dword(GPR[ra]._u32[3]));
 		c.mov(cpu_dword(GPR[rt]._u32[3]), CPU.PC + 4);
 		c.shr(*pos_var, 2);
+		c.or_(*pos_var, 0x2000000);
 		LOG_OPCODE();
 	}
 	void IRET(u32 ra)
@@ -1947,23 +1954,22 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
-		c.mov(*addr, 0);
 		c.setg(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
 	void CLZ(u32 rt, u32 ra)
 	{
 		XmmInvalidate(rt);
+		c.mov(*qw0, 32 + 31);
 		for (u32 i = 0; i < 4; i++)
 		{
 			c.bsr(*addr, cpu_dword(GPR[ra]._u32[i]));
-			c.cmovz(*addr, dword_ptr(*g_imm_var, (s32)offsetof(g_imm_table_struct, fsmb_table[0xffff]))); // load 0xffffffff
-			c.neg(*addr);
-			c.add(*addr, 31);
+			c.cmovz(*addr, qw0->r32());
+			c.xor_(*addr, 31);
 			c.mov(cpu_dword(GPR[rt]._u32[i]), *addr);
 		}
 		LOG_OPCODE();
@@ -2308,11 +2314,10 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._u32[3]));
-		c.mov(*addr, 0);
 		c.seta(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
@@ -2662,11 +2667,10 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
 		c.cmp(*addr, cpu_dword(GPR[rb]._s32[3]));
-		c.mov(*addr, 0);
 		c.sete(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
@@ -3324,11 +3328,10 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._s32[3]));
 		c.cmp(*addr, i10);
-		c.mov(*addr, 0);
 		c.setg(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
@@ -3390,11 +3393,10 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
-		c.mov(*addr, 0);
 		c.seta(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}
@@ -3441,11 +3443,10 @@ private:
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.cmp(*addr, i10);
-		c.mov(*addr, 0);
 		c.sete(addr->r8());
-		c.neg(*addr);
+		c.shl(*addr, 24);
 		c.mov(*pos_var, (CPU.PC >> 2) + 1);
-		c.xor_(*pos_var, *addr);
+		c.or_(*pos_var, *addr);
 		do_finalize = true;
 		LOG_OPCODE();
 	}

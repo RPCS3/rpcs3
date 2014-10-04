@@ -46,7 +46,7 @@ int cellNetCtlTerm()
 
 int cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl->Log("cellNetCtlGetState(state_addr=0x%x)", state.addr());
+	cellNetCtl->Warning("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
 	*state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 
@@ -55,7 +55,7 @@ int cellNetCtlGetState(vm::ptr<u32> state)
 
 int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
-	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid=0x%x)", handler.addr(), arg.addr(), hid.addr());
+	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid_addr=0x%x)", handler.addr(), arg.addr(), hid.addr());
 
 	return CELL_OK;
 }
@@ -69,7 +69,7 @@ int cellNetCtlDelHandler(s32 hid)
 
 int cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl->Todo("cellNetCtlGetInfo(code=%x, info_addr=0x%x)", code, info.addr());
+	cellNetCtl->Todo("cellNetCtlGetInfo(code=0x%x, info_addr=0x%x)", code, info.addr());
 
 	return CELL_OK;
 }

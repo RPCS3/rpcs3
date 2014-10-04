@@ -14,6 +14,8 @@ s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_a
 	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)",
 		cond_id.addr(), mutex_id, attr.addr());
 
+	LV2_LOCK(0);
+
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
 		sys_cond.Error("Invalid pshared attribute(0x%x)", (u32)attr->pshared);
@@ -44,6 +46,8 @@ s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_a
 s32 sys_cond_destroy(u32 cond_id)
 {
 	sys_cond.Warning("sys_cond_destroy(cond_id=%d)", cond_id);
+
+	LV2_LOCK(0);
 
 	Cond* cond;
 	if (!Emu.GetIdManager().GetIDData(cond_id, cond))

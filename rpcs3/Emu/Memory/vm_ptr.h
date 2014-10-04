@@ -366,7 +366,7 @@ namespace vm
 	//BE pointer to LE data
 	template<typename T, int lvl = 1, typename AT = u32> struct bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type>
 	{
-		static bptrl make(AT addr)
+		static bptrl make(typename to_be_t<AT>::type addr)
 		{
 			return (bptrl&)addr;
 		}
@@ -378,7 +378,7 @@ namespace vm
 	//BE pointer to BE data
 	template<typename T, int lvl = 1, typename AT = u32> struct bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>
 	{
-		static bptrb make(AT addr)
+		static bptrb make(typename to_be_t<AT>::type addr)
 		{
 			return (bptrb&)addr;
 		}
@@ -428,7 +428,7 @@ namespace vm
 		//default pointer for HLE structures (BE ptrerence to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> struct bptr : public bptrb<T, lvl, AT>
 		{
-			static bptr make(AT addr)
+			static bptr make(typename to_be_t<AT>::type addr)
 			{
 				return (bptr&)addr;
 			}

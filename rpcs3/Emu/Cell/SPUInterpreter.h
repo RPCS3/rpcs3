@@ -3,7 +3,7 @@
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
 #define MEM_AND_REG_HASH() \
-	unsigned char mem_h[20]; sha1(vm::get_ptr<u8>(CPU.dmac.ls_offset), 256*1024, mem_h); \
+	unsigned char mem_h[20]; sha1(vm::get_ptr<u8>(CPU.ls_offset), 256*1024, mem_h); \
 	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
 	LOG_NOTICE(Log::SPU, "Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
 
@@ -432,9 +432,7 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
-
-		u32 lsa = (a + b) & 0x3fff0;
+		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 
 		CPU.GPR[rt] = CPU.ReadLS128(lsa);
 	}
@@ -1088,6 +1086,7 @@ private:
 		for (int i = 0; i < 4; i++)
 		{
 			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
+
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
 			if (exp > 255) //< 0

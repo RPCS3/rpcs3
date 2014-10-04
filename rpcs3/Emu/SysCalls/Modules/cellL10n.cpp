@@ -283,9 +283,9 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
 int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<be_t<u32>> src_len, int dst_code, vm::ptr<void> dst, vm::ptr<be_t<u32>> dst_len)
 {
-	cellL10n->Todo("L10nConvertStr(src_code=%d,src=0x%x,src_len=%ld,dst_code=%d,dst=0x%x,dst_len=%ld)",
+	cellL10n->Error("L10nConvertStr(src_code=%d, srca_addr=0x%x, src_len_addr=0x%x, dst_code=%d, dst_addr=0x%x, dst_len_addr=0x%x)",
 		src_code, src.addr(), src_len.addr(), dst_code, dst.addr(), dst_len.addr());
-	cellL10n->Todo("L10nConvertStr: 1st char at dst: %x(Hex)", *((char*)src.get_ptr()));
+	//cellL10n->Todo("L10nConvertStr: 1st char at dst: 0x%x", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
 	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.

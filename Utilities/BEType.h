@@ -104,6 +104,16 @@ union u128
 		return ret;
 	}
 
+	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
+	{
+		u128 ret;
+		ret._u32[0] = _0;
+		ret._u32[1] = _1;
+		ret._u32[2] = _2;
+		ret._u32[3] = _3;
+		return ret;
+	}
+
 	static u128 fromBit(u32 bit)
 	{
 		u128 ret = {};
@@ -153,7 +163,7 @@ union u128
 
 	std::string to_hex() const
 	{
-		return fmt::Format("%16llx%16llx", _u64[1], _u64[0]);
+		return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
 	}
 
 	std::string to_xyzw() const
@@ -306,15 +316,10 @@ public:
 		m_data = se_t<T, sizeof(T2)>::func(value);
 	}
 
-	static be_t MakeFromLE(const T value)
+	static be_t make(const T value)
 	{
 		T data = se_t<T, sizeof(T2)>::func(value);
 		return (be_t&)data;
-	}
-
-	static be_t MakeFromBE(const T value)
-	{
-		return (be_t&)value;
 	}
 
 	//template<typename T1>
@@ -335,7 +340,8 @@ public:
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
+		return be_t<T1>::make(ToLE());
+		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
@@ -401,15 +407,10 @@ public:
 		return se_t<const T, sizeof(T2)>::func(m_data);
 	}
 
-	static be_t MakeFromLE(const T value)
+	static be_t make(const T value)
 	{
 		const T data = se_t<const T, sizeof(T2)>::func(value);
 		return (be_t&)data;
-	}
-
-	static be_t MakeFromBE(const T value)
-	{
-		return (be_t&)value;
 	}
 
 	//template<typename T1>
@@ -421,21 +422,7 @@ public:
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		if (sizeof(T1) > sizeof(T) || std::is_floating_point<T>::value || std::is_floating_point<T1>::value)
-		{
-			T1 res = se_t<T1, sizeof(T1)>::func(ToLE());
-			return (be_t<T1>&)res;
-		}
-		else if (sizeof(T1) < sizeof(T))
-		{
-			T1 res = ToBE() >> ((sizeof(T) - sizeof(T1)) * 8);
-			return (be_t<T1>&)res;
-		}
-		else
-		{
-			T1 res = ToBE();
-			return (be_t<T1>&)res;
-		}
+		return be_t<T1>::make(ToLE());
 	}
 
 	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res = ToBE() & right.ToBE(); return (be_t&)res; }

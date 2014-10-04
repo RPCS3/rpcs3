@@ -471,9 +471,6 @@ struct FPRdouble
 class PPUThread : public PPCThread
 {
 public:
-	u32 owned_mutexes;
-
-public:
 	PPCdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
@@ -555,6 +552,9 @@ public:
 
 	u64 R_ADDR; // reservation address
 	u64 R_VALUE; // reservation value (BE)
+
+	u32 owned_mutexes;
+	std::function<void(PPUThread& CPU)> m_custom_task;
 
 public:
 	PPUThread();
@@ -785,17 +785,18 @@ public:
 
 public:
 	virtual void InitRegs();
+	virtual void Task();
 	u64 GetStackArg(s32 i);
 	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
-
-	virtual void DoReset() override;
 	virtual void DoRun() override;
+
+protected:
+	virtual void DoReset() override;
 	virtual void DoPause() override;
 	virtual void DoResume() override;
 	virtual void DoStop() override;
 
-protected:
 	virtual void Step() override
 	{
 		//if(++cycle > 20)

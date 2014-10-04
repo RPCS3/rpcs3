@@ -55,7 +55,7 @@ namespace cb_detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct _func_arg<T, ARG_STACK, g_count, f_count, v_count>
 	{
-		static_assert(f_count <= 12, "TODO: Unsupported stack argument type (float)");
+		static_assert(f_count <= 13, "TODO: Unsupported stack argument type (float)");
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_STACK");
 
@@ -84,7 +84,7 @@ namespace cb_detail
 		const bool is_float = std::is_floating_point<T1>::value;
 		const bool is_vector = std::is_same<T1, u128>::value;
 		const _func_arg_type t = is_float
-			? ((f_count >= 12) ? ARG_STACK : ARG_FLOAT)
+			? ((f_count >= 13) ? ARG_STACK : ARG_FLOAT)
 			: (is_vector ? ((v_count >= 12) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 8) ? ARG_STACK : ARG_GENERAL));
 		const int g = g_count + (is_float || is_vector ? 0 : 1);
 		const int f = f_count + (is_float ? 1 : 0);

@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
 #include "Emu/Event.h"
 #include "MFC.h"
@@ -246,181 +247,127 @@ public:
 		}
 	} m_intrtag[3];
 
-	template<size_t _max_count>
+	// limited lock-free queue, most functions are barrier-free
+	template<size_t max_count>
 	class Channel
 	{
-	public:
-		static const size_t max_count = _max_count;
+		static_assert(max_count >= 1, "Invalid channel count");
 
-	private:
-		union _CRT_ALIGN(8) {
-			struct {
-				volatile u32 m_index;
-				u32 m_value[max_count];
-			};
-			volatile u64 m_indval;
+		struct ChannelData
+		{
+			u32 value;
+			u32 is_set;
 		};
-		std::mutex m_lock;
+
+		atomic_t<ChannelData> m_data[max_count];
+		size_t m_push;
+		size_t m_pop;
 
 	public:
-		Channel()
+		__noinline Channel()
 		{
-			Init();
-		}
-
-		void Init()
-		{
-			m_indval = 0;
-		}
-
-		__forceinline bool Pop(u32& res)
-		{
-			if (max_count > 1)
+			for (size_t i = 0; i < max_count; i++)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(!m_index) 
-				{
-					return false;
-				}
-				res = m_value[0];
-				if (max_count > 1) for (u32 i = 1; i < max_count; i++) // FIFO
-				{
-					m_value[i-1] = m_value[i];
-				}
-				m_value[max_count-1] = 0;
-				m_index--;
-				return true;
+				m_data[i].write_relaxed({});
 			}
-			else
-			{ //lock-free
-				if ((m_indval & 0xffffffff) == 0)
-					return false;
-				else
-				{
-					res = (m_indval >> 32);
-					m_indval = 0;
-					return true;
-				}				
-			}
-		}
-
-		__forceinline bool Push(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-				{
-					return false;
-				}
-				m_value[m_index++] = value;
-				return true;
-			}
-			else
-			{ //lock-free
-				if (m_indval & 0xffffffff)
-					return false;
-				else
-				{
-					const u64 new_value = ((u64)value << 32) | 1;
-					m_indval = new_value;
-					return true;
-				}
-			}
-		}
-
-		__forceinline void PushUncond(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-					m_value[max_count-1] = value; //last message is overwritten
-				else
-					m_value[m_index++] = value;
-			}
-			else
-			{ //lock-free
-				const u64 new_value = ((u64)value << 32) | 1;
-				m_indval = new_value;
-			}
-		}
-
-		__forceinline void PushUncond_OR(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-					m_value[max_count-1] |= value; //last message is logically ORed
-				else
-					m_value[m_index++] = value;
-			}
-			else
-			{
-				InterlockedOr64((volatile s64*)m_indval, ((u64)value << 32) | 1);
-			}
+			m_push = 0;
+			m_pop = 0;
 		}
 
 		__forceinline void PopUncond(u32& res)
 		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(!m_index) 
-					res = 0; //result is undefined
-				else
-				{
-					res = m_value[--m_index];
-					m_value[m_index] = 0;
-				}
-			}
-			else
-			{ //lock-free
-				if(!m_index)
-					res = 0;
-				else
-				{
-					res = (m_indval >> 32);
-					m_indval = 0;
-				}
-			}
+			res = m_data[m_pop].read_relaxed().value;
+			m_data[m_pop].write_relaxed({});
+			m_pop = (m_pop + 1) % max_count;
 		}
 
-		__forceinline u32 GetCount()
+		__forceinline bool Pop(u32& res)
 		{
-			if (max_count > 1)
+			const auto data = m_data[m_pop].read_relaxed();
+			if (data.is_set)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				return m_index;
+				res = data.value;
+				m_data[m_pop].write_relaxed({});
+				m_pop = (m_pop + 1) % max_count;
+				return true;
 			}
 			else
 			{
-				return m_index;
+				return false;
 			}
 		}
 
-		__forceinline u32 GetFreeCount()
+		__forceinline bool Pop_XCHG(u32& res) // not barrier-free, not tested
 		{
-			if (max_count > 1)
+			const auto data = m_data[m_pop].exchange({});
+			if (data.is_set)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				return max_count - m_index;
+				res = data.value;
+				m_pop = (m_pop + 1) % max_count;
+				return true;
 			}
 			else
 			{
-				return max_count - m_index;
+				return false;
 			}
 		}
 
-		void SetValue(u32 value)
+		__forceinline void PushUncond_OR(const u32 value) // not barrier-free, not tested
 		{
-			m_value[0] = value;
+			m_data[m_push]._or({ value, 1 });
+			m_push = (m_push + 1) % max_count;
 		}
 
-		u32 GetValue() const
+		__forceinline void PushUncond(const u32 value)
 		{
-			return m_value[0];
+			m_data[m_push].write_relaxed({ value, 1 });
+			m_push = (m_push + 1) % max_count;
+		}
+
+		__forceinline bool Push(const u32 value)
+		{
+			if (m_data[m_push].read_relaxed().is_set)
+			{
+				return false;
+			}
+			else
+			{
+				PushUncond(value);
+				return true;
+			}
+		}
+
+		__forceinline u32 GetCount() const
+		{
+			u32 res = 0;
+			for (size_t i = 0; i < max_count; i++)
+			{
+				res += m_data[i].read_relaxed().is_set ? 1 : 0;
+			}
+			return res;
+		}
+
+		__forceinline u32 GetFreeCount() const
+		{
+			u32 res = 0;
+			for (size_t i = 0; i < max_count; i++)
+			{
+				res += m_data[i].read_relaxed().is_set ? 0 : 1;
+			}
+			return res;
+		}
+
+		__forceinline void SetValue(const u32 value)
+		{
+			m_data[m_push].direct_op([value](ChannelData& v)
+			{
+				v.value = value;
+			});
+		}
+
+		__forceinline u32 GetValue() const
+		{
+			return m_data[m_pop].read_relaxed().value;
 		}
 	};
 
@@ -473,7 +420,7 @@ public:
 		struct { u32 EAH, EAL; };
 	};
 
-	DMAC dmac;
+	u32 ls_offset;
 
 	void ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size);
 
@@ -502,6 +449,9 @@ public:
 	void WriteLS32 (const u32 lsa, const u32&  data) const { vm::write32 (lsa + m_offset, data); }
 	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
+
+	std::function<void(SPUThread& SPU)> m_custom_task;
+	std::function<u32(SPUThread& SPU)> m_code3_func;
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
@@ -560,6 +510,8 @@ public:
 public:
 	virtual void InitRegs();
 	virtual void Task();
+	void FastCall(u32 ls_addr);
+	void FastStop();
 
 protected:
 	virtual void DoReset();

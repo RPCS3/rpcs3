@@ -128,7 +128,6 @@ void MemoryBase::Init(MemoryType type)
 		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
 		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
 		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
 		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
 		break;
@@ -218,7 +217,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 	}
 
 	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
-	LOG_WARNING(MEMORY, "MemoryBase::Map(0x%llx, 0x%x)", addr, size);
+	LOG_WARNING(MEMORY, "Memory mapped at 0x%llx: size=0x%x", addr, size);
 	return true;
 }
 
@@ -579,73 +578,71 @@ bool VirtualMemoryBlock::IsMyAddress(const u64 addr)
 	return false;
 }
 
-u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
+u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size)
 {
-	if(addr)
+	for (u64 addr = GetStartAddr(); addr <= GetEndAddr() - GetReservedAmount() - size;)
 	{
-		if(!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
-			return 0;
+		bool is_good_addr = true;
 
-		m_mapped_memory.emplace_back(addr, realaddr, size);
-		return addr;
-	}
-	else
-	{
-		for(u64 addr = GetStartAddr(); addr <= GetEndAddr() - GetReservedAmount() - size;)
+		// check if address is already mapped
+		for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 		{
-			bool is_good_addr = true;
-
-			// check if address is already mapped
-			for(u32 i=0; i<m_mapped_memory.size(); ++i)
+			if ((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
+				(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
 			{
-				if((addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size) ||
-					(m_mapped_memory[i].addr >= addr && m_mapped_memory[i].addr < addr + size))
-				{
-					is_good_addr = false;
-					addr = m_mapped_memory[i].addr + m_mapped_memory[i].size;
-					break;
-				}
+				is_good_addr = false;
+				addr = m_mapped_memory[i].addr + m_mapped_memory[i].size;
+				break;
 			}
-
-			if(!is_good_addr) continue;
-
-			m_mapped_memory.emplace_back(addr, realaddr, size);
-
-			return addr;
 		}
 
-		return 0;
+		if (!is_good_addr) continue;
+
+		m_mapped_memory.emplace_back(addr, realaddr, size);
+
+		return addr;
 	}
+
+	return 0;
 }
 
-u32 VirtualMemoryBlock::UnmapRealAddress(u64 realaddr)
+bool VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
+{
+	if(!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
+		return false;
+
+	m_mapped_memory.emplace_back(addr, realaddr, size);
+	return true;
+}
+
+bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr, u32& size)
 {
 	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
-			u32 size = m_mapped_memory[i].size;
+			size = m_mapped_memory[i].size;
 			m_mapped_memory.erase(m_mapped_memory.begin() + i);
-			return size;
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
-u32 VirtualMemoryBlock::UnmapAddress(u64 addr)
+bool VirtualMemoryBlock::UnmapAddress(u64 addr, u32& size)
 {
 	for(u32 i=0; i<m_mapped_memory.size(); ++i)
 	{
 		if(m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
-			u32 size = m_mapped_memory[i].size;
+			size = m_mapped_memory[i].size;
 			m_mapped_memory.erase(m_mapped_memory.begin() + i);
-			return size;
+			return true;
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)

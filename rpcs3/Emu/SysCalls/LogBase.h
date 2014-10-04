@@ -31,12 +31,12 @@ public:
 
 	template<typename... Targs> __noinline void Notice(const u32 id, const char* fmt, Targs... args) const
 	{
-		LogOutput(LogNotice, id, ": ", fmt::Format(fmt, args...));
+		LogOutput(LogNotice, id, " : ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __noinline void Notice(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogNotice, ": ", fmt::Format(fmt, args...));
+		LogOutput(LogNotice, " : ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args) const
@@ -57,12 +57,12 @@ public:
 
 	template<typename... Targs> __noinline void Success(const u32 id, const char* fmt, Targs... args) const
 	{
-		LogOutput(LogSuccess, id, ": ", fmt::Format(fmt, args...));
+		LogOutput(LogSuccess, id, " : ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __noinline void Success(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogSuccess, ": ", fmt::Format(fmt, args...));
+		LogOutput(LogSuccess, " : ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __noinline void Warning(const u32 id, const char* fmt, Targs... args) const

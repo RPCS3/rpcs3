@@ -20,6 +20,7 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	, inter(new SPUInterpreter(cpu))
 	, CPU(cpu)
 	, first(true)
+	, need_check(false)
 {
 	memset(entry, 0, sizeof(entry));
 	X86CpuInfo inf;
@@ -48,7 +49,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	u64 time0 = 0;
 
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = vm::get_ptr<u8>(CPU.dmac.ls_offset);
+	dis_asm.offset = vm::get_ptr<u8>(CPU.ls_offset);
 
 	StringLogger stringLogger;
 	stringLogger.setOption(kLoggerOptionBinaryForm, true);
@@ -102,7 +103,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const u32 opcode = vm::read32(CPU.dmac.ls_offset + pos * 4);
+		const u32 opcode = vm::read32(CPU.ls_offset + pos * 4);
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
@@ -181,8 +182,8 @@ void SPURecompilerCore::Compile(u16 pos)
 
 u8 SPURecompilerCore::DecodeMemory(const u32 address)
 {
-	assert(CPU.dmac.ls_offset == address - CPU.PC);
-	const u32 m_offset = CPU.dmac.ls_offset;
+	assert(CPU.ls_offset == address - CPU.PC);
+	const u32 m_offset = CPU.ls_offset;
 	const u16 pos = (u16)(CPU.PC >> 2);
 
 	//ConLog.Write("DecodeMemory: pos=%d", pos);
@@ -192,20 +193,26 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 	{
 		// check data (hard way)
 		bool is_valid = true;
-		//for (u32 i = pos; i < (u32)(entry[pos].count + pos); i++)
-		//{
-		//	if (entry[i].valid != ls[i])
-		//	{
-		//		is_valid = false;
-		//		break;
-		//	}
-		//}
+		if (need_check)
+		{
+			for (u32 i = 0; i < 0x10000; i++)
+			{
+				if (entry[i].valid && entry[i].valid != ls[i])
+				{
+					is_valid = false;
+					break;
+				}
+			}
+			need_check = false;
+		}
 		// invalidate if necessary
 		if (!is_valid)
 		{
 			for (u32 i = 0; i < 0x10000; i++)
 			{
-				if (entry[i].pointer &&
+				if (!entry[i].pointer) continue;
+
+				if (!entry[i].valid || entry[i].valid != ls[i] ||
 					i + (u32)entry[i].count > (u32)pos &&
 					i < (u32)pos + (u32)entry[pos].count)
 				{
@@ -214,6 +221,11 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 					//RtlDeleteFunctionTable(&entry[i].info);
 #endif
 					entry[i].pointer = nullptr;
+					for (u32 j = i; j < i + (u32)entry[i].count; j++)
+					{
+						entry[j].valid = 0;
+					}
+					//need_check = true;
 				}
 			}
 			//LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
@@ -254,11 +266,17 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 	u32 res = pos;
 	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_imm_table);
 
-	if (res > 0xffff)
+	if (res & 0x1000000)
 	{
 		CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
 		CPU.Stop();
-		res = ~res;
+		res &= ~0x1000000;
+	}
+
+	if (res & 0x2000000)
+	{
+		need_check = true;
+		res &= ~0x2000000;
 	}
 
 	if (did_compile)

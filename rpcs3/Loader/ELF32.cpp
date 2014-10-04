@@ -155,16 +155,16 @@ void Elf32_Shdr::LoadLE(vfsStream& f)
 void Elf32_Shdr::Show()
 {
 #ifdef LOADER_DEBUG
-	LOG_NOTICE(LOADER, "Name offset: %x", sh_name);
-	LOG_NOTICE(LOADER, "Type: %d", sh_type);
-	LOG_NOTICE(LOADER, "Addr: %x", sh_addr);
-	LOG_NOTICE(LOADER, "Offset: %x", sh_offset);
-	LOG_NOTICE(LOADER, "Size: %x", sh_size);
+	LOG_NOTICE(LOADER, "Name offset: 0x%x", sh_name);
+	LOG_NOTICE(LOADER, "Type: 0x%d", sh_type);
+	LOG_NOTICE(LOADER, "Addr: 0x%x", sh_addr);
+	LOG_NOTICE(LOADER, "Offset: 0x%x", sh_offset);
+	LOG_NOTICE(LOADER, "Size: 0x%x", sh_size);
 	LOG_NOTICE(LOADER, "EntSize: %d", sh_entsize);
-	LOG_NOTICE(LOADER, "Flags: %x", sh_flags);
-	LOG_NOTICE(LOADER, "Link: %x", sh_link);
+	LOG_NOTICE(LOADER, "Flags: 0x%x", sh_flags);
+	LOG_NOTICE(LOADER, "Link: 0x%x", sh_link);
 	LOG_NOTICE(LOADER, "Info: %d", sh_info);
-	LOG_NOTICE(LOADER, "Address align: %x", sh_addralign);
+	LOG_NOTICE(LOADER, "Address align: 0x%x", sh_addralign);
 #endif
 }
 

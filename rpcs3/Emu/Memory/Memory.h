@@ -35,7 +35,6 @@ public:
 	DynamicMemoryBlock MainMem;
 	DynamicMemoryBlock PRXMem;
 	DynamicMemoryBlock RSXCMDMem;
-	DynamicMemoryBlock MmaperMem;
 	DynamicMemoryBlock RSXFBMem;
 	DynamicMemoryBlock StackMem;
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];

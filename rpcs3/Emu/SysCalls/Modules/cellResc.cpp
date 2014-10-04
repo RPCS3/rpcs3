@@ -603,7 +603,7 @@ void cellRescExit()
 	if (IsPalTemporal())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
-		cellGcmSetVBlankHandler({});
+		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
 		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
 
 		if (IsPalInterpolate())
@@ -780,20 +780,20 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(IntrHandler50);
 		//cellGcmSetSecondVHandler(IntrHandler60);
-		cellGcmSetFlipHandler({});
+		cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)>::make(0));
 	}
 	else if (IsPalDrop())
 	{
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler({});
+		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
 		//cellGcmSetSecondVHandler(IntrHandler60Drop);
-		cellGcmSetFlipHandler({});
+		cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)>::make(0));
 	} 
 	else if (IsPal60Hsync())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler({});
+		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
 	}
 
 	if (s_rescInternalInstance->s_applicationVBlankHandler) SetVBlankHandler(s_rescInternalInstance->s_applicationVBlankHandler);

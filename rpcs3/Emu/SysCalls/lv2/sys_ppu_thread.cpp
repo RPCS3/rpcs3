@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -147,6 +148,40 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	return CELL_OK;
 }
 
+PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name, std::function<void(PPUThread&)> task)
+{
+	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
+	u32 id = new_thread.GetId();
+	new_thread.SetEntry(entry);
+	new_thread.SetPrio(prio);
+	new_thread.SetStackSize(stacksize);
+	//new_thread.flags = flags;
+	new_thread.m_has_interrupt = false;
+	new_thread.m_is_interrupt = is_interrupt;
+	new_thread.SetName(name);
+	new_thread.m_custom_task = task;
+
+	sys_ppu_thread.Notice("*** New PPU Thread [%s] (%s, entry=0x%x): id = %d", name.c_str(),
+		is_interrupt ? "interrupt" :
+		(is_joinable ? "joinable" : "non-joinable"), entry, id);
+
+	if (!is_interrupt)
+	{
+		new_thread.Run();
+		new_thread.GPR[3] = arg;
+		new_thread.Exec();
+	}
+	else
+	{
+		new_thread.InitStack();
+		new_thread.InitRegs();
+		new_thread.DoRun();
+	}
+
+	return &new_thread;
+}
+
 s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
@@ -171,41 +206,18 @@ s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 
 	default: sys_ppu_thread.Error("sys_ppu_thread_create(): unknown flags value (0x%llx)", flags); return CELL_EPERM;
 	}
 
-	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	std::string name = threadname ? threadname.get_ptr() : "";
 
-	*thread_id = new_thread.GetId();
-	new_thread.SetEntry(entry);
-	new_thread.SetPrio(prio);
-	new_thread.SetStackSize(stacksize);
-	//new_thread.flags = flags;
-	new_thread.m_has_interrupt = false;
-	new_thread.m_is_interrupt = is_interrupt;
-	new_thread.SetName(threadname ? threadname.get_ptr() : "");
-
-	sys_ppu_thread.Notice("*** New PPU Thread [%s] (flags=0x%llx, entry=0x%x): id = %d", new_thread.GetName().c_str(), flags, entry, new_thread.GetId());
-
-	if (!is_interrupt)
-	{
-		new_thread.Run();
-		new_thread.GPR[3] = arg;
-		new_thread.Exec();
-	}
-	else
-	{
-		new_thread.InitStack();
-		new_thread.InitRegs();
-		new_thread.DoRun();
-	}
-
+	*thread_id = ppu_thread_create(entry, arg, prio, stacksize, is_joinable, is_interrupt, name)->GetId();
 	return CELL_OK;
 }
 
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<std::atomic<be_t<u32>>> once_ctrl, vm::ptr<void(*)()> init)
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void(*)()> init)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, init_addr=0x%x)", once_ctrl.addr(), init.addr());
 
-	be_t<u32> old = be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_ONCE_INIT));
-	if (once_ctrl->compare_exchange_weak(old, be_t<u32>::MakeFromBE(se32(SYS_PPU_THREAD_DONE_INIT))))
+	be_t<u32> cmp = be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT);
+	if (once_ctrl->compare_and_swap(cmp, be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)) == cmp)
 	{
 		init.call(CPU);
 	}

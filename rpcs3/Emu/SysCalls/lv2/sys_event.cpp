@@ -10,7 +10,24 @@
 
 SysCallBase sys_event("sys_event");
 
-s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, int size)
+u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size)
+{
+	EventQueue* eq = new EventQueue(protocol, type, name_u64, event_queue_key, size);
+
+	if (event_queue_key && !Emu.GetEventManager().RegisterKey(eq, event_queue_key))
+	{
+		delete eq;
+		return 0;
+	}
+
+	std::string name((const char*)&name_u64, 8);
+	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x, key=0x%llx, size=0x%x): id = %d",
+		name.c_str(), protocol, type, event_queue_key, size, id);
+	return id;
+}
+
+s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id_addr=0x%x, attr_addr=0x%x, event_queue_key=0x%llx, size=%d)",
 		equeue_id.addr(), attr.addr(), event_queue_key, size);
@@ -33,7 +50,7 @@ s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue
 	{
 	case se32(SYS_PPU_QUEUE): break;
 	case se32(SYS_SPU_QUEUE): break;
-	default: sys_event.Error("Unknown 0x%x type attr", (u32)attr->type); return CELL_EINVAL;
+	default: sys_event.Error("Unknown 0x%x type attr", (s32)attr->type); return CELL_EINVAL;
 	}
 
 	if (event_queue_key && Emu.GetEventManager().CheckKey(event_queue_key))
@@ -41,20 +58,13 @@ s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue
 		return CELL_EEXIST;
 	}
 
-	EventQueue* eq = new EventQueue((u32)attr->protocol, (int)attr->type, attr->name_u64, event_queue_key, size);
-
-	if (event_queue_key && !Emu.GetEventManager().RegisterKey(eq, event_queue_key))
+	if (u32 id = event_queue_create(attr->protocol, attr->type, attr->name_u64, event_queue_key, size))
 	{
-		delete eq;
-		return CELL_EAGAIN;
+		*equeue_id = id;
+		return CELL_OK;
 	}
 
-	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
-	*equeue_id = id;
-	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
-
-	return CELL_OK;
+	return CELL_EAGAIN;	
 }
 
 s32 sys_event_queue_destroy(u32 equeue_id, int mode)
@@ -102,7 +112,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 	return CELL_OK;
 }
 
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, int size, vm::ptr<be_t<u32>> number)
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, s32 size, vm::ptr<be_t<u32>> number)
 {
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.addr(), size, number.addr());
@@ -141,10 +151,11 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 	return CELL_OK;
 }
 
-s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 timeout)
+s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, u64 timeout)
 {
-	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event_addr=0x%x, timeout=%lld)",
-		equeue_id, event.addr(), timeout);
+	// dummy_event argument is ignored, data returned in registers
+	sys_event.Log("sys_event_queue_receive(equeue_id=%d, dummy_event_addr=0x%x, timeout=%lld)",
+		equeue_id, dummy_event.addr(), timeout);
 
 	EventQueue* eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
@@ -183,19 +194,20 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> event, u64 ti
 				}
 			}
 		case SMR_SIGNAL:
-			{
-				eq->events.pop(*event);
-				eq->owner.unlock(tid);
-				sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
-					(u64)event->source, (u64)event->data1, (u64)event->data2, (u64)event->data3);
-				/* passing event data in registers */
-				PPUThread& t = GetCurrentPPUThread();
-				t.GPR[4] = event->source;
-				t.GPR[5] = event->data1;
-				t.GPR[6] = event->data2;
-				t.GPR[7] = event->data3;
-				return CELL_OK;
-			}
+		{
+			sys_event_data event;
+			eq->events.pop(event);
+			eq->owner.unlock(tid);
+			sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
+				(u64)event.source, (u64)event.data1, (u64)event.data2, (u64)event.data3);
+			/* passing event data in registers */
+			PPUThread& t = GetCurrentPPUThread();
+			t.GPR[4] = event.source;
+			t.GPR[5] = event.data1;
+			t.GPR[6] = event.data2;
+			t.GPR[7] = event.data3;
+			return CELL_OK;
+		}
 		case SMR_FAILED: break;
 		default: eq->sq.invalidate(tid); return CELL_ECANCELED;
 		}
@@ -225,7 +237,16 @@ s32 sys_event_queue_drain(u32 equeue_id)
 	return CELL_OK;
 }
 
-s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, int port_type, u64 name)
+u32 event_port_create(u64 name)
+{
+	EventPort* eport = new EventPort();
+	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
+	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
+	sys_event.Warning("*** sys_event_port created: id = %d", id);
+	return id;
+}
+
+s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, s32 port_type, u64 name)
 {
 	sys_event.Warning("sys_event_port_create(eport_id_addr=0x%x, port_type=0x%x, name=0x%llx)",
 		eport_id.addr(), port_type, name);
@@ -236,12 +257,7 @@ s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, int port_type, u64 name)
 		return CELL_EINVAL;
 	}
 
-	EventPort* eport = new EventPort();
-	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
-	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
-	*eport_id = id;
-	sys_event.Warning("*** sys_event_port created: id = %d", id);
-
+	*eport_id = event_port_create(name);
 	return CELL_OK;
 }
 
