@@ -432,9 +432,7 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
-
-		u32 lsa = (a + b) & 0x3fff0;
+		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 
 		CPU.GPR[rt] = CPU.ReadLS128(lsa);
 	}
@@ -1088,6 +1086,7 @@ private:
 		for (int i = 0; i < 4; i++)
 		{
 			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
+
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
 			if (exp > 255) //< 0

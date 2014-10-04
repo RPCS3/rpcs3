@@ -1016,6 +1016,12 @@ void SPUThread::StopAndSignal(u32 code)
 		break;
 	}
 
+	case 0x003:
+	{
+		GPR[3]._u32[3] = m_code3_func(*this);
+		break;
+	}
+
 	case 0x110:
 	{
 		/* ===== sys_spu_thread_receive_event ===== */

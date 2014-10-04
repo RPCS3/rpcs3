@@ -6,7 +6,7 @@
 #include "sys_memory.h"
 #include "sys_vm.h"
 
-SysCallBase sys_vm("vm");
+SysCallBase sys_vm("sys_vm");
 MemoryContainerInfo* current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)

@@ -1964,12 +1964,12 @@ private:
 	void CLZ(u32 rt, u32 ra)
 	{
 		XmmInvalidate(rt);
+		c.mov(*qw0, 32 + 31);
 		for (u32 i = 0; i < 4; i++)
 		{
 			c.bsr(*addr, cpu_dword(GPR[ra]._u32[i]));
-			c.cmovz(*addr, dword_ptr(*g_imm_var, (s32)offsetof(g_imm_table_struct, fsmb_table[0xffff]))); // load 0xffffffff
-			c.neg(*addr);
-			c.add(*addr, 31);
+			c.cmovz(*addr, qw0->r32());
+			c.xor_(*addr, 31);
 			c.mov(cpu_dword(GPR[rt]._u32[i]), *addr);
 		}
 		LOG_OPCODE();

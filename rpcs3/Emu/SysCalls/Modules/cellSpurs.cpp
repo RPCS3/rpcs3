@@ -106,11 +106,11 @@ s64 spursInit(
 	// default or system workload:
 #ifdef PRX_DEBUG
 	spurs->m.wklSysG.pm.set(be_t<u64>::make(vm::read32(libsre_rtoc - 0x7EA4)));
+	spurs->m.wklSysG.size = 0x2200;
 #else
 	spurs->m.wklSysG.pm.set(be_t<u64>::make(0x100)); // wrong 64-bit address
 #endif
 	spurs->m.wklSysG.data = 0;
-	spurs->m.wklSysG.size = 0x2200;
 	spurs->m.wklSysG.copy.write_relaxed(0xff);
 	u32 sem;
 	for (u32 i = 0; i < 0x10; i++)
@@ -170,6 +170,10 @@ s64 spursInit(
 			SPU.GPR[4]._u64[1] = spurs.addr();
 			return SPU.FastCall(SPU.PC);
 #endif
+			//SPU.WriteLS32(0x808, 2); // hack for cellSpursModuleExit
+			//SPU.WriteLS32(0x260, 3); // hack for cellSpursModulePollStatus
+			//SPU.WriteLS32(0x264, 0x35000000); // bi $0
+
 			SPU.WriteLS128(0x1c0, u128::from32r(0, spurs.addr(), num, 0x1f));
 
 			u32 wid = 0x20;
@@ -189,7 +193,7 @@ s64 spursInit(
 					// load executable code:
 					memcpy(vm::get_ptr<void>(SPU.ls_offset + 0xa00), wkl.pm.get_ptr(), wkl.size);
 					SPU.WriteLS64(0x1d0, wkl.pm.addr());
-					SPU.WriteLS32(0x1d8, wkl.priority.ToLE() >> 24 & 0xff); // ???
+					SPU.WriteLS32(0x1d8, wkl.copy.read_relaxed());
 				}
 				
 				if (!isSecond) SPU.WriteLS16(0x1e8, 0);
@@ -213,7 +217,8 @@ s64 spursInit(
 				}
 
 				// get workload id:
-
+				//SPU.GPR[3].clear();
+				//wid = SPU.m_code3_func(SPU);
 			}
 			
 		})->GetId();

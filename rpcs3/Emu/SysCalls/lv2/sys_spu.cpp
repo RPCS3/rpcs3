@@ -88,8 +88,8 @@ SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image
 	if (group) group->list[spu_num] = id;
 	new_thread.group = group;
 
-	sys_spu.Warning("*** New SPU Thread [%s] (ep=0x%x, opt=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d",
-		name.c_str(), spu_ep, option, a1, a2, a3, a4, id);
+	sys_spu.Warning("*** New SPU Thread [%s] (ep=0x%x, opt=0x%x, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx): id=%d, spu_offset=0x%x",
+		name.c_str(), spu_ep, option, a1, a2, a3, a4, id, spu_offset);
 	return &new_thread;
 }
 
