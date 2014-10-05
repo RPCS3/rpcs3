@@ -332,7 +332,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
+	if (Memory.RSXIOMem.getRealAddr(ctrl->get, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -346,7 +346,7 @@ void RSXDebugger::GoToPut(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
+	if (Memory.RSXIOMem.getRealAddr(ctrl->put, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -373,20 +373,20 @@ void RSXDebugger::GetMemory()
 	for(u32 i=0; i<m_item_count; i++)
 		m_list_commands->SetItem(i, 2, wxEmptyString);
 
-	u32 ioAddr = RSXReady() ? Memory.RSXIOMem.GetStartAddr() : 0;
+	bool isReady = RSXReady();
 
 	// Write information
 	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
 	{
 		m_list_commands->SetItem(i, 0, wxString::Format("%08x", addr));
 	
-		if (ioAddr && Memory.IsGoodAddr(addr))
+		if (isReady && Memory.IsGoodAddr(addr))
 		{
 			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
-			m_list_commands->SetItem(i, 2, DisAsmCommand(cmd, count, addr, ioAddr));
+			m_list_commands->SetItem(i, 2, DisAsmCommand(cmd, count, addr, 0));
 
 			if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 			{
