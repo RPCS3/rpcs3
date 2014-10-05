@@ -8,6 +8,7 @@
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/ELF.h"
+#include "Crypto/unself.h"
 #include "sys_spu.h"
 
 static SysCallBase sys_spu("sys_spu");
@@ -47,6 +48,18 @@ s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path)
 		sys_spu.Error("sys_spu_image_open error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
+
+	SceHeader hdr;
+	hdr.Load(f);
+
+	if (hdr.CheckMagic())
+	{
+		sys_spu.Error("sys_spu_image_open error: '%s' is encrypted! Decrypt SELF and try again.", path.get_ptr());
+		Emu.Pause();
+		return CELL_ENOENT;
+	}
+
+	f.Seek(0);
 
 	u32 entry;
 	u32 offset = LoadSpuImage(f, entry);

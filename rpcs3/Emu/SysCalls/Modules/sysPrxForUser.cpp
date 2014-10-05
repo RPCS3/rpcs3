@@ -15,10 +15,16 @@
 #include "Emu/SysCalls/lv2/sys_mmapper.h"
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
 #include "Loader/ELF.h"
+#include "Crypto/unself.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sysPrxForUser.h"
 
 Module *sysPrxForUser = nullptr;
+
+void sys_initialize_tls()
+{
+	sysPrxForUser->Log("sys_initialize_tls()");
+}
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {
@@ -47,11 +53,6 @@ u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
 	return (u32)Memory.Alloc(size, align);
-}
-
-void sys_initialize_tls()
-{
-	sysPrxForUser->Log("sys_initialize_tls()");
 }
 
 s64 _sys_process_atexitspawn()
@@ -116,6 +117,18 @@ int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<be_t<u32>> entry)
 		sysPrxForUser->Error("sys_raw_spu_load error: '%s' not found!", path.get_ptr());
 		return CELL_ENOENT;
 	}
+
+	SceHeader hdr;
+	hdr.Load(f);
+
+	if (hdr.CheckMagic())
+	{
+		sysPrxForUser->Error("sys_raw_spu_load error: '%s' is encrypted! Decrypt SELF and try again.", path.get_ptr());
+		Emu.Pause();
+		return CELL_ENOENT;
+	}
+
+	f.Seek(0);
 
 	ELFLoader l(f);
 	l.LoadInfo();
