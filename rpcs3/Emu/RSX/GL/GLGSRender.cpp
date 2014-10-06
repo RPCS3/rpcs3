@@ -1380,6 +1380,7 @@ void GLGSRender::WriteColorBuffers()
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
 			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 		}
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteColorBufferA();
 		WriteColorBufferB();
 	break;
