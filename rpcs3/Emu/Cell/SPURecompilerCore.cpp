@@ -13,7 +13,7 @@
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
-static const g_imm_table_struct g_imm_table;
+const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	: m_enc(new SPURecompiler(cpu, *this))
