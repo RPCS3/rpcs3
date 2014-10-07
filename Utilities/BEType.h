@@ -1,20 +1,92 @@
 #pragma once
 
-#include <emmintrin.h>
-
 union u128
 {
+	__m128 vf;
+	__m128i vi;
+
 	u64 _u64[2];
 	s64 _s64[2];
+
+	class u64_reversed_array_2
+	{
+		u64 data[2];
+
+	public:
+		u64& operator [] (s32 index)
+		{
+			return data[1 - index];
+		}
+
+		const u64& operator [] (s32 index) const
+		{
+			return data[1 - index];
+		}
+
+	} u64r;
+
 	u32 _u32[4];
 	s32 _s32[4];
+
+	class u32_reversed_array_4
+	{
+		u32 data[4];
+
+	public:
+		u32& operator [] (s32 index)
+		{
+			return data[3 - index];
+		}
+
+		const u32& operator [] (s32 index) const
+		{
+			return data[3 - index];
+		}
+
+	} u32r;
+
 	u16 _u16[8];
 	s16 _s16[8];
+
+	class u16_reversed_array_8
+	{
+		u16 data[8];
+
+	public:
+		u16& operator [] (s32 index)
+		{
+			return data[7 - index];
+		}
+
+		const u16& operator [] (s32 index) const
+		{
+			return data[7 - index];
+		}
+
+	} u16r;
+
 	u8  _u8[16];
 	s8  _s8[16];
+
+	class u8_reversed_array_16
+	{
+		u8 data[16];
+
+	public:
+		u8& operator [] (s32 index)
+		{
+			return data[15 - index];
+		}
+
+		const u8& operator [] (s32 index) const
+		{
+			return data[15 - index];
+		}
+
+	} u8r;
+
 	float _f[4];
 	double _d[2];
-	__m128 xmm;
 
 	class bit_array_128
 	{
@@ -94,6 +166,11 @@ union u128
 		return ret;
 	}
 
+	static u128 from64r(u64 _1, u64 _0 = 0)
+	{
+		return from64(_0, _1);
+	}
+
 	static u128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
 	{
 		u128 ret;
@@ -106,12 +183,7 @@ union u128
 
 	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
 	{
-		u128 ret;
-		ret._u32[0] = _0;
-		ret._u32[1] = _1;
-		ret._u32[2] = _2;
-		ret._u32[3] = _3;
-		return ret;
+		return from32(_0, _1, _2, _3);
 	}
 
 	static u128 fromBit(u32 bit)

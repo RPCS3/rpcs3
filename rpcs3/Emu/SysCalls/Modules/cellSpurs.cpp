@@ -170,13 +170,138 @@ s64 spursInit(
 			SPU.GPR[4]._u64[1] = spurs.addr();
 			return SPU.FastCall(SPU.PC);
 #endif
-			//SPU.WriteLS32(0x808, 2); // hack for cellSpursModuleExit
-			//SPU.WriteLS32(0x260, 3); // hack for cellSpursModulePollStatus
-			//SPU.WriteLS32(0x264, 0x35000000); // bi $0
+			SPU.WriteLS32(SPU.ReadLS32(0x1e0), 2); // hack for cellSpursModuleExit
+
+			/*if (!isSecond)*/ SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // first variant
+			{
+				LV2_LOCK(0);
+
+				const u32 arg1 = SPU.GPR[3]._u32[3];
+				u32 var0 = SPU.ReadLS32(0x1d8);
+				u32 var1 = SPU.ReadLS32(0x1dc);
+				u128 wklA = vm::read128(spurs.addr() + 0x20);
+				u128 wklB = vm::read128(spurs.addr() + 0x30);
+				u128 savedA = SPU.ReadLS128(0x180);
+				u128 savedB = SPU.ReadLS128(0x190);
+				u128 vAA; vAA.vi = _mm_sub_epi32(wklA.vi, savedA.vi);
+				u128 vBB; vBB.vi = _mm_sub_epi32(wklB.vi, savedB.vi);
+				u128 vAABB; vAABB.vi = (arg1 == 0) ? _mm_add_epi32(vAA.vi, _mm_andnot_si128(g_imm_table.fsmb_table[0x8000 >> var1], vBB.vi)) : vAA.vi;
+				
+				u32 vNUM = 0x20;
+				u64 vRES = 0x20ull << 32;
+				u128 vSET = {};
+
+				if (spurs->m.x72.read_relaxed() & (1 << num))
+				{
+					SPU.WriteLS8(0x1eb, 0); // var4
+					if (arg1 && var1 != 0x20)
+					{
+						spurs->m.x72._and_not(1 << num);
+					}
+				}
+				else
+				{
+					u128 wklReadyCount0 = vm::read128(spurs.addr() + 0x0);
+					u128 wklReadyCount1 = vm::read128(spurs.addr() + 0x10);
+					u128 savedC = SPU.ReadLS128(0x1A0);
+					u128 savedD = SPU.ReadLS128(0x1B0);
+					u128 vRC; vRC.vi = _mm_add_epi32(_mm_min_epu8(wklReadyCount0.vi, _mm_set1_epi8(8)), _mm_min_epu8(wklReadyCount1.vi, _mm_set1_epi8(8)));
+					u32 wklFlag = spurs->m.wklFlag.flag.read_relaxed();
+					u32 flagRecv = spurs->m.flagRecv.read_relaxed();
+					u128 vFM; vFM.vi = g_imm_table.fsmb_table[wklFlag == 0 ? 0x8000 >> flagRecv : 0];
+					u128 wklSet1; wklSet1.vi = g_imm_table.fsmb_table[spurs->m.wklSet1.read_relaxed()];
+					u128 vFMS1; vFMS1.vi = vFM.vi | wklSet1.vi;
+					u128 vFMV1; vFMV1.vi = g_imm_table.fsmb_table[(wklFlag == 0 ? 0x8000 >> flagRecv : 0) >> var1];
+					u32 var5 = SPU.ReadLS32(0x1ec);
+					u128 wklMinCnt = vm::read128(spurs.addr() + 0x40);
+					u128 wklMaxCnt = vm::read128(spurs.addr() + 0x50);
+					u128 vCC; vCC.vi = _mm_andnot_si128(vFMS1.vi,
+						_mm_cmpeq_epi8(wklReadyCount0.vi, _mm_set1_epi8(0)) | _mm_cmple_epu8(vRC.vi, vAABB.vi)) |
+						_mm_cmple_epu8(wklMaxCnt.vi, vAABB.vi) |
+						_mm_cmpeq_epi8(savedC.vi, _mm_set1_epi8(0)) |
+						g_imm_table.fsmb_table[(~var5) >> 16];
+					u128 vCCH1; vCCH1.vi = _mm_andnot_si128(vCC.vi,
+						_mm_set1_epi8((char)0x80) & (vFMS1.vi | _mm_cmpgt_epu8(wklReadyCount0.vi, vAABB.vi)) |
+						_mm_set1_epi8(0x7f) & savedC.vi);
+					u128 vCCL1; vCCL1.vi = _mm_andnot_si128(vCC.vi,
+						_mm_set1_epi8((char)0x80) & vFMV1.vi |
+						_mm_set1_epi8(0x40) & _mm_cmpgt_epu8(vAABB.vi, _mm_set1_epi8(0)) & _mm_cmpgt_epu8(wklMinCnt.vi, vAABB.vi) |
+						_mm_set1_epi8(0x3c) & _mm_slli_epi32(_mm_sub_epi32(_mm_set1_epi8(8), vAABB.vi), 2) |
+						_mm_set1_epi8(0x02) & _mm_cmpeq_epi8(savedD.vi, _mm_set1_epi8((s8)var0)) |
+						_mm_set1_epi8(0x01));
+					u128 vSTAT; vSTAT.vi =
+						_mm_set1_epi8(0x01) & _mm_cmpgt_epu8(wklReadyCount0.vi, vAABB.vi) |
+						_mm_set1_epi8(0x02) & wklSet1.vi |
+						_mm_set1_epi8(0x04) & vFM.vi;
+
+					for (s32 i = 0, max = -1; i < 0x10; i++)
+					{
+						const s32 value = ((s32)vCCH1.u8r[i] << 8) | ((s32)vCCL1.u8r[i]);
+						if (value > max && (vCC.u8r[i] & 1) == 0)
+						{
+							vNUM = i;
+							max = value;
+						}
+					}
+
+					if (vNUM < 0x10)
+					{
+						vRES == ((u64)vNUM << 32) | vSTAT.u8r[vNUM];
+						vSET.u8r[vNUM] = 0x01;
+					}
+
+					SPU.WriteLS8(0x1eb, vNUM == 0x20);
+
+					if (!arg1 || var1 == vNUM)
+					{
+						spurs->m.wklSet1._and_not(be_t<u16>::make(0x8000 >> vNUM));
+					}
+
+					if (vNUM == flagRecv)
+					{
+						spurs->m.wklFlag.flag |= be_t<u32>::make(-1);
+					}
+				}
+
+				if (arg1 == 0)
+				{
+					vAA.vi = _mm_add_epi32(vAA.vi, vSET.vi);
+					vm::write128(spurs.addr() + 0x20, vAA); // update wklA
+
+					SPU.WriteLS128(0x180, vSET); // update savedA
+					SPU.WriteLS32(0x1dc, vNUM); // update var1
+				}
+
+				if (arg1 == 1 && vNUM != var1)
+				{
+					vBB.vi = _mm_add_epi32(vBB.vi, vSET.vi);
+					vm::write128(spurs.addr() + 0x30, vBB); // update wklB
+
+					SPU.WriteLS128(0x190, vSET); // update savedB
+				}
+				else
+				{
+					SPU.WriteLS128(0x190, {}); // update savedB
+				}
+
+				return vRES;
+			};
+			//else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second variant
+			//{
+			//
+			//};
+
+			if (SPU.m_code3_func)
+			{
+				const u32 addr = SPU.ReadLS32(0x1e4);
+				SPU.WriteLS32(addr + 0, 3); // hack for cellSpursModulePollStatus
+				SPU.WriteLS32(addr + 4, 0x35000000); // bi $0
+			}
 
 			SPU.WriteLS128(0x1c0, u128::from32r(0, spurs.addr(), num, 0x1f));
 
 			u32 wid = 0x20;
+			u32 stat = 0;
 			while (true)
 			{
 				if (Emu.IsStopped())
@@ -199,11 +324,19 @@ s64 spursInit(
 				if (!isSecond) SPU.WriteLS16(0x1e8, 0);
 
 				// run workload:
-				SPU.GPR[1]._u32[3] = 0x3FFB0;
-				SPU.GPR[3]._u32[3] = 0x100;
-				SPU.GPR[4]._u64[1] = wkl.data;
-				SPU.GPR[5]._u32[3] = 0;
-				SPU.FastCall(0xa00);
+				if (wid <= 0x20)
+				{
+					SPU.GPR[1]._u32[3] = 0x3FFB0;
+					SPU.GPR[3]._u32[3] = 0x100;
+					SPU.GPR[4]._u64[1] = wkl.data;
+					SPU.GPR[5]._u32[3] = stat;
+					SPU.FastCall(0xa00);
+				}
+				else
+				{
+					// hack
+					std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				}
 
 				// check status:
 				auto status = SPU.SPU.Status.GetValue();
@@ -217,8 +350,19 @@ s64 spursInit(
 				}
 
 				// get workload id:
-				//SPU.GPR[3].clear();
-				//wid = SPU.m_code3_func(SPU);
+				SPU.GPR[3].clear();
+				if (SPU.m_code3_func)
+				{
+					u64 res = SPU.m_code3_func(SPU);
+					stat = (u32)(res);
+					wid = (u32)(res >> 32);
+				}
+				else
+				{
+					SPU.FastCall(0x290);
+					stat = SPU.GPR[3]._u32[2];
+					wid = SPU.GPR[3]._u32[3];
+				}
 			}
 			
 		})->GetId();
