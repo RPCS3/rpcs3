@@ -2,9 +2,6 @@
 
 union u128
 {
-	__m128 vf;
-	__m128i vi;
-
 	u64 _u64[2];
 	s64 _s64[2];
 
@@ -87,6 +84,8 @@ union u128
 
 	float _f[4];
 	double _d[2];
+	__m128 vf;
+	__m128i vi;
 
 	class bit_array_128
 	{
@@ -186,6 +185,20 @@ union u128
 		return from32(_0, _1, _2, _3);
 	}
 
+	static u128 from32p(u32 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi32((int)value);
+		return ret;
+	}
+
+	static u128 from8p(u8 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi8((char)value);
+		return ret;
+	}
+
 	static u128 fromBit(u32 bit)
 	{
 		u128 ret = {};
@@ -193,9 +206,41 @@ union u128
 		return ret;
 	}
 
-	void setBit(u32 bit)
+	static u128 fromV(__m128i value)
 	{
-		_bit[bit] = true;
+		u128 ret;
+		ret.vi = value;
+		return ret;
+	}
+
+	static __forceinline u128 add8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 minu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_min_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 eq8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 gtu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpgt_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 leu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmple_epu8(left.vi, right.vi));
 	}
 
 	bool operator == (const u128& right) const
@@ -208,24 +253,30 @@ union u128
 		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
 
-	u128 operator | (const u128& right) const
+	__forceinline u128 operator | (const u128& right) const
 	{
-		return from64(_u64[0] | right._u64[0], _u64[1] | right._u64[1]);
+		return fromV(_mm_or_si128(vi, right.vi));
 	}
 
-	u128 operator & (const u128& right) const
+	__forceinline u128 operator & (const u128& right) const
 	{
-		return from64(_u64[0] & right._u64[0], _u64[1] & right._u64[1]);
+		return fromV(_mm_and_si128(vi, right.vi));
 	}
 
-	u128 operator ^ (const u128& right) const
+	__forceinline u128 operator ^ (const u128& right) const
 	{
-		return from64(_u64[0] ^ right._u64[0], _u64[1] ^ right._u64[1]);
+		return fromV(_mm_xor_si128(vi, right.vi));
 	}
 
 	u128 operator ~ () const
 	{
 		return from64(~_u64[0], ~_u64[1]);
+	}
+
+	// result = (~left) & (right)
+	static __forceinline u128 andnot(const u128& left, const u128& right)
+	{
+		return fromV(_mm_andnot_si128(left.vi, right.vi));
 	}
 
 	void clear()

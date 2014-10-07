@@ -119,6 +119,7 @@ public:
 	u32 nPC;
 	u64 cycle;
 	bool m_is_branch;
+	bool m_trace_enabled;
 
 	bool m_is_interrupt;
 	bool m_has_interrupt;

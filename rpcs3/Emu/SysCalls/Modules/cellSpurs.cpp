@@ -183,9 +183,9 @@ s64 spursInit(
 				u128 wklB = vm::read128(spurs.addr() + 0x30);
 				u128 savedA = SPU.ReadLS128(0x180);
 				u128 savedB = SPU.ReadLS128(0x190);
-				u128 vAA; vAA.vi = _mm_sub_epi32(wklA.vi, savedA.vi);
-				u128 vBB; vBB.vi = _mm_sub_epi32(wklB.vi, savedB.vi);
-				u128 vAABB; vAABB.vi = (arg1 == 0) ? _mm_add_epi32(vAA.vi, _mm_andnot_si128(g_imm_table.fsmb_table[0x8000 >> var1], vBB.vi)) : vAA.vi;
+				u128 vAA = u128::sub8(wklA, savedA);
+				u128 vBB = u128::sub8(wklB, savedB);
+				u128 vAABB = (arg1 == 0) ? vAA : u128::add8(vAA, u128::andnot(u128::fromV(g_imm_table.fsmb_table[0x8000 >> var1]), vBB));
 				
 				u32 vNUM = 0x20;
 				u64 vRES = 0x20ull << 32;
@@ -205,34 +205,34 @@ s64 spursInit(
 					u128 wklReadyCount1 = vm::read128(spurs.addr() + 0x10);
 					u128 savedC = SPU.ReadLS128(0x1A0);
 					u128 savedD = SPU.ReadLS128(0x1B0);
-					u128 vRC; vRC.vi = _mm_add_epi32(_mm_min_epu8(wklReadyCount0.vi, _mm_set1_epi8(8)), _mm_min_epu8(wklReadyCount1.vi, _mm_set1_epi8(8)));
+					u128 vRC = u128::add8(u128::minu8(wklReadyCount0, u128::from8p(8)), u128::minu8(wklReadyCount1, u128::from8p(8)));
 					u32 wklFlag = spurs->m.wklFlag.flag.read_relaxed();
 					u32 flagRecv = spurs->m.flagRecv.read_relaxed();
-					u128 vFM; vFM.vi = g_imm_table.fsmb_table[wklFlag == 0 ? 0x8000 >> flagRecv : 0];
-					u128 wklSet1; wklSet1.vi = g_imm_table.fsmb_table[spurs->m.wklSet1.read_relaxed()];
-					u128 vFMS1; vFMS1.vi = vFM.vi | wklSet1.vi;
-					u128 vFMV1; vFMV1.vi = g_imm_table.fsmb_table[(wklFlag == 0 ? 0x8000 >> flagRecv : 0) >> var1];
+					u128 vFM = u128::fromV(g_imm_table.fsmb_table[wklFlag == 0 ? 0x8000 >> flagRecv : 0]);
+					u128 wklSet1 = u128::fromV(g_imm_table.fsmb_table[spurs->m.wklSet1.read_relaxed()]);
+					u128 vFMS1 = vFM | wklSet1;
+					u128 vFMV1 = u128::fromV(g_imm_table.fsmb_table[0x8000 >> var1]);
 					u32 var5 = SPU.ReadLS32(0x1ec);
 					u128 wklMinCnt = vm::read128(spurs.addr() + 0x40);
 					u128 wklMaxCnt = vm::read128(spurs.addr() + 0x50);
-					u128 vCC; vCC.vi = _mm_andnot_si128(vFMS1.vi,
-						_mm_cmpeq_epi8(wklReadyCount0.vi, _mm_set1_epi8(0)) | _mm_cmple_epu8(vRC.vi, vAABB.vi)) |
-						_mm_cmple_epu8(wklMaxCnt.vi, vAABB.vi) |
-						_mm_cmpeq_epi8(savedC.vi, _mm_set1_epi8(0)) |
-						g_imm_table.fsmb_table[(~var5) >> 16];
-					u128 vCCH1; vCCH1.vi = _mm_andnot_si128(vCC.vi,
-						_mm_set1_epi8((char)0x80) & (vFMS1.vi | _mm_cmpgt_epu8(wklReadyCount0.vi, vAABB.vi)) |
-						_mm_set1_epi8(0x7f) & savedC.vi);
-					u128 vCCL1; vCCL1.vi = _mm_andnot_si128(vCC.vi,
-						_mm_set1_epi8((char)0x80) & vFMV1.vi |
-						_mm_set1_epi8(0x40) & _mm_cmpgt_epu8(vAABB.vi, _mm_set1_epi8(0)) & _mm_cmpgt_epu8(wklMinCnt.vi, vAABB.vi) |
-						_mm_set1_epi8(0x3c) & _mm_slli_epi32(_mm_sub_epi32(_mm_set1_epi8(8), vAABB.vi), 2) |
-						_mm_set1_epi8(0x02) & _mm_cmpeq_epi8(savedD.vi, _mm_set1_epi8((s8)var0)) |
-						_mm_set1_epi8(0x01));
-					u128 vSTAT; vSTAT.vi =
-						_mm_set1_epi8(0x01) & _mm_cmpgt_epu8(wklReadyCount0.vi, vAABB.vi) |
-						_mm_set1_epi8(0x02) & wklSet1.vi |
-						_mm_set1_epi8(0x04) & vFM.vi;
+					u128 vCC = u128::andnot(vFMS1, u128::eq8(wklReadyCount0, {}) | u128::leu8(vRC, vAABB)) |
+						u128::leu8(wklMaxCnt, vAABB) |
+						u128::eq8(savedC, {}) |
+						u128::fromV(g_imm_table.fsmb_table[(~var5) >> 16]);
+					cellSpurs->Notice("vCC = %s", vCC.to_hex().c_str());
+					u128 vCCH1 = u128::andnot(vCC,
+						u128::from8p(0x80) & (vFMS1 | u128::gtu8(wklReadyCount0, vAABB)) |
+						u128::from8p(0x7f) & savedC);
+					u128 vCCL1 = u128::andnot(vCC,
+						u128::from8p(0x80) & vFMV1 |
+						u128::from8p(0x40) & u128::gtu8(vAABB, {}) & u128::gtu8(wklMinCnt, vAABB) |
+						u128::from8p(0x3c) & u128::fromV(_mm_slli_epi32(u128::sub8(u128::from8p(8), vAABB).vi, 2)) |
+						u128::from8p(0x02) & u128::eq8(savedD, u128::from8p((u8)var0)) |
+						u128::from8p(0x01));
+					u128 vSTAT =
+						u128::from8p(0x01) & u128::gtu8(wklReadyCount0, vAABB) |
+						u128::from8p(0x02) & wklSet1 |
+						u128::from8p(0x04) & vFM;
 
 					for (s32 i = 0, max = -1; i < 0x10; i++)
 					{
@@ -246,7 +246,7 @@ s64 spursInit(
 
 					if (vNUM < 0x10)
 					{
-						vRES == ((u64)vNUM << 32) | vSTAT.u8r[vNUM];
+						vRES = ((u64)vNUM << 32) | vSTAT.u8r[vNUM];
 						vSET.u8r[vNUM] = 0x01;
 					}
 
@@ -255,18 +255,16 @@ s64 spursInit(
 					if (!arg1 || var1 == vNUM)
 					{
 						spurs->m.wklSet1._and_not(be_t<u16>::make(0x8000 >> vNUM));
-					}
-
-					if (vNUM == flagRecv)
-					{
-						spurs->m.wklFlag.flag |= be_t<u32>::make(-1);
+						if (vNUM == flagRecv)
+						{
+							spurs->m.wklFlag.flag |= be_t<u32>::make(-1);
+						}
 					}
 				}
 
 				if (arg1 == 0)
 				{
-					vAA.vi = _mm_add_epi32(vAA.vi, vSET.vi);
-					vm::write128(spurs.addr() + 0x20, vAA); // update wklA
+					vm::write128(spurs.addr() + 0x20, u128::add8(vAA, vSET)); // update wklA
 
 					SPU.WriteLS128(0x180, vSET); // update savedA
 					SPU.WriteLS32(0x1dc, vNUM); // update var1
@@ -274,8 +272,7 @@ s64 spursInit(
 
 				if (arg1 == 1 && vNUM != var1)
 				{
-					vBB.vi = _mm_add_epi32(vBB.vi, vSET.vi);
-					vm::write128(spurs.addr() + 0x30, vBB); // update wklB
+					vm::write128(spurs.addr() + 0x30, u128::add8(vBB, vSET)); // update wklB
 
 					SPU.WriteLS128(0x190, vSET); // update savedB
 				}
@@ -290,6 +287,7 @@ s64 spursInit(
 			//{
 			//
 			//};
+			SPU.m_code3_func = nullptr;
 
 			if (SPU.m_code3_func)
 			{
@@ -330,7 +328,10 @@ s64 spursInit(
 					SPU.GPR[3]._u32[3] = 0x100;
 					SPU.GPR[4]._u64[1] = wkl.data;
 					SPU.GPR[5]._u32[3] = stat;
+					cellSpurs->Notice("In: [0x1e0] = %s", SPU.ReadLS128(0x1e0).to_hex().c_str());
+					//SPU.m_trace_enabled = (num == 0 && wid == 0x20);
 					SPU.FastCall(0xa00);
+					SPU.m_trace_enabled = false;
 				}
 				else
 				{
