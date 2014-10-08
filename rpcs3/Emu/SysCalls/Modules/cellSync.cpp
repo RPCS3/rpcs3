@@ -1990,7 +1990,7 @@ void cellSync_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libsre = (u32)Memory.PRXMem.AllocAlign(sizeof(libsre_data), 4096);
+		libsre = (u32)Memory.MainMem.AllocAlign(sizeof(libsre_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libsre), libsre_data, sizeof(libsre_data));
 		libsre_rtoc = libsre + 0x399B0;
 

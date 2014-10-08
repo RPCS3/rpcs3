@@ -225,14 +225,14 @@ static __forceinline uint64_t cntlz64(uint64_t arg)
 #endif
 }
 
-// compare 16 packed unsigned byte values (greater than)
+// compare 16 packed unsigned bytes (greater than)
 static __forceinline __m128i _mm_cmpgt_epu8(__m128i A, __m128i B)
 {
 	// (A xor 0x80) > (B xor 0x80)
 	return _mm_cmpgt_epi8(_mm_xor_si128(A, _mm_set1_epi8(-128)), _mm_xor_si128(B, _mm_set1_epi8(-128)));
 }
 
-// compare 16 packed unsigned byte values (less or equal)
+// compare 16 packed unsigned bytes (less or equal)
 static __forceinline __m128i _mm_cmple_epu8(__m128i A, __m128i B)
 {
 	// ((B xor 0x80) > (A xor 0x80)) || A == B

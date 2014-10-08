@@ -91,8 +91,8 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "%s", msg.c_str()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "\n%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "\n%s", msg.c_str()); break;
 		}
 
 		switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -135,9 +135,10 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 		{
-			Emu.GetCallbackManager().Register([callback, userData]() -> s32
+			s32 status = (s32)g_msg_dialog_status;
+			Emu.GetCallbackManager().Register([callback, userData, status]() -> s32
 			{
-				callback((s32)g_msg_dialog_status, userData);
+				callback(status, userData);
 				return CELL_OK;
 			});
 		}
