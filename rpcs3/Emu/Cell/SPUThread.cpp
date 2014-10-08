@@ -1161,7 +1161,7 @@ void SPUThread::StopAndSignal(u32 code)
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 		}
-		Stop();
+		Emu.Pause();
 		break;
 	}
 	}

@@ -170,9 +170,17 @@ s64 spursInit(
 			SPU.GPR[4]._u64[1] = spurs.addr();
 			return SPU.FastCall(SPU.PC);
 #endif
-			SPU.WriteLS32(SPU.ReadLS32(0x1e0), 2); // hack for cellSpursModuleExit
+			// code replacement:
+			{
+				const u32 addr = /*SPU.ReadLS32(0x1e0) +*/ 8; //SPU.ReadLS32(0x1e4);
+				SPU.WriteLS32(addr + 0, 3); // hack for cellSpursModulePollStatus
+				SPU.WriteLS32(addr + 4, 0x35000000); // bi $0
+				SPU.WriteLS32(0x1e4, addr);
 
-			/*if (!isSecond)*/ SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // first variant
+				SPU.WriteLS32(SPU.ReadLS32(0x1e0), 2); // hack for cellSpursModuleExit
+			}
+
+			/*if (!isSecond)*/ SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // first kernel
 			{
 				LV2_LOCK(0);
 
@@ -194,7 +202,7 @@ s64 spursInit(
 				if (spurs->m.x72.read_relaxed() & (1 << num))
 				{
 					SPU.WriteLS8(0x1eb, 0); // var4
-					if (arg1 && var1 != 0x20)
+					if (arg1 == 0 || var1 == 0x20)
 					{
 						spurs->m.x72._and_not(1 << num);
 					}
@@ -219,7 +227,6 @@ s64 spursInit(
 						u128::leu8(wklMaxCnt, vAABB) |
 						u128::eq8(savedC, {}) |
 						u128::fromV(g_imm_table.fsmb_table[(~var5) >> 16]);
-					cellSpurs->Notice("vCC = %s", vCC.to_hex().c_str());
 					u128 vCCH1 = u128::andnot(vCC,
 						u128::from8p(0x80) & (vFMS1 | u128::gtu8(wklReadyCount0, vAABB)) |
 						u128::from8p(0x7f) & savedC);
@@ -283,18 +290,17 @@ s64 spursInit(
 
 				return vRES;
 			};
-			//else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second variant
+			//else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second kernel (TODO)
 			//{
 			//
 			//};
-			SPU.m_code3_func = nullptr;
-
-			if (SPU.m_code3_func)
-			{
-				const u32 addr = SPU.ReadLS32(0x1e4);
-				SPU.WriteLS32(addr + 0, 3); // hack for cellSpursModulePollStatus
-				SPU.WriteLS32(addr + 4, 0x35000000); // bi $0
-			}
+			//SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // test
+			//{
+			//	LV2_LOCK(0);
+			//	SPU.FastCall(0x290);
+			//	u64 vRES = SPU.GPR[3]._u64[1];
+			//	return vRES;
+			//};
 
 			SPU.WriteLS128(0x1c0, u128::from32r(0, spurs.addr(), num, 0x1f));
 
@@ -322,22 +328,11 @@ s64 spursInit(
 				if (!isSecond) SPU.WriteLS16(0x1e8, 0);
 
 				// run workload:
-				if (wid <= 0x20)
-				{
-					SPU.GPR[1]._u32[3] = 0x3FFB0;
-					SPU.GPR[3]._u32[3] = 0x100;
-					SPU.GPR[4]._u64[1] = wkl.data;
-					SPU.GPR[5]._u32[3] = stat;
-					cellSpurs->Notice("In: [0x1e0] = %s", SPU.ReadLS128(0x1e0).to_hex().c_str());
-					//SPU.m_trace_enabled = (num == 0 && wid == 0x20);
-					SPU.FastCall(0xa00);
-					SPU.m_trace_enabled = false;
-				}
-				else
-				{
-					// hack
-					std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				}
+				SPU.GPR[1]._u32[3] = 0x3FFB0;
+				SPU.GPR[3]._u32[3] = 0x100;
+				SPU.GPR[4]._u64[1] = wkl.data;
+				SPU.GPR[5]._u32[3] = stat;
+				SPU.FastCall(0xa00);
 
 				// check status:
 				auto status = SPU.SPU.Status.GetValue();
@@ -352,18 +347,10 @@ s64 spursInit(
 
 				// get workload id:
 				SPU.GPR[3].clear();
-				if (SPU.m_code3_func)
-				{
-					u64 res = SPU.m_code3_func(SPU);
-					stat = (u32)(res);
-					wid = (u32)(res >> 32);
-				}
-				else
-				{
-					SPU.FastCall(0x290);
-					stat = SPU.GPR[3]._u32[2];
-					wid = SPU.GPR[3]._u32[3];
-				}
+				assert(SPU.m_code3_func);
+				u64 res = SPU.m_code3_func(SPU);
+				stat = (u32)(res);
+				wid = (u32)(res >> 32);
 			}
 			
 		})->GetId();
