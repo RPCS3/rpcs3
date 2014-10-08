@@ -1,10 +1,12 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
+#include "llvm/Support/Host.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/CodeGen/MachineCodeInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/MC/MCDisassembler.h"
 
 using namespace llvm;
 
@@ -224,15 +226,19 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     MachineCodeInfo mci;
     m_execution_engine->runJITOnFunction(m_current_function, &mci);
 
-    // Disassember the generated function
+    // Disassemble the generated function
+    auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+
     LOG_NOTICE(PPU, "[UT %s] Disassembly:", name);
     for (uint64_t pc = 0; pc < mci.size();) {
         char str[1024];
 
-        auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
+        auto size = LLVMDisasmInstruction(disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
         LOG_NOTICE(PPU, "[UT %s] %p: %s.", name, (uint8_t *)mci.address() + pc, str);
         pc += size;
     }
+
+    LLVMDisasmDispose(disassembler);
 
     // Run the test
     input();

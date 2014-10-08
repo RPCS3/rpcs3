@@ -18,6 +18,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Vectorize.h"
+#include "llvm/MC/MCDisassembler.h"
 
 using namespace llvm;
 
@@ -63,8 +64,6 @@ PPULLVMRecompiler::PPULLVMRecompiler()
     m_fpm->add(createCFGSimplificationPass());
     m_fpm->doInitialization();
 
-    m_disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
-
     if (!s_rotate_mask_inited) {
         InitRotateMask();
         s_rotate_mask_inited = true;
@@ -74,37 +73,6 @@ PPULLVMRecompiler::PPULLVMRecompiler()
 PPULLVMRecompiler::~PPULLVMRecompiler() {
     Stop();
 
-    std::string error;
-    raw_fd_ostream log_file("PPULLVMRecompiler.log", error, sys::fs::F_Text);
-    log_file << "Total time                      = " << m_total_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent compiling        = " << m_compilation_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent building IR  = " << m_ir_build_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent optimizing   = " << m_optimizing_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent translating  = " << m_translation_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent idling           = " << m_idling_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent doing misc tasks = " << (m_total_time.count() - m_idling_time.count() - m_compilation_time.count()) / 1000000 << "ms\n";
-    log_file << "Revision                        = " << m_revision << "\n";
-    log_file << "\nInterpreter fallback stats:\n";
-    for (auto i = m_interpreter_fallback_stats.begin(); i != m_interpreter_fallback_stats.end(); i++) {
-        log_file << i->first << " = " << i->second << "\n";
-    }
-
-    log_file << "\nDisassembly:\n";
-    for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
-        log_file << fmt::Format("%s: Size = %u bytes, Number of instructions = %u\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.num_instructions);
-        //for (size_t pc = 0; pc < i->second.size;) {
-        //    char str[1024];
-
-        //    auto size = LLVMDisasmInstruction(m_disassembler, (uint8_t *)i->second.executable + pc, i->second.size - pc,
-        //                                      (uint64_t)((uint8_t *)i->second.executable + pc), str, sizeof(str));
-        //    log_file << str << '\n';
-        //    pc += size;
-        //}
-    }
-
-    //log_file << "\nLLVM IR:\n" << *m_module;
-
-    LLVMDisasmDispose(m_disassembler);
     delete m_execution_engine;
     delete m_fpm;
     delete m_ir_builder;
@@ -133,10 +101,10 @@ void PPULLVMRecompiler::ReleaseExecutable(u32 address, u32 revision) {
 }
 
 void PPULLVMRecompiler::RequestCompilation(u32 address) {
-    {
-        std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
-        m_uncompiled_shared.push_back(address);
-    }
+        {
+            std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
+            m_uncompiled_shared.push_back(address);
+        }
 
     if (!IsAlive()) {
         Start();
@@ -205,6 +173,41 @@ void PPULLVMRecompiler::Task() {
 
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     m_total_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+
+    std::string error;
+    raw_fd_ostream log_file("PPULLVMRecompiler.log", error, sys::fs::F_Text);
+    log_file << "Total time                      = " << m_total_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent compiling        = " << m_compilation_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent building IR  = " << m_ir_build_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent optimizing   = " << m_optimizing_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent translating  = " << m_translation_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent idling           = " << m_idling_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent doing misc tasks = " << (m_total_time.count() - m_idling_time.count() - m_compilation_time.count()) / 1000000 << "ms\n";
+    log_file << "Revision                        = " << m_revision << "\n";
+    log_file << "\nInterpreter fallback stats:\n";
+    for (auto i = m_interpreter_fallback_stats.begin(); i != m_interpreter_fallback_stats.end(); i++) {
+        log_file << i->first << " = " << i->second << "\n";
+    }
+
+    log_file << "\nDisassembly:\n";
+    //auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+    for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
+        log_file << fmt::Format("%s: Size = %u bytes, Number of instructions = %u\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.num_instructions);
+
+        //uint8_t * fn_ptr = (uint8_t *)i->second.executable;
+        //for (size_t pc = 0; pc < i->second.size;) {
+        //    char str[1024];
+
+        //    auto size = LLVMDisasmInstruction(disassembler, fn_ptr + pc, i->second.size - pc, (uint64_t)(fn_ptr + pc), str, sizeof(str));
+        //    log_file << str << '\n';
+        //    pc += size;
+        //}
+    }
+
+    //LLVMDisasmDispose(disassembler);
+
+    //log_file << "\nLLVM IR:\n" << *m_module;
+
     LOG_NOTICE(PPU, "PPU LLVM compiler thread exiting.");
 }
 
@@ -3483,7 +3486,7 @@ bool PPULLVMRecompiler::NeedsCompiling(u32 address) {
         }
 
         // If any of the unhit blocks in this function have been hit, then recompile this section
-        for(auto j = i->second.unhit_blocks_list.begin(); j != i->second.unhit_blocks_list.end(); j++) {
+        for (auto j = i->second.unhit_blocks_list.begin(); j != i->second.unhit_blocks_list.end(); j++) {
             if (m_hit_blocks.find(*j) != m_hit_blocks.end()) {
                 return true;
             }
@@ -3910,7 +3913,7 @@ void PPULLVMRecompiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_
         target_block       = GetBlockInFunction(target_address, m_current_function);
         if (!target_block) {
             target_block = GetBlockInFunction(target_address, m_current_function, true);
-            if ((m_hit_blocks.find(target_address) != m_hit_blocks.end() || !cmp_i1) &&  m_num_instructions < 300) {
+            if ((m_hit_blocks.find(target_address) != m_hit_blocks.end() || !cmp_i1) && m_num_instructions < 300) {
                 // Target block has either been hit or this is an unconditional branch.
                 m_current_function_uncompiled_blocks_list.push_back(target_address);
                 m_hit_blocks.insert(target_address);
@@ -4133,7 +4136,10 @@ PPULLVMRecompiler * PPULLVMEmulator::s_recompiler       = nullptr;
 PPULLVMEmulator::PPULLVMEmulator(PPUThread & ppu)
     : m_ppu(ppu)
     , m_interpreter(new PPUInterpreter(ppu))
-    , m_decoder(m_interpreter) {
+    , m_decoder(m_interpreter)
+    , m_last_instr_was_branch(true)
+    , m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
+    , m_recompiler_revision(0) {
     std::lock_guard<std::mutex> lock(s_recompiler_mutex);
 
     s_num_instances++;
@@ -4144,6 +4150,10 @@ PPULLVMEmulator::PPULLVMEmulator(PPUThread & ppu)
 }
 
 PPULLVMEmulator::~PPULLVMEmulator() {
+    for (auto iter = m_address_to_executable.begin(); iter != m_address_to_executable.end(); iter++) {
+        s_recompiler->ReleaseExecutable(iter->first, iter->second.revision);
+    }
+
     std::lock_guard<std::mutex> lock(s_recompiler_mutex);
 
     s_num_instances--;
@@ -4154,17 +4164,14 @@ PPULLVMEmulator::~PPULLVMEmulator() {
 }
 
 u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
-    static bool s_last_instr_was_branch = false;
-    static auto s_last_cache_clear_time = std::chrono::high_resolution_clock::now();
-    auto        now                     = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
 
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - s_last_cache_clear_time).count() > 1000) {
-        static u32 s_revision = 0;
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 1000) {
         bool       clear_all  = false;
 
         u32 revision = s_recompiler->GetCurrentRevision();
-        if (s_revision != revision) {
-            s_revision = revision;
+        if (m_recompiler_revision != revision) {
+            m_recompiler_revision = revision;
             clear_all  = true;
         }
 
@@ -4179,7 +4186,7 @@ u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
             }
         }
 
-        s_last_cache_clear_time = now;
+        m_last_cache_clear_time = now;
     }
 
     auto address_to_executable_iter = m_address_to_executable.find(address);
@@ -4194,7 +4201,7 @@ u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
             address_to_executable_iter = m_address_to_executable.insert(m_address_to_executable.end(), std::make_pair(address, executable_info));
             m_uncompiled.erase(address);
         } else {
-            if (s_last_instr_was_branch) {
+            if (m_last_instr_was_branch) {
                 auto uncompiled_iter = m_uncompiled.find(address);
                 if (uncompiled_iter != m_uncompiled.end()) {
                     uncompiled_iter->second++;
@@ -4212,10 +4219,10 @@ u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
     if (address_to_executable_iter != m_address_to_executable.end()) {
         address_to_executable_iter->second.executable(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
         address_to_executable_iter->second.num_hits++;
-        s_last_instr_was_branch = true;
+        m_last_instr_was_branch = true;
     } else {
         ret                     = m_decoder.DecodeMemory(address);
-        s_last_instr_was_branch = m_ppu.m_is_branch;
+        m_last_instr_was_branch = m_ppu.m_is_branch;
     }
 
     return ret;

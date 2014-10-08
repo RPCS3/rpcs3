@@ -9,12 +9,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/ExecutionEngine/JIT.h"
-#include "llvm/MC/MCDisassembler.h"
 #include "llvm/PassManager.h"
 
 struct PPURegState;
 
-/// PPU to LLVM recompiler
+/// PPU recompiler that uses LLVM for code generation and optimization
 class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPCDecoder {
 public:
     typedef void(*Executable)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
@@ -451,44 +450,44 @@ protected:
 
 private:
     struct ExecutableInfo {
-        /// Pointer to the executable
-        Executable executable;
+    /// Pointer to the executable
+    Executable executable;
 
-        /// Size of the executable
-        size_t size;
+    /// Size of the executable
+    size_t size;
 
-        /// Number of PPU instructions compiled into this executable
-        u32 num_instructions;
+    /// Number of PPU instructions compiled into this executable
+    u32 num_instructions;
 
-        /// List of blocks that this executable refers to that have not been hit yet
-        std::list<u32> unhit_blocks_list;
+    /// List of blocks that this executable refers to that have not been hit yet
+    std::list<u32> unhit_blocks_list;
 
-        /// LLVM function corresponding to the executable
-        llvm::Function * llvm_function;
-    };
+    /// LLVM function corresponding to the executable
+    llvm::Function * llvm_function;
+};
 
-    /// Lock for accessing m_compiled_shared
-    // TODO: Use a RW lock
-    std::mutex m_compiled_shared_lock;
+            /// Lock for accessing m_compiled_shared
+            // TODO: Use a RW lock
+            std::mutex m_compiled_shared_lock;
 
-    /// Sections that have been compiled. This data store is shared with the execution threads.
-    /// Keys are starting address of the section and ~revision. Data is pointer to the executable and its reference count.
-    std::map<std::pair<u32, u32>, std::pair<Executable, u32>> m_compiled_shared;
+            /// Sections that have been compiled. This data store is shared with the execution threads.
+            /// Keys are starting address of the section and ~revision. Data is pointer to the executable and its reference count.
+            std::map<std::pair<u32, u32>, std::pair<Executable, u32>> m_compiled_shared;
 
-    /// Lock for accessing m_uncompiled_shared
-    std::mutex m_uncompiled_shared_lock;
+            /// Lock for accessing m_uncompiled_shared
+            std::mutex m_uncompiled_shared_lock;
 
-    /// Current revision. This is incremented everytime a section is compiled.
-    std::atomic<u32> m_revision;
+            /// Current revision. This is incremented everytime a section is compiled.
+            std::atomic<u32> m_revision;
 
-    /// Sections that have not been compiled yet. This data store is shared with the execution threads.
-    std::list<u32> m_uncompiled_shared;
+            /// Sections that have not been compiled yet. This data store is shared with the execution threads.
+            std::list<u32> m_uncompiled_shared;
 
-    /// Set of all blocks that have been hit
-    std::set<u32> m_hit_blocks;
+            /// Set of all blocks that have been hit
+            std::set<u32> m_hit_blocks;
 
-    /// Sections that have been compiled. Keys are starting address of the section and ~revision.
-    std::map<std::pair<u32, u32>, ExecutableInfo> m_compiled;
+            /// Sections that have been compiled. Keys are starting address of the section and ~revision.
+            std::map<std::pair<u32, u32>, ExecutableInfo> m_compiled;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -504,9 +503,6 @@ private:
 
     /// Function pass manager
     llvm::FunctionPassManager * m_fpm;
-
-    /// Disassembler
-    LLVMDisasmContextRef m_disassembler;
 
     /// A flag used to detect branch instructions.
     /// This is set to false at the start of compilation of a block.
@@ -764,6 +760,15 @@ private:
 
     /// PPU instruction Decoder
     PPUDecoder m_decoder;
+
+    /// Set to true if the last executed instruction was a branch
+    bool m_last_instr_was_branch;
+
+    /// The time at which the m_address_to_executable cache was last cleared
+    std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
+
+    /// The revision of the recompiler to which this thread is synced
+    u32 m_recompiler_revision;
 
     /// Address to executable map. Key is address.
     std::unordered_map<u32, ExecutableInfo> m_address_to_executable;
