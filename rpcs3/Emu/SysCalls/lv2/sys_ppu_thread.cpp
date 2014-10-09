@@ -34,7 +34,7 @@ void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 
 void sys_internal_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 {
-	sys_ppu_thread.Log("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
+	sys_ppu_thread.Warning("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
 
 	ppu_thread_exit(CPU, errorcode);
 }
