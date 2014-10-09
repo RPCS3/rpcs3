@@ -1074,10 +1074,12 @@ private:
 	}
 	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1093,10 +1095,12 @@ private:
 	}
 	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1112,10 +1116,12 @@ private:
 	}
 	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1131,10 +1137,12 @@ private:
 	}
 	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1181,10 +1189,12 @@ private:
 	}
 	void BI(u32 intr, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1197,10 +1207,12 @@ private:
 	}
 	void BISL(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		XmmInvalidate(rt);

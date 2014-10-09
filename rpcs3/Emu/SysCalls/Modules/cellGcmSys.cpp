@@ -933,8 +933,8 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			offsetTable.ioAddress[(ea >> 20) + i] = (u16)(io >> 20) + i;
-			offsetTable.eaAddress[(io >> 20) + i] = (u16)(ea >> 20) + i;
+			offsetTable.ioAddress[(ea >> 20) + i] = (u16)((io >> 20) + i);
+			offsetTable.eaAddress[(io >> 20) + i] = (u16)((ea >> 20) + i);
 			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = false;
 		}
 
