@@ -180,9 +180,9 @@ s64 spursInit(
 				SPU.WriteLS32(SPU.ReadLS32(0x1e0), 2); // hack for cellSpursModuleExit
 			}
 
-			/*if (!isSecond)*/ SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // first kernel
+			if (!isSecond) SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // first kernel
 			{
-				LV2_LOCK(0);
+				LV2_LOCK(0); // TODO: lock-free implementation if possible
 
 				const u32 arg1 = SPU.GPR[3]._u32[3];
 				u32 var0 = SPU.ReadLS32(0x1d8);
@@ -193,7 +193,8 @@ s64 spursInit(
 				u128 savedB = SPU.ReadLS128(0x190);
 				u128 vAA = u128::sub8(wklA, savedA);
 				u128 vBB = u128::sub8(wklB, savedB);
-				u128 vAABB = (arg1 == 0) ? vAA : u128::add8(vAA, u128::andnot(u128::fromV(g_imm_table.fsmb_table[0x8000 >> var1]), vBB));
+				u128 vM1 = {}; if (var1 <= 15) vM1.u8r[var1] = 0xff;
+				u128 vAABB = (arg1 == 0) ? vAA : u128::add8(vAA, u128::andnot(vM1, vBB));
 				
 				u32 vNUM = 0x20;
 				u64 vRES = 0x20ull << 32;
@@ -216,10 +217,10 @@ s64 spursInit(
 					u128 vRC = u128::add8(u128::minu8(wklReadyCount0, u128::from8p(8)), u128::minu8(wklReadyCount1, u128::from8p(8)));
 					u32 wklFlag = spurs->m.wklFlag.flag.read_relaxed();
 					u32 flagRecv = spurs->m.flagRecv.read_relaxed();
-					u128 vFM = u128::fromV(g_imm_table.fsmb_table[wklFlag == 0 ? 0x8000 >> flagRecv : 0]);
+					u128 vFM = u128::fromV(g_imm_table.fsmb_table[(wklFlag == 0) && (flagRecv < 16) ? 0x8000 >> flagRecv : 0]);
 					u128 wklSet1 = u128::fromV(g_imm_table.fsmb_table[spurs->m.wklSet1.read_relaxed()]);
 					u128 vFMS1 = vFM | wklSet1;
-					u128 vFMV1 = u128::fromV(g_imm_table.fsmb_table[0x8000 >> var1]);
+					u128 vFMV1 = u128::fromV(g_imm_table.fsmb_table[(var1 < 16) ? 0x8000 >> var1 : 0]);
 					u32 var5 = SPU.ReadLS32(0x1ec);
 					u128 wklMinCnt = vm::read128(spurs.addr() + 0x40);
 					u128 wklMaxCnt = vm::read128(spurs.addr() + 0x50);
@@ -261,10 +262,10 @@ s64 spursInit(
 
 					if (!arg1 || var1 == vNUM)
 					{
-						spurs->m.wklSet1._and_not(be_t<u16>::make(0x8000 >> vNUM));
-						if (vNUM == flagRecv)
+						spurs->m.wklSet1._and_not(be_t<u16>::make((u16)(vNUM < 16 ? 0x8000 >> vNUM : 0)));
+						if (vNUM == flagRecv && wklFlag == 0)
 						{
-							spurs->m.wklFlag.flag |= be_t<u32>::make(-1);
+							spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
 						}
 					}
 				}
@@ -285,15 +286,138 @@ s64 spursInit(
 				}
 				else
 				{
+					vm::write128(spurs.addr() + 0x30, vBB); // update wklB
+
 					SPU.WriteLS128(0x190, {}); // update savedB
 				}
 
 				return vRES;
 			};
-			//else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second kernel (TODO)
-			//{
-			//
-			//};
+			else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second kernel
+			{
+				LV2_LOCK(0); // TODO: lock-free implementation if possible
+
+				const u32 arg1 = SPU.GPR[3]._u32[3];
+				u32 var0 = SPU.ReadLS32(0x1d8);
+				u32 var1 = SPU.ReadLS32(0x1dc);
+				u128 wklA = vm::read128(spurs.addr() + 0x20);
+				u128 wklB = vm::read128(spurs.addr() + 0x30);
+				u128 savedA = SPU.ReadLS128(0x180);
+				u128 savedB = SPU.ReadLS128(0x190);
+				u128 vAA = u128::sub8(wklA, savedA);
+				u128 vBB = u128::sub8(wklB, savedB);
+				u128 vM1 = {}; if (var1 <= 31) vM1.u8r[var1 & 0xf] = (var1 <= 15) ? 0xf : 0xf0;
+				u128 vAABB = (arg1 == 0) ? vAA : u128::add8(vAA, u128::andnot(vM1, vBB));
+
+				u32 vNUM = 0x20;
+				u64 vRES = 0x20ull << 32;
+				u128 vSET = {};
+
+				if (spurs->m.x72.read_relaxed() & (1 << num))
+				{
+					SPU.WriteLS8(0x1eb, 0); // var4
+					if (arg1 == 0 || var1 == 0x20)
+					{
+						spurs->m.x72._and_not(1 << num);
+					}
+				}
+				else
+				{
+					u128 wklReadyCount0 = vm::read128(spurs.addr() + 0x0);
+					u128 wklReadyCount1 = vm::read128(spurs.addr() + 0x10);
+					u128 savedC = SPU.ReadLS128(0x1A0);
+					u128 wklMaxCnt = vm::read128(spurs.addr() + 0x50);
+					u32 wklFlag = spurs->m.wklFlag.flag.read_relaxed();
+					u32 flagRecv = spurs->m.flagRecv.read_relaxed();
+					u128 wklSet1 = u128::fromV(g_imm_table.fsmb_table[spurs->m.wklSet1.read_relaxed()]);
+					u128 wklSet2 = u128::fromV(g_imm_table.fsmb_table[spurs->m.wklSet2.read_relaxed()]);
+					u128 vABL = vAABB & u128::from8p(0x0f);
+					u128 vABH = u128::fromV(_mm_srli_epi32((vAABB & u128::from8p(0xf0)).vi, 4));
+					u32 var5 = SPU.ReadLS32(0x1ec);
+					u128 v5L = u128::fromV(g_imm_table.fsmb_table[var5 >> 16]);
+					u128 v5H = u128::fromV(g_imm_table.fsmb_table[(u16)var5]);
+					u128 vFML = u128::fromV(g_imm_table.fsmb_table[(wklFlag == 0) && (flagRecv < 16) ? 0x8000 >> flagRecv : 0]);
+					u128 vFMH = u128::fromV(g_imm_table.fsmb_table[(u16)((wklFlag == 0) && (flagRecv < 32) ? 0x80000000 >> flagRecv : 0)]);
+					u128 vCL = u128::fromV(_mm_slli_epi32((savedC & u128::from8p(0x0f)).vi, 4));
+					u128 vCH = savedC & u128::from8p(0xf0);
+					u128 vABRL = u128::gtu8(wklReadyCount0, vABL);
+					u128 vABRH = u128::gtu8(wklReadyCount1, vABH);
+					u128 vCCL = v5L & u128::gtu8(vCL, {}) & u128::gtu8(wklMaxCnt & u128::from8p(0x0f), vABL) & (wklSet1 | vFML | vABRL);
+					u128 vCCH = v5H & u128::gtu8(vCH, {}) & u128::gtu8(u128::fromV(_mm_srli_epi32((wklMaxCnt & u128::from8p(0xf0)).vi, 4)), vABH) & (wklSet2 | vFMH | vABRH);
+					u128 v1H = {}; if (var1 <= 31 && var1 > 15) v1H.u8r[var1 & 0xf] = 4;
+					u128 v1L = {}; if (var1 <= 15) v1L.u8r[var1] = 4;
+					u128 vCH1 = (v1H | vCH & u128::from8p(0xFB)) & vCCH;
+					u128 vCL1 = (v1L | vCL & u128::from8p(0xFB)) & vCCL;
+					u128 vSTATL = vABRL & u128::from8p(1) | wklSet1 & u128::from8p(2) | vFML & u128::from8p(4);
+					u128 vSTATH = vABRH & u128::from8p(1) | wklSet2 & u128::from8p(2) | vFMH & u128::from8p(4);
+
+					s32 max = -1;
+					for (u32 i = 0; i < 0x10; i++)
+					{
+						const s32 value = vCL1.u8r[i];
+						if (value > max && (vCCL.u8r[i] & 1))
+						{
+							vNUM = i;
+							max = value;
+						}
+					}
+					for (u32 i = 16; i < 0x20; i++)
+					{
+						const s32 value = vCH1.u8r[i];
+						if (value > max && (vCCH.u8r[i] & 1))
+						{
+							vNUM = i;
+							max = value;
+						}
+					}
+
+					if (vNUM < 0x10)
+					{
+						vRES = ((u64)vNUM << 32) | vSTATL.u8r[vNUM];
+						vSET.u8r[vNUM] = 0x01;
+					}
+					else if (vNUM < 0x20)
+					{
+						vRES = ((u64)vNUM << 32) | vSTATH.u8r[vNUM & 0xf];
+						vSET.u8r[vNUM] = 0x10;
+					}
+
+					SPU.WriteLS8(0x1eb, vNUM == 0x20);
+
+					if (!arg1 || var1 == vNUM)
+					{
+						spurs->m.wklSet1._and_not(be_t<u16>::make((u16)(vNUM < 16 ? 0x8000 >> vNUM : 0)));
+						spurs->m.wklSet2._and_not(be_t<u16>::make((u16)(0x80000000 >> vNUM)));
+						if (vNUM == flagRecv && wklFlag == 0)
+						{
+							spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
+						}
+					}
+				}
+
+				if (arg1 == 0)
+				{
+					vm::write128(spurs.addr() + 0x20, u128::add8(vAA, vSET)); // update wklA
+
+					SPU.WriteLS128(0x180, vSET); // update savedA
+					SPU.WriteLS32(0x1dc, vNUM); // update var1
+				}
+
+				if (arg1 == 1 && vNUM != var1)
+				{
+					vm::write128(spurs.addr() + 0x30, u128::add8(vBB, vSET)); // update wklB
+
+					SPU.WriteLS128(0x190, vSET); // update savedB
+				}
+				else
+				{
+					vm::write128(spurs.addr() + 0x30, vBB); // update wklB
+
+					SPU.WriteLS128(0x190, {}); // update savedB
+				}
+
+				return vRES;
+			};
 			//SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // test
 			//{
 			//	LV2_LOCK(0);
