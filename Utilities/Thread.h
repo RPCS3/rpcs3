@@ -70,3 +70,31 @@ public:
 	void join();
 	bool joinable() const;
 };
+
+// for internal use (checks if Emu is stopped)
+bool waiter_is_stopped(const char* func_name, u64 signal_id);
+// for internal use
+void waiter_register(u64 signal_id, NamedThreadBase* thread);
+// for internal use
+void waiter_unregister(u64 signal_id, NamedThreadBase* thread);
+
+// wait until waiter_func() returns true, signal_id is arbitrary number
+template<typename WT> static __forceinline void waiter_op(const char* func_name, u64 signal_id, const WT waiter_func)
+{
+	if (waiter_func()) return;
+
+	NamedThreadBase* thread = GetCurrentNamedThread();
+	waiter_register(signal_id, thread);
+
+	while (true)
+	{
+		thread->WaitForAnySignal(1);
+		if (waiter_is_stopped(func_name, signal_id)) break;
+		if (waiter_func()) break;
+	}
+
+	waiter_unregister(signal_id, thread);
+}
+
+// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
+void waiter_signal(u64 signal_id);

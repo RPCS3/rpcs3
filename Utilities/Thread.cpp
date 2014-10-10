@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Log.h"
 #include "Thread.h"
 
@@ -206,4 +207,67 @@ void thread::join()
 bool thread::joinable() const
 {
 	return m_thr.joinable();
+}
+
+struct g_waiter_map_t
+{
+	// TODO: optimize (use custom lightweight readers-writer lock)
+
+	std::mutex m_mutex;
+	
+	struct waiter
+	{
+		u64 signal_id;
+		NamedThreadBase* thread;
+	};
+
+	std::vector<waiter> m_waiters;
+
+} g_waiter_map;
+
+bool waiter_is_stopped(const char* func_name, u64 signal_id)
+{
+	if (Emu.IsStopped())
+	{
+		LOG_WARNING(Log::HLE, "%s() aborted (signal_id=0x%llx)", func_name, signal_id);
+		return true;
+	}
+	return false;
+}
+
+void waiter_register(u64 signal_id, NamedThreadBase* thread)
+{
+	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+
+	// add waiter
+	g_waiter_map.m_waiters.push_back({ signal_id, thread });
+}
+
+void waiter_unregister(u64 signal_id, NamedThreadBase* thread)
+{
+	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+
+	// remove waiter
+	for (s32 i = g_waiter_map.m_waiters.size() - 1; i >= 0; i--)
+	{
+		if (g_waiter_map.m_waiters[i].signal_id == signal_id && g_waiter_map.m_waiters[i].thread == thread)
+		{
+			g_waiter_map.m_waiters.erase(g_waiter_map.m_waiters.begin() + i);
+			return;
+		}
+	}
+}
+
+void waiter_signal(u64 signal_id)
+{
+	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+
+	// find waiter and signal
+	for (auto& v : g_waiter_map.m_waiters)
+	{
+		if (v.signal_id == signal_id)
+		{
+			v.thread->Notify();
+		}
+	}
 }

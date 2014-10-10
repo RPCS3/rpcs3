@@ -60,15 +60,10 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	});
 
 	// prx: wait until this old value is equal to m_rel
-	while (order != mutex->data.read_relaxed().m_rel)
+	waiter_op(__FUNCTION__, mutex.addr(), [mutex, order]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncMutexLock(mutex_addr=0x%x) aborted", mutex.addr());
-			break;
-		}
-	}
+		return order == mutex->data.read_relaxed().m_rel;
+	});
 
 	// prx: sync
 	mutex->data.read_sync();
@@ -116,6 +111,8 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 	{
 		mutex.m_rel++;
 	});
+
+	waiter_signal(mutex.addr());
 	return CELL_OK;
 }
 
