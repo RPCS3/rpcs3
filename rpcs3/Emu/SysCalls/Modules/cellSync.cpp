@@ -174,15 +174,12 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp))
+	waiter_op(__FUNCTION__, barrier.addr(), [barrier]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.addr());
-			return CELL_OK;
-		}
-	}
+		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp) == CELL_OK;
+	});
+
+	waiter_signal(barrier.addr() ^ 1);
 	return CELL_OK;
 }
 
@@ -199,7 +196,13 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp);
+	if (s32 res = barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp))
+	{
+		return res;
+	}
+
+	waiter_signal(barrier.addr() ^ 1);
+	return CELL_OK;
 }
 
 s32 syncBarrierTryWaitOp(CellSyncBarrier::data_t& barrier)
@@ -233,15 +236,12 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp))
+	waiter_op(__FUNCTION__, barrier.addr() ^ 1, [barrier]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.addr());
-			return CELL_OK;
-		}
-	}
+		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp) == CELL_OK;
+	});
+
+	waiter_signal(barrier.addr());
 	return CELL_OK;
 }
 
@@ -258,7 +258,13 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp);
+	if (s32 res = barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp))
+	{
+		return res;
+	}
+
+	waiter_signal(barrier.addr());
+	return CELL_OK;
 }
 
 s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size)

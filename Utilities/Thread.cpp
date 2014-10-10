@@ -235,7 +235,9 @@ bool waiter_is_stopped(const char* func_name, u64 signal_id)
 	return false;
 }
 
-void waiter_register(u64 signal_id, NamedThreadBase* thread)
+waiter_reg_t::waiter_reg_t(u64 signal_id)
+	: signal_id(signal_id)
+	, thread(GetCurrentNamedThread())
 {
 	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
 
@@ -243,12 +245,12 @@ void waiter_register(u64 signal_id, NamedThreadBase* thread)
 	g_waiter_map.m_waiters.push_back({ signal_id, thread });
 }
 
-void waiter_unregister(u64 signal_id, NamedThreadBase* thread)
+waiter_reg_t::~waiter_reg_t()
 {
 	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
 
 	// remove waiter
-	for (s32 i = g_waiter_map.m_waiters.size() - 1; i >= 0; i--)
+	for (size_t i = g_waiter_map.m_waiters.size() - 1; i >= 0; i--)
 	{
 		if (g_waiter_map.m_waiters[i].signal_id == signal_id && g_waiter_map.m_waiters[i].thread == thread)
 		{

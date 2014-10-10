@@ -73,27 +73,32 @@ public:
 
 // for internal use (checks if Emu is stopped)
 bool waiter_is_stopped(const char* func_name, u64 signal_id);
-// for internal use
-void waiter_register(u64 signal_id, NamedThreadBase* thread);
-// for internal use
-void waiter_unregister(u64 signal_id, NamedThreadBase* thread);
 
-// wait until waiter_func() returns true, signal_id is arbitrary number
+struct waiter_reg_t
+{
+	const u64 signal_id;
+	NamedThreadBase* const thread;
+
+	waiter_reg_t(u64 signal_id);
+	~waiter_reg_t();
+};
+
+// wait until waiter_func() returns true, signal_id is an arbitrary number
 template<typename WT> static __forceinline void waiter_op(const char* func_name, u64 signal_id, const WT waiter_func)
 {
+	// check condition
 	if (waiter_func()) return;
 
-	NamedThreadBase* thread = GetCurrentNamedThread();
-	waiter_register(signal_id, thread);
+	// register waiter
+	waiter_reg_t waiter(signal_id);
 
 	while (true)
 	{
-		thread->WaitForAnySignal(1);
+		// wait for 1 ms or until signal arrived
+		waiter.thread->WaitForAnySignal(1);
 		if (waiter_is_stopped(func_name, signal_id)) break;
 		if (waiter_func()) break;
 	}
-
-	waiter_unregister(signal_id, thread);
 }
 
 // signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
