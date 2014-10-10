@@ -2234,14 +2234,14 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//LOG_WARNING(RSX, "non increment cmd! 0x%x", cmd);
-			inc=0;
+			inc = 0;
 		}
 
 		if(cmd == 0)
 		{
 			LOG_ERROR(Log::RSX, "null cmd: cmd=0x%x, put=0x%x, get=0x%x (addr=0x%x)", cmd, put, get, (u32)Memory.RSXIOMem.RealAddr(get));
-			Emu.Pause();
-			//HACK! We couldn't be here
+			//Emu.Pause();
+			//HACK! We shouldn't be here
 			m_ctrl->get = get + (count + 1) * 4;
 			continue;
 		}
