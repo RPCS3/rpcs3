@@ -303,6 +303,29 @@ union u128
 	}
 };
 
+#ifndef InterlockedCompareExchange
+static __forceinline u128 InterlockedCompareExchange(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+	return (u128&)res;
+#else
+	u128 cmp = comp;
+	_InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&cmp);
+	return cmp;
+#endif
+}
+#endif
+
+static __forceinline bool InterlockedCompareExchangeTest(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+#else
+	return _InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp) != 0;
+#endif
+}
+
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
 #define re64(val) _byteswap_uint64(val)
