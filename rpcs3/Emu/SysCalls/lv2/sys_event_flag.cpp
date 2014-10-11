@@ -37,7 +37,7 @@ u32 EventFlag::check()
 	return target;
 }
 
-s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
+s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
 		eflag_id.addr(), attr.addr(), init);
@@ -88,7 +88,7 @@ s32 sys_event_flag_destroy(u32 eflag_id)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result, u64 timeout)
+s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
 	sys_event_flag.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
 		eflag_id, bitptn, mode, result.addr(), timeout);
@@ -225,7 +225,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> r
 	}
 }
 
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result)
+s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 {
 	sys_event_flag.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
 		eflag_id, bitptn, mode, result.addr());
@@ -316,7 +316,7 @@ s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num)
+s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num)
 {
 	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.addr());
 
@@ -354,7 +354,7 @@ s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num)
 	return CELL_OK;
 }
 
-s32 sys_event_flag_get(u32 eflag_id, vm::ptr<be_t<u64>> flags)
+s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags)
 {
 	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.addr());
 

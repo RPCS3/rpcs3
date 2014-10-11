@@ -30,7 +30,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 	return CELL_FONT_OK;
 }
 
-int cellFontGetRevisionFlags(vm::ptr<be_t<u64>> revisionFlags)
+int cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
@@ -40,7 +40,7 @@ int cellFontInit(vm::ptr<CellFontConfig> config)
 {
 	cellFont->Log("cellFontInit(config=0x%x)", config.addr());
 
-	vm::var<be_t<u64>> revisionFlags;
+	vm::var<u64> revisionFlags;
 	revisionFlags.value() = 0;
 	cellFontGetRevisionFlags(revisionFlags);
 	return cellFontInitializeWithRevision(revisionFlags.value(), config);
@@ -383,7 +383,7 @@ int cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<be_t<float>> slantPar
 	return CELL_FONT_OK;
 }
 
-int cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<be_t<u32>> fontId, vm::ptr<be_t<u32>> fontCode)
+int cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
 	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
 		font.addr(), code, fontId.addr(), fontCode.addr());

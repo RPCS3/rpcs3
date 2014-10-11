@@ -9,7 +9,7 @@
 
 SysCallBase sys_rwlock("sys_rwlock");
 
-s32 sys_rwlock_create(vm::ptr<be_t<u32>> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
+s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
 	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.addr(), attr.addr());
 

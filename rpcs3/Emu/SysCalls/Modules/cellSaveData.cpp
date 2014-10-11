@@ -989,7 +989,7 @@ int cellSaveDataFixedExport() //const char *dirName, u32 maxSizeKB, CellSaveData
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<be_t<u32>> bind, vm::ptr<be_t<u32>> sizeKB
+int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_SAVEDATA_RET_OK;
@@ -1025,7 +1025,7 @@ int cellSaveDataUserFixedExport() //CellSysutilUserId userId, const char *dirNam
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<be_t<u32>> bind, vm::ptr<be_t<u32>> sizeKB
+int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_SAVEDATA_RET_OK;

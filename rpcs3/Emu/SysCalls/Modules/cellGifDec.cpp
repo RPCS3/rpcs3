@@ -21,7 +21,7 @@ int cellGifDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u
 	return CELL_OK;
 }
 
-int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
+int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
@@ -38,9 +38,9 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellGif
 
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
-		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
-		current_subHandle->fd = fd->ToLE();
+		vm::var<u32> fd;
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
+		current_subHandle->fd = fd;
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
@@ -72,7 +72,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	
 	//Write the header to buffer
 	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
-	vm::var<be_t<u64>> pos, nread;
+	vm::var<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{
@@ -154,7 +154,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	//Copy the GIF file to a buffer
 	vm::var<unsigned char[]> gif((u32)fileSize);
-	vm::var<be_t<u64>> pos, nread;
+	vm::var<u64> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.ToBE())
 	{

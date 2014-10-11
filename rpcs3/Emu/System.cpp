@@ -340,14 +340,14 @@ void Emulator::Load()
 		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
 		vm::write32(m_rsx_callback - 4, m_rsx_callback);
 
-		auto callback_data = vm::ptr<be_t<u32>>::make(m_rsx_callback);
+		auto callback_data = vm::ptr<u32>::make(m_rsx_callback);
 		callback_data[0] = ADDI(11, 0, 0x3ff);
 		callback_data[1] = SC(2);
 		callback_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
 
 		m_ppu_thr_exit = (u32)Memory.MainMem.AllocAlign(4 * 4);
 
-		auto ppu_thr_exit_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_exit);
+		auto ppu_thr_exit_data = vm::ptr<u32>::make(m_ppu_thr_exit);
 		//ppu_thr_exit_data += ADDI(3, 0, 0); // why it kills return value (GPR[3]) ?
 		ppu_thr_exit_data[0] = ADDI(11, 0, 41);
 		ppu_thr_exit_data[1] = SC(2);
@@ -355,7 +355,7 @@ void Emulator::Load()
 
 		m_ppu_thr_stop = (u32)Memory.MainMem.AllocAlign(2 * 4);
 
-		auto ppu_thr_stop_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_stop);
+		auto ppu_thr_stop_data = vm::ptr<u32>::make(m_ppu_thr_stop);
 		ppu_thr_stop_data[0] = SC(4);
 		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
 

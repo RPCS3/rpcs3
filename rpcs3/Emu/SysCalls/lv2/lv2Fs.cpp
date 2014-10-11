@@ -30,7 +30,7 @@ struct FsRingBufferConfig
 } fs_config;
 
 
-s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<be_t<u32>> arg, u64 size)
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<u32> arg, u64 size)
 {
 	sys_fs->Log("cellFsOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
 		path.get_ptr(), flags, fd.addr(), arg.addr(), size);
@@ -116,7 +116,7 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::p
 	return CELL_OK;
 }
 
-s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
 	sys_fs->Log("cellFsRead(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nread_addr=0x%x)",
 		fd, buf.addr(), nbytes, nread.addr());
@@ -137,7 +137,7 @@ s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
 	return CELL_OK;
 }
 
-s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<be_t<u64>> nwrite)
+s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite)
 {
 	sys_fs->Log("cellFsWrite(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nwrite_addr=0x%x)",
 		fd, buf.addr(), nbytes, nwrite.addr());
@@ -170,7 +170,7 @@ s32 cellFsClose(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
+s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 {
 	sys_fs->Warning("cellFsOpendir(path=\"%s\", fd_addr=0x%x)", path.get_ptr(), fd.addr());
 
@@ -187,7 +187,7 @@ s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<be_t<u32>> fd)
 	return CELL_OK;
 }
 
-s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<be_t<u64>> nread)
+s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	sys_fs->Warning("cellFsReaddir(fd=%d, dir_addr=0x%x, nread_addr=0x%x)", fd, dir.addr(), nread.addr());
 
@@ -407,7 +407,7 @@ s32 cellFsUnlink(vm::ptr<const char> path)
 	return CELL_OK;
 }
 
-s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
+s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 {
 	sys_fs->Log("cellFsLseek(fd=%d, offset=0x%llx, whence=0x%x, pos_addr=0x%x)", fd, offset, whence, pos.addr());
 
@@ -496,7 +496,7 @@ s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 	return CELL_OK;
 }
 
-s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
+s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
 	sys_fs->Warning("cellFsFGetBlockSize(fd=%d, sector_size_addr=0x%x, block_size_addr=0x%x)",
 		fd, sector_size.addr(), block_size.addr());
@@ -512,7 +512,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64
 	return CELL_OK;
 }
 
-s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size, vm::ptr<be_t<u64>> block_size)
+s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
 	sys_fs->Warning("cellFsGetBlockSize(file='%s', sector_size_addr=0x%x, block_size_addr=0x%x)",
 		path.get_ptr(), sector_size.addr(), block_size.addr());
@@ -525,7 +525,7 @@ s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<be_t<u64>> sector_size,
 	return CELL_OK;
 }
 
-s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, vm::ptr<be_t<u64>> block_count)
+s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count)
 {
 	sys_fs->Warning("cellFsGetFreeSize(path=\"%s\", block_size_addr=0x%x, block_count_addr=0x%x)",
 		path.get_ptr(), block_size.addr(), block_count.addr());
@@ -539,7 +539,7 @@ s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<be_t<u32>> block_size, v
 	return CELL_OK;
 }
 
-s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<be_t<u32>> data_count)
+s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count)
 {
 	sys_fs->Warning("cellFsGetDirectoryEntries(fd=%d, entries_addr=0x%x, entries_size=0x%x, data_count_addr=0x%x)",
 		fd, entries.addr(), entries_size, data_count.addr());
@@ -637,7 +637,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetStatus(u32 fd, vm::ptr<be_t<u64>> status)
+s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
 	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, status_addr=0x%x)", fd, status.addr());
 
@@ -651,7 +651,7 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<be_t<u64>> status)
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetRegid(u32 fd, vm::ptr<be_t<u64>> regid)
+s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
 	sys_fs->Warning("cellFsStReadGetRingBuf(fd=%d, regid_addr=0x%x)", fd, regid.addr());
 
@@ -694,7 +694,7 @@ s32 cellFsStReadStop(u32 fd)
 	return CELL_OK;
 }
 
-s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
+s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<u64> rsize)
 {
 	sys_fs->Warning("cellFsStRead(fd=%d, buf_addr=0x%x, size=0x%llx, rsize_addr=0x%x)", fd, buf_addr, size, rsize.addr());
 
@@ -714,7 +714,7 @@ s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<be_t<u64>> rsize)
 	return CELL_OK;
 }
 
-s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<be_t<u32>> addr, vm::ptr<be_t<u64>> size)
+s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
 	sys_fs->Todo("cellFsStReadGetCurrentAddr(fd=%d, addr_addr=0x%x, size_addr=0x%x)", fd, addr.addr(), size.addr());
 

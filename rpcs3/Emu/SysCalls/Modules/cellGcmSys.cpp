@@ -796,7 +796,7 @@ int cellGcmSortRemapEaIoAddress()
 //----------------------------------------------------------------------------
 // Memory Mapping
 //----------------------------------------------------------------------------
-s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
+s32 cellGcmAddressToOffset(u64 address, vm::ptr<u32> offset)
 {
 	cellGcmSys->Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
 
@@ -910,7 +910,7 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	return CELL_OK;
 }
 
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
+s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys->Warning("cellGcmMapMainMemory(ea=0x%x,size=0x%x,offset_addr=0x%x)", ea, size, offset.addr());
 

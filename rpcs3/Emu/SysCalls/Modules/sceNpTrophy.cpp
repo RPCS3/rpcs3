@@ -84,7 +84,7 @@ int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 	return CELL_OK;
 }
 
-int sceNpTrophyCreateContext(vm::ptr<be_t<u32>> context, vm::ptr<SceNpCommunicationId> commID, vm::ptr<SceNpCommunicationSignature> commSign, u64 options)
+int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId> commID, vm::ptr<SceNpCommunicationSignature> commSign, u64 options)
 {
 	sceNpTrophy->Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
 		context.addr(), commID.addr(), commSign.addr(), options);
@@ -122,7 +122,7 @@ int sceNpTrophyCreateContext(vm::ptr<be_t<u32>> context, vm::ptr<SceNpCommunicat
 	return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 }
 
-int sceNpTrophyCreateHandle(vm::ptr<be_t<u32>> handle)
+int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpTrophy->Warning("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
 
@@ -212,7 +212,7 @@ int sceNpTrophySetSoundLevel()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<be_t<u64>> reqspace, u64 options)
+int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
 	sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
 		context, handle, reqspace.addr(), options);
@@ -307,7 +307,7 @@ int sceNpTrophyDestroyHandle()
 	return CELL_OK;
 }
 
-int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<be_t<u32>> platinumId)
+int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
 	sceNpTrophy->Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
 		context, handle, trophyId, platinumId.addr());
@@ -344,7 +344,7 @@ int sceNpTrophyTerm()
 	return CELL_OK;
 }
 
-int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<be_t<u32>> count)
+int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
 	sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
 		context, handle, flags.addr(), count.addr());

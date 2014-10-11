@@ -720,7 +720,7 @@ int cellDmuxQueryAttr2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<CellDm
 }
 
 int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmuxResource> demuxerResource, 
-	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<u32> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen(demuxerType_addr=0x%x, demuxerResource_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.addr(), demuxerResource.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -738,7 +738,7 @@ int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmux
 }
 
 int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmuxResourceEx> demuxerResourceEx, 
-	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<u32> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpenEx(demuxerType_addr=0x%x, demuxerResourceEx_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType.addr(), demuxerResourceEx.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -756,7 +756,7 @@ int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDm
 }
 
 int cellDmuxOpen2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellDmuxResource2> demuxerResource2, 
-	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<be_t<u32>> demuxerHandle)
+	vm::ptr<const CellDmuxCb> demuxerCb, vm::ptr<u32> demuxerHandle)
 {
 	cellDmux->Warning("cellDmuxOpen2(demuxerType2_addr=0x%x, demuxerResource2_addr=0x%x, demuxerCb_addr=0x%x, demuxerHandle_addr=0x%x)",
 		demuxerType2.addr(), demuxerResource2.addr(), demuxerCb.addr(), demuxerHandle.addr());
@@ -923,7 +923,7 @@ int cellDmuxQueryEsAttr2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<cons
 
 int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFilterId, 
 					 vm::ptr<const CellDmuxEsResource> esResourceInfo, vm::ptr<const CellDmuxEsCb> esCb,
-					 const u32 esSpecificInfo_addr, vm::ptr<be_t<u32>> esHandle)
+					 const u32 esSpecificInfo_addr, vm::ptr<u32> esHandle)
 {
 	cellDmux->Warning("cellDmuxEnableEs(demuxerHandle=%d, esFilterId_addr=0x%x, esResourceInfo_addr=0x%x, esCb_addr=0x%x, "
 		"esSpecificInfo_addr=0x%x, esHandle_addr=0x%x)", demuxerHandle, esFilterId.addr(), esResourceInfo.addr(),
@@ -992,7 +992,7 @@ int cellDmuxResetEs(u32 esHandle)
 	return CELL_OK;
 }
 
-int cellDmuxGetAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
+int cellDmuxGetAu(u32 esHandle, vm::ptr<u32> auInfo_ptr, vm::ptr<u32> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxGetAu(esHandle=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
 		esHandle, auInfo_ptr.addr(), auSpecificInfo_ptr.addr());
@@ -1015,7 +1015,7 @@ int cellDmuxGetAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32>
 	return CELL_OK;
 }
 
-int cellDmuxPeekAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
+int cellDmuxPeekAu(u32 esHandle, vm::ptr<u32> auInfo_ptr, vm::ptr<u32> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxPeekAu(esHandle=0x%x, auInfo_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
 		esHandle, auInfo_ptr.addr(), auSpecificInfo_ptr.addr());
@@ -1038,7 +1038,7 @@ int cellDmuxPeekAu(u32 esHandle, vm::ptr<be_t<u32>> auInfo_ptr, vm::ptr<be_t<u32
 	return CELL_OK;
 }
 
-int cellDmuxGetAuEx(u32 esHandle, vm::ptr<be_t<u32>> auInfoEx_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
+int cellDmuxGetAuEx(u32 esHandle, vm::ptr<u32> auInfoEx_ptr, vm::ptr<u32> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxGetAuEx(esHandle=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
 		esHandle, auInfoEx_ptr.addr(), auSpecificInfo_ptr.addr());
@@ -1061,7 +1061,7 @@ int cellDmuxGetAuEx(u32 esHandle, vm::ptr<be_t<u32>> auInfoEx_ptr, vm::ptr<be_t<
 	return CELL_OK;
 }
 
-int cellDmuxPeekAuEx(u32 esHandle, vm::ptr<be_t<u32>> auInfoEx_ptr, vm::ptr<be_t<u32>> auSpecificInfo_ptr)
+int cellDmuxPeekAuEx(u32 esHandle, vm::ptr<u32> auInfoEx_ptr, vm::ptr<u32> auSpecificInfo_ptr)
 {
 	cellDmux->Log("cellDmuxPeekAuEx(esHandle=0x%x, auInfoEx_ptr_addr=0x%x, auSpecificInfo_ptr_addr=0x%x)",
 		esHandle, auInfoEx_ptr.addr(), auSpecificInfo_ptr.addr());

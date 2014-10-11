@@ -9,7 +9,7 @@
 
 SysCallBase sys_cond("sys_cond");
 
-s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr)
+s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr)
 {
 	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)",
 		cond_id.addr(), mutex_id, attr.addr());

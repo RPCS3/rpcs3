@@ -25,7 +25,7 @@ s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8
 {
 #ifdef PRX_DEBUG_XXX
 	vm::var<be_t<u32>> queue;
-	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
+	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
 		spurs, queue, port, size, vm::read32(libsre_rtoc - 0x7E2C));
 	queue_id = queue->ToLE();
 	return res;
@@ -346,7 +346,7 @@ s64 spursInit(
 			if (Emu.IsStopped()) continue;
 
 			assert(sys_spu_thread_group_start(spurs->m.spuTG) == CELL_OK);
-			if (s32 res = sys_spu_thread_group_join(spurs->m.spuTG, vm::ptr<be_t<u32>>::make(0), vm::ptr<be_t<u32>>::make(0)))
+			if (s32 res = sys_spu_thread_group_join(spurs->m.spuTG, vm::ptr<u32>::make(0), vm::ptr<u32>::make(0)))
 			{
 				if (res == CELL_ESTAT)
 				{
@@ -796,7 +796,7 @@ s64 cellSpursGetSpuGuid()
 #endif
 }
 
-s64 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<be_t<u32>> group)
+s64 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> group)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.addr(), group.addr());
@@ -807,7 +807,7 @@ s64 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<be_t<u32>> gr
 #endif
 }
 
-s64 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<be_t<u32>> nThreads)
+s64 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<u32> nThreads)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), nThreads.addr());
@@ -818,7 +818,7 @@ s64 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<be_t<u32>> nThrea
 #endif
 }
 
-s64 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<be_t<u32>> thread, vm::ptr<be_t<u32>> nThreads)
+s64 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> thread, vm::ptr<u32> nThreads)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), thread.addr(), nThreads.addr());
@@ -1569,7 +1569,7 @@ s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 #endif
 }
 
-s64 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u16>> mask, u32 mode)
+s64 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.addr(), mask.addr(), mode);
@@ -1602,7 +1602,7 @@ s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 #endif
 }
 
-s64 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u16>> mask, u32 mode)
+s64 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.addr(), mask.addr(), mode);
@@ -1613,7 +1613,7 @@ s64 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<be_
 #endif
 }
 
-s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u32>> direction)
+s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> direction)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=0x%x)", eventFlag.addr(), direction.addr());
@@ -1624,7 +1624,7 @@ s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::pt
 #endif
 }
 
-s64 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<be_t<u32>> clear_mode)
+s64 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> clear_mode)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=0x%x)", eventFlag.addr(), clear_mode.addr());
@@ -1980,7 +1980,7 @@ s64 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
 #endif
 }
 
-s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<be_t<u32>> workloadId)
+s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> workloadId)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.addr(), workloadId.addr());
@@ -2002,7 +2002,7 @@ s64 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
 #endif
 }
 
-s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<be_t<u32>> taskID, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
+s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskID, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
 	vm::ptr<CellSpursTaskArgument> argument)
 {
 #ifdef PRX_DEBUG
