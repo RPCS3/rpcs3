@@ -286,7 +286,7 @@ void PPULLVMRecompiler::VADDSWS(u32 vd, u32 va, u32 vb) {
     auto va_v4i32 = GetVrAsIntVec(va, 32);
     auto vb_v4i32 = GetVrAsIntVec(vb, 32);
 
-    // It looks like x86 does not have an instruction to add 32 bit intergers with singed/unsiged saturation.
+    // It looks like x86 does not have an instruction to add 32 bit intergers with singed/unsigned saturation.
     // To implement add with saturation, we first determine what the result would be if the operation were to cause
     // an overflow. If two -ve numbers are being added and cause an overflow, the result would be 0x80000000.
     // If two +ve numbers are being added and cause an overflow, the result would be 0x7FFFFFFF. Addition of a -ve
@@ -685,7 +685,12 @@ void PPULLVMRecompiler::VLOGEFP(u32 vd, u32 vb) {
 }
 
 void PPULLVMRecompiler::VMADDFP(u32 vd, u32 va, u32 vc, u32 vb) {
-    InterpreterCall("VMADDFP", &PPUInterpreter::VMADDFP, vd, va, vc, vb);
+    auto va_v4f32  = GetVrAsFloatVec(va);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto vc_v4f32  = GetVrAsFloatVec(vc);
+    auto res_v4f32 = m_ir_builder->CreateFMul(va_v4f32, vc_v4f32);
+    res_v4f32      = m_ir_builder->CreateFAdd(res_v4f32, vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void PPULLVMRecompiler::VMAXFP(u32 vd, u32 va, u32 vb) {
@@ -841,15 +846,40 @@ void PPULLVMRecompiler::VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb) {
 }
 
 void PPULLVMRecompiler::VNOR(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VNOR", &PPUInterpreter::VNOR, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto res_v8i16 = m_ir_builder->CreateOr(va_v8i16, vb_v8i16);
+    res_v8i16      = m_ir_builder->CreateNot(res_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void PPULLVMRecompiler::VOR(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VOR", &PPUInterpreter::VOR, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto res_v8i16 = m_ir_builder->CreateOr(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void PPULLVMRecompiler::VPERM(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VPERM", &PPUInterpreter::VPERM, vd, va, vb, vc);
+    auto va_v16i8 = GetVrAsIntVec(va, 8);
+    auto vb_v16i8 = GetVrAsIntVec(vb, 8);
+    auto vc_v16i8 = GetVrAsIntVec(vc, 8);
+
+    u8 thrity_one_v16i8[16] = {0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F};
+    vc_v16i8                = m_ir_builder->CreateAnd(vc_v16i8, ConstantDataVector::get(m_ir_builder->getContext(), thrity_one_v16i8));
+
+    u8   fifteen_v16i8[16] = {15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15};
+    auto vc_le15_v16i8     = m_ir_builder->CreateSub(ConstantDataVector::get(m_ir_builder->getContext(), fifteen_v16i8), vc_v16i8);
+    auto res_va_v16i8      = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_ssse3_pshuf_b_128), va_v16i8, vc_le15_v16i8);
+
+    auto vc_gt15_v16i8 = m_ir_builder->CreateSub(ConstantDataVector::get(m_ir_builder->getContext(), thrity_one_v16i8), vc_v16i8);
+    auto cmp_i1        = m_ir_builder->CreateICmpUGT(vc_gt15_v16i8, ConstantDataVector::get(m_ir_builder->getContext(), fifteen_v16i8));
+    auto cmp_i8        = m_ir_builder->CreateSExt(cmp_i1, VectorType::get(m_ir_builder->getInt8Ty(), 16));
+    vc_gt15_v16i8      = m_ir_builder->CreateOr(cmp_i8, vc_gt15_v16i8);
+    auto res_vb_v16i8  = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_ssse3_pshuf_b_128), vb_v16i8, vc_gt15_v16i8);
+
+    auto res_v16i8 = m_ir_builder->CreateOr(res_vb_v16i8, res_va_v16i8);
+    SetVr(vd, res_v16i8);
 }
 
 void PPULLVMRecompiler::VPKPX(u32 vd, u32 va, u32 vb) {
@@ -1097,7 +1127,10 @@ void PPULLVMRecompiler::VUPKLSH(u32 vd, u32 vb) {
 }
 
 void PPULLVMRecompiler::VXOR(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VXOR", &PPUInterpreter::VXOR, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto res_v8i16 = m_ir_builder->CreateXor(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void PPULLVMRecompiler::MULLI(u32 rd, u32 ra, s32 simm16) {
@@ -1842,7 +1875,16 @@ void PPULLVMRecompiler::LBZX(u32 rd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::LVX(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVX", &PPUInterpreter::LVX, vd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    addr_i64      = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFF0ULL);
+    auto mem_i128 = ReadMemory(addr_i64, 128);
+    SetVr(vd, mem_i128);
+    //InterpreterCall("LVX", &PPUInterpreter::LVX, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::NEG(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2007,7 +2049,15 @@ void PPULLVMRecompiler::STBX(u32 rs, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::STVX(u32 vs, u32 ra, u32 rb) {
-    InterpreterCall("STVX", &PPUInterpreter::STVX, vs, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFF0ULL);
+    WriteMemory(addr_i64, GetVr(vs));
+    //InterpreterCall("STVX", &PPUInterpreter::STVX, vs, ra, rb);
 }
 
 void PPULLVMRecompiler::SUBFME(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2184,7 +2234,8 @@ void PPULLVMRecompiler::LHAX(u32 rd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::LVXL(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVXL", &PPUInterpreter::LVXL, vd, ra, rb);
+    LVX(vd, ra, rb);
+    //InterpreterCall("LVXL", &PPUInterpreter::LVXL, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::MFTB(u32 rd, u32 spr) {
@@ -2321,7 +2372,8 @@ void PPULLVMRecompiler::NAND(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void PPULLVMRecompiler::STVXL(u32 vs, u32 ra, u32 rb) {
-    InterpreterCall("STVXL", &PPUInterpreter::STVXL, vs, ra, rb);
+    STVX(vs, ra, rb);
+    //InterpreterCall("STVXL", &PPUInterpreter::STVXL, vs, ra, rb);
 }
 
 void PPULLVMRecompiler::DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3108,7 +3160,7 @@ void PPULLVMRecompiler::FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto ra_f64  = GetFpr(fra);
     auto rb_f64  = GetFpr(frb);
     auto rc_f64  = GetFpr(frc);
-    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
@@ -3122,21 +3174,42 @@ void PPULLVMRecompiler::FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto rc_f64  = GetFpr(frc);
     rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
-    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
     // TODO: Set flags
-    InterpreterCall("FMSUBS", &PPUInterpreter::FMSUBS, frd, fra, frc, frb, rc);
+    //InterpreterCall("FMSUBS", &PPUInterpreter::FMSUBS, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FNMSUBS", &PPUInterpreter::FNMSUBS, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    res_f64      = m_ir_builder->CreateFNeg(res_f64);
+    auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
+    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FNMSUBS", &PPUInterpreter::FNMSUBS, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FNMADDS", &PPUInterpreter::FNMADDS, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    res_f64      = m_ir_builder->CreateFNeg(res_f64);
+    auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
+    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FNMADDS", &PPUInterpreter::FNMADDS, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::STD(u32 rs, u32 ra, s32 d) {
@@ -3257,7 +3330,7 @@ void PPULLVMRecompiler::FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto rc_f64  = GetFpr(frc);
     rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
-    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
     // TODO: Set flags
@@ -3268,7 +3341,7 @@ void PPULLVMRecompiler::FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto ra_f64  = GetFpr(fra);
     auto rb_f64  = GetFpr(frb);
     auto rc_f64  = GetFpr(frc);
-    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fma, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
     // TODO: Set flags
@@ -3276,11 +3349,28 @@ void PPULLVMRecompiler::FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FNMSUB", &PPUInterpreter::FNMSUB, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    res_f64      = m_ir_builder->CreateFNeg(res_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FNMSUB", &PPUInterpreter::FNMSUB, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FNMADD", &PPUInterpreter::FNMADD, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, {m_ir_builder->getDoubleTy()}), ra_f64, rc_f64, rb_f64);
+    res_f64      = m_ir_builder->CreateFNeg(res_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FNMADD", &PPUInterpreter::FNMADD, frd, fra, frc, frb, rc);
 }
 
 void PPULLVMRecompiler::FCMPO(u32 crfd, u32 fra, u32 frb) {
@@ -3303,11 +3393,22 @@ void PPULLVMRecompiler::FMR(u32 frd, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FNABS(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FNABS", &PPUInterpreter::FNABS, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::fabs, {m_ir_builder->getDoubleTy()}), rb_f64);
+    res_f64      = m_ir_builder->CreateFNeg(res_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FNABS", &PPUInterpreter::FNABS, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FABS(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FABS", &PPUInterpreter::FABS, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::fabs, {m_ir_builder->getDoubleTy()}), rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FABS", &PPUInterpreter::FABS, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FCTID(u32 frd, u32 frb, bool rc) {
@@ -3437,9 +3538,12 @@ void PPULLVMRecompiler::Compile(u32 address) {
         m_compiled_shared[std::make_pair(address, ~revision)] = std::make_pair(executable_info.executable, 0);
     }
 
+    if (revision) {
+        m_revision.fetch_add(1, std::memory_order_relaxed);
+    }
+
     auto compilation_end  = std::chrono::high_resolution_clock::now();
     m_compilation_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
-    m_revision.fetch_add(1, std::memory_order_relaxed);
 }
 
 void PPULLVMRecompiler::RemoveUnusedOldVersions() {
@@ -3828,6 +3932,12 @@ void PPULLVMRecompiler::SetVscr(Value * val_x32) {
     auto vscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, VSCR));
     auto vscr_i32_ptr = m_ir_builder->CreateBitCast(vscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     m_ir_builder->CreateStore(val_i32, vscr_i32_ptr);
+}
+
+Value * PPULLVMRecompiler::GetVr(u32 vr) {
+    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(GetPPUState(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
+    return m_ir_builder->CreateLoad(vr_i128_ptr);
 }
 
 Value * PPULLVMRecompiler::GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits) {

@@ -450,44 +450,44 @@ protected:
 
 private:
     struct ExecutableInfo {
-    /// Pointer to the executable
-    Executable executable;
+        /// Pointer to the executable
+        Executable executable;
 
-    /// Size of the executable
-    size_t size;
+        /// Size of the executable
+        size_t size;
 
-    /// Number of PPU instructions compiled into this executable
-    u32 num_instructions;
+        /// Number of PPU instructions compiled into this executable
+        u32 num_instructions;
 
-    /// List of blocks that this executable refers to that have not been hit yet
-    std::list<u32> unhit_blocks_list;
+        /// List of blocks that this executable refers to that have not been hit yet
+        std::list<u32> unhit_blocks_list;
 
-    /// LLVM function corresponding to the executable
-    llvm::Function * llvm_function;
-};
+        /// LLVM function corresponding to the executable
+        llvm::Function * llvm_function;
+    };
 
-            /// Lock for accessing m_compiled_shared
-            // TODO: Use a RW lock
-            std::mutex m_compiled_shared_lock;
+    /// Lock for accessing m_compiled_shared
+    // TODO: Use a RW lock
+    std::mutex m_compiled_shared_lock;
 
-            /// Sections that have been compiled. This data store is shared with the execution threads.
-            /// Keys are starting address of the section and ~revision. Data is pointer to the executable and its reference count.
-            std::map<std::pair<u32, u32>, std::pair<Executable, u32>> m_compiled_shared;
+    /// Sections that have been compiled. This data store is shared with the execution threads.
+    /// Keys are starting address of the section and ~revision. Data is pointer to the executable and its reference count.
+    std::map<std::pair<u32, u32>, std::pair<Executable, u32>> m_compiled_shared;
 
-            /// Lock for accessing m_uncompiled_shared
-            std::mutex m_uncompiled_shared_lock;
+    /// Lock for accessing m_uncompiled_shared
+    std::mutex m_uncompiled_shared_lock;
 
-            /// Current revision. This is incremented everytime a section is compiled.
-            std::atomic<u32> m_revision;
+    /// Current revision. This is incremented everytime a section is compiled.
+    std::atomic<u32> m_revision;
 
-            /// Sections that have not been compiled yet. This data store is shared with the execution threads.
-            std::list<u32> m_uncompiled_shared;
+    /// Sections that have not been compiled yet. This data store is shared with the execution threads.
+    std::list<u32> m_uncompiled_shared;
 
-            /// Set of all blocks that have been hit
-            std::set<u32> m_hit_blocks;
+    /// Set of all blocks that have been hit
+    std::set<u32> m_hit_blocks;
 
-            /// Sections that have been compiled. Keys are starting address of the section and ~revision.
-            std::map<std::pair<u32, u32>, ExecutableInfo> m_compiled;
+    /// Sections that have been compiled. Keys are starting address of the section and ~revision.
+    std::map<std::pair<u32, u32>, ExecutableInfo> m_compiled;
 
     /// LLVM context
     llvm::LLVMContext * m_llvm_context;
@@ -670,6 +670,9 @@ private:
 
     /// Set VSCR
     void SetVscr(llvm::Value * val_x32);
+
+    /// Load VR
+    llvm::Value * GetVr(u32 vr);
 
     /// Load VR and convert it to an integer vector
     llvm::Value * GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits);
