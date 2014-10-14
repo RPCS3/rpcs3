@@ -101,10 +101,10 @@ void PPULLVMRecompiler::ReleaseExecutable(u32 address, u32 revision) {
 }
 
 void PPULLVMRecompiler::RequestCompilation(u32 address) {
-        {
-            std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
-            m_uncompiled_shared.push_back(address);
-        }
+    {
+        std::lock_guard<std::mutex> lock(m_uncompiled_shared_lock);
+        m_uncompiled_shared.push_back(address);
+    }
 
     if (!IsAlive()) {
         Start();
@@ -4277,12 +4277,12 @@ u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
     auto now = std::chrono::high_resolution_clock::now();
 
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 1000) {
-        bool       clear_all  = false;
+        bool clear_all  = false;
 
         u32 revision = s_recompiler->GetCurrentRevision();
         if (m_recompiler_revision != revision) {
             m_recompiler_revision = revision;
-            clear_all  = true;
+            clear_all = true;
         }
 
         for (auto iter = m_address_to_executable.begin(); iter != m_address_to_executable.end();) {

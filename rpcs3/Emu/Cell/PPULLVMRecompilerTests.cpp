@@ -33,7 +33,7 @@ struct PPURegState {
     u64 GPR[32];
 
     /// Vector purpose registers
-    VPR_reg VPR[32];
+    u128 VPR[32];
 
     /// Condition register
     CRhdr CR;
@@ -129,7 +129,7 @@ struct PPURegState {
         std::string ret;
 
         for (int i = 0; i < 32; i++) {
-            ret += fmt::Format("GPR[%02d] = 0x%016llx FPR[%02d] = %16g VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, i, VPR[i].ToString(true).c_str(), VPR[i].ToString().c_str());
+            ret += fmt::Format("GPR[%02d] = 0x%016llx FPR[%02d] = %16g VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
         }
 
         for (int i = 0; i < 8; i++) {
@@ -180,8 +180,8 @@ void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, P
 
         if (interp_output_reg_state.ToString() != recomp_output_reg_state.ToString()) {
             msg = std::string("Input register states:\n") + input_reg_state.ToString() +
-                  std::string("\nOutput register states:\n") + recomp_output_reg_state.ToString() +
-                  std::string("\nInterpreter output register states:\n") + interp_output_reg_state.ToString();
+                std::string("\nOutput register states:\n") + recomp_output_reg_state.ToString() +
+                std::string("\nInterpreter output register states:\n") + interp_output_reg_state.ToString();
             return false;
         }
 
@@ -206,7 +206,7 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     m_ir_builder->SetInsertPoint(block);
 
     test_case();
-    
+
     m_ir_builder->CreateRetVoid();
 
     // Print the IR
