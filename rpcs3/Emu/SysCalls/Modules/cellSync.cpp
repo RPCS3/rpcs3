@@ -16,6 +16,10 @@ u32 libsre;
 u32 libsre_rtoc;
 #endif
 
+waiter_map_t sync_mutex_wm("sync_mutex_wm");
+waiter_map_t sync_barrier_wait_wm("sync_barrier_wait_wm");
+waiter_map_t sync_barrier_notify_wm("sync_barrier_notify_wm");
+
 s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
 	if (!mutex)
@@ -60,7 +64,7 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	});
 
 	// prx: wait until this old value is equal to m_rel
-	waiter_op(__FUNCTION__, mutex.addr(), [mutex, order]()
+	sync_mutex_wm.waiter_op(mutex.addr(), [mutex, order]()
 	{
 		return order == mutex->data.read_relaxed().m_rel;
 	});
@@ -112,7 +116,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		mutex.m_rel++;
 	});
 
-	waiter_signal(mutex.addr());
+	sync_mutex_wm.notify(mutex.addr());
 	return CELL_OK;
 }
 
@@ -174,12 +178,12 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	waiter_op(__FUNCTION__, barrier.addr(), [barrier]()
+	sync_barrier_notify_wm.waiter_op(barrier.addr(), [barrier]()
 	{
 		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp) == CELL_OK;
 	});
 
-	waiter_signal(barrier.addr() ^ 1);
+	sync_barrier_wait_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -201,7 +205,7 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return res;
 	}
 
-	waiter_signal(barrier.addr() ^ 1);
+	sync_barrier_wait_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -236,12 +240,12 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	waiter_op(__FUNCTION__, barrier.addr() ^ 1, [barrier]()
+	sync_barrier_wait_wm.waiter_op(barrier.addr(), [barrier]()
 	{
 		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp) == CELL_OK;
 	});
 
-	waiter_signal(barrier.addr());
+	sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -263,7 +267,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return res;
 	}
 
-	waiter_signal(barrier.addr());
+	sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 

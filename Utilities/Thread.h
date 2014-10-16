@@ -71,35 +71,54 @@ public:
 	bool joinable() const;
 };
 
-// for internal use (checks if Emu is stopped)
-bool waiter_is_stopped(const char* func_name, u64 signal_id);
-
-struct waiter_reg_t
+class waiter_map_t
 {
-	const u64 signal_id;
-	NamedThreadBase* const thread;
+	// TODO: optimize (use custom lightweight readers-writer lock)
+	std::mutex m_mutex;
 
-	waiter_reg_t(u64 signal_id);
-	~waiter_reg_t();
-};
-
-// wait until waiter_func() returns true, signal_id is an arbitrary number
-template<typename WT> static __forceinline void waiter_op(const char* func_name, u64 signal_id, const WT waiter_func)
-{
-	// check condition
-	if (waiter_func()) return;
-
-	// register waiter
-	waiter_reg_t waiter(signal_id);
-
-	while (true)
+	struct waiter_t
 	{
-		// wait for 1 ms or until signal arrived
-		waiter.thread->WaitForAnySignal(1);
-		if (waiter_is_stopped(func_name, signal_id)) break;
-		if (waiter_func()) break;
-	}
-}
+		u64 signal_id;
+		NamedThreadBase* thread;
+	};
 
-// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
-void waiter_signal(u64 signal_id);
+	std::vector<waiter_t> m_waiters;
+
+	std::string m_name;
+
+	struct waiter_reg_t
+	{
+		const u64 signal_id;
+		NamedThreadBase* const thread;
+		waiter_map_t& map;
+
+		waiter_reg_t(waiter_map_t& map, u64 signal_id);
+		~waiter_reg_t();
+	};
+
+	bool is_stopped(u64 signal_id);
+
+public:
+	waiter_map_t(const char* name) : m_name(name) {}
+
+	// wait until waiter_func() returns true, signal_id is an arbitrary number
+	template<typename WT> __forceinline void waiter_op(u64 signal_id, const WT waiter_func)
+	{
+		// check condition
+		if (waiter_func()) return;
+
+		// register waiter
+		waiter_reg_t waiter(*this, signal_id);
+
+		while (true)
+		{
+			// wait for 1 ms or until signal arrived
+			waiter.thread->WaitForAnySignal(1);
+			if (is_stopped(signal_id)) break;
+			if (waiter_func()) break;
+		}
+	}
+
+	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
+	void notify(u64 signal_id);
+};

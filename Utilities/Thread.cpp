@@ -209,63 +209,53 @@ bool thread::joinable() const
 	return m_thr.joinable();
 }
 
-struct g_waiter_map_t
-{
-	// TODO: optimize (use custom lightweight readers-writer lock)
-
-	std::mutex m_mutex;
-	
-	struct waiter
-	{
-		u64 signal_id;
-		NamedThreadBase* thread;
-	};
-
-	std::vector<waiter> m_waiters;
-
-} g_waiter_map;
-
-bool waiter_is_stopped(const char* func_name, u64 signal_id)
+bool waiter_map_t::is_stopped(u64 signal_id)
 {
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(Log::HLE, "%s() aborted (signal_id=0x%llx)", func_name, signal_id);
+		LOG_WARNING(Log::HLE, "%s.waiter_op() aborted (signal_id=0x%llx)", m_name.c_str(), signal_id);
 		return true;
 	}
 	return false;
 }
 
-waiter_reg_t::waiter_reg_t(u64 signal_id)
+waiter_map_t::waiter_reg_t::waiter_reg_t(waiter_map_t& map, u64 signal_id)
 	: signal_id(signal_id)
 	, thread(GetCurrentNamedThread())
+	, map(map)
 {
-	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+	std::lock_guard<std::mutex> lock(map.m_mutex);
 
 	// add waiter
-	g_waiter_map.m_waiters.push_back({ signal_id, thread });
+	map.m_waiters.push_back({ signal_id, thread });
 }
 
-waiter_reg_t::~waiter_reg_t()
+waiter_map_t::waiter_reg_t::~waiter_reg_t()
 {
-	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+	std::lock_guard<std::mutex> lock(map.m_mutex);
 
 	// remove waiter
-	for (size_t i = g_waiter_map.m_waiters.size() - 1; i >= 0; i--)
+	for (size_t i = map.m_waiters.size() - 1; i >= 0; i--)
 	{
-		if (g_waiter_map.m_waiters[i].signal_id == signal_id && g_waiter_map.m_waiters[i].thread == thread)
+		if (map.m_waiters[i].signal_id == signal_id && map.m_waiters[i].thread == thread)
 		{
-			g_waiter_map.m_waiters.erase(g_waiter_map.m_waiters.begin() + i);
+			map.m_waiters.erase(map.m_waiters.begin() + i);
 			return;
 		}
 	}
+
+	LOG_ERROR(HLE, "%s(): waiter not found (signal_id=0x%llx, map='%s')", __FUNCTION__, signal_id, map.m_name.c_str());
+	Emu.Pause();
 }
 
-void waiter_signal(u64 signal_id)
+void waiter_map_t::notify(u64 signal_id)
 {
-	std::lock_guard<std::mutex> lock(g_waiter_map.m_mutex);
+	if (!m_waiters.size()) return;
+
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	// find waiter and signal
-	for (auto& v : g_waiter_map.m_waiters)
+	for (auto& v : m_waiters)
 	{
 		if (v.signal_id == signal_id)
 		{

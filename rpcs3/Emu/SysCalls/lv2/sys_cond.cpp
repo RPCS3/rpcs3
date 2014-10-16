@@ -80,9 +80,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
-		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
-		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
@@ -108,9 +106,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
 	{
 		cond->signaler = GetCurrentPPUThread().GetId();
-		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
-		Emu.GetCPU().NotifyThread(target);
 
 		if (Emu.IsStopped())
 		{
@@ -147,9 +143,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
-		//cond->signal_stamp = get_system_time();
 		cond->signal.lock(target);
-		Emu.GetCPU().NotifyThread(target);
 	}
 
 	if (Emu.IsStopped())
@@ -195,7 +189,6 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	{
 		if (cond->signal.unlock(tid, tid) == SMR_OK)
 		{
-			//const u64 stamp2 = get_system_time();
 			if (SMutexResult res = mutex->m_mutex.trylock(tid))
 			{
 				if (res != SMR_FAILED)
@@ -215,14 +208,11 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 				}
 			}
 			mutex->recursive = 1;
-			const volatile u64 stamp = cond->signal_stamp;
 			cond->signal.unlock(tid);
-			Emu.GetCPU().NotifyThread(cond->signaler);
-			//ConLog.Write("sys_cond_wait(): signal latency %lld (minimum %lld)", get_system_time() - stamp, stamp2 - stamp);
 			return CELL_OK;
 		}
 
-		SM_Sleep();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		if (counter++ > max_counter)
 		{
