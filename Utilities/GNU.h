@@ -119,7 +119,7 @@ static __forceinline bool InterlockedCompareExchangeTest(volatile uint8_t* dest,
 #if defined(__GNUG__)
 	return __sync_bool_compare_and_swap(dest, comp, exch);
 #else
-	return _InterlockedCompareExchange8((volatile char*)dest, exch, comp) == comp;
+	return (uint8_t)_InterlockedCompareExchange8((volatile char*)dest, exch, comp) == comp;
 #endif
 }
 static __forceinline bool InterlockedCompareExchangeTest(volatile uint16_t* dest, uint16_t exch, uint16_t comp)
@@ -127,7 +127,7 @@ static __forceinline bool InterlockedCompareExchangeTest(volatile uint16_t* dest
 #if defined(__GNUG__)
 	return __sync_bool_compare_and_swap(dest, comp, exch);
 #else
-	return _InterlockedCompareExchange16((volatile short*)dest, exch, comp) == comp;
+	return (uint16_t)_InterlockedCompareExchange16((volatile short*)dest, exch, comp) == comp;
 #endif
 }
 static __forceinline bool InterlockedCompareExchangeTest(volatile uint32_t* dest, uint32_t exch, uint32_t comp)
@@ -135,7 +135,7 @@ static __forceinline bool InterlockedCompareExchangeTest(volatile uint32_t* dest
 #if defined(__GNUG__)
 	return __sync_bool_compare_and_swap(dest, comp, exch);
 #else
-	return _InterlockedCompareExchange((volatile long*)dest, exch, comp) == comp;
+	return (uint32_t)_InterlockedCompareExchange((volatile long*)dest, exch, comp) == comp;
 #endif
 }
 static __forceinline bool InterlockedCompareExchangeTest(volatile uint64_t* dest, uint64_t exch, uint64_t comp)
@@ -143,7 +143,7 @@ static __forceinline bool InterlockedCompareExchangeTest(volatile uint64_t* dest
 #if defined(__GNUG__)
 	return __sync_bool_compare_and_swap(dest, comp, exch);
 #else
-	return _InterlockedCompareExchange64((volatile long long*)dest, exch, comp) == comp;
+	return (uint64_t)_InterlockedCompareExchange64((volatile long long*)dest, exch, comp) == comp;
 #endif
 }
 
