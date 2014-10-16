@@ -16,9 +16,12 @@ u32 libsre;
 u32 libsre_rtoc;
 #endif
 
-waiter_map_t sync_mutex_wm("sync_mutex_wm");
-waiter_map_t sync_barrier_wait_wm("sync_barrier_wait_wm");
-waiter_map_t sync_barrier_notify_wm("sync_barrier_notify_wm");
+waiter_map_t g_sync_mutex_wm("sync_mutex_wm");
+waiter_map_t g_sync_barrier_wait_wm("sync_barrier_wait_wm");
+waiter_map_t g_sync_barrier_notify_wm("sync_barrier_notify_wm");
+waiter_map_t g_sync_rwm_read_wm("sync_rwm_read_wm");
+waiter_map_t g_sync_rwm_write_wm("sync_rwm_write_wm");
+waiter_map_t g_sync_queue_wm("sync_queue_wm");
 
 s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
@@ -64,7 +67,7 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	});
 
 	// prx: wait until this old value is equal to m_rel
-	sync_mutex_wm.waiter_op(mutex.addr(), [mutex, order]()
+	g_sync_mutex_wm.wait_op(mutex.addr(), [mutex, order]()
 	{
 		return order == mutex->data.read_relaxed().m_rel;
 	});
@@ -116,7 +119,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		mutex.m_rel++;
 	});
 
-	sync_mutex_wm.notify(mutex.addr());
+	g_sync_mutex_wm.notify(mutex.addr());
 	return CELL_OK;
 }
 
@@ -178,12 +181,12 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	sync_barrier_notify_wm.waiter_op(barrier.addr(), [barrier]()
+	g_sync_barrier_notify_wm.wait_op(barrier.addr(), [barrier]()
 	{
 		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp) == CELL_OK;
 	});
 
-	sync_barrier_wait_wm.notify(barrier.addr());
+	g_sync_barrier_wait_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -205,7 +208,7 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return res;
 	}
 
-	sync_barrier_wait_wm.notify(barrier.addr());
+	g_sync_barrier_wait_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -240,12 +243,12 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	sync_barrier_wait_wm.waiter_op(barrier.addr(), [barrier]()
+	g_sync_barrier_wait_wm.wait_op(barrier.addr(), [barrier]()
 	{
 		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp) == CELL_OK;
 	});
 
-	sync_barrier_notify_wm.notify(barrier.addr());
+	g_sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -267,7 +270,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return res;
 	}
 
-	sync_barrier_notify_wm.notify(barrier.addr());
+	g_sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -306,6 +309,7 @@ s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
+
 	rwm.m_readers++;
 	return CELL_OK;
 }
@@ -317,6 +321,7 @@ s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
 		cellSync->Error("syncRwmReadEndOp(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", Memory.RealToVirtualAddr(&rwm), (u16)rwm.m_writers);
 		return CELL_SYNC_ERROR_ABORT;
 	}
+
 	rwm.m_readers--;
 	return CELL_OK;
 }
@@ -335,21 +340,22 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	}
 
 	// prx: increase m_readers, wait until m_writers is zero
-	while (rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp))
+	g_sync_rwm_read_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncRwmRead(rwm_addr=0x%x) aborted", rwm.addr());
-			return CELL_OK;
-		}
-	}
+		return rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp) == CELL_OK;
+	});
 
 	// copy data to buffer_addr
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: decrease m_readers (return 0x8041010C if already zero)
-	return rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp);
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
+	{
+		return res;
+	}
+
+	g_sync_rwm_write_wm.notify(rwm.addr());
+	return CELL_OK;
 }
 
 s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
@@ -372,7 +378,13 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
-	return rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp);
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
+	{
+		return res;
+	}
+
+	g_sync_rwm_write_wm.notify(rwm.addr());
+	return CELL_OK;
 }
 
 s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
@@ -381,6 +393,7 @@ s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
+
 	rwm.m_writers = 1;
 	return CELL_OK;
 }
@@ -398,32 +411,23 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (rwm->data.atomic_op(CELL_OK, syncRwmTryWriteBeginOp))
+	g_sync_rwm_read_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (I)", rwm.addr());
-			return CELL_OK;
-		}
-	}
+		return rwm->data.atomic_op(CELL_OK, syncRwmTryWriteBeginOp) == CELL_OK;
+	});
 
 	// prx: wait until m_readers == 0
-	while (rwm->data.read_relaxed().m_readers.ToBE())
+	g_sync_rwm_write_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (II)", rwm.addr());
-			return CELL_OK;
-		}
-	}
+		return rwm->data.read_relaxed().m_readers.ToBE() == 0;
+	});
 
 	// prx: copy data from buffer_addr
 	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
 	rwm->data.exchange({});
+	g_sync_rwm_read_wm.notify(rwm.addr());
 	return CELL_OK;
 }
 
@@ -441,7 +445,7 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	}
 
 	// prx: compare m_readers | m_writers with 0, return if not zero, set m_writers to 1
-	if (!rwm->data.compare_and_swap_test({}, {be_t<u16>::make(0), be_t<u16>::make(1)}))
+	if (!rwm->data.compare_and_swap_test({}, { be_t<u16>::make(0), be_t<u16>::make(1) }))
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -451,6 +455,7 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 
 	// prx: sync and zeroize m_readers and m_writers
 	rwm->data.exchange({});
+	g_sync_rwm_read_wm.notify(rwm.addr());
 	return CELL_OK;
 }
 
@@ -527,24 +532,20 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		return syncQueueTryPushOp(queue, depth, position);
-	}))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			cellSync->Warning("cellSyncQueuePush(queue_addr=0x%x) aborted", queue.addr());
-			return CELL_OK;
-		}
-	}
+			return syncQueueTryPushOp(queue, depth, position);
+		});
+	});
 
 	// prx: memcpy(position * m_size + m_addr, buffer_addr, m_size), sync
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 
 	// prx: atomically insert 0 in 5th u8
 	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -577,6 +578,7 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -619,24 +621,20 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
-	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		return syncQueueTryPopOp(queue, depth, position);
-	}))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			cellSync->Warning("cellSyncQueuePop(queue_addr=0x%x) aborted", queue.addr());
-			return CELL_OK;
-		}
-	}
+			return syncQueueTryPopOp(queue, depth, position);
+		});
+	});
 
 	// prx: (sync), memcpy(buffer_addr, position * m_size + m_addr, m_size)
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
 	// prx: atomically insert 0 in first u8
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -669,6 +667,7 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -705,21 +704,17 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		return syncQueueTryPeekOp(queue, depth, position);
-	}))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			cellSync->Warning("cellSyncQueuePeek(queue_addr=0x%x) aborted", queue.addr());
-			return CELL_OK;
-		}
-	}
+			return syncQueueTryPeekOp(queue, depth, position);
+		});
+	});
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -752,6 +747,7 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -794,47 +790,40 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
-	while (queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth]()
 	{
-		const u32 v1 = (u32)queue.m_v1;
-		// prx: extract first u8, repeat if not zero, insert 1
-		if (v1 >> 24)
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-		queue.m_v1 = v1 | 0x1000000;
-		return CELL_OK;
-	}))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (I)", queue.addr());
-			return CELL_OK;
-		}
-	}
+			const u32 v1 = (u32)queue.m_v1;
+			// prx: extract first u8, repeat if not zero, insert 1
+			if (v1 >> 24)
+			{
+				return CELL_SYNC_ERROR_BUSY;
+			}
 
-	while (queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
-	{
-		const u32 v2 = (u32)queue.m_v2;
-		// prx: extract 5th u8, repeat if not zero, insert 1
-		if (v2 >> 24)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-		queue.m_v2 = v2 | 0x1000000;
-		return CELL_OK;
-	}))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (II)", queue.addr());
+			queue.m_v1 = v1 | 0x1000000;
 			return CELL_OK;
-		}
-	}
+		});
+	});
+
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth]()
+	{
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
+		{
+			const u32 v2 = (u32)queue.m_v2;
+			// prx: extract 5th u8, repeat if not zero, insert 1
+			if (v2 >> 24)
+			{
+				return CELL_SYNC_ERROR_BUSY;
+			}
+
+			queue.m_v2 = v2 | 0x1000000;
+			return CELL_OK;
+		});
+	});
 
 	queue->data.exchange({});
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 

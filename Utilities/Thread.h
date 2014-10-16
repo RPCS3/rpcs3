@@ -102,7 +102,7 @@ public:
 	waiter_map_t(const char* name) : m_name(name) {}
 
 	// wait until waiter_func() returns true, signal_id is an arbitrary number
-	template<typename WT> __forceinline void waiter_op(u64 signal_id, const WT waiter_func)
+	template<typename WT> __forceinline void wait_op(u64 signal_id, const WT waiter_func)
 	{
 		// check condition
 		if (waiter_func()) return;
