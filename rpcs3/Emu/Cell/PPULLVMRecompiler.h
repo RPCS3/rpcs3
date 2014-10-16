@@ -16,7 +16,7 @@ struct PPURegState;
 /// PPU recompiler that uses LLVM for code generation and optimization
 class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPCDecoder {
 public:
-    typedef void(*Executable)(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
+    typedef void(*Executable)(PPUThread * ppu_state, PPUInterpreter * interpreter);
 
     PPULLVMRecompiler();
 
@@ -41,7 +41,7 @@ public:
     u32 GetCurrentRevision();
 
     /// Execute all tests
-    void RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter);
+    void RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter);
 
     void Task() override;
 
@@ -559,9 +559,6 @@ private:
 
     /// Get PPU state pointer
     llvm::Value * GetPPUState();
-
-    /// Get base address
-    llvm::Value * GetBaseAddress();
 
     /// Get interpreter pointer
     llvm::Value * GetInterpreter();

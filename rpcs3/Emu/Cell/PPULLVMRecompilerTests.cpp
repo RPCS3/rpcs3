@@ -158,7 +158,6 @@ struct PPURegState {
 };
 
 static PPUThread      * s_ppu_state    = nullptr;
-static u64              s_base_address = 0;
 static PPUInterpreter * s_interpreter  = nullptr;
 
 template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
@@ -222,6 +221,9 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
         return;
     }
 
+    // Optimize
+    m_fpm->run(*m_current_function);
+
     // Generate the function
     MachineCodeInfo mci;
     m_execution_engine->runJITOnFunction(m_current_function, &mci);
@@ -244,9 +246,6 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     input();
     std::vector<GenericValue> args;
     args.push_back(GenericValue(s_ppu_state));
-    GenericValue base_address;
-    base_address.IntVal = APInt(64, s_base_address);
-    args.push_back(base_address);
     args.push_back(GenericValue(s_interpreter));
     m_execution_engine->runFunction(m_current_function, args);
 
@@ -262,10 +261,9 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     m_execution_engine->freeMachineCodeForFunction(m_current_function);
 }
 
-void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPUInterpreter * interpreter) {
-    s_ppu_state    = ppu_state;
-    s_base_address = base_address;
-    s_interpreter  = interpreter;
+void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) {
+    s_ppu_state   = ppu_state;
+    s_interpreter = interpreter;
 
     PPURegState initial_state;
     initial_state.Load(*ppu_state);
@@ -492,7 +490,7 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPU
     input.GPR[14] = 10;
     input.GPR[23] = 0x10000;
     for (int i = 0; i < 1000; i++) {
-        ((u8*)base_address)[i + 0x10000] = (u8)i;
+        vm::write8(i + 0x10000, i);
     }
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LBZ, 0, input, 5, 0, 0x10000);
@@ -549,6 +547,18 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPU
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVXL, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVXL, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSL, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSL, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSR, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSR, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEBX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEBX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEHX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEHX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEWX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEWX, 1, input, 5, 14, 23);
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 0, input, 3, 0, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 1, input, 3, 14, 0x10000);
@@ -593,6 +603,8 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, u64 base_address, PPU
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVXL, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVXL, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 0, input, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14, 23);
 
     initial_state.Store(*ppu_state);
 }

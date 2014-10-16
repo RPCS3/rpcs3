@@ -1586,11 +1586,55 @@ void PPULLVMRecompiler::TW(u32 to, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::LVSL(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVSL", &PPUInterpreter::LVSL, vd, ra, rb);
+    static const u128 s_lvsl_values[] = {
+        {0x08090A0B0C0D0E0F, 0x0001020304050607},
+        {0x090A0B0C0D0E0F10, 0x0102030405060708},
+        {0x0A0B0C0D0E0F1011, 0x0203040506070809},
+        {0x0B0C0D0E0F101112, 0x030405060708090A},
+        {0x0C0D0E0F10111213, 0x0405060708090A0B},
+        {0x0D0E0F1011121314, 0x05060708090A0B0C},
+        {0x0E0F101112131415, 0x060708090A0B0C0D},
+        {0x0F10111213141516, 0x0708090A0B0C0D0E},
+        {0x1011121314151617, 0x08090A0B0C0D0E0F},
+        {0x1112131415161718, 0x090A0B0C0D0E0F10},
+        {0x1213141516171819, 0x0A0B0C0D0E0F1011},
+        {0x131415161718191A, 0x0B0C0D0E0F101112},
+        {0x1415161718191A1B, 0x0C0D0E0F10111213},
+        {0x15161718191A1B1C, 0x0D0E0F1011121314},
+        {0x161718191A1B1C1D, 0x0E0F101112131415},
+        {0x1718191A1B1C1D1E, 0x0F10111213141516},
+    };
+
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    auto index_i64           = m_ir_builder->CreateAnd(addr_i64, 0xF);
+    auto lvsl_values_i28_ptr = m_ir_builder->CreateIntToPtr(m_ir_builder->getInt64((u64)s_lvsl_values), m_ir_builder->getIntNTy(128)->getPointerTo());
+    lvsl_values_i28_ptr      = m_ir_builder->CreateGEP(lvsl_values_i28_ptr, index_i64);
+    auto val_i128            = m_ir_builder->CreateLoad(lvsl_values_i28_ptr);
+    SetVr(vd, val_i128);
+
+    //InterpreterCall("LVSL", &PPUInterpreter::LVSL, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::LVEBX(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVEBX", &PPUInterpreter::LVEBX, vd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    auto val_i8    = ReadMemory(addr_i64, 8);
+    auto index_i64 = m_ir_builder->CreateAnd(addr_i64, 0xf);
+    index_i64      = m_ir_builder->CreateSub(m_ir_builder->getInt64(15), index_i64);
+    auto vd_v16i8  = GetVrAsIntVec(vd, 8);
+    vd_v16i8       = m_ir_builder->CreateInsertElement(vd_v16i8, val_i8, index_i64);
+    SetVr(vd, vd_v16i8);
+
+    //InterpreterCall("LVEBX", &PPUInterpreter::LVEBX, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -1602,20 +1646,19 @@ void PPULLVMRecompiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::MULHDU(u32 rd, u32 ra, u32 rb, bool rc) {
-    auto ra_i64     = GetGpr(ra);
-    auto rb_i64     = GetGpr(rb);
-    auto ra_i128    = m_ir_builder->CreateZExt(ra_i64, m_ir_builder->getIntNTy(128));
-    auto rb_i128    = m_ir_builder->CreateZExt(rb_i64, m_ir_builder->getIntNTy(128));
-    auto prod_i128  = m_ir_builder->CreateMul(ra_i128, rb_i128);
-    auto prod_v2i64 = m_ir_builder->CreateBitCast(prod_i128, VectorType::get(m_ir_builder->getInt64Ty(), 2));
-    auto prod_i64   = m_ir_builder->CreateExtractElement(prod_v2i64, m_ir_builder->getInt32(1));
+    auto ra_i64    = GetGpr(ra);
+    auto rb_i64    = GetGpr(rb);
+    auto ra_i128   = m_ir_builder->CreateZExt(ra_i64, m_ir_builder->getIntNTy(128));
+    auto rb_i128   = m_ir_builder->CreateZExt(rb_i64, m_ir_builder->getIntNTy(128));
+    auto prod_i128 = m_ir_builder->CreateMul(ra_i128, rb_i128);
+    prod_i128      = m_ir_builder->CreateLShr(prod_i128, 64);
+    auto prod_i64  = m_ir_builder->CreateTrunc(prod_i128, m_ir_builder->getInt64Ty());
     SetGpr(rd, prod_i64);
 
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO: Check what code this generates
     //InterpreterCall("MULHDU", &PPUInterpreter::MULHDU, rd, ra, rb, rc);
 }
 
@@ -1746,11 +1789,57 @@ void PPULLVMRecompiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::LVSR(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVSR", &PPUInterpreter::LVSR, vd, ra, rb);
+    static const u128 s_lvsr_values[] = {
+        {0x18191A1B1C1D1E1F, 0x1011121314151617},
+        {0x1718191A1B1C1D1E, 0x0F10111213141516},
+        {0x161718191A1B1C1D, 0x0E0F101112131415},
+        {0x15161718191A1B1C, 0x0D0E0F1011121314},
+        {0x1415161718191A1B, 0x0C0D0E0F10111213},
+        {0x131415161718191A, 0x0B0C0D0E0F101112},
+        {0x1213141516171819, 0x0A0B0C0D0E0F1011},
+        {0x1112131415161718, 0x090A0B0C0D0E0F10},
+        {0x1011121314151617, 0x08090A0B0C0D0E0F},
+        {0x0F10111213141516, 0x0708090A0B0C0D0E},
+        {0x0E0F101112131415, 0x060708090A0B0C0D},
+        {0x0D0E0F1011121314, 0x05060708090A0B0C},
+        {0x0C0D0E0F10111213, 0x0405060708090A0B},
+        {0x0B0C0D0E0F101112, 0x030405060708090A},
+        {0x0A0B0C0D0E0F1011, 0x0203040506070809},
+        {0x090A0B0C0D0E0F10, 0x0102030405060708},
+    };
+
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    auto index_i64           = m_ir_builder->CreateAnd(addr_i64, 0xF);
+    auto lvsr_values_i28_ptr = m_ir_builder->CreateIntToPtr(m_ir_builder->getInt64((u64)s_lvsr_values), m_ir_builder->getIntNTy(128)->getPointerTo());
+    lvsr_values_i28_ptr      = m_ir_builder->CreateGEP(lvsr_values_i28_ptr, index_i64);
+    auto val_i128            = m_ir_builder->CreateLoad(lvsr_values_i28_ptr);
+    SetVr(vd, val_i128);
+
+    //InterpreterCall("LVSR", &PPUInterpreter::LVSR, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::LVEHX(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVEHX", &PPUInterpreter::LVEHX, vd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    addr_i64       = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFFEULL);
+    auto val_i16   = ReadMemory(addr_i64, 16);
+    auto index_i64 = m_ir_builder->CreateAnd(addr_i64, 0xf);
+    index_i64      = m_ir_builder->CreateLShr(index_i64, 1);
+    index_i64      = m_ir_builder->CreateSub(m_ir_builder->getInt64(7), index_i64);
+    auto vd_v8i16  = GetVrAsIntVec(vd, 16);
+    vd_v8i16       = m_ir_builder->CreateInsertElement(vd_v8i16, val_i16, index_i64);
+    SetVr(vd, vd_v8i16);
+
+    //InterpreterCall("LVEHX", &PPUInterpreter::LVEHX, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -1781,7 +1870,8 @@ void PPULLVMRecompiler::LDUX(u32 rd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::DCBST(u32 ra, u32 rb) {
-    InterpreterCall("DCBST", &PPUInterpreter::DCBST, ra, rb);
+    // TODO: Implement this
+    //InterpreterCall("DCBST", &PPUInterpreter::DCBST, ra, rb);
 }
 
 void PPULLVMRecompiler::LWZUX(u32 rd, u32 ra, u32 rb) {
@@ -1817,24 +1907,38 @@ void PPULLVMRecompiler::TD(u32 to, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::LVEWX(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVEWX", &PPUInterpreter::LVEWX, vd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    addr_i64       = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFFCULL);
+    auto val_i32   = ReadMemory(addr_i64, 32);
+    auto index_i64 = m_ir_builder->CreateAnd(addr_i64, 0xf);
+    index_i64      = m_ir_builder->CreateLShr(index_i64, 2);
+    index_i64      = m_ir_builder->CreateSub(m_ir_builder->getInt64(3), index_i64);
+    auto vd_v4i32  = GetVrAsIntVec(vd, 32);
+    vd_v4i32       = m_ir_builder->CreateInsertElement(vd_v4i32, val_i32, index_i64);
+    SetVr(vd, vd_v4i32);
+
+    //InterpreterCall("LVEWX", &PPUInterpreter::LVEWX, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::MULHD(u32 rd, u32 ra, u32 rb, bool rc) {
-    auto ra_i64     = GetGpr(ra);
-    auto rb_i64     = GetGpr(rb);
-    auto ra_i128    = m_ir_builder->CreateSExt(ra_i64, m_ir_builder->getIntNTy(128));
-    auto rb_i128    = m_ir_builder->CreateSExt(rb_i64, m_ir_builder->getIntNTy(128));
-    auto prod_i128  = m_ir_builder->CreateMul(ra_i128, rb_i128);
-    auto prod_v2i64 = m_ir_builder->CreateBitCast(prod_i128, VectorType::get(m_ir_builder->getInt64Ty(), 2));
-    auto prod_i64   = m_ir_builder->CreateExtractElement(prod_v2i64, m_ir_builder->getInt32(1));
+    auto ra_i64    = GetGpr(ra);
+    auto rb_i64    = GetGpr(rb);
+    auto ra_i128   = m_ir_builder->CreateSExt(ra_i64, m_ir_builder->getIntNTy(128));
+    auto rb_i128   = m_ir_builder->CreateSExt(rb_i64, m_ir_builder->getIntNTy(128));
+    auto prod_i128 = m_ir_builder->CreateMul(ra_i128, rb_i128);
+    prod_i128      = m_ir_builder->CreateLShr(prod_i128, 64);
+    auto prod_i64  = m_ir_builder->CreateTrunc(prod_i128, m_ir_builder->getInt64Ty());
     SetGpr(rd, prod_i64);
 
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO: Check what code this generates
     //InterpreterCall("MULHD", &PPUInterpreter::MULHD, rd, ra, rb, rc);
 }
 
@@ -1858,7 +1962,8 @@ void PPULLVMRecompiler::LDARX(u32 rd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::DCBF(u32 ra, u32 rb) {
-    InterpreterCall("DCBF", &PPUInterpreter::DCBF, ra, rb);
+    // TODO: Implement this
+    //InterpreterCall("DCBF", &PPUInterpreter::DCBF, ra, rb);
 }
 
 void PPULLVMRecompiler::LBZX(u32 rd, u32 ra, u32 rb) {
@@ -2099,7 +2204,8 @@ void PPULLVMRecompiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::DCBTST(u32 ra, u32 rb, u32 th) {
-    InterpreterCall("DCBTST", &PPUInterpreter::DCBTST, ra, rb, th);
+    // TODO: Implement this
+    //InterpreterCall("DCBTST", &PPUInterpreter::DCBTST, ra, rb, th);
 }
 
 void PPULLVMRecompiler::STBUX(u32 rs, u32 ra, u32 rb) {
@@ -2129,7 +2235,8 @@ void PPULLVMRecompiler::ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::DCBT(u32 ra, u32 rb, u32 th) {
-    InterpreterCall("DCBT", &PPUInterpreter::DCBT, ra, rb, th);
+    // TODO: Implement this using prefetch
+    //InterpreterCall("DCBT", &PPUInterpreter::DCBT, ra, rb, th);
 }
 
 void PPULLVMRecompiler::LHZX(u32 rd, u32 ra, u32 rb) {
@@ -2239,7 +2346,22 @@ void PPULLVMRecompiler::LVXL(u32 vd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::MFTB(u32 rd, u32 spr) {
-    InterpreterCall("MFTB", &PPUInterpreter::MFTB, rd, spr);
+    static Function * s_get_time_fn = nullptr;
+
+    if (s_get_time_fn == nullptr) {
+        s_get_time_fn = (Function *)m_module->getOrInsertFunction("get_time", m_ir_builder->getInt64Ty(), nullptr);
+        s_get_time_fn->setCallingConv(CallingConv::X86_64_Win64);
+        m_execution_engine->addGlobalMapping(s_get_time_fn, (void *)get_time);
+    }
+    
+    auto tb_i64 = (Value *)m_ir_builder->CreateCall(s_get_time_fn);
+
+    u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
+    if (n == 0x10D) {
+        tb_i64 = m_ir_builder->CreateLShr(tb_i64, 32);
+    }
+
+    SetGpr(rd, tb_i64);
 }
 
 void PPULLVMRecompiler::LWAUX(u32 rd, u32 ra, u32 rb) {
@@ -2408,7 +2530,20 @@ void PPULLVMRecompiler::DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void PPULLVMRecompiler::LVLX(u32 vd, u32 ra, u32 rb) {
-    InterpreterCall("LVLX", &PPUInterpreter::LVLX, vd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    auto eb_i64   = m_ir_builder->CreateAnd(addr_i64, 0xF);
+    eb_i64        = m_ir_builder->CreateShl(eb_i64, 3);
+    auto eb_i128  = m_ir_builder->CreateZExt(eb_i64, m_ir_builder->getIntNTy(128));
+    addr_i64      = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFF0ULL);
+    auto mem_i128 = ReadMemory(addr_i64, 128);
+    mem_i128      = m_ir_builder->CreateShl(mem_i128, eb_i128);
+    SetVr(vd, mem_i128);
+    //InterpreterCall("LVLX", &PPUInterpreter::LVLX, vd, ra, rb);
 }
 
 void PPULLVMRecompiler::LDBRX(u32 rd, u32 ra, u32 rb) {
@@ -2504,7 +2639,8 @@ void PPULLVMRecompiler::LFSUX(u32 frd, u32 ra, u32 rb) {
 }
 
 void PPULLVMRecompiler::SYNC(u32 l) {
-    InterpreterCall("SYNC", &PPUInterpreter::SYNC, l);
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_mfence));
+    //InterpreterCall("SYNC", &PPUInterpreter::SYNC, l);
 }
 
 void PPULLVMRecompiler::LFDX(u32 frd, u32 ra, u32 rb) {
@@ -2799,7 +2935,20 @@ void PPULLVMRecompiler::ICBI(u32 ra, u32 rs) {
 }
 
 void PPULLVMRecompiler::DCBZ(u32 ra, u32 rb) {
-    InterpreterCall("DCBZ", &PPUInterpreter::DCBZ, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    addr_i64         = m_ir_builder->CreateAnd(addr_i64, ~(127ULL));
+    addr_i64         = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+    auto addr_i8_ptr = m_ir_builder->CreateIntToPtr(addr_i64, m_ir_builder->getInt8PtrTy());
+
+    std::vector<Type *> types = {(Type *)m_ir_builder->getInt8PtrTy(), (Type *)m_ir_builder->getInt32Ty()};
+    m_ir_builder->CreateCall5(Intrinsic::getDeclaration(m_module, Intrinsic::memset, types),
+                              addr_i8_ptr, m_ir_builder->getInt8(0), m_ir_builder->getInt32(128), m_ir_builder->getInt32(128), m_ir_builder->getInt1(true));
+    //InterpreterCall("DCBZ", &PPUInterpreter::DCBZ, ra, rb);L
 }
 
 void PPULLVMRecompiler::LWZ(u32 rd, u32 ra, s32 d) {
@@ -3466,12 +3615,10 @@ void PPULLVMRecompiler::Compile(u32 address) {
     auto function_name = fmt::Format("fn_0x%X_%u", address, revision);
     m_current_function = (Function *)m_module->getOrInsertFunction(function_name, m_ir_builder->getVoidTy(),
                                                                    m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-                                                                   m_ir_builder->getInt64Ty() /*base_addres*/,
                                                                    m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
     m_current_function->setCallingConv(CallingConv::X86_64_Win64);
     auto arg_i = m_current_function->arg_begin();
     arg_i->setName("ppu_state");
-    (++arg_i)->setName("base_address");
     (++arg_i)->setName("interpreter");
 
     // Add an entry block that branches to the first instruction
@@ -3607,15 +3754,8 @@ Value * PPULLVMRecompiler::GetPPUState() {
     return m_current_function->arg_begin();
 }
 
-Value * PPULLVMRecompiler::GetBaseAddress() {
-    auto i = m_current_function->arg_begin();
-    i++;
-    return i;
-}
-
 Value * PPULLVMRecompiler::GetInterpreter() {
     auto i = m_current_function->arg_begin();
-    i++;
     i++;
     return i;
 }
@@ -4073,7 +4213,7 @@ void PPULLVMRecompiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_
 
 Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
     if (bits != 32) {
-        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
+        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
         auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getIntNTy(bits)->getPointerTo());
         auto val_ix       = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr);
         if (bits > 8 && bswap) {
@@ -4101,7 +4241,7 @@ Value * PPULLVMRecompiler::ReadMemory(Value * addr_i64, u32 bits, bool bswap) {
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
-        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
+        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
         auto eaddr_i32_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
         auto val_then_i32  = (Value *)m_ir_builder->CreateLoad(eaddr_i32_ptr);
         if (bswap) {
@@ -4132,7 +4272,7 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
             val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {val_ix->getType()}), val_ix);
         }
 
-        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
+        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
         auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
         m_ir_builder->CreateStore(val_ix, eaddr_ix_ptr);
     } else {
@@ -4160,7 +4300,7 @@ void PPULLVMRecompiler::WriteMemory(Value * addr_i64, Value * val_ix, bool bswap
             val_then_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, {m_ir_builder->getInt32Ty()}), val_then_i32);
         }
 
-        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, GetBaseAddress());
+        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
         auto eaddr_i32_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
         m_ir_builder->CreateStore(val_then_i32, eaddr_i32_ptr);
         m_ir_builder->CreateBr(merge_bb);
@@ -4255,7 +4395,7 @@ PPULLVMEmulator::PPULLVMEmulator(PPUThread & ppu)
     s_num_instances++;
     if (!s_recompiler) {
         s_recompiler = new PPULLVMRecompiler();
-        //s_recompiler->RunAllTests(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
+        //s_recompiler->RunAllTests(&m_ppu, m_interpreter);
     }
 }
 
@@ -4327,7 +4467,7 @@ u8 PPULLVMEmulator::DecodeMemory(const u32 address) {
 
     u8 ret = 0;
     if (address_to_executable_iter != m_address_to_executable.end()) {
-        address_to_executable_iter->second.executable(&m_ppu, (u64)Memory.GetBaseAddr(), m_interpreter);
+        address_to_executable_iter->second.executable(&m_ppu, m_interpreter);
         address_to_executable_iter->second.num_hits++;
         m_last_instr_was_branch = true;
     } else {

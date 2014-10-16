@@ -7,6 +7,7 @@
 #include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -2809,6 +2810,7 @@ private:
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
+		CPU.TB = get_time();
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
