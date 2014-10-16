@@ -28,6 +28,7 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_is_branch(false)
 	, m_status(Stopped)
 	, m_last_syscall(0)
+	, m_trace_enabled(false)
 {
 }
 
@@ -298,7 +299,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 void CPUThread::Task()
 {
-	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s enter", CPUThread::GetFName().c_str());
+	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
 
@@ -337,7 +338,7 @@ void CPUThread::Task()
 			}
 
 			Step();
-			//if (PC - 0x13ED4 < 0x288) trace.push_back(PC);
+			//if (m_trace_enabled) trace.push_back(PC);
 			NextPc(m_dec->DecodeMemory(PC + m_offset));
 
 			if (status == CPUThread_Step)
@@ -373,7 +374,25 @@ void CPUThread::Task()
 	// TODO: linux version
 #endif
 
-	for (auto& v : trace) LOG_NOTICE(PPU, "PC = 0x%x", v);
+	if (trace.size())
+	{
+		LOG_NOTICE(GENERAL, "Trace begin (%d elements)", trace.size());
 
-	if (Ini.HLELogging.GetValue()) LOG_NOTICE(PPU, "%s leave", CPUThread::GetFName().c_str());
+		u32 start = trace[0], prev = trace[0] - 4;
+
+		for (auto& v : trace) //LOG_NOTICE(GENERAL, "PC = 0x%x", v);
+		{
+			if (v - prev != 4)
+			{
+				LOG_NOTICE(GENERAL, "Trace: 0x%08x .. 0x%08x", start, prev);
+				start = v;
+			}
+			prev = v;
+		}
+
+		LOG_NOTICE(GENERAL, "Trace end: 0x%08x .. 0x%08x", start, prev);
+	}
+
+
+	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s leave", CPUThread::GetFName().c_str());
 }

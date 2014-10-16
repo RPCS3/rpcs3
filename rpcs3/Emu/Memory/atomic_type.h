@@ -49,7 +49,7 @@ public:
 	// atomically compare data with cmp, replace with exch if equal, return true if data was replaced
 	__forceinline bool compare_and_swap_test(const T& cmp, const T& exch) volatile
 	{
-		return InterlockedCompareExchange(&data, (atomic_type&)(exch), (atomic_type&)(cmp)) == (atomic_type&)(cmp);
+		return InterlockedCompareExchangeTest(&data, (atomic_type&)(exch), (atomic_type&)(cmp));
 	}
 
 	// read data with memory barrier

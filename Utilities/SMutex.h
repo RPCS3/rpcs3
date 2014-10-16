@@ -2,7 +2,6 @@
 #include "Emu/Memory/atomic_type.h"
 
 bool SM_IsAborted();
-void SM_Sleep();
 
 enum SMutexResult
 {
@@ -20,8 +19,7 @@ template
 <
 	typename T,
 	const u64 free_value = 0,
-	const u64 dead_value = 0xffffffffffffffffull,
-	void (*wait)() = SM_Sleep
+	const u64 dead_value = 0xffffffffffffffffull
 >
 class SMutexBase
 {
@@ -118,7 +116,7 @@ public:
 				default: return res;
 			}
 
-			if (wait != nullptr) wait();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 			if (timeout && counter++ > timeout)
 			{

@@ -804,7 +804,7 @@ void cellPngDec_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libpngdec = (u32)Memory.PRXMem.AllocAlign(sizeof(libpngdec_data), 4096);
+		libpngdec = (u32)Memory.MainMem.AllocAlign(sizeof(libpngdec_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libpngdec), libpngdec_data, sizeof(libpngdec_data));
 		libpngdec_rtoc = libpngdec + 0x49710;
 

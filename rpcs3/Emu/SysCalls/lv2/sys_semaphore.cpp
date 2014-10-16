@@ -119,11 +119,10 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 				continue;
 			}
 			sem->signal = 0;
-			// TODO: notify signaler
 			return CELL_OK;
 		}
 
-		SM_Sleep();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
@@ -182,7 +181,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 
 		if (sem->signal && sem->m_queue.count())
 		{
-			SM_Sleep();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
@@ -190,7 +189,6 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 		{
 			count--;
 			sem->signal = target;
-			Emu.GetCPU().NotifyThread(target);
 		}
 		else
 		{

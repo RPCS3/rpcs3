@@ -1018,7 +1018,7 @@ void SPUThread::StopAndSignal(u32 code)
 
 	case 0x003:
 	{
-		GPR[3]._u32[3] = m_code3_func(*this);
+		GPR[3]._u64[1] = m_code3_func(*this);
 		break;
 	}
 
@@ -1161,7 +1161,7 @@ void SPUThread::StopAndSignal(u32 code)
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 		}
-		Stop();
+		Emu.Pause();
 		break;
 	}
 	}

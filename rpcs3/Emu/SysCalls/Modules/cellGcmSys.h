@@ -12,8 +12,8 @@ enum
 
 struct CellGcmOffsetTable
 {
-	be_t<u32> ioAddress; // u16*
-	be_t<u32> eaAddress; // u16*
+	vm::bptr<u16> ioAddress;
+	vm::bptr<u16> eaAddress;
 };
 
 // Auxiliary functions

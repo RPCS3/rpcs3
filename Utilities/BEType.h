@@ -1,20 +1,91 @@
 #pragma once
 
-#include <emmintrin.h>
-
 union u128
 {
 	u64 _u64[2];
 	s64 _s64[2];
+
+	class u64_reversed_array_2
+	{
+		u64 data[2];
+
+	public:
+		u64& operator [] (s32 index)
+		{
+			return data[1 - index];
+		}
+
+		const u64& operator [] (s32 index) const
+		{
+			return data[1 - index];
+		}
+
+	} u64r;
+
 	u32 _u32[4];
 	s32 _s32[4];
+
+	class u32_reversed_array_4
+	{
+		u32 data[4];
+
+	public:
+		u32& operator [] (s32 index)
+		{
+			return data[3 - index];
+		}
+
+		const u32& operator [] (s32 index) const
+		{
+			return data[3 - index];
+		}
+
+	} u32r;
+
 	u16 _u16[8];
 	s16 _s16[8];
+
+	class u16_reversed_array_8
+	{
+		u16 data[8];
+
+	public:
+		u16& operator [] (s32 index)
+		{
+			return data[7 - index];
+		}
+
+		const u16& operator [] (s32 index) const
+		{
+			return data[7 - index];
+		}
+
+	} u16r;
+
 	u8  _u8[16];
 	s8  _s8[16];
+
+	class u8_reversed_array_16
+	{
+		u8 data[16];
+
+	public:
+		u8& operator [] (s32 index)
+		{
+			return data[15 - index];
+		}
+
+		const u8& operator [] (s32 index) const
+		{
+			return data[15 - index];
+		}
+
+	} u8r;
+
 	float _f[4];
 	double _d[2];
-	__m128 xmm;
+	__m128 vf;
+	__m128i vi;
 
 	class bit_array_128
 	{
@@ -94,6 +165,11 @@ union u128
 		return ret;
 	}
 
+	static u128 from64r(u64 _1, u64 _0 = 0)
+	{
+		return from64(_0, _1);
+	}
+
 	static u128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
 	{
 		u128 ret;
@@ -106,11 +182,20 @@ union u128
 
 	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
 	{
+		return from32(_0, _1, _2, _3);
+	}
+
+	static u128 from32p(u32 value)
+	{
 		u128 ret;
-		ret._u32[0] = _0;
-		ret._u32[1] = _1;
-		ret._u32[2] = _2;
-		ret._u32[3] = _3;
+		ret.vi = _mm_set1_epi32((int)value);
+		return ret;
+	}
+
+	static u128 from8p(u8 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi8((char)value);
 		return ret;
 	}
 
@@ -121,9 +206,41 @@ union u128
 		return ret;
 	}
 
-	void setBit(u32 bit)
+	static u128 fromV(__m128i value)
 	{
-		_bit[bit] = true;
+		u128 ret;
+		ret.vi = value;
+		return ret;
+	}
+
+	static __forceinline u128 add8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 minu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_min_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 eq8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 gtu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpgt_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 leu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmple_epu8(left.vi, right.vi));
 	}
 
 	bool operator == (const u128& right) const
@@ -136,24 +253,30 @@ union u128
 		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
 
-	u128 operator | (const u128& right) const
+	__forceinline u128 operator | (const u128& right) const
 	{
-		return from64(_u64[0] | right._u64[0], _u64[1] | right._u64[1]);
+		return fromV(_mm_or_si128(vi, right.vi));
 	}
 
-	u128 operator & (const u128& right) const
+	__forceinline u128 operator & (const u128& right) const
 	{
-		return from64(_u64[0] & right._u64[0], _u64[1] & right._u64[1]);
+		return fromV(_mm_and_si128(vi, right.vi));
 	}
 
-	u128 operator ^ (const u128& right) const
+	__forceinline u128 operator ^ (const u128& right) const
 	{
-		return from64(_u64[0] ^ right._u64[0], _u64[1] ^ right._u64[1]);
+		return fromV(_mm_xor_si128(vi, right.vi));
 	}
 
 	u128 operator ~ () const
 	{
 		return from64(~_u64[0], ~_u64[1]);
+	}
+
+	// result = (~left) & (right)
+	static __forceinline u128 andnot(const u128& left, const u128& right)
+	{
+		return fromV(_mm_andnot_si128(left.vi, right.vi));
 	}
 
 	void clear()
@@ -179,6 +302,72 @@ union u128
 		return ret;
 	}
 };
+
+#ifndef InterlockedCompareExchange
+static __forceinline u128 InterlockedCompareExchange(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+	return (u128&)res;
+#else
+	_InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp);
+	return comp;
+#endif
+}
+#endif
+
+static __forceinline bool InterlockedCompareExchangeTest(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+#else
+	return _InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp) != 0;
+#endif
+}
+
+#ifndef InterlockedExchange
+static __forceinline u128 InterlockedExchange(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedOr
+static __forceinline u128 InterlockedOr(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old | value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedAnd
+static __forceinline u128 InterlockedAnd(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old & value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedXor
+static __forceinline u128 InterlockedXor(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old ^ value, old)) return old;
+	}
+}
+#endif
 
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
