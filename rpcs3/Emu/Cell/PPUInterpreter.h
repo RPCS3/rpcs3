@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/SysCalls/lv2/sys_time.h"
 
 #include <stdint.h>
 #ifdef _MSC_VER
@@ -425,6 +426,7 @@ private:
 		}
 
 		// Bit n°2 of CR6
+		CPU.SetCR(6, 0);
 		CPU.SetCRBit(6, 0x2, allInBounds);
 	}
 	void VCMPEQFP(u32 vd, u32 va, u32 vb)
@@ -2199,7 +2201,7 @@ private:
 	}
 	void ORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] | (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] | ((u64)uimm16 << 16);
 	}
 	void XORI(u32 ra, u32 rs, u32 uimm16)
 	{
@@ -2207,7 +2209,7 @@ private:
 	}
 	void XORIS(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] ^ (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] ^ ((u64)uimm16 << 16);
 	}
 	void ANDI_(u32 ra, u32 rs, u32 uimm16)
 	{
@@ -2216,7 +2218,7 @@ private:
 	}
 	void ANDIS_(u32 ra, u32 rs, u32 uimm16)
 	{
-		CPU.GPR[ra] = CPU.GPR[rs] & (uimm16 << 16);
+		CPU.GPR[ra] = CPU.GPR[rs] & ((u64)uimm16 << 16);
 		CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc)
@@ -2244,11 +2246,11 @@ private:
 	{
 		if (is_r) // rldcr
 		{
-			RLDICR(ra, rs, (u32)CPU.GPR[rb], m_eb, rc);
+			RLDICR(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
 		}
 		else // rldcl
 		{
-			RLDICL(ra, rs, (u32)CPU.GPR[rb], m_eb, rc);
+			RLDICL(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
 		}
 	}
 	void CMP(u32 crfd, u32 l, u32 ra, u32 rb)
@@ -2395,8 +2397,7 @@ private:
 		}
 
 		CPU.GPR[ra] = i;
-
-		if(rc) CPU.SetCRBit(CR_LT, false);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void SLD(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2480,7 +2481,7 @@ private:
 		}
 
 		CPU.GPR[ra] = i;
-		if(rc) CPU.SetCRBit(CR_LT, false);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void ANDC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2801,6 +2802,7 @@ private:
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
+		CPU.TB = get_time();
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;

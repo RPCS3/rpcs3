@@ -796,15 +796,6 @@ protected:
 	virtual void DoPause() override;
 	virtual void DoResume() override;
 	virtual void DoStop() override;
-
-	virtual void Step() override
-	{
-		//if(++cycle > 20)
-		{
-			TB++;
-			//cycle = 0;
-		}
-	}
 };
 
 PPUThread& GetCurrentPPUThread();
