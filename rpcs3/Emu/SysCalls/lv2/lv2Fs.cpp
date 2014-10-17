@@ -30,7 +30,7 @@ struct FsRingBufferConfig
 } fs_config;
 
 
-s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<u32> arg, u64 size)
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<u32> arg, u64 size)
 {
 	sys_fs->Log("cellFsOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx)",
 		path.get_ptr(), flags, fd.addr(), arg.addr(), size);
@@ -116,7 +116,7 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<u32
 	return CELL_OK;
 }
 
-s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Log("cellFsRead(fd=%d, buf_addr=0x%x, nbytes=0x%llx, nread_addr=0x%x)",
 		fd, buf.addr(), nbytes, nread.addr());
@@ -407,7 +407,7 @@ s32 cellFsUnlink(vm::ptr<const char> path)
 	return CELL_OK;
 }
 
-s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
+s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 {
 	sys_fs->Log("cellFsLseek(fd=%d, offset=0x%llx, whence=0x%x, pos_addr=0x%x)", fd, offset, whence, pos.addr());
 

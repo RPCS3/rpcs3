@@ -111,7 +111,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 }
 	
 
-int cellFsSdataOpen(vm::ptr<const char> path, int flags, vm::ptr<u32> fd, vm::ptr<u32> arg, u64 size)
+int cellFsSdataOpen(vm::ptr<const char> path, int flags, vm::ptr<be_t<u32>> fd, vm::ptr<u32> arg, u64 size)
 {
 	sys_fs->Warning("cellFsSdataOpen(path=\"%s\", flags=0x%x, fd_addr=0x%x, arg_addr=0x%x, size=0x%llx) -> cellFsOpen()",
 		path.get_ptr(), flags, fd.addr(), arg.addr(), size);
@@ -270,7 +270,7 @@ int cellFsAioFinish(vm::ptr<const char> mount_point)
 	return CELL_OK;
 }
 
-int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
+int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
 		fd, offset, buf.addr(), buffer_size, nread.addr());
@@ -278,7 +278,7 @@ int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 	LV2_LOCK(0);
 
 	int ret;
-	vm::var<u64> oldPos, newPos;
+	vm::var<be_t<u64>> oldPos, newPos;
 	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos);       // Save the current position
 	if (ret) return ret;
 	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos);  // Move to the specified offset

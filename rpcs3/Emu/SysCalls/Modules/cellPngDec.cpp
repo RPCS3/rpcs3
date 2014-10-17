@@ -83,9 +83,9 @@ s32 pngDecOpen(
 
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
-		vm::var<u32> fd;
+		vm::var<be_t<u32>> fd;
 		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
-		stream->fd = fd;
+		stream->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
@@ -141,7 +141,7 @@ s32 pngReadHeader(
 	//Write the header to buffer
 	vm::var<u8[34]> buffer; // Alloc buffer for PNG header
 	auto buffer_32 = buffer.To<be_t<u32>>();
-	vm::var<u64> pos, nread;
+	vm::var<be_t<u64>> pos, nread;
 
 	switch (stream->src.srcSelect.ToBE())
 	{
@@ -246,7 +246,7 @@ s32 pngDecodeData(
 
 	//Copy the PNG file to a buffer
 	vm::var<unsigned char[]> png((u32)fileSize);
-	vm::var<u64> pos, nread;
+	vm::var<be_t<u64>> pos, nread;
 
 	switch (stream->src.srcSelect.ToBE())
 	{

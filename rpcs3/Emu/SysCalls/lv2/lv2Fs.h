@@ -128,8 +128,8 @@ struct CellFsRingBuffer
 };
 
 // SysCalls
-s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<u32> arg, u64 size);
-s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<u32> arg, u64 size);
+s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread);
 s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 cellFsClose(u32 fd);
 s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<u32> fd);
@@ -143,7 +143,7 @@ s32 cellFsChmod(vm::ptr<const char> path, u32 mode);
 s32 cellFsFsync(u32 fd);
 s32 cellFsRmdir(vm::ptr<const char> path);
 s32 cellFsUnlink(vm::ptr<const char> path);
-s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos);
+s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos);
 s32 cellFsFtruncate(u32 fd, u64 size);
 s32 cellFsTruncate(vm::ptr<const char> path, u64 size);
 s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size);

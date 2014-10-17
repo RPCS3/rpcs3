@@ -618,8 +618,8 @@ union CellSailEvent
 	};
 };
 
-typedef void(*CellSailMemAllocatorFuncAlloc)(u32 pArg, u32 boundary, u32 size);
-typedef void(*CellSailMemAllocatorFuncFree)(u32 pArg, u32 boundary, u32 pMemory);
+typedef u32(*CellSailMemAllocatorFuncAlloc)(u32 pArg, u32 boundary, u32 size);
+typedef u32(*CellSailMemAllocatorFuncFree)(u32 pArg, u32 boundary, u32 pMemory);
 
 typedef int(*CellSailSoundAdapterFuncMakeup)(u32 pArg);
 typedef int(*CellSailSoundAdapterFuncCleanup)(u32 pArg);
@@ -1102,5 +1102,4 @@ struct CellSailPlayer
 	be_t<s32> repeatMode;
 	be_t<u32> descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
-	be_t<u64> internalData[128];
 };

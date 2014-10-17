@@ -30,7 +30,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 	return CELL_FONT_OK;
 }
 
-int cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
+int cellFontGetRevisionFlags(vm::ptr<be_t<u64>> revisionFlags)
 {
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
@@ -40,7 +40,7 @@ int cellFontInit(vm::ptr<CellFontConfig> config)
 {
 	cellFont->Log("cellFontInit(config=0x%x)", config.addr());
 
-	vm::var<u64> revisionFlags;
+	vm::var<be_t<u64>> revisionFlags;
 	revisionFlags.value() = 0;
 	cellFontGetRevisionFlags(revisionFlags);
 	return cellFontInitializeWithRevision(revisionFlags.value(), config);

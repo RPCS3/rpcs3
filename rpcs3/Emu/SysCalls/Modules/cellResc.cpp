@@ -14,7 +14,7 @@ extern s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 extern int cellGcmSetFlipMode(u32 mode);
 extern void cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)> handler);
 extern void cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)> handler);
-extern int cellGcmAddressToOffset(u64 address, vm::ptr<u32> offset);
+extern int cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
 extern int cellGcmSetSecondVFrequency(u32 freq);
@@ -1049,12 +1049,12 @@ int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray
 	s_rescInternalInstance->m_vertexArrayEA   = vertexArray.addr();
 	s_rescInternalInstance->m_fragmentUcodeEA = fragmentShader.addr();
 
-	vm::var<u32> dstOffset;
+	vm::var<be_t<u32>> dstOffset;
 	cellGcmAddressToOffset(s_rescInternalInstance->m_colorBuffersEA, dstOffset);
 
 	for (int i=0; i<GetNumColorBuffers(); i++)
 	{
-		s_rescInternalInstance->m_dstOffsets[i] = dstOffset + i * s_rescInternalInstance->m_dstBufInterval;
+		s_rescInternalInstance->m_dstOffsets[i] = dstOffset->ToLE() + i * s_rescInternalInstance->m_dstBufInterval;
 	}
 
 	for (int i=0; i<GetNumColorBuffers(); i++)
