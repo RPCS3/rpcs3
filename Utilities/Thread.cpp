@@ -219,11 +219,12 @@ bool waiter_map_t::is_stopped(u64 signal_id)
 	return false;
 }
 
-waiter_map_t::waiter_reg_t::waiter_reg_t(waiter_map_t& map, u64 signal_id)
-	: signal_id(signal_id)
-	, thread(GetCurrentNamedThread())
-	, map(map)
+void waiter_map_t::waiter_reg_t::init()
 {
+	if (thread) return;
+
+	thread = GetCurrentNamedThread();
+
 	std::lock_guard<std::mutex> lock(map.m_mutex);
 
 	// add waiter
@@ -232,10 +233,12 @@ waiter_map_t::waiter_reg_t::waiter_reg_t(waiter_map_t& map, u64 signal_id)
 
 waiter_map_t::waiter_reg_t::~waiter_reg_t()
 {
+	if (!thread) return;
+
 	std::lock_guard<std::mutex> lock(map.m_mutex);
 
 	// remove waiter
-	for (size_t i = map.m_waiters.size() - 1; i >= 0; i--)
+	for (s64 i = map.m_waiters.size() - 1; i >= 0; i--)
 	{
 		if (map.m_waiters[i].signal_id == signal_id && map.m_waiters[i].thread == thread)
 		{
