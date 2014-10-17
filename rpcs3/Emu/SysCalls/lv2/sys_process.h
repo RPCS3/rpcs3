@@ -31,15 +31,15 @@ s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 // SysCalls
 s32 sys_process_getpid();
 s32 sys_process_getppid();
-s32 sys_process_get_number_of_object(u32 object, vm::ptr<be_t<u32>> nump);
-s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, vm::ptr<be_t<u32>> set_size);
+s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump);
+s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size);
 s32 sys_process_get_paramsfo(vm::ptr<u8> buffer);
-s32 sys_process_get_sdk_version(u32 pid, vm::ptr<be_t<s32>> version);
+s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version);
 s32 sys_process_get_status(u64 unk);
 s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 s32 sys_process_exit(s32 errorcode);
 s32 sys_process_kill(u32 pid);
-s32 sys_process_wait_for_child(u32 pid, vm::ptr<be_t<u32>> status, u64 unk);
+s32 sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk);
 s32 sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);
 s32 sys_process_detach_child(u64 unk);
 void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr,

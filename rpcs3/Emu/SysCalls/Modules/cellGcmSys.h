@@ -30,7 +30,7 @@ void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table);
 s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address);
 s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size);
 s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags);
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset);
+s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset);
 s32 cellGcmReserveIoMapSize(u32 size);
 s32 cellGcmUnmapEaIoAddress(u64 ea);
 s32 cellGcmUnmapIoAddress(u64 io);

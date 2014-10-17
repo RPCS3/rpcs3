@@ -540,7 +540,9 @@ int cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
+		cellGcmSys->Todo("Unimplemented display frequency: 59.94Hz");
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
+		cellGcmSys->Todo("Unimplemented display frequency: Scanout");
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq;
 		break;
@@ -919,7 +921,7 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	return CELL_OK;
 }
 
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
+s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys->Warning("cellGcmMapMainMemory(ea=0x%x,size=0x%x,offset_addr=0x%x)", ea, size, offset.addr());
 

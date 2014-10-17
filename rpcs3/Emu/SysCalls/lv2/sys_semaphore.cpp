@@ -21,7 +21,7 @@ u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u6
 	return id;
 }
 
-s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, s32 initial_count, s32 max_count)
+s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr, s32 initial_count, s32 max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.addr(), initial_count, max_count);
@@ -200,7 +200,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 	return CELL_OK;
 }
 
-s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<be_t<s32>> count)
+s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
 	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.addr());
 

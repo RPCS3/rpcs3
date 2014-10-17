@@ -134,7 +134,7 @@ void sys_game_process_exitspawn2(
 	return;
 }
 
-s32 sys_process_get_number_of_object(u32 object, vm::ptr<be_t<u32>> nump)
+s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
 	sys_process.Warning("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
 		object, nump.addr());
@@ -169,7 +169,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<be_t<u32>> nump)
 	return CELL_OK;
 }
 
-s32 sys_process_get_id(u32 object, vm::ptr<be_t<u32>> buffer, u32 size, vm::ptr<be_t<u32>> set_size)
+s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
 {
 	sys_process.Todo("sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
 		object, buffer.addr(), size, set_size.addr());
@@ -258,7 +258,7 @@ s32 process_get_sdk_version(u32 pid, s32& ver)
 	return CELL_OK;
 }
 
-s32 sys_process_get_sdk_version(u32 pid, vm::ptr<be_t<s32>> version)
+s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 {
 	sys_process.Warning("sys_process_get_sdk_version(pid=%d, version_addr=0x%x)", pid, version.addr());
 
@@ -281,7 +281,7 @@ s32 sys_process_kill(u32 pid)
 	return CELL_OK;
 }
 
-s32 sys_process_wait_for_child(u32 pid, vm::ptr<be_t<u32>> status, u64 unk)
+s32 sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
 {
 	sys_process.Todo("sys_process_wait_for_child(pid=%d, status_addr=0x%x, unk=0x%llx",
 		pid, status.addr(), unk);

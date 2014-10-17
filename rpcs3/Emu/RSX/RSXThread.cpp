@@ -170,7 +170,7 @@ u32 RSXVertexData::GetTypeSize()
 
 u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
-	auto args = vm::ptr<be_t<u32>>::make(args_addr);
+	auto args = vm::ptr<u32>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
@@ -237,7 +237,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
-	auto args = vm::ptr<be_t<u32>>::make(args_addr);
+	auto args = vm::ptr<u32>::make(args_addr);
 
 #if	CMD_DEBUG
 		std::string debug = GetMethodName(cmd);
@@ -2260,19 +2260,19 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//LOG_WARNING(RSX, "non increment cmd! 0x%x", cmd);
-			inc=0;
+			inc = 0;
 		}
 
 		if(cmd == 0)
 		{
 			LOG_ERROR(Log::RSX, "null cmd: cmd=0x%x, put=0x%x, get=0x%x (addr=0x%x)", cmd, put, get, (u32)Memory.RSXIOMem.RealAddr(get));
-			Emu.Pause();
-			//HACK! We couldn't be here
+			//Emu.Pause();
+			//HACK! We shouldn't be here
 			m_ctrl->get = get + (count + 1) * 4;
 			continue;
 		}
 
-		auto args = vm::ptr<be_t<u32>>::make((u32)Memory.RSXIOMem.RealAddr(get + 4));
+		auto args = vm::ptr<u32>::make((u32)Memory.RSXIOMem.RealAddr(get + 4));
 
 		for(u32 i=0; i<count; i++)
 		{

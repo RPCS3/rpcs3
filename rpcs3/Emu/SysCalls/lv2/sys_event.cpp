@@ -27,7 +27,7 @@ u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key
 	return id;
 }
 
-s32 sys_event_queue_create(vm::ptr<be_t<u32>> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
+s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id_addr=0x%x, attr_addr=0x%x, event_queue_key=0x%llx, size=%d)",
 		equeue_id.addr(), attr.addr(), event_queue_key, size);
@@ -112,7 +112,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 	return CELL_OK;
 }
 
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, s32 size, vm::ptr<be_t<u32>> number)
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_array, s32 size, vm::ptr<u32> number)
 {
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.addr(), size, number.addr());
@@ -246,7 +246,7 @@ u32 event_port_create(u64 name)
 	return id;
 }
 
-s32 sys_event_port_create(vm::ptr<be_t<u32>> eport_id, s32 port_type, u64 name)
+s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 {
 	sys_event.Warning("sys_event_port_create(eport_id_addr=0x%x, port_type=0x%x, name=0x%llx)",
 		eport_id.addr(), port_type, name);

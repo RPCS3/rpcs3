@@ -32,7 +32,7 @@ struct Cond
 };
 
 // SysCalls
-s32 sys_cond_create(vm::ptr<be_t<u32>> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr);
+s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr);
 s32 sys_cond_destroy(u32 cond_id);
 s32 sys_cond_wait(u32 cond_id, u64 timeout);
 s32 sys_cond_signal(u32 cond_id);

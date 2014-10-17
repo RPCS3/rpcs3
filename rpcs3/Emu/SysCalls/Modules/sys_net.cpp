@@ -19,7 +19,7 @@ extern "C"
 
 Module *sys_net = nullptr;
 
-vm::ptr<be_t<s32>> g_lastError = vm::ptr<be_t<s32>>::make(0);
+vm::ptr<s32> g_lastError = vm::ptr<s32>::make(0);
 
 
 // Auxiliary Functions
@@ -341,7 +341,7 @@ int socketselect()
 int sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
 {
 	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.addr());
-	g_lastError = vm::ptr<be_t<s32>>::make((u32)Memory.Alloc(4, 1));
+	g_lastError = vm::ptr<s32>::make((u32)Memory.Alloc(4, 1));
 #ifdef _WIN32
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1,1);
@@ -474,7 +474,7 @@ int sys_net_finalize_network()
 {
 	sys_net->Warning("sys_net_initialize_network_ex()");
 	Memory.Free(g_lastError.addr());
-	g_lastError = vm::ptr<be_t<s32>>::make(0);
+	g_lastError = vm::ptr<s32>::make(0);
 #ifdef _WIN32
 	WSACleanup();
 #endif

@@ -181,7 +181,7 @@ int sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<be_t<u64>> time_remain_usec)
+int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<u64> time_remain_usec)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -901,7 +901,7 @@ int sceNpManagerUnregisterCallback()
 	return CELL_OK;
 }
 
-int sceNpManagerGetStatus(vm::ptr<be_t<u32>> status)
+int sceNpManagerGetStatus(vm::ptr<u32> status)
 {
 	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 

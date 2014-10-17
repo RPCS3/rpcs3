@@ -6,9 +6,12 @@
 
 Module *cellSail = nullptr;
 
-int cellSailMemAllocatorInitialize()
+int cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<CellSailMemAllocatorFuncs> pCallbacks)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Warning("cellSailMemAllocatorInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x)", pSelf.addr(), pCallbacks.addr());
+
+	pSelf->callbacks = pCallbacks;
+
 	return CELL_OK;
 }
 
@@ -66,16 +69,19 @@ int cellSailDescriptorGetMediaInfo()
 	return CELL_OK;
 }
 
-int cellSailDescriptorSetAutoSelection()
+int cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Todo("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%b)", pSelf.addr(), autoSelection);
+
+	pSelf->autoSelection = autoSelection;
+
+	return autoSelection;
 }
 
-int cellSailDescriptorIsAutoSelection()
+int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailDescriptorIsAutoSelection(pSelf_addr=0x%x)", pSelf.addr());
+	return pSelf->autoSelection;
 }
 
 int cellSailDescriptorCreateDatabase()
@@ -486,9 +492,18 @@ int cellSailPlayerInitialize()
 	return CELL_OK;
 }
 
-int cellSailPlayerInitialize2()
+int cellSailPlayerInitialize2(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailMemAllocator> pAllocator, vm::ptr<CellSailPlayerFuncNotified> pCallback, u64 callbackArg,
+	                          vm::ptr<CellSailPlayerAttribute> pAttribute, vm::ptr<CellSailPlayerResource> pResource)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Warning("cellSailPlayerInitialize2(pSelf_addr=0x%x, pAllocator_addr=0x%x, pCallback=0x%x, callbackArg=%d, pAttribute_addr=0x%x, pResource=0x%x)", pSelf.addr(),
+		pAllocator.addr(), pCallback.addr(), callbackArg, pAttribute.addr(), pResource.addr());
+
+	pSelf->allocator = pAllocator;
+	pSelf->callback = pCallback;
+	pSelf->callbackArgument = callbackArg;
+	pSelf->attribute = pAttribute;
+	pSelf->resource = pResource;
+
 	return CELL_OK;
 }
 
@@ -576,34 +591,76 @@ int cellSailPlayerBoot()
 	return CELL_OK;
 }
 
-int cellSailPlayerCreateDescriptor()
+int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
+
+	if (pSelf->descriptors < 3)
+	{
+		pSelf->descriptors++;
+		pSelf->registeredDescriptors[pSelf->descriptors] = pDesc;
+		pDesc->registered = true;
+	}
+	else
+	{
+		cellSail->Error("Descriptor limit reached! This should never happen, report this to a developer.");
+	}
+
 	return CELL_OK;
 }
 
-int cellSailPlayerDestroyDescriptor()
+int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<CellSailDescriptor> ppDesc)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Todo("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
+					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
+	
+	// TODO: Let the game allocate memory for the descriptor, setup the descriptor and pass it back to the game
+
+	//CellSailDescriptor *pDesc = new CellSailDescriptor();
+	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, 4, descriptorAddress);
+	//cellSail->Error("Address: 0x%x", descriptorAddress);
+	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
+	//descriptor->streamType = streamType;
+	//descriptor->registered = false;
+
+	pSelf->descriptors = 0;
+	pSelf->repeatMode = 0;
+	//ppDesc = descriptor;
+
+	//cellSail->Todo("pSelf_addr=0x%x, pDesc_addr=0x%x", pSelf.addr(), descriptor.addr());
+	//cellSailPlayerAddDescriptor(pSelf, ppDesc);
+
 	return CELL_OK;
 }
 
-int cellSailPlayerAddDescriptor()
+int cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Todo("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
+
+	if (pDesc->registered)
+		return CELL_SAIL_ERROR_INVALID_STATE;
+
 	return CELL_OK;
 }
 
-int cellSailPlayerRemoveDescriptor()
+int cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> ppDesc)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), ppDesc.addr());
+
+	if (pSelf->descriptors > 0)
+	{
+		ppDesc = pSelf->registeredDescriptors[pSelf->descriptors];
+		delete &pSelf->registeredDescriptors[pSelf->descriptors];
+		pSelf->descriptors--;
+	}
+
+	return pSelf->descriptors;
 }
 
-int cellSailPlayerGetDescriptorCount()
+int cellSailPlayerGetDescriptorCount(vm::ptr<CellSailPlayer> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailPlayerGetDescriptorCount(pSelf_addr=0x%x)", pSelf.addr());
+	return pSelf->descriptors;
 }
 
 int cellSailPlayerGetCurrentDescriptor()
@@ -714,16 +771,23 @@ int cellSailPlayerIsPaused()
 	return CELL_OK;
 }
 
-int cellSailPlayerSetRepeatMode()
+int cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%i, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
+
+	pSelf->repeatMode = repeatMode;
+	pSelf->playbackCommand = pCommand;
+
+	return pSelf->repeatMode;
 }
 
-int cellSailPlayerGetRepeatMode()
+int cellSailPlayerGetRepeatMode(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailStartCommand> pCommand)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailPlayerGetRepeatMode(pSelf_addr=0x%x, pCommand_addr=0x%x)", pSelf.addr(), pCommand.addr());
+
+	pCommand = pSelf->playbackCommand;
+
+	return pSelf->repeatMode;
 }
 
 int cellSailPlayerSetEsAudioMuted()
