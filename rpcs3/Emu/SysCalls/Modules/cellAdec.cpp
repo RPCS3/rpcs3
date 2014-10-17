@@ -28,6 +28,7 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 	, cbArg(arg)
 	, adecCb(nullptr)
 	, is_running(false)
+	, is_closed(false)
 	, is_finished(false)
 	, just_started(false)
 	, just_finished(false)
@@ -64,14 +65,14 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 AudioDecoder::~AudioDecoder()
 {
 	// TODO: check finalization
+	for (u32 i = frames.GetCount() - 1; ~i; i--)
+	{
+		AdecFrame& af = frames.Peek(nullptr, i);
+		av_frame_unref(af.data);
+		av_frame_free(&af.data);
+	}
 	if (ctx)
 	{
-		for (u32 i = frames.GetCount() - 1; ~i; i--)
-		{
-			AdecFrame& af = frames.Peek(i);
-			av_frame_unref(af.data);
-			av_frame_free(&af.data);
-		}
 		avcodec_close(ctx);
 		avformat_close_input(&fmt);
 	}
@@ -97,42 +98,47 @@ next:
 	{
 		while (!adec.job.GetCountUnsafe())
 		{
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || adec.is_closed)
 			{
-				cellAdec->Warning("adecRawRead(): aborted");
+				if (Emu.IsStopped()) cellAdec->Warning("adecRawRead(): aborted");
 				return 0;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
 
-		switch (adec.job.Peek().type)
+		switch (auto jtype = adec.job.Peek(nullptr).type)
 		{
 		case adecEndSeq:
 		case adecClose:
-			{
-				buf_size = adec.reader.size;
-			}
-			break;
+		{
+			buf_size = adec.reader.size;
+		}
+		break;
+		
 		case adecDecodeAu:
-			{
-				memcpy(buf, vm::get_ptr<void>(adec.reader.addr), adec.reader.size);
+		{
+			memcpy(buf, vm::get_ptr<void>(adec.reader.addr), adec.reader.size);
+			
+			buf += adec.reader.size;
+			buf_size -= adec.reader.size;
+			res += adec.reader.size;
 
-				buf += adec.reader.size;
-				buf_size -= adec.reader.size;
-				res += adec.reader.size;
+			adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
-				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
+			adec.job.Pop(adec.task, nullptr);
 
-				adec.job.Pop(adec.task);
-
-				adec.reader.addr = adec.task.au.addr;
-				adec.reader.size = adec.task.au.size;
-				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
-			}
-			break;
+			adec.reader.addr = adec.task.au.addr;
+			adec.reader.size = adec.task.au.size;
+			//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+		}
+		break;
+		
 		default:
-			cellAdec->Error("adecRawRead(): sequence error (task %d)", adec.job.Peek().type);
+		{
+			cellAdec->Error("adecRawRead(): unknown task (%d)", jtype);
+			Emu.Pause();
 			return -1;
+		}
 		}
 
 		goto next;
@@ -264,7 +270,7 @@ u32 adecOpen(AudioDecoder* data)
 
 		while (true)
 		{
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || adec.is_closed)
 			{
 				break;
 			}
@@ -281,7 +287,7 @@ u32 adecOpen(AudioDecoder* data)
 				continue;
 			}*/
 
-			if (!adec.job.Pop(task))
+			if (!adec.job.Pop(task, &adec.is_closed))
 			{
 				break;
 			}
@@ -428,10 +434,10 @@ u32 adecOpen(AudioDecoder* data)
 
 				while (true)
 				{
-					if (Emu.IsStopped())
+					if (Emu.IsStopped() || adec.is_closed)
 					{
-						cellAdec->Warning("adecDecodeAu: aborted");
-						return;
+						if (Emu.IsStopped()) cellAdec->Warning("adecDecodeAu: aborted");
+						break;
 					}
 
 					/*if (!adec.ctx) // fake
@@ -534,10 +540,11 @@ u32 adecOpen(AudioDecoder* data)
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate,
 							//av_get_bytes_per_sample((AVSampleFormat)frame.data->format));
 
-						adec.frames.Push(frame);
-						frame.data = nullptr; // to prevent destruction
-
-						adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+						if (adec.frames.Push(frame, &adec.is_closed))
+						{
+							frame.data = nullptr; // to prevent destruction
+							adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+						}
 					}
 				}
 
@@ -545,19 +552,20 @@ u32 adecOpen(AudioDecoder* data)
 			}
 			break;
 
-			case adecClose:
-			{
-				adec.is_finished = true;
-				cellAdec->Notice("Audio Decoder thread ended");
-				return;
-			}
+			case adecClose: break;
 
 			default:
+			{
 				cellAdec->Error("Audio Decoder thread error: unknown task(%d)", task.type);
+				Emu.Pause();
+				return;
+			}
 			}
 		}
+
 		adec.is_finished = true;
-		cellAdec->Warning("Audio Decoder thread aborted");
+		if (adec.is_closed) cellAdec->Notice("Audio Decoder thread ended");
+		if (Emu.IsStopped()) cellAdec->Warning("Audio Decoder thread aborted");
 	});
 
 	t.detach();
@@ -639,7 +647,8 @@ int cellAdecClose(u32 handle)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adec->job.Push(AdecTask(adecClose));
+	adec->is_closed = true;
+	adec->job.Push(AdecTask(adecClose), &sq_no_wait);
 
 	while (!adec->is_finished)
 	{
@@ -676,7 +685,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 		cellAdec->Todo("cellAdecStartSeq(): initialization");
 	}
 	
-	adec->job.Push(task);
+	adec->job.Push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -690,7 +699,7 @@ int cellAdecEndSeq(u32 handle)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adec->job.Push(AdecTask(adecEndSeq));
+	adec->job.Push(AdecTask(adecEndSeq), &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -711,7 +720,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
 	task.au.userdata = auInfo->userData;
 
-	adec->job.Push(task);
+	adec->job.Push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -731,7 +740,10 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	}
 
 	AdecFrame af;
-	adec->frames.Pop(af);
+	if (!adec->frames.Pop(af, &adec->is_closed))
+	{
+		return CELL_ADEC_ERROR_EMPTY;
+	}
 	AVFrame* frame = af.data;
 
 	if (!af.data) // fake: empty data
@@ -773,7 +785,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	AdecFrame& af = adec->frames.Peek();
+	AdecFrame& af = adec->frames.Peek(nullptr);
 
 	AVFrame* frame = af.data;
 

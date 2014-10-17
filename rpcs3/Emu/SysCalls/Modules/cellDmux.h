@@ -415,12 +415,14 @@ public:
 	const u32 cbArg;
 	u32 id;
 	volatile bool is_finished;
+	volatile bool is_closed;
 	volatile bool is_running;
 
 	PPUThread* dmuxCb;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
 		: is_finished(false)
+		, is_closed(false)
 		, is_running(false)
 		, memAddr(addr)
 		, memSize(size)

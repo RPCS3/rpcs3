@@ -1074,6 +1074,7 @@ public:
 	SQueue<AdecTask> job;
 	u32 id;
 	volatile bool is_running;
+	volatile bool is_closed;
 	volatile bool is_finished;
 	bool just_started;
 	bool just_finished;
