@@ -619,7 +619,7 @@ union CellSailEvent
 };
 
 typedef u32(*CellSailMemAllocatorFuncAlloc)(u32 pArg, u32 boundary, u32 size);
-typedef u32(*CellSailMemAllocatorFuncFree)(u32 pArg, u32 boundary, u32 pMemory);
+typedef void(*CellSailMemAllocatorFuncFree)(u32 pArg, u32 boundary, u32 pMemory);
 
 typedef int(*CellSailSoundAdapterFuncMakeup)(u32 pArg);
 typedef int(*CellSailSoundAdapterFuncCleanup)(u32 pArg);
@@ -685,7 +685,7 @@ struct CellSailMemAllocatorFuncs
 
 struct CellSailMemAllocator
 {
-	vm::ptr<CellSailMemAllocatorFuncs> callbacks;
+	vm::bptr<CellSailMemAllocatorFuncs> callbacks;
 	be_t<u32> pArg;
 };
 
@@ -1093,13 +1093,13 @@ struct CellSailPlayerResource
 
 struct CellSailPlayer
 {
-	vm::ptr<CellSailMemAllocator> allocator;
-	vm::ptr<CellSailPlayerFuncNotified> callback;
+	vm::bptr<CellSailMemAllocator> allocator;
+	vm::bptr<CellSailPlayerFuncNotified> callback;
 	be_t<u64> callbackArgument;
-	vm::ptr<CellSailPlayerAttribute> attribute;
-	vm::ptr<CellSailPlayerResource> resource;
-	vm::ptr<CellSailStartCommand> playbackCommand;
+	vm::bptr<CellSailPlayerAttribute> attribute;
+	vm::bptr<CellSailPlayerResource> resource;
+	vm::bptr<CellSailStartCommand> playbackCommand;
 	be_t<s32> repeatMode;
 	be_t<u32> descriptors;
-	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
+	vm::bptr<CellSailDescriptor> registeredDescriptors[2];
 };

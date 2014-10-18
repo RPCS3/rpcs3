@@ -617,9 +617,8 @@ int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 	// TODO: Let the game allocate memory for the descriptor, setup the descriptor and pass it back to the game
 
 	//CellSailDescriptor *pDesc = new CellSailDescriptor();
-	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, 4, descriptorAddress);
-	//cellSail->Error("Address: 0x%x", descriptorAddress);
-	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
+	descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, 4, sizeof(vm::ptr<CellSailDescriptor>));
+	vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
 	//descriptor->streamType = streamType;
 	//descriptor->registered = false;
 
