@@ -105,9 +105,9 @@ int cellAudioInit()
 					float* oal_buffer_float = nullptr;
 
 					if (g_is_u16)
-						queue.Pop(oal_buffer);
+						queue.Pop(oal_buffer, nullptr);
 					else
-						queue_float.Pop(oal_buffer_float);
+						queue_float.Pop(oal_buffer_float, nullptr);
 
 					if (g_is_u16)
 					{
@@ -153,7 +153,6 @@ int cellAudioInit()
 				m_config.counter++;
 
 				const u32 oal_pos = m_config.counter % BUFFER_NUM;
-				const u32 oal_pos_float = m_config.counter % BUFFER_NUM;
 
 				if (Emu.IsPaused())
 				{
@@ -350,10 +349,10 @@ int cellAudioInit()
 								_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buf2ch[i + 4]), float2u16)));
 						}
 					}
-
+					else
 					for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
 					{
-						oal_buffer_float[oal_pos_float][oal_buffer_offset + i] = buf2ch[i];
+						oal_buffer_float[oal_pos][oal_buffer_offset + i] = buf2ch[i];
 					}
 				}
 
@@ -361,8 +360,8 @@ int cellAudioInit()
 
 				if (first_mix)
 				{
-					memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(s16));
-					memset(&oal_buffer_float[oal_pos_float][0], 0, oal_buffer_size * sizeof(float));
+					if (g_is_u16) memset(&oal_buffer[oal_pos][0], 0, oal_buffer_size * sizeof(s16));
+					else memset(&oal_buffer_float[oal_pos][0], 0, oal_buffer_size * sizeof(float));
 				}
 				oal_buffer_offset += sizeof(buf2ch) / sizeof(float);
 
@@ -371,9 +370,9 @@ int cellAudioInit()
 					if(m_audio_out)
 					{
 						if (g_is_u16)
-							queue.Push(&oal_buffer[oal_pos][0]);
+							queue.Push(&oal_buffer[oal_pos][0], nullptr);
 
-						queue_float.Push(&oal_buffer_float[oal_pos_float][0]);
+						queue_float.Push(&oal_buffer_float[oal_pos][0], nullptr);
 					}
 
 					oal_buffer_offset = 0;
@@ -439,8 +438,8 @@ int cellAudioInit()
 			}
 			cellAudio->Notice("Audio thread ended");
 abort:
-			queue.Push(nullptr);
-			queue_float.Push(nullptr);
+			queue.Push(nullptr, nullptr);
+			queue_float.Push(nullptr, nullptr);
 
 			if(do_dump)
 				m_dump.Finalize();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/SMutex.h"
+static const volatile bool sq_no_wait = true;
 
 template<typename T, u32 SQSize = 666>
 class SQueue
@@ -22,13 +22,13 @@ public:
 		return SQSize;
 	}
 
-	bool Push(const T& data)
+	bool Push(const T& data, const volatile bool* do_exit)
 	{
 		while (true)
 		{
 			if (m_count >= SQSize)
 			{
-				if (Emu.IsStopped())
+				if (Emu.IsStopped() || do_exit && *do_exit)
 				{
 					return false;
 				}
@@ -49,13 +49,13 @@ public:
 		}
 	}
 
-	bool Pop(T& data)
+	bool Pop(T& data, const volatile bool* do_exit)
 	{
 		while (true)
 		{
 			if (!m_count)
 			{
-				if (Emu.IsStopped())
+				if (Emu.IsStopped() || do_exit && *do_exit)
 				{
 					return false;
 				}
@@ -78,38 +78,21 @@ public:
 		}
 	}
 
-	u32 GetCount()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return m_count;
-	}
-
-	u32 GetCountUnsafe()
-	{
-		return m_count;
-	}
-
-	bool IsEmpty()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return !m_count;
-	}
-
 	void Clear()
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_count = 0;
 	}
 
-	T& Peek(u32 pos = 0)
+	bool Peek(T& data, const volatile bool* do_exit, u32 pos = 0)
 	{
 		while (true)
 		{
 			if (m_count <= pos)
 			{
-				if (Emu.IsStopped())
+				if (Emu.IsStopped() || do_exit && *do_exit)
 				{
-					break;
+					return false;
 				}
 				
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -124,21 +107,7 @@ public:
 				}
 			}
 		}
-		return m_data[(m_pos + pos) % SQSize];
-	}
-
-	T& PeekIfExist(u32 pos = 0)
-	{
-		static T def_value;
-
-		std::lock_guard<std::mutex> lock(m_mutex);
-		if (m_count <= pos)
-		{
-			return def_value;
-		}
-		else
-		{
-			return m_data[(m_pos + pos) % SQSize];
-		}
+		data = m_data[(m_pos + pos) % SQSize];
+		return true;
 	}
 };

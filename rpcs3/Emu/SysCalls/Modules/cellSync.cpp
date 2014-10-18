@@ -568,10 +568,11 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
 		return syncQueueTryPushOp(queue, depth, position);
-	}))
+	});
+	if (res)
 	{
 		return res;
 	}
@@ -657,10 +658,11 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
 		return syncQueueTryPopOp(queue, depth, position);
-	}))
+	});
+	if (res)
 	{
 		return res;
 	}
@@ -737,10 +739,11 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	if (s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
 		return syncQueueTryPeekOp(queue, depth, position);
-	}))
+	});
+	if (res)
 	{
 		return res;
 	}
