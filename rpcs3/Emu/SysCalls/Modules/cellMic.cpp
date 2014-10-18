@@ -1,40 +1,45 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellMic_init();
-Module cellMic(0x0022, cellMic_init);
+#include "cellMic.h"
 
-// Error Codes
-enum
+Module *cellMic = nullptr;
+
+struct cellMicInternal
 {
-	CELL_MICIN_ERROR_ALREADY_INIT       = 0x80140101,
-	CELL_MICIN_ERROR_SYSTEM             = 0x80140102,
-	CELL_MICIN_ERROR_NOT_INIT           = 0x80140103,
-	CELL_MICIN_ERROR_PARAM              = 0x80140104,
-	CELL_MICIN_ERROR_PORT_FULL          = 0x80140105,
-	CELL_MICIN_ERROR_ALREADY_OPEN       = 0x80140106,
-	CELL_MICIN_ERROR_NOT_OPEN           = 0x80140107,
-	CELL_MICIN_ERROR_NOT_RUN            = 0x80140108,
-	CELL_MICIN_ERROR_TRANS_EVENT        = 0x80140109,
-	CELL_MICIN_ERROR_OPEN               = 0x8014010a,
-	CELL_MICIN_ERROR_SHAREDMEMORY       = 0x8014010b,
-	CELL_MICIN_ERROR_MUTEX              = 0x8014010c,
-	CELL_MICIN_ERROR_EVENT_QUEUE        = 0x8014010d,
-	CELL_MICIN_ERROR_DEVICE_NOT_FOUND   = 0x8014010e,
-	CELL_MICIN_ERROR_SYSTEM_NOT_FOUND   = 0x8014010e,
-	CELL_MICIN_ERROR_FATAL              = 0x8014010f,
-	CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT = 0x80140110,
+	bool m_bCellMicInitialized;;
+
+	cellMicInternal()
+		: m_bCellMicInitialized(false)
+	{
+	}
 };
+
+cellMicInternal CellMicInstance;
 
 int cellMicInit()
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic->Warning("cellMicInit()");
+
+	if (CellMicInstance.m_bCellMicInitialized)
+		return CELL_MICIN_ERROR_ALREADY_INIT;
+
+	CellMicInstance.m_bCellMicInitialized = true;
+
 	return CELL_OK;
 }
 
 int cellMicEnd()
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic->Warning("cellMicEnd()");
+
+	if (!CellMicInstance.m_bCellMicInitialized)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	CellMicInstance.m_bCellMicInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -278,54 +283,60 @@ int cellMicGetDeviceIdentifier()
 	return CELL_OK;
 }
 
-void cellMic_init()
+void cellMic_unload()
 {
-	cellMic.AddFunc(0x8325e02d, cellMicInit);
-	cellMic.AddFunc(0xc6328caa, cellMicEnd);
-	cellMic.AddFunc(0xdd1b59f0, cellMicOpen);
-	cellMic.AddFunc(0x8d229f8e, cellMicClose);
-
-	cellMic.AddFunc(0x017024a8, cellMicGetDeviceGUID);
-	cellMic.AddFunc(0xa52d2ae4, cellMicGetType);
-	cellMic.AddFunc(0x1b42101b, cellMicIsAttached);
-	cellMic.AddFunc(0x186cb1fb, cellMicIsOpen);
-	cellMic.AddFunc(0x6a024aa0, cellMicGetDeviceAttr);
-	cellMic.AddFunc(0xb2c16321, cellMicSetDeviceAttr);
-	cellMic.AddFunc(0xac5ba03a, cellMicGetSignalAttr);
-	cellMic.AddFunc(0x323deb41, cellMicSetSignalAttr);
-	cellMic.AddFunc(0xb30780eb, cellMicGetSignalState);
-
-	cellMic.AddFunc(0xdd724314, cellMicStart);
-	cellMic.AddFunc(0x07e1b12c, cellMicRead);
-	cellMic.AddFunc(0xfcfaf246, cellMicStop);
-	cellMic.AddFunc(0x6bc46aab, cellMicReset);
-
-	cellMic.AddFunc(0x7903400e, cellMicSetNotifyEventQueue);
-	cellMic.AddFunc(0x6cc7ae00, cellMicSetNotifyEventQueue2);
-	cellMic.AddFunc(0x65336418, cellMicRemoveNotifyEventQueue);
-
-	cellMic.AddFunc(0x05709bbf, cellMicOpenEx);
-	cellMic.AddFunc(0xddd19a89, cellMicStartEx);
-	cellMic.AddFunc(0x4e0b69ee, cellMicGetFormatRaw);
-	cellMic.AddFunc(0xfda12276, cellMicGetFormatAux);
-	cellMic.AddFunc(0x87a08d29, cellMicGetFormatDsp);
-	cellMic.AddFunc(0xa42ac07a, cellMicOpenRaw);
-	cellMic.AddFunc(0x72165a7f, cellMicReadRaw);
-	cellMic.AddFunc(0x3acc118e, cellMicReadAux);
-	cellMic.AddFunc(0xc414faa5, cellMicReadDsp);
-
-	cellMic.AddFunc(0x25c5723f, cellMicGetStatus);
-	cellMic.AddFunc(0xe839380f, cellMicStopEx);
-	cellMic.AddFunc(0x3ace58f3, cellMicSysShareClose);
-	cellMic.AddFunc(0x48108a23, cellMicGetFormat);
-	cellMic.AddFunc(0x891c6291, cellMicSetMultiMicNotifyEventQueue);
-	cellMic.AddFunc(0xad049ecf, cellMicGetFormatEx);
-	cellMic.AddFunc(0xbdfd51e2, cellMicSysShareStop);
-	cellMic.AddFunc(0xc3610dbd, cellMicSysShareOpen);
-	cellMic.AddFunc(0xc461563c, cellMicCommand);
-	cellMic.AddFunc(0xcac7e7d7, cellMicSysShareStart);
-	cellMic.AddFunc(0xd127cd3e, cellMicSysShareInit);
-	cellMic.AddFunc(0xf82bbf7c, cellMicSysShareEnd);
-	cellMic.AddFunc(0xfdbbe469, cellMicGetDeviceIdentifier);
+	CellMicInstance.m_bCellMicInitialized = false;
 }
-#endif
+
+void cellMic_init(Module *pxThis)
+{
+	cellMic = pxThis;
+
+	cellMic->AddFunc(0x8325e02d, cellMicInit);
+	cellMic->AddFunc(0xc6328caa, cellMicEnd);
+	cellMic->AddFunc(0xdd1b59f0, cellMicOpen);
+	cellMic->AddFunc(0x8d229f8e, cellMicClose);
+
+	cellMic->AddFunc(0x017024a8, cellMicGetDeviceGUID);
+	cellMic->AddFunc(0xa52d2ae4, cellMicGetType);
+	cellMic->AddFunc(0x1b42101b, cellMicIsAttached);
+	cellMic->AddFunc(0x186cb1fb, cellMicIsOpen);
+	cellMic->AddFunc(0x6a024aa0, cellMicGetDeviceAttr);
+	cellMic->AddFunc(0xb2c16321, cellMicSetDeviceAttr);
+	cellMic->AddFunc(0xac5ba03a, cellMicGetSignalAttr);
+	cellMic->AddFunc(0x323deb41, cellMicSetSignalAttr);
+	cellMic->AddFunc(0xb30780eb, cellMicGetSignalState);
+
+	cellMic->AddFunc(0xdd724314, cellMicStart);
+	cellMic->AddFunc(0x07e1b12c, cellMicRead);
+	cellMic->AddFunc(0xfcfaf246, cellMicStop);
+	cellMic->AddFunc(0x6bc46aab, cellMicReset);
+
+	cellMic->AddFunc(0x7903400e, cellMicSetNotifyEventQueue);
+	cellMic->AddFunc(0x6cc7ae00, cellMicSetNotifyEventQueue2);
+	cellMic->AddFunc(0x65336418, cellMicRemoveNotifyEventQueue);
+
+	cellMic->AddFunc(0x05709bbf, cellMicOpenEx);
+	cellMic->AddFunc(0xddd19a89, cellMicStartEx);
+	cellMic->AddFunc(0x4e0b69ee, cellMicGetFormatRaw);
+	cellMic->AddFunc(0xfda12276, cellMicGetFormatAux);
+	cellMic->AddFunc(0x87a08d29, cellMicGetFormatDsp);
+	cellMic->AddFunc(0xa42ac07a, cellMicOpenRaw);
+	cellMic->AddFunc(0x72165a7f, cellMicReadRaw);
+	cellMic->AddFunc(0x3acc118e, cellMicReadAux);
+	cellMic->AddFunc(0xc414faa5, cellMicReadDsp);
+
+	cellMic->AddFunc(0x25c5723f, cellMicGetStatus);
+	cellMic->AddFunc(0xe839380f, cellMicStopEx);
+	cellMic->AddFunc(0x3ace58f3, cellMicSysShareClose);
+	cellMic->AddFunc(0x48108a23, cellMicGetFormat);
+	cellMic->AddFunc(0x891c6291, cellMicSetMultiMicNotifyEventQueue);
+	cellMic->AddFunc(0xad049ecf, cellMicGetFormatEx);
+	cellMic->AddFunc(0xbdfd51e2, cellMicSysShareStop);
+	cellMic->AddFunc(0xc3610dbd, cellMicSysShareOpen);
+	cellMic->AddFunc(0xc461563c, cellMicCommand);
+	cellMic->AddFunc(0xcac7e7d7, cellMicSysShareStart);
+	cellMic->AddFunc(0xd127cd3e, cellMicSysShareInit);
+	cellMic->AddFunc(0xf82bbf7c, cellMicSysShareEnd);
+	cellMic->AddFunc(0xfdbbe469, cellMicGetDeviceIdentifier);
+}
