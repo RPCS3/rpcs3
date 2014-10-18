@@ -65,9 +65,9 @@ VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 si
 VideoDecoder::~VideoDecoder()
 {
 	// TODO: check finalization
-	for (u32 i = frames.GetCount() - 1; ~i; i--)
+	VdecFrame vf;
+	while (frames.Pop(vf, &sq_no_wait))
 	{
-		VdecFrame& vf = frames.Peek(nullptr, i);
 		av_frame_unref(vf.data);
 		av_frame_free(&vf.data);
 	}
@@ -96,17 +96,14 @@ int vdecRead(void* opaque, u8* buf, int buf_size)
 next:
 	if (vdec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
 	{
-		while (!vdec.job.GetCountUnsafe())
+		VdecTask task;
+		if (!vdec.job.Peek(task, &vdec.is_closed))
 		{
-			if (Emu.IsStopped() || vdec.is_closed)
-			{
-				if (Emu.IsStopped()) cellVdec->Warning("vdecRead(): aborted");
-				return 0;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if (Emu.IsStopped()) cellVdec->Warning("vdecRead() aborted");
+			return 0;
 		}
 
-		switch (auto jtype = vdec.job.Peek(nullptr).type)
+		switch (task.type)
 		{
 		case vdecEndSeq:
 		case vdecClose:
@@ -135,7 +132,7 @@ next:
 		
 		default:
 		{
-			cellVdec->Error("vdecRead(): unknown task (%d)", jtype);
+			cellVdec->Error("vdecRead(): unknown task (%d)", task.type);
 			Emu.Pause();
 			return -1;
 		}
@@ -210,17 +207,11 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 			}
 
-			if (!vdec.job.GetCountUnsafe() && vdec.is_running)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				continue;
-			}
-
-			if (vdec.frames.GetCount() >= 50)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				continue;
-			}
+			//if (!vdec.job.GetCountUnsafe() && vdec.is_running)
+			//{
+			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			//	continue;
+			//}
 
 			if (!vdec.job.Pop(task, &vdec.is_closed))
 			{
@@ -563,28 +554,6 @@ int cellVdecEndSeq(u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	/*if (!vdec->job.IsEmpty())
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		return CELL_VDEC_ERROR_BUSY; // ???
-	}
-
-	if (!vdec->frames.IsEmpty())
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		return CELL_VDEC_ERROR_BUSY; // ???
-	}*/
-
-	while (!vdec->job.IsEmpty() || !vdec->frames.IsEmpty())
-	{
-		if (Emu.IsStopped())
-		{
-			cellVdec->Warning("cellVdecEndSeq(%d) aborted", handle);
-			return CELL_OK;
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-	}
-
 	vdec->job.Push(VdecTask(vdecEndSeq), &vdec->is_closed);
 	return CELL_OK;
 }
@@ -623,9 +592,17 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (vdec->frames.IsEmpty())
+	VdecFrame vf;
+	if (!vdec->frames.Pop(vf, &sq_no_wait))
 	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
+	}
+
+	if (!vf.data)
+	{
+		// hack
+		return CELL_OK;
 	}
 
 	if (outBuff)
@@ -644,13 +621,6 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 			return CELL_OK;
 		}
 
-		VdecFrame vf;
-
-		if (!vdec->frames.Pop(vf, &vdec->is_closed))
-		{
-			return CELL_VDEC_ERROR_EMPTY;
-		}
-
 		AVFrame& frame = *vf.data;
 
 		// TODO: zero padding bytes
@@ -661,11 +631,10 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed(%d)", err);
 			Emu.Pause();
 		}
-
-		av_frame_unref(vf.data);
-		av_frame_free(&vf.data);
 	}
 
+	av_frame_unref(vf.data);
+	av_frame_free(&vf.data);
 	return CELL_OK;
 }
 
@@ -679,13 +648,12 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (vdec->frames.IsEmpty())
+	VdecFrame vf;
+	if (!vdec->frames.Peek(vf, &sq_no_wait))
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
-
-	VdecFrame& vf = vdec->frames.Peek(nullptr);
 
 	AVFrame& frame = *vf.data;
 

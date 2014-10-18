@@ -62,7 +62,11 @@ bool ElementaryStream::is_full()
 {
 	if (released < put_count)
 	{
-		u32 first = entries.Peek(&dmux->is_closed);
+		u32 first;
+		if (!entries.Peek(first, &dmux->is_closed))
+		{
+			return false;
+		}
 		if (first >= put)
 		{
 			return (first - put) < GetMaxAU();
@@ -201,7 +205,11 @@ bool ElementaryStream::release()
 		return false;
 	}
 
-	u32 addr = entries.Peek(&dmux->is_closed);
+	u32 addr;
+	if (!entries.Peek(addr, &dmux->is_closed))
+	{
+		return false; // ???
+	}
 
 	auto info = vm::ptr<CellDmuxAuInfo>::make(addr);
 	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
@@ -239,7 +247,12 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 		return false;
 	}
 
-	u32 addr = entries.Peek(&dmux->is_closed, peek_count - released);
+	u32 addr;
+	if (!entries.Peek(addr, &dmux->is_closed, peek_count - released))
+	{
+		return false; // ???
+	}
+
 	auto info = vm::ptr<CellDmuxAuInfo>::make(addr);
 	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
 	//wxString(update_index ? "Get" : "Peek").wx_str(),
@@ -334,7 +347,7 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 			}
 			
-			if (!dmux.job.GetCountUnsafe() && dmux.is_running)
+			if (!dmux.job.Peek(task, &sq_no_wait) && dmux.is_running)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;

@@ -65,9 +65,9 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 AudioDecoder::~AudioDecoder()
 {
 	// TODO: check finalization
-	for (u32 i = frames.GetCount() - 1; ~i; i--)
+	AdecFrame af;
+	while (frames.Pop(af, &sq_no_wait))
 	{
-		AdecFrame& af = frames.Peek(nullptr, i);
 		av_frame_unref(af.data);
 		av_frame_free(&af.data);
 	}
@@ -96,17 +96,14 @@ int adecRawRead(void* opaque, u8* buf, int buf_size)
 next:
 	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
 	{
-		while (!adec.job.GetCountUnsafe())
+		AdecTask task;
+		if (!adec.job.Peek(task, &adec.is_closed))
 		{
-			if (Emu.IsStopped() || adec.is_closed)
-			{
-				if (Emu.IsStopped()) cellAdec->Warning("adecRawRead(): aborted");
-				return 0;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if (Emu.IsStopped()) cellAdec->Warning("adecRawRead() aborted");
+			return 0;
 		}
 
-		switch (auto jtype = adec.job.Peek(nullptr).type)
+		switch (task.type)
 		{
 		case adecEndSeq:
 		case adecClose:
@@ -135,7 +132,7 @@ next:
 		
 		default:
 		{
-			cellAdec->Error("adecRawRead(): unknown task (%d)", jtype);
+			cellAdec->Error("adecRawRead(): unknown task (%d)", task.type);
 			Emu.Pause();
 			return -1;
 		}
@@ -275,17 +272,11 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			if (!adec.job.GetCountUnsafe() && adec.is_running)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				continue;
-			}
-
-			/*if (adec.frames.GetCount() >= 50)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				continue;
-			}*/
+			//if (!adec.job.GetCountUnsafe() && adec.is_running)
+			//{
+			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			//	continue;
+			//}
 
 			if (!adec.job.Pop(task, &adec.is_closed))
 			{
@@ -667,7 +658,7 @@ int cellAdecClose(u32 handle)
 
 int cellAdecStartSeq(u32 handle, u32 param_addr)
 {
-	cellAdec->Log("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
+	cellAdec->Todo("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
 
 	AudioDecoder* adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
@@ -676,15 +667,9 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	}
 
 	AdecTask task(adecStartSeq);
-	/*if (adec->type == CELL_ADEC_TYPE_ATRACX_2CH)
-	{
 
-	}
-	else*/
-	{
-		cellAdec->Todo("cellAdecStartSeq(): initialization");
-	}
-	
+	// TODO: using parameters
+
 	adec->job.Push(task, &adec->is_closed);
 	return CELL_OK;
 }
@@ -734,38 +719,36 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	if (adec->frames.IsEmpty())
+	AdecFrame af;
+	if (!adec->frames.Pop(af, &sq_no_wait))
 	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	AdecFrame af;
-	if (!adec->frames.Pop(af, &adec->is_closed))
-	{
-		return CELL_ADEC_ERROR_EMPTY;
-	}
 	AVFrame* frame = af.data;
 
-	if (!af.data) // fake: empty data
+	if (!af.data)
 	{
+		// hack
 		return CELL_OK;
 	}
 
-	// reverse byte order, extract data:
-	float* in_f[2];
-	in_f[0] = (float*)frame->extended_data[0];
-	in_f[1] = (float*)frame->extended_data[1];
-	for (u32 i = 0; i < af.size / 8; i++)
+	if (outBuffer)
 	{
-		outBuffer[i * 2 + 0] = in_f[0][i];
-		outBuffer[i * 2 + 1] = in_f[1][i];
+		// reverse byte order, extract data:
+		float* in_f[2];
+		in_f[0] = (float*)frame->extended_data[0];
+		in_f[1] = (float*)frame->extended_data[1];
+		for (u32 i = 0; i < af.size / 8; i++)
+		{
+			outBuffer[i * 2 + 0] = in_f[0][i];
+			outBuffer[i * 2 + 1] = in_f[1][i];
+		}
 	}
 
-	if (af.data)
-	{
-		av_frame_unref(af.data);
-		av_frame_free(&af.data);
-	}
+	av_frame_unref(af.data);
+	av_frame_free(&af.data);
 	return CELL_OK;
 }
 
@@ -779,13 +762,12 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	if (adec->frames.IsEmpty())
+	AdecFrame af;
+	if (!adec->frames.Peek(af, &sq_no_wait))
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
-
-	AdecFrame& af = adec->frames.Peek(nullptr);
 
 	AVFrame* frame = af.data;
 

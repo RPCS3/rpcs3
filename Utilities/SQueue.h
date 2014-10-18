@@ -78,30 +78,13 @@ public:
 		}
 	}
 
-	u32 GetCount()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return m_count;
-	}
-
-	u32 GetCountUnsafe()
-	{
-		return m_count;
-	}
-
-	bool IsEmpty()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		return !m_count;
-	}
-
 	void Clear()
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		m_count = 0;
 	}
 
-	T& Peek(const volatile bool* do_exit, u32 pos = 0)
+	bool Peek(T& data, const volatile bool* do_exit, u32 pos = 0)
 	{
 		while (true)
 		{
@@ -109,7 +92,7 @@ public:
 			{
 				if (Emu.IsStopped() || do_exit && *do_exit)
 				{
-					break;
+					return false;
 				}
 				
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -124,6 +107,7 @@ public:
 				}
 			}
 		}
-		return m_data[(m_pos + pos) % SQSize];
+		data = m_data[(m_pos + pos) % SQSize];
+		return true;
 	}
 };
