@@ -962,9 +962,17 @@ int sceNpManagerGetAccountAge()
 	return CELL_OK;
 }
 
-int sceNpManagerGetContentRatingFlag()
+int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpManagerGetContentRatingFlag(isRestricted=%d, age=%d)", isRestricted, age);
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
+	// TODO: read user's parental control information
+	*isRestricted = 0;
+	*age = 18;
+
 	return CELL_OK;
 }
 
