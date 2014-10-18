@@ -24,6 +24,8 @@ extern void cellGem_unload();
 extern void cellJpgDec_init(Module *pxThis);
 extern void cellGifDec_init(Module *pxThis);
 extern void cellL10n_init(Module *pxThis);
+extern void cellMic_init(Module *pxThis);
+extern void cellMic_unload();
 extern void cellNetCtl_init(Module *pxThis);
 extern void cellNetCtl_unload();
 extern void cellOvis_init(Module *pxThis);
@@ -109,7 +111,7 @@ static const g_modules_list[] =
 	{ 0x001f, "cellResc", cellResc_init, cellResc_load, cellResc_unload },
 	{ 0x0020, "cellDaisy", nullptr, nullptr, nullptr },
 	{ 0x0021, "cellKey2char", nullptr, nullptr, nullptr },
-	{ 0x0022, "cellMic", nullptr, nullptr, nullptr },
+	{ 0x0022, "cellMic", cellMic_init, nullptr, cellMic_unload },
 	{ 0x0023, "cellCamera", cellCamera_init, nullptr, cellCamera_unload },
 	{ 0x0024, "cellVdecMpeg2", nullptr, nullptr, nullptr },
 	{ 0x0025, "cellVdecAvc", nullptr, nullptr, nullptr },
