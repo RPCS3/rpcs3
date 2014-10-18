@@ -81,7 +81,7 @@ s64 sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-int sys_spu_elf_get_information(u32 elf_img, vm::ptr<be_t<u32>> entry, vm::ptr<be_t<u32>> nseg)
+int sys_spu_elf_get_information(u32 elf_img, vm::ptr<u32> entry, vm::ptr<u32> nseg)
 {
 	sysPrxForUser->Todo("sys_spu_elf_get_information(elf_img=0x%x, entry_addr=0x%x, nseg_addr=0x%x)", elf_img, entry.addr(), nseg.addr());
 	return CELL_OK;
@@ -106,7 +106,7 @@ int sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<be_t<u32>> entry)
+int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser->Warning("sys_raw_spu_load(id=0x%x, path_addr=0x%x('%s'), entry_addr=0x%x)", 
 		id, path.addr(), path.get_ptr(), entry.addr());

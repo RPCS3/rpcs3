@@ -9,64 +9,6 @@ using namespace asmjit::host;
 
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
-#define mmToU64Ptr(x) ((u64*)(&x))
-#define mmToU32Ptr(x) ((u32*)(&x))
-#define mmToU16Ptr(x) ((u16*)(&x))
-#define mmToU8Ptr(x) ((u8*)(&x))
-
-struct g_imm_table_struct
-{
-	//u16 cntb_table[65536];
-
-	__m128i fsmb_table[65536];
-	__m128i fsmh_table[256];
-	__m128i fsm_table[16];
-
-	__m128i sldq_pshufb[32];
-	__m128i srdq_pshufb[32];
-	__m128i rldq_pshufb[16];
-
-	g_imm_table_struct()
-	{
-		/*static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
-		for (u32 i = 0; i < sizeof(cntb_table) / sizeof(cntb_table[0]); i++)
-		{
-			u32 cnt_low = 0, cnt_high = 0;
-			for (u32 j = 0; j < 8; j++)
-			{
-				cnt_low += (i >> j) & 1;
-				cnt_high += (i >> (j + 8)) & 1;
-			}
-			cntb_table[i] = (cnt_high << 8) | cnt_low;
-		}*/
-		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
-		{
-
-			for (u32 j = 0; j < 4; j++) mmToU32Ptr(fsm_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
-		}
-		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
-		{
-			for (u32 j = 0; j < 8; j++) mmToU16Ptr(fsmh_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
-		}
-		for (u32 i = 0; i < sizeof(fsmb_table) / sizeof(fsmb_table[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(fsmb_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
-		}
-		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(sldq_pshufb[i])[j] = (u8)(j - i);
-		}
-		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(srdq_pshufb[i])[j] = (j + i > 15) ? 0xff : (u8)(j + i);
-		}
-		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
-		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(rldq_pshufb[i])[j] = (u8)(j - i) & 0xf;
-		}
-	}
-};
-
 class SPURecompiler;
 
 class SPURecompilerCore : public CPUDecoder
@@ -1132,10 +1074,12 @@ private:
 	}
 	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1151,10 +1095,12 @@ private:
 	}
 	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1170,10 +1116,12 @@ private:
 	}
 	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1189,10 +1137,12 @@ private:
 	}
 	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1239,10 +1189,12 @@ private:
 	}
 	void BI(u32 intr, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		c.mov(cpu_dword(PC), CPU.PC);
@@ -1255,10 +1207,12 @@ private:
 	}
 	void BISL(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		XmmInvalidate(rt);

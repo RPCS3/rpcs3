@@ -620,7 +620,7 @@ void cellRescExit()
 	s_rescInternalInstance->m_bInitialized = false;
 }
 
-int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<be_t<u32>> bufferMode)
+int cellRescVideoOutResolutionId2RescBufferMode(u32 resolutionId, vm::ptr<u32> bufferMode)
 {
 	cellResc->Log("cellRescVideoOutResolutionId2RescBufferMode(resolutionId=%d, bufferMode_addr=0x%x)", resolutionId, bufferMode.addr());
 
@@ -858,7 +858,7 @@ int cellRescSetPalInterpolateDropFlexRatio(float ratio)
 	return CELL_OK;
 }
 
-int cellRescGetBufferSize(vm::ptr<be_t<u32>> colorBuffers, vm::ptr<be_t<u32>> vertexArray, vm::ptr<be_t<u32>> fragmentShader)
+int cellRescGetBufferSize(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
 	cellResc->Warning("cellRescGetBufferSize(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)",
 		colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
@@ -1029,7 +1029,7 @@ int cellRescSetWaitFlip()
 	return CELL_OK;
 }
 
-int cellRescSetBufferAddress(vm::ptr<be_t<u32>> colorBuffers, vm::ptr<be_t<u32>> vertexArray, vm::ptr<be_t<u32>> fragmentShader)
+int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray, vm::ptr<u32> fragmentShader)
 {
 	cellResc->Warning("cellRescSetBufferAddress(colorBuffers_addr=0x%x, vertexArray_addr=0x%x, fragmentShader_addr=0x%x)", colorBuffers.addr(), vertexArray.addr(), fragmentShader.addr());
 
@@ -1169,8 +1169,8 @@ int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 	float bandwidth = 0.5f / (srcH / dstH);
 	float phi_b = 2.f * PI * bandwidth;
 	float window[4];
-	auto buf16 = vm::ptr<be_t<u16>>::make(ea_addr);
-	auto buf32 = vm::ptr<be_t<float>>::make(ea_addr);
+	auto buf16 = vm::ptr<u16>::make(ea_addr);
+	auto buf32 = vm::ptr<float>::make(ea_addr);
 
 	blackman(window);
 

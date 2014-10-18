@@ -181,7 +181,7 @@ int sceNpDrmExecuteGamePurchase()
 	return CELL_OK;
 }
 
-int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<be_t<u64>> time_remain_usec)
+int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<u64> time_remain_usec)
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 	return CELL_OK;
@@ -901,7 +901,7 @@ int sceNpManagerUnregisterCallback()
 	return CELL_OK;
 }
 
-int sceNpManagerGetStatus(vm::ptr<be_t<u32>> status)
+int sceNpManagerGetStatus(vm::ptr<u32> status)
 {
 	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
@@ -962,9 +962,17 @@ int sceNpManagerGetAccountAge()
 	return CELL_OK;
 }
 
-int sceNpManagerGetContentRatingFlag()
+int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpManagerGetContentRatingFlag(isRestricted=%d, age=%d)", isRestricted, age);
+
+	if (!sceNpInstance.m_bSceNpInitialized)
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+
+	// TODO: read user's parental control information
+	*isRestricted = 0;
+	*age = 18;
+
 	return CELL_OK;
 }
 

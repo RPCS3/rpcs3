@@ -8,7 +8,7 @@
 
 SysCallBase sys_timer("sys_timer");
 
-s32 sys_timer_create(vm::ptr<be_t<u32>> timer_id)
+s32 sys_timer_create(vm::ptr<u32> timer_id)
 {
 	sys_timer.Warning("sys_timer_create(timer_id_addr=0x%x)", timer_id.addr());
 

@@ -2216,11 +2216,11 @@ private:
 	{
 		if (is_r) // rldcr
 		{
-			RLDICR(ra, rs, (u32)CPU.GPR[rb] & 0x3F, m_eb, rc);
+			RLDICR(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
 		}
 		else // rldcl
 		{
-			RLDICL(ra, rs, (u32)CPU.GPR[rb] & 0x3F, m_eb, rc);
+			RLDICL(ra, rs, (u32)(CPU.GPR[rb] & 0x3F), m_eb, rc);
 		}
 	}
 	void CMP(u32 crfd, u32 l, u32 ra, u32 rb)
@@ -2367,7 +2367,6 @@ private:
 		}
 
 		CPU.GPR[ra] = i;
-
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 	}
 	void SLD(u32 ra, u32 rs, u32 rb, bool rc)

@@ -26,7 +26,7 @@ int cellJpgDecDestroy(u32 mainHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
+int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
 {
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
@@ -45,7 +45,7 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<be_t<u32>> subHandle, vm::ptr<CellJpg
 	case se32(CELL_JPGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
 		current_subHandle->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
 

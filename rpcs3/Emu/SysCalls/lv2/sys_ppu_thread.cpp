@@ -34,7 +34,7 @@ void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 
 void sys_internal_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 {
-	sys_ppu_thread.Log("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
+	sys_ppu_thread.Warning("sys_internal_ppu_thread_exit(0x%llx)", errorcode);
 
 	ppu_thread_exit(CPU, errorcode);
 }
@@ -47,7 +47,7 @@ s32 sys_ppu_thread_yield()
 	return CELL_OK;
 }
 
-s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<be_t<u64>> vptr)
+s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%lld, vptr_addr=0x%x)", thread_id, vptr.addr());
 
@@ -182,7 +182,7 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	return &new_thread;
 }
 
-s32 sys_ppu_thread_create(vm::ptr<be_t<u64>> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
+s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
 		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname.addr(), threadname ? threadname.get_ptr() : "");
@@ -223,7 +223,7 @@ void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::p
 	}
 }
 
-s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<be_t<u64>> thread_id)
+s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_get_id(thread_id_addr=0x%x)", thread_id.addr());
 

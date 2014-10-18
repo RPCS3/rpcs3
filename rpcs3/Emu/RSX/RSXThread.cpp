@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/RSX/GSManager.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
@@ -45,15 +46,40 @@ void RSXThread::nativeRescale(float width, float height)
 
 u32 GetAddress(u32 offset, u32 location)
 {
+	u32 res = 0;
+
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return (u32)Memory.RSXFBMem.GetStartAddr() + offset;
-	case CELL_GCM_LOCATION_MAIN: return (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
+	case CELL_GCM_LOCATION_LOCAL:
+	{
+		res = (u32)Memory.RSXFBMem.GetStartAddr() + offset;
+		break;
+	}
+	case CELL_GCM_LOCATION_MAIN:
+	{
+		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
+		if (res == 0)
+		{
+			LOG_ERROR(RSX, "GetAddress(offset=0x%x): RSXIO memory not mapped", offset);
+			Emu.Pause();
+			break;
+		}
+
+		if (Emu.GetGSManager().GetRender().m_strict_ordering[offset >> 20])
+		{
+			_mm_mfence(); // probably doesn't have any effect on current implementation
+		}
+		break;
+	}
+	default:
+	{
+		LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x): invalid location", offset, location);
+		Emu.Pause();
+		break;
+	}
 	}
 
-	LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x)", location);
-	assert(0);
-	return 0;
+	return res;
 }
 
 RSXVertexData::RSXVertexData()
@@ -144,7 +170,7 @@ u32 RSXVertexData::GetTypeSize()
 
 u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr)
 {
-	auto args = vm::ptr<be_t<u32>>::make(args_addr);
+	auto args = vm::ptr<u32>::make(args_addr);
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
@@ -211,7 +237,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
-	auto args = vm::ptr<be_t<u32>>::make(args_addr);
+	auto args = vm::ptr<u32>::make(args_addr);
 
 #if	CMD_DEBUG
 		std::string debug = GetMethodName(cmd);
@@ -2234,19 +2260,19 @@ void RSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//LOG_WARNING(RSX, "non increment cmd! 0x%x", cmd);
-			inc=0;
+			inc = 0;
 		}
 
 		if(cmd == 0)
 		{
 			LOG_ERROR(Log::RSX, "null cmd: cmd=0x%x, put=0x%x, get=0x%x (addr=0x%x)", cmd, put, get, (u32)Memory.RSXIOMem.RealAddr(get));
-			Emu.Pause();
-			//HACK! We couldn't be here
+			//Emu.Pause();
+			//HACK! We shouldn't be here
 			m_ctrl->get = get + (count + 1) * 4;
 			continue;
 		}
 
-		auto args = vm::ptr<be_t<u32>>::make((u32)Memory.RSXIOMem.RealAddr(get + 4));
+		auto args = vm::ptr<u32>::make((u32)Memory.RSXIOMem.RealAddr(get + 4));
 
 		for(u32 i=0; i<count; i++)
 		{

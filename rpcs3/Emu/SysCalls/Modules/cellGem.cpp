@@ -21,36 +21,60 @@ cellGemInternal cellGemInstance;
 int cellGemCalibrate()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemClearStatusFlags()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemConvertVideoFinish()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemConvertVideoStart()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemEnableCameraPitchAngleCorrection()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemEnableMagnetometer()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -69,60 +93,100 @@ int cellGemEnd()
 int cellGemFilterState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemForceRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetAccelerometerPositionInDevice()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetAllTrackableHues()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetCameraState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetEnvironmentLightingColor()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetHuePixels()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetImageState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetInertialState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetInfo()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -140,30 +204,50 @@ s32 cellGemGetMemorySize(be_t<s32> max_connect)
 int cellGemGetRGB()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetRumble()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetState()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetStatusFlags()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemGetTrackerHue()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -188,6 +272,10 @@ int cellGemInit(vm::ptr<CellGemAttribute> attribute)
 int cellGemInvalidateCalibration()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
@@ -200,54 +288,90 @@ int cellGemIsTrackableHue()
 int cellGemPrepareCamera()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemPrepareVideoConvert()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemReset()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemSetRumble()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemSetYaw()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemTrackHues()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemUpdateFinish()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemUpdateStart()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 
 int cellGemWriteExternalPort()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
+
+	if (!cellGemInstance.m_bInitialized)
+		return CELL_GEM_ERROR_UNINITIALIZED;
+
 	return CELL_OK;
 }
 

@@ -605,7 +605,7 @@ int cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 	return CELL_OK;
 }
 
-int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<be_t<u32>> handle)
+int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
 	cellAdec->Warning("cellAdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.addr(), res.addr(), cb.addr(), handle.addr());
@@ -617,7 +617,7 @@ int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 	return CELL_OK;
 }
 
-int cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<be_t<u32>> handle)
+int cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
 	cellAdec->Warning("cellAdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)", 
 		type.addr(), res.addr(), cb.addr(), handle.addr());
@@ -757,7 +757,7 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	return CELL_OK;
 }
 
-int cellAdecGetPcmItem(u32 handle, vm::ptr<be_t<u32>> pcmItem_ptr)
+int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 {
 	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.addr());
 

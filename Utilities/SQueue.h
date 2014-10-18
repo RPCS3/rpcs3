@@ -33,7 +33,7 @@ public:
 					return false;
 				}
 
-				SM_Sleep();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 
@@ -60,7 +60,7 @@ public:
 					return false;
 				}
 
-				SM_Sleep();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 
@@ -112,7 +112,7 @@ public:
 					break;
 				}
 				
-				SM_Sleep();
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 				continue;
 			}
 

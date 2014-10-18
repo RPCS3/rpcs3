@@ -90,7 +90,7 @@ std::string GLFragmentDecompilerThread::AddConst()
 		return name;
 	}
 
-	auto data = vm::ptr<be_t<u32>>::make(m_addr + m_size + m_offset);
+	auto data = vm::ptr<u32>::make(m_addr + m_size + m_offset);
 
 	m_offset += 4 * 4;
 	u32 x = GetData(data[0]);
@@ -279,7 +279,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 
 void GLFragmentDecompilerThread::Task()
 {
-	auto data = vm::ptr<be_t<u32>>::make(m_addr);
+	auto data = vm::ptr<u32>::make(m_addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;

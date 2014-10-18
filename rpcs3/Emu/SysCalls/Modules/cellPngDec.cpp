@@ -84,7 +84,7 @@ s32 pngDecOpen(
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<be_t<u32>>::make(0), 0);
+		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
 		stream->fd = fd->ToLE();
 		if (ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
@@ -804,7 +804,7 @@ void cellPngDec_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libpngdec = (u32)Memory.PRXMem.AllocAlign(sizeof(libpngdec_data), 4096);
+		libpngdec = (u32)Memory.MainMem.AllocAlign(sizeof(libpngdec_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libpngdec), libpngdec_data, sizeof(libpngdec_data));
 		libpngdec_rtoc = libpngdec + 0x49710;
 

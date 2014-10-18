@@ -422,9 +422,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellLv2dbg.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellMusicDecode.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -625,6 +622,9 @@
     </ClCompile>
     <ClCompile Include="Crypto\ec.cpp">
       <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
       <Filter>Emu\Cell</Filter>
@@ -1236,6 +1236,9 @@
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="cellMic.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
       <Filter>Emu\Cell</Filter>

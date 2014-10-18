@@ -106,7 +106,7 @@ SPUThread* spu_thread_initialize(SpuGroupInfo* group, u32 spu_num, sys_spu_image
 	return &new_thread;
 }
 
-s32 sys_spu_thread_initialize(vm::ptr<be_t<u32>> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
+s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
 	sys_spu.Warning("sys_spu_thread_initialize(thread_addr=0x%x, group=0x%x, spu_num=%d, img_addr=0x%x, attr_addr=0x%x, arg_addr=0x%x)",
 		thread.addr(), group, spu_num, img.addr(), attr.addr(), arg.addr());
@@ -161,7 +161,7 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<be_t<u32>> status)
+s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 {
 	sys_spu.Warning("sys_spu_thread_get_exit_status(id=%d, status_addr=0x%x)", id, status.addr());
 
@@ -451,7 +451,7 @@ SpuGroupInfo* spu_thread_group_create(const std::string& name, u32 num, s32 prio
 	return group;
 }
 
-s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
+s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
 {
 	sys_spu.Warning("sys_spu_thread_group_create(id_addr=0x%x, num=%d, prio=%d, attr_addr=0x%x)",
 		id.addr(), num, prio, attr.addr());
@@ -465,7 +465,7 @@ s32 sys_spu_thread_group_create(vm::ptr<be_t<u32>> id, u32 num, s32 prio, vm::pt
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_group_join(u32 id, vm::ptr<be_t<u32>> cause, vm::ptr<be_t<u32>> status)
+s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
 	sys_spu.Warning("sys_spu_thread_group_join(id=%d, cause_addr=0x%x, status_addr=0x%x)", id, cause.addr(), status.addr());
 
@@ -518,7 +518,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<be_t<u32>> cause, vm::ptr<be_t<u32
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_create(vm::ptr<be_t<u32>> thread_id, vm::ptr<be_t<u32>> entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
+s32 sys_spu_thread_create(vm::ptr<u32> thread_id, vm::ptr<u32> entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr)
 {
 	sys_spu.Todo("sys_spu_thread_create(thread_id_addr=0x%x, entry_addr=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x",
 		thread_id.addr(), entry.addr(), arg, prio, stacksize, flags, threadname_addr);
@@ -569,7 +569,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 	}
 }
 
-s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<be_t<u64>> value, u32 type)
+s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 {
 	sys_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value_addr=0x%x, type=0x%x)",
 		id, address, value.addr(), type);
@@ -638,7 +638,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 	return CELL_OK;
 }
 
-s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<be_t<u64>> value)
+s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 {
 	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value_addr=0x%x)", id, value.addr());
 
@@ -914,7 +914,7 @@ s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_create(vm::ptr<be_t<u32>> id, u32 attr_addr)
+s32 sys_raw_spu_create(vm::ptr<u32> id, u32 attr_addr)
 {
 	sys_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id.addr(), attr_addr);
 
@@ -947,7 +947,7 @@ s32 sys_raw_spu_destroy(u32 id)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<be_t<u32>> intrtag)
+s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
 {
 	sys_spu.Warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag_addr=0x%x)", id, class_id, hwthread, intrtag.addr());
 
@@ -993,7 +993,7 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<be_t<u64>> mask)
+s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 {
 	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.addr());
 
@@ -1031,7 +1031,7 @@ s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<be_t<u64>> stat)
+s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 {
 	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.addr());
 
@@ -1050,7 +1050,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<be_t<u64>> stat)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<be_t<u32>> value)
+s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value_addr=0x%x)", id, value.addr());
 
@@ -1080,7 +1080,7 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 	return CELL_OK;
 }
 
-s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<be_t<u32>> value)
+s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value_addr=0x%x)", id, value.addr());
 

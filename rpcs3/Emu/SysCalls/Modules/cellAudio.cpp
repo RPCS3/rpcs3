@@ -385,7 +385,7 @@ int cellAudioInit()
 				{
 					std::lock_guard<std::mutex> lock(audioMutex);
 					// update indexes:
-					auto indexes = vm::ptr<be_t<u64>>::make(m_config.m_indexes);
+					auto indexes = vm::ptr<u64>::make(m_config.m_indexes);
 					for (u32 i = 0; i < m_config.AUDIO_PORT_COUNT; i++)
 					{
 						if (!m_config.m_ports[i].m_is_audio_port_started) continue;
@@ -505,7 +505,7 @@ int cellAudioQuit()
 	return CELL_OK;
 }
 
-int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<be_t<u32>> portNum)
+int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
 {
 	cellAudio->Warning("cellAudioPortOpen(audioParam_addr=0x%x, portNum_addr=0x%x)", audioParam.addr(), portNum.addr());
 
@@ -657,7 +657,7 @@ int cellAudioPortStop(u32 portNum)
 	return CELL_OK;
 }
 
-int cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<be_t<u64>> stamp)
+int cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 {
 	cellAudio->Log("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp_addr=0x%x)", portNum, tag, stamp.addr());
 
@@ -685,7 +685,7 @@ int cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<be_t<u64>> stamp)
 	return CELL_OK;
 }
 
-int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<be_t<u64>> tag)
+int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 {
 	cellAudio->Log("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag_addr=0x%x)", portNum, blockNo, tag.addr());
 
@@ -736,7 +736,7 @@ int cellAudioSetPortLevel(u32 portNum, float level)
 }
 
 // Utility Functions  
-int cellAudioCreateNotifyEventQueue(vm::ptr<be_t<u32>> id, vm::ptr<be_t<u64>> key)
+int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
 	cellAudio->Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.addr(), key.addr());
 
@@ -764,7 +764,7 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<be_t<u32>> id, vm::ptr<be_t<u64>> ke
 	return CELL_OK;
 }
 
-int cellAudioCreateNotifyEventQueueEx(vm::ptr<be_t<u32>> id, vm::ptr<be_t<u64>> key, u32 iFlags)
+int cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
 {
 	cellAudio->Todo("cellAudioCreateNotifyEventQueueEx(id_addr=0x%x, key_addr=0x%x, iFlags=0x%x)", id.addr(), key.addr(), iFlags);
 	return CELL_OK;

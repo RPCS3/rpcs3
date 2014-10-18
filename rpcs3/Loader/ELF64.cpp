@@ -470,11 +470,11 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 #endif
 						vm::write32(stub.s_text + i*4, (u32)tbl + i*8);
 
-						auto out_tbl = vm::ptr<be_t<u32>>::make((u32)tbl + i * 8);
+						auto out_tbl = vm::ptr<u32>::make((u32)tbl + i * 8);
 						out_tbl[0] = (u32)dst + i*section;
 						out_tbl[1] = Emu.GetModuleManager().GetFuncNumById(nid);
 
-						auto out_dst = vm::ptr<be_t<u32>>::make((u32)dst + i * section);
+						auto out_dst = vm::ptr<u32>::make((u32)dst + i * section);
 						out_dst[0] = OR(11, 2, 2, 0);
 						out_dst[1] = SC(2);
 						out_dst[2] = BLR();

@@ -15,7 +15,7 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
+int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.addr(), attributes.addr(), size.addr(), dirName.addr());
@@ -325,7 +325,7 @@ int cellGameDeleteGameData()
 	return CELL_OK;
 }
 
-int cellGameGetParamInt(u32 id, vm::ptr<be_t<u32>> value)
+int cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 {
 	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
 

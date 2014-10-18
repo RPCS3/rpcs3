@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Log.h"
 #include "Thread.h"
 
@@ -206,4 +207,59 @@ void thread::join()
 bool thread::joinable() const
 {
 	return m_thr.joinable();
+}
+
+bool waiter_map_t::is_stopped(u64 signal_id)
+{
+	if (Emu.IsStopped())
+	{
+		LOG_WARNING(Log::HLE, "%s.waiter_op() aborted (signal_id=0x%llx)", m_name.c_str(), signal_id);
+		return true;
+	}
+	return false;
+}
+
+waiter_map_t::waiter_reg_t::waiter_reg_t(waiter_map_t& map, u64 signal_id)
+	: signal_id(signal_id)
+	, thread(GetCurrentNamedThread())
+	, map(map)
+{
+	std::lock_guard<std::mutex> lock(map.m_mutex);
+
+	// add waiter
+	map.m_waiters.push_back({ signal_id, thread });
+}
+
+waiter_map_t::waiter_reg_t::~waiter_reg_t()
+{
+	std::lock_guard<std::mutex> lock(map.m_mutex);
+
+	// remove waiter
+	for (size_t i = map.m_waiters.size() - 1; i >= 0; i--)
+	{
+		if (map.m_waiters[i].signal_id == signal_id && map.m_waiters[i].thread == thread)
+		{
+			map.m_waiters.erase(map.m_waiters.begin() + i);
+			return;
+		}
+	}
+
+	LOG_ERROR(HLE, "%s(): waiter not found (signal_id=0x%llx, map='%s')", __FUNCTION__, signal_id, map.m_name.c_str());
+	Emu.Pause();
+}
+
+void waiter_map_t::notify(u64 signal_id)
+{
+	if (!m_waiters.size()) return;
+
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	// find waiter and signal
+	for (auto& v : m_waiters)
+	{
+		if (v.signal_id == signal_id)
+		{
+			v.thread->Notify();
+		}
+	}
 }

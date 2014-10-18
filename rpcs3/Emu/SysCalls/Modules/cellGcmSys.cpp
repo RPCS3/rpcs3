@@ -61,11 +61,11 @@ CellGcmOffsetTable offsetTable;
 
 void InitOffsetTable()
 {
-	offsetTable.ioAddress = (u32)Memory.Alloc(3072 * sizeof(u16), 1);
-	offsetTable.eaAddress = (u32)Memory.Alloc(512 * sizeof(u16), 1);
+	offsetTable.ioAddress.set(be_t<u32>::make((u32)Memory.Alloc(3072 * sizeof(u16), 1)));
+	offsetTable.eaAddress.set(be_t<u32>::make((u32)Memory.Alloc(512 * sizeof(u16), 1)));
 
-	memset(vm::get_ptr<void>(offsetTable.ioAddress), 0xFF, 3072 * sizeof(u16));
-	memset(vm::get_ptr<void>(offsetTable.eaAddress), 0xFF, 512 * sizeof(u16));
+	memset(offsetTable.ioAddress.get_ptr(), 0xFF, 3072 * sizeof(u16));
+	memset(offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
@@ -129,7 +129,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 	cellGcmGetOffsetTable(table);
 
 	// If entry not in use, return NULL
-	u16 entry = vm::read16(table->eaAddress + 241 * sizeof(u16));
+	u16 entry = table->eaAddress[241];
 	if (entry == 0xFFFF) {
 		return 0;
 	}
@@ -540,7 +540,9 @@ int cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
+		cellGcmSys->Todo("Unimplemented display frequency: 59.94Hz");
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
+		cellGcmSys->Todo("Unimplemented display frequency: Scanout");
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq;
 		break;
@@ -814,7 +816,7 @@ s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
 	// Address in main memory else check 
 	else
 	{
-		u16 upper12Bits = vm::read16(offsetTable.ioAddress + sizeof(u16)*(address >> 20));
+		u16 upper12Bits = offsetTable.ioAddress[address >> 20];
 
 		// If the address is mapped in IO
 		if (upper12Bits != 0xFFFF) {
@@ -858,10 +860,8 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
 	return CELL_OK;
 }
 
-s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
+s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 {
-	cellGcmSys->Warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
-
 	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
 	// Check if the mapping was successfull
@@ -870,8 +870,9 @@ s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
 		// Fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			vm::write16(offsetTable.ioAddress + ((ea >> 20) + i)*sizeof(u16), (io >> 20) + i);
-			vm::write16(offsetTable.eaAddress + ((io >> 20) + i)*sizeof(u16), (ea >> 20) + i);
+			offsetTable.ioAddress[(ea >> 20) + i] = (io >> 20) + i;
+			offsetTable.eaAddress[(io >> 20) + i] = (ea >> 20) + i;
+			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = is_strict;
 		}
 	}
 	else
@@ -883,10 +884,20 @@ s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
 	return CELL_OK;
 }
 
+s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
+{
+	cellGcmSys->Warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
+
+	return gcmMapEaIoAddress(ea, io, size, false);
+}
+
 s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
 {
 	cellGcmSys->Warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
-	return cellGcmMapEaIoAddress(ea, io, size); // TODO: strict ordering
+
+	assert(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
+
+	return gcmMapEaIoAddress(ea, io, size, true);
 }
 
 s32 cellGcmMapLocalMemory(u64 address, u64 size)
@@ -910,7 +921,7 @@ s32 cellGcmMapLocalMemory(u64 address, u64 size)
 	return CELL_OK;
 }
 
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
+s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys->Warning("cellGcmMapMainMemory(ea=0x%x,size=0x%x,offset_addr=0x%x)", ea, size, offset.addr());
 
@@ -919,13 +930,14 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<be_t<u32>> offset)
 	u32 io = Memory.RSXIOMem.Map(ea, size);
 
 	//check if the mapping was successfull
-	if (Memory.RSXIOMem.Write32(io, 0))
+	if (Memory.RSXIOMem.RealAddr(io) == ea)
 	{
 		//fill the offset table
 		for (u32 i = 0; i<(size >> 20); i++)
 		{
-			vm::write16(offsetTable.ioAddress + ((ea >> 20) + i) * sizeof(u16), (u16)(io >> 20) + i);
-			vm::write16(offsetTable.eaAddress + ((io >> 20) + i) * sizeof(u16), (u16)(ea >> 20) + i);
+			offsetTable.ioAddress[(ea >> 20) + i] = (u16)((io >> 20) + i);
+			offsetTable.eaAddress[(io >> 20) + i] = (u16)((ea >> 20) + i);
+			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = false;
 		}
 
 		*offset = io;
@@ -970,12 +982,12 @@ s32 cellGcmUnmapEaIoAddress(u64 ea)
 	{
 		u64 io;
 		ea = ea >> 20;
-		io = vm::read16(offsetTable.ioAddress + (ea*sizeof(u16)));
+		io = offsetTable.ioAddress[ea];
 
 		for (u32 i = 0; i<size; i++)
 		{
-			vm::write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
-			vm::write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
+			offsetTable.ioAddress[ea + i] = 0xFFFF;
+			offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
 	}
 	else
@@ -996,12 +1008,12 @@ s32 cellGcmUnmapIoAddress(u64 io)
 	{
 		u64 ea;
 		io = io >> 20;
-		ea = vm::read16(offsetTable.eaAddress + (io*sizeof(u16)));
+		ea = offsetTable.eaAddress[io];
 
 		for (u32 i = 0; i<size; i++)
 		{
-			vm::write16(offsetTable.ioAddress + ((ea + i)*sizeof(u16)), 0xFFFF);
-			vm::write16(offsetTable.eaAddress + ((io + i)*sizeof(u16)), 0xFFFF);
+			offsetTable.ioAddress[ea + i] = 0xFFFF;
+			offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
 	}
 	else
