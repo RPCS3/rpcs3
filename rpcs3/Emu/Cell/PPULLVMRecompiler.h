@@ -11,7 +11,7 @@
 #include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/PassManager.h"
 
-struct PPURegState;
+struct PPUState;
 
 /// PPU recompiler that uses LLVM for code generation and optimization
 class PPULLVMRecompiler : public ThreadBase, protected PPUOpcodes, protected PPCDecoder {
@@ -690,10 +690,10 @@ private:
     void CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk);
 
     /// Read from memory
-    llvm::Value * ReadMemory(llvm::Value * addr_i64, u32 bits, bool bswap = true);
+    llvm::Value * ReadMemory(llvm::Value * addr_i64, u32 bits, u32 alignment = 0, bool bswap = true, bool could_be_mmio = true);
 
     /// Write to memory
-    void WriteMemory(llvm::Value * addr_i64, llvm::Value * val_ix, bool bswap = true);
+    void WriteMemory(llvm::Value * addr_i64, llvm::Value * val_ix, u32 alignment = 0, bool bswap = true, bool could_be_mmio = true);
 
     /// Call an interpreter function
     template<class Func, class... Args>
@@ -709,7 +709,7 @@ private:
 
     /// Test an instruction against the interpreter
     template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-    void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args);
+    void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args);
 
     /// Excute a test
     void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);

@@ -2,7 +2,7 @@
 
 #include <emmintrin.h>
 
-union u128
+union _CRT_ALIGN(16) u128
 {
 	u64 _u64[2];
 	s64 _s64[2];

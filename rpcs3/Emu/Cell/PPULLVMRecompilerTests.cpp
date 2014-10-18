@@ -14,15 +14,15 @@ using namespace llvm;
 VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &PPULLVMRecompiler::fn, &PPUInterpreter::fn, input, __VA_ARGS__)
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(fn, s, n, ...) {  \
-    PPURegState input;                                                              \
+    PPUState input;                                                                 \
     for (int i = s; i < (n + s); i++) {                                             \
-        input.SetRandom();                                                          \
+        input.SetRandom(0x10000);                                                   \
         VERIFY_INSTRUCTION_AGAINST_INTERPRETER(fn, i, input, __VA_ARGS__);          \
     }                                                                               \
 }
 
 /// Register state of a PPU
-struct PPURegState {
+struct PPUState {
     /// Floating point registers
     PPCdouble FPR[32];
 
@@ -56,7 +56,15 @@ struct PPURegState {
     /// Time base register
     u64 TB;
 
-    void Load(PPUThread & ppu) {
+    /// Reservations
+    u64 R_ADDR;
+    u64 R_VALUE;
+
+    /// Mmeory block
+    u32 address;
+    u64 mem_block[64];
+
+    void Load(PPUThread & ppu, u32 addr) {
         for (int i = 0; i < 32; i++) {
             FPR[i] = ppu.FPR[i];
             GPR[i] = ppu.GPR[i];
@@ -74,6 +82,14 @@ struct PPURegState {
         LR    = ppu.LR;
         CTR   = ppu.CTR;
         TB    = ppu.TB;
+
+        R_ADDR  = ppu.R_ADDR;
+        R_VALUE = ppu.R_VALUE;
+
+        address = addr;
+        for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
+            mem_block[i] = vm::read64(address + (i * 8));
+        }
     }
 
     void Store(PPUThread & ppu) {
@@ -94,17 +110,24 @@ struct PPURegState {
         ppu.LR    = LR;
         ppu.CTR   = CTR;
         ppu.TB    = TB;
+
+        ppu.R_ADDR  = R_ADDR;
+        ppu.R_VALUE = R_VALUE;
+
+        for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
+            vm::write64(address + (i * 8), mem_block[i]);
+        }
     }
 
-    void SetRandom() {
+    void SetRandom(u32 addr) {
         std::mt19937_64 rng;
 
-        rng.seed(std::mt19937_64::default_seed);
+        rng.seed((u32)std::chrono::high_resolution_clock::now().time_since_epoch().count());
         for (int i = 0; i < 32; i++) {
-            FPR[i]         = (double)rng();
-            GPR[i]         = rng();
-            VPR[i]._u64[0] = rng();
-            VPR[i]._u64[1] = rng();
+            FPR[i]       = (double)rng();
+            GPR[i]       = rng();
+            VPR[i]._d[0] = (double)rng();
+            VPR[i]._d[1] = (double)rng();
 
             if (i < 8) {
                 SPRG[i] = rng();
@@ -123,6 +146,13 @@ struct PPURegState {
         LR          = rng();
         CTR         = rng();
         TB          = rng();
+        R_ADDR      = rng();
+        R_VALUE     = rng();
+
+        address = addr;
+        for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
+            mem_block[i] = rng();
+        }
     }
 
     std::string ToString() const {
@@ -151,36 +181,41 @@ struct PPURegState {
                            fmt::by_value(FPSCR.FI), fmt::by_value(FPSCR.FR), fmt::by_value(FPSCR.VXVC), fmt::by_value(FPSCR.VXIMZ),
                            fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
                            fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
-        ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT));
+        //ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT)); // TODO: Uncomment after implementing VSCR.SAT
+        ret += fmt::Format("R_ADDR  = 0x%016llx R_VALUE = 0x%016llx\n", R_ADDR, R_VALUE);
+
+        for (int i = 0; i < (sizeof(mem_block) / 8); i += 2) {
+            ret += fmt::Format("mem_block[%d] = 0x%016llx mem_block[%d] = 0x%016llx\n", i, mem_block[i], i + 1, mem_block[i + 1]);
+        }
 
         return ret;
     }
 };
 
-static PPUThread      * s_ppu_state    = nullptr;
-static PPUInterpreter * s_interpreter  = nullptr;
+static PPUThread      * s_ppu_state   = nullptr;
+static PPUInterpreter * s_interpreter = nullptr;
 
 template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPURegState & input_reg_state, Args... args) {
+void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args) {
     auto test_case = [&]() {
         (this->*recomp_fn)(args...);
     };
     auto input = [&]() {
-        input_reg_state.Store(*s_ppu_state);
+        input_state.Store(*s_ppu_state);
     };
     auto check_result = [&](std::string & msg) {
-        PPURegState recomp_output_reg_state;
-        PPURegState interp_output_reg_state;
+        PPUState recomp_output_state;
+        PPUState interp_output_state;
 
-        recomp_output_reg_state.Load(*s_ppu_state);
-        input_reg_state.Store(*s_ppu_state);
+        recomp_output_state.Load(*s_ppu_state, input_state.address);
+        input_state.Store(*s_ppu_state);
         (s_interpreter->*interp_fn)(args...);
-        interp_output_reg_state.Load(*s_ppu_state);
+        interp_output_state.Load(*s_ppu_state, input_state.address);
 
-        if (interp_output_reg_state.ToString() != recomp_output_reg_state.ToString()) {
-            msg = std::string("Input register states:\n") + input_reg_state.ToString() +
-                std::string("\nOutput register states:\n") + recomp_output_reg_state.ToString() +
-                std::string("\nInterpreter output register states:\n") + interp_output_reg_state.ToString();
+        if (interp_output_state.ToString() != recomp_output_state.ToString()) {
+            msg = std::string("Input state:\n") + input_state.ToString() +
+                std::string("\nOutput state:\n") + recomp_output_state.ToString() +
+                std::string("\nInterpreter output state:\n") + interp_output_state.ToString();
             return false;
         }
 
@@ -224,6 +259,11 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     // Optimize
     m_fpm->run(*m_current_function);
 
+    // Print the optimized IR
+    ir = "";
+    m_current_function->print(ir_ostream);
+    LOG_NOTICE(PPU, "[UT %s] Optimized LLVM IR:%s", name, ir.c_str());
+
     // Generate the function
     MachineCodeInfo mci;
     m_execution_engine->runJITOnFunction(m_current_function, &mci);
@@ -265,8 +305,8 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     s_ppu_state   = ppu_state;
     s_interpreter = interpreter;
 
-    PPURegState initial_state;
-    initial_state.Load(*ppu_state);
+    PPUState initial_state;
+    initial_state.Load(*ppu_state, 0x10000);
 
     LOG_NOTICE(PPU, "Running Unit Tests");
 
@@ -348,9 +388,66 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VCMPGTUW_, 0, 5, 0, 1, 2);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VCMPGTUW_, 5, 5, 0, 1, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMADDFP, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXFP, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXSB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXSH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXSW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXUB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXUH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMAXUW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINFP, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINSB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINSH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINSW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINUB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINUH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMINUW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGHB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGHH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGHW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGLB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGLH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMRGLW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMSUMMBM, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMSUMSHM, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMSUMUBM, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VMSUMUHM, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VNMSUBFP, 0, 5, 0, 1, 2, 3);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VNOR, 0, 5, 0, 1, 2);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VOR, 0, 5, 0, 1, 2);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VPERM, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VREFP, 0, 5, 0, 1);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSEL, 0, 5, 0, 1, 2, 3);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSL, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSLB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSLDOI, 0, 5, 0, 1, 2, 6);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSLH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSLO, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSLW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTB, 0, 5, 0, 3, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTH, 0, 5, 0, 3, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTISB, 0, 5, 0, 12345);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTISH, 0, 5, 0, 12345);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTISW, 0, 5, 0, -12345);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSPLTW, 0, 5, 0, 3, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSR, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRAB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRAH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRAW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRB, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRH, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRO, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSRW, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBFP, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBSBS, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBSHS, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBSWS, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUBM, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUBS, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUHM, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUHS, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUWM, 0, 5, 0, 1, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VSUBUWS, 0, 5, 0, 1, 2);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(VXOR, 0, 5, 0, 1, 2);
     // TODO: Rest of the vector instructions
 
@@ -443,6 +540,10 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CMP, 5, 5, 6, 1, 23, 14);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CMPL, 0, 5, 3, 0, 9, 31);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CMPL, 5, 5, 6, 1, 23, 14);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ADDC, 0, 5, 0, 1, 2, 0, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ADDC, 5, 5, 0, 1, 2, 0, true);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(SUBFC, 0, 5, 0, 1, 2, 0, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(SUBFC, 5, 5, 0, 1, 2, 0, true);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EXTSB, 0, 5, 3, 5, 0);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EXTSB, 5, 5, 3, 5, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EXTSH, 0, 5, 6, 9, 0);
@@ -485,13 +586,11 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ISYNC, 0, 5);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EIEIO, 0, 5);
 
-    PPURegState input;
-    input.SetRandom();
+    PPUState input;
+    input.SetRandom(0x10000);
     input.GPR[14] = 10;
+    input.GPR[21] = 15;
     input.GPR[23] = 0x10000;
-    for (int i = 0; i < 1000; i++) {
-        vm::write8(i + 0x10000, i);
-    }
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LBZ, 0, input, 5, 0, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LBZ, 1, input, 5, 14, 0x10000);
@@ -543,22 +642,41 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDUX, 0, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 0, input, 5, 23, 0);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 1, input, 5, 23, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 2, input, 5, 23, 7);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 3, input, 5, 23, 25);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LMW, 0, input, 5, 0, 0x10000);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LMW, 1, input, 16, 14, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVXL, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVXL, 1, input, 5, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 0, input, 5, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSL, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSL, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSL, 2, input, 5, 21, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSR, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSR, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVSR, 2, input, 5, 21, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEBX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEBX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEBX, 2, input, 5, 21, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEHX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEHX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEHX, 2, input, 5, 21, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEWX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEWX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVEWX, 2, input, 5, 21, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVLX, 2, input, 5, 21, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVRX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVRX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LVRX, 2, input, 5, 21, 23);
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 0, input, 3, 0, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 1, input, 3, 14, 0x10000);
@@ -603,6 +721,18 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVXL, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVXL, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEBX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEBX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEHX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEHX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEWX, 0, input, 5, 0, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STVEWX, 1, input, 5, 14, 23);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STMW, 0, input, 5, 0, 0x10000);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STMW, 1, input, 16, 14, 0x10000);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 0, input, 5, 23, 0);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 1, input, 5, 23, 2);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 2, input, 5, 23, 7);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 3, input, 5, 23, 25);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 0, input, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14, 23);
 
