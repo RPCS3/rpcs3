@@ -126,8 +126,10 @@ struct PPUState {
         for (int i = 0; i < 32; i++) {
             FPR[i]       = (double)rng();
             GPR[i]       = rng();
-            VPR[i]._d[0] = (double)rng();
-            VPR[i]._d[1] = (double)rng();
+            VPR[i]._f[0] = (float)rng();
+            VPR[i]._f[1] = (float)rng();
+            VPR[i]._f[2] = (float)rng();
+            VPR[i]._f[3] = (float)rng();
 
             if (i < 8) {
                 SPRG[i] = rng();
@@ -168,19 +170,19 @@ struct PPUState {
 
         ret += fmt::Format("CR      = 0x%08x LR = 0x%016llx CTR = 0x%016llx TB=0x%016llx\n", CR.CR, LR, CTR, TB);
         ret += fmt::Format("XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", XER.XER, fmt::by_value(XER.CA), fmt::by_value(XER.OV), fmt::by_value(XER.SO));
-        ret += fmt::Format("FPSCR   = 0x%08x "
-                           "[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
-                           "VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
-                           "FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
-                           "VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
-                           "XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
-                           FPSCR.FPSCR,
-                           fmt::by_value(FPSCR.RN),
-                           fmt::by_value(FPSCR.NI), fmt::by_value(FPSCR.XE), fmt::by_value(FPSCR.ZE), fmt::by_value(FPSCR.UE), fmt::by_value(FPSCR.OE), fmt::by_value(FPSCR.VE),
-                           fmt::by_value(FPSCR.VXCVI), fmt::by_value(FPSCR.VXSQRT), fmt::by_value(FPSCR.VXSOFT), fmt::by_value(FPSCR.FPRF),
-                           fmt::by_value(FPSCR.FI), fmt::by_value(FPSCR.FR), fmt::by_value(FPSCR.VXVC), fmt::by_value(FPSCR.VXIMZ),
-                           fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
-                           fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
+        //ret += fmt::Format("FPSCR   = 0x%08x " // TODO: Uncomment after implementing FPSCR
+        //                   "[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
+        //                   "VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
+        //                   "FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
+        //                   "VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
+        //                   "XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
+        //                   FPSCR.FPSCR,
+        //                   fmt::by_value(FPSCR.RN),
+        //                   fmt::by_value(FPSCR.NI), fmt::by_value(FPSCR.XE), fmt::by_value(FPSCR.ZE), fmt::by_value(FPSCR.UE), fmt::by_value(FPSCR.OE), fmt::by_value(FPSCR.VE),
+        //                   fmt::by_value(FPSCR.VXCVI), fmt::by_value(FPSCR.VXSQRT), fmt::by_value(FPSCR.VXSOFT), fmt::by_value(FPSCR.FPRF),
+        //                   fmt::by_value(FPSCR.FI), fmt::by_value(FPSCR.FR), fmt::by_value(FPSCR.VXVC), fmt::by_value(FPSCR.VXIMZ),
+        //                   fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
+        //                   fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
         //ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT)); // TODO: Uncomment after implementing VSCR.SAT
         ret += fmt::Format("R_ADDR  = 0x%016llx R_VALUE = 0x%016llx\n", R_ADDR, R_VALUE);
 
@@ -585,6 +587,20 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CNTLZD, 5, 5, 5, 6, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ISYNC, 0, 5);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EIEIO, 0, 5);
+
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FDIV, 0, 5, 0, 1, 2, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FSUB, 0, 5, 0, 1, 2, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FADD, 0, 5, 0, 1, 2, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FMUL, 0, 5, 0, 1, 2, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FMSUB, 0, 5, 0, 1, 2, 3, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FMADD, 0, 5, 0, 1, 2, 3, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FNMSUB, 0, 5, 0, 1, 2, 3, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FNMADD, 0, 5, 0, 1, 2, 3, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FNEG, 0, 5, 0, 1, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FMR, 0, 5, 0, 1, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FNABS, 0, 5, 0, 1, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FABS, 0, 5, 0, 1, false);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FCFID, 0, 5, 0, 1, false);
 
     PPUState input;
     input.SetRandom(0x10000);

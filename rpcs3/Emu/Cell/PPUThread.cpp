@@ -104,14 +104,13 @@ void PPUThread::DoRun()
 	break;
 
 	case 1:
-	case 2:
 	{
 		auto ppui = new PPUInterpreter(*this);
 		m_dec = new PPUDecoder(ppui);
 	}
 	break;
 
-	case 3:
+	case 2:
 		if (!m_dec) {
 			m_dec = new	PPULLVMEmulator(*this);
 		}
