@@ -4892,7 +4892,7 @@ PPULLVMEmulator::PPULLVMEmulator(PPUThread & ppu)
     s_num_instances++;
     if (!s_recompiler) {
         s_recompiler = new PPULLVMRecompiler();
-        //s_recompiler->RunAllTests(&m_ppu, m_interpreter);
+        s_recompiler->RunAllTests(&m_ppu, m_interpreter);
     }
 }
 

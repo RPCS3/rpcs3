@@ -8,6 +8,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/MC/MCDisassembler.h"
 
+//#define PPU_LLVM_RECOMPILER_UNIT_TESTS 1
+
 using namespace llvm;
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER(fn, tc, input, ...) \
@@ -194,11 +196,14 @@ struct PPUState {
     }
 };
 
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
 static PPUThread      * s_ppu_state   = nullptr;
 static PPUInterpreter * s_interpreter = nullptr;
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 
 template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
 void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args) {
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     auto test_case = [&]() {
         (this->*recomp_fn)(args...);
     };
@@ -224,9 +229,11 @@ void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, P
         return true;
     };
     RunTest(name, test_case, input, check_result);
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
 
 void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     // Create the unit test function
     m_current_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
                                                                    m_ir_builder->getInt8PtrTy() /*ppu_state*/,
@@ -301,9 +308,11 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
     }
 
     m_execution_engine->freeMachineCodeForFunction(m_current_function);
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
 
 void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) {
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     s_ppu_state   = ppu_state;
     s_interpreter = interpreter;
 
@@ -753,4 +762,5 @@ void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * inte
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14, 23);
 
     initial_state.Store(*ppu_state);
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }

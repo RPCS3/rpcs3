@@ -7,6 +7,7 @@ compiler:
 branches:
   only:
     - master
+    - ppu_llvm_recompiler
 
 git:
   submodules: false
@@ -27,7 +28,12 @@ before_install:
     sudo ./cmake-3.0.0-Linux-i386.sh --skip-license --prefix=/usr;
 
 before_script:
- - git submodule update --init asmjit ffmpeg
+ - git submodule update --init asmjit ffmpeg llvm
+ - cd llvm_build
+ - cmake -DLLVM_TARGETS_TO_BUILD=X86 -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF -DLLVM_INCLUDE_UTILS=OFF -DWITH_POLLY=OFF ../llvm
+ - make -j 4
+ - sudo make install
+ - cd ..
  - mkdir build
  - cd build
  - cmake ..

@@ -102,7 +102,8 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../Utilities/*"
 )
 
-string(REGEX REPLACE "(.*);.*ConvertUTF.c;" "\\1;" RPCS3_SRC "${RPCS3_SRC}")
+list(REMOVE_ITEM RPCS3_SRC ${RPCS3_SRC_DIR}/../Utilities/simpleini/ConvertUTF.c)
+set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPULLVMRecompiler.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 
 add_executable(rpcs3 ${RPCS3_SRC})
 
