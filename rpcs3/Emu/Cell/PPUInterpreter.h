@@ -1526,29 +1526,10 @@ private:
 	{
 		u8 sh = CPU.VPR[vb]._u8[0] & 0x7;
 
-		u32 t = 1;
-
-		for (uint b = 0; b < 16; b++)
+		CPU.VPR[vd]._u8[0] = CPU.VPR[va]._u8[0] << sh;
+		for (uint b = 1; b < 16; b++)
 		{
-			t &= (CPU.VPR[vb]._u8[b] & 0x7) == sh;
-		}
-
-		if(t)
-		{
-			CPU.VPR[vd]._u8[0] = CPU.VPR[va]._u8[0] << sh;
-
-			for (uint b = 1; b < 16; b++)
-			{
-				CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] << sh) | (CPU.VPR[va]._u8[b-1] >> (8 - sh));
-			}
-		}
-		else
-		{
-			//undefined
-			CPU.VPR[vd]._u32[0] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[1] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[2] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[3] = 0xCDCDCDCD;
+			CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] << sh) | (CPU.VPR[va]._u8[b-1] >> (8 - sh));
 		}
 	}
 	void VSLB(u32 vd, u32 va, u32 vb)
@@ -1649,29 +1630,11 @@ private:
 	void VSR(u32 vd, u32 va, u32 vb) //nf
 	{
 		u8 sh = CPU.VPR[vb]._u8[0] & 0x7;
-		u32 t = 1;
 
-		for (uint b = 0; b < 16; b++)
+		CPU.VPR[vd]._u8[15] = CPU.VPR[va]._u8[15] >> sh;
+		for (uint b = 14; ~b; b--)
 		{
-			t &= (CPU.VPR[vb]._u8[b] & 0x7) == sh;
-		}
-
-		if(t)
-		{
-			CPU.VPR[vd]._u8[15] = CPU.VPR[va]._u8[15] >> sh;
-
-			for (uint b = 14; ~b; b--)
-			{
-				CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] >> sh) | (CPU.VPR[va]._u8[b+1] << (8 - sh));
-			}
-		}
-		else
-		{
-			//undefined
-			CPU.VPR[vd]._u32[0] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[1] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[2] = 0xCDCDCDCD;
-			CPU.VPR[vd]._u32[3] = 0xCDCDCDCD;
+			CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] >> sh) | (CPU.VPR[va]._u8[b+1] << (8 - sh));
 		}
 	}
 	void VSRAB(u32 vd, u32 va, u32 vb) //nf
@@ -2987,7 +2950,7 @@ private:
 	{
 		u64 EA = ra ? CPU.GPR[ra] : 0;
 		u64 N = nb ? nb : 32;
-		u8 reg = (u8)CPU.GPR[rd];
+		u8 reg = rd;
 
 		while (N > 0)
 		{
@@ -3000,11 +2963,13 @@ private:
 			else
 			{
 				u32 buf = 0;
+				u32 i   = 3;
 				while (N > 0)
 				{
 					N = N - 1;
-					buf |= vm::read8(EA) <<(N*8) ;
+					buf |= vm::read8(EA) << (i * 8);
 					EA = EA + 1;
+					i--;
 				}
 				CPU.GPR[reg] = buf;
 			}
@@ -3068,7 +3033,7 @@ private:
 	{
 		u64 EA = ra ? CPU.GPR[ra] : 0;
 		u64 N = nb ? nb : 32;
-		u8 reg = (u8)CPU.GPR[rd];
+		u8 reg = rd;
 
 		while (N > 0)
 		{
