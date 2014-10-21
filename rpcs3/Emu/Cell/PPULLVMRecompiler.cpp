@@ -3783,7 +3783,14 @@ void PPULLVMRecompiler::FADDS(u32 frd, u32 fra, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FSQRTS(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FSQRTS", &PPUInterpreter::FSQRTS, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
+    auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
+    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
+    SetFpr(frd, res_f64);
+    
+    // TODO: Set flags
+    //InterpreterCall("FSQRTS", &PPUInterpreter::FSQRTS, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FRES(u32 frd, u32 frb, bool rc) {
@@ -3950,7 +3957,12 @@ void PPULLVMRecompiler::FADD(u32 frd, u32 fra, u32 frb, bool rc) {
 }
 
 void PPULLVMRecompiler::FSQRT(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FSQRT", &PPUInterpreter::FSQRT, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FSQRT", &PPUInterpreter::FSQRT, frd, frb, rc);
 }
 
 void PPULLVMRecompiler::FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
