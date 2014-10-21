@@ -29,7 +29,6 @@
 *.res
 *.dump
 *.wav
-*.tmp
 
 /build
 

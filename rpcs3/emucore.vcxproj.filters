@@ -1219,6 +1219,9 @@
     <ClInclude Include="Emu\Memory\vm_var.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
+    <ClInclude Include="restore_new.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="define_new_memleakdetect.h">
       <Filter>Header Files</Filter>
     </ClInclude>

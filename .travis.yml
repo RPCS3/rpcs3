@@ -7,7 +7,6 @@ compiler:
 branches:
   only:
     - master
-    - ppu_llvm_recompiler
 
 git:
   submodules: false
