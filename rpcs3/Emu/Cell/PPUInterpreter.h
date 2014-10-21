@@ -2970,15 +2970,15 @@ private:
 			else
 			{
 				u32 buf = 0;
-				u32 i   = 0;
+				u32 i   = 3;
 				while (N > 0)
 				{
 					N = N - 1;
 					buf |= vm::read8(EA) << (i * 8);
 					EA = EA + 1;
-					i++;
+					i--;
 				}
-				CPU.GPR[reg] = re32(buf);
+				CPU.GPR[reg] = buf;
 			}
 			reg = (reg + 1) % 32;
 		}

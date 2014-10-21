@@ -71,6 +71,48 @@ public:
 	bool joinable() const;
 };
 
+class s_mutex_t
+{
+
+};
+
+class s_shared_mutex_t
+{
+
+};
+
+class s_cond_var_t
+{
+	
+//public:
+//	s_cond_var_t();
+//	~s_cond_var_t();
+//
+//	s_cond_var_t(s_cond_var_t& right) = delete;
+//	s_cond_var_t& operator = (s_cond_var_t& right) = delete;
+//
+//	void wait();
+//	void wait_for();
+//
+//	void notify();
+//	void notify_all();
+};
+
+class slw_mutex_t
+{
+
+};
+
+class slw_recursive_mutex_t
+{
+
+};
+
+class slw_shared_mutex_t
+{
+
+};
+
 class waiter_map_t
 {
 	// TODO: optimize (use custom lightweight readers-writer lock)
@@ -88,34 +130,43 @@ class waiter_map_t
 
 	struct waiter_reg_t
 	{
+		NamedThreadBase* thread;
 		const u64 signal_id;
-		NamedThreadBase* const thread;
 		waiter_map_t& map;
 
-		waiter_reg_t(waiter_map_t& map, u64 signal_id);
+		waiter_reg_t(waiter_map_t& map, u64 signal_id)
+			: thread(nullptr)
+			, signal_id(signal_id)
+			, map(map)
+		{
+		}
+
 		~waiter_reg_t();
+
+		void init();
 	};
 
 	bool is_stopped(u64 signal_id);
 
 public:
-	waiter_map_t(const char* name) : m_name(name) {}
+	waiter_map_t(const char* name)
+		: m_name(name)
+	{
+	}
 
 	// wait until waiter_func() returns true, signal_id is an arbitrary number
 	template<typename WT> __forceinline void wait_op(u64 signal_id, const WT waiter_func)
 	{
-		// check condition
-		if (waiter_func()) return;
-
 		// register waiter
 		waiter_reg_t waiter(*this, signal_id);
 
-		while (true)
+		// check condition or if emulator is stopped
+		while (!waiter_func() && !is_stopped(signal_id))
 		{
+			// initialize waiter (only first time)
+			waiter.init();
 			// wait for 1 ms or until signal arrived
 			waiter.thread->WaitForAnySignal(1);
-			if (is_stopped(signal_id)) break;
-			if (waiter_func()) break;
 		}
 	}
 
