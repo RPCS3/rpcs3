@@ -631,7 +631,7 @@ private:
 		}
 		LOG_OPCODE();
 	}
-	void ROTH(u32 rt, u32 ra, u32 rb)
+	void ROTH(u32 rt, u32 ra, u32 rb) //nf
 	{
 		XmmInvalidate(rt);
 		for (u32 i = 0; i < 8; i++)
@@ -3471,6 +3471,16 @@ private:
 			}
 		}
 		WRAPPER_END(rc, rt, ra, rb);*/
+
+		// hypothetical AVX-512 implementation:
+		// VPXORD mask, rc, [byte:0x0f] // 15 - rc (only for index bits)
+		// VPSHUFB res {k0}, ra, mask
+		// VPTESTMB k1 {k0}, rc, [byte:0x10]
+		// VPSHUFB res {k1}, rb, mask
+		// VPCMPNLTUB k1 {k0}, mask, [byte:0xc0]
+		// VPADDB res {k1}, res, [byte:0xff]
+		// VPCMPNLTUB k1 {k1}, mask, [byte:0xe0]
+		// VPSUBB res {k1}, res, [byte:0x7f]
 
 		const XmmLink& v0 = XmmGet(rc); // v0 = mask
 		const XmmLink& v1 = XmmAlloc();

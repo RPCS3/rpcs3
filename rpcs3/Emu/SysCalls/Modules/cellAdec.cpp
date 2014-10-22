@@ -27,7 +27,6 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 	, cbFunc(func)
 	, cbArg(arg)
 	, adecCb(nullptr)
-	, is_running(false)
 	, is_closed(false)
 	, is_finished(false)
 	, just_started(false)
@@ -296,7 +295,6 @@ u32 adecOpen(AudioDecoder* data)
 				if (adec.reader.rem) free(adec.reader.rem);
 				adec.reader.rem = nullptr;
 				adec.reader.rem_size = 0;
-				adec.is_running = true;
 				adec.just_started = true;
 			}
 			break;
@@ -307,7 +305,6 @@ u32 adecOpen(AudioDecoder* data)
 				cellAdec->Warning("adecEndSeq:");
 				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
-				adec.is_running = false;
 				adec.just_finished = true;
 			}
 			break;
@@ -722,7 +719,7 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	AdecFrame af;
 	if (!adec->frames.Pop(af, &sq_no_wait))
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
@@ -765,7 +762,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 	AdecFrame af;
 	if (!adec->frames.Peek(af, &sq_no_wait))
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
