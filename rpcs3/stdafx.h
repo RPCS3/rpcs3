@@ -32,6 +32,7 @@
 #include <sstream>
 #include <functional>
 #include <algorithm>
+#include <random>
 
 #include <sys/stat.h>
 #include "Utilities/GNU.h"

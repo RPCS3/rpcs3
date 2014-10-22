@@ -241,7 +241,7 @@ public:
 	void Load()
 	{
 		// Core
-		CPUDecoderMode.Load(2);
+		CPUDecoderMode.Load(1);
 		SPUDecoderMode.Load(1);
 
 		// Graphics

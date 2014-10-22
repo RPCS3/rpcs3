@@ -419,8 +419,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
-	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("PPU Interpreter");
+	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
 
 	cbox_spu_decoder->Append("SPU Interpreter");
 	cbox_spu_decoder->Append("SPU JIT (asmjit)");

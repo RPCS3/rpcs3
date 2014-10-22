@@ -626,6 +626,12 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMic.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1233,6 +1239,9 @@
     </ClInclude>
     <ClInclude Include="cellMic.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
+      <Filter>Emu\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

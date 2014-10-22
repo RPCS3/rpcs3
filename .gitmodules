@@ -8,3 +8,7 @@
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicekp/asmjit
+[submodule "llvm"]
+	path = llvm
+	url = https://github.com/llvm-mirror/llvm.git
+	branch = release_35
