@@ -423,7 +423,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
 
 	cbox_spu_decoder->Append("SPU Interpreter");
-	cbox_spu_decoder->Append("SPU JIT (asmjit)");
+	cbox_spu_decoder->Append("SPU JIT (ASMJIT)");
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
