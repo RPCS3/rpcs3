@@ -1384,18 +1384,21 @@ private:
 	}
 	void CBX(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		if (ra == rb)
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+		}
+		else if (ra == rb)
 		{
 			c.add(*addr, *addr);
 		}
 		else
 		{
-			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
+			c.add(*addr, cpu_dword(GPR[ra]._u32[3]));
 		}
+		c.not_(*addr);
 		c.and_(*addr, 0xf);
-		c.neg(*addr);
-		c.add(*addr, 0xf);
 		const XmmLink& vr = XmmAlloc(rt);
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
@@ -1405,18 +1408,21 @@ private:
 	}
 	void CHX(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		if (ra == rb)
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+		}
+		else if (ra == rb)
 		{
 			c.add(*addr, *addr);
 		}
 		else
 		{
-			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
+			c.add(*addr, cpu_dword(GPR[ra]._u32[3]));
 		}
+		c.not_(*addr);
 		c.and_(*addr, 0xe);
-		c.neg(*addr);
-		c.add(*addr, 0xe);
 		const XmmLink& vr = XmmAlloc(rt);
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
@@ -1426,18 +1432,21 @@ private:
 	}
 	void CWX(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		if (ra == rb)
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+		}
+		else if (ra == rb)
 		{
 			c.add(*addr, *addr);
 		}
 		else
 		{
-			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
+			c.add(*addr, cpu_dword(GPR[ra]._u32[3]));
 		}
+		c.not_(*addr);
 		c.and_(*addr, 0xc);
-		c.neg(*addr);
-		c.add(*addr, 0xc);
 		const XmmLink& vr = XmmAlloc(rt);
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
@@ -1447,18 +1456,21 @@ private:
 	}
 	void CDX(u32 rt, u32 ra, u32 rb)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		if (ra == rb)
+		c.mov(*addr, cpu_dword(GPR[rb]._u32[3]));
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+		}
+		else if (ra == rb)
 		{
 			c.add(*addr, *addr);
 		}
 		else
 		{
-			c.add(*addr, cpu_dword(GPR[rb]._u32[3]));
+			c.add(*addr, cpu_dword(GPR[ra]._u32[3]));
 		}
+		c.not_(*addr);
 		c.and_(*addr, 0x8);
-		c.neg(*addr);
-		c.add(*addr, 0x8);
 		const XmmLink& vr = XmmAlloc(rt);
 		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
 		XmmFinalize(vr, rt);
@@ -1555,59 +1567,103 @@ private:
 	}
 	void CBD(u32 rt, u32 ra, s32 i7)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		c.add(*addr, i7);
-		c.and_(*addr, 0xf);
-		c.neg(*addr);
-		c.add(*addr, 0xf);
-		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
-		XmmFinalize(vr, rt);
-		XmmInvalidate(rt);
-		c.mov(byte_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+			const XmmLink& vr = XmmAlloc(rt);
+			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
+			value._u8[i7 & 0xf] = 0x03;
+			c.movdqa(vr.get(), XmmConst(value.vi));
+			XmmFinalize(vr, rt);
+		}
+		else
+		{
+			c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+			c.add(*addr, i7);
+			c.not_(*addr);
+			c.and_(*addr, 0xf);
+			const XmmLink& vr = XmmAlloc(rt);
+			c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
+			XmmFinalize(vr, rt);
+			XmmInvalidate(rt);
+			c.mov(byte_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u8[0])), 0x03);
+		}
 		LOG_OPCODE();
 	}
 	void CHD(u32 rt, u32 ra, s32 i7)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		c.add(*addr, i7);
-		c.and_(*addr, 0xe);
-		c.neg(*addr);
-		c.add(*addr, 0xe);
-		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
-		XmmFinalize(vr, rt);
-		XmmInvalidate(rt);
-		c.mov(word_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+			const XmmLink& vr = XmmAlloc(rt);
+			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
+			value._u16[i7 & 0x7] = 0x0203;
+			c.movdqa(vr.get(), XmmConst(value.vi));
+			XmmFinalize(vr, rt);
+		}
+		else
+		{
+			c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+			c.add(*addr, i7);
+			c.not_(*addr);
+			c.and_(*addr, 0xe);
+			const XmmLink& vr = XmmAlloc(rt);
+			c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
+			XmmFinalize(vr, rt);
+			XmmInvalidate(rt);
+			c.mov(word_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u16[0])), 0x0203);
+		}
 		LOG_OPCODE();
 	}
 	void CWD(u32 rt, u32 ra, s32 i7)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		c.add(*addr, i7);
-		c.and_(*addr, 0xc);
-		c.neg(*addr);
-		c.add(*addr, 0xc);
-		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
-		XmmFinalize(vr, rt);
-		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+			const XmmLink& vr = XmmAlloc(rt);
+			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
+			value._u32[i7 & 0x3] = 0x00010203;
+			c.movdqa(vr.get(), XmmConst(value.vi));
+			XmmFinalize(vr, rt);
+		}
+		else
+		{
+			c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+			c.add(*addr, i7);
+			c.not_(*addr);
+			c.and_(*addr, 0xc);
+			const XmmLink& vr = XmmAlloc(rt);
+			c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
+			XmmFinalize(vr, rt);
+			XmmInvalidate(rt);
+			c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x00010203);
+		}
 		LOG_OPCODE();
 	}
 	void CDD(u32 rt, u32 ra, s32 i7)
 	{
-		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
-		c.add(*addr, i7);
-		c.and_(*addr, 0x8);
-		c.neg(*addr);
-		c.add(*addr, 0x8);
-		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
-		XmmFinalize(vr, rt);
-		XmmInvalidate(rt);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
-		c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
+		if (ra == 1)
+		{
+			// assuming that SP % 16 is always zero
+			const XmmLink& vr = XmmAlloc(rt);
+			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
+			value._u64[i7 & 0x1] = 0x0001020304050607ull;
+			c.movdqa(vr.get(), XmmConst(value.vi));
+			XmmFinalize(vr, rt);
+		}
+		else
+		{
+			c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
+			c.add(*addr, i7);
+			c.not_(*addr);
+			c.and_(*addr, 0x8);
+			const XmmLink& vr = XmmAlloc(rt);
+			c.movdqa(vr.get(), XmmConst(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f)));
+			XmmFinalize(vr, rt);
+			XmmInvalidate(rt);
+			c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[0])), 0x04050607);
+			c.mov(dword_ptr(*cpu_var, *addr, 0, (s32)offsetof(SPUThread, GPR[rt]._u32[1])), 0x00010203);
+		}
 		LOG_OPCODE();
 	}
 	void ROTQBII(u32 rt, u32 ra, s32 i7)
