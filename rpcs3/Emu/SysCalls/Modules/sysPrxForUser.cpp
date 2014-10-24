@@ -157,7 +157,7 @@ int sys_get_random_number(vm::ptr<u8> addr, u64 size)
 	if (size > 4096)
 		size = 4096;
 
-	for (u64 i = 0; i < size - 1; i++)
+	for (u32 i = 0; i < (u32)size - 1; i++)
 	{
 		addr[i] = rand() % 256;
 	}

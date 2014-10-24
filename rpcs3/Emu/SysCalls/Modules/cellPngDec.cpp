@@ -75,13 +75,13 @@ s32 pngDecOpen(
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch (src->srcSelect.ToBE())
+	switch (src->srcSelect)
 	{
-	case se32(CELL_PNGDEC_BUFFER):
+	case CELL_PNGDEC_BUFFER:
 		stream->fileSize = src->streamSize.ToLE();
 		break;
 
-	case se32(CELL_PNGDEC_FILE):
+	case CELL_PNGDEC_FILE:
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
 		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);

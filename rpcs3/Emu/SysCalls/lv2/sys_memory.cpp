@@ -154,7 +154,6 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 		return CELL_ESRCH;
 
 	// HACK: Return all memory.
-	sys_memory_info_t info;
 	mem_info->total_user_memory = ct->size;
 	mem_info->available_user_memory = ct->size;
 	return CELL_OK;

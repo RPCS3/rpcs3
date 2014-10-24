@@ -241,13 +241,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 		{
 		case MFC_PUT_CMD:
 		{
-			vm::write32(ea, ReadLS32(lsa));
+			vm::write32((u32)ea, ReadLS32(lsa));
 			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			WriteLS32(lsa, vm::read32(ea));
+			WriteLS32(lsa, vm::read32((u32)ea));
 			return;
 		}
 
@@ -264,13 +264,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(vm::get_ptr<void>(ea), vm::get_ptr<void>(ls_offset + lsa), size);
+		memcpy(vm::get_ptr<void>((u32)ea), vm::get_ptr<void>(ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(vm::get_ptr<void>(ls_offset + lsa), vm::get_ptr<void>(ea), size);
+		memcpy(vm::get_ptr<void>(ls_offset + lsa), vm::get_ptr<void>((u32)ea), size);
 		return;
 	}
 
@@ -402,6 +402,17 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
 			lsa, ea, tag, size, cmd);
 
+		if ((u32)ea != ea)
+		{
+			LOG_ERROR(Log::SPU, "DMA %s: Invalid external address (0x%llx)",
+				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
+				op == MFC_PUTLLC_CMD ? "PUTLLC" :
+				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
+				ea);
+			Emu.Pause();
+			return;
+		}
+
 		if (op == MFC_GETLLAR_CMD) // get reservation
 		{
 			if (R_ADDR)
@@ -412,7 +423,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			R_ADDR = ea;
 			for (u32 i = 0; i < 16; i++)
 			{
-				R_DATA[i] = vm::get_ptr<u64>(R_ADDR)[i];
+				R_DATA[i] = vm::get_ptr<u64>((u32)R_ADDR)[i];
 				vm::get_ptr<u64>(ls_offset + lsa)[i] = R_DATA[i];
 			}
 			MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
@@ -432,7 +443,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					{
 						changed++;
 						mask |= (0x3 << (i * 2));
-						if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
+						if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -446,7 +457,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				{
 					if (buf[i] != R_DATA[i])
 					{
-						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>(ea)[i], buf[i], R_DATA[i]) != R_DATA[i])
+						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>((u32)R_ADDR)[i], buf[i], R_DATA[i]) != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -520,7 +531,7 @@ bool SPUThread::CheckEvents()
 	{
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
+			if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
 			{
 				m_events |= SPU_EVENT_LR;
 				R_ADDR = 0;

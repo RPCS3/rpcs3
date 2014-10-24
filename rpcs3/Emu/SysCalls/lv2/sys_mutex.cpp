@@ -218,9 +218,8 @@ s32 sys_mutex_trylock(u32 mutex_id)
 	switch (mutex->m_mutex.trylock(tid))
 	{
 	case SMR_OK: mutex->recursive = 1; t.owned_mutexes++; return CELL_OK;
+	default: return CELL_EBUSY;
 	}
-
-	return CELL_EBUSY;
 }
 
 s32 sys_mutex_unlock(u32 mutex_id)

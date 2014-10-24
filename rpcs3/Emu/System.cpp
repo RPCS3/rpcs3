@@ -240,7 +240,7 @@ void Emulator::Load()
 
 	try
 	{
-		if(!(is_error = !l.Analyze()) && l.GetMachine() != MACHINE_Unknown)
+		if(!(is_error = !l.Analyze()))
 		{
 			switch(l.GetMachine())
 			{
@@ -260,6 +260,9 @@ void Emulator::Load()
 			case MACHINE_ARM:
 				Memory.Init(Memory_PSV);
 			break;
+
+			default:
+				throw std::string("Unknown machine!");
 			}
 
 			is_error = !l.Load();

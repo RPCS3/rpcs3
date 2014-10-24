@@ -201,36 +201,38 @@ void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)
 
 	for (u32 i = lib + start; i < lib + end; i += 24)
 	{
-		u64 addr = vm::read64(i);
+		u64 addr = vm::read64(i) + lib;
 		const u64 flag = vm::read64(i + 8);
 
-		if (flag == 0x10100000001ull)
+		if ((u32)addr != addr || (u32)(addr + seg2) != (addr + seg2))
 		{
-			addr = addr + seg2 + lib;
-			u32 value = vm::read32(addr);
+			module->Error("fix_relocs(): invalid address (0x%llx)", addr);
+		}
+		else if (flag == 0x10100000001ull)
+		{
+			addr = addr + seg2;
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16) + seg2);
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x100000001ull)
 		{
-			addr = addr + seg2 + lib;
-			u32 value = vm::read32(addr);
+			addr = addr + seg2;
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16));
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x10000000001ull)
 		{
-			addr = addr + lib;
-			u32 value = vm::read32(addr);
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16) + seg2);
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 1)
 		{
-			addr = addr + lib;
-			u32 value = vm::read32(addr);
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16));
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
 		{
