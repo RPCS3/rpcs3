@@ -75,7 +75,7 @@ s32 pngDecOpen(
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch (src->srcSelect)
+	switch (src->srcSelect.ToLE())
 	{
 	case CELL_PNGDEC_BUFFER:
 		stream->fileSize = src->streamSize.ToLE();
