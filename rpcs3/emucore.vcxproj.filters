@@ -630,7 +630,7 @@
       <Filter>Emu\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Emu\Cell</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

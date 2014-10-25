@@ -55,9 +55,13 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 #define rotl64 _rotl64
 #define rotr64 _rotr64
 
+namespace ppu_recompiler_llvm {
+	class Compiler;
+}
+
 class PPUInterpreter : public PPUOpcodes
 {
-    friend class PPULLVMRecompiler;
+    friend class ppu_recompiler_llvm::Compiler;
 private:
 	PPUThread& CPU;
 
