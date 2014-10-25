@@ -1592,6 +1592,10 @@ void PPULLVMRecompiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
     //InterpreterCall("CRXOR", &PPUInterpreter::CRXOR, crbd, crba, crbb);
 }
 
+void PPULLVMRecompiler::DCBI(u32 ra, u32 rb) {
+    InterpreterCall("DCBI", &PPUInterpreter::DCBI, ra, rb);
+}
+
 void PPULLVMRecompiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
     auto cr_i32  = GetCr();
     auto ba_i32  = GetBit(cr_i32, crba);

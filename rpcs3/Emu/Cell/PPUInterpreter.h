@@ -2858,7 +2858,9 @@ private:
 	{
 		GetRegBySPR(spr) = CPU.GPR[rs];
 	}
-	/*0x1d6*///DCBI
+	void DCBI(u32 ra, u32 rb)
+	{
+	}
 	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		CPU.GPR[ra] = ~(CPU.GPR[rs] & CPU.GPR[rb]);

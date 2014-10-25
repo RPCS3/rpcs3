@@ -1600,7 +1600,10 @@ private:
 		default: DisAsm_IMM_R1("mtspr", spr, rs); break;
 		}
 	}
-	/*0x1d6*///DCBI
+	void DCBI(u32 ra, u32 rb)
+	{
+		DisAsm_R2("dcbi", ra, rb);
+	}
 	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("nand", ra, rs, rb, rc);
