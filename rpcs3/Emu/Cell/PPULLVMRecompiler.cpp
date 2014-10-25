@@ -4748,7 +4748,7 @@ CompiledCodeFragment RecompilationEngine::GetCompiledCodeFragment(u32 address) {
     return nullptr;
 }
 
-void ReleaseCompiledCodeFragment(CompiledCodeFragment compiled_code_fragment) {
+void RecompilationEngine::ReleaseCompiledCodeFragment(CompiledCodeFragment compiled_code_fragment) {
 
 }
 
@@ -4778,7 +4778,6 @@ void Tracer::Trace(BranchType branch_type, u32 address) {
     ExecutionTrace * execution_trace = nullptr;
     BlockId          block_id;
     int              function;
-    int              start;
 
     block_id.address = address;
     block_id.type    = branch_type;
@@ -4810,13 +4809,11 @@ void Tracer::Trace(BranchType branch_type, u32 address) {
         function = m_stack.back();
         m_stack.pop_back();
 
-        start = function;
-
         execution_trace                   = new ExecutionTrace();
         execution_trace->function_address = m_trace[function].address;
         execution_trace->type             = ExecutionTrace::Linear;
-        execution_trace->blocks.insert(execution_trace->blocks.begin(), m_trace.begin() + start, m_trace.end());
-        m_trace.erase(m_trace.begin() + start + 1, m_trace.end());
+        execution_trace->blocks.insert(execution_trace->blocks.begin(), m_trace.begin() + function, m_trace.end());
+        m_trace.erase(m_trace.begin() + function + 1, m_trace.end());
         break;
     case None:
         break;
@@ -4908,7 +4905,7 @@ u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
     return ret;
 }
 
-BranchType GetBranchTypeFromInstruction(u32 instruction) {
+BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
     auto type   = BranchType::None;
     auto field1 = instruction >> 26;
     auto lk     = instruction & 1;

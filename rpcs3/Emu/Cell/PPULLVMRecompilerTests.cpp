@@ -11,9 +11,10 @@
 //#define PPU_LLVM_RECOMPILER_UNIT_TESTS 1
 
 using namespace llvm;
+using namespace ppu_recompiler_llvm;
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER(fn, tc, input, ...) \
-VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &PPULLVMRecompiler::fn, &PPUInterpreter::fn, input, __VA_ARGS__)
+VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Compiler::fn, &PPUInterpreter::fn, input, __VA_ARGS__)
 
 #define VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(fn, s, n, ...) {  \
     PPUState input;                                                                 \
@@ -24,7 +25,7 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &PPUL
 }
 
 /// Register state of a PPU
-struct PPUState {
+    struct ppu_recompiler_llvm::PPUState {
     /// Floating point registers
     PPCdouble FPR[32];
 
@@ -201,8 +202,8 @@ static PPUThread      * s_ppu_state   = nullptr;
 static PPUInterpreter * s_interpreter = nullptr;
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 
-template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args) {
+template <class CompilerFn, class PPUInterpreterFn, class... Args>
+void Compiler::VerifyInstructionAgainstInterpreter(const char * name, CompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args) {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     auto test_case = [&]() {
         (this->*recomp_fn)(args...);
@@ -232,7 +233,7 @@ void PPULLVMRecompiler::VerifyInstructionAgainstInterpreter(const char * name, P
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
 
-void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
+void Compiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     // Create the unit test function
     m_current_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
@@ -311,7 +312,7 @@ void PPULLVMRecompiler::RunTest(const char * name, std::function<void()> test_ca
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
 
-void PPULLVMRecompiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) {
+void Compiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
     s_ppu_state   = ppu_state;
     s_interpreter = interpreter;
