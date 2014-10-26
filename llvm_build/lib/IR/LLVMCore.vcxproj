@@ -1,0 +1,214 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="12.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{E56C0AA9-93F3-4569-88F9-B4439AFEA608}</ProjectGUID>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>LLVMCore</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+    <PropertyGroup>
+      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\llvm_build\Debug\lib\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMCore.dir\Debug\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">LLVMCore</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.lib</TargetExt>
+      <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\llvm_build\Release\lib\</OutDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMCore.dir\Release\</IntDir>
+      <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">LLVMCore</TargetName>
+      <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatSpecificWarningsAsErrors>4238</TreatSpecificWarningsAsErrors>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalOptions> /EHs-c- -w14062 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DisableSpecificWarnings>4146;4180;4244;4267;4291;4345;4351;4355;4503;4624;4722;4800</DisableSpecificWarnings>
+      <ExceptionHandling>
+      </ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <TreatSpecificWarningsAsErrors>4238</TreatSpecificWarningsAsErrors>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat />
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_HAS_EXCEPTIONS=0;GTEST_HAS_RTTI=0;_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_CRT_NONSTDC_NO_WARNINGS;_SCL_SECURE_NO_DEPRECATE;_SCL_SECURE_NO_WARNINGS;__STDC_CONSTANT_MACROS;__STDC_FORMAT_MACROS;__STDC_LIMIT_MACROS;CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\llvm_build\lib\IR;$(ProjDir)..\..\..\llvm\lib\IR;$(ProjDir)..\..\..\llvm_build\include;$(ProjDir)..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(ProjDir)..\..\..\llvm\lib\IR\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(ProjDir)../../../llvm/lib/IR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+REM OMMITTED CMAKE COMMAND
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../llvm/lib/IR/CMakeLists.txt;$(ProjDir)..\..\..\llvm\lib\IR\CMakeLists.txt;$(ProjDir)..\..\..\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(ProjDir)../../../llvm/lib/IR/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+REM OMMITTED CMAKE COMMAND
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../llvm/lib/IR/CMakeLists.txt;$(ProjDir)..\..\..\llvm\lib\IR\CMakeLists.txt;$(ProjDir)..\..\..\llvm\lib\IR\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\llvm_build\lib\IR\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\AsmWriter.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\AttributeImpl.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\ConstantFold.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\ConstantsContext.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\LeaksContext.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\LLVMContextImpl.h" />
+    <ClInclude Include="$(ProjDir)..\..\..\llvm\lib\IR\SymbolTableListTraitsImpl.h" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\AsmWriter.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Attributes.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\AutoUpgrade.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\BasicBlock.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Comdat.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\ConstantFold.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\ConstantRange.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Constants.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Core.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DIBuilder.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DataLayout.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DebugInfo.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DebugLoc.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DiagnosticInfo.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\DiagnosticPrinter.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Dominators.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Function.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\GCOV.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\GVMaterializer.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Globals.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\IRBuilder.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\IRPrintingPasses.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\InlineAsm.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Instruction.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Instructions.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\IntrinsicInst.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\LLVMContext.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\LLVMContextImpl.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\LeakDetector.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\LegacyPassManager.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\MDBuilder.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Mangler.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Metadata.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Module.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Pass.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\PassManager.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\PassRegistry.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Type.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\TypeFinder.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Use.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\User.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Value.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\ValueSymbolTable.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\ValueTypes.cpp" />
+    <ClCompile Include="$(ProjDir)..\..\..\llvm\lib\IR\Verifier.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ProjDir)../../../llvm_build/ZERO_CHECK.vcxproj">
+      <Project>F657D95D-4514-49A3-A0BE-D73580846B47</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(ProjDir)../../../llvm_build/include/llvm/IR/intrinsics_gen.vcxproj">
+      <Project>0B9F2D3D-23BA-4B2F-9D24-1F2742BE6FAA</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>
