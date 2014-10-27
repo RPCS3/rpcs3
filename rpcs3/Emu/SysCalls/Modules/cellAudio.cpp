@@ -337,7 +337,7 @@ int cellAudioInit()
 					// 2x MAXPS (optional)
 					// 2x MINPS (optional)
 					// 2x CVTPS2DQ (converts float to s32)
-					// PACKSSDW (converts s32 to s16 with clipping)
+					// PACKSSDW (converts s32 to s16 with signed saturation)
 
 					if (g_is_u16)
 					{

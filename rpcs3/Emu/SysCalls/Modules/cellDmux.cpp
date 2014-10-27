@@ -401,11 +401,6 @@ u32 dmuxOpen(Demuxer* data)
 
 					PesHeader pes(stream);
 
-					if (!pes.new_au) // temporarily
-					{
-						cellDmux->Error("No pts info found");
-					}
-
 					// read additional header:
 					stream.peek(ch); // ???
 					//stream.skip(4);
