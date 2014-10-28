@@ -651,7 +651,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
 	task.au.userdata = auInfo->userData;
 
-	cellAdec->Notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
+	//cellAdec->Notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
 	adec->job.Push(task, &adec->is_closed);
 	return CELL_OK;
 }
@@ -674,12 +674,6 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	}
 
 	AVFrame* frame = af.data;
-
-	if (!af.data)
-	{
-		// hack
-		return CELL_OK;
-	}
 
 	if (outBuffer)
 	{
