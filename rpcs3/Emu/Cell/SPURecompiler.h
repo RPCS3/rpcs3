@@ -1571,8 +1571,8 @@ private:
 		{
 			// assuming that SP % 16 is always zero
 			const XmmLink& vr = XmmAlloc(rt);
-			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
-			value._u8[i7 & 0xf] = 0x03;
+			u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+			value.u8r[i7 & 0xf] = 0x03;
 			c.movdqa(vr.get(), XmmConst(value.vi));
 			XmmFinalize(vr, rt);
 		}
@@ -1596,8 +1596,8 @@ private:
 		{
 			// assuming that SP % 16 is always zero
 			const XmmLink& vr = XmmAlloc(rt);
-			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
-			value._u16[i7 & 0x7] = 0x0203;
+			u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+			value.u16r[(i7 >> 1) & 0x7] = 0x0203;
 			c.movdqa(vr.get(), XmmConst(value.vi));
 			XmmFinalize(vr, rt);
 		}
@@ -1621,8 +1621,8 @@ private:
 		{
 			// assuming that SP % 16 is always zero
 			const XmmLink& vr = XmmAlloc(rt);
-			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
-			value._u32[i7 & 0x3] = 0x00010203;
+			u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+			value.u32r[(i7 >> 2) & 0x3] = 0x00010203;
 			c.movdqa(vr.get(), XmmConst(value.vi));
 			XmmFinalize(vr, rt);
 		}
@@ -1646,8 +1646,8 @@ private:
 		{
 			// assuming that SP % 16 is always zero
 			const XmmLink& vr = XmmAlloc(rt);
-			u128 value = u128::from32r(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f);
-			value._u64[i7 & 0x1] = 0x0001020304050607ull;
+			u128 value = u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f));
+			value.u64r[(i7 >> 3) & 0x1] = 0x0001020304050607ull;
 			c.movdqa(vr.get(), XmmConst(value.vi));
 			XmmFinalize(vr, rt);
 		}
