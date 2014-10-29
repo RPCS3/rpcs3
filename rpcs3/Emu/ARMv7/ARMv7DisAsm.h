@@ -45,50 +45,23 @@ protected:
 		return regs_str;
 	}
 
-	void NULL_OP()
-	{
-		Write("null");
-	}
+	void UNK(const u32 data);
 
-	void PUSH(u16 regs_list)
-	{
-		Write(fmt::Format("push {%s}", GetRegsListString(regs_list).c_str()));
-	}
+	void NULL_OP(const u32 data, const ARMv7_encoding type);
+	void NOP(const u32 data, const ARMv7_encoding type);
 
-	void POP(u16 regs_list)
-	{
-		Write(fmt::Format("pop {%s}", GetRegsListString(regs_list).c_str()));
-	}
+	void PUSH(const u32 data, const ARMv7_encoding type);
+	void POP(const u32 data, const ARMv7_encoding type);
 
-	void NOP()
-	{
-		Write("nop");
-	}
+	void B(const u32 data, const ARMv7_encoding type);
+	void CBZ(const u32 data, const ARMv7_encoding type);
+	void CBNZ(const u32 data, const ARMv7_encoding type);
+	void BL(const u32 data, const ARMv7_encoding type);
+	void BLX(const u32 data, const ARMv7_encoding type);
 
-	void B(u8 cond, u32 imm, u8 intstr_size)
-	{
-		if((cond & 0xe) == 0xe)
-		{
-			Write(fmt::Format("b 0x%x", DisAsmBranchTarget(imm) + intstr_size));
-		}
-		else
-		{
-			Write(fmt::Format("b[%s] 0x%x", g_arm_cond_name[cond], DisAsmBranchTarget(imm) + intstr_size));
-		}
-	}
-
-	virtual void CBZ(u8 op, u32 imm, u8 rn, u8 intstr_size)
-	{
-		Write(fmt::Format("cb%sz 0x%x,%s", (op ? "n" : ""), DisAsmBranchTarget(imm) + intstr_size, g_arm_reg_name[rn]));
-	}
-
-	void BL(u32 imm, u8 intstr_size)
-	{
-		Write(fmt::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
-	}
-
-	void UNK(const u16 code0, const u16 code1)
-	{
-		Write(fmt::Format("Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1));
-	}
+	void SUB_IMM(const u32 data, const ARMv7_encoding type);
+	void SUB_REG(const u32 data, const ARMv7_encoding type);
+	void SUB_RSR(const u32 data, const ARMv7_encoding type);
+	void SUB_SPI(const u32 data, const ARMv7_encoding type);
+	void SUB_SPR(const u32 data, const ARMv7_encoding type);
 };

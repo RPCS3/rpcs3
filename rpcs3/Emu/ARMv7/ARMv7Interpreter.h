@@ -258,65 +258,23 @@ public:
 	}
 
 protected:
-	void NULL_OP()
-	{
-		LOG_ERROR(HLE, "null");
-		Emu.Pause();
-	}
+	void UNK(const u32 data);
 
-	void NOP()
-	{
-	}
+	void NULL_OP(const u32 data, const ARMv7_encoding type);
+	void NOP(const u32 data, const ARMv7_encoding type);
 
-	void PUSH(u16 regs_list)
-	{
-		for(u16 mask=0x1, i=0; mask; mask <<= 1, i++)
-		{
-			if(regs_list & mask)
-			{
-				CPU.SP -= 4;
-				vm::psv::write32(CPU.SP, CPU.read_gpr(i));
-			}
-		}
-	}
+	void PUSH(const u32 data, const ARMv7_encoding type);
+	void POP(const u32 data, const ARMv7_encoding type);
 
-	void POP(u16 regs_list)
-	{
-		for(u16 mask=(0x1 << 15), i=15; mask; mask >>= 1, i--)
-		{
-			if(regs_list & mask)
-			{
-				CPU.write_gpr(i, vm::psv::read32(CPU.SP));
-				CPU.SP += 4;
-			}
-		}
-	}
+	void B(const u32 data, const ARMv7_encoding type);
+	void CBZ(const u32 data, const ARMv7_encoding type);
+	void CBNZ(const u32 data, const ARMv7_encoding type);
+	void BL(const u32 data, const ARMv7_encoding type);
+	void BLX(const u32 data, const ARMv7_encoding type);
 
-	void B(u8 cond, u32 imm, u8 intstr_size)
-	{
-		if(ConditionPassed(cond))
-		{
-			CPU.SetBranch(CPU.PC + intstr_size + imm);
-		}
-	}
-
-	void CBZ(u8 op, u32 imm, u8 rn, u8 intstr_size)
-	{
-		if((CPU.GPR[rn] == 0) ^ op)
-		{
-			CPU.SetBranch(CPU.PC + intstr_size + imm);
-		}
-	}
-
-	void BL(u32 imm, u8 intstr_size)
-	{
-		CPU.LR = (CPU.PC + intstr_size) | 1;
-		CPU.SetBranch(CPU.PC + intstr_size + imm);
-	}
-
-	void UNK(const u16 code0, const u16 code1)
-	{
-		LOG_ERROR(HLE, "Unknown/Illegal opcode! (0x%04x : 0x%04x)", code0, code1);
-		Emu.Pause();
-	}
+	void SUB_IMM(const u32 data, const ARMv7_encoding type);
+	void SUB_REG(const u32 data, const ARMv7_encoding type);
+	void SUB_RSR(const u32 data, const ARMv7_encoding type);
+	void SUB_SPI(const u32 data, const ARMv7_encoding type);
+	void SUB_SPR(const u32 data, const ARMv7_encoding type);
 };

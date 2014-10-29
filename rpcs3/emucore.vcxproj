@@ -54,6 +54,8 @@
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
     <ClCompile Include="Crypto\utils.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
     <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
     <ClCompile Include="Emu\Audio\AudioDumper.cpp" />
