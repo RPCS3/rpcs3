@@ -65,6 +65,61 @@ void ARMv7DisAsm::BLX(const u32 data, const ARMv7_encoding type)
 	//Write(fmt::Format("bl 0x%x", DisAsmBranchTarget(imm) + intstr_size));
 }
 
+void ARMv7DisAsm::ADC_IMM(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADC...");
+}
+
+void ARMv7DisAsm::ADC_REG(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADC...");
+}
+
+void ARMv7DisAsm::ADC_RSR(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADC...");
+}
+
+void ARMv7DisAsm::ADD_IMM(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADD...");
+}
+
+void ARMv7DisAsm::ADD_REG(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADD...");
+}
+
+void ARMv7DisAsm::ADD_RSR(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADD...");
+}
+
+void ARMv7DisAsm::ADD_SPI(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADD SP...");
+}
+
+void ARMv7DisAsm::ADD_SPR(const u32 data, const ARMv7_encoding type)
+{
+	Write("ADD SP...");
+}
+
+void ARMv7DisAsm::MOV_IMM(const u32 data, const ARMv7_encoding type)
+{
+	Write("MOV...");
+}
+
+void ARMv7DisAsm::MOV_REG(const u32 data, const ARMv7_encoding type)
+{
+	Write("MOV...");
+}
+
+void ARMv7DisAsm::MOVT(const u32 data, const ARMv7_encoding type)
+{
+	Write("MOVT...");
+}
+
 void ARMv7DisAsm::SUB_IMM(const u32 data, const ARMv7_encoding type)
 {
 	Write("SUB...");
@@ -90,3 +145,12 @@ void ARMv7DisAsm::SUB_SPR(const u32 data, const ARMv7_encoding type)
 	Write("SUB SP...");
 }
 
+void ARMv7DisAsm::STR_IMM(const u32 data, const ARMv7_encoding type)
+{
+	Write("STR...");
+}
+
+void ARMv7DisAsm::STR_REG(const u32 data, const ARMv7_encoding type)
+{
+	Write("STR...");
+}

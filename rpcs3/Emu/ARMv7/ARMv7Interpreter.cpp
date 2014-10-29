@@ -260,19 +260,116 @@ void ARMv7Interpreter::BLX(const u32 data, const ARMv7_encoding type)
 	CPU.SetBranch(target);
 }
 
+void ARMv7Interpreter::ADC_IMM(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADC_REG(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADC_RSR(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADD_RSR(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADD_SPI(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::ADD_SPR(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::MOV_IMM(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::MOV_REG(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::MOVT(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
 void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 {
-
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
 }
 
 void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
 {
-
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
 }
 
 void ARMv7Interpreter::SUB_RSR(const u32 data, const ARMv7_encoding type)
 {
-
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
 }
 
 void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
@@ -286,6 +383,24 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::SUB_SPR(const u32 data, const ARMv7_encoding type)
 {
-
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
 }
 
+void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7Interpreter::STR_REG(const u32 data, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	default: throw __FUNCTION__;
+	}
+}

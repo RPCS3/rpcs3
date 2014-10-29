@@ -258,23 +258,40 @@ public:
 	}
 
 protected:
-	void UNK(const u32 data);
+	virtual void UNK(const u32 data);
 
-	void NULL_OP(const u32 data, const ARMv7_encoding type);
-	void NOP(const u32 data, const ARMv7_encoding type);
+	virtual void NULL_OP(const u32 data, const ARMv7_encoding type);
+	virtual void NOP(const u32 data, const ARMv7_encoding type);
 
-	void PUSH(const u32 data, const ARMv7_encoding type);
-	void POP(const u32 data, const ARMv7_encoding type);
+	virtual void PUSH(const u32 data, const ARMv7_encoding type);
+	virtual void POP(const u32 data, const ARMv7_encoding type);
 
-	void B(const u32 data, const ARMv7_encoding type);
-	void CBZ(const u32 data, const ARMv7_encoding type);
-	void CBNZ(const u32 data, const ARMv7_encoding type);
-	void BL(const u32 data, const ARMv7_encoding type);
-	void BLX(const u32 data, const ARMv7_encoding type);
+	virtual void B(const u32 data, const ARMv7_encoding type);
+	virtual void CBZ(const u32 data, const ARMv7_encoding type);
+	virtual void CBNZ(const u32 data, const ARMv7_encoding type);
+	virtual void BL(const u32 data, const ARMv7_encoding type);
+	virtual void BLX(const u32 data, const ARMv7_encoding type);
 
-	void SUB_IMM(const u32 data, const ARMv7_encoding type);
-	void SUB_REG(const u32 data, const ARMv7_encoding type);
-	void SUB_RSR(const u32 data, const ARMv7_encoding type);
-	void SUB_SPI(const u32 data, const ARMv7_encoding type);
-	void SUB_SPR(const u32 data, const ARMv7_encoding type);
+	virtual void ADC_IMM(const u32 data, const ARMv7_encoding type);
+	virtual void ADC_REG(const u32 data, const ARMv7_encoding type);
+	virtual void ADC_RSR(const u32 data, const ARMv7_encoding type);
+
+	virtual void ADD_IMM(const u32 data, const ARMv7_encoding type);
+	virtual void ADD_REG(const u32 data, const ARMv7_encoding type);
+	virtual void ADD_RSR(const u32 data, const ARMv7_encoding type);
+	virtual void ADD_SPI(const u32 data, const ARMv7_encoding type);
+	virtual void ADD_SPR(const u32 data, const ARMv7_encoding type);
+
+	virtual void MOV_IMM(const u32 data, const ARMv7_encoding type);
+	virtual void MOV_REG(const u32 data, const ARMv7_encoding type);
+	virtual void MOVT(const u32 data, const ARMv7_encoding type);
+
+	virtual void SUB_IMM(const u32 data, const ARMv7_encoding type);
+	virtual void SUB_REG(const u32 data, const ARMv7_encoding type);
+	virtual void SUB_RSR(const u32 data, const ARMv7_encoding type);
+	virtual void SUB_SPI(const u32 data, const ARMv7_encoding type);
+	virtual void SUB_SPR(const u32 data, const ARMv7_encoding type);
+
+	virtual void STR_IMM(const u32 data, const ARMv7_encoding type);
+	virtual void STR_REG(const u32 data, const ARMv7_encoding type);
 };
