@@ -409,16 +409,6 @@ void ARMv7Interpreter::CMP_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::DBG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
 void ARMv7Interpreter::EOR_IMM(const u32 data, const ARMv7_encoding type)
 {
 	switch (type)
@@ -809,16 +799,6 @@ void ARMv7Interpreter::MVN_REG(const u32 data, const ARMv7_encoding type)
 }
 
 void ARMv7Interpreter::MVN_RSR(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::NEG(const u32 data, const ARMv7_encoding type)
 {
 	switch (type)
 	{

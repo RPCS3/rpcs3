@@ -197,12 +197,6 @@ void ARMv7DisAsm::CMP_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7DisAsm::DBG(const u32 data, const ARMv7_encoding type)
-{
-	Write(__FUNCTION__);
-}
-
-
 void ARMv7DisAsm::EOR_IMM(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
@@ -424,12 +418,6 @@ void ARMv7DisAsm::MVN_REG(const u32 data, const ARMv7_encoding type)
 }
 
 void ARMv7DisAsm::MVN_RSR(const u32 data, const ARMv7_encoding type)
-{
-	Write(__FUNCTION__);
-}
-
-
-void ARMv7DisAsm::NEG(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
 }

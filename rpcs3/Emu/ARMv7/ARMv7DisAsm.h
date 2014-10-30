@@ -95,8 +95,6 @@ protected:
 	virtual void CMP_REG(const u32 data, const ARMv7_encoding type);
 	virtual void CMP_RSR(const u32 data, const ARMv7_encoding type);
 
-	virtual void DBG(const u32 data, const ARMv7_encoding type);
-
 	virtual void EOR_IMM(const u32 data, const ARMv7_encoding type);
 	virtual void EOR_REG(const u32 data, const ARMv7_encoding type);
 	virtual void EOR_RSR(const u32 data, const ARMv7_encoding type);
@@ -154,8 +152,6 @@ protected:
 	virtual void MVN_IMM(const u32 data, const ARMv7_encoding type);
 	virtual void MVN_REG(const u32 data, const ARMv7_encoding type);
 	virtual void MVN_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void NEG(const u32 data, const ARMv7_encoding type);
 
 	virtual void NOP(const u32 data, const ARMv7_encoding type);
 
