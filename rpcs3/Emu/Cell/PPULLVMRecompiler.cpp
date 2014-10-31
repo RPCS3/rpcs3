@@ -76,7 +76,7 @@ Compiler::~Compiler() {
     delete m_llvm_context;
 }
 
-CompiledCodeFragment Compiler::Compile(const std::string & name, const CodeFragment & code_fragment) {
+Executable Compiler::Compile(const std::string & name, const CodeFragment & code_fragment) {
     assert(!name.empty());
     assert(!code_fragment.empty());
 
@@ -114,7 +114,7 @@ CompiledCodeFragment Compiler::Compile(const std::string & name, const CodeFragm
     // Add code to notify the tracer about this function and branch to the first instruction
     m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0, m_current_function));
     //Call<void>("Tracer.Trace", &Tracer::Trace, *arg_i,
-    //           m_ir_builder->getIntN(sizeof(Tracer::BranchType) * 8, code_fragment[0].first.type == FunctionStart ? Tracer::BranchType::CompiledFunctionCall : Tracer::BranchType::CompiledBlock),
+    //           m_ir_builder->getInt32(code_fragment[0].first.type == Function ? FunctionCall : Block),
     //           m_ir_builder->getInt32(code_fragment[0].first.address));
     m_ir_builder->CreateBr(GetBasicBlockFromAddress(code_fragment[0].first.address, m_current_function));
 
@@ -123,9 +123,14 @@ CompiledCodeFragment Compiler::Compile(const std::string & name, const CodeFragm
         m_current_instruction_address = i->first.address;
         m_current_block_next_blocks   = &(i->second);
         auto block                    = GetBasicBlockFromAddress(m_current_instruction_address, m_current_function);
-        m_hit_branch_instruction      = false;
         m_ir_builder->SetInsertPoint(block);
 
+        if (i != code_fragment.begin() && i->first.type == BlockId::Type::FunctionCall) {
+            auto ordinal = RecompilationEngine::GetInstance()->GetOrdinal(i->first.address);
+
+        }
+
+        m_hit_branch_instruction = false;
         while (!m_hit_branch_instruction) {
             if (!block->getInstList().empty()) {
                 break;
@@ -143,7 +148,7 @@ CompiledCodeFragment Compiler::Compile(const std::string & name, const CodeFragm
         }
     }
 
-    // If the function has an unknown block then notify the tracer
+    // If the function has an unknown block then add code to notify the tracer
     auto unknown_bb = GetBasicBlockFromAddress(0xFFFFFFFF, m_current_function);
     if (!unknown_bb) {
         m_ir_builder->SetInsertPoint(unknown_bb);
@@ -177,16 +182,17 @@ CompiledCodeFragment Compiler::Compile(const std::string & name, const CodeFragm
     auto compilation_end  = std::chrono::high_resolution_clock::now();
     m_stats.total_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
 
-    m_compiled[(CompiledCodeFragment)mci.address()] = m_current_function;
-    return (CompiledCodeFragment)mci.address();
+    //m_compiled[(CompiledCodeFragment)mci.address()] = m_current_function;
+    //return (CompiledCodeFragment)mci.address();
+    return nullptr;
 }
 
-void Compiler::FreeCompiledCodeFragment(CompiledCodeFragment compiled_code_fragment) {
-    auto i = m_compiled.find(compiled_code_fragment);
-    if (i != m_compiled.end()) {
-        m_execution_engine->freeMachineCodeForFunction(i->second);
-        i->second->eraseFromParent();
-    }
+void Compiler::FreeCompiledCodeFragment(Executable compiled_code_fragment) {
+    //auto i = m_compiled.find(compiled_code_fragment);
+    //if (i != m_compiled.end()) {
+    //    m_execution_engine->freeMachineCodeForFunction(i->second);
+    //    i->second->eraseFromParent();
+    //}
 }
 
 Compiler::Stats Compiler::GetStats() {
@@ -4741,31 +4747,201 @@ void Compiler::InitRotateMask() {
     }
 }
 
-std::mutex                           RecompilationEngine::s_mutex;
-std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance;
+std::mutex            RecompilationEngine::s_mutex;
+RecompilationEngine * RecompilationEngine::s_the_instance;
 
-CompiledCodeFragment RecompilationEngine::GetCompiledCodeFragment(u32 address) {
+RecompilationEngine::BlockEntry::BlockEntry()
+    : num_hits(0)
+    , is_compiled(false) {
+}
+
+RecompilationEngine::BlockEntry::~BlockEntry() {
+    for (auto i = execution_traces.begin(); i != execution_traces.end(); i++) {
+        delete i->second;
+    }
+}
+
+RecompilationEngine::RecompilationEngine()
+    : ThreadBase("PPU Recompilation Engine") {
+    Start();
+}
+
+RecompilationEngine::~RecompilationEngine() {
+    Stop();
+}
+
+u32 RecompilationEngine::GetOrdinal(u32 address) {
+    return 0xFFFFFFFF;
+}
+
+Executable * RecompilationEngine::GetExecutableLookup() const {
     return nullptr;
 }
 
-void RecompilationEngine::ReleaseCompiledCodeFragment(CompiledCodeFragment compiled_code_fragment) {
+void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
+    {
+        std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
+        m_pending_execution_traces.push_back(execution_trace);
+    }
 
+    Notify();
+    // TODO: Increase the priority of the recompilation engine thread
 }
 
-u32 RecompilationEngine::GetCurrentRevision() {
-    return 0;
+void RecompilationEngine::Task() {
+    std::chrono::nanoseconds idling_time(0);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (!TestDestroy() && !Emu.IsStopped()) {
+        // Wait a few ms for something to happen
+        auto idling_start = std::chrono::high_resolution_clock::now();
+        WaitForAnySignal(250);
+        auto idling_end  = std::chrono::high_resolution_clock::now();
+        idling_time     += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
+
+        u32 num_processed = 0;
+        while (!TestDestroy() && !Emu.IsStopped()) {
+            ExecutionTrace * execution_trace;
+
+            {
+                std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
+
+                auto i = m_pending_execution_traces.begin();
+                if (i != m_pending_execution_traces.end()) {
+                    execution_trace = *i;
+                    m_pending_execution_traces.erase(i);
+                } else {
+                    break;
+                }
+            }
+
+            auto block_i = ProcessExecutionTrace(execution_trace);
+            if (block_i != m_block_table.end()) {
+                CompileBlock(block_i);
+            }
+        }
+
+        // TODO: Reduce the priority of the recompilation engine thread
+
+        if (num_processed == 0) {
+            // If we get here, it means the recompilation engine is idling.
+            // We should use this oppurtunity to optimize the code.
+        }
+    }
+
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    auto total_time     = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    auto compiler_stats = m_compiler.GetStats();
+
+    std::string error;
+    raw_fd_ostream log_file("PPULLVMRecompiler.log", error, sys::fs::F_Text);
+    log_file << "Total time                      = " << total_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent compiling        = " << compiler_stats.total_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent building IR  = " << compiler_stats.ir_build_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent optimizing   = " << compiler_stats.optimization_time.count() / 1000000 << "ms\n";
+    log_file << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
+    log_file << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
+    log_file << "\nInterpreter fallback stats:\n";
+    for (auto i = compiler_stats.interpreter_fallback_stats.begin(); i != compiler_stats.interpreter_fallback_stats.end(); i++) {
+        log_file << i->first << " = " << i->second << "\n";
+    }
+
+    //log_file << "\nDisassembly:\n";
+    //auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+    //for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
+    //    log_file << fmt::Format("%s: Size = %u bytes, Number of instructions = %u\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.num_instructions);
+
+    //    uint8_t * fn_ptr = (uint8_t *)i->second.executable;
+    //    for (size_t pc = 0; pc < i->second.size;) {
+    //        char str[1024];
+
+    //        auto size = LLVMDisasmInstruction(disassembler, fn_ptr + pc, i->second.size - pc, (uint64_t)(fn_ptr + pc), str, sizeof(str));
+    //        log_file << str << '\n';
+    //        pc += size;
+    //    }
+    //}
+
+    //LLVMDisasmDispose(disassembler);
+
+    //log_file << "\nLLVM IR:\n" << *m_module;
+
+    LOG_NOTICE(PPU, "PPU LLVM Recompilation thread exiting.");
+}
+
+RecompilationEngine::BlockTable::iterator RecompilationEngine::ProcessExecutionTrace(ExecutionTrace * execution_trace) {
+    auto block_i = m_block_table.find(execution_trace->blocks[0].address);
+    if (block_i == m_block_table.end()) {
+        // New block
+        block_i = m_block_table.insert(m_block_table.end(), std::make_pair(execution_trace->blocks[0].address, BlockEntry()));
+    }
+
+    block_i->second.num_hits++;
+    auto execution_trace_id = GetExecutionTraceId(execution_trace);
+    auto execution_trace_i  = block_i->second.execution_traces.find(execution_trace_id);
+    if (execution_trace_i == block_i->second.execution_traces.end()) {
+        block_i->second.execution_traces.insert(std::make_pair(execution_trace_id, execution_trace));
+    }
+
+    if (!block_i->second.is_compiled && block_i->second.num_hits > 1000) { // TODO: Make threshold configurable
+        return block_i;
+    }
+
+    return m_block_table.end();
+}
+
+void RecompilationEngine::CompileBlock(BlockTable::iterator block_i) {
+    auto code_fragment = BuildCodeFragmentFromBlock(block_i->second, false);
+}
+
+CodeFragment RecompilationEngine::BuildCodeFragmentFromBlock(const BlockEntry & block_entry, bool force_inline) {
+    CodeFragment                    code_fragment;
+    //std::vector<const BlockEntry *> queue;
+
+    //queue.push_back(&block_entry);
+    //for (auto q = queue.begin(); q != queue.end(); q++) {
+    //    for (auto i = (*q)->execution_traces.begin(); i != (*q)->execution_traces.end(); i++) {
+    //        for (auto j = i->second->blocks.begin(); j != i->second->blocks.end(); j++) {
+    //            auto k = std::find_if(code_fragment.begin(), code_fragment.end(),
+    //                                  [&j](const CodeFragment::value_type & v)->bool { return v.first.address == j->address; });
+    //            if (k == code_fragment.end()) {
+    //                code_fragment.push_back(std::make_pair(*j, std::vector<BlockId>()));
+    //                k = code_fragment.end() - 1;
+    //            }
+
+    //            if ((j + 1) != i->second->blocks.end()) {
+    //                auto l = std::find(k->second.begin(), k->second.end(), *(j + 1));
+    //                if (l == k->second.end()) {
+    //                    k->second.push_back(*(j + 1));
+    //                }
+    //            }
+
+    //            if (force_inline && j->type == BlockId::Type::Normal) {
+    //                auto block_i = m_block_table.find(j->address);
+    //                if (block_i != m_block_table.end()) {
+    //                    if (std::find(queue.begin(), queue.end(), block_i->second) == queue.end()) {
+    //                        queue.push_back(&(block_i->second));
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
+    return code_fragment;
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
     if (s_the_instance == nullptr) {
         std::lock_guard<std::mutex> lock(s_mutex);
-        s_the_instance = std::shared_ptr<RecompilationEngine>(new RecompilationEngine());
+        s_the_instance = new RecompilationEngine();
     }
 
-    return s_the_instance;
+    return std::shared_ptr<RecompilationEngine>(s_the_instance);
 }
 
-Tracer::Tracer() {
+Tracer::Tracer()
+    : m_recompilation_engine(RecompilationEngine::GetInstance()) {
     m_trace.reserve(1000);
     m_stack.reserve(100);
 }
@@ -4774,27 +4950,60 @@ Tracer::~Tracer() {
     Terminate();
 }
 
-void Tracer::Trace(BranchType branch_type, u32 address) {
+void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
     ExecutionTrace * execution_trace = nullptr;
     BlockId          block_id;
     int              function;
 
-    block_id.address = address;
-    block_id.type    = branch_type;
-    switch (branch_type) {
-    case FunctionCall:
+    switch (trace_type) {
+    case TraceType::CallFunction:
+        // arg1 is address of the function
+        block_id.address = arg1;
+        block_id.type    = BlockId::Type::FunctionCall;
+        m_trace.push_back(block_id);
+        break;
+    case TraceType::EnterFunction:
+        // arg1 is address.
+        block_id.address = arg1;
+        block_id.type    = BlockId::Type::Normal;
         m_stack.push_back((u32)m_trace.size());
         m_trace.push_back(block_id);
         break;
-    case Block:
+    case TraceType::ExitFromCompiledFunction:
+        // arg1 is address of function.
+        // arg2 is the address of the exit block.
+        block_id.address = arg1;
+        block_id.type    = BlockId::Type::Normal;
+        m_stack.push_back((u32)m_trace.size());
+        m_trace.push_back(block_id);
+
+        block_id.address = arg2;
+        block_id.type    = BlockId::Type::Exit;
+        m_trace.push_back(block_id);
+        break;
+    case TraceType::Return:
+        // No args used
+        function = m_stack.back();
+        m_stack.pop_back();
+
+        execution_trace                         = new ExecutionTrace();
+        execution_trace->type                   = ExecutionTrace::Type::Linear;
+        execution_trace->function_address       = m_trace[function].address;
+        execution_trace->previous_block_address = 0;
+        std::copy(m_trace.begin() + function, m_trace.end(), std::back_inserter(execution_trace->blocks));
+        m_trace.erase(m_trace.begin() + function, m_trace.end());
+        break;
+    case TraceType::EnterBlock:
+        // arg1 is address. Other args are not used.
         function = m_stack.back();
         for (int i = (int)m_trace.size() - 1; i >= function; i--) {
-            if (m_trace[i].address == address) {
+            if (m_trace[i].address == arg1 && m_trace[i].type == BlockId::Type::Normal) {
                 // Found a loop within the current function
-                execution_trace                   = new ExecutionTrace();
-                execution_trace->type             = ExecutionTrace::Loop;
-                execution_trace->function_address = m_trace[function].address;
-                execution_trace->blocks.insert(execution_trace->blocks.begin(), m_trace.begin() + i, m_trace.end());
+                execution_trace                         = new ExecutionTrace();
+                execution_trace->type                   = ExecutionTrace::Type::Loop;
+                execution_trace->function_address       = m_trace[function].address;
+                execution_trace->previous_block_address = i == function ? 0 : m_trace[i - 1].address;
+                std::copy(m_trace.begin() + i, m_trace.end(), std::back_inserter(execution_trace->blocks));
                 m_trace.erase(m_trace.begin() + i + 1, m_trace.end());
                 break;
             }
@@ -4802,20 +5011,16 @@ void Tracer::Trace(BranchType branch_type, u32 address) {
 
         if (!execution_trace) {
             // A loop was not found
+            block_id.address = arg1;
+            block_id.type    = BlockId::Type::Normal;
             m_trace.push_back(block_id);
         }
         break;
-    case Return:
-        function = m_stack.back();
-        m_stack.pop_back();
-
-        execution_trace                   = new ExecutionTrace();
-        execution_trace->function_address = m_trace[function].address;
-        execution_trace->type             = ExecutionTrace::Linear;
-        execution_trace->blocks.insert(execution_trace->blocks.begin(), m_trace.begin() + function, m_trace.end());
-        m_trace.erase(m_trace.begin() + function + 1, m_trace.end());
-        break;
-    case None:
+    case TraceType::ExitFromCompiledBlock:
+        // arg1 is address of the exit block.
+        block_id.address = arg1;
+        block_id.type    = BlockId::Type::Exit;
+        m_trace.push_back(block_id);
         break;
     default:
         assert(0);
@@ -4823,14 +5028,17 @@ void Tracer::Trace(BranchType branch_type, u32 address) {
     }
 
     if (execution_trace) {
-        auto s = fmt::Format("Trace: 0x%08X, %s -> ", execution_trace->function_address, execution_trace->type == ExecutionTrace::Loop ? "Loop" : "Linear");
-        for (auto i = 0; i < execution_trace->blocks.size(); i++) {
-            s += fmt::Format("0x%08X ", execution_trace->blocks[i]);
+        auto s = fmt::Format("Trace: 0x%08X, 0x%08X, %s -> ", execution_trace->function_address, execution_trace->previous_block_address,
+                             execution_trace->type == ExecutionTrace::Type::Loop ? "Loop" : "Linear");
+        for (auto i = 0; i < execution_trace->blocks.size(); i++) {;
+        s += fmt::Format("%c:0x%08X ",
+                         execution_trace->blocks[i].type == BlockId::Type::Normal       ? 'N' :
+                         execution_trace->blocks[i].type == BlockId::Type::FunctionCall ? 'F' : 'E',
+                         execution_trace->blocks[i].address);
         }
 
         LOG_NOTICE(PPU, s.c_str());
-        delete execution_trace;
-        // TODO: Notify recompilation engine
+        //m_recompilation_engine->NotifyTrace(execution_trace);
     }
 }
 
@@ -4842,36 +5050,27 @@ ppu_recompiler_llvm::ExecutionEngine::ExecutionEngine(PPUThread & ppu)
     : m_ppu(ppu)
     , m_interpreter(new PPUInterpreter(ppu))
     , m_decoder(m_interpreter)
-    , m_last_branch_type(FunctionCall)
     , m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
-    , m_recompiler_revision(0)
     , m_recompilation_engine(RecompilationEngine::GetInstance()) {
+    m_executable_lookup = m_recompilation_engine->GetExecutableLookup();
 }
 
 ppu_recompiler_llvm::ExecutionEngine::~ExecutionEngine() {
-    for (auto iter = m_address_to_compiled_code_fragment.begin(); iter != m_address_to_compiled_code_fragment.end(); iter++) {
-        m_recompilation_engine->ReleaseCompiledCodeFragment(iter->second.first);
-    }
 }
 
 u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
+    ExecuteFunction(this, &m_ppu, m_interpreter, &m_tracer);
+    return 0;
+}
+
+void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() {
     auto now = std::chrono::high_resolution_clock::now();
-
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 10000) {
-        bool clear_all = false;
-
-        u32 revision = m_recompilation_engine->GetCurrentRevision();
-        if (m_recompiler_revision != revision) {
-            m_recompiler_revision = revision;
-            clear_all = true;
-        }
-
-        for (auto i = m_address_to_compiled_code_fragment.begin(); i != m_address_to_compiled_code_fragment.end();) {
+        for (auto i = m_address_to_ordinal.begin(); i != m_address_to_ordinal.end();) {
             auto tmp = i;
             i++;
-            if (tmp->second.second == 0 || clear_all) {
-                m_address_to_compiled_code_fragment.erase(tmp);
-                m_recompilation_engine->ReleaseCompiledCodeFragment(tmp->second.first);
+            if (tmp->second.second == 0) {
+                m_address_to_ordinal.erase(tmp);
             } else {
                 tmp->second.second = 0;
             }
@@ -4879,47 +5078,98 @@ u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
 
         m_last_cache_clear_time = now;
     }
+}
 
-    auto i = m_address_to_compiled_code_fragment.find(address);
-    if (i == m_address_to_compiled_code_fragment.end()) {
-        auto compiled_code_fragment = m_recompilation_engine->GetCompiledCodeFragment(address);
-        if (compiled_code_fragment) {
-            i = m_address_to_compiled_code_fragment.insert(m_address_to_compiled_code_fragment.end(), std::make_pair(address, std::make_pair(compiled_code_fragment, 0)));
+Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Executable default_executable) {
+    // Find the ordinal for the specified address and insert it to the cache
+    auto i = m_address_to_ordinal.find(address);
+    if (i == m_address_to_ordinal.end()) {
+        auto ordinal = m_recompilation_engine->GetOrdinal(address);
+        if (ordinal != 0xFFFFFFFF) {
+            i = m_address_to_ordinal.insert(m_address_to_ordinal.end(), std::make_pair(address, std::make_pair(ordinal, 0)));
         }
     }
 
-    u8 ret = 0;
-    if (i != m_address_to_compiled_code_fragment.end()) {
-        m_last_branch_type = None;
+    Executable executable = default_executable;
+    if (i != m_address_to_ordinal.end()) {
         i->second.second++;
-        i->second.first(&m_ppu, m_interpreter);
-    } else {
-        if (m_last_branch_type != None) {
-            m_tracer.Trace(m_last_branch_type, address);
-        }
-
-        ret                = m_decoder.DecodeMemory(address);
-        m_last_branch_type = m_ppu.m_is_branch ? GetBranchTypeFromInstruction(vm::read32(address)) : None;
+        executable = m_executable_lookup[i->second.first];
     }
 
-    return ret;
+    RemoveUnusedEntriesFromCache();
+    return executable;
+}
+
+u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteFunction(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
+    tracer->Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
+    return ExecuteTillReturn(execution_engine, ppu_state, interpreter, tracer);
+}
+
+u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
+    bool terminate = false;
+
+    while (!terminate) {
+        auto instruction = re32(vm::get_ref<u32>(ppu_state->PC));
+        execution_engine->m_decoder.Decode(instruction);
+        auto is_branch = ppu_state->m_is_branch;
+        ppu_state->NextPc(4);
+
+        if (is_branch) {
+            Executable executable;
+            auto       branch_type = GetBranchTypeFromInstruction(instruction);
+
+            switch (branch_type) {
+            case BranchType::Return:
+                tracer->Trace(Tracer::TraceType::Return, 0, 0);
+                terminate = true;
+                break;
+            case BranchType::FunctionCall:
+                tracer->Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
+                executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteFunction);
+                executable(execution_engine, ppu_state, interpreter, tracer);
+                // Fallthrough
+            case BranchType::LocalBranch:
+                tracer->Trace(Tracer::TraceType::EnterBlock, ppu_state->PC, 0);
+                executable = execution_engine->GetExecutable(ppu_state->PC, nullptr);
+                if (executable != nullptr) {
+                    auto exit_block = executable(execution_engine, ppu_state, interpreter, tracer);
+                    if (exit_block) {
+                        tracer->Trace(Tracer::TraceType::ExitFromCompiledBlock, (u32)exit_block, 0);
+                    } else {
+                        tracer->Trace(Tracer::TraceType::Return, 0, 0);
+                        terminate = true;
+                    }
+                }
+                break;
+            default:
+                assert(0);
+                break;
+            }
+        }
+    }
+
+    return 0;
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
-    auto type   = BranchType::None;
+    auto type   = BranchType::NonBranch;
     auto field1 = instruction >> 26;
     auto lk     = instruction & 1;
 
     if (field1 == 16 || field1 == 18) {
-        type = lk ? FunctionCall : Block;
+        type = lk ? BranchType::FunctionCall : BranchType::LocalBranch;
     } else if (field1 == 19) {
         u32 field2 = (instruction >> 1) & 0x3FF;
         if (field2 == 16) {
-            type = lk ? FunctionCall : Return;
+            type = lk ? BranchType::FunctionCall : BranchType::Return;
         } else if (field2 == 528) {
-            type = lk ? FunctionCall : Block;
+            type = lk ? BranchType::FunctionCall : BranchType::LocalBranch;
         }
     }
 
     return type;
+}
+
+ExecutionTraceId ppu_recompiler_llvm::GetExecutionTraceId(const ExecutionTrace * execution_trace) {
+    return 0;
 }

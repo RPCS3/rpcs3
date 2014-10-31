@@ -61,7 +61,7 @@ namespace ppu_recompiler_llvm {
 
 class PPUInterpreter : public PPUOpcodes
 {
-    friend class ppu_recompiler_llvm::Compiler;
+	friend class ppu_recompiler_llvm::Compiler;
 private:
 	PPUThread& CPU;
 
