@@ -18,7 +18,8 @@ void ARMv7Thread::InitRegs()
 	memset(GPR, 0, sizeof(GPR[0]) * 15);
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
-	PC |= 1;
+	ISET = Thumb;
+	ITSTATE.IT = 0;
 	SP = m_stack_addr + m_stack_size;
 }
 

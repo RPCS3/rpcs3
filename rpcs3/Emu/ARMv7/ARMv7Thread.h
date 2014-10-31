@@ -1,6 +1,14 @@
 #pragma once
 #include "Emu/CPU/CPUThread.h"
 
+enum ARMv7InstructionSet
+{
+	ARM,
+	Thumb,
+	Jazelle,
+	ThumbEE,
+};
+
 class ARMv7Thread : public CPUThread
 {
 public:
@@ -38,6 +46,7 @@ public:
 		};
 
 		u32 APSR;
+
 	} APSR;
 
 	union
@@ -49,7 +58,40 @@ public:
 		};
 
 		u32 IPSR;
+
 	} IPSR;
+
+	ARMv7InstructionSet ISET;
+
+	union
+	{
+		struct
+		{
+			u8 cond : 3;
+			u8 state : 5;
+		};
+
+		u8 IT;
+
+		u32 advance()
+		{
+			const u32 res = (state & 0xf) ? (cond << 1 | state >> 4) : 0xe /* true */;
+
+			state <<= 1;
+			if ((state & 0xf) == 0) // if no d
+			{
+				IT = 0; // clear ITSTATE
+			}
+
+			return res;
+		}
+
+		operator bool() const
+		{
+			return (state & 0xf) != 0;
+		}
+
+	} ITSTATE;
 
 	void write_gpr(u32 n, u32 value)
 	{

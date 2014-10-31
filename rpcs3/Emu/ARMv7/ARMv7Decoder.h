@@ -18,11 +18,11 @@ public:
 		const u32 code0 = vm::psv::read16(address & ~1);
 		const u32 code1 = vm::psv::read16(address + 2 & ~1);
 		const u32 data = code0 << 16 | code1;
-		const u32 arg = address & 1 ? data : code1 << 16 | code0;
+		const u32 arg = address & 1 ? code1 << 16 | code0 : data;
 
 		for (auto& opcode : ARMv7_opcode_table)
 		{
-			if ((opcode.type >= A1) == ((address & 1) == 0) && (data & opcode.mask) == opcode.code)
+			if ((opcode.type < A1) == ((address & 1) == 0) && (arg & opcode.mask) == opcode.code)
 			{
 				(m_op.*opcode.func)(opcode.length == 2 ? code0 : arg, opcode.type);
 				return opcode.length;
@@ -30,6 +30,6 @@ public:
 		}
 
 		m_op.UNK(data);
-		return 2;
+		return address & 1 ? 4 : 2;
 	}
 };

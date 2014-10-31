@@ -150,15 +150,20 @@ void ARMv7Interpreter::ASR_REG(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 {
-	u32 cond = 0xf;
+	u32 cond = CPU.ITSTATE.advance();
 	u32 jump = 0; // jump = instr_size + imm32
 
 	switch (type)
 	{
 	case T1:
 	{
+		cond = (data >> 8) & 0xf;
+		if (cond == 0xf)
+		{
+			throw "SVC";
+		}
+
 		jump = 2 + sign<9, u32>((data & 0xff) << 1);
-		cond = (data >> 8) & 0xf; if (cond == 0xf) throw "SVC";
 		break;
 	}
 	case T2:
@@ -168,11 +173,16 @@ void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 	}
 	case T3:
 	{
+		cond = (data >> 6) & 0xf;
+		if (cond >= 0xe)
+		{
+			throw "Related encodings";
+		}
+
 		u32 s = (data >> 26) & 0x1;
 		u32 j1 = (data >> 13) & 0x1;
 		u32 j2 = (data >> 11) & 0x1;
 		jump = 4 + sign<21, u32>(s << 20 | j2 << 19 | j1 << 18 | (data & 0x3f0000) >> 4 | (data & 0x7ff) << 1);
-		cond = (data >> 6) & 0xf; if (cond >= 0xe) throw "Related encodings";
 		break;
 	}
 	case T4:
@@ -185,8 +195,8 @@ void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 	}
 	case A1:
 	{
-		jump = 1 + 4 + sign<26, u32>((data & 0xffffff) << 2);
 		cond = (data >> 28) & 0xf;
+		jump = 1 + 4 + sign<26, u32>((data & 0xffffff) << 2);
 		break;
 	}
 	}
@@ -257,7 +267,9 @@ void ARMv7Interpreter::BKPT(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::BL(const u32 data, const ARMv7_encoding type)
 {
-	u32 jump = 0;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 newLR = CPU.PC;
+	u32 imm32 = 0;
 
 	switch (type)
 	{
@@ -266,30 +278,39 @@ void ARMv7Interpreter::BL(const u32 data, const ARMv7_encoding type)
 		u32 s = (data >> 26) & 0x1;
 		u32 i1 = (data >> 13) & 0x1 ^ s ^ 1;
 		u32 i2 = (data >> 11) & 0x1 ^ s ^ 1;
-		jump = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
+		imm32 = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
+		newLR = (CPU.PC + 4) | 1;
 		break;
 	}
 	case A1:
 	{
-		jump = 4 + sign<26, u32>((data & 0xffffff) << 2);
+		cond = data >> 28;
+		imm32 = 4 + sign<26, u32>((data & 0xffffff) << 2);
+		newLR = (CPU.PC + 4) - 4;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	CPU.LR = (CPU.PC & 1) ? CPU.PC - 4 : CPU.PC;
-	CPU.SetBranch(CPU.PC + jump);
+	if (ConditionPassed(cond))
+	{
+		CPU.LR = newLR;
+		CPU.SetBranch(CPU.PC + imm32);
+	}
 }
 
 void ARMv7Interpreter::BLX(const u32 data, const ARMv7_encoding type)
 {
-	u32 target;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 newLR = CPU.PC;
+	u32 target = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		target = CPU.GPR[(data >> 3) & 0xf];
+		target = CPU.read_gpr((data >> 3) & 0xf);
+		newLR = ((CPU.PC + 2) - 2) | 1; // ???
 		break;
 	}
 	case T2:
@@ -297,33 +318,74 @@ void ARMv7Interpreter::BLX(const u32 data, const ARMv7_encoding type)
 		u32 s = (data >> 26) & 0x1;
 		u32 i1 = (data >> 13) & 0x1 ^ s ^ 1;
 		u32 i2 = (data >> 11) & 0x1 ^ s ^ 1;
-		target = CPU.PC + 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1) & ~1;
+		target = (CPU.PC + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
+		newLR = (CPU.PC + 4) | 1;
 		break;
 	}
 	case A1:
 	{
-		target = CPU.GPR[data & 0xf];
-		if (!ConditionPassed(data >> 28)) return;
+		cond = data >> 28;
+		target = CPU.read_gpr(data & 0xf);
+		newLR = (CPU.PC + 4) - 4;
 		break;
 	}
 	case A2:
 	{
-		target = CPU.PC + 5 + sign<25, u32>((data & 0xffffff) << 2 | (data & 0x1000000) >> 23);
+		target = (CPU.PC + 4 | 1) + sign<25, u32>((data & 0xffffff) << 2 | (data & 0x1000000) >> 23);
+		newLR = (CPU.PC + 4) - 4;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	CPU.LR = (CPU.PC & 1) ? CPU.PC - (type == T1 ? 2 : 4) : CPU.PC - 4; // ???
-	CPU.SetBranch(target);
+	if (ConditionPassed(cond))
+	{
+		CPU.LR = newLR;
+		if (target & 1)
+		{
+			CPU.ISET = Thumb;
+			CPU.SetBranch(target & ~1);
+		}
+		else
+		{
+			CPU.ISET = ARM;
+			CPU.SetBranch(target);
+		}
+	}
 }
 
 void ARMv7Interpreter::BX(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 target = 0;
+
 	switch (type)
 	{
-	case A1: throw __FUNCTION__;
+	case T1:
+	{
+		target = CPU.read_gpr((data >> 3) & 0xf);
+		break;
+	}
+	case A1:
+	{
+		cond = data >> 28;
+		target = CPU.read_gpr(data & 0xf);
+	}
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		if (target & 1)
+		{
+			CPU.ISET = Thumb;
+			CPU.SetBranch(target & ~1);
+		}
+		else
+		{
+			CPU.ISET = ARM;
+			CPU.SetBranch(target);
+		}
 	}
 }
 
@@ -336,7 +398,7 @@ void ARMv7Interpreter::CB_Z(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if ((CPU.GPR[data & 0x7] == 0) ^ (data & 0x800))
+	if ((CPU.read_gpr(data & 0x7) == 0) ^ (data & 0x800))
 	{
 		CPU.SetBranch(CPU.PC + 2 + ((data & 0xf8) >> 2) + ((data & 0x200) >> 3));
 	}
@@ -441,7 +503,16 @@ void ARMv7Interpreter::IT(const u32 data, const ARMv7_encoding type)
 {
 	switch (type)
 	{
-	case A1: throw __FUNCTION__;
+	case T1:
+	{
+		if ((data & 0xf) == 0)
+		{
+			throw "Related encodings";
+		}
+
+		CPU.ITSTATE.IT = data & 0xff;
+		return;
+	}
 	default: throw __FUNCTION__;
 	}
 }
@@ -711,16 +782,48 @@ void ARMv7Interpreter::MLS(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::MOV_IMM(const u32 data, const ARMv7_encoding type)
 {
-	u32 d;
-	u32 imm;
+	bool set_flags = CPU.ITSTATE;
+	bool carry = CPU.APSR.C;
+
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 imm32 = 0;
 
 	switch (type)
 	{
-	case T1: d = (data >> 8) & 0x7; imm = sign<8, u32>(data & 0xff); break;
+	case T1:
+	{
+		d = (data >> 8) & 0x7;
+		imm32 = sign<8, u32>(data & 0xff);
+		break;
+	}
+	//case T2:
+	//{
+	//	set_flags = data & 0x100000;
+	//	d = (data >> 8) & 0xf;
+	//	imm32 = ThumbExpandImm_C((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff), carry);
+	//	break;
+	//}
+	case T3:
+	{
+		set_flags = false;
+		d = (data >> 8) & 0xf;
+		imm32 = (data & 0xf0000) >> 4 | (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		break;
+	}
 	default: throw __FUNCTION__;
 	}
 
-	CPU.write_gpr(d, imm);
+	if (ConditionPassed(cond))
+	{
+		CPU.write_gpr(d, imm32);
+		if (set_flags)
+		{
+			CPU.APSR.N = imm32 >> 31;
+			CPU.APSR.Z = imm32 == 0;
+			CPU.APSR.C = carry;
+		}
+	}
 }
 
 void ARMv7Interpreter::MOV_REG(const u32 data, const ARMv7_encoding type)
@@ -810,12 +913,28 @@ void ARMv7Interpreter::MVN_RSR(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::NOP(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+
 	switch (type)
 	{
-	case T1: break;
-	case T2: break;
-	case A1: break;
+	case T1:
+	{
+		break;
+	}
+	case T2:
+	{
+		break;
+	}
+	case A1:
+	{
+		cond = data >> 28;
+		break;
+	}
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
 	}
 }
 
@@ -879,6 +998,7 @@ void ARMv7Interpreter::PKH(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::POP(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
 	u16 reg_list = 0;
 
 	switch (type)
@@ -900,31 +1020,39 @@ void ARMv7Interpreter::POP(const u32 data, const ARMv7_encoding type)
 	}
 	case A1:
 	{
-		reg_list = data & 0xffff; if (BitCount(reg_list) < 2) throw "LDM / LDMIA / LDMFD";
-		if (!ConditionPassed(data >> 28)) return;
+		cond = data >> 28;
+		reg_list = data & 0xffff;
+		if (BitCount(reg_list) < 2)
+		{
+			throw "LDM / LDMIA / LDMFD";
+		}
 		break;
 	}
 	case A2:
 	{
+		cond = data >> 28;
 		reg_list = 1 << ((data >> 12) & 0xf);
-		if (!ConditionPassed(data >> 28)) return;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	for (u16 mask = 1, i = 0; mask; mask <<= 1, i++)
+	if (ConditionPassed(cond))
 	{
-		if (reg_list & mask)
+		for (u16 mask = 1, i = 0; mask; mask <<= 1, i++)
 		{
-			CPU.write_gpr(i, vm::psv::read32(CPU.SP));
-			CPU.SP += 4;
+			if (reg_list & mask)
+			{
+				CPU.write_gpr(i, vm::psv::read32(CPU.SP));
+				CPU.SP += 4;
+			}
 		}
 	}
 }
 
 void ARMv7Interpreter::PUSH(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
 	u16 reg_list = 0;
 
 	switch (type)
@@ -946,25 +1074,32 @@ void ARMv7Interpreter::PUSH(const u32 data, const ARMv7_encoding type)
 	}
 	case A1:
 	{
-		reg_list = data & 0xffff; if (BitCount(reg_list) < 2) throw "STMDB / STMFD";
-		if (!ConditionPassed(data >> 28)) return;
+		cond = data >> 28;
+		reg_list = data & 0xffff;
+		if (BitCount(reg_list) < 2)
+		{
+			throw "STMDB / STMFD";
+		}
 		break;
 	}
 	case A2:
 	{
+		cond = data >> 28;
 		reg_list = 1 << ((data >> 12) & 0xf);
-		if (!ConditionPassed(data >> 28)) return;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	for (u16 mask = 1 << 15, i = 15; mask; mask >>= 1, i--)
+	if (ConditionPassed(cond))
 	{
-		if (reg_list & mask)
+		for (u16 mask = 1 << 15, i = 15; mask; mask >>= 1, i--)
 		{
-			CPU.SP -= 4;
-			vm::psv::write32(CPU.SP, CPU.read_gpr(i));
+			if (reg_list & mask)
+			{
+				CPU.SP -= 4;
+				vm::psv::write32(CPU.SP, CPU.read_gpr(i));
+			}
 		}
 	}
 }
@@ -1657,9 +1792,11 @@ void ARMv7Interpreter::SUB_RSR(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+
 	switch (type)
 	{
-	case T1: CPU.SP -= (data & 0x7f) << 2; return;
+	case T1: if (ConditionPassed(cond)) CPU.SP -= (data & 0x7f) << 2; return;
 	default: throw __FUNCTION__;
 	}
 }
