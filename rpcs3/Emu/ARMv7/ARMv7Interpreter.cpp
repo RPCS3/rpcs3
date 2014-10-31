@@ -17,6 +17,33 @@ void ARMv7Interpreter::NULL_OP(const u32 data, const ARMv7_encoding type)
 	Emu.Pause();
 }
 
+void ARMv7Interpreter::HACK(const u32 data, const ARMv7_encoding type)
+{
+	u32 cond = CPU.ITSTATE.advance();
+	u32 code = 0;
+
+	switch (type)
+	{
+	case T1:
+	{
+		code = data & 0xffff;
+		break;
+	}
+	case A1:
+	{
+		cond = data >> 28;
+		code = (data & 0xfff00) >> 4 | (data & 0xf);
+		break;
+	}
+	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		//
+	}
+}
+
 void ARMv7Interpreter::ADC_IMM(const u32 data, const ARMv7_encoding type)
 {
 	switch (type)
@@ -1689,10 +1716,79 @@ void ARMv7Interpreter::STMIB(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 t = 16;
+	u32 n = 13;
+	u32 imm32 = 0;
+	bool index = true;
+	bool add = true;
+	bool wback = false;
+
 	switch (type)
 	{
+	case T1:
+	{
+		t = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		imm32 = (data & 0x7c0) >> 4;
+		break;
+	}
+	case T2:
+	{
+		t = (data & 0x700) >> 8;
+		imm32 = (data & 0xff) << 2;
+		break;
+	}
+	case T3:
+	{
+		t = (data & 0xf000) >> 12;
+		n = (data & 0xf0000) >> 16;
+		imm32 = (data & 0xfff);
+
+		if (n == 0xf)
+		{
+			throw "STR_IMM_T3 UNDEFINED";
+		}
+		break;
+	}
+	case T4:
+	{
+		t = (data & 0xf000) >> 12;
+		n = (data & 0xf0000) >> 16;
+		imm32 = (data & 0xff);
+		index = (data & 0x400);
+		add = (data & 0x200);
+		wback = (data & 0x100);
+
+		if (index && add && !wback)
+		{
+			throw "STRT";
+		}
+		if (n == 13 && index && !add && wback && imm32 == 4)
+		{
+			throw "PUSH";
+		}
+		if (n == 15 || (!index && !wback))
+		{
+			throw "STR_IMM_T4 UNDEFINED";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		const u32 offset_addr = add ? CPU.read_gpr(n) + imm32 : CPU.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+
+		vm::psv::write32(addr, CPU.read_gpr(t));
+
+		if (wback)
+		{
+			CPU.write_gpr(n, offset_addr);
+		}
 	}
 }
 
@@ -1812,16 +1908,6 @@ void ARMv7Interpreter::SUB_SPR(const u32 data, const ARMv7_encoding type)
 
 
 void ARMv7Interpreter::SVC(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::SWP_(const u32 data, const ARMv7_encoding type)
 {
 	switch (type)
 	{

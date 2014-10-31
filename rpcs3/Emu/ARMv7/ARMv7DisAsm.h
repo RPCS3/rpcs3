@@ -49,6 +49,8 @@ protected:
 
 	virtual void NULL_OP(const u32 data, const ARMv7_encoding type);
 
+	virtual void HACK(const u32 data, const ARMv7_encoding type);
+
 	virtual void ADC_IMM(const u32 data, const ARMv7_encoding type);
 	virtual void ADC_REG(const u32 data, const ARMv7_encoding type);
 	virtual void ADC_RSR(const u32 data, const ARMv7_encoding type);
@@ -264,8 +266,6 @@ protected:
 	virtual void SUB_SPR(const u32 data, const ARMv7_encoding type);
 
 	virtual void SVC(const u32 data, const ARMv7_encoding type);
-
-	virtual void SWP_(const u32 data, const ARMv7_encoding type);
 
 	virtual void SXTAB(const u32 data, const ARMv7_encoding type);
 	virtual void SXTAB16(const u32 data, const ARMv7_encoding type);

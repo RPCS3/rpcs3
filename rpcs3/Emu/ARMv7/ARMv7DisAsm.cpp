@@ -11,6 +11,11 @@ void ARMv7DisAsm::NULL_OP(const u32 data, const ARMv7_encoding type)
 	Write("Illegal opcode (null)");
 }
 
+void ARMv7DisAsm::HACK(const u32 data, const ARMv7_encoding type)
+{
+	Write(__FUNCTION__);
+}
+
 void ARMv7DisAsm::ADC_IMM(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
@@ -876,12 +881,6 @@ void ARMv7DisAsm::SUB_SPR(const u32 data, const ARMv7_encoding type)
 
 
 void ARMv7DisAsm::SVC(const u32 data, const ARMv7_encoding type)
-{
-	Write(__FUNCTION__);
-}
-
-
-void ARMv7DisAsm::SWP_(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
 }
