@@ -26,7 +26,7 @@ namespace sce_libc_func
 	}
 }
 
-psv_log_base sceLibc = []() -> psv_log_base&
+psv_log_base sceLibc = []()
 {
 	psv_log_base* module = new psv_log_base("sceLibc");
 

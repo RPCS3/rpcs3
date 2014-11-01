@@ -369,7 +369,7 @@ void ARMv7Interpreter::BLX(const u32 data, const ARMv7_encoding type)
 	case T1:
 	{
 		target = CPU.read_gpr((data >> 3) & 0xf);
-		newLR = ((CPU.PC + 2) - 2) | 1; // ???
+		newLR = (CPU.PC + 2) | 1; // ???
 		break;
 	}
 	case T2:
