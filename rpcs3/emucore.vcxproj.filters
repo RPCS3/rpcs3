@@ -75,6 +75,9 @@
     <Filter Include="Emu\SysCalls\currently_unused">
       <UniqueIdentifier>{ead7494f-a872-4b4d-a864-1a61c3b6012f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\ARMv7\Modules">
+      <UniqueIdentifier>{1d9e6fc4-9a79-4329-a8b5-081e24822aaa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -637,6 +640,12 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp">
       <Filter>Emu\ARMv7</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp">
+      <Filter>Emu\ARMv7</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp">
+      <Filter>Emu\ARMv7\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1248,6 +1257,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
       <Filter>Emu\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
+      <Filter>Emu\ARMv7</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -183,77 +183,77 @@ struct CellPngDecDataOutInfo
 };
 
 // Functions
-s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam);
+s64 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam);
 
-s32 cellPngDecExtCreate(
+s64 cellPngDecExtCreate(
 	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> threadInParam,
 	vm::ptr<CellPngDecThreadOutParam> threadOutParam,
 	vm::ptr<const CellPngDecExtThreadInParam> extThreadInParam,
 	vm::ptr<CellPngDecExtThreadOutParam> extThreadOutParam);
 
-s32 cellPngDecOpen(
+s64 cellPngDecOpen(
 	CellPngDecMainHandle mainHandle,
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo);
 
-s32 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info);
+s64 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info);
 
-s32 cellPngDecSetParameter(
+s64 cellPngDecSetParameter(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam);
 
-s32 cellPngDecDecodeData(
+s64 cellPngDecDecodeData(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo);
 
-s32 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle);
+s64 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle);
 
-s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle);
+s64 cellPngDecDestroy(CellPngDecMainHandle mainHandle);
 
-s32 cellPngDecGetTextChunk(
+s64 cellPngDecGetTextChunk(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u32> textInfoNum,
 	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo);
 
-s32 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte);
+s64 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte);
 
-s32 cellPngDecGetgAMA(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngGAMA> gama);
+s64 cellPngDecGetgAMA(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngGAMA> gama);
 
-s32 cellPngDecGetsRGB(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSRGB> srgb);
+s64 cellPngDecGetsRGB(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSRGB> srgb);
 
-s32 cellPngDecGetiCCP(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngICCP> iccp);
+s64 cellPngDecGetiCCP(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngICCP> iccp);
 
-s32 cellPngDecGetsBIT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSBIT> sbit);
+s64 cellPngDecGetsBIT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSBIT> sbit);
 
-s32 cellPngDecGettRNS(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTRNS> trns);
+s64 cellPngDecGettRNS(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTRNS> trns);
 
-s32 cellPngDecGethIST(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngHIST> hist);
+s64 cellPngDecGethIST(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngHIST> hist);
 
-s32 cellPngDecGettIME(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTIME> time);
+s64 cellPngDecGettIME(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTIME> time);
 
-s32 cellPngDecGetbKGD(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngBKGD> bkgd);
+s64 cellPngDecGetbKGD(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngBKGD> bkgd);
 
-s32 cellPngDecGetsPLT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSPLT> splt);
+s64 cellPngDecGetsPLT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSPLT> splt);
 
-s32 cellPngDecGetoFFs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngOFFS> offs);
+s64 cellPngDecGetoFFs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngOFFS> offs);
 
-s32 cellPngDecGetpHYs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPHYS> phys);
+s64 cellPngDecGetpHYs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPHYS> phys);
 
-s32 cellPngDecGetsCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSCAL> scal);
+s64 cellPngDecGetsCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSCAL> scal);
 
-s32 cellPngDecGetcHRM(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngCHRM> chrm);
+s64 cellPngDecGetcHRM(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngCHRM> chrm);
 
-s32 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPCAL> pcal);
+s64 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPCAL> pcal);
 
-s32 cellPngDecGetUnknownChunks(
+s64 cellPngDecGetUnknownChunks(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
@@ -349,7 +349,7 @@ struct CellPngDecCbCtrlDisp
 };
 
 // Functions
-s32 cellPngDecExtOpen(
+s64 cellPngDecExtOpen(
 	CellPngDecMainHandle mainHandle,
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
@@ -357,13 +357,13 @@ s32 cellPngDecExtOpen(
 	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
 	vm::ptr<const CellPngDecOpnParam> opnParam);
 
-s32 cellPngDecExtReadHeader(
+s64 cellPngDecExtReadHeader(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<CellPngDecInfo> info,
 	vm::ptr<CellPngDecExtInfo> extInfo);
 
-s32 cellPngDecExtSetParameter(
+s64 cellPngDecExtSetParameter(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<const CellPngDecInParam> inParam,
@@ -371,7 +371,7 @@ s32 cellPngDecExtSetParameter(
 	vm::ptr<const CellPngDecExtInParam> extInParam,
 	vm::ptr<CellPngDecExtOutParam> extOutParam);
 
-s32 cellPngDecExtDecodeData(
+s64 cellPngDecExtDecodeData(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u8> data,

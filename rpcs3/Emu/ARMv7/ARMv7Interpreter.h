@@ -225,11 +225,17 @@ public:
 
 	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
 	{
-		uint unsigned_sum = (uint)x + (uint)y + (uint)carry_in;
-		int signed_sum = (int)x + (int)y + (int)carry_in;
-		T result = unsigned_sum & ~(T(1) << (sizeof(T) - 1));
-		carry_out = (uint)result != unsigned_sum;
-		overflow = (int)result != signed_sum;
+		const T sign_mask = (T)1 << (sizeof(T) - 1);
+
+		T result = x + y;
+		carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
+		overflow = (x ^ result) & (y ^ result) & sign_mask;
+		if (carry_in)
+		{
+			result += 1;
+			carry_out ^= (result == 0);
+			overflow ^= (result == sign_mask);
+		}
 		return result;
 	}
 

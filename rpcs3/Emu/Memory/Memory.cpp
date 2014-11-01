@@ -412,6 +412,12 @@ void DynamicMemoryBlockBase::Delete()
 
 bool DynamicMemoryBlockBase::AllocFixed(u64 addr, u32 size)
 {
+	if (!MemoryBlock::GetStartAddr())
+	{
+		LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::AllocFixed(addr=0x%llx, size=0x%x): memory block not initialized", addr, size);
+		return false;
+	}
+
 	size = PAGE_4K(size + (addr & 4095)); // align size
 
 	addr &= ~4095; // align start address
@@ -441,6 +447,12 @@ void DynamicMemoryBlockBase::AppendMem(u64 addr, u32 size) /* private */
 
 u64 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 {
+	if (!MemoryBlock::GetStartAddr())
+	{
+		LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::AllocAlign(size=0x%x, align=0x%x): memory block not initialized", size, align);
+		return 0;
+	}
+
 	size = PAGE_4K(size);
 	u32 exsize;
 

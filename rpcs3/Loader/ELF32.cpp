@@ -3,7 +3,10 @@
 #include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 #include "ELF32.h"
+
+#define LOADER_DEBUG
 
 void Elf32_Ehdr::Show()
 {
@@ -502,6 +505,8 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 bool ELF32Loader::LoadShdrData(u64 offset)
 {
+	u32 fnid_addr = 0;
+
 	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
@@ -526,6 +531,79 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		if(shdr.sh_addr + shdr.sh_size > max_addr)
 		{
 			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
+
+		// probably should be in LoadPhdrData()
+		if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceFNID.rodata"))
+		{
+			fnid_addr = shdr.sh_addr;
+		}
+		else if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceFStub.rodata"))
+		{
+			list_known_psv_modules();
+
+			auto fnid = vm::psv::ptr<const u32>::make(fnid_addr);
+			auto fstub = vm::psv::ptr<const u32>::make(shdr.sh_addr);
+
+			for (u32 j = 0; j < shdr.sh_size / 4; j++)
+			{
+				u32 nid = fnid[j];
+				u32 addr = fstub[j];
+
+				if (auto func = get_psv_func_by_nid(nid))
+				{
+					LOG_NOTICE(LOADER, "Imported function 0x%x (addr=0x%x)", nid, addr);
+
+					// writing Thumb code (temporarily, because it should be ARM)
+					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function
+					vm::psv::write16(addr + 2, (u16)get_psv_func_index(func));
+					vm::psv::write16(addr + 4, 0x4770); // BX LR
+					vm::psv::write16(addr + 6, 0); // null
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Unimplemented function 0x%x (addr=0x%x)", nid, addr);
+
+					// writing Thumb code (temporarily - it shouldn't be written in this case)
+					vm::psv::write16(addr + 0, 0xf06f); // MVN r0,#0x0
+					vm::psv::write16(addr + 2, 0x0000);
+					vm::psv::write16(addr + 4, 0x4770); // BX LR
+					vm::psv::write16(addr + 6, 0); // null
+				}
+			}
+		}
+		else if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceRefs.rodata"))
+		{
+			// basically unknown struct
+
+			struct reloc_info
+			{
+				u32 code; // 0xff
+				u32 data; // address that will be written
+				u32 code1; // 0x2f
+				u32 addr1; // address of movw r12,# instruction to be replaced
+				u32 code2; // 0x30
+				u32 addr2; // address of movt r12,# instruction to be replaced
+				u32 code3; // 0
+			};
+
+			auto rel = vm::psv::ptr<const reloc_info>::make(shdr.sh_addr);
+
+			for (u32 j = 0; j < shdr.sh_size / sizeof(reloc_info); j++)
+			{
+				if (rel[j].code == 0xff && rel[j].code1 == 0x2f && rel[j].code2 == 0x30 && rel[j].code3 == 0)
+				{
+					const u32 data = rel[j].data;
+					vm::psv::write16(rel[j].addr1 + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
+					vm::psv::write16(rel[j].addr1 + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
+					vm::psv::write16(rel[j].addr2 + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
+					vm::psv::write16(rel[j].addr2 + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "sceRefs: unknown code found (code=0x%x, code1=0x%x, code2=0x%x, code3=0x%x)", rel[j].code, rel[j].code1, rel[j].code2, rel[j].code3);
+				}
+			}
 		}
 	}
 
