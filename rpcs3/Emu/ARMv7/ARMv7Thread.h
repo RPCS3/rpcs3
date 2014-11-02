@@ -103,7 +103,7 @@ public:
 		}
 		else
 		{
-			SetBranch(value);
+			SetBranch(value & ~1);
 		}
 	}
 

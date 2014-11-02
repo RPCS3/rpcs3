@@ -210,7 +210,7 @@ void ARMv7Interpreter::ASR_REG(const u32 data, const ARMv7_encoding type)
 void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 {
 	u32 cond = CPU.ITSTATE.advance();
-	u32 jump = 0; // jump = instr_size + imm32
+	u32 jump = 0; // jump = instr_size + imm32 ???
 
 	switch (type)
 	{
@@ -222,12 +222,12 @@ void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 			throw "SVC";
 		}
 
-		jump = 2 + sign<9, u32>((data & 0xff) << 1);
+		jump = 4 + sign<9, u32>((data & 0xff) << 1);
 		break;
 	}
 	case T2:
 	{
-		jump = 2 + sign<12, u32>((data & 0x7ff) << 1);
+		jump = 4 + sign<12, u32>((data & 0x7ff) << 1);
 		break;
 	}
 	case T3:
@@ -235,7 +235,7 @@ void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 		cond = (data >> 6) & 0xf;
 		if (cond >= 0xe)
 		{
-			throw "Related encodings";
+			throw "B_T3: Related encodings";
 		}
 
 		u32 s = (data >> 26) & 0x1;
@@ -254,7 +254,7 @@ void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
 	}
 	case A1:
 	{
-		cond = (data >> 28) & 0xf;
+		cond = data >> 28;
 		jump = 1 + 4 + sign<26, u32>((data & 0xffffff) << 2);
 		break;
 	}
@@ -457,7 +457,7 @@ void ARMv7Interpreter::CB_Z(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if ((CPU.read_gpr(data & 0x7) == 0) ^ (data & 0x800))
+	if ((CPU.read_gpr(data & 0x7) == 0) ^ ((data & 0x800) != 0))
 	{
 		CPU.SetBranch(CPU.PC + 2 + ((data & 0xf8) >> 2) + ((data & 0x200) >> 3));
 	}
@@ -513,10 +513,46 @@ void ARMv7Interpreter::CMP_IMM(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::CMP_REG(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 n = 0;
+	u32 m = 0;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		n = (data & 0x7);
+		m = (data & 0x38) >> 3;
+		break;
+	}
+	case T2:
+	{
+		n = (data & 0x80) >> 4 | (data & 0x7);
+		m = (data & 0x78) >> 3;
+		break;
+	}
+	case T3:
+	{
+		n = (data & 0xf0000) >> 16;
+		m = (data & 0xf);
+		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		bool carry, overflow;
+		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, true);
+		const u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
+		CPU.APSR.N = res >> 31;
+		CPU.APSR.Z = res == 0;
+		CPU.APSR.C = carry;
+		CPU.APSR.V = overflow;
 	}
 }
 
@@ -566,7 +602,7 @@ void ARMv7Interpreter::IT(const u32 data, const ARMv7_encoding type)
 	{
 		if ((data & 0xf) == 0)
 		{
-			throw "Related encodings";
+			throw "IT_T1: Related encodings";
 		}
 
 		CPU.ITSTATE.IT = data & 0xff;
@@ -616,10 +652,82 @@ void ARMv7Interpreter::LDMIB(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::LDR_IMM(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 t = 0;
+	u32 n = 13;
+	u32 imm32 = 0;
+	bool index = true;
+	bool add = true;
+	bool wback = false;
+
 	switch (type)
 	{
-	case A1: throw __FUNCTION__;
+	case T1:
+	{
+		t = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		imm32 = (data & 0x7c0) >> 4;
+		break;
+	}
+	case T2:
+	{
+		t = (data & 0x700) >> 8;
+		imm32 = (data & 0xff) << 2;
+		break;
+	}
+	case T3:
+	{
+		t = (data & 0xf000) >> 12;
+		n = (data & 0xf0000) >> 16;
+		imm32 = (data & 0xfff);
+
+		if (n == 15)
+		{
+			throw "LDR (literal)";
+		}
+		break;
+	}
+	case T4:
+	{
+		t = (data & 0xf000) >> 12;
+		n = (data & 0xf0000) >> 16;
+		imm32 = (data & 0xff);
+		index = (data & 0x400);
+		add = (data & 0x200);
+		wback = (data & 0x100);
+
+		if (n == 15)
+		{
+			throw "LDR (literal)";
+		}
+		if (index && add && !wback)
+		{
+			throw "LDRT";
+		}
+		if (n == 13 && !index && add && wback && imm32 == 4)
+		{
+			throw "POP";
+		}
+		if (!index && !wback)
+		{
+			throw "LDR_IMM_T4: undefined";
+		}
+		break;
+	}
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		const u32 offset_addr = add ? CPU.read_gpr(n) + imm32 : CPU.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+
+		if (wback)
+		{
+			CPU.write_gpr(n, offset_addr);
+		}
+
+		CPU.write_gpr(t, vm::psv::read32(addr));
 	}
 }
 
@@ -855,13 +963,13 @@ void ARMv7Interpreter::MOV_IMM(const u32 data, const ARMv7_encoding type)
 		imm32 = sign<8, u32>(data & 0xff);
 		break;
 	}
-	//case T2:
-	//{
-	//	set_flags = data & 0x100000;
-	//	d = (data >> 8) & 0xf;
-	//	imm32 = ThumbExpandImm_C((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff), carry);
-	//	break;
-	//}
+	case T2:
+	{
+		set_flags = data & 0x100000;
+		d = (data >> 8) & 0xf;
+		imm32 = ThumbExpandImm_C((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff), carry, carry);
+		break;
+	}
 	case T3:
 	{
 		set_flags = false;
@@ -1115,7 +1223,7 @@ void ARMv7Interpreter::POP(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		reg_list = ((data & 0x100) << 6) | (data & 0xff);
+		reg_list = ((data & 0x100) << 7) | (data & 0xff);
 		break;
 	}
 	case T2:
@@ -1830,7 +1938,7 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 
 		if (n == 0xf)
 		{
-			throw "STR_IMM_T3 UNDEFINED";
+			throw "STR_IMM_T3: undefined";
 		}
 		break;
 	}
@@ -1853,7 +1961,7 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 		}
 		if (n == 15 || (!index && !wback))
 		{
-			throw "STR_IMM_T4 UNDEFINED";
+			throw "STR_IMM_T4: undefined";
 		}
 		break;
 	}
@@ -1877,10 +1985,54 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::STR_REG(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 t = 0;
+	u32 n = 0;
+	u32 m = 0;
+	bool index = true;
+	bool add = true;
+	bool wback = false;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		t = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		m = (data & 0x1c0) >> 6;
+		break;
+	}
+	case T2:
+	{
+		t = (data & 0xf000) >> 12;
+		n = (data & 0xf0000) >> 16;
+		m = (data & 0xf);
+		shift_n = (data & 0x30) >> 4;
+
+		if (n == 15)
+		{
+			throw "STR_REG_T2: undefined";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		const u32 offset = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		const u32 offset_addr = add ? CPU.read_gpr(n) + offset : CPU.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+
+		vm::psv::write32(addr, CPU.read_gpr(t));
+
+		if (wback)
+		{
+			CPU.write_gpr(n, offset_addr);
+		}
 	}
 }
 
@@ -1953,10 +2105,62 @@ void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
 {
+	bool set_flags = !CPU.ITSTATE;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 n = 0;
+	u32 m = 0;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		m = (data & 0x1c0) >> 6;
+		break;
+	}
+	case T2:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		m = (data & 0xf);
+		set_flags = (data & 0x100000);
+		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMP (register)";
+		}
+		if (n == 13)
+		{
+			throw "SUB (SP minus register)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		if (set_flags)
+		{
+			bool carry, overflow;
+			u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
+			CPU.write_gpr(d, res);
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+			CPU.APSR.V = overflow;
+		}
+		else
+		{
+			CPU.write_gpr(d, CPU.read_gpr(n) - shifted);
+		}
 	}
 }
 

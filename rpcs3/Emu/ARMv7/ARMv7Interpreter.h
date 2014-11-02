@@ -10,7 +10,7 @@ public:
 	{
 	}
 
-	enum SRType
+	enum SRType : u32
 	{
 		SRType_None,
 		SRType_LSL,
@@ -93,7 +93,7 @@ public:
 		return len - 1 - HighestSetBit(x, len);
 	}
 
-	SRType DecodeImmShift(u8 type, u8 imm5, uint* shift_n)
+	SRType DecodeImmShift(u32 type, u32 imm5, u32* shift_n)
 	{
 		SRType shift_t = SRType_None;
 
@@ -217,7 +217,7 @@ public:
 		return value;
 	}
 
-	template<typename T> T Shift(T value, SRType type, uint amount, bool carry_in)
+	template<typename T> T Shift(T value, SRType type, u32 amount, bool carry_in)
 	{
 		bool carry_out;
 		return Shift_C(value, type, amount, carry_in, carry_out);
@@ -237,6 +237,29 @@ public:
 			overflow ^= (result == sign_mask);
 		}
 		return result;
+	}
+
+	u32 ThumbExpandImm_C(u32 imm12, bool carry_in, bool& carry_out)
+	{
+		if ((imm12 & 0xc00) >> 10)
+		{
+			u32 unrotated_value = (imm12 & 0x7f) | 0x80;
+
+			return ROR_C(unrotated_value, (imm12 & 0xf80) >> 7, carry_out);
+		}
+		else
+		{
+			carry_out = carry_in;
+
+			u32 imm8 = imm12 & 0xff;
+			switch ((imm12 & 0x300) >> 8)
+			{
+			case 0: return imm8;
+			case 1: return imm8 << 16 | imm8;
+			case 2: return imm8 << 24 | imm8 << 8;
+			default: return imm8 << 24 | imm8 << 16 | imm8 << 8 | imm8;
+			}
+		}
 	}
 
 	bool ConditionPassed(u32 cond) const

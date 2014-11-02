@@ -6,7 +6,7 @@
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "ELF32.h"
 
-#define LOADER_DEBUG
+//#define LOADER_DEBUG
 
 void Elf32_Ehdr::Show()
 {

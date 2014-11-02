@@ -24,6 +24,7 @@ namespace Log
 		HLE,
 		PPU,
 		SPU,
+		ARMv7,
 		TTY,
 	};
 
@@ -35,7 +36,7 @@ namespace Log
 	};
 
 	//well I'd love make_array() but alas manually counting is not the end of the world
-	static const std::array<LogTypeName, 8> gTypeNameTable = { {
+	static const std::array<LogTypeName, 9> gTypeNameTable = { {
 			{ GENERAL, "G: " },
 			{ LOADER, "LDR: " },
 			{ MEMORY, "MEM: " },
@@ -43,6 +44,7 @@ namespace Log
 			{ HLE, "HLE: " },
 			{ PPU, "PPU: " },
 			{ SPU, "SPU: " },
+			{ ARMv7, "ARM: " },
 			{ TTY, "TTY: " }
 			} };
 
@@ -121,6 +123,7 @@ static struct { inline operator Log::LogType() { return Log::LogType::RSX; } } R
 static struct { inline operator Log::LogType() { return Log::LogType::HLE; } } HLE;
 static struct { inline operator Log::LogType() { return Log::LogType::PPU; } } PPU;
 static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } SPU;
+static struct { inline operator Log::LogType() { return Log::LogType::ARMv7; } } ARMv7;
 static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
 
 inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)

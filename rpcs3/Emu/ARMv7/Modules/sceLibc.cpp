@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
 extern psv_log_base& sceLibc;
@@ -12,17 +14,25 @@ namespace sce_libc_func
 
 	void exit()
 	{
-		sceLibc.Todo(__FUNCTION__);
+		sceLibc.Error("exit()");
+		Emu.Pause();
+		sceLibc.Success("Process finished");
+		CallAfter([]()
+		{
+			Emu.Stop();
+		});
 	}
 
-	void printf()
+	void printf(vm::psv::ptr<const char> fmt)
 	{
-		sceLibc.Todo(__FUNCTION__);
+		sceLibc.Error("printf(fmt_addr=0x%x)", fmt.addr());
+
+		LOG_NOTICE(TTY, "%s", fmt.get_ptr());
 	}
 
 	void __cxa_set_dso_handle_main()
 	{
-		sceLibc.Todo(__FUNCTION__);
+		sceLibc.Error("__cxa_set_dso_handle_main()");
 	}
 }
 
