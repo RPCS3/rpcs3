@@ -23,11 +23,11 @@ psv_func* get_psv_func_by_nid(u32 nid)
 
 u32 get_psv_func_index(psv_func* func)
 {
-	u32 res = func - g_psv_func_list.data();
+	auto res = func - g_psv_func_list.data();
 
-	assert(res < g_psv_func_list.size());
+	assert((size_t)res < g_psv_func_list.size());
 
-	return res;
+	return (u32)res;
 }
 
 void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)

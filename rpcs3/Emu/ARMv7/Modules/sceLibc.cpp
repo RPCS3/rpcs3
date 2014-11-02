@@ -26,7 +26,7 @@ namespace sce_libc_func
 	}
 }
 
-psv_log_base& sceLibc = []()
+psv_log_base& sceLibc = []() -> psv_log_base&
 {
 	psv_log_base* module = new psv_log_base("sceLibc");
 
@@ -326,5 +326,5 @@ psv_log_base& sceLibc = []()
 	//REG_FUNC(0x7D35108B, _FSnan);
 	//REG_FUNC(0x48AEEF2A, _LSnan);
 
-	return std::move(*module);
+	return *module;
 }();
