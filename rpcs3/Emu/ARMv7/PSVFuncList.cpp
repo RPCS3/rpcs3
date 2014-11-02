@@ -37,7 +37,7 @@ void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)
 	(*g_psv_func_list[index].func)(CPU);
 }
 
-extern psv_log_base sceLibc;
+extern psv_log_base& sceLibc;
 
 void list_known_psv_modules()
 {
