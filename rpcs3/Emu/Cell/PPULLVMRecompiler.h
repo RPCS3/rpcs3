@@ -1,6 +1,9 @@
 #ifndef PPU_LLVM_RECOMPILER_H
 #define PPU_LLVM_RECOMPILER_H
 
+#ifdef LLVM_AVAILABLE
+#define PPU_LLVM_RECOMPILER 1
+
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
@@ -786,4 +789,5 @@ private:
     static PPULLVMRecompiler * s_recompiler;
 };
 
+#endif // LLVM_AVAILABLE
 #endif // PPU_LLVM_RECOMPILER_H

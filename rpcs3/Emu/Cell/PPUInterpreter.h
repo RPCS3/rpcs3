@@ -57,7 +57,9 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 
 class PPUInterpreter : public PPUOpcodes
 {
-    friend class PPULLVMRecompiler;
+#ifdef PPU_LLVM_RECOMPILER
+	friend class PPULLVMRecompiler;
+#endif
 private:
 	PPUThread& CPU;
 
