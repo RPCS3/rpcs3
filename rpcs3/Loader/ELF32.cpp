@@ -352,13 +352,17 @@ bool ELF32Loader::LoadPhdrInfo()
 
 		for(size_t i=0; i<phdr_arr.size(); ++i)
 		{
-			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
+			if(phdr_arr[i].p_offset >= entry && entry < phdr_arr[i].p_offset + phdr_arr[i].p_memsz)
 			{
 				entry += phdr_arr[i].p_vaddr;
 				LOG_WARNING(LOADER, "virtual entry = 0x%x", entry);
 				break;
 			}
 		}
+	}
+	else if (machine == MACHINE_ARM)
+	{
+		entry += 0x81000000;
 	}
 
 	return true;
@@ -601,7 +605,7 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 				}
 				else
 				{
-					LOG_ERROR(LOADER, "sceRefs: unknown code found (code=0x%x, code1=0x%x, code2=0x%x, code3=0x%x)", rel[j].code, rel[j].code1, rel[j].code2, rel[j].code3);
+					LOG_NOTICE(LOADER, "sceRefs: unknown code found (code=0x%x, code1=0x%x, code2=0x%x, code3=0x%x)", rel[j].code, rel[j].code1, rel[j].code2, rel[j].code3);
 				}
 			}
 		}
