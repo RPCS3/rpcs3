@@ -80,6 +80,7 @@ ${LLVM_INCLUDE_DIRS}
 )
 
 add_definitions(${LLVM_DEFINITIONS})
+add_definitions(-DLLVM_AVAILABLE)
 llvm_map_components_to_libnames(LLVM_LIBS jit vectorize x86codegen x86disassembler)
 
 link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
