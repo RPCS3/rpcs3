@@ -16,6 +16,7 @@ namespace ppu_recompiler_llvm {
     class RecompilationEngine;
     class Tracer;
     class ExecutionEngine;
+    struct PPUState;
 
     enum class BranchType {
         NonBranch,
@@ -35,7 +36,18 @@ namespace ppu_recompiler_llvm {
             Normal,
             Exit,
         } type;
+
+        bool operator == (const BlockId & other) const {
+            return (address == other.address && type == other.type);
+        }
+
+        std::string ToString() const {
+            return fmt::Format("%c:0x%08X", type == BlockId::Type::Normal ? 'N' : type == BlockId::Type::FunctionCall ? 'F' : 'E', address);
+        }
     };
+
+    /// Control flow graph of a block. A list of (block address, list of next blocks) pairs.
+    typedef std::vector<std::pair<u32, std::vector<BlockId>>> ControlFlowGraph;
 
     /// Uniquely identifies an execution trace
     typedef u64 ExecutionTraceId;
@@ -45,9 +57,6 @@ namespace ppu_recompiler_llvm {
         /// The function to which this trace belongs
         u32 function_address;
 
-        /// The address of the block that came before this trace
-        u32 previous_block_address;
-
         /// Execution trace type
         enum class Type {
             Linear,
@@ -56,16 +65,58 @@ namespace ppu_recompiler_llvm {
 
         /// Sequence of blocks enountered in this trace
         std::vector<BlockId> blocks;
-    };
 
-    /// A fragment of PPU code. A list of (block, list of next blocks) pairs.
-    typedef std::vector<std::pair<BlockId, std::vector<BlockId>>> CodeFragment;
+        std::string ToString() const {
+            auto s = fmt::Format("0x%08X %s ->", function_address, type == ExecutionTrace::Type::Loop ? "Loop" : "Linear");
+            for (auto i = 0; i < blocks.size(); i++) {
+                s += " " + blocks[i].ToString();
+            }
+
+            return s;
+        }
+    };
 
     /// Pointer to an executable
     typedef u64(*Executable)(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer);
 
-    struct PPUState;
+    /// An entry in the block table
+    struct BlockEntry {
+        /// Address of the block
+        u32 address;
 
+        /// Number of times this block was hit
+        u32 num_hits;
+
+        /// The CFG for this block
+        ControlFlowGraph cfg;
+
+        /// Indicates whether the block has been compiled or not
+        bool is_compiled;
+
+        /// Indicates whether the block is the first block of a function or not
+        bool is_function_start;
+
+        BlockEntry(u32 addr)
+            : address(addr)
+            , num_hits(0)
+            , is_compiled(false) {
+        }
+
+        bool operator == (const BlockEntry & other) const {
+            return address == other.address;
+        }
+    };
+}
+
+namespace std {
+    template<> struct hash<ppu_recompiler_llvm::BlockEntry *> {
+        size_t operator()(const ppu_recompiler_llvm::BlockEntry * e) const {
+            return e->address;
+        }
+    };
+}
+
+namespace ppu_recompiler_llvm {
     /// PPU compiler that uses LLVM for code generation and optimization
     class Compiler : protected PPUOpcodes, protected PPCDecoder {
     public:
@@ -97,10 +148,10 @@ namespace ppu_recompiler_llvm {
         Compiler & operator = (Compiler && other) = delete;
 
         /// Compile a code fragment and obtain an executable
-        Executable Compile(const std::string & name, const CodeFragment & code_fragment);
+        //Executable Compile(const std::string & name, const CodeFragment & code_fragment);
 
         /// Free an executable earilier obtained from the Compile function
-        void FreeCompiledCodeFragment(Executable executable);
+        //void FreeCompiledCodeFragment(Executable executable);
 
         /// Retrieve compiler stats
         Stats GetStats();
@@ -742,24 +793,6 @@ namespace ppu_recompiler_llvm {
         static std::shared_ptr<RecompilationEngine> GetInstance();
 
     private:
-        /// An entry in the block table
-        struct BlockEntry {
-            BlockEntry();
-            ~BlockEntry();
-
-            /// Number of times this block was hit
-            u32 num_hits;
-
-            /// Execution traces starting at this block
-            std::unordered_map<ExecutionTraceId, ExecutionTrace *> execution_traces;
-
-            /// Indicates whether the block has been compiled or not
-            bool is_compiled;
-        };
-
-        /// Block table type. Key is block address.
-        typedef std::unordered_map<u32, BlockEntry> BlockTable;
-
         RecompilationEngine();
 
         RecompilationEngine(const RecompilationEngine & other) = delete;
@@ -768,23 +801,26 @@ namespace ppu_recompiler_llvm {
         RecompilationEngine & operator = (const RecompilationEngine & other) = delete;
         RecompilationEngine & operator = (RecompilationEngine && other) = delete;
 
-        /// Process an execution trace. Returns an iterator to a block table entry if the block should be compiled.
-        BlockTable::iterator ProcessExecutionTrace(ExecutionTrace * execution_trace);
+        /// Process an execution trace.
+        void ProcessExecutionTrace(const ExecutionTrace & execution_trace);
+
+        /// Update a CFG
+        void UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId block, BlockId next_block);
 
         /// Compile a block
-        void CompileBlock(BlockTable::iterator block_i);
-
-        /// Build code fragment from a block
-        CodeFragment BuildCodeFragmentFromBlock(const BlockEntry & block_entry, bool force_inline);
+        void CompileBlock(const BlockEntry & block_entry, bool inline_referenced_blocks);
 
         /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
         std::mutex m_pending_execution_traces_lock;
 
-        /// Queue of execution traces pending prcessing
+        /// Queue of execution traces pending processing
         std::list<ExecutionTrace *> m_pending_execution_traces;
 
         /// Block table
-        BlockTable m_block_table;
+        std::unordered_set<BlockEntry *> m_block_table;
+
+        /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
+        std::unordered_map<ExecutionTraceId, std::vector<BlockEntry *>> m_processed_execution_traces;
 
         /// PPU Compiler
         Compiler m_compiler;
@@ -793,7 +829,7 @@ namespace ppu_recompiler_llvm {
         static std::mutex s_mutex;
 
         /// The instance
-        static RecompilationEngine * s_the_instance;
+        static std::shared_ptr<RecompilationEngine> s_the_instance;
     };
 
     /// Finds interesting execution sequences
@@ -894,7 +930,7 @@ namespace ppu_recompiler_llvm {
     BranchType GetBranchTypeFromInstruction(u32 instruction);
 
     /// Get the execution trace id of an execution trace
-    ExecutionTraceId GetExecutionTraceId(const ExecutionTrace * execution_trace);
+    ExecutionTraceId GetExecutionTraceId(const ExecutionTrace & execution_trace);
 }
 
 #endif // PPU_LLVM_RECOMPILER_H

@@ -33,6 +33,7 @@
 #include <functional>
 #include <algorithm>
 #include <random>
+#include <unordered_set>
 
 #include <sys/stat.h>
 #include "Utilities/GNU.h"
