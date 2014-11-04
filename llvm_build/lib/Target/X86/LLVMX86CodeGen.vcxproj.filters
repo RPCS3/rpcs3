@@ -1,0 +1,221 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <ItemGroup>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86AsmPrinter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86AtomicExpandPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CodeEmitter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86FastISel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86FloatingPoint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86FrameLowering.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ISelDAGToDAG.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ISelLowering.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86JITInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86MCInstLower.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86MachineFunctionInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86PadShortFunction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SelectionDAGInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Subtarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86TargetMachine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86TargetObjectFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86TargetTransformInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86VZeroUpper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86FixupLEAs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td">
+      <Filter>TableGen descriptions</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86AsmPrinter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86FrameLowering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ISelLowering.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86JITInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86MachineFunctionInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Relocations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SelectionDAGInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Subtarget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86TargetMachine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86TargetObjectFile.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt" />
+    <CustomBuild Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CompilationCallback_Win64.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="X86CompilationCallback_Win64.obj">
+      <Filter>Object Files</Filter>
+    </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{73255B00-5C5F-44DF-AF13-17E25F77C964}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{C4A58D48-0D94-4539-AE81-2E13421E4512}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Object Files">
+      <UniqueIdentifier>{328997F2-C662-4233-9E8F-6675001D54A1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TableGen descriptions">
+      <UniqueIdentifier>{6762B3E4-24C5-408B-ACB3-D6EF700963AB}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
