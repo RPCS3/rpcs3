@@ -40,7 +40,7 @@ psv_log_base& sceLibc = []() -> psv_log_base&
 {
 	psv_log_base* module = new psv_log_base("sceLibc");
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, module, sce_libc_func::name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, module, &sce_libc_func::name)
 
 	REG_FUNC(0x33b83b70, __cxa_atexit);
 	REG_FUNC(0x826bbbaf, exit);
