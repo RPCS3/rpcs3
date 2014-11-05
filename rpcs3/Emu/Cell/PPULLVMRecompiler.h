@@ -1,6 +1,9 @@
 #ifndef PPU_LLVM_RECOMPILER_H
 #define PPU_LLVM_RECOMPILER_H
 
+#ifdef LLVM_AVAILABLE
+#define PPU_LLVM_RECOMPILER 1
+
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
@@ -330,7 +333,7 @@ protected:
     void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) override;
     void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) override;
     void MTSPR(u32 spr, u32 rs) override;
-    //DCBI
+    void DCBI(u32 ra, u32 rb) override;
     void NAND(u32 ra, u32 rs, u32 rb, bool rc) override;
     void STVXL(u32 vs, u32 ra, u32 rb) override;
     void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) override;
@@ -786,4 +789,5 @@ private:
     static PPULLVMRecompiler * s_recompiler;
 };
 
+#endif // LLVM_AVAILABLE
 #endif // PPU_LLVM_RECOMPILER_H

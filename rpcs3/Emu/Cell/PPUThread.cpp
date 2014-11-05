@@ -111,9 +111,14 @@ void PPUThread::DoRun()
 	break;
 
 	case 2:
+#ifdef PPU_LLVM_RECOMPILER
 		if (!m_dec) {
-			m_dec = new	PPULLVMEmulator(*this);
+			m_dec = new PPULLVMEmulator(*this);
 		}
+#else
+		LOG_ERROR(PPU, "This image does not include PPU JIT (LLVM)");
+		Emu.Pause();
+#endif
 	break;
 
 	default:

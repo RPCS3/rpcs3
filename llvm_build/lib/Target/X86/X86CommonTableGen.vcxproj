@@ -1,0 +1,737 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build" ToolsVersion="12.0">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGUID>{3A8E626F-A8B4-49B3-BCFF-4CD53B633B55}</ProjectGUID>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>X86CommonTableGen</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Utility</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" />  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+    <PropertyGroup>
+      <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+      <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86;$(ProjDir)..\..\..\..\llvm\lib\Target\X86;$(ProjDir)..\..\..\..\llvm_build\include;$(ProjDir)..\..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <AdditionalIncludeDirectories>$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86;$(ProjDir)..\..\..\..\llvm\lib\Target\X86;$(ProjDir)..\..\..\..\llvm_build\include;$(ProjDir)..\..\..\..\llvm\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule $(ProjDir)../../../../llvm/lib/Target/X86/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+REM OMMITTED CMAKE COMMAND
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm/lib/Target/X86/CMakeLists.txt;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineCompilerId.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeFindBinUtils.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASMCompiler.cmake.in;$(ProjDir)..\..\..\..\llvm_build\CMakeFiles\2.8.12.2\CMakeASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASM_MASMInformation.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASMInformation.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeTestASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeTestASMCompiler.cmake;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule $(ProjDir)../../../../llvm/lib/Target/X86/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+REM OMMITTED CMAKE COMMAND
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm/lib/Target/X86/CMakeLists.txt;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeDetermineCompilerId.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeFindBinUtils.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASMCompiler.cmake.in;$(ProjDir)..\..\..\..\llvm_build\CMakeFiles\2.8.12.2\CMakeASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASM_MASMInformation.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeASMInformation.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeTestASM_MASMCompiler.cmake;F:\apps\CMake 2.8\share\cmake-2.8\Modules\CMakeTestASMCompiler.cmake;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\CMakeLists.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenRegisterInfo.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenRegisterInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-register-info -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenRegisterInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenRegisterInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenRegisterInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-register-info -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenRegisterInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenRegisterInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenRegisterInfo.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenRegisterInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenRegisterInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenRegisterInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenRegisterInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenDisassemblerTables.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenDisassemblerTables.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-disassembler -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenDisassemblerTables.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDisassemblerTables.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenDisassemblerTables.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-disassembler -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenDisassemblerTables.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDisassemblerTables.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenDisassemblerTables.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenDisassemblerTables.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDisassemblerTables.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenDisassemblerTables.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDisassemblerTables.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenInstrInfo.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenInstrInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-instr-info -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenInstrInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenInstrInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenInstrInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-instr-info -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenInstrInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenInstrInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenInstrInfo.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenInstrInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenInstrInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenInstrInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenInstrInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmWriter.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenAsmWriter.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-asm-writer -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmWriter.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenAsmWriter.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-asm-writer -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmWriter.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmWriter.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenAsmWriter.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenAsmWriter.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmWriter1.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenAsmWriter1.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-asm-writer -asmwriternum=1 -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmWriter1.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter1.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenAsmWriter1.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-asm-writer -asmwriternum=1 -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmWriter1.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter1.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmWriter1.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenAsmWriter1.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter1.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenAsmWriter1.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmWriter1.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmMatcher.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenAsmMatcher.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-asm-matcher -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmMatcher.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmMatcher.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenAsmMatcher.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-asm-matcher -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenAsmMatcher.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmMatcher.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenAsmMatcher.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenAsmMatcher.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmMatcher.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenAsmMatcher.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenAsmMatcher.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenDAGISel.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenDAGISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-dag-isel -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenDAGISel.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDAGISel.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenDAGISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-dag-isel -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenDAGISel.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDAGISel.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenDAGISel.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenDAGISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDAGISel.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenDAGISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenDAGISel.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenFastISel.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenFastISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-fast-isel -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenFastISel.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenFastISel.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenFastISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-fast-isel -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenFastISel.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenFastISel.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenFastISel.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenFastISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenFastISel.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenFastISel.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenFastISel.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenCallingConv.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenCallingConv.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-callingconv -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenCallingConv.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenCallingConv.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenCallingConv.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-callingconv -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenCallingConv.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenCallingConv.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenCallingConv.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenCallingConv.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenCallingConv.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenCallingConv.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenCallingConv.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenSubtargetInfo.inc.tmp.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building X86GenSubtargetInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+..\..\..\Debug\bin\llvm-tblgen.exe -gen-subtarget -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenSubtargetInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenSubtargetInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Debug\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building X86GenSubtargetInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+..\..\..\Release\bin\llvm-tblgen.exe -gen-subtarget -I $(ProjDir)../../../../llvm/lib/Target/X86 -I $(ProjDir)../../../../llvm/lib/Target -I $(ProjDir)../../../../llvm/include $(ProjDir)../../../../llvm/lib/Target/X86/X86.td -o $(ProjDir)../../../../llvm_build/lib/Target/X86/X86GenSubtargetInfo.inc.tmp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenSubtargetInfo.inc.tmp.rule;$(ProjDir)..\..\..\..\llvm_build\Release\bin\llvm-tblgen.exe;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86CallingConv.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Instr3DNow.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrArithmetic.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrAVX512.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCMovSetCC.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrCompiler.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrControl.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrExtension.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFMA.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFormats.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFPStack.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrFragmentsSIMD.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrMMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrShiftRotate.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSSE.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSVM.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrSystem.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrTSX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrVMX.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86InstrXOP.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86RegisterInfo.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedHaswell.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86SchedSandyBridge.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86Schedule.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleAtom.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86ScheduleSLM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\CodeGen\ValueTypes.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\Intrinsics.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsAArch64.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsARM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsHexagon.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsMips.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsNVVM.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsPowerPC.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsR600.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsX86.td;$(ProjDir)..\..\..\..\llvm\include\llvm\IR\IntrinsicsXCore.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Option\OptParser.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\Target.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetCallingConv.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetItinerary.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSchedule.td;$(ProjDir)..\..\..\..\llvm\include\llvm\Target\TargetSelectionDAG.td;$(ProjDir)..\..\..\..\llvm\lib\Target\X86\X86.td;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\c2193a484be62350f17b11827d8909e4\X86GenSubtargetInfo.inc.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Updating X86GenSubtargetInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenSubtargetInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Updating X86GenSubtargetInfo.inc...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+copy /y  $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp $(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/c2193a484be62350f17b11827d8909e4/X86GenSubtargetInfo.inc.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc.tmp;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\..\CMakeFiles\119f22f6f43f0c71b19740265bf5be01\X86CommonTableGen.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/119f22f6f43f0c71b19740265bf5be01/X86CommonTableGen.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\CMakeFiles\X86CommonTableGen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)../../../../llvm_build/CMakeFiles/119f22f6f43f0c71b19740265bf5be01/X86CommonTableGen.rule;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenRegisterInfo.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDisassemblerTables.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenInstrInfo.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmWriter1.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenAsmMatcher.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenDAGISel.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenFastISel.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenCallingConv.inc;$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\X86GenSubtargetInfo.inc;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjDir)..\..\..\..\llvm_build\lib\Target\X86\CMakeFiles\X86CommonTableGen</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CMakeFiles\X86CommonTableGen" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ProjDir)../../../../llvm_build/ZERO_CHECK.vcxproj">
+      <Project>F657D95D-4514-49A3-A0BE-D73580846B47</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(ProjDir)../../../../llvm_build/include/llvm/IR/intrinsics_gen.vcxproj">
+      <Project>0B9F2D3D-23BA-4B2F-9D24-1F2742BE6FAA</Project>
+    </ProjectReference>
+    <ProjectReference Include="$(ProjDir)../../../../llvm_build/utils/TableGen/llvm-tblgen.vcxproj">
+      <Project>530CB1CA-0D5D-4D1C-AE8A-F6E2438DB511</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

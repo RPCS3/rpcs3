@@ -57,7 +57,9 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 
 class PPUInterpreter : public PPUOpcodes
 {
-    friend class PPULLVMRecompiler;
+#ifdef PPU_LLVM_RECOMPILER
+	friend class PPULLVMRecompiler;
+#endif
 private:
 	PPUThread& CPU;
 
@@ -3062,7 +3064,9 @@ private:
 	{
 		GetRegBySPR(spr) = CPU.GPR[rs];
 	}
-	/*0x1d6*///DCBI
+	void DCBI(u32 ra, u32 rb)
+	{
+	}
 	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		CPU.GPR[ra] = ~(CPU.GPR[rs] & CPU.GPR[rb]);

@@ -1,0 +1,75 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <ItemGroup>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\ArgumentPromotion.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\BarrierNoopPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\ConstantMerge.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\DeadArgumentElimination.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\ExtractGV.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\FunctionAttrs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\GlobalDCE.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\GlobalOpt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\IPConstantPropagation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\IPO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\InlineAlways.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\InlineSimple.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\Inliner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\Internalize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\LoopExtractor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\MergeFunctions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\PartialInlining.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\PassManagerBuilder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\PruneEH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\StripDeadPrototypes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\StripSymbols.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="$(ProjDir)..\..\..\..\llvm\lib\Transforms\IPO\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{73255B00-5C5F-44DF-AF13-17E25F77C964}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
