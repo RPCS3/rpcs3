@@ -578,34 +578,41 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		}
 		else if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceRefs.rodata"))
 		{
-			// basically unknown struct
+			auto code = vm::psv::ptr<const u32>::make(shdr.sh_addr);
+			u32 data = 0;
 
-			struct reloc_info
+			for (; code.addr() < shdr.sh_addr + shdr.sh_size; code++)
 			{
-				u32 code; // 0xff
-				u32 data; // address that will be written
-				u32 code1; // 0x2f
-				u32 addr1; // address of movw r12,# instruction to be replaced
-				u32 code2; // 0x30
-				u32 addr2; // address of movt r12,# instruction to be replaced
-				u32 code3; // 0
-			};
-
-			auto rel = vm::psv::ptr<const reloc_info>::make(shdr.sh_addr);
-
-			for (u32 j = 0; j < shdr.sh_size / sizeof(reloc_info); j++)
-			{
-				if (rel[j].code == 0xff && rel[j].code1 == 0x2f && rel[j].code2 == 0x30 && rel[j].code3 == 0)
+				switch (*code)
 				{
-					const u32 data = rel[j].data;
-					vm::psv::write16(rel[j].addr1 + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
-					vm::psv::write16(rel[j].addr1 + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
-					vm::psv::write16(rel[j].addr2 + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
-					vm::psv::write16(rel[j].addr2 + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+				case 0x000000ff:
+				{
+					// save address for future use
+					data = *++code;
+					break;
 				}
-				else
+				case 0x0000002f:
 				{
-					LOG_NOTICE(LOADER, "sceRefs: unknown code found (code=0x%x, code1=0x%x, code2=0x%x, code3=0x%x)", rel[j].code, rel[j].code1, rel[j].code2, rel[j].code3);
+					// movw r12,# instruction will be replaced
+					const u32 addr = *++code;
+					vm::psv::write16(addr + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
+					vm::psv::write16(addr + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
+					break;
+				}
+				case 0x00000030:
+				{
+					// movt r12,# instruction will be replaced
+					const u32 addr = *++code;
+					vm::psv::write16(addr + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
+					vm::psv::write16(addr + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+					break;
+				}
+				case 0x00000000:
+				{
+					// probably, no operation
+					break;
+				}
+				default: LOG_NOTICE(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
 				}
 			}
 		}
