@@ -10,12 +10,14 @@ namespace sce_libc_func
 	void __cxa_atexit()
 	{
 		sceLibc.Todo(__FUNCTION__);
+		Emu.Pause();
 	}
 
 	void exit()
 	{
 		sceLibc.Error("exit()");
 		Emu.Pause();
+
 		sceLibc.Success("Process finished");
 		CallAfter([]()
 		{
@@ -36,11 +38,11 @@ namespace sce_libc_func
 	}
 }
 
+#define REG_FUNC(nid, name) reg_psv_func(nid, module, #name, &sce_libc_func::name)
+
 psv_log_base& sceLibc = []() -> psv_log_base&
 {
-	psv_log_base* module = new psv_log_base("sceLibc");
-
-#define REG_FUNC(nid, name) reg_psv_func(nid, module, &sce_libc_func::name)
+	psv_log_base* module = new psv_log_base("SceLibc");
 
 	REG_FUNC(0x33b83b70, __cxa_atexit);
 	REG_FUNC(0x826bbbaf, exit);

@@ -264,6 +264,7 @@ namespace psv_func_detail
 struct psv_func
 {
 	const u32 nid;
+	const char* const name;
 	psv_func_caller* const func;
 	psv_log_base* const module;
 };
@@ -271,11 +272,12 @@ struct psv_func
 void add_psv_func(psv_func& data);
 
 template<typename RT, typename... T>
-void reg_psv_func(u32 nid, psv_log_base* module, RT(*func)(T...))
+void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*func)(T...))
 {
 	psv_func f =
 	{
 		nid,
+		name,
 		new psv_func_detail::func_binder<RT, T...>(func),
 		module
 	};

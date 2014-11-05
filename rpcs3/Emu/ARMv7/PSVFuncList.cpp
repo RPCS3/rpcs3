@@ -38,10 +38,14 @@ void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)
 }
 
 extern psv_log_base& sceLibc;
+extern psv_log_base& sceLibm;
 extern psv_log_base& sceLibstdcxx;
+extern psv_log_base& sceLibKernel;
 
 void list_known_psv_modules()
 {
 	sceLibc.Log("");
+	sceLibm.Log("");
 	sceLibstdcxx.Log("");
+	sceLibKernel.Log("");
 }

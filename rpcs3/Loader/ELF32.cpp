@@ -344,25 +344,25 @@ bool ELF32Loader::LoadPhdrInfo()
 			phdr_arr.back().Load(elf32_f);
 	}
 
-	if(entry & 0x1)
+	if (machine == MACHINE_ARM)
+	{
+		entry = (entry & ~0x3) + 0x81000000;
+	}
+	else if(entry & 0x3)
 	{
 		//entry is physical, convert to virtual
 
-		entry &= ~0x1;
+		entry &= ~0x3;
 
 		for(size_t i=0; i<phdr_arr.size(); ++i)
 		{
-			if(phdr_arr[i].p_offset >= entry && entry < phdr_arr[i].p_offset + phdr_arr[i].p_memsz)
+			if(phdr_arr[i].p_paddr >= entry && entry < phdr_arr[i].p_paddr + phdr_arr[i].p_memsz)
 			{
 				entry += phdr_arr[i].p_vaddr;
 				LOG_WARNING(LOADER, "virtual entry = 0x%x", entry);
 				break;
 			}
 		}
-	}
-	else if (machine == MACHINE_ARM)
-	{
-		entry += 0x81000000;
 	}
 
 	return true;
@@ -556,7 +556,7 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 
 				if (auto func = get_psv_func_by_nid(nid))
 				{
-					LOG_NOTICE(LOADER, "Imported function 0x%x (addr=0x%x)", nid, addr);
+					func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
 
 					// writing Thumb code (temporarily, because it should be ARM)
 					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function
@@ -566,7 +566,7 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 				}
 				else
 				{
-					LOG_ERROR(LOADER, "Unimplemented function 0x%x (addr=0x%x)", nid, addr);
+					LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
 
 					// writing Thumb code (temporarily - it shouldn't be written in this case)
 					vm::psv::write16(addr + 0, 0xf06f); // MVN r0,#0x0
