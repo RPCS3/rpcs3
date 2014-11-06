@@ -74,7 +74,14 @@
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
     <ClCompile Include="Crypto\utils.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibKernel.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLibstdcxx.cpp" />
+    <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp" />
     <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
     <ClCompile Include="Emu\Audio\AudioDumper.cpp" />
     <ClCompile Include="Emu\Audio\AudioManager.cpp" />
@@ -294,6 +301,7 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
+    <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
     <ClInclude Include="Emu\Audio\AudioManager.h" />

@@ -28,7 +28,7 @@ public:
 		{
 			if (m_count >= SQSize)
 			{
-				if (Emu.IsStopped() || do_exit && *do_exit)
+				if (Emu.IsStopped() || (do_exit && *do_exit))
 				{
 					return false;
 				}
@@ -55,7 +55,7 @@ public:
 		{
 			if (!m_count)
 			{
-				if (Emu.IsStopped() || do_exit && *do_exit)
+				if (Emu.IsStopped() || (do_exit && *do_exit))
 				{
 					return false;
 				}
@@ -90,7 +90,7 @@ public:
 		{
 			if (m_count <= pos)
 			{
-				if (Emu.IsStopped() || do_exit && *do_exit)
+				if (Emu.IsStopped() || (do_exit && *do_exit))
 				{
 					return false;
 				}

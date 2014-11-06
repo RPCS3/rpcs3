@@ -557,9 +557,9 @@ s64 spursInit(
 							{
 								if (spurs->m.wklReadyCount[i].read_relaxed() ||
 									spurs->m.wklSet1.read_relaxed() & (0x8000u >> i) ||
-									spurs->m.wklFlag.flag.read_relaxed() == 0 &&
+									(spurs->m.wklFlag.flag.read_relaxed() == 0 &&
 									spurs->m.flagRecv.read_relaxed() == (u8)i
-									)
+									))
 								{
 									do_break = true;
 									break;
@@ -575,9 +575,9 @@ s64 spursInit(
 							{
 								if (spurs->m.wklReadyCount[i + 0x10].read_relaxed() ||
 									spurs->m.wklSet2.read_relaxed() & (0x8000u >> i) ||
-									spurs->m.wklFlag.flag.read_relaxed() == 0 &&
+									(spurs->m.wklFlag.flag.read_relaxed() == 0 &&
 									spurs->m.flagRecv.read_relaxed() == (u8)i + 0x10
-									)
+									))
 								{
 									do_break = true;
 									break;
@@ -953,10 +953,25 @@ s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 
 s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 {
-	cellSpurs->Todo("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
-#ifdef PRX_DEBUG
+	cellSpurs->Warning("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
+#ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8568, libsre_rtoc);
 #endif
+
+	if (!spurs)
+	{
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+	if (spurs.addr() % 128)
+	{
+		return CELL_SPURS_CORE_ERROR_ALIGN;
+	}
+	if (spurs->m.xD66.read_relaxed())
+	{
+		return CELL_SPURS_CORE_ERROR_STAT;
+	}
+
+
 
 	return CELL_OK;
 }
@@ -1360,13 +1375,7 @@ s32 spursAddWorkload(
 		spurs->m.wklSet2._and_not({ be_t<u16>::make(0x8000 >> index) }); // clear bit in wklFlag2
 	}
 
-	spurs->m.flagRecv.atomic_op([wnum](u8& FR)
-	{
-		if (FR == wnum)
-		{
-			FR = 0xff;
-		}
-	});
+	spurs->m.flagRecv.compare_and_swap(wnum, 0xff);
 
 	u32 res_wkl;
 	CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];

@@ -18,6 +18,8 @@ void ARMv7Thread::InitRegs()
 	memset(GPR, 0, sizeof(GPR[0]) * 15);
 	APSR.APSR = 0;
 	IPSR.IPSR = 0;
+	ISET = Thumb;
+	ITSTATE.IT = 0;
 	SP = m_stack_addr + m_stack_size;
 }
 
@@ -30,9 +32,9 @@ void ARMv7Thread::InitStack()
 	}
 }
 
-void ARMv7Thread::SetArg(const uint pos, const u64 arg)
+u32 ARMv7Thread::GetStackArg(u32 pos)
 {
-	assert(0);
+	return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
 }
 
 std::string ARMv7Thread::RegsToString()

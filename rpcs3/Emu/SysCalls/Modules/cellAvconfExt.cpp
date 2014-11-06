@@ -16,15 +16,15 @@ int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
 	cellAvconfExt->Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize_addr=0x%x)", videoOut, screenSize.addr());
 
-	if (!videoOut == CELL_VIDEO_OUT_PRIMARY)
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 
 #ifdef _WIN32
 	HDC screen = GetDC(NULL);
-	u32 diagonal = round(sqrt((pow(GetDeviceCaps(screen, HORZSIZE), 2) + pow(GetDeviceCaps(screen, VERTSIZE), 2))) * 0.0393);
+	float diagonal = roundf(sqrtf((powf(GetDeviceCaps(screen, HORZSIZE), 2) + powf(GetDeviceCaps(screen, VERTSIZE), 2))) * 0.0393);
 #else
 	// TODO: Linux implementation, without using wx
-	// u32 diagonal = round(sqrt((pow(wxGetDisplaySizeMM().GetWidth(), 2) + pow(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393);
+	// float diagonal = roundf(sqrtf((powf(wxGetDisplaySizeMM().GetWidth(), 2) + powf(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393);
 #endif
 
 	if (Ini.GS3DTV.GetValue())

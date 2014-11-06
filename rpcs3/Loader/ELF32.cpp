@@ -3,7 +3,10 @@
 #include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 #include "ELF32.h"
+
+//#define LOADER_DEBUG
 
 void Elf32_Ehdr::Show()
 {
@@ -341,11 +344,15 @@ bool ELF32Loader::LoadPhdrInfo()
 			phdr_arr.back().Load(elf32_f);
 	}
 
-	if(entry & 0x1)
+	if (machine == MACHINE_ARM)
+	{
+		entry = (entry & ~0x3) + 0x81000000;
+	}
+	else if(entry & 0x3)
 	{
 		//entry is physical, convert to virtual
 
-		entry &= ~0x1;
+		entry &= ~0x3;
 
 		for(size_t i=0; i<phdr_arr.size(); ++i)
 		{
@@ -502,6 +509,8 @@ bool ELF32Loader::LoadPhdrData(u64 _offset)
 
 bool ELF32Loader::LoadShdrData(u64 offset)
 {
+	u32 fnid_addr = 0;
+
 	for(u32 i=0; i<shdr_arr.size(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
@@ -526,6 +535,88 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		if(shdr.sh_addr + shdr.sh_size > max_addr)
 		{
 			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
+
+		// probably should be in LoadPhdrData()
+		if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceFNID.rodata"))
+		{
+			fnid_addr = shdr.sh_addr;
+		}
+		else if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceFStub.rodata"))
+		{
+			list_known_psv_modules();
+
+			auto fnid = vm::psv::ptr<const u32>::make(fnid_addr);
+			auto fstub = vm::psv::ptr<const u32>::make(shdr.sh_addr);
+
+			for (u32 j = 0; j < shdr.sh_size / 4; j++)
+			{
+				u32 nid = fnid[j];
+				u32 addr = fstub[j];
+
+				if (auto func = get_psv_func_by_nid(nid))
+				{
+					if (func->module)
+						func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+					else
+						LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+
+					// writing Thumb code (temporarily, because it should be ARM)
+					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function)
+					vm::psv::write16(addr + 2, (u16)get_psv_func_index(func));
+					vm::psv::write16(addr + 4, 0x4770); // BX LR
+					vm::psv::write16(addr + 6, 0); // null
+				}
+				else
+				{
+					LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
+
+					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function)
+					vm::psv::write16(addr + 2, 0x0000); // (zero index)
+					vm::psv::write16(addr + 4, 0x4770); // BX LR
+					vm::psv::write16(addr + 6, 0); // null
+				}
+			}
+		}
+		else if (machine == MACHINE_ARM && !strcmp(shdr_name_arr[i].c_str(), ".sceRefs.rodata"))
+		{
+			auto code = vm::psv::ptr<const u32>::make(shdr.sh_addr);
+			u32 data = 0;
+
+			for (; code.addr() < shdr.sh_addr + shdr.sh_size; code++)
+			{
+				switch (*code)
+				{
+				case 0x000000ff:
+				{
+					// save address for future use
+					data = *++code;
+					break;
+				}
+				case 0x0000002f:
+				{
+					// movw r12,# instruction will be replaced
+					const u32 addr = *++code;
+					vm::psv::write16(addr + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
+					vm::psv::write16(addr + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
+					break;
+				}
+				case 0x00000030:
+				{
+					// movt r12,# instruction will be replaced
+					const u32 addr = *++code;
+					vm::psv::write16(addr + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
+					vm::psv::write16(addr + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+					break;
+				}
+				case 0x00000000:
+				{
+					// probably, no operation
+					break;
+				}
+				default: LOG_NOTICE(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
+				}
+			}
 		}
 	}
 

@@ -997,7 +997,7 @@ s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer
 
 s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1124,7 +1124,7 @@ s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32>
 
 s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1305,7 +1305,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 	{
 		s32 res;
 
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
 #ifdef PRX_DEBUG_XXX
 			res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>::call(GetCurrentPPUThread(), libsre + 0x24B0, libsre_rtoc,
@@ -1351,7 +1351,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 	memcpy(vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), buffer.get_ptr(), size);
 
 	s32 res;
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
 #ifdef PRX_DEBUG_XXX
 		res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, s32, u64>::call(GetCurrentPPUThread(), libsre + 0x26C0, libsre_rtoc,
@@ -1376,7 +1376,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 
 s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_SPU2PPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1503,7 +1503,7 @@ s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> 
 
 s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_SPU2PPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1681,7 +1681,7 @@ s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer
 	while (true)
 	{
 		s32 res;
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
 #ifdef PRX_DEBUG_XXX
 			res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64, u64>::call(GetCurrentPPUThread(), libsre + 0x2A90, libsre_rtoc,
@@ -1724,7 +1724,7 @@ s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer
 	memcpy(buffer.get_ptr(), vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), size);
 
 	s32 res;
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
 #ifdef PRX_DEBUG_XXX
 		res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, s32, u64, u64>::call(GetCurrentPPUThread(), libsre + 0x2CA8, libsre_rtoc,
@@ -1767,7 +1767,7 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		const auto push = queue->push1.read_relaxed();
 
 		s32 var1, var2;
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
 			var1 = var2 = (u16)queue->pop2.read_relaxed().pack;
 		}
@@ -1989,6 +1989,8 @@ void cellSync_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
+		if (!Memory.MainMem.GetStartAddr()) return;
+
 		libsre = (u32)Memory.MainMem.AllocAlign(sizeof(libsre_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libsre), libsre_data, sizeof(libsre_data));
 		libsre_rtoc = libsre + 0x399B0;

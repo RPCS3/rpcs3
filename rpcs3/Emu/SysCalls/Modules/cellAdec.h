@@ -790,7 +790,7 @@ struct CellAdecParamAtracX
 	be_t<s32> ch_config_idx;
 	be_t<s32> nch_out;
 	be_t<s32> nbytes;
-	u8 extra_config_data[4]; // downmix coefficients
+	std::array<u8, 4> extra_config_data; // downmix coefficients
 	be_t<ATRACX_WordSize> bw_pcm;
 	ATRACX_DownmixFlag downmix_flag;
 	ATRACX_ATSHeaderInclude au_includes_ats_hdr_flg;
@@ -1010,6 +1010,18 @@ struct AdecTask
 			u64 pts;
 			u64 userdata;
 		} au;
+
+		struct
+		{
+			s32 sample_rate;
+			s32 channel_config;
+			s32 channels;
+			s32 frame_size;
+			std::array<u8, 4> extra_config;
+			s32 output;
+			u8 downmix;
+			u8 ats_header;
+		} at3p;
 	};
 
 	AdecTask(AdecJobType type)
@@ -1034,6 +1046,8 @@ struct AdecFrame
 
 int adecRead(void* opaque, u8* buf, int buf_size);
 
+static const u32 at3freq[8] = { 32000, 44100, 48000, 88200, 96000, 0, 0, 0 };
+
 struct OMAHeader // OMA Header
 {
 	u32 magic; // 0x01334145
@@ -1043,26 +1057,34 @@ struct OMAHeader // OMA Header
 	u64 unk2; // 0xcef5000000000400ULL
 	u64 unk3; // 0x1c458024329192d2ULL
 	u8 codecId; // 1 for ATRAC3P
-	u8 reserved0; // 0
+	u8 code0; // 0
 	u8 code1;
 	u8 code2;
-	u32 reserved1; // 0
-	u64 reserved[7]; // 0
+	u32 reserved[15]; // 0
 
-	OMAHeader(u8 id, u8 code1, u8 code2)
+	OMAHeader(u8 codec_id, u32 freq, u8 channel_count, u32 frame_size)
 		: magic(0x01334145)
 		, size(96 << 8)
 		, unk0(0xffff)
 		, unk1(0x00500f0100000000ULL)
 		, unk2(0xcef5000000000400ULL)
 		, unk3(0x1c458024329192d2ULL)
-		, codecId(id)
-		, reserved0(0)
-		, code1(code1)
-		, code2(code2)
-		, reserved1(0)
+		, codecId(codec_id)
+		, code0(0)
 	{
 		memset(reserved, 0, sizeof(reserved));
+
+		u8 freq_code;
+		for (freq_code = 0; freq_code < 5; freq_code++)
+		{
+			if (at3freq[freq_code] == freq)
+			{
+				break;
+			}
+		}
+		u32 prepared_frame_size = (frame_size - 8) / 8;
+		code1 = ((prepared_frame_size >> 8) & 0x3) | ((channel_count & 0x7) << 2) | (freq_code << 5);
+		code2 = prepared_frame_size & 0xff;
 	}
 };
 
@@ -1073,7 +1095,6 @@ class AudioDecoder
 public:
 	SQueue<AdecTask> job;
 	u32 id;
-	volatile bool is_running;
 	volatile bool is_closed;
 	volatile bool is_finished;
 	bool just_started;
@@ -1088,20 +1109,13 @@ public:
 		u32 addr;
 		u32 size;
 		bool init;
-		u8* rem;
-		u32 rem_size;
+		bool has_ats;
 
 		AudioReader()
-			: rem(nullptr)
-			, rem_size(0)
+			: init(false)
 		{
 		}
 
-		~AudioReader()
-		{
-			if (rem) free(rem);
-			rem = nullptr;
-		}
 	} reader;
 
 	SQueue<AdecFrame> frames;
@@ -1115,6 +1129,11 @@ public:
 
 	AdecTask task;
 	u64 last_pts, first_pts;
+
+	u32 channels;
+	u32 frame_size;
+	u32 sample_rate;
+	bool use_ats_headers;
 
 	PPUThread* adecCb;
 
