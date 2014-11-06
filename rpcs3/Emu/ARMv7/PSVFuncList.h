@@ -437,7 +437,6 @@ namespace psv_func_detail
 
 		static __forceinline T func(ARMv7Thread& CPU)
 		{
-			return 0.0f;
 		}
 	};
 
@@ -449,7 +448,6 @@ namespace psv_func_detail
 
 		static __forceinline T func(ARMv7Thread& CPU)
 		{
-			return {};
 		}
 	};
 
