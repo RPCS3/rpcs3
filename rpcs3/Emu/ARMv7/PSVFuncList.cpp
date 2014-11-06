@@ -2,9 +2,9 @@
 #include "Emu/System.h"
 #include "PSVFuncList.h"
 
-std::vector<psv_func>& g_psv_func_list = []() -> std::vector<psv_func>&
+std::vector<psv_func> g_psv_func_list = []() -> std::vector<psv_func>
 {
-	auto v = new std::vector<psv_func>;
+	std::vector<psv_func> v;
 
 	psv_func f =
 	{
@@ -19,9 +19,9 @@ std::vector<psv_func>& g_psv_func_list = []() -> std::vector<psv_func>&
 		}),
 		nullptr,
 	};
-	v->push_back(f);
+	v.push_back(f);
 
-	return *v;
+	return v;
 }();
 
 void add_psv_func(psv_func& data)
@@ -58,10 +58,10 @@ void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)
 	(*g_psv_func_list[index].func)(CPU);
 }
 
-extern psv_log_base& sceLibc;
-extern psv_log_base& sceLibm;
-extern psv_log_base& sceLibstdcxx;
-extern psv_log_base& sceLibKernel;
+extern psv_log_base sceLibc;
+extern psv_log_base sceLibm;
+extern psv_log_base sceLibstdcxx;
+extern psv_log_base sceLibKernel;
 
 void list_known_psv_modules()
 {

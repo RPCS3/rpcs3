@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base& sceLibc;
+extern psv_log_base sceLibc;
 
 namespace sce_libc_func
 {
@@ -38,12 +38,10 @@ namespace sce_libc_func
 	}
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, module, #name, &sce_libc_func::name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibc, #name, &sce_libc_func::name)
 
-psv_log_base& sceLibc = []() -> psv_log_base&
+psv_log_base sceLibc = []() -> psv_log_base
 {
-	psv_log_base* module = new psv_log_base("SceLibc");
-
 	REG_FUNC(0x33b83b70, __cxa_atexit);
 	REG_FUNC(0x826bbbaf, exit);
 	REG_FUNC(0x9a004680, printf);
@@ -338,5 +336,5 @@ psv_log_base& sceLibc = []() -> psv_log_base&
 	//REG_FUNC(0x7D35108B, _FSnan);
 	//REG_FUNC(0x48AEEF2A, _LSnan);
 
-	return *module;
+	return psv_log_base("SceLibc");
 }();

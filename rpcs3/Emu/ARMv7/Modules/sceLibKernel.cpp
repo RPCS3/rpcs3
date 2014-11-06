@@ -3,16 +3,14 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base& sceLibKernel;
+extern psv_log_base sceLibKernel;
 
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, module, #name, &name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
 
-psv_log_base& sceLibKernel = []() -> psv_log_base&
+psv_log_base sceLibKernel = []() -> psv_log_base
 {
-	psv_log_base* module = new psv_log_base("sceLibKernel");
-
 	//REG_FUNC(0x23EAA62, sceKernelPuts);
 	//REG_FUNC(0xB0335388, sceClibToupper);
 	//REG_FUNC(0x4C5471BC, sceClibTolower);
@@ -378,5 +376,5 @@ psv_log_base& sceLibKernel = []() -> psv_log_base&
 	/* SceDebugLed */
 	//REG_FUNC(0x78E702D3, sceKernelSetGPO);
 
-	return *module;
+	return psv_log_base("sceLibKernel");
 }();
