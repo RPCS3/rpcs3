@@ -262,6 +262,12 @@ public:
 		}
 	}
 
+	u32 ThumbExpandImm(u32 imm12)
+	{
+		bool carry = CPU.APSR.C;
+		return ThumbExpandImm_C(imm12, carry, carry);
+	}
+
 	bool ConditionPassed(u32 cond) const
 	{
 		bool result = false;

@@ -556,10 +556,13 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 
 				if (auto func = get_psv_func_by_nid(nid))
 				{
-					func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+					if (func->module)
+						func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+					else
+						LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
 
 					// writing Thumb code (temporarily, because it should be ARM)
-					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function
+					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function)
 					vm::psv::write16(addr + 2, (u16)get_psv_func_index(func));
 					vm::psv::write16(addr + 4, 0x4770); // BX LR
 					vm::psv::write16(addr + 6, 0); // null
@@ -568,9 +571,8 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 				{
 					LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
 
-					// writing Thumb code (temporarily - it shouldn't be written in this case)
-					vm::psv::write16(addr + 0, 0xf06f); // MVN r0,#0x0
-					vm::psv::write16(addr + 2, 0x0000);
+					vm::psv::write16(addr + 0, 0xf870); // HACK (special instruction that calls HLE function)
+					vm::psv::write16(addr + 2, 0x0000); // (zero index)
 					vm::psv::write16(addr + 4, 0x4770); // BX LR
 					vm::psv::write16(addr + 6, 0); // null
 				}

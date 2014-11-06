@@ -99,7 +99,7 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 		if (set_flags)
 		{
 			bool carry, overflow;
-			u32 res = AddWithCarry(CPU.read_gpr(n), imm32, false, carry, overflow);
+			const u32 res = AddWithCarry(CPU.read_gpr(n), imm32, false, carry, overflow);
 			CPU.write_gpr(d, res);
 			CPU.APSR.N = res >> 31;
 			CPU.APSR.Z = res == 0;
@@ -504,10 +504,36 @@ void ARMv7Interpreter::CMN_RSR(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::CMP_IMM(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 n = 0;
+	u32 imm32 = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		n = (data & 0x700) >> 8;
+		imm32 = (data & 0xff);
+		break;
+	}
+	case T2:
+	{
+		n = (data & 0xf0000) >> 16;
+		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		bool carry, overflow;
+		const u32 res = AddWithCarry(CPU.read_gpr(n), ~imm32, true, carry, overflow);
+		CPU.APSR.N = res >> 31;
+		CPU.APSR.Z = res == 0;
+		CPU.APSR.C = carry;
+		CPU.APSR.V = overflow;
 	}
 }
 
@@ -1027,7 +1053,7 @@ void ARMv7Interpreter::MOV_REG(const u32 data, const ARMv7_encoding type)
 
 	if (ConditionPassed(cond))
 	{
-		u32 res = CPU.read_gpr(m);
+		const u32 res = CPU.read_gpr(m);
 		CPU.write_gpr(d, res);
 		if (set_flags)
 		{
@@ -2096,10 +2122,81 @@ void ARMv7Interpreter::STRH_REG(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 {
+	bool set_flags = !CPU.ITSTATE;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 n = 0;
+	u32 imm32 = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		imm32 = (data & 0x1c) >> 6;
+		break;
+	}
+	case T2:
+	{
+		d = n = (data & 0x700) >> 8;
+		imm32 = (data & 0xff);
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		set_flags = (data & 0x100000);
+		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMP (immediate)";
+		}
+		if (n == 13)
+		{
+			throw "SUB (SP minus immediate)";
+		}
+		break;
+	}
+	case T4:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		set_flags = false;
+		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+
+		if (d == 15)
+		{
+			throw "ADR";
+		}
+		if (n == 13)
+		{
+			throw "SUB (SP minus immediate)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		if (set_flags)
+		{
+			bool carry, overflow;
+			const u32 res = AddWithCarry(CPU.read_gpr(n), ~imm32, true, carry, overflow);
+			CPU.write_gpr(d, res);
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+			CPU.APSR.V = overflow;
+		}
+		else
+		{
+			CPU.write_gpr(d, CPU.read_gpr(n) - imm32);
+		}
 	}
 }
 
@@ -2146,11 +2243,11 @@ void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
 
 	if (ConditionPassed(cond))
 	{
-		u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
 		if (set_flags)
 		{
 			bool carry, overflow;
-			u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
+			const u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
 			CPU.write_gpr(d, res);
 			CPU.APSR.N = res >> 31;
 			CPU.APSR.Z = res == 0;
@@ -2177,8 +2274,8 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 {
 	u32 cond = CPU.ITSTATE.advance();
 	u32 d = 13;
-	u32 imm32 = 0;
 	bool set_flags = false;
+	u32 imm32 = 0;
 
 	switch (type)
 	{
@@ -2187,6 +2284,26 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 		imm32 = (data & 0x7f) << 2;
 		break;
 	}
+	case T2:
+	{
+		d = (data & 0xf00) >> 8;
+		set_flags = (data & 0x100000);
+		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMP (immediate)";
+		}
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		set_flags = false;
+		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		break;
+	}
+	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
@@ -2195,7 +2312,7 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 		if (set_flags)
 		{
 			bool carry, overflow;
-			u32 res = AddWithCarry(CPU.SP, ~imm32, true, carry, overflow);
+			const u32 res = AddWithCarry(CPU.SP, ~imm32, true, carry, overflow);
 			CPU.write_gpr(d, res);
 			CPU.APSR.N = res >> 31;
 			CPU.APSR.Z = res == 0;

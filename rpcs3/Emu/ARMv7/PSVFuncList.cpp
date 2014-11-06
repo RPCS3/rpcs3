@@ -1,7 +1,28 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "PSVFuncList.h"
 
-std::vector<psv_func> g_psv_func_list;
+std::vector<psv_func>& g_psv_func_list = []() -> std::vector<psv_func>&
+{
+	auto v = new std::vector<psv_func>;
+
+	psv_func f =
+	{
+		0xdeadbeef,
+		"INVALID FUNCTION",
+		new psv_func_detail::func_binder<u32>([]() -> u32
+		{
+			LOG_ERROR(HLE, "Unimplemented function found");
+			Emu.Pause();
+
+			return 0xffffffffu;
+		}),
+		nullptr,
+	};
+	v->push_back(f);
+
+	return *v;
+}();
 
 void add_psv_func(psv_func& data)
 {
