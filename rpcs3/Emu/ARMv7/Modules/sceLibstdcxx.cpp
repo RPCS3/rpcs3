@@ -30,10 +30,6 @@ namespace sce_libstdcxx_func
 
 psv_log_base sceLibstdcxx = []() -> psv_log_base
 {
-	REG_FUNC(0x173E7421, __aeabi_unwind_cpp_pr0);
-	REG_FUNC(0x3C78DDE3, __aeabi_unwind_cpp_pr1);
-	REG_FUNC(0xF95BDD36, __aeabi_unwind_cpp_pr2);
-
 	//REG_FUNC(0x52B0C625, std::bad_typeid::what() const);
 	//REG_FUNC(0x64D7D074, std::bad_typeid::_Doraise() const);
 	//REG_FUNC(0x15FB88E2, std::logic_error::what() const);
@@ -377,6 +373,9 @@ psv_log_base sceLibstdcxx = []() -> psv_log_base
 	//REG_FUNC(0xE7889A5B, _Unwind_VRS_Get);
 	//REG_FUNC(0xF106D050, _Unwind_VRS_Pop);
 	//REG_FUNC(0x91CDA2F9, _Unwind_VRS_Set);
+	REG_FUNC(0x173E7421, __aeabi_unwind_cpp_pr0);
+	REG_FUNC(0x3C78DDE3, __aeabi_unwind_cpp_pr1);
+	REG_FUNC(0xF95BDD36, __aeabi_unwind_cpp_pr2);
 	//REG_FUNC(0x8C93EFDA, __cxa_allocate_exception);
 	//REG_FUNC(0x6165EE89, __cxa_begin_catch);
 	//REG_FUNC(0x5D74285C, __cxa_begin_cleanup);
@@ -1328,6 +1327,7 @@ REG_FUNC(0x13D5D5A1, _Unwind_Resume);
 REG_FUNC(0xE7889A5B, _Unwind_VRS_Get);
 REG_FUNC(0xF106D050, _Unwind_VRS_Pop);
 REG_FUNC(0x91CDA2F9, _Unwind_VRS_Set);
+REG_FUNC(0x173E7421, __aeabi_unwind_cpp_pr0);
 REG_FUNC(0x3C78DDE3, __aeabi_unwind_cpp_pr1);
 REG_FUNC(0xF95BDD36, __aeabi_unwind_cpp_pr2);
 REG_FUNC(0x8C93EFDA, __cxa_allocate_exception);

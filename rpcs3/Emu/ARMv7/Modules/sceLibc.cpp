@@ -36,18 +36,26 @@ namespace sce_libc_func
 	{
 		sceLibc.Error("__cxa_set_dso_handle_main()");
 	}
+
+	void memcpy(vm::psv::ptr<void> dst, vm::psv::ptr<const void> src, u32 size)
+	{
+		sceLibc.Error("memcpy(dst_addr=0x%x, src_addr=0x%x, size=0x%x)", dst.addr(), src.addr(), size);
+
+		::memcpy(dst.get_ptr(), src.get_ptr(), size);
+	}
+
+	void _Assert()
+	{
+		sceLibc.Todo(__FUNCTION__);
+		Emu.Pause();
+	}
 }
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibc, #name, &sce_libc_func::name)
 
 psv_log_base sceLibc = []() -> psv_log_base
 {
-	REG_FUNC(0x33b83b70, __cxa_atexit);
-	REG_FUNC(0x826bbbaf, exit);
-	REG_FUNC(0x9a004680, printf);
-	REG_FUNC(0xbfe02b3a, __cxa_set_dso_handle_main);
-
-	//REG_FUNC(0xE4531F85, _Assert);
+	REG_FUNC(0xE4531F85, _Assert);
 	//REG_FUNC(0xE71C5CDE, _Stoul);
 	//REG_FUNC(0x7A5CA6A3, _Stoulx);
 	//REG_FUNC(0x6794B3C6, _Stoull);
@@ -125,6 +133,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x4790BF1E, getchar);
 	//REG_FUNC(0xF97B8CA3, gets);
 	//REG_FUNC(0x4696E7BE, perror);
+	REG_FUNC(0x9a004680, printf);
 	//REG_FUNC(0x995708A6, putc);
 	//REG_FUNC(0x7CDAC89C, putchar);
 	//REG_FUNC(0x59C3E171, puts);
@@ -153,6 +162,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x875994F3, atoll);
 	//REG_FUNC(0xD1BC28E7, bsearch);
 	//REG_FUNC(0xE9F823C0, div);
+	REG_FUNC(0x826bbbaf, exit);
 	//REG_FUNC(0xB53B345B, _Exit);
 	//REG_FUNC(0xBCEA304B, labs);
 	//REG_FUNC(0x9D2D17CD, llabs);
@@ -185,7 +195,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x54A54EB1, malloc_usable_size);
 	//REG_FUNC(0x2F3E5B16, memchr);
 	//REG_FUNC(0x7747F6D7, memcmp);
-	//REG_FUNC(0x7205BFDB, memcpy);
+	REG_FUNC(0x7205BFDB, memcpy);
 	//REG_FUNC(0xAF5C218D, memmove);
 	//REG_FUNC(0x6DC1F0D8, memset);
 	//REG_FUNC(0x1434FA46, strcat);
@@ -303,11 +313,13 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0xA967B88D, wctype);
 	//REG_FUNC(0x9D885076, _Towctrans);
 	//REG_FUNC(0xE980110A, _Iswctype);
+	REG_FUNC(0x33b83b70, __cxa_atexit);
 	//REG_FUNC(0xEDC939E1, __aeabi_atexit);
 	//REG_FUNC(0xB538BF48, __cxa_finalize);
 	//REG_FUNC(0xD0310E31, __cxa_guard_acquire);
 	//REG_FUNC(0x4ED1056F, __cxa_guard_release);
 	//REG_FUNC(0xD18E461D, __cxa_guard_abort);
+	REG_FUNC(0xbfe02b3a, __cxa_set_dso_handle_main);
 	//REG_FUNC(0x64DA2C47, _Unlocksyslock);
 	//REG_FUNC(0x7DBC0575, _Locksyslock);
 	//REG_FUNC(0x5044FC32, _Lockfilelock);

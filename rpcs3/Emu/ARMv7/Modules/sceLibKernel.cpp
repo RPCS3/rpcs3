@@ -5,7 +5,28 @@
 
 extern psv_log_base sceLibKernel;
 
+typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
 
+struct SceKernelThreadOptParam
+{
+	u32 size;
+	u32 attr;
+};
+
+s32 sceKernelCreateThread(
+	vm::psv::ptr<const char> pName,
+	vm::psv::ptr<SceKernelThreadEntry> entry,
+	s32 initPriority,
+	u32 stackSize,
+	u32 attr,
+	s32 cpuAffinityMask,
+	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
+{
+	sceLibKernel.Todo("sceKernelCreateThread(pName_addr=0x%x ('%s'), entry_addr=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam_addr=0x%x)",
+		pName.addr(), pName.get_ptr(), entry.addr(), initPriority, stackSize, attr, cpuAffinityMask, pOptParam.addr());
+
+	return SCE_OK;
+}
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
 
@@ -269,7 +290,7 @@ psv_log_base sceLibKernel = []() -> psv_log_base
 	//REG_FUNC(0xADCA94E5, sceKernelWaitSignal);
 	//REG_FUNC(0x24460BB3, sceKernelWaitSignalCB);
 	//REG_FUNC(0x7BE9C4C8, sceKernelSendSignal);
-	//REG_FUNC(0xC5C11EE7, sceKernelCreateThread);
+	REG_FUNC(0xC5C11EE7, sceKernelCreateThread);
 	//REG_FUNC(0x6C60AC61, sceIoOpen);
 	//REG_FUNC(0xF5C6F098, sceIoClose);
 	//REG_FUNC(0x713523E1, sceIoRead);

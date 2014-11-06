@@ -122,7 +122,7 @@ public:
 public:
 	virtual void InitRegs(); 
 	virtual void InitStack();
-	virtual void SetArg(const uint pos, const u64 arg);
+	u32 GetStackArg(u32 pos);
 
 public:
 	virtual std::string RegsToString();
