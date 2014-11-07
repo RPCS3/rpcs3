@@ -5,13 +5,82 @@
 
 extern psv_log_base sceLibKernel;
 
+#pragma pack(push, 4)
+
 typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
+
+union SceKernelSysClock
+{
+	struct
+	{
+		u32 low;
+		u32 hi;
+	};
+	u64 quad;
+};
 
 struct SceKernelThreadOptParam
 {
 	u32 size;
 	u32 attr;
 };
+
+struct SceKernelThreadInfo
+{
+	u32 size;
+	s32 processId;
+	char name[32];
+	u32 attr;
+	u32 status;
+	SceKernelThreadEntry entry;
+	vm::psv::ptr<void> pStack;
+	u32 stackSize;
+	s32 initPriority;
+	s32 currentPriority;
+	s32 initCpuAffinityMask;
+	s32 currentCpuAffinityMask;
+	s32 currentCpuId;
+	s32 lastExecutedCpuId;
+	u32 waitType;
+	s32 waitId;
+	s32 exitStatus;
+	SceKernelSysClock runClocks;
+	u32 intrPreemptCount;
+	u32 threadPreemptCount;
+	u32 threadReleaseCount;
+	s32 changeCpuCount;
+	s32 fNotifyCallback;
+	s32 reserved;
+};
+
+struct SceKernelThreadRunStatus
+{
+	u32 size;
+
+	struct
+	{
+		s32 processId;
+		s32 threadId;
+		s32 priority;
+
+	} cpuInfo[4];
+};
+
+struct SceKernelSystemInfo
+{
+	u32 size;
+	u32 activeCpuMask;
+
+	struct
+	{
+		SceKernelSysClock idleClock;
+		u32 comesOutOfIdleCount;
+		u32 threadSwitchCount;
+
+	} cpuInfo[4];
+};
+
+#pragma pack(pop, 4)
 
 s32 sceKernelCreateThread(
 	vm::psv::ptr<const char> pName,
@@ -24,6 +93,167 @@ s32 sceKernelCreateThread(
 {
 	sceLibKernel.Todo("sceKernelCreateThread(pName_addr=0x%x ('%s'), entry_addr=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam_addr=0x%x)",
 		pName.addr(), pName.get_ptr(), entry.addr(), initPriority, stackSize, attr, cpuAffinityMask, pOptParam.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
+{
+	sceLibKernel.Todo("sceKernelStartThread(threadId=%d, argSize=%d, pArgBlock_addr=0x%x)", threadId, argSize, pArgBlock.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelExitThread(s32 exitStatus)
+{
+	sceLibKernel.Todo("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+
+	return SCE_OK;
+}
+
+s32 sceKernelDeleteThread(s32 threadId)
+{
+	sceLibKernel.Todo("sceKernelDeleteThread(threadId=%d)", threadId);
+
+	return SCE_OK;
+}
+
+s32 sceKernelExitDeleteThread(s32 exitStatus)
+{
+	sceLibKernel.Todo("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
+
+	return SCE_OK;
+}
+
+s32 sceKernelChangeThreadCpuAffinityMask(s32 threadId, s32 cpuAffinityMask)
+{
+	sceLibKernel.Todo("sceKernelChangeThreadCpuAffinityMask(threadId=%d, cpuAffinityMask=0x%x)", threadId, cpuAffinityMask);
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadCpuAffinityMask(s32 threadId)
+{
+	sceLibKernel.Todo("sceKernelGetThreadCpuAffinityMask(threadId=0x%x)", threadId);
+
+	return SCE_OK;
+}
+
+s32 sceKernelChangeThreadPriority(s32 threadId, s32 priority)
+{
+	sceLibKernel.Todo("sceKernelChangeThreadPriority(threadId=0x%x, priority=%d)", threadId, priority);
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadCurrentPriority()
+{
+	sceLibKernel.Todo("sceKernelGetThreadCurrentPriority()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadId()
+{
+	sceLibKernel.Todo("sceKernelGetThreadId()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
+{
+	sceLibKernel.Todo("sceKernelChangeCurrentThreadAttr()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadExitStatus(s32 threadId, vm::psv::ptr<s32> pExitStatus)
+{
+	sceLibKernel.Todo("sceKernelGetThreadExitStatus(threadId=%d, pExitStatus_addr=0x%x)", threadId, pExitStatus.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetProcessId()
+{
+	sceLibKernel.Todo("sceKernelGetProcessId()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelCheckWaitableStatus()
+{
+	sceLibKernel.Todo("sceKernelCheckWaitableStatus()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadInfo(s32 threadId, vm::psv::ptr<SceKernelThreadInfo> pInfo)
+{
+	sceLibKernel.Todo("sceKernelGetThreadInfo(threadId=%d, pInfo_addr=0x%x)", threadId, pInfo.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadRunStatus(vm::psv::ptr<SceKernelThreadRunStatus> pStatus)
+{
+	sceLibKernel.Todo("sceKernelGetThreadRunStatus(pStatus_addr=0x%x)", pStatus.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetSystemInfo(vm::psv::ptr<SceKernelSystemInfo> pInfo)
+{
+	sceLibKernel.Todo("sceKernelGetSystemInfo(pInfo_addr=0x%x)", pInfo.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetThreadmgrUIDClass(s32 uid)
+{
+	sceLibKernel.Todo("sceKernelGetThreadmgrUIDClass(uid=%d)", uid);
+
+	return SCE_OK;
+}
+
+s32 sceKernelChangeThreadVfpException(s32 clearMask, s32 setMask)
+{
+	sceLibKernel.Todo("sceKernelChangeThreadVfpException(clearMask=0x%x, setMask=0x%x)", clearMask, setMask);
+
+	return SCE_OK;
+}
+
+s32 sceKernelGetCurrentThreadVfpException()
+{
+	sceLibKernel.Todo("sceKernelGetCurrentThreadVfpException()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelDelayThread(u32 usec)
+{
+	sceLibKernel.Todo("sceKernelDelayThread()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelDelayThreadCB(u32 usec)
+{
+	sceLibKernel.Todo("sceKernelDelayThreadCB()");
+
+	return SCE_OK;
+}
+
+s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+{
+	sceLibKernel.Todo("sceKernelWaitThreadEnd(threadId=%d, pExitStatus_addr=0x%x, pTimeout_addr=0x%x)", threadId, pExitStatus.addr(), pTimeout.addr());
+
+	return SCE_OK;
+}
+
+s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+{
+	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=%d, pExitStatus_addr=0x%x, pTimeout_addr=0x%x)", threadId, pExitStatus.addr(), pTimeout.addr());
 
 	return SCE_OK;
 }
@@ -145,8 +375,8 @@ psv_log_base sceLibKernel = []() -> psv_log_base
 	//REG_FUNC(0x4C7AD128, sceKernelPowerLock);
 	//REG_FUNC(0xAF8E9C11, sceKernelPowerUnlock);
 	//REG_FUNC(0xB295EB61, sceKernelGetTLSAddr);
-	//REG_FUNC(0xFB972F9, sceKernelGetThreadId);
-	//REG_FUNC(0xA37A6057, sceKernelGetCurrentThreadVfpException);
+	REG_FUNC(0xFB972F9, sceKernelGetThreadId);
+	REG_FUNC(0xA37A6057, sceKernelGetCurrentThreadVfpException);
 	//REG_FUNC(0xCA71EA2, sceKernelSendMsgPipe);
 	//REG_FUNC(0xA5CA74AC, sceKernelSendMsgPipeCB);
 	//REG_FUNC(0xDFC670E0, sceKernelTrySendMsgPipe);
@@ -158,23 +388,23 @@ psv_log_base sceLibKernel = []() -> psv_log_base
 	//REG_FUNC(0x9EF798C1, sceKernelTryLockLwMutex);
 	//REG_FUNC(0x499EA781, sceKernelUnlockLwMutex);
 	//REG_FUNC(0xF7D8F1FC, sceKernelGetLwMutexInfo);
-	//REG_FUNC(0xDDB395A9, sceKernelWaitThreadEnd);
-	//REG_FUNC(0xC54941ED, sceKernelWaitThreadEndCB);
-	//REG_FUNC(0xD5DC26C4, sceKernelGetThreadExitStatus);
+	REG_FUNC(0xDDB395A9, sceKernelWaitThreadEnd);
+	REG_FUNC(0xC54941ED, sceKernelWaitThreadEndCB);
+	REG_FUNC(0xD5DC26C4, sceKernelGetThreadExitStatus);
 	//REG_FUNC(0x4373B548, __sce_aeabi_idiv0);
 	//REG_FUNC(0xFB235848, __sce_aeabi_ldiv0);
-	//REG_FUNC(0xF08DE149, sceKernelStartThread);
-	//REG_FUNC(0x58DDAC4F, sceKernelDeleteThread);
-	//REG_FUNC(0x5150577B, sceKernelChangeThreadCpuAffinityMask);
-	//REG_FUNC(0x8C57AC2A, sceKernelGetThreadCpuAffinityMask);
-	//REG_FUNC(0xDF7E6EDA, sceKernelChangeThreadPriority);
+	REG_FUNC(0xF08DE149, sceKernelStartThread);
+	REG_FUNC(0x58DDAC4F, sceKernelDeleteThread);
+	REG_FUNC(0x5150577B, sceKernelChangeThreadCpuAffinityMask);
+	REG_FUNC(0x8C57AC2A, sceKernelGetThreadCpuAffinityMask);
+	REG_FUNC(0xDF7E6EDA, sceKernelChangeThreadPriority);
 	//REG_FUNC(0xBCB63B66, sceKernelGetThreadStackFreeSize);
-	//REG_FUNC(0x8D9C5461, sceKernelGetThreadInfo);
-	//REG_FUNC(0xD6B01013, sceKernelGetThreadRunStatus);
-	//REG_FUNC(0xE0241FAA, sceKernelGetSystemInfo);
-	//REG_FUNC(0xF994FE65, sceKernelGetThreadmgrUIDClass);
+	REG_FUNC(0x8D9C5461, sceKernelGetThreadInfo);
+	REG_FUNC(0xD6B01013, sceKernelGetThreadRunStatus);
+	REG_FUNC(0xE0241FAA, sceKernelGetSystemInfo);
+	REG_FUNC(0xF994FE65, sceKernelGetThreadmgrUIDClass);
 	//REG_FUNC(0xB4DE10C7, sceKernelGetActiveCpuMask);
-	//REG_FUNC(0x2C1321A3, sceKernelChangeThreadVfpException);
+	REG_FUNC(0x2C1321A3, sceKernelChangeThreadVfpException);
 	//REG_FUNC(0x3849359A, sceKernelCreateCallback);
 	//REG_FUNC(0x88DD1BC8, sceKernelGetCallbackInfo);
 	//REG_FUNC(0x464559D3, sceKernelDeleteCallback);
@@ -380,15 +610,15 @@ psv_log_base sceLibKernel = []() -> psv_log_base
 	//REG_FUNC(0x800EDCC1, sceKernelClearDipsw);
 
 	/* SceThreadmgr */
-	//REG_FUNC(0xC8A38E1, sceKernelExitThread);
-	//REG_FUNC(0x1D17DECF, sceKernelExitDeleteThread);
-	//REG_FUNC(0x4B675D05, sceKernelDelayThread);
-	//REG_FUNC(0x9C0180E1, sceKernelDelayThreadCB);
+	REG_FUNC(0xC8A38E1, sceKernelExitThread);
+	REG_FUNC(0x1D17DECF, sceKernelExitDeleteThread);
+	REG_FUNC(0x4B675D05, sceKernelDelayThread);
+	REG_FUNC(0x9C0180E1, sceKernelDelayThreadCB);
 	//REG_FUNC(0x1173F8, sceKernelChangeActiveCpuMask);
-	//REG_FUNC(0x1414F0B, sceKernelGetThreadCurrentPriority);
-	//REG_FUNC(0x751C9B7A, sceKernelChangeCurrentThreadAttr);
-	//REG_FUNC(0xD9BD74EB, sceKernelCheckWaitableStatus);
-	//REG_FUNC(0x9DCB4B7A, sceKernelGetProcessId);
+	REG_FUNC(0x1414F0B, sceKernelGetThreadCurrentPriority);
+	REG_FUNC(0x751C9B7A, sceKernelChangeCurrentThreadAttr);
+	REG_FUNC(0xD9BD74EB, sceKernelCheckWaitableStatus);
+	REG_FUNC(0x9DCB4B7A, sceKernelGetProcessId);
 	//REG_FUNC(0xE53E41F6, sceKernelCheckCallback);
 	//REG_FUNC(0xF4EE4FA9, sceKernelGetSystemTimeWide);
 	//REG_FUNC(0x47F6DE49, sceKernelGetSystemTimeLow);
