@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
@@ -49,6 +50,9 @@ namespace ppu_recompiler_llvm {
     /// Control flow graph of a block. A list of (block address, list of next blocks) pairs.
     typedef std::vector<std::pair<u32, std::vector<BlockId>>> ControlFlowGraph;
 
+    /// Get a string representation of a ControlFlowGraph
+    std::string ControlFlowGraphToString(const ControlFlowGraph & cfg);
+
     /// Uniquely identifies an execution trace
     typedef u64 ExecutionTraceId;
 
@@ -87,6 +91,9 @@ namespace ppu_recompiler_llvm {
         /// Number of times this block was hit
         u32 num_hits;
 
+        /// The current revision number of this function
+        u32 revision;
+
         /// The CFG for this block
         ControlFlowGraph cfg;
 
@@ -99,7 +106,13 @@ namespace ppu_recompiler_llvm {
         BlockEntry(u32 addr)
             : address(addr)
             , num_hits(0)
+            , revision(0)
             , is_compiled(false) {
+        }
+
+        std::string ToString() const {
+            return fmt::Format("%c:0x%08X, NumHits=%u, IsCompiled=%c\n%s", is_function_start ? 'F' : 'N', address, num_hits,
+                               is_compiled ? 'Y' : 'N', ControlFlowGraphToString(cfg).c_str());
         }
 
         bool operator == (const BlockEntry & other) const {
@@ -137,7 +150,7 @@ namespace ppu_recompiler_llvm {
             std::map<std::string, u64> interpreter_fallback_stats;
         };
 
-        Compiler();
+        Compiler(RecompilationEngine & recompilation_engine, const Executable default_function_executable, const Executable default_block_executable);
 
         Compiler(const Compiler & other) = delete;
         Compiler(Compiler && other) = delete;
@@ -147,11 +160,11 @@ namespace ppu_recompiler_llvm {
         Compiler & operator = (const Compiler & other) = delete;
         Compiler & operator = (Compiler && other) = delete;
 
-        /// Compile a code fragment and obtain an executable
-        //Executable Compile(const std::string & name, const CodeFragment & code_fragment);
+        /// Compile a code fragment described by a cfg and return an executable
+        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits, bool generate_trace);
 
-        /// Free an executable earilier obtained from the Compile function
-        //void FreeCompiledCodeFragment(Executable executable);
+        /// Free an executable earilier obtained via a call to Compile
+        void FreeExecutable(const std::string & name);
 
         /// Retrieve compiler stats
         Stats GetStats();
@@ -563,6 +576,58 @@ namespace ppu_recompiler_llvm {
         void UNK(const u32 code, const u32 opcode, const u32 gcode) override;
 
     private:
+        /// State of a compilation task
+        struct CompileTaskState {
+            enum Args {
+                ExecutionEngine,
+                State,
+                Interpreter,
+                Tracer,
+                MaxArgs,
+            };
+
+            /// The LLVM function for the compilation task
+            llvm::Function * function;
+
+            /// Args of the LLVM function
+            llvm::Value * args[MaxArgs];
+
+            /// The CFG being compiled
+            const ControlFlowGraph * cfg;
+
+            /// The current entry of the CFG being compiled
+            ControlFlowGraph::const_iterator cfg_entry;
+
+            /// Address of the current instruction being compiled
+            u32 current_instruction_address;
+
+            /// Map from an address to the address of the block that it belongs to
+            std::unordered_map<u32, u32> address_to_block;
+
+            /// A flag used to detect branch instructions.
+            /// This is set to false at the start of compilation of a block.
+            /// When a branch instruction is encountered, this is set to true by the decode function.
+            bool hit_branch_instruction;
+
+            /// Indicates whether a block should be inlined even if an already compiled version of the block exists
+            bool inline_all_blocks;
+
+            /// Create code such that exit points can be linked to other blocks
+            bool generate_linkable_exits;
+
+            /// Notify the tracer upon exit
+            bool generate_trace;
+        };
+
+        /// Recompilation engine
+        RecompilationEngine & m_recompilation_engine;
+
+        /// The executable that will be called to process unknown functions
+        const Executable m_default_function_executable;
+
+        /// The executable that will be called to process unknown blocks
+        const Executable m_default_block_executable;
+
         /// LLVM context
         llvm::LLVMContext * m_llvm_context;
 
@@ -578,37 +643,23 @@ namespace ppu_recompiler_llvm {
         /// Function pass manager
         llvm::FunctionPassManager * m_fpm;
 
-        /// A flag used to detect branch instructions.
-        /// This is set to false at the start of compilation of a block.
-        /// When a branch instruction is encountered, this is set to true by the decode function.
-        bool m_hit_branch_instruction;
+        /// LLVM type of the functions genreated by the compiler
+        llvm::FunctionType * m_compiled_function_type;
 
-        /// The function being compiled
-        llvm::Function * m_current_function;
-
-        /// The list of next blocks for the current block
-        const std::vector<BlockId> * m_current_block_next_blocks;
-
-        /// Address of the current instruction
-        u32 m_current_instruction_address;
+        /// State of the current compilation task
+        CompileTaskState m_state;
 
         /// Compiler stats
         Stats m_stats;
 
         /// Get the name of the basic block for the specified address
-        std::string GetBasicBlockNameFromAddress(u32 address);
+        std::string GetBasicBlockNameFromAddress(u32 address, const std::string & suffix = "");
+
+        /// Get the address of a basic block from its name
+        u32 GetAddressFromBasicBlockName(const std::string & name);
 
         /// Get the basic block in for the specified address.
-        llvm::BasicBlock * GetBasicBlockFromAddress(u32 address, llvm::Function * function, bool create_if_not_exist = false);
-
-        /// Get PPU state pointer argument
-        llvm::Value * GetPPUStateArg();
-
-        /// Get interpreter pointer argument
-        llvm::Value * GetInterpreterArg();
-
-        /// Get tracer pointer argument
-        llvm::Value * GetTracerArg();
+        llvm::BasicBlock * GetBasicBlockFromAddress(u32 address, const std::string & suffix = "", bool create_if_not_exist = true);
 
         /// Get a bit
         llvm::Value * GetBit(llvm::Value * val, u32 n);
@@ -754,8 +805,8 @@ namespace ppu_recompiler_llvm {
         template<class ReturnType, class Func, class... Args>
         llvm::Value * Call(const char * name, Func function, Args... args);
 
-        /// Tests if the instruction is a branch instruction or not
-        bool IsBranchInstruction(u32 instruction);
+        /// Indirect call
+        llvm::Value * IndirectCall(u32 address, bool is_function);
 
         /// Test an instruction against the interpreter
         template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
@@ -778,14 +829,23 @@ namespace ppu_recompiler_llvm {
     public:
         virtual ~RecompilationEngine();
 
-        /// Get the ordinal for the specified address
-        u32 GetOrdinal(u32 address);
+        /// Allocate an ordinal
+        u32 AllocateOrdinal(u32 address, bool is_function);
 
-        /// Get the executable lookup table
-        Executable * GetExecutableLookup() const;
+        /// Get the ordinal for the specified address
+        u32 GetOrdinal(u32 address) const;
+
+        /// Get the executable specified by the ordinal
+        const Executable GetExecutable(u32 ordinal) const;
+
+        /// Get the address of the executable lookup
+        u64 GetAddressOfExecutableLookup() const;
 
         /// Notify the recompilation engine about a newly detected trace. It takes ownership of the trace.
         void NotifyTrace(ExecutionTrace * execution_trace);
+
+        /// Log
+        llvm::raw_fd_ostream & Log();
 
         void Task() override;
 
@@ -793,6 +853,37 @@ namespace ppu_recompiler_llvm {
         static std::shared_ptr<RecompilationEngine> GetInstance();
 
     private:
+        /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
+        std::mutex m_pending_execution_traces_lock;
+
+        /// Queue of execution traces pending processing
+        std::list<ExecutionTrace *> m_pending_execution_traces;
+
+        /// Block table
+        std::unordered_set<BlockEntry *> m_block_table;
+
+        /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
+        std::unordered_map<ExecutionTraceId, std::vector<BlockEntry *>> m_processed_execution_traces;
+
+        /// Lock for accessing m_address_to_ordinal.
+        // TODO: Make this a RW lock
+        mutable std::mutex m_address_to_ordinal_lock;
+
+        /// Mapping from address to ordinal
+        std::unordered_map<u32, u32> m_address_to_ordinal;
+
+        /// Next ordinal to allocate
+        u32 m_next_ordinal;
+
+        /// PPU Compiler
+        Compiler m_compiler;
+
+        /// Log
+        llvm::raw_fd_ostream m_log;
+
+        /// Executable lookup table
+        Executable m_executable_lookup[10000]; // TODO: Adjust size
+
         RecompilationEngine();
 
         RecompilationEngine(const RecompilationEngine & other) = delete;
@@ -808,22 +899,7 @@ namespace ppu_recompiler_llvm {
         void UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId block, BlockId next_block);
 
         /// Compile a block
-        void CompileBlock(const BlockEntry & block_entry, bool inline_referenced_blocks);
-
-        /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
-        std::mutex m_pending_execution_traces_lock;
-
-        /// Queue of execution traces pending processing
-        std::list<ExecutionTrace *> m_pending_execution_traces;
-
-        /// Block table
-        std::unordered_set<BlockEntry *> m_block_table;
-
-        /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
-        std::unordered_map<ExecutionTraceId, std::vector<BlockEntry *>> m_processed_execution_traces;
-
-        /// PPU Compiler
-        Compiler m_compiler;
+        void CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks);
 
         /// Mutex used to prevent multiple creation
         static std::mutex s_mutex;
@@ -836,7 +912,7 @@ namespace ppu_recompiler_llvm {
     class Tracer {
     public:
         /// Trace type
-        enum class TraceType {
+        enum class TraceType : u32 {
             CallFunction,
             EnterFunction,
             ExitFromCompiledFunction,
@@ -874,6 +950,7 @@ namespace ppu_recompiler_llvm {
 
     /// PPU execution engine
     class ExecutionEngine : public CPUDecoder {
+        friend class RecompilationEngine;
     public:
         ExecutionEngine(PPUThread & ppu);
         ExecutionEngine() = delete;
@@ -901,23 +978,20 @@ namespace ppu_recompiler_llvm {
         /// Execution tracer
         Tracer m_tracer;
 
-        /// Executable lookup table
-        Executable * m_executable_lookup;
-
         /// The time at which the m_address_to_ordinal cache was last cleared
-        std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
+        mutable std::chrono::high_resolution_clock::time_point m_last_cache_clear_time;
 
-        /// Address to ordinal lookup. Key is address. Data is the pair (ordinal, times hit).
-        std::unordered_map<u32, std::pair<u32, u32>> m_address_to_ordinal;
+        /// Address to ordinal cahce. Key is address. Data is the pair (ordinal, times hit).
+        mutable std::unordered_map<u32, std::pair<u32, u32>> m_address_to_ordinal;
 
         /// Recompilation engine
         std::shared_ptr<RecompilationEngine> m_recompilation_engine;
 
         /// Remove unused entries from the m_address_to_ordinal cache
-        void RemoveUnusedEntriesFromCache();
+        void RemoveUnusedEntriesFromCache() const;
 
         /// Get the executable for the specified address
-        Executable GetExecutable(u32 address, Executable default_executable);
+        Executable GetExecutable(u32 address, Executable default_executable) const;
 
         /// Execute a function
         static u64 ExecuteFunction(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer);

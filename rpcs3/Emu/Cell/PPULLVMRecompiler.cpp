@@ -5,7 +5,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/CodeGen/MachineCodeInfo.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/IR/Intrinsics.h"
@@ -19,6 +18,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Vectorize.h"
 #include "llvm/MC/MCDisassembler.h"
+#include "llvm/IR/Verifier.h"
 
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
@@ -26,7 +26,10 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler() {
+Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable default_function_executable, const Executable default_block_executable)
+    : m_recompilation_engine(recompilation_engine)
+    , m_default_function_executable(default_function_executable)
+    , m_default_block_executable(default_block_executable) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
@@ -63,6 +66,13 @@ Compiler::Compiler() {
     m_fpm->add(createCFGSimplificationPass());
     m_fpm->doInitialization();
 
+    std::vector<Type *> arg_types;
+    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
+    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
+    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
+    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
+    m_compiled_function_type = FunctionType::get(m_ir_builder->getInt64Ty(), arg_types, false);
+
     if (!s_rotate_mask_inited) {
         InitRotateMask();
         s_rotate_mask_inited = true;
@@ -76,124 +86,188 @@ Compiler::~Compiler() {
     delete m_llvm_context;
 }
 
-//Executable Compiler::Compile(const std::string & name, const CodeFragment & code_fragment) {
-//    assert(!name.empty());
-//    assert(!code_fragment.empty());
-//
-//    auto compilation_start = std::chrono::high_resolution_clock::now();
-//
-//    // Create the function
-//    m_current_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
-//                                                                   m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-//                                                                   m_ir_builder->getInt8PtrTy() /*interpreter*/,
-//                                                                   m_ir_builder->getInt8PtrTy() /*tracer*/, nullptr);
-//    m_current_function->setCallingConv(CallingConv::X86_64_Win64);
-//    auto arg_i = m_current_function->arg_begin();
-//    arg_i->setName("ppu_state");
-//    (++arg_i)->setName("interpreter");
-//    (++arg_i)->setName("tracer");
-//
-//    // Create the entry block
-//    GetBasicBlockFromAddress(0, m_current_function, true);
-//
-//    // Create basic blocks for each instruction
-//    for (auto i = code_fragment.begin(); i != code_fragment.end(); i++) {
-//        u32 address = i->first.address;
-//        while (1) {
-//            GetBasicBlockFromAddress(address, m_current_function, true);
-//
-//            u32 instr = vm::read32(address);
-//            if (IsBranchInstruction(instr)) {
-//                break;
-//            }
-//
-//            address += 4;
-//        }
-//    }
-//
-//    // Add code to notify the tracer about this function and branch to the first instruction
-//    m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0, m_current_function));
-//    //Call<void>("Tracer.Trace", &Tracer::Trace, *arg_i,
-//    //           m_ir_builder->getInt32(code_fragment[0].first.type == Function ? FunctionCall : Block),
-//    //           m_ir_builder->getInt32(code_fragment[0].first.address));
-//    m_ir_builder->CreateBr(GetBasicBlockFromAddress(code_fragment[0].first.address, m_current_function));
-//
-//    // Convert each block in this code fragment to LLVM IR
-//    for (auto i = code_fragment.begin(); i != code_fragment.end(); i++) {
-//        m_current_instruction_address = i->first.address;
-//        m_current_block_next_blocks   = &(i->second);
-//        auto block                    = GetBasicBlockFromAddress(m_current_instruction_address, m_current_function);
-//        m_ir_builder->SetInsertPoint(block);
-//
-//        if (i != code_fragment.begin() && i->first.type == BlockId::Type::FunctionCall) {
-//            auto ordinal = RecompilationEngine::GetInstance()->GetOrdinal(i->first.address);
-//
-//        }
-//
-//        m_hit_branch_instruction = false;
-//        while (!m_hit_branch_instruction) {
-//            if (!block->getInstList().empty()) {
-//                break;
-//            }
-//
-//            u32 instr = vm::read32(m_current_instruction_address);
-//            Decode(instr);
-//
-//            m_current_instruction_address += 4;
-//            if (!m_hit_branch_instruction) {
-//                block = GetBasicBlockFromAddress(m_current_instruction_address, m_current_function);
-//                m_ir_builder->CreateBr(block);
-//                m_ir_builder->SetInsertPoint(block);
-//            }
-//        }
-//    }
-//
-//    // If the function has an unknown block then add code to notify the tracer
-//    auto unknown_bb = GetBasicBlockFromAddress(0xFFFFFFFF, m_current_function);
-//    if (!unknown_bb) {
-//        m_ir_builder->SetInsertPoint(unknown_bb);
-//        auto branch_type_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 1);
-//        for (auto i = pred_begin(unknown_bb); i != pred_end(unknown_bb); i++) {
-//            // We assume that the last but one instruction of the predecessor sets the branch type
-//            auto j = (*i)->rbegin();
-//            j--;
-//            branch_type_i32->addIncoming(&(*j), *i);
-//        }
-//
-//        //Call<void>("NotifyBranch", &Tracer::NotifyBranch, *arg_i,
-//        //           m_ir_builder->CreateZExtOrTrunc(branch_type_i32, m_ir_builder->getIntNTy(sizeof(Tracer::BranchType) * 8)), GetPc());
-//        m_ir_builder->CreateRetVoid();
-//    }
-//
-//    auto ir_build_end      = std::chrono::high_resolution_clock::now();
-//    m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
-//
-//    // Optimize this function
-//    m_fpm->run(*m_current_function);
-//    auto optimize_end          = std::chrono::high_resolution_clock::now();
-//    m_stats.optimization_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - ir_build_end);
-//
-//    // Translate to machine code
-//    MachineCodeInfo mci;
-//    m_execution_engine->runJITOnFunction(m_current_function, &mci);
-//    auto translate_end        = std::chrono::high_resolution_clock::now();
-//    m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
-//
-//    auto compilation_end  = std::chrono::high_resolution_clock::now();
-//    m_stats.total_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
-//
-//    //m_compiled[(CompiledCodeFragment)mci.address()] = m_current_function;
-//    //return (CompiledCodeFragment)mci.address();
-//    return nullptr;
-//}
+Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits, bool generate_trace) {
+    assert(!name.empty());
+    assert(!cfg.empty());
 
-//void Compiler::FreeCompiledCodeFragment(Executable compiled_code_fragment) {
-//    //auto i = m_compiled.find(compiled_code_fragment);
-//    //if (i != m_compiled.end()) {
-//    //    m_execution_engine->freeMachineCodeForFunction(i->second);
-//    //    i->second->eraseFromParent();
-//    //}
-//}
+    auto compilation_start = std::chrono::high_resolution_clock::now();
+
+    m_state.cfg                     = &cfg;
+    m_state.inline_all_blocks       = inline_all_blocks;
+    m_state.generate_linkable_exits = generate_linkable_exits;
+    m_state.generate_trace          = generate_trace;
+    m_state.address_to_block.clear();
+
+    // Create the function
+    m_state.function = (Function *)m_module->getOrInsertFunction(name, m_compiled_function_type);
+    m_state.function->setCallingConv(CallingConv::X86_64_Win64);
+    auto arg_i = m_state.function->arg_begin();
+    arg_i->setName("execution_engine");
+    m_state.args[CompileTaskState::Args::ExecutionEngine] = arg_i;
+    (++arg_i)->setName("state");
+    m_state.args[CompileTaskState::Args::State] = arg_i;
+    (++arg_i)->setName("interpreter");
+    m_state.args[CompileTaskState::Args::Interpreter] = arg_i;
+    (++arg_i)->setName("tracer");
+    m_state.args[CompileTaskState::Args::Tracer] = arg_i;
+
+    // Create the entry block and add code to branch to the first instruction
+    m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
+    m_ir_builder->CreateBr(GetBasicBlockFromAddress(cfg[0].first));
+
+    // Convert each block in this CFG to LLVM IR
+    for (m_state.cfg_entry = cfg.begin(); m_state.cfg_entry != cfg.end(); m_state.cfg_entry++) {
+        m_state.current_instruction_address = m_state.cfg_entry->first;
+        auto block                          = GetBasicBlockFromAddress(m_state.current_instruction_address);
+        m_ir_builder->SetInsertPoint(block);
+
+        m_state.hit_branch_instruction = false;
+        if (!inline_all_blocks && m_state.cfg_entry != cfg.begin()) {
+            // Use an already compiled implementation of this block if available
+            auto ordinal = m_recompilation_engine.GetOrdinal(m_state.cfg_entry->first);
+            if (ordinal != 0xFFFFFFFF) {
+                auto ret_i64      = IndirectCall(m_state.cfg_entry->first, false);
+                auto switch_instr = m_ir_builder->CreateSwitch(ret_i64, GetBasicBlockFromAddress(0xFFFFFFFF));
+                for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
+                    switch_instr->addCase(m_ir_builder->getInt64(i->address), GetBasicBlockFromAddress(i->address));
+                }
+
+                m_state.hit_branch_instruction = true;
+            }
+        }
+
+        while (!m_state.hit_branch_instruction) {
+            if (!block->getInstList().empty()) {
+                break;
+            }
+
+            u32 instr = re32(vm::get_ref<u32>(m_state.current_instruction_address));
+            Decode(instr);
+
+            if (!m_state.hit_branch_instruction) {
+                m_state.current_instruction_address += 4;
+                block = GetBasicBlockFromAddress(m_state.current_instruction_address);
+                m_ir_builder->CreateBr(block);
+                m_ir_builder->SetInsertPoint(block);
+            }
+        }
+    }
+
+    m_recompilation_engine.Log() << *m_state.function;
+
+    auto default_exit_block_name = GetBasicBlockNameFromAddress(0xFFFFFFFF);
+    for (auto block_i = m_state.function->begin(); block_i != m_state.function->end(); block_i++) {
+        if (!block_i->getInstList().empty() || block_i->getName() == default_exit_block_name) {
+            continue;
+        }
+
+        // An empty block. Generate exit logic.
+        m_recompilation_engine.Log() << "Empty block: " << block_i->getName() << "\n";
+
+        m_ir_builder->SetInsertPoint(block_i);
+        auto exit_block_i64 = m_ir_builder->CreatePHI(m_ir_builder->getInt64Ty(), 0);
+        for (auto i = pred_begin(block_i); i != pred_end(block_i); i++) {
+            auto pred_address = GetAddressFromBasicBlockName(block_i->getName());
+            exit_block_i64->addIncoming(m_ir_builder->getInt64(m_state.address_to_block[pred_address]), *i);
+        }
+
+        auto block_address = GetAddressFromBasicBlockName(block_i->getName());
+        SetPc(m_ir_builder->getInt32(block_address));
+
+        if (generate_linkable_exits) {
+            if (generate_trace) {
+                Call<void>("Tracer.Trace", &Tracer::Trace, m_ir_builder->getInt32((uint32_t)Tracer::TraceType::ExitFromCompiledFunction),
+                           m_ir_builder->getInt32(cfg[0].first), m_ir_builder->CreateTrunc(exit_block_i64, m_ir_builder->getInt32Ty()));
+            }
+
+            auto ret_i64  = IndirectCall(block_address, false);
+            auto cmp_i1   = m_ir_builder->CreateICmpNE(ret_i64, m_ir_builder->getInt64(0));
+            auto then_bb  = BasicBlock::Create(m_ir_builder->getContext());
+            auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+            m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+
+            m_ir_builder->SetInsertPoint(then_bb);
+            IndirectCall(1, false);
+            m_ir_builder->CreateBr(merge_bb);
+
+            m_ir_builder->SetInsertPoint(merge_bb);
+            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+        } else {
+            m_ir_builder->CreateRet(exit_block_i64);
+        }
+    }
+
+    m_recompilation_engine.Log() << *m_state.function;
+
+    // If the function has a default exit block then generate code for it
+    auto default_exit_bb = GetBasicBlockFromAddress(0xFFFFFFFF, false);
+    if (default_exit_bb) {
+        m_ir_builder->SetInsertPoint(default_exit_bb);
+        auto exit_block_i64 = m_ir_builder->CreatePHI(m_ir_builder->getInt64Ty(), 1);
+        for (auto i = pred_begin(default_exit_bb); i != pred_end(default_exit_bb); i++) {
+            // the last but one instruction of the predecessor sets the exit block address
+            auto j = (*i)->rbegin();
+            j++;
+            exit_block_i64->addIncoming(&(*j), *i);
+        }
+
+        if (generate_linkable_exits) {
+            auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_block_i64, m_ir_builder->getInt64(0));
+            auto then_bb  = BasicBlock::Create(m_ir_builder->getContext());
+            auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+            m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+
+            m_ir_builder->SetInsertPoint(then_bb);
+            if (generate_trace) {
+                Call<void>("Tracer.Trace", &Tracer::Trace, m_ir_builder->getInt32((uint32_t)Tracer::TraceType::ExitFromCompiledFunction),
+                           m_ir_builder->getInt32(cfg[0].first), m_ir_builder->CreateTrunc(exit_block_i64, m_ir_builder->getInt32Ty()));
+            }
+
+            IndirectCall(1, false);
+            m_ir_builder->CreateBr(merge_bb);
+
+            m_ir_builder->SetInsertPoint(merge_bb);
+            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+        } else {
+            m_ir_builder->CreateRet(exit_block_i64);
+        }
+    }
+
+    m_recompilation_engine.Log() << *m_state.function;
+
+    std::string        verify;
+    raw_string_ostream verify_ostream(verify);
+    if (verifyFunction(*m_state.function, &verify_ostream)) {
+        m_recompilation_engine.Log() << "Verification failed: " << verify << "\n";
+    }
+
+    auto ir_build_end      = std::chrono::high_resolution_clock::now();
+    m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
+
+    // Optimize this function
+    //m_fpm->run(*m_state.function);
+    auto optimize_end          = std::chrono::high_resolution_clock::now();
+    m_stats.optimization_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - ir_build_end);
+
+    // Translate to machine code
+    MachineCodeInfo mci;
+    m_execution_engine->runJITOnFunction(m_state.function, &mci);
+    auto translate_end        = std::chrono::high_resolution_clock::now();
+    m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
+
+    auto compilation_end  = std::chrono::high_resolution_clock::now();
+    m_stats.total_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
+
+    return (Executable)mci.address();
+}
+
+void Compiler::FreeExecutable(const std::string & name) {
+    auto function = m_module->getFunction(name);
+    if (function) {
+        m_execution_engine->freeMachineCodeForFunction(function);
+        function->eraseFromParent();
+    }
+}
 
 Compiler::Stats Compiler::GetStats() {
     return m_stats;
@@ -1500,7 +1574,7 @@ void Compiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
 }
 
 void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
-    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_current_instruction_address, bd));
+    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, bd));
     CreateBranch(CheckBranchCondition(bo, bi), target_i64, lk ? true : false);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
@@ -1514,7 +1588,7 @@ void Compiler::SC(u32 sc_code) {
 }
 
 void Compiler::B(s32 ll, u32 aa, u32 lk) {
-    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_current_instruction_address, ll));
+    auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, ll));
     CreateBranch(nullptr, target_i64, lk ? true : false);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
@@ -2009,13 +2083,13 @@ void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
         addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
     }
 
-    auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, R_ADDR));
+    auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
     auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(addr_i64, resv_addr_i64_ptr, 8);
 
     auto resv_val_i32     = ReadMemory(addr_i64, 32, 4, false, false);
     auto resv_val_i64     = m_ir_builder->CreateZExt(resv_val_i32, m_ir_builder->getInt64Ty());
-    auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, R_VALUE));
+    auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
     auto resv_val_i64_ptr = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(resv_val_i64, resv_val_i64_ptr, 8);
 
@@ -2208,6 +2282,7 @@ void Compiler::LDUX(u32 rd, u32 ra, u32 rb) {
 
 void Compiler::DCBST(u32 ra, u32 rb) {
     // TODO: Implement this
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
     //InterpreterCall("DCBST", &PPUInterpreter::DCBST, ra, rb);
 }
 
@@ -2301,12 +2376,12 @@ void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
         addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
     }
 
-    auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, R_ADDR));
+    auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
     auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(addr_i64, resv_addr_i64_ptr, 8);
 
     auto resv_val_i64     = ReadMemory(addr_i64, 64, 8, false);
-    auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, R_VALUE));
+    auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
     auto resv_val_i64_ptr = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(resv_val_i64, resv_val_i64_ptr, 8);
 
@@ -2317,6 +2392,7 @@ void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
 
 void Compiler::DCBF(u32 ra, u32 rb) {
     // TODO: Implement this
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
     //InterpreterCall("DCBF", &PPUInterpreter::DCBF, ra, rb);
 }
 
@@ -2596,6 +2672,7 @@ void Compiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
 void Compiler::DCBTST(u32 ra, u32 rb, u32 th) {
     // TODO: Implement this
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
     //InterpreterCall("DCBTST", &PPUInterpreter::DCBTST, ra, rb, th);
 }
 
@@ -2627,6 +2704,7 @@ void Compiler::ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
 void Compiler::DCBT(u32 ra, u32 rb, u32 th) {
     // TODO: Implement this using prefetch
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
     //InterpreterCall("DCBT", &PPUInterpreter::DCBT, ra, rb, th);
 }
 
@@ -4070,24 +4148,40 @@ void Compiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
 }
 
-std::string Compiler::GetBasicBlockNameFromAddress(u32 address) {
+std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::string & suffix) {
     std::string name;
 
     if (address == 0) {
         name = "entry";
     } else if (address == 0xFFFFFFFF) {
-        name = "unknown";
+        name = "default_exit";
     } else {
-        name = fmt::Format("instr_0x%X", address);
+        name = fmt::Format("instr_0x%08X", address);
+    }
+
+    if (suffix != "") {
+        name += "_" + suffix;
     }
 
     return name;
 }
 
-BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, Function * function, bool create_if_not_exist) {
-    auto         block_name = GetBasicBlockNameFromAddress(address);
+u32 Compiler::GetAddressFromBasicBlockName(const std::string & name) {
+    if (name.compare(0, 6, "instr_") == 0) {
+        return strtoul(name.c_str() + 6, nullptr, 0);
+    } else if (name == GetBasicBlockNameFromAddress(0)) {
+        return 0;
+    } else if (name == GetBasicBlockNameFromAddress(0xFFFFFFFF)) {
+        return 0xFFFFFFFF;
+    }
+
+    return 0;
+}
+
+BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, const std::string & suffix, bool create_if_not_exist) {
+    auto         block_name = GetBasicBlockNameFromAddress(address, suffix);
     BasicBlock * block      = nullptr;
-    for (auto i = function->getBasicBlockList().begin(); i != function->getBasicBlockList().end(); i++) {
+    for (auto i = m_state.function->getBasicBlockList().begin(); i != m_state.function->getBasicBlockList().end(); i++) {
         if (i->getName() == block_name) {
             block = &(*i);
             break;
@@ -4095,27 +4189,10 @@ BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, Function * function
     }
 
     if (!block && create_if_not_exist) {
-        block = BasicBlock::Create(m_ir_builder->getContext(), block_name, function);
+        block = BasicBlock::Create(m_ir_builder->getContext(), block_name, m_state.function);
     }
 
     return block;
-}
-
-Value * Compiler::GetPPUStateArg() {
-    return m_current_function->arg_begin();
-}
-
-Value * Compiler::GetInterpreterArg() {
-    auto i = m_current_function->arg_begin();
-    i++;
-    return i;
-}
-
-Value * Compiler::GetTracerArg() {
-    auto i = m_current_function->arg_begin();
-    i++;
-    i++;
-    return i;
 }
 
 Value * Compiler::GetBit(Value * val, u32 n) {
@@ -4231,33 +4308,33 @@ Value * Compiler::SetNibble(Value * val, u32 n, Value * b0, Value * b1, Value * 
 }
 
 Value * Compiler::GetPc() {
-    auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, PC));
+    auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, PC));
     auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(pc_i32_ptr, 4);
 }
 
 void Compiler::SetPc(Value * val_ix) {
-    auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, PC));
+    auto pc_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, PC));
     auto pc_i32_ptr = m_ir_builder->CreateBitCast(pc_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     auto val_i32    = m_ir_builder->CreateZExtOrTrunc(val_ix, m_ir_builder->getInt32Ty());
     m_ir_builder->CreateAlignedStore(val_i32, pc_i32_ptr, 4);
 }
 
 Value * Compiler::GetGpr(u32 r, u32 num_bits) {
-    auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, GPR[r]));
+    auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, GPR[r]));
     auto r_ix_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getIntNTy(num_bits)->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(r_ix_ptr, 8);
 }
 
 void Compiler::SetGpr(u32 r, Value * val_x64) {
-    auto r_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, GPR[r]));
+    auto r_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, GPR[r]));
     auto r_i64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     auto val_i64   = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
     m_ir_builder->CreateAlignedStore(val_i64, r_i64_ptr, 8);
 }
 
 Value * Compiler::GetCr() {
-    auto cr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, CR));
+    auto cr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CR));
     auto cr_i32_ptr = m_ir_builder->CreateBitCast(cr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(cr_i32_ptr, 4);
 }
@@ -4268,7 +4345,7 @@ Value * Compiler::GetCrField(u32 n) {
 
 void Compiler::SetCr(Value * val_x32) {
     auto val_i32    = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
-    auto cr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, CR));
+    auto cr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CR));
     auto cr_i32_ptr = m_ir_builder->CreateBitCast(cr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i32, cr_i32_ptr, 4);
 }
@@ -4310,33 +4387,33 @@ void Compiler::SetCr6AfterVectorCompare(u32 vr) {
 }
 
 Value * Compiler::GetLr() {
-    auto lr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, LR));
+    auto lr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, LR));
     auto lr_i64_ptr = m_ir_builder->CreateBitCast(lr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(lr_i64_ptr, 8);
 }
 
 void Compiler::SetLr(Value * val_x64) {
     auto val_i64     = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto lr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, LR));
+    auto lr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, LR));
     auto lr_i64_ptr = m_ir_builder->CreateBitCast(lr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, lr_i64_ptr, 8);
 }
 
 Value * Compiler::GetCtr() {
-    auto ctr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, CTR));
+    auto ctr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CTR));
     auto ctr_i64_ptr = m_ir_builder->CreateBitCast(ctr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(ctr_i64_ptr, 8);
 }
 
 void Compiler::SetCtr(Value * val_x64) {
     auto val_i64     = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto ctr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, CTR));
+    auto ctr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, CTR));
     auto ctr_i64_ptr = m_ir_builder->CreateBitCast(ctr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, ctr_i64_ptr, 8);
 }
 
 Value * Compiler::GetXer() {
-    auto xer_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, XER));
+    auto xer_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, XER));
     auto xer_i64_ptr = m_ir_builder->CreateBitCast(xer_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(xer_i64_ptr, 8);
 }
@@ -4351,7 +4428,7 @@ Value * Compiler::GetXerSo() {
 
 void Compiler::SetXer(Value * val_x64) {
     auto val_i64     = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto xer_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, XER));
+    auto xer_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, XER));
     auto xer_i64_ptr = m_ir_builder->CreateBitCast(xer_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, xer_i64_ptr, 8);
 }
@@ -4369,20 +4446,20 @@ void Compiler::SetXerSo(Value * so) {
 }
 
 Value * Compiler::GetUsprg0() {
-    auto usrpg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, USPRG0));
+    auto usrpg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG0));
     auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usrpg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(usprg0_i64_ptr, 8);
 }
 
 void Compiler::SetUsprg0(Value * val_x64) {
     auto val_i64        = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, USPRG0));
+    auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG0));
     auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usprg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, usprg0_i64_ptr, 8);
 }
 
 Value * Compiler::GetFpr(u32 r, u32 bits, bool as_int) {
-    auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, FPR[r]));
+    auto r_i8_ptr = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPR[r]));
     if (!as_int) {
         auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
         auto r_f64     = m_ir_builder->CreateAlignedLoad(r_f64_ptr, 8);
@@ -4403,7 +4480,7 @@ Value * Compiler::GetFpr(u32 r, u32 bits, bool as_int) {
 }
 
 void Compiler::SetFpr(u32 r, Value * val) {
-    auto r_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, FPR[r]));
+    auto r_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPR[r]));
     auto r_f64_ptr = m_ir_builder->CreateBitCast(r_i8_ptr, m_ir_builder->getDoubleTy()->getPointerTo());
 
     Value* val_f64;
@@ -4420,47 +4497,47 @@ void Compiler::SetFpr(u32 r, Value * val) {
 }
 
 Value * Compiler::GetVscr() {
-    auto vscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VSCR));
+    auto vscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VSCR));
     auto vscr_i32_ptr = m_ir_builder->CreateBitCast(vscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(vscr_i32_ptr, 4);
 }
 
 void Compiler::SetVscr(Value * val_x32) {
     auto val_i32      = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
-    auto vscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VSCR));
+    auto vscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VSCR));
     auto vscr_i32_ptr = m_ir_builder->CreateBitCast(vscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i32, vscr_i32_ptr, 4);
 }
 
 Value * Compiler::GetVr(u32 vr) {
-    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
     auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(vr_i128_ptr, 16);
 }
 
 Value * Compiler::GetVrAsIntVec(u32 vr, u32 vec_elt_num_bits) {
-    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
     auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
     auto vr_vec_ptr  = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getIntNTy(vec_elt_num_bits), 128 / vec_elt_num_bits)->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(vr_vec_ptr, 16);
 }
 
 Value * Compiler::GetVrAsFloatVec(u32 vr) {
-    auto vr_i8_ptr    = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i8_ptr    = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
     auto vr_i128_ptr  = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
     auto vr_v4f32_ptr = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getFloatTy(), 4)->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(vr_v4f32_ptr, 16);
 }
 
 Value * Compiler::GetVrAsDoubleVec(u32 vr) {
-    auto vr_i8_ptr    = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i8_ptr    = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
     auto vr_i128_ptr  = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
     auto vr_v2f64_ptr = m_ir_builder->CreateBitCast(vr_i128_ptr, VectorType::get(m_ir_builder->getDoubleTy(), 2)->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(vr_v2f64_ptr, 16);
 }
 
 void Compiler::SetVr(u32 vr, Value * val_x128) {
-    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(GetPPUStateArg(), (unsigned int)offsetof(PPUThread, VPR[vr]));
+    auto vr_i8_ptr   = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VPR[vr]));
     auto vr_i128_ptr = m_ir_builder->CreateBitCast(vr_i8_ptr, m_ir_builder->getIntNTy(128)->getPointerTo());
     auto val_i128    = m_ir_builder->CreateBitCast(val_x128, m_ir_builder->getIntNTy(128));
     m_ir_builder->CreateAlignedStore(val_i128, vr_i128_ptr, 16);
@@ -4510,7 +4587,7 @@ Value * Compiler::CheckBranchCondition(u32 bo, u32 bi) {
 
 void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk, bool target_is_lr) {
     if (lk) {
-        SetLr(m_ir_builder->getInt64(m_current_instruction_address + 4));
+        SetLr(m_ir_builder->getInt64(m_state.current_instruction_address + 4));
     }
 
     auto current_block = m_ir_builder->GetInsertBlock();
@@ -4519,49 +4596,69 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool
     if (dyn_cast<ConstantInt>(target_i64)) {
         // Target address is an immediate value.
         u32 target_address = (u32)(dyn_cast<ConstantInt>(target_i64)->getLimitedValue());
-        target_block       = GetBasicBlockFromAddress(target_address, m_current_function);
-        if (!target_block) {
-            target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function);
-            m_ir_builder->SetInsertPoint(target_block);
+        if (lk) {
+            // Function call
+            if (cmp_i1) { // There is no need to create a new block for an unconditional jump
+                target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+                m_ir_builder->SetInsertPoint(target_block);
+            }
+
             SetPc(target_i64);
-            m_ir_builder->CreateBr(GetBasicBlockFromAddress(0xFFFFFFFF, m_current_function, true));
+            IndirectCall(target_address, true);
+            m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
+        } else {
+            // Local branch
+            target_block = GetBasicBlockFromAddress(target_address);
         }
     } else {
         // Target address is in a register
-        target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function);
-        m_ir_builder->SetInsertPoint(target_block);
+        if (cmp_i1) { // There is no need to create a new block for an unconditional jump
+            target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+            m_ir_builder->SetInsertPoint(target_block);
+        }
+
         SetPc(target_i64);
 
         if (target_is_lr && !lk) {
             // Return from function call
-            m_ir_builder->CreateRetVoid();
+            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+        } else if (lk) {
+            auto next_block = GetBasicBlockFromAddress(m_state.current_instruction_address + 4);
+            auto call_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+            m_ir_builder->CreateOr(m_ir_builder->getInt64(m_state.cfg_entry->first), (uint64_t)0);
+            auto switch_instr = m_ir_builder->CreateSwitch(target_i64, call_block);
+            m_ir_builder->SetInsertPoint(call_block);
+            IndirectCall(0, true);
+            m_ir_builder->CreateBr(next_block);
+            for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
+                call_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+                m_ir_builder->SetInsertPoint(call_block);
+                IndirectCall(i->address, true);
+                m_ir_builder->CreateBr(next_block);
+                switch_instr->addCase(m_ir_builder->getInt32(i->address), call_block);
+            }
         } else {
-            auto switch_instr = m_ir_builder->CreateSwitch(target_i64, GetBasicBlockFromAddress(0xFFFFFFFF, m_current_function, true));
-            for (auto i = m_current_block_next_blocks->begin(); i != m_current_block_next_blocks->end(); i++) {
-                switch_instr->addCase(m_ir_builder->getInt32(i->address), GetBasicBlockFromAddress(i->address, m_current_function));
+            auto switch_instr = m_ir_builder->CreateSwitch(target_i64, GetBasicBlockFromAddress(0xFFFFFFFF));
+            for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
+                switch_instr->addCase(m_ir_builder->getInt64(i->address), GetBasicBlockFromAddress(i->address));
             }
         }
     }
 
     if (cmp_i1) {
         // Conditional branch
-        auto next_block = GetBasicBlockFromAddress(m_current_instruction_address + 4, m_current_function);
-        if (!next_block) {
-            next_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function);
-            m_ir_builder->SetInsertPoint(next_block);
-            SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
-            m_ir_builder->CreateBr(GetBasicBlockFromAddress(0xFFFFFFFF, m_current_function, true));
-        }
-
+        auto next_block = GetBasicBlockFromAddress(m_state.current_instruction_address + 4);
         m_ir_builder->SetInsertPoint(current_block);
         m_ir_builder->CreateCondBr(cmp_i1, target_block, next_block);
     } else {
         // Unconditional branch
-        m_ir_builder->SetInsertPoint(current_block);
-        m_ir_builder->CreateBr(target_block);
+        if (target_block) {
+            m_ir_builder->SetInsertPoint(current_block);
+            m_ir_builder->CreateBr(target_block);
+        }
     }
 
-    m_hit_branch_instruction = true;
+    m_state.hit_branch_instruction = true;
 }
 
 Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bswap, bool could_be_mmio) {
@@ -4576,10 +4673,10 @@ Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bsw
         return val_ix;
     } else {
         BasicBlock * next_block = nullptr;
-        for (auto i = m_current_function->begin(); i != m_current_function->end(); i++) {
+        for (auto i = m_state.function->begin(); i != m_state.function->end(); i++) {
             if (&(*i) == m_ir_builder->GetInsertBlock()) {
                 i++;
-                if (i != m_current_function->end()) {
+                if (i != m_state.function->end()) {
                     next_block = &(*i);
                 }
 
@@ -4588,9 +4685,9 @@ Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bsw
         }
 
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -4630,10 +4727,10 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
         m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
     } else {
         BasicBlock * next_block = nullptr;
-        for (auto i = m_current_function->begin(); i != m_current_function->end(); i++) {
+        for (auto i = m_state.function->begin(); i != m_state.function->end(); i++) {
             if (&(*i) == m_ir_builder->GetInsertBlock()) {
                 i++;
-                if (i != m_current_function->end()) {
+                if (i != m_state.function->end()) {
                     next_block = &(*i);
                 }
 
@@ -4642,9 +4739,9 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
         }
 
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_current_function, next_block);
+        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -4680,7 +4777,7 @@ Value * Compiler::InterpreterCall(const char * name, Func function, Args... args
 
     i->second++;
 
-    return Call<void>(name, function, GetInterpreterArg(), m_ir_builder->getInt32(args)...);
+    return Call<void>(name, function, m_state.args[CompileTaskState::Args::Interpreter], m_ir_builder->getInt32(args)...);
 }
 
 template<class T>
@@ -4723,19 +4820,14 @@ Value * Compiler::Call(const char * name, Func function, Args... args) {
     return m_ir_builder->CreateCall(fn, fn_args);
 }
 
-bool Compiler::IsBranchInstruction(u32 instruction) {
-    bool is_branch = false;
-    u32  field1    = instruction >> 26;
-    if (field1 == 16 || field1 == 18) {
-        is_branch = true;
-    } else if (field1 == 19) {
-        u32 field2 = (instruction >> 1) & 0x3FF;
-        if (field2 == 16 || field2 == 528) {
-            is_branch = true;
-        }
-    }
-
-    return is_branch;
+llvm::Value * Compiler::IndirectCall(u32 address, bool is_function) {
+    auto ordinal             = m_recompilation_engine.AllocateOrdinal(address, is_function);
+    auto executable_addr_i64 = m_ir_builder->getInt64(m_recompilation_engine.GetAddressOfExecutableLookup() + (ordinal * sizeof(u64)));
+    auto executable_ptr      = m_ir_builder->CreateIntToPtr(executable_addr_i64, m_compiled_function_type);
+    return m_ir_builder->CreateCall4(executable_ptr, m_state.args[CompileTaskState::Args::ExecutionEngine],
+                                     m_state.args[CompileTaskState::Args::State],
+                                     m_state.args[CompileTaskState::Args::Interpreter],
+                                     m_state.args[CompileTaskState::Args::Tracer]);
 }
 
 void Compiler::InitRotateMask() {
@@ -4751,20 +4843,50 @@ std::mutex                           RecompilationEngine::s_mutex;
 std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullptr;
 
 RecompilationEngine::RecompilationEngine()
-    : ThreadBase("PPU Recompilation Engine") {
-    Start();
+    : ThreadBase("PPU Recompilation Engine")
+    , m_next_ordinal(0)
+    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn)
+    , m_log("PPULLVMRecompiler.log", std::string(), sys::fs::F_Text) {
+    m_log.SetUnbuffered();
 }
 
 RecompilationEngine::~RecompilationEngine() {
     Stop();
 }
 
-u32 RecompilationEngine::GetOrdinal(u32 address) {
-    return 0xFFFFFFFF;
+u32 RecompilationEngine::AllocateOrdinal(u32 address, bool is_function) {
+    std::lock_guard<std::mutex> lock(m_address_to_ordinal_lock);
+
+    auto i = m_address_to_ordinal.find(address);
+    if (i == m_address_to_ordinal.end()) {
+        assert(m_next_ordinal < (sizeof(m_executable_lookup) / sizeof(m_executable_lookup[0])));
+
+        m_executable_lookup[m_next_ordinal] = is_function ? ExecutionEngine::ExecuteFunction : ExecutionEngine::ExecuteTillReturn;
+        std::atomic_thread_fence(std::memory_order_release);
+        i = m_address_to_ordinal.insert(m_address_to_ordinal.end(), std::make_pair(address, m_next_ordinal++));
+    }
+
+    return i->second;
 }
 
-Executable * RecompilationEngine::GetExecutableLookup() const {
-    return nullptr;
+u32 RecompilationEngine::GetOrdinal(u32 address) const {
+    std::lock_guard<std::mutex> lock(m_address_to_ordinal_lock);
+
+    auto i = m_address_to_ordinal.find(address);
+    if (i != m_address_to_ordinal.end()) {
+        return i->second;
+    } else {
+        return 0xFFFFFFFF;
+    }
+}
+
+const Executable RecompilationEngine::GetExecutable(u32 ordinal) const {
+    std::atomic_thread_fence(std::memory_order_acquire);
+    return m_executable_lookup[ordinal];
+}
+
+u64 RecompilationEngine::GetAddressOfExecutableLookup() const {
+    return (u64)m_executable_lookup;
 }
 
 void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
@@ -4773,8 +4895,16 @@ void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
         m_pending_execution_traces.push_back(execution_trace);
     }
 
+    if (!IsAlive()) {
+        Start();
+    }
+
     Notify();
     // TODO: Increase the priority of the recompilation engine thread
+}
+
+raw_fd_ostream & RecompilationEngine::Log() {
+    return m_log;
 }
 
 void RecompilationEngine::Task() {
@@ -4805,6 +4935,7 @@ void RecompilationEngine::Task() {
             }
 
             ProcessExecutionTrace(*execution_trace);
+            delete execution_trace;
         }
 
         // TODO: Reduce the priority of the recompilation engine thread
@@ -4819,18 +4950,16 @@ void RecompilationEngine::Task() {
     auto total_time     = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     auto compiler_stats = m_compiler.GetStats();
 
-    std::string error;
-    raw_fd_ostream log_file("PPULLVMRecompiler.log", error, sys::fs::F_Text);
-    log_file << "Total time                      = " << total_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent compiling        = " << compiler_stats.total_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent building IR  = " << compiler_stats.ir_build_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent optimizing   = " << compiler_stats.optimization_time.count() / 1000000 << "ms\n";
-    log_file << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
-    log_file << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
-    log_file << "\nInterpreter fallback stats:\n";
+    Log() << "Total time                      = " << total_time.count() / 1000000 << "ms\n";
+    Log() << "    Time spent compiling        = " << compiler_stats.total_time.count() / 1000000 << "ms\n";
+    Log() << "        Time spent building IR  = " << compiler_stats.ir_build_time.count() / 1000000 << "ms\n";
+    Log() << "        Time spent optimizing   = " << compiler_stats.optimization_time.count() / 1000000 << "ms\n";
+    Log() << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
+    Log() << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
+    Log() << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
+    Log() << "\nInterpreter fallback stats:\n";
     for (auto i = compiler_stats.interpreter_fallback_stats.begin(); i != compiler_stats.interpreter_fallback_stats.end(); i++) {
-        log_file << i->first << " = " << i->second << "\n";
+        Log() << i->first << " = " << i->second << "\n";
     }
 
     //log_file << "\nDisassembly:\n";
@@ -4860,6 +4989,8 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
     auto execution_trace_id          = GetExecutionTraceId(execution_trace);
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
+        Log() << "Trace: " << execution_trace.ToString() << "\n";
+
         std::vector<BlockEntry *> tmp_block_list;
 
         auto split_trace = false;
@@ -4936,19 +5067,15 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId
     }
 }
 
-void RecompilationEngine::CompileBlock(const BlockEntry & block_entry, bool inline_referenced_blocks) {
-    std::string cfg_str;
-    for (auto i = block_entry.cfg.begin(); i != block_entry.cfg.end(); i++) {
-        cfg_str += fmt::Format("0x%08X ->", i->first);
-        for (auto j = i->second.begin(); j != i->second.end(); j++) {
-            cfg_str += " " + j->ToString();
-        }
+void RecompilationEngine::CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks) {
+    Log() << "Compile: " << block_entry.ToString() << "\n";
 
-        if (i != (block_entry.cfg.end() - 1)) {
-            cfg_str += "\n";
-        }
-    }
-    LOG_NOTICE(PPU, "Compile: %c:0x%08X, NumHits=%u\n%s", block_entry.is_function_start ? 'F' : 'N', block_entry.address, block_entry.num_hits, cfg_str.c_str());
+    auto ordinal    = AllocateOrdinal(block_entry.address, block_entry.is_function_start);
+    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.address, block_entry.revision++), block_entry.cfg,
+                                         block_entry.is_function_start ? false : true /*inline_all_blocks*/,
+                                         block_entry.is_function_start ? true : false /*generate_linkable_exits*/,
+                                         block_entry.is_function_start ? true : false /*generate_trace*/);
+    m_executable_lookup[ordinal] = executable;
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
@@ -4984,11 +5111,8 @@ void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
         m_trace.push_back(block_id);
         break;
     case TraceType::EnterFunction:
-        // arg1 is address.
-        block_id.address = arg1;
-        block_id.type    = BlockId::Type::Normal;
+        // No args used
         m_stack.push_back((u32)m_trace.size());
-        m_trace.push_back(block_id);
         break;
     case TraceType::ExitFromCompiledFunction:
         // arg1 is address of function.
@@ -5059,7 +5183,6 @@ void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
     }
 
     if (execution_trace) {
-        LOG_NOTICE(PPU, "Trace: %s", execution_trace->ToString().c_str());
         m_recompilation_engine->NotifyTrace(execution_trace);
     }
 }
@@ -5074,7 +5197,6 @@ ppu_recompiler_llvm::ExecutionEngine::ExecutionEngine(PPUThread & ppu)
     , m_decoder(m_interpreter)
     , m_last_cache_clear_time(std::chrono::high_resolution_clock::now())
     , m_recompilation_engine(RecompilationEngine::GetInstance()) {
-    m_executable_lookup = m_recompilation_engine->GetExecutableLookup();
 }
 
 ppu_recompiler_llvm::ExecutionEngine::~ExecutionEngine() {
@@ -5086,7 +5208,7 @@ u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
     return 0;
 }
 
-void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() {
+void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() const {
     auto now = std::chrono::high_resolution_clock::now();
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_cache_clear_time).count() > 10000) {
         for (auto i = m_address_to_ordinal.begin(); i != m_address_to_ordinal.end();) {
@@ -5103,7 +5225,7 @@ void ppu_recompiler_llvm::ExecutionEngine::RemoveUnusedEntriesFromCache() {
     }
 }
 
-Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Executable default_executable) {
+Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Executable default_executable) const {
     // Find the ordinal for the specified address and insert it to the cache
     auto i = m_address_to_ordinal.find(address);
     if (i == m_address_to_ordinal.end()) {
@@ -5116,7 +5238,7 @@ Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Exec
     Executable executable = default_executable;
     if (i != m_address_to_ordinal.end()) {
         i->second.second++;
-        executable = m_executable_lookup[i->second.first];
+        executable = m_recompilation_engine->GetExecutable(i->second.first);
     }
 
     RemoveUnusedEntriesFromCache();
@@ -5124,13 +5246,13 @@ Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Exec
 }
 
 u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteFunction(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
-    tracer->Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
+    tracer->Trace(Tracer::TraceType::EnterFunction, 0, 0);
     return ExecuteTillReturn(execution_engine, ppu_state, interpreter, tracer);
 }
 
 u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
     bool terminate = false;
-    bool returned  = false;
+    bool returned  = true;
 
     while (!terminate && !Emu.IsStopped()) {
         if (Emu.IsPaused()) {
@@ -5181,6 +5303,23 @@ u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(ExecutionEngine * ex
     }
 
     return 0;
+}
+
+std::string ppu_recompiler_llvm::ControlFlowGraphToString(const ControlFlowGraph & cfg) {
+    std::string s;
+
+    for (auto i = cfg.begin(); i != cfg.end(); i++) {
+        s += fmt::Format("0x%08X ->", i->first);
+        for (auto j = i->second.begin(); j != i->second.end(); j++) {
+            s += " " + j->ToString();
+        }
+
+        if (i != (cfg.end() - 1)) {
+            s += "\n";
+        }
+    }
+
+    return s;
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
