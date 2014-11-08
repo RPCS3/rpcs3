@@ -216,12 +216,16 @@ struct CellGcmConfig
 	be_t<u32> coreFrequency;
 };
 
+struct CellGcmContextData;
+
+typedef s32(*CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
+
 struct CellGcmContextData
 {
 	be_t<u32> begin;
 	be_t<u32> end;
 	be_t<u32> current;
-	be_t<u32> callback;
+	vm::bptr<CellGcmContextCallback> callback;
 };
 
 struct gcmInfo

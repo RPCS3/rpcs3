@@ -368,7 +368,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_context.begin = ctx_begin;
 	current_context.end = ctx_begin + ctx_size;
 	current_context.current = current_context.begin;
-	current_context.callback = Emu.GetRSXCallback() - 4;
+	current_context.callback.set(be_t<u32>::make(Emu.GetRSXCallback() - 4));
 
 	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
@@ -502,21 +502,11 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 
 	if(current + 8 >= end)
 	{
-		cellGcmSys->Error("bad flip!");
-		//cellGcmCallback(ctxt.addr(), current + 8 - end);
-		//copied:
- 
-		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
- 
-		const s32 res = ctxt->current - ctxt->begin - ctrl.put;
- 
-		memmove(vm::get_ptr<void>(ctxt->begin), vm::get_ptr<void>(ctxt->current - res), res);
-
-		ctxt->current = ctxt->begin + res;
-
-		//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
-		ctrl.put = res;
-		ctrl.get = 0;
+		if (s32 res = ctxt->callback(ctxt, 8 /* ??? */))
+		{
+			cellGcmSys->Error("cellGcmSetPrepareFlip : callback failed (0x%08x)", res);
+			return res;
+		}
 	}
 
 	current = ctxt->current;
@@ -1163,25 +1153,14 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 // TODO: This function was originally located in lv2/SC_GCM and appears in RPCS3 as a lv2 syscall with id 1023,
 //       which according to lv2 dumps isn't the case. So, is this a proper place for this function?
 
-int cellGcmCallback(u32 context_addr, u32 count)
+s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
-	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context_addr, count);
-
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
-
-	auto& ctx = vm::get_ref<CellGcmContextData>(context_addr);
-	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-
-	const s32 res = ctx.current - ctx.begin - ctrl.put;
-
-	memmove(vm::get_ptr<void>(ctx.begin), vm::get_ptr<void>(ctx.current - res), res);
-
-	ctx.current = ctx.begin + res;
-
-	//InterlockedExchange64((volatile long long*)((u8*)&ctrl + offsetof(CellGcmControl, put)), (u64)(u32)re(res));
-	ctrl.put = res;
-	ctrl.get = 0;
+	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
 	
+	// TODO: this may be wrong
+
+	vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT | (0)); // set JUMP cmd
+	context->current = context->begin; // rewind to the beginning
 	return CELL_OK;
 }
 
