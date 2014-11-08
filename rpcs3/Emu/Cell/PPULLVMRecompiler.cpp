@@ -116,12 +116,12 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     // Convert each instruction in the CFG to LLVM IR
     std::vector<PHINode *> exit_instr_list;
     for (auto instr_i = cfg.instruction_addresses.begin(); instr_i != cfg.instruction_addresses.end(); instr_i++) {
+        m_state.hit_branch_instruction      = false;
         m_state.current_instruction_address = *instr_i;
         auto instr_bb                       = GetBasicBlockFromAddress(m_state.current_instruction_address);
         m_ir_builder->SetInsertPoint(instr_bb);
 
-        m_state.hit_branch_instruction = false;
-        if (!inline_all && instr_i != cfg.instruction_addresses.begin()) {
+        if (!inline_all && *instr_i != cfg.start_address) {
             // Use an already compiled implementation of this block if available
             auto ordinal = m_recompilation_engine.GetOrdinal(*instr_i);
             if (ordinal != 0xFFFFFFFF) {
@@ -139,29 +139,17 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
                         switch_instr->addCase(m_ir_builder->getInt32(*next_instr_i), GetBasicBlockFromAddress(*next_instr_i));
                     }
                 }
-
-                m_state.hit_branch_instruction = true;
             }
         }
 
-        while (!m_state.hit_branch_instruction) {
-            if (!instr_bb->getInstList().empty()) {
-                break;
-            }
-
+        if (instr_bb->empty()) {
             u32 instr = re32(vm::get_ref<u32>(m_state.current_instruction_address));
             Decode(instr);
-
             if (!m_state.hit_branch_instruction) {
-                m_state.current_instruction_address += 4;
-                instr_bb = GetBasicBlockFromAddress(m_state.current_instruction_address);
-                m_ir_builder->CreateBr(instr_bb);
-                m_ir_builder->SetInsertPoint(instr_bb);
+                m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
             }
         }
     }
-
-    m_recompilation_engine.Log() << *m_state.function;
 
     // Generate exit logic for all empty blocks
     auto default_exit_block_name = GetBasicBlockNameFromAddress(0xFFFFFFFF);
@@ -171,8 +159,6 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
 
         // Found an empty block
-        m_recompilation_engine.Log() << "Empty block: " << block_i->getName() << "\n";
-
         m_ir_builder->SetInsertPoint(block_i);
         auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
         exit_instr_list.push_back(exit_instr_i32);
@@ -202,10 +188,8 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
     }
 
-    m_recompilation_engine.Log() << *m_state.function;
-
     // If the function has a default exit block then generate code for it
-    auto default_exit_bb = GetBasicBlockFromAddress(0xFFFFFFFF, false);
+    auto default_exit_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "", false);
     if (default_exit_bb) {
         m_ir_builder->SetInsertPoint(default_exit_bb);
         auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
@@ -213,8 +197,8 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
 
         if (generate_linkable_exits) {
             auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_instr_i32, m_ir_builder->getInt32(0));
-            auto then_bb     = GetBasicBlockFromAddress(0xFFFFFFFF, "then");
-            auto merge_bb    = GetBasicBlockFromAddress(0xFFFFFFFF, "merge");
+            auto then_bb  = GetBasicBlockFromAddress(0xFFFFFFFF, "then");
+            auto merge_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "merge");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
@@ -239,6 +223,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
     }
 
+#ifdef _DEBUG
     m_recompilation_engine.Log() << *m_state.function;
 
     std::string        verify;
@@ -246,6 +231,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     if (verifyFunction(*m_state.function, &verify_ostream)) {
         m_recompilation_engine.Log() << "Verification failed: " << verify << "\n";
     }
+#endif
 
     auto ir_build_end      = std::chrono::high_resolution_clock::now();
     m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
@@ -260,6 +246,20 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     m_execution_engine->runJITOnFunction(m_state.function, &mci);
     auto translate_end        = std::chrono::high_resolution_clock::now();
     m_stats.translation_time += std::chrono::duration_cast<std::chrono::nanoseconds>(translate_end - optimize_end);
+
+#ifdef _DEBUG
+    m_recompilation_engine.Log() << "\nDisassembly:\n";
+    auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
+    for (size_t pc = 0; pc < mci.size();) {
+        char str[1024];
+
+        auto size = LLVMDisasmInstruction(disassembler, ((u8 *)mci.address()) + pc, mci.size() - pc, (uint64_t)(((u8 *)mci.address()) + pc), str, sizeof(str));
+        m_recompilation_engine.Log() << fmt::Format("0x%08X: ", (u64)(((u8 *)mci.address()) + pc)) << str << '\n';
+        pc += size;
+    }
+
+    LLVMDisasmDispose(disassembler);
+#endif
 
     auto compilation_end  = std::chrono::high_resolution_clock::now();
     m_stats.total_time   += std::chrono::duration_cast<std::chrono::nanoseconds>(compilation_end - compilation_start);
@@ -4191,15 +4191,24 @@ u32 Compiler::GetAddressFromBasicBlockName(const std::string & name) const {
 BasicBlock * Compiler::GetBasicBlockFromAddress(u32 address, const std::string & suffix, bool create_if_not_exist) {
     auto         block_name = GetBasicBlockNameFromAddress(address, suffix);
     BasicBlock * block      = nullptr;
-    for (auto i = m_state.function->getBasicBlockList().begin(); i != m_state.function->getBasicBlockList().end(); i++) {
+    BasicBlock * next_block = nullptr;
+    for (auto i = m_state.function->begin(); i != m_state.function->end(); i++) {
         if (i->getName() == block_name) {
             block = &(*i);
             break;
         }
+
+#ifdef _DEBUG
+        auto block_address = GetAddressFromBasicBlockName(i->getName());
+        if (block_address > address) {
+            next_block = &(*i);
+            break;
+        }
+#endif
     }
 
     if (!block && create_if_not_exist) {
-        block = BasicBlock::Create(m_ir_builder->getContext(), block_name, m_state.function);
+        block = BasicBlock::Create(m_ir_builder->getContext(), block_name, m_state.function, next_block);
     }
 
     return block;
@@ -4688,22 +4697,10 @@ Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bsw
 
         return val_ix;
     } else {
-        BasicBlock * next_block = nullptr;
-        for (auto i = m_state.function->begin(); i != m_state.function->end(); i++) {
-            if (&(*i) == m_ir_builder->GetInsertBlock()) {
-                i++;
-                if (i != m_state.function->end()) {
-                    next_block = &(*i);
-                }
-
-                break;
-            }
-        }
-
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
+        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
+        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -4742,22 +4739,10 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
         auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
         m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
     } else {
-        BasicBlock * next_block = nullptr;
-        for (auto i = m_state.function->begin(); i != m_state.function->end(); i++) {
-            if (&(*i) == m_ir_builder->GetInsertBlock()) {
-                i++;
-                if (i != m_state.function->end()) {
-                    next_block = &(*i);
-                }
-
-                break;
-            }
-        }
-
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
-        auto else_bb  = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
-        auto merge_bb = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function, next_block);
+        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
+        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
+        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -4837,9 +4822,11 @@ Value * Compiler::Call(const char * name, Func function, Args... args) {
 }
 
 llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_function) {
-    auto ordinal             = m_recompilation_engine.AllocateOrdinal(address, is_function);
-    auto executable_addr_i64 = m_ir_builder->getInt64(m_recompilation_engine.GetAddressOfExecutableLookup() + (ordinal * sizeof(u64)));
-    auto executable_ptr      = m_ir_builder->CreateIntToPtr(executable_addr_i64, m_compiled_function_type);
+    auto ordinal          = m_recompilation_engine.AllocateOrdinal(address, is_function);
+    auto location_i64     = m_ir_builder->getInt64(m_recompilation_engine.GetAddressOfExecutableLookup() + (ordinal * sizeof(u64)));
+    auto location_i64_ptr = m_ir_builder->CreateIntToPtr(location_i64, m_ir_builder->getInt64Ty()->getPointerTo());
+    auto executable_i64   = m_ir_builder->CreateLoad(location_i64_ptr);
+    auto executable_ptr   = m_ir_builder->CreateIntToPtr(executable_i64, m_compiled_function_type->getPointerTo());
     return m_ir_builder->CreateCall3(executable_ptr, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
 }
 
@@ -4970,29 +4957,11 @@ void RecompilationEngine::Task() {
     Log() << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
+    Log() << "Ordinals allocated              = " << m_next_ordinal << "\n";
     Log() << "\nInterpreter fallback stats:\n";
     for (auto i = compiler_stats.interpreter_fallback_stats.begin(); i != compiler_stats.interpreter_fallback_stats.end(); i++) {
         Log() << i->first << " = " << i->second << "\n";
     }
-
-    //log_file << "\nDisassembly:\n";
-    //auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
-    //for (auto i = m_compiled.begin(); i != m_compiled.end(); i++) {
-    //    log_file << fmt::Format("%s: Size = %u bytes, Number of instructions = %u\n", i->second.llvm_function->getName().str().c_str(), i->second.size, i->second.num_instructions);
-
-    //    uint8_t * fn_ptr = (uint8_t *)i->second.executable;
-    //    for (size_t pc = 0; pc < i->second.size;) {
-    //        char str[1024];
-
-    //        auto size = LLVMDisasmInstruction(disassembler, fn_ptr + pc, i->second.size - pc, (uint64_t)(fn_ptr + pc), str, sizeof(str));
-    //        log_file << str << '\n';
-    //        pc += size;
-    //    }
-    //}
-
-    //LLVMDisasmDispose(disassembler);
-
-    //log_file << "\nLLVM IR:\n" << *m_module;
 
     LOG_NOTICE(PPU, "PPU LLVM Recompilation thread exiting.");
     s_the_instance = nullptr; // Can cause deadlock if this is the last instance. Need to fix this.
@@ -5002,7 +4971,9 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
     auto execution_trace_id          = execution_trace.GetId();
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
+#ifdef _DEBUG
         Log() << "Trace: " << execution_trace.ToString() << "\n";
+#endif
 
         std::vector<BlockEntry *> tmp_block_list;
 
@@ -5029,9 +5000,7 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
             if (trace_i + 1 != execution_trace.entries.end()) {
                 next_trace = &(*(trace_i + 1));
             } else if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
-                if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
-                    next_trace = &(*(execution_trace.entries.begin()));
-                }
+                next_trace = &(*(execution_trace.entries.begin()));
             }
 
             UpdateControlFlowGraph((*block_i)->cfg, *trace_i, next_trace);
@@ -5043,7 +5012,7 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
     for (auto i = processed_execution_trace_i->second.begin(); i != processed_execution_trace_i->second.end(); i++) {
         if (!(*i)->is_compiled) {
             (*i)->num_hits++;
-            if ((*i)->num_hits >= 1) { // TODO: Make this configurable
+            if ((*i)->num_hits >= 1000) { // TODO: Make this configurable
                 CompileBlock(*(*i), false);
                 (*i)->is_compiled = true;
             }
@@ -5078,13 +5047,15 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
 }
 
 void RecompilationEngine::CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks) {
+#ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
+#endif
 
-    auto is_funciton = block_entry.cfg.start_address == block_entry.cfg.function_address;
-    auto ordinal     = AllocateOrdinal(block_entry.cfg.start_address, is_funciton);
+    auto is_function = block_entry.cfg.start_address == block_entry.cfg.function_address;
+    auto ordinal     = AllocateOrdinal(block_entry.cfg.start_address, is_function);
     auto executable  = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
-                                          is_funciton ? false : true /*inline_all*/,
-                                          is_funciton ? true : false /*generate_linkable_exits*/);
+                                          is_function ? false : true /*inline_all*/,
+                                          is_function ? true : false /*generate_linkable_exits*/);
     m_executable_lookup[ordinal] = executable;
 }
 
@@ -5254,7 +5225,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
         }
 
         auto executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteTillReturn);
-        if (executable != ExecuteTillReturn) {
+        if (executable != ExecuteTillReturn && executable != ExecuteFunction) {
             auto entry = ppu_state->PC;
             auto exit  = (u32)executable(ppu_state, interpreter, 0);
             execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledBlock, entry, exit);

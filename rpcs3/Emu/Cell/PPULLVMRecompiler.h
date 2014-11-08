@@ -240,20 +240,24 @@ namespace ppu_recompiler_llvm {
         }
 
         std::string ToString() const {
-            return fmt::Format("%s\nNumHits=%u, Revision=%u, IsCompiled=%c\n", cfg.ToString().c_str(), num_hits, revision, is_compiled ? 'Y' : 'N');
+            return fmt::Format("%s\nNumHits=%u, Revision=%u, IsCompiled=%c", cfg.ToString().c_str(), num_hits, revision, is_compiled ? 'Y' : 'N');
         }
 
         bool operator == (const BlockEntry & other) const {
             return cfg.start_address == other.cfg.start_address;
         }
-    };
-}
 
-namespace std {
-    template<> struct hash<ppu_recompiler_llvm::BlockEntry *> {
-        size_t operator()(const ppu_recompiler_llvm::BlockEntry * e) const {
-            return e->cfg.start_address;
-        }
+        struct hash {
+            size_t operator()(const BlockEntry * e) const {
+                return e->cfg.start_address;
+            }
+        };
+
+        struct equal_to {
+            bool operator()(const BlockEntry * lhs, const BlockEntry * rhs) const {
+                return *lhs == *rhs;
+            }
+        };
     };
 }
 
@@ -978,7 +982,7 @@ namespace ppu_recompiler_llvm {
         std::list<ExecutionTrace *> m_pending_execution_traces;
 
         /// Block table
-        std::unordered_set<BlockEntry *> m_block_table;
+        std::unordered_set<BlockEntry *, BlockEntry::hash, BlockEntry::equal_to> m_block_table;
 
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
         std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
