@@ -113,6 +113,8 @@ public:
 		return temp;
 	}
 
+	CPUDecoder * GetDecoder() { return m_dec; };
+
 public:
 	u32 entry;
 	u32 PC;

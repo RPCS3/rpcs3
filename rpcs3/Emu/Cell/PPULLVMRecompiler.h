@@ -19,45 +19,106 @@ namespace ppu_recompiler_llvm {
     class ExecutionEngine;
     struct PPUState;
 
-    enum class BranchType {
-        NonBranch,
-        LocalBranch,
-        FunctionCall,
-        Return,
-    };
+    /// An entry in an execution trace
+    struct ExecutionTraceEntry {
+        /// Data associated with the entry. This is discriminated by type.
+        union {
+            struct Instruction {
+                u32 address;
+            } instruction;
 
-    /// Unique id of a block
-    struct BlockId {
-        /// Address of the block
-        u32 address;
+            struct FunctionCall {
+                u32 address;
+            } function_call;
 
-        /// The type of the block
+            struct CompiledBlock {
+                u32 entry_address;
+                u32 exit_address;
+            } compiled_block;
+        };
+
+        /// The type of the entry
         enum class Type {
             FunctionCall,
-            Normal,
-            Exit,
+            Instruction,
+            CompiledBlock,
         } type;
 
-        bool operator == (const BlockId & other) const {
-            return (address == other.address && type == other.type);
+        ExecutionTraceEntry(Type type, u32 arg1, u32 arg2 = 0)
+            : type(type) {
+            switch (type) {
+            case Type::Instruction:
+                instruction.address = arg1;
+                break;
+            case Type::FunctionCall:
+                function_call.address = arg1;
+                break;
+            case Type::CompiledBlock:
+                compiled_block.entry_address = arg1;
+                compiled_block.exit_address  = arg2;
+                break;
+            default:
+                assert(0);
+                break;
+            }
+        }
+
+        u32 GetPrimaryAddress() const {
+            switch (type) {
+            case Type::Instruction:
+                return instruction.address;
+            case Type::FunctionCall:
+                return function_call.address;
+            case Type::CompiledBlock:
+                return compiled_block.entry_address;
+            default:
+                assert(0);
+                return 0;
+            }
         }
 
         std::string ToString() const {
-            return fmt::Format("%c:0x%08X", type == BlockId::Type::Normal ? 'N' : type == BlockId::Type::FunctionCall ? 'F' : 'E', address);
+            switch (type) {
+            case Type::Instruction:
+                return fmt::Format("I:0x%08X", instruction.address);
+            case Type::FunctionCall:
+                return fmt::Format("F:0x%08X", function_call.address);
+            case Type::CompiledBlock:
+                return fmt::Format("C:0x%08X-0x%08X", compiled_block.entry_address, compiled_block.exit_address);
+            default:
+                assert(0);
+                return "";
+            }
+        }
+
+        u64 hash() const {
+            u64 hash = ((u64)type << 32);
+            switch (type) {
+            case Type::Instruction:
+                hash |= instruction.address;
+                break;
+            case Type::FunctionCall:
+                hash |= function_call.address;
+                break;
+            case Type::CompiledBlock:
+                hash   = compiled_block.exit_address;
+                hash <<= 32;
+                hash  |= compiled_block.entry_address;
+                break;
+            default:
+                assert(0);
+                break;
+            }
+
+            return hash;
         }
     };
 
-    /// Control flow graph of a block. A list of (block address, list of next blocks) pairs.
-    typedef std::vector<std::pair<u32, std::vector<BlockId>>> ControlFlowGraph;
-
-    /// Get a string representation of a ControlFlowGraph
-    std::string ControlFlowGraphToString(const ControlFlowGraph & cfg);
-
-    /// Uniquely identifies an execution trace
-    typedef u64 ExecutionTraceId;
-
     /// An execution trace.
     struct ExecutionTrace {
+        /// Unique id of an execution trace;
+        typedef u64 Id;
+
         /// The function to which this trace belongs
         u32 function_address;
 
@@ -67,27 +128,98 @@ namespace ppu_recompiler_llvm {
             Loop,
         } type;
 
-        /// Sequence of blocks enountered in this trace
-        std::vector<BlockId> blocks;
+        /// entries in the trace
+        std::vector<ExecutionTraceEntry> entries;
+
+        ExecutionTrace(u32 address)
+            : function_address(address) {
+        }
 
         std::string ToString() const {
             auto s = fmt::Format("0x%08X %s ->", function_address, type == ExecutionTrace::Type::Loop ? "Loop" : "Linear");
-            for (auto i = 0; i < blocks.size(); i++) {
-                s += " " + blocks[i].ToString();
+            for (auto i = 0; i < entries.size(); i++) {
+                s += " " + entries[i].ToString();
+            }
+
+            return s;
+        }
+
+        Id GetId() const {
+            Id id = 0;
+
+            for (auto i = entries.begin(); i != entries.end(); i++) {
+                id  ^= i->hash();
+                id <<= 1;
+            }
+
+            return id;
+        }
+    };
+
+    /// A control flow graph
+    struct ControlFlowGraph {
+        /// Address of the first instruction
+        u32 start_address;
+
+        /// Address of the function to which this CFG belongs to
+        u32 function_address;
+
+        /// Set of addresses of the instructions in the CFG
+        std::set<u32> instruction_addresses;
+
+        /// Branches in the CFG.
+        /// Key is the address of an instruction
+        /// Data is the set of all instructions to which this instruction branches to.
+        std::map<u32, std::set<u32>> branches;
+
+        /// Function calls in the CFG
+        /// Key is the address of an instruction
+        /// Data is the set of all functions which this instruction invokes.
+        std::map<u32, std::set<u32>> calls;
+
+        ControlFlowGraph(u32 start_address, u32 function_address)
+            : start_address(start_address)
+            , function_address(function_address) {
+        }
+
+        std::string ToString() const {
+            auto s = fmt::Format("0x%08X (0x%08X):", start_address, function_address);
+            for (auto i = instruction_addresses.begin(); i != instruction_addresses.end(); i++) {
+                s += fmt::Format(" 0x%08X", *i);
+            }
+
+            s += "\nBranches:";
+            for (auto i = branches.begin(); i != branches.end(); i++) {
+                s += fmt::Format("\n0x%08X ->", i->first);
+                for (auto j = i->second.begin(); j != i->second.end(); j++) {
+                    s += fmt::Format(" 0x%08X", *j);
+                }
+            }
+
+            s += "\nCalls:";
+            for (auto i = calls.begin(); i != calls.end(); i++) {
+                s += fmt::Format("\n0x%08X ->", i->first);
+                for (auto j = i->second.begin(); j != i->second.end(); j++) {
+                    s += fmt::Format(" 0x%08X", *j);
+                }
             }
 
             return s;
         }
     };
 
+    enum class BranchType {
+        NonBranch,
+        LocalBranch,
+        FunctionCall,
+        Return,
+    };
+
     /// Pointer to an executable
-    typedef u64(*Executable)(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer);
+    typedef u32(*Executable)(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
 
     /// An entry in the block table
     struct BlockEntry {
-        /// Address of the block
-        u32 address;
-
         /// Number of times this block was hit
         u32 num_hits;
 
@@ -100,23 +232,19 @@ namespace ppu_recompiler_llvm {
         /// Indicates whether the block has been compiled or not
         bool is_compiled;
 
-        /// Indicates whether the block is the first block of a function or not
-        bool is_function_start;
-
-        BlockEntry(u32 addr)
-            : address(addr)
-            , num_hits(0)
+        BlockEntry(u32 start_address, u32 function_address)
+            : num_hits(0)
             , revision(0)
-            , is_compiled(false) {
+            , is_compiled(false)
+            , cfg(start_address, function_address) {
         }
 
         std::string ToString() const {
-            return fmt::Format("%c:0x%08X, NumHits=%u, IsCompiled=%c\n%s", is_function_start ? 'F' : 'N', address, num_hits,
-                               is_compiled ? 'Y' : 'N', ControlFlowGraphToString(cfg).c_str());
+            return fmt::Format("%s\nNumHits=%u, Revision=%u, IsCompiled=%c\n", cfg.ToString().c_str(), num_hits, revision, is_compiled ? 'Y' : 'N');
         }
 
         bool operator == (const BlockEntry & other) const {
-            return address == other.address;
+            return cfg.start_address == other.cfg.start_address;
         }
     };
 }
@@ -124,7 +252,7 @@ namespace ppu_recompiler_llvm {
 namespace std {
     template<> struct hash<ppu_recompiler_llvm::BlockEntry *> {
         size_t operator()(const ppu_recompiler_llvm::BlockEntry * e) const {
-            return e->address;
+            return e->cfg.start_address;
         }
     };
 }
@@ -150,7 +278,7 @@ namespace ppu_recompiler_llvm {
             std::map<std::string, u64> interpreter_fallback_stats;
         };
 
-        Compiler(RecompilationEngine & recompilation_engine, const Executable default_function_executable, const Executable default_block_executable);
+        Compiler(RecompilationEngine & recompilation_engine, const Executable unknown_function, const Executable unknown_block);
 
         Compiler(const Compiler & other) = delete;
         Compiler(Compiler && other) = delete;
@@ -161,7 +289,7 @@ namespace ppu_recompiler_llvm {
         Compiler & operator = (Compiler && other) = delete;
 
         /// Compile a code fragment described by a cfg and return an executable
-        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits, bool generate_trace);
+        Executable Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits);
 
         /// Free an executable earilier obtained via a call to Compile
         void FreeExecutable(const std::string & name);
@@ -579,10 +707,9 @@ namespace ppu_recompiler_llvm {
         /// State of a compilation task
         struct CompileTaskState {
             enum Args {
-                ExecutionEngine,
                 State,
                 Interpreter,
-                Tracer,
+                Context,
                 MaxArgs,
             };
 
@@ -595,38 +722,29 @@ namespace ppu_recompiler_llvm {
             /// The CFG being compiled
             const ControlFlowGraph * cfg;
 
-            /// The current entry of the CFG being compiled
-            ControlFlowGraph::const_iterator cfg_entry;
-
             /// Address of the current instruction being compiled
             u32 current_instruction_address;
 
-            /// Map from an address to the address of the block that it belongs to
-            std::unordered_map<u32, u32> address_to_block;
-
             /// A flag used to detect branch instructions.
-            /// This is set to false at the start of compilation of a block.
-            /// When a branch instruction is encountered, this is set to true by the decode function.
+            /// This is set to false at the start of compilation of an instruction.
+            /// If a branch instruction is encountered, this is set to true by the decode function.
             bool hit_branch_instruction;
 
             /// Indicates whether a block should be inlined even if an already compiled version of the block exists
-            bool inline_all_blocks;
+            bool inline_all;
 
             /// Create code such that exit points can be linked to other blocks
             bool generate_linkable_exits;
-
-            /// Notify the tracer upon exit
-            bool generate_trace;
         };
 
         /// Recompilation engine
         RecompilationEngine & m_recompilation_engine;
 
-        /// The executable that will be called to process unknown functions
-        const Executable m_default_function_executable;
+        /// The function that will be called to process unknown functions
+        llvm::Function * m_unknown_function;
 
         /// The executable that will be called to process unknown blocks
-        const Executable m_default_block_executable;
+        llvm::Function *  m_unknown_block;
 
         /// LLVM context
         llvm::LLVMContext * m_llvm_context;
@@ -653,10 +771,10 @@ namespace ppu_recompiler_llvm {
         Stats m_stats;
 
         /// Get the name of the basic block for the specified address
-        std::string GetBasicBlockNameFromAddress(u32 address, const std::string & suffix = "");
+        std::string GetBasicBlockNameFromAddress(u32 address, const std::string & suffix = "") const;
 
         /// Get the address of a basic block from its name
-        u32 GetAddressFromBasicBlockName(const std::string & name);
+        u32 GetAddressFromBasicBlockName(const std::string & name) const;
 
         /// Get the basic block in for the specified address.
         llvm::BasicBlock * GetBasicBlockFromAddress(u32 address, const std::string & suffix = "", bool create_if_not_exist = true);
@@ -785,7 +903,7 @@ namespace ppu_recompiler_llvm {
         llvm::Value * CheckBranchCondition(u32 bo, u32 bi);
 
         /// Create IR for a branch instruction
-        void CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk, bool target_is_lr = false);
+        void CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool lk, bool target_is_lr = false);
 
         /// Read from memory
         llvm::Value * ReadMemory(llvm::Value * addr_i64, u32 bits, u32 alignment = 0, bool bswap = true, bool could_be_mmio = true);
@@ -806,7 +924,7 @@ namespace ppu_recompiler_llvm {
         llvm::Value * Call(const char * name, Func function, Args... args);
 
         /// Indirect call
-        llvm::Value * IndirectCall(u32 address, bool is_function);
+        llvm::Value * IndirectCall(u32 address, llvm::Value * context_i64, bool is_function);
 
         /// Test an instruction against the interpreter
         template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
@@ -863,7 +981,7 @@ namespace ppu_recompiler_llvm {
         std::unordered_set<BlockEntry *> m_block_table;
 
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
-        std::unordered_map<ExecutionTraceId, std::vector<BlockEntry *>> m_processed_execution_traces;
+        std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
 
         /// Lock for accessing m_address_to_ordinal.
         // TODO: Make this a RW lock
@@ -896,7 +1014,7 @@ namespace ppu_recompiler_llvm {
         void ProcessExecutionTrace(const ExecutionTrace & execution_trace);
 
         /// Update a CFG
-        void UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId block, BlockId next_block);
+        void UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry);
 
         /// Compile a block
         void CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks);
@@ -917,7 +1035,7 @@ namespace ppu_recompiler_llvm {
             EnterFunction,
             ExitFromCompiledFunction,
             Return,
-            EnterBlock,
+            Instruction,
             ExitFromCompiledBlock,
         };
 
@@ -938,11 +1056,8 @@ namespace ppu_recompiler_llvm {
         void Terminate();
 
     private:
-        /// Current execution trace
-        std::vector<BlockId> m_trace;
-
         /// Call stack
-        std::vector<u32> m_stack;
+        std::vector<ExecutionTrace *> m_stack;
 
         /// Recompilation engine
         std::shared_ptr<RecompilationEngine> m_recompilation_engine;
@@ -994,17 +1109,14 @@ namespace ppu_recompiler_llvm {
         Executable GetExecutable(u32 address, Executable default_executable) const;
 
         /// Execute a function
-        static u64 ExecuteFunction(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer);
+        static u32 ExecuteFunction(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
 
         /// Execute till the current function returns
-        static u64 ExecuteTillReturn(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer);
+        static u32 ExecuteTillReturn(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
     };
 
     /// Get the branch type from a branch instruction
     BranchType GetBranchTypeFromInstruction(u32 instruction);
-
-    /// Get the execution trace id of an execution trace
-    ExecutionTraceId GetExecutionTraceId(const ExecutionTrace & execution_trace);
 }
 
 #endif // PPU_LLVM_RECOMPILER_H

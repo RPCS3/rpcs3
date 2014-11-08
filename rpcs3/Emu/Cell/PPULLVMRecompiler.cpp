@@ -26,10 +26,8 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable default_function_executable, const Executable default_block_executable)
-    : m_recompilation_engine(recompilation_engine)
-    , m_default_function_executable(default_function_executable)
-    , m_default_block_executable(default_block_executable) {
+Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable unknown_function, const Executable unknown_block)
+    : m_recompilation_engine(recompilation_engine) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
@@ -67,11 +65,18 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
     m_fpm->doInitialization();
 
     std::vector<Type *> arg_types;
-    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
-    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
-    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
-    arg_types.push_back(m_ir_builder->getInt64Ty()->getPointerTo());
-    m_compiled_function_type = FunctionType::get(m_ir_builder->getInt64Ty(), arg_types, false);
+    arg_types.push_back(m_ir_builder->getInt8PtrTy());
+    arg_types.push_back(m_ir_builder->getInt8PtrTy());
+    arg_types.push_back(m_ir_builder->getInt64Ty());
+    m_compiled_function_type = FunctionType::get(m_ir_builder->getInt32Ty(), arg_types, false);
+
+    m_unknown_function = (Function *)m_module->getOrInsertFunction("unknown_function", m_compiled_function_type);
+    m_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
+    m_execution_engine->addGlobalMapping(m_unknown_function, unknown_function);
+
+    m_unknown_block = (Function *)m_module->getOrInsertFunction("unknown_block", m_compiled_function_type);
+    m_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
+    m_execution_engine->addGlobalMapping(m_unknown_block, unknown_block);
 
     if (!s_rotate_mask_inited) {
         InitRotateMask();
@@ -86,50 +91,53 @@ Compiler::~Compiler() {
     delete m_llvm_context;
 }
 
-Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all_blocks, bool generate_linkable_exits, bool generate_trace) {
-    assert(!name.empty());
-    assert(!cfg.empty());
-
+Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & cfg, bool inline_all, bool generate_linkable_exits) {
     auto compilation_start = std::chrono::high_resolution_clock::now();
 
     m_state.cfg                     = &cfg;
-    m_state.inline_all_blocks       = inline_all_blocks;
+    m_state.inline_all              = inline_all;
     m_state.generate_linkable_exits = generate_linkable_exits;
-    m_state.generate_trace          = generate_trace;
-    m_state.address_to_block.clear();
 
     // Create the function
     m_state.function = (Function *)m_module->getOrInsertFunction(name, m_compiled_function_type);
     m_state.function->setCallingConv(CallingConv::X86_64_Win64);
     auto arg_i = m_state.function->arg_begin();
-    arg_i->setName("execution_engine");
-    m_state.args[CompileTaskState::Args::ExecutionEngine] = arg_i;
-    (++arg_i)->setName("state");
+    arg_i->setName("ppu_state");
     m_state.args[CompileTaskState::Args::State] = arg_i;
     (++arg_i)->setName("interpreter");
     m_state.args[CompileTaskState::Args::Interpreter] = arg_i;
-    (++arg_i)->setName("tracer");
-    m_state.args[CompileTaskState::Args::Tracer] = arg_i;
+    (++arg_i)->setName("context");
+    m_state.args[CompileTaskState::Args::Context] = arg_i;
 
     // Create the entry block and add code to branch to the first instruction
     m_ir_builder->SetInsertPoint(GetBasicBlockFromAddress(0));
-    m_ir_builder->CreateBr(GetBasicBlockFromAddress(cfg[0].first));
+    m_ir_builder->CreateBr(GetBasicBlockFromAddress(cfg.start_address));
 
-    // Convert each block in this CFG to LLVM IR
-    for (m_state.cfg_entry = cfg.begin(); m_state.cfg_entry != cfg.end(); m_state.cfg_entry++) {
-        m_state.current_instruction_address = m_state.cfg_entry->first;
-        auto block                          = GetBasicBlockFromAddress(m_state.current_instruction_address);
-        m_ir_builder->SetInsertPoint(block);
+    // Convert each instruction in the CFG to LLVM IR
+    std::vector<PHINode *> exit_instr_list;
+    for (auto instr_i = cfg.instruction_addresses.begin(); instr_i != cfg.instruction_addresses.end(); instr_i++) {
+        m_state.current_instruction_address = *instr_i;
+        auto instr_bb                       = GetBasicBlockFromAddress(m_state.current_instruction_address);
+        m_ir_builder->SetInsertPoint(instr_bb);
 
         m_state.hit_branch_instruction = false;
-        if (!inline_all_blocks && m_state.cfg_entry != cfg.begin()) {
+        if (!inline_all && instr_i != cfg.instruction_addresses.begin()) {
             // Use an already compiled implementation of this block if available
-            auto ordinal = m_recompilation_engine.GetOrdinal(m_state.cfg_entry->first);
+            auto ordinal = m_recompilation_engine.GetOrdinal(*instr_i);
             if (ordinal != 0xFFFFFFFF) {
-                auto ret_i64      = IndirectCall(m_state.cfg_entry->first, false);
-                auto switch_instr = m_ir_builder->CreateSwitch(ret_i64, GetBasicBlockFromAddress(0xFFFFFFFF));
-                for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
-                    switch_instr->addCase(m_ir_builder->getInt64(i->address), GetBasicBlockFromAddress(i->address));
+                auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
+                exit_instr_list.push_back(exit_instr_i32);
+
+                auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
+                context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+                auto ret_i32     = IndirectCall(*instr_i, context_i64, false);
+
+                auto switch_instr = m_ir_builder->CreateSwitch(ret_i32, GetBasicBlockFromAddress(0xFFFFFFFF));
+                auto branch_i     = cfg.branches.find(*instr_i);
+                if (branch_i != cfg.branches.end()) {
+                    for (auto next_instr_i = branch_i->second.begin(); next_instr_i != branch_i->second.end(); next_instr_i++) {
+                        switch_instr->addCase(m_ir_builder->getInt32(*next_instr_i), GetBasicBlockFromAddress(*next_instr_i));
+                    }
                 }
 
                 m_state.hit_branch_instruction = true;
@@ -137,7 +145,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
 
         while (!m_state.hit_branch_instruction) {
-            if (!block->getInstList().empty()) {
+            if (!instr_bb->getInstList().empty()) {
                 break;
             }
 
@@ -146,54 +154,51 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
 
             if (!m_state.hit_branch_instruction) {
                 m_state.current_instruction_address += 4;
-                block = GetBasicBlockFromAddress(m_state.current_instruction_address);
-                m_ir_builder->CreateBr(block);
-                m_ir_builder->SetInsertPoint(block);
+                instr_bb = GetBasicBlockFromAddress(m_state.current_instruction_address);
+                m_ir_builder->CreateBr(instr_bb);
+                m_ir_builder->SetInsertPoint(instr_bb);
             }
         }
     }
 
     m_recompilation_engine.Log() << *m_state.function;
 
+    // Generate exit logic for all empty blocks
     auto default_exit_block_name = GetBasicBlockNameFromAddress(0xFFFFFFFF);
     for (auto block_i = m_state.function->begin(); block_i != m_state.function->end(); block_i++) {
         if (!block_i->getInstList().empty() || block_i->getName() == default_exit_block_name) {
             continue;
         }
 
-        // An empty block. Generate exit logic.
+        // Found an empty block
         m_recompilation_engine.Log() << "Empty block: " << block_i->getName() << "\n";
 
         m_ir_builder->SetInsertPoint(block_i);
-        auto exit_block_i64 = m_ir_builder->CreatePHI(m_ir_builder->getInt64Ty(), 0);
-        for (auto i = pred_begin(block_i); i != pred_end(block_i); i++) {
-            auto pred_address = GetAddressFromBasicBlockName(block_i->getName());
-            exit_block_i64->addIncoming(m_ir_builder->getInt64(m_state.address_to_block[pred_address]), *i);
-        }
+        auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
+        exit_instr_list.push_back(exit_instr_i32);
 
-        auto block_address = GetAddressFromBasicBlockName(block_i->getName());
-        SetPc(m_ir_builder->getInt32(block_address));
+        auto instr_address = GetAddressFromBasicBlockName(block_i->getName());
+        SetPc(m_ir_builder->getInt32(instr_address));
 
         if (generate_linkable_exits) {
-            if (generate_trace) {
-                Call<void>("Tracer.Trace", &Tracer::Trace, m_ir_builder->getInt32((uint32_t)Tracer::TraceType::ExitFromCompiledFunction),
-                           m_ir_builder->getInt32(cfg[0].first), m_ir_builder->CreateTrunc(exit_block_i64, m_ir_builder->getInt32Ty()));
-            }
-
-            auto ret_i64  = IndirectCall(block_address, false);
-            auto cmp_i1   = m_ir_builder->CreateICmpNE(ret_i64, m_ir_builder->getInt64(0));
-            auto then_bb  = BasicBlock::Create(m_ir_builder->getContext());
-            auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+            auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
+            context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+            auto ret_i32     = IndirectCall(instr_address, context_i64, false);
+            auto cmp_i1      = m_ir_builder->CreateICmpNE(ret_i32, m_ir_builder->getInt32(0));
+            auto then_bb     = GetBasicBlockFromAddress(instr_address, "then");
+            auto merge_bb    = GetBasicBlockFromAddress(instr_address, "merge");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
-            IndirectCall(1, false);
+            context_i64 = m_ir_builder->CreateZExt(ret_i32, m_ir_builder->getInt64Ty());
+            context_i64 = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+            m_ir_builder->CreateCall3(m_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
             m_ir_builder->CreateBr(merge_bb);
 
             m_ir_builder->SetInsertPoint(merge_bb);
-            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+            m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
         } else {
-            m_ir_builder->CreateRet(exit_block_i64);
+            m_ir_builder->CreateRet(exit_instr_i32);
         }
     }
 
@@ -203,33 +208,34 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     auto default_exit_bb = GetBasicBlockFromAddress(0xFFFFFFFF, false);
     if (default_exit_bb) {
         m_ir_builder->SetInsertPoint(default_exit_bb);
-        auto exit_block_i64 = m_ir_builder->CreatePHI(m_ir_builder->getInt64Ty(), 1);
-        for (auto i = pred_begin(default_exit_bb); i != pred_end(default_exit_bb); i++) {
-            // the last but one instruction of the predecessor sets the exit block address
-            auto j = (*i)->rbegin();
-            j++;
-            exit_block_i64->addIncoming(&(*j), *i);
-        }
+        auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
+        exit_instr_list.push_back(exit_instr_i32);
 
         if (generate_linkable_exits) {
-            auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_block_i64, m_ir_builder->getInt64(0));
-            auto then_bb  = BasicBlock::Create(m_ir_builder->getContext());
-            auto merge_bb = BasicBlock::Create(m_ir_builder->getContext());
+            auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_instr_i32, m_ir_builder->getInt32(0));
+            auto then_bb     = GetBasicBlockFromAddress(0xFFFFFFFF, "then");
+            auto merge_bb    = GetBasicBlockFromAddress(0xFFFFFFFF, "merge");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
-            if (generate_trace) {
-                Call<void>("Tracer.Trace", &Tracer::Trace, m_ir_builder->getInt32((uint32_t)Tracer::TraceType::ExitFromCompiledFunction),
-                           m_ir_builder->getInt32(cfg[0].first), m_ir_builder->CreateTrunc(exit_block_i64, m_ir_builder->getInt32Ty()));
-            }
-
-            IndirectCall(1, false);
+            auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
+            context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
+            m_ir_builder->CreateCall3(m_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
             m_ir_builder->CreateBr(merge_bb);
 
             m_ir_builder->SetInsertPoint(merge_bb);
-            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+            m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
         } else {
-            m_ir_builder->CreateRet(exit_block_i64);
+            m_ir_builder->CreateRet(exit_instr_i32);
+        }
+    }
+
+    // Add incoming values for all exit instr PHI nodes
+    for (auto exit_instr_i = exit_instr_list.begin(); exit_instr_i != exit_instr_list.end(); exit_instr_i++) {
+        auto block = (*exit_instr_i)->getParent();
+        for (auto pred_i = pred_begin(block); pred_i != pred_end(block); pred_i++) {
+            auto pred_address = GetAddressFromBasicBlockName((*pred_i)->getName());
+            (*exit_instr_i)->addIncoming(m_ir_builder->getInt32(pred_address), *pred_i);
         }
     }
 
@@ -1575,7 +1581,8 @@ void Compiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
 
 void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, bd));
-    CreateBranch(CheckBranchCondition(bo, bi), target_i64, lk ? true : false);
+    auto target_i32 = m_ir_builder->CreateTrunc(target_i64, m_ir_builder->getInt32Ty());
+    CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
     //InterpreterCall("BC", &PPUInterpreter::BC, bo, bi, bd, aa, lk);
@@ -1589,7 +1596,8 @@ void Compiler::SC(u32 sc_code) {
 
 void Compiler::B(s32 ll, u32 aa, u32 lk) {
     auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, ll));
-    CreateBranch(nullptr, target_i64, lk ? true : false);
+    auto target_i32 = m_ir_builder->CreateTrunc(target_i64, m_ir_builder->getInt32Ty());
+    CreateBranch(nullptr, target_i32, lk ? true : false);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
     //InterpreterCall("B", &PPUInterpreter::B, ll, aa, lk);
@@ -1609,7 +1617,8 @@ void Compiler::MCRF(u32 crfd, u32 crfs) {
 void Compiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
     auto lr_i64 = GetLr();
     lr_i64      = m_ir_builder->CreateAnd(lr_i64, ~0x3ULL);
-    CreateBranch(CheckBranchCondition(bo, bi), lr_i64, lk ? true : false, true);
+    auto lr_i32 = m_ir_builder->CreateTrunc(lr_i64, m_ir_builder->getInt32Ty());
+    CreateBranch(CheckBranchCondition(bo, bi), lr_i32, lk ? true : false, true);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
     //InterpreterCall("BCLR", &PPUInterpreter::BCLR, bo, bi, bh, lk);
@@ -1710,7 +1719,8 @@ void Compiler::CROR(u32 crbd, u32 crba, u32 crbb) {
 void Compiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
     auto ctr_i64 = GetCtr();
     ctr_i64      = m_ir_builder->CreateAnd(ctr_i64, ~0x3ULL);
-    CreateBranch(CheckBranchCondition(bo, bi), ctr_i64, lk ? true : false);
+    auto ctr_i32 = m_ir_builder->CreateTrunc(ctr_i64, m_ir_builder->getInt32Ty());
+    CreateBranch(CheckBranchCondition(bo, bi), ctr_i32, lk ? true : false);
     //m_hit_branch_instruction = true;
     //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
     //InterpreterCall("BCCTR", &PPUInterpreter::BCCTR, bo, bi, bh, lk);
@@ -4148,7 +4158,7 @@ void Compiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
     //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
 }
 
-std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::string & suffix) {
+std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::string & suffix) const {
     std::string name;
 
     if (address == 0) {
@@ -4166,7 +4176,7 @@ std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::strin
     return name;
 }
 
-u32 Compiler::GetAddressFromBasicBlockName(const std::string & name) {
+u32 Compiler::GetAddressFromBasicBlockName(const std::string & name) const {
     if (name.compare(0, 6, "instr_") == 0) {
         return strtoul(name.c_str() + 6, nullptr, 0);
     } else if (name == GetBasicBlockNameFromAddress(0)) {
@@ -4585,7 +4595,7 @@ Value * Compiler::CheckBranchCondition(u32 bo, u32 bi) {
     return cmp_i1;
 }
 
-void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool lk, bool target_is_lr) {
+void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool lk, bool target_is_lr) {
     if (lk) {
         SetLr(m_ir_builder->getInt64(m_state.current_instruction_address + 4));
     }
@@ -4593,18 +4603,18 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool
     auto current_block = m_ir_builder->GetInsertBlock();
 
     BasicBlock * target_block  = nullptr;
-    if (dyn_cast<ConstantInt>(target_i64)) {
+    if (dyn_cast<ConstantInt>(target_i32)) {
         // Target address is an immediate value.
-        u32 target_address = (u32)(dyn_cast<ConstantInt>(target_i64)->getLimitedValue());
+        u32 target_address = (u32)(dyn_cast<ConstantInt>(target_i32)->getLimitedValue());
         if (lk) {
             // Function call
             if (cmp_i1) { // There is no need to create a new block for an unconditional jump
-                target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+                target_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "target");
                 m_ir_builder->SetInsertPoint(target_block);
             }
 
-            SetPc(target_i64);
-            IndirectCall(target_address, true);
+            SetPc(target_i32);
+            IndirectCall(target_address, m_ir_builder->getInt64(0), true);
             m_ir_builder->CreateBr(GetBasicBlockFromAddress(m_state.current_instruction_address + 4));
         } else {
             // Local branch
@@ -4613,34 +4623,40 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i64, bool
     } else {
         // Target address is in a register
         if (cmp_i1) { // There is no need to create a new block for an unconditional jump
-            target_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
+            target_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "target");
             m_ir_builder->SetInsertPoint(target_block);
         }
 
-        SetPc(target_i64);
-
+        SetPc(target_i32);
         if (target_is_lr && !lk) {
-            // Return from function call
-            m_ir_builder->CreateRet(m_ir_builder->getInt64(0));
+            // Return from this function
+            m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
         } else if (lk) {
-            auto next_block = GetBasicBlockFromAddress(m_state.current_instruction_address + 4);
-            auto call_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
-            m_ir_builder->CreateOr(m_ir_builder->getInt64(m_state.cfg_entry->first), (uint64_t)0);
-            auto switch_instr = m_ir_builder->CreateSwitch(target_i64, call_block);
-            m_ir_builder->SetInsertPoint(call_block);
-            IndirectCall(0, true);
+            auto next_block             = GetBasicBlockFromAddress(m_state.current_instruction_address + 4);
+            auto unknown_function_block = GetBasicBlockFromAddress(m_state.current_instruction_address, "unknown_function");
+
+            auto switch_instr = m_ir_builder->CreateSwitch(target_i32, unknown_function_block);
+            m_ir_builder->SetInsertPoint(unknown_function_block);
+            m_ir_builder->CreateCall3(m_unknown_function, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], m_ir_builder->getInt64(0));
             m_ir_builder->CreateBr(next_block);
-            for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
-                call_block = BasicBlock::Create(m_ir_builder->getContext(), "", m_state.function);
-                m_ir_builder->SetInsertPoint(call_block);
-                IndirectCall(i->address, true);
-                m_ir_builder->CreateBr(next_block);
-                switch_instr->addCase(m_ir_builder->getInt32(i->address), call_block);
+
+            auto call_i = m_state.cfg->calls.find(m_state.current_instruction_address);
+            if (call_i != m_state.cfg->calls.end()) {
+                for (auto function_i = call_i->second.begin(); function_i != call_i->second.end(); function_i++) {
+                    auto block = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("0x%08X", *function_i));
+                    m_ir_builder->SetInsertPoint(block);
+                    IndirectCall(*function_i, m_ir_builder->getInt64(0), true);
+                    m_ir_builder->CreateBr(next_block);
+                    switch_instr->addCase(m_ir_builder->getInt32(*function_i), block);
+                }
             }
         } else {
-            auto switch_instr = m_ir_builder->CreateSwitch(target_i64, GetBasicBlockFromAddress(0xFFFFFFFF));
-            for (auto i = m_state.cfg_entry->second.begin(); i != m_state.cfg_entry->second.end(); i++) {
-                switch_instr->addCase(m_ir_builder->getInt64(i->address), GetBasicBlockFromAddress(i->address));
+            auto switch_instr = m_ir_builder->CreateSwitch(target_i32, GetBasicBlockFromAddress(0xFFFFFFFF));
+            auto branch_i     = m_state.cfg->branches.find(m_state.current_instruction_address);
+            if (branch_i != m_state.cfg->branches.end()) {
+                for (auto next_instr_i = branch_i->second.begin(); next_instr_i != branch_i->second.end(); next_instr_i++) {
+                    switch_instr->addCase(m_ir_builder->getInt32(*next_instr_i), GetBasicBlockFromAddress(*next_instr_i));
+                }
             }
         }
     }
@@ -4820,14 +4836,11 @@ Value * Compiler::Call(const char * name, Func function, Args... args) {
     return m_ir_builder->CreateCall(fn, fn_args);
 }
 
-llvm::Value * Compiler::IndirectCall(u32 address, bool is_function) {
+llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_function) {
     auto ordinal             = m_recompilation_engine.AllocateOrdinal(address, is_function);
     auto executable_addr_i64 = m_ir_builder->getInt64(m_recompilation_engine.GetAddressOfExecutableLookup() + (ordinal * sizeof(u64)));
     auto executable_ptr      = m_ir_builder->CreateIntToPtr(executable_addr_i64, m_compiled_function_type);
-    return m_ir_builder->CreateCall4(executable_ptr, m_state.args[CompileTaskState::Args::ExecutionEngine],
-                                     m_state.args[CompileTaskState::Args::State],
-                                     m_state.args[CompileTaskState::Args::Interpreter],
-                                     m_state.args[CompileTaskState::Args::Tracer]);
+    return m_ir_builder->CreateCall3(executable_ptr, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
 }
 
 void Compiler::InitRotateMask() {
@@ -4986,7 +4999,7 @@ void RecompilationEngine::Task() {
 }
 
 void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution_trace) {
-    auto execution_trace_id          = GetExecutionTraceId(execution_trace);
+    auto execution_trace_id          = execution_trace.GetId();
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
         Log() << "Trace: " << execution_trace.ToString() << "\n";
@@ -4995,38 +5008,33 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
 
         auto split_trace = false;
         auto block_i     = m_block_table.end();
-        auto trace_block_i       = execution_trace.blocks.begin();
-        for (; trace_block_i != execution_trace.blocks.end(); trace_block_i++) {
-            if (trace_block_i->type == BlockId::Type::Exit) {
+        for (auto trace_i = execution_trace.entries.begin(); trace_i != execution_trace.entries.end(); trace_i++) {
+            if (trace_i->type == ExecutionTraceEntry::Type::CompiledBlock) {
                 block_i     = m_block_table.end();
                 split_trace = true;
-            } else if (block_i == m_block_table.end()) {
-                BlockEntry key(trace_block_i->address);
+            }
+
+            if (block_i == m_block_table.end()) {
+                BlockEntry key(trace_i->GetPrimaryAddress(), execution_trace.function_address);
 
                 block_i = m_block_table.find(&key);
                 if (block_i == m_block_table.end()) {
-                    block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.address));
+                    block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
                 }
 
-                (*block_i)->is_function_start = key.address == execution_trace.function_address;
                 tmp_block_list.push_back(*block_i);
             }
 
-            if (block_i != m_block_table.end()) {
-                BlockId next_block;
-                if (trace_block_i + 1 != execution_trace.blocks.end()) {
-                    next_block = *(trace_block_i + 1);
-                } else {
-                    if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
-                        next_block = *(execution_trace.blocks.begin());
-                    } else {
-                        next_block.address = 0;
-                        next_block.type    = BlockId::Type::Exit;
-                    }
+            const ExecutionTraceEntry * next_trace = nullptr;
+            if (trace_i + 1 != execution_trace.entries.end()) {
+                next_trace = &(*(trace_i + 1));
+            } else if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
+                if (!split_trace && execution_trace.type == ExecutionTrace::Type::Loop) {
+                    next_trace = &(*(execution_trace.entries.begin()));
                 }
-
-                UpdateControlFlowGraph((*block_i)->cfg, *trace_block_i, next_block);
             }
+
+            UpdateControlFlowGraph((*block_i)->cfg, *trace_i, next_trace);
         }
 
         processed_execution_trace_i = m_processed_execution_traces.insert(m_processed_execution_traces.end(), std::make_pair(execution_trace_id, std::move(tmp_block_list)));
@@ -5045,24 +5053,26 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
     std::remove_if(processed_execution_trace_i->second.begin(), processed_execution_trace_i->second.end(), [](const BlockEntry * b)->bool { return b->is_compiled; });
 }
 
-void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId block, BlockId next_block) {
-    if (block.type == BlockId::Type::Exit && next_block.type == BlockId::Type::Exit) {
-        return;
-    }
+void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry) {
+    if (this_entry.type == ExecutionTraceEntry::Type::Instruction) {
+        cfg.instruction_addresses.insert(this_entry.GetPrimaryAddress());
 
-    if (block.type == BlockId::Type::FunctionCall) {
-        return;
-    }
-
-    auto block_i = std::find_if(cfg.begin(), cfg.end(), [&block](const ControlFlowGraph::value_type & v)->bool { return v.first == block.address; });
-    if (block.type == BlockId::Type::Normal && block_i == cfg.end()) {
-        block_i = cfg.insert(cfg.end(), std::make_pair(block.address, std::vector<BlockId>()));
-    }
-
-    if (block_i != cfg.end() && next_block.address && next_block.type != BlockId::Type::Exit) {
-        auto next_block_i = std::find(block_i->second.begin(), block_i->second.end(), next_block);
-        if (next_block_i == block_i->second.end()) {
-            block_i->second.push_back(next_block);
+        if (next_entry) {
+            if (next_entry->type == ExecutionTraceEntry::Type::Instruction || next_entry->type == ExecutionTraceEntry::Type::CompiledBlock) {
+                if (next_entry->GetPrimaryAddress() != (this_entry.GetPrimaryAddress() + 4)) {
+                    cfg.branches[this_entry.GetPrimaryAddress()].insert(next_entry->GetPrimaryAddress());
+                }
+            } else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
+                cfg.calls[this_entry.instruction.address].insert(next_entry->GetPrimaryAddress());
+            }
+        }
+    } else if (this_entry.type == ExecutionTraceEntry::Type::CompiledBlock) {
+        if (next_entry) {
+            if (next_entry->type == ExecutionTraceEntry::Type::Instruction || next_entry->type == ExecutionTraceEntry::Type::CompiledBlock) {
+                cfg.branches[this_entry.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
+            } else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
+                cfg.calls[this_entry.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
+            }
         }
     }
 }
@@ -5070,11 +5080,11 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, BlockId
 void RecompilationEngine::CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks) {
     Log() << "Compile: " << block_entry.ToString() << "\n";
 
-    auto ordinal    = AllocateOrdinal(block_entry.address, block_entry.is_function_start);
-    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.address, block_entry.revision++), block_entry.cfg,
-                                         block_entry.is_function_start ? false : true /*inline_all_blocks*/,
-                                         block_entry.is_function_start ? true : false /*generate_linkable_exits*/,
-                                         block_entry.is_function_start ? true : false /*generate_trace*/);
+    auto is_funciton = block_entry.cfg.start_address == block_entry.cfg.function_address;
+    auto ordinal     = AllocateOrdinal(block_entry.cfg.start_address, is_funciton);
+    auto executable  = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
+                                          is_funciton ? false : true /*inline_all*/,
+                                          is_funciton ? true : false /*generate_linkable_exits*/);
     m_executable_lookup[ordinal] = executable;
 }
 
@@ -5090,7 +5100,6 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
 
 Tracer::Tracer()
     : m_recompilation_engine(RecompilationEngine::GetInstance()) {
-    m_trace.reserve(1000);
     m_stack.reserve(100);
 }
 
@@ -5100,81 +5109,59 @@ Tracer::~Tracer() {
 
 void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
     ExecutionTrace * execution_trace = nullptr;
-    BlockId          block_id;
-    int              function;
 
     switch (trace_type) {
     case TraceType::CallFunction:
         // arg1 is address of the function
-        block_id.address = arg1;
-        block_id.type    = BlockId::Type::FunctionCall;
-        m_trace.push_back(block_id);
+        m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::FunctionCall, arg1));
         break;
     case TraceType::EnterFunction:
-        // No args used
-        m_stack.push_back((u32)m_trace.size());
+        // arg1 is address of the function
+        m_stack.push_back(new ExecutionTrace(arg1));
         break;
     case TraceType::ExitFromCompiledFunction:
         // arg1 is address of function.
-        // arg2 is the address of the exit block.
-        block_id.address = arg1;
-        block_id.type    = BlockId::Type::Normal;
-        m_stack.push_back((u32)m_trace.size());
-        m_trace.push_back(block_id);
-
-        block_id.address = arg2;
-        block_id.type    = BlockId::Type::Exit;
-        m_trace.push_back(block_id);
+        // arg2 is the address of the exit instruction.
+        if (arg2) {
+            m_stack.push_back(new ExecutionTrace(arg1));
+            m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::CompiledBlock, arg1, arg2));
+        }
         break;
     case TraceType::Return:
         // No args used
-        function = m_stack.back();
+        execution_trace       = m_stack.back();
+        execution_trace->type = ExecutionTrace::Type::Linear;
         m_stack.pop_back();
-
-        execution_trace                   = new ExecutionTrace();
-        execution_trace->type             = ExecutionTrace::Type::Linear;
-        execution_trace->function_address = m_trace[function].address;
-        std::copy(m_trace.begin() + function, m_trace.end(), std::back_inserter(execution_trace->blocks));
-        m_trace.erase(m_trace.begin() + function, m_trace.end());
         break;
-    case TraceType::EnterBlock:
-        // arg1 is address. Other args are not used.
-        function = m_stack.back();
-        for (int i = (int)m_trace.size() - 1; i >= function; i--) {
-            if (m_trace[i].address == arg1 && m_trace[i].type == BlockId::Type::Normal) {
-                // Found a loop within the current function
-                execution_trace                   = new ExecutionTrace();
-                execution_trace->type             = ExecutionTrace::Type::Loop;
-                execution_trace->function_address = m_trace[function].address;
-                std::copy(m_trace.begin() + i, m_trace.end(), std::back_inserter(execution_trace->blocks));
-                m_trace.erase(m_trace.begin() + i + 1, m_trace.end());
+    case TraceType::Instruction:
+        // arg1 is the address of the instruction
+        for (int i = (int)m_stack.back()->entries.size() - 1; i >= 0; i--) {
+            if ((m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::Instruction && m_stack.back()->entries[i].instruction.address == arg1) ||
+                (m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::CompiledBlock && m_stack.back()->entries[i].compiled_block.entry_address == arg1)) {
+                // Found a loop
+                execution_trace       = new ExecutionTrace(m_stack.back()->function_address);
+                execution_trace->type = ExecutionTrace::Type::Loop;
+                std::copy(m_stack.back()->entries.begin() + i, m_stack.back()->entries.end(), std::back_inserter(execution_trace->entries));
+                m_stack.back()->entries.erase(m_stack.back()->entries.begin() + i + 1, m_stack.back()->entries.end());
                 break;
             }
         }
 
         if (!execution_trace) {
             // A loop was not found
-            block_id.address = arg1;
-            block_id.type    = BlockId::Type::Normal;
-            m_trace.push_back(block_id);
+            m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::Instruction, arg1));
         }
         break;
     case TraceType::ExitFromCompiledBlock:
-        // arg1 is address of the exit block.
-        block_id.address = arg1;
-        block_id.type    = BlockId::Type::Exit;
-        m_trace.push_back(block_id);
+        // arg1 is address of the compiled block.
+        // arg2 is the address of the exit instruction.
+        m_stack.back()->entries.push_back(ExecutionTraceEntry(ExecutionTraceEntry::Type::CompiledBlock, arg1, arg2));
 
-        if (arg1 == 0) {
+        if (arg2 == 0) {
             // Return from function
-            function = m_stack.back();
+            execution_trace       = m_stack.back();
+            execution_trace->type = ExecutionTrace::Type::Linear;
             m_stack.pop_back();
-
-            execution_trace                   = new ExecutionTrace();
-            execution_trace->type             = ExecutionTrace::Type::Linear;
-            execution_trace->function_address = m_trace[function].address;
-            std::copy(m_trace.begin() + function, m_trace.end(), std::back_inserter(execution_trace->blocks));
-            m_trace.erase(m_trace.begin() + function, m_trace.end());
         }
         break;
     default:
@@ -5204,7 +5191,7 @@ ppu_recompiler_llvm::ExecutionEngine::~ExecutionEngine() {
 }
 
 u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
-    ExecuteFunction(this, &m_ppu, m_interpreter, &m_tracer);
+    ExecuteFunction(&m_ppu, m_interpreter, 0);
     return 0;
 }
 
@@ -5245,14 +5232,20 @@ Executable ppu_recompiler_llvm::ExecutionEngine::GetExecutable(u32 address, Exec
     return executable;
 }
 
-u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteFunction(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
-    tracer->Trace(Tracer::TraceType::EnterFunction, 0, 0);
-    return ExecuteTillReturn(execution_engine, ppu_state, interpreter, tracer);
+u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteFunction(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context) {
+    auto execution_engine = (ExecutionEngine *)ppu_state->GetDecoder();
+    execution_engine->m_tracer.Trace(Tracer::TraceType::EnterFunction, ppu_state->PC, 0);
+    return ExecuteTillReturn(ppu_state, interpreter, 0);
 }
 
-u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(ExecutionEngine * execution_engine, PPUThread * ppu_state, PPUInterpreter * interpreter, Tracer * tracer) {
-    bool terminate = false;
-    bool returned  = true;
+u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context) {
+    auto execution_engine = (ExecutionEngine *)ppu_state->GetDecoder();
+    auto terminate        = false;
+    auto branch_type      = BranchType::NonBranch;
+
+    if (context) {
+        execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledFunction, context >> 32, context & 0xFFFFFFFF);
+    }
 
     while (!terminate && !Emu.IsStopped()) {
         if (Emu.IsPaused()) {
@@ -5260,66 +5253,43 @@ u64 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(ExecutionEngine * ex
             continue;
         }
 
-        BranchType branch_type;
-        if (!returned) {
+        auto executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteTillReturn);
+        if (executable != ExecuteTillReturn) {
+            auto entry = ppu_state->PC;
+            auto exit  = (u32)executable(ppu_state, interpreter, 0);
+            execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledBlock, entry, exit);
+            if (exit == 0) {
+                terminate = true;
+            }
+        } else {
+            execution_engine->m_tracer.Trace(Tracer::TraceType::Instruction, ppu_state->PC, 0);
             auto instruction = re32(vm::get_ref<u32>(ppu_state->PC));
             execution_engine->m_decoder.Decode(instruction);
             branch_type = ppu_state->m_is_branch ? GetBranchTypeFromInstruction(instruction) : BranchType::NonBranch;
             ppu_state->NextPc(4);
-        } else {
-            returned = false;
-            branch_type = BranchType::LocalBranch;
-        }
 
-        Executable executable;
-        switch (branch_type) {
-        case BranchType::Return:
-            tracer->Trace(Tracer::TraceType::Return, 0, 0);
-            terminate = true;
-            break;
-        case BranchType::FunctionCall:
-            tracer->Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
-            executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteFunction);
-            executable(execution_engine, ppu_state, interpreter, tracer);
-            returned = true;
-            break;
-        case BranchType::LocalBranch:
-            tracer->Trace(Tracer::TraceType::EnterBlock, ppu_state->PC, 0);
-            executable = execution_engine->GetExecutable(ppu_state->PC, nullptr);
-            if (executable != nullptr) {
-                auto exit_block = executable(execution_engine, ppu_state, interpreter, tracer);
-                tracer->Trace(Tracer::TraceType::ExitFromCompiledBlock, (u32)exit_block, 0);
-                if (exit_block == 0) {
-                    terminate = true;
-                }
+            switch (branch_type) {
+            case BranchType::Return:
+                execution_engine->m_tracer.Trace(Tracer::TraceType::Return, 0, 0);
+                terminate = true;
+                break;
+            case BranchType::FunctionCall:
+                execution_engine->m_tracer.Trace(Tracer::TraceType::CallFunction, ppu_state->PC, 0);
+                executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteFunction);
+                executable(ppu_state, interpreter, 0);
+                break;
+            case BranchType::LocalBranch:
+                break;
+            case BranchType::NonBranch:
+                break;
+            default:
+                assert(0);
+                break;
             }
-            break;
-        case BranchType::NonBranch:
-            break;
-        default:
-            assert(0);
-            break;
         }
     }
 
     return 0;
-}
-
-std::string ppu_recompiler_llvm::ControlFlowGraphToString(const ControlFlowGraph & cfg) {
-    std::string s;
-
-    for (auto i = cfg.begin(); i != cfg.end(); i++) {
-        s += fmt::Format("0x%08X ->", i->first);
-        for (auto j = i->second.begin(); j != i->second.end(); j++) {
-            s += " " + j->ToString();
-        }
-
-        if (i != (cfg.end() - 1)) {
-            s += "\n";
-        }
-    }
-
-    return s;
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
@@ -5339,14 +5309,4 @@ BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
     }
 
     return type;
-}
-
-ExecutionTraceId ppu_recompiler_llvm::GetExecutionTraceId(const ExecutionTrace & execution_trace) {
-    ExecutionTraceId id = 0;
-
-    for (auto i = execution_trace.blocks.begin(); i != execution_trace.blocks.end(); i++) {
-        id = (id << 8) ^ ((u64)i->address << 32 | _byteswap_ulong((u64)i->address));
-    }
-
-    return id;
 }
