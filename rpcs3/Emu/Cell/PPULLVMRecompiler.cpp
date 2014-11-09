@@ -237,7 +237,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
     m_stats.ir_build_time += std::chrono::duration_cast<std::chrono::nanoseconds>(ir_build_end - compilation_start);
 
     // Optimize this function
-    //m_fpm->run(*m_state.function);
+    m_fpm->run(*m_state.function);
     auto optimize_end          = std::chrono::high_resolution_clock::now();
     m_stats.optimization_time += std::chrono::duration_cast<std::chrono::nanoseconds>(optimize_end - ir_build_end);
 

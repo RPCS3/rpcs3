@@ -111,6 +111,7 @@ void PPUThread::DoRun()
 	break;
 
 	case 2:
+		SetCallStackTracing(false);
 		if (!m_dec) {
 			m_dec = new ppu_recompiler_llvm::ExecutionEngine(*this);
 		}
