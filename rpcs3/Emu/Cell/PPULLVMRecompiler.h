@@ -182,6 +182,34 @@ namespace ppu_recompiler_llvm {
             , function_address(function_address) {
         }
 
+        void operator += (const ControlFlowGraph & other) {
+            for (auto i = other.instruction_addresses.begin(); i != other.instruction_addresses.end(); i++) {
+                instruction_addresses.insert(*i);
+            }
+
+            for (auto i = other.branches.begin(); i != other.branches.end(); i++) {
+                auto j = branches.find(i->first);
+                if (j == branches.end()) {
+                    j = branches.insert(branches.begin(), std::make_pair(i->first, std::set<u32>()));
+                }
+
+                for (auto k = i->second.begin(); k != i->second.end(); k++) {
+                    j->second.insert(*k);
+                }
+            }
+
+            for (auto i = other.calls.begin(); i != other.calls.end(); i++) {
+                auto j = calls.find(i->first);
+                if (j == calls.end()) {
+                    j = calls.insert(calls.begin(), std::make_pair(i->first, std::set<u32>()));
+                }
+
+                for (auto k = i->second.begin(); k != i->second.end(); k++) {
+                    j->second.insert(*k);
+                }
+            }
+        }
+
         std::string ToString() const {
             auto s = fmt::Format("0x%08X (0x%08X):", start_address, function_address);
             for (auto i = instruction_addresses.begin(); i != instruction_addresses.end(); i++) {
@@ -240,11 +268,16 @@ namespace ppu_recompiler_llvm {
         }
 
         std::string ToString() const {
-            return fmt::Format("%s\nNumHits=%u, Revision=%u, IsCompiled=%c", cfg.ToString().c_str(), num_hits, revision, is_compiled ? 'Y' : 'N');
+            return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, IsCompiled=%c",
+                               cfg.start_address, cfg.function_address, num_hits, revision, is_compiled ? 'Y' : 'N');
         }
 
         bool operator == (const BlockEntry & other) const {
             return cfg.start_address == other.cfg.start_address;
+        }
+
+        bool IsFunction() const {
+            return cfg.function_address == cfg.start_address;
         }
 
         struct hash {
@@ -984,6 +1017,9 @@ namespace ppu_recompiler_llvm {
         /// Block table
         std::unordered_set<BlockEntry *, BlockEntry::hash, BlockEntry::equal_to> m_block_table;
 
+        /// Maps a function to the set of all blocks in the function. Key is the address of the function.
+        std::unordered_map<u32, std::vector<BlockEntry *>> m_function_to_blocks;
+
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
         std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
 
@@ -1021,7 +1057,7 @@ namespace ppu_recompiler_llvm {
         void UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry);
 
         /// Compile a block
-        void CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks);
+        void CompileBlock(BlockEntry & block_entry);
 
         /// Mutex used to prevent multiple creation
         static std::mutex s_mutex;

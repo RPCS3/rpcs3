@@ -4991,6 +4991,17 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
                 block_i = m_block_table.find(&key);
                 if (block_i == m_block_table.end()) {
                     block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
+
+                    // Update the function to block map
+                    auto function_to_block_i = m_function_to_blocks.find(execution_trace.function_address);
+                    if (function_to_block_i == m_function_to_blocks.end()) {
+                        function_to_block_i = m_function_to_blocks.insert(m_function_to_blocks.end(), std::make_pair(execution_trace.function_address, std::vector<BlockEntry *>()));
+                    }
+
+                    auto i = std::find(function_to_block_i->second.begin(), function_to_block_i->second.end(), *block_i);
+                    if (i == function_to_block_i->second.end()) {
+                        function_to_block_i->second.push_back(*block_i);
+                    }
                 }
 
                 tmp_block_list.push_back(*block_i);
@@ -5013,7 +5024,7 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
         if (!(*i)->is_compiled) {
             (*i)->num_hits++;
             if ((*i)->num_hits >= 1000) { // TODO: Make this configurable
-                CompileBlock(*(*i), false);
+                CompileBlock(*(*i));
                 (*i)->is_compiled = true;
             }
         }
@@ -5046,16 +5057,32 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
     }
 }
 
-void RecompilationEngine::CompileBlock(BlockEntry & block_entry, bool inline_referenced_blocks) {
+void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 #ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
 #endif
 
-    auto is_function = block_entry.cfg.start_address == block_entry.cfg.function_address;
-    auto ordinal     = AllocateOrdinal(block_entry.cfg.start_address, is_function);
-    auto executable  = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg,
-                                          is_function ? false : true /*inline_all*/,
-                                          is_function ? true : false /*generate_linkable_exits*/);
+    ControlFlowGraph * cfg;
+    ControlFlowGraph   temp_cfg(block_entry.cfg.start_address, block_entry.cfg.function_address);
+    if (block_entry.IsFunction()) {
+        // Form a CFG by merging all the blocks in this function
+        auto function_to_block_i = m_function_to_blocks.find(block_entry.cfg.function_address);
+        for (auto block_i = function_to_block_i->second.begin(); block_i != function_to_block_i->second.end(); block_i++) {
+            temp_cfg += (*block_i)->cfg;
+        }
+
+        cfg = &temp_cfg;
+    } else {
+        cfg = &block_entry.cfg;
+    }
+
+#ifdef _DEBUG
+    Log() << "CFG: " << cfg->ToString() << "\n";
+#endif
+
+    auto ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());
+    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), *cfg, true,
+                                         block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
     m_executable_lookup[ordinal] = executable;
 }
 
