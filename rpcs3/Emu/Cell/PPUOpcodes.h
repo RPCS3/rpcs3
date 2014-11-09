@@ -276,7 +276,7 @@ namespace PPU_opcodes
 		LVEHX  = 0x027, //Load Vector Element Halfword Indexed
 		SUBF   = 0x028,
 		LDUX   = 0x035, //Load Doubleword with Update Indexed
-		DCBST  = 0x036,
+		DCBST  = 0x036, //Data Cache Block Store
 		LWZUX  = 0x037,
 		CNTLZD = 0x03a,
 		ANDC   = 0x03c,
@@ -285,7 +285,7 @@ namespace PPU_opcodes
 		MULHD  = 0x049,
 		MULHW  = 0x04b,
 		LDARX  = 0x054,
-		DCBF   = 0x056,
+		DCBF   = 0x056, //Data Cache Block Flush
 		LBZX   = 0x057,
 		LVX    = 0x067, //Load Vector Indexed
 		NEG    = 0x068,
@@ -311,11 +311,11 @@ namespace PPU_opcodes
 		MULLD  = 0x0e9,
 		ADDME  = 0x0ea,
 		MULLW  = 0x0eb,
-		DCBTST = 0x0f6,
+		DCBTST = 0x0f6, //Data Cache Block Touch for Store
 		STBUX  = 0x0f7,
 		DOZ    = 0x108,
 		ADD    = 0x10a,
-		DCBT   = 0x116,
+		DCBT   = 0x116, //Data Cache Block Touch
 		LHZX   = 0x117,
 		EQV    = 0x11c,
 		ECIWX  = 0x136,
@@ -338,7 +338,7 @@ namespace PPU_opcodes
 		DIVDU  = 0x1c9,
 		DIVWU  = 0x1cb,
 		MTSPR  = 0x1d3,
-		DCBI   = 0x1d6,
+		DCBI   = 0x1d6, //Data Cache Block Invalidate
 		NAND   = 0x1dc,
 		STVXL  = 0x1e7, //Store Vector Indexed Last
 		DIVD   = 0x1e9,
@@ -382,8 +382,8 @@ namespace PPU_opcodes
 		EXTSB  = 0x3ba,
 		STFIWX = 0x3d7,
 		EXTSW  = 0x3da,
-		ICBI   = 0x3d6,
-		DCBZ   = 0x3f6,
+		ICBI   = 0x3d6, //Instruction Cache Block Invalidate
+		DCBZ   = 0x3f6, //Data Cache Block Set to Zero
 	};
 
 	enum G_3aOpcodes //Field 30 - 31
@@ -738,7 +738,7 @@ public:
 	virtual void DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;
 	virtual void MTSPR(u32 spr, u32 rs) = 0;
-	//DCBI
+	virtual void DCBI(u32 ra, u32 rb) = 0;
 	virtual void NAND(u32 ra, u32 rs, u32 rb, bool rc) = 0;
 	virtual void STVXL(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) = 0;

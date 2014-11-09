@@ -1663,6 +1663,10 @@ void Compiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
     //InterpreterCall("CRXOR", &PPUInterpreter::CRXOR, crbd, crba, crbb);
 }
 
+void Compiler::DCBI(u32 ra, u32 rb) {
+    InterpreterCall("DCBI", &PPUInterpreter::DCBI, ra, rb);
+}
+
 void Compiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
     auto cr_i32  = GetCr();
     auto ba_i32  = GetBit(cr_i32, crba);
@@ -3987,7 +3991,12 @@ void Compiler::FRSP(u32 frd, u32 frb, bool rc) {
 }
 
 void Compiler::FCTIW(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FCTIW", &PPUInterpreter::FCTIW, frd, frb, rc);
+    auto rb_f64 = GetFpr(frb);
+    auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
+    SetFpr(frd, res_i32);
+
+    // TODO: Set flags / Handle NaN / Implement Saturation
+    //InterpreterCall("FCTIW", &PPUInterpreter::FCTIW, frd, frb, rc);
 }
 
 void Compiler::FCTIWZ(u32 frd, u32 frb, bool rc) {
@@ -4138,7 +4147,12 @@ void Compiler::FABS(u32 frd, u32 frb, bool rc) {
 }
 
 void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FCTID", &PPUInterpreter::FCTID, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
+    SetFpr(frd, res_i64);
+
+    // TODO: Set flags / Handle NaN / Implement Saturation
+    //InterpreterCall("FCTID", &PPUInterpreter::FCTID, frd, frb, rc);
 }
 
 void Compiler::FCTIDZ(u32 frd, u32 frb, bool rc) {

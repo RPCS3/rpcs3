@@ -29,7 +29,6 @@ VideoDecoder::VideoDecoder(CellVdecCodecType type, u32 profile, u32 addr, u32 si
 	, cbArg(arg)
 	, is_finished(false)
 	, is_closed(false)
-	, is_running(false)
 	, just_started(false)
 	, just_finished(false)
 	, ctx(nullptr)
@@ -225,9 +224,7 @@ u32 vdecOpen(VideoDecoder* data)
 				// TODO: reset data
 				cellVdec->Warning("vdecStartSeq:");
 
-				vdec.reader.addr = 0;
-				vdec.reader.size = 0;
-				vdec.is_running = true;
+				vdec.reader = {};
 				vdec.just_started = true;
 			}
 			break;
@@ -239,7 +236,6 @@ u32 vdecOpen(VideoDecoder* data)
 
 				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 
-				vdec.is_running = false;
 				vdec.just_finished = true;
 			}
 			break;
@@ -595,7 +591,7 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 	VdecFrame vf;
 	if (!vdec->frames.Pop(vf, &sq_no_wait))
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 
@@ -651,7 +647,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 	VdecFrame vf;
 	if (!vdec->frames.Peek(vf, &sq_no_wait))
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
 	}
 

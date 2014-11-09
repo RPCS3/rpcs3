@@ -358,7 +358,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb)
 				{
-					surMixerCb.call(cb_thread, surMixerCbArg, mixcount, 256);
+					surMixerCb.call(cb_thread, surMixerCbArg, (u32)mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();

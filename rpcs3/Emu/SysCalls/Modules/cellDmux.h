@@ -408,7 +408,6 @@ class Demuxer
 {
 public:
 	SQueue<DemuxerTask, 32> job;
-	SQueue<u32, 16> fbSetStream;
 	const u32 memAddr;
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
@@ -416,7 +415,7 @@ public:
 	u32 id;
 	volatile bool is_finished;
 	volatile bool is_closed;
-	volatile bool is_running;
+	std::atomic<bool> is_running;
 
 	PPUThread* dmuxCb;
 

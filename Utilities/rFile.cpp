@@ -21,6 +21,12 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 }
 #endif
 
+#ifdef _WIN32
+#define GET_API_ERROR GetLastError()
+#else
+#define GET_API_ERROR err
+#endif
+
 bool getFileInfo(const char *path, FileInfo *fileInfo) {
 	// TODO: Expand relative paths?
 	fileInfo->fullName = path;
@@ -103,14 +109,15 @@ bool rMkpath(const std::string &path)
 bool rRmdir(const std::string &dir)
 {
 #ifdef _WIN32
-	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str())) {
-		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir.c_str(), GetLastError());
+	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str()))
+#else
+	if (int err = rmdir(dir.c_str()))
+#endif
+	{
+		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir.c_str(), GET_API_ERROR);
 		return false;
 	}
 	return true;
-#else
-	rmdir(dir.c_str());
-#endif
 }
 
 bool rRename(const std::string &from, const std::string &to)
@@ -137,17 +144,14 @@ bool rExists(const std::string &file)
 bool rRemoveFile(const std::string &file)
 {
 #ifdef _WIN32
-	if (!DeleteFile(ConvertUTF8ToWString(file).c_str())) {
-		LOG_ERROR(GENERAL, "Error deleting %s: %i", file.c_str(), GetLastError());
-		return false;
-	}
+	if (!DeleteFile(ConvertUTF8ToWString(file).c_str()))
 #else
-	int err = unlink(file.c_str());
-	if (err) {
-		LOG_ERROR(GENERAL, "Error unlinking %s: %i", file.c_str(), err);
+	if (int err = unlink(file.c_str()))
+#endif
+	{
+		LOG_ERROR(GENERAL, "Error deleting %s: %i", file.c_str(), GET_API_ERROR);
 		return false;
 	}
-#endif
 	return true;
 }
 

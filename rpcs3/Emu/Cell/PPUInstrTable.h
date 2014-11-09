@@ -527,7 +527,7 @@ namespace PPU_instr
 	/*0x1c9*/bind_instr(g1f_list, DIVDU, RD, RA, RB, OE, RC);
 	/*0x1cb*/bind_instr(g1f_list, DIVWU, RD, RA, RB, OE, RC);
 	/*0x1d3*/bind_instr(g1f_list, MTSPR, SPR, RS);
-	/*0x1d6*///DCBI
+	/*0x1d6*/bind_instr(g1f_list, DCBI, RA, RB);
 	/*0x1dc*/bind_instr(g1f_list, NAND, RA, RS, RB, RC);
 	/*0x1e7*/bind_instr(g1f_list, STVXL, VS, RA, RB);
 	/*0x1e9*/bind_instr(g1f_list, DIVD, RD, RA, RB, OE, RC);

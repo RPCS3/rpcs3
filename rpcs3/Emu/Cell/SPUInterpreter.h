@@ -475,6 +475,12 @@ private:
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0xF;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u8[15 - t] = 0x03;
@@ -483,6 +489,12 @@ private:
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0xE;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u16[7 - (t >> 1)] = 0x0203;
@@ -490,6 +502,12 @@ private:
 	void CWX(u32 rt, u32 ra, u32 rb)
 	{
 		const u32 t = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0xC;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 		
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -498,6 +516,12 @@ private:
 	void CDX(u32 rt, u32 ra, u32 rb)
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0x8;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -584,6 +608,12 @@ private:
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xF;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u8[15 - t] = 0x03;
@@ -591,6 +621,12 @@ private:
 	void CHD(u32 rt, u32 ra, s32 i7)
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xE;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -600,6 +636,12 @@ private:
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xC;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u32[3 - (t >> 2)] = 0x00010203;
@@ -607,6 +649,12 @@ private:
 	void CDD(u32 rt, u32 ra, s32 i7)
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0x8;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;

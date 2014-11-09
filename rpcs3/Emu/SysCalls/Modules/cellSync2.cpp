@@ -458,6 +458,8 @@ void cellSync2_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
+		if (!Memory.MainMem.GetStartAddr()) return;
+
 		libsync2 = (u32)Memory.MainMem.AllocAlign(sizeof(libsync2_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libsync2), libsync2_data, sizeof(libsync2_data));
 		libsync2_rtoc = libsync2 + 0xF280;

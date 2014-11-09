@@ -240,7 +240,7 @@ void Emulator::Load()
 
 	try
 	{
-		if(!(is_error = !l.Analyze()) && l.GetMachine() != MACHINE_Unknown)
+		if(!(is_error = !l.Analyze()))
 		{
 			switch(l.GetMachine())
 			{
@@ -260,6 +260,9 @@ void Emulator::Load()
 			case MACHINE_ARM:
 				Memory.Init(Memory_PSV);
 			break;
+
+			default:
+				throw std::string("Unknown machine!");
 			}
 
 			is_error = !l.Load();
@@ -380,10 +383,24 @@ void Emulator::Load()
 	}
 	break;
 
-	default:
-		thread.SetEntry(l.GetEntry());
+	case MACHINE_ARM:
+	{
+		u32 entry = l.GetEntry();
+
+		auto code = vm::psv::ptr<const u32>::make(entry & ~3);
+
+		// evil way to find entry point in .sceModuleInfo.rodata
+		while (code[0] != 0xffffffffu)
+		{
+			entry = code[0] + 0x81000000;
+			code++;
+		}
+
+		thread.SetEntry(entry & ~1);
 		thread.Run();
-	break;
+	
+		break;
+	}
 	}
 
 	m_status = Ready;
