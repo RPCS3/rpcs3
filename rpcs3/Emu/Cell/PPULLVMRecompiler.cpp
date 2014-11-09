@@ -4908,41 +4908,70 @@ raw_fd_ostream & RecompilationEngine::Log() {
 }
 
 void RecompilationEngine::Task() {
+    bool                     work_done_this_iteration = false;
+    bool                     work_done_last_iteration = false;
     std::chrono::nanoseconds idling_time(0);
+    std::chrono::nanoseconds recompiling_time(0);
 
     auto start = std::chrono::high_resolution_clock::now();
     while (!TestDestroy() && !Emu.IsStopped()) {
-        // Wait a few ms for something to happen
-        auto idling_start = std::chrono::high_resolution_clock::now();
-        WaitForAnySignal(250);
-        auto idling_end  = std::chrono::high_resolution_clock::now();
-        idling_time     += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
+        work_done_last_iteration         = work_done_this_iteration;
+        work_done_this_iteration         = false;
+        ExecutionTrace * execution_trace = nullptr;
 
-        u32 num_processed = 0;
-        while (!TestDestroy() && !Emu.IsStopped()) {
-            ExecutionTrace * execution_trace;
+        {
+            std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
 
-            {
-                std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
+            auto i = m_pending_execution_traces.begin();
+            if (i != m_pending_execution_traces.end()) {
+                execution_trace = *i;
+                m_pending_execution_traces.erase(i);
+            }
+        }
 
-                auto i = m_pending_execution_traces.begin();
-                if (i != m_pending_execution_traces.end()) {
-                    execution_trace = *i;
-                    m_pending_execution_traces.erase(i);
-                } else {
-                    break;
+        if (execution_trace) {
+            ProcessExecutionTrace(*execution_trace);
+            delete execution_trace;
+            work_done_this_iteration = true;
+        }
+
+        if (!work_done_this_iteration) {
+            // TODO: Reduce the priority of the recompilation engine thread if its set to high priority
+        }
+
+        if (!work_done_this_iteration && !work_done_last_iteration) {
+            auto recompiling_start = std::chrono::high_resolution_clock::now();
+
+            // Recompile the function with the most number of compiled fragments
+            auto candidate = m_function_table.end();
+            for (auto function_i = m_function_table.begin(); function_i != m_function_table.end(); function_i++) {
+                if ((*function_i)->num_compiled_fragments && (*function_i)->blocks.front()->IsFunction() && (*function_i)->blocks.front()->is_compiled) {
+                    if (candidate != m_function_table.end()) {
+                        if ((*function_i)->num_compiled_fragments > (*candidate)->num_compiled_fragments) {
+                            candidate = function_i;
+                        }
+                    } else {
+                        candidate = function_i;
+                    }
                 }
             }
 
-            ProcessExecutionTrace(*execution_trace);
-            delete execution_trace;
+            if (candidate != m_function_table.end()) {
+                Log() << "Recompiling: " << (*candidate)->ToString() << "\n";
+                CompileBlock(*(*candidate), *((*candidate)->blocks.front()));
+                work_done_this_iteration = true;
+            }
+
+            auto recompiling_end  = std::chrono::high_resolution_clock::now();
+            recompiling_time     += std::chrono::duration_cast<std::chrono::nanoseconds>(recompiling_end - recompiling_start);
         }
 
-        // TODO: Reduce the priority of the recompilation engine thread
-
-        if (num_processed == 0) {
-            // If we get here, it means the recompilation engine is idling.
-            // We should use this oppurtunity to optimize the code.
+        if (!work_done_this_iteration) {
+            // Wait a few ms for something to happen
+            auto idling_start = std::chrono::high_resolution_clock::now();
+            WaitForAnySignal(250);
+            auto idling_end  = std::chrono::high_resolution_clock::now();
+            idling_time     += std::chrono::duration_cast<std::chrono::nanoseconds>(idling_end - idling_start);
         }
     }
 
@@ -4955,6 +4984,7 @@ void RecompilationEngine::Task() {
     Log() << "        Time spent building IR  = " << compiler_stats.ir_build_time.count() / 1000000 << "ms\n";
     Log() << "        Time spent optimizing   = " << compiler_stats.optimization_time.count() / 1000000 << "ms\n";
     Log() << "        Time spent translating  = " << compiler_stats.translation_time.count() / 1000000 << "ms\n";
+    Log() << "    Time spent recompiling      = " << recompiling_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent idling           = " << idling_time.count() / 1000000 << "ms\n";
     Log() << "    Time spent doing misc tasks = " << (total_time.count() - idling_time.count() - compiler_stats.total_time.count()) / 1000000 << "ms\n";
     Log() << "Ordinals allocated              = " << m_next_ordinal << "\n";
@@ -4968,6 +4998,8 @@ void RecompilationEngine::Task() {
 }
 
 void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution_trace) {
+    auto function_i = m_function_table.end();
+
     auto execution_trace_id          = execution_trace.GetId();
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
@@ -4992,16 +5024,16 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
                 if (block_i == m_block_table.end()) {
                     block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
 
-                    // Update the function to block map
-                    auto function_to_block_i = m_function_to_blocks.find(execution_trace.function_address);
-                    if (function_to_block_i == m_function_to_blocks.end()) {
-                        function_to_block_i = m_function_to_blocks.insert(m_function_to_blocks.end(), std::make_pair(execution_trace.function_address, std::vector<BlockEntry *>()));
+                    if (function_i == m_function_table.end()) {
+                        FunctionEntry key(execution_trace.function_address);
+                        function_i = m_function_table.find(&key);
+                        if (function_i == m_function_table.end()) {
+                            function_i = m_function_table.insert(m_function_table.end(), new FunctionEntry(key.address));
+                        }
                     }
 
-                    auto i = std::find(function_to_block_i->second.begin(), function_to_block_i->second.end(), *block_i);
-                    if (i == function_to_block_i->second.end()) {
-                        function_to_block_i->second.push_back(*block_i);
-                    }
+                    // Update the function table
+                    (*function_i)->AddBlock(*block_i);
                 }
 
                 tmp_block_list.push_back(*block_i);
@@ -5024,7 +5056,12 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
         if (!(*i)->is_compiled) {
             (*i)->num_hits++;
             if ((*i)->num_hits >= 1000) { // TODO: Make this configurable
-                CompileBlock(*(*i));
+                if (function_i == m_function_table.end()) {
+                    FunctionEntry key(execution_trace.function_address);
+                    function_i = m_function_table.find(&key);
+                }
+
+                CompileBlock(*(*function_i), *(*i));
                 (*i)->is_compiled = true;
             }
         }
@@ -5057,17 +5094,16 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
     }
 }
 
-void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
+void RecompilationEngine::CompileBlock(FunctionEntry & function_entry, BlockEntry & block_entry) {
 #ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
 #endif
 
-    ControlFlowGraph * cfg;
     ControlFlowGraph   temp_cfg(block_entry.cfg.start_address, block_entry.cfg.function_address);
+    ControlFlowGraph * cfg;
     if (block_entry.IsFunction()) {
         // Form a CFG by merging all the blocks in this function
-        auto function_to_block_i = m_function_to_blocks.find(block_entry.cfg.function_address);
-        for (auto block_i = function_to_block_i->second.begin(); block_i != function_to_block_i->second.end(); block_i++) {
+        for (auto block_i = function_entry.blocks.begin(); block_i != function_entry.blocks.end(); block_i++) {
             temp_cfg += (*block_i)->cfg;
         }
 
@@ -5084,6 +5120,12 @@ void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
     auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), *cfg, true,
                                          block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
     m_executable_lookup[ordinal] = executable;
+
+    if (block_entry.IsFunction()) {
+        function_entry.num_compiled_fragments = 0;
+    } else {
+        function_entry.num_compiled_fragments++;
+    }
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
