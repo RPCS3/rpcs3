@@ -165,6 +165,10 @@ void Rpcs3App::Exit()
 	Ini.Save();
 
 	wxApp::Exit();
+
+#ifdef _WIN32
+	timeEndPeriod(1);
+#endif
 }
 
 void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
@@ -176,6 +180,10 @@ void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 
 Rpcs3App::Rpcs3App()
 {
+#ifdef _WIN32
+	timeBeginPeriod(1);
+#endif
+
 	#if defined(__unix__) && !defined(__APPLE__)
 	XInitThreads();
 	#endif
