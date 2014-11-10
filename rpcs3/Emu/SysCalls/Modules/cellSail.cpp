@@ -595,7 +595,7 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 {
 	cellSail->Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
 
-	if (pSelf->descriptors < 3)
+	if (pSelf->descriptors < 3 && pDesc)
 	{
 		pSelf->descriptors++;
 		pSelf->registeredDescriptors[pSelf->descriptors] = pDesc;
@@ -603,7 +603,7 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 	}
 	else
 	{
-		cellSail->Error("Descriptor limit reached! This should never happen, report this to a developer.");
+		cellSail->Error("Descriptor limit reached or the descriptor is unspecified! This should never happen, report this to a developer.");
 	}
 
 	return CELL_OK;
