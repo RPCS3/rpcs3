@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "sysPrxForUser.h"
 
 //#include "Emu/RSX/GCM.h"
@@ -288,9 +289,11 @@ int cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 
 int cellGcmGetFlipStatus()
 {
-	cellGcmSys->Log("cellGcmGetFlipStatus()");
+	int status = Emu.GetGSManager().GetRender().m_flip_status;
 
-	return Emu.GetGSManager().GetRender().m_flip_status;
+	cellGcmSys->Log("cellGcmGetFlipStatus() -> %d", status);
+
+	return status;
 }
 
 u32 cellGcmGetTiledPitchSize(u32 size)
@@ -498,10 +501,16 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
 	u32 current = ctxt->current;
-	u32 end = ctxt->end;
 
-	if(current + 8 >= end)
+	if (current + 8 == ctxt->begin)
 	{
+		cellGcmSys->Error("cellGcmSetPrepareFlip : queue is full");
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	if (current + 8 >= ctxt->end)
+	{
+		cellGcmSys->Error("Bad flip!");
 		if (s32 res = ctxt->callback(ctxt, 8 /* ??? */))
 		{
 			cellGcmSys->Error("cellGcmSetPrepareFlip : callback failed (0x%08x)", res);

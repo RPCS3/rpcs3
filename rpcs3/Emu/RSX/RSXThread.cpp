@@ -7,6 +7,7 @@
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())

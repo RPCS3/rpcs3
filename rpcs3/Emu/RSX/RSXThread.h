@@ -3,7 +3,6 @@
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
-#include "Emu/SysCalls/Callback.h"
 
 #include <stack>
 #include "Utilities/SSemaphore.h"

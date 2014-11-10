@@ -123,6 +123,7 @@ public:
 	virtual void InitRegs(); 
 	virtual void InitStack();
 	u32 GetStackArg(u32 pos);
+	virtual void DoRun();
 
 public:
 	virtual std::string RegsToString();
@@ -131,7 +132,6 @@ public:
 
 protected:
 	virtual void DoReset();
-	virtual void DoRun();
 	virtual void DoPause();
 	virtual void DoResume();
 	virtual void DoStop();

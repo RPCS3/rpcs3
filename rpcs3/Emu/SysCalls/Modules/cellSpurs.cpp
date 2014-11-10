@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/lv2/sys_ppu_thread.h"
@@ -953,7 +953,7 @@ s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 
 s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 {
-	cellSpurs->Warning("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
+	cellSpurs->Todo("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
 #ifdef PRX_DEBUG_XXX
 	return GetCurrentPPUThread().FastCall2(libsre + 0x8568, libsre_rtoc);
 #endif

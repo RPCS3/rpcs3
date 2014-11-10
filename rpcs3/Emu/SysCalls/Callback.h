@@ -1,11 +1,12 @@
 #pragma once
-#include "CB_FUNC.h"
+
+class CPUThread;
 
 class CallbackManager
 {
 	std::vector<std::function<s32()>> m_cb_list;
 	std::vector<std::function<void()>> m_async_list;
-	PPUThread* m_cb_thread;
+	CPUThread* m_cb_thread;
 	std::mutex m_mutex;
 
 public:

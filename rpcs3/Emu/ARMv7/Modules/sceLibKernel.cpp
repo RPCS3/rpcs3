@@ -1,9 +1,13 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
 extern psv_log_base sceLibKernel;
+
+#define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
 #pragma pack(push, 4)
 
@@ -80,7 +84,7 @@ struct SceKernelSystemInfo
 	} cpuInfo[4];
 };
 
-#pragma pack(pop, 4)
+#pragma pack(pop)
 
 s32 sceKernelCreateThread(
 	vm::psv::ptr<const char> pName,
@@ -91,16 +95,48 @@ s32 sceKernelCreateThread(
 	s32 cpuAffinityMask,
 	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.Todo("sceKernelCreateThread(pName_addr=0x%x ('%s'), entry_addr=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam_addr=0x%x)",
+	sceLibKernel.Error("sceKernelCreateThread(pName_addr=0x%x ('%s'), entry_addr=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam_addr=0x%x)",
 		pName.addr(), pName.get_ptr(), entry.addr(), initPriority, stackSize, attr, cpuAffinityMask, pOptParam.addr());
 
-	return SCE_OK;
+	std::string name = pName.get_ptr();
+
+	ARMv7Thread& new_thread = *(ARMv7Thread*)&Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+
+	u32 id = new_thread.GetId();
+	new_thread.SetEntry(entry.addr() ^ 1);
+	new_thread.SetPrio(initPriority);
+	new_thread.SetStackSize(stackSize);
+	new_thread.SetName(name);
+
+	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x): id = %d", name.c_str(), entry, id);
+
+	new_thread.Run();
+
+	Emu.Pause();
+
+	return id;
 }
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
 {
-	sceLibKernel.Todo("sceKernelStartThread(threadId=%d, argSize=%d, pArgBlock_addr=0x%x)", threadId, argSize, pArgBlock.addr());
+	sceLibKernel.Error("sceKernelStartThread(threadId=%d, argSize=%d, pArgBlock_addr=0x%x)", threadId, argSize, pArgBlock.addr());
 
+	CPUThread* t = Emu.GetCPU().GetThread(threadId);
+
+	if (!t || t->GetType() != CPU_THREAD_ARMv7)
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+	}
+
+	// push arg block onto the stack
+	u32 pos = (static_cast<ARMv7Thread*>(t)->SP -= argSize);
+	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
+
+	// set SceKernelThreadEntry function arguments
+	static_cast<ARMv7Thread*>(t)->write_gpr(0, argSize);
+	static_cast<ARMv7Thread*>(t)->write_gpr(1, pos);
+
+	t->Exec();
 	return SCE_OK;
 }
 

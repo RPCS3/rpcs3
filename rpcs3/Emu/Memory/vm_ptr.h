@@ -1,6 +1,6 @@
 #pragma once
 
-class PPUThread;
+class CPUThread;
 
 namespace vm
 {
@@ -321,9 +321,9 @@ namespace vm
 	public:
 		typedef RT(*type)(T...);
 
-		RT call(PPUThread& CPU, T... args) const; // call using specified PPU thread context, defined in Callback.h (CB_FUNC.h)
+		RT call(CPUThread& CPU, T... args) const; // call using specified CPU thread context, defined in CB_FUNC.h
 
-		RT operator()(T... args) const; // call using current PPU thread context, defined in Callback.h (CB_FUNC.h)
+		RT operator()(T... args) const; // call using current CPU thread context, defined in CB_FUNC.h
 
 		AT addr() const
 		{
