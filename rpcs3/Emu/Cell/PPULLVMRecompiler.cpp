@@ -5094,15 +5094,15 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
                     cfg.branches[this_entry.GetPrimaryAddress()].insert(next_entry->GetPrimaryAddress());
                 }
             } else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
-                cfg.calls[this_entry.instruction.address].insert(next_entry->GetPrimaryAddress());
+                cfg.calls[this_entry.data.instruction.address].insert(next_entry->GetPrimaryAddress());
             }
         }
     } else if (this_entry.type == ExecutionTraceEntry::Type::CompiledBlock) {
         if (next_entry) {
             if (next_entry->type == ExecutionTraceEntry::Type::Instruction || next_entry->type == ExecutionTraceEntry::Type::CompiledBlock) {
-                cfg.branches[this_entry.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
+                cfg.branches[this_entry.data.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
             } else if (next_entry->type == ExecutionTraceEntry::Type::FunctionCall) {
-                cfg.calls[this_entry.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
+                cfg.calls[this_entry.data.compiled_block.exit_address].insert(next_entry->GetPrimaryAddress());
             }
         }
     }
@@ -5190,8 +5190,8 @@ void Tracer::Trace(TraceType trace_type, u32 arg1, u32 arg2) {
     case TraceType::Instruction:
         // arg1 is the address of the instruction
         for (int i = (int)m_stack.back()->entries.size() - 1; i >= 0; i--) {
-            if ((m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::Instruction && m_stack.back()->entries[i].instruction.address == arg1) ||
-                (m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::CompiledBlock && m_stack.back()->entries[i].compiled_block.entry_address == arg1)) {
+            if ((m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::Instruction && m_stack.back()->entries[i].data.instruction.address == arg1) ||
+                (m_stack.back()->entries[i].type == ExecutionTraceEntry::Type::CompiledBlock && m_stack.back()->entries[i].data.compiled_block.entry_address == arg1)) {
                 // Found a loop
                 execution_trace       = new ExecutionTrace(m_stack.back()->function_address);
                 execution_trace->type = ExecutionTrace::Type::Loop;

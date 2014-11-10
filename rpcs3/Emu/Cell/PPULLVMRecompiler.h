@@ -38,7 +38,7 @@ namespace ppu_recompiler_llvm {
                 u32 entry_address;
                 u32 exit_address;
             } compiled_block;
-        };
+        } data;
 
         /// The type of the entry
         enum class Type {
@@ -51,14 +51,14 @@ namespace ppu_recompiler_llvm {
             : type(type) {
             switch (type) {
             case Type::Instruction:
-                instruction.address = arg1;
+                data.instruction.address = arg1;
                 break;
             case Type::FunctionCall:
-                function_call.address = arg1;
+                data.function_call.address = arg1;
                 break;
             case Type::CompiledBlock:
-                compiled_block.entry_address = arg1;
-                compiled_block.exit_address  = arg2;
+                data.compiled_block.entry_address = arg1;
+                data.compiled_block.exit_address  = arg2;
                 break;
             default:
                 assert(0);
@@ -69,11 +69,11 @@ namespace ppu_recompiler_llvm {
         u32 GetPrimaryAddress() const {
             switch (type) {
             case Type::Instruction:
-                return instruction.address;
+                return data.instruction.address;
             case Type::FunctionCall:
-                return function_call.address;
+                return data.function_call.address;
             case Type::CompiledBlock:
-                return compiled_block.entry_address;
+                return data.compiled_block.entry_address;
             default:
                 assert(0);
                 return 0;
@@ -83,11 +83,11 @@ namespace ppu_recompiler_llvm {
         std::string ToString() const {
             switch (type) {
             case Type::Instruction:
-                return fmt::Format("I:0x%08X", instruction.address);
+                return fmt::Format("I:0x%08X", data.instruction.address);
             case Type::FunctionCall:
-                return fmt::Format("F:0x%08X", function_call.address);
+                return fmt::Format("F:0x%08X", data.function_call.address);
             case Type::CompiledBlock:
-                return fmt::Format("C:0x%08X-0x%08X", compiled_block.entry_address, compiled_block.exit_address);
+                return fmt::Format("C:0x%08X-0x%08X", data.compiled_block.entry_address, data.compiled_block.exit_address);
             default:
                 assert(0);
                 return "";
@@ -98,15 +98,15 @@ namespace ppu_recompiler_llvm {
             u64 hash = ((u64)type << 32);
             switch (type) {
             case Type::Instruction:
-                hash |= instruction.address;
+                hash |= data.instruction.address;
                 break;
             case Type::FunctionCall:
-                hash |= function_call.address;
+                hash |= data.function_call.address;
                 break;
             case Type::CompiledBlock:
-                hash   = compiled_block.exit_address;
+                hash   = data.compiled_block.exit_address;
                 hash <<= 32;
-                hash  |= compiled_block.entry_address;
+                hash  |= data.compiled_block.entry_address;
                 break;
             default:
                 assert(0);
