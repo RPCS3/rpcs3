@@ -26,7 +26,7 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable unknown_function, const Executable unknown_block)
+Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block)
     : m_recompilation_engine(recompilation_engine) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
@@ -70,13 +70,13 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
     arg_types.push_back(m_ir_builder->getInt64Ty());
     m_compiled_function_type = FunctionType::get(m_ir_builder->getInt32Ty(), arg_types, false);
 
-    m_unknown_function = (Function *)m_module->getOrInsertFunction("unknown_function", m_compiled_function_type);
-    m_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
-    m_execution_engine->addGlobalMapping(m_unknown_function, unknown_function);
+    m_execute_unknown_function = (Function *)m_module->getOrInsertFunction("execute_unknown_function", m_compiled_function_type);
+    m_execute_unknown_function->setCallingConv(CallingConv::X86_64_Win64);
+    m_execution_engine->addGlobalMapping(m_execute_unknown_function, (void *)execute_unknown_function);
 
-    m_unknown_block = (Function *)m_module->getOrInsertFunction("unknown_block", m_compiled_function_type);
-    m_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
-    m_execution_engine->addGlobalMapping(m_unknown_block, unknown_block);
+    m_execute_unknown_block = (Function *)m_module->getOrInsertFunction("execute_unknown_block", m_compiled_function_type);
+    m_execute_unknown_block->setCallingConv(CallingConv::X86_64_Win64);
+    m_execution_engine->addGlobalMapping(m_execute_unknown_block, (void *)execute_unknown_block);
 
     if (!s_rotate_mask_inited) {
         InitRotateMask();
@@ -178,7 +178,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
             m_ir_builder->SetInsertPoint(then_bb);
             context_i64 = m_ir_builder->CreateZExt(ret_i32, m_ir_builder->getInt64Ty());
             context_i64 = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
-            m_ir_builder->CreateCall3(m_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
+            m_ir_builder->CreateCall3(m_execute_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
             m_ir_builder->CreateBr(merge_bb);
 
             m_ir_builder->SetInsertPoint(merge_bb);
@@ -204,7 +204,7 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
             m_ir_builder->SetInsertPoint(then_bb);
             auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
             context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
-            m_ir_builder->CreateCall3(m_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
+            m_ir_builder->CreateCall3(m_execute_unknown_block, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
             m_ir_builder->CreateBr(merge_bb);
 
             m_ir_builder->SetInsertPoint(merge_bb);
@@ -4660,7 +4660,7 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 
             auto switch_instr = m_ir_builder->CreateSwitch(target_i32, unknown_function_block);
             m_ir_builder->SetInsertPoint(unknown_function_block);
-            m_ir_builder->CreateCall3(m_unknown_function, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], m_ir_builder->getInt64(0));
+            m_ir_builder->CreateCall3(m_execute_unknown_function, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], m_ir_builder->getInt64(0));
             m_ir_builder->CreateBr(next_block);
 
             auto call_i = m_state.cfg->calls.find(m_state.current_instruction_address);
@@ -4859,9 +4859,10 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullp
 RecompilationEngine::RecompilationEngine()
     : ThreadBase("PPU Recompilation Engine")
     , m_next_ordinal(0)
-    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn)
-    , m_log("PPULLVMRecompiler.log", std::string(), sys::fs::F_Text) {
-    m_log.SetUnbuffered();
+    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn) {
+    std::string error;
+    m_log = new raw_fd_ostream("PPULLVMRecompiler.log", error, sys::fs::F_Text);
+    m_log->SetUnbuffered();
 }
 
 RecompilationEngine::~RecompilationEngine() {
@@ -4918,7 +4919,7 @@ void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
 }
 
 raw_fd_ostream & RecompilationEngine::Log() {
-    return m_log;
+    return *m_log;
 }
 
 void RecompilationEngine::Task() {

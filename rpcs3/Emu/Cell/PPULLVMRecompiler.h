@@ -269,7 +269,7 @@ namespace ppu_recompiler_llvm {
             std::map<std::string, u64> interpreter_fallback_stats;
         };
 
-        Compiler(RecompilationEngine & recompilation_engine, const Executable unknown_function, const Executable unknown_block);
+        Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block);
 
         Compiler(const Compiler & other) = delete;
         Compiler(Compiler && other) = delete;
@@ -731,11 +731,11 @@ namespace ppu_recompiler_llvm {
         /// Recompilation engine
         RecompilationEngine & m_recompilation_engine;
 
-        /// The function that will be called to process unknown functions
-        llvm::Function * m_unknown_function;
+        /// The function that will be called to execute unknown functions
+        llvm::Function * m_execute_unknown_function;
 
-        /// The executable that will be called to process unknown blocks
-        llvm::Function *  m_unknown_block;
+        /// The executable that will be called to execute unknown blocks
+        llvm::Function *  m_execute_unknown_block;
 
         /// LLVM context
         llvm::LLVMContext * m_llvm_context;
@@ -1087,7 +1087,7 @@ namespace ppu_recompiler_llvm {
         Compiler m_compiler;
 
         /// Log
-        llvm::raw_fd_ostream m_log;
+        llvm::raw_fd_ostream * m_log;
 
         /// Executable lookup table
         Executable m_executable_lookup[10000]; // TODO: Adjust size
