@@ -149,11 +149,12 @@ public:
 	IniEntry<int> PadHandlerRStickUp;
 
 	// HLE/Miscs
+	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLELogging;
+	IniEntry<bool> RSXLogging;
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
-	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
 
 	//Auto Pause
@@ -224,6 +225,7 @@ public:
 
 		// HLE/Misc
 		HLELogging.Init("HLE_HLELogging", path);
+		RSXLogging.Init("RSX_Logging", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
@@ -294,6 +296,7 @@ public:
 
 		// HLE/Miscs
 		HLELogging.Load(false);
+		RSXLogging.Load(false);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
@@ -365,6 +368,7 @@ public:
 
 		// HLE/Miscs
 		HLELogging.Save();
+		RSXLogging.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();

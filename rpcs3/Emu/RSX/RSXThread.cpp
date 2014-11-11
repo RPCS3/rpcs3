@@ -2231,6 +2231,10 @@ void RSXThread::Task()
 		const u32 cmd = ReadIO32(get);
 		const u32 count = (cmd >> 18) & 0x7ff;
 		//if(cmd == 0) continue;
+
+		if (Ini.RSXLogging.GetValue())
+			LOG_NOTICE(Log::RSX, "%s (cmd=0x%x)", GetMethodName(cmd & 0xffff).c_str(), cmd);
+
 		//LOG_NOTICE(Log::RSX, "put=0x%x, get=0x%x, cmd=0x%x (%s)", put, get, cmd, GetMethodName(cmd & 0xffff).c_str());
 
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)

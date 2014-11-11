@@ -1100,6 +1100,6 @@ struct CellSailPlayer
 	vm::ptr<CellSailPlayerResource> resource;
 	vm::ptr<CellSailStartCommand> playbackCommand;
 	be_t<s32> repeatMode;
-	be_t<u32> descriptors;
+	be_t<s32> descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
 };
