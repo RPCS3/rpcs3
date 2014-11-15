@@ -43,6 +43,8 @@ protected:
 
 	CPUDecoder* m_dec;
 
+	bool m_trace_call_stack;
+
 public:
 	virtual void InitRegs()=0;
 
@@ -113,6 +115,8 @@ public:
 		return temp;
 	}
 
+	CPUDecoder * GetDecoder() { return m_dec; };
+
 public:
 	u32 entry;
 	u32 PC;
@@ -174,6 +178,8 @@ public:
 	u32 GetError() const { return m_error; }
 	u32 GetId() const { return m_id; }
 	CPUThreadType GetType()	const { return m_type; }
+
+	void SetCallStackTracing(bool trace_call_stack) { m_trace_call_stack = trace_call_stack; }
 
 	void Reset();
 	void Close();
