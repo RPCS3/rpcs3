@@ -43,18 +43,18 @@ u32 map_offset_pos = 0;
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
 	if (sdk_version >= 0x00220000) {
-		return 0x0F900000;  // 249MB
+		return 0x0F900000; // 249MB
 	}
 	if (sdk_version >= 0x00200000) {
-		return 0x0F200000;  // 242MB
+		return 0x0F200000; // 242MB
 	}
 	if (sdk_version >= 0x00190000) {
-		return 0x0EA00000;  // 234MB
+		return 0x0EA00000; // 234MB
 	}
 	if (sdk_version >= 0x00180000) {
-		return 0x0E800000;  // 232MB
+		return 0x0E800000; // 232MB
 	}
-	return 0x0E000000;  // 224MB
+	return 0x0E000000; // 224MB
 }
 
 CellGcmOffsetTable offsetTable;
