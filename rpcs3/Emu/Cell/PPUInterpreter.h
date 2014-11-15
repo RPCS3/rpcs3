@@ -133,20 +133,38 @@ private:
 		return ctr_ok && cond_ok;
 	}
 
-	u64& GetRegBySPR(u32 spr)
+	u64 ReadSPR(u32 spr)
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
-		switch(n)
+		switch (n)
 		{
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
 		case 0x100: return CPU.USPRG0;
+		case 0x10C: return CPU.TBL;
 		}
 
-		UNK(fmt::Format("GetRegBySPR error: Unknown SPR 0x%x!", n));
+		UNK(fmt::Format("ReadSPR error: Unknown SPR 0x%x!", n));
 		return CPU.XER.XER;
+	}
+
+	void WriteSPR(u32 spr, u64 value)
+	{
+		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
+
+		switch (n)
+		{
+		case 0x001: CPU.XER.XER = value; return;
+		case 0x008: CPU.LR = value; return;
+		case 0x009: CPU.CTR = value; return;
+		case 0x100: CPU.USPRG0 = value; return;
+		case 0x10C: CPU.TBL = value; return;
+		}
+
+		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));
+		return;
 	}
 	
 	void TDI(u32 to, u32 ra, s32 simm16)
@@ -2911,7 +2929,7 @@ private:
 	}
 	void MFSPR(u32 rd, u32 spr)
 	{
-		CPU.GPR[rd] = GetRegBySPR(spr);
+		CPU.GPR[rd] = ReadSPR(spr);
 	}
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3062,7 +3080,7 @@ private:
 	}
 	void MTSPR(u32 spr, u32 rs)
 	{
-		GetRegBySPR(spr) = CPU.GPR[rs];
+		WriteSPR(spr, CPU.GPR[rs]);
 	}
 	void DCBI(u32 ra, u32 rb)
 	{
