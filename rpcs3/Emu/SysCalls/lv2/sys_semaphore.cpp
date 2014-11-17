@@ -33,7 +33,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr
 
         if (attr.addr() == NULL) {
             sys_semaphore.Error("sys_semaphore_create(): An invalid argument value is specified (attr_addr=0x%x)", attr.addr());
-            return CELL_EINVAL;
+            return CELL_EFAULT;
         }
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
