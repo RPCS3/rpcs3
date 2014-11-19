@@ -214,7 +214,7 @@ namespace ppu_recompiler_llvm {
         }
 
         std::string ToString() const {
-            auto s = fmt::Format("0x%08X (0x%08X):", start_address, function_address);
+            auto s = fmt::Format("0x%08X (0x%08X): Size=%u ->", start_address, function_address, GetSize());
             for (auto i = instruction_addresses.begin(); i != instruction_addresses.end(); i++) {
                 s += fmt::Format(" 0x%08X", *i);
             }
@@ -236,6 +236,12 @@ namespace ppu_recompiler_llvm {
             }
 
             return s;
+        }
+
+        /// Get the size of the CFG. The size is a score of how large the CFG is and increases everytime
+        /// a node or an edge is added to the CFG.
+        size_t GetSize() const {
+            return instruction_addresses.size() + branches.size() + calls.size();
         }
     };
 
@@ -970,6 +976,9 @@ namespace ppu_recompiler_llvm {
             /// The current revision number of this function
             u32 revision;
 
+            /// Size of the CFG when it was last compiled
+            size_t last_compiled_cfg_size;
+
             /// The CFG for this block
             ControlFlowGraph cfg;
 
@@ -979,13 +988,14 @@ namespace ppu_recompiler_llvm {
             BlockEntry(u32 start_address, u32 function_address)
                 : num_hits(0)
                 , revision(0)
+                , last_compiled_cfg_size(0)
                 , is_compiled(false)
                 , cfg(start_address, function_address) {
             }
 
             std::string ToString() const {
-                return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, IsCompiled=%c",
-                                   cfg.start_address, cfg.function_address, num_hits, revision, is_compiled ? 'Y' : 'N');
+                return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
+                                   cfg.start_address, cfg.function_address, num_hits, revision, last_compiled_cfg_size, is_compiled ? 'Y' : 'N');
             }
 
             bool operator == (const BlockEntry & other) const {
@@ -1009,55 +1019,6 @@ namespace ppu_recompiler_llvm {
             };
         };
 
-        /// An entry in the function table
-        struct FunctionEntry {
-            /// Address of the function
-            u32 address;
-
-            /// Number of compiled fragments
-            u32 num_compiled_fragments;
-
-            /// Blocks in the function
-            std::list<BlockEntry *> blocks;
-
-            FunctionEntry(u32 address)
-                : address(address)
-                , num_compiled_fragments(0) {
-            }
-
-            void AddBlock(BlockEntry * block_entry) {
-                auto i = std::find(blocks.begin(), blocks.end(), block_entry);
-                if (i == blocks.end()) {
-                    if (block_entry->IsFunction()) {
-                        // The first block must be the starting block of the function
-                        blocks.push_front(block_entry);
-                    } else {
-                        blocks.push_back(block_entry);
-                    }
-                }
-            }
-
-            std::string ToString() const {
-                return fmt::Format("0x%08X: NumCompiledFragments=%u, NumBlocks=%u", address, num_compiled_fragments, blocks.size());
-            }
-
-            bool operator == (const FunctionEntry & other) const {
-                return address == other.address;
-            }
-
-            struct hash {
-                size_t operator()(const FunctionEntry * f) const {
-                    return f->address;
-                }
-            };
-
-            struct equal_to {
-                bool operator()(const FunctionEntry * lhs, const FunctionEntry * rhs) const {
-                    return *lhs == *rhs;
-                }
-            };
-        };
-
         /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
         std::mutex m_pending_execution_traces_lock;
 
@@ -1066,9 +1027,6 @@ namespace ppu_recompiler_llvm {
 
         /// Block table
         std::unordered_set<BlockEntry *, BlockEntry::hash, BlockEntry::equal_to> m_block_table;
-
-        /// Function table
-        std::unordered_set<FunctionEntry *, FunctionEntry::hash, FunctionEntry::equal_to> m_function_table;
 
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
         std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
@@ -1107,7 +1065,7 @@ namespace ppu_recompiler_llvm {
         void UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry);
 
         /// Compile a block
-        void CompileBlock(FunctionEntry & function_entry, BlockEntry & block_entry);
+        void CompileBlock(BlockEntry & block_entry);
 
         /// Mutex used to prevent multiple creation
         static std::mutex s_mutex;

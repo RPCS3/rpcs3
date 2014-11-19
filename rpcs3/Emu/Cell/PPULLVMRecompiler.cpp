@@ -4923,16 +4923,14 @@ raw_fd_ostream & RecompilationEngine::Log() {
 }
 
 void RecompilationEngine::Task() {
-    bool                     work_done_this_iteration = false;
-    bool                     work_done_last_iteration = false;
+    bool                     is_idling = false;
     std::chrono::nanoseconds idling_time(0);
     std::chrono::nanoseconds recompiling_time(0);
 
     auto start = std::chrono::high_resolution_clock::now();
     while (!TestDestroy() && !Emu.IsStopped()) {
-        work_done_last_iteration         = work_done_this_iteration;
-        work_done_this_iteration         = false;
-        ExecutionTrace * execution_trace = nullptr;
+        bool             work_done_this_iteration = false;
+        ExecutionTrace * execution_trace          = nullptr;
 
         {
             std::lock_guard<std::mutex> lock(m_pending_execution_traces_lock);
@@ -4952,28 +4950,29 @@ void RecompilationEngine::Task() {
 
         if (!work_done_this_iteration) {
             // TODO: Reduce the priority of the recompilation engine thread if its set to high priority
+        } else {
+            is_idling = false;
         }
 
-        if (!work_done_this_iteration && !work_done_last_iteration) {
+        if (is_idling) {
             auto recompiling_start = std::chrono::high_resolution_clock::now();
 
-            // Recompile the function with the most number of compiled fragments
-            auto candidate = m_function_table.end();
-            for (auto function_i = m_function_table.begin(); function_i != m_function_table.end(); function_i++) {
-                if ((*function_i)->num_compiled_fragments && (*function_i)->blocks.front()->IsFunction() && (*function_i)->blocks.front()->is_compiled) {
-                    if (candidate != m_function_table.end()) {
-                        if ((*function_i)->num_compiled_fragments > (*candidate)->num_compiled_fragments) {
-                            candidate = function_i;
-                        }
-                    } else {
-                        candidate = function_i;
+            // Recompile the function whose CFG has changed the most since the last time it was compiled
+            auto   candidate = (BlockEntry *)nullptr;
+            size_t max_diff  = 0;
+            for (auto block : m_block_table) {
+                if (block->IsFunction() && block->is_compiled) {
+                    auto diff = block->cfg.GetSize() - block->last_compiled_cfg_size;
+                    if (diff > max_diff) {
+                        candidate = block;
+                        max_diff  = diff;
                     }
                 }
             }
 
-            if (candidate != m_function_table.end()) {
-                Log() << "Recompiling: " << (*candidate)->ToString() << "\n";
-                CompileBlock(*(*candidate), *((*candidate)->blocks.front()));
+            if (candidate != nullptr) {
+                Log() << "Recompiling: " << candidate->ToString() << "\n";
+                CompileBlock(*candidate);
                 work_done_this_iteration = true;
             }
 
@@ -4982,6 +4981,8 @@ void RecompilationEngine::Task() {
         }
 
         if (!work_done_this_iteration) {
+            is_idling = true;
+
             // Wait a few ms for something to happen
             auto idling_start = std::chrono::high_resolution_clock::now();
             WaitForAnySignal(250);
@@ -5013,19 +5014,23 @@ void RecompilationEngine::Task() {
 }
 
 void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution_trace) {
-    auto function_i = m_function_table.end();
-
     auto execution_trace_id          = execution_trace.GetId();
     auto processed_execution_trace_i = m_processed_execution_traces.find(execution_trace_id);
     if (processed_execution_trace_i == m_processed_execution_traces.end()) {
 #ifdef _DEBUG
         Log() << "Trace: " << execution_trace.ToString() << "\n";
 #endif
+        // Find the function block
+        BlockEntry key(execution_trace.function_address, execution_trace.function_address);
+        auto       block_i = m_block_table.find(&key);
+        if (block_i == m_block_table.end()) {
+            block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
+        }
 
+        auto function_block = *block_i;
+        block_i             = m_block_table.end();
+        auto split_trace    = false;
         std::vector<BlockEntry *> tmp_block_list;
-
-        auto split_trace = false;
-        auto block_i     = m_block_table.end();
         for (auto trace_i = execution_trace.entries.begin(); trace_i != execution_trace.entries.end(); trace_i++) {
             if (trace_i->type == ExecutionTraceEntry::Type::CompiledBlock) {
                 block_i     = m_block_table.end();
@@ -5034,21 +5039,9 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
 
             if (block_i == m_block_table.end()) {
                 BlockEntry key(trace_i->GetPrimaryAddress(), execution_trace.function_address);
-
                 block_i = m_block_table.find(&key);
                 if (block_i == m_block_table.end()) {
                     block_i = m_block_table.insert(m_block_table.end(), new BlockEntry(key.cfg.start_address, key.cfg.function_address));
-
-                    if (function_i == m_function_table.end()) {
-                        FunctionEntry key(execution_trace.function_address);
-                        function_i = m_function_table.find(&key);
-                        if (function_i == m_function_table.end()) {
-                            function_i = m_function_table.insert(m_function_table.end(), new FunctionEntry(key.address));
-                        }
-                    }
-
-                    // Update the function table
-                    (*function_i)->AddBlock(*block_i);
                 }
 
                 tmp_block_list.push_back(*block_i);
@@ -5062,6 +5055,9 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
             }
 
             UpdateControlFlowGraph((*block_i)->cfg, *trace_i, next_trace);
+            if (*block_i != function_block) {
+                UpdateControlFlowGraph(function_block->cfg, *trace_i, next_trace);
+            }
         }
 
         processed_execution_trace_i = m_processed_execution_traces.insert(m_processed_execution_traces.end(), std::make_pair(execution_trace_id, std::move(tmp_block_list)));
@@ -5071,13 +5067,7 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
         if (!(*i)->is_compiled) {
             (*i)->num_hits++;
             if ((*i)->num_hits >= 1000) { // TODO: Make this configurable
-                if (function_i == m_function_table.end()) {
-                    FunctionEntry key(execution_trace.function_address);
-                    function_i = m_function_table.find(&key);
-                }
-
-                CompileBlock(*(*function_i), *(*i));
-                (*i)->is_compiled = true;
+                CompileBlock(*(*i));
             }
         }
     }
@@ -5109,38 +5099,18 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
     }
 }
 
-void RecompilationEngine::CompileBlock(FunctionEntry & function_entry, BlockEntry & block_entry) {
+void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 #ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
-#endif
-
-    ControlFlowGraph   temp_cfg(block_entry.cfg.start_address, block_entry.cfg.function_address);
-    ControlFlowGraph * cfg;
-    if (block_entry.IsFunction()) {
-        // Form a CFG by merging all the blocks in this function
-        for (auto block_i = function_entry.blocks.begin(); block_i != function_entry.blocks.end(); block_i++) {
-            temp_cfg += (*block_i)->cfg;
-        }
-
-        cfg = &temp_cfg;
-    } else {
-        cfg = &block_entry.cfg;
-    }
-
-#ifdef _DEBUG
     Log() << "CFG: " << cfg->ToString() << "\n";
 #endif
 
     auto ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());
-    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), *cfg, true,
+    auto executable = m_compiler.Compile(fmt::Format("fn_0x%08X_%u", block_entry.cfg.start_address, block_entry.revision++), block_entry.cfg, true,
                                          block_entry.IsFunction() ? true : false /*generate_linkable_exits*/);
-    m_executable_lookup[ordinal] = executable;
-
-    if (block_entry.IsFunction()) {
-        function_entry.num_compiled_fragments = 0;
-    } else {
-        function_entry.num_compiled_fragments++;
-    }
+    m_executable_lookup[ordinal]       = executable;
+    block_entry.last_compiled_cfg_size = block_entry.cfg.GetSize();
+    block_entry.is_compiled            = true;
 }
 
 std::shared_ptr<RecompilationEngine> RecompilationEngine::GetInstance() {
