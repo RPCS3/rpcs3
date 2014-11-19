@@ -146,8 +146,25 @@ private:
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
-		case 0x100: return CPU.USPRG0;
+		case 0x100: 
+		case 0x101:
+		case 0x102:
+		case 0x103:
+		case 0x104:
+		case 0x105:
+		case 0x106:
+		case 0x107: return CPU.USPRG[n - 0x100];
+
 		case 0x10C: return get_time();
+
+		case 0x110:
+		case 0x111:
+		case 0x112:
+		case 0x113:
+		case 0x114:
+		case 0x115:
+		case 0x116:
+		case 0x117: return CPU.SPRG[n - 0x110];
 		}
 
 		UNK(fmt::Format("ReadSPR error: Unknown SPR 0x%x!", n));
@@ -163,8 +180,25 @@ private:
 		case 0x001: CPU.XER.XER = value; return;
 		case 0x008: CPU.LR = value; return;
 		case 0x009: CPU.CTR = value; return;
-		case 0x100: CPU.USPRG0 = value; return;
+		case 0x100: 
+		case 0x101:
+		case 0x102:
+		case 0x103:
+		case 0x104:
+		case 0x105:
+		case 0x106:
+		case 0x107: CPU.USPRG[n - 0x100] = value; break;
+
 		case 0x10C: UNK("WriteSPR: Write to time-based SPR. Report this to a developer!"); return;
+
+		case 0x110:
+		case 0x111:
+		case 0x112:
+		case 0x113:
+		case 0x114:
+		case 0x115:
+		case 0x116:
+		case 0x117: CPU.SPRG[n - 0x110] = value; break;
 		}
 
 		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));

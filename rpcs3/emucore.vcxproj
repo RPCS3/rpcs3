@@ -239,13 +239,11 @@
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
     <ClCompile Include="Ini.cpp" />
-    <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\ELF32.cpp" />
     <ClCompile Include="Loader\ELF64.cpp" />
     <ClCompile Include="Loader\Loader.cpp" />
     <ClCompile Include="Loader\PKG.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
-    <ClCompile Include="Loader\SELF.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
@@ -459,13 +457,11 @@
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Ini.h" />
-    <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\ELF32.h" />
     <ClInclude Include="Loader\ELF64.h" />
     <ClInclude Include="Loader\Loader.h" />
     <ClInclude Include="Loader\PKG.h" />
     <ClInclude Include="Loader\PSF.h" />
-    <ClInclude Include="Loader\SELF.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="restore_new.h" />

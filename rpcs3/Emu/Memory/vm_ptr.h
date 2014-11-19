@@ -10,7 +10,7 @@ namespace vm
 		AT m_addr;
 
 	public:
-		typedef T type;
+		typedef typename std::remove_cv<T>::type type;
 
 		_ptr_base operator++ (int)
 		{
@@ -38,41 +38,41 @@ namespace vm
 			return *this;
 		}
 
-		_ptr_base& operator += (int count)
+		_ptr_base& operator += (AT count)
 		{
 			m_addr += count * sizeof(AT);
 			return *this;
 		}
 
-		_ptr_base& operator -= (int count)
+		_ptr_base& operator -= (AT count)
 		{
 			m_addr -= count * sizeof(AT);
 			return *this;
 		}
 
-		_ptr_base operator + (int count) const
-		{
-			return make(m_addr + count * sizeof(AT));
-		}
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * sizeof(AT)); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * sizeof(AT)); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * sizeof(AT)); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * sizeof(AT)); }
 
-		_ptr_base operator - (int count) const
-		{
-			return make(m_addr - count * sizeof(AT));
-		}
+		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		explicit operator bool() const { return m_addr != 0; }
 
 		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr);
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](int index) const
+		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr + sizeof(AT)* index);
-		}
-
-		operator bool() const
-		{
-			return m_addr != 0;
 		}
 
 		//typedef typename invert_be_t<AT>::type AT2;
@@ -80,7 +80,7 @@ namespace vm
 		template<typename AT2>
 		operator const _ptr_base<T, lvl, AT2>() const
 		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr = m_addr;
 			return (_ptr_base<T, lvl, AT2>&)addr;
 		}
 		
@@ -108,6 +108,8 @@ namespace vm
 		AT m_addr;
 		
 	public:
+		typedef typename std::remove_cv<T>::type type;
+
 		__forceinline T* const operator -> () const
 		{
 			return vm::get_ptr<T>(m_addr);
@@ -139,38 +141,44 @@ namespace vm
 			return *this;
 		}
 
-		_ptr_base& operator += (int count)
+		_ptr_base& operator += (AT count)
 		{
 			m_addr += count * sizeof(T);
 			return *this;
 		}
 
-		_ptr_base& operator -= (int count)
+		_ptr_base& operator -= (AT count)
 		{
 			m_addr -= count * sizeof(T);
 			return *this;
 		}
 
-		_ptr_base operator + (int count) const
-		{
-			return make(m_addr + count * sizeof(T));
-		}
-
-		_ptr_base operator - (int count) const
-		{
-			return make(m_addr - count * sizeof(T));
-		}
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * sizeof(T)); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * sizeof(T)); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * sizeof(T)); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * sizeof(T)); }
 
 		__forceinline T& operator *() const
 		{
-			return get_ref<T>(m_addr);
+			return vm::get_ref<T>(m_addr);
 		}
 
-		__forceinline T& operator [](int index) const
+		__forceinline T& operator [](AT index) const
 		{
-			return get_ref<T>(m_addr + sizeof(T) * index);
+			return vm::get_ref<T>(m_addr + sizeof(AT)* index);
 		}
-		
+
+		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		explicit operator bool() const { return m_addr != 0; }
+		explicit operator T*() const { return get_ptr(); }
+
 		/*
 		operator _ref_base<T, AT>()
 		{
@@ -188,26 +196,27 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		void set(AT value)
 		{
 			m_addr = value;
 		}
 
-		operator bool() const
+		/*
+		operator T*() const
 		{
-			return m_addr != 0;
+			return get_ptr();
 		}
-
+		*/
 		//typedef typename invert_be_t<AT>::type AT2;
 
 		template<typename AT2>
 		operator const _ptr_base<T, 1, AT2>() const
 		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr = m_addr;
 			return (_ptr_base<T, 1, AT2>&)addr;
 		}
 
-		T* const get_ptr() const
+		T* get_ptr() const
 		{
 			return vm::get_ptr<T>(m_addr);
 		}
@@ -236,29 +245,39 @@ namespace vm
 			m_addr = value;
 		}
 
-		void* const get_ptr() const
+		void* get_ptr() const
 		{
 			return vm::get_ptr<void>(m_addr);
 		}
 
-		operator bool() const
+		explicit operator void*() const
 		{
-			return m_addr != 0;
+			return get_ptr();
 		}
+
+		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		explicit operator bool() const { return m_addr != 0; }
 
 		//typedef typename invert_be_t<AT>::type AT2;
 
 		template<typename AT2>
 		operator const _ptr_base<void, 1, AT2>() const
 		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr = m_addr;
 			return (_ptr_base<void, 1, AT2>&)addr;
 		}
 
 		template<typename AT2>
 		operator const _ptr_base<const void, 1, AT2>() const
 		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr = m_addr;
 			return (_ptr_base<const void, 1, AT2>&)addr;
 		}
 
@@ -286,15 +305,25 @@ namespace vm
 			m_addr = value;
 		}
 
-		const void* const get_ptr() const
+		const void* get_ptr() const
 		{
 			return vm::get_ptr<const void>(m_addr);
 		}
 
-		operator bool() const
+		explicit operator const void*() const
 		{
-			return m_addr != 0;
+			return get_ptr();
 		}
+
+		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		explicit operator bool() const { return m_addr != 0; }
 
 		//typedef typename invert_be_t<AT>::type AT2;
 
@@ -335,17 +364,22 @@ namespace vm
 			m_addr = value;
 		}
 
-		operator bool() const
-		{
-			return m_addr != 0;
-		}
+		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		explicit operator bool() const { return m_addr != 0; }
 
 		//typedef typename invert_be_t<AT>::type AT2;
 
 		template<typename AT2>
 		operator const _ptr_base<RT(*)(T...), 1, AT2>() const
 		{
-			typename std::remove_const<AT2>::type addr; addr = m_addr;
+			typename std::remove_const<AT2>::type addr = m_addr;
 			return (_ptr_base<RT(*)(T...), 1, AT2>&)addr;
 		}
 
@@ -356,7 +390,7 @@ namespace vm
 
 		operator const std::function<RT(T...)>() const
 		{
-			typename std::remove_const<AT>::type addr; addr = m_addr;
+			typename std::remove_const<AT>::type addr = m_addr;
 			return [addr](T... args) -> RT { return make(addr)(args...); };
 		}
 
@@ -366,7 +400,7 @@ namespace vm
 	//BE pointer to LE data
 	template<typename T, int lvl = 1, typename AT = u32> struct bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type>
 	{
-		static bptrl make(typename to_be_t<AT>::type addr)
+		static bptrl make(AT addr)
 		{
 			return (bptrl&)addr;
 		}
@@ -378,7 +412,7 @@ namespace vm
 	//BE pointer to BE data
 	template<typename T, int lvl = 1, typename AT = u32> struct bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>
 	{
-		static bptrb make(typename to_be_t<AT>::type addr)
+		static bptrb make(AT addr)
 		{
 			return (bptrb&)addr;
 		}
@@ -413,7 +447,7 @@ namespace vm
 
 	namespace ps3
 	{
-		//default pointer for HLE functions (LE ptrerence to BE data)
+		//default pointer for HLE functions (LE pointer to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrb<T, lvl, AT>
 		{
 			static ptr make(AT addr)
@@ -425,10 +459,10 @@ namespace vm
 			//using lptrb<T, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 		};
 
-		//default pointer for HLE structures (BE ptrerence to BE data)
+		//default pointer for HLE structures (BE pointer to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> struct bptr : public bptrb<T, lvl, AT>
 		{
-			static bptr make(typename to_be_t<AT>::type addr)
+			static bptr make(AT addr)
 			{
 				return (bptr&)addr;
 			}
@@ -440,7 +474,7 @@ namespace vm
 
 	namespace psv
 	{
-		//default pointer for HLE functions & structures (LE ptrerence to LE data)
+		//default pointer for HLE functions & structures (LE pointer to LE data)
 		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrl<T, lvl, AT>
 		{
 			static ptr make(AT addr)

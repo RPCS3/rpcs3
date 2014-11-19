@@ -356,9 +356,6 @@
     <ClCompile Include="Emu\Memory\vm.cpp">
       <Filter>Emu\Memory</Filter>
     </ClCompile>
-    <ClCompile Include="Loader\ELF.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
     <ClCompile Include="Loader\ELF32.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -372,9 +369,6 @@
       <Filter>Loader</Filter>
     </ClCompile>
     <ClCompile Include="Loader\PSF.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
-    <ClCompile Include="Loader\SELF.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
     <ClCompile Include="Loader\TROPUSR.cpp">
@@ -988,9 +982,6 @@
     <ClInclude Include="Emu\Memory\MemoryBlock.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="Loader\ELF.h">
-      <Filter>Loader</Filter>
-    </ClInclude>
     <ClInclude Include="Loader\ELF32.h">
       <Filter>Loader</Filter>
     </ClInclude>
@@ -1004,9 +995,6 @@
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\PSF.h">
-      <Filter>Loader</Filter>
-    </ClInclude>
-    <ClInclude Include="Loader\SELF.h">
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\TROPUSR.h">

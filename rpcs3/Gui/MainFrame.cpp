@@ -20,6 +20,7 @@
 #include "Gui/KernelExplorer.h"
 #include "Gui/MemoryViewer.h"
 #include "Gui/RSXDebugger.h"
+#include "Gui/LLEModulesManager.h"
 
 #include <wx/dynlib.h>
 
@@ -44,6 +45,7 @@ enum IDs
 	id_config_vhdd_manager,
 	id_config_autopause_manager,
 	id_config_savedata_manager,
+	id_config_lle_modules_manager,
 	id_tools_compiler,
 	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
@@ -98,6 +100,8 @@ MainFrame::MainFrame()
 	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
 	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
 	menu_conf->Append(id_config_savedata_manager, "Save Data Utility");
+	menu_conf->Append(id_config_lle_modules_manager, "LLE Modules Manager");
+
 
 	wxMenu* menu_tools = new wxMenu();
 	menubar->Append(menu_tools, "Tools");
@@ -137,6 +141,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigLLEModules, this, id_config_lle_modules_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -671,6 +676,11 @@ void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigSaveData(wxCommandEvent& event)
 {
 	SaveDataListDialog(this, true).ShowModal();
+}
+
+void MainFrame::ConfigLLEModules(wxCommandEvent& event)
+{
+	(new LLEModulesManagerFrame(this))->Show();
 }
 
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))

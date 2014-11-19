@@ -14,7 +14,7 @@
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_mmapper.h"
 #include "Emu/SysCalls/lv2/sys_lwcond.h"
-#include "Loader/ELF.h"
+#include "Loader/ELF32.h"
 #include "Crypto/unself.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sysPrxForUser.h"
@@ -130,11 +130,10 @@ int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<u32> entry)
 
 	f.Seek(0);
 
-	ELFLoader l(f);
-	l.LoadInfo();
-	l.LoadData(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
+	u32 _entry;
+	LoadSpuImage(f, _entry, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
-	*entry = l.GetEntry();
+	*entry = _entry;
 
 	return CELL_OK;
 }

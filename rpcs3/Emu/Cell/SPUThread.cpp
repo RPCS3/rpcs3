@@ -1163,7 +1163,6 @@ void SPUThread::StopAndSignal(u32 code)
 	}
 
 	default:
-	{
 		if (!SPU.Out_MBox.GetCount())
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (no message)", code);
@@ -1175,5 +1174,16 @@ void SPUThread::StopAndSignal(u32 code)
 		Emu.Pause();
 		break;
 	}
-	}
+}
+
+spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+{
+	thread = &Emu.GetCPU().AddThread(CPU_THREAD_SPU);
+
+	thread->SetName(name);
+	thread->SetEntry(entry);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
+	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+
+	argc = 0;
 }

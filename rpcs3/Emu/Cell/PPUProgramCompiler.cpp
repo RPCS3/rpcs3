@@ -1,7 +1,7 @@
 #include "stdafx_gui.h"
 #include "PPUProgramCompiler.h"
 #include "Utilities/rFile.h"
-
+/*
 using namespace PPU_instr;
 
 template<typename TO, typename T>
@@ -78,10 +78,10 @@ SectionInfo::SectionInfo(const std::string& _name)
 	section_name_offs += name.length() + 1;
 }
 
-void SectionInfo::SetDataSize(u32 size, u32 align)
+void SectionInfo::SetDataSize(u32 size, u32 addralign)
 {
-	if(align) shdr.sh_addralign = align;
-	if(shdr.sh_addralign) size = AlignAddr(size, shdr.sh_addralign);
+	if (addralign) shdr.sh_addralign = addralign;
+	if (shdr.sh_addralign) size = align(size, shdr.sh_addralign);
 
 	if(!code.empty())
 	{
@@ -985,7 +985,7 @@ void CompilePPUProgram::Compile()
 	elf_info.e_shnum = 15;
 	elf_info.e_shstrndx = elf_info.e_shnum - 1;
 	elf_info.e_phoff = elf_info.e_ehsize;
-	u32 section_offset = AlignAddr(elf_info.e_phoff + elf_info.e_phnum * elf_info.e_phentsize, 0x100);
+	u32 section_offset = align(elf_info.e_phoff + elf_info.e_phnum * elf_info.e_phentsize, 0x100);
 
 	static const u32 sceStub_text_block = 8 * 4;
 
@@ -1143,7 +1143,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_sceStub_text;
 	memset(&s_sceStub_text, 0, sizeof(Elf64_Shdr));
 	s_sceStub_text.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_sceStub_text.sh_addralign);
+	section_offset = align(section_offset, s_sceStub_text.sh_addralign);
 	s_sceStub_text.sh_type = 1;
 	s_sceStub_text.sh_offset = section_offset;
 	s_sceStub_text.sh_addr = section_offset + 0x10000;
@@ -1167,7 +1167,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_lib_stub_top;
 	memset(&s_lib_stub_top, 0, sizeof(Elf64_Shdr));
 	s_lib_stub_top.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_lib_stub_top.sh_addralign);
+	section_offset = align(section_offset, s_lib_stub_top.sh_addralign);
 	s_lib_stub_top.sh_type = 1;
 	s_lib_stub_top.sh_name = section_name_offset;
 	s_lib_stub_top.sh_offset = section_offset;
@@ -1186,7 +1186,7 @@ void CompilePPUProgram::Compile()
 	s_lib_stub.sh_offset = section_offset;
 	s_lib_stub.sh_addr = section_offset + 0x10000;
 	s_lib_stub.sh_flags = 2;
-	s_lib_stub.sh_size = sizeof(Elf64_StubHeader) * modules.size();
+	s_lib_stub.sh_size = sizeof(sys_stub) * modules.size();
 	sections_names.push_back(".lib.stub");
 	section_name_offset += std::string(".lib.stub").length() + 1;
 	section_offset += s_lib_stub.sh_size;
@@ -1207,7 +1207,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_rodata_sceFNID;
 	memset(&s_rodata_sceFNID, 0, sizeof(Elf64_Shdr));
 	s_rodata_sceFNID.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_rodata_sceFNID.sh_addralign);
+	section_offset = align(section_offset, s_rodata_sceFNID.sh_addralign);
 	s_rodata_sceFNID.sh_type = 1;
 	s_rodata_sceFNID.sh_name = section_name_offset;
 	s_rodata_sceFNID.sh_offset = section_offset;
@@ -1221,7 +1221,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_rodata_sceResident;
 	memset(&s_rodata_sceResident, 0, sizeof(Elf64_Shdr));
 	s_rodata_sceResident.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_rodata_sceResident.sh_addralign);
+	section_offset = align(section_offset, s_rodata_sceResident.sh_addralign);
 	s_rodata_sceResident.sh_type = 1;
 	s_rodata_sceResident.sh_name = section_name_offset;
 	s_rodata_sceResident.sh_offset = section_offset;
@@ -1232,7 +1232,7 @@ void CompilePPUProgram::Compile()
 	{
 		s_rodata_sceResident.sh_size += module.m_name.length() + 1;
 	}
-	s_rodata_sceResident.sh_size = AlignAddr(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
+	s_rodata_sceResident.sh_size = align(s_rodata_sceResident.sh_size, s_rodata_sceResident.sh_addralign);
 	sections_names.push_back(".rodata.sceResident");
 	section_name_offset += std::string(".rodata.sceResident").length() + 1;
 	section_offset += s_rodata_sceResident.sh_size;
@@ -1240,7 +1240,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_lib_ent_top;
 	memset(&s_lib_ent_top, 0, sizeof(Elf64_Shdr));
 	s_lib_ent_top.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_lib_ent_top.sh_addralign);
+	section_offset = align(section_offset, s_lib_ent_top.sh_addralign);
 	s_lib_ent_top.sh_size = 4;
 	s_lib_ent_top.sh_flags = 2;
 	s_lib_ent_top.sh_type = 1;
@@ -1267,7 +1267,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_sys_proc_prx_param;
 	memset(&s_sys_proc_prx_param, 0, sizeof(Elf64_Shdr));
 	s_sys_proc_prx_param.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_sys_proc_prx_param.sh_addralign);
+	section_offset = align(section_offset, s_sys_proc_prx_param.sh_addralign);
 	s_sys_proc_prx_param.sh_type = 1;
 	s_sys_proc_prx_param.sh_size = sizeof(sys_proc_prx_param);
 	s_sys_proc_prx_param.sh_name = section_name_offset;
@@ -1280,14 +1280,14 @@ void CompilePPUProgram::Compile()
 
 	const u32 prog_load_0_end = section_offset;
 
-	section_offset = AlignAddr(section_offset + 0x10000, 0x10000);
+	section_offset = align(section_offset + 0x10000, 0x10000);
 	const u32 prog_load_1_start = section_offset;
 
 	Elf64_Shdr s_data_sceFStub;
 	memset(&s_data_sceFStub, 0, sizeof(Elf64_Shdr));
 	s_data_sceFStub.sh_name = section_name_offset;
 	s_data_sceFStub.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_data_sceFStub.sh_addralign);
+	section_offset = align(section_offset, s_data_sceFStub.sh_addralign);
 	s_data_sceFStub.sh_flags = 3;
 	s_data_sceFStub.sh_type = 1;
 	s_data_sceFStub.sh_offset = section_offset;
@@ -1300,7 +1300,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_tbss;
 	memset(&s_tbss, 0, sizeof(Elf64_Shdr));
 	s_tbss.sh_addralign = 4;
-	section_offset = AlignAddr(section_offset, s_tbss.sh_addralign);
+	section_offset = align(section_offset, s_tbss.sh_addralign);
 	s_tbss.sh_size = 4;
 	s_tbss.sh_flags = 0x403;
 	s_tbss.sh_type = 8;
@@ -1314,7 +1314,7 @@ void CompilePPUProgram::Compile()
 	Elf64_Shdr s_opd;
 	memset(&s_opd, 0, sizeof(Elf64_Shdr));
 	s_opd.sh_addralign = 8;
-	section_offset = AlignAddr(section_offset, s_opd.sh_addralign);
+	section_offset = align(section_offset, s_opd.sh_addralign);
 	s_opd.sh_size = 2*4;
 	s_opd.sh_type = 1;
 	s_opd.sh_offset = section_offset;
@@ -1475,7 +1475,7 @@ void CompilePPUProgram::Compile()
 
 	if(!m_file_path.empty() && !m_analyze && !m_error)
 	{
-		s_opd.sh_size = AlignAddr(s_opd.sh_size, s_opd.sh_addralign);
+		s_opd.sh_size = align(s_opd.sh_size, s_opd.sh_addralign);
 		section_offset += s_opd.sh_size;
 
 		const u32 prog_load_1_end = section_offset;
@@ -1483,7 +1483,7 @@ void CompilePPUProgram::Compile()
 		Elf64_Shdr s_shstrtab;
 		memset(&s_shstrtab, 0, sizeof(Elf64_Shdr));
 		s_shstrtab.sh_addralign = 1;
-		section_offset = AlignAddr(section_offset, s_shstrtab.sh_addralign);
+		section_offset = align(section_offset, s_shstrtab.sh_addralign);
 		s_shstrtab.sh_name = section_name_offset;
 		s_shstrtab.sh_type = 3;
 		s_shstrtab.sh_offset = section_offset;
@@ -1505,7 +1505,7 @@ void CompilePPUProgram::Compile()
 		elf_info.e_machine = MACHINE_PPC64; //PowerPC64
 		elf_info.e_version = 1; //ver 1
 		elf_info.e_flags = 0x0;
-		elf_info.e_shoff = AlignAddr(section_offset, 4);
+		elf_info.e_shoff = align(section_offset, 4);
 
 		u8* opd_data = new u8[s_opd.sh_size];
 		u32 entry_point = s_text.sh_addr;
@@ -1523,14 +1523,14 @@ void CompilePPUProgram::Compile()
 		sys_proc_prx_param prx_param;
 		memset(&prx_param, 0, sizeof(sys_proc_prx_param));
 
-		prx_param.size = re32(0x40);
-		prx_param.magic = re32(0x1b434cec);
-		prx_param.version = re32(0x4);
-		prx_param.libentstart = re32(s_lib_ent_top.sh_addr + s_lib_ent_top.sh_size);
-		prx_param.libentend = re32(s_lib_ent_btm.sh_addr);
-		prx_param.libstubstart = re32(s_lib_stub_top.sh_addr + s_lib_stub_top.sh_size);
-		prx_param.libstubend = re32(s_lib_stub_btm.sh_addr);
-		prx_param.ver = re16(0x101);
+		prx_param.size = 0x40;
+		prx_param.magic = 0x1b434cec;
+		prx_param.version = 0x4;
+		prx_param.libentstart = s_lib_ent_top.sh_addr + s_lib_ent_top.sh_size;
+		prx_param.libentend = s_lib_ent_btm.sh_addr;
+		prx_param.libstubstart = vm::bptr<sys_stub>::make(s_lib_stub_top.sh_addr + s_lib_stub_top.sh_size);
+		prx_param.libstubend = vm::bptr<sys_stub>::make(s_lib_stub_btm.sh_addr);
+		prx_param.ver = 0x101;
 			
 		elf_info.e_entry = s_opd.sh_addr;
 
@@ -1588,20 +1588,20 @@ void CompilePPUProgram::Compile()
 		f.Seek(s_lib_stub.sh_offset);
 		for(u32 i=0, nameoffs=4, dataoffs=0; i<modules.size(); ++i)
 		{
-			Elf64_StubHeader stub;
-			memset(&stub, 0, sizeof(Elf64_StubHeader));
+			sys_stub stub;
+			memset(&stub, 0, sizeof(sys_stub));
 
 			stub.s_size = 0x2c;
 			stub.s_version = re16(0x1);
 			stub.s_unk1 = re16(0x9);
-			stub.s_modulename = re32(s_rodata_sceResident.sh_addr + nameoffs);
-			stub.s_nid = re32(s_rodata_sceFNID.sh_addr + dataoffs);
-			stub.s_text = re32(s_data_sceFStub.sh_addr + dataoffs);
-			stub.s_imports = re16(modules[i].m_imports.size());
+			stub.s_modulename = vm::bptr<const char>::make(s_rodata_sceResident.sh_addr + nameoffs);
+			stub.s_nid = vm::bptr<u32>::make(s_rodata_sceFNID.sh_addr + dataoffs);
+			stub.s_text = vm::bptr<u32>::make(s_data_sceFStub.sh_addr + dataoffs);
+			stub.s_imports = modules[i].m_imports.size();
 
 			dataoffs += modules[i].m_imports.size() * 4;
 
-			f.Write(&stub, sizeof(Elf64_StubHeader));
+			f.Write(&stub, sizeof(sys_stub));
 			nameoffs += modules[i].m_name.length() + 1;
 		}
 
@@ -1732,3 +1732,4 @@ void CompilePPUProgram::Compile()
 		system("make_fself.cmd");
 	}
 }
+*/

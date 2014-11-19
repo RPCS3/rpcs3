@@ -421,5 +421,5 @@ void CompilerELF::SetOpStyle(const std::string& text, const wxColour& color, boo
 
 void CompilerELF::DoAnalyzeCode(bool compile)
 {
-	CompilePPUProgram(fmt::ToUTF8(asm_list->GetValue()), "compiled.elf", asm_list, hex_list, err_list, !compile).Compile();
+//	CompilePPUProgram(fmt::ToUTF8(asm_list->GetValue()), "compiled.elf", asm_list, hex_list, err_list, !compile).Compile();
 }

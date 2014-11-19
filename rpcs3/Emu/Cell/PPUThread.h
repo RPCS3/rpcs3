@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/Cell/PPCThread.h"
+#include "Emu/Memory/vm.h"
 
 enum
 {
@@ -530,11 +531,8 @@ public:
 	u64 LR;     //SPR 0x008 : Link Register
 	u64 CTR;    //SPR 0x009 : Count Register
 
-	union
-	{
-		u64 USPRG0;	//SPR 0x100 : User-SPR General-Purpose Register 0
-		u64 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
-	};
+	u64 USPRG[8];	//SPR 0x100 - 0x107: User-SPR General-Purpose Registers
+	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
 	union
@@ -554,7 +552,7 @@ public:
 	u64 R_VALUE; // reservation value (BE)
 
 	u32 owned_mutexes;
-	std::function<void(PPUThread& CPU)> m_custom_task;
+	std::function<void(PPUThread& CPU)> custom_task;
 
 public:
 	PPUThread();
@@ -799,3 +797,49 @@ protected:
 };
 
 PPUThread& GetCurrentPPUThread();
+
+class ppu_thread : cpu_thread
+{
+	static const u32 stack_align = 0x10;
+	vm::ptr<u64> argv;
+	u32 argc;
+	vm::ptr<u64> envp;
+
+public:
+	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
+
+	cpu_thread& args(std::initializer_list<std::string> values) override
+	{
+		if (!values.size())
+			return *this;
+
+		assert(argc == 0);
+
+		envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
+		*envp = 0;
+		argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
+
+		for (auto &arg : values)
+		{
+			u32 arg_size = align(u32(arg.size() + 1), stack_align);
+			u32 arg_addr = vm::alloc(arg_size, vm::main);
+
+			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+			argv[argc++] = arg_addr;
+		}
+
+		return *this;
+	}
+
+	cpu_thread& run() override
+	{
+		thread->Run();
+
+		static_cast<PPUThread*>(thread)->GPR[3] = argc;
+		static_cast<PPUThread*>(thread)->GPR[4] = argv.addr();
+		static_cast<PPUThread*>(thread)->GPR[5] = envp.addr();
+
+		return *this;
+	}
+};

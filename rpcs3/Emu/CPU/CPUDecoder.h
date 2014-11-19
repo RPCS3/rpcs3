@@ -340,7 +340,7 @@ public:
 		, m_args_count(source.m_args_count)
 		, m_args(source.m_args_count ? new CodeFieldBase*[source.m_args_count] : nullptr)
 	{
-		for(int i = 0; i < source.m_args_count; ++i)
+		for(uint i = 0; i < source.m_args_count; ++i)
 			m_args[i] = source.m_args[i];
 	}
 

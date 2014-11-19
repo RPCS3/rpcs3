@@ -10,6 +10,8 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
+//#include "Emu/Cell/PPURecompiler.h"
+#include "Emu/CPU/CPUThreadManager.h"
 
 PPUThread& GetCurrentPPUThread()
 {
@@ -39,11 +41,11 @@ void PPUThread::DoReset()
 	memset(FPR,  0, sizeof(FPR));
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
+	memset(USPRG, 0, sizeof(USPRG));
 
 	CR.CR       = 0;
 	LR          = 0;
 	CTR         = 0;
-	USPRG0      = 0;
 	TB          = 0;
 	XER.XER     = 0;
 	FPSCR.FPSCR = 0;
@@ -84,8 +86,10 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	GPR[1] = AlignAddr(m_stack_addr + m_stack_size, 0x200) - 0x200;
+	GPR[1] = align(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
+	GPR[11] = entry;
+	GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
 
 	LR = Emu.GetPPUThreadExit();
@@ -121,6 +125,8 @@ void PPUThread::DoRun()
 		Emu.Pause();
 #endif
 	break;
+
+	//case 3: m_dec = new PPURecompiler(*this); break;
 
 	default:
 		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
@@ -218,12 +224,24 @@ void PPUThread::FastStop()
 
 void PPUThread::Task()
 {
-	if (m_custom_task)
+	if (custom_task)
 	{
-		m_custom_task(*this);
+		custom_task(*this);
 	}
 	else
 	{
 		CPUThread::Task();
 	}
+}
+
+ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+{
+	thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
+	thread->SetName(name);
+	thread->SetEntry(entry);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
+	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+
+	argc = 0;
 }
