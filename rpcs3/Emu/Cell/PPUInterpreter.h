@@ -147,7 +147,8 @@ private:
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
 		case 0x100: return CPU.USPRG0;
-		case 0x10C: return get_time();
+		case 0x10C: CPU.TB = get_time(); return CPU.TB;
+		case 0x10D: CPU.TB = get_time(); return CPU.TBH;
 		}
 
 		UNK(fmt::Format("ReadSPR error: Unknown SPR 0x%x!", n));
@@ -165,6 +166,7 @@ private:
 		case 0x009: CPU.CTR = value; return;
 		case 0x100: CPU.USPRG0 = value; return;
 		case 0x10C: UNK("WriteSPR: Write to time-based SPR. Report this to a developer!"); return;
+		case 0x10D: UNK("WriteSPR: Write to time-based SPR upper. Report this to a developer!"); return;
 		}
 
 		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));

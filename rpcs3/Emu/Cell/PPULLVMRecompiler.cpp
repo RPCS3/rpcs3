@@ -2325,7 +2325,16 @@ void Compiler::CNTLZD(u32 ra, u32 rs, bool rc) {
 }
 
 void Compiler::ANDC(u32 ra, u32 rs, u32 rb, bool rc) {
-    InterpreterCall("ANDC", &PPUInterpreter::ANDC, ra, rs, rb, rc);
+    auto rs_i64 = GetGpr(rs);
+    auto rb_i64 = GetGpr(rb);
+    rb_i64 = m_ir_builder->CreateNot(rb_i64);
+    auto res_i64 = m_ir_builder->CreateAnd(rs_i64, rb_i64);
+    SetGpr(ra, res_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("ANDC", &PPUInterpreter::ANDC, ra, rs, rb, rc);
 }
 
 void Compiler::TD(u32 to, u32 ra, u32 rb) {
@@ -2783,6 +2792,13 @@ void Compiler::MFSPR(u32 rd, u32 spr) {
         break;
     case 0x100:
         rd_i64 = GetUsprg0();
+        break;
+    case 0x10C:
+        rd_i64 = Call<u64>("get_time", get_time);
+        break;
+    case 0x10D:
+        rd_i64 = Call<u64>("get_time", get_time);
+        rd_i64 = m_ir_builder->CreateLShr(rd_i64, 32);
         break;
     default:
         assert(0);
