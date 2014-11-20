@@ -235,6 +235,8 @@ void Compiler::VerifyInstructionAgainstInterpreter(const char * name, CompilerFn
 
 void Compiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
+    m_recompilation_engine.Log() << "Running test " << name << '\n';
+
     // Create the function
     m_state.function = (Function *)m_module->getOrInsertFunction(name, m_compiled_function_type);
     m_state.function->setCallingConv(CallingConv::X86_64_Win64);
@@ -258,12 +260,12 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     std::string        ir;
     raw_string_ostream ir_ostream(ir);
     m_state.function->print(ir_ostream);
-    LOG_NOTICE(PPU, "[UT %s] LLVM IR:%s", name, ir.c_str());
+    m_recompilation_engine.Log() << "LLVM IR:" << ir;
 
-    std::string        verify;
-    raw_string_ostream verify_ostream(verify);
-    if (verifyFunction(*m_state.function, &verify_ostream)) {
-        LOG_ERROR(PPU, "[UT %s] Verification Failed:%s", name, verify.c_str());
+    std::string        verify_results;
+    raw_string_ostream verify_results_ostream(verify_results);
+    if (verifyFunction(*m_state.function, &verify_results_ostream)) {
+        m_recompilation_engine.Log() << "Verification Failed:" << verify_results;
         return;
     }
 
@@ -273,7 +275,7 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     // Print the optimized IR
     ir = "";
     m_state.function->print(ir_ostream);
-    LOG_NOTICE(PPU, "[UT %s] Optimized LLVM IR:%s", name, ir.c_str());
+    m_recompilation_engine.Log() << "Optimized LLVM IR:" << ir;
 
     // Generate the function
     MachineCodeInfo mci;
@@ -282,12 +284,12 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     // Disassemble the generated function
     auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
 
-    LOG_NOTICE(PPU, "[UT %s] Disassembly:", name);
+    m_recompilation_engine.Log() << "Disassembly:\n";
     for (uint64_t pc = 0; pc < mci.size();) {
         char str[1024];
 
         auto size = LLVMDisasmInstruction(disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
-        LOG_NOTICE(PPU, "[UT %s] %p: %s.", name, (uint8_t *)mci.address() + pc, str);
+        m_recompilation_engine.Log() << ((uint8_t *)mci.address() + pc) << ':' << str << '\n';
         pc += size;
     }
 
@@ -302,9 +304,9 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     std::string msg;
     bool        pass = check_result(msg);
     if (pass) {
-        LOG_NOTICE(PPU, "[UT %s] Test passed. %s", name, msg.c_str());
+        m_recompilation_engine.Log() << "Test " << name << " passed\n" << msg << "\n";
     } else {
-        LOG_ERROR(PPU, "[UT %s] Test failed. %s", name, msg.c_str());
+        m_recompilation_engine.Log() << "Test " << name << " failed\n" << msg << "\n";
     }
 
     m_execution_engine->freeMachineCodeForFunction(m_state.function);
@@ -319,7 +321,7 @@ void Compiler::RunAllTests() {
     s_ppu_state   = &ppu_state;
     s_interpreter = &interpreter;
 
-    LOG_NOTICE(PPU, "Running Unit Tests");
+    m_recompilation_engine.Log() << "Starting Unit Tests\n";
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(MFVSCR, 0, 5, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(MTVSCR, 0, 5, 1);
@@ -767,5 +769,7 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 3, input, 5, 23, 25);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 0, input, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14, 23);
+
+    m_recompilation_engine.Log() << "Finished Unit Tests\n";
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }

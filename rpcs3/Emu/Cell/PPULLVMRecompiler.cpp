@@ -82,8 +82,6 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
         InitRotateMask();
         s_rotate_mask_inited = true;
     }
-
-    RunAllTests();
 }
 
 Compiler::~Compiler() {
@@ -4884,9 +4882,7 @@ RecompilationEngine::RecompilationEngine()
     : ThreadBase("PPU Recompilation Engine")
     , m_next_ordinal(0)
     , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn) {
-    std::string error;
-    m_log = new raw_fd_ostream("PPULLVMRecompiler.log", error, sys::fs::F_Text);
-    m_log->SetUnbuffered();
+    m_compiler.RunAllTests();
 }
 
 RecompilationEngine::~RecompilationEngine() {
@@ -4943,6 +4939,12 @@ void RecompilationEngine::NotifyTrace(ExecutionTrace * execution_trace) {
 }
 
 raw_fd_ostream & RecompilationEngine::Log() {
+    if (!m_log) {
+        std::string error;
+        m_log = new raw_fd_ostream("PPULLVMRecompiler.log", error, sys::fs::F_Text);
+        m_log->SetUnbuffered();
+    }
+
     return *m_log;
 }
 
