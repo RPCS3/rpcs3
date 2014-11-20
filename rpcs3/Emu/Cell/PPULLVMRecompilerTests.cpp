@@ -222,8 +222,8 @@ void Compiler::VerifyInstructionAgainstInterpreter(const char * name, CompilerFn
 
         if (interp_output_state.ToString() != recomp_output_state.ToString()) {
             msg = std::string("Input state:\n") + input_state.ToString() +
-                std::string("\nOutput state:\n") + recomp_output_state.ToString() +
-                std::string("\nInterpreter output state:\n") + interp_output_state.ToString();
+                  std::string("\nOutput state:\n") + recomp_output_state.ToString() +
+                  std::string("\nInterpreter output state:\n") + interp_output_state.ToString();
             return false;
         }
 
@@ -235,48 +235,49 @@ void Compiler::VerifyInstructionAgainstInterpreter(const char * name, CompilerFn
 
 void Compiler::RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result) {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
-    // Create the unit test function
-    m_current_function = (Function *)m_module->getOrInsertFunction(name, m_ir_builder->getVoidTy(),
-                                                                   m_ir_builder->getInt8PtrTy() /*ppu_state*/,
-                                                                   m_ir_builder->getInt64Ty() /*base_addres*/,
-                                                                   m_ir_builder->getInt8PtrTy() /*interpreter*/, nullptr);
-    m_current_function->setCallingConv(CallingConv::X86_64_Win64);
-    auto arg_i = m_current_function->arg_begin();
+    // Create the function
+    m_state.function = (Function *)m_module->getOrInsertFunction(name, m_compiled_function_type);
+    m_state.function->setCallingConv(CallingConv::X86_64_Win64);
+    auto arg_i = m_state.function->arg_begin();
     arg_i->setName("ppu_state");
-    (++arg_i)->setName("base_address");
+    m_state.args[CompileTaskState::Args::State] = arg_i;
     (++arg_i)->setName("interpreter");
+    m_state.args[CompileTaskState::Args::Interpreter] = arg_i;
+    (++arg_i)->setName("context");
+    m_state.args[CompileTaskState::Args::Context] = arg_i;
+    m_state.current_instruction_address = s_ppu_state->PC;
 
-    auto block = BasicBlock::Create(*m_llvm_context, "start", m_current_function);
+    auto block = BasicBlock::Create(*m_llvm_context, "start", m_state.function);
     m_ir_builder->SetInsertPoint(block);
 
     test_case();
 
-    m_ir_builder->CreateRetVoid();
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
 
     // Print the IR
     std::string        ir;
     raw_string_ostream ir_ostream(ir);
-    m_current_function->print(ir_ostream);
+    m_state.function->print(ir_ostream);
     LOG_NOTICE(PPU, "[UT %s] LLVM IR:%s", name, ir.c_str());
 
     std::string        verify;
     raw_string_ostream verify_ostream(verify);
-    if (verifyFunction(*m_current_function, &verify_ostream)) {
+    if (verifyFunction(*m_state.function, &verify_ostream)) {
         LOG_ERROR(PPU, "[UT %s] Verification Failed:%s", name, verify.c_str());
         return;
     }
 
     // Optimize
-    m_fpm->run(*m_current_function);
+    m_fpm->run(*m_state.function);
 
     // Print the optimized IR
     ir = "";
-    m_current_function->print(ir_ostream);
+    m_state.function->print(ir_ostream);
     LOG_NOTICE(PPU, "[UT %s] Optimized LLVM IR:%s", name, ir.c_str());
 
     // Generate the function
     MachineCodeInfo mci;
-    m_execution_engine->runJITOnFunction(m_current_function, &mci);
+    m_execution_engine->runJITOnFunction(m_state.function, &mci);
 
     // Disassemble the generated function
     auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
@@ -294,10 +295,8 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
 
     // Run the test
     input();
-    std::vector<GenericValue> args;
-    args.push_back(GenericValue(s_ppu_state));
-    args.push_back(GenericValue(s_interpreter));
-    m_execution_engine->runFunction(m_current_function, args);
+    auto executable = (Executable)m_execution_engine->getPointerToFunction(m_state.function);
+    executable(s_ppu_state, s_interpreter, 0);
 
     // Verify results
     std::string msg;
@@ -308,17 +307,17 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
         LOG_ERROR(PPU, "[UT %s] Test failed. %s", name, msg.c_str());
     }
 
-    m_execution_engine->freeMachineCodeForFunction(m_current_function);
+    m_execution_engine->freeMachineCodeForFunction(m_state.function);
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }
 
-void Compiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) {
+void Compiler::RunAllTests() {
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
-    s_ppu_state   = ppu_state;
-    s_interpreter = interpreter;
+    PPUThread      ppu_state;
+    PPUInterpreter interpreter(ppu_state);
 
-    PPUState initial_state;
-    initial_state.Load(*ppu_state, 0x10000);
+    s_ppu_state   = &ppu_state;
+    s_interpreter = &interpreter;
 
     LOG_NOTICE(PPU, "Running Unit Tests");
 
@@ -595,12 +594,14 @@ void Compiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CNTLZW, 5, 5, 5, 6, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CNTLZD, 0, 5, 5, 6, 0);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(CNTLZD, 5, 5, 5, 6, 1);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ANDC, 0, 5, 5, 6, 7, 0);
+    VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ANDC, 5, 5, 5, 6, 7, 1);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(ISYNC, 0, 5);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(EIEIO, 0, 5);
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FSQRT, 0, 5, 0, 1, false);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FSQRTS, 0, 5, 0, 1, false);
-	
+
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FDIV, 0, 5, 0, 1, 2, false);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FSUB, 0, 5, 0, 1, 2, false);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FADD, 0, 5, 0, 1, 2, false);
@@ -616,7 +617,7 @@ void Compiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FCFID, 0, 5, 0, 1, false);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FCTID, 0, 5, 0, 1, false);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER_USING_RANDOM_INPUT(FCTIW, 0, 5, 0, 1, false);
-	
+
     PPUState input;
     input.SetRandom(0x10000);
     input.GPR[14] = 10;
@@ -766,7 +767,5 @@ void Compiler::RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter) 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STSWI, 3, input, 5, 23, 25);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 0, input, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(DCBZ, 1, input, 14, 23);
-
-    initial_state.Store(*ppu_state);
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
 }

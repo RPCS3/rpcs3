@@ -82,6 +82,8 @@ Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable 
         InitRotateMask();
         s_rotate_mask_inited = true;
     }
+
+    RunAllTests();
 }
 
 Compiler::~Compiler() {
@@ -4727,10 +4729,13 @@ Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bsw
 
         return val_ix;
     } else {
+        static u32 next_basic_block_id = 0;
+
+        next_basic_block_id++;
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
-        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
-        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
+        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("then_%u", next_basic_block_id));
+        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("else_%u", next_basic_block_id));
+        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("merge_%u", next_basic_block_id));
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -4769,10 +4774,13 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
         auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
         m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
     } else {
+        static u32 next_basic_block_id;
+
+        next_basic_block_id++;
         auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
-        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
-        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
+        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("then_%u", next_basic_block_id));
+        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("else_%u", next_basic_block_id));
+        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("merge_%u", next_basic_block_id));
         m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
 
         m_ir_builder->SetInsertPoint(then_bb);
@@ -5118,7 +5126,7 @@ void RecompilationEngine::UpdateControlFlowGraph(ControlFlowGraph & cfg, const E
 void RecompilationEngine::CompileBlock(BlockEntry & block_entry) {
 #ifdef _DEBUG
     Log() << "Compile: " << block_entry.ToString() << "\n";
-    Log() << "CFG: " << cfg->ToString() << "\n";
+    Log() << "CFG: " << block_entry.cfg.ToString() << "\n";
 #endif
 
     auto ordinal    = AllocateOrdinal(block_entry.cfg.start_address, block_entry.IsFunction());

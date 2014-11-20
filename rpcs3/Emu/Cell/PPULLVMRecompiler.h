@@ -295,7 +295,7 @@ namespace ppu_recompiler_llvm {
         Stats GetStats();
 
         /// Execute all tests
-        void RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter);
+        void RunAllTests();
 
     protected:
         void Decode(const u32 code) override;
