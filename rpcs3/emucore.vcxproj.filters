@@ -33,14 +33,8 @@
     <Filter Include="Emu\HDD">
       <UniqueIdentifier>{28902cf4-4fa6-428b-ab94-6b410fd5077f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\Cell">
-      <UniqueIdentifier>{13d20086-2188-425a-9856-0440fe6f79f2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\CPU">
       <UniqueIdentifier>{037247b4-0370-4193-a25d-bc9d075bf0a7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\ARMv7">
-      <UniqueIdentifier>{93b1cff1-0158-4327-a437-e9abcac8d724}</UniqueIdentifier>
     </Filter>
     <Filter Include="Emu\Audio">
       <UniqueIdentifier>{5a18e5b1-2632-4849-ba94-e7a2ea0b78fa}</UniqueIdentifier>
@@ -60,23 +54,32 @@
     <Filter Include="Utilities\SimpleIni">
       <UniqueIdentifier>{84c34dd1-4c49-4ecf-8ee2-4165c14f24be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\RSX">
-      <UniqueIdentifier>{fadb4b36-57af-4583-891d-d22ff369e266}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\RSX\Null">
-      <UniqueIdentifier>{4adca4fa-b90f-4662-9eb0-1d29cf3cd2eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\RSX\GL">
-      <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\Io\Null">
       <UniqueIdentifier>{fcac6852-b45f-4cf2-afee-cf56bcea14e5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Emu\SysCalls\currently_unused">
       <UniqueIdentifier>{ead7494f-a872-4b4d-a864-1a61c3b6012f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\ARMv7\Modules">
+    <Filter Include="Emu\CPU\Cell">
+      <UniqueIdentifier>{13d20086-2188-425a-9856-0440fe6f79f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\CPU\ARMv7">
+      <UniqueIdentifier>{93b1cff1-0158-4327-a437-e9abcac8d724}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\CPU\ARMv7\Modules">
       <UniqueIdentifier>{1d9e6fc4-9a79-4329-a8b5-081e24822aaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU">
+      <UniqueIdentifier>{6674e2ab-90cd-47de-a852-d21643ab18c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX">
+      <UniqueIdentifier>{fadb4b36-57af-4583-891d-d22ff369e266}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Null">
+      <UniqueIdentifier>{4adca4fa-b90f-4662-9eb0-1d29cf3cd2eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\GL">
+      <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -309,28 +312,28 @@
       <Filter>Emu\HDD</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\MFC.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPCThread.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUThread.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPURSManager.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\CPU\CPUThread.cpp">
       <Filter>Emu\CPU</Filter>
@@ -339,7 +342,7 @@
       <Filter>Emu\CPU</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Audio\AudioManager.cpp">
       <Filter>Emu\Audio</Filter>
@@ -555,37 +558,37 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLProgram.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSManager.cpp">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXThread.cpp">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -624,31 +627,31 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPULLVMRecompiler.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp">
-      <Filter>Emu\ARMv7\Modules</Filter>
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibstdcxx.cpp">
-      <Filter>Emu\ARMv7\Modules</Filter>
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibKernel.cpp">
-      <Filter>Emu\ARMv7\Modules</Filter>
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
-      <Filter>Emu\ARMv7\Modules</Filter>
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -878,64 +881,64 @@
       <Filter>Emu\HDD</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\MFC.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCDecoder.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCDisAsm.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCInstrTable.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCThread.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUDecoder.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUDisAsm.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUInstrTable.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUInterpreter.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUOpcodes.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUThread.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\RawSPUThread.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUDecoder.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUDisAsm.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInstrTable.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInterpreter.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUOpcodes.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPURecompiler.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPURSManager.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUThread.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\CPU\CPUDecoder.h">
       <Filter>Emu\CPU</Filter>
@@ -953,19 +956,19 @@
       <Filter>Emu\CPU</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7Decoder.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7DisAsm.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\AudioDumper.h">
       <Filter>Emu\Audio</Filter>
@@ -1121,58 +1124,58 @@
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
-      <Filter>Emu\RSX\Null</Filter>
+      <Filter>Emu\GPU\RSX\Null</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProgram.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLShaderParam.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\OpenGL.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h">
-      <Filter>Emu\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSManager.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSRender.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXTexture.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXThread.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\sysutil_video.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GCM.h">
-      <Filter>Emu\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1253,10 +1256,10 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
-      <Filter>Emu\Cell</Filter>
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
-      <Filter>Emu\ARMv7</Filter>
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

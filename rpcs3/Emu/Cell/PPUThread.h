@@ -808,38 +808,7 @@ class ppu_thread : cpu_thread
 public:
 	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
 
-	cpu_thread& args(std::initializer_list<std::string> values) override
-	{
-		if (!values.size())
-			return *this;
-
-		assert(argc == 0);
-
-		envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
-		*envp = 0;
-		argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
-
-		for (auto &arg : values)
-		{
-			u32 arg_size = align(u32(arg.size() + 1), stack_align);
-			u32 arg_addr = vm::alloc(arg_size, vm::main);
-
-			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
-
-			argv[argc++] = arg_addr;
-		}
-
-		return *this;
-	}
-
-	cpu_thread& run() override
-	{
-		thread->Run();
-
-		static_cast<PPUThread*>(thread)->GPR[3] = argc;
-		static_cast<PPUThread*>(thread)->GPR[4] = argv.addr();
-		static_cast<PPUThread*>(thread)->GPR[5] = envp.addr();
-
-		return *this;
-	}
+	cpu_thread& args(std::initializer_list<std::string> values) override;
+	cpu_thread& run() override;
+	ppu_thread& gpr(uint index, u64 value);
 };

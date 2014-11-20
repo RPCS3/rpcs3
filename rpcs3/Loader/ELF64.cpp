@@ -323,7 +323,7 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetPPUThreadStop(ppu_thr_stop_data.addr());
 
-			//vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+			vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*
 			//TODO
 			static const int branch_size = 6 * 4;
@@ -354,7 +354,10 @@ namespace loader
 			make_branch(entry, m_ehdr.e_entry);
 			*/
 
-			ppu_thread(m_ehdr.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
+			ppu_thread main_thread(m_ehdr.e_entry, "main_thread");
+
+			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
+			main_thread.gpr(11, m_ehdr.e_entry).gpr(12, Emu.GetMallocPageSize());
 
 			return ok;
 		}

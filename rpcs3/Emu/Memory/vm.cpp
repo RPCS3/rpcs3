@@ -14,7 +14,7 @@ namespace vm
 	#define MAP_ANONYMOUS MAP_ANON
 	#endif
 
-	void* const g_base_addr = ::mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+	void* const g_base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 	#endif
 
 	bool check_addr(u32 addr)

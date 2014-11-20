@@ -643,8 +643,8 @@ namespace PPU_instr
 	{
 		using namespace lists;
 
-		static auto LIS = std::bind(ADDIS, std::placeholders::_1, r0, std::placeholders::_2);
-		static auto LI = std::bind(ADDI, std::placeholders::_1, r0, std::placeholders::_2);
+		//static auto LIS = std::bind(ADDIS, std::placeholders::_1, r0, std::placeholders::_2);
+		//static auto LI = std::bind(ADDI, std::placeholders::_1, r0, std::placeholders::_2);
 		static auto NOP = std::bind(ORI, r0, r0, 0);
 		static auto MR = std::bind(OR, std::placeholders::_1, std::placeholders::_2, std::placeholders::_2, false);
 		static auto BLR = std::bind(BCLR, 0x10 | 0x04, 0, 0, 0);

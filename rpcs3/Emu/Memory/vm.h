@@ -44,21 +44,9 @@ namespace vm
 	}
 
 	template<typename T>
-	T* const get_ptr(u64 addr)
-	{
-		return get_ptr<T>((u32)addr);
-	}
-	
-	template<typename T>
 	T& get_ref(u32 addr)
 	{
 		return *get_ptr<T>(addr);
-	}
-
-	template<typename T>
-	T& get_ref(u64 addr)
-	{
-		return get_ref<T>((u32)addr);
 	}
 
 	namespace ps3

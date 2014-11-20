@@ -179,7 +179,7 @@ void fix_import(Module* module, u32 func, u32 addr)
 	
 	vm::ptr<u32>& ptr = (vm::ptr<u32>&)addr;
 
-	*ptr++ = LIS(11, func >> 16);
+	*ptr++ = ADDIS(11, 0, func >> 16);
 	*ptr++ = ORI(11, 11, func & 0xffff);
 	*ptr++ = NOP();
 	++ptr;

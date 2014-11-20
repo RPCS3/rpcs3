@@ -490,14 +490,14 @@ private:
 	};
 
 public:
-	const T& ToBE() const
+	const type& ToBE() const
 	{
 		return m_data;
 	}
 
 	type ToLE() const
 	{
-		return se_t<T, sizeof(T2)>::func(m_data);
+		return se_t<type, sizeof(T2)>::func(m_data);
 	}
 
 	void FromBE(const type& value)
@@ -507,7 +507,7 @@ public:
 
 	void FromLE(const type& value)
 	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::func(value);
 	}
 
 	static be_t MakeFromLE(const type value)
@@ -533,14 +533,14 @@ public:
 		return is_le_machine ? ToLE() : ToBE();
 	}
 
-	be_t() = default;
-	be_t(const be_t& value) = default;
+	//be_t() = default;
+	//be_t(const be_t& value) = default;
 
-	be_t(type value)
-	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
-	}
-
+	//be_t(type value)
+	//{
+	//	m_data = se_t<type, sizeof(T2)>::func(value);
+	//}
+	
 	be_t& operator = (const be_t& value) = default;
 
 	be_t& operator = (type value)
@@ -558,7 +558,8 @@ public:
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
+		return be_t<T1>::make(value());
+		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
@@ -644,6 +645,8 @@ public:
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
+
+	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
 };
 
 template<typename T>
@@ -770,4 +773,52 @@ template<typename T> __forceinline static void Write32(T& f, const u32 data)
 template<typename T> __forceinline static void Write64(T& f, const u64 data)
 {
 	Write64LE(f, re64(data));
+}
+
+template<typename Tto, typename Tfrom>
+struct convert_le_be_t
+{
+	static Tto func(Tfrom&& value)
+	{
+		return (Tto)value;
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tfrom>
+struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
+{
+	static be_t<Tt, Tt1> func(Tfrom&& value)
+	{
+		return be_t<Tt, Tt1>::make(value);
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tf, typename Tf1>
+struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
+{
+	static be_t<Tt, Tt1> func(be_t<Tf, Tf1>&& value)
+	{
+		return value;
+	}
+};
+
+template<typename Tto, typename Tf, typename Tf1>
+struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
+{
+	static Tto func(be_t<Tf, Tf1>&& value)
+	{
+		return value.value();
+	}
+};
+
+template<typename Tto, typename Tfrom>
+__forceinline Tto convert_le_be(Tfrom&& value)
+{
+	return convert_le_be_t<Tto, Tfrom>::func(value);
+}
+
+template<typename Tto, typename Tfrom>
+__forceinline void convert_le_be(Tto& dst, Tfrom&& src)
+{
+	dst = convert_le_be_t<Tto, Tfrom>::func(src)
 }

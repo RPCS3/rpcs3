@@ -4479,14 +4479,14 @@ void Compiler::SetXerSo(Value * so) {
 }
 
 Value * Compiler::GetUsprg0() {
-    auto usrpg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG0));
+    auto usrpg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG));
     auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usrpg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     return m_ir_builder->CreateAlignedLoad(usprg0_i64_ptr, 8);
 }
 
 void Compiler::SetUsprg0(Value * val_x64) {
     auto val_i64        = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG0));
+    auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG));
     auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usprg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, usprg0_i64_ptr, 8);
 }
@@ -4776,7 +4776,7 @@ void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool
             val_else_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_else_i32);
         }
 
-        Call<void>("vm.write32", (void(*)(u64, u32))vm::write32, addr_i64, val_else_i32);
+        Call<void>("vm.write32", (void(*)(u32, u32))vm::write32, addr_i64, val_else_i32);
         m_ir_builder->CreateBr(merge_bb);
 
         m_ir_builder->SetInsertPoint(merge_bb);

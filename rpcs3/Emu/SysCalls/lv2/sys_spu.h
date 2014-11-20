@@ -90,7 +90,7 @@ struct sys_spu_segment
 
 	union
 	{
-		be_t<u32> addr; // address or fill value		
+		be_t<u32> addr; // address or fill value
 		u64 pad;
 	};
 };

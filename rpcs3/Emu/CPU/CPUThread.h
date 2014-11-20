@@ -228,13 +228,13 @@ public:
 			m_call_stack.erase((res + 1).base(), m_call_stack.end());
 			return;
 		}
-		
+
 		//add a new entry otherwise
 		CallStackItem new_item;
-		
+
 		new_item.branch_pc = pc;
 		new_item.pc = PC;
-			
+
 		m_call_stack.push_back(new_item);
 	}
 

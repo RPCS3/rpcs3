@@ -88,8 +88,8 @@ void PPUThread::InitRegs()
 
 	GPR[1] = align(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
-	GPR[11] = entry;
-	GPR[12] = Emu.GetMallocPageSize();
+	//GPR[11] = entry;
+	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
 
 	LR = Emu.GetPPUThreadExit();
@@ -244,4 +244,48 @@ ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 p
 	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
 
 	argc = 0;
+}
+
+cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
+{
+	if (!values.size())
+		return *this;
+
+	assert(argc == 0);
+
+	envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
+	*envp = 0;
+	argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
+
+	for (auto &arg : values)
+	{
+		u32 arg_size = align(u32(arg.size() + 1), stack_align);
+		u32 arg_addr = vm::alloc(arg_size, vm::main);
+
+		std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+		argv[argc++] = arg_addr;
+	}
+
+	return *this;
+}
+
+cpu_thread& ppu_thread::run()
+{
+	thread->Run();
+
+	gpr(3, argc);
+	gpr(4, argv.addr());
+	gpr(5, envp.addr());
+
+	return *this;
+}
+
+ppu_thread& ppu_thread::gpr(uint index, u64 value)
+{
+	assert(index < 32);
+
+	static_cast<PPUThread*>(thread)->GPR[index] = value;
+
+	return *this;
 }
