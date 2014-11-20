@@ -820,5 +820,5 @@ __forceinline Tto convert_le_be(Tfrom&& value)
 template<typename Tto, typename Tfrom>
 __forceinline void convert_le_be(Tto& dst, Tfrom&& src)
 {
-	dst = convert_le_be_t<Tto, Tfrom>::func(src)
+	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }
