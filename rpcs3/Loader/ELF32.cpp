@@ -36,7 +36,7 @@ namespace loader
 				return broken_file;
 			}
 
-			LOG_ERROR(LOADER, "m_ehdr.e_type = 0x%x", (u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_type : m_ehdr.data_be.e_type));
+			LOG_WARNING(LOADER, "m_ehdr.e_type = 0x%x", (u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_type : m_ehdr.data_be.e_type));
 
 			if (m_ehdr.data_le.e_phnum)
 			{

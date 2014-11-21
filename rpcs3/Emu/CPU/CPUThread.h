@@ -292,6 +292,6 @@ public:
 
 	u32 get_id() const
 	{
-		thread->GetId();
+		return thread->GetId();
 	}
 };

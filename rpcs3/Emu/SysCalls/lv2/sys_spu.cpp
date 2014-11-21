@@ -7,7 +7,7 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
-#include "Loader/elf32.h"
+#include "Loader/ELF32.h"
 #include "Crypto/unself.h"
 #include "sys_spu.h"
 

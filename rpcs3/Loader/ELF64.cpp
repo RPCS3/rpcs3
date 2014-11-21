@@ -43,7 +43,7 @@ namespace loader
 				return broken_file;
 			}
 
-			LOG_ERROR(LOADER, "m_ehdr.e_type = 0x%x", m_ehdr.e_type.ToLE());
+			LOG_WARNING(LOADER, "m_ehdr.e_type = 0x%x", m_ehdr.e_type.ToLE());
 
 			if (m_ehdr.e_machine != MACHINE_PPC64 && m_ehdr.e_machine != MACHINE_SPU)
 			{
@@ -94,7 +94,7 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type)
+				switch (phdr.p_type.ToLE())
 				{
 				case 0x1: //load
 					if (phdr.p_memsz)
@@ -366,7 +366,7 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type)
+				switch (phdr.p_type.ToLE())
 				{
 				case 0x00000001: //LOAD
 					if (phdr.p_memsz)
@@ -448,8 +448,8 @@ namespace loader
 
 							static const u32 tbl_section_size = 2 * 4;
 							static const u32 dst_section_size = 3 * 4;
-							auto& tbl = ptr<u32>::make(alloc(stub->s_imports * tbl_section_size));
-							auto& dst = ptr<u32>::make(alloc(stub->s_imports * dst_section_size));
+							auto tbl = ptr<u32>::make(alloc(stub->s_imports * tbl_section_size));
+							auto dst = ptr<u32>::make(alloc(stub->s_imports * dst_section_size));
 
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
