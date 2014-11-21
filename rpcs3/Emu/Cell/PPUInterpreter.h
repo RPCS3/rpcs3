@@ -187,7 +187,7 @@ private:
 		case 0x104:
 		case 0x105:
 		case 0x106:
-		case 0x107: CPU.USPRG[n - 0x100] = value; break;
+		case 0x107: CPU.USPRG[n - 0x100] = value; return;
 
 		case 0x10C: UNK("WriteSPR: Write to time-based SPR. Report this to a developer!"); return;
 
@@ -198,7 +198,7 @@ private:
 		case 0x114:
 		case 0x115:
 		case 0x116:
-		case 0x117: CPU.SPRG[n - 0x110] = value; break;
+		case 0x117: CPU.SPRG[n - 0x110] = value; return;
 		}
 
 		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));

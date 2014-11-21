@@ -201,8 +201,8 @@ namespace vm
 			return m_addr;
 		}
 
-		template<typename T>
-		void set(T&& value)
+		template<typename U>
+		void set(U&& value)
 		{
 			m_addr = convert_le_be<AT>(value);
 		}

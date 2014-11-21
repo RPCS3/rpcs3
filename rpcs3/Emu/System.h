@@ -48,7 +48,7 @@ public:
 		proc_param.malloc_pagesize = be_t<u32>::make(0x100000);
 		proc_param.sdk_version = be_t<u32>::make(0x360001);
 		proc_param.primary_stacksize = be_t<u32>::make(0x100000);
-		proc_param.primary_prio = be_t<u32>::make(0x50);
+		proc_param.primary_prio = be_t<s32>::make(0x50);
 	}
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
