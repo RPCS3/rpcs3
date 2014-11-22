@@ -138,3 +138,48 @@ protected:
 
 	virtual void DoCode();
 };
+class arm7_thread : cpu_thread
+{
+	static const u32 stack_align = 0x10;
+	vm::ptr<u64> argv;
+	u32 argc;
+	vm::ptr<u64> envp;
+
+public:
+	arm7_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
+
+	cpu_thread& args(std::initializer_list<std::string> values) override
+	{
+		if (!values.size())
+			return *this;
+
+		assert(argc == 0);
+
+		envp.set(vm::alloc((u32)sizeof(envp), stack_align, vm::main));
+		*envp = 0;
+		argv.set(vm::alloc(u32(sizeof(argv)* values.size()), stack_align, vm::main));
+
+		for (auto &arg : values)
+		{
+			u32 arg_size = align(u32(arg.size() + 1), stack_align);
+			u32 arg_addr = vm::alloc(arg_size, stack_align, vm::main);
+
+			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+			argv[argc++] = arg_addr;
+		}
+
+		return *this;
+	}
+
+	cpu_thread& run() override
+	{
+		thread->Run();
+
+		static_cast<ARMv7Thread*>(thread)->GPR[3] = argc;
+		static_cast<ARMv7Thread*>(thread)->GPR[4] = argv.addr();
+		static_cast<ARMv7Thread*>(thread)->GPR[5] = envp.addr();
+
+		return *this;
+	}
+};

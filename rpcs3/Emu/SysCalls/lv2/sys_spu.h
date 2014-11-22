@@ -90,7 +90,7 @@ struct sys_spu_segment
 
 	union
 	{
-		be_t<u32> addr; // address or fill value		
+		be_t<u32> addr; // address or fill value
 		u64 pad;
 	};
 };
@@ -154,6 +154,10 @@ struct SpuGroupInfo
 };
 
 class SPUThread;
+struct vfsStream;
+
+void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr);
+u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 // Aux
 s32 spu_image_import(sys_spu_image& img, u32 src, u32 type);

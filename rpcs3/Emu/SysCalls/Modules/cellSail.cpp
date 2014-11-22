@@ -71,17 +71,24 @@ int cellSailDescriptorGetMediaInfo()
 
 int cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
 {
-	cellSail->Todo("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%b)", pSelf.addr(), autoSelection);
+	cellSail->Todo("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%s)", pSelf.addr(), autoSelection ? "true" : "false");
 
-	pSelf->autoSelection = autoSelection;
+	if (pSelf) {
+		pSelf->autoSelection = autoSelection;
+		return autoSelection;
+	}
 
-	return autoSelection;
+	return CELL_OK;
 }
 
 int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 {
 	cellSail->Warning("cellSailDescriptorIsAutoSelection(pSelf_addr=0x%x)", pSelf.addr());
-	return pSelf->autoSelection;
+
+	if (pSelf)
+		return pSelf->autoSelection;
+
+	return CELL_OK;
 }
 
 int cellSailDescriptorCreateDatabase()
@@ -595,7 +602,7 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 {
 	cellSail->Warning("cellSailPlayerAddDescriptor(pSelf_addr=0x%x, pDesc_addr=0x%x)", pSelf.addr(), pDesc.addr());
 
-	if (pSelf->descriptors < 3 && pDesc)
+	if (pSelf && pSelf->descriptors < 3 && pDesc)
 	{
 		pSelf->descriptors++;
 		pSelf->registeredDescriptors[pSelf->descriptors] = pDesc;

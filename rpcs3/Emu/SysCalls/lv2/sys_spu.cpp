@@ -7,20 +7,26 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/FS/vfsStreamMemory.h"
 #include "Emu/FS/vfsFile.h"
-#include "Loader/ELF.h"
+#include "Loader/ELF32.h"
 #include "Crypto/unself.h"
 #include "sys_spu.h"
 
 static SysCallBase sys_spu("sys_spu");
 
+void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr)
+{
+	loader::handlers::elf32 h;
+	h.init(stream);
+	h.load_data(addr);
+	spu_ep = h.m_ehdr.data_be.e_entry;
+}
+
 u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 {
-	ELFLoader l(stream);
-	l.LoadInfo();
 	const u32 alloc_size = 256 * 1024;
-	u32 spu_offset = (u32)Memory.MainMem.AllocAlign(alloc_size);
-	l.LoadData(spu_offset);
-	spu_ep = l.GetEntry();
+	u32 spu_offset = (u32)vm::alloc(alloc_size, vm::main);
+
+	LoadSpuImage(stream, spu_ep, spu_offset);
 	return spu_offset;
 }
 

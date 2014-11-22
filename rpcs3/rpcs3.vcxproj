@@ -173,6 +173,7 @@
     <ClCompile Include="Gui\GSFrame.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\KernelExplorer.cpp" />
+    <ClCompile Include="Gui\LLEModulesManager.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\MsgDialog.cpp" />
@@ -212,6 +213,7 @@
     <ClInclude Include="Gui\InstructionEditor.h" />
     <ClInclude Include="Gui\InterpreterDisAsm.h" />
     <ClInclude Include="Gui\KernelExplorer.h" />
+    <ClInclude Include="Gui\LLEModulesManager.h" />
     <ClInclude Include="Gui\MainFrame.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\MsgDialog.h" />

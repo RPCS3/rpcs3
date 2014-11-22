@@ -10,6 +10,101 @@
 #include <wx/mstream.h>
 #include <wx/zstream.h>
 
+
+void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr)
+{
+Write32(f, ehdr.e_magic);
+Write8(f, ehdr.e_class);
+Write8(f, ehdr.e_data);
+Write8(f, ehdr.e_curver);
+Write8(f, ehdr.e_os_abi);
+Write64(f, ehdr.e_abi_ver);
+Write16(f, ehdr.e_type);
+Write16(f, ehdr.e_machine);
+Write32(f, ehdr.e_version);
+Write64(f, ehdr.e_entry);
+Write64(f, ehdr.e_phoff);
+Write64(f, ehdr.e_shoff);
+Write32(f, ehdr.e_flags);
+Write16(f, ehdr.e_ehsize);
+Write16(f, ehdr.e_phentsize);
+Write16(f, ehdr.e_phnum);
+Write16(f, ehdr.e_shentsize);
+Write16(f, ehdr.e_shnum);
+Write16(f, ehdr.e_shstrndx);
+}
+void WritePhdr(rFile& f, Elf64_Phdr& phdr)
+{
+Write32(f, phdr.p_type);
+Write32(f, phdr.p_flags);
+Write64(f, phdr.p_offset);
+Write64(f, phdr.p_vaddr);
+Write64(f, phdr.p_paddr);
+Write64(f, phdr.p_filesz);
+Write64(f, phdr.p_memsz);
+Write64(f, phdr.p_align);
+}
+void WriteShdr(rFile& f, Elf64_Shdr& shdr)
+{
+Write32(f, shdr.sh_name);
+Write32(f, shdr.sh_type);
+Write64(f, shdr.sh_flags);
+Write64(f, shdr.sh_addr);
+Write64(f, shdr.sh_offset);
+Write64(f, shdr.sh_size);
+Write32(f, shdr.sh_link);
+Write32(f, shdr.sh_info);
+Write64(f, shdr.sh_addralign);
+Write64(f, shdr.sh_entsize);
+}
+void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
+{
+	Write32(f, ehdr.e_magic);
+	Write8(f, ehdr.e_class);
+	Write8(f, ehdr.e_data);
+	Write8(f, ehdr.e_curver);
+	Write8(f, ehdr.e_os_abi);
+	Write64(f, ehdr.e_abi_ver);
+	Write16(f, ehdr.e_type);
+	Write16(f, ehdr.e_machine);
+	Write32(f, ehdr.e_version);
+	Write32(f, ehdr.e_entry);
+	Write32(f, ehdr.e_phoff);
+	Write32(f, ehdr.e_shoff);
+	Write32(f, ehdr.e_flags);
+	Write16(f, ehdr.e_ehsize);
+	Write16(f, ehdr.e_phentsize);
+	Write16(f, ehdr.e_phnum);
+	Write16(f, ehdr.e_shentsize);
+	Write16(f, ehdr.e_shnum);
+	Write16(f, ehdr.e_shstrndx);
+}
+void WritePhdr(rFile& f, Elf32_Phdr& phdr)
+{
+	Write32(f, phdr.p_type);
+	Write32(f, phdr.p_offset);
+	Write32(f, phdr.p_vaddr);
+	Write32(f, phdr.p_paddr);
+	Write32(f, phdr.p_filesz);
+	Write32(f, phdr.p_memsz);
+	Write32(f, phdr.p_flags);
+	Write32(f, phdr.p_align);
+}
+void WriteShdr(rFile& f, Elf32_Shdr& shdr)
+{
+	Write32(f, shdr.sh_name);
+	Write32(f, shdr.sh_type);
+	Write32(f, shdr.sh_flags);
+	Write32(f, shdr.sh_addr);
+	Write32(f, shdr.sh_offset);
+	Write32(f, shdr.sh_size);
+	Write32(f, shdr.sh_link);
+	Write32(f, shdr.sh_info);
+	Write32(f, shdr.sh_addralign);
+	Write32(f, shdr.sh_entsize);
+}
+
+
 void AppInfo::Load(vfsStream& f)
 {
 	authid    = Read64(f);

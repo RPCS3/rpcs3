@@ -45,9 +45,10 @@ public:
 		SetTLSData(0, 0, 0);
 		memset(&proc_param, 0, sizeof(sys_process_param_info));
 
-		proc_param.malloc_pagesize = 0x100000;
-		proc_param.sdk_version = 0x360001;
-		//TODO
+		proc_param.malloc_pagesize = be_t<u32>::make(0x100000);
+		proc_param.sdk_version = be_t<u32>::make(0x360001);
+		proc_param.primary_stacksize = be_t<u32>::make(0x100000);
+		proc_param.primary_prio = be_t<s32>::make(0x50);
 	}
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
@@ -106,6 +107,7 @@ class Emulator
 	VFS* m_vfs;
 
 	EmuInfo m_info;
+	loader::loader m_loader;
 
 public:
 	std::string m_path;
@@ -120,6 +122,11 @@ public:
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
+
+	std::string GetPath() const
+	{
+		return m_elf_path;
+	}
 
 	std::recursive_mutex& GetCoreMutex()   { return m_core_mutex; }
 
@@ -147,6 +154,21 @@ public:
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{
 		m_info.SetTLSData(addr, filesz, memsz);
+	}
+
+	void SetRSXCallback(u32 addr)
+	{
+		m_rsx_callback = addr;
+	}
+
+	void SetPPUThreadExit(u32 addr)
+	{
+		m_ppu_thr_exit = addr;
+	}
+
+	void SetPPUThreadStop(u32 addr)
+	{
+		m_ppu_thr_stop = addr;
 	}
 
 	EmuInfo& GetInfo() { return m_info; }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Loader/SELF.h"
 #include "Loader/ELF64.h"
 #include "Loader/ELF32.h"
 #include "key_vault.h"
@@ -142,7 +141,8 @@ struct MetadataSectionHeader
   void Show();
 };
 
-struct SectionHash {
+struct SectionHash
+{
   u8 sha1[20];
   u8 padding[12];
   u8 hmac_key[64];
@@ -182,6 +182,291 @@ struct SelfSection
 
   void Load(vfsStream& f);
 };
+
+struct Elf32_Ehdr
+{
+	u32 e_magic;
+	u8 e_class;
+	u8 e_data;
+	u8 e_curver;
+	u8 e_os_abi;
+	u64 e_abi_ver;
+	u16 e_type;
+	u16 e_machine;
+	u32 e_version;
+	u32 e_entry;
+	u32 e_phoff;
+	u32 e_shoff;
+	u32 e_flags;
+	u16 e_ehsize;
+	u16 e_phentsize;
+	u16 e_phnum;
+	u16 e_shentsize;
+	u16 e_shnum;
+	u16 e_shstrndx;
+	void Show() {}
+	bool IsLittleEndian() const
+	{
+		return e_data == 1;
+	}
+
+	void Load(vfsStream& f)
+	{
+		e_magic = Read32(f);
+		e_class = Read8(f);
+		e_data = Read8(f);
+		e_curver = Read8(f);
+		e_os_abi = Read8(f);
+
+		if (IsLittleEndian())
+		{
+			e_abi_ver = Read64LE(f);
+			e_type = Read16LE(f);
+			e_machine = Read16LE(f);
+			e_version = Read32LE(f);
+			e_entry = Read32LE(f);
+			e_phoff = Read32LE(f);
+			e_shoff = Read32LE(f);
+			e_flags = Read32LE(f);
+			e_ehsize = Read16LE(f);
+			e_phentsize = Read16LE(f);
+			e_phnum = Read16LE(f);
+			e_shentsize = Read16LE(f);
+			e_shnum = Read16LE(f);
+			e_shstrndx = Read16LE(f);
+		}
+		else
+		{
+			e_abi_ver = Read64(f);
+			e_type = Read16(f);
+			e_machine = Read16(f);
+			e_version = Read32(f);
+			e_entry = Read32(f);
+			e_phoff = Read32(f);
+			e_shoff = Read32(f);
+			e_flags = Read32(f);
+			e_ehsize = Read16(f);
+			e_phentsize = Read16(f);
+			e_phnum = Read16(f);
+			e_shentsize = Read16(f);
+			e_shnum = Read16(f);
+			e_shstrndx = Read16(f);
+		}
+	}
+	bool CheckMagic() const { return e_magic == 0x7F454C46; }
+	u32 GetEntry() const { return e_entry; }
+};
+
+struct Elf32_Shdr
+{
+	u32 sh_name;
+	u32 sh_type;
+	u32 sh_flags;
+	u32 sh_addr;
+	u32 sh_offset;
+	u32 sh_size;
+	u32 sh_link;
+	u32 sh_info;
+	u32 sh_addralign;
+	u32 sh_entsize;
+	void Load(vfsStream& f)
+	{
+		sh_name = Read32(f);
+		sh_type = Read32(f);
+		sh_flags = Read32(f);
+		sh_addr = Read32(f);
+		sh_offset = Read32(f);
+		sh_size = Read32(f);
+		sh_link = Read32(f);
+		sh_info = Read32(f);
+		sh_addralign = Read32(f);
+		sh_entsize = Read32(f);
+	}
+	void LoadLE(vfsStream& f)
+	{
+		f.Read(this, sizeof(*this));
+	}
+	void Show() {}
+};
+struct Elf32_Phdr
+{
+	u32 p_type;
+	u32 p_offset;
+	u32 p_vaddr;
+	u32 p_paddr;
+	u32 p_filesz;
+	u32 p_memsz;
+	u32 p_flags;
+	u32 p_align;
+	void Load(vfsStream& f)
+	{
+		p_type = Read32(f);
+		p_offset = Read32(f);
+		p_vaddr = Read32(f);
+		p_paddr = Read32(f);
+		p_filesz = Read32(f);
+		p_memsz = Read32(f);
+		p_flags = Read32(f);
+		p_align = Read32(f);
+	}
+	void LoadLE(vfsStream& f)
+	{
+		f.Read(this, sizeof(*this));
+	}
+	void Show() {}
+};
+
+struct Elf64_Ehdr
+{
+	u32 e_magic;
+	u8 e_class;
+	u8 e_data;
+	u8 e_curver;
+	u8 e_os_abi;
+	u64 e_abi_ver;
+	u16 e_type;
+	u16 e_machine;
+	u32 e_version;
+	u64 e_entry;
+	u64 e_phoff;
+	u64 e_shoff;
+	u32 e_flags;
+	u16 e_ehsize;
+	u16 e_phentsize;
+	u16 e_phnum;
+	u16 e_shentsize;
+	u16 e_shnum;
+	u16 e_shstrndx;
+	void Load(vfsStream& f)
+	{
+		e_magic = Read32(f);
+		e_class = Read8(f);
+		e_data = Read8(f);
+		e_curver = Read8(f);
+		e_os_abi = Read8(f);
+		e_abi_ver = Read64(f);
+		e_type = Read16(f);
+		e_machine = Read16(f);
+		e_version = Read32(f);
+		e_entry = Read64(f);
+		e_phoff = Read64(f);
+		e_shoff = Read64(f);
+		e_flags = Read32(f);
+		e_ehsize = Read16(f);
+		e_phentsize = Read16(f);
+		e_phnum = Read16(f);
+		e_shentsize = Read16(f);
+		e_shnum = Read16(f);
+		e_shstrndx = Read16(f);
+	}
+	void Show() {}
+	bool CheckMagic() const { return e_magic == 0x7F454C46; }
+	u64 GetEntry() const { return e_entry; }
+};
+
+struct Elf64_Shdr
+{
+	u32 sh_name;
+	u32 sh_type;
+	u64 sh_flags;
+	u64 sh_addr;
+	u64 sh_offset;
+	u64 sh_size;
+	u32 sh_link;
+	u32 sh_info;
+	u64 sh_addralign;
+	u64 sh_entsize;
+	void Load(vfsStream& f)
+	{
+		sh_name = Read32(f);
+		sh_type = Read32(f);
+		sh_flags = Read64(f);
+		sh_addr = Read64(f);
+		sh_offset = Read64(f);
+		sh_size = Read64(f);
+		sh_link = Read32(f);
+		sh_info = Read32(f);
+		sh_addralign = Read64(f);
+		sh_entsize = Read64(f);
+	}
+	void Show(){}
+};
+
+struct Elf64_Phdr
+{
+	u32 p_type;
+	u32 p_flags;
+	u64 p_offset;
+	u64 p_vaddr;
+	u64 p_paddr;
+	u64 p_filesz;
+	u64 p_memsz;
+	u64 p_align;
+	void Load(vfsStream& f)
+	{
+		p_type = Read32(f);
+		p_flags = Read32(f);
+		p_offset = Read64(f);
+		p_vaddr = Read64(f);
+		p_paddr = Read64(f);
+		p_filesz = Read64(f);
+		p_memsz = Read64(f);
+		p_align = Read64(f);
+	}
+	void Show(){}
+};
+
+struct SceHeader
+{
+	u32 se_magic;
+	u32 se_hver;
+	u16 se_flags;
+	u16 se_type;
+	u32 se_meta;
+	u64 se_hsize;
+	u64 se_esize;
+	void Load(vfsStream& f)
+	{
+		se_magic = Read32(f);
+		se_hver = Read32(f);
+		se_flags = Read16(f);
+		se_type = Read16(f);
+		se_meta = Read32(f);
+		se_hsize = Read64(f);
+		se_esize = Read64(f);
+	}
+	void Show(){}
+	bool CheckMagic() const { return se_magic == 0x53434500; }
+};
+
+struct SelfHeader
+{
+	u64 se_htype;
+	u64 se_appinfooff;
+	u64 se_elfoff;
+	u64 se_phdroff;
+	u64 se_shdroff;
+	u64 se_secinfoff;
+	u64 se_sceveroff;
+	u64 se_controloff;
+	u64 se_controlsize;
+	u64 pad;
+	void Load(vfsStream& f)
+	{
+		se_htype = Read64(f);
+		se_appinfooff = Read64(f);
+		se_elfoff = Read64(f);
+		se_phdroff = Read64(f);
+		se_shdroff = Read64(f);
+		se_secinfoff = Read64(f);
+		se_sceveroff = Read64(f);
+		se_controloff = Read64(f);
+		se_controlsize = Read64(f);
+		pad = Read64(f);
+	}
+	void Show(){}
+};
+
 
 class SELFDecrypter
 {

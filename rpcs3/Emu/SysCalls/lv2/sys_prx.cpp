@@ -34,10 +34,10 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	sys_prx_t* prx = new sys_prx_t();
 	prx->size = (u32)f.GetSize();
 	prx->address = (u32)Memory.Alloc(prx->size, 4);
-	prx->path = path;
+	prx->path = (const char*)path;
 	
 	// Load the PRX into memory
-	f.Read(vm::get_ptr<void>(prx->address), prx->size);
+	f.Read(vm::get_ptr(prx->address), prx->size);
 
 	u32 id = sys_prx.GetNewId(prx, TYPE_PRX);
 	return id;

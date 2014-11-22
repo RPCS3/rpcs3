@@ -15,7 +15,7 @@ s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64)
 
 	u32 id = sys_lwcond.GetNewId(new Lwcond(name_u64), TYPE_LWCOND);
 	u32 addr = Memory.RealToVirtualAddr(&lwmutex);
-	lwcond.lwmutex.set(be_t<u32>::make(addr));
+	lwcond.lwmutex.set(addr);
 	lwcond.lwcond_queue = id;
 
 	std::string name((const char*)&name_u64, 8);

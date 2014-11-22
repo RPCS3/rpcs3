@@ -29,6 +29,7 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_status(Stopped)
 	, m_last_syscall(0)
 	, m_trace_enabled(false)
+	, m_trace_call_stack(true)
 {
 }
 
@@ -155,7 +156,7 @@ void CPUThread::SetBranch(const u32 pc, bool record_branch)
 	m_is_branch = true;
 	nPC = pc;
 
-	if(record_branch)
+	if(m_trace_call_stack && record_branch)
 		CallStackBranch(pc);
 }
 

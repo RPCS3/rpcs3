@@ -33,6 +33,7 @@
 #include <functional>
 #include <algorithm>
 #include <random>
+#include <unordered_set>
 
 #include <sys/stat.h>
 #include "Utilities/GNU.h"
@@ -49,7 +50,10 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
-#define AlignAddr(addr, align) (((addr) + ((align) - 1)) & ~((align) - 1))
+template<typename T> __forceinline T align(const T addr, int align)
+{
+	return (addr + (align - 1)) & ~(align - 1);
+}
 
 #include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"

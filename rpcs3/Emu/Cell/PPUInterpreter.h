@@ -55,10 +55,14 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 #define rotl64 _rotl64
 #define rotr64 _rotr64
 
+namespace ppu_recompiler_llvm {
+	class Compiler;
+}
+
 class PPUInterpreter : public PPUOpcodes
 {
 #ifdef PPU_LLVM_RECOMPILER
-	friend class PPULLVMRecompiler;
+	friend class ppu_recompiler_llvm::Compiler;
 #endif
 private:
 	PPUThread& CPU;
@@ -133,20 +137,72 @@ private:
 		return ctr_ok && cond_ok;
 	}
 
-	u64& GetRegBySPR(u32 spr)
+	u64 ReadSPR(u32 spr)
 	{
 		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 
-		switch(n)
+		switch (n)
 		{
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
-		case 0x100: return CPU.USPRG0;
+		case 0x100: 
+		case 0x101:
+		case 0x102:
+		case 0x103:
+		case 0x104:
+		case 0x105:
+		case 0x106:
+		case 0x107: return CPU.USPRG[n - 0x100];
+
+		case 0x10C: return get_time();
+
+		case 0x110:
+		case 0x111:
+		case 0x112:
+		case 0x113:
+		case 0x114:
+		case 0x115:
+		case 0x116:
+		case 0x117: return CPU.SPRG[n - 0x110];
 		}
 
-		UNK(fmt::Format("GetRegBySPR error: Unknown SPR 0x%x!", n));
+		UNK(fmt::Format("ReadSPR error: Unknown SPR 0x%x!", n));
 		return CPU.XER.XER;
+	}
+
+	void WriteSPR(u32 spr, u64 value)
+	{
+		const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
+
+		switch (n)
+		{
+		case 0x001: CPU.XER.XER = value; return;
+		case 0x008: CPU.LR = value; return;
+		case 0x009: CPU.CTR = value; return;
+		case 0x100: 
+		case 0x101:
+		case 0x102:
+		case 0x103:
+		case 0x104:
+		case 0x105:
+		case 0x106:
+		case 0x107: CPU.USPRG[n - 0x100] = value; return;
+
+		case 0x10C: UNK("WriteSPR: Write to time-based SPR. Report this to a developer!"); return;
+
+		case 0x110:
+		case 0x111:
+		case 0x112:
+		case 0x113:
+		case 0x114:
+		case 0x115:
+		case 0x116:
+		case 0x117: CPU.SPRG[n - 0x110] = value; return;
+		}
+
+		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));
+		return;
 	}
 	
 	void TDI(u32 to, u32 ra, s32 simm16)
@@ -2911,7 +2967,7 @@ private:
 	}
 	void MFSPR(u32 rd, u32 spr)
 	{
-		CPU.GPR[rd] = GetRegBySPR(spr);
+		CPU.GPR[rd] = ReadSPR(spr);
 	}
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3062,7 +3118,7 @@ private:
 	}
 	void MTSPR(u32 spr, u32 rs)
 	{
-		GetRegBySPR(spr) = CPU.GPR[rs];
+		WriteSPR(spr, CPU.GPR[rs]);
 	}
 	void DCBI(u32 ra, u32 rb)
 	{

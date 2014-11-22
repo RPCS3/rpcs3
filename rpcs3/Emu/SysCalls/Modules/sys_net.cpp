@@ -96,7 +96,7 @@ int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> pad
 {
 	sys_net->Warning("accept(s=%d, family_addr=0x%x, paddrlen=0x%x)", s, addr.addr(), paddrlen.addr());
 	if (!addr) {
-		int ret = accept(s, NULL, NULL);
+		int ret = accept(s, nullptr, nullptr);
 		*g_lastError = getLastError();
 		return ret;
 	}

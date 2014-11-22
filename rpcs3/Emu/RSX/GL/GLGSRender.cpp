@@ -2037,8 +2037,12 @@ void GLGSRender::Flip()
 			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 			checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 			GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-			memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			if (packed) 
+			{
+				memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
+				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+				checkForGlError("Flip(): glUnmapBuffer");
+			}
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			src_buffer = pixels.data();

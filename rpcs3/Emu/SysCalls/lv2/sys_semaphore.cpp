@@ -26,6 +26,16 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.addr(), initial_count, max_count);
 
+        if (sem.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_create(): invalid memory access (sem_addr=0x%x)", sem.addr());
+            return CELL_EFAULT;
+        }
+
+        if (attr.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_create(): An invalid argument value is specified (attr_addr=0x%x)", attr.addr());
+            return CELL_EFAULT;
+        }
+
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
 		sys_semaphore.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
@@ -203,6 +213,11 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
 	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.addr());
+
+        if (count.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_get_value(): invalid memory access (count=0x%x)", count.addr());
+            return CELL_EFAULT;
+        }
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

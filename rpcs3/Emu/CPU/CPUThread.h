@@ -43,6 +43,8 @@ protected:
 
 	CPUDecoder* m_dec;
 
+	bool m_trace_call_stack;
+
 public:
 	virtual void InitRegs()=0;
 
@@ -113,6 +115,8 @@ public:
 		return temp;
 	}
 
+	CPUDecoder * GetDecoder() { return m_dec; };
+
 public:
 	u32 entry;
 	u32 PC;
@@ -175,6 +179,8 @@ public:
 	u32 GetId() const { return m_id; }
 	CPUThreadType GetType()	const { return m_type; }
 
+	void SetCallStackTracing(bool trace_call_stack) { m_trace_call_stack = trace_call_stack; }
+
 	void Reset();
 	void Close();
 	void Run();
@@ -222,13 +228,13 @@ public:
 			m_call_stack.erase((res + 1).base(), m_call_stack.end());
 			return;
 		}
-		
+
 		//add a new entry otherwise
 		CallStackItem new_item;
-		
+
 		new_item.branch_pc = pc;
 		new_item.pc = PC;
-			
+
 		m_call_stack.push_back(new_item);
 	}
 
@@ -250,3 +256,42 @@ protected:
 };
 
 CPUThread* GetCurrentCPUThread();
+
+class cpu_thread
+{
+protected:
+	CPUThread* thread;
+
+public:
+	u32 get_entry() const
+	{
+		return thread->entry;
+	}
+
+	virtual cpu_thread& args(std::initializer_list<std::string> values) = 0;
+
+	virtual cpu_thread& run() = 0;
+
+	u64 join()
+	{
+		if (!joinable())
+			throw "thread must be joinable for join";
+
+		thread->SetJoinable(false);
+
+		while (thread->IsRunning())
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+		return thread->GetExitStatus();
+	}
+
+	bool joinable() const
+	{
+		return thread->IsJoinable();
+	}
+
+	u32 get_id() const
+	{
+		return thread->GetId();
+	}
+};
