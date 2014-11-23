@@ -284,7 +284,7 @@ void Compiler::Decode(const u32 code) {
 }
 
 void Compiler::NULL_OP() {
-    InterpreterCall("NULL_OP", &PPUInterpreter::NULL_OP);
+    CompilationError("NULL_OP");
 }
 
 void Compiler::NOP() {
@@ -292,11 +292,11 @@ void Compiler::NOP() {
 }
 
 void Compiler::TDI(u32 to, u32 ra, s32 simm16) {
-    InterpreterCall("TDI", &PPUInterpreter::TDI, to, ra, simm16);
+    CompilationError("TDI");
 }
 
 void Compiler::TWI(u32 to, u32 ra, s32 simm16) {
-    InterpreterCall("TWI", &PPUInterpreter::TWI, to, ra, simm16);
+    CompilationError("TWI");
 }
 
 void Compiler::MFVSCR(u32 vd) {
@@ -1298,35 +1298,67 @@ void Compiler::VREFP(u32 vd, u32 vb) {
 }
 
 void Compiler::VRFIM(u32 vd, u32 vb) {
-    InterpreterCall("VRFIM", &PPUInterpreter::VRFIM, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::floor, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VRFIN(u32 vd, u32 vb) {
-    InterpreterCall("VRFIN", &PPUInterpreter::VRFIN, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::nearbyint, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VRFIP(u32 vd, u32 vb) {
-    InterpreterCall("VRFIP", &PPUInterpreter::VRFIP, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::ceil, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VRFIZ(u32 vd, u32 vb) {
-    InterpreterCall("VRFIZ", &PPUInterpreter::VRFIZ, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::trunc, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VRLB(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VRLB", &PPUInterpreter::VRLB, vd, va, vb);
+    auto va_v16i8   = GetVrAsIntVec(va, 8);
+    auto vb_v16i8   = GetVrAsIntVec(vb, 8);
+    vb_v16i8        = m_ir_builder->CreateAnd(vb_v16i8, m_ir_builder->CreateVectorSplat(16, m_ir_builder->getInt8(7)));
+    auto tmp1_v16i8 = m_ir_builder->CreateShl(va_v16i8, vb_v16i8);
+    vb_v16i8        = m_ir_builder->CreateSub(m_ir_builder->CreateVectorSplat(16, m_ir_builder->getInt8(8)), vb_v16i8);
+    auto tmp2_v16i8 = m_ir_builder->CreateLShr(va_v16i8, vb_v16i8);
+    auto res_v16i8  = m_ir_builder->CreateOr(tmp1_v16i8, tmp2_v16i8);
+    SetVr(vd, res_v16i8);
 }
 
 void Compiler::VRLH(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VRLH", &PPUInterpreter::VRLH, vd, va, vb);
+    auto va_v8i16   = GetVrAsIntVec(va, 16);
+    auto vb_v8i16   = GetVrAsIntVec(vb, 16);
+    vb_v8i16        = m_ir_builder->CreateAnd(vb_v8i16, m_ir_builder->CreateVectorSplat(8, m_ir_builder->getInt16(0xF)));
+    auto tmp1_v8i16 = m_ir_builder->CreateShl(va_v8i16, vb_v8i16);
+    vb_v8i16        = m_ir_builder->CreateSub(m_ir_builder->CreateVectorSplat(8, m_ir_builder->getInt16(0x10)), vb_v8i16);
+    auto tmp2_v8i16 = m_ir_builder->CreateLShr(va_v8i16, vb_v8i16);
+    auto res_v8i16  = m_ir_builder->CreateOr(tmp1_v8i16, tmp2_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VRLW(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VRLW", &PPUInterpreter::VRLW, vd, va, vb);
+    auto va_v4i32   = GetVrAsIntVec(va, 32);
+    auto vb_v4i32   = GetVrAsIntVec(vb, 32);
+    vb_v4i32        = m_ir_builder->CreateAnd(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x1F)));
+    auto tmp1_v4i32 = m_ir_builder->CreateShl(va_v4i32, vb_v4i32);
+    vb_v4i32        = m_ir_builder->CreateSub(m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x20)), vb_v4i32);
+    auto tmp2_v4i32 = m_ir_builder->CreateLShr(va_v4i32, vb_v4i32);
+    auto res_v4i32  = m_ir_builder->CreateOr(tmp1_v4i32, tmp2_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VRSQRTEFP(u32 vd, u32 vb) {
-    InterpreterCall("VRSQRTEFP", &PPUInterpreter::VRSQRTEFP, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    res_v4f32      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse_rcp_ps), res_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VSEL(u32 vd, u32 va, u32 vb, u32 vc) {
@@ -1832,7 +1864,8 @@ void Compiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
 }
 
 void Compiler::DCBI(u32 ra, u32 rb) {
-    InterpreterCall("DCBI", &PPUInterpreter::DCBI, ra, rb);
+    // TODO: See if this can be translated to cache flush
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
@@ -2125,7 +2158,7 @@ void Compiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
 }
 
 void Compiler::TW(u32 to, u32 ra, u32 rb) {
-    InterpreterCall("TW", &PPUInterpreter::TW, to, ra, rb);
+    CompilationError("TW");
 }
 
 void Compiler::LVSL(u32 vd, u32 ra, u32 rb) {
@@ -2506,7 +2539,7 @@ void Compiler::ANDC(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::TD(u32 to, u32 ra, u32 rb) {
-    InterpreterCall("TD", &PPUInterpreter::TD, to, ra, rb);
+    CompilationError("TD");
 }
 
 void Compiler::LVEWX(u32 vd, u32 ra, u32 rb) {
@@ -2669,11 +2702,52 @@ void Compiler::STVEBX(u32 vs, u32 ra, u32 rb) {
 }
 
 void Compiler::SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
-    InterpreterCall("SUBFE", &PPUInterpreter::SUBFE, rd, ra, rb, oe, rc);
+    auto ca_i64    = GetXerCa();
+    auto ra_i64    = GetGpr(ra);
+    auto rb_i64    = GetGpr(rb);
+    ra_i64         = m_ir_builder->CreateNot(ra_i64);
+    auto res_s     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, ca_i64);
+    auto res_i64   = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry1_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    res_s          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), res_i64, rb_i64);
+    res_i64        = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry2_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    auto carry_i1  = m_ir_builder->CreateOr(carry1_i1, carry2_i1);
+    SetGpr(rd, res_i64);
+    SetXerCa(carry_i1);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("SUBFE", &PPUInterpreter::SUBFE, rd, ra, rb, oe, rc);
 }
 
 void Compiler::ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
-    InterpreterCall("ADDE", &PPUInterpreter::ADDE, rd, ra, rb, oe, rc);
+    auto ca_i64    = GetXerCa();
+    auto ra_i64    = GetGpr(ra);
+    auto rb_i64    = GetGpr(rb);
+    auto res_s     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, ca_i64);
+    auto res_i64   = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry1_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    res_s          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), res_i64, rb_i64);
+    res_i64        = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry2_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    auto carry_i1  = m_ir_builder->CreateOr(carry1_i1, carry2_i1);
+    SetGpr(rd, res_i64);
+    SetXerCa(carry_i1);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("ADDE", &PPUInterpreter::ADDE, rd, ra, rb, oe, rc);
 }
 
 void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
@@ -2793,7 +2867,19 @@ void Compiler::ADDZE(u32 rd, u32 ra, u32 oe, bool rc) {
 }
 
 void Compiler::SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) {
-    InterpreterCall("SUBFZE", &PPUInterpreter::SUBFZE, rd, ra, oe, rc);
+    auto ra_i64   = GetGpr(ra);
+    ra_i64        = m_ir_builder->CreateNot(ra_i64);
+    auto ca_i64   = GetXerCa();
+    auto res_s    = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, ca_i64);
+    auto res_i64  = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    SetGpr(rd, res_i64);
+    SetXerCa(carry_i1);
+     
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("SUBFZE", &PPUInterpreter::SUBFZE, rd, ra, oe, rc);
 }
 
 void Compiler::STDCX_(u32 rs, u32 ra, u32 rb) {
@@ -2824,7 +2910,27 @@ void Compiler::STVX(u32 vs, u32 ra, u32 rb) {
 }
 
 void Compiler::SUBFME(u32 rd, u32 ra, u32 oe, bool rc) {
-    InterpreterCall("SUBFME", &PPUInterpreter::SUBFME, rd, ra, oe, rc);
+    auto ca_i64    = GetXerCa();
+    auto ra_i64    = GetGpr(ra);
+    ra_i64         = m_ir_builder->CreateNot(ra_i64);
+    auto res_s     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, ca_i64);
+    auto res_i64   = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry1_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    res_s          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), res_i64, m_ir_builder->getInt64((s64)-1));
+    res_i64        = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry2_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    auto carry_i1  = m_ir_builder->CreateOr(carry1_i1, carry2_i1);
+    SetGpr(rd, res_i64);
+    SetXerCa(carry_i1);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("SUBFME", &PPUInterpreter::SUBFME, rd, ra, oe, rc);
 }
 
 void Compiler::MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2842,7 +2948,26 @@ void Compiler::MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 }
 
 void Compiler::ADDME(u32 rd, u32 ra, u32 oe, bool rc) {
-    InterpreterCall("ADDME", &PPUInterpreter::ADDME, rd, ra, oe, rc);
+    auto ca_i64    = GetXerCa();
+    auto ra_i64    = GetGpr(ra);
+    auto res_s     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), ra_i64, ca_i64);
+    auto res_i64   = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry1_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    res_s          = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::uadd_with_overflow, m_ir_builder->getInt64Ty()), res_i64, m_ir_builder->getInt64((s64)-1));
+    res_i64        = m_ir_builder->CreateExtractValue(res_s, {0});
+    auto carry2_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
+    auto carry_i1  = m_ir_builder->CreateOr(carry1_i1, carry2_i1);
+    SetGpr(rd, res_i64);
+    SetXerCa(carry_i1);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+
+    if (oe) {
+        // TODO: Implement this
+    }
+    //InterpreterCall("ADDME", &PPUInterpreter::ADDME, rd, ra, oe, rc);
 }
 
 void Compiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2913,7 +3038,17 @@ void Compiler::LHZX(u32 rd, u32 ra, u32 rb) {
 }
 
 void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
-    InterpreterCall("EQV", &PPUInterpreter::EQV, ra, rs, rb, rc);
+    auto rs_i64  = GetGpr(rs);
+    auto rb_i64  = GetGpr(rb);
+    auto res_i64 = m_ir_builder->CreateXor(rs_i64, rb_i64);
+    res_i64      = m_ir_builder->CreateNot(res_i64);
+    SetGpr(ra, res_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+
+    //InterpreterCall("EQV", &PPUInterpreter::EQV, ra, rs, rb, rc);
 }
 
 void Compiler::ECIWX(u32 rd, u32 ra, u32 rb) {
@@ -2991,7 +3126,8 @@ void Compiler::LWAX(u32 rd, u32 ra, u32 rb) {
 }
 
 void Compiler::DST(u32 ra, u32 rb, u32 strm, u32 t) {
-    InterpreterCall("DST", &PPUInterpreter::DST, ra, rb, strm, t);
+    // TODO: Revisit
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::LHAX(u32 rd, u32 ra, u32 rb) {
@@ -3036,7 +3172,8 @@ void Compiler::LWAUX(u32 rd, u32 ra, u32 rb) {
 }
 
 void Compiler::DSTST(u32 ra, u32 rb, u32 strm, u32 t) {
-    InterpreterCall("DSTST", &PPUInterpreter::DSTST, ra, rb, strm, t);
+    // TODO: Revisit
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::LHAUX(u32 rd, u32 ra, u32 rb) {
@@ -3063,7 +3200,16 @@ void Compiler::STHX(u32 rs, u32 ra, u32 rb) {
 }
 
 void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
-    InterpreterCall("ORC", &PPUInterpreter::ORC, ra, rs, rb, rc);
+    auto rs_i64  = GetGpr(rs);
+    auto rb_i64  = GetGpr(rb);
+    rb_i64       = m_ir_builder->CreateNot(rb_i64);
+    auto res_i64 = m_ir_builder->CreateOr(rs_i64, rb_i64);
+    SetGpr(ra, res_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("ORC", &PPUInterpreter::ORC, ra, rs, rb, rc);
 }
 
 void Compiler::ECOWX(u32 rs, u32 ra, u32 rb) {
@@ -3149,7 +3295,16 @@ void Compiler::MTSPR(u32 spr, u32 rs) {
 }
 
 void Compiler::NAND(u32 ra, u32 rs, u32 rb, bool rc) {
-    InterpreterCall("NAND", &PPUInterpreter::NAND, ra, rs, rb, rc);
+    auto rs_i64  = GetGpr(rs);
+    auto rb_i64  = GetGpr(rb);
+    auto res_i64 = m_ir_builder->CreateAnd(rs_i64, rb_i64);
+    res_i64      = m_ir_builder->CreateNot(res_i64);
+    SetGpr(ra, res_i64);
+
+    if (rc) {
+        SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
+    }
+    //InterpreterCall("NAND", &PPUInterpreter::NAND, ra, rs, rb, rc);
 }
 
 void Compiler::STVXL(u32 vs, u32 ra, u32 rb) {
@@ -3537,7 +3692,8 @@ void Compiler::LVRXL(u32 vd, u32 ra, u32 rb) {
 }
 
 void Compiler::DSS(u32 strm, u32 a) {
-    InterpreterCall("DSS", &PPUInterpreter::DSS, strm, a);
+    // TODO: Revisit
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::SRAWI(u32 ra, u32 rs, u32 sh, bool rc) {
@@ -3661,7 +3817,8 @@ void Compiler::EXTSW(u32 ra, u32 rs, bool rc) {
 }
 
 void Compiler::ICBI(u32 ra, u32 rs) {
-    InterpreterCall("ICBI", &PPUInterpreter::ICBI, ra, rs);
+    // TODO: Revisit
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::DCBZ(u32 ra, u32 rb) {
@@ -4050,7 +4207,12 @@ void Compiler::FSQRTS(u32 frd, u32 frb, bool rc) {
 }
 
 void Compiler::FRES(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FRES", &PPUInterpreter::FRES, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = m_ir_builder->CreateFDiv(ConstantFP::get(m_ir_builder->getDoubleTy(), 1.0), rb_f64);
+    SetFpr(frd, res_f64);
+
+    // TODO: Set flags
+    //InterpreterCall("FRES", &PPUInterpreter::FRES, frd, frb, rc);
 }
 
 void Compiler::FMULS(u32 frd, u32 fra, u32 frc, bool rc) {
@@ -4241,7 +4403,10 @@ void Compiler::FMUL(u32 frd, u32 fra, u32 frc, bool rc) {
 }
 
 void Compiler::FRSQRTE(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FRSQRTE", &PPUInterpreter::FRSQRTE, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
+    res_f64      = m_ir_builder->CreateFDiv(ConstantFP::get(m_ir_builder->getDoubleTy(), 1.0), res_f64);
+    SetFpr(frd, res_f64);
 }
 
 void Compiler::FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4353,7 +4518,7 @@ void Compiler::FCFID(u32 frd, u32 frb, bool rc) {
 }
 
 void Compiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
-    //InterpreterCall("UNK", &PPUInterpreter::UNK, code, opcode, gcode);
+    CompilationError(fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
 }
 
 std::string Compiler::GetBasicBlockNameFromAddress(u32 address, const std::string & suffix) const {
@@ -5032,6 +5197,11 @@ llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_f
     auto executable_i64   = m_ir_builder->CreateLoad(location_i64_ptr);
     auto executable_ptr   = m_ir_builder->CreateIntToPtr(executable_i64, m_compiled_function_type->getPointerTo());
     return m_ir_builder->CreateCall3(executable_ptr, m_state.args[CompileTaskState::Args::State], m_state.args[CompileTaskState::Args::Interpreter], context_i64);
+}
+
+void Compiler::CompilationError(const std::string & error) {
+    LOG_ERROR(PPU, "[0x%08X] %s", m_state.current_instruction_address, error.c_str());
+    Emu.Pause();
 }
 
 void Compiler::InitRotateMask() {

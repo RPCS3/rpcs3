@@ -930,6 +930,9 @@ namespace ppu_recompiler_llvm {
         /// Excute a test
         void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
 
+        /// Handle compilation errors
+        void CompilationError(const std::string & error);
+
         /// A mask used in rotate instructions
         static u64 s_rotate_mask[64][64];
 
