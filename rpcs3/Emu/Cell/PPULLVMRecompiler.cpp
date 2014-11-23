@@ -288,7 +288,7 @@ void Compiler::NULL_OP() {
 }
 
 void Compiler::NOP() {
-    InterpreterCall("NOP", &PPUInterpreter::NOP);
+    m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
 }
 
 void Compiler::TDI(u32 to, u32 ra, s32 simm16) {
@@ -725,19 +725,47 @@ void Compiler::VCMPGTUW_(u32 vd, u32 va, u32 vb) {
 }
 
 void Compiler::VCTSXS(u32 vd, u32 uimm5, u32 vb) {
-    InterpreterCall("VCTSXS", &PPUInterpreter::VCTSXS, vd, uimm5, vb);
+    auto vb_v4f32 = GetVrAsFloatVec(vb);
+    if (uimm5) {
+        vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 1 << uimm5)));
+    }
+
+    auto res_v4i32 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_cvtps2dq), vb_v4f32);
+    auto cmp_v4i1  = m_ir_builder->CreateFCmpOGE(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 0x7FFFFFFF)));
+    auto cmp_v4i32 = m_ir_builder->CreateSExt(cmp_v4i1, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    res_v4i32      = m_ir_builder->CreateXor(cmp_v4i32, res_v4i32);
+    SetVr(vd, res_v4i32);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VCTUXS(u32 vd, u32 uimm5, u32 vb) {
-    InterpreterCall("VCTUXS", &PPUInterpreter::VCTUXS, vd, uimm5, vb);
+    auto vb_v4f32 = GetVrAsFloatVec(vb);
+    if (uimm5) {
+        vb_v4f32 = m_ir_builder->CreateFMul(vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 1 << uimm5)));
+    }
+
+    auto res_v4f32 = (Value *)m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse_max_ps), vb_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 0)));
+    auto cmp_v4i1  = m_ir_builder->CreateFCmpOGE(res_v4f32, m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 0xFFFFFFFFu)));
+    auto cmp_v4i32 = m_ir_builder->CreateSExt(cmp_v4i1, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    auto res_v4i32 = m_ir_builder->CreateFPToUI(res_v4f32, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    res_v4i32      = m_ir_builder->CreateOr(res_v4i32, cmp_v4i32);
+    SetVr(vd, res_v4i32);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VEXPTEFP(u32 vd, u32 vb) {
-    InterpreterCall("VEXPTEFP", &PPUInterpreter::VEXPTEFP, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = (Value *)m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::pow, VectorType::get(m_ir_builder->getFloatTy(), 4)),
+                                                        m_ir_builder->CreateVectorSplat(4, ConstantFP::get(m_ir_builder->getFloatTy(), 2.0f)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VLOGEFP(u32 vd, u32 vb) {
-    InterpreterCall("VLOGEFP", &PPUInterpreter::VLOGEFP, vd, vb);
+    auto vb_v4f32  = GetVrAsFloatVec(vb);
+    auto res_v4f32 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::log2, VectorType::get(m_ir_builder->getFloatTy(), 4)), vb_v4f32);
+    SetVr(vd, res_v4f32);
 }
 
 void Compiler::VMADDFP(u32 vd, u32 va, u32 vc, u32 vb) {
@@ -798,11 +826,46 @@ void Compiler::VMAXUW(u32 vd, u32 va, u32 vb) {
 }
 
 void Compiler::VMHADDSHS(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VMHADDSHS", &PPUInterpreter::VMHADDSHS, vd, va, vb, vc);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto vc_v8i16  = GetVrAsIntVec(vc, 16);
+    auto va_v8i32  = m_ir_builder->CreateSExt(va_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto vb_v8i32  = m_ir_builder->CreateSExt(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto vc_v8i32  = m_ir_builder->CreateSExt(vc_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto res_v8i32 = m_ir_builder->CreateMul(va_v8i32, vb_v8i32);
+    res_v8i32      = m_ir_builder->CreateAShr(res_v8i32, 15);
+    res_v8i32      = m_ir_builder->CreateAdd(res_v8i32, vc_v8i32);
+
+    u32 mask1_v4i32[4] = {0, 1, 2, 3};
+    auto res1_v4i32    = m_ir_builder->CreateShuffleVector(res_v8i32, UndefValue::get(VectorType::get(m_ir_builder->getInt32Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask1_v4i32));
+    u32 mask2_v4i32[4] = {4, 5, 6, 7};
+    auto res2_v4i32    = m_ir_builder->CreateShuffleVector(res_v8i32, UndefValue::get(VectorType::get(m_ir_builder->getInt32Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask2_v4i32));
+    auto res_v8i16     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_packssdw_128), res1_v4i32, res2_v4i32);
+    SetVr(vd, res_v8i16);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VMHRADDSHS(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VMHRADDSHS", &PPUInterpreter::VMHRADDSHS, vd, va, vb, vc);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto vc_v8i16  = GetVrAsIntVec(vc, 16);
+    auto va_v8i32  = m_ir_builder->CreateSExt(va_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto vb_v8i32  = m_ir_builder->CreateSExt(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto vc_v8i32  = m_ir_builder->CreateSExt(vc_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto res_v8i32 = m_ir_builder->CreateMul(va_v8i32, vb_v8i32);
+    res_v8i32      = m_ir_builder->CreateAdd(res_v8i32, m_ir_builder->CreateVectorSplat(8, m_ir_builder->getInt32(0x4000)));
+    res_v8i32      = m_ir_builder->CreateAShr(res_v8i32, 15);
+    res_v8i32      = m_ir_builder->CreateAdd(res_v8i32, vc_v8i32);
+
+    u32 mask1_v4i32[4] = {0, 1, 2, 3};
+    auto res1_v4i32    = m_ir_builder->CreateShuffleVector(res_v8i32, UndefValue::get(VectorType::get(m_ir_builder->getInt32Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask1_v4i32));
+    u32 mask2_v4i32[4] = {4, 5, 6, 7};
+    auto res2_v4i32    = m_ir_builder->CreateShuffleVector(res_v8i32, UndefValue::get(VectorType::get(m_ir_builder->getInt32Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask2_v4i32));
+    auto res_v8i16     = m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_packssdw_128), res1_v4i32, res2_v4i32);
+    SetVr(vd, res_v8i16);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VMINFP(u32 vd, u32 va, u32 vb) {
@@ -855,7 +918,12 @@ void Compiler::VMINUW(u32 vd, u32 va, u32 vb) {
 }
 
 void Compiler::VMLADDUHM(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VMLADDUHM", &PPUInterpreter::VMLADDUHM, vd, va, vb, vc);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto vc_v8i16  = GetVrAsIntVec(vc, 16);
+    auto res_v8i16 = m_ir_builder->CreateMul(va_v8i16, vb_v8i16);
+    res_v8i16      = m_ir_builder->CreateAdd(res_v8i16, vc_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VMRGHB(u32 vd, u32 va, u32 vb) {
@@ -1010,35 +1078,83 @@ void Compiler::VMSUMUHS(u32 vd, u32 va, u32 vb, u32 vc) {
 }
 
 void Compiler::VMULESB(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULESB", &PPUInterpreter::VMULESB, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    va_v8i16       = m_ir_builder->CreateAShr(va_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateAShr(vb_v8i16, 8);
+    auto res_v8i16 = m_ir_builder->CreateMul(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VMULESH(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULESH", &PPUInterpreter::VMULESH, vd, va, vb);
+    auto va_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    va_v4i32       = m_ir_builder->CreateAShr(va_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateAShr(vb_v4i32, 16);
+    auto res_v4i32 = m_ir_builder->CreateMul(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VMULEUB(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULEUB", &PPUInterpreter::VMULEUB, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    va_v8i16       = m_ir_builder->CreateLShr(va_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateLShr(vb_v8i16, 8);
+    auto res_v8i16 = m_ir_builder->CreateMul(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VMULEUH(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULEUH", &PPUInterpreter::VMULEUH, vd, va, vb);
+    auto va_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    va_v4i32       = m_ir_builder->CreateLShr(va_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateLShr(vb_v4i32, 16);
+    auto res_v4i32 = m_ir_builder->CreateMul(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VMULOSB(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULOSB", &PPUInterpreter::VMULOSB, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    va_v8i16       = m_ir_builder->CreateShl(va_v8i16, 8);
+    va_v8i16       = m_ir_builder->CreateAShr(va_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateShl(vb_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateAShr(vb_v8i16, 8);
+    auto res_v8i16 = m_ir_builder->CreateMul(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VMULOSH(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULOSH", &PPUInterpreter::VMULOSH, vd, va, vb);
+    auto va_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    va_v4i32       = m_ir_builder->CreateShl(va_v4i32, 16);
+    va_v4i32       = m_ir_builder->CreateAShr(va_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateShl(vb_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateAShr(vb_v4i32, 16);
+    auto res_v4i32 = m_ir_builder->CreateMul(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VMULOUB(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULOUB", &PPUInterpreter::VMULOUB, vd, va, vb);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    va_v8i16       = m_ir_builder->CreateShl(va_v8i16, 8);
+    va_v8i16       = m_ir_builder->CreateLShr(va_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateShl(vb_v8i16, 8);
+    vb_v8i16       = m_ir_builder->CreateLShr(vb_v8i16, 8);
+    auto res_v8i16 = m_ir_builder->CreateMul(va_v8i16, vb_v8i16);
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VMULOUH(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VMULOUH", &PPUInterpreter::VMULOUH, vd, va, vb);
+    auto va_v4i32  = GetVrAsIntVec(va, 32);
+    auto vb_v4i32  = GetVrAsIntVec(vb, 32);
+    va_v4i32       = m_ir_builder->CreateShl(va_v4i32, 16);
+    va_v4i32       = m_ir_builder->CreateLShr(va_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateShl(vb_v4i32, 16);
+    vb_v4i32       = m_ir_builder->CreateLShr(vb_v4i32, 16);
+    auto res_v4i32 = m_ir_builder->CreateMul(va_v4i32, vb_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb) {

@@ -807,9 +807,15 @@ private:
 			float result = CPU.VPR[vb]._f[w] * nScale;
 
 			if (result > 0x7fffffff)
+			{
 				CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
+				CPU.VSCR.SAT = 1;
+			}
 			else if (result < -pow(2, 31))
+			{
 				CPU.VPR[vd]._s32[w] = (int)0x80000000;
+				CPU.VSCR.SAT = 1;
+			}
 			else // C rounding = Round towards 0
 				CPU.VPR[vd]._s32[w] = (int)result;
 		}
@@ -821,24 +827,30 @@ private:
 		for (uint w = 0; w < 4; w++)
 		{
 			// C rounding = Round towards 0
-			s64 result = (s64)(CPU.VPR[vb]._f[w] * nScale);
+			float result = CPU.VPR[vb]._f[w] * nScale;
 
 			if (result > 0xffffffffu)
+			{
 				CPU.VPR[vd]._u32[w] = 0xffffffffu;
+				CPU.VSCR.SAT = 1;
+			}
 			else if (result < 0)
+			{
 				CPU.VPR[vd]._u32[w] = 0;
+				CPU.VSCR.SAT = 1;
+			}
 			else
 				CPU.VPR[vd]._u32[w] = (u32)result;
 		}
 	}
 	void VEXPTEFP(u32 vd, u32 vb)
 	{
-		// vd = exp(vb * log(2))
+		// vd = 2^x
 		// ISA : Note that the value placed into the element of vD may vary between implementations
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = exp(CPU.VPR[vb]._f[w] * log(2.0f));
+			CPU.VPR[vd]._f[w] = powf(2.0f, CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VLOGEFP(u32 vd, u32 vb)
@@ -847,7 +859,7 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = log(CPU.VPR[vb]._f[w]) / log(2.0f);
+			CPU.VPR[vd]._f[w] = log2(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
@@ -906,7 +918,8 @@ private:
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			s32 result = (s32)CPU.VPR[va]._s16[h] * (s32)CPU.VPR[vb]._s16[h] + (s32)CPU.VPR[vc]._s16[h];
+			s32 result = (s32)CPU.VPR[va]._s16[h] * (s32)CPU.VPR[vb]._s16[h];
+			result     = (result >> 15) + (s32)CPU.VPR[vc]._s16[h];
 
 			if (result > INT16_MAX)
 			{
@@ -926,7 +939,8 @@ private:
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			s32 result = (s32)CPU.VPR[va]._s16[h] * (s32)CPU.VPR[vb]._s16[h] + (s32)CPU.VPR[vc]._s16[h] + 0x4000;
+			s32 result = ((s32)CPU.VPR[va]._s16[h] * (s32)CPU.VPR[vb]._s16[h]) + 0x4000;
+			result     = (result >> 15) + (s32)CPU.VPR[vc]._s16[h];
 
 			if (result > INT16_MAX)
 			{
