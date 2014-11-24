@@ -165,12 +165,12 @@ namespace vm
 
 		__forceinline T& operator [](typename remove_be_t<AT>::type index) const
 		{
-			return vm::get_ref<T>(m_addr + sizeof(AT)* index);
+			return vm::get_ref<T>(m_addr + sizeof(T)* index);
 		}
 
 		__forceinline T& operator [](typename to_be_t<AT>::forced_type index) const
 		{
-			return vm::get_ref<T>(m_addr + sizeof(AT)* index);
+			return vm::get_ref<T>(m_addr + sizeof(T)* index);
 		}
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }

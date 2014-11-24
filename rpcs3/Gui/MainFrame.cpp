@@ -34,7 +34,8 @@ enum IDs
 {
 	id_boot_elf = 0x555,
 	id_boot_game,
-	id_install_pkg,
+	id_boot_install_pkg,
+	id_boot_exit,
 	id_sys_pause,
 	id_sys_stop,
 	id_sys_send_open_menu,
@@ -76,43 +77,45 @@ MainFrame::MainFrame()
 	wxMenuBar* menubar = new wxMenuBar();
 
 	wxMenu* menu_boot = new wxMenu();
-	menubar->Append(menu_boot, "Boot");
-	menu_boot->Append(id_boot_elf, "Boot ELF / SELF file");
-	menu_boot->Append(id_boot_game, "Boot game");
+	menubar->Append(menu_boot, "&Boot");
+	menu_boot->Append(id_boot_elf, "Boot &ELF / SELF file");
+	menu_boot->Append(id_boot_game, "Boot &game");
 	menu_boot->AppendSeparator();
-	menu_boot->Append(id_install_pkg, "Install PKG");
+	menu_boot->Append(id_boot_install_pkg, "&Install PKG");
+	menu_boot->AppendSeparator();
+	menu_boot->Append(id_boot_exit, "&Exit");
 
 	wxMenu* menu_sys = new wxMenu();
-	menubar->Append(menu_sys, "System");
-	menu_sys->Append(id_sys_pause, "Pause")->Enable(false);
-	menu_sys->Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
+	menubar->Append(menu_sys, "&System");
+	menu_sys->Append(id_sys_pause, "&Pause")->Enable(false);
+	menu_sys->Append(id_sys_stop, "&Stop\tCtrl + S")->Enable(false);
 	menu_sys->AppendSeparator();
-	menu_sys->Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
-	menu_sys->Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_open_menu, "Send &open system menu cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_exit, "Send &exit cmd")->Enable(false);
 
 	wxMenu* menu_conf = new wxMenu();
-	menubar->Append(menu_conf, "Config");
-	menu_conf->Append(id_config_emu, "Settings");
-	menu_conf->Append(id_config_pad, "PAD Settings");
+	menubar->Append(menu_conf, "&Config");
+	menu_conf->Append(id_config_emu, "&Settings");
+	menu_conf->Append(id_config_pad, "&PAD Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "Auto Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
-	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
-	menu_conf->Append(id_config_savedata_manager, "Save Data Utility");
-	menu_conf->Append(id_config_lle_modules_manager, "LLE Modules Manager");
+	menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
+	menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");
+	menu_conf->Append(id_config_savedata_manager, "Save &Data Utility");
+	menu_conf->Append(id_config_lle_modules_manager, "&LLE Modules Manager");
 
 
 	wxMenu* menu_tools = new wxMenu();
-	menubar->Append(menu_tools, "Tools");
-	menu_tools->Append(id_tools_compiler, "ELF Compiler");
-	menu_tools->Append(id_tools_kernel_explorer, "Kernel Explorer")->Enable(false);
-	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer")->Enable(false);
-	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger")->Enable(false);
+	menubar->Append(menu_tools, "&Tools");
+	menu_tools->Append(id_tools_compiler, "&ELF Compiler");
+	menu_tools->Append(id_tools_kernel_explorer, "&Kernel Explorer")->Enable(false);
+	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
+	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
 
 	wxMenu* menu_help = new wxMenu();
-	menubar->Append(menu_help, "Help");
-	menu_help->Append(id_help_about, "About...");
+	menubar->Append(menu_help, "&Help");
+	menu_help->Append(id_help_about, "&About...");
 
 	SetMenuBar(menubar);
 
@@ -128,7 +131,8 @@ MainFrame::MainFrame()
 	// Events
 	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
 	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
-	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
+	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_boot_install_pkg);
+	Bind(wxEVT_MENU, [](wxCommandEvent&){ wxGetApp().Exit(); }, id_boot_exit);
 
 	Bind(wxEVT_MENU, &MainFrame::Pause, this, id_sys_pause);
 	Bind(wxEVT_MENU, &MainFrame::Stop, this, id_sys_stop);
@@ -785,7 +789,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	// Emulation
 	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + E" : "Resume\tCtrl + E");
+	pause.SetItemLabel(is_running ? "&Pause\tCtrl + P" : is_ready ? "&Start\tCtrl + E" : "&Resume\tCtrl + E");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 
@@ -793,7 +797,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
 	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
 	bool enable_commands = !is_stopped;
-	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
+	send_open_menu.SetItemLabel(wxString::Format("Send &%s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 
