@@ -1703,7 +1703,6 @@ void Compiler::MULLI(u32 rd, u32 ra, s32 simm16) {
     auto ra_i64  = GetGpr(ra);
     auto res_i64 = m_ir_builder->CreateMul(ra_i64, m_ir_builder->getInt64((s64)simm16));
     SetGpr(rd, res_i64);
-    //InterpreterCall("MULLI", &PPUInterpreter::MULLI, rd, ra, simm16);
 }
 
 void Compiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
@@ -1714,7 +1713,6 @@ void Compiler::SUBFIC(u32 rd, u32 ra, s32 simm16) {
     auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
     SetGpr(rd, diff_i64);
     SetXerCa(carry_i1);
-    //InterpreterCall("SUBFIC", &PPUInterpreter::SUBFIC, rd, ra, simm16);
 }
 
 void Compiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
@@ -1726,7 +1724,6 @@ void Compiler::CMPLI(u32 crfd, u32 l, u32 ra, u32 uimm16) {
     }
 
     SetCrFieldUnsignedCmp(crfd, ra_i64, m_ir_builder->getInt64(uimm16));
-    //InterpreterCall("CMPLI", &PPUInterpreter::CMPLI, crfd, l, ra, uimm16);
 }
 
 void Compiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
@@ -1738,7 +1735,6 @@ void Compiler::CMPI(u32 crfd, u32 l, u32 ra, s32 simm16) {
     }
 
     SetCrFieldSignedCmp(crfd, ra_i64, m_ir_builder->getInt64((s64)simm16));
-    //InterpreterCall("CMPI", &PPUInterpreter::CMPI, crfd, l, ra, simm16);
 }
 
 void Compiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
@@ -1748,13 +1744,11 @@ void Compiler::ADDIC(u32 rd, u32 ra, s32 simm16) {
     auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
     SetGpr(rd, sum_i64);
     SetXerCa(carry_i1);
-    //InterpreterCall("ADDIC", &PPUInterpreter::ADDIC, rd, ra, simm16);
 }
 
 void Compiler::ADDIC_(u32 rd, u32 ra, s32 simm16) {
     ADDIC(rd, ra, simm16);
     SetCrFieldSignedCmp(0, GetGpr(rd), m_ir_builder->getInt64(0));
-    //InterpreterCall("ADDIC_", &PPUInterpreter::ADDIC_, rd, ra, simm16);
 }
 
 void Compiler::ADDI(u32 rd, u32 ra, s32 simm16) {
@@ -1765,7 +1759,6 @@ void Compiler::ADDI(u32 rd, u32 ra, s32 simm16) {
         auto sum_i64 = m_ir_builder->CreateAdd(ra_i64, m_ir_builder->getInt64((s64)simm16));
         SetGpr(rd, sum_i64);
     }
-    //InterpreterCall("ADDI", &PPUInterpreter::ADDI, rd, ra, simm16);
 }
 
 void Compiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
@@ -1776,18 +1769,12 @@ void Compiler::ADDIS(u32 rd, u32 ra, s32 simm16) {
         auto sum_i64 = m_ir_builder->CreateAdd(ra_i64, m_ir_builder->getInt64((s64)simm16 << 16));
         SetGpr(rd, sum_i64);
     }
-    //InterpreterCall("ADDIS", &PPUInterpreter::ADDIS, rd, ra, simm16);
 }
 
 void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, bd));
     auto target_i32 = m_ir_builder->CreateTrunc(target_i64, m_ir_builder->getInt32Ty());
     CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
-    //m_hit_branch_instruction = true;
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
-    //InterpreterCall("BC", &PPUInterpreter::BC, bo, bi, bd, aa, lk);
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
-    //m_ir_builder->CreateRetVoid();
 }
 
 void Compiler::SC(u32 sc_code) {
@@ -1798,10 +1785,6 @@ void Compiler::B(s32 ll, u32 aa, u32 lk) {
     auto target_i64 = m_ir_builder->getInt64(branchTarget(aa ? 0 : m_state.current_instruction_address, ll));
     auto target_i32 = m_ir_builder->CreateTrunc(target_i64, m_ir_builder->getInt32Ty());
     CreateBranch(nullptr, target_i32, lk ? true : false);
-    //m_hit_branch_instruction = true;
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
-    //InterpreterCall("B", &PPUInterpreter::B, ll, aa, lk);
-    //m_ir_builder->CreateRetVoid();
 }
 
 void Compiler::MCRF(u32 crfd, u32 crfs) {
@@ -1811,7 +1794,6 @@ void Compiler::MCRF(u32 crfd, u32 crfs) {
         cr_i32       = SetNibble(cr_i32, crfd, crf_i32);
         SetCr(cr_i32);
     }
-    //InterpreterCall("MCRF", &PPUInterpreter::MCRF, crfd, crfs);
 }
 
 void Compiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
@@ -1819,11 +1801,6 @@ void Compiler::BCLR(u32 bo, u32 bi, u32 bh, u32 lk) {
     lr_i64      = m_ir_builder->CreateAnd(lr_i64, ~0x3ULL);
     auto lr_i32 = m_ir_builder->CreateTrunc(lr_i64, m_ir_builder->getInt32Ty());
     CreateBranch(CheckBranchCondition(bo, bi), lr_i32, lk ? true : false, true);
-    //m_hit_branch_instruction = true;
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
-    //InterpreterCall("BCLR", &PPUInterpreter::BCLR, bo, bi, bh, lk);
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
-    //m_ir_builder->CreateRetVoid();
 }
 
 void Compiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
@@ -1834,7 +1811,6 @@ void Compiler::CRNOR(u32 crbd, u32 crba, u32 crbb) {
     res_i32      = m_ir_builder->CreateXor(res_i32, 1);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRNOR", &PPUInterpreter::CRNOR, crbd, crba, crbb);
 }
 
 void Compiler::CRANDC(u32 crbd, u32 crba, u32 crbb) {
@@ -1845,12 +1821,10 @@ void Compiler::CRANDC(u32 crbd, u32 crba, u32 crbb) {
     res_i32      = m_ir_builder->CreateAnd(ba_i32, res_i32);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRANDC", &PPUInterpreter::CRANDC, crbd, crba, crbb);
 }
 
 void Compiler::ISYNC() {
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_mfence));
-    //InterpreterCall("ISYNC", &PPUInterpreter::ISYNC);
 }
 
 void Compiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
@@ -1860,7 +1834,6 @@ void Compiler::CRXOR(u32 crbd, u32 crba, u32 crbb) {
     auto res_i32 = m_ir_builder->CreateXor(ba_i32, bb_i32);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRXOR", &PPUInterpreter::CRXOR, crbd, crba, crbb);
 }
 
 void Compiler::DCBI(u32 ra, u32 rb) {
@@ -1876,7 +1849,6 @@ void Compiler::CRNAND(u32 crbd, u32 crba, u32 crbb) {
     res_i32      = m_ir_builder->CreateXor(res_i32, 1);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRNAND", &PPUInterpreter::CRNAND, crbd, crba, crbb);
 }
 
 void Compiler::CRAND(u32 crbd, u32 crba, u32 crbb) {
@@ -1886,7 +1858,6 @@ void Compiler::CRAND(u32 crbd, u32 crba, u32 crbb) {
     auto res_i32 = m_ir_builder->CreateAnd(ba_i32, bb_i32);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRAND", &PPUInterpreter::CRAND, crbd, crba, crbb);
 }
 
 void Compiler::CREQV(u32 crbd, u32 crba, u32 crbb) {
@@ -1897,7 +1868,6 @@ void Compiler::CREQV(u32 crbd, u32 crba, u32 crbb) {
     res_i32      = m_ir_builder->CreateXor(res_i32, 1);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CREQV", &PPUInterpreter::CREQV, crbd, crba, crbb);
 }
 
 void Compiler::CRORC(u32 crbd, u32 crba, u32 crbb) {
@@ -1908,7 +1878,6 @@ void Compiler::CRORC(u32 crbd, u32 crba, u32 crbb) {
     res_i32      = m_ir_builder->CreateOr(ba_i32, res_i32);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CRORC", &PPUInterpreter::CRORC, crbd, crba, crbb);
 }
 
 void Compiler::CROR(u32 crbd, u32 crba, u32 crbb) {
@@ -1918,7 +1887,6 @@ void Compiler::CROR(u32 crbd, u32 crba, u32 crbb) {
     auto res_i32 = m_ir_builder->CreateOr(ba_i32, bb_i32);
     cr_i32       = SetBit(cr_i32, crbd, res_i32);
     SetCr(cr_i32);
-    //InterpreterCall("CROR", &PPUInterpreter::CROR, crbd, crba, crbb);
 }
 
 void Compiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
@@ -1926,11 +1894,6 @@ void Compiler::BCCTR(u32 bo, u32 bi, u32 bh, u32 lk) {
     ctr_i64      = m_ir_builder->CreateAnd(ctr_i64, ~0x3ULL);
     auto ctr_i32 = m_ir_builder->CreateTrunc(ctr_i64, m_ir_builder->getInt32Ty());
     CreateBranch(CheckBranchCondition(bo, bi), ctr_i32, lk ? true : false);
-    //m_hit_branch_instruction = true;
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address));
-    //InterpreterCall("BCCTR", &PPUInterpreter::BCCTR, bo, bi, bh, lk);
-    //SetPc(m_ir_builder->getInt32(m_current_instruction_address + 4));
-    //m_ir_builder->CreateRetVoid();
 }
 
 void Compiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
@@ -1955,7 +1918,6 @@ void Compiler::RLWIMI(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLWIMI", &PPUInterpreter::RLWIMI, ra, rs, sh, mb, me, rc);
 }
 
 void Compiler::RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
@@ -1976,7 +1938,6 @@ void Compiler::RLWINM(u32 ra, u32 rs, u32 sh, u32 mb, u32 me, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLWINM", &PPUInterpreter::RLWINM, ra, rs, sh, mb, me, rc);
 }
 
 void Compiler::RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, bool rc) {
@@ -1996,35 +1957,30 @@ void Compiler::RLWNM(u32 ra, u32 rs, u32 rb, u32 mb, u32 me, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLWNM", &PPUInterpreter::RLWNM, ra, rs, rb, mb, me, rc);
 }
 
 void Compiler::ORI(u32 ra, u32 rs, u32 uimm16) {
     auto rs_i64  = GetGpr(rs);
     auto res_i64 = m_ir_builder->CreateOr(rs_i64, uimm16);
     SetGpr(ra, res_i64);
-    //InterpreterCall("ORI", &PPUInterpreter::ORI, ra, rs, uimm16);
 }
 
 void Compiler::ORIS(u32 ra, u32 rs, u32 uimm16) {
     auto rs_i64  = GetGpr(rs);
     auto res_i64 = m_ir_builder->CreateOr(rs_i64, (u64)uimm16 << 16);
     SetGpr(ra, res_i64);
-    //InterpreterCall("ORIS", &PPUInterpreter::ORIS, ra, rs, uimm16);
 }
 
 void Compiler::XORI(u32 ra, u32 rs, u32 uimm16) {
     auto rs_i64  = GetGpr(rs);
     auto res_i64 = m_ir_builder->CreateXor(rs_i64, uimm16);
     SetGpr(ra, res_i64);
-    //InterpreterCall("XORI", &PPUInterpreter::XORI, ra, rs, uimm16);
 }
 
 void Compiler::XORIS(u32 ra, u32 rs, u32 uimm16) {
     auto rs_i64  = GetGpr(rs);
     auto res_i64 = m_ir_builder->CreateXor(rs_i64, (u64)uimm16 << 16);
     SetGpr(ra, res_i64);
-    //InterpreterCall("XORIS", &PPUInterpreter::XORIS, ra, rs, uimm16);
 }
 
 void Compiler::ANDI_(u32 ra, u32 rs, u32 uimm16) {
@@ -2032,7 +1988,6 @@ void Compiler::ANDI_(u32 ra, u32 rs, u32 uimm16) {
     auto res_i64 = m_ir_builder->CreateAnd(rs_i64, uimm16);
     SetGpr(ra, res_i64);
     SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
-    //InterpreterCall("ANDI_", &PPUInterpreter::ANDI_, ra, rs, uimm16);
 }
 
 void Compiler::ANDIS_(u32 ra, u32 rs, u32 uimm16) {
@@ -2040,7 +1995,6 @@ void Compiler::ANDIS_(u32 ra, u32 rs, u32 uimm16) {
     auto res_i64 = m_ir_builder->CreateAnd(rs_i64, (u64)uimm16 << 16);
     SetGpr(ra, res_i64);
     SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
-    //InterpreterCall("ANDIS_", &PPUInterpreter::ANDIS_, ra, rs, uimm16);
 }
 
 void Compiler::RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
@@ -2058,7 +2012,6 @@ void Compiler::RLDICL(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLDICL", &PPUInterpreter::RLDICL, ra, rs, sh, mb, rc);
 }
 
 void Compiler::RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc) {
@@ -2076,7 +2029,6 @@ void Compiler::RLDICR(u32 ra, u32 rs, u32 sh, u32 me, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLDICR", &PPUInterpreter::RLDICR, ra, rs, sh, me, rc);
 }
 
 void Compiler::RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
@@ -2094,7 +2046,6 @@ void Compiler::RLDIC(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLDIC", &PPUInterpreter::RLDIC, ra, rs, sh, mb, rc);
 }
 
 void Compiler::RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
@@ -2116,7 +2067,6 @@ void Compiler::RLDIMI(u32 ra, u32 rs, u32 sh, u32 mb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLDIMI", &PPUInterpreter::RLDIMI, ra, rs, sh, mb, rc);
 }
 
 void Compiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc) {
@@ -2139,7 +2089,6 @@ void Compiler::RLDC_LR(u32 ra, u32 rs, u32 rb, u32 m_eb, bool is_r, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("RLDC_LR", &PPUInterpreter::RLDC_LR, ra, rs, rb, m_eb, is_r, rc);
 }
 
 void Compiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
@@ -2154,7 +2103,6 @@ void Compiler::CMP(u32 crfd, u32 l, u32 ra, u32 rb) {
     }
 
     SetCrFieldSignedCmp(crfd, ra_i64, rb_i64);
-    //InterpreterCall("CMP", &PPUInterpreter::CMP, crfd, l, ra, rb);
 }
 
 void Compiler::TW(u32 to, u32 ra, u32 rb) {
@@ -2192,8 +2140,6 @@ void Compiler::LVSL(u32 vd, u32 ra, u32 rb) {
     lvsl_values_v16i8_ptr      = m_ir_builder->CreateGEP(lvsl_values_v16i8_ptr, index_i64);
     auto val_v16i8             = m_ir_builder->CreateAlignedLoad(lvsl_values_v16i8_ptr, 16);
     SetVr(vd, val_v16i8);
-
-    //InterpreterCall("LVSL", &PPUInterpreter::LVSL, vd, ra, rb);
 }
 
 void Compiler::LVEBX(u32 vd, u32 ra, u32 rb) {
@@ -2209,8 +2155,6 @@ void Compiler::LVEBX(u32 vd, u32 ra, u32 rb) {
     auto vd_v16i8  = GetVrAsIntVec(vd, 8);
     vd_v16i8       = m_ir_builder->CreateInsertElement(vd_v16i8, val_i8, index_i64);
     SetVr(vd, vd_v16i8);
-
-    //InterpreterCall("LVEBX", &PPUInterpreter::LVEBX, vd, ra, rb);
 }
 
 void Compiler::SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2229,8 +2173,8 @@ void Compiler::SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("SUBFCO");
     }
-    //InterpreterCall("SUBFC", &PPUInterpreter::SUBFC, rd, ra, rb, oe, rc);
 }
 
 void Compiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2249,7 +2193,6 @@ void Compiler::ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
     if (oe) {
         // TODO: Implement this
     }
-    //InterpreterCall("ADDC", &PPUInterpreter::ADDC, rd, ra, rb, oe, rc);
 }
 
 void Compiler::MULHDU(u32 rd, u32 ra, u32 rb, bool rc) {
@@ -2265,8 +2208,6 @@ void Compiler::MULHDU(u32 rd, u32 ra, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("MULHDU", &PPUInterpreter::MULHDU, rd, ra, rb, rc);
 }
 
 void Compiler::MULHWU(u32 rd, u32 ra, u32 rb, bool rc) {
@@ -2281,14 +2222,12 @@ void Compiler::MULHWU(u32 rd, u32 ra, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("MULHWU", &PPUInterpreter::MULHWU, rd, ra, rb, rc);
 }
 
 void Compiler::MFOCRF(u32 a, u32 rd, u32 crm) {
     auto cr_i32 = GetCr();
     auto cr_i64 = m_ir_builder->CreateZExt(cr_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, cr_i64);
-    //InterpreterCall("MFOCRF", &PPUInterpreter::MFOCRF, a, rd, crm);
 }
 
 void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
@@ -2311,7 +2250,6 @@ void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
     resv_val_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), resv_val_i32);
     resv_val_i64 = m_ir_builder->CreateZExt(resv_val_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, resv_val_i64);
-    //InterpreterCall("LWARX", &PPUInterpreter::LWARX, rd, ra, rb);
 }
 
 void Compiler::LDX(u32 rd, u32 ra, u32 rb) {
@@ -2323,7 +2261,6 @@ void Compiler::LDX(u32 rd, u32 ra, u32 rb) {
 
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LDX", &PPUInterpreter::LDX, rd, ra, rb);
 }
 
 void Compiler::LWZX(u32 rd, u32 ra, u32 rb) {
@@ -2336,7 +2273,6 @@ void Compiler::LWZX(u32 rd, u32 ra, u32 rb) {
     auto mem_i32 = ReadMemory(addr_i64, 32);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LWZX", &PPUInterpreter::LWZX, rd, ra, rb);
 }
 
 void Compiler::SLW(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -2353,8 +2289,6 @@ void Compiler::SLW(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SLW", &PPUInterpreter::SLW, ra, rs, rb, rc);
 }
 
 void Compiler::CNTLZW(u32 ra, u32 rs, bool rc) {
@@ -2366,8 +2300,6 @@ void Compiler::CNTLZW(u32 ra, u32 rs, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("CNTLZW", &PPUInterpreter::CNTLZW, ra, rs, rc);
 }
 
 void Compiler::SLD(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -2383,8 +2315,6 @@ void Compiler::SLD(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SLD", &PPUInterpreter::SLD, ra, rs, rb, rc);
 }
 
 void Compiler::AND(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -2396,7 +2326,6 @@ void Compiler::AND(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("AND", &PPUInterpreter::AND, ra, rs, rb, rc);
 }
 
 void Compiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
@@ -2411,7 +2340,6 @@ void Compiler::CMPL(u32 crfd, u32 l, u32 ra, u32 rb) {
     }
 
     SetCrFieldUnsignedCmp(crfd, ra_i64, rb_i64);
-    //InterpreterCall("CMPL", &PPUInterpreter::CMPL, crfd, l, ra, rb);
 }
 
 void Compiler::LVSR(u32 vd, u32 ra, u32 rb) {
@@ -2445,8 +2373,6 @@ void Compiler::LVSR(u32 vd, u32 ra, u32 rb) {
     lvsr_values_v16i8_ptr      = m_ir_builder->CreateGEP(lvsr_values_v16i8_ptr, index_i64);
     auto val_v16i8             = m_ir_builder->CreateAlignedLoad(lvsr_values_v16i8_ptr, 16);
     SetVr(vd, val_v16i8);
-
-    //InterpreterCall("LVSR", &PPUInterpreter::LVSR, vd, ra, rb);
 }
 
 void Compiler::LVEHX(u32 vd, u32 ra, u32 rb) {
@@ -2464,8 +2390,6 @@ void Compiler::LVEHX(u32 vd, u32 ra, u32 rb) {
     auto vd_v8i16  = GetVrAsIntVec(vd, 16);
     vd_v8i16       = m_ir_builder->CreateInsertElement(vd_v8i16, val_i16, index_i64);
     SetVr(vd, vd_v8i16);
-
-    //InterpreterCall("LVEHX", &PPUInterpreter::LVEHX, vd, ra, rb);
 }
 
 void Compiler::SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2480,8 +2404,8 @@ void Compiler::SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("SUBFO");
     }
-    //InterpreterCall("SUBF", &PPUInterpreter::SUBF, rd, ra, rb, oe, rc);
 }
 
 void Compiler::LDUX(u32 rd, u32 ra, u32 rb) {
@@ -2492,13 +2416,11 @@ void Compiler::LDUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LDUX", &PPUInterpreter::LDUX, rd, ra, rb);
 }
 
 void Compiler::DCBST(u32 ra, u32 rb) {
     // TODO: Implement this
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
-    //InterpreterCall("DCBST", &PPUInterpreter::DCBST, ra, rb);
 }
 
 void Compiler::LWZUX(u32 rd, u32 ra, u32 rb) {
@@ -2510,7 +2432,6 @@ void Compiler::LWZUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LWZUX", &PPUInterpreter::LWZUX, rd, ra, rb);
 }
 
 void Compiler::CNTLZD(u32 ra, u32 rs, bool rc) {
@@ -2521,8 +2442,6 @@ void Compiler::CNTLZD(u32 ra, u32 rs, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("CNTLZD", &PPUInterpreter::CNTLZD, ra, rs, rc);
 }
 
 void Compiler::ANDC(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -2535,7 +2454,6 @@ void Compiler::ANDC(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("ANDC", &PPUInterpreter::ANDC, ra, rs, rb, rc);
 }
 
 void Compiler::TD(u32 to, u32 ra, u32 rb) {
@@ -2557,8 +2475,6 @@ void Compiler::LVEWX(u32 vd, u32 ra, u32 rb) {
     auto vd_v4i32  = GetVrAsIntVec(vd, 32);
     vd_v4i32       = m_ir_builder->CreateInsertElement(vd_v4i32, val_i32, index_i64);
     SetVr(vd, vd_v4i32);
-
-    //InterpreterCall("LVEWX", &PPUInterpreter::LVEWX, vd, ra, rb);
 }
 
 void Compiler::MULHD(u32 rd, u32 ra, u32 rb, bool rc) {
@@ -2574,8 +2490,6 @@ void Compiler::MULHD(u32 rd, u32 ra, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("MULHD", &PPUInterpreter::MULHD, rd, ra, rb, rc);
 }
 
 void Compiler::MULHW(u32 rd, u32 ra, u32 rb, bool rc) {
@@ -2590,7 +2504,6 @@ void Compiler::MULHW(u32 rd, u32 ra, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("MULHW", &PPUInterpreter::MULHW, rd, ra, rb, rc);
 }
 
 void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
@@ -2611,13 +2524,11 @@ void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
 
     resv_val_i64      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), resv_val_i64);
     SetGpr(rd, resv_val_i64);
-    //InterpreterCall("LDARX", &PPUInterpreter::LDARX, rd, ra, rb);
 }
 
 void Compiler::DCBF(u32 ra, u32 rb) {
     // TODO: Implement this
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
-    //InterpreterCall("DCBF", &PPUInterpreter::DCBF, ra, rb);
 }
 
 void Compiler::LBZX(u32 rd, u32 ra, u32 rb) {
@@ -2630,7 +2541,6 @@ void Compiler::LBZX(u32 rd, u32 ra, u32 rb) {
     auto mem_i8  = ReadMemory(addr_i64, 8);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i8, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LBZX", &PPUInterpreter::LBZX, rd, ra, rb);
 }
 
 void Compiler::LVX(u32 vd, u32 ra, u32 rb) {
@@ -2643,7 +2553,6 @@ void Compiler::LVX(u32 vd, u32 ra, u32 rb) {
     addr_i64      = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFF0ULL);
     auto mem_i128 = ReadMemory(addr_i64, 128, 16);
     SetVr(vd, mem_i128);
-    //InterpreterCall("LVX", &PPUInterpreter::LVX, vd, ra, rb);
 }
 
 void Compiler::NEG(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2657,8 +2566,8 @@ void Compiler::NEG(u32 rd, u32 ra, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("NEGO");
     }
-    //InterpreterCall("NEG", &PPUInterpreter::NEG, rd, ra, oe, rc);
 }
 
 void Compiler::LBZUX(u32 rd, u32 ra, u32 rb) {
@@ -2670,7 +2579,6 @@ void Compiler::LBZUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i8, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LBZUX", &PPUInterpreter::LBZUX, rd, ra, rb);
 }
 
 void Compiler::NOR(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -2683,7 +2591,6 @@ void Compiler::NOR(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("NOR", &PPUInterpreter::NOR, ra, rs, rb, rc);
 }
 
 void Compiler::STVEBX(u32 vs, u32 ra, u32 rb) {
@@ -2698,7 +2605,6 @@ void Compiler::STVEBX(u32 vs, u32 ra, u32 rb) {
     auto vs_v16i8  = GetVrAsIntVec(vs, 8);
     auto val_i8    = m_ir_builder->CreateExtractElement(vs_v16i8, index_i64);
     WriteMemory(addr_i64, val_i8);
-    //InterpreterCall("STVEBX", &PPUInterpreter::STVEBX, vs, ra, rb);
 }
 
 void Compiler::SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2722,8 +2628,8 @@ void Compiler::SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("SUBFEO");
     }
-    //InterpreterCall("SUBFE", &PPUInterpreter::SUBFE, rd, ra, rb, oe, rc);
 }
 
 void Compiler::ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2746,8 +2652,8 @@ void Compiler::ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("ADDEO");
     }
-    //InterpreterCall("ADDE", &PPUInterpreter::ADDE, rd, ra, rb, oe, rc);
 }
 
 void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
@@ -2768,7 +2674,6 @@ void Compiler::MTOCRF(u32 l, u32 crm, u32 rs) {
     rs_i32 = m_ir_builder->CreateAnd(rs_i32, ~mask);
     cr_i32 = m_ir_builder->CreateOr(cr_i32, rs_i32);
     SetCr(cr_i32);
-    //InterpreterCall("MTOCRF", &PPUInterpreter::MTOCRF, l, crm, rs);
 }
 
 void Compiler::STDX(u32 rs, u32 ra, u32 rb) {
@@ -2779,7 +2684,6 @@ void Compiler::STDX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 64));
-    //InterpreterCall("STDX", &PPUInterpreter::STDX, rs, ra, rb);
 }
 
 void Compiler::STWCX_(u32 rs, u32 ra, u32 rb) {
@@ -2794,7 +2698,6 @@ void Compiler::STWX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 32));
-    //InterpreterCall("STWX", &PPUInterpreter::STWX, rs, ra, rb);
 }
 
 void Compiler::STVEHX(u32 vs, u32 ra, u32 rb) {
@@ -2811,7 +2714,6 @@ void Compiler::STVEHX(u32 vs, u32 ra, u32 rb) {
     auto vs_v8i16  = GetVrAsIntVec(vs, 16);
     auto val_i16   = m_ir_builder->CreateExtractElement(vs_v8i16, index_i64);
     WriteMemory(addr_i64, val_i16, 2);
-    //InterpreterCall("STVEHX", &PPUInterpreter::STVEHX, vs, ra, rb);
 }
 
 void Compiler::STDUX(u32 rs, u32 ra, u32 rb) {
@@ -2821,7 +2723,6 @@ void Compiler::STDUX(u32 rs, u32 ra, u32 rb) {
 
     WriteMemory(addr_i64, GetGpr(rs, 64));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STDUX", &PPUInterpreter::STDUX, rs, ra, rb);
 }
 
 void Compiler::STWUX(u32 rs, u32 ra, u32 rb) {
@@ -2831,7 +2732,6 @@ void Compiler::STWUX(u32 rs, u32 ra, u32 rb) {
 
     WriteMemory(addr_i64, GetGpr(rs, 32));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STWUX", &PPUInterpreter::STWUX, rs, ra, rb);
 }
 
 void Compiler::STVEWX(u32 vs, u32 ra, u32 rb) {
@@ -2848,7 +2748,6 @@ void Compiler::STVEWX(u32 vs, u32 ra, u32 rb) {
     auto vs_v4i32  = GetVrAsIntVec(vs, 32);
     auto val_i32   = m_ir_builder->CreateExtractElement(vs_v4i32, index_i64);
     WriteMemory(addr_i64, val_i32, 4);
-    //InterpreterCall("STVEWX", &PPUInterpreter::STVEWX, vs, ra, rb);
 }
 
 void Compiler::ADDZE(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2859,11 +2758,15 @@ void Compiler::ADDZE(u32 rd, u32 ra, u32 oe, bool rc) {
     auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
     SetGpr(rd, sum_i64);
     SetXerCa(carry_i1);
-     
+
     if (rc) {
         SetCrFieldSignedCmp(0, sum_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("ADDZE", &PPUInterpreter::ADDZE, rd, ra, oe, rc);
+
+    if (oe) {
+        // TODO: Implement this
+        CompilationError("ADDZEO");
+    }
 }
 
 void Compiler::SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2875,11 +2778,15 @@ void Compiler::SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) {
     auto carry_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
     SetGpr(rd, res_i64);
     SetXerCa(carry_i1);
-     
+
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("SUBFZE", &PPUInterpreter::SUBFZE, rd, ra, oe, rc);
+
+    if (oe) {
+        // TODO: Implement this
+        CompilationError("SUBFZEO");
+    }
 }
 
 void Compiler::STDCX_(u32 rs, u32 ra, u32 rb) {
@@ -2894,7 +2801,6 @@ void Compiler::STBX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 8));
-    //InterpreterCall("STBX", &PPUInterpreter::STBX, rs, ra, rb);
 }
 
 void Compiler::STVX(u32 vs, u32 ra, u32 rb) {
@@ -2906,7 +2812,6 @@ void Compiler::STVX(u32 vs, u32 ra, u32 rb) {
 
     addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFFFFFFFFF0ULL);
     WriteMemory(addr_i64, GetVr(vs), 16);
-    //InterpreterCall("STVX", &PPUInterpreter::STVX, vs, ra, rb);
 }
 
 void Compiler::SUBFME(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2929,8 +2834,8 @@ void Compiler::SUBFME(u32 rd, u32 ra, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("SUBFMEO");
     }
-    //InterpreterCall("SUBFME", &PPUInterpreter::SUBFME, rd, ra, oe, rc);
 }
 
 void Compiler::MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2943,8 +2848,10 @@ void Compiler::MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
-    //InterpreterCall("MULLD", &PPUInterpreter::MULLD, rd, ra, rb, oe, rc);
+    if (oe) {
+        // TODO implement oe
+        CompilationError("MULLDO");
+    }
 }
 
 void Compiler::ADDME(u32 rd, u32 ra, u32 oe, bool rc) {
@@ -2966,8 +2873,8 @@ void Compiler::ADDME(u32 rd, u32 ra, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("ADDMEO");
     }
-    //InterpreterCall("ADDME", &PPUInterpreter::ADDME, rd, ra, oe, rc);
 }
 
 void Compiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -2982,14 +2889,15 @@ void Compiler::MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, prod_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
-    //InterpreterCall("MULLW", &PPUInterpreter::MULLW, rd, ra, rb, oe, rc);
+    if (oe) {
+        // TODO implement oe
+        CompilationError("MULLWO");
+    }
 }
 
 void Compiler::DCBTST(u32 ra, u32 rb, u32 th) {
     // TODO: Implement this
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
-    //InterpreterCall("DCBTST", &PPUInterpreter::DCBTST, ra, rb, th);
 }
 
 void Compiler::STBUX(u32 rs, u32 ra, u32 rb) {
@@ -2999,7 +2907,6 @@ void Compiler::STBUX(u32 rs, u32 ra, u32 rb) {
 
     WriteMemory(addr_i64, GetGpr(rs, 8));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STBUX", &PPUInterpreter::STBUX, rs, ra, rb);
 }
 
 void Compiler::ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3014,14 +2921,13 @@ void Compiler::ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
 
     if (oe) {
         // TODO: Implement this
+        CompilationError("ADDO");
     }
-    //InterpreterCall("ADD", &PPUInterpreter::ADD, rd, ra, rb, oe, rc);
 }
 
 void Compiler::DCBT(u32 ra, u32 rb, u32 th) {
     // TODO: Implement this using prefetch
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::donothing));
-    //InterpreterCall("DCBT", &PPUInterpreter::DCBT, ra, rb, th);
 }
 
 void Compiler::LHZX(u32 rd, u32 ra, u32 rb) {
@@ -3034,7 +2940,6 @@ void Compiler::LHZX(u32 rd, u32 ra, u32 rb) {
     auto mem_i16 = ReadMemory(addr_i64, 16);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LHZX", &PPUInterpreter::LHZX, rd, ra, rb);
 }
 
 void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3047,8 +2952,6 @@ void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("EQV", &PPUInterpreter::EQV, ra, rs, rb, rc);
 }
 
 void Compiler::ECIWX(u32 rd, u32 ra, u32 rb) {
@@ -3064,7 +2967,6 @@ void Compiler::LHZUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LHZUX", &PPUInterpreter::LHZUX, rd, ra, rb);
 }
 
 void Compiler::XOR(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3076,7 +2978,6 @@ void Compiler::XOR(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("XOR", &PPUInterpreter::XOR, ra, rs, rb, rc);
 }
 
 void Compiler::MFSPR(u32 rd, u32 spr) {
@@ -3109,7 +3010,6 @@ void Compiler::MFSPR(u32 rd, u32 spr) {
     }
 
     SetGpr(rd, rd_i64);
-    //InterpreterCall("MFSPR", &PPUInterpreter::MFSPR, rd, spr);
 }
 
 void Compiler::LWAX(u32 rd, u32 ra, u32 rb) {
@@ -3122,7 +3022,6 @@ void Compiler::LWAX(u32 rd, u32 ra, u32 rb) {
     auto mem_i32 = ReadMemory(addr_i64, 32);
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LWAX", &PPUInterpreter::LWAX, rd, ra, rb);
 }
 
 void Compiler::DST(u32 ra, u32 rb, u32 strm, u32 t) {
@@ -3140,12 +3039,10 @@ void Compiler::LHAX(u32 rd, u32 ra, u32 rb) {
     auto mem_i16 = ReadMemory(addr_i64, 16);
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LHAX", &PPUInterpreter::LHAX, rd, ra, rb);
 }
 
 void Compiler::LVXL(u32 vd, u32 ra, u32 rb) {
     LVX(vd, ra, rb);
-    //InterpreterCall("LVXL", &PPUInterpreter::LVXL, vd, ra, rb);
 }
 
 void Compiler::MFTB(u32 rd, u32 spr) {
@@ -3168,7 +3065,6 @@ void Compiler::LWAUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LWAUX", &PPUInterpreter::LWAUX, rd, ra, rb);
 }
 
 void Compiler::DSTST(u32 ra, u32 rb, u32 strm, u32 t) {
@@ -3185,7 +3081,6 @@ void Compiler::LHAUX(u32 rd, u32 ra, u32 rb) {
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LHAUX", &PPUInterpreter::LHAUX, rd, ra, rb);
 }
 
 void Compiler::STHX(u32 rs, u32 ra, u32 rb) {
@@ -3196,7 +3091,6 @@ void Compiler::STHX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 16));
-    //InterpreterCall("STHX", &PPUInterpreter::STHX, rs, ra, rb);
 }
 
 void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3209,7 +3103,6 @@ void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("ORC", &PPUInterpreter::ORC, ra, rs, rb, rc);
 }
 
 void Compiler::ECOWX(u32 rs, u32 ra, u32 rb) {
@@ -3223,7 +3116,6 @@ void Compiler::STHUX(u32 rs, u32 ra, u32 rb) {
 
     WriteMemory(addr_i64, GetGpr(rs, 16));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STHUX", &PPUInterpreter::STHUX, rs, ra, rb);
 }
 
 void Compiler::OR(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3235,7 +3127,6 @@ void Compiler::OR(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("OR", &PPUInterpreter::OR, ra, rs, rb, rc);
 }
 
 void Compiler::DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3248,9 +3139,12 @@ void Compiler::DIVDU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
+    if (oe) {
+        // TODO implement oe
+        CompilationError("DIVDUO");
+    }
+
     // TODO make sure an exception does not occur on divide by 0 and overflow
-    //InterpreterCall("DIVDU", &PPUInterpreter::DIVDU, rd, ra, rb, oe, rc);
 }
 
 void Compiler::DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3264,9 +3158,12 @@ void Compiler::DIVWU(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
+    if (oe) {
+        // TODO implement oe
+        CompilationError("DIVWUO");
+    }
+
     // TODO make sure an exception does not occur on divide by 0 and overflow
-    //InterpreterCall("DIVWU", &PPUInterpreter::DIVWU, rd, ra, rb, oe, rc);
 }
 
 void Compiler::MTSPR(u32 spr, u32 rs) {
@@ -3291,7 +3188,6 @@ void Compiler::MTSPR(u32 spr, u32 rs) {
         break;
     }
 
-    //InterpreterCall("MTSPR", &PPUInterpreter::MTSPR, spr, rs);
 }
 
 void Compiler::NAND(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3304,12 +3200,10 @@ void Compiler::NAND(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("NAND", &PPUInterpreter::NAND, ra, rs, rb, rc);
 }
 
 void Compiler::STVXL(u32 vs, u32 ra, u32 rb) {
     STVX(vs, ra, rb);
-    //InterpreterCall("STVXL", &PPUInterpreter::STVXL, vs, ra, rb);
 }
 
 void Compiler::DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3322,9 +3216,12 @@ void Compiler::DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
+    if (oe) {
+        // TODO implement oe
+        CompilationError("DIVDO");
+    }
+
     // TODO make sure an exception does not occur on divide by 0 and overflow
-    //InterpreterCall("DIVD", &PPUInterpreter::DIVD, rd, ra, rb, oe, rc);
 }
 
 void Compiler::DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
@@ -3338,9 +3235,12 @@ void Compiler::DIVW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
 
-    // TODO implement oe
+    if (oe) {
+        // TODO implement oe
+        CompilationError("DIVWO");
+    }
+
     // TODO make sure an exception does not occur on divide by 0 and overflow
-    //InterpreterCall("DIVW", &PPUInterpreter::DIVW, rd, ra, rb, oe, rc);
 }
 
 void Compiler::LVLX(u32 vd, u32 ra, u32 rb) {
@@ -3357,7 +3257,6 @@ void Compiler::LVLX(u32 vd, u32 ra, u32 rb) {
     auto mem_i128 = ReadMemory(addr_i64, 128, 16);
     mem_i128      = m_ir_builder->CreateShl(mem_i128, eb_i128);
     SetVr(vd, mem_i128);
-    //InterpreterCall("LVLX", &PPUInterpreter::LVLX, vd, ra, rb);
 }
 
 void Compiler::LDBRX(u32 rd, u32 ra, u32 rb) {
@@ -3369,7 +3268,6 @@ void Compiler::LDBRX(u32 rd, u32 ra, u32 rb) {
 
     auto mem_i64 = ReadMemory(addr_i64, 64, 0, false);
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LDBRX", &PPUInterpreter::LDBRX, rd, ra, rb);
 }
 
 void Compiler::LSWX(u32 rd, u32 ra, u32 rb) {
@@ -3386,7 +3284,6 @@ void Compiler::LWBRX(u32 rd, u32 ra, u32 rb) {
     auto mem_i32 = ReadMemory(addr_i64, 32, 0, false);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LWBRX", &PPUInterpreter::LWBRX, rd, ra, rb);
 }
 
 void Compiler::LFSX(u32 frd, u32 ra, u32 rb) {
@@ -3398,7 +3295,6 @@ void Compiler::LFSX(u32 frd, u32 ra, u32 rb) {
 
     auto mem_i32 = ReadMemory(addr_i64, 32);
     SetFpr(frd, mem_i32);
-    //InterpreterCall("LFSX", &PPUInterpreter::LFSX, frd, ra, rb);
 }
 
 void Compiler::SRW(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3413,8 +3309,6 @@ void Compiler::SRW(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRW", &PPUInterpreter::SRW, ra, rs, rb, rc);
 }
 
 void Compiler::SRD(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3430,8 +3324,6 @@ void Compiler::SRD(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, res_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRD", &PPUInterpreter::SRD, ra, rs, rb, rc);
 }
 
 void Compiler::LVRX(u32 vd, u32 ra, u32 rb) {
@@ -3452,8 +3344,6 @@ void Compiler::LVRX(u32 vd, u32 ra, u32 rb) {
     auto cmp_i128 = m_ir_builder->CreateSExt(cmp_i1, m_ir_builder->getIntNTy(128));
     mem_i128      = m_ir_builder->CreateAnd(mem_i128, cmp_i128);
     SetVr(vd, mem_i128);
-
-    //InterpreterCall("LVRX", &PPUInterpreter::LVRX, vd, ra, rb);
 }
 
 void Compiler::LSWI(u32 rd, u32 ra, u32 nb) {
@@ -3474,8 +3364,6 @@ void Compiler::LSWI(u32 rd, u32 ra, u32 nb) {
         SetGpr(rd, val_i64);
         rd = (rd + 1) % 32;
     }
-
-    //InterpreterCall("LSWI", &PPUInterpreter::LSWI, rd, ra, nb);
 }
 
 void Compiler::LFSUX(u32 frd, u32 ra, u32 rb) {
@@ -3485,12 +3373,10 @@ void Compiler::LFSUX(u32 frd, u32 ra, u32 rb) {
     auto mem_i32  = ReadMemory(addr_i64, 32);
     SetFpr(frd, mem_i32);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LFSUX", &PPUInterpreter::LFSUX, frd, ra, rb);
 }
 
 void Compiler::SYNC(u32 l) {
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_mfence));
-    //InterpreterCall("SYNC", &PPUInterpreter::SYNC, l);
 }
 
 void Compiler::LFDX(u32 frd, u32 ra, u32 rb) {
@@ -3502,7 +3388,6 @@ void Compiler::LFDX(u32 frd, u32 ra, u32 rb) {
 
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetFpr(frd, mem_i64);
-    //InterpreterCall("LFDX", &PPUInterpreter::LFDX, frd, ra, rb);
 }
 
 void Compiler::LFDUX(u32 frd, u32 ra, u32 rb) {
@@ -3512,7 +3397,6 @@ void Compiler::LFDUX(u32 frd, u32 ra, u32 rb) {
     auto mem_i64  = ReadMemory(addr_i64, 64);
     SetFpr(frd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LFDUX", &PPUInterpreter::LFDUX, frd, ra, rb);
 }
 
 void Compiler::STVLX(u32 vs, u32 ra, u32 rb) {
@@ -3531,7 +3415,6 @@ void Compiler::STWBRX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 32), 0, false);
-    //InterpreterCall("STWBRX", &PPUInterpreter::STWBRX, rs, ra, rb);
 }
 
 void Compiler::STFSX(u32 frs, u32 ra, u32 rb) {
@@ -3543,7 +3426,6 @@ void Compiler::STFSX(u32 frs, u32 ra, u32 rb) {
 
     auto frs_i32 = m_ir_builder->CreateBitCast(GetFpr(frs, 32), m_ir_builder->getInt32Ty());
     WriteMemory(addr_i64, frs_i32);
-    //InterpreterCall("STFSX", &PPUInterpreter::STFSX, frs, ra, rb);
 }
 
 void Compiler::STVRX(u32 vs, u32 ra, u32 rb) {
@@ -3558,7 +3440,6 @@ void Compiler::STFSUX(u32 frs, u32 ra, u32 rb) {
     auto frs_i32 = m_ir_builder->CreateBitCast(GetFpr(frs, 32), m_ir_builder->getInt32Ty());
     WriteMemory(addr_i64, frs_i32);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STFSUX", &PPUInterpreter::STFSUX, frs, ra, rb);
 }
 
 void Compiler::STSWI(u32 rd, u32 ra, u32 nb) {
@@ -3592,8 +3473,6 @@ void Compiler::STSWI(u32 rd, u32 ra, u32 nb) {
             }
         }
     }
-
-    //InterpreterCall("STSWI", &PPUInterpreter::STSWI, rd, ra, nb);
 }
 
 void Compiler::STFDX(u32 frs, u32 ra, u32 rb) {
@@ -3605,7 +3484,6 @@ void Compiler::STFDX(u32 frs, u32 ra, u32 rb) {
 
     auto frs_i64 = m_ir_builder->CreateBitCast(GetFpr(frs), m_ir_builder->getInt64Ty());
     WriteMemory(addr_i64, frs_i64);
-    //InterpreterCall("STFDX", &PPUInterpreter::STFDX, frs, ra, rb);
 }
 
 void Compiler::STFDUX(u32 frs, u32 ra, u32 rb) {
@@ -3616,12 +3494,10 @@ void Compiler::STFDUX(u32 frs, u32 ra, u32 rb) {
     auto frs_i64 = m_ir_builder->CreateBitCast(GetFpr(frs), m_ir_builder->getInt64Ty());
     WriteMemory(addr_i64, frs_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STFDUX", &PPUInterpreter::STFDUX, frs, ra, rb);
 }
 
 void Compiler::LVLXL(u32 vd, u32 ra, u32 rb) {
     LVLX(vd, ra, rb);
-    //InterpreterCall("LVLXL", &PPUInterpreter::LVLXL, vd, ra, rb);
 }
 
 void Compiler::LHBRX(u32 rd, u32 ra, u32 rb) {
@@ -3634,7 +3510,6 @@ void Compiler::LHBRX(u32 rd, u32 ra, u32 rb) {
     auto mem_i16 = ReadMemory(addr_i64, 16, 0, false);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LHBRX", &PPUInterpreter::LHBRX, rd, ra, rb);
 }
 
 void Compiler::SRAW(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3657,8 +3532,6 @@ void Compiler::SRAW(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, ra_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRAW", &PPUInterpreter::SRAW, ra, rs, rb, rc);
 }
 
 void Compiler::SRAD(u32 ra, u32 rs, u32 rb, bool rc) {
@@ -3682,13 +3555,10 @@ void Compiler::SRAD(u32 ra, u32 rs, u32 rb, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, ra_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRAD", &PPUInterpreter::SRAD, ra, rs, rb, rc);
 }
 
 void Compiler::LVRXL(u32 vd, u32 ra, u32 rb) {
     LVRX(vd, ra, rb);
-    //InterpreterCall("LVRXL", &PPUInterpreter::LVRXL, vd, ra, rb);
 }
 
 void Compiler::DSS(u32 strm, u32 a) {
@@ -3713,8 +3583,6 @@ void Compiler::SRAWI(u32 ra, u32 rs, u32 sh, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, ra_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRAWI", &PPUInterpreter::SRAWI, ra, rs, sh, rc);
 }
 
 void Compiler::SRADI1(u32 ra, u32 rs, u32 sh, bool rc) {
@@ -3735,23 +3603,18 @@ void Compiler::SRADI1(u32 ra, u32 rs, u32 sh, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, ra_i64, m_ir_builder->getInt64(0));
     }
-
-    //InterpreterCall("SRADI1", &PPUInterpreter::SRADI1, ra, rs, sh, rc);
 }
 
 void Compiler::SRADI2(u32 ra, u32 rs, u32 sh, bool rc) {
     SRADI1(ra, rs, sh, rc);
-    //InterpreterCall("SRADI2", &PPUInterpreter::SRADI2, ra, rs, sh, rc);
 }
 
 void Compiler::EIEIO() {
     m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_mfence));
-    //InterpreterCall("EIEIO", &PPUInterpreter::EIEIO);
 }
 
 void Compiler::STVLXL(u32 vs, u32 ra, u32 rb) {
     STVLX(vs, ra, rb);
-    //InterpreterCall("STVLXL", &PPUInterpreter::STVLXL, vs, ra, rb);
 }
 
 void Compiler::STHBRX(u32 rs, u32 ra, u32 rb) {
@@ -3762,7 +3625,6 @@ void Compiler::STHBRX(u32 rs, u32 ra, u32 rb) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 16), 0, false);
-    //InterpreterCall("STHBRX", &PPUInterpreter::STHBRX, rs, ra, rb);
 }
 
 void Compiler::EXTSH(u32 ra, u32 rs, bool rc) {
@@ -3773,12 +3635,10 @@ void Compiler::EXTSH(u32 ra, u32 rs, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, rs_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("EXTSH", &PPUInterpreter::EXTSH, ra, rs, rc);
 }
 
 void Compiler::STVRXL(u32 vs, u32 ra, u32 rb) {
     STVRX(vs, ra, rb);
-    //InterpreterCall("STVRXL", &PPUInterpreter::STVRXL, vs, ra, rb);
 }
 
 void Compiler::EXTSB(u32 ra, u32 rs, bool rc) {
@@ -3789,7 +3649,6 @@ void Compiler::EXTSB(u32 ra, u32 rs, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, rs_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("EXTSB", &PPUInterpreter::EXTSB, ra, rs, rc);
 }
 
 void Compiler::STFIWX(u32 frs, u32 ra, u32 rb) {
@@ -3802,7 +3661,6 @@ void Compiler::STFIWX(u32 frs, u32 ra, u32 rb) {
     auto frs_i64 = m_ir_builder->CreateBitCast(GetFpr(frs), m_ir_builder->getInt64Ty());
     auto frs_i32 = m_ir_builder->CreateTrunc(frs_i64, m_ir_builder->getInt32Ty());
     WriteMemory(addr_i64, frs_i32);
-    //InterpreterCall("STFIWX", &PPUInterpreter::STFIWX, frs, ra, rb);
 }
 
 void Compiler::EXTSW(u32 ra, u32 rs, bool rc) {
@@ -3813,7 +3671,6 @@ void Compiler::EXTSW(u32 ra, u32 rs, bool rc) {
     if (rc) {
         SetCrFieldSignedCmp(0, rs_i64, m_ir_builder->getInt64(0));
     }
-    //InterpreterCall("EXTSW", &PPUInterpreter::EXTSW, ra, rs, rc);
 }
 
 void Compiler::ICBI(u32 ra, u32 rs) {
@@ -3835,7 +3692,6 @@ void Compiler::DCBZ(u32 ra, u32 rb) {
     std::vector<Type *> types = {(Type *)m_ir_builder->getInt8PtrTy(), (Type *)m_ir_builder->getInt32Ty()};
     m_ir_builder->CreateCall5(Intrinsic::getDeclaration(m_module, Intrinsic::memset, types),
                               addr_i8_ptr, m_ir_builder->getInt8(0), m_ir_builder->getInt32(128), m_ir_builder->getInt32(128), m_ir_builder->getInt1(true));
-    //InterpreterCall("DCBZ", &PPUInterpreter::DCBZ, ra, rb);L
 }
 
 void Compiler::LWZ(u32 rd, u32 ra, s32 d) {
@@ -3848,7 +3704,6 @@ void Compiler::LWZ(u32 rd, u32 ra, s32 d) {
     auto mem_i32 = ReadMemory(addr_i64, 32);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LWZ", &PPUInterpreter::LWZ, rd, ra, d);
 }
 
 void Compiler::LWZU(u32 rd, u32 ra, s32 d) {
@@ -3860,7 +3715,6 @@ void Compiler::LWZU(u32 rd, u32 ra, s32 d) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LWZU", &PPUInterpreter::LWZU, rd, ra, d);
 }
 
 void Compiler::LBZ(u32 rd, u32 ra, s32 d) {
@@ -3873,7 +3727,6 @@ void Compiler::LBZ(u32 rd, u32 ra, s32 d) {
     auto mem_i8  = ReadMemory(addr_i64, 8);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i8, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LBZ", &PPUInterpreter::LBZ, rd, ra, d);
 }
 
 void Compiler::LBZU(u32 rd, u32 ra, s32 d) {
@@ -3885,7 +3738,6 @@ void Compiler::LBZU(u32 rd, u32 ra, s32 d) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i8, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LBZU", &PPUInterpreter::LBZU, rd, ra, d);
 }
 
 void Compiler::STW(u32 rs, u32 ra, s32 d) {
@@ -3896,7 +3748,6 @@ void Compiler::STW(u32 rs, u32 ra, s32 d) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 32));
-    //InterpreterCall("STW", &PPUInterpreter::STW, rs, ra, d);
 }
 
 void Compiler::STWU(u32 rs, u32 ra, s32 d) {
@@ -3906,7 +3757,6 @@ void Compiler::STWU(u32 rs, u32 ra, s32 d) {
 
     WriteMemory(addr_i64, GetGpr(rs, 32));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STWU", &PPUInterpreter::STWU, rs, ra, d);
 }
 
 void Compiler::STB(u32 rs, u32 ra, s32 d) {
@@ -3917,7 +3767,6 @@ void Compiler::STB(u32 rs, u32 ra, s32 d) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 8));
-    //InterpreterCall("STB", &PPUInterpreter::STB, rs, ra, d);
 }
 
 void Compiler::STBU(u32 rs, u32 ra, s32 d) {
@@ -3927,7 +3776,6 @@ void Compiler::STBU(u32 rs, u32 ra, s32 d) {
 
     WriteMemory(addr_i64, GetGpr(rs, 8));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STBU", &PPUInterpreter::STBU, rs, ra, d);
 }
 
 void Compiler::LHZ(u32 rd, u32 ra, s32 d) {
@@ -3940,7 +3788,6 @@ void Compiler::LHZ(u32 rd, u32 ra, s32 d) {
     auto mem_i16 = ReadMemory(addr_i64, 16);
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LHZ", &PPUInterpreter::LHZ, rd, ra, d);
 }
 
 void Compiler::LHZU(u32 rd, u32 ra, s32 d) {
@@ -3952,7 +3799,6 @@ void Compiler::LHZU(u32 rd, u32 ra, s32 d) {
     auto mem_i64 = m_ir_builder->CreateZExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LHZU", &PPUInterpreter::LHZU, rd, ra, d);
 }
 
 void Compiler::LHA(u32 rd, u32 ra, s32 d) {
@@ -3965,7 +3811,6 @@ void Compiler::LHA(u32 rd, u32 ra, s32 d) {
     auto mem_i16 = ReadMemory(addr_i64, 16);
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LHA", &PPUInterpreter::LHA, rd, ra, d);
 }
 
 void Compiler::LHAU(u32 rd, u32 ra, s32 d) {
@@ -3977,7 +3822,6 @@ void Compiler::LHAU(u32 rd, u32 ra, s32 d) {
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i16, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LHAU", &PPUInterpreter::LHAU, rd, ra, d);
 }
 
 void Compiler::STH(u32 rs, u32 ra, s32 d) {
@@ -3988,7 +3832,6 @@ void Compiler::STH(u32 rs, u32 ra, s32 d) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 16));
-    //InterpreterCall("STH", &PPUInterpreter::STH, rs, ra, d);
 }
 
 void Compiler::STHU(u32 rs, u32 ra, s32 d) {
@@ -3998,7 +3841,6 @@ void Compiler::STHU(u32 rs, u32 ra, s32 d) {
 
     WriteMemory(addr_i64, GetGpr(rs, 16));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STHU", &PPUInterpreter::STHU, rs, ra, d);
 }
 
 void Compiler::LMW(u32 rd, u32 ra, s32 d) {
@@ -4013,8 +3855,6 @@ void Compiler::LMW(u32 rd, u32 ra, s32 d) {
         SetGpr(i, val_i64);
         addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64(4));
     }
-
-    //InterpreterCall("LMW", &PPUInterpreter::LMW, rd, ra, d);
 }
 
 void Compiler::STMW(u32 rs, u32 ra, s32 d) {
@@ -4028,8 +3868,6 @@ void Compiler::STMW(u32 rs, u32 ra, s32 d) {
         WriteMemory(addr_i64, val_i32);
         addr_i64 = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64(4));
     }
-
-    //InterpreterCall("STMW", &PPUInterpreter::STMW, rs, ra, d);
 }
 
 void Compiler::LFS(u32 frd, u32 ra, s32 d) {
@@ -4041,7 +3879,6 @@ void Compiler::LFS(u32 frd, u32 ra, s32 d) {
 
     auto mem_i32 = ReadMemory(addr_i64, 32);
     SetFpr(frd, mem_i32);
-    //InterpreterCall("LFS", &PPUInterpreter::LFS, frd, ra, d);
 }
 
 void Compiler::LFSU(u32 frd, u32 ra, s32 ds) {
@@ -4051,7 +3888,6 @@ void Compiler::LFSU(u32 frd, u32 ra, s32 ds) {
     auto mem_i32  = ReadMemory(addr_i64, 32);
     SetFpr(frd, mem_i32);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LFSU", &PPUInterpreter::LFSU, frd, ra, ds);
 }
 
 void Compiler::LFD(u32 frd, u32 ra, s32 d) {
@@ -4063,7 +3899,6 @@ void Compiler::LFD(u32 frd, u32 ra, s32 d) {
 
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetFpr(frd, mem_i64);
-    //InterpreterCall("LFD", &PPUInterpreter::LFD, frd, ra, d);
 }
 
 void Compiler::LFDU(u32 frd, u32 ra, s32 ds) {
@@ -4074,7 +3909,6 @@ void Compiler::LFDU(u32 frd, u32 ra, s32 ds) {
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetFpr(frd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LFDU", &PPUInterpreter::LFDU, frd, ra, ds);
 }
 
 void Compiler::STFS(u32 frs, u32 ra, s32 d) {
@@ -4086,7 +3920,6 @@ void Compiler::STFS(u32 frs, u32 ra, s32 d) {
 
     auto frs_i32 = m_ir_builder->CreateBitCast(GetFpr(frs, 32), m_ir_builder->getInt32Ty());
     WriteMemory(addr_i64, frs_i32);
-    //InterpreterCall("STFS", &PPUInterpreter::STFS, frs, ra, d);
 }
 
 void Compiler::STFSU(u32 frs, u32 ra, s32 d) {
@@ -4097,7 +3930,6 @@ void Compiler::STFSU(u32 frs, u32 ra, s32 d) {
     auto frs_i32 = m_ir_builder->CreateBitCast(GetFpr(frs, 32), m_ir_builder->getInt32Ty());
     WriteMemory(addr_i64, frs_i32);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STFSU", &PPUInterpreter::STFSU, frs, ra, d);
 }
 
 void Compiler::STFD(u32 frs, u32 ra, s32 d) {
@@ -4109,7 +3941,6 @@ void Compiler::STFD(u32 frs, u32 ra, s32 d) {
 
     auto frs_i64 = m_ir_builder->CreateBitCast(GetFpr(frs), m_ir_builder->getInt64Ty());
     WriteMemory(addr_i64, frs_i64);
-    //InterpreterCall("STFD", &PPUInterpreter::STFD, frs, ra, d);
 }
 
 void Compiler::STFDU(u32 frs, u32 ra, s32 d) {
@@ -4120,7 +3951,6 @@ void Compiler::STFDU(u32 frs, u32 ra, s32 d) {
     auto frs_i64 = m_ir_builder->CreateBitCast(GetFpr(frs), m_ir_builder->getInt64Ty());
     WriteMemory(addr_i64, frs_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STFDU", &PPUInterpreter::STFDU, frs, ra, d);
 }
 
 void Compiler::LD(u32 rd, u32 ra, s32 ds) {
@@ -4132,7 +3962,6 @@ void Compiler::LD(u32 rd, u32 ra, s32 ds) {
 
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LD", &PPUInterpreter::LD, rd, ra, ds);
 }
 
 void Compiler::LDU(u32 rd, u32 ra, s32 ds) {
@@ -4143,7 +3972,6 @@ void Compiler::LDU(u32 rd, u32 ra, s32 ds) {
     auto mem_i64 = ReadMemory(addr_i64, 64);
     SetGpr(rd, mem_i64);
     SetGpr(ra, addr_i64);
-    //InterpreterCall("LDU", &PPUInterpreter::LDU, rd, ra, ds);
 }
 
 void Compiler::LWA(u32 rd, u32 ra, s32 ds) {
@@ -4156,7 +3984,6 @@ void Compiler::LWA(u32 rd, u32 ra, s32 ds) {
     auto mem_i32 = ReadMemory(addr_i64, 32);
     auto mem_i64 = m_ir_builder->CreateSExt(mem_i32, m_ir_builder->getInt64Ty());
     SetGpr(rd, mem_i64);
-    //InterpreterCall("LWA", &PPUInterpreter::LWA, rd, ra, ds);
 }
 
 void Compiler::FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4167,8 +3994,12 @@ void Compiler::FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FDIVS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FDIVS", &PPUInterpreter::FDIVS, frd, fra, frb, rc);
 }
 
 void Compiler::FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4179,8 +4010,12 @@ void Compiler::FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FSUBS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FSUBS", &PPUInterpreter::FSUBS, frd, fra, frb, rc);
 }
 
 void Compiler::FADDS(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4191,8 +4026,12 @@ void Compiler::FADDS(u32 frd, u32 fra, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FADDS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FADDS", &PPUInterpreter::FADDS, frd, fra, frb, rc);
 }
 
 void Compiler::FSQRTS(u32 frd, u32 frb, bool rc) {
@@ -4201,9 +4040,13 @@ void Compiler::FSQRTS(u32 frd, u32 frb, bool rc) {
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
-    
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FSQRTS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FSQRTS", &PPUInterpreter::FSQRTS, frd, frb, rc);
 }
 
 void Compiler::FRES(u32 frd, u32 frb, bool rc) {
@@ -4211,8 +4054,12 @@ void Compiler::FRES(u32 frd, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateFDiv(ConstantFP::get(m_ir_builder->getDoubleTy(), 1.0), rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FRES.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FRES", &PPUInterpreter::FRES, frd, frb, rc);
 }
 
 void Compiler::FMULS(u32 frd, u32 fra, u32 frc, bool rc) {
@@ -4223,8 +4070,12 @@ void Compiler::FMULS(u32 frd, u32 fra, u32 frc, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMULS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMULS", &PPUInterpreter::FMULS, frd, fra, frc, rc);
 }
 
 void Compiler::FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4236,8 +4087,12 @@ void Compiler::FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMADDS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMADDS", &PPUInterpreter::FMADDS, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4250,8 +4105,12 @@ void Compiler::FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMSUBS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMSUBS", &PPUInterpreter::FMSUBS, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4265,8 +4124,12 @@ void Compiler::FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNMSUBS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNMSUBS", &PPUInterpreter::FNMSUBS, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4279,8 +4142,12 @@ void Compiler::FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNMADDS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNMADDS", &PPUInterpreter::FNMADDS, frd, fra, frc, frb, rc);
 }
 
 void Compiler::STD(u32 rs, u32 ra, s32 d) {
@@ -4291,7 +4158,6 @@ void Compiler::STD(u32 rs, u32 ra, s32 d) {
     }
 
     WriteMemory(addr_i64, GetGpr(rs, 64));
-    //InterpreterCall("STD", &PPUInterpreter::STD, rs, ra, d);
 }
 
 void Compiler::STDU(u32 rs, u32 ra, s32 ds) {
@@ -4301,7 +4167,6 @@ void Compiler::STDU(u32 rs, u32 ra, s32 ds) {
 
     WriteMemory(addr_i64, GetGpr(rs, 64));
     SetGpr(ra, addr_i64);
-    //InterpreterCall("STDU", &PPUInterpreter::STDU, rs, ra, ds);
 }
 
 void Compiler::MTFSB1(u32 crbd, bool rc) {
@@ -4341,8 +4206,12 @@ void Compiler::FCTIW(u32 frd, u32 frb, bool rc) {
     auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
     SetFpr(frd, res_i32);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FCTIW.");
+    }
+
     // TODO: Set flags / Handle NaN / Implement Saturation
-    //InterpreterCall("FCTIW", &PPUInterpreter::FCTIW, frd, frb, rc);
 }
 
 void Compiler::FCTIWZ(u32 frd, u32 frb, bool rc) {
@@ -4355,8 +4224,12 @@ void Compiler::FDIV(u32 frd, u32 fra, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateFDiv(ra_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FDIV.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FDIV", &PPUInterpreter::FDIV, frd, fra, frb, rc);
 }
 
 void Compiler::FSUB(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4365,8 +4238,12 @@ void Compiler::FSUB(u32 frd, u32 fra, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateFSub(ra_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FSUB.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FSUB", &PPUInterpreter::FSUB, frd, fra, frb, rc);
 }
 
 void Compiler::FADD(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4375,8 +4252,12 @@ void Compiler::FADD(u32 frd, u32 fra, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateFAdd(ra_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FADD.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FADD", &PPUInterpreter::FADD, frd, fra, frb, rc);
 }
 
 void Compiler::FSQRT(u32 frd, u32 frb, bool rc) {
@@ -4384,8 +4265,12 @@ void Compiler::FSQRT(u32 frd, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FSQRT.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FSQRT", &PPUInterpreter::FSQRT, frd, frb, rc);
 }
 
 void Compiler::FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4398,8 +4283,12 @@ void Compiler::FMUL(u32 frd, u32 fra, u32 frc, bool rc) {
     auto res_f64 = m_ir_builder->CreateFMul(ra_f64, rc_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMUL.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMUL", &PPUInterpreter::FMUL, frd, fra, frc, rc);
 }
 
 void Compiler::FRSQRTE(u32 frd, u32 frb, bool rc) {
@@ -4407,6 +4296,11 @@ void Compiler::FRSQRTE(u32 frd, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
     res_f64      = m_ir_builder->CreateFDiv(ConstantFP::get(m_ir_builder->getDoubleTy(), 1.0), res_f64);
     SetFpr(frd, res_f64);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FRSQRTE.");
+    }
 }
 
 void Compiler::FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4417,8 +4311,12 @@ void Compiler::FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMSUB.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMSUB", &PPUInterpreter::FMSUB, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4428,8 +4326,12 @@ void Compiler::FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMADD.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMADD", &PPUInterpreter::FMADD, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4440,8 +4342,12 @@ void Compiler::FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNMSUB.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNMSUB", &PPUInterpreter::FNMSUB, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
@@ -4453,8 +4359,12 @@ void Compiler::FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNMADD.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNMADD", &PPUInterpreter::FNMADD, frd, fra, frc, frb, rc);
 }
 
 void Compiler::FCMPO(u32 crfd, u32 fra, u32 frb) {
@@ -4466,14 +4376,23 @@ void Compiler::FNEG(u32 frd, u32 frb, bool rc) {
     rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
     SetFpr(frd, rb_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNEG.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNEG", &PPUInterpreter::FNEG, frd, frb, rc);
 }
 
 void Compiler::FMR(u32 frd, u32 frb, bool rc) {
     SetFpr(frd, GetFpr(frb));
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FMR.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FMR", &PPUInterpreter::FMR, frd, frb, rc);
 }
 
 void Compiler::FNABS(u32 frd, u32 frb, bool rc) {
@@ -4482,8 +4401,12 @@ void Compiler::FNABS(u32 frd, u32 frb, bool rc) {
     res_f64      = m_ir_builder->CreateFNeg(res_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FNABS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FNABS", &PPUInterpreter::FNABS, frd, frb, rc);
 }
 
 void Compiler::FABS(u32 frd, u32 frb, bool rc) {
@@ -4491,8 +4414,12 @@ void Compiler::FABS(u32 frd, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::fabs, m_ir_builder->getDoubleTy()), rb_f64);
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FABS.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FABS", &PPUInterpreter::FABS, frd, frb, rc);
 }
 
 void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
@@ -4500,8 +4427,12 @@ void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
     auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
     SetFpr(frd, res_i64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FCTID.");
+    }
+
     // TODO: Set flags / Handle NaN / Implement Saturation
-    //InterpreterCall("FCTID", &PPUInterpreter::FCTID, frd, frb, rc);
 }
 
 void Compiler::FCTIDZ(u32 frd, u32 frb, bool rc) {
@@ -4513,8 +4444,12 @@ void Compiler::FCFID(u32 frd, u32 frb, bool rc) {
     auto res_f64 = m_ir_builder->CreateSIToFP(rb_i64, m_ir_builder->getDoubleTy());
     SetFpr(frd, res_f64);
 
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FCFID.");
+    }
+
     // TODO: Set flags
-    //InterpreterCall("FCFID", &PPUInterpreter::FCFID, frd, frb, rc);
 }
 
 void Compiler::UNK(const u32 code, const u32 opcode, const u32 gcode) {
