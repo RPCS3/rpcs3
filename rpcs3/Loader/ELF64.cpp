@@ -463,8 +463,8 @@ namespace loader
 								be_t<u32>::make(BLR())
 							};
 
-							auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
-							auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
+							const auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
+							const auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
 
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
