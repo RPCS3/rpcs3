@@ -131,9 +131,12 @@ namespace vm
 	location_info g_locations[memory_location_count] =
 	{
 		{ 0x00010000, 0x2FFF0000, ps3::main_alloc, ps3::main_fixed_alloc, ps3::main_dealloc },
-		{ 0x00010000, 0x2FFF0000, ps3::stack_alloc, ps3::stack_fixed_alloc, ps3::stack_dealloc },
+		{ 0xD0000000, 0x10000000, ps3::stack_alloc, ps3::stack_fixed_alloc, ps3::stack_dealloc },
+
+		//remove me
 		{ 0x00010000, 0x2FFF0000, ps3::sprx_alloc, ps3::sprx_fixed_alloc, ps3::sprx_dealloc },
-		{ 0x00010000, 0x2FFF0000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
+
+		{ 0x30000000, 0x10000000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
 	};
 
 	void close()

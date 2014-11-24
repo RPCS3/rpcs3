@@ -446,25 +446,38 @@ namespace loader
 								LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 							}
 
-							static const u32 tbl_section_size = 2 * 4;
-							static const u32 dst_section_size = 3 * 4;
-							auto tbl = ptr<u32>::make(alloc(stub->s_imports * tbl_section_size));
-							auto dst = ptr<u32>::make(alloc(stub->s_imports * dst_section_size));
+							struct tbl_item
+							{
+								be_t<u32> stub;
+								be_t<u32> rtoc;
+							};
+
+							struct stub_data_t
+							{
+								be_t<u32> data[3];
+							} 
+							static const stub_data =
+							{
+								be_t<u32>::make(MR(11, 2)),
+								be_t<u32>::make(SC(2)),
+								be_t<u32>::make(BLR())
+							};
+
+							auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
+							auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
 
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
-								const u32 nid = *stub->s_nid++;
+								const u32 nid = stub->s_nid[i];
 
 								if (!Emu.GetModuleManager().get_function_stub(nid, stub->s_text[i]))
 								{
-									stub->s_text[i] = tbl.addr();
+									dst[i] = stub_data;
 
-									*tbl++ = dst.addr();
-									*tbl++ = Emu.GetModuleManager().GetFuncNumById(nid);
+									tbl[i].stub = (dst + i).addr();
+									tbl[i].rtoc = stub->s_nid[i];
 
-									*dst++ = MR(11, 2);
-									*dst++ = SC(2);
-									*dst++ = BLR();
+									stub->s_text[i] = (tbl + i).addr();
 
 									if (module && !module->Load(nid))
 									{

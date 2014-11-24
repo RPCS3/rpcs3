@@ -3,29 +3,18 @@
 
 namespace vm
 {
-	enum memory_location
+	enum memory_location : uint
 	{
 		main,
 		stack,
+
+		//remove me
 		sprx,
+
 		user_space,
 
 		memory_location_count
 	};
-
-	struct location_info
-	{
-		u32 addr_offset;
-		u32 size;
-
-		u32(*allocator)(u32 size);
-		u32(*fixed_allocator)(u32 addr, u32 size);
-		void(*deallocator)(u32 addr);
-
-		u32 alloc_offset;
-	};
-
-	extern location_info g_locations[memory_location_count];
 
 	static void set_stack_size(u32 size) {}
 	static void initialize_stack() {}
@@ -201,3 +190,33 @@ namespace vm
 #include "vm_ref.h"
 #include "vm_ptr.h"
 #include "vm_var.h"
+
+namespace vm
+{
+	struct location_info
+	{
+		u32 addr_offset;
+		u32 size;
+
+		u32(*allocator)(u32 size);
+		u32(*fixed_allocator)(u32 addr, u32 size);
+		void(*deallocator)(u32 addr);
+
+		u32 alloc_offset;
+
+		template<typename T = char>
+		ptr<T> alloc(u32 count) const
+		{
+			return ptr<T>::make(allocator(count * sizeof(T)));
+		}
+	};
+
+	extern location_info g_locations[memory_location_count];
+
+	template<memory_location location = main>
+	location_info& get()
+	{
+		assert(location < memory_location_count);
+		return g_locations[location];
+	}
+}
