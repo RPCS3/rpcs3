@@ -4192,9 +4192,7 @@ private:
 			}
 		}
 
-		(u64&)CPU.FPR[frd] = 0xfff8000000000000ull | r;
-		if(r == 0 && ( (u64&)b & DOUBLE_SIGN )) (u64&)CPU.FPR[frd] |= 0x100000000ull;
-
+		(u64&)CPU.FPR[frd] = r;
 		if(rc) UNK("fctiw.");
 	}
 	void FCTIWZ(u32 frd, u32 frb, bool rc)
@@ -4232,10 +4230,7 @@ private:
 			value = (u32)i;
 		}
 
-		(u64&)CPU.FPR[frd] = 0xfff8000000000000ull | value;
-		if (value == 0 && ( (u64&)b & DOUBLE_SIGN ))
-			(u64&)CPU.FPR[frd] |= 0x100000000ull;
-
+		(u64&)CPU.FPR[frd] = (u64)value;
 		if(rc) UNK("fctiwz.");
 	}
 	void FDIV(u32 frd, u32 fra, u32 frb, bool rc)
@@ -4333,7 +4328,7 @@ private:
 		{
 			CPU.SetFPSCRException(FPSCR_ZX);
 		}
-		CPU.FPR[frd] = static_cast<float>(1.0 / sqrt(CPU.FPR[frb]));
+		CPU.FPR[frd] = 1.0 / sqrt(CPU.FPR[frb]);
 		if(rc) UNK("frsqrte.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
@@ -4458,9 +4453,7 @@ private:
 			}
 		}
 
-		(u64&)CPU.FPR[frd] = 0xfff8000000000000ull | r;
-		if(r == 0 && ( (u64&)b & DOUBLE_SIGN )) (u64&)CPU.FPR[frd] |= 0x100000000ull;
-
+		(u64&)CPU.FPR[frd] = r;
 		if(rc) UNK("fctid.");
 	}
 	void FCTIDZ(u32 frd, u32 frb, bool rc)
@@ -4498,9 +4491,7 @@ private:
 			r = (u64)i;
 		}
 
-		(u64&)CPU.FPR[frd] = 0xfff8000000000000ull | r;
-		if(r == 0 && ( (u64&)b & DOUBLE_SIGN )) (u64&)CPU.FPR[frd] |= 0x100000000ull;
-
+		(u64&)CPU.FPR[frd] = r;
 		if(rc) UNK("fctidz.");
 	}
 	void FCFID(u32 frd, u32 frb, bool rc)

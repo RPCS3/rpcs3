@@ -3991,8 +3991,7 @@ void Compiler::FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto res_f64 = m_ir_builder->CreateFDiv(ra_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4007,8 +4006,7 @@ void Compiler::FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto res_f64 = m_ir_builder->CreateFSub(ra_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4023,8 +4021,7 @@ void Compiler::FADDS(u32 frd, u32 fra, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto res_f64 = m_ir_builder->CreateFAdd(ra_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4038,8 +4035,7 @@ void Compiler::FSQRTS(u32 frd, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto res_f64 = (Value *)m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::sqrt, m_ir_builder->getDoubleTy()), rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4052,7 +4048,8 @@ void Compiler::FSQRTS(u32 frd, u32 frb, bool rc) {
 void Compiler::FRES(u32 frd, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
     auto res_f64 = m_ir_builder->CreateFDiv(ConstantFP::get(m_ir_builder->getDoubleTy(), 1.0), rb_f64);
-    SetFpr(frd, res_f64);
+    auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4067,8 +4064,7 @@ void Compiler::FMULS(u32 frd, u32 fra, u32 frc, bool rc) {
     auto rc_f64  = GetFpr(frc);
     auto res_f64 = m_ir_builder->CreateFMul(ra_f64, rc_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4084,8 +4080,7 @@ void Compiler::FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto rc_f64  = GetFpr(frc);
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4102,8 +4097,7 @@ void Compiler::FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     rb_f64       = m_ir_builder->CreateFNeg(rb_f64);
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4121,8 +4115,7 @@ void Compiler::FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     res_f64      = m_ir_builder->CreateFNeg(res_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4139,8 +4132,7 @@ void Compiler::FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
     auto res_f64 = (Value *)m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::fmuladd, m_ir_builder->getDoubleTy()), ra_f64, rc_f64, rb_f64);
     res_f64      = m_ir_builder->CreateFNeg(res_f64);
     auto res_f32 = m_ir_builder->CreateFPTrunc(res_f64, m_ir_builder->getFloatTy());
-    res_f64      = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
-    SetFpr(frd, res_f64);
+    SetFpr(frd, res_f32);
 
     if (rc) {
         // TODO: Implement this
@@ -4194,27 +4186,68 @@ void Compiler::MTFSF(u32 flm, u32 frb, bool rc) {
 }
 
 void Compiler::FCMPU(u32 crfd, u32 fra, u32 frb) {
-    InterpreterCall("FCMPU", &PPUInterpreter::FCMPU, crfd, fra, frb);
+    auto ra_f64 = GetFpr(fra);
+    auto rb_f64 = GetFpr(frb);
+    auto lt_i1  = m_ir_builder->CreateFCmpOLT(ra_f64, rb_f64);
+    auto gt_i1  = m_ir_builder->CreateFCmpOGT(ra_f64, rb_f64);
+    auto eq_i1  = m_ir_builder->CreateFCmpOEQ(ra_f64, rb_f64);
+    auto cr_i32 = GetCr();
+    cr_i32      = SetNibble(cr_i32, crfd, lt_i1, gt_i1, eq_i1, m_ir_builder->getInt1(false));
+    SetCr(cr_i32);
+
+    // TODO: Set flags / Handle NaN
 }
 
 void Compiler::FRSP(u32 frd, u32 frb, bool rc) {
-    InterpreterCall("FRSP", &PPUInterpreter::FRSP, frd, frb, rc);
+    auto rb_f64  = GetFpr(frb);
+    auto res_f32 = m_ir_builder->CreateFPTrunc(rb_f64, m_ir_builder->getFloatTy());
+    auto res_f64 = m_ir_builder->CreateFPExt(res_f32, m_ir_builder->getDoubleTy());
+    SetFpr(frd, res_f64);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FRSP.");
+    }
+
+    // TODO: Revisit this
+    // TODO: Set flags
 }
 
 void Compiler::FCTIW(u32 frd, u32 frb, bool rc) {
-    auto rb_f64 = GetFpr(frb);
+    auto rb_f64  = GetFpr(frb);
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFF));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648));
     auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
-    SetFpr(frd, res_i32);
+    auto res_i64 = m_ir_builder->CreateZExt(res_i32, m_ir_builder->getInt64Ty());
+    res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFF), res_i64);
+    res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x80000000), res_i64);
+    SetFpr(frd, res_i64);
 
     if (rc) {
         // TODO: Implement this
         CompilationError("FCTIW.");
     }
 
-    // TODO: Set flags / Handle NaN / Implement Saturation
+    // TODO: Set flags / Implement rounding modes
+    //InterpreterCall("FCTIW", &PPUInterpreter::FCTIWZ, frd, frb, rc);
 }
 
 void Compiler::FCTIWZ(u32 frd, u32 frb, bool rc) {
+    //auto rb_f64  = GetFpr(frb);
+    //auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFF));
+    //auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648));
+    //auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
+    //auto res_i64 = m_ir_builder->CreateZExt(res_i32, m_ir_builder->getInt64Ty());
+    //res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFF), res_i64);
+    //res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x80000000), res_i64);
+    //SetFpr(frd, res_i64);
+
+    //if (rc) {
+    //    // TODO: Implement this
+    //    CompilationError("FCTIWZ.");
+    //}
+
+    // TODO: Set flags
     InterpreterCall("FCTIWZ", &PPUInterpreter::FCTIWZ, frd, frb, rc);
 }
 
@@ -4274,7 +4307,19 @@ void Compiler::FSQRT(u32 frd, u32 frb, bool rc) {
 }
 
 void Compiler::FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
-    InterpreterCall("FSEL", &PPUInterpreter::FSEL, frd, fra, frc, frb, rc);
+    auto ra_f64  = GetFpr(fra);
+    auto rb_f64  = GetFpr(frb);
+    auto rc_f64  = GetFpr(frc);
+    auto cmp_i1  = m_ir_builder->CreateFCmpOGE(ra_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0.0));
+    auto res_f64 = m_ir_builder->CreateSelect(cmp_i1, rc_f64, rb_f64);
+    SetFpr(frd, res_f64);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FSEL.");
+    }
+
+    // TODO: Set flags
 }
 
 void Compiler::FMUL(u32 frd, u32 fra, u32 frc, bool rc) {
@@ -4368,7 +4413,16 @@ void Compiler::FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {
 }
 
 void Compiler::FCMPO(u32 crfd, u32 fra, u32 frb) {
-    InterpreterCall("FCMPO", &PPUInterpreter::FCMPO, crfd, fra, frb);
+    auto ra_f64 = GetFpr(fra);
+    auto rb_f64 = GetFpr(frb);
+    auto lt_i1  = m_ir_builder->CreateFCmpOLT(ra_f64, rb_f64);
+    auto gt_i1  = m_ir_builder->CreateFCmpOGT(ra_f64, rb_f64);
+    auto eq_i1  = m_ir_builder->CreateFCmpOEQ(ra_f64, rb_f64);
+    auto cr_i32 = GetCr();
+    cr_i32      = SetNibble(cr_i32, crfd, lt_i1, gt_i1, eq_i1, m_ir_builder->getInt1(false));
+    SetCr(cr_i32);
+
+    // TODO: Set flags / Handle NaN
 }
 
 void Compiler::FNEG(u32 frd, u32 frb, bool rc) {
@@ -4424,7 +4478,11 @@ void Compiler::FABS(u32 frd, u32 frb, bool rc) {
 
 void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFFFFFFFFFFll));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808ll));
     auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
+    res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFFFFFFFFFF), res_i64);
+    res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x8000000000000000), res_i64);
     SetFpr(frd, res_i64);
 
     if (rc) {
@@ -4432,10 +4490,25 @@ void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
         CompilationError("FCTID.");
     }
 
-    // TODO: Set flags / Handle NaN / Implement Saturation
+    // TODO: Set flags / Implement rounding modes
+    //InterpreterCall("FCTIDZ", &PPUInterpreter::FCTID, frd, frb, rc);
 }
 
 void Compiler::FCTIDZ(u32 frd, u32 frb, bool rc) {
+    //auto rb_f64  = GetFpr(frb);
+    //auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFFFFFFFFFFll));
+    //auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808ll));
+    //auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
+    //res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFFFFFFFFFF), res_i64);
+    //res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x8000000000000000), res_i64);
+    //SetFpr(frd, res_i64);
+
+    //if (rc) {
+    //    // TODO: Implement this
+    //    CompilationError("FCTIDZ.");
+    //}
+
+    // TODO: Set flags
     InterpreterCall("FCTIDZ", &PPUInterpreter::FCTIDZ, frd, frb, rc);
 }
 
