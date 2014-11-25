@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/CPU/CPUThreadManager.h"
 
 #include "ARMv7Thread.h"
 #include "ARMv7Decoder.h"
@@ -99,4 +100,16 @@ void ARMv7Thread::DoStop()
 
 void ARMv7Thread::DoCode()
 {
+}
+
+arm7_thread::arm7_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+{
+	thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+
+	thread->SetName(name);
+	thread->SetEntry(entry);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
+	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+
+	argc = 0;
 }

@@ -28,11 +28,74 @@ enum
 	CELL_PRX_ERROR_ELF_IS_REGISTERED           = 0x80011910, // Fixed ELF is already registered
 };
 
+// Information about imported or exported libraries in PRX modules
+struct sys_prx_library_info_t
+{
+	u8 size;
+	u8 unk0;
+	be_t<u16> version;
+	be_t<u16> attributes;
+	be_t<u16> num_func;
+	be_t<u16> num_var;
+	be_t<u16> num_tlsvar;
+	u8 info_hash;
+	u8 info_tlshash;
+	u8 unk1[2];
+	be_t<u32> name_addr;
+	be_t<u32> fnid_addr;
+	be_t<u32> fstub_addr;
+	be_t<u32> unk4;
+	be_t<u32> unk5;
+	be_t<u32> unk6;
+	be_t<u32> unk7;
+};
+
+// ELF file headers
+struct sys_prx_param_t
+{
+	be_t<u32> size;
+	be_t<u32> magic;
+	be_t<u32> version;
+	be_t<u32> unk0;
+	be_t<u32> libentstart;
+	be_t<u32> libentend;
+	vm::bptr<sys_prx_library_info_t> libstubstart;
+	vm::bptr<sys_prx_library_info_t> libstubend;
+	be_t<u16> ver;
+	be_t<u16> unk1;
+	be_t<u32> unk2;
+};
+
+// PRX file headers
+struct sys_prx_module_info_t
+{
+	be_t<u16> attributes;
+	be_t<u16> version;
+	s8 name[28];
+	be_t<u32> toc;
+	vm::bptr<sys_prx_library_info_t> exports_start;
+	vm::bptr<sys_prx_library_info_t> exports_end;
+	be_t<u32> imports_start;
+	be_t<u32> imports_end;
+};
+
+// Relocation information of the SCE_PPURELA segment
+struct sys_prx_relocation_info_t
+{
+	be_t<u64> offset;
+	be_t<u16> unk0;
+	u8 index_value;
+	u8 index_addr;
+	be_t<u32> type;
+	vm::bptr<void, 1, u64> ptr;
+};
+
+
 // Data types
 struct sys_prx_load_module_option_t
 {
 	be_t<u64> size;
-	be_t<u32> base_addr; // void*
+	vm::bptr<void> base_addr;
 };
 
 struct sys_prx_start_module_option_t

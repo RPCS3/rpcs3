@@ -108,9 +108,9 @@ void MemoryBase::Init(MemoryType type)
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
 #ifdef _WIN32
-	if (!g_base_addr)
+	if (!vm::g_base_addr)
 #else
-	if ((s64)g_base_addr == (s64)-1)
+	if ((s64)vm::g_base_addr == (s64)-1)
 #endif
 	{
 		LOG_ERROR(MEMORY, "Initializing memory failed");
@@ -119,7 +119,7 @@ void MemoryBase::Init(MemoryType type)
 	}
 	else
 	{
-		LOG_NOTICE(MEMORY, "Initializing memory: m_base_addr = 0x%llx", (u64)g_base_addr);
+		LOG_NOTICE(MEMORY, "Initializing memory: base_addr = 0x%llx", (u64)vm::g_base_addr);
 	}
 
 	switch (type)
@@ -128,6 +128,8 @@ void MemoryBase::Init(MemoryType type)
 		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
 		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
 		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
+		MemoryBlocks.push_back(SPRXMem.SetRange(0x50000000, 0x10000000));
+		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
 		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
 		break;
@@ -217,6 +219,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 	}
 
 	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
+	
 	LOG_WARNING(MEMORY, "Memory mapped at 0x%llx: size=0x%x", addr, size);
 	return true;
 }
@@ -412,12 +415,6 @@ void DynamicMemoryBlockBase::Delete()
 
 bool DynamicMemoryBlockBase::AllocFixed(u64 addr, u32 size)
 {
-	if (!MemoryBlock::GetStartAddr())
-	{
-		LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::AllocFixed(addr=0x%llx, size=0x%x): memory block not initialized", addr, size);
-		return false;
-	}
-
 	size = PAGE_4K(size + (addr & 4095)); // align size
 
 	addr &= ~4095; // align start address
@@ -452,7 +449,7 @@ u64 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::AllocAlign(size=0x%x, align=0x%x): memory block not initialized", size, align);
 		return 0;
 	}
-
+	
 	size = PAGE_4K(size);
 	u32 exsize;
 
@@ -579,9 +576,9 @@ bool VirtualMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
 
 bool VirtualMemoryBlock::IsMyAddress(const u64 addr)
 {
-	for(u32 i=0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
-		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
+		if (addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
 		{
 			return true;
 		}
@@ -620,7 +617,7 @@ u64 VirtualMemoryBlock::Map(u64 realaddr, u32 size)
 
 bool VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 {
-	if(!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
+	if (!IsInMyRange(addr, size) && (IsMyAddress(addr) || IsMyAddress(addr + size - 1)))
 		return false;
 
 	m_mapped_memory.emplace_back(addr, realaddr, size);
@@ -629,9 +626,9 @@ bool VirtualMemoryBlock::Map(u64 realaddr, u32 size, u64 addr)
 
 bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr, u32& size)
 {
-	for(u32 i=0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
-		if(m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
+		if (m_mapped_memory[i].realAddress == realaddr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			size = m_mapped_memory[i].size;
 			m_mapped_memory.erase(m_mapped_memory.begin() + i);
@@ -644,9 +641,9 @@ bool VirtualMemoryBlock::UnmapRealAddress(u64 realaddr, u32& size)
 
 bool VirtualMemoryBlock::UnmapAddress(u64 addr, u32& size)
 {
-	for(u32 i=0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
-		if(m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
+		if (m_mapped_memory[i].addr == addr && IsInMyRange(m_mapped_memory[i].addr, m_mapped_memory[i].size))
 		{
 			size = m_mapped_memory[i].size;
 			m_mapped_memory.erase(m_mapped_memory.begin() + i);
@@ -669,7 +666,7 @@ bool VirtualMemoryBlock::Read32(const u64 addr, u32* value)
 bool VirtualMemoryBlock::Write32(const u64 addr, const u32 value)
 {
 	u64 realAddr;
-	if(!getRealAddr(addr, realAddr))
+	if (!getRealAddr(addr, realAddr))
 		return false;
 	vm::write32(realAddr, value);
 	return true;
@@ -677,9 +674,9 @@ bool VirtualMemoryBlock::Write32(const u64 addr, const u32 value)
 
 bool VirtualMemoryBlock::getRealAddr(u64 addr, u64& result)
 {
-	for(u32 i=0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
-		if(addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
+		if (addr >= m_mapped_memory[i].addr && addr < m_mapped_memory[i].addr + m_mapped_memory[i].size)
 		{
 			result = m_mapped_memory[i].realAddress + (addr - m_mapped_memory[i].addr);
 			return true;
@@ -691,9 +688,9 @@ bool VirtualMemoryBlock::getRealAddr(u64 addr, u64& result)
 
 u64 VirtualMemoryBlock::getMappedAddress(u64 realAddress)
 {
-	for(u32 i=0; i<m_mapped_memory.size(); ++i)
+	for (u32 i = 0; i<m_mapped_memory.size(); ++i)
 	{
-		if(realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
+		if (realAddress >= m_mapped_memory[i].realAddress && realAddress < m_mapped_memory[i].realAddress + m_mapped_memory[i].size)
 		{
 			return m_mapped_memory[i].addr + (realAddress - m_mapped_memory[i].realAddress);
 		}
@@ -711,7 +708,7 @@ void VirtualMemoryBlock::Delete()
 
 bool VirtualMemoryBlock::Reserve(u32 size)
 {
-	if(size + GetReservedAmount() > GetEndAddr() - GetStartAddr())
+	if (size + GetReservedAmount() > GetEndAddr() - GetStartAddr())
 		return false;
 
 	m_reserve_size += size;
@@ -720,7 +717,7 @@ bool VirtualMemoryBlock::Reserve(u32 size)
 
 bool VirtualMemoryBlock::Unreserve(u32 size)
 {
-	if(size > GetReservedAmount())
+	if (size > GetReservedAmount())
 		return false;
 
 	m_reserve_size -= size;

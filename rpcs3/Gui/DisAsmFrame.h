@@ -1,5 +1,5 @@
 #pragma once
-
+#if 0
 class PPCThread;
 
 class DisAsmFrame : public wxFrame
@@ -32,3 +32,5 @@ public:
 
 	virtual void AddLine(const wxString line);
 };
+
+#endif

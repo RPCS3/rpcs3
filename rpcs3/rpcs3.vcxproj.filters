@@ -90,6 +90,9 @@
     <ClCompile Include="Gui\MsgDialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\LLEModulesManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -183,6 +186,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\InstructionEditor.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\LLEModulesManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>

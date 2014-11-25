@@ -77,16 +77,14 @@ int pamfStreamTypeToEsFilterId(u8 type, u8 ch, vm::ptr<CellCodecEsFilterId> pEsF
 u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
 {
 	//TODO: get stream type correctly
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
-	switch (pAddr->stream_headers[stream].type)
+	switch (pSelf->pAddr->stream_headers[stream].type)
 	{
 	case 0x1b: return CELL_PAMF_STREAM_TYPE_AVC;
 	case 0xdc: return CELL_PAMF_STREAM_TYPE_ATRAC3PLUS;
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
 	default:
-		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
+		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pSelf->pAddr->stream_headers[stream].type);
 		return 0;
 	}
 }
@@ -94,18 +92,18 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
 u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u8 stream)
 {
 	//TODO: get stream channel correctly
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
-	switch (pAddr->stream_headers[stream].type)
+	switch (pSelf->pAddr->stream_headers[stream].type)
 	{
 	case 0x1b:
-		if ((pAddr->stream_headers[stream].stream_id >= 0xe0) && (pAddr->stream_headers[stream].stream_id <= 0xef))
+		if ((pSelf->pAddr->stream_headers[stream].stream_id >= 0xe0) && (pSelf->pAddr->stream_headers[stream].stream_id <= 0xef))
 		{
-			return pAddr->stream_headers[stream].stream_id - 0xe0;
+			return pSelf->pAddr->stream_headers[stream].stream_id - 0xe0;
 		}
 		else
 		{
-			cellPamf->Error("pamfGetStreamChannel: stream type 0x%x got invalid stream id=0x%x", pAddr->stream_headers[stream].type, pAddr->stream_headers[stream].stream_id);
+			cellPamf->Error("pamfGetStreamChannel: stream type 0x%x got invalid stream id=0x%x", 
+				pSelf->pAddr->stream_headers[stream].type, pSelf->pAddr->stream_headers[stream].stream_id);
 			return 0;
 		}
 	case 0xdc:
@@ -118,7 +116,7 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u8 stream)
 		cellPamf->Todo("pamfGetStreamChannel: CELL_PAMF_STREAM_TYPE_USER_DATA");
 		return 0;
 	default:
-		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pAddr->stream_headers[stream].type);
+		cellPamf->Todo("pamfGetStreamType: unsupported stream type found(0x%x)", pSelf->pAddr->stream_headers[stream].type);
 		return 0;
 	}
 
@@ -200,10 +198,8 @@ int cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::pt
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-	const u32 upper = (u16)pAddr->start_pts_high;
-	pTimeStamp->upper = upper;
-	pTimeStamp->lower = pAddr->start_pts_low;
+	pTimeStamp->upper = (u32)(u16)pSelf->pAddr->start_pts_high;
+	pTimeStamp->lower = pSelf->pAddr->start_pts_low;
 	return CELL_OK;
 }
 
@@ -215,10 +211,8 @@ int cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-	const u32 upper = (u16)pAddr->end_pts_high;
-	pTimeStamp->upper = upper;
-	pTimeStamp->lower = pAddr->end_pts_low;
+	pTimeStamp->upper = (u32)(u16)pSelf->pAddr->end_pts_high;
+	pTimeStamp->lower = pSelf->pAddr->end_pts_low;
 	return CELL_OK;
 }
 
@@ -230,8 +224,7 @@ int cellPamfReaderGetMuxRateBound(vm::ptr<CellPamfReader> pSelf)
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-	return pAddr->mux_rate_max;
+	return pSelf->pAddr->mux_rate_max;
 }
 
 int cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
@@ -242,8 +235,7 @@ int cellPamfReaderGetNumberOfStreams(vm::ptr<CellPamfReader> pSelf)
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-	return pAddr->stream_count;
+	return pSelf->pAddr->stream_count;
 }
 
 int cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 streamType)
@@ -254,11 +246,9 @@ int cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 s
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
 	int counts[6] = {0, 0, 0, 0, 0, 0};
 
-	for (u8 i = 0; i < pAddr->stream_count; i++)
+	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
 	{
 		counts[pamfGetStreamType(pSelf, i)]++;
 	}
@@ -289,18 +279,14 @@ int cellPamfReaderSetStreamWithIndex(vm::ptr<CellPamfReader> pSelf, u8 streamInd
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
-	if (streamIndex < pAddr->stream_count)
+	if (streamIndex < pSelf->pAddr->stream_count)
 	{
 		pSelf->stream = streamIndex;
 		return CELL_OK;
 	}
-	else
-	{
-		cellPamf->Error("cellPamfReaderSetStreamWithIndex: CELL_PAMF_ERROR_INVALID_ARG");
-		return CELL_PAMF_ERROR_INVALID_ARG;
-	}	
+
+	cellPamf->Error("cellPamfReaderSetStreamWithIndex: CELL_PAMF_ERROR_INVALID_ARG");
+	return CELL_PAMF_ERROR_INVALID_ARG;
 }
 
 int cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 streamType, u8 ch)
@@ -311,8 +297,6 @@ int cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
 	if (streamType > 5)
 	{
 		cellPamf->Error("cellPamfReaderSetStreamWithTypeAndChannel: invalid stream type(%d)", streamType);
@@ -320,7 +304,7 @@ int cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSelf, u8 
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
-	for (u8 i = 0; i < pAddr->stream_count; i++)
+	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
 	{
 		if (pamfGetStreamType(pSelf, i) == streamType) 
 		{
@@ -343,11 +327,9 @@ int cellPamfReaderSetStreamWithTypeAndIndex(vm::ptr<CellPamfReader> pSelf, u8 st
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
 	u32 found = 0;
 
-	for (u8 i = 0; i < pAddr->stream_count; i++)
+	for (u8 i = 0; i < pSelf->pAddr->stream_count; i++)
 	{
 		const u8 type = pamfGetStreamType(pSelf, i);
 
@@ -426,8 +408,6 @@ int cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
-
 	memset(vm::get_ptr<void>(pInfo_addr), 0, size);
 
 	switch (pamfGetStreamType(pSelf, pSelf->stream))
@@ -486,7 +466,7 @@ int cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 	case CELL_PAMF_STREAM_TYPE_AC3:
 		{
 			auto pInfo = vm::ptr<CellPamfAc3Info>::make(pInfo_addr);
-			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr + 0x98 + pSelf->stream * 0x30);
+			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
 
 			if (size != sizeof(CellPamfAc3Info))
 			{
@@ -501,7 +481,7 @@ int cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
 		{
 			auto pInfo = vm::ptr<CellPamfLpcmInfo>::make(pInfo_addr);
-			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr + 0x98 + pSelf->stream * 0x30);
+			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
 
 			if (size != sizeof(CellPamfLpcmInfo))
 			{
@@ -537,8 +517,7 @@ int cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);	
-	return pAddr->stream_headers[pSelf->stream].ep_num;
+	return pSelf->pAddr->stream_headers[pSelf->stream].ep_num;
 }
 
 int cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEpIterator> pIt)
@@ -549,7 +528,6 @@ int cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIn
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
 
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 	//TODO:
 	return CELL_OK;
 }
@@ -561,8 +539,6 @@ int cellPamfReaderGetEpIteratorWithTimeStamp(vm::ptr<CellPamfReader> pSelf, vm::
 	if (!pSelf->pAddr) {
 		return CELL_PAMF_ERROR_INVALID_PAMF;
 	}
-
-	vm::ptr<const PamfHeader> pAddr(pSelf->pAddr);
 
 	//TODO:
 

@@ -290,7 +290,7 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	}
 
 	// prx: zeroize first u16 and second u16, write buffer_size in second u32, write buffer_addr in second u64 and sync
-	rwm->m_size = buffer_size;
+	rwm->m_size = be_t<u32>::make(buffer_size);
 	rwm->m_buffer = buffer;
 	rwm->data.exchange({});
 	return CELL_OK;
@@ -479,9 +479,9 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	}
 
 	// prx: zeroize first u64, write size in third u32, write depth in fourth u32, write address in third u64 and sync
-	queue->m_size = size;
-	queue->m_depth = depth;
-	queue->m_buffer = buffer;
+	queue->m_size = be_t<u32>::make(size);
+	queue->m_depth = be_t<u32>::make(depth);
+	queue->m_buffer.set(buffer.addr());
 	queue->data.exchange({});
 	return CELL_OK;
 }
@@ -855,7 +855,7 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 	{
 		queue->pop1.write_relaxed({});
 		queue->push1.write_relaxed({});
-		queue->m_buffer.set(queue->m_buffer.addr() | be_t<u64>::make(1));
+		queue->m_buffer.set(queue->m_buffer.addr() | 1);
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
 		//m_bs[2]

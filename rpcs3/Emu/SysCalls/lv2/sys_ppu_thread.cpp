@@ -160,11 +160,11 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(name);
-	new_thread.m_custom_task = task;
+	new_thread.custom_task = task;
 
 	sys_ppu_thread.Notice("*** New PPU Thread [%s] (%s, entry=0x%x): id = %d", name.c_str(),
 		is_interrupt ? "interrupt" :
-		(is_joinable ? "joinable" : "non-joinable"), entry, id);
+		(is_joinable ? "joinable" : "detached"), entry, id);
 
 	if (!is_interrupt)
 	{
@@ -194,15 +194,13 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 	{
 	case 0: break;
 	case SYS_PPU_THREAD_CREATE_JOINABLE:
-	{
 		is_joinable = true;
 		break;
-	}
+
 	case SYS_PPU_THREAD_CREATE_INTERRUPT:
-	{
 		is_interrupt = true;
 		break;
-	}
+
 	default: sys_ppu_thread.Error("sys_ppu_thread_create(): unknown flags value (0x%llx)", flags); return CELL_EPERM;
 	}
 

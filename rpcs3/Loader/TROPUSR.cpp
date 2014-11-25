@@ -133,7 +133,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	{
 		if (n->GetName() == "trophy")
 		{
-			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
+			u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
 			u32 trophy_grade;
 			switch (((const char *)n->GetAttribute("ttype").c_str())[0])
 			{

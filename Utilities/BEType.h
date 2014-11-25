@@ -451,7 +451,13 @@ template<typename T, typename T2 = T>
 class be_t
 {
 	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
-	T m_data;
+
+public:
+	typedef typename std::remove_cv<T>::type type;
+	static const bool is_le_machine = true;
+
+private:
+	type m_data;
 
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
@@ -482,54 +488,77 @@ class be_t
 			return (be_t<Tto>&)res;
 		}
 	};
+
 public:
-	typedef T type;
-	
-	const T& ToBE() const
+	const type& ToBE() const
 	{
 		return m_data;
 	}
 
-	T ToLE() const
+	type ToLE() const
 	{
-		return se_t<T, sizeof(T2)>::func(m_data);
+		return se_t<type, sizeof(T2)>::func(m_data);
 	}
 
-	void FromBE(const T& value)
+	void FromBE(const type& value)
 	{
 		m_data = value;
 	}
 
-	void FromLE(const T& value)
+	void FromLE(const type& value)
 	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::func(value);
 	}
 
-	static be_t make(const T value)
+	static be_t MakeFromLE(const type value)
 	{
-		T data = se_t<T, sizeof(T2)>::func(value);
+		type data = se_t<type, sizeof(T2)>::func(value);
 		return (be_t&)data;
 	}
 
-	//template<typename T1>
-	operator const T() const
+	static be_t MakeFromBE(const type value)
 	{
-		return ToLE();
+		return (be_t&)value;
 	}
 
+	//make be_t from current machine byte ordering
+	static be_t make(const type value)
+	{
+		return is_le_machine ? MakeFromLE(value) : MakeFromBE(value);
+	}
+
+	//get value in current machine byte ordering
+	__forceinline type value() const
+	{
+		return is_le_machine ? ToLE() : ToBE();
+	}
+
+	//be_t() = default;
+	//be_t(const be_t& value) = default;
+
+	//be_t(type value)
+	//{
+	//	m_data = se_t<type, sizeof(T2)>::func(value);
+	//}
+	
 	be_t& operator = (const be_t& value) = default;
 
-	be_t& operator = (T value)
+	be_t& operator = (type value)
 	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::func(value);
 
 		return *this;
+	}
+
+	operator type() const
+	{
+		return value();
 	}
 
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		return be_t<T1>::make(ToLE());
+		return be_t<T1>::make(value());
 		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
@@ -577,62 +606,6 @@ public:
 	be_t& operator-- () { *this -= 1; return *this; }
 };
 
-template<typename T, typename T2>
-class be_t<const T, T2>
-{
-	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
-	const T m_data;
-
-public:
-	typedef const T type;
-
-	const T& ToBE() const
-	{
-		return m_data;
-	}
-
-	const T ToLE() const
-	{
-		return se_t<const T, sizeof(T2)>::func(m_data);
-	}
-
-	static be_t make(const T value)
-	{
-		const T data = se_t<const T, sizeof(T2)>::func(value);
-		return (be_t&)data;
-	}
-
-	//template<typename T1>
-	operator const T() const
-	{
-		return ToLE();
-	}
-
-	template<typename T1>
-	operator const be_t<T1>() const
-	{
-		return be_t<T1>::make(ToLE());
-	}
-
-	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res = ToBE() & right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator | (const be_t<T1>& right) const { const T res = ToBE() | right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { const T res = ToBE() ^ right.ToBE(); return (be_t&)res; }
-
-	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
-	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (T1 right) const { return (T1)ToLE() >  right; }
-	template<typename T1> bool operator <  (T1 right) const { return (T1)ToLE() <  right; }
-	template<typename T1> bool operator >= (T1 right) const { return (T1)ToLE() >= right; }
-	template<typename T1> bool operator <= (T1 right) const { return (T1)ToLE() <= right; }
-
-	template<typename T1> bool operator == (const be_t<T1>& right) const { return ToBE() == right.ToBE(); }
-	template<typename T1> bool operator != (const be_t<T1>& right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (const be_t<T1>& right) const { return (T1)ToLE() >  right.ToLE(); }
-	template<typename T1> bool operator <  (const be_t<T1>& right) const { return (T1)ToLE() <  right.ToLE(); }
-	template<typename T1> bool operator >= (const be_t<T1>& right) const { return (T1)ToLE() >= right.ToLE(); }
-	template<typename T1> bool operator <= (const be_t<T1>& right) const { return (T1)ToLE() <= right.ToLE(); }
-};
-
 template<typename T, typename T2 = T>
 struct is_be_t : public std::integral_constant<bool, false> {};
 
@@ -672,6 +645,8 @@ public:
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
+
+	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
 };
 
 template<typename T>
@@ -798,4 +773,52 @@ template<typename T> __forceinline static void Write32(T& f, const u32 data)
 template<typename T> __forceinline static void Write64(T& f, const u64 data)
 {
 	Write64LE(f, re64(data));
+}
+
+template<typename Tto, typename Tfrom>
+struct convert_le_be_t
+{
+	static Tto func(Tfrom&& value)
+	{
+		return (Tto)value;
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tfrom>
+struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
+{
+	static be_t<Tt, Tt1> func(Tfrom&& value)
+	{
+		return be_t<Tt, Tt1>::make(value);
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tf, typename Tf1>
+struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
+{
+	static be_t<Tt, Tt1> func(be_t<Tf, Tf1>&& value)
+	{
+		return value;
+	}
+};
+
+template<typename Tto, typename Tf, typename Tf1>
+struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
+{
+	static Tto func(be_t<Tf, Tf1>&& value)
+	{
+		return value.value();
+	}
+};
+
+template<typename Tto, typename Tfrom>
+__forceinline Tto convert_le_be(Tfrom&& value)
+{
+	return convert_le_be_t<Tto, Tfrom>::func(value);
+}
+
+template<typename Tto, typename Tfrom>
+__forceinline void convert_le_be(Tto& dst, Tfrom&& src)
+{
+	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }
