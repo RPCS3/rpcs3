@@ -1778,7 +1778,21 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 }
 
 void Compiler::SC(u32 sc_code) {
-    InterpreterCall("SC", &PPUInterpreter::SC, sc_code);
+    switch (sc_code) {
+    case 2:
+        Call<void>("SysCalls.DoSyscall", SysCalls::DoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
+        break;
+    case 3:
+        Call<void>("StaticFuncManager.StaticExecute", &StaticFuncManager::StaticExecute,
+                   m_ir_builder->getInt64((u64)&Emu.GetSFuncManager()), m_state.args[CompileTaskState::Args::State], GetGpr(11, 32));
+        break;
+    case 4:
+        Call<void>("PPUThread.FastStop", &PPUThread::FastStop, m_state.args[CompileTaskState::Args::State]);
+        break;
+    default:
+        CompilationError(fmt::Format("SC %u", sc_code));
+        break;
+    }
 }
 
 void Compiler::B(s32 ll, u32 aa, u32 lk) {
@@ -2955,7 +2969,15 @@ void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECIWX(u32 rd, u32 ra, u32 rb) {
-    InterpreterCall("ECIWX", &PPUInterpreter::ECIWX, rd, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    auto mem_i32 = ReadMemory(addr_i64, 32);
+    auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
+    SetGpr(rd, mem_i64);
 }
 
 void Compiler::LHZUX(u32 rd, u32 ra, u32 rb) {
@@ -3106,7 +3128,13 @@ void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECOWX(u32 rs, u32 ra, u32 rb) {
-    InterpreterCall("ECOWX", &PPUInterpreter::ECOWX, rs, ra, rb);
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    WriteMemory(addr_i64, GetGpr(rs, 32));
 }
 
 void Compiler::STHUX(u32 rs, u32 ra, u32 rb) {
@@ -4215,8 +4243,8 @@ void Compiler::FRSP(u32 frd, u32 frb, bool rc) {
 
 void Compiler::FCTIW(u32 frd, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
-    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFF));
-    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648));
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 2147483647.0));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648.0));
     auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
     auto res_i64 = m_ir_builder->CreateZExt(res_i32, m_ir_builder->getInt64Ty());
     res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFF), res_i64);
@@ -4229,26 +4257,24 @@ void Compiler::FCTIW(u32 frd, u32 frb, bool rc) {
     }
 
     // TODO: Set flags / Implement rounding modes
-    //InterpreterCall("FCTIW", &PPUInterpreter::FCTIWZ, frd, frb, rc);
 }
 
 void Compiler::FCTIWZ(u32 frd, u32 frb, bool rc) {
-    //auto rb_f64  = GetFpr(frb);
-    //auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFF));
-    //auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648));
-    //auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
-    //auto res_i64 = m_ir_builder->CreateZExt(res_i32, m_ir_builder->getInt64Ty());
-    //res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFF), res_i64);
-    //res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x80000000), res_i64);
-    //SetFpr(frd, res_i64);
+    auto rb_f64  = GetFpr(frb);
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 2147483647.0));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -2147483648.0));
+    auto res_i32 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt32Ty());
+    auto res_i64 = m_ir_builder->CreateZExt(res_i32, m_ir_builder->getInt64Ty());
+    res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFF), res_i64);
+    res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x80000000), res_i64);
+    SetFpr(frd, res_i64);
 
-    //if (rc) {
-    //    // TODO: Implement this
-    //    CompilationError("FCTIWZ.");
-    //}
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FCTIWZ.");
+    }
 
     // TODO: Set flags
-    InterpreterCall("FCTIWZ", &PPUInterpreter::FCTIWZ, frd, frb, rc);
 }
 
 void Compiler::FDIV(u32 frd, u32 fra, u32 frb, bool rc) {
@@ -4478,8 +4504,8 @@ void Compiler::FABS(u32 frd, u32 frb, bool rc) {
 
 void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
     auto rb_f64  = GetFpr(frb);
-    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFFFFFFFFFFll));
-    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808ll));
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 9223372036854775807.0));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808.0));
     auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
     res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFFFFFFFFFF), res_i64);
     res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x8000000000000000), res_i64);
@@ -4491,25 +4517,23 @@ void Compiler::FCTID(u32 frd, u32 frb, bool rc) {
     }
 
     // TODO: Set flags / Implement rounding modes
-    //InterpreterCall("FCTIDZ", &PPUInterpreter::FCTID, frd, frb, rc);
 }
 
 void Compiler::FCTIDZ(u32 frd, u32 frb, bool rc) {
-    //auto rb_f64  = GetFpr(frb);
-    //auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 0x7FFFFFFFFFFFFFFFll));
-    //auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808ll));
-    //auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
-    //res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFFFFFFFFFF), res_i64);
-    //res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x8000000000000000), res_i64);
-    //SetFpr(frd, res_i64);
+    auto rb_f64  = GetFpr(frb);
+    auto max_i1  = m_ir_builder->CreateFCmpOGT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), 9223372036854775807.0));
+    auto min_i1  = m_ir_builder->CreateFCmpULT(rb_f64, ConstantFP::get(m_ir_builder->getDoubleTy(), -9223372036854775808.0));
+    auto res_i64 = m_ir_builder->CreateFPToSI(rb_f64, m_ir_builder->getInt64Ty());
+    res_i64      = m_ir_builder->CreateSelect(max_i1, m_ir_builder->getInt64(0x7FFFFFFFFFFFFFFF), res_i64);
+    res_i64      = m_ir_builder->CreateSelect(min_i1, m_ir_builder->getInt64(0x8000000000000000), res_i64);
+    SetFpr(frd, res_i64);
 
-    //if (rc) {
-    //    // TODO: Implement this
-    //    CompilationError("FCTIDZ.");
-    //}
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("FCTIDZ.");
+    }
 
     // TODO: Set flags
-    InterpreterCall("FCTIDZ", &PPUInterpreter::FCTIDZ, frd, frb, rc);
 }
 
 void Compiler::FCFID(u32 frd, u32 frb, bool rc) {
