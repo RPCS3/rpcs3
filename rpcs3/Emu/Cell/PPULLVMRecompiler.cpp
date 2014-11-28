@@ -1016,7 +1016,26 @@ void Compiler::VMSUMSHM(u32 vd, u32 va, u32 vb, u32 vc) {
 }
 
 void Compiler::VMSUMSHS(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VMSUMSHS", &PPUInterpreter::VMSUMSHS, vd, va, vb, vc);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto vc_v4i32  = GetVrAsIntVec(vc, 32);
+    auto res_v4i32 = (Value *)m_ir_builder->CreateCall2(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse2_pmadd_wd), va_v8i16, vb_v8i16);
+
+    auto tmp1_v4i32 = m_ir_builder->CreateLShr(vc_v4i32, 31);
+    tmp1_v4i32      = m_ir_builder->CreateAdd(tmp1_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x7FFFFFFF)));
+    auto tmp1_v16i8 = m_ir_builder->CreateBitCast(tmp1_v4i32, VectorType::get(m_ir_builder->getInt8Ty(), 16));
+    auto tmp2_v4i32 = m_ir_builder->CreateXor(vc_v4i32, res_v4i32);
+    tmp2_v4i32      = m_ir_builder->CreateNot(tmp2_v4i32);
+    auto sum_v4i32  = m_ir_builder->CreateAdd(vc_v4i32, res_v4i32);
+    auto sum_v16i8  = m_ir_builder->CreateBitCast(sum_v4i32, VectorType::get(m_ir_builder->getInt8Ty(), 16));
+    auto tmp3_v4i32 = m_ir_builder->CreateXor(vc_v4i32, sum_v4i32);
+    tmp3_v4i32      = m_ir_builder->CreateAnd(tmp2_v4i32, tmp3_v4i32);
+    tmp3_v4i32      = m_ir_builder->CreateAShr(tmp3_v4i32, 31);
+    auto tmp3_v16i8 = m_ir_builder->CreateBitCast(tmp3_v4i32, VectorType::get(m_ir_builder->getInt8Ty(), 16));
+    auto res_v16i8  = m_ir_builder->CreateCall3(Intrinsic::getDeclaration(m_module, Intrinsic::x86_sse41_pblendvb), sum_v16i8, tmp1_v16i8, tmp3_v16i8);
+    SetVr(vd, res_v16i8);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VMSUMUBM(u32 vd, u32 va, u32 vb, u32 vc) {
@@ -1074,7 +1093,31 @@ void Compiler::VMSUMUHM(u32 vd, u32 va, u32 vb, u32 vc) {
 }
 
 void Compiler::VMSUMUHS(u32 vd, u32 va, u32 vb, u32 vc) {
-    InterpreterCall("VMSUMUHS", &PPUInterpreter::VMSUMUHS, vd, va, vb, vc);
+    auto va_v8i16  = GetVrAsIntVec(va, 16);
+    auto vb_v8i16  = GetVrAsIntVec(vb, 16);
+    auto va_v8i32  = m_ir_builder->CreateZExt(va_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto vb_v8i32  = m_ir_builder->CreateZExt(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    auto tmp_v8i32 = m_ir_builder->CreateMul(va_v8i32, vb_v8i32);
+
+    auto undef_v8i32    = UndefValue::get(VectorType::get(m_ir_builder->getInt32Ty(), 8));
+    u32  mask1_v4i32[4] = {0, 2, 4, 6};
+    auto tmp1_v4i32     = m_ir_builder->CreateShuffleVector(tmp_v8i32, undef_v8i32, ConstantDataVector::get(m_ir_builder->getContext(), mask1_v4i32));
+    u32  mask2_v4i32[4] = {1, 3, 5, 7};
+    auto tmp2_v4i32     = m_ir_builder->CreateShuffleVector(tmp_v8i32, undef_v8i32, ConstantDataVector::get(m_ir_builder->getContext(), mask2_v4i32));
+
+    auto vc_v4i32  = GetVrAsIntVec(vc, 32);
+    auto res_v4i32 = m_ir_builder->CreateAdd(tmp1_v4i32, tmp2_v4i32);
+    auto cmp_v4i1  = m_ir_builder->CreateICmpULT(res_v4i32, tmp1_v4i32);
+    auto cmp_v4i32 = m_ir_builder->CreateSExt(cmp_v4i1, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    res_v4i32      = m_ir_builder->CreateOr(res_v4i32, cmp_v4i32);
+    res_v4i32      = m_ir_builder->CreateAdd(res_v4i32, vc_v4i32);
+    cmp_v4i1       = m_ir_builder->CreateICmpULT(res_v4i32, vc_v4i32);
+    cmp_v4i32      = m_ir_builder->CreateSExt(cmp_v4i1, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    res_v4i32      = m_ir_builder->CreateOr(res_v4i32, cmp_v4i32);
+
+    SetVr(vd, res_v4i32);
+
+    // TODO: Set VSCR.SAT
 }
 
 void Compiler::VMULESB(u32 vd, u32 va, u32 vb) {
@@ -1204,7 +1247,37 @@ void Compiler::VPERM(u32 vd, u32 va, u32 vb, u32 vc) {
 }
 
 void Compiler::VPKPX(u32 vd, u32 va, u32 vb) {
-    InterpreterCall("VPKPX", &PPUInterpreter::VPKPX, vd, va, vb);
+    auto va_v4i32 = GetVrAsIntVec(va, 32);
+    auto vb_v4i32 = GetVrAsIntVec(vb, 32);
+
+    auto tmpa_v4i32 = m_ir_builder->CreateShl(va_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(7)));
+    tmpa_v4i32      = m_ir_builder->CreateAnd(tmpa_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFC000000)));
+    va_v4i32        = m_ir_builder->CreateShl(va_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(10)));
+    va_v4i32        = m_ir_builder->CreateAnd(va_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(~0xFC000000)));
+    tmpa_v4i32      = m_ir_builder->CreateOr(tmpa_v4i32, va_v4i32);
+    tmpa_v4i32      = m_ir_builder->CreateAnd(tmpa_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFFE00000)));
+    va_v4i32        = m_ir_builder->CreateShl(va_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(3)));
+    va_v4i32        = m_ir_builder->CreateAnd(va_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(~0xFFE00000)));
+    tmpa_v4i32      = m_ir_builder->CreateOr(tmpa_v4i32, va_v4i32);
+    auto tmpa_v8i16 = m_ir_builder->CreateBitCast(tmpa_v4i32, VectorType::get(m_ir_builder->getInt16Ty(), 8));
+
+    auto tmpb_v4i32 = m_ir_builder->CreateShl(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(7)));
+    tmpb_v4i32      = m_ir_builder->CreateAnd(tmpb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFC000000)));
+    vb_v4i32        = m_ir_builder->CreateShl(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(10)));
+    vb_v4i32        = m_ir_builder->CreateAnd(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(~0xFC000000)));
+    tmpb_v4i32      = m_ir_builder->CreateOr(tmpb_v4i32, vb_v4i32);
+    tmpb_v4i32      = m_ir_builder->CreateAnd(tmpb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFFE00000)));
+    vb_v4i32        = m_ir_builder->CreateShl(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(3)));
+    vb_v4i32        = m_ir_builder->CreateAnd(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(~0xFFE00000)));
+    tmpb_v4i32      = m_ir_builder->CreateOr(tmpb_v4i32, vb_v4i32);
+    auto tmpb_v8i16 = m_ir_builder->CreateBitCast(tmpb_v4i32, VectorType::get(m_ir_builder->getInt16Ty(), 8));
+
+    u32  mask_v8i32[8] = {1, 3, 5, 7, 9, 11, 13, 15};
+    auto res_v8i16     = m_ir_builder->CreateShuffleVector(tmpb_v8i16, tmpa_v8i16, ConstantDataVector::get(m_ir_builder->getContext(), mask_v8i32));
+
+    SetVr(vd, res_v8i16);
+
+    // TODO: Implement with pext on CPUs with BMI
 }
 
 void Compiler::VPKSHSS(u32 vd, u32 va, u32 vb) {
@@ -1669,27 +1742,69 @@ void Compiler::VSUM4UBS(u32 vd, u32 va, u32 vb) {
 }
 
 void Compiler::VUPKHPX(u32 vd, u32 vb) {
-    InterpreterCall("VUPKHPX", &PPUInterpreter::VUPKHPX, vd, vb);
+    auto vb_v8i16      = GetVrAsIntVec(vb, 16);
+    u32  mask_v8i32[8] = { 4, 4, 5, 5, 6, 6, 7, 7 };
+    vb_v8i16           = m_ir_builder->CreateShuffleVector(vb_v8i16, UndefValue::get(VectorType::get(m_ir_builder->getInt16Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v8i32));
+
+    auto vb_v4i32   = m_ir_builder->CreateBitCast(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    vb_v4i32        = m_ir_builder->CreateAShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(10)));
+    auto tmp1_v4i32 = m_ir_builder->CreateLShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(3)));
+    tmp1_v4i32      = m_ir_builder->CreateAnd(tmp1_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x00001F00)));
+    auto tmp2_v4i32 = m_ir_builder->CreateLShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(6)));
+    tmp2_v4i32      = m_ir_builder->CreateAnd(tmp2_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x0000001F)));
+    auto res_v4i32  = m_ir_builder->CreateAnd(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFF1F0000)));
+    res_v4i32       = m_ir_builder->CreateOr(res_v4i32, tmp1_v4i32);
+    res_v4i32       = m_ir_builder->CreateOr(res_v4i32, tmp2_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VUPKHSB(u32 vd, u32 vb) {
-    InterpreterCall("VUPKHSB", &PPUInterpreter::VUPKHSB, vd, vb);
+    auto vb_v16i8      = GetVrAsIntVec(vb, 8);
+    u32  mask_v8i32[8] = { 8, 9, 10, 11, 12, 13, 14, 15 };
+    auto vb_v8i8       = m_ir_builder->CreateShuffleVector(vb_v16i8, UndefValue::get(VectorType::get(m_ir_builder->getInt8Ty(), 16)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v8i32));
+    auto res_v8i16     = m_ir_builder->CreateSExt(vb_v8i8, VectorType::get(m_ir_builder->getInt16Ty(), 8));
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VUPKHSH(u32 vd, u32 vb) {
-    InterpreterCall("VUPKHSH", &PPUInterpreter::VUPKHSH, vd, vb);
+    auto vb_v8i16      = GetVrAsIntVec(vb, 16);
+    u32  mask_v4i32[4] = { 4, 5, 6, 7 };
+    auto vb_v4i16      = m_ir_builder->CreateShuffleVector(vb_v8i16, UndefValue::get(VectorType::get(m_ir_builder->getInt16Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v4i32));
+    auto res_v4i32     = m_ir_builder->CreateSExt(vb_v4i16, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VUPKLPX(u32 vd, u32 vb) {
-    InterpreterCall("VUPKLPX", &PPUInterpreter::VUPKLPX, vd, vb);
+    auto vb_v8i16      = GetVrAsIntVec(vb, 16);
+    u32  mask_v8i32[8] = { 0, 0, 1, 1, 2, 2, 3, 3 };
+    vb_v8i16           = m_ir_builder->CreateShuffleVector(vb_v8i16, UndefValue::get(VectorType::get(m_ir_builder->getInt16Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v8i32));
+
+    auto vb_v4i32   = m_ir_builder->CreateBitCast(vb_v8i16, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    vb_v4i32        = m_ir_builder->CreateAShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(10)));
+    auto tmp1_v4i32 = m_ir_builder->CreateLShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(3)));
+    tmp1_v4i32      = m_ir_builder->CreateAnd(tmp1_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x00001F00)));
+    auto tmp2_v4i32 = m_ir_builder->CreateLShr(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(6)));
+    tmp2_v4i32      = m_ir_builder->CreateAnd(tmp2_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0x0000001F)));
+    auto res_v4i32  = m_ir_builder->CreateAnd(vb_v4i32, m_ir_builder->CreateVectorSplat(4, m_ir_builder->getInt32(0xFF1F0000)));
+    res_v4i32       = m_ir_builder->CreateOr(res_v4i32, tmp1_v4i32);
+    res_v4i32       = m_ir_builder->CreateOr(res_v4i32, tmp2_v4i32);
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VUPKLSB(u32 vd, u32 vb) {
-    InterpreterCall("VUPKLSB", &PPUInterpreter::VUPKLSB, vd, vb);
+    auto vb_v16i8      = GetVrAsIntVec(vb, 8);
+    u32  mask_v8i32[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    auto vb_v8i8       = m_ir_builder->CreateShuffleVector(vb_v16i8, UndefValue::get(VectorType::get(m_ir_builder->getInt8Ty(), 16)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v8i32));
+    auto res_v8i16     = m_ir_builder->CreateSExt(vb_v8i8, VectorType::get(m_ir_builder->getInt16Ty(), 8));
+    SetVr(vd, res_v8i16);
 }
 
 void Compiler::VUPKLSH(u32 vd, u32 vb) {
-    InterpreterCall("VUPKLSH", &PPUInterpreter::VUPKLSH, vd, vb);
+    auto vb_v8i16      = GetVrAsIntVec(vb, 16);
+    u32  mask_v4i32[4] = { 0, 1, 2, 3 };
+    auto vb_v4i16      = m_ir_builder->CreateShuffleVector(vb_v8i16, UndefValue::get(VectorType::get(m_ir_builder->getInt16Ty(), 8)), ConstantDataVector::get(m_ir_builder->getContext(), mask_v4i32));
+    auto res_v4i32     = m_ir_builder->CreateSExt(vb_v4i16, VectorType::get(m_ir_builder->getInt32Ty(), 4));
+    SetVr(vd, res_v4i32);
 }
 
 void Compiler::VXOR(u32 vd, u32 va, u32 vb) {
@@ -5250,9 +5365,9 @@ std::shared_ptr<RecompilationEngine> RecompilationEngine::s_the_instance = nullp
 
 RecompilationEngine::RecompilationEngine()
     : ThreadBase("PPU Recompilation Engine")
+    , m_log(nullptr)
     , m_next_ordinal(0)
-    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn)
-    , m_log(nullptr) {
+    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn) {
     m_compiler.RunAllTests();
 }
 

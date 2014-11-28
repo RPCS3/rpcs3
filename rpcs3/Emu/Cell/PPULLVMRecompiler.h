@@ -1022,6 +1022,9 @@ namespace ppu_recompiler_llvm {
             };
         };
 
+        /// Log
+        llvm::raw_fd_ostream * m_log;
+
         /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
         std::mutex m_pending_execution_traces_lock;
 
@@ -1046,9 +1049,6 @@ namespace ppu_recompiler_llvm {
 
         /// PPU Compiler
         Compiler m_compiler;
-
-        /// Log
-        llvm::raw_fd_ostream * m_log;
 
         /// Executable lookup table
         Executable m_executable_lookup[10000]; // TODO: Adjust size
