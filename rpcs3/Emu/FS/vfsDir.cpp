@@ -84,7 +84,7 @@ bool vfsDir::IsExists(const std::string& path) const
 
 	for (const auto entry : vfsDir(path + "/.."))
 	{
-		if (!stricmp(entry->name.c_str(), dir_name.c_str()))
+		if (!strcmp(entry->name.c_str(), dir_name.c_str()))
 			return true;
 	}
 

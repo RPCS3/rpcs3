@@ -21,7 +21,10 @@ int sort_devices(const void* _a, const void* _b)
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
-	std::vector<std::string> path_blocks = std::move(fmt::split(path, { "/", "\\" }));
+	std::string lower_path = path;
+	std::transform(lower_path.begin(), lower_path.end(), lower_path.begin(), ::tolower);
+
+	std::vector<std::string> path_blocks = std::move(fmt::split(lower_path, { "/", "\\" }));
 
 	for (size_t i = 0; i < path_blocks.size(); ++i)
 	{
@@ -100,7 +103,7 @@ void VFS::UnMount(const std::string& ps3_path)
 
 	for (u32 i = 0; i < m_devices.size(); ++i)
 	{
-		if (!stricmp(m_devices[i]->GetPs3Path().c_str(), simpl_ps3_path.c_str()))
+		if (!strcmp(m_devices[i]->GetPs3Path().c_str(), simpl_ps3_path.c_str()))
 		{
 			delete m_devices[i];
 
@@ -297,7 +300,7 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 			size_t eq = 0;
 			for (; eq < dev_ps3_path_blocks.size(); ++eq)
 			{
-				if (stricmp(ps3_path_blocks[eq].c_str(), dev_ps3_path_blocks[eq].c_str()))
+				if (strcmp(ps3_path_blocks[eq].c_str(), dev_ps3_path_blocks[eq].c_str()))
 				{
 					break;
 				}
@@ -351,7 +354,7 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 		size_t eq = 0;
 		for (; eq < dev_local_path_blocks_blocks.size(); ++eq)
 		{
-			if (stricmp(local_path_blocks[eq].c_str(), dev_local_path_blocks_blocks[eq].c_str()))
+			if (strcmp(local_path_blocks[eq].c_str(), dev_local_path_blocks_blocks[eq].c_str()))
 			{
 				break;
 			}
