@@ -503,7 +503,7 @@ namespace loader
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
 								const u32 nid = stub->s_nid[i];
-								auto func = module->GetFunc(nid);
+								auto func = module ? module->GetFunc(nid) : nullptr;
 
 								if (!func || !func->lle_func)
 								{
