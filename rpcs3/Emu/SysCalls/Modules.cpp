@@ -180,7 +180,7 @@ void fix_import(Module* module, u32 func, u32 addr)
 {
 	using namespace PPU_instr;
 	
-	vm::ptr<u32>& ptr = vm::ptr<u32>::make(addr);
+	vm::ptr<u32> ptr = vm::ptr<u32>::make(addr);
 
 	*ptr++ = ADDIS(11, 0, func >> 16);
 	*ptr++ = ORI(11, 11, func & 0xffff);
