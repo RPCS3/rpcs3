@@ -869,6 +869,12 @@ namespace ppu_recompiler_llvm {
         /// Set USPRG0
         void SetUsprg0(llvm::Value * val_x64);
 
+        /// Load FPSCR
+        llvm::Value * GetFpscr();
+
+        /// Set FPSCR
+        void SetFpscr(llvm::Value * val_x32);
+
         /// Get FPR
         llvm::Value * GetFpr(u32 r, u32 bits = 64, bool as_int = false);
 

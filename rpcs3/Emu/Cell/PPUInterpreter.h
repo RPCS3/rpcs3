@@ -4112,7 +4112,7 @@ private:
 	}
 	void MTFSB1(u32 crbd, bool rc)
 	{
-		u64 mask = (1ULL << crbd);
+		u64 mask = (1ULL << (31 - crbd));
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		CPU.FPSCR.FPSCR |= mask;
 
@@ -4120,13 +4120,32 @@ private:
 	}
 	void MCRFS(u32 crbd, u32 crbs)
 	{
-		u64 mask = (1ULL << crbd);
-		CPU.CR.CR &= ~mask;
-		CPU.CR.CR |= CPU.FPSCR.FPSCR & mask;
+		CPU.SetCR(crbd, (CPU.FPSCR.FPSCR  >> ((7 - crbs) * 4)) & 0xf);
+
+		switch (crbs)
+		{
+		case 0:
+			CPU.FPSCR.FX = CPU.FPSCR.OX = 0;
+			break;
+		case 1:
+			CPU.FPSCR.UX = CPU.FPSCR.ZX = CPU.FPSCR.XX = CPU.FPSCR.VXSNAN = 0;
+			break;
+		case 2:
+			CPU.FPSCR.VXISI = CPU.FPSCR.VXIDI = CPU.FPSCR.VXZDZ = CPU.FPSCR.VXIMZ = 0;
+			break;
+		case 3:
+			CPU.FPSCR.VXVC = 0;
+			break;
+		case 5:
+			CPU.FPSCR.VXSOFT = CPU.FPSCR.VXSQRT = CPU.FPSCR.VXCVI = 0;
+			break;
+		default:
+			break;
+		}
 	}
 	void MTFSB0(u32 crbd, bool rc)
 	{
-		u64 mask = (1ULL << crbd);
+		u64 mask = (1ULL << (31 - crbd));
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
 		CPU.FPSCR.FPSCR &= ~mask;
 
@@ -4134,17 +4153,18 @@ private:
 	}
 	void MTFSFI(u32 crfd, u32 i, bool rc)
 	{
-		u64 mask = (0x1ULL << crfd);
+		u32 mask = 0xF0000000 >> (crfd * 4);
+		u32 val  = (i & 0xF) << ((7 - crfd) * 4);
 
-		if(i)
+		const u32 oldNI  = CPU.FPSCR.NI;
+		CPU.FPSCR.FPSCR &= ~mask;
+		CPU.FPSCR.FPSCR |= val;
+		if (CPU.FPSCR.NI != oldNI)
 		{
-			if ((crfd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
-			CPU.FPSCR.FPSCR |= mask;
-		}
-		else
-		{
-			if ((crfd == 29) && CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
-			CPU.FPSCR.FPSCR &= ~mask;
+			if (oldNI)
+				LOG_WARNING(PPU, "Non-IEEE mode disabled");
+			else
+				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
 
 		if(rc) UNIMPLEMENTED();

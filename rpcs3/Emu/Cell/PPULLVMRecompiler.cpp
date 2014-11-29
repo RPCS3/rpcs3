@@ -4305,27 +4305,99 @@ void Compiler::STDU(u32 rs, u32 ra, s32 ds) {
 }
 
 void Compiler::MTFSB1(u32 crbd, bool rc) {
-    InterpreterCall("MTFSB1", &PPUInterpreter::MTFSB1, crbd, rc);
+    auto fpscr_i32 = GetFpscr();
+    SetBit(fpscr_i32, crbd, m_ir_builder->getInt32(1), false);
+    SetFpscr(fpscr_i32);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("MTFSB1.");
+    }
 }
 
 void Compiler::MCRFS(u32 crbd, u32 crbs) {
-    InterpreterCall("MCRFS", &PPUInterpreter::MCRFS, crbd, crbs);
+    auto fpscr_i32 = GetFpscr();
+    auto val_i32   = GetNibble(fpscr_i32, crbs);
+    SetCrField(crbd, val_i32);
+
+    switch (crbs) {
+    case 0:
+        fpscr_i32 = ClrBit(fpscr_i32, 0);
+        fpscr_i32 = ClrBit(fpscr_i32, 3);
+        break;
+    case 1:
+        fpscr_i32 = ClrNibble(fpscr_i32, 1);
+        break;
+    case 2:
+        fpscr_i32 = ClrNibble(fpscr_i32, 2);
+        break;
+    case 3:
+        fpscr_i32 = ClrBit(fpscr_i32, 12);
+        break;
+    case 5:
+        fpscr_i32 = ClrBit(fpscr_i32, 21);
+        fpscr_i32 = ClrBit(fpscr_i32, 22);
+        fpscr_i32 = ClrBit(fpscr_i32, 23);
+        break;
+    default:
+        break;
+    }
+
+    SetFpscr(fpscr_i32);
 }
 
 void Compiler::MTFSB0(u32 crbd, bool rc) {
-    InterpreterCall("MTFSB0", &PPUInterpreter::MTFSB0, crbd, rc);
+    auto fpscr_i32 = GetFpscr();
+    fpscr_i32      = ClrBit(fpscr_i32, crbd);
+    SetFpscr(fpscr_i32);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("MTFSB0.");
+    }
 }
 
 void Compiler::MTFSFI(u32 crfd, u32 i, bool rc) {
-    InterpreterCall("MTFSFI", &PPUInterpreter::MTFSFI, crfd, i, rc);
+    auto fpscr_i32 = GetFpscr();
+    fpscr_i32      = SetNibble(fpscr_i32, crfd, m_ir_builder->getInt32(i & 0xF));
+    SetFpscr(fpscr_i32);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("MTFSFI.");
+    }
 }
 
 void Compiler::MFFS(u32 frd, bool rc) {
-    InterpreterCall("MFFS", &PPUInterpreter::MFFS, frd, rc);
+    auto fpscr_i32 = GetFpscr();
+    auto fpscr_i64 = m_ir_builder->CreateZExt(fpscr_i32, m_ir_builder->getInt64Ty());
+    SetFpr(frd, fpscr_i64);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("MFFS.");
+    }
 }
 
 void Compiler::MTFSF(u32 flm, u32 frb, bool rc) {
-    InterpreterCall("MTFSF", &PPUInterpreter::MTFSF, flm, frb, rc);
+    u32 mask = 0;
+    for(u32 i = 0; i < 8; i++) {
+        if (flm & (1 << i)) {
+            mask |= 0xF << (i * 4);
+        }
+    }
+
+    auto rb_i32    = GetFpr(frb, 32, true);
+    auto fpscr_i32 = GetFpscr();
+    fpscr_i32      = m_ir_builder->CreateAnd(fpscr_i32, ~mask);
+    rb_i32         = m_ir_builder->CreateAnd(rb_i32, mask);
+    fpscr_i32      = m_ir_builder->CreateOr(fpscr_i32, rb_i32);
+    SetFpscr(fpscr_i32);
+
+    if (rc) {
+        // TODO: Implement this
+        CompilationError("MTFSF.");
+    }
 }
 
 void Compiler::FCMPU(u32 crfd, u32 fra, u32 frb) {
@@ -4985,6 +5057,19 @@ void Compiler::SetUsprg0(Value * val_x64) {
     auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG));
     auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usprg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
     m_ir_builder->CreateAlignedStore(val_i64, usprg0_i64_ptr, 8);
+}
+
+Value * Compiler::GetFpscr() {
+    auto fpscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPSCR));
+    auto fpscr_i32_ptr = m_ir_builder->CreateBitCast(fpscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    return m_ir_builder->CreateAlignedLoad(fpscr_i32_ptr, 4);
+}
+
+void Compiler::SetFpscr(Value * val_x32) {
+    auto val_i32       = m_ir_builder->CreateBitCast(val_x32, m_ir_builder->getInt32Ty());
+    auto fpscr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, FPSCR));
+    auto fpscr_i32_ptr = m_ir_builder->CreateBitCast(fpscr_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    m_ir_builder->CreateAlignedStore(val_i32, fpscr_i32_ptr, 4);
 }
 
 Value * Compiler::GetFpr(u32 r, u32 bits, bool as_int) {
