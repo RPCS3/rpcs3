@@ -86,16 +86,7 @@ namespace loader
 			{
 			case MACHINE_MIPS: break;
 			case MACHINE_ARM: arm7_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;
-			case MACHINE_SPU:
-			{
-				if (!Emu.IsStopped())
-				{
-					break;
-				}
-
-				spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
-				break;
-			}
+			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;
 			}
 
 			return ok;
@@ -117,7 +108,7 @@ namespace loader
 				case 0x00000001: //LOAD
 					if (phdr.data_le.p_memsz)
 					{
-						if (machine != MACHINE_SPU && !vm::alloc(vaddr, memsz, vm::main))
+						if ((machine != MACHINE_SPU || Emu.IsStopped()) && !vm::alloc(vaddr, memsz, vm::main))
 						{
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, vaddr, memsz);
 

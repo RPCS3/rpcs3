@@ -140,9 +140,12 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 	return SCE_OK;
 }
 
-s32 sceKernelExitThread(s32 exitStatus)
+s32 sceKernelExitThread(ARMv7Thread& CPU, s32 exitStatus)
 {
-	sceLibKernel.Todo("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.Error("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+
+	// exit status is stored in r0
+	CPU.Stop();
 
 	return SCE_OK;
 }

@@ -6,20 +6,32 @@ std::vector<psv_func> g_psv_func_list = []() -> std::vector<psv_func>
 {
 	std::vector<psv_func> v;
 
-	psv_func f =
+	psv_func unimplemented =
 	{
-		0xdeadbeef,
+		0x00000000, // must not be a valid id
 		"INVALID FUNCTION",
 		new psv_func_detail::func_binder<u32>([]() -> u32
 		{
-			LOG_ERROR(HLE, "Unimplemented function found");
+			LOG_ERROR(HLE, "Unimplemented function executed");
 			Emu.Pause();
 
 			return 0xffffffffu;
 		}),
 		nullptr,
 	};
-	v.push_back(f);
+	v.push_back(unimplemented);
+
+	psv_func hle_return =
+	{
+		0x00000001, // must not be a valid id
+		"INVALID FUNCTION",
+		new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU)
+		{
+			CPU.FastStop();
+		}),
+		nullptr,
+	};
+	v.push_back(hle_return);
 
 	return v;
 }();

@@ -123,6 +123,8 @@ public:
 	virtual void InitRegs(); 
 	virtual void InitStack();
 	u32 GetStackArg(u32 pos);
+	void FastCall(u32 addr);
+	void FastStop();
 	virtual void DoRun();
 
 public:

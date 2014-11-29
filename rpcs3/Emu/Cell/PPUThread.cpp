@@ -202,7 +202,7 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	m_status = Running;
 	PC = addr;
 	GPR[2] = rtoc;
-	LR = Emu.m_ppu_thr_stop;
+	LR = Emu.m_cpu_thr_stop;
 	SetCurrentNamedThread(this);
 
 	CPUThread::Task();

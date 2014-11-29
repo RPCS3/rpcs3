@@ -1715,13 +1715,10 @@ private:
 		}
 		else
 		{
+			// rotate left
 			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& v1 = XmmCopy(va);
-			c.pslldq(va.get(), s);
-			c.psrldq(v1.get(), 16 - s);
-			c.por(va.get(), v1.get());
+			c.palignr(va.get(), va.get(), 16 - s);
 			XmmFinalize(va, rt);
-			XmmFinalize(v1);
 		}
 		LOG_OPCODE();
 	}
