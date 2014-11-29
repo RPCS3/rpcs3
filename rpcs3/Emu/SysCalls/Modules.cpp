@@ -62,10 +62,12 @@ Module::~Module()
 {
 	UnLoad();
 
-	for (int i = 0; i < m_funcs_list.size(); i++)
+	for (auto &i : m_funcs_list)
 	{
-		delete m_funcs_list[i];
+		delete i.second;
 	}
+	
+	m_funcs_list.clear();
 }
 
 void Module::Load()
@@ -75,12 +77,10 @@ void Module::Load()
 
 	if(m_load_func) m_load_func();
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
+	for (auto &i : m_funcs_list)
 	{
-		Emu.GetModuleManager().AddFunc(m_funcs_list[i]);
+		Emu.GetModuleManager().AddFunc(i.second);
 	}
-
-	SetLoaded(true);
 }
 
 void Module::UnLoad()
@@ -89,6 +89,11 @@ void Module::UnLoad()
 		return;
 
 	if(m_unload_func) m_unload_func();
+
+	for (auto &i : m_funcs_list)
+	{
+		i.second->lle_func.set(0);
+	}
 
 	// TODO: Re-enable this when needed
 	// This was disabled because some functions would get unloaded and
@@ -106,16 +111,14 @@ bool Module::Load(u32 id)
 	if(Emu.GetModuleManager().IsLoadedFunc(id)) 
 		return false;
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
-	{
-		if(m_funcs_list[i]->id == id)
-		{
-			Emu.GetModuleManager().AddFunc(m_funcs_list[i]);
-			return true;
-		}
-	}
+	auto res = m_funcs_list.find(id);
 
-	return false;
+	if (res == m_funcs_list.end())
+		return false;
+
+	Emu.GetModuleManager().AddFunc(res->second);
+
+	return true;
 }
 
 bool Module::UnLoad(u32 id)
@@ -177,7 +180,7 @@ void fix_import(Module* module, u32 func, u32 addr)
 {
 	using namespace PPU_instr;
 	
-	vm::ptr<u32>& ptr = (vm::ptr<u32>&)addr;
+	vm::ptr<u32>& ptr = vm::ptr<u32>::make(addr);
 
 	*ptr++ = ADDIS(11, 0, func >> 16);
 	*ptr++ = ORI(11, 11, func & 0xffff);

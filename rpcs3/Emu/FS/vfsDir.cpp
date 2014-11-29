@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 
+#include "vfsDevice.h"
 #include "VFS.h"
 #include "vfsDir.h"
 
@@ -10,7 +11,7 @@ vfsDir::vfsDir()
 {
 	// TODO: proper implementation
 	// m_stream is nullptr here. So open root until a proper dir is given
-	Open("/");
+	//Open("/");
 }
 
 vfsDir::vfsDir(const std::string& path)
@@ -26,37 +27,78 @@ bool vfsDir::Open(const std::string& path)
 
 	m_stream.reset(Emu.GetVFS().OpenDir(path));
 
-	return m_stream && m_stream->IsOpened();
+	DirEntryInfo info;
+
+	m_cwd = simplify_path(0 && m_stream && m_stream->IsOpened() ? m_stream->GetPath() : path, true);
+
+	auto blocks = simplify_path_blocks(GetPath());
+
+	for (auto dev : Emu.GetVFS().m_devices)
+	{
+		auto dev_blocks = simplify_path_blocks(dev->GetPs3Path());
+
+		if (dev_blocks.size() < (blocks.size() + 1))
+		{
+			continue;
+		}
+
+		bool is_ok = true;
+
+		for (size_t i = 0; i < blocks.size(); ++i)
+		{
+			if (stricmp(dev_blocks[i].c_str(), blocks[i].c_str()))
+			{
+				is_ok = false;
+				break;
+			}
+		}
+
+		if (is_ok)
+		{
+			info.name = dev_blocks[blocks.size()];
+			m_entries.push_back(info);
+		}
+	}
+
+	if (m_stream && m_stream->IsOpened())
+	{
+		m_entries.insert(m_entries.begin(), m_stream->GetEntries().begin(), m_stream->GetEntries().end());
+	}
+
+	return !m_entries.empty();
 }
 
 bool vfsDir::Create(const std::string& path)
 {
-	return m_stream->Create(path);
+	return Emu.GetVFS().CreateDir(path);
 }
 
 bool vfsDir::IsExists(const std::string& path) const
 {
-	return m_stream->IsExists(path);
-}
+	auto path_blocks = simplify_path_blocks(path);
 
-const std::vector<DirEntryInfo>& vfsDir::GetEntries() const
-{
-	return m_stream->GetEntries();
+	if (path_blocks.empty())
+		return false;
+
+	std::string dir_name = path_blocks[path_blocks.size() - 1];
+
+	for (const auto entry : vfsDir(path + "/.."))
+	{
+		if (!stricmp(entry->name.c_str(), dir_name.c_str()))
+			return true;
+	}
+
+	return false;
 }
 
 bool vfsDir::Rename(const std::string& from, const std::string& to)
 {
-	return m_stream->Rename(from, to);
+	return Emu.GetVFS().RenameDir(from, to);
 }
 
 bool vfsDir::Remove(const std::string& path)
 {
-	return m_stream->Remove(path);
-}
-
-const DirEntryInfo* vfsDir::Read()
-{
-	return m_stream->Read();
+	return Emu.GetVFS().RemoveDir(path);
 }
 
 void vfsDir::Close()
@@ -64,12 +106,7 @@ void vfsDir::Close()
 	m_stream.reset();
 }
 
-std::string vfsDir::GetPath() const
-{
-	return m_stream->GetPath();
-}
-
 bool vfsDir::IsOpened() const
 {
-	return m_stream && m_stream->IsOpened();
+	return !m_entries.empty();
 }

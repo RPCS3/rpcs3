@@ -46,6 +46,11 @@ bool vfsLocalDir::Create(const std::string& path)
 	return rMkpath(path);
 }
 
+bool vfsLocalDir::IsExists(const std::string& path) const
+{
+	return rIsDir(path);
+}
+
 bool vfsLocalDir::Rename(const std::string& from, const std::string& to)
 {
 	return false;

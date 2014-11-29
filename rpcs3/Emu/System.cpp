@@ -192,7 +192,7 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
-	GetVFS().Init(m_path);
+	GetVFS().Init(rFileName(m_path).GetPath());
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");

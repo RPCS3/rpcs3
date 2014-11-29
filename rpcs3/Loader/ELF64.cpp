@@ -3,6 +3,7 @@
 #include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsDir.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -12,6 +13,7 @@
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "ELF64.h"
+#include "Ini.h"
 
 using namespace PPU_instr;
 
@@ -43,8 +45,6 @@ namespace loader
 				return broken_file;
 			}
 
-			LOG_WARNING(LOADER, "m_ehdr.e_type = 0x%x", m_ehdr.e_type.ToLE());
-
 			if (m_ehdr.e_machine != MACHINE_PPC64 && m_ehdr.e_machine != MACHINE_SPU)
 			{
 				LOG_ERROR(LOADER, "Unknown elf64 machine type: 0x%x", m_ehdr.e_machine.ToLE());
@@ -73,8 +73,6 @@ namespace loader
 
 			if (is_sprx())
 			{
-				LOG_NOTICE(LOADER, "SPRX loading...");
-
 				m_stream->Seek(handler::get_stream_offset() + m_phdrs[0].p_paddr.addr());
 				m_stream->Read(&m_sprx_module_info, sizeof(sprx_module_info));
 
@@ -94,7 +92,7 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type.ToLE())
+				switch ((u32)phdr.p_type)
 				{
 				case 0x1: //load
 					if (phdr.p_memsz)
@@ -127,6 +125,8 @@ namespace loader
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_paddr.addr());
 							m_stream->Read(&module_info, sizeof(module_info));
 							LOG_ERROR(LOADER, "%s (%x):", module_info.name, (u32)module_info.toc);
+							info.name = std::string((const char*)module_info.name, 28);
+							info.rtoc = module_info.toc;
 
 							int import_count = (module_info.imports_end - module_info.imports_start) / sizeof(sys_prx_library_info_t);
 
@@ -149,12 +149,12 @@ namespace loader
 								{
 									char name[27];
 									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.name_addr);
-									modulename = std::string(name, m_stream->Read(name, sizeof(name)));
+									m_stream->Read(name, sizeof(name));
+									modulename = std::string(name);
 									LOG_ERROR(LOADER, "**** %s", name);
 								}
 
-								//ModuleManager& manager = Emu.GetModuleManager();
-								//Module* module = manager.GetModuleByName(modulename);
+								auto &module = info.modules[modulename];
 
 								LOG_ERROR(LOADER, "**** 0x%x - 0x%x - 0x%x", (u32)lib.unk4, (u32)lib.unk5, (u32)lib.unk6);
 
@@ -167,7 +167,7 @@ namespace loader
 									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.fstub_addr + i * sizeof(fstub));
 									m_stream->Read(&fstub, sizeof(fstub));
 
-									info.exports[fnid] = fstub;
+									module.exports[fnid] = fstub;
 
 									//LOG_NOTICE(LOADER, "Exported function '%s' in '%s' module  (LLE)", SysCalls::GetHLEFuncName(fnid).c_str(), module_name.c_str());
 									LOG_ERROR(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetHLEFuncName(fnid).c_str(), (u32)fstub);
@@ -201,17 +201,17 @@ namespace loader
 						switch ((u32)rel.type)
 						{
 						case 1:
-							LOG_ERROR(LOADER, "**** RELOCATION(1): 0x%x <- 0x%x", ADDR, (u32)(info.segments[rel.index_value].begin.addr() + rel.ptr.addr()));
+							LOG_WARNING(LOADER, "**** RELOCATION(1): 0x%x <- 0x%x", ADDR, (u32)(info.segments[rel.index_value].begin.addr() + rel.ptr.addr()));
 							*vm::ptr<u32>::make(ADDR) = info.segments[rel.index_value].begin.addr() + rel.ptr.addr();
 							break;
 
 						case 4:
-							LOG_ERROR(LOADER, "**** RELOCATION(4): 0x%x <- 0x%x", ADDR, (u16)(rel.ptr.addr()));
+							LOG_WARNING(LOADER, "**** RELOCATION(4): 0x%x <- 0x%x", ADDR, (u16)(rel.ptr.addr()));
 							*vm::ptr<u16>::make(ADDR) = (u16)(u64)rel.ptr.addr();
 							break;
 
 						case 5:
-							LOG_ERROR(LOADER, "**** RELOCATION(5): 0x%x <- 0x%x", ADDR, (u16)(info.segments[rel.index_value].begin.addr() >> 16));
+							LOG_WARNING(LOADER, "**** RELOCATION(5): 0x%x <- 0x%x", ADDR, (u16)(info.segments[rel.index_value].begin.addr() >> 16));
 							*vm::ptr<u16>::make(ADDR) = info.segments[rel.index_value].begin.addr() >> 16;
 							break;
 
@@ -230,20 +230,23 @@ namespace loader
 				}
 			}
 
-			for (auto &e : info.exports)
+			for (auto &m : info.modules)
 			{
-				u32 stub = e.second;
-
-				for (auto &s : info.segments)
+				for (auto &e : m.second.exports)
 				{
-					if (stub >= s.initial_addr.addr() && stub < s.initial_addr.addr() + s.size_file)
-					{
-						stub += s.begin.addr() - s.initial_addr.addr();
-						break;
-					}
-				}
+					u32 stub = e.second;
 
-				e.second = stub;
+					for (auto &s : info.segments)
+					{
+						if (stub >= s.initial_addr.addr() && stub < s.initial_addr.addr() + s.size_file)
+						{
+							stub += s.begin.addr() - s.initial_addr.addr();
+							break;
+						}
+					}
+
+					e.second = stub;
+				}
 			}
 
 			return ok;
@@ -266,12 +269,12 @@ namespace loader
 			std::vector<u32> stop_funcs;
 
 			//load modules
-			static const char* lle_modules[] = { "lv2", "sre", "l10n", "gcm_sys", "fs" };
-			//TODO: for (auto &module : lle_modules)
-			char* module;  if (0)
+			vfsDir lle_dir("/dev_flash/sys/external");
+			
+			for (const auto module : lle_dir)
 			{
 				elf64 sprx_handler;
-				vfsFile fsprx(std::string("/dev_flash/sys/external/lib") + module + ".sprx");
+				vfsFile fsprx(lle_dir.GetPath() + "/" + module->name);
 
 				if (fsprx.IsOpened())
 				{
@@ -279,21 +282,52 @@ namespace loader
 
 					if (sprx_handler.is_sprx())
 					{
+						IniEntry<bool> load_lib;
+						load_lib.Init(sprx_handler.sprx_get_module_name(), "LLE");
+
+						if (!load_lib.LoadValue(false))
+						{
+							LOG_ERROR(LOADER, "skipped lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+							continue;
+						}
+						else
+						{
+							LOG_WARNING(LOADER, "loading lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+						}
+
 						sprx_info info;
 						sprx_handler.load_sprx(info);
 
-						std::unordered_map<u32, u32>::iterator f;
-
-						if ((f = info.exports.find(0xbc9a0086)) != info.exports.end())
-							start_funcs.push_back(f->second);
-
-						if ((f = info.exports.find(0xab779874)) != info.exports.end())
-							stop_funcs.push_back(f->second);
-
-						for (auto &e : info.exports)
+						for (auto &m : info.modules)
 						{
-							if (e.first != 0xbc9a0086 && e.first != 0xab779874)
-								Emu.GetModuleManager().register_function(e.first, e.second);
+							if (m.first == "")
+							{
+								for (auto &e : m.second.exports)
+								{
+									switch (e.first)
+									{
+									case 0xbc9a0086: start_funcs.push_back(e.second); break;
+									case 0xab779874: stop_funcs.push_back(e.second); break;
+
+									default: LOG_ERROR(LOADER, "unknown special func 0x%08x in '%s' library", e.first, info.name.c_str()); break;
+									}
+								}
+
+								continue;
+							}
+
+							Module* module = Emu.GetModuleManager().GetModuleByName(m.first);
+
+							if (!module)
+							{
+								LOG_ERROR(LOADER, "unknown module '%s' in '%s' library", m.first.c_str(), info.name.c_str());
+								module = new Module(-1, m.first.c_str());
+							}
+
+							for (auto &e : m.second.exports)
+							{
+								module->RegisterLLEFunc(e.first, vm::ptr<void(*)()>::make(e.second));
+							}
 						}
 					}
 				}
@@ -469,8 +503,9 @@ namespace loader
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
 								const u32 nid = stub->s_nid[i];
+								auto func = module->GetFunc(nid);
 
-								if (!Emu.GetModuleManager().get_function_stub(nid, stub->s_text[i]))
+								if (!func || !func->lle_func)
 								{
 									dst[i] = stub_data;
 
@@ -490,6 +525,7 @@ namespace loader
 								}
 								else
 								{
+									stub->s_text[i] = func->lle_func.addr();
 									//Is function auto exported, than we can use it
 									LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (LLE: 0x%x)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str(), (u32)stub->s_text[i]);
 								}

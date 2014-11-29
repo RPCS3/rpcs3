@@ -305,7 +305,7 @@ s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 
 	const std::string _path = path.get_ptr();
 
-	if(Emu.GetVFS().ExistsDir(_path))
+	if(vfsDir().IsExists(_path))
 		return CELL_EEXIST;
 	if(!Emu.GetVFS().CreateDir(_path))
 		return CELL_EBUSY;
@@ -395,7 +395,7 @@ s32 cellFsUnlink(vm::ptr<const char> path)
 
 	std::string _path = path.get_ptr();
 
-	if (Emu.GetVFS().ExistsDir(_path))
+	if (vfsDir().IsExists(_path))
 		return CELL_EISDIR;
 
 	if (!Emu.GetVFS().ExistsFile(_path))
