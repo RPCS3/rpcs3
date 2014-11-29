@@ -46,7 +46,7 @@ bool vfsDir::Open(const std::string& path)
 
 		for (size_t i = 0; i < blocks.size(); ++i)
 		{
-			if (stricmp(dev_blocks[i].c_str(), blocks[i].c_str()))
+			if (strcmp(dev_blocks[i].c_str(), blocks[i].c_str()))
 			{
 				is_ok = false;
 				break;

@@ -105,7 +105,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 	{
 		if (entry->flags & DirEntry_TypeDir)
 		{
-			vfsStream* stream = Emu.GetVFS().OpenFile("/app_home/TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
+			vfsStream* stream = Emu.GetVFS().OpenFile("/app_home/../TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
 
 			if (stream && stream->IsOpened())
 			{
