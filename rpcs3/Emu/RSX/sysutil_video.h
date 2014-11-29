@@ -16,8 +16,8 @@ enum VideoErrorCode
 
 enum CellVideoOut
 {
-	CELL_VIDEO_OUT_PRIMARY,
-	CELL_VIDEO_OUT_SECONDARY,
+	CELL_VIDEO_OUT_PRIMARY   = 0,
+	CELL_VIDEO_OUT_SECONDARY = 1,
 };
 
 enum CellVideoOutResolutionId
