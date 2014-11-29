@@ -21,7 +21,7 @@ bool vfsLocalDir::Open(const std::string& path)
 	std::string name;
 	for(bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
 	{
-		std::string dir_path = path + name;
+		std::string dir_path = path + "/" + name;
 
 		m_entries.emplace_back();
 		// TODO: Use same info structure as fileinfo?

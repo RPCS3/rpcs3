@@ -136,11 +136,11 @@ bool Rpcs3App::OnInit()
 	main_thread = std::this_thread::get_id();
 
 	Ini.Load();
-	m_MainFrame = new MainFrame();
-	SetTopWindow(m_MainFrame);
 	Emu.Init();
 	Emu.SetEmulatorPath(executablePath.ToStdString());
 
+	m_MainFrame = new MainFrame();
+	SetTopWindow(m_MainFrame);
 	m_MainFrame->Show();
 	m_MainFrame->DoSettings(true);
 
