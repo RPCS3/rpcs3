@@ -1380,6 +1380,7 @@ void GLGSRender::WriteColorBuffers()
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
 			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 		}
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteColorBufferA();
 		WriteColorBufferB();
 	break;
@@ -1804,11 +1805,9 @@ void GLGSRender::ExecCMD()
 		}
 	}
 
-	if (m_set_two_side_light_enable)
-	{
-		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-		checkForGlError("glLightModeli");
-	}
+	// TODO: Use other glLightModel functions?
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, m_set_two_side_light_enable ? GL_TRUE : GL_FALSE);
+	checkForGlError("glLightModeli");
 
 	if(m_set_shade_mode)
 	{
@@ -2038,8 +2037,12 @@ void GLGSRender::Flip()
 			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 			checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 			GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-			memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			if (packed) 
+			{
+				memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
+				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+				checkForGlError("Flip(): glUnmapBuffer");
+			}
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 			src_buffer = pixels.data();

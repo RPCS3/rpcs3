@@ -15,7 +15,7 @@ Module *cellGame = nullptr;
 std::string contentInfo = "";
 std::string usrdir = "";
 
-int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
+int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
 	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.addr(), attributes.addr(), size.addr(), dirName.addr());
@@ -30,7 +30,7 @@ int cellGameBootCheck(vm::ptr<be_t<u32>> type, vm::ptr<be_t<u32>> attributes, vm
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/PARAM.SFO");
+	vfsFile f("/app_home/../PARAM.SFO");
 	if (!f.IsOpened())
 	{
 		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
@@ -100,7 +100,7 @@ int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/PARAM.SFO");
+	vfsFile f("/app_home/../PARAM.SFO");
 	if (!f.IsOpened())
 	{
 		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
@@ -180,6 +180,12 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 {
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.addr(), usrdirPath.addr());
+
+	if (!contentInfoPath && !usrdirPath)
+	{
+		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_PARAM");
+		return CELL_GAME_ERROR_PARAM;
+	}
 	
 	if (contentInfo == "" && usrdir == "")
 	{
@@ -325,12 +331,12 @@ int cellGameDeleteGameData()
 	return CELL_OK;
 }
 
-int cellGameGetParamInt(u32 id, vm::ptr<be_t<u32>> value)
+int cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 {
 	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/PARAM.SFO");
+	vfsFile f("/app_home/../PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
@@ -353,7 +359,7 @@ int cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/PARAM.SFO");
+	vfsFile f("/app_home/../PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;

@@ -90,9 +90,8 @@ struct GLParamArray
 		case PARAM_IN:      return "in ";
 		case PARAM_UNIFORM: return "uniform ";
 		case PARAM_CONST:   return "const ";
+		default:            return "";
 		}
-
-		return "";
 	}
 
 	bool HasParam(const GLParamFlag flag, std::string type, const std::string& name)

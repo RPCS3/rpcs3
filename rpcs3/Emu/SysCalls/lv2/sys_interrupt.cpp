@@ -37,7 +37,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 	return CELL_OK;
 }
 
-s32 sys_interrupt_thread_establish(vm::ptr<be_t<u32>> ih, u32 intrtag, u64 intrthread, u64 arg)
+s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread, u64 arg)
 {
 	sys_interrupt.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.addr(), intrtag, intrthread, arg);
 

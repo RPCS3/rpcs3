@@ -766,7 +766,9 @@ void cellSpursJq_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libspurs_jq = (u32)Memory.PRXMem.AllocAlign(sizeof(libspurs_jq_data), 4096);
+		if (!Memory.MainMem.GetStartAddr()) return;
+
+		libspurs_jq = (u32)Memory.MainMem.AllocAlign(sizeof(libspurs_jq_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libspurs_jq), libspurs_jq_data, sizeof(libspurs_jq_data));
 		libspurs_jq_rtoc = libspurs_jq + 0x17E80;
 

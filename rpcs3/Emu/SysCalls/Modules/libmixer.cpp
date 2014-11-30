@@ -140,7 +140,7 @@ int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
 	return CELL_OK;
 }
  
-int cellSSPlayerCreate(vm::ptr<be_t<u32>> handle, vm::ptr<CellSSPlayerConfig> config)
+int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
 	libmixer->Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
 		handle.addr(), config.addr());
@@ -358,7 +358,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb)
 				{
-					surMixerCb.call(cb_thread, surMixerCbArg, mixcount, 256);
+					surMixerCb.call(cb_thread, surMixerCbArg, (u32)mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
@@ -471,14 +471,14 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	return CELL_OK;
 }
 
-int cellSurMixerGetAANHandle(vm::ptr<be_t<u32>> handle)
+int cellSurMixerGetAANHandle(vm::ptr<u32> handle)
 {
 	libmixer->Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.addr(), 0x11111111);
 	*handle = 0x11111111;
 	return CELL_OK;
 }
 
-int cellSurMixerChStripGetAANPortNo(vm::ptr<be_t<u32>> port, u32 type, u32 index)
+int cellSurMixerChStripGetAANPortNo(vm::ptr<u32> port, u32 type, u32 index)
 {
 	libmixer->Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.addr(), type, index, (type << 16) | index);
 	*port = (type << 16) | index;
@@ -593,7 +593,7 @@ int cellSurMixerPause(u32 type)
 	return CELL_OK;
 }
 
-int cellSurMixerGetCurrentBlockTag(vm::ptr<be_t<u64>> tag)
+int cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 {
 	libmixer->Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.addr());
 
@@ -601,7 +601,7 @@ int cellSurMixerGetCurrentBlockTag(vm::ptr<be_t<u64>> tag)
 	return CELL_OK;
 }
 
-int cellSurMixerGetTimestamp(u64 tag, vm::ptr<be_t<u64>> stamp)
+int cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
 

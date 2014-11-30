@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
 #include "Emu/Event.h"
 #include "MFC.h"
@@ -103,6 +104,66 @@ enum
 	SPU_RdSigNotify1_offs = 0x1400C,
 	SPU_RdSigNotify2_offs = 0x1C00C,
 };
+
+#define mmToU64Ptr(x) ((u64*)(&x))
+#define mmToU32Ptr(x) ((u32*)(&x))
+#define mmToU16Ptr(x) ((u16*)(&x))
+#define mmToU8Ptr(x) ((u8*)(&x))
+
+struct g_imm_table_struct
+{
+	//u16 cntb_table[65536];
+
+	__m128i fsmb_table[65536];
+	__m128i fsmh_table[256];
+	__m128i fsm_table[16];
+
+	__m128i sldq_pshufb[32];
+	__m128i srdq_pshufb[32];
+	__m128i rldq_pshufb[16];
+
+	g_imm_table_struct()
+	{
+		/*static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
+		for (u32 i = 0; i < sizeof(cntb_table) / sizeof(cntb_table[0]); i++)
+		{
+		u32 cnt_low = 0, cnt_high = 0;
+		for (u32 j = 0; j < 8; j++)
+		{
+		cnt_low += (i >> j) & 1;
+		cnt_high += (i >> (j + 8)) & 1;
+		}
+		cntb_table[i] = (cnt_high << 8) | cnt_low;
+		}*/
+		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
+		{
+
+			for (u32 j = 0; j < 4; j++) mmToU32Ptr(fsm_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
+		{
+			for (u32 j = 0; j < 8; j++) mmToU16Ptr(fsmh_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(fsmb_table) / sizeof(fsmb_table[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(fsmb_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+		}
+		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(sldq_pshufb[i])[j] = (u8)(j - i);
+		}
+		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(srdq_pshufb[i])[j] = (j + i > 15) ? 0xff : (u8)(j + i);
+		}
+		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++) mmToU8Ptr(rldq_pshufb[i])[j] = (u8)(j - i) & 0xf;
+		}
+	}
+};
+
+extern const g_imm_table_struct g_imm_table;
 
 //Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
@@ -246,181 +307,127 @@ public:
 		}
 	} m_intrtag[3];
 
-	template<size_t _max_count>
+	// limited lock-free queue, most functions are barrier-free
+	template<size_t max_count>
 	class Channel
 	{
-	public:
-		static const size_t max_count = _max_count;
+		static_assert(max_count >= 1, "Invalid channel count");
 
-	private:
-		union _CRT_ALIGN(8) {
-			struct {
-				volatile u32 m_index;
-				u32 m_value[max_count];
-			};
-			volatile u64 m_indval;
+		struct ChannelData
+		{
+			u32 value;
+			u32 is_set;
 		};
-		std::mutex m_lock;
+
+		atomic_t<ChannelData> m_data[max_count];
+		size_t m_push;
+		size_t m_pop;
 
 	public:
-		Channel()
+		__noinline Channel()
 		{
-			Init();
-		}
-
-		void Init()
-		{
-			m_indval = 0;
-		}
-
-		__forceinline bool Pop(u32& res)
-		{
-			if (max_count > 1)
+			for (size_t i = 0; i < max_count; i++)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(!m_index) 
-				{
-					return false;
-				}
-				res = m_value[0];
-				if (max_count > 1) for (u32 i = 1; i < max_count; i++) // FIFO
-				{
-					m_value[i-1] = m_value[i];
-				}
-				m_value[max_count-1] = 0;
-				m_index--;
-				return true;
+				m_data[i].write_relaxed({});
 			}
-			else
-			{ //lock-free
-				if ((m_indval & 0xffffffff) == 0)
-					return false;
-				else
-				{
-					res = (m_indval >> 32);
-					m_indval = 0;
-					return true;
-				}				
-			}
-		}
-
-		__forceinline bool Push(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-				{
-					return false;
-				}
-				m_value[m_index++] = value;
-				return true;
-			}
-			else
-			{ //lock-free
-				if (m_indval & 0xffffffff)
-					return false;
-				else
-				{
-					const u64 new_value = ((u64)value << 32) | 1;
-					m_indval = new_value;
-					return true;
-				}
-			}
-		}
-
-		__forceinline void PushUncond(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-					m_value[max_count-1] = value; //last message is overwritten
-				else
-					m_value[m_index++] = value;
-			}
-			else
-			{ //lock-free
-				const u64 new_value = ((u64)value << 32) | 1;
-				m_indval = new_value;
-			}
-		}
-
-		__forceinline void PushUncond_OR(u32 value)
-		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(m_index >= max_count) 
-					m_value[max_count-1] |= value; //last message is logically ORed
-				else
-					m_value[m_index++] = value;
-			}
-			else
-			{
-				InterlockedOr64((volatile s64*)m_indval, ((u64)value << 32) | 1);
-			}
+			m_push = 0;
+			m_pop = 0;
 		}
 
 		__forceinline void PopUncond(u32& res)
 		{
-			if (max_count > 1)
-			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				if(!m_index) 
-					res = 0; //result is undefined
-				else
-				{
-					res = m_value[--m_index];
-					m_value[m_index] = 0;
-				}
-			}
-			else
-			{ //lock-free
-				if(!m_index)
-					res = 0;
-				else
-				{
-					res = (m_indval >> 32);
-					m_indval = 0;
-				}
-			}
+			res = m_data[m_pop].read_relaxed().value;
+			m_data[m_pop].write_relaxed({});
+			m_pop = (m_pop + 1) % max_count;
 		}
 
-		__forceinline u32 GetCount()
+		__forceinline bool Pop(u32& res)
 		{
-			if (max_count > 1)
+			const auto data = m_data[m_pop].read_relaxed();
+			if (data.is_set)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				return m_index;
+				res = data.value;
+				m_data[m_pop].write_relaxed({});
+				m_pop = (m_pop + 1) % max_count;
+				return true;
 			}
 			else
 			{
-				return m_index;
+				return false;
 			}
 		}
 
-		__forceinline u32 GetFreeCount()
+		__forceinline bool Pop_XCHG(u32& res) // not barrier-free, not tested
 		{
-			if (max_count > 1)
+			const auto data = m_data[m_pop].exchange({});
+			if (data.is_set)
 			{
-				std::lock_guard<std::mutex> lock(m_lock);
-				return max_count - m_index;
+				res = data.value;
+				m_pop = (m_pop + 1) % max_count;
+				return true;
 			}
 			else
 			{
-				return max_count - m_index;
+				return false;
 			}
 		}
 
-		void SetValue(u32 value)
+		__forceinline void PushUncond_OR(const u32 value) // not barrier-free, not tested
 		{
-			m_value[0] = value;
+			m_data[m_push]._or({ value, 1 });
+			m_push = (m_push + 1) % max_count;
 		}
 
-		u32 GetValue() const
+		__forceinline void PushUncond(const u32 value)
 		{
-			return m_value[0];
+			m_data[m_push].write_relaxed({ value, 1 });
+			m_push = (m_push + 1) % max_count;
+		}
+
+		__forceinline bool Push(const u32 value)
+		{
+			if (m_data[m_push].read_relaxed().is_set)
+			{
+				return false;
+			}
+			else
+			{
+				PushUncond(value);
+				return true;
+			}
+		}
+
+		__forceinline u32 GetCount() const
+		{
+			u32 res = 0;
+			for (size_t i = 0; i < max_count; i++)
+			{
+				res += m_data[i].read_relaxed().is_set ? 1 : 0;
+			}
+			return res;
+		}
+
+		__forceinline u32 GetFreeCount() const
+		{
+			u32 res = 0;
+			for (size_t i = 0; i < max_count; i++)
+			{
+				res += m_data[i].read_relaxed().is_set ? 0 : 1;
+			}
+			return res;
+		}
+
+		__forceinline void SetValue(const u32 value)
+		{
+			m_data[m_push].direct_op([value](ChannelData& v)
+			{
+				v.value = value;
+			});
+		}
+
+		__forceinline u32 GetValue() const
+		{
+			return m_data[m_pop].read_relaxed().value;
 		}
 	};
 
@@ -473,7 +480,7 @@ public:
 		struct { u32 EAH, EAL; };
 	};
 
-	DMAC dmac;
+	u32 ls_offset;
 
 	void ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size);
 
@@ -502,6 +509,9 @@ public:
 	void WriteLS32 (const u32 lsa, const u32&  data) const { vm::write32 (lsa + m_offset, data); }
 	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
+
+	std::function<void(SPUThread& SPU)> m_custom_task;
+	std::function<u64(SPUThread& SPU)> m_code3_func;
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
@@ -560,6 +570,8 @@ public:
 public:
 	virtual void InitRegs();
 	virtual void Task();
+	void FastCall(u32 ls_addr);
+	void FastStop();
 
 protected:
 	virtual void DoReset();
@@ -571,3 +583,49 @@ protected:
 };
 
 SPUThread& GetCurrentSPUThread();
+
+class spu_thread : cpu_thread
+{
+	static const u32 stack_align = 0x10;
+	vm::ptr<u64> argv;
+	u32 argc;
+	vm::ptr<u64> envp;
+
+public:
+	spu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
+
+	cpu_thread& args(std::initializer_list<std::string> values) override
+	{
+		if (!values.size())
+			return *this;
+
+		assert(argc == 0);
+
+		envp.set(Memory.MainMem.AllocAlign((u32)sizeof(envp), stack_align));
+		*envp = 0;
+		argv.set(Memory.MainMem.AllocAlign(u32(sizeof(argv)* values.size()), stack_align));
+
+		for (auto &arg : values)
+		{
+			u32 arg_size = align(u32(arg.size() + 1), stack_align);
+			u32 arg_addr = Memory.MainMem.AllocAlign(arg_size, stack_align);
+
+			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+			argv[argc++] = arg_addr;
+		}
+
+		return *this;
+	}
+
+	cpu_thread& run() override
+	{
+		thread->Run();
+
+		static_cast<SPUThread*>(thread)->GPR[3].from64(argc);
+		static_cast<SPUThread*>(thread)->GPR[4].from64(argv.addr());
+		static_cast<SPUThread*>(thread)->GPR[5].from64(envp.addr());
+
+		return *this;
+	}
+};

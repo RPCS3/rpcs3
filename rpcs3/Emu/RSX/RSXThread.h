@@ -134,6 +134,7 @@ public:
 	u32 m_report_main_addr;
 
 	u32 m_local_mem_addr, m_main_mem_addr;
+	bool m_strict_ordering[0x1000];
 
 public:
 	uint m_draw_mode;

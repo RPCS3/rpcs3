@@ -87,7 +87,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Platform)\$(Configuration)\emucore.lib;wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;..\ffmpeg\Windows\x86_64\lib;..\OpenAL\Win64</AdditionalLibraryDirectories>
@@ -113,7 +113,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)$(Platform)\$(Configuration)\emucore.lib;wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31ud_adv.lib;wxbase31ud.lib;wxmsw31ud_core.lib;wxmsw31ud_aui.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <DataExecutionPrevention>false</DataExecutionPrevention>
       <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;..\ffmpeg\Windows\x86_64\lib;..\OpenAL\Win64</AdditionalLibraryDirectories>
@@ -148,7 +148,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)$(Platform)\$(Configuration)\emucore.lib;wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;wxexpat.lib;wsock32.lib;wininet.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wxmsw31u_adv.lib;wxbase31u.lib;wxmsw31u_core.lib;wxmsw31u_aui.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;wxregexu.lib;wxexpat.lib;wsock32.lib;wininet.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib;libOpenAL32.dll.a;asmjit.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -173,6 +173,7 @@
     <ClCompile Include="Gui\GSFrame.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\KernelExplorer.cpp" />
+    <ClCompile Include="Gui\LLEModulesManager.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\MsgDialog.cpp" />
@@ -212,6 +213,7 @@
     <ClInclude Include="Gui\InstructionEditor.h" />
     <ClInclude Include="Gui\InterpreterDisAsm.h" />
     <ClInclude Include="Gui\KernelExplorer.h" />
+    <ClInclude Include="Gui\LLEModulesManager.h" />
     <ClInclude Include="Gui\MainFrame.h" />
     <ClInclude Include="Gui\MemoryViewer.h" />
     <ClInclude Include="Gui\MsgDialog.h" />
@@ -223,6 +225,11 @@
     <ClInclude Include="Gui\VHDDManager.h" />
     <ClInclude Include="rpcs3.h" />
     <ClInclude Include="stdafx_gui.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="emucore.vcxproj">
+      <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -310,7 +310,7 @@ int cellRtcConvertLocalTimeToUtc(vm::ptr<CellRtcTick> pLocalTime, vm::ptr<CellRt
 	return CELL_OK;
 }
 
-int cellRtcGetDosTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<be_t<u32>> puiDosTime)
+int cellRtcGetDosTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u32> puiDosTime)
 {
 	cellRtc->Log("cellRtcGetDosTime(pDateTime=0x%x, puiDosTime=0x%x)", pDateTime.addr(), puiDosTime.addr());
 
@@ -321,7 +321,7 @@ int cellRtcGetDosTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<be_t<u32>> pui
 	return CELL_OK;
 }
 
-int cellRtcGetTime_t(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<be_t<s64>> piTime)
+int cellRtcGetTime_t(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<s64> piTime)
 {
 	cellRtc->Log("cellRtcGetTime_t(pDateTime=0x%x, piTime=0x%x)", pDateTime.addr(), piTime.addr());
 
@@ -333,7 +333,7 @@ int cellRtcGetTime_t(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<be_t<s64>> piTi
 	return CELL_OK;
 }
 
-int cellRtcGetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<be_t<u64>> pulWin32FileTime)
+int cellRtcGetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u64> pulWin32FileTime)
 {
 	cellRtc->Log("cellRtcGetWin32FileTime(pDateTime=0x%x, pulWin32FileTime=0x%x)", pDateTime.addr(), pulWin32FileTime.addr());
 

@@ -31,7 +31,7 @@
 namespace detail{
 	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)
 	{
-		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == name;
+		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == name;
 	}
 }
 

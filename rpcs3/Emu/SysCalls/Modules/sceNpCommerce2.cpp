@@ -6,6 +6,18 @@
 
 Module *sceNpCommerce2 = nullptr;
 
+struct sceNpCommerce2Internal
+{
+	bool m_bSceNpCommerce2Initialized;
+
+	sceNpCommerce2Internal()
+		: m_bSceNpCommerce2Initialized(false)
+	{
+	}
+};
+
+sceNpCommerce2Internal sceNpCommerce2Instance;
+
 int sceNpCommerce2ExecuteStoreBrowse()
 {
 	UNIMPLEMENTED_FUNC(sceNpCommerce2);
@@ -20,13 +32,25 @@ int sceNpCommerce2GetStoreBrowseUserdata()
 
 int sceNpCommerce2Init()
 {
-	UNIMPLEMENTED_FUNC(sceNpCommerce2);
+	sceNpCommerce2->Warning("sceNpCommerce2Init()");
+
+	if (sceNpCommerce2Instance.m_bSceNpCommerce2Initialized)
+		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
+
+	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = true;
+
 	return CELL_OK;
 }
 
 int sceNpCommerce2Term()
 {
-	UNIMPLEMENTED_FUNC(sceNpCommerce2);
+	sceNpCommerce2->Warning("sceNpCommerce2Term()");
+
+	if (!sceNpCommerce2Instance.m_bSceNpCommerce2Initialized)
+		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
+
+	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
+
 	return CELL_OK;
 }
 
@@ -290,7 +314,7 @@ int sceNpCommerce2DestroyReq()
 
 void sceNpCommerce2_unload()
 {
-	// TODO: Unload SNS module
+	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
 }
 
 void sceNpCommerce2_init(Module *pxThis)

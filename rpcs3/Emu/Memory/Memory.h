@@ -7,8 +7,6 @@ using std::nullptr_t;
 #define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
 #define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
-extern void* const m_base_addr;
-
 enum MemoryType
 {
 	Memory_PS3,
@@ -24,6 +22,11 @@ enum : u32
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 };
 
+namespace vm
+{
+	extern void* const g_base_addr;
+}
+
 class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;
@@ -33,6 +36,7 @@ public:
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
+	DynamicMemoryBlock SPRXMem;
 	DynamicMemoryBlock PRXMem;
 	DynamicMemoryBlock RSXCMDMem;
 	DynamicMemoryBlock MmaperMem;
@@ -70,7 +74,7 @@ public:
 
 	static void* const GetBaseAddr()
 	{
-		return m_base_addr;
+		return vm::g_base_addr;
 	}
 
 	__noinline void InvalidAddress(const char* func, const u64 addr);

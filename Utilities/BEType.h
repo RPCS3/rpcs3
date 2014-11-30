@@ -1,20 +1,91 @@
 #pragma once
 
-#include <emmintrin.h>
-
-union u128
+union _CRT_ALIGN(16) u128
 {
 	u64 _u64[2];
 	s64 _s64[2];
+
+	class u64_reversed_array_2
+	{
+		u64 data[2];
+
+	public:
+		u64& operator [] (s32 index)
+		{
+			return data[1 - index];
+		}
+
+		const u64& operator [] (s32 index) const
+		{
+			return data[1 - index];
+		}
+
+	} u64r;
+
 	u32 _u32[4];
 	s32 _s32[4];
+
+	class u32_reversed_array_4
+	{
+		u32 data[4];
+
+	public:
+		u32& operator [] (s32 index)
+		{
+			return data[3 - index];
+		}
+
+		const u32& operator [] (s32 index) const
+		{
+			return data[3 - index];
+		}
+
+	} u32r;
+
 	u16 _u16[8];
 	s16 _s16[8];
+
+	class u16_reversed_array_8
+	{
+		u16 data[8];
+
+	public:
+		u16& operator [] (s32 index)
+		{
+			return data[7 - index];
+		}
+
+		const u16& operator [] (s32 index) const
+		{
+			return data[7 - index];
+		}
+
+	} u16r;
+
 	u8  _u8[16];
 	s8  _s8[16];
+
+	class u8_reversed_array_16
+	{
+		u8 data[16];
+
+	public:
+		u8& operator [] (s32 index)
+		{
+			return data[15 - index];
+		}
+
+		const u8& operator [] (s32 index) const
+		{
+			return data[15 - index];
+		}
+
+	} u8r;
+
 	float _f[4];
 	double _d[2];
-	__m128 xmm;
+	__m128 vf;
+	__m128i vi;
 
 	class bit_array_128
 	{
@@ -94,6 +165,11 @@ union u128
 		return ret;
 	}
 
+	static u128 from64r(u64 _1, u64 _0 = 0)
+	{
+		return from64(_0, _1);
+	}
+
 	static u128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
 	{
 		u128 ret;
@@ -104,6 +180,25 @@ union u128
 		return ret;
 	}
 
+	static u128 from32r(u32 _3, u32 _2 = 0, u32 _1 = 0, u32 _0 = 0)
+	{
+		return from32(_0, _1, _2, _3);
+	}
+
+	static u128 from32p(u32 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi32((int)value);
+		return ret;
+	}
+
+	static u128 from8p(u8 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi8((char)value);
+		return ret;
+	}
+
 	static u128 fromBit(u32 bit)
 	{
 		u128 ret = {};
@@ -111,9 +206,41 @@ union u128
 		return ret;
 	}
 
-	void setBit(u32 bit)
+	static u128 fromV(__m128i value)
 	{
-		_bit[bit] = true;
+		u128 ret;
+		ret.vi = value;
+		return ret;
+	}
+
+	static __forceinline u128 add8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 minu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_min_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 eq8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 gtu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpgt_epu8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 leu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmple_epu8(left.vi, right.vi));
 	}
 
 	bool operator == (const u128& right) const
@@ -126,24 +253,30 @@ union u128
 		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
 
-	u128 operator | (const u128& right) const
+	__forceinline u128 operator | (const u128& right) const
 	{
-		return from64(_u64[0] | right._u64[0], _u64[1] | right._u64[1]);
+		return fromV(_mm_or_si128(vi, right.vi));
 	}
 
-	u128 operator & (const u128& right) const
+	__forceinline u128 operator & (const u128& right) const
 	{
-		return from64(_u64[0] & right._u64[0], _u64[1] & right._u64[1]);
+		return fromV(_mm_and_si128(vi, right.vi));
 	}
 
-	u128 operator ^ (const u128& right) const
+	__forceinline u128 operator ^ (const u128& right) const
 	{
-		return from64(_u64[0] ^ right._u64[0], _u64[1] ^ right._u64[1]);
+		return fromV(_mm_xor_si128(vi, right.vi));
 	}
 
 	u128 operator ~ () const
 	{
 		return from64(~_u64[0], ~_u64[1]);
+	}
+
+	// result = (~left) & (right)
+	static __forceinline u128 andnot(const u128& left, const u128& right)
+	{
+		return fromV(_mm_andnot_si128(left.vi, right.vi));
 	}
 
 	void clear()
@@ -153,7 +286,7 @@ union u128
 
 	std::string to_hex() const
 	{
-		return fmt::Format("%16llx%16llx", _u64[1], _u64[0]);
+		return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
 	}
 
 	std::string to_xyzw() const
@@ -169,6 +302,72 @@ union u128
 		return ret;
 	}
 };
+
+#ifndef InterlockedCompareExchange
+static __forceinline u128 InterlockedCompareExchange(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+	return (u128&)res;
+#else
+	_InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp);
+	return comp;
+#endif
+}
+#endif
+
+static __forceinline bool InterlockedCompareExchangeTest(volatile u128* dest, u128 exch, u128 comp)
+{
+#if defined(__GNUG__)
+	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
+#else
+	return _InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp) != 0;
+#endif
+}
+
+#ifndef InterlockedExchange
+static __forceinline u128 InterlockedExchange(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedOr
+static __forceinline u128 InterlockedOr(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old | value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedAnd
+static __forceinline u128 InterlockedAnd(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old & value, old)) return old;
+	}
+}
+#endif
+
+#ifndef InterlockedXor
+static __forceinline u128 InterlockedXor(volatile u128* dest, u128 value)
+{
+	while (true)
+	{
+		const u128 old = *(u128*)dest;
+		if (InterlockedCompareExchangeTest(dest, old ^ value, old)) return old;
+	}
+}
+#endif
 
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
@@ -252,7 +451,13 @@ template<typename T, typename T2 = T>
 class be_t
 {
 	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
-	T m_data;
+
+public:
+	typedef typename std::remove_cv<T>::type type;
+	static const bool is_le_machine = true;
+
+private:
+	type m_data;
 
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
@@ -283,59 +488,78 @@ class be_t
 			return (be_t<Tto>&)res;
 		}
 	};
+
 public:
-	typedef T type;
-	
-	const T& ToBE() const
+	const type& ToBE() const
 	{
 		return m_data;
 	}
 
-	T ToLE() const
+	type ToLE() const
 	{
-		return se_t<T, sizeof(T2)>::func(m_data);
+		return se_t<type, sizeof(T2)>::func(m_data);
 	}
 
-	void FromBE(const T& value)
+	void FromBE(const type& value)
 	{
 		m_data = value;
 	}
 
-	void FromLE(const T& value)
+	void FromLE(const type& value)
 	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::func(value);
 	}
 
-	static be_t MakeFromLE(const T value)
+	static be_t MakeFromLE(const type value)
 	{
-		T data = se_t<T, sizeof(T2)>::func(value);
+		type data = se_t<type, sizeof(T2)>::func(value);
 		return (be_t&)data;
 	}
 
-	static be_t MakeFromBE(const T value)
+	static be_t MakeFromBE(const type value)
 	{
 		return (be_t&)value;
 	}
 
-	//template<typename T1>
-	operator const T() const
+	//make be_t from current machine byte ordering
+	static be_t make(const type value)
 	{
-		return ToLE();
+		return is_le_machine ? MakeFromLE(value) : MakeFromBE(value);
 	}
 
+	//get value in current machine byte ordering
+	__forceinline type value() const
+	{
+		return is_le_machine ? ToLE() : ToBE();
+	}
+
+	//be_t() = default;
+	//be_t(const be_t& value) = default;
+
+	//be_t(type value)
+	//{
+	//	m_data = se_t<type, sizeof(T2)>::func(value);
+	//}
+	
 	be_t& operator = (const be_t& value) = default;
 
-	be_t& operator = (T value)
+	be_t& operator = (type value)
 	{
-		m_data = se_t<T, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::func(value);
 
 		return *this;
+	}
+
+	operator type() const
+	{
+		return value();
 	}
 
 	template<typename T1>
 	operator const be_t<T1>() const
 	{
-		return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
+		return be_t<T1>::make(value());
+		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
 	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
@@ -382,81 +606,6 @@ public:
 	be_t& operator-- () { *this -= 1; return *this; }
 };
 
-template<typename T, typename T2>
-class be_t<const T, T2>
-{
-	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
-	const T m_data;
-
-public:
-	typedef const T type;
-
-	const T& ToBE() const
-	{
-		return m_data;
-	}
-
-	const T ToLE() const
-	{
-		return se_t<const T, sizeof(T2)>::func(m_data);
-	}
-
-	static be_t MakeFromLE(const T value)
-	{
-		const T data = se_t<const T, sizeof(T2)>::func(value);
-		return (be_t&)data;
-	}
-
-	static be_t MakeFromBE(const T value)
-	{
-		return (be_t&)value;
-	}
-
-	//template<typename T1>
-	operator const T() const
-	{
-		return ToLE();
-	}
-
-	template<typename T1>
-	operator const be_t<T1>() const
-	{
-		if (sizeof(T1) > sizeof(T) || std::is_floating_point<T>::value || std::is_floating_point<T1>::value)
-		{
-			T1 res = se_t<T1, sizeof(T1)>::func(ToLE());
-			return (be_t<T1>&)res;
-		}
-		else if (sizeof(T1) < sizeof(T))
-		{
-			T1 res = ToBE() >> ((sizeof(T) - sizeof(T1)) * 8);
-			return (be_t<T1>&)res;
-		}
-		else
-		{
-			T1 res = ToBE();
-			return (be_t<T1>&)res;
-		}
-	}
-
-	template<typename T1> be_t operator & (const be_t<T1>& right) const { const T res = ToBE() & right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator | (const be_t<T1>& right) const { const T res = ToBE() | right.ToBE(); return (be_t&)res; }
-	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { const T res = ToBE() ^ right.ToBE(); return (be_t&)res; }
-
-	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
-	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (T1 right) const { return (T1)ToLE() >  right; }
-	template<typename T1> bool operator <  (T1 right) const { return (T1)ToLE() <  right; }
-	template<typename T1> bool operator >= (T1 right) const { return (T1)ToLE() >= right; }
-	template<typename T1> bool operator <= (T1 right) const { return (T1)ToLE() <= right; }
-
-	template<typename T1> bool operator == (const be_t<T1>& right) const { return ToBE() == right.ToBE(); }
-	template<typename T1> bool operator != (const be_t<T1>& right) const { return !(*this == right); }
-	template<typename T1> bool operator >  (const be_t<T1>& right) const { return (T1)ToLE() >  right.ToLE(); }
-	template<typename T1> bool operator <  (const be_t<T1>& right) const { return (T1)ToLE() <  right.ToLE(); }
-	template<typename T1> bool operator >= (const be_t<T1>& right) const { return (T1)ToLE() >= right.ToLE(); }
-	template<typename T1> bool operator <= (const be_t<T1>& right) const { return (T1)ToLE() <= right.ToLE(); }
-};
-
 template<typename T, typename T2 = T>
 struct is_be_t : public std::integral_constant<bool, false> {};
 
@@ -496,6 +645,8 @@ public:
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
+
+	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
 };
 
 template<typename T>
@@ -622,4 +773,52 @@ template<typename T> __forceinline static void Write32(T& f, const u32 data)
 template<typename T> __forceinline static void Write64(T& f, const u64 data)
 {
 	Write64LE(f, re64(data));
+}
+
+template<typename Tto, typename Tfrom>
+struct convert_le_be_t
+{
+	static Tto func(Tfrom&& value)
+	{
+		return (Tto)value;
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tfrom>
+struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
+{
+	static be_t<Tt, Tt1> func(Tfrom&& value)
+	{
+		return be_t<Tt, Tt1>::make(value);
+	}
+};
+
+template<typename Tt, typename Tt1, typename Tf, typename Tf1>
+struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
+{
+	static be_t<Tt, Tt1> func(be_t<Tf, Tf1>&& value)
+	{
+		return value;
+	}
+};
+
+template<typename Tto, typename Tf, typename Tf1>
+struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
+{
+	static Tto func(be_t<Tf, Tf1>&& value)
+	{
+		return value.value();
+	}
+};
+
+template<typename Tto, typename Tfrom>
+__forceinline Tto convert_le_be(Tfrom&& value)
+{
+	return convert_le_be_t<Tto, Tfrom>::func(value);
+}
+
+template<typename Tto, typename Tfrom>
+__forceinline void convert_le_be(Tto& dst, Tfrom&& src)
+{
+	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }

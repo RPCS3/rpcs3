@@ -40,6 +40,7 @@ private:
 	void ConfigVHDD(wxCommandEvent& event);
 	void ConfigAutoPause(wxCommandEvent& event);
 	void ConfigSaveData(wxCommandEvent& event);
+	void ConfigLLEModules(wxCommandEvent& event);
 	void OpenELFCompiler(wxCommandEvent& evt);
 	void OpenKernelExplorer(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);

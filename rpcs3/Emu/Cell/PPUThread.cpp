@@ -9,6 +9,9 @@
 #include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
+#include "Emu/Cell/PPULLVMRecompiler.h"
+//#include "Emu/Cell/PPURecompiler.h"
+#include "Emu/CPU/CPUThreadManager.h"
 
 PPUThread& GetCurrentPPUThread()
 {
@@ -38,11 +41,11 @@ void PPUThread::DoReset()
 	memset(FPR,  0, sizeof(FPR));
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
+	memset(USPRG, 0, sizeof(USPRG));
 
 	CR.CR       = 0;
 	LR          = 0;
 	CTR         = 0;
-	USPRG0      = 0;
 	TB          = 0;
 	XER.XER     = 0;
 	FPSCR.FPSCR = 0;
@@ -83,8 +86,10 @@ void PPUThread::InitRegs()
 	}
 	*/
 
-	GPR[1] = AlignAddr(m_stack_addr + m_stack_size, 0x200) - 0x200;
+	GPR[1] = align(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
+	//GPR[11] = entry;
+	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
 
 	LR = Emu.GetPPUThreadExit();
@@ -103,12 +108,25 @@ void PPUThread::DoRun()
 	break;
 
 	case 1:
-	case 2:
 	{
 		auto ppui = new PPUInterpreter(*this);
 		m_dec = new PPUDecoder(ppui);
 	}
 	break;
+
+	case 2:
+#ifdef PPU_LLVM_RECOMPILER
+		SetCallStackTracing(false);
+		if (!m_dec) {
+			m_dec = new ppu_recompiler_llvm::ExecutionEngine(*this);
+		}
+#else
+		LOG_ERROR(PPU, "This image does not include PPU JIT (LLVM)");
+		Emu.Pause();
+#endif
+	break;
+
+	//case 3: m_dec = new PPURecompiler(*this); break;
 
 	default:
 		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
@@ -187,7 +205,7 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	LR = Emu.m_ppu_thr_stop;
 	SetCurrentNamedThread(this);
 
-	Task();
+	CPUThread::Task();
 
 	m_status = old_status;
 	PC = old_PC;
@@ -202,4 +220,72 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 void PPUThread::FastStop()
 {
 	m_status = Stopped;
+}
+
+void PPUThread::Task()
+{
+	if (custom_task)
+	{
+		custom_task(*this);
+	}
+	else
+	{
+		CPUThread::Task();
+	}
+}
+
+ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+{
+	thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
+	thread->SetName(name);
+	thread->SetEntry(entry);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
+	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+
+	argc = 0;
+}
+
+cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
+{
+	if (!values.size())
+		return *this;
+
+	assert(argc == 0);
+
+	envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
+	*envp = 0;
+	argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
+
+	for (auto &arg : values)
+	{
+		u32 arg_size = align(u32(arg.size() + 1), stack_align);
+		u32 arg_addr = vm::alloc(arg_size, vm::main);
+
+		std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+
+		argv[argc++] = arg_addr;
+	}
+
+	return *this;
+}
+
+cpu_thread& ppu_thread::run()
+{
+	thread->Run();
+
+	gpr(3, argc);
+	gpr(4, argv.addr());
+	gpr(5, envp.addr());
+
+	return *this;
+}
+
+ppu_thread& ppu_thread::gpr(uint index, u64 value)
+{
+	assert(index < 32);
+
+	static_cast<PPUThread*>(thread)->GPR[index] = value;
+
+	return *this;
 }

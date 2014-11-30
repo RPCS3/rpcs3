@@ -40,6 +40,8 @@ wxDEFINE_EVENT(wxEVT_DBG_COMMAND, wxCommandEvent);
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
+std::string simplify_path(const std::string& path, bool is_dir);
+
 bool Rpcs3App::OnInit()
 {
 	SetSendDbgCommandCallback([](DbgCommand id, CPUThread* t)
@@ -128,16 +130,17 @@ bool Rpcs3App::OnInit()
 	wxInitAllImageHandlers();
 
 	// RPCS3 assumes the current working directory is the folder where it is contained, so we make sure this is true
-	const wxString executablePath = wxStandardPaths::Get().GetExecutablePath();
-	wxSetWorkingDirectory(wxPathOnly(executablePath));
+	const wxString executablePath = wxPathOnly(wxStandardPaths::Get().GetExecutablePath());
+	wxSetWorkingDirectory(executablePath);
 
 	main_thread = std::this_thread::get_id();
 
 	Ini.Load();
+	Emu.Init();
+	Emu.SetEmulatorPath(executablePath.ToStdString());
+
 	m_MainFrame = new MainFrame();
 	SetTopWindow(m_MainFrame);
-	Emu.Init();
-
 	m_MainFrame->Show();
 	m_MainFrame->DoSettings(true);
 
@@ -165,6 +168,10 @@ void Rpcs3App::Exit()
 	Ini.Save();
 
 	wxApp::Exit();
+
+#ifdef _WIN32
+	timeEndPeriod(1);
+#endif
 }
 
 void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
@@ -176,6 +183,10 @@ void Rpcs3App::SendDbgCommand(DbgCommand id, CPUThread* thr)
 
 Rpcs3App::Rpcs3App()
 {
+#ifdef _WIN32
+	timeBeginPeriod(1);
+#endif
+
 	#if defined(__unix__) && !defined(__APPLE__)
 	XInitThreads();
 	#endif

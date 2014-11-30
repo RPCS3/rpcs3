@@ -163,13 +163,14 @@ public:
 
 	// maps real address to virtual address space, returns the mapped address or 0 on failure (if no address is specified the
 	// first mappable space is used)
-	virtual u64 Map(u64 realaddr, u32 size, u64 addr = 0);
+	virtual bool Map(u64 realaddr, u32 size, u64 addr);
+	virtual u64 Map(u64 realaddr, u32 size);
 
 	// Unmap real address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
-	virtual u32 UnmapRealAddress(u64 realaddr);
+	virtual bool UnmapRealAddress(u64 realaddr, u32& size);
 
 	// Unmap address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
-	virtual u32 UnmapAddress(u64 addr);
+	virtual bool UnmapAddress(u64 addr, u32& size);
 
 	// Reserve a certain amount so no one can use it, returns true on succces, false on failure
 	virtual bool Reserve(u32 size);

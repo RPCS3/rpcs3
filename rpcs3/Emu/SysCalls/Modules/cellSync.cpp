@@ -16,6 +16,13 @@ u32 libsre;
 u32 libsre_rtoc;
 #endif
 
+waiter_map_t g_sync_mutex_wm("sync_mutex_wm");
+waiter_map_t g_sync_barrier_wait_wm("sync_barrier_wait_wm");
+waiter_map_t g_sync_barrier_notify_wm("sync_barrier_notify_wm");
+waiter_map_t g_sync_rwm_read_wm("sync_rwm_read_wm");
+waiter_map_t g_sync_rwm_write_wm("sync_rwm_write_wm");
+waiter_map_t g_sync_queue_wm("sync_queue_wm");
+
 s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
 	if (!mutex)
@@ -28,8 +35,7 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: set zero and sync
-	mutex->m_data() = 0;
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
+	mutex->data.exchange({});
 	return CELL_OK;
 }
 
@@ -53,32 +59,21 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: increase u16 and remember its old value
-	be_t<u16> old_order;
-	while (true)
+	// prx: increase m_acq and remember its old value
+	be_t<u16> order;
+	mutex->data.atomic_op([&order](CellSyncMutex::data_t& mutex)
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
+		order = mutex.m_acq++;
+	});
 
-		old_order = new_mutex.m_order;
-		new_mutex.m_order++; // increase m_order
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
-	// prx: wait until another u16 value == old value
-	while (old_order != mutex->m_freed)
+	// prx: wait until this old value is equal to m_rel
+	g_sync_mutex_wm.wait_op(mutex.addr(), [mutex, order]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncMutexLock(mutex_addr=0x%x) aborted", mutex.addr());
-			break;
-		}
-	}
+		return order == mutex->data.read_relaxed().m_rel;
+	});
 
 	// prx: sync
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
+	mutex->data.read_sync();
 	return CELL_OK;
 }
 
@@ -95,25 +90,15 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (true)
+	// prx: exit if m_acq and m_rel are not equal, increase m_acq
+	return mutex->data.atomic_op(CELL_OK, [](CellSyncMutex::data_t& mutex) -> s32
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
-
-		// prx: compare two u16 values and exit if not equal
-		if (new_mutex.m_order != new_mutex.m_freed)
+		if (mutex.m_acq++ != mutex.m_rel)
 		{
 			return CELL_SYNC_ERROR_BUSY;
 		}
-		else
-		{
-			new_mutex.m_order++;
-		}
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
-	return CELL_OK;
+		return CELL_OK;
+	});
 }
 
 s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
@@ -129,18 +114,12 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&mutex->m_data(), 0, 0);
-
-	while (true)
+	mutex->data.atomic_op_sync([](CellSyncMutex::data_t& mutex)
 	{
-		const u32 old_data = mutex->m_data();
-		CellSyncMutex new_mutex;
-		new_mutex.m_data() = old_data;
+		mutex.m_rel++;
+	});
 
-		new_mutex.m_freed++;
-		if (InterlockedCompareExchange(&mutex->m_data(), new_mutex.m_data(), old_data) == old_data) break;
-	}
-
+	g_sync_mutex_wm.notify(mutex.addr());
 	return CELL_OK;
 }
 
@@ -160,9 +139,7 @@ s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 	}
 
 	// prx: zeroize first u16, write total_count in second u16 and sync
-	barrier->m_value = 0;
-	barrier->m_count = total_count;
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
+	barrier->data.exchange({ be_t<s16>::make(0), be_t<s16>::make(total_count) });
 	return CELL_OK;
 }
 
@@ -172,6 +149,24 @@ s32 cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 
 	return syncBarrierInitialize(barrier, total_count);
 }
+
+s32 syncBarrierTryNotifyOp(CellSyncBarrier::data_t& barrier)
+{
+	// prx: extract m_value (repeat if < 0), increase, compare with second s16, set sign bit if equal, insert it back
+	s16 value = (s16)barrier.m_value;
+	if (value < 0)
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	value++;
+	if (value == (s16)barrier.m_count)
+	{
+		value |= 0x8000;
+	}
+	barrier.m_value = value;
+	return CELL_OK;
+};
 
 s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 {
@@ -186,36 +181,12 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: sync, extract m_value, repeat if < 0, increase, compare with second s16, set sign bit if equal, insert it back
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
-
-	while (true)
+	g_sync_barrier_notify_wm.wait_op(barrier.addr(), [barrier]()
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp) == CELL_OK;
+	});
 
-		s16 value = (s16)new_barrier.m_value;
-		if (value < 0)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncBarrierNotify(barrier_addr=0x%x) aborted", barrier.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		value++;
-		if (value == (s16)new_barrier.m_count)
-		{
-			value |= 0x8000;
-		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
-	}
-
+	g_sync_barrier_wait_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -232,31 +203,30 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
-
-	while (true)
+	if (s32 res = barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryNotifyOp))
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
-
-		s16 value = (s16)new_barrier.m_value;
-		if (value >= 0)
-		{
-			value++;
-			if (value == (s16)new_barrier.m_count)
-			{
-				value |= 0x8000;
-			}
-			new_barrier.m_value = value;
-			if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
-		}		
-		else
-		{
-			if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) return CELL_SYNC_ERROR_BUSY;
-		}
+		return res;
 	}
 
+	g_sync_barrier_wait_wm.notify(barrier.addr());
+	return CELL_OK;
+}
+
+s32 syncBarrierTryWaitOp(CellSyncBarrier::data_t& barrier)
+{
+	// prx: extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
+	s16 value = (s16)barrier.m_value;
+	if (value >= 0)
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	value--;
+	if (value == (s16)0x8000)
+	{
+		value = 0;
+	}
+	barrier.m_value = value;
 	return CELL_OK;
 }
 
@@ -273,36 +243,12 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: sync, extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
-
-	while (true)
+	g_sync_barrier_wait_wm.wait_op(barrier.addr(), [barrier]()
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
+		return barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp) == CELL_OK;
+	});
 
-		s16 value = (s16)new_barrier.m_value;
-		if (value >= 0)
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncBarrierWait(barrier_addr=0x%x) aborted", barrier.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		value--;
-		if (value == (s16)0x8000)
-		{
-			value = 0;
-		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
-	}
-
+	g_sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -319,29 +265,12 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	InterlockedCompareExchange(&barrier->m_data(), 0, 0);
-
-	while (true)
+	if (s32 res = barrier->data.atomic_op_sync(CELL_OK, syncBarrierTryWaitOp))
 	{
-		const u32 old_data = barrier->m_data();
-		CellSyncBarrier new_barrier;
-		new_barrier.m_data() = old_data;
-
-		s16 value = (s16)new_barrier.m_value;
-		if (value >= 0)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		value--;
-		if (value == (s16)0x8000)
-		{
-			value = 0;
-		}
-		new_barrier.m_value = value;
-		if (InterlockedCompareExchange(&barrier->m_data(), new_barrier.m_data(), old_data) == old_data) break;
+		return res;
 	}
 
+	g_sync_barrier_notify_wm.notify(barrier.addr());
 	return CELL_OK;
 }
 
@@ -361,10 +290,9 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	}
 
 	// prx: zeroize first u16 and second u16, write buffer_size in second u32, write buffer_addr in second u64 and sync
-	rwm->m_data() = 0;
-	rwm->m_size = buffer_size;
+	rwm->m_size = be_t<u32>::make(buffer_size);
 	rwm->m_buffer = buffer;
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
+	rwm->data.exchange({});
 	return CELL_OK;
 }
 
@@ -373,6 +301,29 @@ s32 cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 bu
 	cellSync->Log("cellSyncRwmInitialize(rwm_addr=0x%x, buffer_addr=0x%x, buffer_size=0x%x)", rwm.addr(), buffer.addr(), buffer_size);
 
 	return syncRwmInitialize(rwm, buffer, buffer_size);
+}
+
+s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
+{
+	if (rwm.m_writers.ToBE())
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	rwm.m_readers++;
+	return CELL_OK;
+}
+
+s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
+{
+	if (!rwm.m_readers.ToBE())
+	{
+		cellSync->Error("syncRwmReadEndOp(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", Memory.RealToVirtualAddr(&rwm), (u16)rwm.m_writers);
+		return CELL_SYNC_ERROR_ABORT;
+	}
+
+	rwm.m_readers--;
+	return CELL_OK;
 }
 
 s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
@@ -388,47 +339,22 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: atomically load first u32, repeat until second u16 == 0, increase first u16 and sync
-	while (true)
+	// prx: increase m_readers, wait until m_writers is zero
+	g_sync_rwm_read_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncRwmRead(rwm_addr=0x%x) aborted", rwm.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-		
-		new_rwm.m_readers++;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
-	}
+		return rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp) == CELL_OK;
+	});
 
 	// copy data to buffer_addr
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
-	// prx: load first u32, return 0x8041010C if first u16 == 0, atomically decrease it
-	while (true)
+	// prx: decrease m_readers (return 0x8041010C if already zero)
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (!new_rwm.m_readers.ToBE())
-		{
-			cellSync->Error("cellSyncRwmRead(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", rwm.addr(), (u16)new_rwm.m_writers);
-			return CELL_SYNC_ERROR_ABORT;
-		}
-
-		new_rwm.m_readers--;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+		return res;
 	}
+
+	g_sync_rwm_write_wm.notify(rwm.addr());
 	return CELL_OK;
 }
 
@@ -445,38 +371,30 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (true)
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmTryReadBeginOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_rwm.m_readers++;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+		return res;
 	}
 
 	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
 
-	while (true)
+	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (!new_rwm.m_readers.ToBE())
-		{
-			cellSync->Error("cellSyncRwmRead(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", rwm.addr(), (u16)new_rwm.m_writers);
-			return CELL_SYNC_ERROR_ABORT;
-		}
-
-		new_rwm.m_readers--;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
+		return res;
 	}
+
+	g_sync_rwm_write_wm.notify(rwm.addr());
+	return CELL_OK;
+}
+
+s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
+{
+	if (rwm.m_writers.ToBE())
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	rwm.m_writers = 1;
 	return CELL_OK;
 }
 
@@ -493,45 +411,23 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: atomically compare second u16 (m_writers) with 0, repeat if not 0, set 1, sync
-	while (true)
+	g_sync_rwm_read_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		const u32 old_data = rwm->m_data();
-		CellSyncRwm new_rwm;
-		new_rwm.m_data() = old_data;
-
-		if (new_rwm.m_writers.ToBE())
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (I)", rwm.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		new_rwm.m_writers = 1;
-		if (InterlockedCompareExchange(&rwm->m_data(), new_rwm.m_data(), old_data) == old_data) break;
-	}
+		return rwm->data.atomic_op(CELL_OK, syncRwmTryWriteBeginOp) == CELL_OK;
+	});
 
 	// prx: wait until m_readers == 0
-	while (rwm->m_readers.ToBE())
+	g_sync_rwm_write_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellSync->Warning("cellSyncRwmWrite(rwm_addr=0x%x) aborted (II)", rwm.addr());
-			return CELL_OK;
-		}
-	}
+		return rwm->data.read_relaxed().m_readers.ToBE() == 0;
+	});
 
 	// prx: copy data from buffer_addr
 	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
-	rwm->m_data() = 0;
+	rwm->data.exchange({});
+	g_sync_rwm_read_wm.notify(rwm.addr());
 	return CELL_OK;
 }
 
@@ -548,15 +444,18 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: compare m_readers | m_writers with 0, return busy if not zero, set m_writers to 1
-	if (InterlockedCompareExchange(&rwm->m_data(), se32(1), 0) != 0) return CELL_SYNC_ERROR_BUSY;
+	// prx: compare m_readers | m_writers with 0, return if not zero, set m_writers to 1
+	if (!rwm->data.compare_and_swap_test({}, { be_t<u16>::make(0), be_t<u16>::make(1) }))
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
 
 	// prx: copy data from buffer_addr
 	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
-	InterlockedCompareExchange(&rwm->m_data(), 0, 0);
-	rwm->m_data() = 0;
+	rwm->data.exchange({});
+	g_sync_rwm_read_wm.notify(rwm.addr());
 	return CELL_OK;
 }
 
@@ -580,11 +479,10 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	}
 
 	// prx: zeroize first u64, write size in third u32, write depth in fourth u32, write address in third u64 and sync
-	queue->m_data() = 0;
-	queue->m_size = size;
-	queue->m_depth = depth;
-	queue->m_buffer = buffer;
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	queue->m_size = be_t<u32>::make(size);
+	queue->m_depth = be_t<u32>::make(depth);
+	queue->m_buffer.set(buffer.addr());
+	queue->data.exchange({});
 	return CELL_OK;
 }
 
@@ -593,6 +491,26 @@ s32 cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u3
 	cellSync->Log("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.addr(), buffer.addr(), size, depth);
 
 	return syncQueueInitialize(queue, buffer, size, depth);
+}
+
+s32 syncQueueTryPushOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	// prx: compare 5th u8 with zero (break if not zero)
+	// prx: compare (second u32 (u24) + first u8) with depth (break if greater or equal)
+	if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+	{
+		return CELL_SYNC_ERROR_BUSY;
+	}
+
+	// prx: extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
+	// prx: insert 1 in 5th u8
+	// prx: extract second u32 (u24), increase it, insert it back
+	position = (v1 & 0xffffff);
+	queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
+	queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
+	return CELL_OK;
 }
 
 s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
@@ -610,52 +528,24 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		// prx: compare 5th u8 with zero (repeat if not zero)
-		// prx: compare (second u32 (u24) + first u8) with depth (repeat if greater or equal)
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePush(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		// prx: extract first u32 (u24) (-> position), calculate (position + 1) % depth, insert it back
-		// prx: insert 1 in 5th u8
-		// prx: extract second u32 (u24), increase it, insert it back
-		position = (v1 & 0xffffff);
-		new_queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		new_queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+			return syncQueueTryPushOp(queue, depth, position);
+		});
+	});
 
 	// prx: memcpy(position * m_size + m_addr, buffer_addr, m_size), sync
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
 
 	// prx: atomically insert 0 in 5th u8
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v2 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -674,39 +564,42 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		position = (v1 & 0xffffff);
-		new_queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
-		new_queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPushOp(queue, depth, position);
+	});
+	if (res)
+	{
+		return res;
 	}
 
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
+	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+	g_sync_queue_wm.notify(queue.addr());
+	return CELL_OK;
+}
 
-	while (true)
+s32 syncQueueTryPopOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	// prx: extract first u8, repeat if not zero
+	// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
+	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v2 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return CELL_SYNC_ERROR_BUSY;
 	}
+
+	// prx: insert 1 in first u8
+	// prx: extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
+	// prx: extract second u32 (u24), decrease it, insert it back
+	queue.m_v1 = 0x1000000 | v1;
+	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
+	queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
 	return CELL_OK;
 }
 
@@ -725,52 +618,24 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
-	while (true)
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		// prx: extract first u8, repeat if not zero
-		// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePop(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		// prx: insert 1 in first u8
-		// prx: extract first u32 (u24), add depth, subtract second u32 (u24), calculate (% depth), save to position
-		// prx: extract second u32 (u24), decrease it, insert it back
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+			return syncQueueTryPopOp(queue, depth, position);
+		});
+	});
 
 	// prx: (sync), memcpy(buffer_addr, position * m_size + m_addr, m_size)
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
 
 	// prx: atomically insert 0 in first u8
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -789,39 +654,36 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		new_queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPopOp(queue, depth, position);
+	});
+	if (res)
+	{
+		return res;
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
+	return CELL_OK;
+}
 
-	while (true)
+s32 syncQueueTryPeekOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
+{
+	const u32 v1 = (u32)queue.m_v1;
+	const u32 v2 = (u32)queue.m_v2;
+	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return CELL_SYNC_ERROR_BUSY;
 	}
+
+	queue.m_v1 = 0x1000000 | v1;
+	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
 	return CELL_OK;
 }
 
@@ -840,44 +702,21 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
-			{
-				cellSync->Warning("cellSyncQueuePeek(queue_addr=0x%x) aborted", queue.addr());
-				return CELL_OK;
-			}
-			continue;
-		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+			return syncQueueTryPeekOp(queue, depth, position);
+		});
+	});
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
-
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -896,38 +735,22 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	const u32 size = (u32)queue->m_size;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
-	while (true)
+	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		const u32 v2 = (u32)new_queue.m_v2;
-		if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-
-		new_queue.m_v1 = 0x1000000 | v1;
-		position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
+		return syncQueueTryPeekOp(queue, depth, position);
+	});
+	if (res)
+	{
+		return res;
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
-
-	while (true)
-	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		new_queue.m_v1 &= 0xffffff; // TODO: use InterlockedAnd() or something
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
+	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -944,9 +767,10 @@ s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 count = (u32)queue->m_v2 & 0xffffff;
+	const auto data = queue->data.read_relaxed();
+	const u32 count = (u32)data.m_v2 & 0xffffff;
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && count <= depth);
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && count <= depth);
 
 	return count;
 }
@@ -965,55 +789,44 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	}
 
 	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)queue->m_v1 & 0xffffff) <= depth && ((u32)queue->m_v2 & 0xffffff) <= depth);
+	const auto data = queue->data.read_relaxed();
+	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
-	while (true)
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth]()
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v1 = (u32)new_queue.m_v1;
-		// prx: extract first u8, repeat if not zero, insert 1
-		if (v1 >> 24)
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
+			const u32 v1 = (u32)queue.m_v1;
+			// prx: extract first u8, repeat if not zero, insert 1
+			if (v1 >> 24)
 			{
-				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (I)", queue.addr());
-				return CELL_OK;
+				return CELL_SYNC_ERROR_BUSY;
 			}
-			continue;
-		}
-		new_queue.m_v1 = v1 | 0x1000000;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
 
-	while (true)
+			queue.m_v1 = v1 | 0x1000000;
+			return CELL_OK;
+		});
+	});
+
+	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth]()
 	{
-		const u64 old_data = queue->m_data();
-		CellSyncQueue new_queue;
-		new_queue.m_data() = old_data;
-
-		const u32 v2 = (u32)new_queue.m_v2;
-		// prx: extract 5th u8, repeat if not zero, insert 1
-		if (v2 >> 24)
+		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-			if (Emu.IsStopped())
+			const u32 v2 = (u32)queue.m_v2;
+			// prx: extract 5th u8, repeat if not zero, insert 1
+			if (v2 >> 24)
 			{
-				cellSync->Warning("cellSyncQueueClear(queue_addr=0x%x) aborted (II)", queue.addr());
-				return CELL_OK;
+				return CELL_SYNC_ERROR_BUSY;
 			}
-			continue;
-		}
-		new_queue.m_v2 = v2 | 0x1000000;
-		if (InterlockedCompareExchange(&queue->m_data(), new_queue.m_data(), old_data) == old_data) break;
-	}
 
-	queue->m_data() = 0;
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+			queue.m_v2 = v2 | 0x1000000;
+			return CELL_OK;
+		});
+	});
+
+	queue->data.exchange({});
+	g_sync_queue_wm.notify(queue.addr());
 	return CELL_OK;
 }
 
@@ -1030,50 +843,42 @@ void syncLFQueueDump(vm::ptr<CellSyncLFQueue> queue)
 
 void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
-	queue->m_h1 = 0;
-	queue->m_h2 = 0;
-	queue->m_h4 = 0;
-	queue->m_h5 = 0;
-	queue->m_h6 = 0;
-	queue->m_h8 = 0;
 	queue->m_size = size;
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
 	queue->m_direction = direction;
-	for (u32 i = 0; i < sizeof(queue->m_hs) / sizeof(queue->m_hs[0]); i++)
-	{
-		queue->m_hs[i] = 0;
-	}
+	*queue->m_hs1 = {};
+	*queue->m_hs2 = {};
 	queue->m_eaSignal = eaSignal;
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		queue->m_h3 = 0;
-		queue->m_h7 = 0;
-		queue->m_buffer = buffer + 1;
-		assert(queue->m_buffer.addr() % 2);
+		queue->pop1.write_relaxed({});
+		queue->push1.write_relaxed({});
+		queue->m_buffer.set(queue->m_buffer.addr() | 1);
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
 		//m_bs[2]
 		//m_bs[3]
 		queue->m_v1 = -1;
-		queue->m_hs[0] = -1;
-		queue->m_hs[16] = -1;
-		queue->m_v2 = 0;
-		queue->m_v3 = 0;
+		queue->push2.write_relaxed({ be_t<u16>::make(-1) });
+		queue->pop2.write_relaxed({ be_t<u16>::make(-1) });
 	}
 	else
 	{
-		//m_h3
-		//m_h7
+		queue->pop1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->pop1.read_relaxed().m_h3, be_t<u16>::make(0) });
+		queue->push1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->push1.read_relaxed().m_h7, be_t<u16>::make(0) });
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;
 		queue->m_bs[3] = -1;
 		queue->m_v1 = 0;
-		queue->m_v2 = 0; // written as u64
-		queue->m_v3 = 0;
+		queue->push2.write_relaxed({});
+		queue->pop2.write_relaxed({});
 	}
+
+	queue->m_v2 = 0;
+	queue->m_eq_id = 0;
 }
 
 s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
@@ -1081,7 +886,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 #ifdef PRX_DEBUG_XXX
 	return cb_caller<s32, vm::ptr<CellSyncLFQueue>, vm::ptr<u8>, u32, u32, CellSyncQueueDirection, vm::ptr<void>>::call(GetCurrentPPUThread(), libsre + 0x205C, libsre_rtoc,
 		queue, buffer, size, depth, direction, eaSignal);
-#else
+#endif
 
 	if (!queue)
 	{
@@ -1123,17 +928,16 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 	u32 old_value;
 	while (true)
 	{
-		const u32 old_data = queue->m_data();
-		CellSyncLFQueue new_data;
-		new_data.m_data() = old_data;
+		const auto old = queue->init.read_relaxed();
+		auto init = old;
 
-		if (old_data)
+		if (old.ToBE())
 		{
-			if (sdk_ver > 0x17ffff && old_data != se32(2))
+			if (sdk_ver > 0x17ffff && old != 2)
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
-			old_value = old_data;
+			old_value = old.ToLE();
 		}
 		else
 		{
@@ -1148,14 +952,14 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 					}
 				}
 			}
-			new_data.m_data() = se32(1);
-			old_value = se32(1);
+			init = 1;
+			old_value = 1;
 		}
 
-		if (InterlockedCompareExchange(&queue->m_data(), new_data.m_data(), old_data) == old_data) break;
+		if (queue->init.compare_and_swap_test(old, init)) break;
 	}
 
-	if (old_value == se32(2))
+	if (old_value == 2)
 	{
 		if ((u32)queue->m_size != size || (u32)queue->m_depth != depth || queue->m_buffer.addr() != buffer.addr())
 		{
@@ -1175,14 +979,12 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 		syncLFQueueInit(queue, buffer, size, depth, direction, eaSignal);
 
 		// prx: sync, zeroize u32 at 0x2c offset
-		InterlockedCompareExchange(&queue->m_data(), 0, 0);
-		queue->m_data() = 0;
+		queue->init.exchange({});
 	}
 
 	// prx: sync
-	InterlockedCompareExchange(&queue->m_data(), 0, 0);
+	queue->init.read_sync();
 	return CELL_OK;
-#endif
 }
 
 s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
@@ -1195,7 +997,7 @@ s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer
 
 s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1211,28 +1013,27 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				return -1;
 			}
 
-			const u64 old_data = InterlockedCompareExchange(&queue->m_push1(), 0, 0);
-			CellSyncLFQueue new_queue;
-			new_queue.m_push1() = old_data;
+			const auto old = queue->push1.read_sync();
+			auto push = old;
 
 			if (var1)
 			{
-				new_queue.m_h7 = 0;
+				push.m_h7 = 0;
 			}
 			if (isBlocking && useEventQueue && *(u32*)queue->m_bs == -1)
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s32)(s16)new_queue.m_h8;
+			s32 var2 = (s32)(s16)push.m_h8;
 			s32 res;
-			if (useEventQueue && ((s32)(u16)new_queue.m_h5 != var2 || new_queue.m_h7.ToBE() != 0))
+			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7.ToBE() != 0))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
 			else
 			{
-				var2 -= (s32)(u16)queue->m_h1;
+				var2 -= (s32)(u16)queue->pop1.read_relaxed().m_h1;
 				if (var2 < 0)
 				{
 					var2 += depth * 2;
@@ -1240,21 +1041,21 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 
 				if (var2 < depth)
 				{
-					pointer = (s16)new_queue.m_h8;
+					pointer = (s16)push.m_h8;
 					if (pointer + 1 >= depth * 2)
 					{
-						new_queue.m_h8 = 0;
+						push.m_h8 = 0;
 					}
 					else
 					{
-						new_queue.m_h8++;
+						push.m_h8++;
 					}
 					res = CELL_OK;
 				}
 				else if (!isBlocking)
 				{
 					res = CELL_SYNC_ERROR_AGAIN;
-					if (!new_queue.m_h7.ToBE() || res)
+					if (!push.m_h7.ToBE() || res)
 					{
 						return res;
 					}
@@ -1267,7 +1068,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				else
 				{
 					res = CELL_OK;
-					new_queue.m_h7 = 3;
+					push.m_h7 = 3;
 					if (isBlocking != 3)
 					{
 						break;
@@ -1275,9 +1076,9 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				}
 			}
 
-			if (InterlockedCompareExchange(&queue->m_push1(), new_queue.m_push1(), old_data) == old_data)
+			if (queue->push1.compare_and_swap_test(old, push))
 			{
-				if (!new_queue.m_h7.ToBE() || res)
+				if (!push.m_h7.ToBE() || res)
 				{
 					return res;
 				}
@@ -1285,17 +1086,12 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		u32 eq = (u32)queue->m_v3; // 0x7c
-		sys_event_data event;
-		assert(0);
-		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
+		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
 		var1 = 1;
 	}
-
-	assert(0);
 }
 
-s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	cellSync->Todo("_cellSyncLFQueueGetPushPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
 		queue.addr(), pointer.addr(), isBlocking, useEventQueue);
@@ -1314,7 +1110,7 @@ s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync->Todo("_cellSyncLFQueueGetPushPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
@@ -1328,7 +1124,7 @@ s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t
 
 s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_PPU2SPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_PPU2SPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1337,27 +1133,26 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_push2(), 0, 0);
-		CellSyncLFQueue new_queue;
-		new_queue.m_push2() = old_data;
+		const auto old = queue->push2.read_sync();
+		auto push2 = old;
 
-		const u32 old_data2 = queue->m_push3();
-		new_queue.m_push3() = old_data2;
+		const auto old2 = queue->push3.read_relaxed();
+		auto push3 = old2;
 
-		s32 var1 = pointer - (u16)new_queue.m_h5;
+		s32 var1 = pointer - (u16)push3.m_h5;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
 		}
 
-		s32 var2 = (s32)(s16)queue->m_h4 - (s32)(u16)queue->m_h1;
+		s32 var2 = (s32)(s16)queue->pop1.read_relaxed().m_h4 - (s32)(u16)queue->pop1.read_relaxed().m_h1;
 		if (var2 < 0)
 		{
 			var2 += depth * 2;
 		}
 
 		s32 var9_ = 15 - var1;
-		// calculate (1 slw (15 - var1))
+		// calculate (u16)(1 slw (15 - var1))
 		if (var9_ & 0x30)
 		{
 			var9_ = 0;
@@ -1366,20 +1161,9 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)new_queue.m_h6);
-		// count leading zeros in u16
-		{
-			u16 v = var9;
-			for (var9 = 0; var9 < 16; var9++)
-			{
-				if (v & (1 << (15 - var9)))
-				{
-					break;
-				}
-			}
-		}
+		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)push3.m_h6)) - 16; // count leading zeros in u16
 		
-		s32 var5 = (s32)(u16)new_queue.m_h6 | var9_;
+		s32 var5 = (s32)(u16)push3.m_h6 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1389,13 +1173,13 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)new_queue.m_h5 + var9;
+		s32 var3 = (u16)push3.m_h5 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		u16 pack = new_queue.m_hs[0]; // three packed 5-bit fields
+		u16 pack = push2.pack; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1433,22 +1217,23 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 				var12 = (var12 + 1) << 10;
 			}
 
-			new_queue.m_hs[0] = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs[1 + 2 * var11];
+			push2.pack = (pack & 0x83ff) | var12;
+			var6 = (u16)queue->m_hs1[var11];
 		}
 		else
 		{
 			var6 = -1;
 		}
 
-		s32 var7 = (var3 << 16) | (var5 & 0xffff);
+		push3.m_h5 = (u16)var3;
+		push3.m_h6 = (u16)var5;
 
-		if (InterlockedCompareExchange(&queue->m_push2(), new_queue.m_push2(), old_data) == old_data)
+		if (queue->push2.compare_and_swap_test(old, push2))
 		{
 			assert(var2 + var4 < 16);
 			if (var6 != -1)
 			{
-				bool exch = InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2;
+				bool exch = queue->push3.compare_and_swap_test(old2, push3);
 				assert(exch);
 				if (exch)
 				{
@@ -1458,10 +1243,10 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			}
 			else
 			{
-				pack = queue->m_hs[0];
+				pack = queue->push2.read_relaxed().pack;
 				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
-					if (InterlockedCompareExchange(&queue->m_push3(), re32(var7), old_data2) == old_data2)
+					if (queue->push3.compare_and_swap_test(old2, push3))
 					{
 						return CELL_OK;
 					}
@@ -1469,8 +1254,6 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 			}
 		}
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
@@ -1522,7 +1305,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 	{
 		s32 res;
 
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
 #ifdef PRX_DEBUG_XXX
 			res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>::call(GetCurrentPPUThread(), libsre + 0x24B0, libsre_rtoc,
@@ -1568,7 +1351,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 	memcpy(vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), buffer.get_ptr(), size);
 
 	s32 res;
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
 #ifdef PRX_DEBUG_XXX
 		res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, s32, u64>::call(GetCurrentPPUThread(), libsre + 0x26C0, libsre_rtoc,
@@ -1593,7 +1376,7 @@ s32 _cellSyncLFQueuePushBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void>
 
 s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32, u32 useEventQueue)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_SPU2PPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1609,28 +1392,27 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 				return -1;
 			}
 
-			const u64 old_data = InterlockedCompareExchange(&queue->m_pop1(), 0, 0);
-			CellSyncLFQueue new_queue;
-			new_queue.m_pop1() = old_data;
+			const auto old = queue->pop1.read_sync();
+			auto pop = old;
 
 			if (var1)
 			{
-				new_queue.m_h3 = 0;
+				pop.m_h3 = 0;
 			}
 			if (isBlocking && useEventQueue && *(u32*)queue->m_bs == -1)
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s32)(s16)new_queue.m_h4;
+			s32 var2 = (s32)(s16)pop.m_h4;
 			s32 res;
-			if (useEventQueue && ((s32)(u16)new_queue.m_h1 != var2 || new_queue.m_h3.ToBE() != 0))
+			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3.ToBE() != 0))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
 			else
 			{
-				var2 = (s32)(u16)queue->m_h5 - var2;
+				var2 = (s32)(u16)queue->push1.read_relaxed().m_h5 - var2;
 				if (var2 < 0)
 				{
 					var2 += depth * 2;
@@ -1638,21 +1420,21 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 
 				if (var2 > 0)
 				{
-					pointer = (s16)new_queue.m_h4;
+					pointer = (s16)pop.m_h4;
 					if (pointer + 1 >= depth * 2)
 					{
-						new_queue.m_h4 = 0;
+						pop.m_h4 = 0;
 					}
 					else
 					{
-						new_queue.m_h4++;
+						pop.m_h4++;
 					}
 					res = CELL_OK;
 				}
 				else if (!isBlocking)
 				{
 					res = CELL_SYNC_ERROR_AGAIN;
-					if (!new_queue.m_h3.ToBE() || res)
+					if (!pop.m_h3.ToBE() || res)
 					{
 						return res;
 					}
@@ -1665,7 +1447,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 				else
 				{
 					res = CELL_OK;
-					new_queue.m_h3 = 3;
+					pop.m_h3 = 3;
 					if (isBlocking != 3)
 					{
 						break;
@@ -1673,9 +1455,9 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 				}
 			}
 
-			if (InterlockedCompareExchange(&queue->m_pop1(), new_queue.m_pop1(), old_data) == old_data)
+			if (queue->pop1.compare_and_swap_test(old, pop))
 			{
-				if (!new_queue.m_h3.ToBE() || res)
+				if (!pop.m_h3.ToBE() || res)
 				{
 					return res;
 				}
@@ -1683,17 +1465,12 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		u32 eq = (u32)queue->m_v3; // 0x7c
-		sys_event_data event;
-		assert(0);
-		// TODO: sys_event_queue_receive (event data is not used), assert if error returned
+		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
 		var1 = 1;
 	}
-
-	assert(0);
 }
 
-s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
 {
 	cellSync->Todo("_cellSyncLFQueueGetPopPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, arg4=%d, useEventQueue=%d)",
 		queue.addr(), pointer.addr(), isBlocking, arg4, useEventQueue);
@@ -1712,7 +1489,7 @@ s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> pointer, u32 isBlocking, u32 useEventQueue)
+s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPopPointer
 	cellSync->Todo("_cellSyncLFQueueGetPopPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
@@ -1726,7 +1503,7 @@ s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<
 
 s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_SPU2PPU))
+	if (queue->m_direction != CELL_SYNC_QUEUE_SPU2PPU)
 	{
 		return CELL_SYNC_ERROR_PERM;
 	}
@@ -1735,27 +1512,26 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_pop2(), 0, 0);
-		CellSyncLFQueue new_queue;
-		new_queue.m_pop2() = old_data;
+		const auto old = queue->pop2.read_sync();
+		auto pop2 = old;
 
-		const u32 old_data2 = queue->m_pop3();
-		new_queue.m_pop3() = old_data2;
+		const auto old2 = queue->pop3.read_relaxed();
+		auto pop3 = old2;
 
-		s32 var1 = pointer - (u16)new_queue.m_h1;
+		s32 var1 = pointer - (u16)pop3.m_h1;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
 		}
 
-		s32 var2 = (s32)(s16)queue->m_h8 - (s32)(u16)queue->m_h5;
+		s32 var2 = (s32)(s16)queue->push1.read_relaxed().m_h8 - (s32)(u16)queue->push1.read_relaxed().m_h5;
 		if (var2 < 0)
 		{
 			var2 += depth * 2;
 		}
 
 		s32 var9_ = 15 - var1;
-		// calculate (1 slw (15 - var1))
+		// calculate (u16)(1 slw (15 - var1))
 		if (var9_ & 0x30)
 		{
 			var9_ = 0;
@@ -1764,20 +1540,9 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = ~(var9_ | (u16)new_queue.m_h2);
-		// count leading zeros in u16
-		{
-			u16 v = var9;
-			for (var9 = 0; var9 < 16; var9++)
-			{
-				if (v & (1 << (15 - var9)))
-				{
-					break;
-				}
-			}
-		}
+		s32 var9 = cntlz32((u32)(u16)~(var9_ | (u16)pop3.m_h2)) - 16; // count leading zeros in u16
 
-		s32 var5 = (s32)(u16)new_queue.m_h2 | var9_;
+		s32 var5 = (s32)(u16)pop3.m_h2 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1787,13 +1552,13 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)new_queue.m_h1 + var9;
+		s32 var3 = (u16)pop3.m_h1 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
 		}
 
-		u16 pack = new_queue.m_hs[16]; // three packed 5-bit fields
+		u16 pack = pop2.pack; // three packed 5-bit fields
 
 		s32 var4 = ((pack >> 10) & 0x1f) - ((pack >> 5) & 0x1f);
 		if (var4 < 0)
@@ -1835,17 +1600,18 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 				var12 = (var12 + 1) << 10;
 			}
 
-			new_queue.m_hs[0] = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs[17 + 2 * var11];
+			pop2.pack = (pack & 0x83ff) | var12;
+			var6 = (u16)queue->m_hs2[var11];
 		}
 
-		s32 var7 = (var3 << 16) | (var5 & 0xffff);
+		pop3.m_h1 = (u16)var3;
+		pop3.m_h2 = (u16)var5;
 
-		if (InterlockedCompareExchange(&queue->m_pop2(), new_queue.m_pop2(), old_data) == old_data)
+		if (queue->pop2.compare_and_swap_test(old, pop2))
 		{
 			if (var6 != -1)
 			{
-				bool exch = InterlockedCompareExchange(&queue->m_pop3(), re32(var7), old_data2) == old_data2;
+				bool exch = queue->pop3.compare_and_swap_test(old2, pop3);
 				assert(exch);
 				if (exch)
 				{
@@ -1855,10 +1621,10 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			}
 			else
 			{
-				pack = queue->m_hs[16];
+				pack = queue->pop2.read_relaxed().pack;
 				if ((pack & 0x1f) == ((pack >> 10) & 0x1f))
 				{
-					if (InterlockedCompareExchange(&queue->m_pop3(), re32(var7), old_data2) == old_data2)
+					if (queue->pop3.compare_and_swap_test(old2, pop3))
 					{
 						return CELL_OK;
 					}
@@ -1866,8 +1632,6 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 			}
 		}
 	}
-
-	assert(0);
 }
 
 s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1917,7 +1681,7 @@ s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer
 	while (true)
 	{
 		s32 res;
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
 #ifdef PRX_DEBUG_XXX
 			res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64, u64>::call(GetCurrentPPUThread(), libsre + 0x2A90, libsre_rtoc,
@@ -1960,7 +1724,7 @@ s32 _cellSyncLFQueuePopBody(vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer
 	memcpy(buffer.get_ptr(), vm::get_ptr<void>((u64)(queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position)), size);
 
 	s32 res;
-	if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
 #ifdef PRX_DEBUG_XXX
 		res = cb_caller<s32, vm::ptr<CellSyncLFQueue>, s32, u64, u64>::call(GetCurrentPPUThread(), libsre + 0x2CA8, libsre_rtoc,
@@ -1995,42 +1759,44 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO: optimize if possible
 	while (true)
 	{
-		const u64 old_data = InterlockedCompareExchange(&queue->m_pop1(), 0, 0);
-		CellSyncLFQueue new_queue;
-		new_queue.m_pop1() = old_data;
+		const auto old = queue->pop1.read_sync();
+		auto pop = old;
 
-		const u64 new_data = queue->m_push1();
-		new_queue.m_push1() = new_data;
+		const auto push = queue->push1.read_relaxed();
 
 		s32 var1, var2;
-		if (queue->m_direction.ToBE() != se32(CELL_SYNC_QUEUE_ANY2ANY))
+		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-			var1 = var2 = (u16)queue->m_hs[16];
+			var1 = var2 = (u16)queue->pop2.read_relaxed().pack;
 		}
 		else
 		{
-			var1 = (u16)new_queue.m_h7;
-			var2 = (u16)new_queue.m_h3;
+			var1 = (u16)push.m_h7;
+			var2 = (u16)pop.m_h3;
 		}
 
-		if ((s32)(s16)new_queue.m_h4 != (s32)(u16)new_queue.m_h1 ||
-			(s32)(s16)new_queue.m_h8 != (s32)(u16)new_queue.m_h5 ||
+		if ((s32)(s16)pop.m_h4 != (s32)(u16)pop.m_h1 ||
+			(s32)(s16)push.m_h8 != (s32)(u16)push.m_h5 ||
 			((var2 >> 10) & 0x1f) != (var2 & 0x1f) ||
 			((var1 >> 10) & 0x1f) != (var1 & 0x1f))
 		{
 			return CELL_SYNC_ERROR_BUSY;
 		}
 
-		if (InterlockedCompareExchange(&queue->m_pop1(), new_data, old_data) == old_data) break;
+		pop.m_h1 = push.m_h5;
+		pop.m_h2 = push.m_h6;
+		pop.m_h3 = push.m_h7;
+		pop.m_h4 = push.m_h8;
+
+		if (queue->pop1.compare_and_swap_test(old, pop)) break;
 	}
 
 	return CELL_OK;
 }
 
-s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> size)
+s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size)
 {
 	cellSync->Warning("cellSyncLFQueueSize(queue_addr=0x%x, size_addr=0x%x)", queue.addr(), size.addr());
 
@@ -2043,15 +1809,14 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> size)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// TODO: optimize if possible
 	while (true)
 	{
-		const u32 old_data = InterlockedCompareExchange(&queue->m_pop3(), 0, 0);
+		const auto old = queue->pop3.read_sync();
 
-		u32 var1 = (u16)queue->m_h1;
-		u32 var2 = (u16)queue->m_h5;
+		u32 var1 = (u16)queue->pop1.read_relaxed().m_h1;
+		u32 var2 = (u16)queue->push1.read_relaxed().m_h5;
 
-		if (InterlockedCompareExchange(&queue->m_pop3(), old_data, old_data) == old_data)
+		if (queue->pop3.compare_and_swap_test(old, old))
 		{
 			if (var1 <= var2)
 			{
@@ -2064,11 +1829,9 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> size)
 			return CELL_OK;
 		}
 	}
-
-	assert(0);
 }
 
-s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> depth)
+s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 {
 	cellSync->Log("cellSyncLFQueueDepth(queue_addr=0x%x, depth_addr=0x%x)", queue.addr(), depth.addr());
 
@@ -2085,7 +1848,7 @@ s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<be_t<u32>> dept
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be_t<u32>> ppSignal)
+s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u32> ppSignal)
 {
 	cellSync->Log("_cellSyncLFQueueGetSignalAddress(queue_addr=0x%x, ppSignal_addr=0x%x)", queue.addr(), ppSignal.addr());
 
@@ -2102,7 +1865,7 @@ s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::p
 	return CELL_OK;
 }
 
-s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be_t<CellSyncQueueDirection>> direction)
+s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<CellSyncQueueDirection> direction)
 {
 	cellSync->Log("cellSyncLFQueueGetDirection(queue_addr=0x%x, direction_addr=0x%x)", queue.addr(), direction.addr());
 
@@ -2119,7 +1882,7 @@ s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be
 	return CELL_OK;
 }
 
-s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be_t<u32>> entry_size)
+s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u32> entry_size)
 {
 	cellSync->Log("cellSyncLFQueueGetEntrySize(queue_addr=0x%x, entry_size_addr=0x%x)", queue.addr(), entry_size.addr());
 
@@ -2136,28 +1899,36 @@ s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<be
 	return CELL_OK;
 }
 
-s32 syncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	// TODO
-	assert(0);
+#ifdef PRX_DEBUG
+	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x19A8, libsre_rtoc,
+		spus, num, queue);
+#endif
+
+	assert(!"syncLFQueueAttachLv2EventQueue");
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 
 	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
 }
 
-s32 syncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	// TODO
-	assert(0);
+#ifdef PRX_DEBUG
+	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x1DA0, libsre_rtoc,
+		spus, num, queue);
+#endif
+
+	assert(!"syncLFQueueDetachLv2EventQueue");
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<be_t<u32>> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync->Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
 
@@ -2218,7 +1989,9 @@ void cellSync_init(Module *pxThis)
 #ifdef PRX_DEBUG
 	CallAfter([]()
 	{
-		libsre = (u32)Memory.PRXMem.AllocAlign(sizeof(libsre_data), 4096);
+		if (!Memory.MainMem.GetStartAddr()) return;
+
+		libsre = (u32)Memory.MainMem.AllocAlign(sizeof(libsre_data), 0x100000);
 		memcpy(vm::get_ptr<void>(libsre), libsre_data, sizeof(libsre_data));
 		libsre_rtoc = libsre + 0x399B0;
 

@@ -6,12 +6,12 @@
 #include "sys_memory.h"
 #include "sys_vm.h"
 
-SysCallBase sys_vm("vm");
+SysCallBase sys_vm("sys_vm");
 MemoryContainerInfo* current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)
 {
-	sys_vm.Todo("sys_vm_memory_map(vsize=0x%x,psize=0x%x,cidr=0x%x,flags=0x%llx,policy=0x%llx,addr=0x%x)", 
+	sys_vm.Error("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cidr=0x%x, flags=0x%llx, policy=0x%llx, addr_addr=0x%x)", 
 		vsize, psize, cid, flag, policy, addr);
 
 	// Check virtual size.
@@ -26,25 +26,12 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 		return CELL_ENOMEM;
 	}
 
+	// Use fixed address (TODO: search and use some free address instead)
+	u32 new_addr = Memory.IsGoodAddr(0x60000000) ? 0x70000000 : 0x60000000;
+
 	// If container ID is SYS_MEMORY_CONTAINER_ID_INVALID, allocate directly.
 	if(cid == SYS_MEMORY_CONTAINER_ID_INVALID)
 	{
-		u32 new_addr;
-		switch(flag)
-		{
-		case SYS_MEMORY_PAGE_SIZE_1M:
-			new_addr = (u32)Memory.Alloc(psize, 0x100000);
-			break;
-
-		case SYS_MEMORY_PAGE_SIZE_64K:
-			new_addr = (u32)Memory.Alloc(psize, 0x10000);
-			break;
-
-		default: return CELL_EINVAL;
-		}
-
-		if(!new_addr) return CELL_ENOMEM;
-
 		// Create a new MemoryContainerInfo to act as default container with vsize.
 		current_ct = new MemoryContainerInfo(new_addr, vsize);
 	}
@@ -57,18 +44,22 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 		current_ct = ct;
 	}
 
+	// Allocate actual memory using virtual size (physical size is ignored)
+	assert(Memory.Map(new_addr, vsize));
+
 	// Write a pointer for the allocated memory.
-	vm::write32(addr, current_ct->addr);
+	vm::write32(addr, new_addr);
 
 	return CELL_OK;
 }
 
 s32 sys_vm_unmap(u32 addr)
 {
-	sys_vm.Todo("sys_vm_unmap(addr=0x%x)", addr);
+	sys_vm.Error("sys_vm_unmap(addr=0x%x)", addr);
 
-	// Simply free the memory to unmap.
-	if(!Memory.Free(addr)) return CELL_EINVAL;
+	// Unmap memory.
+	assert(addr == 0x60000000 || addr == 0x70000000);
+	if(!Memory.Unmap(addr)) return CELL_EINVAL;
 
 	return CELL_OK;
 }

@@ -3,7 +3,7 @@
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
 #define MEM_AND_REG_HASH() \
-	unsigned char mem_h[20]; sha1(vm::get_ptr<u8>(CPU.dmac.ls_offset), 256*1024, mem_h); \
+	unsigned char mem_h[20]; sha1(vm::get_ptr<u8>(CPU.ls_offset), 256*1024, mem_h); \
 	unsigned char reg_h[20]; sha1((const unsigned char*)CPU.GPR, sizeof(CPU.GPR), reg_h); \
 	LOG_NOTICE(Log::SPU, "Mem hash: 0x%llx, reg hash: 0x%llx", *(u64*)mem_h, *(u64*)reg_h);
 
@@ -251,10 +251,12 @@ private:
 	}
 	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -270,10 +272,12 @@ private:
 	}
 	void BINZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -289,10 +293,12 @@ private:
 	}
 	void BIHZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -308,10 +314,12 @@ private:
 	}
 	void BIHNZ(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -337,10 +345,12 @@ private:
 	}
 	void BI(u32 intr, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -349,10 +359,12 @@ private:
 	}
 	void BISL(u32 intr, u32 rt, u32 ra)
 	{
-		if (intr)
+		switch (intr)
 		{
-			UNIMPLEMENTED();
-			return;
+		case 0: break;
+		case 0x10: break; // enable interrupts
+		case 0x20: break; // disable interrupts
+		default: UNIMPLEMENTED(); return;
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
@@ -432,9 +444,7 @@ private:
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
-		u32 a = CPU.GPR[ra]._u32[3], b = CPU.GPR[rb]._u32[3];
-
-		u32 lsa = (a + b) & 0x3fff0;
+		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 
 		CPU.GPR[rt] = CPU.ReadLS128(lsa);
 	}
@@ -465,6 +475,12 @@ private:
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0xF;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u8[15 - t] = 0x03;
@@ -473,6 +489,12 @@ private:
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0xE;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u16[7 - (t >> 1)] = 0x0203;
@@ -480,6 +502,12 @@ private:
 	void CWX(u32 rt, u32 ra, u32 rb)
 	{
 		const u32 t = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0xC;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 		
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -488,6 +516,12 @@ private:
 	void CDX(u32 rt, u32 ra, u32 rb)
 	{
 		const u32 t = (CPU.GPR[rb]._u32[3] + CPU.GPR[ra]._u32[3]) & 0x8;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -574,6 +608,12 @@ private:
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xF;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u8[15 - t] = 0x03;
@@ -581,6 +621,12 @@ private:
 	void CHD(u32 rt, u32 ra, s32 i7)
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xE;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -590,6 +636,12 @@ private:
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0xC;
 
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
+
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
 		CPU.GPR[rt]._u32[3 - (t >> 2)] = 0x00010203;
@@ -597,6 +649,12 @@ private:
 	void CDD(u32 rt, u32 ra, s32 i7)
 	{
 		const int t = (CPU.GPR[ra]._u32[3] + i7) & 0x8;
+
+		if (ra == 1 && (CPU.GPR[ra]._u32[3] & 0xF))
+		{
+			LOG_ERROR(SPU, "%s(): SP = 0x%x", __FUNCTION__, CPU.GPR[ra]._u32[3]);
+			Emu.Pause();
+		}
 
 		CPU.GPR[rt]._u64[0] = (u64)0x18191A1B1C1D1E1F;
 		CPU.GPR[rt]._u64[1] = (u64)0x1011121314151617;
@@ -1088,6 +1146,7 @@ private:
 		for (int i = 0; i < 4; i++)
 		{
 			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
+
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
 			if (exp > 255) //< 0

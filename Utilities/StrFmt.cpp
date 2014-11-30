@@ -103,3 +103,34 @@ std::vector<std::string> fmt::rSplit(const std::string& source, const std::strin
 	} while (true);
 	return ret;
 }
+
+std::vector<std::string> fmt::split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
+{
+	std::vector<std::string> result;
+
+	size_t cursor_begin = 0;
+
+	for (size_t cursor_end = 0; cursor_end < source.length(); ++cursor_end)
+	{
+		for (auto &separator : separators)
+		{
+			if (strncmp(source.c_str() + cursor_end, separator.c_str(), separator.length()) == 0)
+			{
+				std::string candidate = source.substr(cursor_begin, cursor_end - cursor_begin);
+				if (!is_skip_empty || !candidate.empty())
+					result.push_back(candidate);
+
+				cursor_begin = cursor_end + separator.length();
+				cursor_end = cursor_begin - 1;
+				break;
+			}
+		}
+	}
+
+	if (cursor_begin != source.length())
+	{
+		result.push_back(source.substr(cursor_begin));
+	}
+
+	return std::move(result);
+}

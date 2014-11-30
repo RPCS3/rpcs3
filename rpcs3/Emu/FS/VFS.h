@@ -42,9 +42,16 @@ struct VFSManagerEntry
 	}
 };
 
+std::vector<std::string> simplify_path_blocks(const std::string& path);
+std::string simplify_path(const std::string& path, bool is_dir);
+
 struct VFS
 {
 	~VFS();
+
+	std::string cwd;
+
+	std::string FindEntry(const std::string &path);
 
 	//TODO: find out where these are supposed to be deleted or just make it shared_ptr
 	//and also make GetDevice and GetDeviceLocal return shared_ptr then.

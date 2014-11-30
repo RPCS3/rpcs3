@@ -120,8 +120,8 @@ int Decrypt(rFile& pkg_f, rFile& dec_pkg_f, PKGHeader* m_header)
 			{
 				aes_crypt_ecb(&c, AES_ENCRYPT, iv, ctr+j*HASH_LEN);
 
-				be_t<u64> hi = be_t<u64>::MakeFromBE(*(u64*)&iv[0]);
-				be_t<u64> lo = be_t<u64>::MakeFromBE(*(u64*)&iv[8]);
+				be_t<u64> hi = *(be_t<u64>*)&iv[0];
+				be_t<u64> lo = *(be_t<u64>*)&iv[8];
 				lo++;
 
 				if (lo == 0)

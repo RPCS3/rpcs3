@@ -1,6 +1,8 @@
 #pragma once
+#include "Emu/Memory/vm.h"
 
 struct vfsFileBase;
+struct vfsStream;
 class rFile;
 
 #ifdef _DEBUG	
@@ -65,22 +67,7 @@ struct sys_process_param
 	sys_process_param_info info;
 };
 
-struct sys_proc_prx_param
-{
-	be_t<u32> size;
-	be_t<u32> magic;
-	be_t<u32> version;
-	be_t<u32> pad0;
-	be_t<u32> libentstart;
-	be_t<u32> libentend;
-	be_t<u32> libstubstart;
-	be_t<u32> libstubend;
-	be_t<u16> ver;
-	be_t<u16> pad1;
-	be_t<u32> pad2;
-};
-
-struct Elf64_StubHeader
+struct sys_stub
 {
 	u8 s_size; // = 0x2c
 	u8 s_unk0;
@@ -89,59 +76,80 @@ struct Elf64_StubHeader
 	be_t<u16> s_imports;
 	be_t<u32> s_unk2; // = 0x0
 	be_t<u32> s_unk3; // = 0x0
-	be_t<u32> s_modulename;
-	be_t<u32> s_nid;
-	be_t<u32> s_text;
+	vm::bptr<const char> s_modulename;
+	vm::bptr<u32> s_nid;
+	vm::bptr<u32> s_text;
 	be_t<u32> s_unk4; // = 0x0
 	be_t<u32> s_unk5; // = 0x0
 	be_t<u32> s_unk6; // = 0x0
 	be_t<u32> s_unk7; // = 0x0
 };
 
-class LoaderBase
+struct sys_proc_prx_param
 {
-protected:
-	u32 entry;
-	u32 min_addr;
-	u32 max_addr;
-	Elf_Machine machine;
+	be_t<u32> size;
+	be_t<u32> magic;
+	be_t<u32> version;
+	be_t<u32> pad0;
+	be_t<u32> libentstart;
+	be_t<u32> libentend;
+	vm::bptr<sys_stub> libstubstart;
+	vm::bptr<sys_stub> libstubend;
+	be_t<u16> ver;
+	be_t<u16> pad1;
+	be_t<u32> pad2;
+};
 
-	LoaderBase()
-		: machine(MACHINE_Unknown)
-		, entry(0)
-		, min_addr(0)
-		, max_addr(0)
+namespace loader
+{
+	class handler
 	{
-	}
+		u64 m_stream_offset;
 
-public:
-	virtual ~LoaderBase() = default;
+	protected:
+		vfsStream* m_stream;
 
-	virtual bool LoadInfo() { return false; }
-	virtual bool LoadData(u64 offset = 0) { return false; }
-	Elf_Machine GetMachine() const { return machine; }
+	public:
+		enum error_code
+		{
+			bad_version = -1,
+			bad_file = -2,
+			broken_file = -3,
+			loading_error = -4,
+			bad_relocation_type = -5,
+			ok = 0,
+		};
 
-	u32 GetEntry()   const { return entry; }
-	u32 GetMinAddr() const { return min_addr; }
-	u32 GetMaxAddr() const { return max_addr; }
-};
+		virtual ~handler() = default;
 
-class Loader : public LoaderBase
-{
-	vfsFileBase* m_stream;
-	LoaderBase* m_loader;
+		virtual error_code init(vfsStream& stream);
+		virtual error_code load() = 0;
+		u64 get_stream_offset() const
+		{
+			return m_stream_offset;
+		}
+	};
 
-public:
-	Loader();
-	Loader(vfsFileBase& stream);
-	virtual ~Loader();
+	class loader
+	{
+		std::vector<handler*> m_handlers;
 
-	void Open(const std::string& path);
-	void Open(vfsFileBase& stream);
-	bool Analyze();
+	public:
+		~loader()
+		{
+			for (auto &h : m_handlers)
+			{
+				delete h;
+			}
+		}
 
-	bool Load();
+		void register_handler(handler* handler)
+		{
+			m_handlers.push_back(handler);
+		}
 
-private:
-	LoaderBase* SearchLoader();
-};
+		bool load(vfsStream& stream);
+	};
+
+	using namespace vm;
+}

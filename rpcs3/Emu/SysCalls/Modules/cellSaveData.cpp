@@ -178,7 +178,7 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 	strcpy_trunc(statGet->getParam.listParam, entry.listParam);
 
 	statGet->fileNum = 0;
-	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(0);
+	statGet->fileList.set(be_t<u32>::make(0));
 	statGet->fileListNum = 0;
 	std::string saveDir = "/dev_hdd0/home/00000001/savedata/" + entry.dirName; // TODO: Get the path of the current user
 	vfsDir dir(saveDir);
@@ -210,7 +210,7 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		}
 	}
 
-	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(be_t<u32>::MakeFromLE((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
+	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(be_t<u32>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
 	for (u32 i=0; i<fileEntries.size(); i++)
 		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
 }
@@ -989,7 +989,7 @@ int cellSaveDataFixedExport() //const char *dirName, u32 maxSizeKB, CellSaveData
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<be_t<u32>> bind, vm::ptr<be_t<u32>> sizeKB
+int cellSaveDataGetListItem() //const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_SAVEDATA_RET_OK;
@@ -1025,7 +1025,7 @@ int cellSaveDataUserFixedExport() //CellSysutilUserId userId, const char *dirNam
 	return CELL_SAVEDATA_RET_OK;
 }
 
-int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<be_t<u32>> bind, vm::ptr<be_t<u32>> sizeKB
+int cellSaveDataUserGetListItem() //CellSysutilUserId userId, const char *dirName, CellSaveDataDirStat *dir, CellSaveDataSystemFileParam *sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_SAVEDATA_RET_OK;

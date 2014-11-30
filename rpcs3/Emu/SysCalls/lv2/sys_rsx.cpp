@@ -29,7 +29,7 @@ s32 sys_rsx_device_close()
  * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16. 
  * @param a7 (IN): E.g. Immediate value passed in cellGcmSys is 8.
  */
-s32 sys_rsx_memory_allocate(vm::ptr<be_t<u32>> mem_handle, vm::ptr<be_t<u32>> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
+s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u32> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
 {
 	sys_rsx.Todo("sys_rsx_memory_allocate(mem_handle_addr=0x%x, local_mem_addr=0x%x, size=0x%x, flags=0x%x, a5=%d, a6=%d, a7=%d)",
 		mem_handle.addr(), mem_addr.addr(), size, flags, a5, a6, a7);
@@ -55,7 +55,7 @@ s32 sys_rsx_memory_free(u32 mem_handle)
  * @param mem_ctx (IN): mem_ctx given by sys_rsx_memory_allocate
  * @param system_mode (IN):
  */
-s32 sys_rsx_context_allocate(vm::ptr<be_t<u32>> context_id, vm::ptr<be_t<u32>> lpar_dma_control, vm::ptr<be_t<u32>> lpar_driver_info, vm::ptr<be_t<u32>> lpar_reports, u64 mem_ctx, u64 system_mode)
+s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u32> lpar_dma_control, vm::ptr<u32> lpar_driver_info, vm::ptr<u32> lpar_reports, u64 mem_ctx, u64 system_mode)
 {
 	sys_rsx.Todo("sys_rsx_context_allocate(context_id_addr=0x%x, lpar_dma_control_addr=0x%x, lpar_driver_info_addr=0x%x, lpar_reports_addr=0x%x, mem_ctx=0x%x, system_mode=0x%x)",
 		context_id.addr(), lpar_dma_control.addr(), lpar_driver_info.addr(), lpar_reports.addr(), mem_ctx, system_mode);
@@ -170,7 +170,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
  * @param a2 (OUT): Unused?
  * @param dev_id (IN): An immediate value and always 8. (cellGcmInitPerfMon uses 11, 10, 9, 7, 12 successively).
  */
-s32 sys_rsx_device_map(vm::ptr<be_t<u32>> a1, vm::ptr<be_t<u32>> a2, u32 dev_id)
+s32 sys_rsx_device_map(vm::ptr<u32> a1, vm::ptr<u32> a2, u32 dev_id)
 {
 	sys_rsx.Todo("sys_rsx_device_map(a1_addr=0x%x, a2_addr=0x%x, a3=%d)", a1.addr(), a2.addr(), dev_id);
 

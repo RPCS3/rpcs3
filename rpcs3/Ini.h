@@ -104,10 +104,11 @@ public:
 	IniEntry<u8> GSRenderMode;
 	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
-	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
+	IniEntry<bool> GSVSyncEnable;
+	IniEntry<bool> GS3DTV;
 
 	// Audio
 	IniEntry<u8> AudioOutMode;
@@ -115,6 +116,7 @@ public:
 	IniEntry<bool> AudioConvertToU16;
 
 	// Camera
+	IniEntry<u8> Camera;
 	IniEntry<u8> CameraType;
 
 	// Input/Output
@@ -147,11 +149,12 @@ public:
 	IniEntry<int> PadHandlerRStickUp;
 
 	// HLE/Miscs
+	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLELogging;
+	IniEntry<bool> RSXLogging;
 	IniEntry<bool> HLEHookStFunc;
 	IniEntry<bool> HLESaveTTY;
 	IniEntry<bool> HLEExitOnStop;
-	IniEntry<u8>   HLELogLvl;
 	IniEntry<bool> HLEAlwaysStart;
 
 	//Auto Pause
@@ -176,10 +179,11 @@ public:
 		GSRenderMode.Init("GS_RenderMode", path);
 		GSResolution.Init("GS_Resolution", path);
 		GSAspectRatio.Init("GS_AspectRatio", path);
-		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
+		GSVSyncEnable.Init("GS_VSyncEnable", path);
+		GS3DTV.Init("GS_3DTV", path);
 
 		// Audio
 		AudioOutMode.Init("Audio_AudioOutMode", path);
@@ -187,6 +191,7 @@ public:
 		AudioConvertToU16.Init("Audio_AudioConvertToU16", path);
 
 		// Camera
+		Camera.Init("Camera", path);
 		CameraType.Init("Camera_Type", path);
 
 		// Input/Output
@@ -220,6 +225,7 @@ public:
 
 		// HLE/Misc
 		HLELogging.Init("HLE_HLELogging", path);
+		RSXLogging.Init("RSX_Logging", path);
 		HLEHookStFunc.Init("HLE_HLEHookStFunc", path);
 		HLESaveTTY.Init("HLE_HLESaveTTY", path);
 		HLEExitOnStop.Init("HLE_HLEExitOnStop", path);
@@ -237,17 +243,18 @@ public:
 	void Load()
 	{
 		// Core
-		CPUDecoderMode.Load(2);
+		CPUDecoderMode.Load(1);
 		SPUDecoderMode.Load(1);
 
 		// Graphics
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
-		GSVSyncEnable.Load(false);
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
+		GSVSyncEnable.Load(false);
+		GS3DTV.Load(false);
 
 		// Audio
 		AudioOutMode.Load(1);
@@ -255,6 +262,7 @@ public:
 		AudioConvertToU16.Load(false);
 
 		// Camera
+		Camera.Load(0);
 		CameraType.Load(2);
 
 		// Input/Ouput
@@ -288,6 +296,7 @@ public:
 
 		// HLE/Miscs
 		HLELogging.Load(false);
+		RSXLogging.Load(false);
 		HLEHookStFunc.Load(false);
 		HLESaveTTY.Load(false);
 		HLEExitOnStop.Load(false);
@@ -313,10 +322,11 @@ public:
 		GSRenderMode.Save();
 		GSResolution.Save();
 		GSAspectRatio.Save();
-		GSVSyncEnable.Save();
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
+		GSVSyncEnable.Save();
+		GS3DTV.Save();
 
 		// Audio 
 		AudioOutMode.Save();
@@ -324,6 +334,7 @@ public:
 		AudioConvertToU16.Save();
 
 		// Camera
+		Camera.Save();
 		CameraType.Save();
 
 		// Input/Output
@@ -357,6 +368,7 @@ public:
 
 		// HLE/Miscs
 		HLELogging.Save();
+		RSXLogging.Save();
 		HLEHookStFunc.Save();
 		HLESaveTTY.Save();
 		HLEExitOnStop.Save();

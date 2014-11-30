@@ -1,5 +1,7 @@
 #pragma once
 
+struct sys_lwmutex_t;
+
 struct sys_lwcond_attribute_t
 {
 	union
@@ -11,7 +13,7 @@ struct sys_lwcond_attribute_t
 
 struct sys_lwcond_t
 {
-	be_t<u32> lwmutex;
+	vm::bptr<sys_lwmutex_t> lwmutex;
 	be_t<u32> lwcond_queue;
 };
 
@@ -23,8 +25,12 @@ struct Lwcond
 	Lwcond(u64 name)
 		: m_queue(name)
 	{
+		signal.initialize();
 	}
 };
+
+// Aux
+s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64);
 
 // SysCalls
 s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr);

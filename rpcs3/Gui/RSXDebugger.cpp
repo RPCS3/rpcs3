@@ -332,7 +332,7 @@ void RSXDebugger::GoToGet(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->get, realAddr)) {
+	if (Memory.RSXIOMem.getRealAddr(ctrl->get, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -346,7 +346,7 @@ void RSXDebugger::GoToPut(wxCommandEvent& event)
 	if (!RSXReady()) return;
 	auto ctrl = vm::get_ptr<CellGcmControl>(Emu.GetGSManager().GetRender().m_ctrlAddress);
 	u64 realAddr;
-	if (Memory.RSXIOMem.getRealAddr(Memory.RSXIOMem.GetStartAddr() + ctrl->put, realAddr)) {
+	if (Memory.RSXIOMem.getRealAddr(ctrl->put, realAddr)) {
 		m_addr = realAddr; // WARNING: Potential Truncation? Cast from u64 to u32
 		t_addr->SetValue(wxString::Format("%08x", m_addr));
 		UpdateInformation();
@@ -373,20 +373,20 @@ void RSXDebugger::GetMemory()
 	for(u32 i=0; i<m_item_count; i++)
 		m_list_commands->SetItem(i, 2, wxEmptyString);
 
-	u32 ioAddr = RSXReady() ? Memory.RSXIOMem.GetStartAddr() : 0;
+	bool isReady = RSXReady();
 
 	// Write information
 	for(u32 i=0, addr = m_addr; i<m_item_count; i++, addr += 4)
 	{
 		m_list_commands->SetItem(i, 0, wxString::Format("%08x", addr));
 	
-		if (ioAddr && Memory.IsGoodAddr(addr))
+		if (isReady && Memory.IsGoodAddr(addr))
 		{
 			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->SetItem(i, 1, wxString::Format("%08x", cmd));
 			m_list_commands->SetItem(i, 3, wxString::Format("%d", count));
-			m_list_commands->SetItem(i, 2, DisAsmCommand(cmd, count, addr, ioAddr));
+			m_list_commands->SetItem(i, 2, DisAsmCommand(cmd, count, addr, 0));
 
 			if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 			{
@@ -492,23 +492,24 @@ void RSXDebugger::GetFlags()
 #define LIST_FLAGS_ADD(name, value) \
 	m_list_flags->InsertItem(i, name); m_list_flags->SetItem(i, 1, value ? "Enabled" : "Disabled"); i++;
 
-	LIST_FLAGS_ADD("Alpha test",        render.m_set_alpha_test);
-	LIST_FLAGS_ADD("Blend",             render.m_set_blend);
-	LIST_FLAGS_ADD("Scissor",           render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
-	LIST_FLAGS_ADD("Cull face",         render.m_set_cull_face);
-	LIST_FLAGS_ADD("Depth bounds test", render.m_set_depth_bounds_test);
-	LIST_FLAGS_ADD("Depth test",        render.m_set_depth_test);
-	LIST_FLAGS_ADD("Dither",            render.m_set_dither);
-	LIST_FLAGS_ADD("Line smooth",       render.m_set_line_smooth);
-	LIST_FLAGS_ADD("Logic op",          render.m_set_logic_op);
-	LIST_FLAGS_ADD("Poly smooth",       render.m_set_poly_smooth);
-	LIST_FLAGS_ADD("Poly offset fill",  render.m_set_poly_offset_fill);
-	LIST_FLAGS_ADD("Poly offset line",  render.m_set_poly_offset_line);
-	LIST_FLAGS_ADD("Poly offset point", render.m_set_poly_offset_point);
-	LIST_FLAGS_ADD("Stencil test",      render.m_set_stencil_test);
-	LIST_FLAGS_ADD("Primitive restart", render.m_set_restart_index);
-	LIST_FLAGS_ADD("Point Sprite",	    render.m_set_point_sprite_control);
-	LIST_FLAGS_ADD("Lighting ",	    render.m_set_specular);
+	LIST_FLAGS_ADD("Alpha test",         render.m_set_alpha_test);
+	LIST_FLAGS_ADD("Blend",              render.m_set_blend);
+	LIST_FLAGS_ADD("Scissor",            render.m_set_scissor_horizontal && render.m_set_scissor_vertical);
+	LIST_FLAGS_ADD("Cull face",          render.m_set_cull_face);
+	LIST_FLAGS_ADD("Depth bounds test",  render.m_set_depth_bounds_test);
+	LIST_FLAGS_ADD("Depth test",         render.m_set_depth_test);
+	LIST_FLAGS_ADD("Dither",             render.m_set_dither);
+	LIST_FLAGS_ADD("Line smooth",        render.m_set_line_smooth);
+	LIST_FLAGS_ADD("Logic op",           render.m_set_logic_op);
+	LIST_FLAGS_ADD("Poly smooth",        render.m_set_poly_smooth);
+	LIST_FLAGS_ADD("Poly offset fill",   render.m_set_poly_offset_fill);
+	LIST_FLAGS_ADD("Poly offset line",   render.m_set_poly_offset_line);
+	LIST_FLAGS_ADD("Poly offset point",  render.m_set_poly_offset_point);
+	LIST_FLAGS_ADD("Stencil test",       render.m_set_stencil_test);
+	LIST_FLAGS_ADD("Primitive restart",  render.m_set_restart_index);
+	LIST_FLAGS_ADD("Two sided lighting", render.m_set_two_side_light_enable);
+	LIST_FLAGS_ADD("Point Sprite",	     render.m_set_point_sprite_control);
+	LIST_FLAGS_ADD("Lighting ",	         render.m_set_specular);
 
 #undef LIST_FLAGS_ADD
 }
@@ -830,7 +831,7 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 	}
 	else if(!(cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL)) && cmd != CELL_GCM_METHOD_FLAG_RETURN)
 	{
-		auto args = vm::ptr<be_t<u32>>::make(currentAddr + 4);
+		auto args = vm::ptr<u32>::make(currentAddr + 4);
 
 		u32 index = 0;
 		switch(cmd & 0x3ffff)

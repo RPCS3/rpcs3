@@ -61,5 +61,4 @@ enum
 
 struct DMAC
 {
-	u32 ls_offset;
 };

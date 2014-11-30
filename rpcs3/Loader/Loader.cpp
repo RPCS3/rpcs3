@@ -1,10 +1,37 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Loader.h"
-#include "ELF.h"
-#include "SELF.h"
 #include "PSF.h"
 #include "Emu/FS/vfsLocalFile.h"
+
+namespace loader
+{
+	bool loader::load(vfsStream& stream)
+	{
+		for (auto i : m_handlers)
+		{
+			if (i->init(stream) == handler::ok)
+			{
+				if (i->load() == handler::ok)
+				{
+					return true;
+				}
+			}
+
+			stream.Seek(i->get_stream_offset());
+		}
+
+		return false;
+	}
+
+	handler::error_code handler::init(vfsStream& stream)
+	{
+		m_stream_offset = stream.Tell();
+		m_stream = &stream;
+
+		return ok;
+	}
+};
 
 static const u64 g_spu_offset = 0x10000;
 
@@ -13,7 +40,7 @@ const std::string Ehdr_DataToString(const u8 data)
 	if(data > 1) return fmt::Format("%d's complement, big endian", data);
 	if(data < 1) return "Data is not found";
 
-	return fmt::Format("%d's complement, small endian", data);
+	return fmt::Format("%d's complement, little endian", data);
 }
 
 const std::string Ehdr_TypeToString(const u16 type)
@@ -94,93 +121,4 @@ const std::string Phdr_TypeToString(const u32 type)
 	};
 
 	return fmt::Format("Unknown (%x)", type);
-}
-
-Loader::Loader()
-	: m_stream(nullptr)
-	, m_loader(nullptr)
-{
-}
-
-Loader::Loader(vfsFileBase& stream)
-	: m_stream(&stream)
-	, m_loader(nullptr)
-{
-}
-
-Loader::~Loader()
-{
-	delete m_loader;
-	m_loader = nullptr;
-}
-
-void Loader::Open(vfsFileBase& stream)
-{
-	m_stream = &stream;
-}
-
-LoaderBase* Loader::SearchLoader()
-{
-	if(!m_stream) 
-		return nullptr;
-
-	LoaderBase* l = new ELFLoader(*m_stream);
-	if(l->LoadInfo()) 
-		return l;
-	delete l;
-
-	l = new SELFLoader(*m_stream);
-	if(l->LoadInfo()) 
-		return l;
-	delete l;
-
-	return nullptr;
-}
-
-bool Loader::Analyze()
-{
-	delete m_loader;
-
-	m_loader = SearchLoader();
-
-	if(!m_loader)
-	{
-		LOG_ERROR(LOADER, "Unknown file type");
-		return false;
-	}
-
-	machine = m_loader->GetMachine();
-	entry = m_loader->GetMachine() == MACHINE_SPU ? m_loader->GetEntry() + g_spu_offset : m_loader->GetEntry();
-
-	return true;
-}
-
-bool Loader::Load()
-{
-	if(!m_loader)
-		return false;
-
-	if(!m_loader->LoadData(m_loader->GetMachine() == MACHINE_SPU ? g_spu_offset : 0))
-	{
-		LOG_ERROR(LOADER, "Broken file");
-		return false;
-	}
-
-	/*
-	const std::string& root = fmt::ToUTF8(wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath());
-	std::string ps3_path;
-	const std::string& psf_path = root + "/" + "PARAM.SFO";
-	vfsFile f(psf_path);
-	if(f.IsOpened())
-	{
-		PSFLoader psf_l(f);
-		if(psf_l.Load())
-		{
-			CurGameInfo = psf_l.m_info;
-			CurGameInfo.root = root;
-			psf_l.Close();
-		}
-	}
-	*/
-	return true;
 }

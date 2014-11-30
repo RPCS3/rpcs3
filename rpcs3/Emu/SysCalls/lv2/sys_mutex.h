@@ -34,13 +34,14 @@ struct Mutex
 		, m_queue(name)
 		, cond_count(0)
 	{
+		m_mutex.initialize();
 	}
 
 	~Mutex();
 };
 
 // SysCalls
-s32 sys_mutex_create(vm::ptr<be_t<u32>> mutex_id, vm::ptr<sys_mutex_attribute> attr);
+s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute> attr);
 s32 sys_mutex_destroy(u32 mutex_id);
 s32 sys_mutex_lock(u32 mutex_id, u64 timeout);
 s32 sys_mutex_trylock(u32 mutex_id);

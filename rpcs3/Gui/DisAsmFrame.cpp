@@ -1,4 +1,5 @@
 #include "stdafx_gui.h"
+#if 0
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -512,3 +513,4 @@ void DisAsmFrame::MouseWheel(wxMouseEvent& event)
 
 	event.Skip();
 }
+#endif

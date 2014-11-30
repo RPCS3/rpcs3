@@ -20,6 +20,7 @@
 #include "Gui/KernelExplorer.h"
 #include "Gui/MemoryViewer.h"
 #include "Gui/RSXDebugger.h"
+#include "Gui/LLEModulesManager.h"
 
 #include <wx/dynlib.h>
 
@@ -33,7 +34,8 @@ enum IDs
 {
 	id_boot_elf = 0x555,
 	id_boot_game,
-	id_install_pkg,
+	id_boot_install_pkg,
+	id_boot_exit,
 	id_sys_pause,
 	id_sys_stop,
 	id_sys_send_open_menu,
@@ -44,6 +46,7 @@ enum IDs
 	id_config_vhdd_manager,
 	id_config_autopause_manager,
 	id_config_savedata_manager,
+	id_config_lle_modules_manager,
 	id_tools_compiler,
 	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
@@ -74,41 +77,45 @@ MainFrame::MainFrame()
 	wxMenuBar* menubar = new wxMenuBar();
 
 	wxMenu* menu_boot = new wxMenu();
-	menubar->Append(menu_boot, "Boot");
-	menu_boot->Append(id_boot_elf, "Boot ELF / SELF file");
-	menu_boot->Append(id_boot_game, "Boot game");
+	menubar->Append(menu_boot, "&Boot");
+	menu_boot->Append(id_boot_elf, "Boot &ELF / SELF file");
+	menu_boot->Append(id_boot_game, "Boot &game");
 	menu_boot->AppendSeparator();
-	menu_boot->Append(id_install_pkg, "Install PKG");
+	menu_boot->Append(id_boot_install_pkg, "&Install PKG");
+	menu_boot->AppendSeparator();
+	menu_boot->Append(id_boot_exit, "&Exit");
 
 	wxMenu* menu_sys = new wxMenu();
-	menubar->Append(menu_sys, "System");
-	menu_sys->Append(id_sys_pause, "Pause")->Enable(false);
-	menu_sys->Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
+	menubar->Append(menu_sys, "&System");
+	menu_sys->Append(id_sys_pause, "&Pause")->Enable(false);
+	menu_sys->Append(id_sys_stop, "&Stop\tCtrl + S")->Enable(false);
 	menu_sys->AppendSeparator();
-	menu_sys->Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
-	menu_sys->Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_open_menu, "Send &open system menu cmd")->Enable(false);
+	menu_sys->Append(id_sys_send_exit, "Send &exit cmd")->Enable(false);
 
 	wxMenu* menu_conf = new wxMenu();
-	menubar->Append(menu_conf, "Config");
-	menu_conf->Append(id_config_emu, "Settings");
-	menu_conf->Append(id_config_pad, "PAD Settings");
+	menubar->Append(menu_conf, "&Config");
+	menu_conf->Append(id_config_emu, "&Settings");
+	menu_conf->Append(id_config_pad, "&PAD Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_autopause_manager, "Auto Pause Settings");
+	menu_conf->Append(id_config_autopause_manager, "&Auto Pause Settings");
 	menu_conf->AppendSeparator();
-	menu_conf->Append(id_config_vfs_manager, "Virtual File System Manager");
-	menu_conf->Append(id_config_vhdd_manager, "Virtual HDD Manager");
-	menu_conf->Append(id_config_savedata_manager, "Save Data Utility");
+	menu_conf->Append(id_config_vfs_manager, "Virtual &File System Manager");
+	menu_conf->Append(id_config_vhdd_manager, "Virtual &HDD Manager");
+	menu_conf->Append(id_config_savedata_manager, "Save &Data Utility");
+	menu_conf->Append(id_config_lle_modules_manager, "&LLE Modules Manager");
+
 
 	wxMenu* menu_tools = new wxMenu();
-	menubar->Append(menu_tools, "Tools");
-	menu_tools->Append(id_tools_compiler, "ELF Compiler");
-	menu_tools->Append(id_tools_kernel_explorer, "Kernel Explorer")->Enable(false);
-	menu_tools->Append(id_tools_memory_viewer, "Memory Viewer")->Enable(false);
-	menu_tools->Append(id_tools_rsx_debugger, "RSX Debugger")->Enable(false);
+	menubar->Append(menu_tools, "&Tools");
+	menu_tools->Append(id_tools_compiler, "&ELF Compiler");
+	menu_tools->Append(id_tools_kernel_explorer, "&Kernel Explorer")->Enable(false);
+	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
+	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
 
 	wxMenu* menu_help = new wxMenu();
-	menubar->Append(menu_help, "Help");
-	menu_help->Append(id_help_about, "About...");
+	menubar->Append(menu_help, "&Help");
+	menu_help->Append(id_help_about, "&About...");
 
 	SetMenuBar(menubar);
 
@@ -124,7 +131,8 @@ MainFrame::MainFrame()
 	// Events
 	Bind(wxEVT_MENU, &MainFrame::BootElf, this, id_boot_elf);
 	Bind(wxEVT_MENU, &MainFrame::BootGame, this, id_boot_game);
-	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_install_pkg);
+	Bind(wxEVT_MENU, &MainFrame::InstallPkg, this, id_boot_install_pkg);
+	Bind(wxEVT_MENU, [](wxCommandEvent&){ wxGetApp().Exit(); }, id_boot_exit);
 
 	Bind(wxEVT_MENU, &MainFrame::Pause, this, id_sys_pause);
 	Bind(wxEVT_MENU, &MainFrame::Stop, this, id_sys_stop);
@@ -137,6 +145,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::ConfigVHDD, this, id_config_vhdd_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigAutoPause, this, id_config_autopause_manager);
 	Bind(wxEVT_MENU, &MainFrame::ConfigSaveData, this, id_config_savedata_manager);
+	Bind(wxEVT_MENU, &MainFrame::ConfigLLEModules, this, id_config_lle_modules_manager);
 
 	Bind(wxEVT_MENU, &MainFrame::OpenELFCompiler, this, id_tools_compiler);
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
@@ -332,7 +341,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
-	static const u32 width = 385;
+	static const u32 width = 425;
 	static const u32 height = 400;
 
 	// Settings panels
@@ -341,12 +350,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxPanel* p_cpu        = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_graphics   = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_audio      = new wxPanel(nb_config, wxID_ANY);
+	wxPanel* p_camera     = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_io         = new wxPanel(nb_config, wxID_ANY);
 	wxPanel* p_hle        = new wxPanel(nb_config, wxID_ANY);
 
 	nb_config->AddPage(p_cpu,      wxT("Core"));
 	nb_config->AddPage(p_graphics, wxT("Graphics"));
 	nb_config->AddPage(p_audio,    wxT("Audio"));
+	nb_config->AddPage(p_camera,   wxT("Camera"));
 	nb_config->AddPage(p_io,       wxT("Input / Output"));
 	nb_config->AddPage(p_hle,      wxT("HLE / Misc."));
 	nb_config->AddPage(p_system,   wxT("System"));
@@ -355,6 +366,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxBoxSizer* s_subpanel_cpu      = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_graphics = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_audio    = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* s_subpanel_camera   = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_io       = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* s_subpanel_hle      = new wxBoxSizer(wxVERTICAL);
 
@@ -375,10 +387,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	// Audio
 	wxStaticBoxSizer* s_round_audio_out = new wxStaticBoxSizer(wxVERTICAL, p_audio, _("Audio Out"));
 
+	// Camera
+	wxStaticBoxSizer* s_round_camera      = new wxStaticBoxSizer(wxVERTICAL, p_camera, _("Camera"));
+	wxStaticBoxSizer* s_round_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_camera, _("Camera type"));
+
 	// HLE / Misc.
-	wxStaticBoxSizer* s_round_hle_misc = new wxStaticBoxSizer(wxHORIZONTAL, p_hle, _(""));
 	wxStaticBoxSizer* s_round_hle_log_lvl = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Log Level"));
-	wxStaticBoxSizer* s_round_camera_type = new wxStaticBoxSizer(wxVERTICAL, p_hle, _("Camera type"));
 
 	// System
 	wxStaticBoxSizer* s_round_sys_lang = new wxStaticBoxSizer(wxVERTICAL, p_system, _("Language"));
@@ -392,7 +406,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_audio_out        = new wxComboBox(p_audio, wxID_ANY);
-	wxComboBox* cbox_camera_type      = new wxComboBox(p_hle, wxID_ANY);
+	wxComboBox* cbox_camera           = new wxComboBox(p_camera, wxID_ANY);
+	wxComboBox* cbox_camera_type      = new wxComboBox(p_camera, wxID_ANY);
 	wxComboBox* cbox_hle_loglvl       = new wxComboBox(p_hle, wxID_ANY);
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
@@ -400,9 +415,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
+	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
 	wxCheckBox* chbox_hle_logging         = new wxCheckBox(p_hle, wxID_ANY, "Log all SysCalls");
+	wxCheckBox* chbox_rsx_logging         = new wxCheckBox(p_hle, wxID_ANY, "RSX Logging");
 	wxCheckBox* chbox_hle_hook_stfunc     = new wxCheckBox(p_hle, wxID_ANY, "Hook static functions");
 	wxCheckBox* chbox_hle_savetty         = new wxCheckBox(p_hle, wxID_ANY, "Save TTY output to file");
 	wxCheckBox* chbox_hle_exitonstop      = new wxCheckBox(p_hle, wxID_ANY, "Exit RPCS3 when process finishes");
@@ -412,23 +429,23 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
-	cbox_cpu_decoder->Append("PPU Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("PPU Interpreter");
+	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
 
 	cbox_spu_decoder->Append("SPU Interpreter");
-	cbox_spu_decoder->Append("SPU JIT (asmjit)");
+	cbox_spu_decoder->Append("SPU JIT (ASMJIT)");
 
-	for(int i=1; i<WXSIZEOF(ResolutionTable); ++i)
+	cbox_gs_render->Append("Null");
+	cbox_gs_render->Append("OpenGL");
+	//cbox_gs_render->Append("Software");
+
+	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
 		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.ToLE(), ResolutionTable[i].height.ToLE()));
 	}
 
 	cbox_gs_aspect->Append("4:3");
 	cbox_gs_aspect->Append("16:9");
-
-	cbox_gs_render->Append("Null");
-	cbox_gs_render->Append("OpenGL");
-	//cbox_gs_render->Append("Software");
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
@@ -448,6 +465,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
 
+	cbox_camera->Append("Null");
+
 	cbox_camera_type->Append("Unknown");
 	cbox_camera_type->Append("EyeToy");
 	cbox_camera_type->Append("PlayStation Eye");
@@ -459,26 +478,35 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
-	static const char* s_sys_lang_table[] =
-	{
-		"Japanese", "English (US)",    "French",    "Spanish",   "German",          "Italian",
-		"Dutch",    "Portuguese (PT)", "Russian",   "Korean",    "Chinese (Trad.)", "Chinese (Simp.)",
-		"Finnish",  "Swedish",         "Danish",    "Norwegian", "Polish",          "English (UK)"
-	};
-
-	for (auto& lang : s_sys_lang_table)
-	{
-		cbox_sys_lang->Append(lang);
-	}
+	cbox_sys_lang->Append("Japanese");
+	cbox_sys_lang->Append("English (US)");
+	cbox_sys_lang->Append("French");
+	cbox_sys_lang->Append("Spanish");
+	cbox_sys_lang->Append("German");
+	cbox_sys_lang->Append("Italian");
+	cbox_sys_lang->Append("Dutch");
+	cbox_sys_lang->Append("Portuguese (PT)");
+	cbox_sys_lang->Append("Russian");
+	cbox_sys_lang->Append("Korean");
+	cbox_sys_lang->Append("Chinese (Trad.)");
+	cbox_sys_lang->Append("Chinese (Simp.)");
+	cbox_sys_lang->Append("Finnish");
+	cbox_sys_lang->Append("Swedish");
+	cbox_sys_lang->Append("Danish");
+	cbox_sys_lang->Append("Norwegian");
+	cbox_sys_lang->Append("Polish");
+	cbox_sys_lang->Append("English (UK)");
 
 	// Get values from .ini
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_gs_3dmonitor       ->SetValue(Ini.GS3DTV.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
 	chbox_hle_logging        ->SetValue(Ini.HLELogging.GetValue());
+	chbox_rsx_logging        ->SetValue(Ini.RSXLogging.GetValue());
 	chbox_hle_hook_stfunc    ->SetValue(Ini.HLEHookStFunc.GetValue());
 	chbox_hle_savetty        ->SetValue(Ini.HLESaveTTY.GetValue());
 	chbox_hle_exitonstop     ->SetValue(Ini.HLEExitOnStop.GetValue());
@@ -497,6 +525,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
 	cbox_audio_out       ->SetSelection(Ini.AudioOutMode.GetValue());
+	cbox_camera          ->SetSelection(Ini.Camera.GetValue());
 	cbox_camera_type     ->SetSelection(Ini.CameraType.GetValue());
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
@@ -505,7 +534,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_audio_dump->Enable(Emu.IsStopped());
 	chbox_audio_conv->Enable(Emu.IsStopped());
 	chbox_hle_logging->Enable(Emu.IsStopped());
-	cbox_camera_type->Enable(Emu.IsStopped());
+	chbox_rsx_logging->Enable(Emu.IsStopped());
 	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
 
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -521,10 +550,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	s_round_audio_out->Add(cbox_audio_out, wxSizerFlags().Border(wxALL, 5).Expand());
 
-	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_camera->Add(cbox_camera, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_camera_type->Add(cbox_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_hle_misc->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_round_hle_misc->Add(s_round_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	s_round_hle_log_lvl->Add(cbox_hle_loglvl, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_sys_lang->Add(cbox_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -540,6 +569,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_3dmonitor, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
 	s_subpanel_io->Add(s_round_io_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -551,9 +581,14 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_audio->Add(chbox_audio_dump, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_audio->Add(chbox_audio_conv, wxSizerFlags().Border(wxALL, 5).Expand());
 
+	// Camera
+	s_subpanel_camera->Add(s_round_camera, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_camera->Add(s_round_camera_type, wxSizerFlags().Border(wxALL, 5).Expand());
+
 	// HLE / Misc.
-	s_subpanel_hle->Add(s_round_hle_misc, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(s_round_hle_log_lvl, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_logging, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_hle->Add(chbox_rsx_logging, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_hook_stfunc, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_savetty, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_hle->Add(chbox_hle_exitonstop, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -576,6 +611,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	diag.SetSizerAndFit(s_subpanel_graphics, false);
 	diag.SetSizerAndFit(s_subpanel_io, false);
 	diag.SetSizerAndFit(s_subpanel_audio, false);
+	diag.SetSizerAndFit(s_subpanel_camera, false);
 	diag.SetSizerAndFit(s_subpanel_hle, false);
 	diag.SetSizerAndFit(s_subpanel_system, false);
 	diag.SetSizerAndFit(s_b_panel, false);
@@ -589,18 +625,21 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
-		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
+		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
+		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
 		Ini.MouseHandlerMode.SetValue(cbox_mouse_handler->GetSelection());
 		Ini.AudioOutMode.SetValue(cbox_audio_out->GetSelection());
 		Ini.AudioDumpToFile.SetValue(chbox_audio_dump->GetValue());
 		Ini.AudioConvertToU16.SetValue(chbox_audio_conv->GetValue());
+		Ini.Camera.SetValue(cbox_camera->GetSelection());
 		Ini.CameraType.SetValue(cbox_camera_type->GetSelection());
 		Ini.HLELogging.SetValue(chbox_hle_logging->GetValue());
+		Ini.RSXLogging.SetValue(chbox_rsx_logging->GetValue());
 		Ini.HLEHookStFunc.SetValue(chbox_hle_hook_stfunc->GetValue());
 		Ini.HLESaveTTY.SetValue(chbox_hle_savetty->GetValue());
 		Ini.HLEExitOnStop.SetValue(chbox_hle_exitonstop->GetValue());
@@ -641,6 +680,11 @@ void MainFrame::ConfigAutoPause(wxCommandEvent& WXUNUSED(event))
 void MainFrame::ConfigSaveData(wxCommandEvent& event)
 {
 	SaveDataListDialog(this, true).ShowModal();
+}
+
+void MainFrame::ConfigLLEModules(wxCommandEvent& event)
+{
+	(new LLEModulesManagerFrame(this))->Show();
 }
 
 void MainFrame::OpenELFCompiler(wxCommandEvent& WXUNUSED(event))
@@ -745,7 +789,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	// Emulation
 	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	pause.SetItemLabel(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + E" : "Resume\tCtrl + E");
+	pause.SetItemLabel(is_running ? "&Pause\tCtrl + P" : is_ready ? "&Start\tCtrl + E" : "&Resume\tCtrl + E");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 
@@ -753,7 +797,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
 	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
 	bool enable_commands = !is_stopped;
-	send_open_menu.SetItemLabel(wxString::Format("Send %s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
+	send_open_menu.SetItemLabel(wxString::Format("Send &%s system menu cmd", (m_sys_menu_opened ? "close" : "open")));
 	send_open_menu.Enable(enable_commands);
 	send_exit.Enable(enable_commands);
 

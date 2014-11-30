@@ -55,7 +55,7 @@ int cellUserInfoEnableOverlay()
 	return CELL_OK;
 }
 
-int cellUserInfoGetList(vm::ptr<be_t<u32>> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<be_t<u32>> currentUserId)
+int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
 	cellUserInfo->Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
 		listNum.addr(), listBuf.addr(), currentUserId.addr());

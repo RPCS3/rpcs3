@@ -29,7 +29,7 @@ __Mac OSX__
 ### Building
 
 To initialize the repository don't forget to execute `git submodule update --init` to pull the wxWidgets source.
-* __Windows__: Install *Visual Studio 2013*. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
+* __Windows__: Install *Visual Studio 2013*, *Cmake*, *Python* and select *Add in the PATH variable* for both. Then open the *.SLN* file, and press *Build* > *Rebuild Solution*.
 * __Linux & Mac OSX__:
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
 

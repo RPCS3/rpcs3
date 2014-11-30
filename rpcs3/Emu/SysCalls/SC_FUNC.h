@@ -57,14 +57,14 @@ namespace detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_STACK, g_count, f_count, v_count>
 	{
-		static_assert(f_count <= 12, "TODO: Unsupported stack argument type (float)");
+		static_assert(f_count <= 13, "TODO: Unsupported stack argument type (float)");
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_STACK");
 
 		static __forceinline T func(PPUThread& CPU)
 		{
 			// TODO: check stack argument displacement
-			const u64 res = CPU.GetStackArg(8 + std::max(g_count - 8, 0) + std::max(f_count - 12, 0) + std::max(v_count - 12, 0));
+			const u64 res = CPU.GetStackArg(8 + std::max(g_count - 8, 0) + std::max(f_count - 13, 0) + std::max(v_count - 12, 0));
 			return (T&)res;
 		}
 	};
@@ -144,7 +144,7 @@ namespace detail
 		const bool is_float = std::is_floating_point<T>::value;
 		const bool is_vector = std::is_same<T, u128>::value;
 		const bind_arg_type t = is_float
-			? ((f_count >= 12) ? ARG_STACK : ARG_FLOAT)
+			? ((f_count >= 13) ? ARG_STACK : ARG_FLOAT)
 			: (is_vector ? ((v_count >= 12) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 8) ? ARG_STACK : ARG_GENERAL));
 		const int g = g_count + (is_float || is_vector ? 0 : 1);
 		const int f = f_count + (is_float ? 1 : 0);

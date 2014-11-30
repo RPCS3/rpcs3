@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/Cell/PPCThread.h"
+#include "Emu/Memory/vm.h"
 
 enum
 {
@@ -471,9 +472,6 @@ struct FPRdouble
 class PPUThread : public PPCThread
 {
 public:
-	u32 owned_mutexes;
-
-public:
 	PPCdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
@@ -533,11 +531,8 @@ public:
 	u64 LR;     //SPR 0x008 : Link Register
 	u64 CTR;    //SPR 0x009 : Count Register
 
-	union
-	{
-		u64 USPRG0;	//SPR 0x100 : User-SPR General-Purpose Register 0
-		u64 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
-	};
+	u64 USPRG[8];	//SPR 0x100 - 0x107: User-SPR General-Purpose Registers
+	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
 	union
@@ -555,6 +550,9 @@ public:
 
 	u64 R_ADDR; // reservation address
 	u64 R_VALUE; // reservation value (BE)
+
+	u32 owned_mutexes;
+	std::function<void(PPUThread& CPU)> custom_task;
 
 public:
 	PPUThread();
@@ -785,25 +783,32 @@ public:
 
 public:
 	virtual void InitRegs();
+	virtual void Task();
 	u64 GetStackArg(s32 i);
 	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
-
-	virtual void DoReset() override;
 	virtual void DoRun() override;
+
+protected:
+	virtual void DoReset() override;
 	virtual void DoPause() override;
 	virtual void DoResume() override;
 	virtual void DoStop() override;
-
-protected:
-	virtual void Step() override
-	{
-		//if(++cycle > 20)
-		{
-			TB++;
-			//cycle = 0;
-		}
-	}
 };
 
 PPUThread& GetCurrentPPUThread();
+
+class ppu_thread : cpu_thread
+{
+	static const u32 stack_align = 0x10;
+	vm::ptr<u64> argv;
+	u32 argc;
+	vm::ptr<u64> envp;
+
+public:
+	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
+
+	cpu_thread& args(std::initializer_list<std::string> values) override;
+	cpu_thread& run() override;
+	ppu_thread& gpr(uint index, u64 value);
+};

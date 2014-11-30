@@ -1037,7 +1037,7 @@ private:
 		case 0x1: Write("HyperCall"); break;
 		case 0x2: Write("sc"); break;
 		case 0x22: Write("HyperCall LV1"); break;
-		default: Write(fmt::Format("Unknown sc: %x", sc_code));
+		default: Write(fmt::Format("Unknown sc: 0x%x", sc_code));
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
@@ -1600,7 +1600,10 @@ private:
 		default: DisAsm_IMM_R1("mtspr", spr, rs); break;
 		}
 	}
-	/*0x1d6*///DCBI
+	void DCBI(u32 ra, u32 rb)
+	{
+		DisAsm_R2("dcbi", ra, rb);
+	}
 	void NAND(u32 ra, u32 rs, u32 rb, bool rc)
 	{
 		DisAsm_R3_RC("nand", ra, rs, rb, rc);

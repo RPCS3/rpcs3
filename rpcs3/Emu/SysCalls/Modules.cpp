@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/Static.h"
 #include "Crypto/sha1.h"
 #include "ModuleManager.h"
+#include "Emu/Cell/PPUInstrTable.h"
 
 u32 getFunctionId(const char* name)
 {
@@ -61,10 +62,12 @@ Module::~Module()
 {
 	UnLoad();
 
-	for (int i = 0; i < m_funcs_list.size(); i++)
+	for (auto &i : m_funcs_list)
 	{
-		delete m_funcs_list[i];
+		delete i.second;
 	}
+	
+	m_funcs_list.clear();
 }
 
 void Module::Load()
@@ -74,12 +77,10 @@ void Module::Load()
 
 	if(m_load_func) m_load_func();
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
+	for (auto &i : m_funcs_list)
 	{
-		Emu.GetModuleManager().AddFunc(m_funcs_list[i]);
+		Emu.GetModuleManager().AddFunc(i.second);
 	}
-
-	SetLoaded(true);
 }
 
 void Module::UnLoad()
@@ -89,10 +90,18 @@ void Module::UnLoad()
 
 	if(m_unload_func) m_unload_func();
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
+	for (auto &i : m_funcs_list)
 	{
-		Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
+		i.second->lle_func.set(0);
 	}
+
+	// TODO: Re-enable this when needed
+	// This was disabled because some functions would get unloaded and
+	// some games tried to use them, thus only printing a TODO message
+	//for(u32 i=0; i<m_funcs_list.size(); ++i)
+	//{
+	//	Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
+	//}
 
 	SetLoaded(false);
 }
@@ -102,16 +111,14 @@ bool Module::Load(u32 id)
 	if(Emu.GetModuleManager().IsLoadedFunc(id)) 
 		return false;
 
-	for(u32 i=0; i<m_funcs_list.size(); ++i)
-	{
-		if(m_funcs_list[i]->id == id)
-		{
-			Emu.GetModuleManager().AddFunc(m_funcs_list[i]);
-			return true;
-		}
-	}
+	auto res = m_funcs_list.find(id);
 
-	return false;
+	if (res == m_funcs_list.end())
+		return false;
+
+	Emu.GetModuleManager().AddFunc(res->second);
+
+	return true;
 }
 
 bool Module::UnLoad(u32 id)
@@ -146,12 +153,12 @@ void Module::SetName(const std::string& name)
 
 bool Module::CheckID(u32 id) const
 {
-	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).m_name == GetName();
+	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).GetName() == GetName();
 }
 
 bool Module::CheckID(u32 id, ID*& _id) const
 {
-	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->m_name == GetName();
+	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == GetName();
 }
 
 bool Module::RemoveId(u32 id)
@@ -171,12 +178,18 @@ void Module::PushNewFuncSub(SFunc* func)
 
 void fix_import(Module* module, u32 func, u32 addr)
 {
-	vm::write32(addr + 0x0, 0x3d600000 | (func >> 16)); /* lis r11, (func_id >> 16) */
-	vm::write32(addr + 0x4, 0x616b0000 | (func & 0xffff)); /* ori r11, (func_id & 0xffff) */
-	vm::write32(addr + 0x8, 0x60000000); /* nop */
-	// leave rtoc saving at 0xC
-	vm::write64(addr + 0x10, 0x440000024e800020ull); /* sc + blr */
-	vm::write64(addr + 0x18, 0x6000000060000000ull); /* nop + nop */
+	using namespace PPU_instr;
+	
+	vm::ptr<u32> ptr = vm::ptr<u32>::make(addr);
+
+	*ptr++ = ADDIS(11, 0, func >> 16);
+	*ptr++ = ORI(11, 11, func & 0xffff);
+	*ptr++ = NOP();
+	++ptr;
+	*ptr++ = SC(2);
+	*ptr++ = BLR();
+	*ptr++ = NOP();
+	*ptr++ = NOP();
 
 	module->Load(func);
 }
@@ -191,36 +204,38 @@ void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)
 
 	for (u32 i = lib + start; i < lib + end; i += 24)
 	{
-		u64 addr = vm::read64(i);
+		u64 addr = vm::read64(i) + lib;
 		const u64 flag = vm::read64(i + 8);
 
-		if (flag == 0x10100000001ull)
+		if ((u32)addr != addr || (u32)(addr + seg2) != (addr + seg2))
 		{
-			addr = addr + seg2 + lib;
-			u32 value = vm::read32(addr);
+			module->Error("fix_relocs(): invalid address (0x%llx)", addr);
+		}
+		else if (flag == 0x10100000001ull)
+		{
+			addr = addr + seg2;
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16) + seg2);
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x100000001ull)
 		{
-			addr = addr + seg2 + lib;
-			u32 value = vm::read32(addr);
+			addr = addr + seg2;
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16));
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x10000000001ull)
 		{
-			addr = addr + lib;
-			u32 value = vm::read32(addr);
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16) + seg2);
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 1)
 		{
-			addr = addr + lib;
-			u32 value = vm::read32(addr);
+			u32 value = vm::read32((u32)addr);
 			assert(value == vm::read64(i + 16));
-			vm::write32(addr, value + lib);
+			vm::write32((u32)addr, value + lib);
 		}
 		else if (flag == 0x10000000004ull || flag == 0x10000000006ull)
 		{

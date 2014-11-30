@@ -69,12 +69,12 @@ void AutoPause::Reload(void)
 				//Less than 1024 - be regarded as a system call.
 				//emplace_back may not cause reductant move/copy operation.
 				m_pause_syscall.emplace_back(num);
-				LOG_WARNING(HLE, "Auto Pause: Find System Call ID %x", num);
+				LOG_WARNING(HLE, "Auto Pause: Find System Call ID 0x%x", num);
 			}
 			else
 			{
 				m_pause_function.emplace_back(num);
-				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID %x", num);
+				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID 0x%x", num);
 			}
 		}
 		list.Close();
@@ -103,7 +103,7 @@ void AutoPause::TryPause(u32 code) {
 			if (code == m_pause_syscall[i])
 			{
 				Emu.Pause();
-				LOG_ERROR(HLE, "Auto Pause Triggered: System call %x", code);	//Used Error
+				LOG_ERROR(HLE, "Auto Pause Triggered: System call 0x%x", code); // Used Error
 			}
 		}
 	}
@@ -121,7 +121,7 @@ void AutoPause::TryPause(u32 code) {
 			if (code == m_pause_function[i])
 			{
 				Emu.Pause();
-				LOG_ERROR(HLE, "Auto Pause Triggered: Function call %x", code);	//Used Error
+				LOG_ERROR(HLE, "Auto Pause Triggered: Function call 0x%x", code); // Used Error
 			}
 		}
 	}

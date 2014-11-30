@@ -5,16 +5,36 @@
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_semaphore.h"
 #include "sys_time.h"
-//#include "Utilities/SMutex.h"
+#include "sys_semaphore.h"
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute> attr, int initial_count, int max_count)
+u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u64)
+{
+	LV2_LOCK(0);
+
+	const std::string name((const char*)&name_u64, 8);
+	const u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, protocol, name_u64), TYPE_SEMAPHORE);
+	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", name.c_str(), protocol, id);
+	Emu.GetSyncPrimManager().AddSemaphoreData(id, name, initial_count, max_count);
+	return id;
+}
+
+s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr, s32 initial_count, s32 max_count)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.addr(), initial_count, max_count);
+
+        if (sem.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_create(): invalid memory access (sem_addr=0x%x)", sem.addr());
+            return CELL_EFAULT;
+        }
+
+        if (attr.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_create(): An invalid argument value is specified (attr_addr=0x%x)", attr.addr());
+            return CELL_EFAULT;
+        }
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
@@ -37,19 +57,15 @@ s32 sys_semaphore_create(vm::ptr<be_t<u32>> sem, vm::ptr<sys_semaphore_attribute
 	default: sys_semaphore.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
 	}
 
-	u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, attr->protocol, attr->name_u64), TYPE_SEMAPHORE);
-	*sem = id;
-	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, id);
-
-	Emu.GetSyncPrimManager().AddSemaphoreData(id, std::string(attr->name, 8), initial_count, max_count);
-
+	*sem = semaphore_create(initial_count, max_count, attr->protocol, attr->name_u64);
 	return CELL_OK;
 }
 
 s32 sys_semaphore_destroy(u32 sem_id)
 {
 	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=%d)", sem_id);
+
+	LV2_LOCK(0);
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
@@ -113,11 +129,10 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 				continue;
 			}
 			sem->signal = 0;
-			// TODO: notify signaler
 			return CELL_OK;
 		}
 
-		SM_Sleep();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
@@ -144,7 +159,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 	}
 }
 
-s32 sys_semaphore_post(u32 sem_id, int count)
+s32 sys_semaphore_post(u32 sem_id, s32 count)
 {
 	sys_semaphore.Log("sys_semaphore_post(sem_id=%d, count=%d)", sem_id, count);
 
@@ -159,7 +174,7 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 		return CELL_EINVAL;
 	}
 
-	if (count + sem->m_value - (int)sem->m_queue.count() > sem->max)
+	if (count + sem->m_value - (s32)sem->m_queue.count() > sem->max)
 	{
 		return CELL_EBUSY;
 	}
@@ -176,7 +191,7 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 
 		if (sem->signal && sem->m_queue.count())
 		{
-			SM_Sleep();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 			continue;
 		}
 
@@ -184,7 +199,6 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 		{
 			count--;
 			sem->signal = target;
-			Emu.GetCPU().NotifyThread(target);
 		}
 		else
 		{
@@ -196,9 +210,14 @@ s32 sys_semaphore_post(u32 sem_id, int count)
 	return CELL_OK;
 }
 
-s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<be_t<s32>> count)
+s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
 	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.addr());
+
+        if (count.addr() == NULL) {
+            sys_semaphore.Error("sys_semaphore_get_value(): invalid memory access (count=0x%x)", count.addr());
+            return CELL_EFAULT;
+        }
 
 	Semaphore* sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

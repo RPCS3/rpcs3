@@ -228,15 +228,15 @@ enum CellVideoOutRGBOutputRange
 
 static const CellVideoOutResolution ResolutionTable[] =
 {
-	{ be_t<u16>::MakeFromBE(se16(0xffff)), be_t<u16>::MakeFromBE(se16(0xffff)) }, //0 - 0
-	{ be_t<u16>::MakeFromBE(se16(1920)), be_t<u16>::MakeFromBE(se16(1080)) },     //1 - 1
-	{ be_t<u16>::MakeFromBE(se16(1280)), be_t<u16>::MakeFromBE(se16(720)) },      //2 - 2
-	{ be_t<u16>::MakeFromBE(se16(720)), be_t<u16>::MakeFromBE(se16(480)) },       //4 - 3
-	{ be_t<u16>::MakeFromBE(se16(720)), be_t<u16>::MakeFromBE(se16(576)) },       //5 - 4
-	{ be_t<u16>::MakeFromBE(se16(1600)), be_t<u16>::MakeFromBE(se16(1080)) },     //10 - 5
-	{ be_t<u16>::MakeFromBE(se16(1440)), be_t<u16>::MakeFromBE(se16(1080)) },     //11 - 6
-	{ be_t<u16>::MakeFromBE(se16(1280)), be_t<u16>::MakeFromBE(se16(1080)) },     //12 - 7
-	{ be_t<u16>::MakeFromBE(se16(960)), be_t<u16>::MakeFromBE(se16(1080)) },      //13 - 8
+	{ be_t<u16>::make(0xffff), be_t<u16>::make(0xffff) }, //0 - 0
+	{ be_t<u16>::make(1920), be_t<u16>::make(1080) },     //1 - 1
+	{ be_t<u16>::make(1280), be_t<u16>::make(720) },      //2 - 2
+	{ be_t<u16>::make(720), be_t<u16>::make(480) },       //4 - 3
+	{ be_t<u16>::make(720), be_t<u16>::make(576) },       //5 - 4
+	{ be_t<u16>::make(1600), be_t<u16>::make(1080) },     //10 - 5
+	{ be_t<u16>::make(1440), be_t<u16>::make(1080) },     //11 - 6
+	{ be_t<u16>::make(1280), be_t<u16>::make(1080) },     //12 - 7
+	{ be_t<u16>::make(960), be_t<u16>::make(1080) },      //13 - 8
 };
 
 inline static u32 ResolutionIdToNum(u32 id)

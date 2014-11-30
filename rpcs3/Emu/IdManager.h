@@ -59,12 +59,13 @@ public:
 	}
 };
 
-struct ID
+class ID
 {
 	std::string m_name;
 	IDData* m_data;
 	IDType m_type;
 
+public:
 	template<typename T>
 	ID(const std::string& name, T* data, const IDType type)
 		: m_name(name)
@@ -95,6 +96,21 @@ struct ID
 	void Kill()
 	{
 		delete m_data;
+	}
+
+	const std::string& GetName() const
+	{
+		return m_name;
+	}
+
+	IDData* GetData() const
+	{
+		return m_data;
+	}
+
+	IDType GetType() const
+	{
+		return m_type;
 	}
 };
 
@@ -172,7 +188,7 @@ public:
 			return false;
 		}
 
-		result = f->second.m_data->get<T>();
+		result = f->second.GetData()->get<T>();
 
 		return true;
 	}
@@ -198,8 +214,8 @@ public:
 		if (item == m_id_map.end()) {
 			return false;
 		}
-		if (item->second.m_type < TYPE_OTHER) {
-			m_types[item->second.m_type].erase(id);
+		if (item->second.GetType() < TYPE_OTHER) {
+			m_types[item->second.GetType()].erase(id);
 		}
 
 		item->second.Kill();

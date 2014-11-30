@@ -50,7 +50,15 @@ void SPUThread::Task()
 	const int round = std::fegetround();
 	std::fesetround(FE_TOWARDZERO);
 
-	CPUThread::Task();
+	if (m_custom_task)
+	{
+		m_custom_task(*this);
+	}
+	else
+	{
+		CPUThread::Task();
+	}
+	
 	if (std::fegetround() != FE_TOWARDZERO)
 	{
 		LOG_ERROR(Log::SPU, "Rounding mode has changed(%d)", std::fegetround());
@@ -68,11 +76,11 @@ void SPUThread::DoReset()
 
 void SPUThread::InitRegs()
 {
-	GPR[1]._u32[3] = 0x40000 - 120;
+	GPR[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 
 	cfg.Reset();
 
-	dmac.ls_offset = m_offset;
+	ls_offset = m_offset;
 
 	SPU.Status.SetValue(SPU_STATUS_STOPPED);
 
@@ -138,6 +146,31 @@ void SPUThread::DoClose()
 	}
 }
 
+void SPUThread::FastCall(u32 ls_addr)
+{
+	// can't be called from another thread (because it doesn't make sense)
+	WriteLS32(0x0, 2);
+
+	auto old_PC = PC;
+	auto old_LR = GPR[0]._u32[3];
+	auto old_stack = GPR[1]._u32[3]; // only saved and restored (may be wrong)
+
+	m_status = Running;
+	PC = ls_addr;
+	GPR[0]._u32[3] = 0x0;
+
+	CPUThread::Task();
+
+	PC = old_PC;
+	GPR[0]._u32[3] = old_LR;
+	GPR[1]._u32[3] = old_stack;
+}
+
+void SPUThread::FastStop()
+{
+	m_status = Stopped;
+}
+
 void SPUThread::WriteSNR(bool number, u32 value)
 {
 	if (cfg.value & ((u64)1 << (u64)number))
@@ -181,11 +214,11 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 			if ((addr <= 0x3ffff) && (addr + size <= 0x40000))
 			{
 				// LS access
-				ea = spu->dmac.ls_offset + addr;
+				ea = spu->ls_offset + addr;
 			}
 			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 			{
-				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(dmac.ls_offset + lsa));
+				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(ls_offset + lsa));
 				return;
 			}
 			else
@@ -208,13 +241,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 		{
 		case MFC_PUT_CMD:
 		{
-			vm::write32(ea, ReadLS32(lsa));
+			vm::write32((u32)ea, ReadLS32(lsa));
 			return;
 		}
 
 		case MFC_GET_CMD:
 		{
-			WriteLS32(lsa, vm::read32(ea));
+			WriteLS32(lsa, vm::read32((u32)ea));
 			return;
 		}
 
@@ -231,13 +264,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(vm::get_ptr<void>(ea), vm::get_ptr<void>(dmac.ls_offset + lsa), size);
+		memcpy(vm::get_ptr<void>((u32)ea), vm::get_ptr<void>(ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(vm::get_ptr<void>(dmac.ls_offset + lsa), vm::get_ptr<void>(ea), size);
+		memcpy(vm::get_ptr<void>(ls_offset + lsa), vm::get_ptr<void>((u32)ea), size);
 		return;
 	}
 
@@ -269,10 +302,10 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 	for (u32 i = 0; i < list_size; i++)
 	{
-		auto rec = vm::ptr<list_element>::make(dmac.ls_offset + list_addr + i * 8);
+		auto rec = vm::ptr<list_element>::make(ls_offset + list_addr + i * 8);
 
 		u32 size = rec->ts;
-		if (size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
+		if (!(rec->s.ToBE() & se16(0x8000)) && size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
 		{
 			LOG_ERROR(Log::SPU, "DMA List: invalid transfer size(%d)", size);
 			result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
@@ -280,13 +313,16 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 		}
 
 		u32 addr = rec->ea;
-		ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
 
-		if (Ini.HLELogging.GetValue() || rec->s)
+		if (size)
+			ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
+
+		if (Ini.HLELogging.GetValue() || rec->s.ToBE())
 			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
 			i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
 
-		lsa += std::max(size, (u32)16);
+		if (size)
+			lsa += std::max(size, (u32)16);
 
 		if (rec->s.ToBE() & se16(0x8000))
 		{
@@ -366,6 +402,17 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
 			lsa, ea, tag, size, cmd);
 
+		if ((u32)ea != ea)
+		{
+			LOG_ERROR(Log::SPU, "DMA %s: Invalid external address (0x%llx)",
+				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
+				op == MFC_PUTLLC_CMD ? "PUTLLC" :
+				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
+				ea);
+			Emu.Pause();
+			return;
+		}
+
 		if (op == MFC_GETLLAR_CMD) // get reservation
 		{
 			if (R_ADDR)
@@ -376,8 +423,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 			R_ADDR = ea;
 			for (u32 i = 0; i < 16; i++)
 			{
-				R_DATA[i] = vm::get_ptr<u64>(R_ADDR)[i];
-				vm::get_ptr<u64>(dmac.ls_offset + lsa)[i] = R_DATA[i];
+				R_DATA[i] = vm::get_ptr<u64>((u32)R_ADDR)[i];
+				vm::get_ptr<u64>(ls_offset + lsa)[i] = R_DATA[i];
 			}
 			MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 		}
@@ -391,12 +438,12 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				u64 buf[16];
 				for (u32 i = 0; i < 16; i++)
 				{
-					buf[i] = vm::get_ptr<u64>(dmac.ls_offset + lsa)[i];
+					buf[i] = vm::get_ptr<u64>(ls_offset + lsa)[i];
 					if (buf[i] != R_DATA[i])
 					{
 						changed++;
 						mask |= (0x3 << (i * 2));
-						if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
+						if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -410,7 +457,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 				{
 					if (buf[i] != R_DATA[i])
 					{
-						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>(ea)[i], buf[i], R_DATA[i]) != R_DATA[i])
+						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>((u32)R_ADDR)[i], buf[i], R_DATA[i]) != R_DATA[i])
 						{
 							m_events |= SPU_EVENT_LR;
 							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
@@ -436,8 +483,8 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 					for (s32 i = (s32)PC; i < (s32)PC + 4 * 7; i += 4)
 					{
 						dis_asm.dump_pc = i;
-						dis_asm.offset = vm::get_ptr<u8>(dmac.ls_offset);
-						const u32 opcode = vm::read32(i + dmac.ls_offset);
+						dis_asm.offset = vm::get_ptr<u8>(ls_offset);
+						const u32 opcode = vm::read32(i + ls_offset);
 						(*SPU_instr::rrr_list)(&dis_asm, opcode);
 						if (i >= 0 && i < 0x40000)
 						{
@@ -454,7 +501,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		}
 		else // store unconditional
 		{
-			if (R_ADDR)
+			if (R_ADDR) // may be wrong
 			{
 				m_events |= SPU_EVENT_LR;
 			}
@@ -484,7 +531,7 @@ bool SPUThread::CheckEvents()
 	{
 		for (u32 i = 0; i < 16; i++)
 		{
-			if (vm::get_ptr<u64>(R_ADDR)[i] != R_DATA[i])
+			if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
 			{
 				m_events |= SPU_EVENT_LR;
 				R_ADDR = 0;
@@ -498,18 +545,20 @@ bool SPUThread::CheckEvents()
 
 u32 SPUThread::GetChannelCount(u32 ch)
 {
+	u32 res = 0xdeafbeef;
+
 	switch (ch)
 	{
-	case SPU_WrOutMbox:       return SPU.Out_MBox.GetFreeCount();
-	case SPU_WrOutIntrMbox:   return SPU.Out_IntrMBox.GetFreeCount();
-	case SPU_RdInMbox:        return SPU.In_MBox.GetCount();
-	case MFC_RdTagStat:       return MFC1.TagStatus.GetCount();
-	case MFC_RdListStallStat: return StallStat.GetCount();
-	case MFC_WrTagUpdate:     return MFC1.TagStatus.GetCount(); // hack
-	case SPU_RdSigNotify1:    return SPU.SNR[0].GetCount();
-	case SPU_RdSigNotify2:    return SPU.SNR[1].GetCount();
-	case MFC_RdAtomicStat:    return MFC1.AtomicStat.GetCount();
-	case SPU_RdEventStat:     return CheckEvents() ? 1 : 0;
+	case SPU_WrOutMbox:       res = SPU.Out_MBox.GetFreeCount(); break;
+	case SPU_WrOutIntrMbox:   res = SPU.Out_IntrMBox.GetFreeCount(); break;
+	case SPU_RdInMbox:        res = SPU.In_MBox.GetCount(); break;
+	case MFC_RdTagStat:       res = MFC1.TagStatus.GetCount(); break;
+	case MFC_RdListStallStat: res = StallStat.GetCount(); break;
+	case MFC_WrTagUpdate:     res = MFC1.TagStatus.GetCount(); break;// hack
+	case SPU_RdSigNotify1:    res = SPU.SNR[0].GetCount(); break;
+	case SPU_RdSigNotify2:    res = SPU.SNR[1].GetCount(); break;
+	case MFC_RdAtomicStat:    res = MFC1.AtomicStat.GetCount(); break;
+	case SPU_RdEventStat:     res = CheckEvents() ? 1 : 0; break;
 
 	default:
 	{
@@ -518,11 +567,16 @@ u32 SPUThread::GetChannelCount(u32 ch)
 		return 0;
 	}
 	}
+
+	//LOG_NOTICE(Log::SPU, "%s(%s) -> 0x%x", __FUNCTION__, spu_ch_name[ch], res);
+	return res;
 }
 
 void SPUThread::WriteChannel(u32 ch, const u128& r)
 {
 	const u32 v = r._u32[3];
+
+	//LOG_NOTICE(Log::SPU, "%s(%s): v=0x%x", __FUNCTION__, spu_ch_name[ch], v);
 
 	switch (ch)
 	{
@@ -880,13 +934,27 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 
 	case SPU_RdSigNotify1:
 	{
-		while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if (cfg.value & 1)
+		{
+			while (!SPU.SNR[0].Pop_XCHG(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		else
+		{
+			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 		break;
 	}
 
 	case SPU_RdSigNotify2:
 	{
-		while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if (cfg.value & 2)
+		{
+			while (!SPU.SNR[1].Pop_XCHG(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+		else
+		{
+			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 		break;
 	}
 
@@ -936,6 +1004,8 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 	}
 
 	if (Emu.IsStopped()) LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
+
+	//LOG_NOTICE(Log::SPU, "%s(%s) -> 0x%x", __FUNCTION__, spu_ch_name[ch], v);
 }
 
 void SPUThread::StopAndSignal(u32 code)
@@ -945,6 +1015,24 @@ void SPUThread::StopAndSignal(u32 code)
 
 	switch (code)
 	{
+	case 0x001:
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		break;
+	}
+
+	case 0x002:
+	{
+		FastStop();
+		break;
+	}
+
+	case 0x003:
+	{
+		GPR[3]._u64[1] = m_code3_func(*this);
+		break;
+	}
+
 	case 0x110:
 	{
 		/* ===== sys_spu_thread_receive_event ===== */
@@ -1075,7 +1163,6 @@ void SPUThread::StopAndSignal(u32 code)
 	}
 
 	default:
-	{
 		if (!SPU.Out_MBox.GetCount())
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (no message)", code);
@@ -1084,8 +1171,19 @@ void SPUThread::StopAndSignal(u32 code)
 		{
 			LOG_ERROR(Log::SPU, "Unknown STOP code: 0x%x (message=0x%x)", code, SPU.Out_MBox.GetValue());
 		}
-		Stop();
+		Emu.Pause();
 		break;
 	}
-	}
+}
+
+spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+{
+	thread = &Emu.GetCPU().AddThread(CPU_THREAD_SPU);
+
+	thread->SetName(name);
+	thread->SetEntry(entry);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
+	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+
+	argc = 0;
 }

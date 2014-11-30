@@ -12,7 +12,7 @@ namespace detail{
 	{
 		ID* id_data;
 		if(!CheckId(id, id_data,name)) return false;
-		data = id_data->m_data->get<T>();
+		data = id_data->GetData()->get<T>();
 		return true;
 	}
 
@@ -40,7 +40,7 @@ public:
 
 	bool CheckId(u32 id) const
 	{
-		return GetIdManager().CheckID(id) && GetIdManager().GetID(id).m_name == GetName();
+		return GetIdManager().CheckID(id) && GetIdManager().GetID(id).GetName() == GetName();
 	}
 
 	template<typename T>

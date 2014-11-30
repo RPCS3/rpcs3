@@ -34,10 +34,10 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	sys_prx_t* prx = new sys_prx_t();
 	prx->size = (u32)f.GetSize();
 	prx->address = (u32)Memory.Alloc(prx->size, 4);
-	prx->path = path;
+	prx->path = (const char*)path;
 	
 	// Load the PRX into memory
-	f.Read(vm::get_ptr<void>(prx->address), prx->size);
+	f.Read(vm::get_ptr(prx->address), prx->size);
 
 	u32 id = sys_prx.GetNewId(prx, TYPE_PRX);
 	return id;
@@ -61,7 +61,7 @@ s32 sys_prx_load_module_on_memcontainer_by_fd()
 	return CELL_OK;
 }
 
-s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt)
+s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_start_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
@@ -76,7 +76,7 @@ s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> mod
 	return CELL_OK;
 }
 
-s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<be_t<u32>> modres, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt)
+s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt)
 {
 	sys_prx.Todo("sys_prx_stop_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());

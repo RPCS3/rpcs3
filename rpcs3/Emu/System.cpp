@@ -57,6 +57,8 @@ Emulator::Emulator()
 	, m_sync_prim_manager(new SyncPrimManager())
 	, m_vfs(new VFS())
 {
+	m_loader.register_handler(new loader::handlers::elf32);
+	m_loader.register_handler(new loader::handlers::elf64);
 }
 
 Emulator::~Emulator()
@@ -171,7 +173,6 @@ void Emulator::Load()
 
 	if(IsSelf(m_path))
 	{
-		std::string self_path = m_path;
 		std::string elf_path = rFileName(m_path).GetPath();
 
 		if (fmt::CmpNoCase(rFileName(m_path).GetFullName(),"EBOOT.BIN") == 0)
@@ -183,7 +184,7 @@ void Emulator::Load()
 			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
 		}
 
-		if(!DecryptSelf(elf_path, self_path))
+		if(!DecryptSelf(elf_path, m_path))
 			return;
 
 		m_path = elf_path;
@@ -191,7 +192,7 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
-	GetVFS().Init(m_path);
+	GetVFS().Init(rFileName(m_path).GetPath());
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
@@ -236,74 +237,12 @@ void Emulator::Load()
 		return;
 	}
 
-	bool is_error;
-	Loader l(f);
-
-	try
+	if (!m_loader.load(f))
 	{
-		if(!(is_error = !l.Analyze()) && l.GetMachine() != MACHINE_Unknown)
-		{
-			switch(l.GetMachine())
-			{
-			case MACHINE_SPU:
-				Memory.Init(Memory_PS3);
-				Memory.MainMem.AllocFixed(Memory.MainMem.GetStartAddr(), 0x40000);
-			break;
-
-			case MACHINE_PPC64:
-				Memory.Init(Memory_PS3);
-			break;
-
-			case MACHINE_MIPS:
-				Memory.Init(Memory_PSP);
-			break;
-
-			case MACHINE_ARM:
-				Memory.Init(Memory_PSV);
-			break;
-			}
-
-			is_error = !l.Load();
-		}
-		
-	}
-	catch(const std::string& e)
-	{
-		LOG_ERROR(LOADER, "%s", e.c_str());
-		is_error = true;
-	}
-	catch(...)
-	{
-		LOG_ERROR(LOADER, "Unhandled loader error.");
-		is_error = true;
-	}
-
-	CPUThreadType thread_type;
-
-	if(!is_error)
-	{
-		switch(l.GetMachine())
-		{
-		case MACHINE_PPC64: thread_type = CPU_THREAD_PPU; break;
-		case MACHINE_SPU: thread_type = CPU_THREAD_SPU; break;
-		case MACHINE_ARM: thread_type = CPU_THREAD_ARMv7; break;
-
-		default:
-			LOG_ERROR(LOADER, "Unimplemented thread type for machine.");
-			is_error = true;
-		break;
-		}
-	}
-
-	if(is_error)
-	{
-		Memory.Close();
-		Stop();
+		LOG_ERROR(LOADER, "Loading '%s' failed", m_elf_path.c_str());
+		vm::close();
 		return;
 	}
-
-	// setting default values
-	Emu.m_sdk_version = -1; // possibly "unknown" value
 
 	// trying to load some info from PARAM.SFO
 	vfsFile f2("/app_home/PARAM.SFO");
@@ -324,69 +263,6 @@ void Emulator::Load()
 
 	LoadPoints(BreakPointsDBName);
 
-	CPUThread& thread = GetCPU().AddThread(thread_type);
-
-	switch(l.GetMachine())
-	{
-	case MACHINE_SPU:
-		LOG_NOTICE(LOADER, "offset = 0x%llx", Memory.MainMem.GetStartAddr());
-		LOG_NOTICE(LOADER, "max addr = 0x%x", l.GetMaxAddr());
-		thread.SetOffset(Memory.MainMem.GetStartAddr());
-		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
-		thread.Run();
-	break;
-
-	case MACHINE_PPC64:
-	{
-		m_rsx_callback = (u32)Memory.MainMem.AllocAlign(4 * 4) + 4;
-		vm::write32(m_rsx_callback - 4, m_rsx_callback);
-
-		auto callback_data = vm::ptr<be_t<u32>>::make(m_rsx_callback);
-		callback_data[0] = ADDI(11, 0, 0x3ff);
-		callback_data[1] = SC(2);
-		callback_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
-
-		m_ppu_thr_exit = (u32)Memory.MainMem.AllocAlign(4 * 4);
-
-		auto ppu_thr_exit_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_exit);
-		//ppu_thr_exit_data += ADDI(3, 0, 0); // why it kills return value (GPR[3]) ?
-		ppu_thr_exit_data[0] = ADDI(11, 0, 41);
-		ppu_thr_exit_data[1] = SC(2);
-		ppu_thr_exit_data[2] = BCLR(0x10 | 0x04, 0, 0, 0);
-
-		m_ppu_thr_stop = (u32)Memory.MainMem.AllocAlign(2 * 4);
-
-		auto ppu_thr_stop_data = vm::ptr<be_t<u32>>::make(m_ppu_thr_stop);
-		ppu_thr_stop_data[0] = SC(4);
-		ppu_thr_stop_data[1] = BCLR(0x10 | 0x04, 0, 0, 0);
-
-		vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
-
-		thread.SetEntry(l.GetEntry());
-		thread.SetStackSize(0x10000);
-		thread.SetPrio(0x50);
-		thread.Run();
-
-		u32 arg1 = Memory.MainMem.AllocAlign(m_elf_path.size() + 1 + 0x20, 0x10) + 0x20;
-		memcpy(vm::get_ptr<char>(arg1), m_elf_path.c_str(), m_elf_path.size() + 1);
-		u32 argv = arg1 - 0x20;
-		vm::write64(argv, arg1);
-
-		static_cast<PPUThread&>(thread).GPR[3] = 1; // arg count
-		static_cast<PPUThread&>(thread).GPR[4] = argv; // probably, args**
-		static_cast<PPUThread&>(thread).GPR[5] = argv + 0x10; // unknown
-		static_cast<PPUThread&>(thread).GPR[6] = 0; // unknown
-		static_cast<PPUThread&>(thread).GPR[12] = Emu.GetMallocPageSize(); // ???
-		//thread.AddArgv("-emu");
-	}
-	break;
-
-	default:
-		thread.SetEntry(l.GetEntry());
-		thread.Run();
-	break;
-	}
-
 	m_status = Ready;
 
 	GetGSManager().Init();
@@ -399,7 +275,6 @@ void Emulator::Load()
 
 void Emulator::Run()
 {
-
 	if(!IsReady())
 	{
 		Load();

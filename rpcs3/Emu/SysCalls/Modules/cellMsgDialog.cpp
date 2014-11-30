@@ -21,6 +21,7 @@ enum MsgDialogState
 };
 
 std::atomic<MsgDialogState> g_msg_dialog_state(msgDialogNone);
+u64 g_msg_dialog_status;
 u64 g_msg_dialog_wait_until;
 u32 g_msg_dialog_progress_bar_count;
 
@@ -90,8 +91,8 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "%s", msg.c_str()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "\n%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "\n%s", msg.c_str()); break;
 		}
 
 		switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -100,14 +101,14 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		case CELL_MSGDIALOG_TYPE_SE_MUTE_ON: break;
 		}
 
-		u64 status = CELL_MSGDIALOG_BUTTON_NONE;
+		g_msg_dialog_status = CELL_MSGDIALOG_BUTTON_NONE;
 
 		volatile bool m_signal = false;
-		CallAfter([type, msg, &status, &m_signal]()
+		CallAfter([type, msg, &m_signal]()
 		{
 			if (Emu.IsStopped()) return;
 
-			MsgDialogCreate(type, msg.c_str(), status);
+			MsgDialogCreate(type, msg.c_str(), g_msg_dialog_status);
 
 			m_signal = true;
 		});
@@ -134,9 +135,10 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 		{
-			Emu.GetCallbackManager().Register([callback, status, userData]() -> s32
+			s32 status = (s32)g_msg_dialog_status;
+			Emu.GetCallbackManager().Register([callback, userData, status]() -> s32
 			{
-				callback((s32)status, userData);
+				callback(status, userData);
 				return CELL_OK;
 			});
 		}

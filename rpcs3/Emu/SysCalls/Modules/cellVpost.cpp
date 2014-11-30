@@ -35,7 +35,7 @@ u32 vpostOpen(VpostInstance* data)
 	return id;
 }
 
-int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResource> resource, vm::ptr<be_t<u32>> handle)
+int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResource> resource, vm::ptr<u32> handle)
 {
 	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());
@@ -45,7 +45,7 @@ int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellV
 	return CELL_OK;
 }
 
-int cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResourceEx> resource, vm::ptr<be_t<u32>> handle)
+int cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResourceEx> resource, vm::ptr<u32> handle)
 {
 	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());

@@ -23,7 +23,7 @@ typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, v
 
 Module *cellSysutil = nullptr;
 
-int cellSysutilGetSystemParamInt(int id, vm::ptr<be_t<u32>> value)
+int cellSysutilGetSystemParamInt(int id, vm::ptr<u32> value)
 {
 	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.addr());
 
@@ -825,7 +825,7 @@ int cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 	return CELL_OK;
 }
 
-int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, vm::ptr<be_t<u32>> memSize)
+int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
 {
 	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", config.addr(), memSize.addr());
 

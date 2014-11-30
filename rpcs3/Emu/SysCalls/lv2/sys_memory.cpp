@@ -108,7 +108,7 @@ s32 sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	return CELL_OK;
 }
 
-s32 sys_memory_container_create(vm::ptr<be_t<u32>> cid, u32 yield_size)
+s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 {
 	sys_memory.Warning("sys_memory_container_create(cid_addr=0x%x, yield_size=0x%x)", cid.addr(), yield_size);
 
@@ -154,7 +154,6 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 		return CELL_ESRCH;
 
 	// HACK: Return all memory.
-	sys_memory_info_t info;
 	mem_info->total_user_memory = ct->size;
 	mem_info->available_user_memory = ct->size;
 	return CELL_OK;

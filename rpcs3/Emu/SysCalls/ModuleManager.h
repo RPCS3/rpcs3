@@ -10,6 +10,7 @@ class ModuleManager
 	std::vector<ModuleFunc *> m_modules_funcs_list;
 	std::vector<Module> m_mod_init; //owner of Module
 	bool initialized;
+
 public:
 	ModuleManager();
 	~ModuleManager();

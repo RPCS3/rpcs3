@@ -1,7 +1,7 @@
 #pragma once
+#include "Emu/Memory/atomic_type.h"
 
 bool SM_IsAborted();
-void SM_Sleep();
 
 enum SMutexResult
 {
@@ -19,35 +19,30 @@ template
 <
 	typename T,
 	const u64 free_value = 0,
-	const u64 dead_value = 0xffffffffffffffffull,
-	void (*wait)() = SM_Sleep
+	const u64 dead_value = 0xffffffffffffffffull
 >
 class SMutexBase
 {
-	static_assert(sizeof(T) == sizeof(std::atomic<T>), "Invalid SMutexBase type");
-	std::atomic<T> owner;
+	static_assert(sizeof(T) == sizeof(atomic_le_t<T>), "Invalid SMutexBase type");
+	T owner;
+	typedef atomic_le_t<T> AT;
 
 public:
 	static const T GetFreeValue()
 	{
 		static const u64 value = free_value;
-		return (const T&)value;
+		return (T&)value;
 	}
 
 	static const T GetDeadValue()
 	{
 		static const u64 value = dead_value;
-		return (const T&)value;
+		return (T&)value;
 	}
 
 	void initialize()
 	{
 		owner = GetFreeValue();
-	}
-
-	SMutexBase()
-	{
-		initialize();
 	}
 
 	void finalize()
@@ -66,9 +61,9 @@ public:
 		{
 			return SMR_ABORT;
 		}
-		T old = GetFreeValue();
+		T old = reinterpret_cast<AT&>(owner).compare_and_swap(GetFreeValue(), tid);
 
-		if (!owner.compare_exchange_strong(old, tid))
+		if (old != GetFreeValue())
 		{
 			if (old == tid)
 			{
@@ -90,9 +85,9 @@ public:
 		{
 			return SMR_ABORT;
 		}
-		T old = tid;
+		T old = reinterpret_cast<AT&>(owner).compare_and_swap(tid, to);
 
-		if (!owner.compare_exchange_strong(old, to))
+		if (old != tid)
 		{
 			if (old == GetFreeValue())
 			{
@@ -121,7 +116,7 @@ public:
 				default: return res;
 			}
 
-			if (wait != nullptr) wait();
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 			if (timeout && counter++ > timeout)
 			{
@@ -131,5 +126,4 @@ public:
 	}
 };
 
-typedef SMutexBase<u32>
-	SMutex;
+typedef SMutexBase<u32> SMutex;

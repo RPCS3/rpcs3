@@ -45,16 +45,18 @@ struct EventFlag
 		, m_protocol(protocol)
 		, m_type(type)
 	{
+		m_mutex.initialize();
+		signal.initialize();
 	}
 
 	u32 check();
 };
 
-s32 sys_event_flag_create(vm::ptr<be_t<u32>> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init);
+s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init);
 s32 sys_event_flag_destroy(u32 eflag_id);
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result, u64 timeout);
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<be_t<u64>> result);
+s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
+s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result);
 s32 sys_event_flag_set(u32 eflag_id, u64 bitptn);
 s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn);
-s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<be_t<u32>> num);
-s32 sys_event_flag_get(u32 eflag_id, vm::ptr<be_t<u64>> flags);
+s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num);
+s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags);

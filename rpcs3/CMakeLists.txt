@@ -55,6 +55,7 @@ find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(OpenAL REQUIRED)
+find_package(LLVM REQUIRED CONFIG)
 
 include("${wxWidgets_USE_FILE}")
 
@@ -69,6 +70,7 @@ endif()
 include_directories(
 ${wxWidgets_INCLUDE_DIRS}
 ${OPENAL_INCLUDE_DIR}
+${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/include"
 "${RPCS3_SRC_DIR}"
 "${RPCS3_SRC_DIR}/Loader"
@@ -76,6 +78,14 @@ ${OPENAL_INCLUDE_DIR}
 "${RPCS3_SRC_DIR}/.."
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 )
+
+add_definitions(${LLVM_DEFINITIONS})
+add_definitions(-DLLVM_AVAILABLE)
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+	llvm_map_components_to_libnames(LLVM_LIBS jit vectorize x86codegen x86disassembler)
+else()
+	llvm_map_components_to_libnames(LLVM_LIBS jit vectorize x86codegen x86disassembler mcdisassembler)
+endif()
 
 link_directories("${RPCS3_SRC_DIR}/../ffmpeg/${PLATFORM_ARCH}/lib")
 
@@ -97,10 +107,13 @@ RPCS3_SRC
 "${RPCS3_SRC_DIR}/../Utilities/*"
 )
 
+list(REMOVE_ITEM RPCS3_SRC ${RPCS3_SRC_DIR}/../Utilities/simpleini/ConvertUTF.c)
+set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPULLVMRecompiler.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+
 add_executable(rpcs3 ${RPCS3_SRC})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjit/") #hack because the asmjit cmake file force fno exceptions
-target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES})
+target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${LLVM_LIBS})
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)

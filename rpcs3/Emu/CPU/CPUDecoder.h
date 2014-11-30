@@ -333,6 +333,17 @@ public:
 				});
 	}
 
+	InstrBase(const InstrBase &source)
+		: InstrCaller<TO>(source)
+		, m_name(source.m_name)
+		, m_opcode(source.m_opcode)
+		, m_args_count(source.m_args_count)
+		, m_args(source.m_args_count ? new CodeFieldBase*[source.m_args_count] : nullptr)
+	{
+		for(uint i = 0; i < source.m_args_count; ++i)
+			m_args[i] = source.m_args[i];
+	}
+
 	virtual ~InstrBase()
 	{
 		if (m_args) {
