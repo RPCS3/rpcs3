@@ -112,7 +112,7 @@ void ARMv7Thread::FastCall(u32 addr)
 
 	m_status = Running;
 	PC = addr;
-	LR = Emu.m_cpu_thr_stop;
+	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
 
 	CPUThread::Task();

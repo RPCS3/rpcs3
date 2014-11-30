@@ -155,20 +155,20 @@ public:
 		if (!values.size())
 			return *this;
 
-		assert(argc == 0);
+		//assert(argc == 0);
 
-		envp.set(vm::alloc((u32)sizeof(envp), stack_align, vm::main));
-		*envp = 0;
-		argv.set(vm::alloc(u32(sizeof(argv)* values.size()), stack_align, vm::main));
+		//envp.set(vm::alloc((u32)sizeof(envp), stack_align, vm::main));
+		//*envp = 0;
+		//argv.set(vm::alloc(u32(sizeof(argv)* values.size()), stack_align, vm::main));
 
 		for (auto &arg : values)
 		{
-			u32 arg_size = align(u32(arg.size() + 1), stack_align);
-			u32 arg_addr = vm::alloc(arg_size, stack_align, vm::main);
+			//u32 arg_size = align(u32(arg.size() + 1), stack_align);
+			//u32 arg_addr = vm::alloc(arg_size, stack_align, vm::main);
 
-			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
+			//std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
 
-			argv[argc++] = arg_addr;
+			//argv[argc++] = arg_addr;
 		}
 
 		return *this;
@@ -178,9 +178,9 @@ public:
 	{
 		thread->Run();
 
-		static_cast<ARMv7Thread*>(thread)->GPR[3] = argc;
-		static_cast<ARMv7Thread*>(thread)->GPR[4] = argv.addr();
-		static_cast<ARMv7Thread*>(thread)->GPR[5] = envp.addr();
+		//static_cast<ARMv7Thread*>(thread)->GPR[0] = argc;
+		//static_cast<ARMv7Thread*>(thread)->GPR[1] = argv.addr();
+		//static_cast<ARMv7Thread*>(thread)->GPR[2] = envp.addr();
 
 		return *this;
 	}

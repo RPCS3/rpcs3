@@ -350,12 +350,12 @@ namespace loader
 			ppu_thr_exit_data[0] = ADDI(r11, 0, 41);
 			ppu_thr_exit_data[1] = SC(2);
 			ppu_thr_exit_data[2] = BLR();
-			Emu.SetPPUThreadExit(ppu_thr_exit_data.addr());
+			Emu.SetCPUThreadExit(ppu_thr_exit_data.addr());
 
 			auto ppu_thr_stop_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(2 * 4));
 			ppu_thr_stop_data[0] = SC(4);
 			ppu_thr_stop_data[1] = BLR();
-			Emu.SetPPUThreadStop(ppu_thr_stop_data.addr());
+			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
 			vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*

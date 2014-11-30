@@ -203,7 +203,7 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " ");//used to be skip_line
-	vfsFile sfo("/app_home/PARAM.SFO");
+	vfsFile sfo("/app_home/../PARAM.SFO");
 	PSFLoader psf(sfo);
 	psf.Load(false);
 	std::string title = psf.GetString("TITLE");
@@ -212,7 +212,7 @@ void Emulator::Load()
 	LOG_NOTICE(LOADER, "Serial: %s", title_id.c_str());
 
 	// bdvd inserting imitation
-	vfsFile f1("/app_home/dev_bdvd.path");
+	vfsFile f1("/app_home/../dev_bdvd.path");
 	if (f1.IsOpened())
 	{
 		std::string bdvd;
@@ -246,7 +246,7 @@ void Emulator::Load()
 	}
 
 	// trying to load some info from PARAM.SFO
-	vfsFile f2("/app_home/PARAM.SFO");
+	vfsFile f2("/app_home/../PARAM.SFO");
 	if (f2.IsOpened())
 	{
 		PSFLoader psf(f2);
