@@ -380,9 +380,9 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	vm::write32(context.addr(), gcm_info.context_addr);
 
 	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-	ctrl.put = 0;
-	ctrl.get = 0;
-	ctrl.ref = -1;
+	ctrl.put.write_relaxed(be_t<u32>::make(0));
+	ctrl.get.write_relaxed(be_t<u32>::make(0));
+	ctrl.ref.write_relaxed(be_t<u32>::make(-1));
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.m_ctxt_addr = context.addr();
@@ -526,7 +526,10 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	if(ctxt.addr() == gcm_info.context_addr)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-		ctrl.put += 8;
+		ctrl.put.atomic_op([](be_t<u32>& value)
+		{
+			value += 8;
+		});
 	}
 
 	return id;
@@ -1166,6 +1169,16 @@ int cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
+
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+
+	{
+		const u32 address = context->current;
+		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
+		assert(upper != 0xFFFF);
+		u32 offset = (upper << 20) | (address & 0xFFFFF);
+		//ctrl.put.exchange(be_t<u32>::make(offset)); // update put pointer
+	}
 	
 	// TODO: this may be wrong
 

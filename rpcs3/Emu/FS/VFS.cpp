@@ -422,7 +422,7 @@ void VFS::Init(const std::string& path)
 		Mount(entry.mount, mpath, dev);
 	}
 
-	Link("/app_home/", cwd);
+	Link("/app_home/", "/host_root/" + cwd);
 }
 
 void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
@@ -442,7 +442,7 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_flash/",  "/dev_flash/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb000/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb/");
-			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../",             "/dev_bdvd/");
+			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../../",          "/dev_bdvd/");
 			res.emplace_back(vfsDevice_LocalFile, "",                           "/host_root/");
 
 			return;
