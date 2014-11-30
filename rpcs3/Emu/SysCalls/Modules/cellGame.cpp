@@ -30,7 +30,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
+	vfsFile f("/dev_bdvd/PARAM.SFO");
 	if (!f.IsOpened())
 	{
 		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
@@ -100,7 +100,7 @@ int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
+	vfsFile f("/dev_bdvd/PARAM.SFO");
 	if (!f.IsOpened())
 	{
 		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
@@ -181,7 +181,7 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.addr(), usrdirPath.addr());
 
-	if (!contentInfoPath && !usrdirPath)
+	if (!contentInfoPath || !usrdirPath)
 	{
 		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
@@ -336,7 +336,7 @@ int cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
+	vfsFile f("/dev_bdvd/PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
@@ -359,7 +359,7 @@ int cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
+	vfsFile f("/dev_bdvd/PARAM.SFO");
 	PSFLoader psf(f);
 	if(!psf.Load(false))
 		return CELL_GAME_ERROR_FAILURE;
