@@ -112,6 +112,7 @@ class Emulator
 public:
 	std::string m_path;
 	std::string m_elf_path;
+	std::string m_emu_path;
 	std::string m_title_id;
 	u32 m_cpu_thr_stop;
 	s32 m_sdk_version;
@@ -126,6 +127,16 @@ public:
 	std::string GetPath() const
 	{
 		return m_elf_path;
+	}
+
+	std::string GetEmulatorPath() const
+	{
+		return m_emu_path;
+	}
+
+	void SetEmulatorPath(const std::string& path)
+	{
+		m_emu_path = path;
 	}
 
 	std::recursive_mutex& GetCoreMutex()   { return m_core_mutex; }

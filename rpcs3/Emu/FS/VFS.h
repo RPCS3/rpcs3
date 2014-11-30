@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 
 class vfsDevice;
 struct vfsFileBase;
@@ -42,9 +43,14 @@ struct VFSManagerEntry
 	}
 };
 
+std::vector<std::string> simplify_path_blocks(const std::string& path);
+std::string simplify_path(const std::string& path, bool is_dir);
+
 struct VFS
 {
 	~VFS();
+
+	std::string cwd;
 
 	//TODO: find out where these are supposed to be deleted or just make it shared_ptr
 	//and also make GetDevice and GetDeviceLocal return shared_ptr then.
@@ -52,9 +58,23 @@ struct VFS
 	// This will cause problems if other code stores the pointer returned by GetDevice/GetDeviceLocal
 	// and tries to use it after the device is unmounted.
 	std::vector<vfsDevice *> m_devices;
+
+	struct links_sorter
+	{
+		bool operator()(const std::vector<std::string>& a, const std::vector<std::string>& b)
+		{
+			return b.size() < a.size();
+		}
+	};
+
+	std::map<std::vector<std::string>, std::vector<std::string>, links_sorter> links;
+
 	void Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device);
+	void Link(const std::string& mount_point, const std::string& ps3_path);
 	void UnMount(const std::string& ps3_path);
 	void UnMountAll();
+
+	std::string GetLinked(std::string ps3_path) const;
 
 	vfsFileBase* OpenFile(const std::string& ps3_path, vfsOpenMode mode) const;
 	vfsDirBase* OpenDir(const std::string& ps3_path) const;

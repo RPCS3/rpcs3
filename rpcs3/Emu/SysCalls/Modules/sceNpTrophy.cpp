@@ -96,7 +96,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 	// TODO: There are other possible errors
 
 	// TODO: Is the TROPHY.TRP file necessarily located in this path?
-	vfsDir dir("/app_home/TROPDIR/");
+	vfsDir dir("/app_home/../TROPDIR/");
 	if(!dir.IsOpened())
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -105,7 +105,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 	{
 		if (entry->flags & DirEntry_TypeDir)
 		{
-			vfsStream* stream = Emu.GetVFS().OpenFile("/app_home/TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
+			vfsStream* stream = Emu.GetVFS().OpenFile("/app_home/../TROPDIR/" + entry->name + "/TROPHY.TRP", vfsRead);
 
 			if (stream && stream->IsOpened())
 			{

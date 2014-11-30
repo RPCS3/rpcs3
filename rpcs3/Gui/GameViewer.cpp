@@ -112,7 +112,7 @@ void GameViewer::LoadGames()
 
 	m_games.clear();
 
-	for(const DirEntryInfo* info = dir.Read(); info; info = dir.Read())
+	for(const DirEntryInfo* info : dir)
 	{
 		if(info->flags & DirEntry_TypeDir)
 		{
@@ -182,7 +182,7 @@ void GameViewer::ShowData()
 
 void GameViewer::Refresh()
 {
-	Emu.GetVFS().Init(m_path);
+	Emu.GetVFS().Init("/");
 	LoadGames();
 	LoadPSF();
 	ShowData();
@@ -210,7 +210,7 @@ void GameViewer::DClick(wxListEvent& event)
 
 	Debug::AutoPause::getInstance().Reload();
 
-	Emu.GetVFS().Init(path);
+	Emu.GetVFS().Init("/");
 	std::string local_path;
 	if (Emu.GetVFS().GetDevice(path, local_path) && !Emu.BootGame(local_path)) {
 		LOG_ERROR(HLE, "Boot error: elf not found! [%s]", path.c_str());

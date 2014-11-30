@@ -219,4 +219,37 @@ namespace vm
 		assert(location < memory_location_count);
 		return g_locations[location];
 	}
+
+	class stack
+	{
+		u32 m_begin;
+		u32 m_size;
+		int m_page_size;
+		int m_position;
+		u8 m_align;
+
+	public:
+		void init(u32 begin, u32 size, u32 page_size = 180, u8 align = 0x10)
+		{
+			m_begin = begin;
+			m_size = size;
+			m_page_size = page_size;
+			m_position = 0;
+			m_align = align;
+		}
+
+		u32 alloc_new_page()
+		{
+			assert(m_position + m_page_size < (int)m_size);
+			m_position += (int)m_page_size;
+			return m_begin + m_position;
+		}
+
+		u32 dealloc_new_page()
+		{
+			assert(m_position - m_page_size > 0);
+			m_position -= (int)m_page_size;
+			return m_begin + m_position;
+		}
+	};
 }

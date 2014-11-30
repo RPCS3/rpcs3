@@ -32,7 +32,7 @@ bool vfsDirBase::IsOpened() const
 
 bool vfsDirBase::IsExists(const std::string& path) const
 {
-	return rExists(path);
+	return false;
 }
 
 const std::vector<DirEntryInfo>& vfsDirBase::GetEntries() const
@@ -57,4 +57,10 @@ const DirEntryInfo* vfsDirBase::Read()
 		return nullptr;
 
 	return &m_entries[m_pos++];
+}
+
+const DirEntryInfo* vfsDirBase::First()
+{
+	m_pos = 0;
+	return Read();
 }

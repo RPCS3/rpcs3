@@ -57,7 +57,7 @@ int fmt::CmpNoCase(const std::string& a, const std::string& b)
 		return std::equal(a.begin(),
 			a.end(),
 			b.begin(),
-			[](const char& a, const char& b){return tolower(a) == tolower(b); })
+			[](const char& a, const char& b){return ::tolower(a) == ::tolower(b); })
 			? 0 : -1;
 	}
 }
@@ -102,4 +102,66 @@ std::vector<std::string> fmt::rSplit(const std::string& source, const std::strin
 		}
 	} while (true);
 	return ret;
+}
+
+std::vector<std::string> fmt::split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
+{
+	std::vector<std::string> result;
+
+	size_t cursor_begin = 0;
+
+	for (size_t cursor_end = 0; cursor_end < source.length(); ++cursor_end)
+	{
+		for (auto &separator : separators)
+		{
+			if (strncmp(source.c_str() + cursor_end, separator.c_str(), separator.length()) == 0)
+			{
+				std::string candidate = source.substr(cursor_begin, cursor_end - cursor_begin);
+				if (!is_skip_empty || !candidate.empty())
+					result.push_back(candidate);
+
+				cursor_begin = cursor_end + separator.length();
+				cursor_end = cursor_begin - 1;
+				break;
+			}
+		}
+	}
+
+	if (cursor_begin != source.length())
+	{
+		result.push_back(source.substr(cursor_begin));
+	}
+
+	return std::move(result);
+}
+
+std::string fmt::merge(std::vector<std::string> source, const std::string& separator)
+{
+	std::string result;
+
+	for (auto &s : source)
+	{
+		result += s + separator;
+	}
+
+	return result;
+}
+
+std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)
+{
+	std::string result;
+
+	for (auto &v : sources)
+	{
+		result += fmt::merge(v, separator);
+	}
+
+	return result;
+}
+
+std::string fmt::tolower(std::string source)
+{
+	std::transform(source.begin(), source.end(), source.begin(), ::tolower);
+
+	return source;
 }
