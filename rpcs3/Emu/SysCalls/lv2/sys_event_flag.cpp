@@ -30,9 +30,7 @@ u32 EventFlag::check()
 	}
 
 	if (m_protocol == SYS_SYNC_PRIORITY)
-	{
 		target = sq.pop_prio();
-	}
 
 	return target;
 }
@@ -42,13 +40,13 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
 		eflag_id.addr(), attr.addr(), init);
 
-	if (eflag_id.addr() == NULL)
+	if (!eflag_id)
 	{
 		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (eflag_id_addr=0x%x)", eflag_id.addr());
 		return CELL_EFAULT;
 	}
 
-	if (attr.addr() == NULL)
+	if (!attr)
 	{
 		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (attr_addr=0x%x)", attr.addr());
 		return CELL_EFAULT;
@@ -64,9 +62,7 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 	}
 
 	if (attr->pshared.ToBE() != se32(0x200))
-	{
 		return CELL_EINVAL;
-	}
 
 	switch (attr->type.ToBE())
 	{
@@ -370,7 +366,7 @@ s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags)
 {
 	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.addr());
 
-	if (flags.addr() == NULL)
+	if (!flags)
 	{
 		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (flags_addr=0x%x)", flags.addr());
 		return CELL_EFAULT;

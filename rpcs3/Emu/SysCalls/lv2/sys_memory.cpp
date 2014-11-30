@@ -28,7 +28,7 @@ s32 sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 	default: return CELL_EINVAL;
 	}
 
-	if(!addr)
+	if (!addr)
 		return CELL_ENOMEM;
 	
 	// Write back the start address of the allocated area.
