@@ -57,7 +57,7 @@ int fmt::CmpNoCase(const std::string& a, const std::string& b)
 		return std::equal(a.begin(),
 			a.end(),
 			b.begin(),
-			[](const char& a, const char& b){return tolower(a) == tolower(b); })
+			[](const char& a, const char& b){return ::tolower(a) == ::tolower(b); })
 			? 0 : -1;
 	}
 }
@@ -133,4 +133,35 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 	}
 
 	return std::move(result);
+}
+
+std::string fmt::merge(std::vector<std::string> source, const std::string& separator)
+{
+	std::string result;
+
+	for (auto &s : source)
+	{
+		result += s + separator;
+	}
+
+	return result;
+}
+
+std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)
+{
+	std::string result;
+
+	for (auto &v : sources)
+	{
+		result += fmt::merge(v, separator);
+	}
+
+	return result;
+}
+
+std::string fmt::tolower(std::string source)
+{
+	std::transform(source.begin(), source.end(), source.begin(), ::tolower);
+
+	return source;
 }
