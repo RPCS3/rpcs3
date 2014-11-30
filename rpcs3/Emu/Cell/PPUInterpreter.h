@@ -893,7 +893,7 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = log2(CPU.VPR[vb]._f[w]);
+			CPU.VPR[vd]._f[w] = log2f(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
@@ -2824,7 +2824,7 @@ private:
 			return;
 		}
 		const u8 eb = (addr & 0xf) >> 1;
-		vm::write16((u32)addr & 0xFFFFFFFE, CPU.VPR[vs]._u16[7 - eb]);
+		vm::write16((u32)addr, CPU.VPR[vs]._u16[7 - eb]);
 	}
 	void STDUX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2860,7 +2860,7 @@ private:
 			return;
 		}
 		const u8 eb = (addr & 0xf) >> 2;
-		vm::write32((u32)addr & 0xFFFFFFFC, CPU.VPR[vs]._u32[3 - eb]);
+		vm::write32((u32)addr, CPU.VPR[vs]._u32[3 - eb]);
 	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{

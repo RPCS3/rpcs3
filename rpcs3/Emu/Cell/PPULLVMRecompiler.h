@@ -253,7 +253,7 @@ namespace ppu_recompiler_llvm {
     };
 
     /// Pointer to an executable
-    typedef u32(*Executable)(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+    typedef u32(*Executable)(PPUThread * ppu_state, u64 context);
 
     /// PPU compiler that uses LLVM for code generation and optimization
     class Compiler : protected PPUOpcodes, protected PPCDecoder {
@@ -270,9 +270,6 @@ namespace ppu_recompiler_llvm {
 
             /// Total time
             std::chrono::nanoseconds total_time;
-
-            /// Contains the number of times interpreter fallback was used
-            std::map<std::string, u64> interpreter_fallback_stats;
         };
 
         Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block);
@@ -705,7 +702,6 @@ namespace ppu_recompiler_llvm {
         struct CompileTaskState {
             enum Args {
                 State,
-                Interpreter,
                 Context,
                 MaxArgs,
             };
@@ -913,10 +909,6 @@ namespace ppu_recompiler_llvm {
 
         /// Write to memory
         void WriteMemory(llvm::Value * addr_i64, llvm::Value * val_ix, u32 alignment = 0, bool bswap = true, bool could_be_mmio = true);
-
-        /// Call an interpreter function
-        template<class Func, class... Args>
-        llvm::Value * InterpreterCall(const char * name, Func function, Args... args);
 
         /// Convert a C++ type to an LLVM type
         template<class T>
@@ -1166,10 +1158,10 @@ namespace ppu_recompiler_llvm {
         Executable GetExecutable(u32 address, Executable default_executable) const;
 
         /// Execute a function
-        static u32 ExecuteFunction(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+        static u32 ExecuteFunction(PPUThread * ppu_state, u64 context);
 
         /// Execute till the current function returns
-        static u32 ExecuteTillReturn(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+        static u32 ExecuteTillReturn(PPUThread * ppu_state, u64 context);
     };
 
     /// Get the branch type from a branch instruction
