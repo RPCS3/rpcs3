@@ -90,6 +90,46 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 		imm32 = (data & 0x1c0) >> 6;
 		break;
 	}
+	case T2:
+	{
+		d = n = (data & 0x700) >> 8;
+		imm32 = (data & 0xff);
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		set_flags = (data & 0x100000);
+		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMN (immediate)";
+		}
+		if (n == 13)
+		{
+			throw "ADD (SP plus immediate)";
+		}
+		break;
+	}
+	case T4:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		set_flags = false;
+		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+
+		if (n == 15)
+		{
+			throw "ADR";
+		}
+		if (n == 13)
+		{
+			throw "ADD (SP plus immediate)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
@@ -115,10 +155,74 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
 {
+	bool set_flags = !CPU.ITSTATE;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 n = 0;
+	u32 m = 0;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (data & 0x7);
+		n = (data & 0x38) >> 3;
+		m = (data & 0x1c0) >> 6;
+		break;
+	}
+	case T2:
+	{
+		n = d = (data & 0x80) >> 4 | (data & 0x7);
+		m = (data & 0x78) >> 3;
+		set_flags = false;
+
+		if (n == 13 || m == 13)
+		{
+			throw "ADD (SP plus register)";
+		}
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		m = (data & 0xf);
+		set_flags = (data & 0x100000);
+		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMN (register)";
+		}
+		if (n == 13)
+		{
+			throw "ADD (SP plus register)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, true);
+		if (set_flags)
+		{
+			bool carry, overflow;
+			const u32 res = AddWithCarry(CPU.read_gpr(n), shifted, false, carry, overflow);
+			CPU.write_gpr(d, res);
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+			CPU.APSR.V = overflow;
+		}
+		else
+		{
+			CPU.write_gpr(d, CPU.read_gpr(n) + shifted);
+		}
 	}
 }
 
@@ -133,19 +237,121 @@ void ARMv7Interpreter::ADD_RSR(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::ADD_SPI(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 13;
+	bool set_flags = false;
+	u32 imm32 = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (data & 0x700) >> 8;
+		imm32 = (data & 0xff) << 2;
+		break;
+	}
+	case T2:
+	{
+		imm32 = (data & 0x7f) << 2;
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		set_flags = (data & 0x100000);
+		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+
+		if (d == 15 && set_flags)
+		{
+			throw "CMN (immediate)";
+		}
+		break;
+	}
+	case T4:
+	{
+		d = (data & 0xf00) >> 8;
+		set_flags = false;
+		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		if (set_flags)
+		{
+			bool carry, overflow;
+			const u32 res = AddWithCarry(CPU.SP, imm32, false, carry, overflow);
+			CPU.write_gpr(d, res);
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+			CPU.APSR.V = overflow;
+		}
+		else
+		{
+			CPU.write_gpr(d, CPU.SP + imm32);
+		}
 	}
 }
 
 void ARMv7Interpreter::ADD_SPR(const u32 data, const ARMv7_encoding type)
 {
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 13;
+	u32 m = 0;
+	bool set_flags = false;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		m = d = (data & 0x80) >> 4 | (data & 0x7);
+		break;
+	}
+	case T2:
+	{
+		m = (data & 0x78) >> 3;
+
+		if (m == 13)
+		{
+			throw "ADD_SPR_T2: T1";
+		}
+		break;
+	}
+	case T3:
+	{
+		d = (data & 0xf00) >> 8;
+		m = (data & 0xf);
+		set_flags = (data & 0x100000);
+		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		if (set_flags)
+		{
+			bool carry, overflow;
+			const u32 res = AddWithCarry(CPU.SP, shifted, false, carry, overflow);
+			CPU.write_gpr(d, res);
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+			CPU.APSR.V = overflow;
+		}
+		else
+		{
+			CPU.write_gpr(d, CPU.SP + CPU.read_gpr(m));
+		}
 	}
 }
 
@@ -918,19 +1124,96 @@ void ARMv7Interpreter::LDRSH_REG(const u32 data, const ARMv7_encoding type)
 
 void ARMv7Interpreter::LSL_IMM(const u32 data, const ARMv7_encoding type)
 {
+	bool set_flags = !CPU.ITSTATE;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 m = 0;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (data & 0x7);
+		m = (data & 0x38) >> 3;
+		shift_n = (data & 0x7c0) >> 6;
+
+		if (!shift_n)
+		{
+			throw "MOV (register)";
+		}
+		break;
+	}
+	case T2:
+	{
+		d = (data & 0xf00) >> 8;
+		m = (data & 0xf);
+		set_flags = (data & 0x100000);
+		shift_n = (data & 0x7000) >> 10 | (data & 0xc0) >> 6;
+
+		if (!shift_n)
+		{
+			throw "MOV (register)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		bool carry;
+		const u32 res = Shift_C(CPU.read_gpr(m), SRType_LSL, shift_n, CPU.APSR.C, carry);
+		CPU.write_gpr(d, res);
+		if (set_flags)
+		{
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+		}
 	}
 }
 
 void ARMv7Interpreter::LSL_REG(const u32 data, const ARMv7_encoding type)
 {
+	bool set_flags = !CPU.ITSTATE;
+	u32 cond = CPU.ITSTATE.advance();
+	u32 d = 0;
+	u32 n = 0;
+	u32 m = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = n = (data & 0x7);
+		m = (data & 0x38) >> 3;
+		break;
+	}
+	case T2:
+	{
+		d = (data & 0xf00) >> 8;
+		n = (data & 0xf0000) >> 16;
+		m = (data & 0xf);
+		set_flags = (data & 0x100000);
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(cond))
+	{
+		bool carry;
+		const u32 res = Shift_C(CPU.read_gpr(n), SRType_LSL, (CPU.read_gpr(m) & 0xff), CPU.APSR.C, carry);
+		CPU.write_gpr(d, res);
+		if (set_flags)
+		{
+			CPU.APSR.N = res >> 31;
+			CPU.APSR.Z = res == 0;
+			CPU.APSR.C = carry;
+		}
 	}
 }
 

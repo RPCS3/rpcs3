@@ -1840,15 +1840,15 @@ private:
 	{
 		for (uint b = 0; b < 16; b++)
 		{
-				s16 result = (s16)CPU.VPR[va]._u8[b] - (s16)CPU.VPR[vb]._u8[b];
+			s16 result = (s16)CPU.VPR[va]._u8[b] - (s16)CPU.VPR[vb]._u8[b];
 
-				if (result < 0)
-				{
+			if (result < 0)
+			{
 				CPU.VPR[vd]._u8[b] = 0;
 				CPU.VSCR.SAT = 1;
-				}
-				else
-					CPU.VPR[vd]._u8[b] = (u8)result;
+			}
+			else
+				CPU.VPR[vd]._u8[b] = (u8)result;
 		}
 	}
 	void VSUBUHM(u32 vd, u32 va, u32 vb)

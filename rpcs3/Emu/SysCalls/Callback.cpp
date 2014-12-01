@@ -1,10 +1,10 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
-#include "ErrorCodes.h"
 #include "Emu/System.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/ARMv7/ARMv7Thread.h"
 #include "Callback.h"
 
 void CallbackManager::Register(const std::function<s32()>& func)
@@ -51,14 +51,28 @@ void CallbackManager::Init()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_cb_thread = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-	m_cb_thread->SetName("Callback Thread");
-	m_cb_thread->SetEntry(0);
-	m_cb_thread->SetPrio(1001);
-	m_cb_thread->SetStackSize(0x10000);
-	m_cb_thread->InitStack();
-	m_cb_thread->InitRegs();
-	m_cb_thread->DoRun();
+	if (Memory.PSV.RAM.GetStartAddr())
+	{
+		m_cb_thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+		m_cb_thread->SetName("Callback Thread");
+		m_cb_thread->SetEntry(0);
+		m_cb_thread->SetPrio(1001);
+		m_cb_thread->SetStackSize(0x10000);
+		m_cb_thread->InitStack();
+		m_cb_thread->InitRegs();
+		static_cast<ARMv7Thread*>(m_cb_thread)->DoRun();
+	}
+	else
+	{
+		m_cb_thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+		m_cb_thread->SetName("Callback Thread");
+		m_cb_thread->SetEntry(0);
+		m_cb_thread->SetPrio(1001);
+		m_cb_thread->SetStackSize(0x10000);
+		m_cb_thread->InitStack();
+		m_cb_thread->InitRegs();
+		static_cast<PPUThread*>(m_cb_thread)->DoRun();
+	}
 
 	thread cb_async_thread("CallbackManager::Async() thread", [this]()
 	{

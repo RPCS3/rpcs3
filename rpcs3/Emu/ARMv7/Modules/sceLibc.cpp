@@ -44,9 +44,11 @@ namespace sce_libc_func
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
 	}
 
-	void _Assert()
+	void _Assert(vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
 	{
-		sceLibc.Todo(__FUNCTION__);
+		sceLibc.Error("_Assert(text_addr=0x%x, func_addr=0x%x)", text.addr(), func.addr());
+
+		LOG_ERROR(TTY, "%s : %s", func.get_ptr(), text.get_ptr());
 		Emu.Pause();
 	}
 }

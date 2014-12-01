@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Utilities/rMsgBox.h"
 #include "Emu/FS/VFS.h"
@@ -181,9 +181,8 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.addr(), usrdirPath.addr());
 
-	if (!contentInfoPath && !usrdirPath)
+	if (!contentInfoPath || !usrdirPath)
 	{
-		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
 	}
 	
