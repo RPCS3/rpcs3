@@ -73,16 +73,27 @@ void sys_game_process_exitspawn(
 		envp++;
 	}
 
-	for (auto &arg : argv){
+	for (auto &arg : argv) {
 		sys_process.Log("argument: %s", arg.c_str());
 	}
-	for (auto &en : env){
+
+	for (auto &en : env) {
 		sys_process.Log("env_argument: %s", en.c_str());
 	}
+
 	//TODO: execute the file in <path> with the args in argv
 	//and the environment parameters in envp and copy the data
 	//from data_addr into the adress space of the new process
 	//then kill the current process
+
+	Emu.Pause();
+	sys_process.Success("Process finished");
+
+	CallAfter([]()
+	{
+		Emu.Stop();
+	});
+
 	return;
 }
 
@@ -121,16 +132,27 @@ void sys_game_process_exitspawn2(
 		envp++;
 	}
 
-	for (auto &arg : argv){
+	for (auto &arg : argv) {
 		sys_process.Log("argument: %s", arg.c_str());
 	}
-	for (auto &en : env){
+
+	for (auto &en : env) {
 		sys_process.Log("env_argument: %s", en.c_str());
 	}
+
 	//TODO: execute the file in <path> with the args in argv
 	//and the environment parameters in envp and copy the data
 	//from data_addr into the adress space of the new process
 	//then kill the current process
+
+	Emu.Pause();
+	sys_process.Success("Process finished");
+
+	CallAfter([]()
+	{
+		Emu.Stop();
+	});
+
 	return;
 }
 

@@ -131,8 +131,16 @@ namespace loader
 
 			struct sprx_info
 			{
-				std::unordered_map<u32, u32> exports;
-				std::unordered_map<u32, u32> imports;
+				std::string name;
+				u32 rtoc;
+
+				struct module_info
+				{
+					std::unordered_map<u32, u32> exports;
+					std::unordered_map<u32, u32> imports;
+				};
+
+				std::unordered_map<std::string, module_info> modules;
 				std::vector<sprx_segment_info> segments;
 			};
 

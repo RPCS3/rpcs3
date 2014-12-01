@@ -10,7 +10,6 @@ class ModuleManager
 	std::vector<ModuleFunc *> m_modules_funcs_list;
 	std::vector<Module> m_mod_init; //owner of Module
 	bool initialized;
-	std::unordered_map<u32, u32> m_registered_functions;
 
 public:
 	ModuleManager();
@@ -26,20 +25,4 @@ public:
 	u32 GetFuncNumById(u32 id);
 	Module* GetModuleByName(const std::string& name);
 	Module* GetModuleById(u16 id);
-
-	void register_function(u32 fnid, u32 fstub)
-	{
-		m_registered_functions[fnid] = fstub;
-	}
-
-	bool get_function_stub(u32 fnid, be_t<u32>& res)
-	{
-		auto f = m_registered_functions.find(fnid);
-
-		if (f == m_registered_functions.end())
-			return false;
-
-		res = f->second;
-		return true;
-	}
 };

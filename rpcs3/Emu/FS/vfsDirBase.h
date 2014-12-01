@@ -53,4 +53,57 @@ public:
 	virtual bool Rename(const std::string& from, const std::string& to) = 0;
 	virtual bool Remove(const std::string& path) = 0;
 	virtual const DirEntryInfo* Read();
+	virtual const DirEntryInfo* First();
+
+	class iterator
+	{
+		vfsDirBase *parent;
+		const DirEntryInfo* data;
+
+	public:
+		iterator(vfsDirBase* parent)
+			: parent(parent)
+			, data(parent->First())
+		{
+		}
+
+		iterator(const DirEntryInfo* data)
+			: parent(parent)
+			, data(data)
+		{
+		}
+
+		iterator& operator++()
+		{
+			data = parent->Read();
+			return *this;
+		}
+
+		iterator operator++(int)
+		{
+			const DirEntryInfo* olddata = data;
+			data = parent->Read();
+			return iterator(olddata);
+		}
+
+		const DirEntryInfo* operator *()
+		{
+			return data;
+		}
+
+		bool operator!=(iterator other) const
+		{
+			return data != other.data;
+		}
+	};
+
+	iterator begin()
+	{
+		return iterator(this);
+	}
+
+	iterator end()
+	{
+		return iterator((const DirEntryInfo*)nullptr);
+	}
 };

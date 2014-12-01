@@ -192,4 +192,9 @@ namespace fmt{
 	void Replace(std::string &str, const std::string &searchterm, const std::string& replaceterm);
 
 	std::vector<std::string> rSplit(const std::string& source, const std::string& delim);
+
+	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
+	std::string merge(std::vector<std::string> source, const std::string& separator);
+	std::string merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator);
+	std::string tolower(std::string source);
 }

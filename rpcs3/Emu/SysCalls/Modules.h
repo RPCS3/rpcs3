@@ -9,10 +9,12 @@ struct ModuleFunc
 {
 	u32 id;
 	func_caller* func;
+	vm::ptr<void(*)()> lle_func;
 
-	ModuleFunc(u32 id, func_caller* func)
+	ModuleFunc(u32 id, func_caller* func, vm::ptr<void(*)()> lle_func = vm::ptr<void(*)()>::make(0))
 		: id(id)
 		, func(func)
+		, lle_func(lle_func)
 	{
 	}
 
@@ -57,7 +59,7 @@ class Module : public LogBase
 	void PushNewFuncSub(SFunc* func);
 
 public:
-	std::vector<ModuleFunc*> m_funcs_list;
+	std::unordered_map<u32, ModuleFunc*> m_funcs_list;
 
 	Module(u16 id, const char* name, void(*load)() = nullptr, void(*unload)() = nullptr);
 
@@ -66,6 +68,16 @@ public:
 
 	Module &operator =(Module &other) = delete;
 	Module &operator =(Module &&other);
+	
+	ModuleFunc* GetFunc(u32 id)
+	{
+		auto res = m_funcs_list.find(id);
+
+		if (res == m_funcs_list.end())
+			return nullptr;
+
+		return res->second;
+	}
 
 	~Module();
 
@@ -114,9 +126,20 @@ public:
 	}
 
 	bool RemoveId(u32 id);
+	
+	void RegisterLLEFunc(u32 id, vm::ptr<void(*)()> func)
+	{
+		if (auto f = GetFunc(id))
+		{
+			f->lle_func = func;
+			return;
+		}
+		
+		m_funcs_list[id] = new ModuleFunc(id, nullptr, func);
+	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const char* name, T func);
+	template<typename T> __forceinline void AddFunc(const char* name, T func);	
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
@@ -125,7 +148,7 @@ u32 getFunctionId(const char* name);
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
-	m_funcs_list.emplace_back(new ModuleFunc(id, bind_func(func)));
+	m_funcs_list[id] = new ModuleFunc(id, bind_func(func));
 }
 
 template<typename T>
