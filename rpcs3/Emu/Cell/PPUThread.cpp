@@ -92,7 +92,7 @@ void PPUThread::InitRegs()
 	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
 
-	LR = Emu.GetPPUThreadExit();
+	LR = Emu.GetCPUThreadExit();
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
@@ -202,7 +202,7 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	m_status = Running;
 	PC = addr;
 	GPR[2] = rtoc;
-	LR = Emu.m_ppu_thr_stop;
+	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
 
 	CPUThread::Task();

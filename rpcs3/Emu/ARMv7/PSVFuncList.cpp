@@ -2,30 +2,36 @@
 #include "Emu/System.h"
 #include "PSVFuncList.h"
 
-std::vector<psv_func> g_psv_func_list = []() -> std::vector<psv_func>
-{
-	std::vector<psv_func> v;
-
-	psv_func f =
-	{
-		0xdeadbeef,
-		"INVALID FUNCTION",
-		new psv_func_detail::func_binder<u32>([]() -> u32
-		{
-			LOG_ERROR(HLE, "Unimplemented function found");
-			Emu.Pause();
-
-			return 0xffffffffu;
-		}),
-		nullptr,
-	};
-	v.push_back(f);
-
-	return v;
-}();
+std::vector<psv_func> g_psv_func_list;
 
 void add_psv_func(psv_func& data)
 {
+	if (!g_psv_func_list.size())
+	{
+		psv_func unimplemented;
+		unimplemented.nid = 0x00000000; // must not be a valid id
+		unimplemented.name = "INVALID FUNCTION (0x0)";
+		unimplemented.func.reset(new psv_func_detail::func_binder<u32>([]() -> u32
+		{
+			LOG_ERROR(HLE, "Unimplemented function executed");
+			Emu.Pause();
+
+			return 0xffffffffu;
+		}));
+		g_psv_func_list.push_back(unimplemented);
+
+		psv_func hle_return;
+		hle_return.nid = 0x00000001; // must not be a valid id
+		hle_return.name = "INVALID FUNCTION (0x1)";
+		hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU)
+		{
+			CPU.FastStop();
+
+			return;
+		}));
+		g_psv_func_list.push_back(hle_return);
+	}
+
 	g_psv_func_list.push_back(data);
 }
 

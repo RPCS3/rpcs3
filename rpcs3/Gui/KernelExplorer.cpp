@@ -146,7 +146,7 @@ void KernelExplorer::Update()
 		sprintf(name, "Modules (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
 		const auto& objects = Emu.GetIdManager().GetTypeIDs(TYPE_PRX);
-		sprintf(name, "Segment List (%d)", 2 * objects.size()); // TODO: Assuming 2 segments per PRX file is not good
+		sprintf(name, "Segment List (%l)", 2 * objects.size()); // TODO: Assuming 2 segments per PRX file is not good
 		m_tree->AppendItem(node, name);
 		for (const auto& id : objects)
 		{

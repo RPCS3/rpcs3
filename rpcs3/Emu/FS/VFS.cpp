@@ -8,23 +8,9 @@
 
 #undef CreateFile
 
-int sort_devices(const void* _a, const void* _b)
-{
-	const vfsDevice& a =  **(const vfsDevice**)_a;
-	const vfsDevice& b =  **(const vfsDevice**)_b;
-
-	if (a.GetPs3Path().length() > b.GetPs3Path().length()) return  1;
-	if (a.GetPs3Path().length() < b.GetPs3Path().length()) return -1;
-
-	return 0;
-}
-
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
-	std::string lower_path = path;
-	std::transform(lower_path.begin(), lower_path.end(), lower_path.begin(), ::tolower);
-
-	std::vector<std::string> path_blocks = std::move(fmt::split(lower_path, { "/", "\\" }));
+	std::vector<std::string> path_blocks = std::move(fmt::split(fmt::tolower(path), { "/", "\\" }));
 
 	for (size_t i = 0; i < path_blocks.size(); ++i)
 	{
@@ -53,19 +39,11 @@ std::string simplify_path(const std::string& path, bool is_dir)
 
 	if (is_dir)
 	{
-		for (auto &dir : path_blocks)
-		{
-			result += dir + "/";
-		}
+		result = fmt::merge(path_blocks, "/");
 	}
 	else
 	{
-		for (size_t i = 0; i < path_blocks.size() - 1; ++i)
-		{
-			result += path_blocks[i] + "/";
-		}
-
-		result += path_blocks[path_blocks.size() - 1];
+		result = fmt::merge(std::vector<std::string>(path_blocks.begin(), path_blocks.end() - 1), "/") + path_blocks[path_blocks.size() - 1];
 	}
 
 	return result;
@@ -74,12 +52,6 @@ std::string simplify_path(const std::string& path, bool is_dir)
 VFS::~VFS()
 {
 	UnMountAll();
-}
-
-std::string VFS::FindEntry(const std::string &path)
-{
-	return path;
-	return cwd + "/" + path;
 }
 
 void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device)
@@ -93,8 +65,41 @@ void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsD
 
 	if (m_devices.size() > 1)
 	{
-		//std::qsort(m_devices.GetPtr(), m_devices.GetCount(), sizeof(vfsDevice*), sort_devices);
+		std::sort(m_devices.begin(), m_devices.end(), [](vfsDevice *a, vfsDevice *b) { return b->GetPs3Path().length() < a->GetPs3Path().length(); });
 	}
+}
+
+void VFS::Link(const std::string& mount_point, const std::string& ps3_path)
+{
+	links[simplify_path_blocks(mount_point)] = simplify_path_blocks(ps3_path);
+}
+
+std::string VFS::GetLinked(std::string ps3_path) const
+{
+	ps3_path = fmt::tolower(ps3_path);
+	auto path_blocks = fmt::split(ps3_path, { "/", "\\" });
+
+	for (auto link : links)
+	{
+		if (path_blocks.size() < link.first.size())
+			continue;
+
+		bool is_ok = true;
+
+		for (size_t i = 0; i < link.first.size(); ++i)
+		{
+			if (link.first[i] != path_blocks[i])
+			{
+				is_ok = false;
+				break;
+			}
+		}
+
+		if (is_ok)
+			return fmt::merge({ link.second, std::vector<std::string>(path_blocks.begin() + link.first.size(), path_blocks.end()) }, "/");
+	}
+
+	return ps3_path;
 }
 
 void VFS::UnMount(const std::string& ps3_path)
@@ -285,8 +290,9 @@ bool VFS::RenameDir(const std::string& ps3_path_from, const std::string& ps3_pat
 
 vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 {
-	auto try_get_device = [this, &path](const std::vector<std::string>& ps3_path_blocks) -> vfsDevice*
+	auto try_get_device = [this, &path](const std::string& ps3_path) -> vfsDevice*
 	{
+		std::vector<std::string> ps3_path_blocks = simplify_path_blocks(ps3_path);
 		size_t max_eq = 0;
 		int max_i = -1;
 
@@ -328,10 +334,10 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 		return m_devices[max_i];
 	};
 
-	if (auto res = try_get_device(simplify_path_blocks(ps3_path)))
+	if (auto res = try_get_device(GetLinked(ps3_path)))
 		return res;
 
-	if (auto res = try_get_device(simplify_path_blocks(cwd + ps3_path)))
+	if (auto res = try_get_device(GetLinked(cwd + ps3_path)))
 		return res;
 
 	return nullptr;
@@ -415,6 +421,8 @@ void VFS::Init(const std::string& path)
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
 	}
+
+	Link("/app_home/", "/host_root/" + cwd);
 }
 
 void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
@@ -434,8 +442,7 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_flash/",  "/dev_flash/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb000/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb/");
-			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)",                 "/app_home/");
-			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../",             "/dev_bdvd/");
+			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../../",          "/dev_bdvd/");
 			res.emplace_back(vfsDevice_LocalFile, "",                           "/host_root/");
 
 			return;

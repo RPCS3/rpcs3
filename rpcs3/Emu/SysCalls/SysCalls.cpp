@@ -26,6 +26,8 @@
 #include "lv2/sys_tty.h"
 #include "lv2/sys_vm.h"
 
+#include "Emu/SysCalls/Modules/cellGcmSys.h"
+
 #include "SysCalls.h"
 
 namespace detail{
@@ -39,8 +41,6 @@ void default_syscall(PPUThread& CPU);
 static func_caller *null_func = bind_func(default_syscall);
 
 static const int kSyscallTableLength = 1024;
-
-extern int cellGcmCallback(u32 context_addr, u32 count);
 
 // UNS = Unused
 // ROOT = Root

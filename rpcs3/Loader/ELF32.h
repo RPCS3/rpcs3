@@ -27,7 +27,7 @@ namespace loader
 						u16 e_type;
 						u16 e_machine;
 						u32 e_version;
-						u16 e_entry;
+						u32 e_entry;
 						u32 e_phoff;
 						u32 e_shoff;
 						u32 e_flags;
@@ -45,7 +45,7 @@ namespace loader
 						be_t<u16> e_type;
 						be_t<u16> e_machine;
 						be_t<u32> e_version;
-						be_t<u16> e_entry;
+						be_t<u32> e_entry;
 						be_t<u32> e_phoff;
 						be_t<u32> e_shoff;
 						be_t<u32> e_flags;
@@ -59,7 +59,7 @@ namespace loader
 				};
 
 				bool is_le() const { return e_data == 1; }
-				bool check() const { return e_magic == 0x7F454C46; }
+				bool check() const { return e_magic == 0x464C457F; }
 			};
 
 			struct shdr
