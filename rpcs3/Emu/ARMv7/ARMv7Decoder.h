@@ -41,7 +41,7 @@ public:
 		*/
 
 		execute_main_group(&m_thr);
-		LOG_NOTICE(GENERAL, "%s, %d \n\n", m_thr.m_last_instr_name, m_thr.m_last_instr_size);
+		// LOG_NOTICE(GENERAL, "%s, %d \n\n", m_thr.m_last_instr_name, m_thr.m_last_instr_size);
 		m_thr.m_last_instr_name = "Unknown";
 		return m_thr.m_last_instr_size;
 	}
