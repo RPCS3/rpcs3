@@ -6,6 +6,7 @@
 #include "ELF32.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/System.h"
 
 namespace loader
@@ -88,6 +89,8 @@ namespace loader
 			case MACHINE_MIPS: break;
 			case MACHINE_ARM:
 			{
+				list_known_psv_modules();
+
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
 				armv7_thr_stop_data[0] = 0xf870; // HACK 
 				armv7_thr_stop_data[1] = 0x0001; // index 1
