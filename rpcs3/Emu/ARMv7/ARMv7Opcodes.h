@@ -1,5 +1,10 @@
 #pragma once
 
+#include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/ARMv7/ARMv7Interpreter.h"
+#include "Emu/System.h"
+#include "Utilities/Log.h"
+
 static const char* g_arm_reg_name[16] =
 {
 	"r0", "r1", "r2", "r3",
@@ -8,710 +13,2013 @@ static const char* g_arm_reg_name[16] =
 	"r12", "sp", "lr", "pc",
 };
 
-namespace ARMv7_opcodes
+using namespace ARMv7_instrs;
+
+struct ARMv7_Instruction
 {
-	enum ARMv7_T1Opcodes
-	{
-		T1_CBZ = 0xb,
-		T1_B = 0xd,
-		T1_PUSH = 0x1d,
-		T1_POP = 0x5e,
-		T1_NOP = 0xBF00,
-	};
+	void(*func)(ARMv7Thread* thr, const ARMv7_encoding type);
+	u8 size;
+	ARMv7_encoding type;
+	const char* name;
+};
 
-	enum ARMv7_T2Opcodes
-	{
-		T2_B = 0x1c,
-		T2_PUSH = 0xe92d,
-		T2_POP = 0xe8bd,
-	};
 
-	enum ARMv7_T3Opcodes
-	{
-		T3_B = 0x1e,
-	};
+#define ARMv7_OP_2(func, type) { func, 2, type, #func "_" #type }
+#define ARMv7_OP_4(func, type) { func, 4, type, #func "_" #type }
+#define ARMv7_NULL_OP { NULL_OP, 2, T1, "NULL_OP" }
+
+
+// 0x1...
+static void group_0x1(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x1_main[] =
+{
+	ARMv7_OP_2(ASR_IMM, T1), // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(ADD_REG, T1), // 8 0xfe00
+	ARMv7_NULL_OP,           // 9
+	ARMv7_OP_2(SUB_REG, T1), // A 0xfe00
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(ADD_IMM, T1), // C 0xfe00
+	ARMv7_NULL_OP,           // D
+	ARMv7_OP_2(SUB_IMM, T1)  // E 0xfe00
+};
+
+static const ARMv7_Instruction g_table_0x1[] =
+{
+	{ group_0x1 }
+};
+
+static void group_0x1(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0e00) >> 8;
+
+	if ((thr->code.code0 & 0xf800) == 0x1000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0x1_main[index].name;
+	thr->m_last_instr_size = g_table_0x1_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x1_main[index].func(thr, g_table_0x1_main[index].type);
 }
 
-enum ARMv7_encoding
+// 0x2...
+static void group_0x2(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x2_main[] =
 {
-	T1,
-	T2,
-	T3,
-	T4,
-	A1,
-	A2,
+	ARMv7_OP_2(MOV_IMM, T1), // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(CMP_IMM, T1)  // 8 0xf800
 };
 
-class ARMv7Opcodes
+static const ARMv7_Instruction g_table_0x2[] =
 {
-public:
-	virtual void UNK(const u32 data) = 0;
-
-	virtual void NULL_OP(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void HACK(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ADC_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADC_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADC_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ADD_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADD_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADD_RSR(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADD_SPI(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ADD_SPR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ADR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void AND_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void AND_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void AND_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ASR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ASR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void B(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void BFC(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void BFI(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void BIC_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void BIC_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void BIC_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void BKPT(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void BL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void BLX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void BX(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void CB_Z(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void CLZ(const u32 data, const ARMv7_encoding type) = 0;
-	
-	virtual void CMN_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void CMN_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void CMN_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void CMP_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void CMP_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void CMP_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void EOR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void EOR_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void EOR_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void IT(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDMDA(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDMDB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDMIB(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDR_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDRB_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRB_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRB_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDRD_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRD_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRD_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDRH_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRH_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRH_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDRSB_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRSB_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRSB_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LDRSH_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRSH_LIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LDRSH_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LSL_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LSL_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void LSR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void LSR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void MLA(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MLS(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void MOV_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MOV_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MOVT(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void MRS(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MSR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MSR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void MUL(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void MVN_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MVN_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void MVN_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void NOP(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ORN_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ORN_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ORR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ORR_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ORR_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void PKH(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void POP(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void PUSH(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void QADD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QASX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QDADD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QDSUB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QSAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QSUB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QSUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void QSUB8(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void RBIT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void REV(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void REV16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void REVSH(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void ROR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void ROR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void RRX(const u32 data, const ARMv7_encoding type) = 0;
-	
-	virtual void RSB_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void RSB_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void RSB_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void RSC_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void RSC_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void RSC_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SASX(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SBC_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SBC_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SBC_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SBFX(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SDIV(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SEL(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SHADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SHADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SHASX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SHSAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SHSUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SHSUB8(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SMLA__(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLAD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLAL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLAL__(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLALD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLAW_(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLSD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMLSLD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMMLA(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMMLS(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMMUL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMUAD(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMUL__(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMULL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMULW_(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SMUSD(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SSAT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SSAT16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SSAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SSUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SSUB8(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void STM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STMDA(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STMDB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STMIB(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void STR_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STR_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void STRB_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STRB_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void STRD_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STRD_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void STRH_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void STRH_REG(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SUB_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SUB_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SUB_RSR(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SUB_SPI(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SUB_SPR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SVC(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void SXTAB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SXTAB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SXTAH(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SXTB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SXTB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void SXTH(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void TB_(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void TEQ_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void TEQ_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void TEQ_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void TST_IMM(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void TST_REG(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void TST_RSR(const u32 data, const ARMv7_encoding type) = 0;
-
-	virtual void UADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UASX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UBFX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UDIV(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHASX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHSAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHSUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UHSUB8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UMAAL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UMLAL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UMULL(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQADD16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQADD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQASX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQSAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQSUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UQSUB8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USAD8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USADA8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USAT(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USAT16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USAX(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USUB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void USUB8(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTAB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTAB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTAH(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTB(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTB16(const u32 data, const ARMv7_encoding type) = 0;
-	virtual void UXTH(const u32 data, const ARMv7_encoding type) = 0;
-
-	// TODO: vector ops + something
+	{ group_0x2 }
 };
 
-struct ARMv7_opcode_t
+static void group_0x2(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 mask;
-	u32 code;
-	u32 length; // 2 or 4
-	const char* name;
-	ARMv7_encoding type;
-	void (ARMv7Opcodes::*func)(const u32 data, const ARMv7_encoding type);
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x2_main[index].name;
+	thr->m_last_instr_size = g_table_0x2_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x2_main[index].func(thr, g_table_0x2_main[index].type);
+}
+
+// 0x3...
+static void group_0x3(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x3_main[] =
+{
+	ARMv7_OP_2(ADD_IMM, T2), // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(SUB_IMM, T2)  // 8 0xf800
 };
 
-// single 16-bit value
-#define ARMv7_OP2(mask, code, type, name) { (u32)((mask) << 16), (u32)((code) << 16), 2, #name "_" #type, type, &ARMv7Opcodes::name }
-// two 16-bit values
-#define ARMv7_OP4(mask0, mask1, code0, code1, type, name) { (u32)((mask0) << 16) | (mask1), (u32)((code0) << 16) | (code1), 4, #name "_" #type, type, &ARMv7Opcodes::name }
-
-static const ARMv7_opcode_t ARMv7_opcode_table[] = 
+static const ARMv7_Instruction g_table_0x3[] =
 {
-	ARMv7_OP2(0xffff, 0x0000, T1, NULL_OP), // ???
-
-	ARMv7_OP4(0xffff, 0x0000, 0xf870, 0x0000, T1, HACK), // "Undefined" Thumb opcode
-	ARMv7_OP4(0x0ff0, 0x00f0, 0x0070, 0x0090, A1, HACK), // "Undefined" ARM opcode
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf140, 0x0000, T1, ADC_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x02a0, 0x0000, A1, ADC_IMM),
-	ARMv7_OP2(0xffc0, 0x4040, T1, ADC_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeb40, 0x0000, T2, ADC_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x00a0, 0x0000, A1, ADC_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x00a0, 0x0010, A1, ADC_RSR),
-
-	ARMv7_OP2(0xf800, 0xa800, T1, ADD_SPI),
-	ARMv7_OP2(0xff80, 0xb000, T2, ADD_SPI),
-	ARMv7_OP4(0xfbef, 0x8000, 0xf10d, 0x0000, T3, ADD_SPI),
-	ARMv7_OP4(0xfbff, 0x8000, 0xf20d, 0x0000, T4, ADD_SPI),
-	ARMv7_OP4(0x0fef, 0x0000, 0x028d, 0x0000, A1, ADD_SPI),
-	ARMv7_OP2(0xff78, 0x4468, T1, ADD_SPR),
-	ARMv7_OP2(0xff87, 0x4485, T2, ADD_SPR),
-	ARMv7_OP4(0xffef, 0x8000, 0xeb0d, 0x0000, T3, ADD_SPR),
-	ARMv7_OP4(0x0fef, 0x0010, 0x008d, 0x0000, A1, ADD_SPR),
-	ARMv7_OP2(0xfe00, 0x1c00, T1, ADD_IMM),
-	ARMv7_OP2(0xf800, 0x3000, T2, ADD_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf200, 0x0000, T4, ADD_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0280, 0x0000, A1, ADD_IMM),
-	ARMv7_OP2(0xfe00, 0x1800, T1, ADD_REG),
-	ARMv7_OP2(0xff00, 0x4400, T2, ADD_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeb00, 0x0000, T3, ADD_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0080, 0x0000, A1, ADD_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0080, 0x0010, A1, ADD_RSR),
-
-	ARMv7_OP2(0xf800, 0xa000, T1, ADR),
-	ARMv7_OP4(0xfbff, 0x8000, 0xf2af, 0x0000, T2, ADR),
-	ARMv7_OP4(0xfbff, 0x8000, 0xf20f, 0x0000, T3, ADR),
-	ARMv7_OP4(0x0fff, 0x0000, 0x028f, 0x0000, A1, ADR),
-	ARMv7_OP4(0x0fff, 0x0000, 0x024f, 0x0000, A2, ADR),
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf000, 0x0000, T1, AND_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0200, 0x0000, A1, AND_IMM),
-	ARMv7_OP2(0xffc0, 0x4000, T1, AND_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xea00, 0x0000, T2, AND_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0000, 0x0000, A1, AND_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0000, 0x0010, A1, AND_RSR),
-
-	ARMv7_OP2(0xf800, 0x1000, T1, ASR_IMM),
-	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0020, T2, ASR_IMM),
-	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0040, A1, ASR_IMM),
-	ARMv7_OP2(0xffc0, 0x4100, T1, ASR_REG),
-	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa40, 0xf000, T2, ASR_REG),
-	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0050, A1, ASR_REG),
-
-	ARMv7_OP2(0xf000, 0xd000, T1, B),
-	ARMv7_OP2(0xf800, 0xe000, T2, B),
-	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0x8000, T3, B),
-	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0x9000, T4, B),
-	ARMv7_OP4(0x0f00, 0x0000, 0x0a00, 0x0000, A1, B),
-
-	ARMv7_OP4(0xffff, 0x8020, 0xf36f, 0x0000, T1, BFC),
-	ARMv7_OP4(0x0fe0, 0x007f, 0x07c0, 0x001f, A1, BFC),
-	ARMv7_OP4(0xfff0, 0x8020, 0xf360, 0x0000, T1, BFI),
-	ARMv7_OP4(0x0fe0, 0x0070, 0x07c0, 0x0010, A1, BFI),
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf020, 0x0000, T1, BIC_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x03c0, 0x0000, A1, BIC_IMM),
-	ARMv7_OP2(0xffc0, 0x4380, T1, BIC_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xea20, 0x0000, T2, BIC_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x01c0, 0x0000, A1, BIC_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x01c0, 0x0010, A1, BIC_RSR),
-
-	ARMv7_OP2(0xff00, 0xbe00, T1, BKPT),
-	ARMv7_OP4(0x0ff0, 0x00f0, 0x0120, 0x0070, A1, BKPT),
-
-	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0xd000, T1, BL),
-	ARMv7_OP4(0x0f00, 0x0000, 0x0b00, 0x0000, A1, BL),
-	ARMv7_OP2(0xff80, 0x4780, T1, BLX),
-	ARMv7_OP4(0xf800, 0xc001, 0xf000, 0xc000, T2, BLX),
-	ARMv7_OP4(0x0fff, 0xfff0, 0x012f, 0xff30, A1, BLX),
-	ARMv7_OP4(0xfe00, 0x0000, 0xfa00, 0x0000, A2, BLX),
-
-	ARMv7_OP2(0xff87, 0x4700, T1, BX),
-	ARMv7_OP4(0x0fff, 0xfff0, 0x012f, 0xff10, A1, BX),
-
-	ARMv7_OP2(0xf500, 0xb100, T1, CB_Z),
-
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfab0, 0xf080, T1, CLZ),
-	ARMv7_OP4(0x0fff, 0x0ff0, 0x016f, 0x0f10, A1, CLZ),
-
-	ARMv7_OP4(0xfbf0, 0x8f00, 0xf110, 0x0f00, T1, CMN_IMM),
-	ARMv7_OP4(0x0ff0, 0xf000, 0x0370, 0x0000, A1, CMN_IMM),
-	ARMv7_OP2(0xffc0, 0x42c0, T1, CMN_REG),
-	ARMv7_OP4(0xfff0, 0x8f00, 0xeb10, 0x0f00, T2, CMN_REG),
-	ARMv7_OP4(0x0ff0, 0xf010, 0x0170, 0x0000, A1, CMN_REG),
-	ARMv7_OP4(0x0ff0, 0xf090, 0x0170, 0x0010, A1, CMN_RSR),
-
-	ARMv7_OP2(0xf800, 0x2800, T1, CMP_IMM),
-	ARMv7_OP4(0xfbf0, 0x8f00, 0xf1b0, 0x0f00, T2, CMP_IMM),
-	ARMv7_OP4(0x0ff0, 0xf000, 0x0350, 0x0000, A1, CMP_IMM),
-	ARMv7_OP2(0xffc0, 0x4280, T1, CMP_REG),
-	ARMv7_OP2(0xff00, 0x4500, T2, CMP_REG),
-	ARMv7_OP4(0xfff0, 0x8f00, 0xebb0, 0x0f00, T3, CMP_REG),
-	ARMv7_OP4(0x0ff0, 0xf010, 0x0150, 0x0000, A1, CMP_REG),
-	ARMv7_OP4(0x0ff0, 0xf090, 0x0150, 0x0010, A1, CMP_RSR),
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf080, 0x0000, T1, EOR_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0220, 0x0000, A1, EOR_IMM),
-	ARMv7_OP2(0xffc0, 0x4040, T1, EOR_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xea80, 0x0000, T2, EOR_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0020, 0x0000, A1, EOR_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0020, 0x0010, A1, EOR_RSR),
-
-	ARMv7_OP2(0xff00, 0xbf00, T1, IT),
-
-	ARMv7_OP2(0xf800, 0xc800, T1, LDM),
-	ARMv7_OP4(0xffd0, 0x2000, 0xe890, 0x0000, T2, LDM),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0890, 0x0000, A1, LDM),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0810, 0x0000, A1, LDMDA),
-	ARMv7_OP4(0xffd0, 0x2000, 0xe910, 0x0000, T1, LDMDB),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0910, 0x0000, A1, LDMDB),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0990, 0x0000, A1, LDMIB),
-
-	ARMv7_OP2(0xf800, 0x6800, T1, LDR_IMM),
-	ARMv7_OP2(0xf800, 0x9800, T2, LDR_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf8d0, 0x0000, T3, LDR_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf850, 0x0800, T4, LDR_IMM),
-	ARMv7_OP4(0x0e50, 0x0000, 0x0410, 0x0000, A1, LDR_IMM),
-	ARMv7_OP2(0xf800, 0x4800, T1, LDR_LIT),
-	ARMv7_OP4(0xff7f, 0x0000, 0xf85f, 0x0000, T2, LDR_LIT),
-	ARMv7_OP4(0x0f7f, 0x0000, 0x051f, 0x0000, A1, LDR_LIT),
-	ARMv7_OP2(0xfe00, 0x5800, T1, LDR_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf850, 0x0000, T2, LDR_REG),
-	ARMv7_OP4(0x0e50, 0x0010, 0x0610, 0x0000, A1, LDR_REG),
-
-	ARMv7_OP2(0xf800, 0x7800, T1, LDRB_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf890, 0x0000, T2, LDRB_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf810, 0x0800, T3, LDRB_IMM),
-	ARMv7_OP4(0x0e50, 0x0000, 0x0450, 0x0000, A1, LDRB_IMM),
-	ARMv7_OP4(0xff7f, 0x0000, 0xf81f, 0x0000, T1, LDRB_LIT),
-	ARMv7_OP4(0x0f7f, 0x0000, 0x055f, 0x0000, A1, LDRB_LIT),
-	ARMv7_OP2(0xfe00, 0x5c00, T1, LDRB_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf810, 0x0000, T2, LDRB_REG),
-	ARMv7_OP4(0x0e50, 0x0010, 0x0650, 0x0000, A1, LDRB_REG),
-
-	ARMv7_OP4(0xfe50, 0x0000, 0xe850, 0x0000, T1, LDRD_IMM),
-	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00d0, A1, LDRD_IMM),
-	ARMv7_OP4(0xfe7f, 0x0000, 0xe85f, 0x0000, T1, LDRD_LIT),
-	ARMv7_OP4(0x0f7f, 0x00f0, 0x014f, 0x00d0, A1, LDRD_LIT),
-	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00d0, A1, LDRD_REG),
-
-	ARMv7_OP4(0xfff0, 0x0000, 0xf990, 0x0000, T1, LDRSB_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf910, 0x0800, T2, LDRSB_IMM),
-	ARMv7_OP4(0x0e50, 0x00f0, 0x0050, 0x00d0, A1, LDRSB_IMM),
-	ARMv7_OP4(0xff7f, 0x0000, 0xf91f, 0x0000, T1, LDRSB_LIT),
-	ARMv7_OP4(0x0f7f, 0x00f0, 0x015f, 0x00d0, A1, LDRSB_LIT),
-	ARMv7_OP2(0xfe00, 0x5600, T1, LDRSB_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf910, 0x0000, T2, LDRSB_REG),
-	ARMv7_OP4(0x0e50, 0x0ff0, 0x0010, 0x00d0, A1, LDRSB_REG),
-
-	ARMv7_OP4(0xfff0, 0x0000, 0xf9b0, 0x0000, T1, LDRSH_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf930, 0x0800, T2, LDRSH_IMM),
-	ARMv7_OP4(0x0e50, 0x00f0, 0x0050, 0x00f0, A1, LDRSH_IMM),
-	ARMv7_OP4(0xff7f, 0x0000, 0xf93f, 0x0000, T1, LDRSH_LIT),
-	ARMv7_OP4(0x0f7f, 0x00f0, 0x015f, 0x00f0, A1, LDRSH_LIT),
-	ARMv7_OP2(0xfe00, 0x5e00, T1, LDRSH_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf930, 0x0000, T2, LDRSH_REG),
-	ARMv7_OP4(0x0e50, 0x0ff0, 0x0010, 0x00f0, A1, LDRSH_REG),
-
-	ARMv7_OP2(0xf800, 0x0000, T1, LSL_IMM),
-	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0000, T2, LSL_IMM),
-	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0000, A1, LSL_IMM),
-	ARMv7_OP2(0xffc0, 0x4080, T1, LSL_REG),
-	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa00, 0xf000, T2, LSL_REG),
-	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0010, A1, LSL_REG),
-
-	ARMv7_OP2(0xf800, 0x0800, T1, LSR_IMM),
-	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0010, T2, LSR_IMM),
-	ARMv7_OP4(0x0fef, 0x0030, 0x01a0, 0x0020, A1, LSR_IMM),
-	ARMv7_OP2(0xffc0, 0x40c0, T1, LSR_REG),
-	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa20, 0xf000, T2, LSR_REG),
-	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0030, A1, LSR_REG),
-
-	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0000, T1, MLA),
-	ARMv7_OP4(0x0fe0, 0x00f0, 0x0020, 0x0090, A1, MLA),
-
-	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0010, T1, MLS),
-	ARMv7_OP4(0x0ff0, 0x00f0, 0x0060, 0x0090, A1, MLS),
-
-	ARMv7_OP2(0xf800, 0x2000, T1, MOV_IMM),
-	ARMv7_OP4(0xfbef, 0x8000, 0xf04f, 0x0000, T2, MOV_IMM),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf240, 0x0000, T3, MOV_IMM),
-	ARMv7_OP4(0x0fef, 0x0000, 0x03a0, 0x0000, A1, MOV_IMM),
-	ARMv7_OP4(0x0ff0, 0x0000, 0x0300, 0x0000, A2, MOV_IMM),
-	ARMv7_OP2(0xff00, 0x4600, T1, MOV_REG),
-	ARMv7_OP2(0xffc0, 0x0000, T2, MOV_REG),
-	ARMv7_OP4(0xffef, 0xf0f0, 0xea4f, 0x0000, T3, MOV_REG),
-	ARMv7_OP4(0x0fef, 0x0ff0, 0x01a0, 0x0000, A1, MOV_REG),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf2c0, 0x0000, T1, MOVT),
-	ARMv7_OP4(0x0ff0, 0x0000, 0x0340, 0x0000, A1, MOVT),
-
-	ARMv7_OP4(0xffff, 0xf0ff, 0xf3ef, 0x8000, T1, MRS),
-	ARMv7_OP4(0x0fff, 0x0fff, 0x010f, 0x0000, A1, MRS),
-	ARMv7_OP4(0x0ff3, 0xf000, 0x0320, 0xf000, A1, MSR_IMM),
-	ARMv7_OP4(0xfff0, 0xf3ff, 0xf380, 0x8000, T1, MSR_REG),
-	ARMv7_OP4(0x0ff3, 0xfff0, 0x0120, 0xf000, A1, MSR_REG),
-	
-	ARMv7_OP2(0xffc0, 0x4340, T1, MUL),
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfb00, 0xf000, T2, MUL),
-	ARMv7_OP4(0x0fe0, 0xf0f0, 0x0000, 0x0090, A1, MUL),
-
-	ARMv7_OP4(0xfbef, 0x8000, 0xf06f, 0x0000, T1, MVN_IMM),
-	ARMv7_OP4(0x0fef, 0x0000, 0x03e0, 0x0000, A1, MVN_IMM),
-	ARMv7_OP2(0xffc0, 0x43c0, T1, MVN_REG),
-	ARMv7_OP4(0xffef, 0x8000, 0xea6f, 0x0000, T2, MVN_REG),
-	ARMv7_OP4(0xffef, 0x0010, 0x01e0, 0x0000, A1, MVN_REG),
-	ARMv7_OP4(0x0fef, 0x0090, 0x01e0, 0x0010, A1, MVN_RSR),
-
-	ARMv7_OP2(0xffff, 0xbf00, T1, NOP),
-	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8000, T2, NOP),
-	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf000, A1, NOP),
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf060, 0x0000, T1, ORN_IMM),
-	ARMv7_OP4(0xffe0, 0x8000, 0xea60, 0x0000, T1, ORN_REG),
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf040, 0x0000, T1, ORR_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0380, 0x0000, A1, ORR_IMM),
-	ARMv7_OP2(0xffc0, 0x4300, T1, ORR_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xea40, 0x0000, T2, ORR_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0180, 0x0000, A1, ORR_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0180, 0x0010, A1, ORR_RSR),
-
-	ARMv7_OP4(0xfff0, 0x8010, 0xeac0, 0x0000, T1, PKH),
-	ARMv7_OP4(0x0ff0, 0x0030, 0x0680, 0x0010, A1, PKH),
-
-	ARMv7_OP2(0xfe00, 0xbc00, T1, POP),
-	ARMv7_OP4(0xffff, 0x0000, 0xe8bd, 0x0000, T2, POP),
-	ARMv7_OP4(0xffff, 0x0fff, 0xf85d, 0x0b04, T3, POP),
-	ARMv7_OP4(0x0fff, 0x0000, 0x08bd, 0x0000, A1, POP),
-	ARMv7_OP4(0x0fff, 0x0fff, 0x049d, 0x0004, A2, POP),
-
-	ARMv7_OP2(0xfe00, 0xb400, T1, PUSH),
-	ARMv7_OP4(0xffff, 0x0000, 0xe92d, 0x0000, T2, PUSH), // had an error in arch ref
-	ARMv7_OP4(0xffff, 0x0fff, 0xf84d, 0x0d04, T3, PUSH),
-	ARMv7_OP4(0x0fff, 0x0000, 0x092d, 0x0000, A1, PUSH),
-	ARMv7_OP4(0x0fff, 0x0fff, 0x052d, 0x0004, A2, PUSH),
-
-	// TODO (Q*...)
-
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf0a0, T1, RBIT),
-	ARMv7_OP4(0x0fff, 0x0ff0, 0x06ff, 0x0f30, A1, RBIT),
-
-	ARMv7_OP2(0xffc0, 0xba00, T1, REV),
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf080, T2, REV),
-	ARMv7_OP4(0x0fff, 0x0ff0, 0x06bf, 0x0f30, A1, REV),
-	ARMv7_OP2(0xffc0, 0xba40, T1, REV16),
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf090, T2, REV16),
-	ARMv7_OP4(0x0fff, 0x0ff0, 0x06bf, 0x0fb0, A1, REV16),
-	ARMv7_OP2(0xffc0, 0xbac0, T1, REVSH),
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf0b0, T2, REVSH),
-	ARMv7_OP4(0x0fff, 0x0ff0, 0x06ff, 0x0fb0, A1, REVSH),
-
-	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0030, T1, ROR_IMM),
-	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0060, A1, ROR_IMM),
-	ARMv7_OP2(0xffc0, 0x41c0, T1, ROR_REG),
-	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa60, 0xf000, T2, ROR_REG),
-	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0070, A1, ROR_REG),
-	ARMv7_OP4(0xffef, 0xf0f0, 0xea4f, 0x0030, T1, RRX),
-	ARMv7_OP4(0x0fef, 0x0ff0, 0x01a0, 0x0060, A1, RRX),
-
-	ARMv7_OP2(0xffc0, 0x4240, T1, RSB_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf1c0, 0x0000, T2, RSB_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0260, 0x0000, A1, RSB_IMM),
-	ARMv7_OP4(0xffe0, 0x8000, 0xebc0, 0x0000, T1, RSB_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0060, 0x0000, A1, RSB_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0060, 0x0010, A1, RSB_RSR),
-
-	ARMv7_OP4(0x0fe0, 0x0000, 0x02e0, 0x0000, A1, RSC_IMM),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x00e0, 0x0000, A1, RSC_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x00e0, 0x0010, A1, RSC_RSR),
-
-	// TODO (SADD16, SADD8, SASX)
-
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf160, 0x0000, T1, SBC_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x02c0, 0x0000, A1, SBC_IMM),
-	ARMv7_OP2(0xffc0, 0x4180, T1, SBC_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeb60, 0x0000, T2, SBC_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x00c0, 0x0000, A1, SBC_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x00c0, 0x0010, A1, SBC_RSR),
-
-	ARMv7_OP4(0xfff0, 0x8020, 0xf340, 0x0000, T1, SBFX),
-	ARMv7_OP4(0x0fe0, 0x0070, 0x07a0, 0x0050, A1, SBFX),
-
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfb90, 0xf0f0, T1, SDIV), // ???
-
-	ARMv7_OP4(0xfff0, 0xf0f0, 0xfaa0, 0xf080, T1, SEL),
-	ARMv7_OP4(0x0ff0, 0x0ff0, 0x0680, 0x0fb0, A1, SEL),
-
-	// TODO (SH*, SM*, SS*)
-
-	ARMv7_OP2(0xf800, 0xc000, T1, STM),
-	ARMv7_OP4(0xffd0, 0xa000, 0xe880, 0x0000, T2, STM),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0880, 0x0000, A1, STM),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0800, 0x0000, A1, STMDA),
-	ARMv7_OP4(0xffd0, 0xa000, 0xe900, 0x0000, T1, STMDB),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0900, 0x0000, A1, STMDB),
-	ARMv7_OP4(0x0fd0, 0x0000, 0x0980, 0x0000, A1, STMIB),
-
-	ARMv7_OP2(0xf800, 0x6000, T1, STR_IMM),
-	ARMv7_OP2(0xf800, 0x9000, T2, STR_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf8c0, 0x0000, T3, STR_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf840, 0x0800, T4, STR_IMM),
-	ARMv7_OP4(0x0e50, 0x0000, 0x0400, 0x0000, A1, STR_IMM),
-	ARMv7_OP2(0xfe00, 0x5000, T1, STR_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf840, 0x0000, T2, STR_REG),
-	ARMv7_OP4(0x0e50, 0x0010, 0x0600, 0x0000, A1, STR_REG),
-
-	ARMv7_OP2(0xf800, 0x7000, T1, STRB_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf880, 0x0000, T2, STRB_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf800, 0x0800, T3, STRB_IMM),
-	ARMv7_OP4(0x0e50, 0x0000, 0x0440, 0x0000, A1, STRB_IMM),
-	ARMv7_OP2(0xfe00, 0x5400, T1, STRB_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf800, 0x0000, T2, STRB_REG),
-	ARMv7_OP4(0x0e50, 0x0010, 0x0640, 0x0000, A1, STRB_REG),
-
-	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM),
-	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00f0, A1, STRD_IMM),
-	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00f0, A1, STRD_REG),
-
-	ARMv7_OP2(0xf800, 0x8000, T1, STRH_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf8a0, 0x0000, T2, STRH_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf820, 0x0800, T3, STRH_IMM),
-	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00b0, A1, STRH_IMM),
-	ARMv7_OP2(0xfe00, 0x5200, T1, STRH_REG),
-	ARMv7_OP4(0xfff0, 0x0fc0, 0xf820, 0x0000, T2, STRH_REG),
-	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00b0, A1, STRH_REG),
-
-	ARMv7_OP2(0xff80, 0xb080, T1, SUB_SPI),
-	ARMv7_OP4(0xfbef, 0x8000, 0xf1ad, 0x0000, T2, SUB_SPI),
-	ARMv7_OP4(0xfbff, 0x8000, 0xf2ad, 0x0000, T3, SUB_SPI),
-	ARMv7_OP4(0x0fef, 0x0000, 0x024d, 0x0000, A1, SUB_SPI),
-	ARMv7_OP4(0xffef, 0x8000, 0xebad, 0x0000, T1, SUB_SPR),
-	ARMv7_OP4(0x0fef, 0x0010, 0x004d, 0x0000, A1, SUB_SPR),
-	ARMv7_OP2(0xfe00, 0x1e00, T1, SUB_IMM),
-	ARMv7_OP2(0xf800, 0x3800, T2, SUB_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf2a0, 0x0000, T4, SUB_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0240, 0x0000, A1, SUB_IMM),
-	ARMv7_OP2(0xfe00, 0x1a00, T1, SUB_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0040, 0x0000, A1, SUB_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0040, 0x0010, A1, SUB_RSR),
-
-	ARMv7_OP2(0xff00, 0xdf00, T1, SVC),
-	ARMv7_OP4(0x0f00, 0x0000, 0x0f00, 0x0000, A1, SVC),
-
-	// TODO (SX*)
-
-	ARMv7_OP4(0xfff0, 0xffe0, 0xe8d0, 0xf000, T1, TB_),
-
-	ARMv7_OP4(0xfbf0, 0x8f00, 0xf090, 0x0f00, T1, TEQ_IMM),
-	ARMv7_OP4(0x0ff0, 0xf000, 0x0330, 0x0000, A1, TEQ_IMM),
-	ARMv7_OP4(0xfff0, 0x8f00, 0xea90, 0x0f00, T1, TEQ_REG),
-	ARMv7_OP4(0x0ff0, 0xf010, 0x0130, 0x0000, A1, TEQ_REG),
-	ARMv7_OP4(0x0ff0, 0xf090, 0x0130, 0x0010, A1, TEQ_RSR),
-
-	ARMv7_OP4(0xfbf0, 0x8f00, 0xf010, 0x0f00, T1, TST_IMM),
-	ARMv7_OP4(0x0ff0, 0xf000, 0x0310, 0x0000, A1, TST_IMM),
-	ARMv7_OP2(0xffc0, 0x4200, T1, TST_REG),
-	ARMv7_OP4(0xfff0, 0x8f00, 0xea10, 0x0f00, T2, TST_REG),
-	ARMv7_OP4(0x0ff0, 0xf010, 0x0110, 0x0000, A1, TST_REG),
-	ARMv7_OP4(0x0ff0, 0xf090, 0x0110, 0x0010, A1, TST_RSR),
-
-	// TODO (U*, V*)
+	{ group_0x3 }
 };
 
-#undef ARMv7_OP
-#undef ARMv7_OPP
+static void group_0x3(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x3_main[index].name;
+	thr->m_last_instr_size = g_table_0x3_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x3_main[index].func(thr, g_table_0x3_main[index].type);
+}
 
+// 0x4...
+static void group_0x4(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x40(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x41(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x42(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x43(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x44(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x47(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x4[] =
+{
+	{ group_0x4 }
+};
+
+static const ARMv7_Instruction g_table_0x40[] =
+{
+	ARMv7_OP_2(AND_REG, T1), // 0 0xffc0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_2(ADC_REG, T1), // 4 0xffc0
+	// ARMv7_OP_2(EOR_REG, T1), // 4 0xffc0   code(ADC_REG, T1) == code(EOR_REG, T1) ???
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(LSL_REG, T1), // 8 0xffc0
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(LSR_REG, T1)  // C 0xffc0
+};
+
+static void group_0x40(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
+	thr->m_last_instr_name = g_table_0x40[index].name;
+	thr->m_last_instr_size = g_table_0x40[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x40[index].func(thr, g_table_0x40[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x41[] =
+{
+	ARMv7_OP_2(ASR_REG, T1), // 0 0xffc0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(SBC_REG, T1), // 8 0xffc0
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(ROR_REG, T1)  // C 0xffc0
+};
+
+static void group_0x41(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
+	thr->m_last_instr_name = g_table_0x41[index].name;
+	thr->m_last_instr_size = g_table_0x41[index].size;
+	g_table_0x41[index].func(thr, g_table_0x41[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x42[] =
+{
+	ARMv7_OP_2(TST_REG, T1), // 0 0xffc0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_2(RSB_IMM, T1), // 4 0xffc0
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(CMP_REG, T1), // 8 0xffc0
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(CMN_REG, T1)  // C 0xffc0
+};
+
+static void group_0x42(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
+	thr->m_last_instr_name = g_table_0x42[index].name;
+	thr->m_last_instr_size = g_table_0x42[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x42[index].func(thr, g_table_0x42[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x43[] =
+{
+	ARMv7_OP_2(ORR_REG, T1), // 0 0xffc0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_2(MUL, T1),     // 4 0xffc0
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(BIC_REG, T1), // 8 0xffc0
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(MVN_REG, T1)  // C 0xffc0
+};
+
+static void group_0x43(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
+	thr->m_last_instr_name = g_table_0x43[index].name;
+	thr->m_last_instr_size = g_table_0x43[index].size;
+	g_table_0x43[index].func(thr, g_table_0x43[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x44[] =
+{
+	ARMv7_OP_2(ADD_REG, T2), // 0 0xff00
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_OP_2(ADD_SPR, T1), // 6 0xff78
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(ADD_SPR, T2)  // 8 0xff87
+};
+
+static void group_0x44(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0080) >> 4;
+
+	if ((thr->code.code0 & 0xff00) == 0x4400) index = 0x0;
+	if ((thr->code.code0 & 0xff78) == 0x4468) index = 0x6;
+
+	thr->m_last_instr_name = g_table_0x44[index].name;
+	thr->m_last_instr_size = g_table_0x44[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x44[index].func(thr, g_table_0x44[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x47[] =
+{
+	ARMv7_OP_2(BX, T1),      // 0 0xff87
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(BLX, T1)      // 8 0xff80
+};
+
+static void group_0x47(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0080) >> 4;
+	thr->m_last_instr_name = g_table_0x47[index].name;
+	thr->m_last_instr_size = g_table_0x47[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x47[index].func(thr, g_table_0x47[index].type);
+}
+
+static const ARMv7_Instruction g_table_0x4_main[] =
+{
+	{ group_0x40 },          // 0
+	{ group_0x41 },          // 1
+	{ group_0x42 },          // 2
+	{ group_0x43 },          // 3
+	{ group_0x44 },          // 4
+	ARMv7_OP_2(CMP_REG, T2), // 5 0xff00
+	ARMv7_OP_2(MOV_REG, T1), // 6 0xff00
+	{ group_0x47 },          // 7
+	ARMv7_OP_2(LDR_LIT, T1)  // 8 0xf800
+};
+
+static void group_0x4(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0f00) >> 8;
+
+	if ((index & 0xf800) == 0x4800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0x4_main[index].name;
+	thr->m_last_instr_size = g_table_0x4_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x4_main[index].func(thr, g_table_0x4_main[index].type);
+}
+
+// 0x5...
+static void group_0x5(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x5_main[] =
+{
+	ARMv7_OP_2(STR_REG, T1),   // 0 0xfe00
+	ARMv7_NULL_OP,             // 1
+	ARMv7_OP_2(STRH_REG, T1),  // 2 0xfe00
+	ARMv7_NULL_OP,             // 3
+	ARMv7_OP_2(STRB_REG, T1),  // 4 0xfe00
+	ARMv7_NULL_OP,             // 5
+	ARMv7_OP_2(LDRSB_REG, T1), // 6 0xfe00
+	ARMv7_NULL_OP,             // 7
+	ARMv7_OP_2(LDR_REG, T1),   // 8 0xfe00
+	ARMv7_NULL_OP,             // 9
+	ARMv7_NULL_OP,             // A
+	ARMv7_NULL_OP,             // B
+	ARMv7_OP_2(LDRB_REG, T1),  // C 0xfe00
+	ARMv7_NULL_OP,             // D
+	ARMv7_OP_2(LDRSH_REG, T1)  // E 0xfe00
+};
+
+static const ARMv7_Instruction g_table_0x5[] =
+{
+	{ group_0x5 }
+};
+
+static void group_0x5(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0e00) >> 8;
+	thr->m_last_instr_name = g_table_0x5_main[index].name;
+	thr->m_last_instr_size = g_table_0x5_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x5_main[index].func(thr, g_table_0x5_main[index].type);
+}
+
+// 0x6...
+static void group_0x6(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x6_main[] =
+{
+	ARMv7_OP_2(STR_IMM, T1), // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(LDR_IMM, T1)  // 8 0xf800
+};
+
+static const ARMv7_Instruction g_table_0x6[] =
+{
+	{ group_0x6 }
+};
+
+static void group_0x6(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x6_main[index].name;
+	thr->m_last_instr_size = g_table_0x6_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x6_main[index].func(thr, g_table_0x6_main[index].type);
+}
+
+// 0x7...
+static void group_0x7(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x7_main[] =
+{
+	ARMv7_OP_2(STRB_IMM, T1), // 0 0xf800
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_2(LDRB_IMM, T1)  // 8 0xf800
+};
+
+static const ARMv7_Instruction g_table_0x7[] =
+{
+	{ group_0x7 }
+};
+
+static void group_0x7(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x7_main[index].name;
+	thr->m_last_instr_size = g_table_0x7_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x7_main[index].func(thr, g_table_0x7_main[index].type);
+}
+
+// 0x8...
+static void group_0x8(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x8_main[] =
+{
+	ARMv7_OP_2(STRH_IMM, T1)  // 0 0xf800
+};
+
+static const ARMv7_Instruction g_table_0x8[] =
+{
+	{ group_0x8 }
+};
+
+static void group_0x8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x8_main[index].name;
+	thr->m_last_instr_size = g_table_0x8_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x8_main[index].func(thr, g_table_0x8_main[index].type);
+}
+
+// 0x9...
+static void group_0x9(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0x9_main[] =
+{
+	ARMv7_OP_2(STR_IMM, T2), // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(LDR_IMM, T2)  // 8 0xf800
+};
+
+static const ARMv7_Instruction g_table_0x9[] =
+{
+	{ group_0x9 }
+};
+
+static void group_0x9(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0x9_main[index].name;
+	thr->m_last_instr_size = g_table_0x9_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0x9_main[index].func(thr, g_table_0x9_main[index].type);
+}
+
+// 0xa...
+static void group_0xa(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0xa_main[] =
+{
+	ARMv7_OP_2(ADR, T1),     // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(ADD_SPI, T1)  // 8 0xf800
+};
+
+static const ARMv7_Instruction g_table_0xa[] =
+{
+	{ group_0xa }
+};
+
+static void group_0xa(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0xa_main[index].name;
+	thr->m_last_instr_size = g_table_0xa_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xa_main[index].func(thr, g_table_0xa_main[index].type);
+}
+
+// 0xb...
+static void group_0xb(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xb0(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xba(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0xb0[] =
+{
+	ARMv7_OP_2(ADD_SPI, T2), // 0 0xff80
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(SUB_SPI, T1)  // 8 0xff80
+};
+
+static void group_0xb0(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0080) >> 4;
+	thr->m_last_instr_name = g_table_0xb0[index].name;
+	thr->m_last_instr_size = g_table_0xb0[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xb0[index].func(thr, g_table_0xb0[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xba[] =
+{
+	ARMv7_OP_2(REV, T1),     // 0 0xffc0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_2(REV16, T1),   // 4 0xffc0
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(REVSH, T1)    // C 0xffc0
+};
+
+static void group_0xba(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00c0) >> 4; // mask 0xffc0
+	thr->m_last_instr_name = g_table_0xba[index].name;
+	thr->m_last_instr_size = g_table_0xba[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xba[index].func(thr, g_table_0xba[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xb_main[] =
+{
+	{ group_0xb0 },          // 0
+	ARMv7_OP_2(CB_Z, T1),    // 1 0xf500
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_2(PUSH, T1),    // 4 0xfe00
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	{ group_0xba },          // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_2(POP, T1),     // C 0xfe00
+	ARMv7_NULL_OP,           // D
+	ARMv7_OP_2(BKPT, T1),    // E 0xff00
+	ARMv7_OP_2(NOP, T1),     // F 0xffff
+	ARMv7_OP_2(IT, T1),      // 10 0xff00
+};
+
+static const ARMv7_Instruction g_table_0xb[] =
+{
+	{ group_0xb }
+};
+
+static void group_0xb(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0e00) >> 8;
+
+	if ((thr->code.code0 & 0xf500) == 0xb100) index = 0x1;  // CB_Z, T1
+	if ((thr->code.code0 & 0xff00) == 0xbe00) index = 0xe;  // BKPT, T1
+	if ((thr->code.code0 & 0xffff) == 0xbf00) index = 0xf;  // NOP, T1
+	if ((thr->code.code0 & 0xff00) == 0xbf00) index = 0x10; // IT, T1
+
+	thr->m_last_instr_name = g_table_0xb_main[index].name;
+	thr->m_last_instr_size = g_table_0xb_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xb_main[index].func(thr, g_table_0xb_main[index].type);
+}
+
+// 0xc...
+static void group_0xc(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0xc_main[] =
+{
+	ARMv7_OP_2(STM, T1),     // 0 0xf800
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_2(LDM, T1)      // 8 0xf800
+};
+
+static const ARMv7_Instruction g_table_0xc[] =
+{
+	{ group_0xc }
+};
+
+static void group_0xc(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x0800) >> 8;
+	thr->m_last_instr_name = g_table_0xc_main[index].name;
+	thr->m_last_instr_size = g_table_0xc_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xc_main[index].func(thr, g_table_0xc_main[index].type);
+}
+
+// 0xd...
+static void group_0xd(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0xd_main[] =
+{
+	ARMv7_OP_2(B, T1),       // 0 0xf000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_2(SVC, T1)      // F 0xff00
+};
+
+static const ARMv7_Instruction g_table_0xd[] =
+{
+	{ group_0xd }
+};
+
+static void group_0xd(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	//u32 index = (thr->code.code0 & 0x0f00) >> 8;
+	//if ((thr->code.code0 & 0xf000) == 0xd000) index = 0;
+
+	const u32 index = (thr->code.code0 & 0xff00) == 0xdf00 ? 0xf : 0x0; // check me
+	thr->m_last_instr_name = g_table_0xd_main[index].name;
+	thr->m_last_instr_size = g_table_0xd_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xd_main[index].func(thr, g_table_0xd_main[index].type);
+}
+
+// 0xe...
+static void group_0xe(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xe85(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xe8(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xe9(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea4(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea4f(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea4f0000(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea4f0030(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xea6(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xeb(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xeb0(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xeba(ARMv7Thread* thr, const ARMv7_encoding type);
+
+
+static const ARMv7_Instruction g_table_0xe85[] =
+{
+	ARMv7_OP_4(LDRD_IMM, T1), // 0 0xfe50, 0x0000
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_NULL_OP,            // 8
+	ARMv7_NULL_OP,            // 9
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_NULL_OP,            // D
+	ARMv7_NULL_OP,            // E
+	ARMv7_OP_4(LDRD_LIT, T1)  // F 0xfe7f, 0x0000
+};
+
+static void group_0xe85(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	//u32 index = thr->code.code0 & 0x000f;
+	//if ((thr->code.code0 & 0xfe50) == 0xe850) index = 0x0;
+
+	const u32 index = (thr->code.code0 & 0xfe7f) == 0xe85f ? 0xf : 0x0; // check me
+	thr->m_last_instr_name = g_table_0xe85[index].name;
+	thr->m_last_instr_size = g_table_0xe85[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xe85[index].func(thr, g_table_0xe85[index].type);
+};
+
+static const ARMv7_Instruction g_table_0xe8[] =
+{
+	ARMv7_NULL_OP,            // 0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_OP_4(STRD_IMM, T1), // 4 0xfe50, 0x0000
+	{ group_0xe85 },          // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(STM, T2),      // 8 0xffd0, 0xa000
+	ARMv7_OP_4(LDM, T2),      // 9 0xffd0, 0x2000
+	ARMv7_NULL_OP,            // A
+	ARMv7_OP_4(POP, T2),      // B 0xffff, 0x0000
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(TB_, T1)       // D 0xfff0, 0xffe0
+};
+
+static void group_0xe8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00f0) >> 4;
+
+	if ((thr->code.code0 & 0xfe50) == 0xe840) index = 0x4;
+	if ((thr->code.code0 & 0xffd0) == 0xe880) index = 0x8;
+	if ((thr->code.code0 & 0xffd0) == 0xe890) index = 0x9;
+
+	thr->m_last_instr_name = g_table_0xe8[index].name;
+	thr->m_last_instr_size = g_table_0xe8[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xe8[index].func(thr, g_table_0xe8[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xe9[] =
+{
+	ARMv7_OP_4(STMDB, T1),    // 0 0xffd0, 0xa000
+	ARMv7_OP_4(LDMDB, T1),    // 1 0xffd0, 0x2000
+	ARMv7_OP_4(PUSH, T2)      // 2 0xffff, 0x0000
+};
+
+static void group_0xe9(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00d0) >> 4;
+
+	if ((thr->code.code0 & 0xffff) == 0xe92d) index = 0x2;
+
+	thr->m_last_instr_name = g_table_0xe9[index].name;
+	thr->m_last_instr_size = g_table_0xe9[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xe9[index].func(thr, g_table_0xe9[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea4[] =
+{
+	ARMv7_OP_4(ORR_REG, T2), // 0 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_NULL_OP,           // E
+	{ group_0xea4f }         // F
+};
+
+static void group_0xea4(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = 0x0;
+	if ((thr->code.code0 & 0xffef) == 0xea4f) index = 0xf; // check me
+
+	thr->m_last_instr_name = g_table_0xea4[index].name;
+	thr->m_last_instr_size = g_table_0xea4[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea4[index].func(thr, g_table_0xea4[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea4f[] =
+{
+	{ group_0xea4f0000 },    // 0
+	ARMv7_OP_4(ASR_IMM, T2), // 1 0xffef, 0x8030
+	ARMv7_OP_4(ASR_IMM, T2), // 2 0xffef, 0x8030
+	{ group_0xea4f0030 }     // 3
+};
+
+static void group_0xea4f(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code1 & 0x0030) >> 4;
+	thr->m_last_instr_name = g_table_0xea4f[index].name;
+	thr->m_last_instr_size = g_table_0xea4f[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea4f[index].func(thr, g_table_0xea4f[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea4f0000[] =
+{
+	ARMv7_OP_4(MOV_REG, T3), // 0 0xffef, 0xf0f0
+	ARMv7_OP_4(LSL_IMM, T2)  // 1 0xffef, 0x8030
+};
+
+static void group_0xea4f0000(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = thr->code.code1 & 0x8030 ? 0x0 : 0x1;
+	thr->m_last_instr_name = g_table_0xea4f0000[index].name;
+	thr->m_last_instr_size = g_table_0xea4f0000[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea4f0000[index].func(thr, g_table_0xea4f0000[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea4f0030[] =
+{
+	ARMv7_OP_4(RRX, T1),     // 1 0xffef, 0xf0f0
+	ARMv7_OP_4(ROR_IMM, T1)  // 2 0xffef, 0x8030
+};
+
+static void group_0xea4f0030(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = thr->code.code1 & 0x8030 ? 0x0 : 0x1;
+	thr->m_last_instr_name = g_table_0xea4f0030[index].name;
+	thr->m_last_instr_size = g_table_0xea4f0030[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea4f0030[index].func(thr, g_table_0xea4f0030[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea6[] =
+{
+	ARMv7_OP_4(ORN_REG, T1), // 0 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(MVN_REG, T2)  // F 0xffef, 0x8000
+};
+
+static void group_0xea6(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xffe08000) == 0xea600000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xea6[index].name;
+	thr->m_last_instr_size = g_table_0xea6[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea6[index].func(thr, g_table_0xea6[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xea[] =
+{
+	ARMv7_OP_4(AND_REG, T2),  // 0 0xffe0, 0x8000
+	ARMv7_OP_4(TST_REG, T2),  // 1 0xfff0, 0x8f00
+	ARMv7_OP_4(BIC_REG, T2),  // 2 0xffe0, 0x8000
+	ARMv7_NULL_OP,            // 3
+	{ group_0xea4 },          // 4
+	ARMv7_NULL_OP,            // 5
+	{ group_0xea6 },          // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(EOR_REG, T2),  // 8 0xffe0, 0x8000
+	ARMv7_OP_4(TEQ_REG, T1),  // 9 0xfff0, 0x8f00
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_OP_4(PKH, T1)       // C 0xfff0, 0x8010
+};
+
+static void group_0xea(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00e0) >> 4;
+
+	if ((thr->m_arg & 0xfff08f00) == 0xea100f00) index = 0x1;
+	if ((thr->m_arg & 0xfff08f00) == 0xea900f00) index = 0x9;
+	if ((thr->m_arg & 0xfff08010) == 0xeac00000) index = 0xc;
+
+	thr->m_last_instr_name = g_table_0xea[index].name;
+	thr->m_last_instr_size = g_table_0xea[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xea[index].func(thr, g_table_0xea[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xeb0[] =
+{
+	ARMv7_OP_4(ADD_REG, T3), // 0 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(ADD_SPR, T3)  // D 0xffef, 0x8000
+};
+
+static void group_0xeb0(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xffe08000) == 0xeb000000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xeb0[index].name;
+	thr->m_last_instr_size = g_table_0xeb0[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xeb0[index].func(thr, g_table_0xeb0[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xeba[] =
+{
+	ARMv7_OP_4(SUB_REG, T2), // 0 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(SUB_SPR, T1)  // D 0xffef, 0x8000
+};
+
+static void group_0xeba(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xffe08000) == 0xeba00000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xeba[index].name;
+	thr->m_last_instr_size = g_table_0xeba[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xeba[index].func(thr, g_table_0xeba[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xeb[] =
+{
+	{ group_0xeb0 },         // 0 0xffe0
+	ARMv7_OP_4(CMN_REG, T2), // 1 0xfff0, 0x8f00
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_4(ADC_REG, T2), // 4 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 5
+	ARMv7_OP_4(SBC_REG, T2), // 6 0xffe0, 0x8000
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	{ group_0xeba },         // A 0xffe0
+	ARMv7_OP_4(CMP_REG, T3), // B 0xfff0, 0x8f00
+	ARMv7_OP_4(RSB_REG, T1)  // C 0xffe0, 0x8000
+};
+
+static void group_0xeb(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00e0) >> 4;
+
+	if ((thr->m_arg & 0xfff08f00) == 0xeb100f00) index = 0x1;
+	if ((thr->m_arg & 0xfff08f00) == 0xebb00f00) index = 0xb;
+
+	thr->m_last_instr_name = g_table_0xeb[index].name;
+	thr->m_last_instr_size = g_table_0xeb[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xeb[index].func(thr, g_table_0xeb[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xe_main[] =
+{
+	ARMv7_OP_2(B, T2),        // 0 0xf800
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	{ group_0xe8 },           // 8
+	{ group_0xe9 },           // 9
+	{ group_0xea },           // A
+	{ group_0xeb },           // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_NULL_OP,            // D
+	ARMv7_NULL_OP,            // E
+	ARMv7_NULL_OP,            // F
+};
+
+static const ARMv7_Instruction g_table_0xe[] =
+{
+	{ group_0xe }
+};
+
+static void group_0xe(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0f00) >> 8;
+
+	if ((thr->code.code0 & 0xf800) == 0xe000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xe_main[index].name;
+	thr->m_last_instr_size = g_table_0xe_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xe_main[index].func(thr, g_table_0xe_main[index].type);
+}
+
+// 0xf...
+static void group_0xf(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf000(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf04(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf06(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf0(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf1(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf1a(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf10(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf20(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf2a(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf2(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf36(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf3(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf810(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf800(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf81(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf820(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf840(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf84(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf850(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf85(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf8(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf910(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf91(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf930(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf93(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf9(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xfa00(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xfa90(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xfa(ARMv7Thread* thr, const ARMv7_encoding type);
+
+static const ARMv7_Instruction g_table_0xf000[] =
+{
+	ARMv7_OP_4(AND_IMM, T1), // 0 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_4(B, T3),       // 8 0xf800, 0xd000
+	ARMv7_OP_4(B, T4),       // 9 0xf800, 0xd000
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_4(BLX, T2),     // C 0xf800, 0xc001
+	ARMv7_OP_4(BL, T1)       // D 0xf800, 0xd000
+};
+
+static void group_0xf000(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0xd000) >> 12;
+
+	if ((thr->code.code1 & 0x8000) == 0x0000) index = 0x0;
+	if ((thr->code.code1 & 0xc001) == 0xc000) index = 0xc;
+
+	thr->m_last_instr_size = g_table_0xf000[index].size;
+	thr->m_last_instr_name = g_table_0xf000[index].name;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf000[index].func(thr, g_table_0xf000[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf04[] =
+{
+	ARMv7_OP_4(ORR_IMM, T1), // 0 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(MOV_IMM, T2)  // F 0xfbef, 0x8000
+};
+
+static void group_0xf04(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbe08000) == 0xf0400000) index = 0x0;
+
+	thr->m_last_instr_size = g_table_0xf04[index].size;
+	thr->m_last_instr_name = g_table_0xf04[index].name;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf04[index].func(thr, g_table_0xf04[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf06[] =
+{
+	ARMv7_OP_4(ORN_IMM, T1), // 0 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(MVN_IMM, T1)  // F 0xfbef, 0x8000
+};
+
+static void group_0xf06(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbe08000) == 0xf0600000) index = 0x0;
+
+	thr->m_last_instr_size = g_table_0xf06[index].size;
+	thr->m_last_instr_name = g_table_0xf06[index].name;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf06[index].func(thr, g_table_0xf06[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf0[] =
+{
+	/*
+	{ group_0xf000 },        // 0 0xfbe0
+	ARMv7_OP_4(TST_IMM, T1), // 1 0xfbf0, 0x8f00
+	ARMv7_OP_4(BIC_IMM, T1), // 2 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 3
+	{ group_0xf04 },         // 4 0xfbef
+	ARMv7_NULL_OP,           // 5
+	{ group_0xf06 },         // 6 0xfbef
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_4(EOR_IMM, T1), // 8 0xfbe0, 0x8000
+	ARMv7_OP_4(TEQ_IMM, T1)  // 9 0xfbf0, 0x8f00
+	*/
+
+	ARMv7_OP_4(AND_IMM, T1), // f0 000  // 0
+	ARMv7_OP_4(B, T3),       // f0 008  // 1
+	ARMv7_OP_4(B, T4),       // f0 009  // 2
+	ARMv7_OP_4(BLX, T2),     // f0 00C  // 3
+	ARMv7_OP_4(BL, T1),      // f0 00D  // 4
+
+	ARMv7_OP_4(TST_IMM, T1), // f0 1    // 5
+	ARMv7_OP_4(BIC_IMM, T1), // f0 2    // 6
+	ARMv7_NULL_OP,           // f0 3    // 7
+
+
+	ARMv7_OP_4(ORR_IMM, T1), // f0 40   // 8
+	ARMv7_OP_4(MOV_IMM, T2), // f0 4F   // 9
+
+	ARMv7_NULL_OP,           // f0 5    // A
+
+	ARMv7_OP_4(ORN_IMM, T1), // f0 60   // B
+	ARMv7_OP_4(MVN_IMM, T1), // f0 6F   // C
+
+	ARMv7_NULL_OP,           // f0 7    // D
+	ARMv7_OP_4(EOR_IMM, T1), // f0 8    // E
+	ARMv7_OP_4(TEQ_IMM, T1)  // f0 9    // F
+
+};
+
+static void group_0xf0(ARMv7Thread* thr, const ARMv7_encoding type) // TODO: optimize this group
+{
+	u32 index = 0;
+	if ((thr->m_arg & 0xfbe08000) == 0xf0000000) index = 0x0;
+	if ((thr->m_arg & 0xf800d000) == 0xf0008000) index = 0x1;
+	if ((thr->m_arg & 0xf800d000) == 0xf0009000) index = 0x2;
+	if ((thr->m_arg & 0xf800c001) == 0xf000c000) index = 0x3;
+	if ((thr->m_arg & 0xf800d000) == 0xf000d000) index = 0x4;
+	if ((thr->m_arg & 0xfbf08f00) == 0xf0100f00) index = 0x5;
+	if ((thr->m_arg & 0xfbe08000) == 0xf0200000) index = 0x6;
+	if ((thr->m_arg & 0xfbe08000) == 0xf0400000) index = 0x8;
+	if ((thr->m_arg & 0xfbef8000) == 0xf04f0000) index = 0x9;
+	if ((thr->m_arg & 0xfbe08000) == 0xf0600000) index = 0xb;
+	if ((thr->m_arg & 0xfbef8000) == 0xf06f0000) index = 0xc;
+	if ((thr->m_arg & 0xfbe08000) == 0xf0800000) index = 0xe;
+	if ((thr->m_arg & 0xfbf08f00) == 0xf0900f00) index = 0xf;
+
+	/*
+	u32 index = (thr->code.code0 & 0x00e0) >> 4; // 0xfbef
+
+	if ((thr->code.code0 & 0xfbf0) == 0xf010) index = 0x1;
+	if ((thr->code.code0 & 0xfbf0) == 0xf090) index = 0x9;
+	*/
+
+	thr->m_last_instr_size = g_table_0xf0[index].size;
+	thr->m_last_instr_name = g_table_0xf0[index].name;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf0[index].func(thr, g_table_0xf0[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf10[] =
+{
+	ARMv7_OP_4(ADD_IMM, T3), // 0 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(ADD_SPI, T3)  // D 0xfbef, 0x8000
+};
+
+static void group_0xf10(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbe08000) == 0xf1000000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf10[index].name;
+	thr->m_last_instr_size = g_table_0xf10[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf10[index].func(thr, g_table_0xf10[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf1a[] =
+{
+	ARMv7_OP_4(SUB_IMM, T3), // 0 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(SUB_SPI, T2)  // D 0xfbef, 0x8000
+};
+
+static void group_0xf1a(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbe08000) == 0xf1a00000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf1a[index].name;
+	thr->m_last_instr_size = g_table_0xf1a[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf1a[index].func(thr, g_table_0xf1a[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf1[] =
+{
+	{ group_0xf10 },         // 0
+	ARMv7_OP_4(CMN_IMM, T1), // 1 0xfbf0, 0x8f00
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_4(ADC_IMM, T1), // 4 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 5
+	ARMv7_OP_4(SBC_IMM, T1), // 6 0xfbe0, 0x8000
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	{ group_0xf1a },         // A
+	ARMv7_OP_4(CMP_IMM, T2), // B 0xfbf0, 0x8f00
+	ARMv7_OP_4(RSB_IMM, T2)  // C 0xfbe0, 0x8000
+};
+
+static void group_0xf1(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00e0) >> 4;
+
+	if ((thr->m_arg & 0xfbf08f00) == 0xf1100f00) index = 0x1;
+	if ((thr->m_arg & 0xfbf08f00) == 0xf1b00f00) index = 0xb;
+
+	thr->m_last_instr_name = g_table_0xf1[index].name;
+	thr->m_last_instr_size = g_table_0xf1[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf1[index].func(thr, g_table_0xf1[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf20[] =
+{
+	ARMv7_OP_4(ADD_IMM, T4), // 0 0xfbf0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(ADD_SPI, T4), // D 0xfbff, 0x8000
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(ADR, T3)      // F 0xfbff, 0x8000
+};
+
+static void group_0xf20(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbf08000) == 0xf2000000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf20[index].name;
+	thr->m_last_instr_size = g_table_0xf20[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf20[index].func(thr, g_table_0xf20[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf2a[] =
+{
+	ARMv7_OP_4(SUB_IMM, T4), // 0 0xfbf0, 0x8000
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_OP_4(SUB_SPI, T3), // D 0xfbff, 0x8000
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(ADR, T2)      // F 0xfbff, 0x8000
+};
+
+static void group_0xf2a(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfbf08000) == 0xf2a00000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf2a[index].name;
+	thr->m_last_instr_size = g_table_0xf2a[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf2a[index].func(thr, g_table_0xf2a[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf2[] =
+{
+	{ group_0xf20 },         // 0 0xfbff
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_4(MOV_IMM, T3), // 4 0xfbf0, 0x8000
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	{ group_0xf2a },         // A 0xfbff
+	ARMv7_NULL_OP,           // B
+	ARMv7_OP_4(MOVT, T1)     // C 0xfbf0, 0x8000
+};
+
+static void group_0xf2(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00f0) >> 4; // mask 0xfbf0
+	thr->m_last_instr_name = g_table_0xf2[index].name;
+	thr->m_last_instr_size = g_table_0xf2[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf2[index].func(thr, g_table_0xf2[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf36[] =
+{
+	ARMv7_OP_4(BFI, T1),     // 0 0xfff0, 0x8020
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(BFC, T1)      // F 0xffff, 0x8020
+};
+
+static void group_0xf36(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if ((thr->m_arg & 0xfff08020) == 0xf3600000) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf36[index].name;
+	thr->m_last_instr_size = g_table_0xf36[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf36[index].func(thr, g_table_0xf36[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf3[] =
+{
+	ARMv7_NULL_OP,           // 0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_OP_4(SBFX, T1),    // 4 0xfff0, 0x8020
+	ARMv7_NULL_OP,           // 5
+	{ group_0xf36 },         // 6 0xffff
+	ARMv7_NULL_OP,           // 7
+	ARMv7_OP_4(MSR_REG, T1), // 8 0xfff0, 0xf3ff
+	ARMv7_NULL_OP,           // 9
+	ARMv7_OP_4(NOP, T2),     // A 0xffff, 0xffff
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // D
+	ARMv7_OP_4(MRS, T1),     // E 0xffff, 0xf0ff
+};
+
+static void group_0xf3(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00f0) >> 4;
+	thr->m_last_instr_name = g_table_0xf3[index].name;
+	thr->m_last_instr_size = g_table_0xf3[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf3[index].func(thr, g_table_0xf3[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf800[] =
+{
+	ARMv7_OP_4(STRB_REG, T2), // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(STRB_IMM, T3)  // 8 0xfff0, 0x0800
+};
+
+static void group_0xf800(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf800[index].name;
+	thr->m_last_instr_size = g_table_0xf800[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf800[index].func(thr, g_table_0xf800[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf810[] =
+{
+	ARMv7_OP_4(LDRB_REG, T2), // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(LDRB_IMM, T3)  // 8 0xfff0, 0x0800
+};
+
+static void group_0xf810(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf810[index].name;
+	thr->m_last_instr_size = g_table_0xf810[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf810[index].func(thr, g_table_0xf810[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf81[] =
+{
+	{ group_0xf810 },        // 0 0xfff0
+	ARMv7_NULL_OP,           // 1
+	ARMv7_NULL_OP,           // 2
+	ARMv7_NULL_OP,           // 3
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	ARMv7_NULL_OP,           // 8
+	ARMv7_NULL_OP,           // 9
+	ARMv7_NULL_OP,           // A
+	ARMv7_NULL_OP,           // B
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // C
+	ARMv7_NULL_OP,           // E
+	ARMv7_OP_4(LDRB_LIT, T1) // F 0xff7f, 0x0000
+};
+
+static void group_0xf81(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if (((thr->m_arg & 0xfff00fc0) == 0xf8100000) || ((thr->m_arg & 0xfff00800) == 0xf8100800)) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf81[index].name;
+	thr->m_last_instr_size = g_table_0xf81[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf81[index].func(thr, g_table_0xf81[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf820[] =
+{
+	ARMv7_OP_4(STRH_REG, T2), // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(STRH_IMM, T3)  // 8 0xfff0, 0x0800
+};
+
+static void group_0xf820(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf820[index].name;
+	thr->m_last_instr_size = g_table_0xf820[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf820[index].func(thr, g_table_0xf820[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf840[] =
+{
+	ARMv7_OP_4(STR_REG, T2),  // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(STR_IMM, T4)   // 8 0xfff0, 0x0800
+};
+
+static void group_0xf840(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf840[index].name;
+	thr->m_last_instr_size = g_table_0xf840[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf840[index].func(thr, g_table_0xf840[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf84[] =
+{
+	{ group_0xf840 },         // 0 0xfff0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_NULL_OP,            // 8
+	ARMv7_NULL_OP,            // 9
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(PUSH, T3)      // D 0xffff, 0x0fff
+};
+
+static void group_0xf84(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if (((thr->m_arg & 0xfff00fc0) == 0xf8400000) || ((thr->m_arg & 0xfff00800) == 0xf8400800)) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf84[index].name;
+	thr->m_last_instr_size = g_table_0xf84[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf84[index].func(thr, g_table_0xf84[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf850[] =
+{
+	ARMv7_OP_4(LDR_REG, T2),  // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_OP_4(LDR_IMM, T4)   // 8 0xfff0, 0x0800
+};
+
+static void group_0xf850(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf850[index].name;
+	thr->m_last_instr_size = g_table_0xf850[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf850[index].func(thr, g_table_0xf850[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf85[] =
+{
+	{ group_0xf850 },         // 0 0xfff0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_NULL_OP,            // 8
+	ARMv7_NULL_OP,            // 9
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(POP, T3),      // D 0xffff, 0x0fff
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(LDR_LIT, T2)   // F 0xff7f, 0x0000
+};
+
+static void group_0xf85(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if (((thr->m_arg & 0xfff00fc0) == 0xf8500000) || ((thr->m_arg & 0xfff00800) == 0xf8500800)) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf85[index].name;
+	thr->m_last_instr_size = g_table_0xf85[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf85[index].func(thr, g_table_0xf85[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf8[] =
+{
+	{ group_0xf800 },         // 0 0xfff0
+	{ group_0xf81 },          // 1 0xfff0
+	{ group_0xf820 },         // 2 0xfff0
+	ARMv7_NULL_OP,            // 3
+	{ group_0xf84 },          // 4 0xfff0
+	{ group_0xf85 },          // 5 0xfff0
+	ARMv7_NULL_OP,            // 6
+	ARMv7_OP_4(HACK, T1),     // 7 0xffff, 0x0000
+	ARMv7_OP_4(STRB_IMM, T2), // 8 0xfff0, 0x0000
+	ARMv7_OP_4(LDRB_IMM, T2), // 9 0xfff0, 0x0000
+	ARMv7_OP_4(STRH_IMM, T2), // A 0xfff0, 0x0000
+	ARMv7_NULL_OP,            // B
+	ARMv7_OP_4(STR_IMM, T3),  // C 0xfff0, 0x0000
+	ARMv7_OP_4(LDR_IMM, T3)   // D 0xfff0, 0x0000
+};
+
+static void group_0xf8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code0 & 0x00f0) >> 4;
+	thr->m_last_instr_name = g_table_0xf8[index].name;
+	thr->m_last_instr_size = g_table_0xf8[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf8[index].func(thr, g_table_0xf8[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf910[] =
+{
+	ARMv7_OP_4(LDRSB_REG, T2), // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,             // 1
+	ARMv7_NULL_OP,             // 2
+	ARMv7_NULL_OP,             // 3
+	ARMv7_NULL_OP,             // 4
+	ARMv7_NULL_OP,             // 5
+	ARMv7_NULL_OP,             // 6
+	ARMv7_NULL_OP,             // 7
+	ARMv7_OP_4(LDRSB_IMM, T2)  // 8 0xfff0, 0x0800
+};
+
+static void group_0xf910(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf910[index].name;
+	thr->m_last_instr_size = g_table_0xf910[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf910[index].func(thr, g_table_0xf910[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf91[] =
+{
+	{ group_0xf910 },         // 0 0xfff0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_NULL_OP,            // 8
+	ARMv7_NULL_OP,            // 9
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_NULL_OP,            // D
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(LDRSB_LIT, T1) // F 0xff7f, 0x0000
+};
+
+static void group_0xf91(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if (((thr->m_arg & 0xfff00fc0) == 0xf9100000) || ((thr->m_arg & 0xfff00800) == 0xf9100800)) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf91[index].name;
+	thr->m_last_instr_size = g_table_0xf91[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf91[index].func(thr, g_table_0xf91[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf930[] =
+{
+	ARMv7_OP_4(LDRSH_REG, T2), // 0 0xfff0, 0x0fc0
+	ARMv7_NULL_OP,             // 1
+	ARMv7_NULL_OP,             // 2
+	ARMv7_NULL_OP,             // 3
+	ARMv7_NULL_OP,             // 4
+	ARMv7_NULL_OP,             // 5
+	ARMv7_NULL_OP,             // 6
+	ARMv7_NULL_OP,             // 7
+	ARMv7_OP_4(LDRSH_IMM, T2)  // 8 0xfff0, 0x0800
+};
+
+static void group_0xf930(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code1 & 0x0f00) >> 8;
+
+	if ((thr->code.code1 & 0x0800) == 0x0800) index = 0x8;
+
+	thr->m_last_instr_name = g_table_0xf930[index].name;
+	thr->m_last_instr_size = g_table_0xf930[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf930[index].func(thr, g_table_0xf930[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf93[] =
+{
+	{ group_0xf930 },         // 0 0xfff0
+	ARMv7_NULL_OP,            // 1
+	ARMv7_NULL_OP,            // 2
+	ARMv7_NULL_OP,            // 3
+	ARMv7_NULL_OP,            // 4
+	ARMv7_NULL_OP,            // 5
+	ARMv7_NULL_OP,            // 6
+	ARMv7_NULL_OP,            // 7
+	ARMv7_NULL_OP,            // 8
+	ARMv7_NULL_OP,            // 9
+	ARMv7_NULL_OP,            // A
+	ARMv7_NULL_OP,            // B
+	ARMv7_NULL_OP,            // C
+	ARMv7_NULL_OP,            // D
+	ARMv7_NULL_OP,            // C
+	ARMv7_OP_4(LDRSH_LIT, T1) // F 0xff7f, 0x0000
+};
+
+static void group_0xf93(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = thr->code.code0 & 0x000f;
+
+	if (((thr->m_arg & 0xfff00fc0) == 0xf9300000) || ((thr->m_arg & 0xfff00800) == 0xf9300800)) index = 0x0;
+
+	thr->m_last_instr_name = g_table_0xf93[index].name;
+	thr->m_last_instr_size = g_table_0xf93[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf93[index].func(thr, g_table_0xf93[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf9[] =
+{
+	ARMv7_NULL_OP,             // 0
+	{ group_0xf91 },           // 1 0xff7f
+	ARMv7_NULL_OP,             // 2
+	{ group_0xf93 },           // 3 0xff7f
+	ARMv7_NULL_OP,             // 4
+	ARMv7_NULL_OP,             // 5
+	ARMv7_NULL_OP,             // 6
+	ARMv7_NULL_OP,             // 7
+	ARMv7_NULL_OP,             // 8
+	ARMv7_OP_4(LDRSB_IMM, T1), // 9 0xfff0, 0x0000
+	ARMv7_NULL_OP,             // A
+	ARMv7_OP_4(LDRSH_IMM, T1), // B 0xfff0, 0x0000
+};
+
+static void group_0xf9(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00f0) >> 4;
+
+	if ((thr->code.code0 & 0xff7) == 0xf91) index = 0x1; // check me
+	if ((thr->code.code0 & 0xff7) == 0xf93) index = 0x3;
+
+	thr->m_last_instr_name = g_table_0xf9[index].name;
+	thr->m_last_instr_size = g_table_0xf9[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf9[index].func(thr, g_table_0xf9[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xfa00[] =
+{
+	ARMv7_OP_4(BLX, A2),       // 0 0xfe00, 0x0000
+	ARMv7_NULL_OP,             // 1
+	ARMv7_NULL_OP,             // 2
+	ARMv7_NULL_OP,             // 3
+	ARMv7_NULL_OP,             // 4
+	ARMv7_NULL_OP,             // 5
+	ARMv7_NULL_OP,             // 6
+	ARMv7_NULL_OP,             // 7
+	ARMv7_NULL_OP,             // 8
+	ARMv7_NULL_OP,             // 9
+	ARMv7_NULL_OP,             // A
+	ARMv7_NULL_OP,             // B
+	ARMv7_NULL_OP,             // C
+	ARMv7_NULL_OP,             // D
+	ARMv7_NULL_OP,             // E
+	ARMv7_OP_4(LSL_REG, T2)    // F 0xffe0, 0xf0f0
+};
+
+static void group_0xfa00(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code1 & 0xf0f0) == 0xf000 ? 0xf : 0x0;
+	thr->m_last_instr_name = g_table_0xfa00[index].name;
+	thr->m_last_instr_size = g_table_0xfa00[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xfa00[index].func(thr, g_table_0xfa00[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xfa90[] =
+{
+	ARMv7_NULL_OP,             // 0
+	ARMv7_NULL_OP,             // 1
+	ARMv7_NULL_OP,             // 2
+	ARMv7_NULL_OP,             // 3
+	ARMv7_NULL_OP,             // 4
+	ARMv7_NULL_OP,             // 5
+	ARMv7_NULL_OP,             // 6
+	ARMv7_NULL_OP,             // 7
+	ARMv7_OP_4(REV, T2),       // 8 0xfff0, 0xf0f0
+	ARMv7_OP_4(REV16, T2),     // 9 0xfff0, 0xf0f0
+	ARMv7_OP_4(RBIT, T1),      // A 0xfff0, 0xf0f0
+	ARMv7_OP_4(REVSH, T2)      // B 0xfff0, 0xf0f0
+};
+
+static void group_0xfa90(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	const u32 index = (thr->code.code1 & 0x00f0) >> 4;
+	thr->m_last_instr_name = g_table_0xfa90[index].name;
+	thr->m_last_instr_size = g_table_0xfa90[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xfa90[index].func(thr, g_table_0xfa90[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xfa[] =
+{
+	{ group_0xfa00 },          // 0 0xffe0
+	ARMv7_NULL_OP,             // 1
+	ARMv7_OP_4(LSR_REG, T2),   // 2 0xffe0, 0xf0f0
+	ARMv7_NULL_OP,             // 3
+	ARMv7_OP_4(ASR_REG, T2),   // 4 0xffe0, 0xf0f0
+	ARMv7_NULL_OP,             // 5
+	ARMv7_OP_4(ROR_REG, T2),   // 6 0xffe0, 0xf0f0
+	ARMv7_NULL_OP,             // 7
+	ARMv7_NULL_OP,             // 8
+	{ group_0xfa90 },          // 9 0xfff0
+	ARMv7_OP_4(SEL, T1),       // A 0xfff0, 0xf0f0
+	ARMv7_OP_4(CLZ, T1)        // B 0xfff0, 0xf0f0
+};
+
+static void group_0xfa(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x00e0) >> 4;
+
+	switch ((thr->code.code0 & 0x00f0) >> 4)
+	{
+	case 0x9: index = 0x9; break;
+	case 0xa: index = 0xa; break;
+	case 0xb: index = 0xb; break;
+
+	default: break;
+	}
+
+	thr->m_last_instr_name = g_table_0xfa[index].name;
+	thr->m_last_instr_size = g_table_0xfa[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xfa[index].func(thr, g_table_0xfa[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf_main[] =
+{
+	{ group_0xf0 },          // 0 0xfbef
+	{ group_0xf1 },          // 1 0xfbef
+	{ group_0xf2 },          // 2 0xfbff
+	{ group_0xf3 },          // 3 0xffff
+	ARMv7_NULL_OP,           // 4
+	ARMv7_NULL_OP,           // 5
+	ARMv7_NULL_OP,           // 6
+	ARMv7_NULL_OP,           // 7
+	{ group_0xf8 },          // 8 0xfff0
+	{ group_0xf9 },          // 9 0xfff0
+	{ group_0xfa },          // A 0xfff0
+
+};
+
+static void group_0xf(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 index = (thr->code.code0 & 0x0b00) >> 8;
+
+	switch ((thr->m_arg & 0x0800d000) >> 12)
+	{
+	case 0x8: // B, T3
+	case 0x9: // B, T4
+	case 0xd: index = 0x0; break; // BL, T1
+
+	default: break;
+	}
+
+	if ((thr->m_arg & 0xf800c001) == 0xf000c000) index = 0x0; // BLX, T2
+
+	switch ((thr->code.code0 & 0x0f00) >> 8)
+	{
+	case 0x3: index = 0x3; break;
+	case 0x8: index = 0x8; break;
+	case 0x9: index = 0x9; break;
+	case 0xa: index = 0xa; break;
+
+	default: break;
+	}
+
+	thr->m_last_instr_name = g_table_0xf_main[index].name;
+	thr->m_last_instr_size = g_table_0xf_main[index].size;
+	thr->code.data = thr->m_last_instr_size == 2 ? thr->code.code0 : thr->m_arg;
+	g_table_0xf_main[index].func(thr, g_table_0xf_main[index].type);
+}
+
+static const ARMv7_Instruction g_table_0xf[] =
+{
+	{ group_0xf }
+};
+
+
+static void execute_main_group(ARMv7Thread* thr)
+{
+	switch ((thr->code.code0 & 0xf000) >> 12)
+	{
+	//case 0x0: (*g_table_0x0).func(thr, (*g_table_0x0).type); break; // TODO
+	case 0x1: (*g_table_0x1).func(thr, (*g_table_0x1).type); break;
+	case 0x2: (*g_table_0x2).func(thr, (*g_table_0x2).type); break;
+	case 0x3: (*g_table_0x3).func(thr, (*g_table_0x3).type); break;
+	case 0x4: (*g_table_0x4).func(thr, (*g_table_0x4).type); break;
+	case 0x5: (*g_table_0x5).func(thr, (*g_table_0x5).type); break;
+	case 0x6: (*g_table_0x6).func(thr, (*g_table_0x6).type); break;
+	case 0x7: (*g_table_0x7).func(thr, (*g_table_0x7).type); break;
+	case 0x8: (*g_table_0x8).func(thr, (*g_table_0x8).type); break;
+	case 0x9: (*g_table_0x9).func(thr, (*g_table_0x9).type); break;
+	case 0xa: (*g_table_0xa).func(thr, (*g_table_0xa).type); break;
+	case 0xb: (*g_table_0xb).func(thr, (*g_table_0xb).type); break;
+	case 0xc: (*g_table_0xc).func(thr, (*g_table_0xc).type); break;
+	case 0xd: (*g_table_0xd).func(thr, (*g_table_0xd).type); break;
+	case 0xe: (*g_table_0xe).func(thr, (*g_table_0xe).type); break;
+	case 0xf: (*g_table_0xf).func(thr, (*g_table_0xf).type); break;
+
+	default: LOG_ERROR(GENERAL, "ARMv7Decoder: unknown group 0x%x", (thr->code.code0 & 0xf000) >> 12); Emu.Pause(); break;
+	}
+}
+
+#undef ARMv7_OP_2
+#undef ARMv7_OP_4
+#undef ARMv7_NULL_OP

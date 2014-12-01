@@ -6,46 +6,292 @@
 #include "PSVFuncList.h"
 #include "ARMv7Interpreter.h"
 
-void ARMv7Interpreter::UNK(const u32 data)
+template<typename T>
+u8 ARMv7_instrs::BitCount(T x, u8 len)
 {
-	LOG_ERROR(HLE, "Unknown/illegal opcode! (0x%04x : 0x%04x)", data >> 16, data & 0xffff);
+	u8 result = 0;
+
+	for (u8 mask = 1 << (len - 1); mask; mask >>= 1)
+	{
+		if (x & mask) result++;
+	}
+
+	return result;
+}
+
+template<typename T>
+s8 ARMv7_instrs::LowestSetBit(T x, u8 len)
+{
+	if (!x) return len;
+
+	u8 result = 0;
+
+	for (T mask = 1, i = 0; i<len && (x & mask) == 0; mask <<= 1, i++)
+	{
+		result++;
+	}
+
+	return result;
+}
+
+template<typename T>
+s8 ARMv7_instrs::HighestSetBit(T x, u8 len)
+{
+	if (!x) return -1;
+
+	u8 result = len;
+
+	for (T mask = T(1) << (len - 1); (x & mask) == 0; mask >>= 1)
+	{
+		result--;
+	}
+
+	return result;
+}
+
+template<typename T>
+s8 ARMv7_instrs::CountLeadingZeroBits(T x, u8 len)
+{
+	return len - 1 - HighestSetBit(x, len);
+}
+
+SRType ARMv7_instrs::DecodeImmShift(u32 type, u32 imm5, u32* shift_n)
+{
+	SRType shift_t = SRType_None;
+
+	switch (type)
+	{
+	case 0: shift_t = SRType_LSL; if (shift_n) *shift_n = imm5; break;
+	case 1: shift_t = SRType_LSR; if (shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
+	case 2: shift_t = SRType_ASR; if (shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
+	case 3:
+		if (imm5 == 0)
+		{
+			shift_t = SRType_RRX; if (shift_n) *shift_n = 1;
+		}
+		else
+		{
+			shift_t = SRType_ROR; if (shift_n) *shift_n = imm5;
+		}
+		break;
+	}
+
+	return shift_t;
+}
+
+SRType ARMv7_instrs::DecodeRegShift(u8 type)
+{
+	SRType shift_t = SRType_None;
+
+	switch (type)
+	{
+	case 0: shift_t = SRType_LSL; break;
+	case 1: shift_t = SRType_LSR; break;
+	case 2: shift_t = SRType_ASR; break;
+	case 3: shift_t = SRType_ROR; break;
+	}
+
+	return shift_t;
+}
+
+u32 ARMv7_instrs::LSL_C(u32 x, s32 shift, bool& carry_out)
+{
+	assert(shift > 0);
+	carry_out = shift <= 32 ? x & (1 << (32 - shift)) : false;
+	return shift < 32 ? x << shift : 0;
+}
+
+u32 ARMv7_instrs::LSL(u32 x, s32 shift)
+{
+	assert(shift >= 0);
+	return shift < 32 ? x << shift : 0;
+}
+
+u32 ARMv7_instrs::LSR_C(u32 x, s32 shift, bool& carry_out)
+{
+	assert(shift > 0);
+	carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
+	return shift < 32 ? x >> shift : 0;
+}
+
+u32 ARMv7_instrs::LSR(u32 x, s32 shift)
+{
+	assert(shift >= 0);
+	return shift < 32 ? x >> shift : 0;
+}
+
+s32 ARMv7_instrs::ASR_C(s32 x, s32 shift, bool& carry_out)
+{
+	assert(shift > 0);
+	carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
+	return shift < 32 ? x >> shift : x >> 31;
+}
+
+s32 ARMv7_instrs::ASR(s32 x, s32 shift)
+{
+	assert(shift >= 0);
+	return shift < 32 ? x >> shift : x >> 31;
+}
+
+u32 ARMv7_instrs::ROR_C(u32 x, s32 shift, bool& carry_out)
+{
+	assert(shift);
+	carry_out = x & (1 << (shift - 1));
+	return x >> shift | x << (32 - shift);
+}
+
+u32 ARMv7_instrs::ROR(u32 x, s32 shift)
+{
+	return x >> shift | x << (32 - shift);
+}
+
+u32 ARMv7_instrs::RRX_C(u32 x, bool carry_in, bool& carry_out)
+{
+	carry_out = x & 0x1;
+	return ((u32)carry_in << 31) | (x >> 1);
+}
+
+u32 ARMv7_instrs::RRX(u32 x, bool carry_in)
+{
+	return ((u32)carry_in << 31) | (x >> 1);
+}
+
+template<typename T> T ARMv7_instrs::Shift_C(T value, SRType type, s32 amount, bool carry_in, bool& carry_out)
+{
+	assert(type != SRType_RRX || amount == 1);
+
+	if (amount)
+	{
+		switch (type)
+		{
+		case SRType_LSL: return LSL_C(value, amount, carry_out);
+		case SRType_LSR: return LSR_C(value, amount, carry_out);
+		case SRType_ASR: return ASR_C(value, amount, carry_out);
+		case SRType_ROR: return ROR_C(value, amount, carry_out);
+		case SRType_RRX: return RRX_C(value, carry_in, carry_out);
+		}
+	}
+
+	carry_out = carry_in;
+	return value;
+}
+
+template<typename T> T ARMv7_instrs::Shift(T value, SRType type, s32 amount, bool carry_in)
+{
+	bool carry_out;
+	return Shift_C(value, type, amount, carry_in, carry_out);
+}
+
+template<typename T> T ARMv7_instrs::AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
+{
+	const T sign_mask = (T)1 << (sizeof(T) - 1);
+
+	T result = x + y;
+	carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
+	overflow = (x ^ result) & (y ^ result) & sign_mask;
+	if (carry_in)
+	{
+		result += 1;
+		carry_out ^= (result == 0);
+		overflow ^= (result == sign_mask);
+	}
+	return result;
+}
+
+u32 ARMv7_instrs::ThumbExpandImm_C(u32 imm12, bool carry_in, bool& carry_out)
+{
+	if ((imm12 & 0xc00) >> 10)
+	{
+		u32 unrotated_value = (imm12 & 0x7f) | 0x80;
+
+		return ROR_C(unrotated_value, (imm12 & 0xf80) >> 7, carry_out);
+	}
+	else
+	{
+		carry_out = carry_in;
+
+		u32 imm8 = imm12 & 0xff;
+		switch ((imm12 & 0x300) >> 8)
+		{
+		case 0: return imm8;
+		case 1: return imm8 << 16 | imm8;
+		case 2: return imm8 << 24 | imm8 << 8;
+		default: return imm8 << 24 | imm8 << 16 | imm8 << 8 | imm8;
+		}
+	}
+}
+
+u32 ARMv7_instrs::ThumbExpandImm(ARMv7Thread* CPU, u32 imm12)
+{
+	bool carry = CPU->APSR.C;
+	return ThumbExpandImm_C(imm12, carry, carry);
+}
+
+bool ARMv7_instrs::ConditionPassed(ARMv7Thread* CPU, u32 cond)
+{
+	bool result = false;
+
+	switch (cond >> 1)
+	{
+	case 0: result = CPU->APSR.Z == 1; break;
+	case 1: result = CPU->APSR.C == 1; break;
+	case 2: result = CPU->APSR.N == 1; break;
+	case 3: result = CPU->APSR.V == 1; break;
+	case 4: result = CPU->APSR.C == 1 && CPU->APSR.Z == 0; break;
+	case 5: result = CPU->APSR.N == CPU->APSR.V; break;
+	case 6: result = CPU->APSR.N == CPU->APSR.V && CPU->APSR.Z == 0; break;
+	case 7: return true;
+	}
+
+	if (cond & 0x1)
+	{
+		return !result;
+	}
+
+	return result;
+}
+
+// instructions
+void ARMv7_instrs::UNK(ARMv7Thread* thr)
+{
+	LOG_ERROR(HLE, "Unknown/illegal opcode! (0x%04x : 0x%04x)", thr->code.data >> 16, thr->code.data & 0xffff);
 	Emu.Pause();
 }
 
-void ARMv7Interpreter::NULL_OP(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::NULL_OP(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	LOG_ERROR(HLE, "Null opcode found");
+	LOG_ERROR(HLE, "Null opcode found: data = 0x%x", thr->m_arg);
 	Emu.Pause();
 }
 
-void ARMv7Interpreter::HACK(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::HACK(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 code = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		code = data & 0xffff;
+		code = thr->code.data & 0xffff;
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		code = (data & 0xfff00) >> 4 | (data & 0xf);
+		cond = thr->code.data >> 28;
+		code = (thr->code.data & 0xfff00) >> 4 | (thr->code.data & 0xf);
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		execute_psv_func_by_index(CPU, code);
+		execute_psv_func_by_index(*thr, code);
 	}
 }
 
-void ARMv7Interpreter::ADC_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADC_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -54,7 +300,7 @@ void ARMv7Interpreter::ADC_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::ADC_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADC_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -63,7 +309,7 @@ void ARMv7Interpreter::ADC_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::ADC_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADC_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -73,10 +319,10 @@ void ARMv7Interpreter::ADC_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADD_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 n = 0;
 	u32 imm32 = 0;
@@ -85,23 +331,23 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		imm32 = (data & 0x1c0) >> 6;
+		d = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		imm32 = (thr->code.data & 0x1c0) >> 6;
 		break;
 	}
 	case T2:
 	{
-		d = n = (data & 0x700) >> 8;
-		imm32 = (data & 0xff);
+		d = n = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff);
 		break;
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
-		set_flags = (data & 0x100000);
-		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
+		set_flags = (thr->code.data & 0x100000);
+		imm32 = ThumbExpandImm(thr, (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff));
 
 		if (d == 15 && set_flags)
 		{
@@ -115,10 +361,10 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 	}
 	case T4:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
 		set_flags = false;
-		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		imm32 = (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 
 		if (n == 15)
 		{
@@ -134,29 +380,29 @@ void ARMv7Interpreter::ADD_IMM(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.read_gpr(n), imm32, false, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->read_gpr(n), imm32, false, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.read_gpr(n) + imm32);
+			thr->write_gpr(d, thr->read_gpr(n) + imm32);
 		}
 	}
 }
 
-void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADD_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 n = 0;
 	u32 m = 0;
@@ -167,15 +413,15 @@ void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		m = (data & 0x1c0) >> 6;
+		d = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		m = (thr->code.data & 0x1c0) >> 6;
 		break;
 	}
 	case T2:
 	{
-		n = d = (data & 0x80) >> 4 | (data & 0x7);
-		m = (data & 0x78) >> 3;
+		n = d = (thr->code.data & 0x80) >> 4 | (thr->code.data & 0x7);
+		m = (thr->code.data & 0x78) >> 3;
 		set_flags = false;
 
 		if (n == 13 || m == 13)
@@ -186,11 +432,11 @@ void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
-		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
+		shift_t = DecodeImmShift((thr->code.data & 0x30) >> 4, (thr->code.data & 0x7000) >> 10 | (thr->code.data & 0xc0) >> 6, &shift_n);
 
 		if (d == 15 && set_flags)
 		{
@@ -206,27 +452,27 @@ void ARMv7Interpreter::ADD_REG(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, true);
+		const u32 shifted = Shift(thr->read_gpr(m), shift_t, shift_n, true);
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.read_gpr(n), shifted, false, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->read_gpr(n), shifted, false, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.read_gpr(n) + shifted);
+			thr->write_gpr(d, thr->read_gpr(n) + shifted);
 		}
 	}
 }
 
-void ARMv7Interpreter::ADD_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADD_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -235,9 +481,9 @@ void ARMv7Interpreter::ADD_RSR(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::ADD_SPI(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADD_SPI(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 13;
 	bool set_flags = false;
 	u32 imm32 = 0;
@@ -246,20 +492,20 @@ void ARMv7Interpreter::ADD_SPI(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x700) >> 8;
-		imm32 = (data & 0xff) << 2;
+		d = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff) << 2;
 		break;
 	}
 	case T2:
 	{
-		imm32 = (data & 0x7f) << 2;
+		imm32 = (thr->code.data & 0x7f) << 2;
 		break;
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		set_flags = (data & 0x100000);
-		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		d = (thr->code.data & 0xf00) >> 8;
+		set_flags = (thr->code.data & 0x100000);
+		imm32 = ThumbExpandImm(thr, (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff));
 
 		if (d == 15 && set_flags)
 		{
@@ -269,37 +515,37 @@ void ARMv7Interpreter::ADD_SPI(const u32 data, const ARMv7_encoding type)
 	}
 	case T4:
 	{
-		d = (data & 0xf00) >> 8;
+		d = (thr->code.data & 0xf00) >> 8;
 		set_flags = false;
-		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		imm32 = (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.SP, imm32, false, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->SP, imm32, false, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.SP + imm32);
+			thr->write_gpr(d, thr->SP + imm32);
 		}
 	}
 }
 
-void ARMv7Interpreter::ADD_SPR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADD_SPR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 13;
 	u32 m = 0;
 	bool set_flags = false;
@@ -310,12 +556,12 @@ void ARMv7Interpreter::ADD_SPR(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		m = d = (data & 0x80) >> 4 | (data & 0x7);
+		m = d = (thr->code.data & 0x80) >> 4 | (thr->code.data & 0x7);
 		break;
 	}
 	case T2:
 	{
-		m = (data & 0x78) >> 3;
+		m = (thr->code.data & 0x78) >> 3;
 
 		if (m == 13)
 		{
@@ -325,38 +571,38 @@ void ARMv7Interpreter::ADD_SPR(const u32 data, const ARMv7_encoding type)
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
-		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		d = (thr->code.data & 0xf00) >> 8;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
+		shift_t = DecodeImmShift((thr->code.data & 0x30) >> 4, (thr->code.data & 0x7000) >> 10 | (thr->code.data & 0xc0) >> 6, &shift_n);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		const u32 shifted = Shift(thr->read_gpr(m), shift_t, shift_n, thr->APSR.C);
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.SP, shifted, false, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->SP, shifted, false, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.SP + CPU.read_gpr(m));
+			thr->write_gpr(d, thr->SP + thr->read_gpr(m));
 		}
 	}
 }
 
 
-void ARMv7Interpreter::ADR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ADR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -366,7 +612,7 @@ void ARMv7Interpreter::ADR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::AND_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::AND_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -375,7 +621,7 @@ void ARMv7Interpreter::AND_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::AND_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::AND_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -384,26 +630,7 @@ void ARMv7Interpreter::AND_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::AND_RSR(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::ASR_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::ASR_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::AND_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -413,67 +640,86 @@ void ARMv7Interpreter::ASR_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::B(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ASR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::ASR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::B(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 cond = thr->ITSTATE.advance();
 	u32 jump = 0; // jump = instr_size + imm32 ???
 
 	switch (type)
 	{
 	case T1:
 	{
-		cond = (data >> 8) & 0xf;
+		cond = (thr->code.data >> 8) & 0xf;
 		if (cond == 0xf)
 		{
 			throw "SVC";
 		}
 
-		jump = 4 + sign<9, u32>((data & 0xff) << 1);
+		jump = 4 + sign<9, u32>((thr->code.data & 0xff) << 1);
 		break;
 	}
 	case T2:
 	{
-		jump = 4 + sign<12, u32>((data & 0x7ff) << 1);
+		jump = 4 + sign<12, u32>((thr->code.data & 0x7ff) << 1);
 		break;
 	}
 	case T3:
 	{
-		cond = (data >> 6) & 0xf;
+		cond = (thr->code.data >> 6) & 0xf;
 		if (cond >= 0xe)
 		{
 			throw "B_T3: Related encodings";
 		}
 
-		u32 s = (data >> 26) & 0x1;
-		u32 j1 = (data >> 13) & 0x1;
-		u32 j2 = (data >> 11) & 0x1;
-		jump = 4 + sign<21, u32>(s << 20 | j2 << 19 | j1 << 18 | (data & 0x3f0000) >> 4 | (data & 0x7ff) << 1);
+		u32 s = (thr->code.data >> 26) & 0x1;
+		u32 j1 = (thr->code.data >> 13) & 0x1;
+		u32 j2 = (thr->code.data >> 11) & 0x1;
+		jump = 4 + sign<21, u32>(s << 20 | j2 << 19 | j1 << 18 | (thr->code.data & 0x3f0000) >> 4 | (thr->code.data & 0x7ff) << 1);
 		break;
 	}
 	case T4:
 	{
-		u32 s = (data >> 26) & 0x1;
-		u32 i1 = (data >> 13) & 0x1 ^ s ^ 1;
-		u32 i2 = (data >> 11) & 0x1 ^ s ^ 1;
-		jump = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
+		u32 s = (thr->code.data >> 26) & 0x1;
+		u32 i1 = (thr->code.data >> 13) & 0x1 ^ s ^ 1;
+		u32 i2 = (thr->code.data >> 11) & 0x1 ^ s ^ 1;
+		jump = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (thr->code.data & 0x3ff0000) >> 4 | (thr->code.data & 0x7ff) << 1);
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		jump = 1 + 4 + sign<26, u32>((data & 0xffffff) << 2);
+		cond = thr->code.data >> 28;
+		jump = 1 + 4 + sign<26, u32>((thr->code.data & 0xffffff) << 2);
 		break;
 	}
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		CPU.SetBranch(CPU.PC + jump);
+		thr->SetBranch(thr->PC + jump);
 	}
 }
 
 
-void ARMv7Interpreter::BFC(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BFC(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -482,35 +728,7 @@ void ARMv7Interpreter::BFC(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::BFI(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::BIC_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::BIC_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::BIC_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BFI(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -520,7 +738,25 @@ void ARMv7Interpreter::BIC_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::BKPT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BIC_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::BIC_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::BIC_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -530,132 +766,142 @@ void ARMv7Interpreter::BKPT(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::BL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BKPT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
-	u32 newLR = CPU.PC;
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::BL(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 cond = thr->ITSTATE.advance();
+	u32 newLR = thr->PC;
 	u32 imm32 = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		u32 s = (data >> 26) & 0x1;
-		u32 i1 = (data >> 13) & 0x1 ^ s ^ 1;
-		u32 i2 = (data >> 11) & 0x1 ^ s ^ 1;
-		imm32 = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
-		newLR = (CPU.PC + 4) | 1;
+		u32 s = (thr->code.data >> 26) & 0x1;
+		u32 i1 = (thr->code.data >> 13) & 0x1 ^ s ^ 1;
+		u32 i2 = (thr->code.data >> 11) & 0x1 ^ s ^ 1;
+		imm32 = 4 + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (thr->code.data & 0x3ff0000) >> 4 | (thr->code.data & 0x7ff) << 1);
+		newLR = (thr->PC + 4) | 1;
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		imm32 = 4 + sign<26, u32>((data & 0xffffff) << 2);
-		newLR = (CPU.PC + 4) - 4;
+		cond = thr->code.data >> 28;
+		imm32 = 4 + sign<26, u32>((thr->code.data & 0xffffff) << 2);
+		newLR = (thr->PC + 4) - 4;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		CPU.LR = newLR;
-		CPU.SetBranch(CPU.PC + imm32);
+		thr->LR = newLR;
+		thr->SetBranch(thr->PC + imm32);
 	}
 }
 
-void ARMv7Interpreter::BLX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BLX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
-	u32 newLR = CPU.PC;
+	u32 cond = thr->ITSTATE.advance();
+	u32 newLR = thr->PC;
 	u32 target = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		target = CPU.read_gpr((data >> 3) & 0xf);
-		newLR = (CPU.PC + 2) | 1; // ???
+		target = thr->read_gpr((thr->code.data >> 3) & 0xf);
+		newLR = (thr->PC + 2) | 1; // ???
 		break;
 	}
 	case T2:
 	{
-		u32 s = (data >> 26) & 0x1;
-		u32 i1 = (data >> 13) & 0x1 ^ s ^ 1;
-		u32 i2 = (data >> 11) & 0x1 ^ s ^ 1;
-		target = (CPU.PC + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (data & 0x3ff0000) >> 4 | (data & 0x7ff) << 1);
-		newLR = (CPU.PC + 4) | 1;
+		u32 s = (thr->code.data >> 26) & 0x1;
+		u32 i1 = (thr->code.data >> 13) & 0x1 ^ s ^ 1;
+		u32 i2 = (thr->code.data >> 11) & 0x1 ^ s ^ 1;
+		target = (thr->PC + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (thr->code.data & 0x3ff0000) >> 4 | (thr->code.data & 0x7ff) << 1);
+		newLR = (thr->PC + 4) | 1;
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		target = CPU.read_gpr(data & 0xf);
-		newLR = (CPU.PC + 4) - 4;
+		cond = thr->code.data >> 28;
+		target = thr->read_gpr(thr->code.data & 0xf);
+		newLR = (thr->PC + 4) - 4;
 		break;
 	}
 	case A2:
 	{
-		target = (CPU.PC + 4 | 1) + sign<25, u32>((data & 0xffffff) << 2 | (data & 0x1000000) >> 23);
-		newLR = (CPU.PC + 4) - 4;
+		target = (thr->PC + 4 | 1) + sign<25, u32>((thr->code.data & 0xffffff) << 2 | (thr->code.data & 0x1000000) >> 23);
+		newLR = (thr->PC + 4) - 4;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		CPU.LR = newLR;
+		thr->LR = newLR;
 		if (target & 1)
 		{
-			CPU.ISET = Thumb;
-			CPU.SetBranch(target & ~1);
+			thr->ISET = Thumb;
+			thr->SetBranch(target & ~1);
 		}
 		else
 		{
-			CPU.ISET = ARM;
-			CPU.SetBranch(target);
+			thr->ISET = ARM;
+			thr->SetBranch(target);
 		}
 	}
 }
 
-void ARMv7Interpreter::BX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::BX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 target = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		target = CPU.read_gpr((data >> 3) & 0xf);
+		target = thr->read_gpr((thr->code.data >> 3) & 0xf);
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		target = CPU.read_gpr(data & 0xf);
+		cond = thr->code.data >> 28;
+		target = thr->read_gpr(thr->code.data & 0xf);
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		if (target & 1)
 		{
-			CPU.ISET = Thumb;
-			CPU.SetBranch(target & ~1);
+			thr->ISET = Thumb;
+			thr->SetBranch(target & ~1);
 		}
 		else
 		{
-			CPU.ISET = ARM;
-			CPU.SetBranch(target);
+			thr->ISET = ARM;
+			thr->SetBranch(target);
 		}
 	}
 }
 
 
-void ARMv7Interpreter::CB_Z(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CB_Z(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -663,14 +909,14 @@ void ARMv7Interpreter::CB_Z(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if ((CPU.read_gpr(data & 0x7) == 0) ^ ((data & 0x800) != 0))
+	if ((thr->read_gpr(thr->code.data & 0x7) == 0) ^ ((thr->code.data & 0x800) != 0))
 	{
-		CPU.SetBranch(CPU.PC + 2 + ((data & 0xf8) >> 2) + ((data & 0x200) >> 3));
+		thr->SetBranch(thr->PC + 2 + ((thr->code.data & 0xf8) >> 2) + ((thr->code.data & 0x200) >> 3));
 	}
 }
 
 
-void ARMv7Interpreter::CLZ(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CLZ(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -680,7 +926,7 @@ void ARMv7Interpreter::CLZ(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::CMN_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMN_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -689,7 +935,7 @@ void ARMv7Interpreter::CMN_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::CMN_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMN_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -698,7 +944,7 @@ void ARMv7Interpreter::CMN_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::CMN_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMN_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -708,9 +954,9 @@ void ARMv7Interpreter::CMN_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::CMP_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMP_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 n = 0;
 	u32 imm32 = 0;
 
@@ -718,34 +964,34 @@ void ARMv7Interpreter::CMP_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		n = (data & 0x700) >> 8;
-		imm32 = (data & 0xff);
+		n = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff);
 		break;
 	}
 	case T2:
 	{
-		n = (data & 0xf0000) >> 16;
-		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		n = (thr->code.data & 0xf0000) >> 16;
+		imm32 = ThumbExpandImm(thr, (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff));
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		bool carry, overflow;
-		const u32 res = AddWithCarry(CPU.read_gpr(n), ~imm32, true, carry, overflow);
-		CPU.APSR.N = res >> 31;
-		CPU.APSR.Z = res == 0;
-		CPU.APSR.C = carry;
-		CPU.APSR.V = overflow;
+		const u32 res = AddWithCarry(thr->read_gpr(n), ~imm32, true, carry, overflow);
+		thr->APSR.N = res >> 31;
+		thr->APSR.Z = res == 0;
+		thr->APSR.C = carry;
+		thr->APSR.V = overflow;
 	}
 }
 
-void ARMv7Interpreter::CMP_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMP_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 n = 0;
 	u32 m = 0;
 	auto shift_t = SRType_LSL;
@@ -755,40 +1001,40 @@ void ARMv7Interpreter::CMP_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		n = (data & 0x7);
-		m = (data & 0x38) >> 3;
+		n = (thr->code.data & 0x7);
+		m = (thr->code.data & 0x38) >> 3;
 		break;
 	}
 	case T2:
 	{
-		n = (data & 0x80) >> 4 | (data & 0x7);
-		m = (data & 0x78) >> 3;
+		n = (thr->code.data & 0x80) >> 4 | (thr->code.data & 0x7);
+		m = (thr->code.data & 0x78) >> 3;
 		break;
 	}
 	case T3:
 	{
-		n = (data & 0xf0000) >> 16;
-		m = (data & 0xf);
-		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		n = (thr->code.data & 0xf0000) >> 16;
+		m = (thr->code.data & 0xf);
+		shift_t = DecodeImmShift((thr->code.data & 0x30) >> 4, (thr->code.data & 0x7000) >> 10 | (thr->code.data & 0xc0) >> 6, &shift_n);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		bool carry, overflow;
-		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, true);
-		const u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
-		CPU.APSR.N = res >> 31;
-		CPU.APSR.Z = res == 0;
-		CPU.APSR.C = carry;
-		CPU.APSR.V = overflow;
+		const u32 shifted = Shift(thr->read_gpr(m), shift_t, shift_n, true);
+		const u32 res = AddWithCarry(thr->read_gpr(n), ~shifted, true, carry, overflow);
+		thr->APSR.N = res >> 31;
+		thr->APSR.Z = res == 0;
+		thr->APSR.C = carry;
+		thr->APSR.V = overflow;
 	}
 }
 
-void ARMv7Interpreter::CMP_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::CMP_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -798,7 +1044,7 @@ void ARMv7Interpreter::CMP_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::EOR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::EOR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -807,7 +1053,7 @@ void ARMv7Interpreter::EOR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::EOR_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::EOR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -816,7 +1062,7 @@ void ARMv7Interpreter::EOR_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::EOR_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::EOR_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -826,18 +1072,18 @@ void ARMv7Interpreter::EOR_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::IT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::IT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
 	case T1:
 	{
-		if ((data & 0xf) == 0)
+		if ((thr->code.data & 0xf) == 0)
 		{
 			throw "IT_T1: Related encodings";
 		}
 
-		CPU.ITSTATE.IT = data & 0xff;
+		thr->ITSTATE.IT = thr->code.data & 0xff;
 		return;
 	}
 	default: throw __FUNCTION__;
@@ -845,7 +1091,7 @@ void ARMv7Interpreter::IT(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::LDM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -854,7 +1100,7 @@ void ARMv7Interpreter::LDM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDMDA(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDMDA(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -863,7 +1109,7 @@ void ARMv7Interpreter::LDMDA(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDMDB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDMDB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -872,7 +1118,7 @@ void ARMv7Interpreter::LDMDB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDMIB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDMIB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -882,9 +1128,9 @@ void ARMv7Interpreter::LDMIB(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::LDR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 t = 0;
 	u32 n = 13;
 	u32 imm32 = 0;
@@ -896,22 +1142,22 @@ void ARMv7Interpreter::LDR_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		t = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		imm32 = (data & 0x7c0) >> 4;
+		t = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		imm32 = (thr->code.data & 0x7c0) >> 4;
 		break;
 	}
 	case T2:
 	{
-		t = (data & 0x700) >> 8;
-		imm32 = (data & 0xff) << 2;
+		t = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff) << 2;
 		break;
 	}
 	case T3:
 	{
-		t = (data & 0xf000) >> 12;
-		n = (data & 0xf0000) >> 16;
-		imm32 = (data & 0xfff);
+		t = (thr->code.data & 0xf000) >> 12;
+		n = (thr->code.data & 0xf0000) >> 16;
+		imm32 = (thr->code.data & 0xfff);
 
 		if (n == 15)
 		{
@@ -921,12 +1167,12 @@ void ARMv7Interpreter::LDR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 	case T4:
 	{
-		t = (data & 0xf000) >> 12;
-		n = (data & 0xf0000) >> 16;
-		imm32 = (data & 0xff);
-		index = (data & 0x400);
-		add = (data & 0x200);
-		wback = (data & 0x100);
+		t = (thr->code.data & 0xf000) >> 12;
+		n = (thr->code.data & 0xf0000) >> 16;
+		imm32 = (thr->code.data & 0xff);
+		index = (thr->code.data & 0x400);
+		add = (thr->code.data & 0x200);
+		wback = (thr->code.data & 0x100);
 
 		if (n == 15)
 		{
@@ -949,21 +1195,21 @@ void ARMv7Interpreter::LDR_IMM(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 offset_addr = add ? CPU.read_gpr(n) + imm32 : CPU.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+		const u32 offset_addr = add ? thr->read_gpr(n) + imm32 : thr->read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : thr->read_gpr(n);
 
 		if (wback)
 		{
-			CPU.write_gpr(n, offset_addr);
+			thr->write_gpr(n, offset_addr);
 		}
 
-		CPU.write_gpr(t, vm::psv::read32(addr));
+		thr->write_gpr(t, vm::psv::read32(addr));
 	}
 }
 
-void ARMv7Interpreter::LDR_LIT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDR_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -972,35 +1218,7 @@ void ARMv7Interpreter::LDR_LIT(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDR_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::LDRB_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRB_LIT(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRB_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1010,7 +1228,7 @@ void ARMv7Interpreter::LDRB_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::LDRD_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRB_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1019,7 +1237,7 @@ void ARMv7Interpreter::LDRD_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDRD_LIT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRB_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1028,35 +1246,7 @@ void ARMv7Interpreter::LDRD_LIT(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDRD_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::LDRH_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRH_LIT(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRH_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRB_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1066,7 +1256,7 @@ void ARMv7Interpreter::LDRH_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::LDRSB_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRD_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1075,7 +1265,7 @@ void ARMv7Interpreter::LDRSB_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDRSB_LIT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRD_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1084,35 +1274,7 @@ void ARMv7Interpreter::LDRSB_LIT(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LDRSB_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::LDRSH_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRSH_LIT(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::LDRSH_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRD_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1122,10 +1284,94 @@ void ARMv7Interpreter::LDRSH_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::LSL_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LDRH_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRH_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRH_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::LDRSB_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRSB_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRSB_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::LDRSH_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRSH_LIT(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::LDRSH_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::LSL_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 m = 0;
 	u32 shift_n = 0;
@@ -1134,9 +1380,9 @@ void ARMv7Interpreter::LSL_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x7);
-		m = (data & 0x38) >> 3;
-		shift_n = (data & 0x7c0) >> 6;
+		d = (thr->code.data & 0x7);
+		m = (thr->code.data & 0x38) >> 3;
+		shift_n = (thr->code.data & 0x7c0) >> 6;
 
 		if (!shift_n)
 		{
@@ -1146,10 +1392,10 @@ void ARMv7Interpreter::LSL_IMM(const u32 data, const ARMv7_encoding type)
 	}
 	case T2:
 	{
-		d = (data & 0xf00) >> 8;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
-		shift_n = (data & 0x7000) >> 10 | (data & 0xc0) >> 6;
+		d = (thr->code.data & 0xf00) >> 8;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
+		shift_n = (thr->code.data & 0x7000) >> 10 | (thr->code.data & 0xc0) >> 6;
 
 		if (!shift_n)
 		{
@@ -1161,24 +1407,24 @@ void ARMv7Interpreter::LSL_IMM(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		bool carry;
-		const u32 res = Shift_C(CPU.read_gpr(m), SRType_LSL, shift_n, CPU.APSR.C, carry);
-		CPU.write_gpr(d, res);
+		const u32 res = Shift_C(thr->read_gpr(m), SRType_LSL, shift_n, thr->APSR.C, carry);
+		thr->write_gpr(d, res);
 		if (set_flags)
 		{
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7Interpreter::LSL_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LSL_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 n = 0;
 	u32 m = 0;
@@ -1187,38 +1433,38 @@ void ARMv7Interpreter::LSL_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = n = (data & 0x7);
-		m = (data & 0x38) >> 3;
+		d = n = (thr->code.data & 0x7);
+		m = (thr->code.data & 0x38) >> 3;
 		break;
 	}
 	case T2:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		bool carry;
-		const u32 res = Shift_C(CPU.read_gpr(n), SRType_LSL, (CPU.read_gpr(m) & 0xff), CPU.APSR.C, carry);
-		CPU.write_gpr(d, res);
+		const u32 res = Shift_C(thr->read_gpr(n), SRType_LSL, (thr->read_gpr(m) & 0xff), thr->APSR.C, carry);
+		thr->write_gpr(d, res);
 		if (set_flags)
 		{
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
 		}
 	}
 }
 
 
-void ARMv7Interpreter::LSR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LSR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1227,26 +1473,7 @@ void ARMv7Interpreter::LSR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::LSR_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::MLA(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::MLS(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::LSR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1256,11 +1483,30 @@ void ARMv7Interpreter::MLS(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::MOV_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MLA(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	bool carry = CPU.APSR.C;
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::MLS(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::MOV_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	bool set_flags = !thr->ITSTATE;
+	bool carry = thr->APSR.C;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 imm32 = 0;
 
@@ -1268,42 +1514,42 @@ void ARMv7Interpreter::MOV_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data >> 8) & 0x7;
-		imm32 = sign<8, u32>(data & 0xff);
+		d = (thr->code.data >> 8) & 0x7;
+		imm32 = sign<8, u32>(thr->code.data & 0xff);
 		break;
 	}
 	case T2:
 	{
-		set_flags = data & 0x100000;
-		d = (data >> 8) & 0xf;
-		imm32 = ThumbExpandImm_C((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff), carry, carry);
+		set_flags = thr->code.data & 0x100000;
+		d = (thr->code.data >> 8) & 0xf;
+		imm32 = ThumbExpandImm_C((thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff), carry, carry);
 		break;
 	}
 	case T3:
 	{
 		set_flags = false;
-		d = (data >> 8) & 0xf;
-		imm32 = (data & 0xf0000) >> 4 | (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		d = (thr->code.data >> 8) & 0xf;
+		imm32 = (thr->code.data & 0xf0000) >> 4 | (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		CPU.write_gpr(d, imm32);
+		thr->write_gpr(d, imm32);
 		if (set_flags)
 		{
-			CPU.APSR.N = imm32 >> 31;
-			CPU.APSR.Z = imm32 == 0;
-			CPU.APSR.C = carry;
+			thr->APSR.N = imm32 >> 31;
+			thr->APSR.Z = imm32 == 0;
+			thr->APSR.C = carry;
 		}
 	}
 }
 
-void ARMv7Interpreter::MOV_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MOV_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 m = 0;
 	bool set_flags = false;
@@ -1312,44 +1558,44 @@ void ARMv7Interpreter::MOV_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x80) >> 4 | (data & 0x7);
-		m = (data & 0x78) >> 3;
+		d = (thr->code.data & 0x80) >> 4 | (thr->code.data & 0x7);
+		m = (thr->code.data & 0x78) >> 3;
 		break;
 	}
 	case T2:
 	{
-		d = (data & 0x7);
-		m = (data & 0x38) >> 3;
+		d = (thr->code.data & 0x7);
+		m = (thr->code.data & 0x38) >> 3;
 		set_flags = true;
 		break;
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
+		d = (thr->code.data & 0xf00) >> 8;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 res = CPU.read_gpr(m);
-		CPU.write_gpr(d, res);
+		const u32 res = thr->read_gpr(m);
+		thr->write_gpr(d, res);
 		if (set_flags)
 		{
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			//CPU.APSR.C = ?
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			//thr->APSR.C = ?
 		}
 	}
 }
 
-void ARMv7Interpreter::MOVT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MOVT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 imm16 = 0;
 
@@ -1357,22 +1603,22 @@ void ARMv7Interpreter::MOVT(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0xf00) >> 8;
-		imm16 = (data & 0xf0000) >> 4 | (data & 0x4000000) >> 14 | (data & 0x7000) >> 4 | (data & 0xff);
+		d = (thr->code.data & 0xf00) >> 8;
+		imm16 = (thr->code.data & 0xf0000) >> 4 | (thr->code.data & 0x4000000) >> 14 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		CPU.write_gpr(d, (CPU.read_gpr(d) & 0xffff) | (imm16 << 16));
+		thr->write_gpr(d, (thr->read_gpr(d) & 0xffff) | (imm16 << 16));
 	}
 }
 
 
-void ARMv7Interpreter::MRS(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MRS(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1381,7 +1627,7 @@ void ARMv7Interpreter::MRS(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::MSR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MSR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1390,17 +1636,7 @@ void ARMv7Interpreter::MSR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::MSR_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::MUL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MSR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1410,25 +1646,7 @@ void ARMv7Interpreter::MUL(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::MVN_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::MVN_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::MVN_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MUL(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1438,9 +1656,37 @@ void ARMv7Interpreter::MVN_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::NOP(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::MVN_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::MVN_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::MVN_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::NOP(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 cond = thr->ITSTATE.advance();
 
 	switch (type)
 	{
@@ -1454,19 +1700,19 @@ void ARMv7Interpreter::NOP(const u32 data, const ARMv7_encoding type)
 	}
 	case A1:
 	{
-		cond = data >> 28;
+		cond = thr->code.data >> 28;
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 	}
 }
 
 
-void ARMv7Interpreter::ORN_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ORN_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1475,35 +1721,7 @@ void ARMv7Interpreter::ORN_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::ORN_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::ORR_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::ORR_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::ORR_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ORN_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1513,7 +1731,25 @@ void ARMv7Interpreter::ORR_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::PKH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ORR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::ORR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::ORR_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1523,32 +1759,42 @@ void ARMv7Interpreter::PKH(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::POP(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::PKH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::POP(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 cond = thr->ITSTATE.advance();
 	u16 reg_list = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		reg_list = ((data & 0x100) << 7) | (data & 0xff);
+		reg_list = ((thr->code.data & 0x100) << 7) | (thr->code.data & 0xff);
 		break;
 	}
 	case T2:
 	{
-		reg_list = data & 0xdfff;
+		reg_list = thr->code.data & 0xdfff;
 		break;
 	}
 	case T3:
 	{
-		reg_list = 1 << (data >> 12);
+		reg_list = 1 << (thr->code.data >> 12);
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		reg_list = data & 0xffff;
+		cond = thr->code.data >> 28;
+		reg_list = thr->code.data & 0xffff;
 		if (BitCount(reg_list) < 2)
 		{
 			throw "LDM / LDMIA / LDMFD";
@@ -1557,52 +1803,52 @@ void ARMv7Interpreter::POP(const u32 data, const ARMv7_encoding type)
 	}
 	case A2:
 	{
-		cond = data >> 28;
-		reg_list = 1 << ((data >> 12) & 0xf);
+		cond = thr->code.data >> 28;
+		reg_list = 1 << ((thr->code.data >> 12) & 0xf);
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		for (u16 mask = 1, i = 0; mask; mask <<= 1, i++)
 		{
 			if (reg_list & mask)
 			{
-				CPU.write_gpr(i, vm::psv::read32(CPU.SP));
-				CPU.SP += 4;
+				thr->write_gpr(i, vm::psv::read32(thr->SP));
+				thr->SP += 4;
 			}
 		}
 	}
 }
 
-void ARMv7Interpreter::PUSH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::PUSH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u16 reg_list = 0;
 
 	switch (type)
 	{
 	case T1:
 	{
-		reg_list = ((data & 0x100) << 6) | (data & 0xff);
+		reg_list = ((thr->code.data & 0x100) << 6) | (thr->code.data & 0xff);
 		break;
 	}
 	case T2:
 	{
-		reg_list = data & 0x5fff;
+		reg_list = thr->code.data & 0x5fff;
 		break;
 	}
 	case T3:
 	{
-		reg_list = 1 << (data >> 12);
+		reg_list = 1 << (thr->code.data >> 12);
 		break;
 	}
 	case A1:
 	{
-		cond = data >> 28;
-		reg_list = data & 0xffff;
+		cond = thr->code.data >> 28;
+		reg_list = thr->code.data & 0xffff;
 		if (BitCount(reg_list) < 2)
 		{
 			throw "STMDB / STMFD";
@@ -1611,28 +1857,28 @@ void ARMv7Interpreter::PUSH(const u32 data, const ARMv7_encoding type)
 	}
 	case A2:
 	{
-		cond = data >> 28;
-		reg_list = 1 << ((data >> 12) & 0xf);
+		cond = thr->code.data >> 28;
+		reg_list = 1 << ((thr->code.data >> 12) & 0xf);
 		break;
 	}
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		for (u16 mask = 1 << 15, i = 15; mask; mask >>= 1, i--)
 		{
 			if (reg_list & mask)
 			{
-				CPU.SP -= 4;
-				vm::psv::write32(CPU.SP, CPU.read_gpr(i));
+				thr->SP -= 4;
+				vm::psv::write32(thr->SP, thr->read_gpr(i));
 			}
 		}
 	}
 }
 
 
-void ARMv7Interpreter::QADD(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QADD(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1641,7 +1887,7 @@ void ARMv7Interpreter::QADD(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QADD16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QADD16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1650,7 +1896,7 @@ void ARMv7Interpreter::QADD16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QADD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QADD8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1659,7 +1905,7 @@ void ARMv7Interpreter::QADD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QASX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QASX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1668,7 +1914,7 @@ void ARMv7Interpreter::QASX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QDADD(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QDADD(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1677,7 +1923,7 @@ void ARMv7Interpreter::QDADD(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QDSUB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QDSUB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1686,7 +1932,7 @@ void ARMv7Interpreter::QDSUB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QSAX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QSAX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1695,7 +1941,7 @@ void ARMv7Interpreter::QSAX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QSUB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QSUB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1704,7 +1950,7 @@ void ARMv7Interpreter::QSUB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QSUB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QSUB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1713,44 +1959,7 @@ void ARMv7Interpreter::QSUB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::QSUB8(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::RBIT(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::REV(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::REV16(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::REVSH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::QSUB8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1760,7 +1969,7 @@ void ARMv7Interpreter::REVSH(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::ROR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RBIT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1769,7 +1978,7 @@ void ARMv7Interpreter::ROR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::ROR_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::REV(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1778,8 +1987,7 @@ void ARMv7Interpreter::ROR_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-
-void ARMv7Interpreter::RRX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::REV16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1788,26 +1996,7 @@ void ARMv7Interpreter::RRX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-
-void ARMv7Interpreter::RSB_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::RSB_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::RSB_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::REVSH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1817,7 +2006,7 @@ void ARMv7Interpreter::RSB_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::RSC_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ROR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1826,16 +2015,7 @@ void ARMv7Interpreter::RSC_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::RSC_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::RSC_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::ROR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1845,25 +2025,7 @@ void ARMv7Interpreter::RSC_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SADD16(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SADD8(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SASX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RRX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1873,7 +2035,7 @@ void ARMv7Interpreter::SASX(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SBC_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RSB_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1882,7 +2044,7 @@ void ARMv7Interpreter::SBC_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SBC_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RSB_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1891,17 +2053,7 @@ void ARMv7Interpreter::SBC_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SBC_RSR(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::SBFX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RSB_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1911,7 +2063,25 @@ void ARMv7Interpreter::SBFX(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SDIV(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::RSC_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::RSC_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::RSC_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1921,7 +2091,25 @@ void ARMv7Interpreter::SDIV(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SEL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SADD16(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SADD8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SASX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1931,7 +2119,7 @@ void ARMv7Interpreter::SEL(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SHADD16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SBC_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1940,7 +2128,7 @@ void ARMv7Interpreter::SHADD16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SHADD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SBC_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1949,34 +2137,7 @@ void ARMv7Interpreter::SHADD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SHASX(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SHSAX(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SHSUB16(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SHSUB8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SBC_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -1986,142 +2147,7 @@ void ARMv7Interpreter::SHSUB8(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SMLA__(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLAD(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLAL(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLAL__(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLALD(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLAW_(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLSD(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMLSLD(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMMLA(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMMLS(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMMUL(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMUAD(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMUL__(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMULL(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMULW_(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SMUSD(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SBFX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2131,43 +2157,7 @@ void ARMv7Interpreter::SMUSD(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SSAT(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SSAT16(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SSAX(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SSUB16(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::SSUB8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SDIV(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2177,34 +2167,7 @@ void ARMv7Interpreter::SSUB8(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::STM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::STMDA(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::STMDB(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::STMIB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SEL(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2214,9 +2177,292 @@ void ARMv7Interpreter::STMIB(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SHADD16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SHADD8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SHASX(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SHSAX(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SHSUB16(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SHSUB8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::SMLA__(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLAD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLAL(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLAL__(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLALD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLAW_(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLSD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMLSLD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMMLA(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMMLS(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMMUL(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMUAD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMUL__(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMULL(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMULW_(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SMUSD(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::SSAT(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SSAT16(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SSAX(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SSUB16(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::SSUB8(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::STM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::STMDA(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::STMDB(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::STMIB(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::STR_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	u32 cond = thr->ITSTATE.advance();
 	u32 t = 16;
 	u32 n = 13;
 	u32 imm32 = 0;
@@ -2228,22 +2474,22 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		t = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		imm32 = (data & 0x7c0) >> 4;
+		t = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		imm32 = (thr->code.data & 0x7c0) >> 4;
 		break;
 	}
 	case T2:
 	{
-		t = (data & 0x700) >> 8;
-		imm32 = (data & 0xff) << 2;
+		t = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff) << 2;
 		break;
 	}
 	case T3:
 	{
-		t = (data & 0xf000) >> 12;
-		n = (data & 0xf0000) >> 16;
-		imm32 = (data & 0xfff);
+		t = (thr->code.data & 0xf000) >> 12;
+		n = (thr->code.data & 0xf0000) >> 16;
+		imm32 = (thr->code.data & 0xfff);
 
 		if (n == 0xf)
 		{
@@ -2253,12 +2499,12 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 	}
 	case T4:
 	{
-		t = (data & 0xf000) >> 12;
-		n = (data & 0xf0000) >> 16;
-		imm32 = (data & 0xff);
-		index = (data & 0x400);
-		add = (data & 0x200);
-		wback = (data & 0x100);
+		t = (thr->code.data & 0xf000) >> 12;
+		n = (thr->code.data & 0xf0000) >> 16;
+		imm32 = (thr->code.data & 0xff);
+		index = (thr->code.data & 0x400);
+		add = (thr->code.data & 0x200);
+		wback = (thr->code.data & 0x100);
 
 		if (index && add && !wback)
 		{
@@ -2278,23 +2524,23 @@ void ARMv7Interpreter::STR_IMM(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 offset_addr = add ? CPU.read_gpr(n) + imm32 : CPU.read_gpr(n) - imm32;
-		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+		const u32 offset_addr = add ? thr->read_gpr(n) + imm32 : thr->read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : thr->read_gpr(n);
 
-		vm::psv::write32(addr, CPU.read_gpr(t));
+		vm::psv::write32(addr, thr->read_gpr(t));
 
 		if (wback)
 		{
-			CPU.write_gpr(n, offset_addr);
+			thr->write_gpr(n, offset_addr);
 		}
 	}
 }
 
-void ARMv7Interpreter::STR_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STR_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 t = 0;
 	u32 n = 0;
 	u32 m = 0;
@@ -2308,17 +2554,17 @@ void ARMv7Interpreter::STR_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		t = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		m = (data & 0x1c0) >> 6;
+		t = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		m = (thr->code.data & 0x1c0) >> 6;
 		break;
 	}
 	case T2:
 	{
-		t = (data & 0xf000) >> 12;
-		n = (data & 0xf0000) >> 16;
-		m = (data & 0xf);
-		shift_n = (data & 0x30) >> 4;
+		t = (thr->code.data & 0xf000) >> 12;
+		n = (thr->code.data & 0xf0000) >> 16;
+		m = (thr->code.data & 0xf);
+		shift_n = (thr->code.data & 0x30) >> 4;
 
 		if (n == 15)
 		{
@@ -2330,23 +2576,23 @@ void ARMv7Interpreter::STR_REG(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 offset = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
-		const u32 offset_addr = add ? CPU.read_gpr(n) + offset : CPU.read_gpr(n) - offset;
-		const u32 addr = index ? offset_addr : CPU.read_gpr(n);
+		const u32 offset = Shift(thr->read_gpr(m), shift_t, shift_n, thr->APSR.C);
+		const u32 offset_addr = add ? thr->read_gpr(n) + offset : thr->read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : thr->read_gpr(n);
 
-		vm::psv::write32(addr, CPU.read_gpr(t));
+		vm::psv::write32(addr, thr->read_gpr(t));
 
 		if (wback)
 		{
-			CPU.write_gpr(n, offset_addr);
+			thr->write_gpr(n, offset_addr);
 		}
 	}
 }
 
 
-void ARMv7Interpreter::STRB_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STRB_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2355,26 +2601,7 @@ void ARMv7Interpreter::STRB_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::STRB_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::STRD_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::STRD_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STRB_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2384,7 +2611,7 @@ void ARMv7Interpreter::STRD_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::STRH_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STRD_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2393,7 +2620,7 @@ void ARMv7Interpreter::STRH_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::STRH_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STRD_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2403,10 +2630,29 @@ void ARMv7Interpreter::STRH_REG(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::STRH_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::STRH_REG(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::SUB_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 n = 0;
 	u32 imm32 = 0;
@@ -2415,23 +2661,23 @@ void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		imm32 = (data & 0x1c) >> 6;
+		d = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		imm32 = (thr->code.data & 0x1c) >> 6;
 		break;
 	}
 	case T2:
 	{
-		d = n = (data & 0x700) >> 8;
-		imm32 = (data & 0xff);
+		d = n = (thr->code.data & 0x700) >> 8;
+		imm32 = (thr->code.data & 0xff);
 		break;
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
-		set_flags = (data & 0x100000);
-		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
+		set_flags = (thr->code.data & 0x100000);
+		imm32 = ThumbExpandImm(thr, (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff));
 
 		if (d == 15 && set_flags)
 		{
@@ -2445,10 +2691,10 @@ void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 	}
 	case T4:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
 		set_flags = false;
-		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		imm32 = (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 
 		if (d == 15)
 		{
@@ -2464,29 +2710,29 @@ void ARMv7Interpreter::SUB_IMM(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.read_gpr(n), ~imm32, true, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->read_gpr(n), ~imm32, true, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.read_gpr(n) - imm32);
+			thr->write_gpr(d, thr->read_gpr(n) - imm32);
 		}
 	}
 }
 
-void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SUB_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	bool set_flags = !CPU.ITSTATE;
-	u32 cond = CPU.ITSTATE.advance();
+	bool set_flags = !thr->ITSTATE;
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 0;
 	u32 n = 0;
 	u32 m = 0;
@@ -2497,18 +2743,18 @@ void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		d = (data & 0x7);
-		n = (data & 0x38) >> 3;
-		m = (data & 0x1c0) >> 6;
+		d = (thr->code.data & 0x7);
+		n = (thr->code.data & 0x38) >> 3;
+		m = (thr->code.data & 0x1c0) >> 6;
 		break;
 	}
 	case T2:
 	{
-		d = (data & 0xf00) >> 8;
-		n = (data & 0xf0000) >> 16;
-		m = (data & 0xf);
-		set_flags = (data & 0x100000);
-		shift_t = DecodeImmShift((data & 0x30) >> 4, (data & 0x7000) >> 10 | (data & 0xc0) >> 6, &shift_n);
+		d = (thr->code.data & 0xf00) >> 8;
+		n = (thr->code.data & 0xf0000) >> 16;
+		m = (thr->code.data & 0xf);
+		set_flags = (thr->code.data & 0x100000);
+		shift_t = DecodeImmShift((thr->code.data & 0x30) >> 4, (thr->code.data & 0x7000) >> 10 | (thr->code.data & 0xc0) >> 6, &shift_n);
 
 		if (d == 15 && set_flags)
 		{
@@ -2524,27 +2770,27 @@ void ARMv7Interpreter::SUB_REG(const u32 data, const ARMv7_encoding type)
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
-		const u32 shifted = Shift(CPU.read_gpr(m), shift_t, shift_n, CPU.APSR.C);
+		const u32 shifted = Shift(thr->read_gpr(m), shift_t, shift_n, thr->APSR.C);
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.read_gpr(n), ~shifted, true, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->read_gpr(n), ~shifted, true, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.read_gpr(n) - shifted);
+			thr->write_gpr(d, thr->read_gpr(n) - shifted);
 		}
 	}
 }
 
-void ARMv7Interpreter::SUB_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SUB_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2553,9 +2799,9 @@ void ARMv7Interpreter::SUB_RSR(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SUB_SPI(ARMv7Thread* thr, const ARMv7_encoding type)
 {
-	u32 cond = CPU.ITSTATE.advance();
+	u32 cond = thr->ITSTATE.advance();
 	u32 d = 13;
 	bool set_flags = false;
 	u32 imm32 = 0;
@@ -2564,14 +2810,14 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 	{
 	case T1:
 	{
-		imm32 = (data & 0x7f) << 2;
+		imm32 = (thr->code.data & 0x7f) << 2;
 		break;
 	}
 	case T2:
 	{
-		d = (data & 0xf00) >> 8;
-		set_flags = (data & 0x100000);
-		imm32 = ThumbExpandImm((data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff));
+		d = (thr->code.data & 0xf00) >> 8;
+		set_flags = (thr->code.data & 0x100000);
+		imm32 = ThumbExpandImm(thr, (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff));
 
 		if (d == 15 && set_flags)
 		{
@@ -2581,35 +2827,35 @@ void ARMv7Interpreter::SUB_SPI(const u32 data, const ARMv7_encoding type)
 	}
 	case T3:
 	{
-		d = (data & 0xf00) >> 8;
+		d = (thr->code.data & 0xf00) >> 8;
 		set_flags = false;
-		imm32 = (data & 0x4000000) >> 15 | (data & 0x7000) >> 4 | (data & 0xff);
+		imm32 = (thr->code.data & 0x4000000) >> 15 | (thr->code.data & 0x7000) >> 4 | (thr->code.data & 0xff);
 		break;
 	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
-	if (ConditionPassed(cond))
+	if (ConditionPassed(thr, cond))
 	{
 		if (set_flags)
 		{
 			bool carry, overflow;
-			const u32 res = AddWithCarry(CPU.SP, ~imm32, true, carry, overflow);
-			CPU.write_gpr(d, res);
-			CPU.APSR.N = res >> 31;
-			CPU.APSR.Z = res == 0;
-			CPU.APSR.C = carry;
-			CPU.APSR.V = overflow;
+			const u32 res = AddWithCarry(thr->SP, ~imm32, true, carry, overflow);
+			thr->write_gpr(d, res);
+			thr->APSR.N = res >> 31;
+			thr->APSR.Z = res == 0;
+			thr->APSR.C = carry;
+			thr->APSR.V = overflow;
 		}
 		else
 		{
-			CPU.write_gpr(d, CPU.SP - imm32);
+			thr->write_gpr(d, thr->SP - imm32);
 		}
 	}
 }
 
-void ARMv7Interpreter::SUB_SPR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SUB_SPR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2619,7 +2865,7 @@ void ARMv7Interpreter::SUB_SPR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SVC(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SVC(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2629,7 +2875,7 @@ void ARMv7Interpreter::SVC(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::SXTAB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTAB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2638,7 +2884,7 @@ void ARMv7Interpreter::SXTAB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SXTAB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTAB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2647,7 +2893,7 @@ void ARMv7Interpreter::SXTAB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SXTAH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTAH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2656,7 +2902,7 @@ void ARMv7Interpreter::SXTAH(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SXTB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2665,7 +2911,7 @@ void ARMv7Interpreter::SXTB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SXTB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2674,17 +2920,7 @@ void ARMv7Interpreter::SXTB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::SXTH(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7Interpreter::TB_(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::SXTH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2694,25 +2930,7 @@ void ARMv7Interpreter::TB_(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::TEQ_IMM(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::TEQ_REG(const u32 data, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7Interpreter::TEQ_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TB_(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2722,7 +2940,7 @@ void ARMv7Interpreter::TEQ_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::TST_IMM(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TEQ_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2731,7 +2949,7 @@ void ARMv7Interpreter::TST_IMM(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::TST_REG(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TEQ_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2740,7 +2958,7 @@ void ARMv7Interpreter::TST_REG(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::TST_RSR(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TEQ_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2750,7 +2968,7 @@ void ARMv7Interpreter::TST_RSR(const u32 data, const ARMv7_encoding type)
 }
 
 
-void ARMv7Interpreter::UADD16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TST_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2759,7 +2977,7 @@ void ARMv7Interpreter::UADD16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UADD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TST_REG(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2768,7 +2986,7 @@ void ARMv7Interpreter::UADD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UASX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::TST_RSR(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2777,7 +2995,8 @@ void ARMv7Interpreter::UASX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UBFX(const u32 data, const ARMv7_encoding type)
+
+void ARMv7_instrs::UADD16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2786,7 +3005,7 @@ void ARMv7Interpreter::UBFX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UDIV(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UADD8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2795,7 +3014,7 @@ void ARMv7Interpreter::UDIV(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHADD16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UASX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2804,7 +3023,7 @@ void ARMv7Interpreter::UHADD16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHADD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UBFX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2813,7 +3032,7 @@ void ARMv7Interpreter::UHADD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHASX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UDIV(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2822,7 +3041,7 @@ void ARMv7Interpreter::UHASX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHSAX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHADD16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2831,7 +3050,7 @@ void ARMv7Interpreter::UHSAX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHSUB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHADD8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2840,7 +3059,7 @@ void ARMv7Interpreter::UHSUB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UHSUB8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHASX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2849,7 +3068,7 @@ void ARMv7Interpreter::UHSUB8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UMAAL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHSAX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2858,7 +3077,7 @@ void ARMv7Interpreter::UMAAL(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UMLAL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHSUB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2867,7 +3086,7 @@ void ARMv7Interpreter::UMLAL(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UMULL(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UHSUB8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2876,7 +3095,7 @@ void ARMv7Interpreter::UMULL(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQADD16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UMAAL(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2885,7 +3104,7 @@ void ARMv7Interpreter::UQADD16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQADD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UMLAL(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2894,7 +3113,7 @@ void ARMv7Interpreter::UQADD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQASX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UMULL(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2903,7 +3122,7 @@ void ARMv7Interpreter::UQASX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQSAX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQADD16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2912,7 +3131,7 @@ void ARMv7Interpreter::UQSAX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQSUB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQADD8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2921,7 +3140,7 @@ void ARMv7Interpreter::UQSUB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UQSUB8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQASX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2930,7 +3149,7 @@ void ARMv7Interpreter::UQSUB8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USAD8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQSAX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2939,7 +3158,7 @@ void ARMv7Interpreter::USAD8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USADA8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQSUB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2948,7 +3167,7 @@ void ARMv7Interpreter::USADA8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USAT(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UQSUB8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2957,7 +3176,7 @@ void ARMv7Interpreter::USAT(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USAT16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USAD8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2966,7 +3185,7 @@ void ARMv7Interpreter::USAT16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USAX(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USADA8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2975,7 +3194,7 @@ void ARMv7Interpreter::USAX(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USUB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USAT(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2984,7 +3203,7 @@ void ARMv7Interpreter::USUB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::USUB8(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USAT16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -2993,7 +3212,7 @@ void ARMv7Interpreter::USUB8(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTAB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USAX(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3002,7 +3221,7 @@ void ARMv7Interpreter::UXTAB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTAB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USUB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3011,7 +3230,7 @@ void ARMv7Interpreter::UXTAB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTAH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::USUB8(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3020,7 +3239,7 @@ void ARMv7Interpreter::UXTAH(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTB(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UXTAB(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3029,7 +3248,7 @@ void ARMv7Interpreter::UXTB(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTB16(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UXTAB16(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3038,7 +3257,34 @@ void ARMv7Interpreter::UXTB16(const u32 data, const ARMv7_encoding type)
 	}
 }
 
-void ARMv7Interpreter::UXTH(const u32 data, const ARMv7_encoding type)
+void ARMv7_instrs::UXTAH(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::UXTB(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::UXTB16(ARMv7Thread* thr, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::UXTH(ARMv7Thread* thr, const ARMv7_encoding type)
 {
 	switch (type)
 	{

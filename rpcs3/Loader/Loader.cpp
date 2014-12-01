@@ -10,14 +10,19 @@ namespace loader
 	{
 		for (auto i : m_handlers)
 		{
-			if (i->init(stream) == handler::ok)
+			i->set_status(i->init(stream));
+			if (i->get_status() == handler::ok)
 			{
-				if (i->load() == handler::ok)
+				i->set_status(i->load());
+				if (i->get_status() == handler::ok)
 				{
 					return true;
 				}
+
+				LOG_ERROR(LOADER, "loader::load() failed: %s", i->get_error_code().c_str());
 			}
 
+			LOG_ERROR(LOADER, "loader::init() failed: %s", i->get_error_code().c_str());
 			stream.Seek(i->get_stream_offset());
 		}
 

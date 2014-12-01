@@ -112,7 +112,8 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 
 	for(uint i=0; i<thrs.size(); ++i)
 	{
-		m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
+		if (thrs[i]->GetType() != CPU_THREAD_ARMv7)
+			m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
 	}
 
 	m_choice_units->Thaw();
@@ -150,9 +151,9 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
-			decoder = new ARMv7Decoder(dis_asm);
-			disasm = &dis_asm;
+			//ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
+			//decoder = new ARMv7Decoder(dis_asm);
+			//disasm = &dis_asm;
 		}
 		break;
 		}
