@@ -1170,15 +1170,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
 
-	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-
-	{
-		const u32 address = context->current;
-		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-		assert(upper != 0xFFFF);
-		const u32 offset = (upper << 20) | (address & 0xFFFFF);
-		//ctrl.put.exchange(be_t<u32>::make(offset)); // update put pointer
-	}
+	//auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 
 	// preparations for changing the place (for optimized FIFO mode)
 	//auto cmd = vm::ptr<u32>::make(context->current.ToLE());
@@ -1188,12 +1180,17 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//cmd[3] = 0; // some incrementing by module value
 	//context->current += 0x10;
 
+	if (0)
 	{
 		const u32 address = context->begin;
 		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
 		assert(upper != 0xFFFF);
 		const u32 offset = (upper << 20) | (address & 0xFFFFF);
 		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset); // set JUMP cmd
+	}
+	else
+	{
+		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT | (0));
 	}
 	
 	context->current = context->begin; // rewind to the beginning

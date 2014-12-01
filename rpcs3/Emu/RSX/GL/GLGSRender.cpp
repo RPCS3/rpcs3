@@ -816,10 +816,36 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 	for(u32 i=0; i<m_vertex_count; ++i)
 	{
+		if (0)
+		{
+			u32 data_format = methodRegisters[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + i * 4];
+			u16 frequency = data_format >> 16;
+			u8 stride = (data_format >> 8) & 0xff;
+			u8 size = (data_format >> 4) & 0xf;
+			u8 type = data_format & 0xf;
+
+			u32 type_size = 1;
+			switch (type)
+			{
+			case CELL_GCM_VERTEX_S1:    type_size = 2; break;
+			case CELL_GCM_VERTEX_F:     type_size = 4; break;
+			case CELL_GCM_VERTEX_SF:    type_size = 2; break;
+			case CELL_GCM_VERTEX_UB:    type_size = 1; break;
+			case CELL_GCM_VERTEX_S32K:  type_size = 2; break;
+			case CELL_GCM_VERTEX_CMP:   type_size = 4; break;
+			case CELL_GCM_VERTEX_UB256: type_size = 1; break;
+
+			default:
+				LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+				break;
+			}
+
+			int item_size = size * type_size;
+		}
+
 		offset_list[i] = cur_offset;
 
-		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
-
+		if (!m_vertex_data[i].IsEnabled()) continue;
 		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
 		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
 		const u32 pos = m_vdata.size();
@@ -835,12 +861,12 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 	m_vbo.Create(indexed_draw ? 2 : 1);
 	m_vbo.Bind(0);
-	m_vbo.SetData(&m_vdata[0], m_vdata.size());
+	m_vbo.SetData(m_vdata.data(), m_vdata.size());
 
 	if(indexed_draw)
 	{
 		m_vbo.Bind(GL_ELEMENT_ARRAY_BUFFER, 1);
-		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, &m_indexed_array.m_data[0], m_indexed_array.m_data.size());
+		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
 	}
 
 	checkForGlError("initializing vbo");
@@ -941,7 +967,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
 
-		if(!m_vertex_data[i].addr)
+		if(0 && !m_vertex_data[i].addr)
 		{
 			switch(m_vertex_data[i].type)
 			{
@@ -992,7 +1018,7 @@ void GLGSRender::DisableVertexData()
 	m_vdata.clear();
 	for(u32 i=0; i<m_vertex_count; ++i)
 	{
-		if(!m_vertex_data[i].IsEnabled() || !m_vertex_data[i].addr) continue;
+		if(!m_vertex_data[i].IsEnabled()) continue;
 		glDisableVertexAttribArray(i);
 		checkForGlError("glDisableVertexAttribArray");
 	}
@@ -1002,14 +1028,16 @@ void GLGSRender::DisableVertexData()
 void GLGSRender::InitVertexData()
 {
 	int l;
-	GLfloat scaleOffsetMat[16] = {
+	GLfloat scaleOffsetMat[16] =
+	{
 		1.0f, 0.0f, 0.0f, 0.0f, 
 		0.0f, 1.0f, 0.0f, 0.0f, 
 		0.0f, 0.0f, 1.0f, 0.0f, 
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
-	for (const RSXTransformConstant& c : m_transform_constants) {
+	for (const RSXTransformConstant& c : m_transform_constants)
+	{
 		const std::string name = fmt::Format("vc[%u]", c.id);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
@@ -1676,6 +1704,24 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glColorMask");
 	}
 
+	if (!m_indexed_array.m_count && !m_draw_array_count)
+	{
+		u32 min_vertex_size = ~0;
+		for(auto &i : m_vertex_data)
+		{
+			if (!i.size)
+				continue;
+
+			u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
+
+			if (min_vertex_size > vertex_size)
+				min_vertex_size = vertex_size;
+		}
+
+		m_draw_array_count = min_vertex_size;
+		m_draw_array_first = 0;
+	}
+
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
@@ -1938,10 +1984,13 @@ void GLGSRender::ExecCMD()
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
 	}
 
-	EnableVertexData(m_indexed_array.m_count ? true : false);
+	if (m_indexed_array.m_count || m_draw_array_count)
+	{
+		EnableVertexData(m_indexed_array.m_count ? true : false);
 
-	InitVertexData();
-	InitFragmentData();
+		InitVertexData();
+		InitFragmentData();
+	}
 
 	if(m_indexed_array.m_count)
 	{
