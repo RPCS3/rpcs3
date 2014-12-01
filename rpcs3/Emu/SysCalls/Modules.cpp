@@ -81,6 +81,8 @@ void Module::Load()
 	{
 		Emu.GetModuleManager().AddFunc(i.second);
 	}
+
+	SetLoaded(true);
 }
 
 void Module::UnLoad()

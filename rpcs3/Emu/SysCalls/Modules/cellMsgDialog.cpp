@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"

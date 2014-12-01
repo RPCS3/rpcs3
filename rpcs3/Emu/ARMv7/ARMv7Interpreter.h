@@ -132,75 +132,72 @@ public:
 		return shift_t;
 	}
 
-	u32 LSL_C(u32 x, int shift, bool& carry_out)
+	u32 LSL_C(u32 x, s32 shift, bool& carry_out)
 	{
-		u32 extended_x = x << shift;
-		carry_out = (extended_x >> 31) ? 1 : 0;
-		return extended_x & ~(1 << 31);
+		assert(shift > 0);
+		carry_out = shift <= 32 ? x & (1 << (32 - shift)) : false;
+		return shift < 32 ? x << shift : 0;
 	}
 
-	u32 LSL(u32 x, int shift)
+	u32 LSL(u32 x, s32 shift)
 	{
-		if(!shift) return x;
-		bool carry_out;
-		return LSL_C(x, shift, carry_out);
+		assert(shift >= 0);
+		return shift < 32 ? x << shift : 0;
 	}
 
-	u32 LSR_C(u32 x, int shift, bool& carry_out)
+	u32 LSR_C(u32 x, s32 shift, bool& carry_out)
 	{
-		carry_out = (x >> (shift - 1)) & 0x1;
-		return x >> shift;
+		assert(shift > 0);
+		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
+		return shift < 32 ? x >> shift : 0;
 	}
 
-	u32 LSR(u32 x, int shift)
+	u32 LSR(u32 x, s32 shift)
 	{
-		if(!shift) return x;
-		bool carry_out;
-		return LSR_C(x, shift, carry_out);
+		assert(shift >= 0);
+		return shift < 32 ? x >> shift : 0;
 	}
 
-	s32 ASR_C(s32 x, int shift, bool& carry_out)
+	s32 ASR_C(s32 x, s32 shift, bool& carry_out)
 	{
-		carry_out = (x >> (shift - 1)) & 0x1;
-		return x >> shift;
+		assert(shift > 0);
+		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
+		return shift < 32 ? x >> shift : x >> 31;
 	}
 
-	s32 ASR(s32 x, int shift)
+	s32 ASR(s32 x, s32 shift)
 	{
-		if(!shift) return x;
-		bool carry_out;
-		return ASR_C(x, shift, carry_out);
+		assert(shift >= 0);
+		return shift < 32 ? x >> shift : x >> 31;
 	}
 
-	u32 ROR_C(u32 x, int shift, bool& carry_out)
+	u32 ROR_C(u32 x, s32 shift, bool& carry_out)
 	{
-		u32 result = LSR(x, shift) | LSL(x, 32 - shift);
-		carry_out = (result >> 30) & 0x1;
-		return result;
+		assert(shift);
+		carry_out = x & (1 << (shift - 1));
+		return x >> shift | x << (32 - shift);
 	}
 
-	s32 ROR(s32 x, int shift)
+	u32 ROR(u32 x, s32 shift)
 	{
-		if(!shift) return x;
-		bool carry_out;
-		return ROR_C(x, shift, carry_out);
+		return x >> shift | x << (32 - shift);
 	}
 
-	template<typename T> T RRX_C(T x, bool carry_in, bool& carry_out)
+	u32 RRX_C(u32 x, bool carry_in, bool& carry_out)
 	{
 		carry_out = x & 0x1;
-		return ((u32)carry_in << 31) | (x & 0x7ffffffe);
+		return ((u32)carry_in << 31) | (x >> 1);
 	}
 
-	s32 RRX(s32 x, int shift)
+	u32 RRX(u32 x, bool carry_in)
 	{
-		if(!shift) return x;
-		bool carry_out;
-		return RRX_C(x, shift, carry_out);
+		return ((u32)carry_in << 31) | (x >> 1);
 	}
 
-	template<typename T> T Shift_C(T value, SRType type, uint amount, bool carry_in, bool& carry_out)
+	template<typename T> T Shift_C(T value, SRType type, s32 amount, bool carry_in, bool& carry_out)
 	{
+		assert(type != SRType_RRX || amount == 1);
+
 		if(amount)
 		{
 			switch(type)
@@ -209,7 +206,7 @@ public:
 			case SRType_LSR: return LSR_C(value, amount, carry_out);
 			case SRType_ASR: return ASR_C(value, amount, carry_out);
 			case SRType_ROR: return ROR_C(value, amount, carry_out);
-			case SRType_RRX: return RRX_C(value, amount, carry_out);
+			case SRType_RRX: return RRX_C(value, carry_in, carry_out);
 			}
 		}
 
@@ -217,7 +214,7 @@ public:
 		return value;
 	}
 
-	template<typename T> T Shift(T value, SRType type, u32 amount, bool carry_in)
+	template<typename T> T Shift(T value, SRType type, s32 amount, bool carry_in)
 	{
 		bool carry_out;
 		return Shift_C(value, type, amount, carry_in, carry_out);

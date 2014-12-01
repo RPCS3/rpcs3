@@ -7,6 +7,7 @@
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())
@@ -258,7 +259,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV406E
 	case NV406E_SET_REFERENCE:
 	{
-		m_ctrl->ref = ARGS(0);
+		m_ctrl->ref.exchange(be_t<u32>::make(ARGS(0)));
 	}
 	break;
 
@@ -2203,14 +2204,8 @@ void RSXThread::Task()
 
 		inc=1;
 
-		u32 put, get;
-		// this code produces only mov + bswap:
-		put = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, put))));
-		get = se_t<u32>::func(std::atomic_load((volatile std::atomic<u32>*)((u8*)m_ctrl + offsetof(CellGcmControl, get))));
-		/*
-		se_t<u32>::func(put, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, put)), 0, 0));
-		se_t<u32>::func(get, InterlockedCompareExchange((volatile unsigned long*)((u8*)m_ctrl + offsetof(CellGcmControl, get)), 0, 0));
-		*/
+		u32 get = m_ctrl->get.read_sync();
+		u32 put = m_ctrl->put.read_sync();
 
 		if(put == get || !Emu.IsRunning())
 		{
@@ -2240,7 +2235,7 @@ void RSXThread::Task()
 		{
 			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
 			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, m_ioAddress + get, cmd, get, put);
-			m_ctrl->get = addr;
+			m_ctrl->get.exchange(be_t<u32>::make(addr));
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -2249,7 +2244,7 @@ void RSXThread::Task()
 			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
 			//u32 addr = offs;
 			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
-			m_ctrl->get = offs;
+			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
 		if(cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -2258,7 +2253,7 @@ void RSXThread::Task()
 			u32 get = m_call_stack.top();
 			m_call_stack.pop();
 			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-			m_ctrl->get = get;
+			m_ctrl->get.exchange(be_t<u32>::make(get));
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -2272,7 +2267,10 @@ void RSXThread::Task()
 			LOG_ERROR(Log::RSX, "null cmd: cmd=0x%x, put=0x%x, get=0x%x (addr=0x%x)", cmd, put, get, (u32)Memory.RSXIOMem.RealAddr(get));
 			//Emu.Pause();
 			//HACK! We shouldn't be here
-			m_ctrl->get = get + (count + 1) * 4;
+			m_ctrl->get.atomic_op([](be_t<u32>& value)
+			{
+				value += 4;
+			});
 			continue;
 		}
 
@@ -2285,7 +2283,10 @@ void RSXThread::Task()
 
 		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);
 
-		m_ctrl->get = get + (count + 1) * 4;
+		m_ctrl->get.atomic_op([count](be_t<u32>& value)
+		{
+			value += (count + 1) * 4;
+		});
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 	catch (const std::string& e)

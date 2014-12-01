@@ -84,7 +84,8 @@ class Emulator
 	uint m_mode;
 
 	u32 m_rsx_callback;
-	u32 m_ppu_thr_exit;
+	u32 m_cpu_thr_exit;
+	u32 m_cpu_thr_stop;
 	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
@@ -114,7 +115,6 @@ public:
 	std::string m_elf_path;
 	std::string m_emu_path;
 	std::string m_title_id;
-	u32 m_ppu_thr_stop;
 	s32 m_sdk_version;
 
 	Emulator();
@@ -172,14 +172,14 @@ public:
 		m_rsx_callback = addr;
 	}
 
-	void SetPPUThreadExit(u32 addr)
+	void SetCPUThreadExit(u32 addr)
 	{
-		m_ppu_thr_exit = addr;
+		m_cpu_thr_exit = addr;
 	}
 
-	void SetPPUThreadStop(u32 addr)
+	void SetCPUThreadStop(u32 addr)
 	{
-		m_ppu_thr_stop = addr;
+		m_cpu_thr_stop = addr;
 	}
 
 	EmuInfo& GetInfo() { return m_info; }
@@ -191,7 +191,8 @@ public:
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
-	u32 GetPPUThreadExit() const { return m_ppu_thr_exit; }
+	u32 GetCPUThreadExit() const { return m_cpu_thr_exit; }
+	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	void CheckStatus();
 	bool BootGame(const std::string& path);

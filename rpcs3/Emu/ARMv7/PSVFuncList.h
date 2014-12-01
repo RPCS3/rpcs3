@@ -643,10 +643,10 @@ namespace psv_func_detail
 
 struct psv_func
 {
-	const u32 nid;
-	const char* const name;
-	psv_func_caller* const func;
-	psv_log_base* const module;
+	u32 nid;
+	const char* name;
+	std::shared_ptr<psv_func_caller> func;
+	psv_log_base* module;
 };
 
 void add_psv_func(psv_func& data);
@@ -654,13 +654,11 @@ void add_psv_func(psv_func& data);
 template<typename RT, typename... T>
 void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*func)(T...))
 {
-	psv_func f =
-	{
-		nid,
-		name,
-		new psv_func_detail::func_binder<RT, T...>(func),
-		module
-	};
+	psv_func f;
+	f.nid = nid;
+	f.name = name;
+	f.func.reset(new psv_func_detail::func_binder<RT, T...>(func));
+	f.module = module;
 
 	add_psv_func(f);
 }

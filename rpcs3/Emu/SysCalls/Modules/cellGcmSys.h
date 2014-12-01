@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/RSX/GCM.h"
 
 enum
 {
@@ -20,8 +21,7 @@ struct CellGcmOffsetTable
 void InitOffsetTable();
 u32 gcmGetLocalMemorySize();
 
-
-// SysCalls
+// libgcm functions
 s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id);
 
 s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
@@ -35,3 +35,6 @@ s32 cellGcmReserveIoMapSize(u32 size);
 s32 cellGcmUnmapEaIoAddress(u64 ea);
 s32 cellGcmUnmapIoAddress(u64 io);
 s32 cellGcmUnreserveIoMapSize(u32 size);
+
+// Syscall
+s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);

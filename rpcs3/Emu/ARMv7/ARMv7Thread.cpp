@@ -102,6 +102,33 @@ void ARMv7Thread::DoCode()
 {
 }
 
+void ARMv7Thread::FastCall(u32 addr)
+{
+	auto old_status = m_status;
+	auto old_PC = PC;
+	auto old_stack = SP;
+	auto old_LR = LR;
+	auto old_thread = GetCurrentNamedThread();
+
+	m_status = Running;
+	PC = addr;
+	LR = Emu.GetCPUThreadStop();
+	SetCurrentNamedThread(this);
+
+	CPUThread::Task();
+
+	m_status = old_status;
+	PC = old_PC;
+	SP = old_stack;
+	LR = old_LR;
+	SetCurrentNamedThread(old_thread);
+}
+
+void ARMv7Thread::FastStop()
+{
+	m_status = Stopped;
+}
+
 arm7_thread::arm7_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
 	thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
