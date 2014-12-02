@@ -214,7 +214,7 @@ namespace ppu_recompiler_llvm {
         }
 
         std::string ToString() const {
-            auto s = fmt::Format("0x%08X (0x%08X):", start_address, function_address);
+            auto s = fmt::Format("0x%08X (0x%08X): Size=%u ->", start_address, function_address, GetSize());
             for (auto i = instruction_addresses.begin(); i != instruction_addresses.end(); i++) {
                 s += fmt::Format(" 0x%08X", *i);
             }
@@ -237,6 +237,12 @@ namespace ppu_recompiler_llvm {
 
             return s;
         }
+
+        /// Get the size of the CFG. The size is a score of how large the CFG is and increases everytime
+        /// a node or an edge is added to the CFG.
+        size_t GetSize() const {
+            return instruction_addresses.size() + branches.size() + calls.size();
+        }
     };
 
     enum class BranchType {
@@ -247,7 +253,7 @@ namespace ppu_recompiler_llvm {
     };
 
     /// Pointer to an executable
-    typedef u32(*Executable)(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+    typedef u32(*Executable)(PPUThread * ppu_state, u64 context);
 
     /// PPU compiler that uses LLVM for code generation and optimization
     class Compiler : protected PPUOpcodes, protected PPCDecoder {
@@ -264,9 +270,6 @@ namespace ppu_recompiler_llvm {
 
             /// Total time
             std::chrono::nanoseconds total_time;
-
-            /// Contains the number of times interpreter fallback was used
-            std::map<std::string, u64> interpreter_fallback_stats;
         };
 
         Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block);
@@ -289,7 +292,7 @@ namespace ppu_recompiler_llvm {
         Stats GetStats();
 
         /// Execute all tests
-        void RunAllTests(PPUThread * ppu_state, PPUInterpreter * interpreter);
+        void RunAllTests();
 
     protected:
         void Decode(const u32 code) override;
@@ -699,7 +702,6 @@ namespace ppu_recompiler_llvm {
         struct CompileTaskState {
             enum Args {
                 State,
-                Interpreter,
                 Context,
                 MaxArgs,
             };
@@ -863,6 +865,12 @@ namespace ppu_recompiler_llvm {
         /// Set USPRG0
         void SetUsprg0(llvm::Value * val_x64);
 
+        /// Load FPSCR
+        llvm::Value * GetFpscr();
+
+        /// Set FPSCR
+        void SetFpscr(llvm::Value * val_x32);
+
         /// Get FPR
         llvm::Value * GetFpr(u32 r, u32 bits = 64, bool as_int = false);
 
@@ -902,10 +910,6 @@ namespace ppu_recompiler_llvm {
         /// Write to memory
         void WriteMemory(llvm::Value * addr_i64, llvm::Value * val_ix, u32 alignment = 0, bool bswap = true, bool could_be_mmio = true);
 
-        /// Call an interpreter function
-        template<class Func, class... Args>
-        llvm::Value * InterpreterCall(const char * name, Func function, Args... args);
-
         /// Convert a C++ type to an LLVM type
         template<class T>
         llvm::Type * CppToLlvmType();
@@ -923,6 +927,9 @@ namespace ppu_recompiler_llvm {
 
         /// Excute a test
         void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
+
+        /// Handle compilation errors
+        void CompilationError(const std::string & error);
 
         /// A mask used in rotate instructions
         static u64 s_rotate_mask[64][64];
@@ -970,6 +977,9 @@ namespace ppu_recompiler_llvm {
             /// The current revision number of this function
             u32 revision;
 
+            /// Size of the CFG when it was last compiled
+            size_t last_compiled_cfg_size;
+
             /// The CFG for this block
             ControlFlowGraph cfg;
 
@@ -979,13 +989,14 @@ namespace ppu_recompiler_llvm {
             BlockEntry(u32 start_address, u32 function_address)
                 : num_hits(0)
                 , revision(0)
+                , last_compiled_cfg_size(0)
                 , is_compiled(false)
                 , cfg(start_address, function_address) {
             }
 
             std::string ToString() const {
-                return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, IsCompiled=%c",
-                                   cfg.start_address, cfg.function_address, num_hits, revision, is_compiled ? 'Y' : 'N');
+                return fmt::Format("0x%08X (0x%08X): NumHits=%u, Revision=%u, LastCompiledCfgSize=%u, IsCompiled=%c",
+                                   cfg.start_address, cfg.function_address, num_hits, revision, last_compiled_cfg_size, is_compiled ? 'Y' : 'N');
             }
 
             bool operator == (const BlockEntry & other) const {
@@ -1009,54 +1020,8 @@ namespace ppu_recompiler_llvm {
             };
         };
 
-        /// An entry in the function table
-        struct FunctionEntry {
-            /// Address of the function
-            u32 address;
-
-            /// Number of compiled fragments
-            u32 num_compiled_fragments;
-
-            /// Blocks in the function
-            std::list<BlockEntry *> blocks;
-
-            FunctionEntry(u32 address)
-                : address(address)
-                , num_compiled_fragments(0) {
-            }
-
-            void AddBlock(BlockEntry * block_entry) {
-                auto i = std::find(blocks.begin(), blocks.end(), block_entry);
-                if (i == blocks.end()) {
-                    if (block_entry->IsFunction()) {
-                        // The first block must be the starting block of the function
-                        blocks.push_front(block_entry);
-                    } else {
-                        blocks.push_back(block_entry);
-                    }
-                }
-            }
-
-            std::string ToString() const {
-                return fmt::Format("0x%08X: NumCompiledFragments=%u, NumBlocks=%u", address, num_compiled_fragments, blocks.size());
-            }
-
-            bool operator == (const FunctionEntry & other) const {
-                return address == other.address;
-            }
-
-            struct hash {
-                size_t operator()(const FunctionEntry * f) const {
-                    return f->address;
-                }
-            };
-
-            struct equal_to {
-                bool operator()(const FunctionEntry * lhs, const FunctionEntry * rhs) const {
-                    return *lhs == *rhs;
-                }
-            };
-        };
+        /// Log
+        llvm::raw_fd_ostream * m_log;
 
         /// Lock for accessing m_pending_execution_traces. TODO: Eliminate this and use a lock-free queue.
         std::mutex m_pending_execution_traces_lock;
@@ -1066,9 +1031,6 @@ namespace ppu_recompiler_llvm {
 
         /// Block table
         std::unordered_set<BlockEntry *, BlockEntry::hash, BlockEntry::equal_to> m_block_table;
-
-        /// Function table
-        std::unordered_set<FunctionEntry *, FunctionEntry::hash, FunctionEntry::equal_to> m_function_table;
 
         /// Execution traces that have been already encountered. Data is the list of all blocks that this trace includes.
         std::unordered_map<ExecutionTrace::Id, std::vector<BlockEntry *>> m_processed_execution_traces;
@@ -1085,9 +1047,6 @@ namespace ppu_recompiler_llvm {
 
         /// PPU Compiler
         Compiler m_compiler;
-
-        /// Log
-        llvm::raw_fd_ostream * m_log;
 
         /// Executable lookup table
         Executable m_executable_lookup[10000]; // TODO: Adjust size
@@ -1107,7 +1066,7 @@ namespace ppu_recompiler_llvm {
         void UpdateControlFlowGraph(ControlFlowGraph & cfg, const ExecutionTraceEntry & this_entry, const ExecutionTraceEntry * next_entry);
 
         /// Compile a block
-        void CompileBlock(FunctionEntry & function_entry, BlockEntry & block_entry);
+        void CompileBlock(BlockEntry & block_entry);
 
         /// Mutex used to prevent multiple creation
         static std::mutex s_mutex;
@@ -1199,10 +1158,10 @@ namespace ppu_recompiler_llvm {
         Executable GetExecutable(u32 address, Executable default_executable) const;
 
         /// Execute a function
-        static u32 ExecuteFunction(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+        static u32 ExecuteFunction(PPUThread * ppu_state, u64 context);
 
         /// Execute till the current function returns
-        static u32 ExecuteTillReturn(PPUThread * ppu_state, PPUInterpreter * interpreter, u64 context);
+        static u32 ExecuteTillReturn(PPUThread * ppu_state, u64 context);
     };
 
     /// Get the branch type from a branch instruction
