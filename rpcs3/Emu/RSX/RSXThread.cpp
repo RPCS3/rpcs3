@@ -95,11 +95,11 @@ RSXVertexData::RSXVertexData()
 
 void RSXVertexData::Reset()
 {
-	frequency = 0;
-	stride = 0;
-	size = 0;
-	type = 0;
-	addr = 0;
+	//frequency = 0;
+	//stride = 0;
+	//size = 0;
+	//type = 0;
+	//addr = 0;
 	data.clear();
 }
 
@@ -313,7 +313,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case 0x0003fead:
 		//if(cmd == 0xfeadffff)
 		{
+			//LOG_WARNING(RSX, "Flip()");
 			Flip();
+
 			m_last_flip_time = get_system_time();
 
 			m_gcm_current_buffer = ARGS(0);
@@ -399,14 +401,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u8 v2 = a0 >> 16;
 		u8 v3 = a0 >> 24;
 
-		m_vertex_data[index].Reset();
+		//m_vertex_data[index].Reset();
 		m_vertex_data[index].size = 4;
-		m_vertex_data[index].type = 4;
+		m_vertex_data[index].type = CELL_GCM_VERTEX_UB;
 		m_vertex_data[index].data.push_back(v0);
 		m_vertex_data[index].data.push_back(v1);
 		m_vertex_data[index].data.push_back(v2);
 		m_vertex_data[index].data.push_back(v3);
-		//LOG_WARNING(RSX, "index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
+		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4UB_M: index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
 	}
 	break;
 
@@ -418,14 +420,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
 		
-		m_vertex_data[index].Reset();
-		m_vertex_data[index].type = 2;
+		//m_vertex_data[index].Reset();
+		m_vertex_data[index].type = CELL_GCM_VERTEX_F;
 		m_vertex_data[index].size = 2;
-		m_vertex_data[index].data.resize(sizeof(float) * 2);
-		(float&)m_vertex_data[index].data[sizeof(float)*0] = v0;
-		(float&)m_vertex_data[index].data[sizeof(float)*1] = v1;
+		u32 pos = m_vertex_data[index].data.size();
+		m_vertex_data[index].data.resize(pos + sizeof(float) * 2);
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 0] = v0;
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 1] = v1;
 
-		//LOG_WARNING(RSX, "index = %d, v0 = %f, v1 = %f", index, v0, v1);
+		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA2F_M: index = %d, v0 = %f, v1 = %f", index, v0, v1);
 	}
 	break;
 
@@ -441,16 +444,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		float v2 = (float&)a2;
 		float v3 = (float&)a3;
 
-		m_vertex_data[index].Reset();
-		m_vertex_data[index].type = 2;
+		//m_vertex_data[index].Reset();
+		m_vertex_data[index].type = CELL_GCM_VERTEX_F;
 		m_vertex_data[index].size = 4;
-		m_vertex_data[index].data.resize(sizeof(float) * 4);
-		(float&)m_vertex_data[index].data[sizeof(float)*0] = v0;
-		(float&)m_vertex_data[index].data[sizeof(float)*1] = v1;
-		(float&)m_vertex_data[index].data[sizeof(float)*2] = v2;
-		(float&)m_vertex_data[index].data[sizeof(float)*3] = v3;
+		u32 pos = m_vertex_data[index].data.size();
+		m_vertex_data[index].data.resize(pos + sizeof(float) * 4);
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 0] = v0;
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 1] = v1;
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 2] = v2;
+		(float&)m_vertex_data[index].data[pos + sizeof(float) * 3] = v3;
 
-		//LOG_WARNING(RSX, "index = %d, v0 = %f, v1 = %f, v2 = %f, v3 = %f", index, v0, v1, v2, v3);
+		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4F_M: index = %d, v0 = %f, v1 = %f, v2 = %f, v3 = %f", index, v0, v1, v2, v3);
 	}
 	break;
 
@@ -460,6 +464,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		CMD_LOG("num=%d, addr=0x%x", index, addr);
 		m_vertex_data[index].addr = addr;
 		m_vertex_data[index].data.clear();
+
+		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET: num=%d, addr=0x%x", index, addr);
 	}
 	break;
 
@@ -478,6 +484,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		cv.stride = stride;
 		cv.size = size;
 		cv.type = type;
+
+		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT: index=%d, frequency=%d, stride=%d, size=%d, type=%d", index, frequency, stride, size, type);
 	}
 	break;
 
@@ -947,6 +955,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (count >= 2) {
 			m_vertex_data_base_index = ARGS(1);
 		}
+
+		//LOG_ERROR(RSX, "NV4097_SET_VERTEX_DATA_BASE_OFFSET: 0x%x", m_vertex_data_base_offset);
 	}
 	break;
 
@@ -1453,14 +1463,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_SURFACE_PITCH_D:
 	{
-		if (ARGS(0))
-			LOG_WARNING(RSX, "NV4097_SET_SURFACE_PITCH_D: 0x%x", ARGS(0));
+		m_surface_pitch_d = ARGS(0);
+
+		if (count != 1)
+		{
+			LOG_WARNING(RSX, "NV4097_SET_SURFACE_PITCH_D: Bad count (%d)", count);
+			break;
+		}
 	}
 	break;
 
 	case NV4097_SET_SURFACE_PITCH_Z:
 	{
 		m_surface_pitch_z = ARGS(0);
+		if (count != 1)
+		{
+			LOG_WARNING(RSX, "NV4097_SET_SURFACE_PITCH_Z: Bad count (%d)", count);
+			break;
+		}
 	}
 	break;
 
@@ -1468,6 +1488,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_set_context_dma_color_a = true;
 		m_context_dma_color_a = ARGS(0);
+
+		if (count != 1)
+		{
+			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_A: Bad count (%d)", count);
+			break;
+		}
 	}
 	break;
 
@@ -2135,6 +2161,9 @@ void RSXThread::End()
 {
 	ExecCMD();
 
+	for (auto &vdata : m_vertex_data)
+		vdata.data.clear();
+	
 	m_indexed_array.Reset();
 	m_fragment_constants.clear();
 	m_transform_constants.clear();
@@ -2233,17 +2262,17 @@ void RSXThread::Task()
 
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
-			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
-			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, m_ioAddress + get, cmd, get, put);
-			m_ctrl->get.exchange(be_t<u32>::make(addr));
+			u32 offs = cmd & 0x1fffffff;
+			//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
+			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			m_call_stack.push(get + 4);
-			u32 offs = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+			u32 offs = cmd & ~3;
 			//u32 addr = offs;
-			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x - 0x%x", offs, addr, cmd, get);
+			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
 			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
@@ -2261,12 +2290,13 @@ void RSXThread::Task()
 			//LOG_WARNING(RSX, "non increment cmd! 0x%x", cmd);
 			inc = 0;
 		}
-
-		if(cmd == 0)
+		else
 		{
-			LOG_ERROR(Log::RSX, "null cmd: cmd=0x%x, put=0x%x, get=0x%x (addr=0x%x)", cmd, put, get, (u32)Memory.RSXIOMem.RealAddr(get));
-			//Emu.Pause();
-			//HACK! We shouldn't be here
+			//LOG_WARNING(RSX, "increment cmd! 0x%x", cmd);
+		}
+
+		if(cmd == 0) //nop
+		{
 			m_ctrl->get.atomic_op([](be_t<u32>& value)
 			{
 				value += 4;
@@ -2278,7 +2308,7 @@ void RSXThread::Task()
 
 		for(u32 i=0; i<count; i++)
 		{
-			methodRegisters[(cmd & 0xffff) + (i*4*inc)] = ARGS(i);
+			methodRegisters[(cmd & 0xffff) + (i * 4 * inc)] = ARGS(i);
 		}
 
 		DoCmd(cmd, cmd & 0x3ffff, args.addr(), count);

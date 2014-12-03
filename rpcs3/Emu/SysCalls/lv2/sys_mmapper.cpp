@@ -162,7 +162,7 @@ s32 sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 		sys_mmapper.Error("sys_mmapper_map_memory failed!");
 
 	// Keep track of mapped addresses.
-	mmapper_info_map[mem_id] = start_addr;
+	mmapper_info_map[start_addr] = mem_id;
 
 	return CELL_OK;
 }
@@ -198,7 +198,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 	vm::write32(alloc_addr, addr);
 
 	// Keep track of mapped addresses.
-	mmapper_info_map[mem_id] = addr;
+	mmapper_info_map[addr] = mem_id;
 
 	return CELL_OK;
 }
@@ -208,7 +208,7 @@ s32 sys_mmapper_unmap_memory(u32 start_addr, u32 mem_id_addr)
 	sys_mmapper.Warning("sys_mmapper_unmap_memory(start_addr=0x%x, mem_id_addr=0x%x)", start_addr, mem_id_addr);
 
 	// Write back the mem ID of the unmapped area.
-	u32 mem_id = mmapper_info_map.find(start_addr)->first;
+	u32 mem_id = mmapper_info_map.find(start_addr)->second;
 	vm::write32(mem_id_addr, mem_id);
 
 	return CELL_OK;
