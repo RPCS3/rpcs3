@@ -5,7 +5,7 @@ static const volatile bool sq_no_wait = true;
 template<typename T, u32 SQSize = 666>
 class SQueue
 {
-	std::mutex m_mutex;
+	mutable std::mutex m_mutex;
 	u32 m_pos;
 	u32 m_count;
 	T m_data[SQSize];
@@ -17,9 +17,14 @@ public:
 	{
 	}
 
-	const u32 GetSize() const
+	u32 GetSize() const
 	{
 		return SQSize;
+	}
+
+	bool IsFull() const volatile
+	{
+		return m_count == SQSize;
 	}
 
 	bool Push(const T& data, const volatile bool* do_exit)
