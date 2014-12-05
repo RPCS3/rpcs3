@@ -58,23 +58,27 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	}
 }
 
-bool ElementaryStream::is_full()
+bool ElementaryStream::is_full(u32 space)
 {
 	if (released < put_count)
 	{
-		u32 first;
-		if (!entries.Peek(first, &dmux->is_closed))
+		if (entries.IsFull())
 		{
-			return false;
+			return true;
 		}
+
+		u32 first; assert(entries.Peek(first, &sq_no_wait));
 		if (first >= put)
 		{
-			return (first - put) < GetMaxAU();
+			return first - put < space + 128;
+		}
+		else if (put + space + 128 > memAddr + memSize)
+		{
+			return first - memAddr < space + 128;
 		}
 		else
 		{
-			// probably, always false
-			return (put + GetMaxAU()) > (memAddr + memSize);
+			return false;
 		}
 	}
 	else
@@ -83,21 +87,10 @@ bool ElementaryStream::is_full()
 	}
 }
 
-const u32 ElementaryStream::GetMaxAU() const
-{
-	return (fidMajor == 0xbd) ? 4096 : 640 * 1024 + 128; // TODO
-}
-
-bool ElementaryStream::hasunseen()
+bool ElementaryStream::isfull(u32 space)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	return peek_count < put_count;
-}
-
-bool ElementaryStream::isfull()
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-	return is_full() || entries.IsFull();
+	return is_full(space);
 }
 
 void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool rap, u32 specific)
@@ -106,11 +99,16 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		if (is_full())
+		if (is_full(size))
 		{
 			cellDmux->Error("es::push_au(): buffer is full");
 			Emu.Pause();
 			return;
+		}
+
+		if (put + size + 128 > memAddr + memSize)
+		{
+			put = memAddr;
 		}
 
 		memcpy(vm::get_ptr<void>(put + 128), raw_data.data(), size);
@@ -142,10 +140,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		addr = put;
 
-		u32 new_addr = a128(put + 128 + size);
-		put = ((new_addr + GetMaxAU()) > (memAddr + memSize)) ? memAddr : new_addr;
-
-		size = 0;
+		put = a128(put + 128 + size);
 
 		put_count++;
 	}
@@ -170,92 +165,61 @@ void ElementaryStream::push(DemuxerStream& stream, u32 size)
 bool ElementaryStream::release()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 	if (released >= put_count)
 	{
 		cellDmux->Error("es::release(): buffer is empty");
 		Emu.Pause();
 		return false;
 	}
-
-	u32 addr;
-	if (!entries.Peek(addr, &dmux->is_closed))
-	{
-		return false; // ???
-	}
-
-	auto info = vm::ptr<CellDmuxAuInfo>::make(addr);
-	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::release(): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
-	//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, first, (u32)info->ptsLower);
-
-	if (released >= peek_count)
+	if (released >= got_count)
 	{
 		cellDmux->Error("es::release(): buffer has not been seen yet");
 		Emu.Pause();
 		return false;
 	}
 
+	u32 addr; assert(entries.Pop(addr, &sq_no_wait));
 	released++;
-	if (!entries.Pop(addr, &sq_no_wait))
-	{
-		cellDmux->Error("es::release(): entries.Pop() aborted (no entries found)");
-		Emu.Pause();
-		return false;
-	}
-	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::release(): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", peek, first, put, size);
 	return true;
 }
 
 bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, ">>> es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
-	//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
-	if (peek_count >= put_count) return false;
 
-	if (peek_count < released)
+	if (got_count < released)
 	{
-		cellDmux->Error("es::peek(): sequence error: peek_count < released (peek_count=%d, released=%d)", peek_count, released);
+		cellDmux->Error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
 		Emu.Pause();
 		return false;
 	}
 
-	u32 addr;
-	if (!entries.Peek(addr, &dmux->is_closed, peek_count - released))
+	if (got_count >= put_count)
 	{
-		return false; // ???
+		return false;
 	}
 
-	auto info = vm::ptr<CellDmuxAuInfo>::make(addr);
-	//if (fidMajor != 0xbd) LOG_WARNING(HLE, "es::peek(%sAu(Ex)): (%s) size = 0x%x, info = 0x%x, pts = 0x%x",
-	//wxString(update_index ? "Get" : "Peek").wx_str(),
-	//wxString(fidMajor == 0xbd ? "ATRAC3P Audio" : "Video AVC").wx_str(), (u32)info->auSize, peek, (u32)info->ptsLower);
-
-	out_data = addr;
+	u32 addr; assert(entries.Peek(addr, &sq_no_wait, got_count - released));
+	out_data = no_ex ? addr + 64 : addr;
 	out_spec = out_data + sizeof(CellDmuxAuInfoEx);
-	if (no_ex) out_data += 64;
 
 	if (update_index)
 	{
-		peek_count++;
+		got_count++;
 	}
-
-	//if (fidMajor != 0xbd) LOG_NOTICE(HLE, "<<< es::peek(%sAu%s): peek=0x%x, first=0x%x, put=0x%x, size=0x%x", wxString(update_index ? "Get" : "Peek").wx_str(),
-	//wxString(no_ex ? "" : "Ex").wx_str(), peek, first, put, size);
 	return true;
 }
 
 void ElementaryStream::reset()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-	//first = 0;
-	//peek = 0;
 	put = memAddr;
-	//size = 0;
 	entries.Clear();
 	put_count = 0;
+	got_count = 0;
 	released = 0;
-	peek_count = 0;
+	raw_data.clear();
+	raw_pos = 0;
 }
 
 void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
@@ -382,7 +346,7 @@ u32 dmuxOpen(Demuxer* data)
 					if (esATX[ch])
 					{
 						ElementaryStream& es = *esATX[ch];
-						if (es.isfull())
+						if (es.raw_data.size() > 1024 * 1024)
 						{
 							stream = backup;
 							std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -392,9 +356,15 @@ u32 dmuxOpen(Demuxer* data)
 						stream.skip(4);
 						len -= 4;
 
+						if (pes.has_ts)
+						{
+							es.last_dts = pes.dts;
+							es.last_pts = pes.pts;
+						}
+
 						es.push(stream, len - pes.size - 3);
 
-						while (!es.isfull())
+						while (true)
 						{
 							auto const size = es.raw_data.size() - es.raw_pos; // size of available new data
 							auto const data = es.raw_data.data() + es.raw_pos; // pointer to available data
@@ -411,8 +381,10 @@ u32 dmuxOpen(Demuxer* data)
 							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
 
 							if (size < frame_size + 8) break; // skip non-complete AU
+
+							if (es.isfull(frame_size + 8)) break; // skip if cannot push AU
 							
-							es.push_au(frame_size + 8, pes.dts, pes.pts, stream.userdata, true /* TODO: set correct value */, 0);
+							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
@@ -437,28 +409,24 @@ u32 dmuxOpen(Demuxer* data)
 					if (esAVC[ch])
 					{
 						ElementaryStream& es = *esAVC[ch];
-						if (es.isfull())
-						{
-							std::this_thread::sleep_for(std::chrono::milliseconds(1));
-							continue;
-						}
-
 						DemuxerStream backup = stream;
 
 						stream.skip(4);
 						stream.get(len);
 						PesHeader pes(stream);
 
-						if (es.isfull())
+						const u32 old_size = (u32)es.raw_data.size();
+						if (es.isfull(old_size))
 						{
 							stream = backup;
 							std::this_thread::sleep_for(std::chrono::milliseconds(1));
 							continue;
 						}
 
-						if (pes.has_ts && es.raw_data.size())
+						if ((pes.has_ts && old_size) || old_size >= 0x70000)
 						{
-							es.push_au((u32)es.raw_data.size(), es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
+							// push AU if it becomes too big or the next packet contains ts data
+							es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							// callback
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
@@ -474,7 +442,7 @@ u32 dmuxOpen(Demuxer* data)
 							es.last_pts = pes.pts;
 						}
 
-						//reconstruction of MPEG2-PS stream for vdec module
+						// reconstruction of MPEG2-PS stream for vdec module
 						const u32 size = len + 6 /*- pes.size - 3*/;
 						stream = backup;
 						es.push(stream, size);
@@ -615,16 +583,29 @@ u32 dmuxOpen(Demuxer* data)
 			{
 				ElementaryStream& es = *task.es.es_ptr;
 
-				if (es.raw_data.size())
+				const u32 old_size = (u32)es.raw_data.size();
+				if (old_size && (es.fidMajor & 0xf0) == 0xe0)
 				{
-					// TODO (it's only for AVC, but may cause problems with ATX)
-					es.push_au((u32)es.raw_data.size(), es.last_dts, es.last_pts, stream.userdata, false, 0);
+					// TODO (it's only for AVC, some ATX data may be lost)
+					while (es.isfull(old_size))
+					{
+						if (Emu.IsStopped() || dmux.is_closed) break;
+
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+					}
+
+					es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false, 0);
 
 					// callback
 					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
 					es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+				}
+				
+				if (es.raw_data.size())
+				{
+					cellDmux->Error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", (u32)es.raw_data.size(), es.id);
 				}
 
 				// callback

@@ -438,15 +438,12 @@ class ElementaryStream
 
 	SQueue<u32> entries; // AU starting addresses
 	u32 put_count; // number of AU written
+	u32 got_count; // number of AU obtained by GetAu(Ex)
 	u32 released; // number of AU released
-	u32 peek_count; // number of AU obtained by GetAu(Ex)
 
 	u32 put; // AU that is being written now
-	//u32 size; // number of bytes written (after 128b header)
-	//u32 first; // AU that will be released
-	//u32 peek; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
 
-	bool is_full();
+	bool is_full(u32 space);
 	
 public:
 	Demuxer* dmux;
@@ -479,24 +476,17 @@ public:
 		, cbFunc(cbFunc)
 		, cbArg(cbArg)
 		, spec(spec)
-		//, first(0)
-		//, peek(0)
 		, put(memAddr)
-		//, size(0)
 		, put_count(0)
+		, got_count(0)
 		, released(0)
-		, peek_count(0)
 		, raw_pos(0)
 		, last_dts(0xffffffffffffffffull)
 		, last_pts(0xffffffffffffffffull)
 	{
 	}
 
-	const u32 GetMaxAU() const;
-
-	bool hasunseen();
-
-	bool isfull();
+	bool isfull(u32 space);
 
 	void push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool rap, u32 specific);
 
