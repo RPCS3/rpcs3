@@ -33,3 +33,5 @@ To initialize the repository don't forget to execute `git submodule update --ini
 * __Linux & Mac OSX__:
 `cd rpcs3 && cmake CMakeLists.txt && make && cd ../` Then run with `cd bin && ./rpcs3`
 
+### Support
+* [Donate by PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=MPJ3S9XQXCE3G)
