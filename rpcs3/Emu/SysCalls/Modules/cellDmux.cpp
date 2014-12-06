@@ -67,8 +67,12 @@ bool ElementaryStream::is_full(u32 space)
 			return true;
 		}
 
-		u32 first; assert(entries.Peek(first, &sq_no_wait));
-		if (first >= put)
+		u32 first = 0;
+		if (!entries.Peek(first, &dmux->is_closed) || !first)
+		{
+			throw "es::is_full() error: entries.Peek() failed";
+		}
+		else if (first >= put)
 		{
 			return first - put < space + 128;
 		}
@@ -101,9 +105,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		if (is_full(size))
 		{
-			cellDmux->Error("es::push_au(): buffer is full");
-			Emu.Pause();
-			return;
+			throw "es::push_au() error: buffer is full";
 		}
 
 		if (put + size + 128 > memAddr + memSize)
@@ -144,7 +146,10 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		put_count++;
 	}
-	assert(entries.Push(addr, &sq_no_wait));
+	if (!entries.Push(addr, &dmux->is_closed))
+	{
+		throw "es::push_au() error: entries.Push() failed";
+	}
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)
@@ -163,18 +168,25 @@ bool ElementaryStream::release()
 	std::lock_guard<std::mutex> lock(m_mutex);
 	if (released >= put_count)
 	{
-		cellDmux->Error("es::release(): buffer is empty");
+		cellDmux->Error("es::release() error: buffer is empty");
 		Emu.Pause();
 		return false;
 	}
 	if (released >= got_count)
 	{
-		cellDmux->Error("es::release(): buffer has not been seen yet");
+		cellDmux->Error("es::release() error: buffer has not been seen yet");
 		Emu.Pause();
 		return false;
 	}
 
-	u32 addr; assert(entries.Pop(addr, &sq_no_wait));
+	u32 addr = 0;
+	if (!entries.Pop(addr, &dmux->is_closed) || !addr)
+	{
+		cellDmux->Error("es::release() error: entries.Pop() failed");
+		Emu.Pause();
+		return false;
+	}
+
 	released++;
 	return true;
 }
@@ -193,7 +205,14 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 		return false;
 	}
 
-	u32 addr; assert(entries.Peek(addr, &sq_no_wait, got_count - released));
+	u32 addr = 0;
+	if (!entries.Peek(addr, &dmux->is_closed, got_count - released) || !addr)
+	{
+		cellDmux->Error("es::peek() error: entries.Peek() failed");
+		Emu.Pause();
+		return false;
+	}
+
 	out_data = no_ex ? addr + 64 : addr;
 	out_spec = addr + sizeof(CellDmuxAuInfoEx);
 
