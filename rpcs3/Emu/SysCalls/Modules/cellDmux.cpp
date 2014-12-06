@@ -144,11 +144,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		put_count++;
 	}
-	if (!entries.Push(addr, &sq_no_wait))
-	{
-		cellDmux->Error("es::push_au() aborted (no space)");
-		Emu.Pause();
-	}
+	assert(entries.Push(addr, &sq_no_wait));
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)
@@ -186,14 +182,12 @@ bool ElementaryStream::release()
 bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
-
 	if (got_count < released)
 	{
 		cellDmux->Error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
 		Emu.Pause();
 		return false;
 	}
-
 	if (got_count >= put_count)
 	{
 		return false;
@@ -201,7 +195,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 
 	u32 addr; assert(entries.Peek(addr, &sq_no_wait, got_count - released));
 	out_data = no_ex ? addr + 64 : addr;
-	out_spec = out_data + sizeof(CellDmuxAuInfoEx);
+	out_spec = addr + sizeof(CellDmuxAuInfoEx);
 
 	if (update_index)
 	{
