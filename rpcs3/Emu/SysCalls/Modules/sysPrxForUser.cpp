@@ -205,7 +205,10 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
 {
 	sysPrxForUser->Log("_sys_strcat(dest_addr=0x%x, source_addr=0x%x)", dest.addr(), source.addr());
 
-	assert(strcat(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
+	if (strcat(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
+	{
+		assert(!"strcat(): unexpected result");
+	}
 	return dest;
 }
 
@@ -213,7 +216,10 @@ vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 {
 	sysPrxForUser->Log("_sys_strncat(dest_addr=0x%x, source_addr=0x%x, len=%d)", dest.addr(), source.addr(), len);
 
-	assert(strncat(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
+	if (strncat(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
+	{
+		assert(!"strncat(): unexpected result");
+	}
 	return dest;
 }
 
@@ -221,7 +227,10 @@ vm::ptr<char> _sys_strcpy(vm::ptr<char> dest, vm::ptr<const char> source)
 {
 	sysPrxForUser->Log("_sys_strcpy(dest_addr=0x%x, source_addr=0x%x)", dest.addr(), source.addr());
 
-	assert(strcpy(dest.get_ptr(), source.get_ptr()) == dest.get_ptr());
+	if (strcpy(dest.get_ptr(), source.get_ptr()) != dest.get_ptr())
+	{
+		assert(!"strcpy(): unexpected result");
+	}
 	return dest;
 }
 
@@ -234,7 +243,10 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 		return vm::ptr<char>::make(0);
 	}
 
-	assert(strncpy(dest.get_ptr(), source.get_ptr(), len) == dest.get_ptr());
+	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
+	{
+		assert(!"strncpy(): unexpected result");
+	}
 	return dest;
 }
 

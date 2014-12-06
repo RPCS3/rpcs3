@@ -37,7 +37,10 @@ s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8
 		return CELL_EAGAIN; // rough
 	}
 
-	assert(spursAttachLv2EventQueue(spurs, queue_id, port, 1, true) == CELL_OK);
+	if (s32 res = spursAttachLv2EventQueue(spurs, queue_id, port, 1, true))
+	{
+		assert(!"spursAttachLv2EventQueue() failed");
+	}
 	return CELL_OK;
 }
 
@@ -138,7 +141,10 @@ s64 spursInit(
 	spurs->m.nSpus = nSpus;
 	spurs->m.spuPriority = spuPriority;
 #ifdef PRX_DEBUG
-	assert(spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1) == CELL_OK);
+	if (s32 res = spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1))
+	{
+		assert(!"spu_image_import() failed");
+	}
 #else
 	spurs->m.spuImg.addr = Memory.Alloc(0x40000, 4096);
 #endif
@@ -492,8 +498,14 @@ s64 spursInit(
 		}
 	}
 
-	assert(lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv") == CELL_OK);
-	assert(lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv") == CELL_OK);
+	if (s32 res = lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv"))
+	{
+		assert(!"lwmutex_create() failed");
+	}
+	if (s32 res = lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv"))
+	{
+		assert(!"lwcond_create() failed");
+	}
 
 	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK ? SF1_EXIT_IF_NO_WORK : 0) | (isSecond ? SF1_IS_SECOND : 0);
 	spurs->m.flagRecv.write_relaxed(0xff);
@@ -504,14 +516,20 @@ s64 spursInit(
 	spurs->m.ppuPriority = ppuPriority;
 
 	u32 queue;
-	assert(spursCreateLv2EventQueue(spurs, queue, vm::ptr<u8>::make(spurs.addr() + 0xc9), 0x2a, *(u64*)"_spuPrv") == CELL_OK);
+	if (s32 res = spursCreateLv2EventQueue(spurs, queue, vm::ptr<u8>::make(spurs.addr() + 0xc9), 0x2a, *(u64*)"_spuPrv"))
+	{
+		assert(!"spursCreateLv2EventQueue() failed");
+	}
 	spurs->m.queue = queue;
 
 	u32 port = event_port_create(0);
 	assert(port && ~port);
 	spurs->m.port = port;
 
-	assert(sys_event_port_connect_local(port, queue) == CELL_OK);
+	if (s32 res = sys_event_port_connect_local(port, queue))
+	{
+		assert(!"sys_event_port_connect_local() failed");
+	}
 
 	name = std::string(prefix, prefixSize);
 
@@ -536,10 +554,16 @@ s64 spursInit(
 
 			if (spurs->m.flags1 & SF1_EXIT_IF_NO_WORK)
 			{
-				assert(sys_lwmutex_lock(spurs->get_lwmutex(), 0) == CELL_OK);
+				if (s32 res = sys_lwmutex_lock(spurs->get_lwmutex(), 0))
+				{
+					assert(!"sys_lwmutex_lock() failed");
+				}
 				if (spurs->m.xD66.read_relaxed())
 				{
-					assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+					if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+					{
+						assert(!"sys_lwmutex_unlock() failed");
+					}
 					return;
 				}
 				else while (true)
@@ -590,28 +614,40 @@ s64 spursInit(
 					spurs->m.xD65.exchange(1);
 					if (spurs->m.xD64.read_relaxed() == 0)
 					{
-						assert(sys_lwcond_wait(spurs->get_lwcond(), 0) == CELL_OK);
+						if (s32 res = sys_lwcond_wait(spurs->get_lwcond(), 0))
+						{
+							assert(!"sys_lwcond_wait() failed");
+						}
 					}
 					spurs->m.xD65.exchange(0);
 					if (spurs->m.xD66.read_relaxed())
 					{
-						assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+						if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+						{
+							assert(!"sys_lwmutex_unlock() failed");
+						}
 						return;
 					}
 				}
-				assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == CELL_OK);
+				if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+				{
+					assert(!"sys_lwmutex_unlock() failed");
+				}
 			}
 
 			if (Emu.IsStopped()) continue;
 
-			assert(sys_spu_thread_group_start(spurs->m.spuTG) == CELL_OK);
+			if (s32 res = sys_spu_thread_group_start(spurs->m.spuTG))
+			{
+				assert(!"sys_spu_thread_group_start() failed");
+			}
 			if (s32 res = sys_spu_thread_group_join(spurs->m.spuTG, vm::ptr<u32>::make(0), vm::ptr<u32>::make(0)))
 			{
 				if (res == CELL_ESTAT)
 				{
 					return;
 				}
-				assert(res == CELL_OK);
+				assert(!"sys_spu_thread_group_join() failed");
 			}
 
 			if (Emu.IsStopped()) continue;
@@ -635,7 +671,10 @@ s64 spursInit(
 	// enable exception event handler
 	if (spurs->m.enableEH.compare_and_swap_test(be_t<u32>::make(0), be_t<u32>::make(1)))
 	{
-		assert(sys_spu_thread_group_connect_event(spurs->m.spuTG, spurs->m.queue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION) == CELL_OK);
+		if (s32 res = sys_spu_thread_group_connect_event(spurs->m.spuTG, spurs->m.queue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION))
+		{
+			assert(!"sys_spu_thread_group_connect_event() failed");
+		}
 	}
 	
 	spurs->m.unk22 = 0;
@@ -997,7 +1036,10 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	}
 
 	s32 sdk_ver;
-	assert(process_get_sdk_version(process_getpid(), sdk_ver) == CELL_OK);
+	if (s32 res = process_get_sdk_version(process_getpid(), sdk_ver))
+	{
+		assert(!"process_get_sdk_version() failed");
+	}
 	if (sdk_ver == -1) sdk_ver = 0x460000;
 
 	u8 _port = 0x3f;
@@ -1236,9 +1278,18 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 	spurs->m.xD64.exchange(1);
 	if (spurs->m.xD65.read_sync())
 	{
-		assert(sys_lwmutex_lock(spurs->get_lwmutex(), 0) == 0);
-		assert(sys_lwcond_signal(spurs->get_lwcond()) == 0);
-		assert(sys_lwmutex_unlock(spurs->get_lwmutex()) == 0);
+		if (s32 res = sys_lwmutex_lock(spurs->get_lwmutex(), 0))
+		{
+			assert(!"sys_lwmutex_lock() failed");
+		}
+		if (s32 res = sys_lwcond_signal(spurs->get_lwcond()))
+		{
+			assert(!"sys_lwcond_signal() failed");
+		}
+		if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+		{
+			assert(!"sys_lwmutex_unlock() failed");
+		}
 	}
 	return CELL_OK;
 }
