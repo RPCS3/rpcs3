@@ -358,7 +358,7 @@ struct PesHeader
 	u64 pts;
 	u64 dts;
 	u8 size;
-	bool new_au;
+	bool has_ts;
 
 	PesHeader(DemuxerStream& stream);
 };
@@ -438,15 +438,12 @@ class ElementaryStream
 
 	SQueue<u32> entries; // AU starting addresses
 	u32 put_count; // number of AU written
+	u32 got_count; // number of AU obtained by GetAu(Ex)
 	u32 released; // number of AU released
-	u32 peek_count; // number of AU obtained by GetAu(Ex)
 
 	u32 put; // AU that is being written now
-	u32 size; // number of bytes written (after 128b header)
-	//u32 first; // AU that will be released
-	//u32 peek; // AU that will be obtained by GetAu(Ex)/PeekAu(Ex)
 
-	bool is_full();
+	bool is_full(u32 space);
 	
 public:
 	Demuxer* dmux;
@@ -461,6 +458,13 @@ public:
 	const u32 cbArg;
 	const u32 spec; //addr
 
+	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
+	size_t raw_pos; // should be <= raw_data.size()
+	u64 last_dts;
+	u64 last_pts;
+
+	void push(DemuxerStream& stream, u32 size); // called by demuxer thread (not multithread-safe)
+
 	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 		: dmux(dmux)
 		, memAddr(a128(addr))
@@ -472,29 +476,19 @@ public:
 		, cbFunc(cbFunc)
 		, cbArg(cbArg)
 		, spec(spec)
-		//, first(0)
-		//, peek(0)
 		, put(memAddr)
-		, size(0)
 		, put_count(0)
+		, got_count(0)
 		, released(0)
-		, peek_count(0)
+		, raw_pos(0)
+		, last_dts(0xffffffffffffffffull)
+		, last_pts(0xffffffffffffffffull)
 	{
 	}
 
-	const u32 GetMaxAU() const;
+	bool isfull(u32 space);
 
-	u32 freespace();
-
-	bool hasunseen();
-
-	bool hasdata();
-
-	bool isfull();
-
-	void finish(DemuxerStream& stream);
-
-	void push(DemuxerStream& stream, u32 sz, PesHeader& pes);
+	void push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool rap, u32 specific);
 
 	bool release();
 

@@ -1086,7 +1086,10 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
+		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		{
+			assert(!"sys_event_queue_receive() failed");
+		}
 		var1 = 1;
 	}
 }
@@ -1106,7 +1109,7 @@ s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32
 {
 	// TODO
 	//pointer = 0;
-	assert(0);
+	assert(!"syncLFQueueGetPushPointer2()");
 	return CELL_OK;
 }
 
@@ -1268,7 +1271,7 @@ s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer,
 {
 	// TODO
 	//if (fpSendSignal) return fpSendSignal(0, 0);
-	assert(0);
+	assert(!"syncLFQueueCompletePushPointer2()");
 	return CELL_OK;
 }
 
@@ -1465,7 +1468,10 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		assert(sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0) == CELL_OK);
+		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		{
+			assert(!"sys_event_queue_receive() failed");
+		}
 		var1 = 1;
 	}
 }
@@ -1485,7 +1491,7 @@ s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 {
 	// TODO
 	//pointer = 0;
-	assert(0);
+	assert(!"syncLFQueueGetPopPointer2()");
 	return CELL_OK;
 }
 
@@ -1647,7 +1653,7 @@ s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 {
 	// TODO
 	//if (fpSendSignal) fpSendSignal(0, 0);
-	assert(0);
+	assert(!"syncLFQueueCompletePopPointer2()");
 	return CELL_OK;
 }
 
@@ -1906,7 +1912,7 @@ s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 		spus, num, queue);
 #endif
 
-	assert(!"syncLFQueueAttachLv2EventQueue");
+	assert(!"syncLFQueueAttachLv2EventQueue()");
 	return CELL_OK;
 }
 
@@ -1924,7 +1930,7 @@ s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 		spus, num, queue);
 #endif
 
-	assert(!"syncLFQueueDetachLv2EventQueue");
+	assert(!"syncLFQueueDetachLv2EventQueue()");
 	return CELL_OK;
 }
 

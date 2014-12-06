@@ -3,6 +3,38 @@
 #include "Log.h"
 #include "Thread.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+void SetCurrentThreadDebugName(const char* threadName)
+{
+#ifdef _WIN32 // this is VS-specific way to set thread names for the debugger
+	#pragma pack(push,8)
+	struct THREADNAME_INFO
+	{
+		DWORD dwType;
+		LPCSTR szName;
+		DWORD dwThreadID;
+		DWORD dwFlags;
+	} info;
+	#pragma pack(pop)
+
+	info.dwType = 0x1000;
+	info.szName = threadName;
+	info.dwThreadID = -1;
+	info.dwFlags = 0;
+
+	__try
+	{
+		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
+#endif
+}
+
 thread_local NamedThreadBase* g_tls_this_thread = nullptr;
 std::atomic<u32> g_thread_count(0);
 
@@ -85,6 +117,8 @@ void ThreadBase::Start()
 
 	m_executor = new std::thread([this]()
 	{
+		SetCurrentThreadDebugName(GetThreadName().c_str());
+
 		SetCurrentNamedThread(this);
 		g_thread_count++;
 
@@ -172,6 +206,8 @@ void thread::start(std::function<void()> func)
 
 	m_thr = std::thread([func, name]()
 	{
+		SetCurrentThreadDebugName(name.c_str());
+
 		NamedThreadBase info(name);
 		SetCurrentNamedThread(&info);
 		g_thread_count++;

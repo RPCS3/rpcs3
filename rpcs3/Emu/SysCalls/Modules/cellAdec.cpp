@@ -97,7 +97,7 @@ next:
 	{
 		u8 code1 = vm::read8(adec.reader.addr + 2);
 		u8 code2 = vm::read8(adec.reader.addr + 3);
-		adec.channels = code1 >> 2;
+		adec.channels = (code1 >> 2) & 0x7;
 		adec.frame_size = ((((u32)code1 & 0x3) << 8) | (u32)code2) * 8 + 8;
 		adec.sample_rate = at3freq[code1 >> 5];
 
