@@ -4,12 +4,12 @@
 #include "Emu/System.h"
 #include "Utilities/Log.h"
 
-static enum ARMv7_encoding
+enum ARMv7_encoding
 {
 	T1, T2, T3, T4, A1, A2
 };
 
-static enum SRType : u32
+enum SRType : u32
 {
 	SRType_None,
 	SRType_LSL,
