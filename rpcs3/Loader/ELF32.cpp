@@ -92,19 +92,151 @@ namespace loader
 				list_known_psv_modules();
 
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
-				armv7_thr_stop_data[0] = 0xf870; // HACK 
+				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
 				armv7_thr_stop_data[1] = 0x0001; // index 1
 				Emu.SetCPUThreadExit(armv7_thr_stop_data.addr());
 
-				u32 entry = m_ehdr.data_le.e_entry + (u32)Memory.PSV.RAM.GetStartAddr();
+				u32 entry = 0; // actual entry point (ELFs entry point is ignored)
+				u32 fnid_addr = 0;
 
-				auto code = vm::psv::ptr<const u32>::make(entry & ~3);
+				// load section names
+				//assert(m_ehdr.data_le.e_shstrndx < m_shdrs.size());
+				//const u32 sname_off = m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset;
+				//const u32 sname_size = m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_size;
+				//const u32 sname_base = sname_size ? Memory.PSV.RAM.AllocAlign(sname_size) : 0;
+				//if (sname_base)
+				//{
+				//	m_stream->Seek(handler::get_stream_offset() + sname_off);
+				//	m_stream->Read(vm::get_ptr<void>(sname_base), sname_size);
+				//}
 
-				// very rough way to find entry point in .sceModuleInfo.rodata
-				while (code[0] != 0xffffffffu)
+				for (auto& shdr : m_shdrs)
 				{
-					entry = code[0] + 0x81000000;
-					code++;
+					// get secton name
+					//auto name = vm::psv::ptr<const char>::make(sname_base + shdr.data_le.sh_name);
+
+					m_stream->Seek(handler::get_stream_offset() + m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset + shdr.data_le.sh_name);
+					std::string name;
+					while (!m_stream->Eof())
+					{
+						char c;
+						m_stream->Read(&c, 1);
+						if (c == 0) break;
+						name.push_back(c);
+					}
+
+					if (!strcmp(name.c_str(), ".sceModuleInfo.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceModuleInfo.rodata analysis...");
+
+						auto code = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+
+						// very rough way to find the entry point
+						while (code[0] != 0xffffffffu)
+						{
+							entry = code[0] + 0x81000000;
+							code++;
+
+							if (code.addr() >= shdr.data_le.sh_addr + shdr.data_le.sh_size)
+							{
+								LOG_ERROR(LOADER, "Unable to find entry point in .sceModuleInfo.rodata");
+								entry = 0;
+								break;
+							}
+						}
+					}
+					else if (!strcmp(name.c_str(), ".sceFNID.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceFNID.rodata analysis...");
+
+						fnid_addr = shdr.data_le.sh_addr;
+					}
+					else if (!strcmp(name.c_str(), ".sceFStub.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceFStub.rodata analysis...");
+
+						if (!fnid_addr)
+						{
+							LOG_ERROR(LOADER, ".sceFNID.rodata address not found, unable to process imports");
+							continue;
+						}
+
+						auto fnid = vm::psv::ptr<const u32>::make(fnid_addr);
+						auto fstub = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+
+						for (u32 j = 0; j < shdr.data_le.sh_size / 4; j++)
+						{
+							u32 nid = fnid[j];
+							u32 addr = fstub[j];
+
+							if (auto func = get_psv_func_by_nid(nid))
+							{
+								if (func->module)
+									func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+								else
+									LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+
+								// writing Thumb code (temporarily, because it should be ARM)
+								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
+								vm::psv::write16(addr + 2, (u16)get_psv_func_index(func)); // function index
+								vm::psv::write16(addr + 4, 0x4770); // BX LR
+								vm::psv::write16(addr + 6, 0); // null
+							}
+							else
+							{
+								LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
+
+								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
+								vm::psv::write16(addr + 2, 0x0000); // index 0
+								vm::psv::write16(addr + 4, 0x4770); // BX LR
+								vm::psv::write16(addr + 6, 0); // null
+							}
+						}
+					}
+					else if (!strcmp(name.c_str(), ".sceRefs.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceRefs.rodata analysis...");
+
+						u32 data = 0;
+
+						for (auto code = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr); code.addr() < shdr.data_le.sh_addr + shdr.data_le.sh_size; code++)
+						{
+							switch (*code)
+							{
+							case 0x000000ff:
+							{
+								// save address for future use
+								data = *++code;
+								break;
+							}
+							case 0x0000002f:
+							{
+								// movw r12,# instruction will be replaced
+								const u32 addr = *++code;
+								vm::psv::write16(addr + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
+								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
+								break;
+							}
+							case 0x00000030:
+							{
+								// movt r12,# instruction will be replaced
+								const u32 addr = *++code;
+								vm::psv::write16(addr + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
+								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+								break;
+							}
+							case 0x00000000:
+							{
+								// probably, no operation
+								break;
+							}
+							default:
+							{
+								LOG_NOTICE(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
+							}
+							}
+						}
+					}
 				}
 
 				arm7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
