@@ -685,6 +685,7 @@ struct VdecFrame
 	u64 dts;
 	u64 pts;
 	u64 userdata;
+	u32 frc;
 };
 
 int vdecRead(void* opaque, u8* buf, int buf_size);
@@ -699,6 +700,8 @@ public:
 	bool just_started;
 	bool just_finished;
 
+	AVCodec* codec;
+	AVInputFormat* input_format;
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
 	u8* io_buf;
@@ -721,6 +724,7 @@ public:
 
 	VdecTask task; // current task variable
 	u64 last_pts, first_pts, first_dts;
+	u32 frc_set; // frame rate overwriting
 	AVRational rfr, afr;
 
 	PPUThread* vdecCb;

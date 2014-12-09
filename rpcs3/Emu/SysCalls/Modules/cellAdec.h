@@ -1100,6 +1100,8 @@ public:
 	bool just_started;
 	bool just_finished;
 
+	AVCodec* codec;
+	AVInputFormat* input_format;
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
 	u8* io_buf;
