@@ -516,6 +516,10 @@ u32 vdecOpen(VideoDecoder* data)
 								{
 									frame.frc = CELL_VDEC_FRC_30000DIV1001;
 								}
+								else if (vdec.ctx->time_base.den / vdec.ctx->ticks_per_frame == 60000)
+								{
+									frame.frc = CELL_VDEC_FRC_60000DIV1001;
+								}
 								else
 								{
 									cellVdec->Error("vdecDecodeAu: unsupported time_base.den (%d/1001, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);

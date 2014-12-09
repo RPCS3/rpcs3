@@ -41,7 +41,10 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 
 	switch (type)
 	{
+	case CELL_ADEC_TYPE_ATRACX:
 	case CELL_ADEC_TYPE_ATRACX_2CH:
+	case CELL_ADEC_TYPE_ATRACX_6CH:
+	case CELL_ADEC_TYPE_ATRACX_8CH:
 	{
 		codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
 		input_format = av_find_input_format("oma");
@@ -122,11 +125,11 @@ int adecRead(void* opaque, u8* buf, int buf_size)
 	int res = 0;
 
 next:
-	if (adec.type == CELL_ADEC_TYPE_ATRACX_2CH && adec.reader.has_ats)
+	if (adecIsAtracX(adec.type) && adec.reader.has_ats)
 	{
 		u8 code1 = vm::read8(adec.reader.addr + 2);
 		u8 code2 = vm::read8(adec.reader.addr + 3);
-		adec.channels = (code1 >> 2) & 0x7;
+		adec.ch_cfg = (code1 >> 2) & 0x7;
 		adec.frame_size = ((((u32)code1 & 0x3) << 8) | (u32)code2) * 8 + 8;
 		adec.sample_rate = at3freq[code1 >> 5];
 
@@ -135,9 +138,9 @@ next:
 		adec.reader.has_ats = false;
 	}
 
-	if (adec.type == CELL_ADEC_TYPE_ATRACX_2CH && !adec.reader.init)
+	if (adecIsAtracX(adec.type) && !adec.reader.init)
 	{
-		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.channels, adec.frame_size);
+		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
 		if (buf_size < sizeof(oma))
 		{
 			cellAdec->Error("adecRead(): OMAHeader writing failed");
@@ -273,9 +276,10 @@ u32 adecOpen(AudioDecoder* data)
 				adec.reader.has_ats = false;
 				adec.just_started = true;
 
-				if (adec.type == CELL_ADEC_TYPE_ATRACX_2CH)
+				if (adecIsAtracX(adec.type))
 				{
-					adec.channels = task.at3p.channels;
+					adec.ch_cfg = task.at3p.channel_config;
+					adec.ch_out = task.at3p.channels;
 					adec.frame_size = task.at3p.frame_size;
 					adec.sample_rate = task.at3p.sample_rate;
 					adec.use_ats_headers = task.at3p.ats_header == 1;
@@ -306,7 +310,7 @@ u32 adecOpen(AudioDecoder* data)
 				{
 					adec.first_pts = task.au.pts;
 					adec.last_pts = task.au.pts;
-					if (adec.type == CELL_ADEC_TYPE_ATRACX_2CH) adec.last_pts -= 0x10000; // hack
+					if (adecIsAtracX(adec.type)) adec.last_pts -= 0x10000; // hack
 				}
 
 				struct AVPacketHolder : AVPacket
@@ -515,12 +519,12 @@ bool adecCheckType(AudioCodecType type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: cellAdec->Notice("adecCheckType: ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec->Notice("adecCheckType: ATRAC3plus 2ch"); break;
-	case CELL_ADEC_TYPE_MP3: cellAdec->Notice("adecCheckType: MP3"); break;
+	case CELL_ADEC_TYPE_ATRACX: cellAdec->Notice("adecCheckType(): ATRAC3plus"); break;
+	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec->Notice("adecCheckType(): ATRAC3plus 2ch"); break;
+	case CELL_ADEC_TYPE_ATRACX_6CH: cellAdec->Notice("adecCheckType(): ATRAC3plus 6ch"); break;
+	case CELL_ADEC_TYPE_ATRACX_8CH: cellAdec->Notice("adecCheckType(): ATRAC3plus 8ch"); break;
+	case CELL_ADEC_TYPE_MP3: cellAdec->Notice("adecCheckType(): MP3"); break;
 
-	case CELL_ADEC_TYPE_ATRACX_6CH:
-	case CELL_ADEC_TYPE_ATRACX_8CH:
 	case CELL_ADEC_TYPE_LPCM_PAMF:
 	case CELL_ADEC_TYPE_AC3:
 	case CELL_ADEC_TYPE_ATRAC3:
@@ -528,10 +532,12 @@ bool adecCheckType(AudioCodecType type)
 	case CELL_ADEC_TYPE_CELP:
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
+	{
 		cellAdec->Todo("Unimplemented audio codec type (%d)", type);
+		Emu.Pause();
 		break;
-	default:
-		return false;
+	}	
+	default: return false;
 	}
 
 	return true;
@@ -617,7 +623,10 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 
 	switch (adec->type)
 	{
+	case CELL_ADEC_TYPE_ATRACX:
 	case CELL_ADEC_TYPE_ATRACX_2CH:
+	case CELL_ADEC_TYPE_ATRACX_6CH:
+	case CELL_ADEC_TYPE_ATRACX_8CH:
 	{
 		auto param = vm::ptr<const CellAdecParamAtracX>::make(param_addr);
 
@@ -729,7 +738,49 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i * 2 + 1] = in_f[1][i];
 			}
 		}
-		else if (frame->format = AV_SAMPLE_FMT_S16P && frame->channels == 1)
+		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 6)
+		{
+			float* in_f[6];
+			in_f[0] = (float*)frame->extended_data[0];
+			in_f[1] = (float*)frame->extended_data[1];
+			in_f[2] = (float*)frame->extended_data[2];
+			in_f[3] = (float*)frame->extended_data[3];
+			in_f[4] = (float*)frame->extended_data[4];
+			in_f[5] = (float*)frame->extended_data[5];
+			for (u32 i = 0; i < af.size / 24; i++)
+			{
+				outBuffer[i * 6 + 0] = in_f[0][i];
+				outBuffer[i * 6 + 1] = in_f[1][i];
+				outBuffer[i * 6 + 2] = in_f[2][i];
+				outBuffer[i * 6 + 3] = in_f[3][i];
+				outBuffer[i * 6 + 4] = in_f[4][i];
+				outBuffer[i * 6 + 5] = in_f[5][i];
+			}
+		}
+		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 8)
+		{
+			float* in_f[8];
+			in_f[0] = (float*)frame->extended_data[0];
+			in_f[1] = (float*)frame->extended_data[1];
+			in_f[2] = (float*)frame->extended_data[2];
+			in_f[3] = (float*)frame->extended_data[3];
+			in_f[4] = (float*)frame->extended_data[4];
+			in_f[5] = (float*)frame->extended_data[5];
+			in_f[6] = (float*)frame->extended_data[6];
+			in_f[7] = (float*)frame->extended_data[7];
+			for (u32 i = 0; i < af.size / 24; i++)
+			{
+				outBuffer[i * 8 + 0] = in_f[0][i];
+				outBuffer[i * 8 + 1] = in_f[1][i];
+				outBuffer[i * 8 + 2] = in_f[2][i];
+				outBuffer[i * 8 + 3] = in_f[3][i];
+				outBuffer[i * 8 + 4] = in_f[4][i];
+				outBuffer[i * 8 + 5] = in_f[5][i];
+				outBuffer[i * 8 + 6] = in_f[6][i];
+				outBuffer[i * 8 + 7] = in_f[7][i];
+			}
+		}
+		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 1)
 		{
 			s16* in_i = (s16*)frame->extended_data[0];
 			for (u32 i = 0; i < af.size / 2; i++)
@@ -737,7 +788,7 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 				outBuffer[i] = (float)in_i[i] / 0x8000;
 			}
 		}
-		else if (frame->format = AV_SAMPLE_FMT_S16P && frame->channels == 2)
+		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 2)
 		{
 			s16* in_i[2];
 			in_i[0] = (s16*)frame->extended_data[0];
@@ -798,7 +849,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;
 
-	if (adec->type == CELL_ADEC_TYPE_ATRACX_2CH)
+	if (adecIsAtracX(adec->type))
 	{
 		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + sizeof(CellAdecPcmItem));
 
@@ -812,6 +863,14 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 		{
 			atx->channelConfigIndex = 2;
 		}
+		else if (frame->channels == 6)
+		{
+			atx->channelConfigIndex = 6;
+		}
+		else if (frame->channels == 8)
+		{
+			atx->channelConfigIndex = 7;
+		}
 		else
 		{
 			cellAdec->Error("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
@@ -822,6 +881,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 	{
 		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + sizeof(CellAdecPcmItem));
 
+		// TODO
 		memset(mp3.get_ptr(), 0, sizeof(CellAdecMP3Info));
 	}
 

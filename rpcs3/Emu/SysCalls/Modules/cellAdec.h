@@ -284,6 +284,14 @@ enum AudioCodecType
 	CELL_ADEC_TYPE_RESERVED25,
 };
 
+static bool adecIsAtracX(const AudioCodecType type)
+{
+	return type == CELL_ADEC_TYPE_ATRACX
+		|| type == CELL_ADEC_TYPE_ATRACX_2CH
+		|| type == CELL_ADEC_TYPE_ATRACX_6CH
+		|| type == CELL_ADEC_TYPE_ATRACX_8CH;
+}
+
 // Output Channel Number
 enum CellAdecChannel
 {
@@ -1132,7 +1140,8 @@ public:
 	AdecTask task;
 	u64 last_pts, first_pts;
 
-	u32 channels;
+	u32 ch_out;
+	u32 ch_cfg;
 	u32 frame_size;
 	u32 sample_rate;
 	bool use_ats_headers;
