@@ -1,565 +1,759 @@
 #pragma once
-#include "Emu/ARMv7/ARMv7Opcodes.h"
 
-class ARMv7Interpreter : public ARMv7Opcodes
+#include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/System.h"
+#include "Utilities/Log.h"
+
+enum ARMv7_encoding
 {
-	ARMv7Thread& CPU;
+	T1, T2, T3, T4, A1, A2
+};
 
-public:
-	ARMv7Interpreter(ARMv7Thread& cpu) : CPU(cpu)
-	{
-	}
+enum SRType : u32
+{
+	SRType_None,
+	SRType_LSL,
+	SRType_LSR,
+	SRType_ASR,
+	SRType_ROR,
+	SRType_RRX
+};
 
-	enum SRType : u32
-	{
-		SRType_None,
-		SRType_LSL,
-		SRType_LSR,
-		SRType_ASR,
-		SRType_ROR,
-		SRType_RRX,
-	};
-
+namespace ARMv7_instrs
+{
 	template<typename T>
-	bool IsZero(T x)
+	static bool IsZero(T x)
 	{
 		return x == T(0);
 	}
 
 	template<typename T>
-	bool IsOnes(T x)
+	static bool IsOnes(T x)
 	{
 		return x == ~T(0);
 	}
 
 	template<typename T>
-	u8 IsZeroBit(T x)
+	static u8 IsZeroBit(T x)
 	{
 		return IsZero(x) ? 1 : 0;
 	}
 
 	template<typename T>
-	bool IsOnesBit(T x, u8 len = sizeof(T) * 8)
+	static bool IsOnesBit(T x, u8 len = sizeof(T) * 8)
 	{
 		return IsOnes(x) ? 1 : 0;
 	}
 
 	template<typename T>
-	u8 BitCount(T x, u8 len = sizeof(T) * 8)
-	{
-		u8 result = 0;
-
-		for(u8 mask=1 << (len - 1); mask; mask >>= 1)
-		{
-			if(x & mask) result++;
-		}
-
-		return result;
-	}
+	u8 BitCount(T x, u8 len = sizeof(T) * 8);
 
 	template<typename T>
-	s8 LowestSetBit(T x, u8 len = sizeof(T) * 8)
-	{
-		if(!x) return len;
-
-		u8 result = 0;
-
-		for(T mask=1, i=0; i<len && (x & mask) == 0; mask <<= 1, i++)
-		{
-			result++;
-		}
-
-		return result;
-	}
+	s8 LowestSetBit(T x, u8 len = sizeof(T) * 8);
 
 	template<typename T>
-	s8 HighestSetBit(T x, u8 len = sizeof(T) * 8)
-	{
-		if(!x) return -1;
-
-		u8 result = len;
-
-		for(T mask=T(1) << (len - 1); (x & mask) == 0; mask >>= 1)
-		{
-			result--;
-		}
-
-		return result;
-	}
+	s8 HighestSetBit(T x, u8 len = sizeof(T) * 8);
 
 	template<typename T>
-	s8 CountLeadingZeroBits(T x, u8 len = sizeof(T) * 8)
-	{
-		return len - 1 - HighestSetBit(x, len);
-	}
-
-	SRType DecodeImmShift(u32 type, u32 imm5, u32* shift_n)
-	{
-		SRType shift_t = SRType_None;
-
-		switch(type)
-		{
-		case 0: shift_t = SRType_LSL; if(shift_n) *shift_n = imm5; break;
-		case 1: shift_t = SRType_LSR; if(shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
-		case 2: shift_t = SRType_ASR; if(shift_n) *shift_n = imm5 == 0 ? 32 : imm5; break;
-		case 3:
-			if(imm5 == 0)
-			{
-				shift_t = SRType_RRX; if(shift_n) *shift_n = 1;
-			}
-			else
-			{
-				shift_t = SRType_ROR; if(shift_n) *shift_n = imm5;
-			}
-		break;
-		}
-
-		return shift_t;
-	}
-
-	SRType DecodeRegShift(u8 type)
-	{
-		SRType shift_t = SRType_None;
-
-		switch(type)
-		{
-		case 0: shift_t = SRType_LSL; break;
-		case 1: shift_t = SRType_LSR; break;
-		case 2: shift_t = SRType_ASR; break;
-		case 3: shift_t = SRType_ROR; break;
-		}
-
-		return shift_t;
-	}
-
-	u32 LSL_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (32 - shift)) : false;
-		return shift < 32 ? x << shift : 0;
-	}
-
-	u32 LSL(u32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x << shift : 0;
-	}
-
-	u32 LSR_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
-		return shift < 32 ? x >> shift : 0;
-	}
-
-	u32 LSR(u32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x >> shift : 0;
-	}
-
-	s32 ASR_C(s32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift > 0);
-		carry_out = shift <= 32 ? x & (1 << (shift - 1)) : false;
-		return shift < 32 ? x >> shift : x >> 31;
-	}
-
-	s32 ASR(s32 x, s32 shift)
-	{
-		assert(shift >= 0);
-		return shift < 32 ? x >> shift : x >> 31;
-	}
-
-	u32 ROR_C(u32 x, s32 shift, bool& carry_out)
-	{
-		assert(shift);
-		carry_out = x & (1 << (shift - 1));
-		return x >> shift | x << (32 - shift);
-	}
-
-	u32 ROR(u32 x, s32 shift)
-	{
-		return x >> shift | x << (32 - shift);
-	}
-
-	u32 RRX_C(u32 x, bool carry_in, bool& carry_out)
-	{
-		carry_out = x & 0x1;
-		return ((u32)carry_in << 31) | (x >> 1);
-	}
-
-	u32 RRX(u32 x, bool carry_in)
-	{
-		return ((u32)carry_in << 31) | (x >> 1);
-	}
-
-	template<typename T> T Shift_C(T value, SRType type, s32 amount, bool carry_in, bool& carry_out)
-	{
-		assert(type != SRType_RRX || amount == 1);
-
-		if(amount)
-		{
-			switch(type)
-			{
-			case SRType_LSL: return LSL_C(value, amount, carry_out);
-			case SRType_LSR: return LSR_C(value, amount, carry_out);
-			case SRType_ASR: return ASR_C(value, amount, carry_out);
-			case SRType_ROR: return ROR_C(value, amount, carry_out);
-			case SRType_RRX: return RRX_C(value, carry_in, carry_out);
-			}
-		}
-
-		carry_out = carry_in;
-		return value;
-	}
-
-	template<typename T> T Shift(T value, SRType type, s32 amount, bool carry_in)
-	{
-		bool carry_out;
-		return Shift_C(value, type, amount, carry_in, carry_out);
-	}
-
-	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
-	{
-		const T sign_mask = (T)1 << (sizeof(T) - 1);
-
-		T result = x + y;
-		carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
-		overflow = (x ^ result) & (y ^ result) & sign_mask;
-		if (carry_in)
-		{
-			result += 1;
-			carry_out ^= (result == 0);
-			overflow ^= (result == sign_mask);
-		}
-		return result;
-	}
-
-	u32 ThumbExpandImm_C(u32 imm12, bool carry_in, bool& carry_out)
-	{
-		if ((imm12 & 0xc00) >> 10)
-		{
-			u32 unrotated_value = (imm12 & 0x7f) | 0x80;
-
-			return ROR_C(unrotated_value, (imm12 & 0xf80) >> 7, carry_out);
-		}
-		else
-		{
-			carry_out = carry_in;
-
-			u32 imm8 = imm12 & 0xff;
-			switch ((imm12 & 0x300) >> 8)
-			{
-			case 0: return imm8;
-			case 1: return imm8 << 16 | imm8;
-			case 2: return imm8 << 24 | imm8 << 8;
-			default: return imm8 << 24 | imm8 << 16 | imm8 << 8 | imm8;
-			}
-		}
-	}
-
-	u32 ThumbExpandImm(u32 imm12)
-	{
-		bool carry = CPU.APSR.C;
-		return ThumbExpandImm_C(imm12, carry, carry);
-	}
-
-	bool ConditionPassed(u32 cond) const
-	{
-		bool result = false;
-
-		switch(cond >> 1)
-		{
-		case 0: result = CPU.APSR.Z == 1; break;
-		case 1: result = CPU.APSR.C == 1; break;
-		case 2: result = CPU.APSR.N == 1; break;
-		case 3: result = CPU.APSR.V == 1; break;
-		case 4: result = CPU.APSR.C == 1 && CPU.APSR.Z == 0; break;
-		case 5: result = CPU.APSR.N == CPU.APSR.V; break;
-		case 6: result = CPU.APSR.N == CPU.APSR.V && CPU.APSR.Z == 0; break;
-		case 7: return true;
-		}
-
-		if(cond & 0x1)
-		{
-			return !result;
-		}
-
-		return result;
-	}
-
-protected:
-	virtual void UNK(const u32 data);
-
-	virtual void NULL_OP(const u32 data, const ARMv7_encoding type);
-
-	virtual void HACK(const u32 data, const ARMv7_encoding type);
-
-	virtual void ADC_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ADC_REG(const u32 data, const ARMv7_encoding type);
-	virtual void ADC_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void ADD_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ADD_REG(const u32 data, const ARMv7_encoding type);
-	virtual void ADD_RSR(const u32 data, const ARMv7_encoding type);
-	virtual void ADD_SPI(const u32 data, const ARMv7_encoding type);
-	virtual void ADD_SPR(const u32 data, const ARMv7_encoding type);
-
-	virtual void ADR(const u32 data, const ARMv7_encoding type);
-
-	virtual void AND_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void AND_REG(const u32 data, const ARMv7_encoding type);
-	virtual void AND_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void ASR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ASR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void B(const u32 data, const ARMv7_encoding type);
-
-	virtual void BFC(const u32 data, const ARMv7_encoding type);
-	virtual void BFI(const u32 data, const ARMv7_encoding type);
-
-	virtual void BIC_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void BIC_REG(const u32 data, const ARMv7_encoding type);
-	virtual void BIC_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void BKPT(const u32 data, const ARMv7_encoding type);
-
-	virtual void BL(const u32 data, const ARMv7_encoding type);
-	virtual void BLX(const u32 data, const ARMv7_encoding type);
-	virtual void BX(const u32 data, const ARMv7_encoding type);
-
-	virtual void CB_Z(const u32 data, const ARMv7_encoding type);
-
-	virtual void CLZ(const u32 data, const ARMv7_encoding type);
-
-	virtual void CMN_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void CMN_REG(const u32 data, const ARMv7_encoding type);
-	virtual void CMN_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void CMP_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void CMP_REG(const u32 data, const ARMv7_encoding type);
-	virtual void CMP_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void EOR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void EOR_REG(const u32 data, const ARMv7_encoding type);
-	virtual void EOR_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void IT(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDM(const u32 data, const ARMv7_encoding type);
-	virtual void LDMDA(const u32 data, const ARMv7_encoding type);
-	virtual void LDMDB(const u32 data, const ARMv7_encoding type);
-	virtual void LDMIB(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDR_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDRB_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDRB_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDRB_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDRD_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDRD_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDRD_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDRH_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDRH_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDRH_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDRSB_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDRSB_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDRSB_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LDRSH_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LDRSH_LIT(const u32 data, const ARMv7_encoding type);
-	virtual void LDRSH_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LSL_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LSL_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void LSR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void LSR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void MLA(const u32 data, const ARMv7_encoding type);
-	virtual void MLS(const u32 data, const ARMv7_encoding type);
-
-	virtual void MOV_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void MOV_REG(const u32 data, const ARMv7_encoding type);
-	virtual void MOVT(const u32 data, const ARMv7_encoding type);
-
-	virtual void MRS(const u32 data, const ARMv7_encoding type);
-	virtual void MSR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void MSR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void MUL(const u32 data, const ARMv7_encoding type);
-
-	virtual void MVN_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void MVN_REG(const u32 data, const ARMv7_encoding type);
-	virtual void MVN_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void NOP(const u32 data, const ARMv7_encoding type);
-
-	virtual void ORN_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ORN_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void ORR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ORR_REG(const u32 data, const ARMv7_encoding type);
-	virtual void ORR_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void PKH(const u32 data, const ARMv7_encoding type);
-
-	virtual void POP(const u32 data, const ARMv7_encoding type);
-	virtual void PUSH(const u32 data, const ARMv7_encoding type);
-
-	virtual void QADD(const u32 data, const ARMv7_encoding type);
-	virtual void QADD16(const u32 data, const ARMv7_encoding type);
-	virtual void QADD8(const u32 data, const ARMv7_encoding type);
-	virtual void QASX(const u32 data, const ARMv7_encoding type);
-	virtual void QDADD(const u32 data, const ARMv7_encoding type);
-	virtual void QDSUB(const u32 data, const ARMv7_encoding type);
-	virtual void QSAX(const u32 data, const ARMv7_encoding type);
-	virtual void QSUB(const u32 data, const ARMv7_encoding type);
-	virtual void QSUB16(const u32 data, const ARMv7_encoding type);
-	virtual void QSUB8(const u32 data, const ARMv7_encoding type);
-
-	virtual void RBIT(const u32 data, const ARMv7_encoding type);
-	virtual void REV(const u32 data, const ARMv7_encoding type);
-	virtual void REV16(const u32 data, const ARMv7_encoding type);
-	virtual void REVSH(const u32 data, const ARMv7_encoding type);
-
-	virtual void ROR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void ROR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void RRX(const u32 data, const ARMv7_encoding type);
-
-	virtual void RSB_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void RSB_REG(const u32 data, const ARMv7_encoding type);
-	virtual void RSB_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void RSC_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void RSC_REG(const u32 data, const ARMv7_encoding type);
-	virtual void RSC_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void SADD16(const u32 data, const ARMv7_encoding type);
-	virtual void SADD8(const u32 data, const ARMv7_encoding type);
-	virtual void SASX(const u32 data, const ARMv7_encoding type);
-
-	virtual void SBC_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void SBC_REG(const u32 data, const ARMv7_encoding type);
-	virtual void SBC_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void SBFX(const u32 data, const ARMv7_encoding type);
-
-	virtual void SDIV(const u32 data, const ARMv7_encoding type);
-
-	virtual void SEL(const u32 data, const ARMv7_encoding type);
-
-	virtual void SHADD16(const u32 data, const ARMv7_encoding type);
-	virtual void SHADD8(const u32 data, const ARMv7_encoding type);
-	virtual void SHASX(const u32 data, const ARMv7_encoding type);
-	virtual void SHSAX(const u32 data, const ARMv7_encoding type);
-	virtual void SHSUB16(const u32 data, const ARMv7_encoding type);
-	virtual void SHSUB8(const u32 data, const ARMv7_encoding type);
-
-	virtual void SMLA__(const u32 data, const ARMv7_encoding type);
-	virtual void SMLAD(const u32 data, const ARMv7_encoding type);
-	virtual void SMLAL(const u32 data, const ARMv7_encoding type);
-	virtual void SMLAL__(const u32 data, const ARMv7_encoding type);
-	virtual void SMLALD(const u32 data, const ARMv7_encoding type);
-	virtual void SMLAW_(const u32 data, const ARMv7_encoding type);
-	virtual void SMLSD(const u32 data, const ARMv7_encoding type);
-	virtual void SMLSLD(const u32 data, const ARMv7_encoding type);
-	virtual void SMMLA(const u32 data, const ARMv7_encoding type);
-	virtual void SMMLS(const u32 data, const ARMv7_encoding type);
-	virtual void SMMUL(const u32 data, const ARMv7_encoding type);
-	virtual void SMUAD(const u32 data, const ARMv7_encoding type);
-	virtual void SMUL__(const u32 data, const ARMv7_encoding type);
-	virtual void SMULL(const u32 data, const ARMv7_encoding type);
-	virtual void SMULW_(const u32 data, const ARMv7_encoding type);
-	virtual void SMUSD(const u32 data, const ARMv7_encoding type);
-
-	virtual void SSAT(const u32 data, const ARMv7_encoding type);
-	virtual void SSAT16(const u32 data, const ARMv7_encoding type);
-	virtual void SSAX(const u32 data, const ARMv7_encoding type);
-	virtual void SSUB16(const u32 data, const ARMv7_encoding type);
-	virtual void SSUB8(const u32 data, const ARMv7_encoding type);
-
-	virtual void STM(const u32 data, const ARMv7_encoding type);
-	virtual void STMDA(const u32 data, const ARMv7_encoding type);
-	virtual void STMDB(const u32 data, const ARMv7_encoding type);
-	virtual void STMIB(const u32 data, const ARMv7_encoding type);
-
-	virtual void STR_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void STR_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void STRB_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void STRB_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void STRD_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void STRD_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void STRH_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void STRH_REG(const u32 data, const ARMv7_encoding type);
-
-	virtual void SUB_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void SUB_REG(const u32 data, const ARMv7_encoding type);
-	virtual void SUB_RSR(const u32 data, const ARMv7_encoding type);
-	virtual void SUB_SPI(const u32 data, const ARMv7_encoding type);
-	virtual void SUB_SPR(const u32 data, const ARMv7_encoding type);
-
-	virtual void SVC(const u32 data, const ARMv7_encoding type);
-
-	virtual void SXTAB(const u32 data, const ARMv7_encoding type);
-	virtual void SXTAB16(const u32 data, const ARMv7_encoding type);
-	virtual void SXTAH(const u32 data, const ARMv7_encoding type);
-	virtual void SXTB(const u32 data, const ARMv7_encoding type);
-	virtual void SXTB16(const u32 data, const ARMv7_encoding type);
-	virtual void SXTH(const u32 data, const ARMv7_encoding type);
-
-	virtual void TB_(const u32 data, const ARMv7_encoding type);
-
-	virtual void TEQ_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void TEQ_REG(const u32 data, const ARMv7_encoding type);
-	virtual void TEQ_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void TST_IMM(const u32 data, const ARMv7_encoding type);
-	virtual void TST_REG(const u32 data, const ARMv7_encoding type);
-	virtual void TST_RSR(const u32 data, const ARMv7_encoding type);
-
-	virtual void UADD16(const u32 data, const ARMv7_encoding type);
-	virtual void UADD8(const u32 data, const ARMv7_encoding type);
-	virtual void UASX(const u32 data, const ARMv7_encoding type);
-	virtual void UBFX(const u32 data, const ARMv7_encoding type);
-	virtual void UDIV(const u32 data, const ARMv7_encoding type);
-	virtual void UHADD16(const u32 data, const ARMv7_encoding type);
-	virtual void UHADD8(const u32 data, const ARMv7_encoding type);
-	virtual void UHASX(const u32 data, const ARMv7_encoding type);
-	virtual void UHSAX(const u32 data, const ARMv7_encoding type);
-	virtual void UHSUB16(const u32 data, const ARMv7_encoding type);
-	virtual void UHSUB8(const u32 data, const ARMv7_encoding type);
-	virtual void UMAAL(const u32 data, const ARMv7_encoding type);
-	virtual void UMLAL(const u32 data, const ARMv7_encoding type);
-	virtual void UMULL(const u32 data, const ARMv7_encoding type);
-	virtual void UQADD16(const u32 data, const ARMv7_encoding type);
-	virtual void UQADD8(const u32 data, const ARMv7_encoding type);
-	virtual void UQASX(const u32 data, const ARMv7_encoding type);
-	virtual void UQSAX(const u32 data, const ARMv7_encoding type);
-	virtual void UQSUB16(const u32 data, const ARMv7_encoding type);
-	virtual void UQSUB8(const u32 data, const ARMv7_encoding type);
-	virtual void USAD8(const u32 data, const ARMv7_encoding type);
-	virtual void USADA8(const u32 data, const ARMv7_encoding type);
-	virtual void USAT(const u32 data, const ARMv7_encoding type);
-	virtual void USAT16(const u32 data, const ARMv7_encoding type);
-	virtual void USAX(const u32 data, const ARMv7_encoding type);
-	virtual void USUB16(const u32 data, const ARMv7_encoding type);
-	virtual void USUB8(const u32 data, const ARMv7_encoding type);
-	virtual void UXTAB(const u32 data, const ARMv7_encoding type);
-	virtual void UXTAB16(const u32 data, const ARMv7_encoding type);
-	virtual void UXTAH(const u32 data, const ARMv7_encoding type);
-	virtual void UXTB(const u32 data, const ARMv7_encoding type);
-	virtual void UXTB16(const u32 data, const ARMv7_encoding type);
-	virtual void UXTH(const u32 data, const ARMv7_encoding type);
+	s8 CountLeadingZeroBits(T x, u8 len = sizeof(T) * 8);
+
+	SRType DecodeImmShift(u32 type, u32 imm5, u32* shift_n);
+	SRType DecodeRegShift(u8 type);
+
+	u32 LSL_C(u32 x, s32 shift, bool& carry_out);
+	u32 LSL(u32 x, s32 shift);
+	u32 LSR_C(u32 x, s32 shift, bool& carry_out);
+	u32 LSR(u32 x, s32 shift);
+
+	s32 ASR_C(s32 x, s32 shift, bool& carry_out);
+	s32 ASR(s32 x, s32 shift);
+
+	u32 ROR_C(u32 x, s32 shift, bool& carry_out);
+	u32 ROR(u32 x, s32 shift);
+
+	u32 RRX_C(u32 x, bool carry_in, bool& carry_out);
+	u32 RRX(u32 x, bool carry_in);
+
+	template<typename T> T Shift_C(T value, SRType type, s32 amount, bool carry_in, bool& carry_out);
+
+	template<typename T> T Shift(T value, SRType type, s32 amount, bool carry_in);
+
+	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow);
+
+	u32 ThumbExpandImm_C(u32 imm12, bool carry_in, bool& carry_out);
+	u32 ThumbExpandImm(ARMv7Thread* CPU, u32 imm12);
+
+	bool ConditionPassed(ARMv7Thread* CPU, u32 cond);
+
+	// instructions
+	void UNK(ARMv7Thread* thr);
+
+	void NULL_OP(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void HACK(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ADC_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADC_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADC_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ADD_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADD_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADD_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADD_SPI(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ADD_SPR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ADR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void AND_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void AND_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void AND_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ASR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ASR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void B(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void BFC(ARMv7Thread* thr, const ARMv7_encoding type);
+	void BFI(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void BIC_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void BIC_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void BIC_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void BKPT(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void BL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void BLX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void BX(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void CB_Z(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void CLZ(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void CMN_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void CMN_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void CMN_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void CMP_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void CMP_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void CMP_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void EOR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void EOR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void EOR_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void IT(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDMDA(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDMDB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDMIB(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDR_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDRB_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRB_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRB_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDRD_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRD_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRD_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDRH_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRH_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRH_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDRSB_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRSB_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRSB_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LDRSH_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRSH_LIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LDRSH_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LSL_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LSL_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void LSR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void LSR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void MLA(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MLS(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void MOV_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MOV_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MOVT(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void MRS(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MSR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MSR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void MUL(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void MVN_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MVN_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void MVN_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void NOP(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ORN_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ORN_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ORR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ORR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ORR_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void PKH(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void POP(ARMv7Thread* thr, const ARMv7_encoding type);
+	void PUSH(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void QADD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QASX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QDADD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QDSUB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QSAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QSUB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QSUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void QSUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void RBIT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void REV(ARMv7Thread* thr, const ARMv7_encoding type);
+	void REV16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void REVSH(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void ROR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void ROR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void RRX(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void RSB_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void RSB_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void RSB_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void RSC_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void RSC_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void RSC_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SASX(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SBC_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SBC_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SBC_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SBFX(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SDIV(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SEL(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SHADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SHADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SHASX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SHSAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SHSUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SHSUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SMLA__(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLAD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLAL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLAL__(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLALD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLAW_(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLSD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMLSLD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMMLA(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMMLS(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMMUL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMUAD(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMUL__(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMULL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMULW_(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SMUSD(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SSAT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SSAT16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SSAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SSUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SSUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void STM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STMDA(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STMDB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STMIB(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void STR_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STR_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void STRB_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STRB_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void STRD_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STRD_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void STRH_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void STRH_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SUB_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SUB_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SUB_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SUB_SPI(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SUB_SPR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SVC(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void SXTAB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SXTAB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SXTAH(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SXTB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SXTB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void SXTH(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void TB_(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void TEQ_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void TEQ_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void TEQ_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void TST_IMM(ARMv7Thread* thr, const ARMv7_encoding type);
+	void TST_REG(ARMv7Thread* thr, const ARMv7_encoding type);
+	void TST_RSR(ARMv7Thread* thr, const ARMv7_encoding type);
+
+	void UADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UASX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UBFX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UDIV(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHASX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHSAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHSUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UHSUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UMAAL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UMLAL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UMULL(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQADD16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQADD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQASX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQSAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQSUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UQSUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USAD8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USADA8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USAT(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USAT16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USAX(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USUB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void USUB8(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTAB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTAB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTAH(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTB(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTB16(ARMv7Thread* thr, const ARMv7_encoding type);
+	void UXTH(ARMv7Thread* thr, const ARMv7_encoding type);
 };
+
+
+// old instructions table for debugging and information, delete this later
+using namespace ARMv7_instrs;
+
+struct ARMv7_opcode_t
+{
+	u32 mask;
+	u32 code;
+	u32 length; // 2 or 4
+	const char* name;
+	ARMv7_encoding type;
+	void(*func)(ARMv7Thread* thr, const ARMv7_encoding type);
+};
+
+// single 16-bit value
+#define ARMv7_OP2(mask, code, type, name) { (u32)((mask) << 16), (u32)((code) << 16), 2, #name "_" #type, type, name }
+// two 16-bit values
+#define ARMv7_OP4(mask0, mask1, code0, code1, type, name) { (u32)((mask0) << 16) | (mask1), (u32)((code0) << 16) | (code1), 4, #name "_" #type, type, name }
+
+static const ARMv7_opcode_t ARMv7_opcode_table[] =
+{
+	ARMv7_OP2(0xffff, 0x0000, T1, NULL_OP), // ???
+
+	ARMv7_OP4(0xffff, 0x0000, 0xf870, 0x0000, T1, HACK), // "Undefined" Thumb opcode
+	ARMv7_OP4(0x0ff0, 0x00f0, 0x0070, 0x0090, A1, HACK), // "Undefined" ARM opcode
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf140, 0x0000, T1, ADC_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x02a0, 0x0000, A1, ADC_IMM),
+	ARMv7_OP2(0xffc0, 0x4040, T1, ADC_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeb40, 0x0000, T2, ADC_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x00a0, 0x0000, A1, ADC_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x00a0, 0x0010, A1, ADC_RSR),
+
+	ARMv7_OP2(0xf800, 0xa800, T1, ADD_SPI),
+	ARMv7_OP2(0xff80, 0xb000, T2, ADD_SPI),
+	ARMv7_OP4(0xfbef, 0x8000, 0xf10d, 0x0000, T3, ADD_SPI),
+	ARMv7_OP4(0xfbff, 0x8000, 0xf20d, 0x0000, T4, ADD_SPI),
+	ARMv7_OP4(0x0fef, 0x0000, 0x028d, 0x0000, A1, ADD_SPI),
+	ARMv7_OP2(0xff78, 0x4468, T1, ADD_SPR),
+	ARMv7_OP2(0xff87, 0x4485, T2, ADD_SPR),
+	ARMv7_OP4(0xffef, 0x8000, 0xeb0d, 0x0000, T3, ADD_SPR),
+	ARMv7_OP4(0x0fef, 0x0010, 0x008d, 0x0000, A1, ADD_SPR),
+	ARMv7_OP2(0xfe00, 0x1c00, T1, ADD_IMM),
+	ARMv7_OP2(0xf800, 0x3000, T2, ADD_IMM),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf200, 0x0000, T4, ADD_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0280, 0x0000, A1, ADD_IMM),
+	ARMv7_OP2(0xfe00, 0x1800, T1, ADD_REG),
+	ARMv7_OP2(0xff00, 0x4400, T2, ADD_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeb00, 0x0000, T3, ADD_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0080, 0x0000, A1, ADD_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0080, 0x0010, A1, ADD_RSR),
+
+	ARMv7_OP2(0xf800, 0xa000, T1, ADR),
+	ARMv7_OP4(0xfbff, 0x8000, 0xf2af, 0x0000, T2, ADR),
+	ARMv7_OP4(0xfbff, 0x8000, 0xf20f, 0x0000, T3, ADR),
+	ARMv7_OP4(0x0fff, 0x0000, 0x028f, 0x0000, A1, ADR),
+	ARMv7_OP4(0x0fff, 0x0000, 0x024f, 0x0000, A2, ADR),
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf000, 0x0000, T1, AND_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0200, 0x0000, A1, AND_IMM),
+	ARMv7_OP2(0xffc0, 0x4000, T1, AND_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xea00, 0x0000, T2, AND_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0000, 0x0000, A1, AND_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0000, 0x0010, A1, AND_RSR),
+
+	ARMv7_OP2(0xf800, 0x1000, T1, ASR_IMM),
+	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0020, T2, ASR_IMM),
+	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0040, A1, ASR_IMM),
+	ARMv7_OP2(0xffc0, 0x4100, T1, ASR_REG),
+	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa40, 0xf000, T2, ASR_REG),
+	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0050, A1, ASR_REG),
+
+	ARMv7_OP2(0xf000, 0xd000, T1, B),
+	ARMv7_OP2(0xf800, 0xe000, T2, B),
+	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0x8000, T3, B),
+	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0x9000, T4, B),
+	ARMv7_OP4(0x0f00, 0x0000, 0x0a00, 0x0000, A1, B),
+
+	ARMv7_OP4(0xffff, 0x8020, 0xf36f, 0x0000, T1, BFC),
+	ARMv7_OP4(0x0fe0, 0x007f, 0x07c0, 0x001f, A1, BFC),
+	ARMv7_OP4(0xfff0, 0x8020, 0xf360, 0x0000, T1, BFI),
+	ARMv7_OP4(0x0fe0, 0x0070, 0x07c0, 0x0010, A1, BFI),
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf020, 0x0000, T1, BIC_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x03c0, 0x0000, A1, BIC_IMM),
+	ARMv7_OP2(0xffc0, 0x4380, T1, BIC_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xea20, 0x0000, T2, BIC_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x01c0, 0x0000, A1, BIC_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x01c0, 0x0010, A1, BIC_RSR),
+
+	ARMv7_OP2(0xff00, 0xbe00, T1, BKPT),
+	ARMv7_OP4(0x0ff0, 0x00f0, 0x0120, 0x0070, A1, BKPT),
+
+	ARMv7_OP4(0xf800, 0xd000, 0xf000, 0xd000, T1, BL),
+	ARMv7_OP4(0x0f00, 0x0000, 0x0b00, 0x0000, A1, BL),
+	ARMv7_OP2(0xff80, 0x4780, T1, BLX),
+	ARMv7_OP4(0xf800, 0xc001, 0xf000, 0xc000, T2, BLX),
+	ARMv7_OP4(0x0fff, 0xfff0, 0x012f, 0xff30, A1, BLX),
+	ARMv7_OP4(0xfe00, 0x0000, 0xfa00, 0x0000, A2, BLX),
+
+	ARMv7_OP2(0xff87, 0x4700, T1, BX),
+	ARMv7_OP4(0x0fff, 0xfff0, 0x012f, 0xff10, A1, BX),
+
+	ARMv7_OP2(0xf500, 0xb100, T1, CB_Z),
+
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfab0, 0xf080, T1, CLZ),
+	ARMv7_OP4(0x0fff, 0x0ff0, 0x016f, 0x0f10, A1, CLZ),
+
+	ARMv7_OP4(0xfbf0, 0x8f00, 0xf110, 0x0f00, T1, CMN_IMM),
+	ARMv7_OP4(0x0ff0, 0xf000, 0x0370, 0x0000, A1, CMN_IMM),
+	ARMv7_OP2(0xffc0, 0x42c0, T1, CMN_REG),
+	ARMv7_OP4(0xfff0, 0x8f00, 0xeb10, 0x0f00, T2, CMN_REG),
+	ARMv7_OP4(0x0ff0, 0xf010, 0x0170, 0x0000, A1, CMN_REG),
+	ARMv7_OP4(0x0ff0, 0xf090, 0x0170, 0x0010, A1, CMN_RSR),
+
+	ARMv7_OP2(0xf800, 0x2800, T1, CMP_IMM),
+	ARMv7_OP4(0xfbf0, 0x8f00, 0xf1b0, 0x0f00, T2, CMP_IMM),
+	ARMv7_OP4(0x0ff0, 0xf000, 0x0350, 0x0000, A1, CMP_IMM),
+	ARMv7_OP2(0xffc0, 0x4280, T1, CMP_REG),
+	ARMv7_OP2(0xff00, 0x4500, T2, CMP_REG),
+	ARMv7_OP4(0xfff0, 0x8f00, 0xebb0, 0x0f00, T3, CMP_REG),
+	ARMv7_OP4(0x0ff0, 0xf010, 0x0150, 0x0000, A1, CMP_REG),
+	ARMv7_OP4(0x0ff0, 0xf090, 0x0150, 0x0010, A1, CMP_RSR),
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf080, 0x0000, T1, EOR_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0220, 0x0000, A1, EOR_IMM),
+	ARMv7_OP2(0xffc0, 0x4040, T1, EOR_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xea80, 0x0000, T2, EOR_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0020, 0x0000, A1, EOR_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0020, 0x0010, A1, EOR_RSR),
+
+	ARMv7_OP2(0xff00, 0xbf00, T1, IT),
+
+	ARMv7_OP2(0xf800, 0xc800, T1, LDM),
+	ARMv7_OP4(0xffd0, 0x2000, 0xe890, 0x0000, T2, LDM),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0890, 0x0000, A1, LDM),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0810, 0x0000, A1, LDMDA),
+	ARMv7_OP4(0xffd0, 0x2000, 0xe910, 0x0000, T1, LDMDB),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0910, 0x0000, A1, LDMDB),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0990, 0x0000, A1, LDMIB),
+
+	ARMv7_OP2(0xf800, 0x6800, T1, LDR_IMM),
+	ARMv7_OP2(0xf800, 0x9800, T2, LDR_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf8d0, 0x0000, T3, LDR_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf850, 0x0800, T4, LDR_IMM),
+	ARMv7_OP4(0x0e50, 0x0000, 0x0410, 0x0000, A1, LDR_IMM),
+	ARMv7_OP2(0xf800, 0x4800, T1, LDR_LIT),
+	ARMv7_OP4(0xff7f, 0x0000, 0xf85f, 0x0000, T2, LDR_LIT),
+	ARMv7_OP4(0x0f7f, 0x0000, 0x051f, 0x0000, A1, LDR_LIT),
+	ARMv7_OP2(0xfe00, 0x5800, T1, LDR_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf850, 0x0000, T2, LDR_REG),
+	ARMv7_OP4(0x0e50, 0x0010, 0x0610, 0x0000, A1, LDR_REG),
+
+	ARMv7_OP2(0xf800, 0x7800, T1, LDRB_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf890, 0x0000, T2, LDRB_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf810, 0x0800, T3, LDRB_IMM),
+	ARMv7_OP4(0x0e50, 0x0000, 0x0450, 0x0000, A1, LDRB_IMM),
+	ARMv7_OP4(0xff7f, 0x0000, 0xf81f, 0x0000, T1, LDRB_LIT),
+	ARMv7_OP4(0x0f7f, 0x0000, 0x055f, 0x0000, A1, LDRB_LIT),
+	ARMv7_OP2(0xfe00, 0x5c00, T1, LDRB_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf810, 0x0000, T2, LDRB_REG),
+	ARMv7_OP4(0x0e50, 0x0010, 0x0650, 0x0000, A1, LDRB_REG),
+
+	ARMv7_OP4(0xfe50, 0x0000, 0xe850, 0x0000, T1, LDRD_IMM),
+	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00d0, A1, LDRD_IMM),
+	ARMv7_OP4(0xfe7f, 0x0000, 0xe85f, 0x0000, T1, LDRD_LIT),
+	ARMv7_OP4(0x0f7f, 0x00f0, 0x014f, 0x00d0, A1, LDRD_LIT),
+	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00d0, A1, LDRD_REG),
+
+	ARMv7_OP4(0xfff0, 0x0000, 0xf990, 0x0000, T1, LDRSB_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf910, 0x0800, T2, LDRSB_IMM),
+	ARMv7_OP4(0x0e50, 0x00f0, 0x0050, 0x00d0, A1, LDRSB_IMM),
+	ARMv7_OP4(0xff7f, 0x0000, 0xf91f, 0x0000, T1, LDRSB_LIT),
+	ARMv7_OP4(0x0f7f, 0x00f0, 0x015f, 0x00d0, A1, LDRSB_LIT),
+	ARMv7_OP2(0xfe00, 0x5600, T1, LDRSB_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf910, 0x0000, T2, LDRSB_REG),
+	ARMv7_OP4(0x0e50, 0x0ff0, 0x0010, 0x00d0, A1, LDRSB_REG),
+
+	ARMv7_OP4(0xfff0, 0x0000, 0xf9b0, 0x0000, T1, LDRSH_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf930, 0x0800, T2, LDRSH_IMM),
+	ARMv7_OP4(0x0e50, 0x00f0, 0x0050, 0x00f0, A1, LDRSH_IMM),
+	ARMv7_OP4(0xff7f, 0x0000, 0xf93f, 0x0000, T1, LDRSH_LIT),
+	ARMv7_OP4(0x0f7f, 0x00f0, 0x015f, 0x00f0, A1, LDRSH_LIT),
+	ARMv7_OP2(0xfe00, 0x5e00, T1, LDRSH_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf930, 0x0000, T2, LDRSH_REG),
+	ARMv7_OP4(0x0e50, 0x0ff0, 0x0010, 0x00f0, A1, LDRSH_REG),
+
+	ARMv7_OP2(0xf800, 0x0000, T1, LSL_IMM),
+	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0000, T2, LSL_IMM),
+	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0000, A1, LSL_IMM),
+	ARMv7_OP2(0xffc0, 0x4080, T1, LSL_REG),
+	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa00, 0xf000, T2, LSL_REG),
+	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0010, A1, LSL_REG),
+
+	ARMv7_OP2(0xf800, 0x0800, T1, LSR_IMM),
+	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0010, T2, LSR_IMM),
+	ARMv7_OP4(0x0fef, 0x0030, 0x01a0, 0x0020, A1, LSR_IMM),
+	ARMv7_OP2(0xffc0, 0x40c0, T1, LSR_REG),
+	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa20, 0xf000, T2, LSR_REG),
+	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0030, A1, LSR_REG),
+
+	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0000, T1, MLA),
+	ARMv7_OP4(0x0fe0, 0x00f0, 0x0020, 0x0090, A1, MLA),
+
+	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0010, T1, MLS),
+	ARMv7_OP4(0x0ff0, 0x00f0, 0x0060, 0x0090, A1, MLS),
+
+	ARMv7_OP2(0xf800, 0x2000, T1, MOV_IMM),
+	ARMv7_OP4(0xfbef, 0x8000, 0xf04f, 0x0000, T2, MOV_IMM),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf240, 0x0000, T3, MOV_IMM),
+	ARMv7_OP4(0x0fef, 0x0000, 0x03a0, 0x0000, A1, MOV_IMM),
+	ARMv7_OP4(0x0ff0, 0x0000, 0x0300, 0x0000, A2, MOV_IMM),
+	ARMv7_OP2(0xff00, 0x4600, T1, MOV_REG),
+	ARMv7_OP2(0xffc0, 0x0000, T2, MOV_REG),
+	ARMv7_OP4(0xffef, 0xf0f0, 0xea4f, 0x0000, T3, MOV_REG),
+	ARMv7_OP4(0x0fef, 0x0ff0, 0x01a0, 0x0000, A1, MOV_REG),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf2c0, 0x0000, T1, MOVT),
+	ARMv7_OP4(0x0ff0, 0x0000, 0x0340, 0x0000, A1, MOVT),
+
+	ARMv7_OP4(0xffff, 0xf0ff, 0xf3ef, 0x8000, T1, MRS),
+	ARMv7_OP4(0x0fff, 0x0fff, 0x010f, 0x0000, A1, MRS),
+	ARMv7_OP4(0x0ff3, 0xf000, 0x0320, 0xf000, A1, MSR_IMM),
+	ARMv7_OP4(0xfff0, 0xf3ff, 0xf380, 0x8000, T1, MSR_REG),
+	ARMv7_OP4(0x0ff3, 0xfff0, 0x0120, 0xf000, A1, MSR_REG),
+
+	ARMv7_OP2(0xffc0, 0x4340, T1, MUL),
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfb00, 0xf000, T2, MUL),
+	ARMv7_OP4(0x0fe0, 0xf0f0, 0x0000, 0x0090, A1, MUL),
+
+	ARMv7_OP4(0xfbef, 0x8000, 0xf06f, 0x0000, T1, MVN_IMM),
+	ARMv7_OP4(0x0fef, 0x0000, 0x03e0, 0x0000, A1, MVN_IMM),
+	ARMv7_OP2(0xffc0, 0x43c0, T1, MVN_REG),
+	ARMv7_OP4(0xffef, 0x8000, 0xea6f, 0x0000, T2, MVN_REG),
+	ARMv7_OP4(0xffef, 0x0010, 0x01e0, 0x0000, A1, MVN_REG),
+	ARMv7_OP4(0x0fef, 0x0090, 0x01e0, 0x0010, A1, MVN_RSR),
+
+	ARMv7_OP2(0xffff, 0xbf00, T1, NOP),
+	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8000, T2, NOP),
+	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf000, A1, NOP),
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf060, 0x0000, T1, ORN_IMM),
+	ARMv7_OP4(0xffe0, 0x8000, 0xea60, 0x0000, T1, ORN_REG),
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf040, 0x0000, T1, ORR_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0380, 0x0000, A1, ORR_IMM),
+	ARMv7_OP2(0xffc0, 0x4300, T1, ORR_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xea40, 0x0000, T2, ORR_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0180, 0x0000, A1, ORR_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0180, 0x0010, A1, ORR_RSR),
+
+	ARMv7_OP4(0xfff0, 0x8010, 0xeac0, 0x0000, T1, PKH),
+	ARMv7_OP4(0x0ff0, 0x0030, 0x0680, 0x0010, A1, PKH),
+
+	ARMv7_OP2(0xfe00, 0xbc00, T1, POP),
+	ARMv7_OP4(0xffff, 0x0000, 0xe8bd, 0x0000, T2, POP),
+	ARMv7_OP4(0xffff, 0x0fff, 0xf85d, 0x0b04, T3, POP),
+	ARMv7_OP4(0x0fff, 0x0000, 0x08bd, 0x0000, A1, POP),
+	ARMv7_OP4(0x0fff, 0x0fff, 0x049d, 0x0004, A2, POP),
+
+	ARMv7_OP2(0xfe00, 0xb400, T1, PUSH),
+	ARMv7_OP4(0xffff, 0x0000, 0xe92d, 0x0000, T2, PUSH), // had an error in arch ref
+	ARMv7_OP4(0xffff, 0x0fff, 0xf84d, 0x0d04, T3, PUSH),
+	ARMv7_OP4(0x0fff, 0x0000, 0x092d, 0x0000, A1, PUSH),
+	ARMv7_OP4(0x0fff, 0x0fff, 0x052d, 0x0004, A2, PUSH),
+
+	// TODO (Q*...)
+
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf0a0, T1, RBIT),
+	ARMv7_OP4(0x0fff, 0x0ff0, 0x06ff, 0x0f30, A1, RBIT),
+
+	ARMv7_OP2(0xffc0, 0xba00, T1, REV),
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf080, T2, REV),
+	ARMv7_OP4(0x0fff, 0x0ff0, 0x06bf, 0x0f30, A1, REV),
+	ARMv7_OP2(0xffc0, 0xba40, T1, REV16),
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf090, T2, REV16),
+	ARMv7_OP4(0x0fff, 0x0ff0, 0x06bf, 0x0fb0, A1, REV16),
+	ARMv7_OP2(0xffc0, 0xbac0, T1, REVSH),
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfa90, 0xf0b0, T2, REVSH),
+	ARMv7_OP4(0x0fff, 0x0ff0, 0x06ff, 0x0fb0, A1, REVSH),
+
+	ARMv7_OP4(0xffef, 0x8030, 0xea4f, 0x0030, T1, ROR_IMM),
+	ARMv7_OP4(0x0fef, 0x0070, 0x01a0, 0x0060, A1, ROR_IMM),
+	ARMv7_OP2(0xffc0, 0x41c0, T1, ROR_REG),
+	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa60, 0xf000, T2, ROR_REG),
+	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0070, A1, ROR_REG),
+	ARMv7_OP4(0xffef, 0xf0f0, 0xea4f, 0x0030, T1, RRX),
+	ARMv7_OP4(0x0fef, 0x0ff0, 0x01a0, 0x0060, A1, RRX),
+
+	ARMv7_OP2(0xffc0, 0x4240, T1, RSB_IMM),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf1c0, 0x0000, T2, RSB_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0260, 0x0000, A1, RSB_IMM),
+	ARMv7_OP4(0xffe0, 0x8000, 0xebc0, 0x0000, T1, RSB_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0060, 0x0000, A1, RSB_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0060, 0x0010, A1, RSB_RSR),
+
+	ARMv7_OP4(0x0fe0, 0x0000, 0x02e0, 0x0000, A1, RSC_IMM),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x00e0, 0x0000, A1, RSC_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x00e0, 0x0010, A1, RSC_RSR),
+
+	// TODO (SADD16, SADD8, SASX)
+
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf160, 0x0000, T1, SBC_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x02c0, 0x0000, A1, SBC_IMM),
+	ARMv7_OP2(0xffc0, 0x4180, T1, SBC_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeb60, 0x0000, T2, SBC_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x00c0, 0x0000, A1, SBC_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x00c0, 0x0010, A1, SBC_RSR),
+
+	ARMv7_OP4(0xfff0, 0x8020, 0xf340, 0x0000, T1, SBFX),
+	ARMv7_OP4(0x0fe0, 0x0070, 0x07a0, 0x0050, A1, SBFX),
+
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfb90, 0xf0f0, T1, SDIV), // ???
+
+	ARMv7_OP4(0xfff0, 0xf0f0, 0xfaa0, 0xf080, T1, SEL),
+	ARMv7_OP4(0x0ff0, 0x0ff0, 0x0680, 0x0fb0, A1, SEL),
+
+	// TODO (SH*, SM*, SS*)
+
+	ARMv7_OP2(0xf800, 0xc000, T1, STM),
+	ARMv7_OP4(0xffd0, 0xa000, 0xe880, 0x0000, T2, STM),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0880, 0x0000, A1, STM),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0800, 0x0000, A1, STMDA),
+	ARMv7_OP4(0xffd0, 0xa000, 0xe900, 0x0000, T1, STMDB),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0900, 0x0000, A1, STMDB),
+	ARMv7_OP4(0x0fd0, 0x0000, 0x0980, 0x0000, A1, STMIB),
+
+	ARMv7_OP2(0xf800, 0x6000, T1, STR_IMM),
+	ARMv7_OP2(0xf800, 0x9000, T2, STR_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf8c0, 0x0000, T3, STR_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf840, 0x0800, T4, STR_IMM),
+	ARMv7_OP4(0x0e50, 0x0000, 0x0400, 0x0000, A1, STR_IMM),
+	ARMv7_OP2(0xfe00, 0x5000, T1, STR_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf840, 0x0000, T2, STR_REG),
+	ARMv7_OP4(0x0e50, 0x0010, 0x0600, 0x0000, A1, STR_REG),
+
+	ARMv7_OP2(0xf800, 0x7000, T1, STRB_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf880, 0x0000, T2, STRB_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf800, 0x0800, T3, STRB_IMM),
+	ARMv7_OP4(0x0e50, 0x0000, 0x0440, 0x0000, A1, STRB_IMM),
+	ARMv7_OP2(0xfe00, 0x5400, T1, STRB_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf800, 0x0000, T2, STRB_REG),
+	ARMv7_OP4(0x0e50, 0x0010, 0x0640, 0x0000, A1, STRB_REG),
+
+	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM),
+	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00f0, A1, STRD_IMM),
+	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00f0, A1, STRD_REG),
+
+	ARMv7_OP2(0xf800, 0x8000, T1, STRH_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf8a0, 0x0000, T2, STRH_IMM),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf820, 0x0800, T3, STRH_IMM),
+	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00b0, A1, STRH_IMM),
+	ARMv7_OP2(0xfe00, 0x5200, T1, STRH_REG),
+	ARMv7_OP4(0xfff0, 0x0fc0, 0xf820, 0x0000, T2, STRH_REG),
+	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00b0, A1, STRH_REG),
+
+	ARMv7_OP2(0xff80, 0xb080, T1, SUB_SPI),
+	ARMv7_OP4(0xfbef, 0x8000, 0xf1ad, 0x0000, T2, SUB_SPI),
+	ARMv7_OP4(0xfbff, 0x8000, 0xf2ad, 0x0000, T3, SUB_SPI),
+	ARMv7_OP4(0x0fef, 0x0000, 0x024d, 0x0000, A1, SUB_SPI),
+	ARMv7_OP4(0xffef, 0x8000, 0xebad, 0x0000, T1, SUB_SPR),
+	ARMv7_OP4(0x0fef, 0x0010, 0x004d, 0x0000, A1, SUB_SPR),
+	ARMv7_OP2(0xfe00, 0x1e00, T1, SUB_IMM),
+	ARMv7_OP2(0xf800, 0x3800, T2, SUB_IMM),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf2a0, 0x0000, T4, SUB_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0240, 0x0000, A1, SUB_IMM),
+	ARMv7_OP2(0xfe00, 0x1a00, T1, SUB_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0040, 0x0000, A1, SUB_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0040, 0x0010, A1, SUB_RSR),
+
+	ARMv7_OP2(0xff00, 0xdf00, T1, SVC),
+	ARMv7_OP4(0x0f00, 0x0000, 0x0f00, 0x0000, A1, SVC),
+
+	// TODO (SX*)
+
+	ARMv7_OP4(0xfff0, 0xffe0, 0xe8d0, 0xf000, T1, TB_),
+
+	ARMv7_OP4(0xfbf0, 0x8f00, 0xf090, 0x0f00, T1, TEQ_IMM),
+	ARMv7_OP4(0x0ff0, 0xf000, 0x0330, 0x0000, A1, TEQ_IMM),
+	ARMv7_OP4(0xfff0, 0x8f00, 0xea90, 0x0f00, T1, TEQ_REG),
+	ARMv7_OP4(0x0ff0, 0xf010, 0x0130, 0x0000, A1, TEQ_REG),
+	ARMv7_OP4(0x0ff0, 0xf090, 0x0130, 0x0010, A1, TEQ_RSR),
+
+	ARMv7_OP4(0xfbf0, 0x8f00, 0xf010, 0x0f00, T1, TST_IMM),
+	ARMv7_OP4(0x0ff0, 0xf000, 0x0310, 0x0000, A1, TST_IMM),
+	ARMv7_OP2(0xffc0, 0x4200, T1, TST_REG),
+	ARMv7_OP4(0xfff0, 0x8f00, 0xea10, 0x0f00, T2, TST_REG),
+	ARMv7_OP4(0x0ff0, 0xf010, 0x0110, 0x0000, A1, TST_REG),
+	ARMv7_OP4(0x0ff0, 0xf090, 0x0110, 0x0010, A1, TST_RSR)
+
+	// TODO (U*, V*)
+};
+
+#undef ARMv7_OP2
+#undef ARMv7_OP4

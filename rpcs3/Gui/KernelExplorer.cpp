@@ -118,7 +118,6 @@ void KernelExplorer::Update()
 		const auto& node = m_tree->AppendItem(root, name);
 		const auto& objects = Emu.GetIdManager().GetTypeIDs(TYPE_LWCOND);
 
-		u32 index = 0;
 		for (const auto& id : objects)
 		{
 			sprintf(name, "LW Condition Variable: ID = 0x%08x '%s'", id, Emu.GetSyncPrimManager().GetSyncPrimName(TYPE_LWCOND, id).c_str());
