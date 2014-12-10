@@ -130,6 +130,17 @@ enum TaskConstants
 	CELL_SPURS_TASK_TOP = 0x3000,
 	CELL_SPURS_TASK_BOTTOM = 0x40000,
 	CELL_SPURS_MAX_TASK_NAME_LENGTH = 32,
+	CELL_SPURS_TASK_ATTRIBUTE_REVISION = 1,
+	CELL_SPURS_TASK_ATTRIBUTE_SIZE = 256,
+	CELL_SPURS_TASKSET_SIZE = 6400,
+	CELL_SPURS_TASKSET_ALIGN = 128,
+	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION = 1,
+	CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN = 8,
+	CELL_SPURS_TASKSET_ATTRIBUTE_SIZE = 512,
+	CELL_SPURS_TASKSET2_SIZE = 10496,
+	CELL_SPURS_TASKSET2_ALIGN = 128,
+	CELL_SPURS_TASKSET_ATTRIBUTE2_ALIGN = 8,
+	CELL_SPURS_TASKSET_ATTRIBUTE2_SIZE = 512,
 };
 
 class SPURSManager;
@@ -529,6 +540,18 @@ struct CellSpursTasksetInfo
 struct CellSpursTaskset2
 {
 	be_t<u8> skip[10496];
+};
+
+struct CellSpursTasksetAttribute
+{
+	be_t<u32> revision;
+	be_t<u32> sdk_version;
+	be_t<u64> args;
+	u8 priority[8];
+	be_t<u32> max_contention;
+	be_t<u32> name;
+	be_t<u32> taskset_size;
+	be_t<u32> enable_clear_ls;
 };
 
 struct CellSpursTasksetAttribute2
