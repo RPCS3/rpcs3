@@ -494,11 +494,11 @@ u32 vdecOpen(VideoDecoder* data)
 							{
 								switch ((u64)vdec.ctx->time_base.den + (u64)(vdec.ctx->ticks_per_frame - 1) * 0x100000000ull)
 								{
-								case 24: case 48 + 0x100000000: frame.frc = CELL_VDEC_FRC_24; break;
-								case 25: case 50 + 0x100000000: frame.frc = CELL_VDEC_FRC_25; break;
-								case 30: case 60 + 0x100000000: frame.frc = CELL_VDEC_FRC_30; break;
-								case 50: case 100 + 0x100000000: frame.frc = CELL_VDEC_FRC_50; break;
-								case 60: case 120 + 0x100000000: frame.frc = CELL_VDEC_FRC_60; break;
+								case 24: case 0x100000000ull + 48: frame.frc = CELL_VDEC_FRC_24; break;
+								case 25: case 0x100000000ull + 50: frame.frc = CELL_VDEC_FRC_25; break;
+								case 30: case 0x100000000ull + 60: frame.frc = CELL_VDEC_FRC_30; break;
+								case 50: case 0x100000000ull + 100: frame.frc = CELL_VDEC_FRC_50; break;
+								case 60: case 0x100000000ull + 120: frame.frc = CELL_VDEC_FRC_60; break;
 								default:
 								{
 									cellVdec->Error("vdecDecodeAu: unsupported time_base.den (%d/1, tpf=%d)", vdec.ctx->time_base.den, vdec.ctx->ticks_per_frame);
@@ -553,7 +553,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 			case vdecSetFrameRate:
 			{
-				cellVdec->Error("vdecSetFrameRate(0x%x)", task.frc);
+				cellVdec->Warning("vdecSetFrameRate(0x%x)", task.frc);
 				vdec.frc_set = task.frc;
 				break;
 			}
