@@ -85,7 +85,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
 					m_static_funcs_list[j]->found++;
 					data[i+0] = re32(0x39600000 | j); // li r11, j
-					data[i+1] = se32(0x44000003); // sc 3
+					data[i+1] = se32(0x44000042); // sc 2
 					data[i+2] = se32(0x4e800020); // blr
 					i += 2; // skip modified code
 				}

@@ -1995,20 +1995,20 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
 }
 
-void Compiler::SC(u32 sc_code) {
-    switch (sc_code) {
-    case 2:
+void Compiler::SC(u32 lev) {
+    switch (lev) {
+    case 0:
         Call<void>("SysCalls.DoSyscall", SysCalls::DoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
         break;
-    case 3:
+    case 2:
         Call<void>("StaticFuncManager.StaticExecute", &StaticFuncManager::StaticExecute,
                    m_ir_builder->getInt64((u64)&Emu.GetSFuncManager()), m_state.args[CompileTaskState::Args::State], GetGpr(11, 32));
         break;
-    case 4:
+    case 3:
         Call<void>("PPUThread.FastStop", &PPUThread::FastStop, m_state.args[CompileTaskState::Args::State]);
         break;
     default:
-        CompilationError(fmt::Format("SC %u", sc_code));
+        CompilationError(fmt::Format("SC %u", lev));
         break;
     }
 }

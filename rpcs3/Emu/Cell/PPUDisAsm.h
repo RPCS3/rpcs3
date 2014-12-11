@@ -1030,14 +1030,13 @@ private:
 		
 		Write(fmt::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
-	void SC(u32 sc_code)
+	void SC(u32 lev)
 	{
-		switch(sc_code)
+		switch (lev)
 		{
-		case 0x1: Write("HyperCall"); break;
-		case 0x2: Write("sc"); break;
-		case 0x22: Write("HyperCall LV1"); break;
-		default: Write(fmt::Format("Unknown sc: 0x%x", sc_code));
+		case 0x0: Write("sc"); break;
+		case 0x1: Write("HyperCall LV1"); break;
+		default: Write(fmt::Format("Unknown sc: 0x%x", lev));
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
