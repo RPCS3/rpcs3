@@ -196,10 +196,15 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 			CellSaveDataFileStat fileEntry;
 			vfsFile file(saveDir + "/" + dirEntry->name);
 
-			if (dirEntry->name == "ICON0.PNG") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-			if (dirEntry->name == "ICON1.PAM") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-			if (dirEntry->name == "PIC1.PNG")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-			if (dirEntry->name == "SND0.AT3")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+			if (dirEntry->name == "ICON0.PNG")
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+			else if (dirEntry->name == "ICON1.PAM")
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+			else if (dirEntry->name == "PIC1.PNG") 
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+			else if (dirEntry->name == "SND0.AT3") 
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+
 			fileEntry.st_size = file.GetSize();
 			fileEntry.st_atime_ = 0; // TODO ?
 			fileEntry.st_mtime_ = 0; // TODO ?
@@ -210,8 +215,10 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		}
 	}
 
+	// TODO: Fix the crash
+	// statGet's fileList doesn't seem to be initiliazed properly, when called by cellSaveDataAutoSave2, thus causing a crash during memcpy.
 	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(be_t<u32>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
-	for (u32 i=0; i<fileEntries.size(); i++)
+	for (u32 i = 0; i < fileEntries.size(); i++)
 		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
 }
 
@@ -637,7 +644,9 @@ int cellSaveDataAutoSave2(u32 version, vm::ptr<const char> dirName, u32 errDialo
 	result->userdata = userdata;
 	funcStat(result, statGet, statSet);
 
-	Memory.Free(statGet->fileList.addr());
+	if (statGet->fileList)
+		Memory.Free(statGet->fileList.addr());
+
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataAutoSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;
