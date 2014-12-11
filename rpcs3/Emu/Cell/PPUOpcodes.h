@@ -628,7 +628,7 @@ public:
 	virtual void ADDI(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void ADDIS(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) = 0;
-	virtual void SC(u32 sc_code) = 0;
+	virtual void SC(u32 lev) = 0;
 	virtual void B(s32 ll, u32 aa, u32 lk) = 0;
 	virtual void MCRF(u32 crfd, u32 crfs) = 0;
 	virtual void BCLR(u32 bo, u32 bi, u32 bh, u32 lk) = 0;

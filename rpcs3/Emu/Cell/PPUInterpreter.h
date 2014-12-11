@@ -2164,13 +2164,13 @@ private:
 			if(lk) CPU.LR = nextLR;
 		}
 	}
-	void SC(u32 sc_code)
+	void SC(u32 lev)
 	{
-		switch(sc_code)
+		switch (lev)
 		{
-		case 0x1: UNK(fmt::Format("HyperCall %d", CPU.GPR[0])); break;
-		case 0x2: SysCall(); break;
-		case 0x3:
+		case 0x0: SysCall(); break;
+		case 0x1: UNK("HyperCall LV1"); break;
+		case 0x2:
 			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
 			{
@@ -2178,9 +2178,8 @@ private:
 					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
 			}
 			break;
-		case 0x4: CPU.FastStop(); break;
-		case 0x22: UNK("HyperCall LV1"); break;
-		default: UNK(fmt::Format("Unknown sc: 0x%x", sc_code));
+		case 0x3: CPU.FastStop(); break;
+		default: UNK(fmt::Format("Unknown sc: 0x%x", lev)); break;
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
