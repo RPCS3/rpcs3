@@ -19,6 +19,8 @@ extern "C"
 
 Module *cellAdec = nullptr;
 
+#define ADEC_ERROR(...) { cellAdec->Error(__VA_ARGS__); Emu.Pause(); return; } // only for decoder thread
+
 AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 	: type(type)
 	, memAddr(addr)
@@ -58,38 +60,28 @@ AudioDecoder::AudioDecoder(AudioCodecType type, u32 addr, u32 size, vm::ptr<Cell
 	}
 	default:
 	{
-		cellAdec->Error("AudioDecoder(): unknown type (0x%x)", type);
-		Emu.Pause();
-		return;
+		ADEC_ERROR("AudioDecoder(): unknown type (0x%x)", type);
 	}
 	}
 	
 	if (!codec)
 	{
-		cellAdec->Error("AudioDecoder(): avcodec_find_decoder() failed");
-		Emu.Pause();
-		return;
+		ADEC_ERROR("AudioDecoder(): avcodec_find_decoder() failed");
 	}
 	if (!input_format)
 	{
-		cellAdec->Error("AudioDecoder(): av_find_input_format() failed");
-		Emu.Pause();
-		return;
+		ADEC_ERROR("AudioDecoder(): av_find_input_format() failed");
 	}
 	fmt = avformat_alloc_context();
 	if (!fmt)
 	{
-		cellAdec->Error("AudioDecoder(): avformat_alloc_context() failed");
-		Emu.Pause();
-		return;
+		ADEC_ERROR("AudioDecoder(): avformat_alloc_context() failed");
 	}
 	io_buf = (u8*)av_malloc(4096);
 	fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
 	if (!fmt->pb)
 	{
-		cellAdec->Error("AudioDecoder(): avio_alloc_context() failed");
-		Emu.Pause();
-		return;
+		ADEC_ERROR("AudioDecoder(): avio_alloc_context() failed");
 	}
 }
 
@@ -353,28 +345,16 @@ u32 adecOpen(AudioDecoder* data)
 					err = avformat_open_input(&adec.fmt, NULL, adec.input_format, &opts);
 					if (err || opts)
 					{
-						cellAdec->Error("adecDecodeAu: avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
-						Emu.Pause();
-						break;
+						ADEC_ERROR("adecDecodeAu: avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					//err = avformat_find_stream_info(adec.fmt, NULL);
-					//if (err)
+					//if (err || !adec.fmt->nb_streams)
 					//{
-					//	cellAdec->Error("adecDecodeAu: avformat_find_stream_info() failed");
-					//	Emu.Pause();
-					//	break;
-					//}
-					//if (!adec.fmt->nb_streams)
-					//{
-					//	cellAdec->Error("adecDecodeAu: no stream found");
-					//	Emu.Pause();
-					//	break;
+					//	ADEC_ERROR("adecDecodeAu: avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, adec.fmt->nb_streams);
 					//}
 					if (!avformat_new_stream(adec.fmt, adec.codec))
 					{
-						cellAdec->Error("adecDecodeAu: avformat_new_stream() failed");
-						Emu.Pause();
-						break;
+						ADEC_ERROR("adecDecodeAu: avformat_new_stream() failed");
 					}
 					adec.ctx = adec.fmt->streams[0]->codec; // TODO: check data
 
@@ -387,9 +367,7 @@ u32 adecOpen(AudioDecoder* data)
 					}
 					if (err || opts)
 					{
-						cellAdec->Error("adecDecodeAu: avcodec_open2() failed");
-						Emu.Pause();
-						break;
+						ADEC_ERROR("adecDecodeAu: avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					adec.just_started = false;
 				}
@@ -433,9 +411,7 @@ u32 adecOpen(AudioDecoder* data)
 
 					if (!frame.data)
 					{
-						cellAdec->Error("adecDecodeAu: av_frame_alloc() failed");
-						Emu.Pause();
-						break;
+						ADEC_ERROR("adecDecodeAu: av_frame_alloc() failed");
 					}
 
 					int got_frame = 0;
@@ -444,7 +420,7 @@ u32 adecOpen(AudioDecoder* data)
 
 					if (decode <= 0)
 					{
-						if (!last_frame && decode < 0)
+						if (decode < 0)
 						{
 							cellAdec->Error("adecDecodeAu: AU decoding error(0x%x)", decode);
 						}
@@ -469,9 +445,7 @@ u32 adecOpen(AudioDecoder* data)
 						case AV_SAMPLE_FMT_S16P: break;
 						default:
 						{
-							cellAdec->Error("adecDecodeAu: unsupported frame format(%d)", frame.data->format);
-							Emu.Pause();
-							break;
+							ADEC_ERROR("adecDecodeAu: unsupported frame format(%d)", frame.data->format);
 						}
 						}
 						frame.auAddr = task.au.addr;
@@ -494,13 +468,14 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			case adecClose: break;
+			case adecClose:
+			{
+				break;
+			}
 
 			default:
 			{
-				cellAdec->Error("Audio Decoder thread error: unknown task(%d)", task.type);
-				Emu.Pause();
-				return;
+				ADEC_ERROR("Audio Decoder thread error: unknown task(%d)", task.type);
 			}
 			}
 		}

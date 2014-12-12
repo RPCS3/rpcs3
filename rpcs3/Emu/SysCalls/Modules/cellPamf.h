@@ -141,6 +141,8 @@ struct CellCodecTimeStamp
 	be_t<u32> lower;
 };
 
+static const u64 CODEC_TS_INVALID = 0xffffffffffffffffull;
+
 // Entry point information
 struct CellPamfEp
 {
