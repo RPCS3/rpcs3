@@ -71,7 +71,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 		}
 		else
 		{
-			cellDmux->Notice("PesHeader(): unknown code (v=0x%x, size=%d, pos=%d)", v, size, pos - 1);
+			cellDmux->Warning("PesHeader(): unknown code (v=0x%x, size=%d, pos=%d)", v, size, pos - 1);
 			stream.skip(size - pos);
 			pos = size;
 			break;
@@ -493,7 +493,7 @@ u32 dmuxOpen(Demuxer* data)
 							
 							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
-							cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", ((be_t<u64>*)data)->ToLE(), frame_size);
+							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", ((be_t<u64>*)data)->ToLE(), frame_size);
 
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
