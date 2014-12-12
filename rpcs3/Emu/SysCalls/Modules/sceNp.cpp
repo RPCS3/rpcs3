@@ -112,7 +112,7 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	std::string enc_drm_path = drm_path.get_ptr();
 	std::string dec_drm_path = "/dev_hdd1/cache/" + drm_file_name;
 	std::string pf_str("00000001");  // TODO: Allow multiple profiles. Use default for now.
-	std::string rap_path("../dev_hdd0/home/" + pf_str + "/exdata/");
+	std::string rap_path("/dev_hdd0/home/" + pf_str + "/exdata/");
 
 	// Search dev_usb000 for a compatible RAP file. 
 	vfsDir *raps_dir = new vfsDir(rap_path);
