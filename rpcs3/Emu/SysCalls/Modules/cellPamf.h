@@ -141,6 +141,8 @@ struct CellCodecTimeStamp
 	be_t<u32> lower;
 };
 
+static const u64 CODEC_TS_INVALID = 0xffffffffffffffffull;
+
 // Entry point information
 struct CellPamfEp
 {
@@ -168,7 +170,8 @@ struct CellCodecEsFilterId
 };
 
 // AVC (MPEG4 AVC Video) Specific Information
-struct CellPamfAvcInfo {
+struct CellPamfAvcInfo
+{
 	u8 profileIdc;
 	u8 levelIdc;
 	u8 frameMbsOnlyFlag;
@@ -196,7 +199,8 @@ struct CellPamfAvcInfo {
 };
 
 // M2V (MPEG2 Video) Specific Information
-struct CellPamfM2vInfo {
+struct CellPamfM2vInfo
+{
 	u8 profileAndLevelIndication;
 	bool progressiveSequence;
 	u8 videoSignalInfoFlag;
@@ -216,27 +220,32 @@ struct CellPamfM2vInfo {
 };
 
 // LPCM Audio Specific Information
-struct CellPamfLpcmInfo {
+struct CellPamfLpcmInfo
+{
 	be_t<u32> samplingFrequency;
 	u8 numberOfChannels;
 	be_t<u16> bitsPerSample;
 };
 
 // ATRAC3+ Audio Specific Information
-struct CellPamfAtrac3plusInfo {
+struct CellPamfAtrac3plusInfo
+{
 	be_t<u32> samplingFrequency;
 	u8 numberOfChannels;
 };
 
 // AC3 Audio Specific Information
-struct CellPamfAc3Info {
+struct CellPamfAc3Info
+{
 	be_t<u32> samplingFrequency;
 	u8 numberOfChannels;
 };
 
-#pragma pack(push, 1) //file data
+#pragma pack(push, 1) // file data
 
-struct PamfStreamHeader_AVC { //AVC specific information
+// AVC specific information
+struct PamfStreamHeader_AVC
+{
 	u8 profileIdc;
 	u8 levelIdc;
 	u8 unk0;
@@ -256,11 +265,15 @@ struct PamfStreamHeader_AVC { //AVC specific information
 	u32 unk12; //0
 };
 
-struct PamfStreamHeader_M2V { //M2V specific information
-	u8 unknown[32]; //no information yet
+// M2V specific information
+struct PamfStreamHeader_M2V
+{ 
+	u8 unknown[32];
 };
 
-struct PamfStreamHeader_Audio { //Audio specific information
+// Audio specific information
+struct PamfStreamHeader_Audio
+{
 	u16 unknown; //== 0
 	u8 channels; //number of channels (1, 2, 6 or 8)
 	u8 freq; //== 1 (always 48000)
@@ -268,14 +281,14 @@ struct PamfStreamHeader_Audio { //Audio specific information
 	u8 reserved[27]; //probably nothing
 };
 
-struct PamfStreamHeader //48 bytes
+struct PamfStreamHeader
 {
 	//TODO: look for correct beginning of stream header
 	u8 type; //0x1B for video (AVC), 0xDC ATRAC3+, 0x80 LPCM, 0xDD userdata
 	u8 unknown[3]; //0
 	//TODO: examine stream_ch encoding
-	u8 stream_id;
-	u8 private_stream_id;
+	u8 fid_major;
+	u8 fid_minor;
 	u8 unknown1; //?????
 	u8 unknown2; //?????
 	//Entry Point Info
@@ -284,6 +297,8 @@ struct PamfStreamHeader //48 bytes
 	//Specific Info
 	u8 data[32];
 };
+
+static_assert(sizeof(PamfStreamHeader) == 48, "Invalid PamfStreamHeader size");
 
 struct PamfHeader
 {
@@ -317,21 +332,25 @@ struct PamfHeader
 	PamfStreamHeader stream_headers[256];
 };
 
-struct PamfEpHeader { //12 bytes
+struct PamfEpHeader
+{
 	be_t<u16> value0; //mixed indexN (probably left 2 bits) and nThRefPictureOffset
 	be_t<u16> pts_high;
 	be_t<u32> pts_low;
 	be_t<u32> rpnOffset;
 };
 
+static_assert(sizeof(PamfEpHeader) == 12, "Invalid PamfEpHeader size");
+
 #pragma pack(pop)
 
+// not directly accessed by virtual CPU, fields are unknown
 struct CellPamfReader
 {
-	//this struct can be used in any way, if it is not accessed directly by virtual CPU
-	//be_t<u64> internalData[16];
 	vm::ptr<const PamfHeader> pAddr;
-	int stream;
+	s32 stream;
 	u64 fileSize;
 	u32 internalData[28];
 };
+
+static_assert(sizeof(CellPamfReader) == 128, "Invalid CellPamfReader size");

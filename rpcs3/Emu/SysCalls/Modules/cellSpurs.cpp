@@ -568,6 +568,8 @@ s64 spursInit(
 				}
 				else while (true)
 				{
+					if (Emu.IsStopped()) break;
+
 					spurs->m.xD64.exchange(0);
 					if (spurs->m.exception.ToBE() == 0)
 					{
@@ -629,6 +631,9 @@ s64 spursInit(
 						return;
 					}
 				}
+
+				if (Emu.IsStopped()) continue;
+
 				if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
 				{
 					assert(!"sys_lwmutex_unlock() failed");
