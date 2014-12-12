@@ -2296,22 +2296,50 @@ s64 cellSpursJobChainGetSpursAddress()
 #endif
 }
 
-s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8> priority,
-	u32 max_contention, u32 enable_clear_ls, u32 size, u8 unknown /*TODO: Figure this out*/)
+s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority,
+	u32 max_contention, vm::ptr<const char> name, u32 size, s32 enable_clear_ls)
 {
 	if (!spurs || !taskset)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (spurs.addr() % CELL_SPURS_ALIGN || taskset.addr() % CELL_SPURS_TASKSET_ALIGN)
+	if (spurs.addr() % CellSpurs::align || taskset.addr() % CellSpursTaskset::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
 	memset((void *)taskset.addr(), 0, size);
 
-	// TODO: Implement the rest of this
+	taskset->m.spurs = spurs;
+	taskset->m.args = args;
+	taskset->m.enable_clear_ls = enable_clear_ls > 0 ? 1 : 0;
+	taskset->m.size = size;
+
+	auto wkl_attr = vm::ptr<CellSpursWorkloadAttribute>::make((u32)Memory.Alloc(CellSpursWorkloadAttribute::size, CellSpursWorkloadAttribute::align));
+	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::ptr<const void>::make(16) /*pm*/, 0x1E40 /*pm_size*/,
+		taskset.addr(), priority, 8 /*min_contention*/, max_contention);
+	// TODO: Check return code
+
+	auto cls = vm::ptr<const char>::make((u32)Memory.Alloc(1, 1));
+	*((char *)cls.get_ptr()) = 0;
+	cellSpursWorkloadAttributeSetName(wkl_attr, cls, name);
+	// TODO: Check return code
+
+	// TODO: cellSpursWorkloadAttributeSetShutdownCompletionEventHook(wkl_attr, hook, taskset);
+	// TODO: Check return code
+
+	auto wid = vm::ptr<u32>::make((u32)Memory.Alloc(4, 4));
+	cellSpursAddWorkloadWithAttribute(spurs, wid, vm::ptr<const CellSpursWorkloadAttribute>::make(wkl_attr.addr()));
+	// TODO: Check return code
+
+	taskset->m.x72 = 0x80;
+	taskset->m.wid.FromBE(*wid);
+	// TODO: cellSpursSetExceptionEventHandler(spurs, wid, hook, taskset);
+	// TODO: Check return code
+
+	Memory.Free(wkl_attr.addr());
+	Memory.Free(wid.addr());
 	return CELL_OK;
 }
 
@@ -2327,21 +2355,28 @@ s64 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSp
 		CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (attr.addr() % 8)
+	if (attr.addr() % CellSpursTasksetAttribute::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (attr->revision != 1)
+	if (attr->m.revision != CELL_SPURS_TASKSET_ATTRIBUTE_REVISION)
 	{
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	return spursCreateTaskset(spurs, taskset, attr->args, vm::ptr<const u8>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, priority)),
-		attr->max_contention, attr->enable_clear_ls, attr->taskset_size, 0 /*TODO: Figure this out*/);
+	auto rc = spursCreateTaskset(spurs, taskset, attr->m.args, vm::ptr<const u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, m.priority)),
+		attr->m.max_contention, vm::ptr<const char>::make(attr->m.name.addr()), attr->m.taskset_size, attr->m.enable_clear_ls);
+
+	if (attr->m.taskset_size >= CellSpursTaskset2::size)
+	{
+		// TODO: Implement this
+	}
+
+	return rc;
 }
 
-s64 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8> priority, u32 maxContention)
+s64 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority, u32 maxContention)
 {
 	cellSpurs->Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
 		spurs.addr(), taskset.addr(), args, priority.addr(), maxContention);
@@ -2357,7 +2392,7 @@ s64 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> t
 	return CELL_OK;
 #endif
 
-	return spursCreateTaskset(spurs, taskset, args, priority, maxContention, 0, CELL_SPURS_TASKSET_SIZE, 0);
+	return spursCreateTaskset(spurs, taskset, args, priority, maxContention, vm::ptr<const char>::make(0), CellSpursTaskset::size, 0);
 }
 
 s64 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
@@ -2439,17 +2474,17 @@ s64 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (attr.addr() % CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN)
+	if (attr.addr() % CellSpursTasksetAttribute::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	attr->name = name.addr();
+	attr->m.name = name;
 	return CELL_OK;
 #endif
 }
 
-s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> attr, size_t size)
+s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> attr, u32 size)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -2460,17 +2495,17 @@ s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> a
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (attr.addr() % CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN)
+	if (attr.addr() % CellSpursTasksetAttribute::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (size != CELL_SPURS_TASKSET_SIZE && size != CELL_SPURS_TASKSET2_SIZE)
+	if (size != CellSpursTaskset::size && size != CellSpursTaskset2::size)
 	{
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	attr->taskset_size = size;
+	attr->m.taskset_size = size;
 	return CELL_OK;
 #endif
 }
@@ -2486,12 +2521,12 @@ s64 cellSpursTasksetAttributeEnableClearLS(vm::ptr<CellSpursTasksetAttribute> at
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (attr.addr() % CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN)
+	if (attr.addr() % CellSpursTasksetAttribute::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	attr->enable_clear_ls = enable ? 1 : 0;
+	attr->m.enable_clear_ls = enable ? 1 : 0;
 	return CELL_OK;
 #endif
 }
@@ -2503,20 +2538,19 @@ s64 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> at
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x1474C, libsre_rtoc);
 #else
-	memset(attribute.get_ptr(), 0, CELL_SPURS_TASKSET_ATTRIBUTE2_SIZE);
-	attribute->revision = revision;
-	attribute->name_addr = NULL;
-	attribute->argTaskset = 0;
+	memset(attribute.get_ptr(), 0, CellSpursTasksetAttribute2::size);
+	attribute->m.revision = revision;
+	attribute->m.name.set(0);
+	attribute->m.args = 0;
 
 	for (s32 i = 0; i < 8; i++)
 	{
-		attribute->priority[i] = 1;
+		attribute->m.priority[i] = 1;
 	}
 
-	attribute->maxContention = 8;
-	attribute->enableClearLs = 0;
-	attribute->CellSpursTaskNameBuffer_addr = 0;
-
+	attribute->m.max_contention = 8;
+	attribute->m.enable_clear_ls = 0;
+	attribute->m.task_name_buffer.set(0);
 	return CELL_OK;
 #endif
 }
@@ -2647,13 +2681,43 @@ s64 cellSpursTaskGetContextSaveAreaSize()
 #endif
 }
 
-s64 cellSpursCreateTaskset2()
+s64 cellSpursCreateTaskset2(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2> taskset, vm::ptr<CellSpursTasksetAttribute2> attr)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15108, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	auto free_attr = false;
+	if (!attr)
+	{
+		attr.set(Memory.Alloc(CellSpursTasksetAttribute2::size, CellSpursTasksetAttribute2::align));
+		free_attr = true;
+		_cellSpursTasksetAttribute2Initialize(attr, 0);
+	}
+
+	auto rc = spursCreateTaskset(spurs, vm::ptr<CellSpursTaskset>::make(taskset.addr()), attr->m.args,
+		vm::ptr<const u8[8]>::make(attr.addr() + offsetof(CellSpursTasksetAttribute, m.priority)),
+		attr->m.max_contention, vm::ptr<const char>::make(attr->m.name.addr()), CellSpursTaskset2::size, (u8)attr->m.enable_clear_ls);
+	if (rc != CELL_OK)
+	{
+		if (free_attr)
+		{
+			Memory.Free(attr.addr());
+		}
+		return rc;
+	}
+
+	if (attr->m.task_name_buffer.addr() % CellSpursTaskNameBuffer::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	// TODO: Implement rest of the function
+
+	if (free_attr)
+	{
+		Memory.Free(attr.addr());
+	}
 	return CELL_OK;
 #endif
 }
@@ -2735,7 +2799,7 @@ s64 cellSpursTasksetUnsetExceptionEventHandler()
 #endif
 }
 
-s64 cellSpursLookUpTasksetAddress()
+s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset *> taskset, u32 id)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -2746,7 +2810,7 @@ s64 cellSpursLookUpTasksetAddress()
 #endif
 }
 
-s64 cellSpursTasksetGetSpursAddress()
+s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<CellSpurs *> spurs)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -2779,7 +2843,7 @@ s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attr
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
-	if (attribute.addr() % CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN)
+	if (attribute.addr() % CellSpursTasksetAttribute::align)
 	{
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
@@ -2792,13 +2856,13 @@ s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attr
 		}
 	}
 
-	memset(attribute.get_ptr(), 0, CELL_SPURS_TASKSET_ATTRIBUTE_SIZE);
-	attribute->revision = revision;
-	attribute->sdk_version = sdk_version;
-	attribute->args = args;
-	memcpy(attribute->priority, priority.get_ptr(), 8);
-	attribute->taskset_size = CELL_SPURS_TASKSET_SIZE;
-	attribute->max_contention = max_contention;
+	memset(attribute.get_ptr(), 0, CellSpursTasksetAttribute::size);
+	attribute->m.revision = revision;
+	attribute->m.sdk_version = sdk_version;
+	attribute->m.args = args;
+	memcpy(attribute->m.priority, priority.get_ptr(), 8);
+	attribute->m.taskset_size = CellSpursTaskset::size;
+	attribute->m.max_contention = max_contention;
 	return CELL_OK;
 #endif
 }

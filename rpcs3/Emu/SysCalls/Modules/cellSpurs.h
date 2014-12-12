@@ -131,16 +131,7 @@ enum TaskConstants
 	CELL_SPURS_TASK_BOTTOM = 0x40000,
 	CELL_SPURS_MAX_TASK_NAME_LENGTH = 32,
 	CELL_SPURS_TASK_ATTRIBUTE_REVISION = 1,
-	CELL_SPURS_TASK_ATTRIBUTE_SIZE = 256,
-	CELL_SPURS_TASKSET_SIZE = 6400,
-	CELL_SPURS_TASKSET_ALIGN = 128,
 	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION = 1,
-	CELL_SPURS_TASKSET_ATTRIBUTE_ALIGN = 8,
-	CELL_SPURS_TASKSET_ATTRIBUTE_SIZE = 512,
-	CELL_SPURS_TASKSET2_SIZE = 10496,
-	CELL_SPURS_TASKSET2_ALIGN = 128,
-	CELL_SPURS_TASKSET_ATTRIBUTE2_ALIGN = 8,
-	CELL_SPURS_TASKSET_ATTRIBUTE2_SIZE = 512,
 };
 
 class SPURSManager;
@@ -428,7 +419,31 @@ struct CellSpursEventFlag
 
 struct CellSpursTaskset
 {
-	SPURSManagerTaskset *taskset;
+	static const u32 align = 128;
+	static const u32 size = 6400;
+
+	union
+	{
+		// Raw data
+		u8 _u8[size];
+
+		// Real data
+		struct
+		{
+			u8 unk1[0x64];              // 0x00
+			vm::bptr<CellSpurs> spurs;  // 0x64
+			be_t<u64> args;             // 0x68
+			u8 enable_clear_ls;         // 0x70
+			u8 x71;                     // 0x71
+			u8 x72;                     // 0x72
+			u8 x73;                     // 0x73
+			be_t<u32> wid;              // 0x74
+			u8 unk3[0x1818];            // 0x78
+			be_t<u32> size;             // 0x1890
+		} m;
+
+		SPURSManagerTaskset *taskset;
+	};
 };
 
 struct CellSpursInfo
@@ -524,6 +539,13 @@ struct CellSpursTracePacket
 //typedef void (*CellSpursTasksetExceptionEventHandler)(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, 
 //													    u32 idTask, vm::ptr<const CellSpursExceptionInfo> info, vm::ptr<void> arg);
 
+struct CellSpursTaskNameBuffer
+{
+	static const u32 align = 16;
+
+	char taskName[CELL_SPURS_MAX_TASK][CELL_SPURS_MAX_TASK_NAME_LENGTH];
+};
+
 struct CellSpursTasksetInfo
 {
 	//CellSpursTaskInfo taskInfo[CELL_SPURS_MAX_TASK];
@@ -539,37 +561,59 @@ struct CellSpursTasksetInfo
 
 struct CellSpursTaskset2
 {
+	static const u32 align = 128;
+	static const u32 size = 10496;
+
 	be_t<u8> skip[10496];
 };
 
 struct CellSpursTasksetAttribute
 {
-	be_t<u32> revision;
-	be_t<u32> sdk_version;
-	be_t<u64> args;
-	u8 priority[8];
-	be_t<u32> max_contention;
-	be_t<u32> name;
-	be_t<u32> taskset_size;
-	be_t<u32> enable_clear_ls;
+	static const u32 align = 8;
+	static const u32 size = 512;
+
+	union
+	{
+		// Raw data
+		u8 _u8[size];
+
+		// Real data
+		struct
+		{
+			be_t<u32> revision;             // 0x00
+			be_t<u32> sdk_version;          // 0x04
+			be_t<u64> args;                 // 0x08
+			u8 priority[8];                 // 0x10
+			be_t<u32> max_contention;       // 0x18
+			vm::bptr<const char> name;      // 0x1C
+			be_t<u32> taskset_size;         // 0x20
+			be_t<s32> enable_clear_ls;      // 0x24
+		} m;
+	};
 };
 
 struct CellSpursTasksetAttribute2
 {
-	be_t<u32> revision;
-	be_t<u32> name_addr;
-	be_t<u64> argTaskset;
-	u8 priority[8];
-	be_t<u32> maxContention;
-	be_t<s32> enableClearLs;
-	be_t<s32> CellSpursTaskNameBuffer_addr; //??? *taskNameBuffer
-	//be_t<u32> __reserved__[];
-};
+	static const u32 align = 8;
+	static const u32 size = 512;
 
-// cellSpurs task structures.
-struct CellSpursTaskNameBuffer
-{
-	char taskName[CELL_SPURS_MAX_TASK][CELL_SPURS_MAX_TASK_NAME_LENGTH];
+	union
+	{
+		// Raw data
+		u8 _u8[size];
+
+		// Real data
+		struct
+		{
+			be_t<u32> revision;                                 // 0x00
+			vm::bptr<const char> name;                          // 0x04
+			be_t<u64> args;                                     // 0x08
+			u8 priority[8];                                     // 0x10
+			be_t<u32> max_contention;                           // 0x18
+			be_t<s32> enable_clear_ls;                          // 0x1C
+			vm::bptr<CellSpursTaskNameBuffer> task_name_buffer; // 0x20
+		} m;
+	};
 };
 
 struct CellSpursTraceTaskData
