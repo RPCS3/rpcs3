@@ -4,6 +4,7 @@ struct GameInfo
 {
 	std::string root;
 
+	std::string icon_path;
 	std::string name;
 	std::string serial;
 	std::string app_ver;

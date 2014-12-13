@@ -24,7 +24,7 @@ public:
 	bool operator()(const GameInfo& game1, const GameInfo& game2) const
 	{
 		// Note that the column index has to match the appropriate GameInfo member
-		switch (sortColumn)
+		switch (sortColumn - 1) // skip *icon* column
 		{
 		case 0: return sortAscending ? (game1.name < game2.name)         : (game1.name > game2.name);
 		case 1: return sortAscending ? (game1.serial < game2.serial)     : (game1.serial > game2.serial);
@@ -149,6 +149,7 @@ void GameViewer::LoadPSF()
 			continue;
 
 		GameInfo game;
+		game.icon_path = wxGetCwd() + m_path + m_games[i] + "/ICON0.PNG";
 		game.root = m_games[i];
 		game.serial = psf.GetString("TITLE_ID");
 		game.name = psf.GetString("TITLE");
