@@ -1,5 +1,7 @@
 #pragma once
 #include <wx/listctrl.h>
+#include <wx/imaglist.h>
+#include <wx/log.h>
 #include "rpcs3/Ini.h"
 #include "Emu/GameInfo.h"
 
@@ -69,6 +71,7 @@ struct ColumnsArr
 	}
 
 public:
+	Column* m_col_icon;
 	Column* m_col_name;
 	Column* m_col_serial;
 	Column* m_col_fw;
@@ -76,36 +79,46 @@ public:
 	Column* m_col_category;
 	Column* m_col_path;
 
+	wxImageList* m_img_list;
+	std::vector<int> m_icon_indexes;
+
 	void Init()
 	{
+		m_img_list = new wxImageList(80, 44);
+
 		m_columns.clear();
+		m_columns.emplace_back(m_columns.size(), 100, "Icon");
 		m_columns.emplace_back(m_columns.size(), 160, "Name");
 		m_columns.emplace_back(m_columns.size(),  85, "Serial");
 		m_columns.emplace_back(m_columns.size(),  55, "FW");
 		m_columns.emplace_back(m_columns.size(),  55, "App version");
 		m_columns.emplace_back(m_columns.size(),  55, "Category");
 		m_columns.emplace_back(m_columns.size(), 160, "Path");
-		m_col_name     = &m_columns[0];
-		m_col_serial   = &m_columns[1];
-		m_col_fw       = &m_columns[2];
-		m_col_app_ver  = &m_columns[3];
-		m_col_category = &m_columns[4];
-		m_col_path     = &m_columns[5];
+		m_col_icon     = &m_columns[0];
+		m_col_name     = &m_columns[1];
+		m_col_serial   = &m_columns[2];
+		m_col_fw       = &m_columns[3];
+		m_col_app_ver  = &m_columns[4];
+		m_col_category = &m_columns[5];
+		m_col_path     = &m_columns[6];
 	}
 
 	void Update(const std::vector<GameInfo>& game_data)
 	{
+		m_col_icon->data.clear();
 		m_col_name->data.clear();
 		m_col_serial->data.clear();
 		m_col_fw->data.clear();
 		m_col_app_ver->data.clear();
 		m_col_category->data.clear();
 		m_col_path->data.clear();
+		m_icon_indexes.clear();
 
 		if(m_columns.size() == 0) return;
 
 		for(const auto& game : game_data)
 		{
+			m_col_icon->data.push_back(game.icon_path);
 			m_col_name->data.push_back(game.name);
 			m_col_serial->data.push_back(game.serial);
 			m_col_fw->data.push_back(game.fw);
@@ -113,11 +126,25 @@ public:
 			m_col_category->data.push_back(game.category);
 			m_col_path->data.push_back(game.root);
 		}
+
+		// load icons
+		for (const auto& path : m_col_icon->data)
+		{
+			wxImage game_icon(80, 44);
+			{
+				wxLogNull logNo; // temporary disable wx warnings ("iCCP: known incorrect sRGB profile" spamming)
+				if (game_icon.LoadFile(fmt::FromUTF8(path), wxBITMAP_TYPE_PNG))
+					game_icon.Rescale(80, 44);
+			}
+
+			m_icon_indexes.push_back(m_img_list->Add(game_icon));
+		}
 	}
 
 	void Show(wxListView* list)
 	{
 		list->DeleteAllColumns();
+		list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
 		std::vector<Column *> c_col = GetSortedColumnsByPos();
 		for(u32 i=0, c=0; i<c_col.size(); ++i)
 		{
@@ -129,6 +156,7 @@ public:
 	void ShowData(wxListView* list)
 	{
 		list->DeleteAllItems();
+		list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
 		for(int c=0; c<list->GetColumnCount(); ++c)
 		{
 			Column* col = GetColumnByPos(c);
@@ -147,7 +175,8 @@ public:
 					list->SetItemData(i, i);
 				}
 				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
-
+				list->SetItem(i, 0, wxEmptyString); // don't insert icon path
+				list->SetItemColumnImage(i, 0, m_icon_indexes[i]);
 			}			
 		}
 	}
