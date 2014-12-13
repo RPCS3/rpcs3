@@ -2427,7 +2427,7 @@ s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	*wid = taskset->m.wid.ToBE();
+	*wid = taskset->m.wid;
 	return CELL_OK;
 #endif
 }
@@ -2443,6 +2443,121 @@ s64 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
 #endif
 }
 
+u32 _cellSpursGetSdkVersion()
+{
+	static u32 sdk_version = -2;
+
+	if (sdk_version == -2)
+	{
+		auto version = vm::ptr<s32>::make((u32)Memory.Alloc(sizeof(u32), sizeof(u32)));
+		sys_process_get_sdk_version(sys_process_getpid(), version);
+		sdk_version = *version;
+		Memory.Free(version.addr());
+	}
+
+	return sdk_version;
+}
+
+s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::ptr<u32> elf_addr, vm::ptr<u32> context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg)
+{
+	if (!taskset || !elf_addr)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (elf_addr.addr() % 16)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	auto sdk_version = _cellSpursGetSdkVersion();
+	if (sdk_version < 0x27FFFF)
+	{
+		if (context_addr.addr() % 16)
+		{
+			return CELL_SPURS_TASK_ERROR_ALIGN;
+		}
+	}
+	else
+	{
+		if (context_addr.addr() % 128)
+		{
+			return CELL_SPURS_TASK_ERROR_ALIGN;
+		}
+	}
+
+	u32 alloc_ls_blocks = 0;
+	if (context_addr.addr() != 0)
+	{
+		if (context_size < CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE)
+		{
+			return CELL_SPURS_TASK_ERROR_INVAL;
+		}
+
+		alloc_ls_blocks = context_size > 0x3D400 ? 0x7A : ((context_size - 0x400) >> 11);
+		if (ls_pattern.addr() != 0)
+		{
+			u32 ls_blocks = 0;
+			for (u32 i = 0; i < 2; i++)
+			{
+				for (u32 j = 0; j < 64; j++)
+				{
+					if (ls_pattern->u64[0] & ((u64)1 << j))
+					{
+						ls_blocks++;
+					}
+				}
+			}
+
+			if (ls_blocks > alloc_ls_blocks)
+			{
+				return CELL_SPURS_TASK_ERROR_INVAL;
+			}
+
+			if (ls_pattern->u32[0] & 0xFC000000)
+			{
+				// Prevent save/restore to SPURS management area
+				return CELL_SPURS_TASK_ERROR_INVAL;
+			}
+		}
+	}
+	else
+	{
+		alloc_ls_blocks = 0;
+	}
+
+	// TODO: Verify the ELF header is proper and all its load segments are at address >= 0x3000
+
+	// TODO: Make the following block execute atomically
+	u32 tmp_task_id;
+	for (tmp_task_id = 0; tmp_task_id < CELL_SPURS_MAX_TASK; tmp_task_id++)
+	{
+		u32 l = tmp_task_id >> 5;
+		u32 b = tmp_task_id & 0x1F;
+		if ((taskset->m.enabled_set[l] & (0x80000000 >> b)) == 0)
+		{
+			taskset->m.enabled_set[l] |= 0x80000000 >> b;
+			break;
+		}
+	}
+
+	if (tmp_task_id >= CELL_SPURS_MAX_TASK)
+	{
+		CELL_SPURS_TASK_ERROR_AGAIN;
+	}
+
+	taskset->m.task_info[tmp_task_id].elf_addr.set(elf_addr.addr());
+	taskset->m.task_info[tmp_task_id].context_save_storage.set((context_addr.addr() & 0xFFFFFFF8) | alloc_ls_blocks);
+	for (u32 i = 0; i < 2; i++)
+	{
+		taskset->m.task_info[tmp_task_id].args.u64[i] = arg != 0 ? arg->u64[i] : 0;
+		taskset->m.task_info[tmp_task_id].ls_pattern.u64[i] = ls_pattern != 0 ? ls_pattern->u64[i] : 0;
+	}
+
+	*task_id = tmp_task_id;
+	return CELL_OK;
+}
+
 s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskID, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
 	vm::ptr<CellSpursTaskArgument> argument)
 {
@@ -2451,8 +2566,7 @@ s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskID, 
 		taskset.addr(), taskID.addr(), elf_addr, context_addr, context_size, lsPattern.addr(), argument.addr());
 	return GetCurrentPPUThread().FastCall2(libsre + 0x12414, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	return spursCreateTask(taskset, taskID, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
 #endif
 }
 
@@ -2883,7 +2997,7 @@ s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm:
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	*spurs = (u32)taskset->m.spurs.addr().ToBE();
+	*spurs = (u32)taskset->m.spurs.addr();
 	return CELL_OK;
 #endif
 }

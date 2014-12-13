@@ -132,6 +132,7 @@ enum TaskConstants
 	CELL_SPURS_MAX_TASK_NAME_LENGTH = 32,
 	CELL_SPURS_TASK_ATTRIBUTE_REVISION = 1,
 	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION = 1,
+	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE = 1024,
 };
 
 class SPURSManager;
@@ -417,6 +418,18 @@ struct CellSpursEventFlag
 	SPURSManagerEventFlag *eventFlag;
 };
 
+union CellSpursTaskArgument
+{
+	be_t<u32> u32[4];
+	be_t<u64> u64[2];
+};
+
+union CellSpursTaskLsPattern
+{
+	be_t<u32> u32[4];
+	be_t<u64> u64[2];
+};
+
 struct CellSpursTaskset
 {
 	static const u32 align = 128;
@@ -429,14 +442,16 @@ struct CellSpursTaskset
 
 		struct TaskInfo
 		{
-			be_t<u32> args[4];
-			vm::bptr<u64, 1, u64> elf;
-			vm::bptr<u64, 1, u64> context_save_storage;
-			be_t<u32> ls_pattern[4];
+			CellSpursTaskArgument args;
+			vm::bptr<u64, 1, u64> elf_addr;
+			vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+			CellSpursTaskLsPattern ls_pattern;
 		};
 
+		static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
+
 		// Real data
-		struct
+		struct _CellSpursTaskset
 		{
 			be_t<u32> running_set[4];                    // 0x00
 			be_t<u32> ready_set[4];                      // 0x10
@@ -459,7 +474,10 @@ struct CellSpursTaskset
 			u32 unk2;                                    // 0x1894
 			u32 event_flag_id1;                          // 0x1898
 			u32 event_flag_id2;                          // 0x189C
+			u8 unk3[0x60];                               // 0x18A0
 		} m;
+
+		static_assert(sizeof(_CellSpursTaskset) == size, "Wrong _CellSpursTaskset size");
 
 		SPURSManagerTaskset *taskset;
 	};
@@ -590,14 +608,16 @@ struct CellSpursTaskset2
 
 		struct TaskInfo
 		{
-			be_t<u32> args[4];
-			vm::bptr<u64, 1, u64> elf_address;
-			vm::bptr<u64, 1, u64> context_save_storage;
-			be_t<u32> ls_pattern[4];
+			CellSpursTaskArgument args;
+			vm::bptr<u64, 1, u64> elf_addr;
+			vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+			CellSpursTaskLsPattern ls_pattern;
 		};
 
+		static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
+
 		// Real data
-		struct
+		struct _CellSpursTaskset2
 		{
 			be_t<u32> running_set[4];                    // 0x00
 			be_t<u32> ready_set[4];                      // 0x10
@@ -620,9 +640,12 @@ struct CellSpursTaskset2
 			u32 unk2;                                    // 0x1894
 			u32 event_flag_id1;                          // 0x1898
 			u32 event_flag_id2;                          // 0x189C
-			u8 unk3[0x88];                               // 0x1900
-			u128 task_exit_code[128];                    // 0x1988
+			u8 unk3[0xE8];                               // 0x18A0
+			u64 task_exit_code[256];                     // 0x1988
+			u8 unk4[0x778];                              // 0x2188
 		} m;
+
+		static_assert(sizeof(_CellSpursTaskset2) == size, "Wrong _CellSpursTaskset2 size");
 	};
 };
 
@@ -679,21 +702,6 @@ struct CellSpursTraceTaskData
 {
 	be_t<u32> incident;
 	be_t<u32> task;
-};
-
-typedef be_t<u32> be_u32;
-typedef be_t<u64> be_u64;
-
-struct CellSpursTaskArgument
-{
-	be_u32 u32[4];
-	be_u64 u64[2];
-};
-
-struct CellSpursTaskLsPattern
-{
-	be_u32 u32[4];
-	be_u64 u64[2];
 };
 
 struct CellSpursTaskAttribute2
