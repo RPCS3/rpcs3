@@ -467,7 +467,7 @@ void GLVertexDecompilerThread::Task()
 			switch (d1.sca_opcode)
 			{
 			case 0x08: //BRA
-				LOG_WARNING(RSX, "BRA finded. Please, report to RPCS3 team.");
+				LOG_WARNING(RSX, "BRA found. Please report to RPCS3 team.");
 				is_has_BRA = true;
 				m_jump_lvls.clear();
 				d3.HEX = m_data[++i];
