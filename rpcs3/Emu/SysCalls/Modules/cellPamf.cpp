@@ -107,9 +107,10 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 	return CELL_OK;
 }
 
-u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
+u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream type correctly
+	assert(stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -127,9 +128,10 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u8 stream)
 	return 0xff;
 }
 
-u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u8 stream)
+u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream channel correctly
+	assert(stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -446,6 +448,7 @@ s32 cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 
 	// always returns CELL_OK
 
+	assert((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	pEsFilterId->filterIdMajor = header.fid_major;
 	pEsFilterId->filterIdMinor = header.fid_minor;
@@ -458,103 +461,232 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 {
 	cellPamf->Warning("cellPamfReaderGetStreamInfo(pSelf=0x%x, stream=%d, pInfo_addr=0x%x, size=%d)", pSelf.addr(), pSelf->stream, pInfo_addr, size);
 
-	// TODO (many parameters are wrong)
-	memset(vm::get_ptr<void>(pInfo_addr), 0, size);
+	assert((u32)pSelf->stream < (u32)pSelf->pAddr->stream_count);
+	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
+	const u8 type = pamfGetStreamType(pSelf, pSelf->stream);
+	const u8 ch = pamfGetStreamChannel(pSelf, pSelf->stream);
 
-	switch (pamfGetStreamType(pSelf, pSelf->stream))
+	switch (type)
 	{
 	case CELL_PAMF_STREAM_TYPE_AVC:
+	{
+		if (size < sizeof(CellPamfAvcInfo))
 		{
-			auto pInfo = vm::ptr<CellPamfAvcInfo>::make(pInfo_addr);
-			auto pAVC = vm::ptr<PamfStreamHeader_AVC>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
-
-			if (size != sizeof(CellPamfAvcInfo))
-			{
-				cellPamf->Error("cellPamfReaderGetStreamInfo: wrong AVC data size(%d)", size);
-				return CELL_PAMF_ERROR_INVALID_ARG;
-			}
-
-			pInfo->profileIdc = pAVC->profileIdc;
-			pInfo->levelIdc = pAVC->levelIdc;
-
-			pInfo->frameMbsOnlyFlag = 1; //fake
-			pInfo->frameRateInfo = (pAVC->unk0 & 0x7) - 1;
-			pInfo->aspectRatioIdc = 1; //fake
-
-			pInfo->horizontalSize = 16 * (u16)pAVC->horizontalSize;
-			pInfo->verticalSize = 16 * (u16)pAVC->verticalSize;
-
-			pInfo->videoSignalInfoFlag = 1; //fake
-			pInfo->colourPrimaries = 1; //fake
-			pInfo->transferCharacteristics = 1; //fake
-			pInfo->matrixCoefficients = 1; //fake
-			//pInfo->deblockingFilterFlag = 1; //???
-
-			cellPamf->Warning("cellPamfReaderGetStreamInfo: CELL_PAMF_STREAM_TYPE_AVC");
-		}
-		break;
-	case CELL_PAMF_STREAM_TYPE_M2V:
-		{
-			//TODO
-			cellPamf->Error("TODO: cellPamfReaderGetStreamInfo: CELL_PAMF_STREAM_TYPE_M2V");
-		}
-		break;
-	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS: 
-		{
-			auto pInfo = vm::ptr<CellPamfAtrac3plusInfo>::make(pInfo_addr);
-			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
-
-			if (size != sizeof(CellPamfAtrac3plusInfo))
-			{
-				cellPamf->Error("cellPamfReaderGetStreamInfo: wrong ATRAC3+ data size(%d)", size);
-				return CELL_PAMF_ERROR_INVALID_ARG;
-			}
-
-			pInfo->numberOfChannels = pAudio->channels;
-			pInfo->samplingFrequency = CELL_PAMF_FS_48kHz;
-		}
-		break;
-	case CELL_PAMF_STREAM_TYPE_AC3:
-		{
-			auto pInfo = vm::ptr<CellPamfAc3Info>::make(pInfo_addr);
-			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
-
-			if (size != sizeof(CellPamfAc3Info))
-			{
-				cellPamf->Error("cellPamfReaderGetStreamInfo: wrong AC3 data size(%d)", size);
-				return CELL_PAMF_ERROR_INVALID_ARG;
-			}
-
-			pInfo->numberOfChannels = pAudio->channels;
-			pInfo->samplingFrequency = CELL_PAMF_FS_48kHz;
-		}
-		break;
-	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
-		{
-			auto pInfo = vm::ptr<CellPamfLpcmInfo>::make(pInfo_addr);
-			auto pAudio = vm::ptr<PamfStreamHeader_Audio>::make(pSelf->pAddr.addr() + 0x98 + pSelf->stream * 0x30);
-
-			if (size != sizeof(CellPamfLpcmInfo))
-			{
-				cellPamf->Error("cellPamfReaderGetStreamInfo: wrong LPCM data size(%d)", size);
-				return CELL_PAMF_ERROR_INVALID_ARG;
-			}
-
-			pInfo->numberOfChannels = pAudio->channels;
-			pInfo->samplingFrequency = CELL_PAMF_FS_48kHz;
-
-			if (pAudio->bps == 0x40)
-				pInfo->bitsPerSample = CELL_PAMF_BIT_LENGTH_16;
-			else
-				//TODO: CELL_PAMF_BIT_LENGTH_24
-				cellPamf->Error("cellPamfReaderGetStreamInfo: unknown bps(0x%x)", (u8)pAudio->bps);
-		}
-		break;
-	case CELL_PAMF_STREAM_TYPE_USER_DATA: 
-		{
-			cellPamf->Error("cellPamfReaderGetStreamInfo: CELL_PAMF_STREAM_TYPE_USER_DATA");
 			return CELL_PAMF_ERROR_INVALID_ARG;
 		}
+
+		auto info = vm::ptr<CellPamfAvcInfo>::make(pInfo_addr);
+
+		info->profileIdc = header.AVC.profileIdc;
+		info->levelIdc = header.AVC.levelIdc;
+		info->frameMbsOnlyFlag = (header.AVC.x2 & 0x80) >> 7;
+		info->videoSignalInfoFlag = (header.AVC.x2 & 0x40) >> 6;
+		info->frameRateInfo = (header.AVC.x2 & 0x0f) - 1;
+		info->aspectRatioIdc = header.AVC.aspectRatioIdc;
+
+		if (header.AVC.aspectRatioIdc == 0xff)
+		{
+			info->sarWidth = header.AVC.sarWidth;
+			info->sarHeight = header.AVC.sarHeight;
+		}
+		else
+		{
+			info->sarWidth = 0;
+			info->sarHeight = 0;
+		}
+
+		info->horizontalSize = ((u16)header.AVC.horizontalSize & 0xff) * 16;
+		info->verticalSize = ((u16)header.AVC.verticalSize & 0xff) * 16;
+		info->frameCropLeftOffset = header.AVC.frameCropLeftOffset;
+		info->frameCropRightOffset = header.AVC.frameCropRightOffset;
+		info->frameCropTopOffset = header.AVC.frameCropTopOffset;
+		info->frameCropBottomOffset = header.AVC.frameCropBottomOffset;
+
+		if (info->videoSignalInfoFlag)
+		{
+			info->videoFormat = header.AVC.x14 >> 5;
+			info->videoFullRangeFlag = (header.AVC.x14 & 0x10) >> 4;
+			info->colourPrimaries = header.AVC.colourPrimaries;
+			info->transferCharacteristics = header.AVC.transferCharacteristics;
+			info->matrixCoefficients = header.AVC.matrixCoefficients;
+		}
+		else
+		{
+			info->videoFormat = 0;
+			info->videoFullRangeFlag = 0;
+			info->colourPrimaries = 0;
+			info->transferCharacteristics = 0;
+			info->matrixCoefficients = 0;
+		}
+		
+		info->entropyCodingModeFlag = (header.AVC.x18 & 0x80) >> 7;
+		info->deblockingFilterFlag = (header.AVC.x18 & 0x40) >> 6;
+		info->minNumSlicePerPictureIdc = (header.AVC.x18 & 0x30) >> 4;
+		info->nfwIdc = header.AVC.x18 & 0x03;
+		info->maxMeanBitrate = header.AVC.maxMeanBitrate;
+
+		cellPamf->Notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_AVC");
+		break;
+	}
+		
+	case CELL_PAMF_STREAM_TYPE_M2V:
+	{
+		if (size < sizeof(CellPamfM2vInfo))
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		auto info = vm::ptr<CellPamfM2vInfo>::make(pInfo_addr);
+
+		switch (header.M2V.x0)
+		{
+		case 0x44: info->profileAndLevelIndication = 3; break;
+		case 0x48: info->profileAndLevelIndication = 1; break;
+		default: info->profileAndLevelIndication = CELL_PAMF_M2V_UNKNOWN;
+		}
+
+		info->progressiveSequence = (header.M2V.x2 & 0x80) >> 7;
+		info->videoSignalInfoFlag = (header.M2V.x2 & 0x40) >> 6;
+		info->frameRateInfo = header.M2V.x2 & 0xf;
+		info->aspectRatioIdc = header.M2V.aspectRatioIdc;
+
+		if (header.M2V.aspectRatioIdc == 0xff)
+		{
+			info->sarWidth = header.M2V.sarWidth;
+			info->sarHeight = header.M2V.sarHeight;
+		}
+		else
+		{
+			info->sarWidth = 0;
+			info->sarHeight = 0;
+		}
+
+		info->horizontalSize = ((u16)header.M2V.horizontalSize & 0xff) * 16;
+		info->verticalSize = ((u16)header.M2V.verticalSize & 0xff) * 16;
+		info->horizontalSizeValue = header.M2V.horizontalSizeValue;
+		info->verticalSizeValue = header.M2V.verticalSizeValue;
+
+		if (info->videoSignalInfoFlag)
+		{
+			info->videoFormat = header.M2V.x14 >> 5;
+			info->videoFullRangeFlag = (header.M2V.x14 & 0x10) >> 4;
+			info->colourPrimaries = header.M2V.colourPrimaries;
+			info->transferCharacteristics = header.M2V.transferCharacteristics;
+			info->matrixCoefficients = header.M2V.matrixCoefficients;
+		}
+		else
+		{
+			info->videoFormat = 0;
+			info->videoFullRangeFlag = 0;
+			info->colourPrimaries = 0;
+			info->transferCharacteristics = 0;
+			info->matrixCoefficients = 0;
+		}
+
+		cellPamf->Notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_M2V");
+		break;
+	}
+		
+	case CELL_PAMF_STREAM_TYPE_ATRAC3PLUS: 
+	{
+		if (size < sizeof(CellPamfAtrac3plusInfo))
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		auto info = vm::ptr<CellPamfAtrac3plusInfo>::make(pInfo_addr);
+
+		info->samplingFrequency = header.audio.freq & 0xf;
+		info->numberOfChannels = header.audio.channels & 0xf;
+
+		cellPamf->Notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_ATRAC3PLUS");
+		break;
+	}
+
+	case CELL_PAMF_STREAM_TYPE_PAMF_LPCM:
+	{
+		if (size < sizeof(CellPamfLpcmInfo))
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		auto info = vm::ptr<CellPamfLpcmInfo>::make(pInfo_addr);
+
+		info->samplingFrequency = header.audio.freq & 0xf;
+		info->numberOfChannels = header.audio.channels & 0xf;
+		info->bitsPerSample = header.audio.bps >> 6;
+
+		cellPamf->Notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_PAMF_LPCM");
+		break;
+	}
+
+	case CELL_PAMF_STREAM_TYPE_AC3:
+	{
+		if (size < sizeof(CellPamfAc3Info))
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		auto info = vm::ptr<CellPamfAc3Info>::make(pInfo_addr);
+
+		info->samplingFrequency = header.audio.freq & 0xf;
+		info->numberOfChannels = header.audio.channels & 0xf;
+
+		cellPamf->Notice("cellPamfReaderGetStreamInfo(): CELL_PAMF_STREAM_TYPE_AC3");
+		break;
+	}
+
+	case CELL_PAMF_STREAM_TYPE_USER_DATA:
+	{
+		cellPamf->Error("cellPamfReaderGetStreamInfo(): invalid type CELL_PAMF_STREAM_TYPE_USER_DATA");
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	case 6:
+	{
+		if (size < 4)
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		cellPamf->Todo("cellPamfReaderGetStreamInfo(): type 6");
+		break;
+	}
+
+	case 7:
+	{
+		if (size < 2)
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		cellPamf->Todo("cellPamfReaderGetStreamInfo(): type 7");
+		break;
+	}
+
+	case 8:
+	{
+		if (size < 2)
+		{
+			return CELL_PAMF_ERROR_INVALID_ARG;
+		}
+
+		cellPamf->Todo("cellPamfReaderGetStreamInfo(): type 8");
+		break;
+	}
+
+	case 9:
+	{
+		cellPamf->Error("cellPamfReaderGetStreamInfo(): invalid type 9");
+		return CELL_PAMF_ERROR_INVALID_ARG;
+	}
+
+	default:
+	{
+		// invalid type or getting type/ch failed
+		cellPamf->Error("cellPamfReaderGetStreamInfo(): invalid type %d (ch=%d)", type, ch);
+		return CELL_PAMF_ERROR_INVALID_PAMF;
+	}
 	}
 	
 	return CELL_OK;
@@ -562,10 +694,10 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, u32 pInfo_addr, u
 
 u32 cellPamfReaderGetNumberOfEp(vm::ptr<CellPamfReader> pSelf)
 {
-	cellPamf->Warning("cellPamfReaderGetNumberOfEp(pSelf=0x%x, stream=%d)", pSelf.addr(), pSelf->stream);
+	cellPamf->Todo("cellPamfReaderGetNumberOfEp(pSelf=0x%x, stream=%d)", pSelf.addr(), pSelf->stream);
 
 	// cannot return error code
-	return pSelf->pAddr->stream_headers[pSelf->stream].ep_num;
+	return 0; //pSelf->pAddr->stream_headers[pSelf->stream].ep_num;
 }
 
 s32 cellPamfReaderGetEpIteratorWithIndex(vm::ptr<CellPamfReader> pSelf, u32 epIndex, vm::ptr<CellPamfEpIterator> pIt)
