@@ -178,31 +178,33 @@ struct CellPamfAvcInfo
 	u8 videoSignalInfoFlag;
 	u8 frameRateInfo;
 	u8 aspectRatioIdc;
-	be_t<u16> sarWidth; //reserved
-	be_t<u16> sarHeight; //reserved
+	be_t<u16> sarWidth;
+	be_t<u16> sarHeight;
 	be_t<u16> horizontalSize;
 	be_t<u16> verticalSize;
-	be_t<u16> frameCropLeftOffset; //reserved
-	be_t<u16> frameCropRightOffset; //reserved
-	be_t<u16> frameCropTopOffset; //reserved
-	be_t<u16> frameCropBottomOffset; //!!!!!
-	u8 videoFormat; //reserved
+	be_t<u16> frameCropLeftOffset;
+	be_t<u16> frameCropRightOffset;
+	be_t<u16> frameCropTopOffset;
+	be_t<u16> frameCropBottomOffset;
+	u8 videoFormat;
 	u8 videoFullRangeFlag;
 	u8 colourPrimaries;
 	u8 transferCharacteristics;
 	u8 matrixCoefficients;
-	u8 entropyCodingModeFlag; //reserved
+	u8 entropyCodingModeFlag;
 	u8 deblockingFilterFlag;
-	u8 minNumSlicePerPictureIdc; //reserved
-	u8 nfwIdc; //reserved
-	u8 maxMeanBitrate; //reserved
+	u8 minNumSlicePerPictureIdc;
+	u8 nfwIdc;
+	u8 maxMeanBitrate;
 };
+
+static_assert(sizeof(CellPamfAvcInfo) == 0x20, "Invalid CellPamfAvcInfo size");
 
 // M2V (MPEG2 Video) Specific Information
 struct CellPamfM2vInfo
 {
 	u8 profileAndLevelIndication;
-	bool progressiveSequence;
+	u8 progressiveSequence;
 	u8 videoSignalInfoFlag;
 	u8 frameRateInfo;
 	u8 aspectRatioIdc;
@@ -219,13 +221,7 @@ struct CellPamfM2vInfo
 	u8 matrixCoefficients;
 };
 
-// LPCM Audio Specific Information
-struct CellPamfLpcmInfo
-{
-	be_t<u32> samplingFrequency;
-	u8 numberOfChannels;
-	be_t<u16> bitsPerSample;
-};
+static_assert(sizeof(CellPamfM2vInfo) == 0x18, "Invalid CellPamfM2vInfo size");
 
 // ATRAC3+ Audio Specific Information
 struct CellPamfAtrac3plusInfo
@@ -234,6 +230,8 @@ struct CellPamfAtrac3plusInfo
 	u8 numberOfChannels;
 };
 
+static_assert(sizeof(CellPamfAtrac3plusInfo) == 8, "Invalid CellPamfAtrac3plusInfo size");
+
 // AC3 Audio Specific Information
 struct CellPamfAc3Info
 {
@@ -241,61 +239,100 @@ struct CellPamfAc3Info
 	u8 numberOfChannels;
 };
 
+static_assert(sizeof(CellPamfAc3Info) == 8, "Invalid CellPamfAc3Info size");
+
+// LPCM Audio Specific Information
+struct CellPamfLpcmInfo
+{
+	be_t<u32> samplingFrequency;
+	u8 numberOfChannels;
+	be_t<u16> bitsPerSample;
+};
+
+
+
 #pragma pack(push, 1) // file data
-
-// AVC specific information
-struct PamfStreamHeader_AVC
-{
-	u8 profileIdc;
-	u8 levelIdc;
-	u8 unk0;
-	u8 unk1; //1
-	u32 unk2; //0
-	be_t<u16> horizontalSize; //divided by 16
-	be_t<u16> verticalSize; //divided by 16
-	u32 unk3; //0
-	u32 unk4; //0
-	u8 unk5; //0xA0
-	u8 unk6; //1
-	u8 unk7; //1
-	u8 unk8; //1
-	u8 unk9; //0xB0
-	u8 unk10;
-	u16 unk11; //0
-	u32 unk12; //0
-};
-
-// M2V specific information
-struct PamfStreamHeader_M2V
-{ 
-	u8 unknown[32];
-};
-
-// Audio specific information
-struct PamfStreamHeader_Audio
-{
-	u16 unknown; //== 0
-	u8 channels; //number of channels (1, 2, 6 or 8)
-	u8 freq; //== 1 (always 48000)
-	u8 bps; //(LPCM only, 0x40 for 16 bit, ???? for 24)
-	u8 reserved[27]; //probably nothing
-};
 
 struct PamfStreamHeader
 {
-	//TODO: look for correct beginning of stream header
-	u8 type; //0x1B for video (AVC), 0xDC ATRAC3+, 0x80 LPCM, 0xDD userdata
-	u8 unknown[3]; //0
-	//TODO: examine stream_ch encoding
+	u8 type;
+	u8 unknown[3];
 	u8 fid_major;
 	u8 fid_minor;
-	u8 unknown1; //?????
-	u8 unknown2; //?????
-	//Entry Point Info
-	be_t<u32> ep_offset; //offset of EP section in header
-	be_t<u32> ep_num; //count of EPs
-	//Specific Info
-	u8 data[32];
+	u8 unknown1;
+	u8 unknown2;
+	be_t<u32> ep_offset; // offset of EP section in header
+	be_t<u32> ep_num; // count of EPs
+	
+	union
+	{
+		u8 data[32]; // specific info
+
+		// AVC specific information
+		struct
+		{
+			u8 profileIdc;
+			u8 levelIdc;
+			u8 x2; // contains frameMbsOnlyFlag, videoSignalInfoFlag, frameRateInfo
+			u8 aspectRatioIdc;
+			u32 x4; // 0 (not used)
+			be_t<u16> horizontalSize; // divided by 16
+			be_t<u16> verticalSize; // divided by 16
+			be_t<u16> frameCropLeftOffset;
+			be_t<u16> frameCropRightOffset;
+			be_t<u16> frameCropTopOffset;
+			be_t<u16> frameCropBottomOffset;
+			union
+			{
+				struct
+				{
+					be_t<u16> sarWidth;
+					be_t<u16> sarHeight;
+				};
+				struct
+				{
+					u8 x14; // contains videoFormat and videoFullRangeFlag
+					u8 colourPrimaries;
+					u8 transferCharacteristics;
+					u8 matrixCoefficients;
+				};
+			};
+			u8 x18; // contains entropyCodingModeFlag, deblockingFilterFlag, minNumSlicePerPictureIdc, nfwIdc
+			u8 maxMeanBitrate;
+
+		} AVC;
+
+		// M2V specific information
+		struct
+		{
+			s8 x0; // contains profileAndLevelIndication
+			u8 x1; // not used
+			u8 x2; // contains progressiveSequence, videoSignalInfoFlag, frameRateInfo
+			u8 aspectRatioIdc;
+			be_t<u16> sarWidth;
+			be_t<u16> sarHeight;
+			be_t<u16> horizontalSize;
+			be_t<u16> verticalSize;
+			be_t<u16> horizontalSizeValue;
+			be_t<u16> verticalSizeValue;
+			u32 x10; // not used
+			u8 x14; // contains videoFormat and videoFullRangeFlag
+			u8 colourPrimaries;
+			u8 transferCharacteristics;
+			u8 matrixCoefficients;
+
+		} M2V;
+
+		// Audio specific information
+		struct
+		{
+			u16 unknown; // 0
+			u8 channels; // number of channels (1, 2, 6, 8)
+			u8 freq; // 1 (always 48000)
+			u8 bps; // LPCM only
+
+		} audio;
+	};
 };
 
 static_assert(sizeof(PamfStreamHeader) == 48, "Invalid PamfStreamHeader size");
