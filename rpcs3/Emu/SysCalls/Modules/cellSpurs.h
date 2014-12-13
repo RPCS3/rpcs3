@@ -427,19 +427,38 @@ struct CellSpursTaskset
 		// Raw data
 		u8 _u8[size];
 
+		struct TaskInfo
+		{
+			be_t<u32> args[4];
+			vm::bptr<u64, 1, u64> elf;
+			vm::bptr<u64, 1, u64> context_save_storage;
+			be_t<u32> ls_pattern[4];
+		};
+
 		// Real data
 		struct
 		{
-			u8 unk1[0x64];              // 0x00
-			vm::bptr<CellSpurs> spurs;  // 0x64
-			be_t<u64> args;             // 0x68
-			u8 enable_clear_ls;         // 0x70
-			u8 x71;                     // 0x71
-			u8 x72;                     // 0x72
-			u8 x73;                     // 0x73
-			be_t<u32> wid;              // 0x74
-			u8 unk3[0x1818];            // 0x78
-			be_t<u32> size;             // 0x1890
+			be_t<u32> running_set[4];                    // 0x00
+			be_t<u32> ready_set[4];                      // 0x10
+			be_t<u32> unk_set[4];                        // 0x20 - TODO: Find out what this is
+			be_t<u32> enabled_set[4];                    // 0x30
+			be_t<u32> signal_received_set[4];            // 0x40
+			be_t<u32> waiting_set[4];                    // 0x50
+			vm::bptr<CellSpurs, 1, u64> spurs;           // 0x60
+			be_t<u64> args;                              // 0x68
+			u8 enable_clear_ls;                          // 0x70
+			u8 x71;                                      // 0x71
+			u8 x72;                                      // 0x72
+			u8 last_scheduled_task;                      // 0x73
+			be_t<u32> wid;                               // 0x74
+			u8 unk1[8];                                  // 0x78
+			TaskInfo task_info[128];                     // 0x80
+			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
+			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
+			be_t<u32> size;                              // 0x1890
+			u32 unk2;                                    // 0x1894
+			u32 event_flag_id1;                          // 0x1898
+			u32 event_flag_id2;                          // 0x189C
 		} m;
 
 		SPURSManagerTaskset *taskset;
@@ -564,7 +583,47 @@ struct CellSpursTaskset2
 	static const u32 align = 128;
 	static const u32 size = 10496;
 
-	be_t<u8> skip[10496];
+	union
+	{
+		// Raw data
+		u8 _u8[size];
+
+		struct TaskInfo
+		{
+			be_t<u32> args[4];
+			vm::bptr<u64, 1, u64> elf_address;
+			vm::bptr<u64, 1, u64> context_save_storage;
+			be_t<u32> ls_pattern[4];
+		};
+
+		// Real data
+		struct
+		{
+			be_t<u32> running_set[4];                    // 0x00
+			be_t<u32> ready_set[4];                      // 0x10
+			be_t<u32> unk_set[4];                        // 0x20 - TODO: Find out what this is
+			be_t<u32> enabled_set[4];                    // 0x30
+			be_t<u32> signal_received_set[4];            // 0x40
+			be_t<u32> waiting_set[4];                    // 0x50
+			vm::bptr<CellSpurs, 1, u64> spurs;           // 0x60
+			be_t<u64> args;                              // 0x68
+			u8 enable_clear_ls;                          // 0x70
+			u8 x71;                                      // 0x71
+			u8 x72;                                      // 0x72
+			u8 last_scheduled_task;                      // 0x73
+			be_t<u32> wid;                               // 0x74
+			u8 unk1[8];                                  // 0x78
+			TaskInfo task_info[128];                     // 0x80
+			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
+			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
+			be_t<u32> size;                              // 0x1890
+			u32 unk2;                                    // 0x1894
+			u32 event_flag_id1;                          // 0x1898
+			u32 event_flag_id2;                          // 0x189C
+			u8 unk3[0x88];                               // 0x1900
+			u128 task_exit_code[128];                    // 0x1988
+		} m;
+	};
 };
 
 struct CellSpursTasksetAttribute

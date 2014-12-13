@@ -253,7 +253,7 @@ namespace vm
 
 		void* get_ptr() const
 		{
-			return vm::get_ptr<void>(m_addr);
+			return vm::get_ptr<void>((u32)m_addr);
 		}
 
 		explicit operator void*() const
@@ -313,7 +313,7 @@ namespace vm
 
 		const void* get_ptr() const
 		{
-			return vm::get_ptr<const void>(m_addr);
+			return vm::get_ptr<const void>((u32)m_addr);
 		}
 
 		explicit operator const void*() const

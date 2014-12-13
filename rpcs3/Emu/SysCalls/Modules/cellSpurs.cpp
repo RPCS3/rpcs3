@@ -2309,7 +2309,7 @@ s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> tasks
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	memset((void *)taskset.addr(), 0, size);
+	memset(taskset.get_ptr(), 0, size);
 
 	taskset->m.spurs = spurs;
 	taskset->m.args = args;
@@ -2406,13 +2406,28 @@ s64 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
 #endif
 }
 
-s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> workloadId)
+s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursGetTasksetId(taskset_addr=0x%x, workloadId_addr=0x%x)", taskset.addr(), workloadId.addr());
 	return GetCurrentPPUThread().FastCall2(libsre + 0x14EA0, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!taskset || !wid)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	*wid = taskset->m.wid.ToBE();
 	return CELL_OK;
 #endif
 }
@@ -2777,29 +2792,66 @@ s64 cellSpursCreateTask2WithBinInfo()
 #endif
 }
 
-s64 cellSpursTasksetSetExceptionEventHandler()
+s64 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u64> handler, vm::ptr<u64> arg)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x13124, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!taskset || !handler)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	if (taskset->m.exception_handler != 0)
+	{
+		return CELL_SPURS_TASK_ERROR_BUSY;
+	}
+
+	taskset->m.exception_handler = handler;
+	taskset->m.exception_handler_arg = arg;
 	return CELL_OK;
 #endif
 }
 
-s64 cellSpursTasksetUnsetExceptionEventHandler()
+s64 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x13194, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!taskset)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	taskset->m.exception_handler.set(0);
+	taskset->m.exception_handler_arg.set(0);
 	return CELL_OK;
 #endif
 }
 
-s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset *> taskset, u32 id)
+s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<u32> taskset, u32 id)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
@@ -2810,13 +2862,28 @@ s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 #endif
 }
 
-s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<CellSpurs *> spurs)
+s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<u32> spurs)
 {
 #ifdef PRX_DEBUG
 	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x14408, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!taskset || !spurs)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	*spurs = (u32)taskset->m.spurs.addr().ToBE();
 	return CELL_OK;
 #endif
 }
@@ -3092,6 +3159,8 @@ void cellSpurs_init(Module *pxThis)
 	REG_FUNC(cellSpurs, cellSpursEnableExceptionEventHandler);
 	REG_FUNC(cellSpurs, cellSpursSetGlobalExceptionEventHandler);
 	REG_FUNC(cellSpurs, cellSpursUnsetGlobalExceptionEventHandler);
+	REG_FUNC(cellSpurs, cellSpursSetExceptionEventHandler);
+	REG_FUNC(cellSpurs, cellSpursUnsetExceptionEventHandler);
 
 	// Event flag
 	REG_FUNC(cellSpurs, _cellSpursEventFlagInitialize);
@@ -3137,8 +3206,6 @@ void cellSpurs_init(Module *pxThis)
 	REG_FUNC(cellSpurs, cellSpursCreateTask2WithBinInfo);
 	REG_FUNC(cellSpurs, cellSpursLookUpTasksetAddress);
 	REG_FUNC(cellSpurs, cellSpursTasksetGetSpursAddress);
-	REG_FUNC(cellSpurs, cellSpursSetExceptionEventHandler);
-	REG_FUNC(cellSpurs, cellSpursUnsetExceptionEventHandler);
 	REG_FUNC(cellSpurs, cellSpursGetTasksetInfo);
 	REG_FUNC(cellSpurs, cellSpursTasksetSetExceptionEventHandler);
 	REG_FUNC(cellSpurs, cellSpursTasksetUnsetExceptionEventHandler);
