@@ -445,16 +445,83 @@ void GLVertexDecompilerThread::Task()
 	m_instr_count = 0;
 
 	for (int i = 0; i < m_max_instr_count; ++i)
+	{
 		m_instructions[i].reset();
+	}
 
-	for (u32 i = 0; m_instr_count < m_max_instr_count; m_instr_count++)
+	bool is_has_BRA = false;
+
+	for (u32 i = 1; m_instr_count < m_max_instr_count; m_instr_count++)
 	{
 		m_cur_instr = &m_instructions[m_instr_count];
 
-		d0.HEX = m_data[i++];
-		d1.HEX = m_data[i++];
-		d2.HEX = m_data[i++];
-		d3.HEX = m_data[i++];
+		if (is_has_BRA)
+		{
+			d3.HEX = m_data[i];
+			i += 4;
+		}
+		else
+		{
+			d1.HEX = m_data[i++];
+
+			switch (d1.sca_opcode)
+			{
+			case 0x08: //BRA
+				LOG_WARNING(RSX, "BRA found. Please report to RPCS3 team.");
+				is_has_BRA = true;
+				m_jump_lvls.clear();
+				d3.HEX = m_data[++i];
+				i += 4;
+				break;
+
+			case 0x09: //BRI
+				d2.HEX = m_data[i++];
+				d3.HEX = m_data[i];
+				i += 2;
+				m_jump_lvls.emplace(GetAddr());
+				break;
+
+			default:
+				d3.HEX = m_data[++i];
+				i += 2;
+				break;
+			}
+		}
+
+		if (d3.end)
+		{
+			m_instr_count++;
+
+			if (i < m_data.size())
+				LOG_ERROR(RSX, "Program end before buffer end.");
+
+			break;
+		}
+	}
+
+	uint jump_position = 0;
+
+	if (is_has_BRA || !m_jump_lvls.empty())
+	{
+		m_cur_instr = &m_instructions[0];
+		AddCode("int jump_position = 0;");
+		AddCode("while (true)");
+		AddCode("{");
+		m_cur_instr->open_scopes++;
+
+		AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
+		AddCode("{");
+		m_cur_instr->open_scopes++;
+	}
+
+	for (u32 i = 0; i < m_instr_count; ++i)
+	{
+		m_cur_instr = &m_instructions[i];
+
+		d0.HEX = m_data[i * 4 + 0];
+		d1.HEX = m_data[i * 4 + 1];
+		d2.HEX = m_data[i * 4 + 2];
+		d3.HEX = m_data[i * 4 + 3];
 
 		src[0].src0l = d2.src0l;
 		src[0].src0h = d1.src0h;
@@ -462,12 +529,23 @@ void GLVertexDecompilerThread::Task()
 		src[2].src2l = d3.src2l;
 		src[2].src2h = d2.src2h;
 
-		if(!d1.sca_opcode && !d1.vec_opcode)
+		if (i && (is_has_BRA || std::find(m_jump_lvls.begin(), m_jump_lvls.end(), i) != m_jump_lvls.end()))
 		{
-			m_body.push_back("//nop");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+			AddCode("");
+
+			AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
+			AddCode("{");
+			m_cur_instr->open_scopes++;
 		}
 
-		switch(d1.sca_opcode)
+		if (!d1.sca_opcode && !d1.vec_opcode)
+		{
+			AddCode("//nop");
+		}
+
+		switch (d1.sca_opcode)
 		{
 		case 0x00: break; // NOP
 		case 0x01: SetDSTSca("$s"); break; // MOV
@@ -477,22 +555,47 @@ void GLVertexDecompilerThread::Task()
 		case 0x05: SetDSTSca("exp($s)"); break; // EXP
 		case 0x06: SetDSTSca("log($s)"); break; // LOG
 		case 0x07: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0 ? exp2($s.w * log2($s.y)) : 0.0), 1.0)"); break; // LIT
-		//case 0x08: break; // BRA
+		case 0x08: // BRA
+		{
+			AddCode("$if ($cond)");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode("jump_position = $a$am;");
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+		}
+		break;
 		case 0x09: // BRI : works differently (BRI o[1].x(TR) L0;)
-			//AddCode("$ifcond { $f(); return; }");
-			if (GetAddr() > m_instr_count)
+		{
+			uint jump_position;
+
+			if (is_has_BRA)
 			{
-				AddCode("if(!$cond)");
-				AddCode("{");
-				m_cur_instr->open_scopes++;
-				m_instructions[GetAddr()].put_close_scopes++;
+				jump_position = GetAddr();
 			}
 			else
 			{
-				AddCode("} while ($cond);");
-				m_cur_instr->close_scopes++;
-				m_instructions[GetAddr()].do_count++;
+				int addr = GetAddr();
+
+				jump_position = 0;
+				for (auto pos : m_jump_lvls)
+				{
+					if (addr == pos)
+						break;
+
+					++jump_position;
+				}
 			}
+
+			AddCode("$ifcond ");
+			AddCode("{");
+			m_cur_instr->open_scopes++;
+			AddCode(fmt::Format("jump_position = %u;", jump_position));
+			AddCode("continue;");
+			m_cur_instr->close_scopes++;
+			AddCode("}");
+		}
 		break;
 		//case 0x0a: AddCode("$ifcond $f(); //CAL"); break; // CAL : works same as BRI
 		case 0x0b: AddCode("$ifcond $f(); //CLI"); break; // CLI : works same as BRI
@@ -507,13 +610,13 @@ void GLVertexDecompilerThread::Task()
 		//case 0x14: break; // POP : works differently (POP o[1].x;)
 
 		default:
-			m_body.push_back(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
+			AddCode(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
 			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
 			Emu.Pause();
 		break;
 		}
 
-		switch(d1.vec_opcode)
+		switch (d1.vec_opcode)
 		{
 		case 0x00: break; //NOP
 		case 0x01: SetDSTVec("$0"); break; //MOV
@@ -540,29 +643,41 @@ void GLVertexDecompilerThread::Task()
 		case 0x16: SetDSTVec("sign($0)"); break; //SSG
 
 		default:
-			m_body.push_back(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
+			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
 			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
 			Emu.Pause();
 		break;
 		}
 
-		if(d3.end)
+		if (d3.end)
 		{
 			m_instr_count++;
 
-			if(i < m_data.size())
+			if (i < m_data.size())
+			{
 				LOG_ERROR(RSX, "Program end before buffer end.");
-
+			}
 			break;
 		}
 	}
 
+	if (is_has_BRA || !m_jump_lvls.empty())
+	{
+		m_cur_instr = &m_instructions[m_instr_count - 1];
+		m_cur_instr->close_scopes++;
+		AddCode("}");
+		AddCode("break;");
+		m_cur_instr->close_scopes++;
+		AddCode("}");
+	}
+
 	m_shader = BuildCode();
 
+	m_jump_lvls.clear();
 	m_body.clear();
 	if (m_funcs.size() > 2)
 	{
-		m_funcs.erase(m_funcs.begin()+2, m_funcs.end());
+		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
 	}
 }
 

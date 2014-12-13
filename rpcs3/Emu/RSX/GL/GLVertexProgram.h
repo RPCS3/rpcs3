@@ -2,6 +2,7 @@
 #include "GLShaderParam.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Utilities/Thread.h"
+#include <set>
 
 struct GLVertexDecompilerThread : public ThreadBase
 {
@@ -154,8 +155,8 @@ struct GLVertexDecompilerThread : public ThreadBase
 	Instruction* m_cur_instr;
 	size_t m_instr_count;
 
+	std::set<int> m_jump_lvls;
 	std::vector<std::string> m_body;
-
 	std::vector<FuncInfo> m_funcs;
 
 	//wxString main;
