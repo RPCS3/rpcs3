@@ -62,7 +62,7 @@ public:
 
 	template<typename... Targs> __noinline void Success(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogSuccess, " : ", fmt::Format(fmt, args...));
+		LogOutput(LogSuccess, ": ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __noinline void Warning(const u32 id, const char* fmt, Targs... args) const

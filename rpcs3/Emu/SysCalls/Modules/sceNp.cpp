@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/lv2/sys_process.h"
 
 #include "Emu/FS/VFS.h"
 #include "Utilities/rFile.h"
@@ -187,15 +188,35 @@ int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<u64> time_remain_usec)
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn()
+int sceNpDrmProcessExitSpawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpDrmProcessExitSpawn()");
+	sceNp->Warning("path: %s", path.get_ptr());
+	sceNp->Warning("argv: 0x%x", argv_addr);
+	sceNp->Warning("envp: 0x%x", envp_addr);
+	sceNp->Warning("data: 0x%x", data_addr);
+	sceNp->Warning("data_size: 0x%x", data_size);
+	sceNp->Warning("prio: %d", prio);
+	sceNp->Warning("flags: %d", flags);
+
+	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
+
 	return CELL_OK;
 }
 
-int sceNpDrmProcessExitSpawn2()
+int sceNpDrmProcessExitSpawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp->Warning("sceNpDrmProcessExitSpawn2()");
+	sceNp->Warning("path: %s", path.get_ptr());
+	sceNp->Warning("argv: 0x%x", argv_addr);
+	sceNp->Warning("envp: 0x%x", envp_addr);
+	sceNp->Warning("data: 0x%x", data_addr);
+	sceNp->Warning("data_size: 0x%x", data_size);
+	sceNp->Warning("prio: %d", prio);
+	sceNp->Warning("flags: %d", flags);
+
+	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
+
 	return CELL_OK;
 }
 

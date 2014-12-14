@@ -38,17 +38,20 @@ s32 sys_process_exit(s32 errorcode)
 	return CELL_OK;
 }
 
-void sys_game_process_exitspawn(
-			vm::ptr<const char> path,
-			u32 argv_addr,
-			u32 envp_addr,
-			u32 data_addr,
-			u32 data_size,
-			u32 prio,
-			u64 flags )
+void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
+	std::string _path = path.get_ptr();
+	const std::string& from = "//";
+	const std::string& to = "/";
+
+	size_t start_pos = 0;
+	while ((start_pos = _path.find(from, start_pos)) != std::string::npos) {
+		_path.replace(start_pos, from.length(), to);
+		start_pos += to.length();
+	}
+
 	sys_process.Todo("sys_game_process_exitspawn()");
-	sys_process.Warning("path: %s", path.get_ptr());
+	sys_process.Warning("path: %s", _path.c_str());
 	sys_process.Warning("argv: 0x%x", argv_addr);
 	sys_process.Warning("envp: 0x%x", envp_addr);
 	sys_process.Warning("data: 0x%x", data_addr);
@@ -60,25 +63,32 @@ void sys_game_process_exitspawn(
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
-	while (argvp && *argvp)
+	if (argv_addr)
 	{
-		argv.push_back(argvp[0].get_ptr());
-		argvp++;
-	}
-	auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
-	while (envp && *envp)
-	{
-		env.push_back(envp[0].get_ptr());
-		envp++;
+		auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
+		while (argvp && *argvp)
+		{
+			argv.push_back(argvp[0].get_ptr());
+			argvp++;
+		}
+
+		for (auto &arg : argv) {
+			sys_process.Log("argument: %s", arg.c_str());
+		}
 	}
 
-	for (auto &arg : argv) {
-		sys_process.Log("argument: %s", arg.c_str());
-	}
+	if (envp_addr)
+	{
+		auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
+		while (envp && *envp)
+		{
+			env.push_back(envp[0].get_ptr());
+			envp++;
+		}
 
-	for (auto &en : env) {
-		sys_process.Log("env_argument: %s", en.c_str());
+		for (auto &en : env) {
+			sys_process.Log("env_argument: %s", en.c_str());
+		}
 	}
 
 	//TODO: execute the file in <path> with the args in argv
@@ -93,21 +103,33 @@ void sys_game_process_exitspawn(
 	{
 		Emu.Stop();
 	});
+
+	int device = -1;
+
+	if (_path.substr(1, 8) == "dev_hdd0")
+		device = 0;
+	else if (_path.substr(1, 8) == "dev_hdd1")
+		device = 1;
+
+	Emu.BootGame(_path.c_str(), true, device);
 
 	return;
 }
 
-void sys_game_process_exitspawn2(
-			vm::ptr<const char> path,
-			u32 argv_addr,
-			u32 envp_addr,
-			u32 data_addr,
-			u32 data_size,
-			u32 prio,
-			u64 flags)
+void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sys_process.Todo("sys_game_process_exitspawn2");
-	sys_process.Warning("path: %s", path.get_ptr());
+	std::string _path = path.get_ptr();
+	const std::string& from = "//";
+	const std::string& to = "/";
+
+	size_t start_pos = 0;
+	while ((start_pos = _path.find(from, start_pos)) != std::string::npos) {
+		_path.replace(start_pos, from.length(), to);
+		start_pos += to.length();
+	}
+
+	sys_process.Warning("sys_game_process_exitspawn2()");
+	sys_process.Warning("path: %s", _path.c_str());
 	sys_process.Warning("argv: 0x%x", argv_addr);
 	sys_process.Warning("envp: 0x%x", envp_addr);
 	sys_process.Warning("data: 0x%x", data_addr);
@@ -115,29 +137,37 @@ void sys_game_process_exitspawn2(
 	sys_process.Warning("prio: %d", prio);
 	sys_process.Warning("flags: %d", flags);
 
-	std::string _path = path.get_ptr();
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
-	auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
-	while (argvp && *argvp)
+	if (argv_addr)
 	{
-		argv.push_back(argvp[0].get_ptr());
-		argvp++;
-	}
-	auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
-	while (envp && *envp)
-	{
-		env.push_back(envp[0].get_ptr());
-		envp++;
+		auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
+		while (argvp && *argvp)
+		{
+			argv.push_back(argvp[0].get_ptr());
+			argvp++;
+		}
+
+		for (auto &arg : argv)
+		{
+			sys_process.Log("argument: %s", arg.c_str());
+		}
 	}
 
-	for (auto &arg : argv) {
-		sys_process.Log("argument: %s", arg.c_str());
-	}
+	if (envp_addr)
+	{
+		auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
+		while (envp && *envp)
+		{
+			env.push_back(envp[0].get_ptr());
+			envp++;
+		}
 
-	for (auto &en : env) {
-		sys_process.Log("env_argument: %s", en.c_str());
+		for (auto &en : env)
+		{
+			sys_process.Log("env_argument: %s", en.c_str());
+		}
 	}
 
 	//TODO: execute the file in <path> with the args in argv
@@ -152,6 +182,15 @@ void sys_game_process_exitspawn2(
 	{
 		Emu.Stop();
 	});
+	
+	int device = -1;
+
+	if (_path.substr(1, 8) == "dev_hdd0")
+		device = 0;
+	else if (_path.substr(1, 8) == "dev_hdd1")
+		device = 1;
+
+	Emu.BootGame(_path.c_str(), true, device);
 
 	return;
 }
