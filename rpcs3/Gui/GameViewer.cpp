@@ -67,7 +67,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	LoadSettings();
 	m_columns.Show(this);
 
-	m_sortColumn = 0;
+	m_sortColumn = 1;
 	m_sortAscending = true;
 	m_path = "/dev_hdd0/game/";
 	m_popup = new wxMenu();
