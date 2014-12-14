@@ -59,7 +59,6 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 	sys_process.Warning("prio: %d", prio);
 	sys_process.Warning("flags: %d", flags);
 
-	std::string _path = path.get_ptr();
 	std::vector<std::string> argv;
 	std::vector<std::string> env;
 
