@@ -63,15 +63,15 @@ namespace Log
 		LogSeverity mServerity;
 		std::string mText;
 
-		u32 size();
-		void serialize(char *output);
+		u32 size() const;
+		void serialize(char *output) const;
 		static LogMessage deserialize(char *input, u32* size_out=nullptr);
 	};
 
 	struct LogListener
 	{
 		virtual ~LogListener() {};
-		virtual void log(LogMessage msg) = 0;
+		virtual void log(const LogMessage &msg) = 0;
 	};
 
 	struct LogChannel
@@ -80,7 +80,7 @@ namespace Log
 		LogChannel(const std::string& name);
 		LogChannel(LogChannel& other) = delete;
 		LogChannel& operator = (LogChannel& other) = delete;
-		void log(LogMessage msg);
+		void log(const LogMessage &msg);
 		void addListener(std::shared_ptr<LogListener> listener);
 		void removeListener(std::shared_ptr<LogListener> listener);
 		std::string name;
