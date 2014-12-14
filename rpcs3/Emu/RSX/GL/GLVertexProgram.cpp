@@ -547,15 +547,15 @@ void GLVertexDecompilerThread::Task()
 
 		switch (d1.sca_opcode)
 		{
-		case 0x00: break; // NOP
-		case 0x01: SetDSTSca("$s"); break; // MOV
-		case 0x02: SetDSTSca("(1.0 / $s)"); break; // RCP
-		case 0x03: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break; // RCC
-		case 0x04: SetDSTSca("inversesqrt(abs($s))"); break; // RSQ
-		case 0x05: SetDSTSca("exp($s)"); break; // EXP
-		case 0x06: SetDSTSca("log($s)"); break; // LOG
-		case 0x07: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0 ? exp2($s.w * log2($s.y)) : 0.0), 1.0)"); break; // LIT
-		case 0x08: // BRA
+		case RSX_SCA_OPCODE_NOP: break;
+		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
+		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
+		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("inversesqrt(abs($s))"); break;
+		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
+		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
+		case RSX_SCA_OPCODE_LIT: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0 ? exp2($s.w * log2($s.y)) : 0.0), 1.0)"); break;
+		case RSX_SCA_OPCODE_BRA:
 		{
 			AddCode("$if ($cond)");
 			AddCode("{");
@@ -566,7 +566,7 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
-		case 0x09: // BRI : works differently (BRI o[1].x(TR) L0;)
+		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
 			uint jump_position;
 
@@ -597,17 +597,38 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
-		//case 0x0a: AddCode("$ifcond $f(); //CAL"); break; // CAL : works same as BRI
-		case 0x0b: AddCode("$ifcond $f(); //CLI"); break; // CLI : works same as BRI
-		case 0x0c: AddCode("$ifcond return;"); break; // RET : works like BRI but shorter (RET o[1].x(TR);)
-		case 0x0d: SetDSTSca("log2($s)"); break; // LG2
-		case 0x0e: SetDSTSca("exp2($s)"); break; // EX2
-		case 0x0f: SetDSTSca("sin($s)"); break; // SIN
-		case 0x10: SetDSTSca("cos($s)"); break; // COS
-		//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
-		//case 0x12: break; // CLB : works same as BRB
-		//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
-		//case 0x14: break; // POP : works differently (POP o[1].x;)
+		case RSX_SCA_OPCODE_CAL:
+			// works same as BRI
+			AddCode("$ifcond $f(); //CAL"); 
+			break;
+		case RSX_SCA_OPCODE_CLI: 
+			// works same as BRI
+			AddCode("$ifcond $f(); //CLI"); 
+			break;
+		case RSX_SCA_OPCODE_RET:
+			// works like BRI but shorter (RET o[1].x(TR);)
+			AddCode("$ifcond return;"); 
+			break;
+		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2($s)"); break;
+		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
+		case RSX_SCA_OPCODE_SIN: SetDSTSca("sin($s)"); break;
+		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
+		case RSX_SCA_OPCODE_BRB: 
+			// works differently (BRB o[1].x !b0, L0;)
+			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB");
+			break;
+		case RSX_SCA_OPCODE_CLB: break; 
+			// works same as BRB
+			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
+			break;
+		case RSX_SCA_OPCODE_PSH: break; 
+			// works differently (PSH o[1].x A0;)
+			LOG_ERROR(RSX, "Unimplemented sca_opcode PSH");
+			break;
+		case RSX_SCA_OPCODE_POP: break; 
+			// works differently (POP o[1].x;)
+			LOG_ERROR(RSX, "Unimplemented sca_opcode POP");
+			break;
 
 		default:
 			AddCode(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
@@ -618,29 +639,29 @@ void GLVertexDecompilerThread::Task()
 
 		switch (d1.vec_opcode)
 		{
-		case 0x00: break; //NOP
-		case 0x01: SetDSTVec("$0"); break; //MOV
-		case 0x02: SetDSTVec("($0 * $1)"); break; //MUL
-		case 0x03: SetDSTVec("($0 + $2)"); break; //ADD
-		case 0x04: SetDSTVec("($0 * $1 + $2)"); break; //MAD
-		case 0x05: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break; //DP3
-		case 0x06: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break; //DPH
-		case 0x07: SetDSTVec("vec4(dot($0, $1))"); break; //DP4
-		case 0x08: SetDSTVec("vec4(distance($0, $1))"); break; //DST
-		case 0x09: SetDSTVec("min($0, $1)"); break; //MIN
-		case 0x0a: SetDSTVec("max($0, $1)"); break; //MAX
-		case 0x0b: SetDSTVec("vec4(lessThan($0, $1))"); break; //SLT
-		case 0x0c: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break; //SGE
-		case 0x0d: AddCode("$ifcond $a = ivec4($0)$am;");  break; //ARL
-		case 0x0e: SetDSTVec("fract($0)"); break; //FRC
-		case 0x0f: SetDSTVec("floor($0)"); break; //FLR
-		case 0x10: SetDSTVec("vec4(equal($0, $1))"); break; //SEQ
-		case 0x11: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break; //SFL
-		case 0x12: SetDSTVec("vec4(greaterThan($0, $1))"); break; //SGT
-		case 0x13: SetDSTVec("vec4(lessThanEqual($0, $1))"); break; //SLE
-		case 0x14: SetDSTVec("vec4(notEqual($0, $1))"); break; //SNE
-		case 0x15: SetDSTVec("vec4(equal($0, vec4(1.0)))"); break; //STR
-		case 0x16: SetDSTVec("sign($0)"); break; //SSG
+		case RSX_VEC_OPCODE_NOP: break;
+		case RSX_VEC_OPCODE_MOV: SetDSTVec("$0"); break;
+		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
+		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
+		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
+		case RSX_VEC_OPCODE_DP3: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break;
+		case RSX_VEC_OPCODE_DPH: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break;
+		case RSX_VEC_OPCODE_DP4: SetDSTVec("vec4(dot($0, $1))"); break;
+		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
+		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
+		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
+		case RSX_VEC_OPCODE_SLT: SetDSTVec("vec4(lessThan($0, $1))"); break;
+		case RSX_VEC_OPCODE_SGE: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break;
+		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = ivec4($0)$am;");  break;
+		case RSX_VEC_OPCODE_FRC: SetDSTVec("fract($0)"); break;
+		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
+		case RSX_VEC_OPCODE_SEQ: SetDSTVec("vec4(equal($0, $1))"); break;
+		case RSX_VEC_OPCODE_SFL: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break;
+		case RSX_VEC_OPCODE_SGT: SetDSTVec("vec4(greaterThan($0, $1))"); break;
+		case RSX_VEC_OPCODE_SLE: SetDSTVec("vec4(lessThanEqual($0, $1))"); break;
+		case RSX_VEC_OPCODE_SNE: SetDSTVec("vec4(notEqual($0, $1))"); break;
+		case RSX_VEC_OPCODE_STR: SetDSTVec("vec4(equal($0, vec4(1.0)))"); break;
+		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
 
 		default:
 			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
