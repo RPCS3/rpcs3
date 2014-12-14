@@ -63,7 +63,7 @@ wxString GetPaneName()
 }
 
 MainFrame::MainFrame()
-	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(800, 600))
+	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(900, 600))
 	, m_aui_mgr(this)
 	, m_sys_menu_opened(false)
 {

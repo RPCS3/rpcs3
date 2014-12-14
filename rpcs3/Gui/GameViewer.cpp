@@ -67,7 +67,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	LoadSettings();
 	m_columns.Show(this);
 
-	m_sortColumn = 0;
+	m_sortColumn = 1;
 	m_sortAscending = true;
 	m_path = "/dev_hdd0/game/";
 	m_popup = new wxMenu();
@@ -148,8 +148,11 @@ void GameViewer::LoadPSF()
 		if(!psf.Load(false))
 			continue;
 
+		// get local path from VFS...
+		std::string local_path;
+		Emu.GetVFS().GetDevice(m_path, local_path);
+
 		GameInfo game;
-		game.icon_path = wxGetCwd() + m_path + m_games[i] + "/ICON0.PNG";
 		game.root = m_games[i];
 		game.serial = psf.GetString("TITLE_ID");
 		game.name = psf.GetString("TITLE");
@@ -160,13 +163,21 @@ void GameViewer::LoadPSF()
 		game.resolution = psf.GetInteger("RESOLUTION");
 		game.sound_format = psf.GetInteger("SOUND_FORMAT");
 		
-		if(game.serial.length() == 9)
+		if (game.serial.length() == 9)
+		{
 			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
+		}
 
 		if (game.category.substr(0, 2) == "HG")
+		{
 			game.category = "HDD Game";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
 		else if (game.category.substr(0, 2) == "DG")
+		{
 			game.category = "Disc Game";
+			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+		}
 			
 		m_game_data.push_back(game);
 	}
