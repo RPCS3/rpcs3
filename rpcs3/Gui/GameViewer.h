@@ -183,13 +183,15 @@ public:
 
 	void LoadSave(bool isLoad, const std::string& path, wxListView* list = NULL)
 	{
-		if(isLoad) Init();
-		else if(list)
+		if (isLoad)
+			Init();
+		else if (list)
 		{
-			for(int c=0; c<list->GetColumnCount(); ++c)
+			for (int c = 0; c < list->GetColumnCount(); ++c)
 			{
 				Column* col = GetColumnByPos(c);
-				if(col) col->width = list->GetColumnWidth(c);
+				if (col)
+					col->width = list->GetColumnWidth(c);
 			}
 		}
 
@@ -205,21 +207,21 @@ public:
 			} \
 		}
 
-		for(u32 i=0; i<m_columns.size(); ++i)
+		for (u32 i = 0; i < m_columns.size(); ++i)
 		{
 			ADD_COLUMN(pos, m_columns[i].def_pos, int, "position", 1);
 			ADD_COLUMN(width, m_columns[i].def_width, int, "width", 1);
 			ADD_COLUMN(shown, true, bool, "shown", 0);
 		}
 
-		if(isLoad)
+		if (isLoad)
 		{
 			//check for errors
-			for(u32 c1=0; c1<m_columns.size(); ++c1)
+			for (u32 c1 = 0; c1 < m_columns.size(); ++c1)
 			{
-				for(u32 c2=c1+1; c2<m_columns.size(); ++c2)
+				for (u32 c2 = c1 + 1; c2 < m_columns.size(); ++c2)
 				{
-					if(m_columns[c1].pos == m_columns[c2].pos)
+					if (m_columns[c1].pos == m_columns[c2].pos)
 					{
 						LOG_ERROR(HLE, "Columns loaded with error!");
 						Init();
@@ -228,17 +230,19 @@ public:
 				}
 			}
 
-			for(u32 p=0; p<m_columns.size(); ++p)
+			for (u32 p = 0; p < m_columns.size(); ++p)
 			{
 				bool ishas = false;
-				for(u32 c=0; c<m_columns.size(); ++c)
+				for (u32 c = 0; c < m_columns.size(); ++c)
 				{
-					if(m_columns[c].pos != p) continue;
+					if (m_columns[c].pos != p)
+						continue;
+
 					ishas = true;
 					break;
 				}
 
-				if(!ishas)
+				if (!ishas)
 				{
 					LOG_ERROR(HLE, "Columns loaded with error!");
 					Init();
