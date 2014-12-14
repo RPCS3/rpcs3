@@ -336,47 +336,82 @@ void GLFragmentDecompilerThread::Task()
 		case RSX_FP_OPCODE_SGT: SetDst("vec4(greaterThan($0, $1))"); break;
 		case RSX_FP_OPCODE_SNE: SetDst("vec4(notEqual($0, $1))"); break;
 		case RSX_FP_OPCODE_SEQ: SetDst("vec4(equal($0, $1))"); break;
-
 		case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
 		case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
 		case RSX_FP_OPCODE_KIL: SetDst("discard", false); break;
-		//case RSX_FP_OPCODE_PK4: break;
-		//case RSX_FP_OPCODE_UP4: break;
+		case RSX_FP_OPCODE_PK4: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode PK4");
+			break;
+		case RSX_FP_OPCODE_UP4:
+			LOG_ERROR(RSX, "Unimplemented fp_opcode UP4");
+			break;
 		case RSX_FP_OPCODE_DDX: SetDst("dFdx($0)"); break;
 		case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
 		case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)"); break;
-		//case RSX_FP_OPCODE_TXP: break;
-		//case RSX_FP_OPCODE_TXD: break;
+		case RSX_FP_OPCODE_TXP:
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TXP");
+			break;
+		case RSX_FP_OPCODE_TXD:
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TXD");
+			break;
 		case RSX_FP_OPCODE_RCP: SetDst("(1 / $0)"); break;
 		case RSX_FP_OPCODE_RSQ: SetDst("inversesqrt(abs($0))"); break;
 		case RSX_FP_OPCODE_EX2: SetDst("exp2($0)"); break;
 		case RSX_FP_OPCODE_LG2: SetDst("log2($0)"); break;
 		case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0 ? exp2($0.w * log2($0.y)) : 0.0), 1.0)"); break;
-		case RSX_FP_OPCODE_LRP: SetDst("($0 * ($1 - $2) + $2)"); break;
-		
+		case RSX_FP_OPCODE_LRP: SetDst("($0 * ($1 - $2) + $2)"); break;	
 		case RSX_FP_OPCODE_STR: SetDst("vec4(equal($0, vec4(1.0)))"); break;
 		case RSX_FP_OPCODE_SFL: SetDst("vec4(equal($0, vec4(0.0)))"); break;
 		case RSX_FP_OPCODE_COS: SetDst("cos($0)"); break;
 		case RSX_FP_OPCODE_SIN: SetDst("sin($0)"); break;
-		//case RSX_FP_OPCODE_PK2: break;
-		//case RSX_FP_OPCODE_UP2: break;
+		case RSX_FP_OPCODE_PK2:
+			LOG_ERROR(RSX, "Unimplemented fp_opcode PK2");
+			break;
+		case RSX_FP_OPCODE_UP2: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode UP2");
+			break;
 		case RSX_FP_OPCODE_POW: SetDst("pow($0, $1)"); break;
-		//case RSX_FP_OPCODE_PKB: break;
-		//case RSX_FP_OPCODE_UPB: break;
-		//case RSX_FP_OPCODE_PK16: break;
-		//case RSX_FP_OPCODE_UP16: break;
-		//case RSX_FP_OPCODE_BEM: break;
-		//case RSX_FP_OPCODE_PKG: break;
-		//case RSX_FP_OPCODE_UPG: break;
+		case RSX_FP_OPCODE_PKB: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode PKB");
+			break;
+		case RSX_FP_OPCODE_UPB: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode UPB");
+			break;
+		case RSX_FP_OPCODE_PK16: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode PK16");
+			break;
+		case RSX_FP_OPCODE_UP16: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode UP16");
+			break;
+		case RSX_FP_OPCODE_BEM: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode BEM");
+			break;
+		case RSX_FP_OPCODE_PKG: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode PKG");
+			break;
+		case RSX_FP_OPCODE_UPG: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode UPG");
+			break;
 		case RSX_FP_OPCODE_DP2A: SetDst("($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
-		//case RSX_FP_OPCODE_TXL: break;
- 		
-		//case RSX_FP_OPCODE_TXB: break;
-		//case RSX_FP_OPCODE_TEXBEM: break;
-		//case RSX_FP_OPCODE_TXPBEM: break;
-		//case RSX_FP_OPCODE_BEMLUM: break;
+		case RSX_FP_OPCODE_TXL: break;
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TXL");
+			break;
+		case RSX_FP_OPCODE_TXB: break;
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TXB");
+			break;
+		case RSX_FP_OPCODE_TEXBEM: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TEXBEM");
+			break;
+		case RSX_FP_OPCODE_TXPBEM: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TXPBEM");
+			break;
+		case RSX_FP_OPCODE_BEMLUM: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode BEMLUM");
+			break;
 		case RSX_FP_OPCODE_REFL: SetDst("($0 - 2.0 * $1 * dot($0, $1))"); break;
-		//case RSX_FP_OPCODE_TIMESWTEX: break;
+		case RSX_FP_OPCODE_TIMESWTEX: 
+			LOG_ERROR(RSX, "Unimplemented fp_opcode TIMESWTEX");
+			break;
 		case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
 		case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); break;
 		case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
@@ -384,9 +419,10 @@ void GLFragmentDecompilerThread::Task()
 		case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
 		case RSX_FP_OPCODE_FENCT: break;
 		case RSX_FP_OPCODE_FENCB: break;
-
 		case RSX_FP_OPCODE_BRK: SetDst("break"); break;
-		//case RSX_FP_OPCODE_CAL: break;
+		case RSX_FP_OPCODE_CAL:
+			LOG_ERROR(RSX, "Unimplemented fp_opcode CAL");
+			break;
 		case RSX_FP_OPCODE_IFE:
 			AddCode("if($cond)");
 			m_else_offsets.push_back(src1.else_offset << 2);
@@ -427,11 +463,13 @@ void GLFragmentDecompilerThread::Task()
 				m_code_level++;
 			}
 		break;
-		//case RSX_FP_OPCODE_RET: SetDst("return"); break;
+		case RSX_FP_OPCODE_RET: 
+			SetDst("return");
+			break;
 
 		default:
 			LOG_ERROR(RSX, "Unknown fp opcode 0x%x (inst %d)", opcode, m_size / (4 * 4));
-			//Emu.Pause();
+			Emu.Pause();
 		break;
 		}
 
