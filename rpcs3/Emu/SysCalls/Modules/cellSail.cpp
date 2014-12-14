@@ -71,7 +71,7 @@ int cellSailDescriptorGetMediaInfo()
 
 int cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool autoSelection)
 {
-	cellSail->Todo("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%s)", pSelf.addr(), autoSelection ? "true" : "false");
+	cellSail->Warning("cellSailDescriptorSetAutoSelection(pSelf_addr=0x%x, autoSelection=%s)", pSelf.addr(), autoSelection ? "true" : "false");
 
 	if (pSelf) {
 		pSelf->autoSelection = autoSelection;
@@ -84,7 +84,7 @@ int cellSailDescriptorSetAutoSelection(vm::ptr<CellSailDescriptor> pSelf, bool a
 int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 {
 	cellSail->Warning("cellSailDescriptorIsAutoSelection(pSelf_addr=0x%x)", pSelf.addr());
-
+	
 	if (pSelf)
 		return pSelf->autoSelection;
 
@@ -621,12 +621,17 @@ int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 	cellSail->Todo("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
 	
+	//cellSail->Todo("Descriptor: %i", sizeof(CellSailDescriptor));
+	//cellSail->Todo("Player: %i", sizeof(CellSailPlayer));
+
 	// TODO: Let the game allocate memory for the descriptor, setup the descriptor and pass it back to the game
 
 	//CellSailDescriptor *pDesc = new CellSailDescriptor();
-	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, 4, descriptorAddress);
-	//cellSail->Error("Address: 0x%x", descriptorAddress);
+	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
+	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
+	cellSail->Error("Address: 0x%x", descriptorAddress);
 	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
+	vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
 	//descriptor->streamType = streamType;
 	//descriptor->registered = false;
 
@@ -766,16 +771,16 @@ int cellSailPlayerCancel()
 	return CELL_OK;
 }
 
-int cellSailPlayerSetPaused()
+int cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, bool paused)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Todo("cellSailPlayerSetPaused(pSelf_addr=0x%x, paused=)", pSelf.addr(), paused);
 	return CELL_OK;
 }
 
-int cellSailPlayerIsPaused()
+int cellSailPlayerIsPaused(vm::ptr<CellSailPlayer> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
-	return CELL_OK;
+	cellSail->Warning("cellSailPlayerIsPaused(pSelf_addr=0x%x)", pSelf.addr());
+	return pSelf->paused;
 }
 
 int cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
