@@ -84,15 +84,15 @@ public:
 
 	void Init()
 	{
-		m_img_list = new wxImageList(80, 44);
+		m_img_list = new wxImageList(56, 31);
 
 		m_columns.clear();
-		m_columns.emplace_back(m_columns.size(), 100, "Icon");
+		m_columns.emplace_back(m_columns.size(),  75, "Icon");
 		m_columns.emplace_back(m_columns.size(), 160, "Name");
 		m_columns.emplace_back(m_columns.size(),  85, "Serial");
 		m_columns.emplace_back(m_columns.size(),  55, "FW");
 		m_columns.emplace_back(m_columns.size(),  55, "App version");
-		m_columns.emplace_back(m_columns.size(),  55, "Category");
+		m_columns.emplace_back(m_columns.size(),  75, "Category");
 		m_columns.emplace_back(m_columns.size(), 160, "Path");
 		m_col_icon     = &m_columns[0];
 		m_col_name     = &m_columns[1];
@@ -130,11 +130,11 @@ public:
 		// load icons
 		for (const auto& path : m_col_icon->data)
 		{
-			wxImage game_icon(80, 44);
+			wxImage game_icon(56, 31);
 			{
 				wxLogNull logNo; // temporary disable wx warnings ("iCCP: known incorrect sRGB profile" spamming)
 				if (game_icon.LoadFile(fmt::FromUTF8(path), wxBITMAP_TYPE_PNG))
-					game_icon.Rescale(80, 44);
+					game_icon.Rescale(56, 31);
 			}
 
 			m_icon_indexes.push_back(m_img_list->Add(game_icon));
