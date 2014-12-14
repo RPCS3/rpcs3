@@ -148,6 +148,10 @@ void GameViewer::LoadPSF()
 		if(!psf.Load(false))
 			continue;
 
+		// get local path from VFS...
+		std::string local_path;
+		Emu.GetVFS().GetDevice(m_path, local_path);
+
 		GameInfo game;
 		game.root = m_games[i];
 		game.serial = psf.GetString("TITLE_ID");
@@ -167,12 +171,12 @@ void GameViewer::LoadPSF()
 		if (game.category.substr(0, 2) == "HG")
 		{
 			game.category = "HDD Game";
-			game.icon_path = wxGetCwd() + m_path + m_games[i] + "/ICON0.PNG";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
 		}
 		else if (game.category.substr(0, 2) == "DG")
 		{
-			game.icon_path = wxGetCwd() + m_path + m_games[i] + "/PS3_GAME/ICON0.PNG";
 			game.category = "Disc Game";
+			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
 		}
 			
 		m_game_data.push_back(game);
