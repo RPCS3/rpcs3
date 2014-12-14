@@ -195,7 +195,7 @@ public:
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	void CheckStatus();
-	bool BootGame(const std::string& path);
+	bool BootGame(const std::string& path, bool direct = false, int device = 0);
 
 	void Load();
 	void Run();

@@ -104,19 +104,20 @@ void Emulator::SetTitleID(const std::string& id)
 void Emulator::CheckStatus()
 {
 	std::vector<CPUThread *>& threads = GetCPU().GetThreads();
-	if(!threads.size())
+	if (!threads.size())
 	{
 		Stop();
 		return;	
 	}
 
 	bool IsAllPaused = true;
-	for(u32 i=0; i<threads.size(); ++i)
+	for (u32 i = 0; i < threads.size(); ++i)
 	{
-		if(threads[i]->IsPaused()) continue;
+		if (threads[i]->IsPaused()) continue;
 		IsAllPaused = false;
 		break;
 	}
+
 	if(IsAllPaused)
 	{
 		//ConLog.Warning("all paused!");
@@ -125,20 +126,21 @@ void Emulator::CheckStatus()
 	}
 
 	bool IsAllStoped = true;
-	for(u32 i=0; i<threads.size(); ++i)
+	for (u32 i = 0; i < threads.size(); ++i)
 	{
-		if(threads[i]->IsStopped()) continue;
+		if (threads[i]->IsStopped()) continue;
 		IsAllStoped = false;
 		break;
 	}
-	if(IsAllStoped)
+
+	if (IsAllStoped)
 	{
 		//ConLog.Warning("all stoped!");
 		Pause(); //Stop();
 	}
 }
 
-bool Emulator::BootGame(const std::string& path)
+bool Emulator::BootGame(const std::string& path, bool direct, int device)
 {
 	static const char* elf_path[6] =
 	{
@@ -149,12 +151,35 @@ bool Emulator::BootGame(const std::string& path)
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN",
 	};
+	auto curpath = path;
 
-	for(int i=0; i<sizeof(elf_path) / sizeof(*elf_path);i++)
+	if (!direct)
 	{
-		const std::string& curpath = path + elf_path[i];
+		for (int i = 0; i < sizeof(elf_path) / sizeof(*elf_path); i++)
+		{
+			curpath = path + elf_path[i];
 
-		if(rFile::Access(curpath, rFile::read))
+			if (rFile::Access(curpath, rFile::read))
+			{
+				SetPath(curpath);
+				Load();
+
+				return true;
+			}
+		}
+	}
+	else
+	{
+		std::string pathy;
+
+		if (device == 0)
+			Emu.GetVFS().GetDevice("dev_hdd0", pathy);
+		else if (device == 1)
+			Emu.GetVFS().GetDevice("dev_hdd1", pathy);
+
+		curpath = pathy.substr(0, pathy.length() - 9) + path;
+
+		if (rFile::Access(curpath, rFile::read))
 		{
 			SetPath(curpath);
 			Load();
@@ -170,9 +195,9 @@ void Emulator::Load()
 {
 	GetModuleManager().init();
 
-	if(!rExists(m_path)) return;
+	if (!rExists(m_path)) return;
 
-	if(IsSelf(m_path))
+	if (IsSelf(m_path))
 	{
 		std::string elf_path = rFileName(m_path).GetPath();
 
@@ -185,7 +210,7 @@ void Emulator::Load()
 			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
 		}
 
-		if(!DecryptSelf(elf_path, m_path))
+		if (!DecryptSelf(elf_path, m_path))
 			return;
 
 		m_path = elf_path;
@@ -197,7 +222,7 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
-	for(uint i=0; i<GetVFS().m_devices.size(); ++i)
+	for (uint i = 0; i < GetVFS().m_devices.size(); ++i)
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
