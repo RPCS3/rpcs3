@@ -245,26 +245,20 @@ void GameViewer::RightClick(wxListEvent& event)
 
 void GameViewer::RemoveGame(wxCommandEvent& event)
 {
-	wxString GameName = this->GetItemText(event.GetId(), 5);
+	Emu.GetVFS().Init("/");
 
-	// TODO: VFS is only available at emulation time, this is a temporary solution to locate the game
-	Emu.GetVFS().Init(m_path);
-
-	vfsDir dir(m_path);	
-	if (!dir.IsOpened())
-		return;
-	const std::string sPath = dir.GetPath().erase(0, 1);
-	const std::string sGameFolder = GameName.mb_str().data();
-	const std::string localPath = sPath + sGameFolder;
+	// get local path from VFS
+	std::string local_path;
+	Emu.GetVFS().GetDevice(m_path, local_path);
+	std::string del_path = local_path + "/" + this->GetItemText(event.GetId(), 6).ToStdString();
 
 	Emu.GetVFS().UnMountAll();
 
-	if (!rExists(localPath))
-		return;
 	//TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;
-	wxDir localDir(localPath);
+	wxDir localDir(del_path);
 	localDir.Traverse(deleter);
+	wxRmdir(del_path); // delete empty directory
 
 	Refresh();
 }

@@ -134,7 +134,7 @@ public:
 			{
 				wxLogNull logNo; // temporary disable wx warnings ("iCCP: known incorrect sRGB profile" spamming)
 				if (game_icon.LoadFile(fmt::FromUTF8(path), wxBITMAP_TYPE_PNG))
-					game_icon.Rescale(58, 32);
+					game_icon.Rescale(58, 32, wxIMAGE_QUALITY_HIGH);
 			}
 
 			m_icon_indexes.push_back(m_img_list->Add(game_icon));
