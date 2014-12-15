@@ -3783,6 +3783,7 @@ std::string SysCalls::GetHLEFuncName(const u32 fid)
 	case 0x8bb03ab8: return "sys_game_board_storage_write";
 	case 0x8c2bb498: return "sys_spinlock_initialize";
 	case 0x96328741: return "_sys_process_at_Exitspawn";
+	case 0x4f7172c9: return "sys_process_is_stack";
 	case 0x996f7cf8: return "_sys_strncat";
 	case 0x99c88692: return "_sys_strcpy";
 	case 0x9d3c0f81: return "sys_mempool_destroy";
