@@ -224,7 +224,7 @@ struct CellSpurs
 
 	struct _sub_str1
 	{
-		u8 unk0[0x20];
+		u8 unk0[0x20]; // 0x00 - SPU exceptionh handler 0x08 - SPU exception handler args
 		be_t<u64> sem; // 0x20
 		u8 unk1[0x8];
 		vm::bptr<CellSpursShutdownCompletionEventHook, 1, u64> hook; // 0x30
@@ -234,14 +234,14 @@ struct CellSpurs
 
 	static_assert(sizeof(_sub_str1) == 0x80, "Wrong _sub_str1 size");
 
-	struct _sub_str2
+	struct _sub_str2 // Event port multiplexer
 	{
-		be_t<u32> unk0;
-		be_t<u32> unk1;
-		be_t<u32> unk2;
-		be_t<u32> unk3;
+		be_t<u32> unk0; // 0x00 Outstanding requests
+		be_t<u32> unk1; // 0x04
+		be_t<u32> unk2; // 0x08
+		be_t<u32> unk3; // 0x0C
 		be_t<u64> port; // 0x10
-		u8 unk_[0x68];
+		u8 unk_[0x68];  // 0x18 - The first u64 seems to be the start of a linked list. The linked list struct seems to be {u64 next; u64 data; u64 handler}
 	};
 
 	static_assert(sizeof(_sub_str2) == 0x80, "Wrong _sub_str2 size");
@@ -275,43 +275,43 @@ struct CellSpurs
 		struct
 		{
 			atomic_t<u8> wklReadyCount[0x20]; // 0x0 (index = wid)
-			u8 wklA[0x10];        // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
-			u8 wklB[0x10];        // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
-			u8 wklMinCnt[0x10];   // 0x40 (seems only for first 0..15 wids)
-			atomic_t<u8> wklMaxCnt[0x10]; // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16)
+			u8 wklA[0x10];        // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Current contention
+			u8 wklB[0x10];        // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Pending
+			u8 wklMinCnt[0x10];   // 0x40 (seems only for first 0..15 wids) - Min contention
+			atomic_t<u8> wklMaxCnt[0x10]; // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Max contention
 			CellSpursWorkloadFlag wklFlag; // 0x60
-			atomic_t<u16> wklSet1; // 0x70 (bitset for 0..15 wids)
-			atomic_t<u8> x72;     // 0x72
-			u8 x73;               // 0x73
-			u8 flags1;            // 0x74
-			u8 x75;               // 0x75
-			u8 nSpus;             // 0x76
+			atomic_t<u16> wklSet1; // 0x70 (bitset for 0..15 wids) - Workload signal
+			atomic_t<u8> x72;     // 0x72 - message
+			u8 x73;               // 0x73 - idling
+			u8 flags1;            // 0x74 - Bit0(MSB)=exit_if_no_work, Bit1=32_workloads
+			u8 x75;               // 0x75 - trace control
+			u8 nSpus;             // 0x76 - Number of SPUs
 			atomic_t<u8> flagRecv; // 0x77
-			atomic_t<u16> wklSet2; // 0x78 (bitset for 16..32 wids)
+			atomic_t<u16> wklSet2; // 0x78 (bitset for 16..32 wids) - Workload signal
 			u8 x7A[6];            // 0x7A
-			atomic_t<u8> wklStat1[0x10]; // 0x80
-			u8 wklD1[0x10];       // 0x90
-			u8 wklE1[0x10];       // 0xA0
-			atomic_t<u32> wklMskA; // 0xB0
-			atomic_t<u32> wklMskB; // 0xB4
-			u8 xB8[5];            // 0xB8
-			atomic_t<u8> xBD;     // 0xBD
-			u8 xBE[2];            // 0xBE
-			u8 xC0[8];            // 0xC0
-			u8 xC8;               // 0xC8
-			u8 spuPort;           // 0xC9
+			atomic_t<u8> wklStat1[0x10]; // 0x80 - Workload state (16*u8) - State enum {non_exitent, preparing, runnable, shutting_down, removable, invalid}
+			u8 wklD1[0x10];       // 0x90 - Workload status (16*u8)
+			u8 wklE1[0x10];       // 0xA0 - Workload event (16*u8)
+			atomic_t<u32> wklMskA; // 0xB0 - Available workloads (32*u1)
+			atomic_t<u32> wklMskB; // 0xB4 - Available module id
+			u8 xB8[5];            // 0xB8 - 0xBC - exit barrier
+			atomic_t<u8> xBD;     // 0xBD - update workload
+			u8 xBE[2];            // 0xBE - 0xBF - message - terminate
+			u8 xC0[8];            // 0xC0 - System workload
+			u8 xC8;               // 0xC8 - System service - on spu
+			u8 spuPort;           // 0xC9 - SPU port for system service
 			u8 xCA;               // 0xCA
 			u8 xCB;               // 0xCB
 			u8 xCC;               // 0xCC
 			u8 xCD;               // 0xCD
-			u8 xCE;               // 0xCE
+			u8 xCE;               // 0xCE - message - update trace
 			u8 xCF;               // 0xCF
-			atomic_t<u8> wklStat2[0x10]; // 0xD0
-			u8 wklD2[0x10];       // 0xE0
-			u8 wklE2[0x10];       // 0xF0
+			atomic_t<u8> wklStat2[0x10]; // 0xD0 - Workload state (16*u8)
+			u8 wklD2[0x10];       // 0xE0 - Workload status (16*u8)
+			u8 wklE2[0x10];       // 0xF0 - Workload event (16*u8)
 			_sub_str1 wklF1[0x10]; // 0x100
-			be_t<u64> unk22;      // 0x900
-			u8 unknown7[0x980 - 0x908];
+			be_t<u64> unk22;      // 0x900 - SPURS trace buffer
+			u8 unknown7[0x980 - 0x908]; // 0x908 - Per SPU trace info ??? (8*u32) 0x950 - SPURS trace mode (u32)
 			be_t<u64> semPrv;     // 0x980
 			be_t<u32> unk11;      // 0x988
 			be_t<u32> unk12;      // 0x98C
@@ -321,14 +321,14 @@ struct CellSpurs
 			_sub_str3 wklSysG;    // 0xD00
 			be_t<u64> ppu0;       // 0xD20
 			be_t<u64> ppu1;       // 0xD28
-			be_t<u32> spuTG;      // 0xD30
+			be_t<u32> spuTG;      // 0xD30 - SPU thread group
 			be_t<u32> spus[8];    // 0xD34
 			u8 unknown3[0xD5C - 0xD54];
-			be_t<u32> queue;      // 0xD5C
-			be_t<u32> port;       // 0xD60
-			atomic_t<u8> xD64;    // 0xD64
-			atomic_t<u8> xD65;    // 0xD65
-			atomic_t<u8> xD66;    // 0xD66
+			be_t<u32> queue;      // 0xD5C - Event queue
+			be_t<u32> port;       // 0xD60 - Event port
+			atomic_t<u8> xD64;    // 0xD64 - SPURS handler dirty
+			atomic_t<u8> xD65;    // 0xD65 - SPURS handler waiting
+			atomic_t<u8> xD66;    // 0xD66 - SPURS handler exiting
 			atomic_t<u32> enableEH; // 0xD68
 			be_t<u32> exception;  // 0xD6C
 			sys_spu_image spuImg; // 0xD70
@@ -340,13 +340,13 @@ struct CellSpurs
 			be_t<u32> unk5;       // 0xD9C
 			be_t<u32> revision;   // 0xDA0
 			be_t<u32> sdkVersion; // 0xDA4
-			atomic_t<u64> spups;  // 0xDA8
+			atomic_t<u64> spups;  // 0xDA8 - SPU port bits
 			sys_lwmutex_t mutex;  // 0xDB0
 			sys_lwcond_t cond;    // 0xDC8
 			u8 unknown9[0xE00 - 0xDD0];
 			_sub_str4 wklH1[0x10]; // 0xE00
 			_sub_str2 sub3;       // 0xF00
-			u8 unknown6[0x1000 - 0xF80];
+			u8 unknown6[0x1000 - 0xF80]; // 0xF80 - Gloabl SPU exception handler 0xF88 - Gloabl SPU exception handlers args
 			_sub_str3 wklG2[0x10]; // 0x1000
 			_sub_str1 wklF2[0x10]; // 0x1200
 			_sub_str4 wklH2[0x10]; // 0x1A00
@@ -435,20 +435,20 @@ struct CellSpursTaskset
 	static const u32 align = 128;
 	static const u32 size = 6400;
 
+	struct TaskInfo
+	{
+		CellSpursTaskArgument args;
+		vm::bptr<u64, 1, u64> elf_addr;
+		vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+		CellSpursTaskLsPattern ls_pattern;
+	};
+
+	static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
+
 	union
 	{
 		// Raw data
 		u8 _u8[size];
-
-		struct TaskInfo
-		{
-			CellSpursTaskArgument args;
-			vm::bptr<u64, 1, u64> elf_addr;
-			vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
-			CellSpursTaskLsPattern ls_pattern;
-		};
-
-		static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
 
 		// Real data
 		struct _CellSpursTaskset
@@ -601,20 +601,20 @@ struct CellSpursTaskset2
 	static const u32 align = 128;
 	static const u32 size = 10496;
 
+	struct TaskInfo
+	{
+		CellSpursTaskArgument args;
+		vm::bptr<u64, 1, u64> elf_addr;
+		vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+		CellSpursTaskLsPattern ls_pattern;
+	};
+
+	static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
+
 	union
 	{
 		// Raw data
 		u8 _u8[size];
-
-		struct TaskInfo
-		{
-			CellSpursTaskArgument args;
-			vm::bptr<u64, 1, u64> elf_addr;
-			vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
-			CellSpursTaskLsPattern ls_pattern;
-		};
-
-		static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
 
 		// Real data
 		struct _CellSpursTaskset2
