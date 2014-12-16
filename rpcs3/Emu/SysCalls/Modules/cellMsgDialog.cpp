@@ -86,7 +86,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	default: g_msg_dialog_progress_bar_count = 0; break; // ???
 	}
 
-	std::string msg = msgString.get_ptr();
+	std::string msg = (msgString.addr() != 0) ? msgString.get_ptr() : "";
 
 	thread t("MsgDialog thread", [type, msg, callback, userData, extParam]()
 	{
