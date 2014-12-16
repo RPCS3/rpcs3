@@ -86,7 +86,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	default: g_msg_dialog_progress_bar_count = 0; break; // ???
 	}
 
-	std::string msg = msgString.get_ptr();
+	std::string msg = (msgString.addr() != 0) ? msgString.get_ptr() : "";
 
 	thread t("MsgDialog thread", [type, msg, callback, userData, extParam]()
 	{
@@ -174,15 +174,15 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> cal
 	case 0x80010007: errorMessage = "The file is in unrecognized format / The file is not a valid ELF file."; break;
 	case 0x80010008: errorMessage = "Resource deadlock is avoided."; break;
 	case 0x80010009: errorMessage = "Operation not permitted."; break;
-	case 0x8001000A: errorMessage = "The device or resource is bus."; break;
-	case 0x8001000B: errorMessage = "The operation is timed ou."; break;
-	case 0x8001000C: errorMessage = "The operation is aborte."; break;
+	case 0x8001000A: errorMessage = "The device or resource is busy."; break;
+	case 0x8001000B: errorMessage = "The operation is timed out."; break;
+	case 0x8001000C: errorMessage = "The operation is aborted."; break;
 	case 0x8001000D: errorMessage = "Invalid memory access."; break;
 	case 0x8001000F: errorMessage = "State of the target thread is invalid."; break;
 	case 0x80010010: errorMessage = "Alignment is invalid."; break;
 	case 0x80010011: errorMessage = "Shortage of the kernel resources."; break;
 	case 0x80010012: errorMessage = "The file is a directory."; break;
-	case 0x80010013: errorMessage = "Operation canceled."; break;
+	case 0x80010013: errorMessage = "Operation cancelled."; break;
 	case 0x80010014: errorMessage = "Entry already exists."; break;
 	case 0x80010015: errorMessage = "Port is already connected."; break;
 	case 0x80010016: errorMessage = "Port is not connected."; break;
