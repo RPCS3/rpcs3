@@ -48,7 +48,7 @@ typedef be_t<uint> CGresource;
 typedef be_t<uint> CGenum;
 typedef be_t<uint> CGtype;
 
-typedef be_t<unsigned int>                    CgBinaryOffset;
+typedef be_t<unsigned int>              CgBinaryOffset;
 typedef CgBinaryOffset                  CgBinaryEmbeddedConstantOffset;
 typedef CgBinaryOffset                  CgBinaryFloatOffset;
 typedef CgBinaryOffset                  CgBinaryStringOffset;
@@ -74,13 +74,13 @@ struct CgBinaryParameter
 	CGtype                          type;          // cgGetParameterType()
 	CGresource                      res;           // cgGetParameterResource()
 	CGenum                          var;           // cgGetParameterVariability()
-	be_t<int>                             resIndex;      // cgGetParameterResourceIndex()
+	be_t<int>                       resIndex;      // cgGetParameterResourceIndex()
 	CgBinaryStringOffset            name;          // cgGetParameterName()
 	CgBinaryFloatOffset             defaultValue;  // default constant value
 	CgBinaryEmbeddedConstantOffset  embeddedConst; // embedded constant information
 	CgBinaryStringOffset            semantic;      // cgGetParameterSemantic()
 	CGenum                          direction;     // cgGetParameterDirection()
-	be_t<int>                             paramno;       // 0..n: cgGetParameterIndex() -1: globals
+	be_t<int>                       paramno;       // 0..n: cgGetParameterIndex() -1: globals
 	CGbool                          isReferenced;  // cgIsParameterReferenced()
 	CGbool                          isShared;	   // cgIsParameterShared()
 };
@@ -303,8 +303,8 @@ bool Rpcs3App::OnInit()
 
 	OnArguments();
 
-	compile_shader("compile_shader0.spo");
-	compile_shader("compile_shader1.spo");
+	//compile_shader("compile_shader0.spo");
+	//compile_shader("compile_shader1.spo");
 
 	return true;
 }
