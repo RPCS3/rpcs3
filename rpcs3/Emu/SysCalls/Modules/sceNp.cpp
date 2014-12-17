@@ -116,17 +116,16 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	std::string rap_path("/dev_hdd0/home/" + pf_str + "/exdata/");
 
 	// Search dev_usb000 for a compatible RAP file. 
-	vfsDir *raps_dir = new vfsDir(rap_path);
-	if (!raps_dir->IsOpened())
+	vfsDir raps_dir(rap_path);
+	if (!raps_dir.IsOpened())
 		sceNp->Warning("npDrmIsAvailable: Can't find RAP file for DRM!");
 	else
 	{
-		const std::vector<DirEntryInfo> &entries = raps_dir->GetEntries();
-		for (auto &entry : entries)
+		for (const DirEntryInfo *entry : raps_dir)
 		{
-			if (entry.name.find(titleID) != std::string::npos)
+			if (entry->name.find(titleID) != std::string::npos)
 			{
-				rap_path += entry.name;
+				rap_path += entry->name;
 				break;
 			}
 		}

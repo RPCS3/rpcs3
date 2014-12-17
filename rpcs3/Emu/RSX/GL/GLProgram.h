@@ -24,5 +24,6 @@ public:
 	void Use();
 	void UnUse();
 	void SetTex(u32 index);
+	void SetVTex(u32 index);
 	void Delete();
 };
