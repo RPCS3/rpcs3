@@ -32,12 +32,21 @@ std::string simplify_path(const std::string& path, bool is_dir)
 {
 	std::vector<std::string> path_blocks = simplify_path_blocks(path);
 
+	std::string result;
+
 	if (path_blocks.empty())
-		return "";
+		return result;
 
-	std::string result = fmt::merge(path_blocks, "/");
+	if (is_dir)
+	{
+		result = fmt::merge(path_blocks, "/");
+	}
+	else
+	{
+		result = fmt::merge(std::vector<std::string>(path_blocks.begin(), path_blocks.end() - 1), "/") + path_blocks[path_blocks.size() - 1];
+	}
 
-	return is_dir ? result + "/" : result;
+	return result;
 }
 
 VFS::~VFS()
