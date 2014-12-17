@@ -148,6 +148,7 @@ private:
 	GLVertexProgram m_vertex_prog;
 
 	GLTexture m_gl_textures[m_textures_count];
+	GLTexture m_gl_vertex_textures[m_textures_count];
 
 	GLvao m_vao;
 	GLvbo m_vbo;

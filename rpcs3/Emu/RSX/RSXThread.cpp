@@ -181,6 +181,12 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	return 0;
 }
 
+#define case_4(a, m) \
+	case a + m: \
+	case a + m * 2: \
+	case a + m * 3: \
+	index = (cmd - a) / m; \
+	case a \
 
 #define case_16(a, m) \
 	case a + m: \
@@ -251,8 +257,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	u32 index = 0;
 
 	m_used_gcm_commands.insert(cmd);
-
-	//static u32 draw_array_count = 0;
 
 	switch(cmd)
 	{
@@ -392,6 +396,29 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 	
+	// Vertex Texture
+	case_4(NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20) :
+		case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20) :
+	{
+		// Done using methodRegisters in RSXTexture.cpp
+	}
+	break;
+
+	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20) :
+	{
+		RSXVertexTexture& tex = m_vertex_textures[index];
+		const u32 a0 = ARGS(0);
+		u32 pitch = a0 & 0xFFFFF;
+		u16 depth = a0 >> 20;
+		tex.SetControl3(depth, pitch);
+	}
+	break;
+
 	// Vertex data
 	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4):
 	{
@@ -971,10 +998,27 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 a0 = ARGS(0);
 
 		//LOG_WARNING(RSX, "NV4097_SET_BEGIN_END: 0x%x", a0);
+		if (!m_indexed_array.m_count && !m_draw_array_count)
+		{
+			u32 min_vertex_size = ~0;
+			for (auto &i : m_vertex_data)
+			{
+				if (!i.size)
+					continue;
 
-		m_read_buffer = false;
+				u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
 
-		if(a0)
+				if (min_vertex_size > vertex_size)
+					min_vertex_size = vertex_size;
+			}
+
+			m_draw_array_count = min_vertex_size;
+			m_draw_array_first = 0;
+		}
+
+		m_read_buffer = Ini.GSReadColorBuffer.GetValue() || (!m_indexed_array.m_count && !m_draw_array_count);
+
+		if (a0)
 		{
 			Begin(a0);
 		}

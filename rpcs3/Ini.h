@@ -107,6 +107,7 @@ public:
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
+	IniEntry<bool> GSReadColorBuffer;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GS3DTV;
 
@@ -182,6 +183,7 @@ public:
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
+		GSReadColorBuffer.Init("GS_GSReadColorBuffer", path);
 		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GS3DTV.Init("GS_3DTV", path);
 
@@ -253,6 +255,7 @@ public:
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
+		GSReadColorBuffer.Load(false);
 		GSVSyncEnable.Load(false);
 		GS3DTV.Load(false);
 
@@ -325,6 +328,7 @@ public:
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();
+		GSReadColorBuffer.Save();
 		GSVSyncEnable.Save();
 		GS3DTV.Save();
 

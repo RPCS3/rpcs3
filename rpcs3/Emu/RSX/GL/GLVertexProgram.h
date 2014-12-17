@@ -54,6 +54,7 @@ enum vec_opcode
 	RSX_VEC_OPCODE_SNE = 0x14,
 	RSX_VEC_OPCODE_STR = 0x15,
 	RSX_VEC_OPCODE_SSG = 0x16,
+	RSX_VEC_OPCODE_TEX = 0x19,
 };
 
 struct GLVertexDecompilerThread : public ThreadBase
@@ -237,12 +238,14 @@ struct GLVertexDecompilerThread : public ThreadBase
 	std::string GetDST(bool is_sca = false);
 	std::string GetSRC(const u32 n);
 	std::string GetFunc();
+	std::string GetTex();
 	std::string GetCond();
 	std::string AddAddrMask();
 	std::string AddAddrReg();
 	u32 GetAddr();
 	std::string Format(const std::string& code);
 
+	void AddCodeCond(const std::string& dst, const std::string& src);
 	void AddCode(const std::string& code);
 	void SetDST(bool is_sca, std::string value);
 	void SetDSTVec(const std::string& code);

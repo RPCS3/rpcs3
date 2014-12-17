@@ -369,7 +369,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
 	current_context.begin = ctx_begin;
-	current_context.end = ctx_begin + ctx_size;
+	current_context.end = ctx_begin + ctx_size - 4;
 	current_context.current = current_context.begin;
 	current_context.callback.set(be_t<u32>::make(Emu.GetRSXCallback() - 4));
 
@@ -1172,7 +1172,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
-	if (1)
+	if (0)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
