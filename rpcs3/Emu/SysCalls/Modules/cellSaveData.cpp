@@ -279,7 +279,10 @@ s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<Cell
 			break;
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
-			cellSysutil->Warning("modifySaveDataFiles: File operation CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC not yet implemented");
+			// Does it really write without trunctation?
+			Emu.GetVFS().CreateFile(filepath);
+			file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
+			fileGet->excSize = (u32)file->Write(buf, (u32)std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
 			break;
 
 		default:
