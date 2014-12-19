@@ -283,7 +283,6 @@
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
-    <ClInclude Include="cellMic.h" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\ec.h" />
     <ClInclude Include="Crypto\key_vault.h" />
@@ -420,8 +419,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellGifDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellJpgDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellMic.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellMsgDialog.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellNetCtl.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPad.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPng.h" />

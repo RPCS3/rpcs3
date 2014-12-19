@@ -195,7 +195,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024*1024) {
+		if (index >= 1024 * 1024) {
 			cellGcmSys->Error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
 			return 0;
 		}
@@ -300,7 +300,7 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys->Log("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (size_t i=0; i < sizeof(tiled_pitches)/sizeof(tiled_pitches[0]) - 1; i++) {
+	for (size_t i=0; i < sizeof(tiled_pitches) / sizeof(tiled_pitches[0]) - 1; i++) {
 		if (tiled_pitches[i] < size && size <= tiled_pitches[i+1]) {
 			return tiled_pitches[i+1];
 		}
