@@ -110,7 +110,8 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 	else if (_path.substr(1, 8) == "dev_hdd1")
 		device = 1;
 
-	Emu.BootGame(_path.c_str(), true, device);
+	if (device != 0)
+		Emu.BootGame(_path.c_str(), true, device);
 
 	return;
 }

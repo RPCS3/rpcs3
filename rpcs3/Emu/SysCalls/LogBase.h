@@ -36,7 +36,7 @@ public:
 
 	template<typename... Targs> __noinline void Notice(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogNotice, " : ", fmt::Format(fmt, args...));
+		LogOutput(LogNotice, ": ", fmt::Format(fmt, args...));
 	}
 
 	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args) const

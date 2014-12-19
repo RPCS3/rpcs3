@@ -679,8 +679,8 @@ typedef void(*CellSailPlayerFuncNotified)(u32 pArg, vm::ptr<CellSailEvent> event
 
 struct CellSailMemAllocatorFuncs
 {
-	CellSailMemAllocatorFuncAlloc pAlloc;
-	CellSailMemAllocatorFuncFree pFree;
+	vm::ptr<CellSailMemAllocatorFuncAlloc> pAlloc;
+	vm::ptr<CellSailMemAllocatorFuncFree> pFree;
 };
 
 struct CellSailMemAllocator
@@ -691,8 +691,8 @@ struct CellSailMemAllocator
 
 struct CellSailFuture
 {
-	u32 mutex_id;
-	u32 cond_id;
+	be_t<u32> mutex_id;
+	be_t<u32> cond_id;
 	volatile be_t<u32> flags;
 	be_t<s32> result;
 	be_t<u64> userParam;

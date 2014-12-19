@@ -742,6 +742,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMic.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
@@ -1251,9 +1254,6 @@
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
-    </ClInclude>
-    <ClInclude Include="cellMic.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
       <Filter>Emu\CPU\Cell</Filter>

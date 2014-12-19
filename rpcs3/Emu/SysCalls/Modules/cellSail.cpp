@@ -11,6 +11,7 @@ int cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<
 	cellSail->Warning("cellSailMemAllocatorInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x)", pSelf.addr(), pCallbacks.addr());
 
 	pSelf->callbacks = pCallbacks;
+	// TODO: Create a cellSail thread
 
 	return CELL_OK;
 }
@@ -629,15 +630,18 @@ int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 	//CellSailDescriptor *pDesc = new CellSailDescriptor();
 	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
 	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	cellSail->Error("Address: 0x%x", descriptorAddress);
+	//CellSailMemAllocatorFuncAlloc test = pSelf->allocator->callbacks->pAlloc.call(Emu.GetCPU());
+	//u32 descriptorAddress2 = test(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
+	//cellSail->Error("Address: 0x%x", pSelf->allocator->callbacks.addr());
+	//cellSail->Error("Address 2: 0x%x", descriptorAddress2);
 	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
-	vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
-	//descriptor->streamType = streamType;
-	//descriptor->registered = false;
+	ppDesc = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
+	//cellSail->Error("Address 2: 0x%x", ppDesc.addr());
+	ppDesc->streamType = streamType;
+	ppDesc->registered = false;
 
-	pSelf->descriptors = 0;
+	//pSelf->descriptors = 0;
 	pSelf->repeatMode = 0;
-	//ppDesc = descriptor;
 
 	//cellSail->Todo("pSelf_addr=0x%x, pDesc_addr=0x%x", pSelf.addr(), descriptor.addr());
 	//cellSailPlayerAddDescriptor(pSelf, ppDesc);
