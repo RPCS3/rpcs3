@@ -3,7 +3,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/RSX/GSManage
+#include "Emu/RSX/GSManager.h
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
