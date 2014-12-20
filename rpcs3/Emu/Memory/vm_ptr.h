@@ -112,7 +112,7 @@ namespace vm
 
 		__forceinline T* const operator -> () const
 		{
-			return vm::get_ptr<T>(m_addr);
+			return vm::get_ptr<T>((u32)m_addr);
 		}
 
 		_ptr_base operator++ (int)

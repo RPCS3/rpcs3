@@ -608,7 +608,7 @@ public:
 		for (auto &arg : values)
 		{
 			u32 arg_size = align(u32(arg.size() + 1), stack_align);
-			u32 arg_addr = Memory.MainMem.AllocAlign(arg_size, stack_align);
+			u32 arg_addr = (u32)Memory.MainMem.AllocAlign(arg_size, stack_align);
 
 			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
 

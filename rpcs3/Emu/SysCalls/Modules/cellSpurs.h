@@ -94,6 +94,7 @@ enum SPURSKernelInterfaces
 	CELL_SPURS_MAX_SPU = 8,
 	CELL_SPURS_MAX_WORKLOAD = 16,
 	CELL_SPURS_MAX_WORKLOAD2 = 32,
+	CELL_SPURS_SYS_SERVICE_WORKLOAD_ID = 32,
 	CELL_SPURS_MAX_PRIORITY = 16,
 	CELL_SPURS_NAME_MAX_LENGTH = 15,
 	CELL_SPURS_SIZE = 4096,
@@ -162,8 +163,8 @@ enum SpursAttrFlags : u32
 enum SpursFlags1 : u8
 {
 	SF1_NONE = 0x0,
-	
-	SF1_IS_SECOND = 0x40,
+
+	SF1_32_WORKLOADS    = 0x40,
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
 
@@ -214,6 +215,12 @@ struct CellSpursWorkloadFlag
 
 typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
+enum CellSpursModulePollStatus {
+	CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT  = 1,
+	CELL_SPURS_MODULE_POLL_STATUS_SIGNAL      = 2,
+	CELL_SPURS_MODULE_POLL_STATUS_FLAG        = 4
+};
+
 // Core CellSpurs structures
 struct CellSpurs
 {
@@ -246,7 +253,7 @@ struct CellSpurs
 
 	static_assert(sizeof(_sub_str2) == 0x80, "Wrong _sub_str2 size");
 
-	struct _sub_str3
+	struct WorkloadInfo
 	{
 		vm::bptr<const void, 1, u64> pm; // policy module
 		be_t<u64> data; // spu argument
@@ -255,7 +262,7 @@ struct CellSpurs
 		be_t<u64> priority;
 	};
 
-	static_assert(sizeof(_sub_str3) == 0x20, "Wrong _sub_str3 size");
+	static_assert(sizeof(WorkloadInfo) == 0x20, "Wrong WorkloadInfo size");
 
 	struct _sub_str4
 	{
@@ -274,29 +281,33 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			atomic_t<u8> wklReadyCount[0x20]; // 0x0 (index = wid)
-			u8 wklA[0x10];        // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Current contention
-			u8 wklB[0x10];        // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Pending
-			u8 wklMinCnt[0x10];   // 0x40 (seems only for first 0..15 wids) - Min contention
-			atomic_t<u8> wklMaxCnt[0x10]; // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Max contention
-			CellSpursWorkloadFlag wklFlag; // 0x60
-			atomic_t<u16> wklSet1; // 0x70 (bitset for 0..15 wids) - Workload signal
-			atomic_t<u8> x72;     // 0x72 - message
-			u8 x73;               // 0x73 - idling
-			u8 flags1;            // 0x74 - Bit0(MSB)=exit_if_no_work, Bit1=32_workloads
-			u8 x75;               // 0x75 - trace control
-			u8 nSpus;             // 0x76 - Number of SPUs
-			atomic_t<u8> flagRecv; // 0x77
-			atomic_t<u16> wklSet2; // 0x78 (bitset for 16..32 wids) - Workload signal
-			u8 x7A[6];            // 0x7A
+			// The first 0x80 bytes of the CellSpurs structure is shared by all instances of the SPURS kernel in a SPURS instance and the PPU.
+			// The SPURS kernel copies this from main memory to the LS (address 0x100) then runs its scheduling algorithm using this as one
+			// of the inputs. After selecting a new workload, the SPURS kernel updates this and writes it back to main memory.
+			// The read-modify-write is performed atomically by the SPURS kernel.
+			atomic_t<u8> wklReadyCount[0x10];       // 0x00 (index = wid) - Number of SPUs requested by each workload
+			u8 wklCurrentContention[0x10];          // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Number of SPUs used by each workload
+			u8 wklPendingContention[0x10];          // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Number of SPUs that are pending to context switch to the workload
+			u8 wklMinContention[0x10];              // 0x40 (seems only for first 0..15 wids) - Min SPUs required for each workload
+			atomic_t<u8> wklMaxContention[0x10];    // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Max SPUs that may be allocated to each workload
+			CellSpursWorkloadFlag wklFlag;          // 0x60
+			atomic_t<u16> wklSignal1;               // 0x70 (bitset for 0..15 wids)
+			atomic_t<u8> sysSrvMessage;             // 0x72
+			u8 sysSrvIdling;                        // 0x73
+			u8 flags1;                              // 0x74 Type is SpursFlags1
+			u8 sysSrvTraceControl;                  // 0x75
+			u8 nSpus;                               // 0x76
+			atomic_t<u8> wklFlagReceiver;           // 0x77
+			atomic_t<u16> wklSignal2;               // 0x78 (bitset for 16..32 wids)
+			u8 x7A[6];                              // 0x7A
 			atomic_t<u8> wklStat1[0x10]; // 0x80 - Workload state (16*u8) - State enum {non_exitent, preparing, runnable, shutting_down, removable, invalid}
 			u8 wklD1[0x10];       // 0x90 - Workload status (16*u8)
 			u8 wklE1[0x10];       // 0xA0 - Workload event (16*u8)
-			atomic_t<u32> wklMskA; // 0xB0 - Available workloads (32*u1)
-			atomic_t<u32> wklMskB; // 0xB4 - Available module id
-			u8 xB8[5];            // 0xB8 - 0xBC - exit barrier
-			atomic_t<u8> xBD;     // 0xBD - update workload
-			u8 xBE[2];            // 0xBE - 0xBF - message - terminate
+			atomic_t<u32> wklMskA; // 0xB0 - System service - Available workloads (32*u1)
+			atomic_t<u32> wklMskB; // 0xB4 - System service - Available module id
+			u8 xB8[5];            // 0xB8 - 0xBC - Syetem service exit barrier
+			atomic_t<u8> xBD;     // 0xBD - System service message - update workload
+			u8 xBE[2];            // 0xBE - 0xBF - System service message - terminate
 			u8 xC0[8];            // 0xC0 - System workload
 			u8 xC8;               // 0xC8 - System service - on spu
 			u8 spuPort;           // 0xC9 - SPU port for system service
@@ -304,7 +315,7 @@ struct CellSpurs
 			u8 xCB;               // 0xCB
 			u8 xCC;               // 0xCC
 			u8 xCD;               // 0xCD
-			u8 xCE;               // 0xCE - message - update trace
+			u8 xCE;               // 0xCE - System service message - update trace
 			u8 xCF;               // 0xCF
 			atomic_t<u8> wklStat2[0x10]; // 0xD0 - Workload state (16*u8)
 			u8 wklD2[0x10];       // 0xE0 - Workload status (16*u8)
@@ -317,8 +328,8 @@ struct CellSpurs
 			be_t<u32> unk12;      // 0x98C
 			be_t<u64> unk13;      // 0x990
 			u8 unknown4[0xB00 - 0x998];
-			_sub_str3 wklG1[0x10]; // 0xB00
-			_sub_str3 wklSysG;    // 0xD00
+			WorkloadInfo wklInfo1[0x10]; // 0xB00
+			WorkloadInfo wklInfoSysSrv;  // 0xD00
 			be_t<u64> ppu0;       // 0xD20
 			be_t<u64> ppu1;       // 0xD28
 			be_t<u32> spuTG;      // 0xD30 - SPU thread group
@@ -347,7 +358,7 @@ struct CellSpurs
 			_sub_str4 wklH1[0x10]; // 0xE00
 			_sub_str2 sub3;       // 0xF00
 			u8 unknown6[0x1000 - 0xF80]; // 0xF80 - Gloabl SPU exception handler 0xF88 - Gloabl SPU exception handlers args
-			_sub_str3 wklG2[0x10]; // 0x1000
+			WorkloadInfo wklInfo2[0x10]; // 0x1000
 			_sub_str1 wklF2[0x10]; // 0x1200
 			_sub_str4 wklH2[0x10]; // 0x1A00
 		} m;
@@ -739,6 +750,30 @@ struct CellSpursTaskBinInfo
 	be_t<u32> sizeContext;
 	be_t<u32> __reserved__;
 	CellSpursTaskLsPattern lsPattern;
+};
+
+// The SPURS kernel data store. This resides at 0x00 of the LS.
+struct SpursKernelMgmtData {
+	u8 unk0[0x100];                                 // 0x00
+	u8 tempArea[0x80];                              // 0x100
+	u8 wklLocContention[0x10];                      // 0x180
+	u8 wklLocPendingContention[0x10];               // 0x190
+	u8 priority[0x10];                              // 0x1A0
+	u8 x1B0[0x10];                                  // 0x1B0
+	vm::bptr<CellSpurs, 1, u64> spurs;              // 0x1C0
+	be_t<u32> spuNum;                               // 0x1C8
+	be_t<u32> dmaTagId;                             // 0x1CC
+	vm::bptr<const void, 1, u64> wklCurrentAddr;    // 0x1D0
+	be_t<u32> x1D8;                                 // 0x1D8
+	u32 wklCurrentId;                               // 0x1DC
+	be_t<u32> yieldToKernelAddr;                    // 0x1E0
+	be_t<u32> selectWorkloadAddr;                   // 0x1E4
+	u8 x1E8;                                        // 0x1E8
+	u8 x1E9;                                        // 0x1E9
+	u8 x1EA;                                        // 0x1EA
+	u8 x1EB;                                        // 0x1EB - This might be spuIdling
+	be_t<u16> x1EC;                                 // 0x1EC - This might be wklEnable1
+	be_t<u16> x1EE;                                 // 0x1EE - This might be wklEnable2
 };
 
 s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
