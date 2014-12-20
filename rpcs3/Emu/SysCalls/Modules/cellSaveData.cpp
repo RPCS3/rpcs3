@@ -215,11 +215,11 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		}
 	}
 
-	// TODO: Fix the crash
-	// statGet's fileList doesn't seem to be initiliazed properly, when called by cellSaveDataAutoSave2, thus causing a crash during memcpy.
-	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(be_t<u32>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
-	for (u32 i = 0; i < fileEntries.size(); i++)
-		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
+	statGet->fileList = vm::ptr<CellSaveDataFileStat>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), 8));
+	for (u32 i = 0; i < fileEntries.size(); i++) {
+		CellSaveDataFileStat *dst = &statGet->fileList[i];
+		memcpy(dst, &fileEntries[i], sizeof(CellSaveDataFileStat));
+	}
 }
 
 s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<CellSaveDataCBResult> result, const std::string& saveDataDir)
