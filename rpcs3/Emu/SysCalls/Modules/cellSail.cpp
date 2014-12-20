@@ -617,28 +617,18 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 	return CELL_OK;
 }
 
-int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<CellSailDescriptor> ppDesc)
+int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<u32> ppDesc)
 {
 	cellSail->Todo("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
 	
-	//cellSail->Todo("Descriptor: %i", sizeof(CellSailDescriptor));
-	//cellSail->Todo("Player: %i", sizeof(CellSailPlayer));
-
 	// TODO: Let the game allocate memory for the descriptor, setup the descriptor and pass it back to the game
 
-	//CellSailDescriptor *pDesc = new CellSailDescriptor();
-	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	//CellSailMemAllocatorFuncAlloc test = pSelf->allocator->callbacks->pAlloc.call(Emu.GetCPU());
-	//u32 descriptorAddress2 = test(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	//cellSail->Error("Address: 0x%x", pSelf->allocator->callbacks.addr());
-	//cellSail->Error("Address 2: 0x%x", descriptorAddress2);
-	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
-	ppDesc = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
-	//cellSail->Error("Address 2: 0x%x", ppDesc.addr());
-	ppDesc->streamType = streamType;
-	ppDesc->registered = false;
+	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), 1);
+	auto descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
+	*ppDesc = descriptorAddress;
+	descriptor->streamType = streamType;
+	descriptor->registered = false;
 
 	//pSelf->descriptors = 0;
 	pSelf->repeatMode = 0;
