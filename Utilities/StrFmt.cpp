@@ -137,14 +137,17 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 
 std::string fmt::merge(std::vector<std::string> source, const std::string& separator)
 {
+	if (!source.size())
+		return "";
+
 	std::string result;
 
-	for (auto &s : source)
+	for (int i = 0; i < source.size() - 1; ++i)
 	{
-		result += s + separator;
+		result += source[i] + separator;
 	}
 
-	return result;
+	return result + source[source.size() - 1];
 }
 
 std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)
