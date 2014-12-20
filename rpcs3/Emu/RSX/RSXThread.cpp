@@ -95,11 +95,11 @@ RSXVertexData::RSXVertexData()
 
 void RSXVertexData::Reset()
 {
-	//frequency = 0;
-	//stride = 0;
-	//size = 0;
-	//type = 0;
-	//addr = 0;
+	frequency = 0;
+	stride = 0;
+	size = 0;
+	type = 0;
+	addr = 0;
 	data.clear();
 }
 
@@ -428,7 +428,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u8 v2 = a0 >> 16;
 		u8 v3 = a0 >> 24;
 
-		//m_vertex_data[index].Reset();
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].size = 4;
 		m_vertex_data[index].type = CELL_GCM_VERTEX_UB;
 		m_vertex_data[index].data.push_back(v0);
@@ -447,7 +447,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
 		
-		//m_vertex_data[index].Reset();
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = CELL_GCM_VERTEX_F;
 		m_vertex_data[index].size = 2;
 		u32 pos = m_vertex_data[index].data.size();
@@ -471,7 +471,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		float v2 = (float&)a2;
 		float v3 = (float&)a3;
 
-		//m_vertex_data[index].Reset();
+		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = CELL_GCM_VERTEX_F;
 		m_vertex_data[index].size = 4;
 		u32 pos = m_vertex_data[index].data.size();
