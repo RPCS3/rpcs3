@@ -10,7 +10,7 @@
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
-	std::vector<std::string> path_blocks = std::move(fmt::split(fmt::tolower(path), { "/", "\\" }));
+	std::vector<std::string> path_blocks = fmt::split(fmt::tolower(path), { "/", "\\" });
 
 	for (size_t i = 0; i < path_blocks.size(); ++i)
 	{
@@ -43,7 +43,9 @@ std::string simplify_path(const std::string& path, bool is_dir)
 	}
 	else
 	{
-		result = fmt::merge(std::vector<std::string>(path_blocks.begin(), path_blocks.end() - 1), "/") + path_blocks[path_blocks.size() - 1];
+		const std::string dir = std::move(path_blocks.back());
+		path_blocks.pop_back();
+		result = fmt::merge(path_blocks, "/") + dir;
 	}
 
 	return result;
@@ -63,6 +65,7 @@ void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsD
 	device->SetPath(simpl_ps3_path, simplify_path(local_path, true));
 	m_devices.push_back(device);
 
+	//TODO make m_devices to a map with a custom sort function and remove this code
 	if (m_devices.size() > 1)
 	{
 		std::sort(m_devices.begin(), m_devices.end(), [](vfsDevice *a, vfsDevice *b) { return b->GetPs3Path().length() < a->GetPs3Path().length(); });
@@ -121,9 +124,9 @@ void VFS::UnMount(const std::string& ps3_path)
 
 void VFS::UnMountAll()
 {
-	for(u32 i=0; i<m_devices.size(); ++i)
+	for (auto device : m_devices)
 	{
-		delete m_devices[i];
+		delete device;
 	}
 
 	m_devices.clear();
