@@ -527,6 +527,8 @@ int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 			port.channel = (u8)audioParam->nChannel;
 			port.block = (u8)audioParam->nBlock;
 			port.attr = audioParam->attr;
+			port.addr = m_config.m_buffer + (128 * 1024 * i);
+			port.read_index_addr = m_config.m_indexes + (sizeof(u64) * i);
 			if (port.attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 			{
 				port.level = audioParam->level;
@@ -579,8 +581,8 @@ int cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 	portConfig->nChannel = port.channel;
 	portConfig->nBlock = port.block;
 	portConfig->portSize = port.channel * port.block * 256 * sizeof(float);
-	portConfig->portAddr = m_config.m_buffer + (128 * 1024 * portNum); // 0x20020000
-	portConfig->readIndexAddr = m_config.m_indexes + (sizeof(u64) * portNum); // 0x20010010 on ps3
+	portConfig->portAddr = port.addr; // 0x20020000
+	portConfig->readIndexAddr = port.read_index_addr; // 0x20010010 on ps3
 
 	cellAudio->Log("*** port config: nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
 		(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
@@ -731,6 +733,28 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 int cellAudioSetPortLevel(u32 portNum, float level)
 {
 	cellAudio->Todo("cellAudioSetPortLevel(portNum=0x%x, level=%f)", portNum, level);
+
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	port.level = level; // TODO
+
 	return CELL_OK;
 }
 
@@ -841,21 +865,94 @@ int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 	return CELL_OK;
 }
 
-int cellAudioAddData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, float volume)
+int cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
 	cellAudio->Todo("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+	
+	//u32 addr = port.addr;
+	//for (u32 i = 0; i < samples; i++)
+	//{
+	//	vm::write32(addr, src[i]);
+	//	addr += port.channel * port.block * sizeof(float);
+	//}
+
+	m_config.m_buffer = src.addr(); // TODO: write data from src in selected port
+
 	return CELL_OK;
 }
 
 int cellAudioAdd2chData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, float volume)
 {
 	cellAudio->Todo("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	m_config.m_buffer = src.addr(); // TODO
+	
 	return CELL_OK;
 }
 
 int cellAudioAdd6chData(u32 portNum, vm::ptr<be_t<float>> src, float volume)
 {
 	cellAudio->Todo("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
+	
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	m_config.m_buffer = src.addr(); // TODO
+	
 	return CELL_OK;
 }
 
