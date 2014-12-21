@@ -255,10 +255,10 @@ struct CellSpurs
 
 	struct WorkloadInfo
 	{
-		vm::bptr<const void, 1, u64> pm; // policy module
-		be_t<u64> data; // spu argument
+		vm::bptr<const void, 1, u64> addr; // Address of the executable
+		be_t<u64> arg; // spu argument
 		be_t<u32> size;
-		atomic_t<u8> copy;
+		atomic_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
 		be_t<u64> priority;
 	};
 
@@ -285,21 +285,22 @@ struct CellSpurs
 			// The SPURS kernel copies this from main memory to the LS (address 0x100) then runs its scheduling algorithm using this as one
 			// of the inputs. After selecting a new workload, the SPURS kernel updates this and writes it back to main memory.
 			// The read-modify-write is performed atomically by the SPURS kernel.
-			atomic_t<u8> wklReadyCount[0x10];       // 0x00 (index = wid) - Number of SPUs requested by each workload
-			u8 wklCurrentContention[0x10];          // 0x20 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Number of SPUs used by each workload
-			u8 wklPendingContention[0x10];          // 0x30 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Number of SPUs that are pending to context switch to the workload
-			u8 wklMinContention[0x10];              // 0x40 (seems only for first 0..15 wids) - Min SPUs required for each workload
-			atomic_t<u8> wklMaxContention[0x10];    // 0x50 (packed 4-bit data, index = wid % 16, internal index = wid / 16) - Max SPUs that may be allocated to each workload
-			CellSpursWorkloadFlag wklFlag;          // 0x60
-			atomic_t<u16> wklSignal1;               // 0x70 (bitset for 0..15 wids)
-			atomic_t<u8> sysSrvMessage;             // 0x72
-			u8 sysSrvIdling;                        // 0x73
-			u8 flags1;                              // 0x74 Type is SpursFlags1
-			u8 sysSrvTraceControl;                  // 0x75
-			u8 nSpus;                               // 0x76
-			atomic_t<u8> wklFlagReceiver;           // 0x77
-			atomic_t<u16> wklSignal2;               // 0x78 (bitset for 16..32 wids)
-			u8 x7A[6];                              // 0x7A
+			atomic_t<u8> wklReadyCount1[0x10];                  // 0x00 Number of SPUs requested by each workload (0..15 wids).
+			atomic_t<u8> wklIdleSpuCountOrReadyCount2[0x10];    // 0x10 SPURS1: Number of idle SPUs requested by each workload (0..15 wids). SPURS2: Number of SPUs requested by each workload (16..31 wids).
+			u8 wklCurrentContention[0x10];                      // 0x20 Number of SPUs used by each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
+			u8 wklPendingContention[0x10];                      // 0x30 Number of SPUs that are pending to context switch to the workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
+			u8 wklMinContention[0x10];                          // 0x40 Min SPUs required for each workload. SPURS1: index = wid. SPURS2: Unused.
+			atomic_t<u8> wklMaxContention[0x10];                // 0x50 Max SPUs that may be allocated to each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
+			CellSpursWorkloadFlag wklFlag;                      // 0x60
+			atomic_t<u16> wklSignal1;                           // 0x70 (bitset for 0..15 wids)
+			atomic_t<u8> sysSrvMessage;                         // 0x72
+			u8 sysSrvIdling;                                    // 0x73
+			u8 flags1;                                          // 0x74 Type is SpursFlags1
+			u8 sysSrvTraceControl;                              // 0x75
+			u8 nSpus;                                           // 0x76
+			atomic_t<u8> wklFlagReceiver;                       // 0x77
+			atomic_t<u16> wklSignal2;                           // 0x78 (bitset for 16..32 wids)
+			u8 x7A[6];                                          // 0x7A
 			atomic_t<u8> wklStat1[0x10]; // 0x80 - Workload state (16*u8) - State enum {non_exitent, preparing, runnable, shutting_down, removable, invalid}
 			u8 wklD1[0x10];       // 0x90 - Workload status (16*u8)
 			u8 wklE1[0x10];       // 0xA0 - Workload event (16*u8)
@@ -764,7 +765,7 @@ struct SpursKernelMgmtData {
 	be_t<u32> spuNum;                               // 0x1C8
 	be_t<u32> dmaTagId;                             // 0x1CC
 	vm::bptr<const void, 1, u64> wklCurrentAddr;    // 0x1D0
-	be_t<u32> x1D8;                                 // 0x1D8
+	be_t<u32> wklCurrentUniqueId;                   // 0x1D8
 	u32 wklCurrentId;                               // 0x1DC
 	be_t<u32> yieldToKernelAddr;                    // 0x1E0
 	be_t<u32> selectWorkloadAddr;                   // 0x1E4
@@ -774,6 +775,8 @@ struct SpursKernelMgmtData {
 	u8 x1EB;                                        // 0x1EB - This might be spuIdling
 	be_t<u16> x1EC;                                 // 0x1EC - This might be wklEnable1
 	be_t<u16> x1EE;                                 // 0x1EE - This might be wklEnable2
+    u8 x1F0[0x220 - 0x1F0];                         // 0x1F0
+    u8 wklUniqueId[0x10];                           // 0x220
 };
 
 s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);

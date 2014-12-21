@@ -109,13 +109,13 @@ s64 spursInit(
 
 	// default or system workload:
 #ifdef PRX_DEBUG
-	spurs->m.wklSysG.pm.set(be_t<u64>::make(vm::read32(libsre_rtoc - 0x7EA4)));
-	spurs->m.wklSysG.size = 0x2200;
+	spurs->m.wklInfoSysSrv.addr.set(be_t<u64>::make(vm::read32(libsre_rtoc - 0x7EA4)));
+	spurs->m.wklInfoSysSrv.size = 0x2200;
 #else
-	spurs->m.wklInfoSysSrv.pm.set(be_t<u64>::make(0x100)); // wrong 64-bit address
+	spurs->m.wklInfoSysSrv.addr.set(be_t<u64>::make(0x100)); // wrong 64-bit address
 #endif
-	spurs->m.wklInfoSysSrv.data = 0;
-	spurs->m.wklInfoSysSrv.copy.write_relaxed(0xff);
+	spurs->m.wklInfoSysSrv.arg = 0;
+	spurs->m.wklInfoSysSrv.uniqueId.write_relaxed(0xff);
 	u32 sem;
 	for (u32 i = 0; i < 0x10; i++)
 	{
@@ -192,114 +192,164 @@ s64 spursInit(
 			{
 				LV2_LOCK(0); // TODO: lock-free implementation if possible
 
-				const u32 arg1 = SPU.GPR[3]._u32[3];
-				u32 var0 = SPU.ReadLS32(0x1d8);
-				u32 var1 = SPU.ReadLS32(0x1dc);
-				u128 wklA = vm::read128(spurs.addr() + 0x20);
-				u128 wklB = vm::read128(spurs.addr() + 0x30);
-				u128 savedA = SPU.ReadLS128(0x180);
-				u128 savedB = SPU.ReadLS128(0x190);
-				u128 vAA = u128::sub8(wklA, savedA);
-				u128 vBB = u128::sub8(wklB, savedB);
-				u128 vM1 = {}; if (var1 <= 15) vM1.u8r[var1] = 0xff;
-				u128 vAABB = (arg1 == 0) ? vAA : u128::add8(vAA, u128::andnot(vM1, vBB));
-				
-				u32 vNUM = 0x20;
-				u64 vRES = 0x20ull << 32;
-				u128 vSET = {};
+				auto mgmt  = vm::get_ptr<SpursKernelMgmtData>(SPU.ls_offset);
 
-				if (spurs->m.sysSrvMessage.read_relaxed() & (1 << num))
+				// The first and only argument to this function is a boolean that is set to false if the function
+				// is called by the SPURS kernel and set to true if called by cellSpursModulePollStatus.
+				// If the first argument is true then the shared data is not updated with the result.
+				const auto isPoll = SPU.GPR[3]._u32[3];
+
+				// Calculate the contention (number of SPUs used) for each workload
+				u8 contention[CELL_SPURS_MAX_WORKLOAD];
+				u8 pendingContention[CELL_SPURS_MAX_WORKLOAD];
+				for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 				{
-					SPU.WriteLS8(0x1eb, 0); // var4
-					if (arg1 == 0 || var1 == 0x20)
-					{
-						spurs->m.sysSrvMessage._and_not(1 << num);
-					}
-				}
-				else
-				{
-					u128 wklReadyCount0 = vm::read128(spurs.addr() + 0x0);
-					u128 wklReadyCount1 = vm::read128(spurs.addr() + 0x10);
-					u128 savedC = SPU.ReadLS128(0x1A0);
-					u128 savedD = SPU.ReadLS128(0x1B0);
-					u128 vRC = u128::add8(u128::minu8(wklReadyCount0, u128::from8p(8)), u128::minu8(wklReadyCount1, u128::from8p(8)));
-					u32 wklFlag = spurs->m.wklFlag.flag.read_relaxed();
-					u32 flagRecv = spurs->m.wklFlagReceiver.read_relaxed();
-					u128 vFM = u128::fromV(g_imm_table.fsmb_table[(wklFlag == 0) && (flagRecv < 16) ? 0x8000 >> flagRecv : 0]);
-					u128 wklSet1 = u128::fromV(g_imm_table.fsmb_table[spurs->m.wklSignal1.read_relaxed()]);
-					u128 vFMS1 = vFM | wklSet1;
-					u128 vFMV1 = u128::fromV(g_imm_table.fsmb_table[(var1 < 16) ? 0x8000 >> var1 : 0]);
-					u32 var5 = SPU.ReadLS32(0x1ec);
-					u128 wklMinCnt = vm::read128(spurs.addr() + 0x40);
-					u128 wklMaxCnt = vm::read128(spurs.addr() + 0x50);
-					u128 vCC = u128::andnot(vFMS1, u128::eq8(wklReadyCount0, {}) | u128::leu8(vRC, vAABB)) |
-						u128::leu8(wklMaxCnt, vAABB) |
-						u128::eq8(savedC, {}) |
-						u128::fromV(g_imm_table.fsmb_table[(~var5) >> 16]);
-					u128 vCCH1 = u128::andnot(vCC,
-						u128::from8p(0x80) & (vFMS1 | u128::gtu8(wklReadyCount0, vAABB)) |
-						u128::from8p(0x7f) & savedC);
-					u128 vCCL1 = u128::andnot(vCC,
-						u128::from8p(0x80) & vFMV1 |
-						u128::from8p(0x40) & u128::gtu8(vAABB, {}) & u128::gtu8(wklMinCnt, vAABB) |
-						u128::from8p(0x3c) & u128::fromV(_mm_slli_epi32(u128::sub8(u128::from8p(8), vAABB).vi, 2)) |
-						u128::from8p(0x02) & u128::eq8(savedD, u128::from8p((u8)var0)) |
-						u128::from8p(0x01));
-					u128 vSTAT =
-						u128::from8p(0x01) & u128::gtu8(wklReadyCount0, vAABB) |
-						u128::from8p(0x02) & wklSet1 |
-						u128::from8p(0x04) & vFM;
+					contention[i] = mgmt->spurs->m.wklCurrentContention[i] - mgmt->wklLocContention[i];
 
-					for (s32 i = 0, max = -1; i < 0x10; i++)
+					// If this is a poll request then the number of SPUs pending to context switch is also added to the contention presumably
+					// to prevent unnecessary jumps to the kernel
+					if (isPoll)
 					{
-						const s32 value = ((s32)vCCH1.u8r[i] << 8) | ((s32)vCCL1.u8r[i]);
-						if (value > max && (vCC.u8r[i] & 1) == 0)
+						pendingContention[i] = mgmt->spurs->m.wklPendingContention[i] - mgmt->wklLocPendingContention[i];
+						if (i != mgmt->wklCurrentId)
 						{
-							vNUM = i;
-							max = value;
-						}
-					}
-
-					if (vNUM < 0x10)
-					{
-						vRES = ((u64)vNUM << 32) | vSTAT.u8r[vNUM];
-						vSET.u8r[vNUM] = 0x01;
-					}
-
-					SPU.WriteLS8(0x1eb, vNUM == 0x20);
-
-					if (!arg1 || var1 == vNUM)
-					{
-						spurs->m.wklSignal1._and_not(be_t<u16>::make((u16)(vNUM < 16 ? 0x8000 >> vNUM : 0)));
-						if (vNUM == flagRecv && wklFlag == 0)
-						{
-							spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(-1));
+							contention[i] += pendingContention[i];
 						}
 					}
 				}
 
-				if (arg1 == 0)
+				u32 wklSelectedId = CELL_SPURS_SYS_SERVICE_WORKLOAD_ID;
+				u32 pollStatus    = 0;
+
+				// The system service workload has the highest priority. Select the system service workload if
+				// the system service message bit for this SPU is set.
+				if (mgmt->spurs->m.sysSrvMessage.read_relaxed() & (1 << mgmt->spuNum))
 				{
-					vm::write128(spurs.addr() + 0x20, u128::add8(vAA, vSET)); // update wklA
-
-					SPU.WriteLS128(0x180, vSET); // update savedA
-					SPU.WriteLS32(0x1dc, vNUM); // update var1
-				}
-
-				if (arg1 == 1 && vNUM != var1)
-				{
-					vm::write128(spurs.addr() + 0x30, u128::add8(vBB, vSET)); // update wklB
-
-					SPU.WriteLS128(0x190, vSET); // update savedB
+					// Not sure what this does. Possibly Mark the SPU as in use.
+					mgmt->x1EB = 0;
+					if (!isPoll || mgmt->wklCurrentId == CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						// Clear the message bit
+						mgmt->spurs->m.sysSrvMessage.write_relaxed(mgmt->spurs->m.sysSrvMessage.read_relaxed() & ~(1 << mgmt->spuNum));
+					}
 				}
 				else
 				{
-					vm::write128(spurs.addr() + 0x30, vBB); // update wklB
+					// Caclulate the scheduling weight for each workload
+					u16 maxWeight = 0;
+					for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+					{
+						u8 x1EC         = mgmt->x1EC & (0x8000 >> i);
+						u8 wklSignal    = mgmt->spurs->m.wklSignal1.read_relaxed() & (0x8000 >> i);
+						u8 wklFlag      = mgmt->spurs->m.wklFlag.flag.read_relaxed() == 0 ? mgmt->spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
+						u8 readyCount   = mgmt->spurs->m.wklReadyCount1[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : mgmt->spurs->m.wklReadyCount1[i].read_relaxed();
+						u8 idleSpuCount = mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed();
+						u8 requestCount = readyCount + idleSpuCount;
 
-					SPU.WriteLS128(0x190, {}); // update savedB
+						// For a workload to be considered for scheduling:
+						// 1. Its priority must not be 0
+						// 2. The number of SPUs used by it must be less than the max contention for that workload
+						// 3. The bit in 0x1EC for the wokload must be set
+						// 4. The number of SPUs allocated to it must be less than the number of SPUs requested (i.e. readyCount)
+						//    OR the workload must be signalled
+						//    OR the workload flag is 0 and the workload is configured as the wokload flag receiver
+						if (x1EC && mgmt->priority[i] != 0 && mgmt->spurs->m.wklMaxContention[i].read_relaxed() > contention[i])
+						{
+							if (wklFlag || wklSignal || (readyCount != 0 && requestCount > contention[i]))
+							{
+								// The scheduling weight of the workload is formed from the following parameters in decreasing order of priority:
+								// 1. Wokload signal set or workload flag or ready count > contention
+								// 2. Priority of the workload on the SPU
+								// 3. Is the workload the last selected workload
+								// 4. Minimum contention of the workload
+								// 5. Number of SPUs that are being used by the workload (lesser the number, more the weight)
+								// 6. Is the workload executable same as the currently loaded executable
+								// 7. The workload id (lesser the number, more the weight)
+								u16 weight  = (wklFlag || wklSignal || (readyCount > contention[i])) ? 0x8000 : 0;
+								weight     |= (u16)(mgmt->priority[i] & 0x7F) << 16;
+								weight     |= i == mgmt->wklCurrentId ? 0x80 : 0x00;
+								weight     |= (contention[i] > 0 && mgmt->spurs->m.wklMinContention[i] > contention[i]) ? 0x40 : 0x00;
+								weight     |= ((CELL_SPURS_MAX_SPU - contention[i]) & 0x0F) << 2;
+								weight     |= mgmt->wklUniqueId[i] == mgmt->wklCurrentId ? 0x02 : 0x00;
+								weight     |= 0x01;
+
+								// In case of a tie the lower numbered workload is chosen
+								if (weight > maxWeight)
+								{
+									wklSelectedId  = i;
+									maxWeight      = weight;
+									pollStatus     = readyCount > contention[i] ? CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT : 0;
+									pollStatus    |= wklSignal ? CELL_SPURS_MODULE_POLL_STATUS_SIGNAL : 0;
+									pollStatus    |= wklFlag ? CELL_SPURS_MODULE_POLL_STATUS_FLAG : 0;
+								}
+							}
+						}
+					}
+
+					// Not sure what this does. Possibly mark the SPU as idle/in use.
+					mgmt->x1EB = wklSelectedId == CELL_SPURS_SYS_SERVICE_WORKLOAD_ID ? 1 : 0;
+
+					if (!isPoll || wklSelectedId == mgmt->wklCurrentId)
+					{
+						// Clear workload signal for the selected workload
+						mgmt->spurs->m.wklSignal1.write_relaxed(be_t<u16>::make(mgmt->spurs->m.wklSignal1.read_relaxed() & ~(0x8000 >> wklSelectedId)));
+						mgmt->spurs->m.wklSignal2.write_relaxed(be_t<u16>::make(mgmt->spurs->m.wklSignal1.read_relaxed() & ~(0x80000000u >> wklSelectedId)));
+
+						// If the selected workload is the wklFlag workload then pull the wklFlag to all 1s
+						if (wklSelectedId == mgmt->spurs->m.wklFlagReceiver.read_relaxed())
+						{
+							mgmt->spurs->m.wklFlag.flag.write_relaxed(be_t<u32>::make(0xFFFFFFFF));
+						}
+					}
 				}
 
-				return vRES;
+				if (!isPoll)
+				{
+					// Called by kernel
+					// Increment the contention for the selected workload
+					if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						contention[wklSelectedId]++;
+					}
+
+					for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+					{
+						mgmt->spurs->m.wklCurrentContention[i] = contention[i];
+						mgmt->wklLocContention[i]              = 0;
+						mgmt->wklLocPendingContention[i]       = 0;
+					}
+
+					if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						mgmt->wklLocContention[wklSelectedId] = 1;
+					}
+
+					mgmt->wklCurrentId = wklSelectedId;
+				}
+				else if (wklSelectedId != mgmt->wklCurrentId)
+				{
+					// Not called by kernel but a context switch is required
+					// Increment the pending contention for the selected workload
+					if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						pendingContention[wklSelectedId]++;
+					}
+
+					for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
+					{
+						mgmt->spurs->m.wklPendingContention[i] = pendingContention[i];
+						mgmt->wklLocPendingContention[i]       = 0;
+					}
+
+					if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						mgmt->wklLocPendingContention[wklSelectedId] = 1;
+					}
+				}
+
+				u64 result  = (u64)wklSelectedId << 32;
+				result     |= pollStatus;
+				return result;
 			};
 			else SPU.m_code3_func = [spurs, num](SPUThread& SPU) -> u64 // second kernel
 			{
@@ -324,7 +374,7 @@ s64 spursInit(
 					// to prevent unnecessary jumps to the kernel
 					if (isPoll)
 					{
-						pendingContention[i] = mgmt->spurs->m.wklPendingContention[i] - mgmt->wklLocPendingContention[i];
+						pendingContention[i] = mgmt->spurs->m.wklPendingContention[i & 0x0F] - mgmt->wklLocPendingContention[i & 0x0F];
 						pendingContention[i] = i < CELL_SPURS_MAX_WORKLOAD ? pendingContention[i] & 0x0F : pendingContention[i] >> 4;
 						if (i != mgmt->wklCurrentId)
 						{
@@ -342,7 +392,7 @@ s64 spursInit(
 				{
 					// Not sure what this does. Possibly Mark the SPU as in use.
 					mgmt->x1EB = 0;
-					if (!isPoll || mgmt->wklCurrentId == 0x20)
+					if (!isPoll || mgmt->wklCurrentId == CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
 					{
 						// Clear the message bit
 						mgmt->spurs->m.sysSrvMessage.write_relaxed(mgmt->spurs->m.sysSrvMessage.read_relaxed() & ~(1 << mgmt->spuNum));
@@ -350,7 +400,7 @@ s64 spursInit(
 				}
 				else
 				{
-					// Caclulate the scheduling weight for each worjload
+					// Caclulate the scheduling weight for each workload
 					u8 maxWeight = 0;
 					for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++)
 					{
@@ -360,31 +410,33 @@ s64 spursInit(
 						u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklMaxContention[j].read_relaxed() & 0x0F : mgmt->spurs->m.wklMaxContention[j].read_relaxed() >> 4;
 						u8 wklSignal     = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklSignal1.read_relaxed() & (0x8000 >> j) : mgmt->spurs->m.wklSignal2.read_relaxed() & (0x8000 >> j);
 						u8 wklFlag       = mgmt->spurs->m.wklFlag.flag.read_relaxed() == 0 ? mgmt->spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
+						u8 readyCount    = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklReadyCount1[j].read_relaxed() : mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[j].read_relaxed();
 
-						// For a worload to be considered for scheduling:
+						// For a workload to be considered for scheduling:
 						// 1. Its priority must be greater than 0
 						// 2. The number of SPUs used by it must be less than the max contention for that workload
 						// 3. The bit in 0x1EC/0x1EE for the wokload must be set
 						// 4. The number of SPUs allocated to it must be less than the number of SPUs requested (i.e. readyCount)
-						// Condition #4 may be overriden using a workload signal or using the workload flag
+						//    OR the workload must be signalled
+						//    OR the workload flag is 0 and the workload is configured as the wokload receiver
 						if (x1ECx1EE && priority > 0 && maxContention > contention[i])
 						{
-							if (wklFlag || wklSignal || mgmt->spurs->m.wklReadyCount[i].read_relaxed() > contention[i])
+							if (wklFlag || wklSignal || readyCount > contention[i])
 							{
 								// The scheduling weight of the workload is equal to the priority of the workload for the SPU.
 								// The current workload is given a sligtly higher weight presumably to reduce the number of context switches.
+								// In case of a tie the lower numbered workload is chosen.
 								u8 weight = priority << 4;
 								if (mgmt->wklCurrentId == i)
 								{
 									weight |= 0x04;
 								}
 
-								// In case of a tie the lower numbered workload is chosen
 								if (weight > maxWeight)
 								{
 									wklSelectedId  = i;
 									maxWeight      = weight;
-									pollStatus     = mgmt->spurs->m.wklReadyCount[i].read_relaxed() > contention[i] ? CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT : 0;
+									pollStatus     = readyCount > contention[i] ? CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT : 0;
 									pollStatus    |= wklSignal ? CELL_SPURS_MODULE_POLL_STATUS_SIGNAL : 0;
 									pollStatus    |= wklFlag ? CELL_SPURS_MODULE_POLL_STATUS_FLAG : 0;
 								}
@@ -432,6 +484,11 @@ s64 spursInit(
 				{
 					// Not called by kernel but a context switch is required
 					// Increment the pending contention for the selected workload
+					if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID)
+					{
+						pendingContention[wklSelectedId]++;
+					}
+
 					for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++)
 					{
 						mgmt->spurs->m.wklPendingContention[i] = pendingContention[i] | (pendingContention[i + 0x10] << 4);
@@ -471,12 +528,12 @@ s64 spursInit(
 				// get current workload info:
 				auto& wkl = wid < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklInfo1[wid] : (wid < CELL_SPURS_MAX_WORKLOAD2 && isSecond ? spurs->m.wklInfo2[wid & 0xf] : spurs->m.wklInfoSysSrv);
 
-				if (mgmt->wklCurrentAddr != wkl.pm)
+				if (mgmt->wklCurrentAddr != wkl.addr)
 				{
 					// load executable code:
-					memcpy(vm::get_ptr<void>(SPU.ls_offset + 0xa00), wkl.pm.get_ptr(), wkl.size);
-					mgmt->wklCurrentAddr = wkl.pm;
-					mgmt->x1D8 = wkl.copy.read_relaxed();
+					memcpy(vm::get_ptr<void>(SPU.ls_offset + 0xa00), wkl.addr.get_ptr(), wkl.size);
+					mgmt->wklCurrentAddr     = wkl.addr;
+					mgmt->wklCurrentUniqueId = wkl.uniqueId.read_relaxed();
 				}
 				
 				if (!isSecond) SPU.WriteLS16(0x1e8, 0);
@@ -484,7 +541,7 @@ s64 spursInit(
 				// run workload:
 				SPU.GPR[1]._u32[3] = 0x3FFB0;
 				SPU.GPR[3]._u32[3] = 0x100;
-				SPU.GPR[4]._u64[1] = wkl.data;
+				SPU.GPR[4]._u64[1] = wkl.arg;
 				SPU.GPR[5]._u32[3] = pollStatus;
 				SPU.FastCall(0xa00);
 
@@ -601,7 +658,7 @@ s64 spursInit(
 								spurs->m.wklMaxContention[i].read_relaxed() & 0xf
 								)
 							{
-								if (spurs->m.wklReadyCount[i].read_relaxed() ||
+								if (spurs->m.wklReadyCount1[i].read_relaxed() ||
 									spurs->m.wklSignal1.read_relaxed() & (0x8000u >> i) ||
 									(spurs->m.wklFlag.flag.read_relaxed() == 0 &&
 									spurs->m.wklFlagReceiver.read_relaxed() == (u8)i
@@ -619,7 +676,7 @@ s64 spursInit(
 								spurs->m.wklMaxContention[i].read_relaxed() & 0xf0
 								)
 							{
-								if (spurs->m.wklReadyCount[i + 0x10].read_relaxed() ||
+								if (spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed() ||
 									spurs->m.wklSignal2.read_relaxed() & (0x8000u >> i) ||
 									(spurs->m.wklFlag.flag.read_relaxed() == 0 &&
 									spurs->m.wklFlagReceiver.read_relaxed() == (u8)i + 0x10
@@ -1385,8 +1442,8 @@ s32 spursAddWorkload(
 		spurs->m.wklStat1[wnum].write_relaxed(1);
 		spurs->m.wklD1[wnum] = 0;
 		spurs->m.wklE1[wnum] = 0;
-		spurs->m.wklInfo1[wnum].pm = pm;
-		spurs->m.wklInfo1[wnum].data = data;
+		spurs->m.wklInfo1[wnum].addr = pm;
+		spurs->m.wklInfo1[wnum].arg = data;
 		spurs->m.wklInfo1[wnum].size = size;
 		spurs->m.wklInfo1[wnum].priority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH1[wnum].nameClass = nameClass;
@@ -1401,9 +1458,10 @@ s32 spursAddWorkload(
 		}
 		if ((spurs->m.flags1 & SF1_32_WORKLOADS) == 0)
 		{
-			spurs->m.wklReadyCount[wnum + 16].write_relaxed(0);
+			spurs->m.wklIdleSpuCountOrReadyCount2[wnum].write_relaxed(0);
 			spurs->m.wklMinContention[wnum] = minContention > 8 ? 8 : minContention;
 		}
+		spurs->m.wklReadyCount1[wnum].write_relaxed(0);
 	}
 	else
 	{
@@ -1412,8 +1470,8 @@ s32 spursAddWorkload(
 		spurs->m.wklStat2[index].write_relaxed(1);
 		spurs->m.wklD2[index] = 0;
 		spurs->m.wklE2[index] = 0;
-		spurs->m.wklInfo2[index].pm = pm;
-		spurs->m.wklInfo2[index].data = data;
+		spurs->m.wklInfo2[index].addr = pm;
+		spurs->m.wklInfo2[index].arg = data;
 		spurs->m.wklInfo2[index].size = size;
 		spurs->m.wklInfo2[index].priority = *(be_t<u64>*)priorityTable;
 		spurs->m.wklH2[index].nameClass = nameClass;
@@ -1426,8 +1484,8 @@ s32 spursAddWorkload(
 			spurs->m.wklF2[index].hookArg = hookArg;
 			spurs->m.wklE2[index] |= 2;
 		}
+		spurs->m.wklIdleSpuCountOrReadyCount2[wnum].write_relaxed(0);
 	}
-	spurs->m.wklReadyCount[wnum].write_relaxed(0);
 
 	if (wnum <= 15)
 	{
@@ -1462,21 +1520,21 @@ s32 spursAddWorkload(
 			if (mask & m)
 			{
 				CellSpurs::WorkloadInfo& current = i <= 15 ? spurs->m.wklInfo1[i] : spurs->m.wklInfo2[i & 0xf];
-				if (current.pm.addr() == wkl.pm.addr())
+				if (current.addr.addr() == wkl.addr.addr())
 				{
 					// if a workload with identical policy module found
-					res_wkl = current.copy.read_relaxed();
+					res_wkl = current.uniqueId.read_relaxed();
 					break;
 				}
 				else
 				{
-					k |= 0x80000000 >> current.copy.read_relaxed();
+					k |= 0x80000000 >> current.uniqueId.read_relaxed();
 					res_wkl = cntlz32(~k);
 				}
 			}
 		}
 
-		wkl.copy.exchange((u8)res_wkl);
+		wkl.uniqueId.exchange((u8)res_wkl);
 		v = mask | (0x80000000u >> wnum);
 	});
 	assert(res_wkl <= 31);
@@ -1818,7 +1876,14 @@ s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	spurs->m.wklReadyCount[wid].exchange((u8)value);
+	if (wid < CELL_SPURS_MAX_WORKLOAD)
+	{
+		spurs->m.wklReadyCount1[wid].exchange((u8)value);
+	}
+	else
+	{
+		spurs->m.wklIdleSpuCountOrReadyCount2[wid].exchange((u8)value);
+	}
 	return CELL_OK;
 }
 
