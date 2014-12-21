@@ -165,7 +165,7 @@ void GLVertexDecompilerThread::SetDST(bool is_sca, std::string value)
 	//code += dest + value;
 	//AddCode(code + ";");
 
-	AddCodeCond(dest, value);
+	AddCodeCond(Format(dest), value);
 }
 
 std::string GLVertexDecompilerThread::GetFunc()
@@ -454,7 +454,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 
 	std::string fp;
 
-	for (int i = m_funcs.size() - 1; i>0; --i)
+	for (int i = m_funcs.size() - 1; i > 0; --i)
 	{
 		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
 	}

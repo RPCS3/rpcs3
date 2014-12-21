@@ -47,7 +47,7 @@ void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
 
 	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
 
-	AddCodeCond(dest, code);
+	AddCodeCond(Format(dest), code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
 
 	if (dst.set_cond)

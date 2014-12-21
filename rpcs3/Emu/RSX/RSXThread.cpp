@@ -340,9 +340,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				double limit;
 				switch (Ini.GSFrameLimit.GetValue())
 				{
-				case 1: limit = 50.0; break;
+				case 1: limit = 50.; break;
 				case 2: limit = 59.94; break;
-				case 3: limit = m_fps_limit; break; //TODO
+				case 3: limit = 30.; break;
+				case 4: limit = 60.; break;
+				case 5: limit = m_fps_limit; break; //TODO
 
 				case 0:
 				default:

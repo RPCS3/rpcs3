@@ -450,7 +450,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_gs_aspect->Append("4:3");
 	cbox_gs_aspect->Append("16:9");
 
-	for (auto item : { "Off", "50", "59.94", "Auto" })
+	for (auto item : { "Off", "50", "59.94", "30", "60", "Auto" })
 		cbox_gs_frame_limit->Append(item);
 
 	cbox_pad_handler->Append("Null");
