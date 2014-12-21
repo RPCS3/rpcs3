@@ -104,6 +104,7 @@ public:
 	IniEntry<u8> GSRenderMode;
 	IniEntry<u8> GSResolution;
 	IniEntry<u8> GSAspectRatio;
+	IniEntry<u8> GSFrameLimit;
 	IniEntry<bool> GSLogPrograms;
 	IniEntry<bool> GSDumpColorBuffers;
 	IniEntry<bool> GSDumpDepthBuffer;
@@ -180,6 +181,7 @@ public:
 		GSRenderMode.Init("GS_RenderMode", path);
 		GSResolution.Init("GS_Resolution", path);
 		GSAspectRatio.Init("GS_AspectRatio", path);
+		GSFrameLimit.Init("GS_FrameLimit", path);
 		GSLogPrograms.Init("GS_LogPrograms", path);
 		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
 		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
@@ -252,6 +254,7 @@ public:
 		GSRenderMode.Load(1);
 		GSResolution.Load(4);
 		GSAspectRatio.Load(2);
+		GSFrameLimit.Load(0);
 		GSLogPrograms.Load(false);
 		GSDumpColorBuffers.Load(false);
 		GSDumpDepthBuffer.Load(false);
@@ -325,6 +328,7 @@ public:
 		GSRenderMode.Save();
 		GSResolution.Save();
 		GSAspectRatio.Save();
+		GSFrameLimit.Save();
 		GSLogPrograms.Save();
 		GSDumpColorBuffers.Save();
 		GSDumpDepthBuffer.Save();

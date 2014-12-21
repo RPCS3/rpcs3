@@ -7,6 +7,7 @@
 #include <stack>
 #include "Utilities/SSemaphore.h"
 #include "Utilities/Thread.h"
+#include "Utilities/Timer.h"
 
 enum Method
 {
@@ -101,6 +102,8 @@ public:
 protected:
 	std::stack<u32> m_call_stack;
 	CellGcmControl* m_ctrl;
+	Timer m_timer_sync;
+	double m_fps_limit = 59.94;
 
 public:
 	GcmTileInfo m_tiles[m_tiles_count];

@@ -335,6 +335,26 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				});
 			}
 
+			auto sync = [&]()
+			{
+				double limit;
+				switch (Ini.GSFrameLimit.GetValue())
+				{
+				case 1: limit = 50.0; break;
+				case 2: limit = 59.94; break;
+				case 3: limit = m_fps_limit; break; //TODO
+
+				case 0:
+				default:
+					return;
+				}
+
+				std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - m_timer_sync.GetElapsedTimeInMilliSec())));
+				m_timer_sync.Start();
+			};
+
+			sync();
+
 			//Emu.Pause();
 		}
 	break;
