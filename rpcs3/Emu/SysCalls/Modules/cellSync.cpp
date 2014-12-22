@@ -4,9 +4,8 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SMutex.h"
 
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "Emu/Event.h"

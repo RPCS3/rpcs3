@@ -6,9 +6,10 @@
 #include "Emu/System.h"
 #include "ModuleManager.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SMutex.h"
+#include "Utilities/SQueue.h"
 
 #include "lv2/lv2Fs.h"
+#include "lv2/sleep_queue_type.h"
 #include "lv2/sys_lwmutex.h"
 #include "lv2/sys_mutex.h"
 #include "lv2/sys_cond.h"
@@ -139,11 +140,11 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
 	bind_func(sys_semaphore_trywait),                       //93  (0x05D)
 	bind_func(sys_semaphore_post),                          //94  (0x05E)
-	null_func,//bind_func(sys_lwmutex_create),              //95  (0x05F) // internal, used by sys_lwmutex_create
-	null_func,//bind_func(sys_lwmutex_destroy),             //96  (0x060) // internal, used by sys_lwmutex_destroy
-	null_func,//bind_func(sys_lwmutex_lock),                //97  (0x061) // internal, used by sys_lwmutex_lock
-	null_func,//bind_func(sys_lwmutex_trylock),             //98  (0x062) // internal, used by sys_lwmutex_unlock
-	null_func,//bind_func(sys_lwmutex_unlock),              //99  (0x063) // internal, used by sys_lwmutex_trylock
+	null_func,//bind_func(_sys_lwmutex_create),             //95  (0x05F) // internal, used by sys_lwmutex_create
+	null_func,//bind_func(_sys_lwmutex_destroy),            //96  (0x060) // internal, used by sys_lwmutex_destroy
+	null_func,//bind_func(_sys_lwmutex_lock),               //97  (0x061) // internal, used by sys_lwmutex_lock
+	null_func,//bind_func(_sys_lwmutex_trylock),            //98  (0x062) // internal, used by sys_lwmutex_unlock
+	null_func,//bind_func(_sys_lwmutex_unlock),             //99  (0x063) // internal, used by sys_lwmutex_trylock
 	bind_func(sys_mutex_create),                            //100 (0x064)
 	bind_func(sys_mutex_destroy),                           //101 (0x065)
 	bind_func(sys_mutex_lock),                              //102 (0x066)
@@ -155,9 +156,9 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_cond_signal),                             //108 (0x06C)
 	bind_func(sys_cond_signal_all),                         //109 (0x06D)
 	bind_func(sys_cond_signal_to),                          //110 (0x06E)
-	null_func,//bind_func(sys_lwcond_create)                //111 (0x06F) // internal, used by sys_lwcond_create
-	null_func,//bind_func(sys_lwcond_destroy)               //112 (0x070) // internal, used by sys_lwcond_destroy
-	null_func,//bind_func(sys_lwcond_queue_wait)            //113 (0x071) // internal, used by sys_lwcond_wait
+	null_func,//bind_func(_sys_lwcond_create)               //111 (0x06F) // internal, used by sys_lwcond_create
+	null_func,//bind_func(_sys_lwcond_destroy)              //112 (0x070) // internal, used by sys_lwcond_destroy
+	null_func,//bind_func(_sys_lwcond_queue_wait)           //113 (0x071) // internal, used by sys_lwcond_wait
 	bind_func(sys_semaphore_get_value),                     //114 (0x072)
 	null_func,//bind_func(sys_semaphore_...)                //115 (0x073) // internal, used by sys_lwcond_signal, sys_lwcond_signal_to
 	null_func,//bind_func(sys_semaphore_...)                //116 (0x074) // internal, used by sys_lwcond_signal_all

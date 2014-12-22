@@ -18,9 +18,9 @@ struct sys_mutex_attribute
 
 struct Mutex
 {
-	u32 id;
-	SMutex m_mutex;
-	SleepQueue m_queue;
+	atomic_le_t<u32> id;
+	atomic_le_t<u32> owner;
+	sleep_queue_t queue;
 	u32 recursive; // recursive locks count
 	std::atomic<u32> cond_count; // count of condition variables associated
 
@@ -30,18 +30,20 @@ struct Mutex
 	Mutex(u32 protocol, bool is_recursive, u64 name)
 		: protocol(protocol)
 		, is_recursive(is_recursive)
-		, m_queue(name)
+		, queue(name)
 		, cond_count(0)
 	{
-		m_mutex.initialize();
+		owner.write_relaxed(0);
 	}
 
 	~Mutex();
 };
 
+class PPUThread;
+
 // SysCalls
-s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute> attr);
-s32 sys_mutex_destroy(u32 mutex_id);
-s32 sys_mutex_lock(u32 mutex_id, u64 timeout);
-s32 sys_mutex_trylock(u32 mutex_id);
-s32 sys_mutex_unlock(u32 mutex_id);
+s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute> attr);
+s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id);
+s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout);
+s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id);
+s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id);

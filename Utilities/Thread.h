@@ -160,10 +160,10 @@ public:
 		// register waiter
 		waiter_reg_t waiter(*this, signal_id);
 
-		// check condition or if emulator is stopped
+		// check the condition or if the emulator is stopped
 		while (!waiter_func() && !is_stopped(signal_id))
 		{
-			// initialize waiter (only first time)
+			// initialize waiter (only once)
 			waiter.init();
 			// wait for 1 ms or until signal arrived
 			waiter.thread->WaitForAnySignal(1);

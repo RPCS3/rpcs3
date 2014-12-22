@@ -288,9 +288,9 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, vm::ptr<const CellCodecEsFilt
 					 const u32 esSpecificInfo_addr, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x500000; // 0x45fa49 from ps3
+		attr->memSize = 0x400000; // 0x45fa49 from ps3
 	else
-		attr->memSize = 0x8000; // 0x73d9 from ps3
+		attr->memSize = 0x6000; // 0x73d9 from ps3
 
 	cellDmux->Warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", (u32)esFilterId->filterIdMajor, (u32)esFilterId->filterIdMinor,
 		(u32)esFilterId->supplementalInfo1, (u32)esFilterId->supplementalInfo2);
@@ -454,7 +454,7 @@ u32 dmuxOpen(Demuxer* data)
 						if (es.raw_data.size() > 1024 * 1024)
 						{
 							stream = backup;
-							std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 							continue;
 						}
 
@@ -550,7 +550,7 @@ u32 dmuxOpen(Demuxer* data)
 						if (es.isfull(old_size))
 						{
 							stream = backup;
-							std::this_thread::sleep_for(std::chrono::milliseconds(1));
+							std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 							continue;
 						}
 
@@ -714,7 +714,7 @@ u32 dmuxOpen(Demuxer* data)
 					{
 						if (Emu.IsStopped() || dmux.is_closed) break;
 
-						std::this_thread::sleep_for(std::chrono::milliseconds(1));
+						std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 					}
 
 					es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false, 0);
@@ -868,7 +868,7 @@ int cellDmuxClose(u32 demuxerHandle)
 			return CELL_OK;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
@@ -936,7 +936,7 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 			cellDmux->Warning("cellDmuxResetStreamAndWaitDone(%d) aborted", demuxerHandle);
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 	return CELL_OK;
 }

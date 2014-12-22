@@ -6,33 +6,32 @@
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
+#include "sleep_queue_type.h"
 #include "sys_time.h"
 #include "sys_lwmutex.h"
 
 SysCallBase sys_lwmutex("sys_lwmutex");
 
-// TODO: move SleepQueue somewhere
-
 s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name_u64)
 {
 	LV2_LOCK(0);
 
-	lwmutex.mutex.write_relaxed(be_t<u32>::make(0));
+	lwmutex.owner.write_relaxed(be_t<u32>::make(0));
 	lwmutex.waiter.write_relaxed(be_t<u32>::make(~0));
 	lwmutex.attribute = protocol | recursive;
 	lwmutex.recursive_count = 0;
-	u32 sq_id = sys_lwmutex.GetNewId(new SleepQueue(name_u64), TYPE_LWMUTEX);
+	u32 sq_id = sys_lwmutex.GetNewId(new sleep_queue_t(name_u64), TYPE_LWMUTEX);
 	lwmutex.sleep_queue = sq_id;
 
 	std::string name((const char*)&name_u64, 8);
 	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", name.c_str(), protocol | recursive, sq_id);
 
-	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, name, GetCurrentPPUThread().GetId());
+	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, name, 0);
 	
 	return CELL_OK;
 }
 
-s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
+s32 sys_lwmutex_create(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
 	sys_lwmutex.Warning("sys_lwmutex_create(lwmutex_addr=0x%x, attr_addr=0x%x)", lwmutex.addr(), attr.addr());
 
@@ -55,7 +54,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	return lwmutex_create(*lwmutex, attr->protocol, attr->recursive, attr->name_u64);
 }
 
-s32 sys_lwmutex_destroy(vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sys_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.addr());
 
@@ -77,156 +76,42 @@ s32 sys_lwmutex_destroy(vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 }
 
-s32 sys_lwmutex_lock(vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)
+s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)
 {
 	sys_lwmutex.Log("sys_lwmutex_lock(lwmutex_addr=0x%x, timeout=%lld)", lwmutex.addr(), timeout);
 
-	return lwmutex->lock(be_t<u32>::make(GetCurrentPPUThread().GetId()), timeout);
+	return lwmutex->lock(be_t<u32>::make(CPU.GetId()), timeout);
 }
 
-s32 sys_lwmutex_trylock(vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sys_lwmutex.Log("sys_lwmutex_trylock(lwmutex_addr=0x%x)", lwmutex.addr());
 
-	return lwmutex->trylock(be_t<u32>::make(GetCurrentPPUThread().GetId()));
+	return lwmutex->trylock(be_t<u32>::make(CPU.GetId()));
 }
 
-s32 sys_lwmutex_unlock(vm::ptr<sys_lwmutex_t> lwmutex)
+s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sys_lwmutex.Log("sys_lwmutex_unlock(lwmutex_addr=0x%x)", lwmutex.addr());
 
-	return lwmutex->unlock(be_t<u32>::make(GetCurrentPPUThread().GetId()));
-}
-
-void SleepQueue::push(u32 tid)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-	list.push_back(tid);
-}
-
-u32 SleepQueue::pop() // SYS_SYNC_FIFO
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-		
-	while (true)
-	{
-		if (list.size())
-		{
-			u32 res = list[0];
-			list.erase(list.begin());
-			if (res && Emu.GetIdManager().CheckID(res))
-			// check thread
-			{
-				return res;
-			}
-		}
-		return 0;
-	};
-}
-
-u32 SleepQueue::pop_prio() // SYS_SYNC_PRIORITY
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	while (true)
-	{
-		if (list.size())
-		{
-			u64 highest_prio = ~0ull;
-			u32 sel = 0;
-			for (u32 i = 0; i < list.size(); i++)
-			{
-				CPUThread* t = Emu.GetCPU().GetThread(list[i]);
-				if (!t)
-				{
-					list[i] = 0;
-					sel = i;
-					break;
-				}
-				u64 prio = t->GetPrio();
-				if (prio < highest_prio)
-				{
-					highest_prio = prio;
-					sel = i;
-				}
-			}
-			u32 res = list[sel];
-			list.erase(list.begin() + sel);
-			/* if (Emu.GetIdManager().CheckID(res)) */
-			if (res)
-			// check thread
-			{
-				return res;
-			}
-		}
-		return 0;
-	}
-}
-
-u32 SleepQueue::pop_prio_inherit() // (TODO)
-{
-	sys_lwmutex.Error("TODO: SleepQueue::pop_prio_inherit()");
-	Emu.Pause();
-	return 0;
-}
-
-bool SleepQueue::invalidate(u32 tid)
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	if (tid) for (u32 i = 0; i < list.size(); i++)
-	{
-		if (list[i] == tid)
-		{
-			list.erase(list.begin() + i);
-			return true;
-		}
-	}
-
-	return false;
-}
-
-u32 SleepQueue::count()
-{
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	u32 result = 0;
-	for (u32 i = 0; i < list.size(); i++)
-	{
-		if (list[i]) result++;
-	}
-	return result;
-}
-
-bool SleepQueue::finalize()
-{
-	if (!m_mutex.try_lock()) return false;
-
-	for (u32 i = 0; i < list.size(); i++)
-	{
-		if (list[i])
-		{
-			m_mutex.unlock();
-			return false;
-		}
-	}
-
-	m_mutex.unlock();
-	return true;
+	return lwmutex->unlock(be_t<u32>::make(CPU.GetId()));
 }
 
 s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
 
-	be_t<u32> owner_tid = mutex.read_sync();
+	const be_t<u32> old_owner = owner.read_sync();
 
-	if (tid == owner_tid)
+	if (old_owner == tid)
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
 			recursive_count += 1;
-			if (!recursive_count.ToBE()) return CELL_EKRESOURCE;
+			if (!recursive_count.ToBE())
+			{
+				return CELL_EKRESOURCE;
+			}
 			return CELL_OK;
 		}
 		else
@@ -235,7 +120,7 @@ s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 		}
 	}
 
-	if (!mutex.compare_and_swap_test(be_t<u32>::make(0), tid))
+	if (!owner.compare_and_swap_test(be_t<u32>::make(0), tid))
 	{
 		return CELL_EBUSY;
 	}
@@ -246,45 +131,33 @@ s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 
 s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 {
-	if (mutex.read_sync() != tid)
+	if (owner.read_sync() != tid)
 	{
 		return CELL_EPERM;
 	}
-	else
+
+	if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
 	{
-		if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
-		{
-			sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
-			recursive_count = 1;
-		}
-
-		recursive_count -= 1;
-		if (!recursive_count.ToBE())
-		{
-			be_t<u32> target = be_t<u32>::make(0);
-			switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
-			{
-			case se32(SYS_SYNC_FIFO):
-			case se32(SYS_SYNC_PRIORITY):
-			{
-				SleepQueue* sq;
-				if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
-				{
-					return CELL_ESRCH;
-				}
-
-				target = attribute & SYS_SYNC_FIFO ? sq->pop() : sq->pop_prio();
-			}
-			}
-
-			if (!mutex.compare_and_swap_test(tid, target))
-			{
-				assert(!"sys_lwmutex_t::unlock() failed");
-			}
-		}
-
-		return CELL_OK;
+		sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
+		recursive_count = 1;
 	}
+
+	recursive_count -= 1;
+	if (!recursive_count.ToBE())
+	{
+		sleep_queue_t* sq;
+		if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
+		{
+			return CELL_ESRCH;
+		}
+
+		if (!owner.compare_and_swap_test(tid, be_t<u32>::make(sq->pop(attribute))))
+		{
+			assert(!"sys_lwmutex_t::unlock() failed");
+		}
+	}
+
+	return CELL_OK;
 }
 
 s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
@@ -295,25 +168,18 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	default: return res;
 	}
 
-	SleepQueue* sq;
+	sleep_queue_t* sq;
 	if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
 	{
 		return CELL_ESRCH;
 	}
 
-	switch (attribute.ToBE() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK))
-	{
-	case se32(SYS_SYNC_PRIORITY):
-	case se32(SYS_SYNC_FIFO):
-	{
-		sq->push(tid);
-	}
-	}
+	sq->push(tid, attribute);
 
 	const u64 time_start = get_system_time();
 	while (true)
 	{
-		auto old_owner = mutex.compare_and_swap(be_t<u32>::make(0), tid);
+		auto old_owner = owner.compare_and_swap(be_t<u32>::make(0), tid);
 		if (!old_owner.ToBE())
 		{
 			sq->invalidate(tid);

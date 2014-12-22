@@ -156,7 +156,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 				cellSysutil->Warning("MsgDialog thread aborted");
 				return;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
 		while (g_msg_dialog_state == msgDialogOpen || (s64)(get_system_time() - g_msg_dialog_wait_until) < 0)
@@ -166,7 +166,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 				g_msg_dialog_state = msgDialogAbort;
 				break;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))

@@ -72,12 +72,6 @@ void CPUThreadManager::RemoveThread(const u32 id)
 
 	for (u32 i = 0; i < m_threads.size(); ++i)
 	{
-		if (m_threads[i]->m_wait_thread_id == id)
-		{
-			m_threads[i]->Wait(false);
-			m_threads[i]->m_wait_thread_id = -1;
-		}
-
 		if (m_threads[i]->GetId() != id) continue;
 
 		thr = m_threads[i];

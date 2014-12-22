@@ -5,7 +5,7 @@
 #include "Emu/Memory/atomic_type.h"
 
 #include "Emu/Cell/PPUThread.h"
-#include "sys_lwmutex.h"
+#include "sleep_queue_type.h"
 #include "sys_rwlock.h"
 
 SysCallBase sys_rwlock("sys_rwlock");
@@ -76,7 +76,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 			sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
 		if (rw->rlock_trylock(tid)) return CELL_OK;
 
@@ -139,7 +139,7 @@ s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 			sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=%d, ...) aborted", rw_lock_id);
 			return CELL_ETIMEDOUT;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
 		if (rw->wlock_trylock(tid, true)) return CELL_OK;
 

@@ -383,9 +383,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\SMutex.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -652,6 +649,9 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1009,9 +1009,6 @@
     <ClInclude Include="..\Utilities\BEType.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\SMutex.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\SQueue.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1260,6 +1257,9 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
       <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

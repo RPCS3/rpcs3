@@ -3,11 +3,10 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SMutex.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
-#include "sys_lwmutex.h"
+#include "sleep_queue_type.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
@@ -88,19 +87,19 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 	u32 tid = GetCurrentPPUThread().GetId();
 
 	eq->sq.m_mutex.lock();
-	eq->owner.lock(tid);
+	//eq->owner.lock(tid);
 	// check if some threads are waiting for an event
 	if (!mode && eq->sq.list.size())
 	{
-		eq->owner.unlock(tid);
+		//eq->owner.unlock(tid);
 		eq->sq.m_mutex.unlock();
 		return CELL_EBUSY;
 	}
-	eq->owner.unlock(tid, ~0);
+	//eq->owner.unlock(tid, ~0);
 	eq->sq.m_mutex.unlock();
 	while (eq->sq.list.size())
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
 			sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
@@ -140,16 +139,16 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 	u32 tid = GetCurrentPPUThread().GetId();
 
 	eq->sq.m_mutex.lock();
-	eq->owner.lock(tid);
+	//eq->owner.lock(tid);
 	if (eq->sq.list.size())
 	{
 		*number = 0;
-		eq->owner.unlock(tid);
+		//eq->owner.unlock(tid);
 		eq->sq.m_mutex.unlock();
 		return CELL_OK;
 	}
 	*number = eq->events.pop_all(event_array.get_ptr(), size);
-	eq->owner.unlock(tid);
+	//eq->owner.unlock(tid);
 	eq->sq.m_mutex.unlock();
 	return CELL_OK;
 }
@@ -173,34 +172,38 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 
 	u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->sq.push(tid); // add thread to sleep queue
+	eq->sq.push(tid, eq->protocol); // add thread to sleep queue
 
 	timeout = timeout ? (timeout / 1000) : ~0;
 	u64 counter = 0;
 	while (true)
 	{
-		switch (eq->owner.trylock(tid))
+		u32 old_owner = eq->owner.compare_and_swap(0, tid);
+		const s32 res = old_owner ? (old_owner == tid ? 1 : 2) : 0;
+
+		switch (res)
 		{
-		case SMR_OK:
-			if (!eq->events.count())
+		case 0:
+		{
+			const u32 next = eq->events.count() ? eq->sq.pop(eq->protocol) : 0;
+			if (next != tid)
 			{
-				eq->owner.unlock(tid);
+				if (!eq->owner.compare_and_swap_test(tid, next))
+				{
+					assert(!"sys_event_queue_receive() failed (I)");
+				}
 				break;
 			}
-			else
-			{
-				u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
-				if (next != tid)
-				{
-					eq->owner.unlock(tid, next);
-					break;
-				}
-			}
-		case SMR_SIGNAL:
+			// fallthrough
+		}
+		case 1:
 		{
 			sys_event_data event;
 			eq->events.pop(event);
-			eq->owner.unlock(tid);
+			if (!eq->owner.compare_and_swap_test(tid, 0))
+			{
+				assert(!"sys_event_queue_receive() failed (II)");
+			}
 			sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
 				(u64)event.source, (u64)event.data1, (u64)event.data2, (u64)event.data3);
 			/* passing event data in registers */
@@ -211,11 +214,15 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 			t.GPR[7] = event.data3;
 			return CELL_OK;
 		}
-		case SMR_FAILED: break;
-		default: eq->sq.invalidate(tid); return CELL_ECANCELED;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		if (!~old_owner)
+		{
+			eq->sq.invalidate(tid);
+			return CELL_ECANCELED;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (counter++ > timeout || Emu.IsStopped())
 		{
 			if (Emu.IsStopped()) sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);

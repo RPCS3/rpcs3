@@ -3,11 +3,12 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SMutex.h"
+#include "Utilities/SQueue.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_lwmutex.h"
+#include "sleep_queue_type.h"
+#include "sys_time.h"
 #include "sys_mutex.h"
 #include "sys_cond.h"
 
@@ -33,7 +34,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 	}
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
-	u32 id = sys_cond.GetNewId(cond, TYPE_COND);
+	const u32 id = sys_cond.GetNewId(cond, TYPE_COND);
 	*cond_id = id;
 	mutex->cond_count++;
 	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
@@ -54,7 +55,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	if (!cond->m_queue.finalize())
+	if (!cond->queue.finalize())
 	{
 		return CELL_EBUSY;
 	}
@@ -77,9 +78,9 @@ s32 sys_cond_signal(u32 cond_id)
 
 	Mutex* mutex = cond->mutex;
 
-	if (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
+	if (u32 target = cond->queue.pop(mutex->protocol))
 	{
-		cond->signal.lock(target);
+		cond->signal.Push(target, nullptr);
 
 		if (Emu.IsStopped())
 		{
@@ -102,10 +103,9 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 	Mutex* mutex = cond->mutex;
 
-	while (u32 target = (mutex->protocol == SYS_SYNC_PRIORITY ? cond->m_queue.pop_prio() : cond->m_queue.pop()))
+	while (u32 target = cond->queue.pop(mutex->protocol))
 	{
-		cond->signaler = GetCurrentPPUThread().GetId();
-		cond->signal.lock(target);
+		cond->signal.Push(target, nullptr);
 
 		if (Emu.IsStopped())
 		{
@@ -114,7 +114,6 @@ s32 sys_cond_signal_all(u32 cond_id)
 		}
 	}
 
-	cond->signaler = 0;
 	return CELL_OK;
 }
 
@@ -133,7 +132,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (!cond->m_queue.invalidate(thread_id))
+	if (!cond->queue.invalidate(thread_id))
 	{
 		return CELL_EPERM;
 	}
@@ -142,7 +141,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
-		cond->signal.lock(target);
+		cond->signal.Push(target, nullptr);
 	}
 
 	if (Emu.IsStopped())
@@ -153,7 +152,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 	return CELL_OK;
 }
 
-s32 sys_cond_wait(u32 cond_id, u64 timeout)
+s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 {
 	sys_cond.Log("sys_cond_wait(cond_id=%d, timeout=%lld)", cond_id, timeout);
 
@@ -164,65 +163,69 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 	}
 
 	Mutex* mutex = cond->mutex;
-	u32 tid = GetCurrentPPUThread().GetId();
 
-	if (mutex->m_mutex.GetOwner() != tid)
+	const u32 tid = CPU.GetId();
+	if (mutex->owner.read_sync() != tid)
 	{
-		sys_cond.Warning("sys_cond_wait(cond_id=%d) failed (EPERM)", cond_id);
 		return CELL_EPERM;
 	}
 
-	cond->m_queue.push(tid);
+	cond->queue.push(tid, mutex->protocol);
 
 	auto old_recursive = mutex->recursive;
 	mutex->recursive = 0;
-	mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
+	if (!mutex->owner.compare_and_swap_test(tid, mutex->queue.pop(mutex->protocol)))
+	{
+		assert(!"sys_cond_wait() failed");
+	}
 
-	u64 counter = 0;
-	const u64 max_counter = timeout ? (timeout / 1000) : ~0ull;
-
+	bool pushed_in_sleep_queue = false;
+	const u64 time_start = get_system_time();
 	while (true)
 	{
-		if (cond->signal.unlock(tid, tid) == SMR_OK)
+		u32 signaled;
+		if (cond->signal.Peek(signaled, &sq_no_wait) && signaled == tid) // check signaled threads
 		{
-			if (SMutexResult res = mutex->m_mutex.trylock(tid))
+			if (mutex->owner.compare_and_swap_test(0, tid)) // try to lock
 			{
-				if (res != SMR_FAILED)
-				{
-					goto abort;
-				}
-				mutex->m_queue.push(tid);
-
-				switch (mutex->m_mutex.lock(tid))
-				{
-				case SMR_OK:
-					mutex->m_queue.invalidate(tid);
-				case SMR_SIGNAL:
-					break;
-				default:
-					goto abort;
-				}
+				break;
 			}
-			mutex->recursive = old_recursive;
-			cond->signal.unlock(tid);
-			return CELL_OK;
+
+			if (!pushed_in_sleep_queue)
+			{
+				mutex->queue.push(tid, mutex->protocol);
+				pushed_in_sleep_queue = true;
+			}
+				
+			auto old_owner = mutex->owner.compare_and_swap(0, tid);
+			if (!old_owner)
+			{
+				mutex->queue.invalidate(tid);
+				break;
+			}
+			if (old_owner == tid)
+			{
+				break;
+			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-		if (counter++ > max_counter)
+		if (timeout && get_system_time() - time_start > timeout)
 		{
-			cond->m_queue.invalidate(tid);
-			GetCurrentPPUThread().owned_mutexes--; // ???
-			return CELL_ETIMEDOUT;
+			cond->queue.invalidate(tid);
+			CPU.owned_mutexes--; // ???
+			return CELL_ETIMEDOUT; // mutex not locked
 		}
+
 		if (Emu.IsStopped())
 		{
-			goto abort;
+			sys_cond.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+			return CELL_OK;
 		}
 	}
 
-abort:
-	sys_cond.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+	mutex->recursive = old_recursive;
+	cond->signal.Pop(cond_id /* unused result */, nullptr);
 	return CELL_OK;
 }

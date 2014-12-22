@@ -1,8 +1,5 @@
 #pragma once
 
-//#include "sys_lwmutex.h"
-//#include "Utilities/SMutex.h"
-
 #define FIX_SPUQ(x) ((u64)x | 0x5350555100000000ULL)
 // arbitrary code to prevent "special" zero value in key argument
 
@@ -192,10 +189,10 @@ public:
 
 struct EventQueue
 {
-	SleepQueue sq;
+	sleep_queue_t sq;
 	EventPortList ports;
 	EventRingBuffer events;
-	SMutex owner;
+	atomic_le_t<u32> owner;
 
 	const union
 	{
@@ -213,7 +210,7 @@ struct EventQueue
 		, key(key)
 		, events(size) // size: max event count this queue can hold
 	{
-		owner.initialize();
+		owner.write_relaxed(0);
 	}
 };
 

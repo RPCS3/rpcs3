@@ -50,7 +50,6 @@
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
     <ClCompile Include="..\Utilities\rTime.cpp" />
     <ClCompile Include="..\Utilities\rXml.cpp" />
-    <ClCompile Include="..\Utilities\SMutex.cpp" />
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
@@ -134,6 +133,7 @@
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp" />
@@ -277,7 +277,6 @@
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h" />
     <ClInclude Include="..\Utilities\simpleini\SimpleIni.h" />
-    <ClInclude Include="..\Utilities\SMutex.h" />
     <ClInclude Include="..\Utilities\SQueue.h" />
     <ClInclude Include="..\Utilities\SSemaphore.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
@@ -383,6 +382,7 @@
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
     <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />

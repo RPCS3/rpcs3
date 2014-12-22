@@ -6,7 +6,7 @@
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_lwmutex.h"
+#include "sleep_queue_type.h"
 #include "sys_time.h"
 #include "sys_semaphore.h"
 
@@ -75,7 +75,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 		return CELL_ESRCH;
 	}
 	
-	if (!sem->m_queue.finalize())
+	if (!sem->queue.finalize())
 	{
 		return CELL_EBUSY;
 	}
@@ -99,13 +99,13 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 	const u64 start_time = get_system_time();
 
 	{
-		std::lock_guard<std::mutex> lock(sem->m_mutex);
-		if (sem->m_value > 0)
+		std::lock_guard<std::mutex> lock(sem->mutex);
+		if (sem->value > 0)
 		{
-			sem->m_value--;
+			sem->value--;
 			return CELL_OK;
 		}
-		sem->m_queue.push(tid);
+		sem->queue.push(tid, sem->protocol);
 	}
 
 	while (true)
@@ -118,13 +118,13 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			sem->m_queue.invalidate(tid);
+			sem->queue.invalidate(tid);
 			return CELL_ETIMEDOUT;
 		}
 
 		if (tid == sem->signal)
 		{
-			std::lock_guard<std::mutex> lock(sem->m_mutex);
+			std::lock_guard<std::mutex> lock(sem->mutex);
 
 			if (tid != sem->signal)
 			{
@@ -134,7 +134,7 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 			return CELL_OK;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 }
 
@@ -148,11 +148,11 @@ s32 sys_semaphore_trywait(u32 sem_id)
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard<std::mutex> lock(sem->m_mutex);
+	std::lock_guard<std::mutex> lock(sem->mutex);
 
-	if (sem->m_value > 0)
+	if (sem->value > 0)
 	{
-		sem->m_value--;
+		sem->value--;
 		return CELL_OK;
 	}
 	else
@@ -176,7 +176,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 		return CELL_EINVAL;
 	}
 
-	if (count + sem->m_value - (s32)sem->m_queue.count() > sem->max)
+	if (count + sem->value - (s32)sem->queue.count() > sem->max)
 	{
 		return CELL_EBUSY;
 	}
@@ -189,22 +189,22 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 			return CELL_OK;
 		}
 
-		std::lock_guard<std::mutex> lock(sem->m_mutex);
+		std::lock_guard<std::mutex> lock(sem->mutex);
 
-		if (sem->signal && sem->m_queue.count())
+		if (sem->signal && sem->queue.count())
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}
 
-		if (u32 target = (sem->protocol == SYS_SYNC_FIFO) ? sem->m_queue.pop() : sem->m_queue.pop_prio())
+		if (u32 target = sem->queue.pop(sem->protocol))
 		{
 			count--;
 			sem->signal = target;
 		}
 		else
 		{
-			sem->m_value += count;
+			sem->value += count;
 			count = 0;
 		}
 	}
@@ -227,9 +227,9 @@ s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard<std::mutex> lock(sem->m_mutex);
+	std::lock_guard<std::mutex> lock(sem->mutex);
 	
-	*count = sem->m_value;
+	*count = sem->value;
 
 	return CELL_OK;
 }

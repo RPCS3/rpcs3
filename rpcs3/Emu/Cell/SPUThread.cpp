@@ -3,12 +3,13 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SQueue.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/ErrorCodes.h"
-#include "Utilities/SMutex.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_event_flag.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
@@ -588,7 +589,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 			if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "SPU_WrOutIntrMbox: interrupt(v=0x%x)", v);
 			while (!SPU.Out_IntrMBox.Push(v))
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 				if (Emu.IsStopped())
 				{
 					LOG_WARNING(Log::SPU, "%s(%s) aborted", __FUNCTION__, spu_ch_name[ch]);
@@ -721,21 +722,13 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				const u32 tid = GetId();
+				std::lock_guard<std::mutex> lock(ef->mutex);
 
-				ef->m_mutex.lock(tid);
 				ef->flags |= (u64)1 << flag;
 				if (u32 target = ef->check())
 				{
-					// if signal, leave both mutexes locked...
-					ef->signal.lock(target);
-					ef->m_mutex.unlock(tid, target);
+					ef->signal.Push(target, nullptr);
 				}
-				else
-				{
-					ef->m_mutex.unlock(tid);
-				}
-
 				SPU.In_MBox.PushUncond(CELL_OK);
 				return;
 			}
@@ -769,21 +762,13 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				const u32 tid = GetId();
+				std::lock_guard<std::mutex> lock(ef->mutex);
 
-				ef->m_mutex.lock(tid);
 				ef->flags |= (u64)1 << flag;
 				if (u32 target = ef->check())
 				{
-					// if signal, leave both mutexes locked...
-					ef->signal.lock(target);
-					ef->m_mutex.unlock(tid, target);
+					ef->signal.Push(target, nullptr);
 				}
-				else
-				{
-					ef->m_mutex.unlock(tid);
-				}
-
 				return;
 			}
 			else
@@ -806,7 +791,10 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 
 	case SPU_WrOutMbox:
 	{
-		while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!SPU.Out_MBox.Push(v) && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		break;
 	}
 
@@ -917,13 +905,19 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 	{
 	case SPU_RdInMbox:
 	{
-		while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		break;
 	}
 
 	case MFC_RdTagStat:
 	{
-		while (!MFC1.TagStatus.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!MFC1.TagStatus.Pop(v) && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		break;
 	}
 
@@ -937,11 +931,17 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 	{
 		if (cfg.value & 1)
 		{
-			while (!SPU.SNR[0].Pop_XCHG(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!SPU.SNR[0].Pop_XCHG(v) && !Emu.IsStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
 		}
 		else
 		{
-			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!SPU.SNR[0].Pop(v) && !Emu.IsStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
 		}
 		break;
 	}
@@ -950,24 +950,36 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 	{
 		if (cfg.value & 2)
 		{
-			while (!SPU.SNR[1].Pop_XCHG(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!SPU.SNR[1].Pop_XCHG(v) && !Emu.IsStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
 		}
 		else
 		{
-			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			while (!SPU.SNR[1].Pop(v) && !Emu.IsStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
 		}
 		break;
 	}
 
 	case MFC_RdAtomicStat:
 	{
-		while (!MFC1.AtomicStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!MFC1.AtomicStat.Pop(v) && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		break;
 	}
 
 	case MFC_RdListStallStat:
 	{
-		while (!StallStat.Pop(v) && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!StallStat.Pop(v) && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		break;
 	}
 
@@ -985,7 +997,10 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 
 	case SPU_RdEventStat:
 	{
-		while (!CheckEvents() && !Emu.IsStopped()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		while (!CheckEvents() && !Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
 		v = m_events & m_event_mask;
 		break;
 	}
@@ -1067,43 +1082,51 @@ void SPUThread::StopAndSignal(u32 code)
 
 		u32 tid = GetId();
 
-		eq->sq.push(tid); // add thread to sleep queue
+		eq->sq.push(tid, eq->protocol); // add thread to sleep queue
 
 		while (true)
 		{
-			switch (eq->owner.trylock(tid))
+			u32 old_owner = eq->owner.compare_and_swap(0, tid);
+
+			switch (s32 res = old_owner ? (old_owner == tid ? 1 : 2) : 0)
 			{
-			case SMR_OK:
-				if (!eq->events.count())
+			case 0:
+			{
+				const u32 next = eq->events.count() ? eq->sq.pop(eq->protocol) : 0;
+				if (next != tid)
 				{
-					eq->owner.unlock(tid);
+					if (!eq->owner.compare_and_swap_test(tid, next))
+					{
+						assert(!"sys_spu_thread_receive_event() failed (I)");
+					}
 					break;
 				}
-				else
-				{
-					u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
-					if (next != tid)
-					{
-						eq->owner.unlock(tid, next);
-						break;
-					}
-				}
-			case SMR_SIGNAL:
+				// fallthrough
+			}
+			case 1:
 			{
 				sys_event_data event;
 				eq->events.pop(event);
-				eq->owner.unlock(tid);
+				if (!eq->owner.compare_and_swap_test(tid, 0))
+				{
+					assert(!"sys_spu_thread_receive_event() failed (II)");
+				}
 				SPU.In_MBox.PushUncond(CELL_OK);
 				SPU.In_MBox.PushUncond((u32)event.data1);
 				SPU.In_MBox.PushUncond((u32)event.data2);
 				SPU.In_MBox.PushUncond((u32)event.data3);
 				return;
 			}
-			case SMR_FAILED: break;
-			default: eq->sq.invalidate(tid); SPU.In_MBox.PushUncond(CELL_ECANCELED); return;
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if (!~old_owner)
+			{
+				eq->sq.invalidate(tid);
+				SPU.In_MBox.PushUncond(CELL_ECANCELED);
+				return;
+			}
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			if (Emu.IsStopped())
 			{
 				LOG_WARNING(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);

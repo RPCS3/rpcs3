@@ -43,7 +43,7 @@ s32 sys_ppu_thread_yield()
 {
 	sys_ppu_thread.Log("sys_ppu_thread_yield()");
 	// Note: Or do we actually want to yield?
-	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	return CELL_OK;
 }
 
@@ -61,7 +61,7 @@ s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 			sys_ppu_thread.Warning("sys_ppu_thread_join(%d) aborted", thread_id);
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	*vptr = thr->GetExitStatus();

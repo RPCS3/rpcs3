@@ -244,12 +244,6 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			//if (!adec.job.GetCountUnsafe() && adec.is_running)
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	continue;
-			//}
-
 			if (!adec.job.Pop(task, &adec.is_closed))
 			{
 				break;
@@ -576,7 +570,7 @@ int cellAdecClose(u32 handle)
 			cellAdec->Warning("cellAdecClose(%d) aborted", handle);
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());

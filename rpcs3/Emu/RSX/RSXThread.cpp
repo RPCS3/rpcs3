@@ -2215,7 +2215,7 @@ void RSXThread::Task()
 				continue;
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
 		is_vblank_stopped = true;
@@ -2246,7 +2246,7 @@ void RSXThread::Task()
 				m_sem_flush.post_and_wait();
 			}
 
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}
 
@@ -2332,7 +2332,7 @@ void RSXThread::Task()
 
 	while (!is_vblank_stopped)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");

@@ -31,20 +31,18 @@ struct EventFlagWaiter
 
 struct EventFlag
 {
-	SMutex m_mutex;
-	u64 flags;
+	atomic_le_t<u64> flags;
+	SQueue<u32, 32> signal;
+	std::mutex mutex; // protects waiters
 	std::vector<EventFlagWaiter> waiters;
-	SMutex signal;
-	const u32 m_protocol;
-	const int m_type;
+	const u32 protocol;
+	const int type;
 
 	EventFlag(u64 pattern, u32 protocol, int type)
-		: flags(pattern)
-		, m_protocol(protocol)
-		, m_type(type)
+		: protocol(protocol)
+		, type(type)
 	{
-		m_mutex.initialize();
-		signal.initialize();
+		flags.write_relaxed(pattern);
 	}
 
 	u32 check();

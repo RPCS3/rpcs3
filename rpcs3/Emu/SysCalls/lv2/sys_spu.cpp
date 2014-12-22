@@ -504,7 +504,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 				sys_spu.Warning("sys_spu_thread_group_join(id=%d) aborted", id);
 				return CELL_OK;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 	}
 

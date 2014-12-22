@@ -234,12 +234,6 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 			}
 
-			//if (!vdec.job.GetCountUnsafe() && vdec.is_running)
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	continue;
-			//}
-
 			if (!vdec.job.Pop(task, &vdec.is_closed))
 			{
 				break;
@@ -612,7 +606,7 @@ int cellVdecClose(u32 handle)
 			cellVdec->Warning("cellVdecClose(%d) aborted", handle);
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());

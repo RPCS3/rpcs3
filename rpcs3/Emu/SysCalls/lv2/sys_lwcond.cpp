@@ -3,9 +3,11 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SMutex.h"
+#include "Utilities/SQueue.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "sleep_queue_type.h"
+#include "sys_time.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
@@ -52,7 +54,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	if (!lw->m_queue.finalize())
+	if (!lw->queue.finalize())
 	{
 		return CELL_EBUSY;
 	}
@@ -74,9 +76,9 @@ s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 
 	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
 
-	if (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
+	if (u32 target = lw->queue.pop(mutex->attribute))
 	{
-		lw->signal.lock(target);
+		lw->signal.Push(target, nullptr);
 
 		if (Emu.IsStopped())
 		{
@@ -100,9 +102,9 @@ s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 
 	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
 
-	while (u32 target = (mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? lw->m_queue.pop_prio() : lw->m_queue.pop()))
+	while (u32 target = lw->queue.pop(mutex->attribute))
 	{
-		lw->signal.lock(target);
+		lw->signal.Push(target, nullptr);
 
 		if (Emu.IsStopped())
 		{
@@ -129,14 +131,14 @@ s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (!lw->m_queue.invalidate(ppu_thread_id))
+	if (!lw->queue.invalidate(ppu_thread_id))
 	{
 		return CELL_EPERM;
 	}
 
 	u32 target = ppu_thread_id;
 	{
-		lw->signal.lock(target);
+		lw->signal.Push(target, nullptr);
 
 		if (Emu.IsStopped())
 		{
@@ -148,7 +150,7 @@ s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 	return CELL_OK;
 }
 
-s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
+s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.addr(), timeout);
 
@@ -159,10 +161,10 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	}
 
 	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
-	u32 tid_le = GetCurrentPPUThread().GetId();
+	u32 tid_le = CPU.GetId();
 	be_t<u32> tid = be_t<u32>::make(tid_le);
 
-	SleepQueue* sq = nullptr;
+	sleep_queue_t* sq = nullptr;
 	if (!Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq) && mutex->attribute.ToBE() != se32(SYS_SYNC_RETRY))
 	{
 		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had invalid sleep queue (%d)",
@@ -170,60 +172,89 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	auto old_owner = mutex->mutex.read_sync();
-	if (old_owner != tid)
+	if (mutex->owner.read_sync() != tid)
 	{
-		sys_lwcond.Warning("sys_lwcond_wait(id=%d) failed (EPERM)", (u32)lwcond->lwcond_queue);
-		return CELL_EPERM; // caller must own this lwmutex
+		return CELL_EPERM;
 	}
 
-	lw->m_queue.push(tid_le);
+	lw->queue.push(tid_le, mutex->attribute);
 
 	auto old_recursive = mutex->recursive_count;
 	mutex->recursive_count = 0;
 
-	be_t<u32> target = sq ? (be_t<u32>::make(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())) : be_t<u32>::make(0);
-	if (!mutex->mutex.compare_and_swap_test(tid, target))
+	be_t<u32> target = be_t<u32>::make(sq->pop(mutex->attribute));
+	if (!mutex->owner.compare_and_swap_test(tid, target))
 	{
 		assert(!"sys_lwcond_wait(): mutex unlocking failed");
 	}
 
-	u64 counter = 0;
-	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
-
+	const u64 time_start = get_system_time();
 	while (true)
 	{
-		if (lw->signal.unlock(tid, tid) == SMR_OK)
+		u32 signaled;
+		if (lw->signal.Peek(signaled, &sq_no_wait) && signaled == tid_le) // check signaled threads
 		{
-			switch (mutex->lock(tid, 0))
+			s32 res = mutex->lock(tid, timeout ? get_system_time() - time_start : 0); // this is bad
+			if (res == CELL_OK)
 			{
-			case CELL_OK: break;
-			case static_cast<int>(CELL_EDEADLK): sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex was locked",
-								   (u32)lwcond->lwcond_queue); return CELL_OK;
-			case static_cast<int>(CELL_ESRCH): sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex not found (%d)",
-								 (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue); return CELL_ESRCH;
-			case static_cast<int>(CELL_EINVAL): goto abort;
+				break;
 			}
 
-			mutex->recursive_count = old_recursive;
-			lw->signal.unlock(tid);
-			return CELL_OK;
+			switch (res)
+			{
+			case static_cast<int>(CELL_EDEADLK):
+			{
+				sys_lwcond.Error("sys_lwcond_wait(id=%d): associated mutex was locked", (u32)lwcond->lwcond_queue);
+				lw->queue.invalidate(tid_le);
+				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				return CELL_OK; // mutex not locked (but already locked in the incorrect way)
+			}
+			case static_cast<int>(CELL_ESRCH):
+			{
+				sys_lwcond.Error("sys_lwcond_wait(id=%d): associated mutex not found (%d)", (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
+				lw->queue.invalidate(tid_le);
+				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				return CELL_ESRCH; // mutex not locked
+			}
+			case static_cast<int>(CELL_ETIMEDOUT):
+			{
+				lw->queue.invalidate(tid_le);
+				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				return CELL_ETIMEDOUT; // mutex not locked
+			}
+			case static_cast<int>(CELL_EINVAL):
+			{
+				sys_lwcond.Error("sys_lwcond_wait(id=%d): invalid associated mutex (%d)", (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
+				lw->queue.invalidate(tid_le);
+				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				return CELL_EINVAL; // mutex not locked
+			}
+			default:
+			{
+				sys_lwcond.Error("sys_lwcond_wait(id=%d): mutex->lock() returned 0x%x", (u32)lwcond->lwcond_queue, res);
+				lw->queue.invalidate(tid_le);
+				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				return CELL_EINVAL; // mutex not locked
+			}
+			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-		if (counter++ > max_counter)
+		if (timeout && get_system_time() - time_start > timeout)
 		{
-			lw->m_queue.invalidate(tid_le);
-			return CELL_ETIMEDOUT;
+			lw->queue.invalidate(tid_le);
+			return CELL_ETIMEDOUT; // mutex not locked
 		}
+
 		if (Emu.IsStopped())
 		{
-			goto abort;
+			sys_lwcond.Warning("sys_lwcond_wait(id=%d) aborted", (u32)lwcond->lwcond_queue);
+			return CELL_OK;
 		}
 	}
 
-abort:
-	sys_lwcond.Warning("sys_lwcond_wait(id=%d) aborted", (u32)lwcond->lwcond_queue);
+	mutex->recursive_count = old_recursive;
+	lw->signal.Pop(tid_le /* unused result */, nullptr);
 	return CELL_OK;
 }

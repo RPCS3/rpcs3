@@ -6,9 +6,8 @@
 
 #include "rpcs3/Ini.h"
 #include "Utilities/SQueue.h"
-#include "Utilities/SMutex.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "Emu/Audio/AudioManager.h"
@@ -461,7 +460,7 @@ abort:
 
 			while (!internal_finished)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			}
 
 			m_config.m_is_audio_finalized = true;
@@ -475,7 +474,7 @@ abort:
 			cellAudio->Warning("cellAudioInit() aborted");
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	return CELL_OK;
@@ -494,7 +493,7 @@ int cellAudioQuit()
 
 	while (!m_config.m_is_audio_finalized)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
 			cellAudio->Warning("cellAudioQuit(): aborted");

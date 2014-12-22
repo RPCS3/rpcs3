@@ -362,7 +362,6 @@ void Emulator::Stop()
 	m_status = Stopped;
 
 	u32 uncounted = 0;
-	u32 counter = 0;
 	while (true)
 	{
 		if (g_thread_count <= uncounted)
