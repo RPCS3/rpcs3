@@ -1,7 +1,5 @@
 #pragma once
 
-#include "sys_lwmutex.h"
-
 struct sys_semaphore_attribute
 {
 	be_t<u32> protocol;

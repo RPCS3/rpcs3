@@ -1,10 +1,13 @@
 #pragma once
+#include "Utilities/SMutex.h"
 #include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "MFC.h"
 
-enum SPUchannels 
+enum SPUchannels
 {
 	SPU_RdEventStat     = 0,  //Read event status with mask applied
 	SPU_WrEventMask     = 1,  //Write event mask
@@ -22,7 +25,7 @@ enum SPUchannels
 	SPU_WrOutIntrMbox   = 30, //Write outbound interrupt mailbox contents (interrupting PPU)
 };
 
-enum MFCchannels 
+enum MFCchannels
 {
 	MFC_WrMSSyncReq     = 9,  //Write multisource synchronization request
 	MFC_RdTagMask       = 12, //Read tag mask

@@ -1,5 +1,4 @@
 #pragma once
-#include "sys_mutex.h"
 
 struct sys_cond_attribute
 {

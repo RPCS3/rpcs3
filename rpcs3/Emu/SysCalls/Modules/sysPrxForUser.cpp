@@ -3,6 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
 
 #include "Emu/FS/vfsFile.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"

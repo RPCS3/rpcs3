@@ -1,5 +1,4 @@
 #pragma once
-#include <Utilities/SMutex.h>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -66,8 +65,8 @@ struct SleepQueue
 
 struct sys_lwmutex_t
 {
-	SMutexBase<be_t<u32>> mutex;
-	be_t<u32> waiter; // currently not used
+	atomic_t<u32> mutex;
+	atomic_t<u32> waiter; // currently not used
 	be_t<u32> attribute;
 	be_t<u32> recursive_count;
 	be_t<u32> sleep_queue;
@@ -78,9 +77,9 @@ struct sys_lwmutex_t
 		return *(reinterpret_cast<u64*>(this));
 	}
 
-	int trylock(be_t<u32> tid);
-	int unlock(be_t<u32> tid);
-	int lock(be_t<u32> tid, u64 timeout);
+	s32 trylock(be_t<u32> tid);
+	s32 unlock(be_t<u32> tid);
+	s32 lock(be_t<u32> tid, u64 timeout);
 };
 
 // Aux

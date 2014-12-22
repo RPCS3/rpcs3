@@ -1,7 +1,4 @@
 #pragma once
-#include "Emu/SysCalls/lv2/sys_lwmutex.h"
-#include "Emu/SysCalls/lv2/sys_lwcond.h"
-#include "Emu/SysCalls/lv2/sys_spu.h"
 
 // Core return codes.
 enum

@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-//#include "Emu/System.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
+
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
 #include "Event.h"
 
 void EventManager::Init()

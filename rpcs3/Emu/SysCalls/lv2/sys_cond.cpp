@@ -2,9 +2,13 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
+#include "sys_lwmutex.h"
+#include "sys_mutex.h"
 #include "sys_cond.h"
 
 SysCallBase sys_cond("sys_cond");
@@ -26,11 +30,6 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (mutex->is_recursive)
-	{
-		sys_cond.Warning("*** condition on recursive mutex(%d)", mutex_id);
 	}
 
 	Cond* cond = new Cond(mutex, attr->name_u64);
@@ -175,10 +174,7 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 
 	cond->m_queue.push(tid);
 
-	if (mutex->recursive != 1)
-	{
-		sys_cond.Warning("sys_cond_wait(cond_id=%d): associated mutex had wrong recursive value (%d)", cond_id, mutex->recursive);
-	}
+	auto old_recursive = mutex->recursive;
 	mutex->recursive = 0;
 	mutex->m_mutex.unlock(tid, mutex->protocol == SYS_SYNC_PRIORITY ? mutex->m_queue.pop_prio() : mutex->m_queue.pop());
 
@@ -207,7 +203,7 @@ s32 sys_cond_wait(u32 cond_id, u64 timeout)
 					goto abort;
 				}
 			}
-			mutex->recursive = 1;
+			mutex->recursive = old_recursive;
 			cond->signal.unlock(tid);
 			return CELL_OK;
 		}

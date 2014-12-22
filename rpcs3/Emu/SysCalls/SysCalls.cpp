@@ -5,8 +5,12 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "ModuleManager.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
 
 #include "lv2/lv2Fs.h"
+#include "lv2/sys_lwmutex.h"
+#include "lv2/sys_mutex.h"
 #include "lv2/sys_cond.h"
 #include "lv2/sys_event.h"
 #include "lv2/sys_event_flag.h"

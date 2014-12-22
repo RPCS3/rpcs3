@@ -2,6 +2,8 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "sys_lwmutex.h"
@@ -161,9 +163,15 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	be_t<u32> tid = be_t<u32>::make(tid_le);
 
 	SleepQueue* sq = nullptr;
-	Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq);
+	if (!Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq) && mutex->attribute.ToBE() != se32(SYS_SYNC_RETRY))
+	{
+		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had invalid sleep queue (%d)",
+			(u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
+		return CELL_ESRCH;
+	}
 
-	if (mutex->mutex.GetOwner() != tid)
+	auto old_owner = mutex->mutex.read_sync();
+	if (old_owner != tid)
 	{
 		sys_lwcond.Warning("sys_lwcond_wait(id=%d) failed (EPERM)", (u32)lwcond->lwcond_queue);
 		return CELL_EPERM; // caller must own this lwmutex
@@ -171,25 +179,13 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	lw->m_queue.push(tid_le);
 
-	if (mutex->recursive_count.ToBE() != se32(1))
-	{
-		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had wrong recursive value (%d)",
-			(u32)lwcond->lwcond_queue, (u32)mutex->recursive_count);
-	}
+	auto old_recursive = mutex->recursive_count;
 	mutex->recursive_count = 0;
 
-	if (sq)
+	be_t<u32> target = sq ? (be_t<u32>::make(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop())) : be_t<u32>::make(0);
+	if (!mutex->mutex.compare_and_swap_test(tid, target))
 	{
-		mutex->mutex.unlock(tid, be_t<u32>::make(mutex->attribute.ToBE() == se32(SYS_SYNC_PRIORITY) ? sq->pop_prio() : sq->pop()));
-	}
-	else if (mutex->attribute.ToBE() == se32(SYS_SYNC_RETRY))
-	{
-		mutex->mutex.unlock(tid); // SYS_SYNC_RETRY
-	}
-	else
-	{
-		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had invalid sleep queue (%d)",
-			(u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
+		assert(!"sys_lwcond_wait(): mutex unlocking failed");
 	}
 
 	u64 counter = 0;
@@ -209,7 +205,7 @@ s32 sys_lwcond_wait(vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 			case static_cast<int>(CELL_EINVAL): goto abort;
 			}
 
-			mutex->recursive_count = 1;
+			mutex->recursive_count = old_recursive;
 			lw->signal.unlock(tid);
 			return CELL_OK;
 		}

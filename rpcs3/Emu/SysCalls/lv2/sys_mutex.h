@@ -1,5 +1,4 @@
 #pragma once
-#include "sys_lwmutex.h"
 
 struct sys_mutex_attribute
 {

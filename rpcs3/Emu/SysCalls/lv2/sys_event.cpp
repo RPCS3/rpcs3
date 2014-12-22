@@ -2,9 +2,12 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/Memory/atomic_type.h"
+#include "Utilities/SMutex.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
+#include "sys_lwmutex.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
