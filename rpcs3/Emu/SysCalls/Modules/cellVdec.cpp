@@ -206,9 +206,10 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 
 u32 vdecOpen(VideoDecoder* data)
 {
+	std::shared_ptr<VideoDecoder> data_ptr(data);
 	VideoDecoder& vdec = *data;
 
-	u32 vdec_id = cellVdec->GetNewId(data);
+	u32 vdec_id = cellVdec->GetNewId(data_ptr);
 
 	vdec.id = vdec_id;
 
@@ -221,7 +222,7 @@ u32 vdecOpen(VideoDecoder* data)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
+	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&, data_ptr]()
 	{
 		cellVdec->Notice("Video Decoder thread started");
 
@@ -590,7 +591,7 @@ int cellVdecClose(u32 handle)
 {
 	cellVdec->Warning("cellVdecClose(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -618,7 +619,7 @@ int cellVdecStartSeq(u32 handle)
 {
 	cellVdec->Log("cellVdecStartSeq(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -632,7 +633,7 @@ int cellVdecEndSeq(u32 handle)
 {
 	cellVdec->Warning("cellVdecEndSeq(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -646,7 +647,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 {
 	cellVdec->Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -670,7 +671,7 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 {
 	cellVdec->Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, outBuff_addr=0x%x)", handle, format.addr(), outBuff.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -726,7 +727,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 {
 	cellVdec->Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -871,7 +872,7 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
 	cellVdec->Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;

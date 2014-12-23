@@ -752,11 +752,10 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	}
 	event_key = (event_key << 48) | 0x80004d494f323221; // left part: 0x8000, 0x8001, 0x8002 ...
 
-	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32);
+	std::shared_ptr<EventQueue> eq(new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
 
 	if (!Emu.GetEventManager().RegisterKey(eq, event_key))
 	{
-		delete eq;
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 

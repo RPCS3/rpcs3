@@ -43,7 +43,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 	sys_memory.Log("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%x)", size, cid, flags);
 
 	// Check if this container ID is valid.
-	MemoryContainerInfo* ct;
+	std::shared_ptr<MemoryContainerInfo> ct;
 	if (!sys_memory.CheckId(cid, ct))
 		return CELL_ESRCH;
 	
@@ -119,7 +119,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 		return CELL_ENOMEM;
 
 	// Wrap the allocated memory in a memory container.
-	MemoryContainerInfo *ct = new MemoryContainerInfo(addr, yield_size);
+	std::shared_ptr<MemoryContainerInfo> ct(new MemoryContainerInfo(addr, yield_size));
 	u32 id = sys_memory.GetNewId(ct, TYPE_MEM);
 	*cid = id;
 
@@ -133,7 +133,7 @@ s32 sys_memory_container_destroy(u32 cid)
 	sys_memory.Warning("sys_memory_container_destroy(cid=%d)", cid);
 
 	// Check if this container ID is valid.
-	MemoryContainerInfo* ct;
+	std::shared_ptr<MemoryContainerInfo> ct;
 	if (!sys_memory.CheckId(cid, ct))
 		return CELL_ESRCH;
 
@@ -149,7 +149,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.addr(), cid);
 
 	// Check if this container ID is valid.
-	MemoryContainerInfo* ct;
+	std::shared_ptr<MemoryContainerInfo> ct;
 	if (!sys_memory.CheckId(cid, ct))
 		return CELL_ESRCH;
 

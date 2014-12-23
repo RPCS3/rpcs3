@@ -14,11 +14,11 @@ struct sys_cond_attribute
 
 struct Cond
 {
-	Mutex* mutex; // associated with mutex
+	std::shared_ptr<Mutex> mutex; // associated with mutex
 	SQueue<u32, 32> signal;
 	sleep_queue_t queue;
 
-	Cond(Mutex* mutex, u64 name)
+	Cond(std::shared_ptr<Mutex>& mutex, u64 name)
 		: mutex(mutex)
 		, queue(name)
 	{

@@ -28,7 +28,8 @@ int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVp
 
 u32 vpostOpen(VpostInstance* data)
 {
-	u32 id = cellVpost->GetNewId(data);
+	std::shared_ptr<VpostInstance> data_ptr(data);
+	u32 id = cellVpost->GetNewId(data_ptr);
 
 	cellVpost->Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
 
@@ -59,7 +60,7 @@ int cellVpostClose(u32 handle)
 {
 	cellVpost->Warning("cellVpostClose(handle=0x%x)", handle);
 
-	VpostInstance* vpost;
+	std::shared_ptr<VpostInstance> vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))
 	{
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
@@ -75,7 +76,7 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	cellVpost->Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
 		handle, inPicBuff.addr(), ctrlParam.addr(), outPicBuff.addr(), picInfo.addr());
 
-	VpostInstance* vpost;
+	std::shared_ptr<VpostInstance> vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))
 	{
 		return CELL_VPOST_ERROR_E_ARG_HDL_INVALID;

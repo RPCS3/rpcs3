@@ -216,9 +216,10 @@ next:
 
 u32 adecOpen(AudioDecoder* data)
 {
+	std::shared_ptr<AudioDecoder> data_ptr(data);
 	AudioDecoder& adec = *data;
 
-	u32 adec_id = cellAdec->GetNewId(data);
+	u32 adec_id = cellAdec->GetNewId(data_ptr);
 
 	adec.id = adec_id;
 
@@ -231,7 +232,7 @@ u32 adecOpen(AudioDecoder* data)
 	adec.adecCb->InitRegs();
 	adec.adecCb->DoRun();
 
-	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
+	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&, data_ptr]()
 	{
 		cellAdec->Notice("Audio Decoder thread started");
 
@@ -554,7 +555,7 @@ int cellAdecClose(u32 handle)
 {
 	cellAdec->Warning("cellAdecClose(handle=%d)", handle);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -582,7 +583,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 {
 	cellAdec->Warning("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -634,7 +635,7 @@ int cellAdecEndSeq(u32 handle)
 {
 	cellAdec->Warning("cellAdecEndSeq(handle=%d)", handle);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -648,7 +649,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
 	cellAdec->Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -670,7 +671,7 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
 	cellAdec->Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -784,7 +785,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 {
 	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;

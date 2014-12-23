@@ -16,7 +16,7 @@ struct sys_lwmutex_t
 	atomic_t<u32> owner;
 	atomic_t<u32> waiter; // currently not used
 	be_t<u32> attribute;
-	be_t<u32> recursive_count;
+	atomic_t<u32> recursive_count;
 	be_t<u32> sleep_queue;
 	be_t<u32> pad;
 

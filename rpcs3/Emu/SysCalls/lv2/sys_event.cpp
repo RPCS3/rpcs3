@@ -14,11 +14,10 @@ SysCallBase sys_event("sys_event");
 
 u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size)
 {
-	EventQueue* eq = new EventQueue(protocol, type, name_u64, event_queue_key, size);
+	std::shared_ptr<EventQueue> eq(new EventQueue(protocol, type, name_u64, event_queue_key, size));
 
 	if (event_queue_key && !Emu.GetEventManager().RegisterKey(eq, event_queue_key))
 	{
-		delete eq;
 		return 0;
 	}
 
@@ -73,7 +72,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 {
 	sys_event.Todo("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -119,7 +118,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.addr(), size, number.addr());
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -159,7 +158,7 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 	sys_event.Log("sys_event_queue_receive(equeue_id=%d, dummy_event_addr=0x%x, timeout=%lld)",
 		equeue_id, dummy_event.addr(), timeout);
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -236,7 +235,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 {
 	sys_event.Log("sys_event_queue_drain(equeue_id=%d)", equeue_id);
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -249,7 +248,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 u32 event_port_create(u64 name)
 {
-	EventPort* eport = new EventPort();
+	std::shared_ptr<EventPort> eport(new EventPort());
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
 	sys_event.Warning("*** sys_event_port created: id = %d", id);
@@ -275,7 +274,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 {
 	sys_event.Warning("sys_event_port_destroy(eport_id=%d)", eport_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -301,7 +300,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 {
 	sys_event.Warning("sys_event_port_connect_local(eport_id=%d, equeue_id=%d)", eport_id, equeue_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -318,7 +317,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_EISCONN;
 	}
 
-	EventQueue* equeue;
+	std::shared_ptr<EventQueue> equeue;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, equeue))
 	{
 		sys_event.Error("sys_event_port_connect_local: event_queue(%d) not found!", equeue_id);
@@ -339,7 +338,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 {
 	sys_event.Warning("sys_event_port_disconnect(eport_id=%d)", eport_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -366,7 +365,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	sys_event.Log("sys_event_port_send(eport_id=%d, data1=0x%llx, data2=0x%llx, data3=0x%llx)",
 		eport_id, data1, data2, data3);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -374,7 +373,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	std::lock_guard<std::mutex> lock(eport->m_mutex);
 
-	EventQueue* eq = eport->eq;
+	std::shared_ptr<EventQueue> eq = eport->eq;
 	if (!eq)
 	{
 		return CELL_ENOTCONN;

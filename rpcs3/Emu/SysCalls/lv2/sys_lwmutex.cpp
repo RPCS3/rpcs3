@@ -16,11 +16,13 @@ s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name
 {
 	LV2_LOCK(0);
 
+	std::shared_ptr<sleep_queue_t> sq(new sleep_queue_t(name_u64));
+
 	lwmutex.owner.write_relaxed(be_t<u32>::make(0));
 	lwmutex.waiter.write_relaxed(be_t<u32>::make(~0));
 	lwmutex.attribute = protocol | recursive;
-	lwmutex.recursive_count = 0;
-	u32 sq_id = sys_lwmutex.GetNewId(new sleep_queue_t(name_u64), TYPE_LWMUTEX);
+	lwmutex.recursive_count.write_relaxed(be_t<u32>::make(0));
+	u32 sq_id = sys_lwmutex.GetNewId(sq, TYPE_LWMUTEX);
 	lwmutex.sleep_queue = sq_id;
 
 	std::string name((const char*)&name_u64, 8);
@@ -101,17 +103,24 @@ s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 {
 	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
 
+	if (!Emu.GetIdManager().CheckID(sleep_queue))
+	{
+		return CELL_ESRCH;
+	}
+
 	const be_t<u32> old_owner = owner.read_sync();
 
 	if (old_owner == tid)
 	{
 		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
 		{
-			recursive_count += 1;
-			if (!recursive_count.ToBE())
+			auto rv = recursive_count.read_relaxed();
+			if (!~(rv++).ToBE())
 			{
 				return CELL_EKRESOURCE;
 			}
+
+			recursive_count.exchange(rv);
 			return CELL_OK;
 		}
 		else
@@ -125,7 +134,7 @@ s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 		return CELL_EBUSY;
 	}
 	
-	recursive_count = 1;
+	recursive_count.exchange(be_t<u32>::make(1));
 	return CELL_OK;
 }
 
@@ -136,16 +145,18 @@ s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 		return CELL_EPERM;
 	}
 
-	if (!recursive_count || (recursive_count.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
+	auto rv = recursive_count.read_relaxed();
+	if (!rv.ToBE() || (rv.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
 	{
-		sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)recursive_count);
-		recursive_count = 1;
+		sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)rv);
+		rv = 1;
 	}
 
-	recursive_count -= 1;
-	if (!recursive_count.ToBE())
+	rv--;
+	recursive_count.exchange(rv);
+	if (!rv.ToBE())
 	{
-		sleep_queue_t* sq;
+		std::shared_ptr<sleep_queue_t> sq;
 		if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
 		{
 			return CELL_ESRCH;
@@ -168,7 +179,7 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	default: return res;
 	}
 
-	sleep_queue_t* sq;
+	std::shared_ptr<sleep_queue_t> sq;
 	if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
 	{
 		return CELL_ESRCH;
@@ -205,6 +216,6 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 		}
 	}
 
-	recursive_count = 1;
+	recursive_count.exchange(be_t<u32>::make(1));
 	return CELL_OK;
 }

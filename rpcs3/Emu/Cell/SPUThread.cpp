@@ -39,6 +39,10 @@ SPUThread::SPUThread(CPUThreadType type) : PPCThread(type)
 	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
 
 	group = nullptr;
+	for (auto& p : SPUPs)
+	{
+		p.reset(new EventPort());
+	}
 
 	Reset();
 }
@@ -138,12 +142,12 @@ void SPUThread::DoClose()
 	}
 	for (u32 i = 0; i < 64; i++)
 	{
-		EventPort& port = SPUPs[i];
-		std::lock_guard<std::mutex> lock(port.m_mutex);
-		if (port.eq)
+		std::shared_ptr<EventPort> port = SPUPs[i];
+		std::lock_guard<std::mutex> lock(port->m_mutex);
+		if (port->eq)
 		{
-			port.eq->ports.remove(&port);
-			port.eq = nullptr;
+			port->eq->ports.remove(port);
+			port->eq = nullptr;
 		}
 	}
 }
@@ -210,17 +214,17 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 				return;
 			}
 
-			SPUThread* spu = (SPUThread*)Emu.GetCPU().GetThread(group->list[num]);
+			std::shared_ptr<CPUThread> spu = Emu.GetCPU().GetThread(group->list[num]);
 
 			u32 addr = (ea & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET;
 			if ((addr <= 0x3ffff) && (addr + size <= 0x40000))
 			{
 				// LS access
-				ea = spu->ls_offset + addr;
+				ea = ((SPUThread*)spu.get())->ls_offset + addr;
 			}
 			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
 			{
-				spu->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(ls_offset + lsa));
+				((SPUThread*)spu.get())->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(ls_offset + lsa));
 				return;
 			}
 			else
@@ -597,7 +601,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 				}
 			}
 			m_intrtag[2].stat |= 1;
-			if (CPUThread* t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
+			if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
 			{
 				if (t->GetType() == CPU_THREAD_PPU)
 				{
@@ -607,7 +611,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 						Emu.Pause();
 						return;
 					}
-					PPUThread& ppu = *(PPUThread*)t;
+					PPUThread& ppu = *(PPUThread*)t.get();
 					ppu.GPR[3] = ppu.m_interrupt_arg;
 					ppu.FastCall2(vm::read32(ppu.entry), vm::read32(ppu.entry + 4));
 				}
@@ -634,18 +638,18 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					LOG_NOTICE(Log::SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
 				}
 
-				EventPort& port = SPUPs[spup];
+				std::shared_ptr<EventPort> port = SPUPs[spup];
 
-				std::lock_guard<std::mutex> lock(port.m_mutex);
+				std::lock_guard<std::mutex> lock(port->m_mutex);
 
-				if (!port.eq)
+				if (!port->eq)
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (v & 0x00ffffff), data);
 					SPU.In_MBox.PushUncond(CELL_ENOTCONN); // TODO: check error passing
 					return;
 				}
 
-				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
+				if (!port->eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
 				{
 					SPU.In_MBox.PushUncond(CELL_EBUSY);
 					return;
@@ -672,18 +676,18 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					LOG_WARNING(Log::SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
 				}
 
-				EventPort& port = SPUPs[spup];
+				std::shared_ptr<EventPort> port = SPUPs[spup];
 
-				std::lock_guard<std::mutex> lock(port.m_mutex);
+				std::lock_guard<std::mutex> lock(port->m_mutex);
 
-				if (!port.eq)
+				if (!port->eq)
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (v & 0x00ffffff), data);
 					return;
 				}
 
 				// TODO: check passing spup value
-				if (!port.eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
+				if (!port->eq->events.push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (v & 0x00ffffff), data))
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (v & 0x00ffffff), data);
 					return;
@@ -714,7 +718,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					LOG_WARNING(Log::SPU, "sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d))", data, v, flag);
 				}
 
-				EventFlag* ef;
+				std::shared_ptr<EventFlag> ef;
 				if (!Emu.GetIdManager().GetIDData(data, ef))
 				{
 					LOG_ERROR(Log::SPU, "sys_event_flag_set_bit(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
@@ -755,7 +759,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					LOG_WARNING(Log::SPU, "sys_event_flag_set_bit_impatient(id=%d, v=0x%x (flag=%d))", data, v, flag);
 				}
 
-				EventFlag* ef;
+				std::shared_ptr<EventFlag> ef;
 				if (!Emu.GetIdManager().GetIDData(data, ef))
 				{
 					LOG_WARNING(Log::SPU, "sys_event_flag_set_bit_impatient(id=%d, v=0x%x (flag=%d)): EventFlag not found", data, v, flag);
@@ -1073,7 +1077,7 @@ void SPUThread::StopAndSignal(u32 code)
 			LOG_NOTICE(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x)", spuq);
 		}
 
-		EventQueue* eq;
+		std::shared_ptr<EventQueue> eq;
 		if (!SPUQs.GetEventQueue(FIX_SPUQ(spuq), eq))
 		{
 			SPU.In_MBox.PushUncond(CELL_EINVAL); // TODO: check error value
@@ -1159,7 +1163,7 @@ void SPUThread::StopAndSignal(u32 code)
 		group->m_exit_status = SPU.Out_MBox.GetValue();
 		for (auto& v : group->list)
 		{
-			if (CPUThread* t = Emu.GetCPU().GetThread(v))
+			if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(v))
 			{
 				t->Stop();
 			}

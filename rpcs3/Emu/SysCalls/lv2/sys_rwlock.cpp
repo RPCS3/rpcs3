@@ -32,7 +32,8 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 		return CELL_EINVAL;
 	}
 
-	u32 id = sys_rwlock.GetNewId(new RWLock((u32)attr->attr_protocol, attr->name_u64), TYPE_RWLOCK);
+	std::shared_ptr<RWLock> rw(new RWLock((u32)attr->attr_protocol, attr->name_u64));
+	u32 id = sys_rwlock.GetNewId(rw, TYPE_RWLOCK);
 	*rw_lock_id = id;
 
 	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d",
@@ -45,7 +46,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 {
 	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=%d)", rw_lock_id);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 
 	std::lock_guard<std::mutex> lock(rw->m_lock);
@@ -61,7 +62,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 	const u32 tid = GetCurrentPPUThread().GetId();
 
@@ -98,7 +99,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 
 	if (!rw->rlock_trylock(GetCurrentPPUThread().GetId())) return CELL_EBUSY;
@@ -110,7 +111,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 
 	if (!rw->rlock_unlock(GetCurrentPPUThread().GetId())) return CELL_EPERM;
@@ -122,7 +123,7 @@ s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout)
 {
 	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 	const u32 tid = GetCurrentPPUThread().GetId();
 
@@ -161,7 +162,7 @@ s32 sys_rwlock_trywlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 	const u32 tid = GetCurrentPPUThread().GetId();
 
@@ -176,7 +177,7 @@ s32 sys_rwlock_wunlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
 
-	RWLock* rw;
+	std::shared_ptr<RWLock> rw;
 	if (!sys_rwlock.CheckId(rw_lock_id, rw)) return CELL_ESRCH;
 
 	if (!rw->wlock_unlock(GetCurrentPPUThread().GetId())) return CELL_EPERM;

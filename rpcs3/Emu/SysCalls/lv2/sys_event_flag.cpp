@@ -74,7 +74,8 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 	default: return CELL_EINVAL;
 	}
 
-	u32 id = sys_event_flag.GetNewId(new EventFlag(init, (u32)attr->protocol, (int)attr->type), TYPE_EVENT_FLAG);
+	std::shared_ptr<EventFlag> ef(new EventFlag(init, (u32)attr->protocol, (int)attr->type));
+	u32 id = sys_event_flag.GetNewId(ef, TYPE_EVENT_FLAG);
 	*eflag_id = id;
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
 		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
@@ -86,7 +87,7 @@ s32 sys_event_flag_destroy(u32 eflag_id)
 {
 	sys_event_flag.Warning("sys_event_flag_destroy(eflag_id=%d)", eflag_id);
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	if (ef->waiters.size()) // ???
@@ -121,7 +122,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result,
 	default: return CELL_EINVAL;
 	}
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	const u32 tid = GetCurrentPPUThread().GetId();
@@ -255,7 +256,7 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> resu
 	default: return CELL_EINVAL;
 	}
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 	
 	std::lock_guard<std::mutex> lock(ef->mutex);
@@ -289,7 +290,7 @@ s32 sys_event_flag_set(u32 eflag_id, u64 bitptn)
 {
 	sys_event_flag.Log("sys_event_flag_set(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	std::lock_guard<std::mutex> lock(ef->mutex);
@@ -306,7 +307,7 @@ s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
 {
 	sys_event_flag.Log("sys_event_flag_clear(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	std::lock_guard<std::mutex> lock(ef->mutex);
@@ -318,7 +319,7 @@ s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num)
 {
 	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.addr());
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	std::vector<u32> tids;
@@ -362,7 +363,7 @@ s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags)
 		return CELL_EFAULT;
 	}
 
-	EventFlag* ef;
+	std::shared_ptr<EventFlag> ef;
 	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
 
 	*flags = ef->flags.read_sync();

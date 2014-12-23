@@ -7,7 +7,7 @@
 #include "sys_vm.h"
 
 SysCallBase sys_vm("sys_vm");
-MemoryContainerInfo* current_ct;
+std::shared_ptr<MemoryContainerInfo> current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)
 {
@@ -33,12 +33,12 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	if(cid == SYS_MEMORY_CONTAINER_ID_INVALID)
 	{
 		// Create a new MemoryContainerInfo to act as default container with vsize.
-		current_ct = new MemoryContainerInfo(new_addr, vsize);
+		current_ct.reset(new MemoryContainerInfo(new_addr, vsize));
 	}
 	else
 	{
 		// Check memory container.
-		MemoryContainerInfo* ct;
+		std::shared_ptr<MemoryContainerInfo> ct;
 		if(!sys_vm.CheckId(cid, ct)) return CELL_ESRCH;
 
 		current_ct = ct;

@@ -60,7 +60,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 		return CELL_ESTAT;
 	}
 
-	CPUThread* it = Emu.GetCPU().GetThread(intrthread);
+	std::shared_ptr<CPUThread> it = Emu.GetCPU().GetThread(intrthread);
 	if (!it)
 	{
 		return CELL_ESRCH;
@@ -80,7 +80,7 @@ s32 sys_interrupt_thread_disestablish(u32 ih)
 {
 	sys_interrupt.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
 
-	CPUThread* it = Emu.GetCPU().GetThread(ih);
+	std::shared_ptr<CPUThread> it = Emu.GetCPU().GetThread(ih);
 	if (!it)
 	{
 		return CELL_ESRCH;

@@ -20,9 +20,9 @@ struct Mutex
 {
 	atomic_le_t<u32> id;
 	atomic_le_t<u32> owner;
-	sleep_queue_t queue;
-	u32 recursive; // recursive locks count
+	std::atomic<u32> recursive_count; // recursive locks count
 	std::atomic<u32> cond_count; // count of condition variables associated
+	sleep_queue_t queue;
 
 	const u32 protocol;
 	const bool is_recursive;

@@ -16,7 +16,7 @@ Mutex::~Mutex()
 {
 	if (u32 tid = owner.read_sync())
 	{
-		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id, tid, recursive);
+		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id, tid, recursive_count.load());
 	}
 
 	if (!queue.m_mutex.try_lock()) return;
@@ -61,7 +61,7 @@ s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_at
 		return CELL_EINVAL;
 	}
 
-	Mutex* mutex = new Mutex((u32)attr->protocol, is_recursive, attr->name_u64);
+	std::shared_ptr<Mutex> mutex(new Mutex((u32)attr->protocol, is_recursive, attr->name_u64));
 	const u32 id = sys_mutex.GetNewId(mutex, TYPE_MUTEX);
 	mutex->id.exchange(id);
 	*mutex_id = id;
@@ -80,7 +80,7 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 
 	LV2_LOCK(0);
 
-	Mutex* mutex;
+	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -120,7 +120,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 {
 	sys_mutex.Log("sys_mutex_lock(mutex_id=%d, timeout=%lld)", mutex_id, timeout);
 
-	Mutex* mutex;
+	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -132,10 +132,11 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 	{
 		if (mutex->is_recursive)
 		{
-			if (!++mutex->recursive)
+			if (!~mutex->recursive_count)
 			{
 				return CELL_EKRESOURCE;
 			}
+			mutex->recursive_count++;
 			return CELL_OK;
 		}
 		else
@@ -146,7 +147,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	if (mutex->owner.compare_and_swap_test(0, tid))
 	{
-		mutex->recursive = 1;
+		mutex->recursive_count = 1;
 		CPU.owned_mutexes++;
 		return CELL_OK;
 	}
@@ -182,7 +183,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		}
 	}
 
-	mutex->recursive = 1;
+	mutex->recursive_count = 1;
 	CPU.owned_mutexes++;
 	return CELL_OK;
 }
@@ -191,7 +192,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 {
 	sys_mutex.Log("sys_mutex_trylock(mutex_id=%d)", mutex_id);
 
-	Mutex* mutex;
+	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -203,10 +204,11 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 	{
 		if (mutex->is_recursive)
 		{
-			if (!++mutex->recursive)
+			if (!~mutex->recursive_count)
 			{
 				return CELL_EKRESOURCE;
 			}
+			mutex->recursive_count++;
 			return CELL_OK;
 		}
 		else
@@ -220,7 +222,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 		return CELL_EBUSY;
 	}
 
-	mutex->recursive = 1;
+	mutex->recursive_count = 1;
 	CPU.owned_mutexes++;
 	return CELL_OK;
 }
@@ -229,7 +231,7 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 {
 	sys_mutex.Log("sys_mutex_unlock(mutex_id=%d)", mutex_id);
 
-	Mutex* mutex;
+	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -242,13 +244,13 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	if (!mutex->recursive || (mutex->recursive != 1 && !mutex->is_recursive))
+	if (!mutex->recursive_count || (mutex->recursive_count != 1 && !mutex->is_recursive))
 	{
-		sys_mutex.Error("sys_mutex_unlock(%d): wrong recursive value fixed (%d)", mutex_id, mutex->recursive);
-		mutex->recursive = 1;
+		sys_mutex.Error("sys_mutex_unlock(%d): wrong recursive value fixed (%d)", mutex_id, mutex->recursive_count.load());
+		mutex->recursive_count = 1;
 	}
 
-	if (!--mutex->recursive)
+	if (!--mutex->recursive_count)
 	{
 		if (!mutex->owner.compare_and_swap_test(tid, mutex->queue.pop(mutex->protocol)))
 		{

@@ -31,7 +31,7 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
-	CellJpgDecSubHandle *current_subHandle = new CellJpgDecSubHandle;
+	std::shared_ptr<CellJpgDecSubHandle> current_subHandle(new CellJpgDecSubHandle);
 
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
@@ -68,7 +68,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)",
 		mainHandle, subHandle);
 
-	CellJpgDecSubHandle* subHandle_data;
+	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
@@ -82,7 +82,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 {
 	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
 
-	CellJpgDecSubHandle* subHandle_data;
+	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
@@ -151,7 +151,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
-	CellJpgDecSubHandle* subHandle_data;
+	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
@@ -281,7 +281,7 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgD
 	cellJpgDec->Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
-	CellJpgDecSubHandle* subHandle_data;
+	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
 	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 

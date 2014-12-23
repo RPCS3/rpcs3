@@ -16,8 +16,9 @@ u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u6
 {
 	LV2_LOCK(0);
 
+	std::shared_ptr<Semaphore> sem(new Semaphore(initial_count, max_count, protocol, name_u64));
 	const std::string name((const char*)&name_u64, 8);
-	const u32 id = sys_semaphore.GetNewId(new Semaphore(initial_count, max_count, protocol, name_u64), TYPE_SEMAPHORE);
+	const u32 id = sys_semaphore.GetNewId(sem, TYPE_SEMAPHORE);
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", name.c_str(), protocol, id);
 	Emu.GetSyncPrimManager().AddSemaphoreData(id, name, initial_count, max_count);
 	return id;
@@ -69,7 +70,7 @@ s32 sys_semaphore_destroy(u32 sem_id)
 
 	LV2_LOCK(0);
 
-	Semaphore* sem;
+	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{
 		return CELL_ESRCH;
@@ -89,7 +90,7 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 {
 	sys_semaphore.Log("sys_semaphore_wait(sem_id=%d, timeout=%lld)", sem_id, timeout);
 
-	Semaphore* sem;
+	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{
 		return CELL_ESRCH;
@@ -142,7 +143,7 @@ s32 sys_semaphore_trywait(u32 sem_id)
 {
 	sys_semaphore.Log("sys_semaphore_trywait(sem_id=%d)", sem_id);
 
-	Semaphore* sem;
+	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{
 		return CELL_ESRCH;
@@ -165,7 +166,7 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 {
 	sys_semaphore.Log("sys_semaphore_post(sem_id=%d, count=%d)", sem_id, count);
 
-	Semaphore* sem;
+	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{
 		return CELL_ESRCH;
@@ -216,12 +217,13 @@ s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
 {
 	sys_semaphore.Log("sys_semaphore_get_value(sem_id=%d, count_addr=0x%x)", sem_id, count.addr());
 
-        if (count.addr() == NULL) {
-            sys_semaphore.Error("sys_semaphore_get_value(): invalid memory access (count=0x%x)", count.addr());
-            return CELL_EFAULT;
-        }
+	if (!count)
+	{
+		sys_semaphore.Error("sys_semaphore_get_value(): invalid memory access (count=0x%x)", count.addr());
+		return CELL_EFAULT;
+	}
 
-	Semaphore* sem;
+	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))
 	{
 		return CELL_ESRCH;

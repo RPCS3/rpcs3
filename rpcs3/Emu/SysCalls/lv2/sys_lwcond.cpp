@@ -17,7 +17,8 @@ s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64)
 {
 	LV2_LOCK(0);
 
-	u32 id = sys_lwcond.GetNewId(new Lwcond(name_u64), TYPE_LWCOND);
+	std::shared_ptr<Lwcond> lw(new Lwcond(name_u64));
+	u32 id = sys_lwcond.GetNewId(lw, TYPE_LWCOND);
 	u32 addr = Memory.RealToVirtualAddr(&lwmutex);
 	lwcond.lwmutex.set(addr);
 	lwcond.lwcond_queue = id;
@@ -48,7 +49,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 
 	u32 id = lwcond->lwcond_queue;
 
-	Lwcond* lw;
+	std::shared_ptr<Lwcond> lw;
 	if (!Emu.GetIdManager().GetIDData(id, lw))
 	{
 		return CELL_ESRCH;
@@ -68,7 +69,7 @@ s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Log("sys_lwcond_signal(lwcond_addr=0x%x)", lwcond.addr());
 
-	Lwcond* lw;
+	std::shared_ptr<Lwcond> lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
 	{
 		return CELL_ESRCH;
@@ -94,7 +95,7 @@ s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Log("sys_lwcond_signal_all(lwcond_addr=0x%x)", lwcond.addr());
 
-	Lwcond* lw;
+	std::shared_ptr<Lwcond> lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
 	{
 		return CELL_ESRCH;
@@ -120,7 +121,7 @@ s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
 	sys_lwcond.Log("sys_lwcond_signal_to(lwcond_addr=0x%x, ppu_thread_id=%d)", lwcond.addr(), ppu_thread_id);
 
-	Lwcond* lw;
+	std::shared_ptr<Lwcond> lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
 	{
 		return CELL_ESRCH;
@@ -154,7 +155,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 {
 	sys_lwcond.Log("sys_lwcond_wait(lwcond_addr=0x%x, timeout=%lld)", lwcond.addr(), timeout);
 
-	Lwcond* lw;
+	std::shared_ptr<Lwcond> lw;
 	if (!Emu.GetIdManager().GetIDData((u32)lwcond->lwcond_queue, lw))
 	{
 		return CELL_ESRCH;
@@ -164,8 +165,8 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	u32 tid_le = CPU.GetId();
 	be_t<u32> tid = be_t<u32>::make(tid_le);
 
-	sleep_queue_t* sq = nullptr;
-	if (!Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq) && mutex->attribute.ToBE() != se32(SYS_SYNC_RETRY))
+	std::shared_ptr<sleep_queue_t> sq;
+	if (!Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq))
 	{
 		sys_lwcond.Warning("sys_lwcond_wait(id=%d): associated mutex had invalid sleep queue (%d)",
 			(u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
@@ -179,8 +180,8 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	lw->queue.push(tid_le, mutex->attribute);
 
-	auto old_recursive = mutex->recursive_count;
-	mutex->recursive_count = 0;
+	auto old_recursive = mutex->recursive_count.read_relaxed();
+	mutex->recursive_count.exchange(be_t<u32>::make(0));
 
 	be_t<u32> target = be_t<u32>::make(sq->pop(mutex->attribute));
 	if (!mutex->owner.compare_and_swap_test(tid, target))
@@ -254,7 +255,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		}
 	}
 
-	mutex->recursive_count = old_recursive;
+	mutex->recursive_count.exchange(old_recursive);
 	lw->signal.Pop(tid_le /* unused result */, nullptr);
 	return CELL_OK;
 }

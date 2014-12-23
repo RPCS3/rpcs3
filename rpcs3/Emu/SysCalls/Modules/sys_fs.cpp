@@ -168,7 +168,7 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr
 	{
 		LV2_LOCK(0);
 
-		vfsFileBase* orig_file;
+		std::shared_ptr<vfsFileBase> orig_file;
 		if (!sys_fs->CheckId(fd, orig_file))
 		{
 			sys_fs->Error("Wrong fd (%s)", fd);
@@ -178,7 +178,7 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void (*)(vm::ptr
 
 		u64 nbytes = aio->size;
 
-		vfsStream& file = *(vfsStream*)orig_file;
+		vfsStream& file = *(vfsStream*)orig_file.get();
 		const u64 old_pos = file.Tell();
 		file.Seek((u64)aio->offset);
 
@@ -220,7 +220,7 @@ int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<u32> aio_id, vm::ptr<void(*)(v
 		return CELL_ENXIO;
 	}
 
-	vfsFileBase* orig_file;
+	std::shared_ptr<vfsFileBase> orig_file;
 	u32 fd = aio->fd;
 
 	if (!sys_fs->CheckId(fd, orig_file))

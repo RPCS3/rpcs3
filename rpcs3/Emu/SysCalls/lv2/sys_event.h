@@ -56,7 +56,7 @@ struct EventQueue;
 struct EventPort
 {
 	u64 name; // generated or user-specified code that is passed to sys_event_data struct
-	EventQueue* eq; // event queue this port has been connected to
+	std::shared_ptr<EventQueue> eq; // event queue this port has been connected to
 	std::mutex m_mutex; // may be locked until the event sending is finished
 
 	EventPort(u64 name = 0)
@@ -150,7 +150,7 @@ public:
 
 class EventPortList
 {
-	std::vector<EventPort*> data;
+	std::vector<std::shared_ptr<EventPort>> data;
 	std::mutex m_mutex;
 
 public:
@@ -167,18 +167,18 @@ public:
 		data.clear();
 	}
 
-	void add(EventPort* port)
+	void add(std::shared_ptr<EventPort>& port)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		data.push_back(port);
 	}
 
-	void remove(EventPort* port)
+	void remove(std::shared_ptr<EventPort>& port)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		for (u32 i = 0; i < data.size(); i++)
 		{
-			if (data[i] == port)
+			if (data[i].get() == port.get())
 			{
 				data.erase(data.begin() + i);
 				return;

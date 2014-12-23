@@ -33,7 +33,8 @@ int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);
 
-	u32 heap_id = sysPrxForUser->GetNewId(new HeapInfo(heap_addr, align, size));
+	std::shared_ptr<HeapInfo> heap(new HeapInfo(heap_addr, align, size));
+	u32 heap_id = sysPrxForUser->GetNewId(heap);
 	sysPrxForUser->Warning("*** sys_heap created: id = %d", heap_id);
 	return heap_id;
 }
@@ -42,7 +43,7 @@ u32 _sys_heap_malloc(const u32 heap_id, const u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
 
-	HeapInfo* heap;
+	std::shared_ptr<HeapInfo> heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
 	return (u32)Memory.Alloc(size, 1);
@@ -52,7 +53,7 @@ u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 {
 	sysPrxForUser->Warning("_sys_heap_memalign(heap_id=%d, align=0x%x, size=0x%x)", heap_id, align, size);
 
-	HeapInfo* heap;
+	std::shared_ptr<HeapInfo> heap;
 	if(!sysPrxForUser->CheckId(heap_id, heap)) return CELL_ESRCH;
 
 	return (u32)Memory.Alloc(size, align);

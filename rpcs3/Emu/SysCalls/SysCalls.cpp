@@ -35,8 +35,9 @@
 
 #include "SysCalls.h"
 
-namespace detail{
-	template<> bool CheckId(u32 id, ID*& _id,const std::string &name)
+namespace detail
+{
+	bool CheckIdID(u32 id, ID*& _id, const std::string &name)
 	{
 		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == name;
 	}
@@ -143,8 +144,8 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(_sys_lwmutex_create),             //95  (0x05F) // internal, used by sys_lwmutex_create
 	null_func,//bind_func(_sys_lwmutex_destroy),            //96  (0x060) // internal, used by sys_lwmutex_destroy
 	null_func,//bind_func(_sys_lwmutex_lock),               //97  (0x061) // internal, used by sys_lwmutex_lock
-	null_func,//bind_func(_sys_lwmutex_trylock),            //98  (0x062) // internal, used by sys_lwmutex_unlock
-	null_func,//bind_func(_sys_lwmutex_unlock),             //99  (0x063) // internal, used by sys_lwmutex_trylock
+	null_func,//bind_func(_sys_lwmutex_???lock),            //98  (0x062) // internal, used by sys_lwmutex_unlock
+	null_func,//bind_func(_sys_lwmutex_???lock),            //99  (0x063) // internal, used by sys_lwmutex_trylock
 	bind_func(sys_mutex_create),                            //100 (0x064)
 	bind_func(sys_mutex_destroy),                           //101 (0x065)
 	bind_func(sys_mutex_lock),                              //102 (0x066)

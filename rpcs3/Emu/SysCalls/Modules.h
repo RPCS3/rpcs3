@@ -95,7 +95,8 @@ public:
 
 public:
 	bool CheckID(u32 id) const;
-	template<typename T> bool CheckId(u32 id, T*& data)
+
+	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data)
 	{
 		ID* id_data;
 
@@ -106,7 +107,7 @@ public:
 		return true;
 	}
 
-	template<typename T> bool CheckId(u32 id, T*& data, IDType& type)
+	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data, IDType& type)
 	{
 		ID* id_data;
 
@@ -117,10 +118,11 @@ public:
 
 		return true;
 	}
+
 	bool CheckID(u32 id, ID*& _id) const;
 
 	template<typename T>
-	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
+	u32 GetNewId(std::shared_ptr<T>& data, IDType type = TYPE_OTHER)
 	{
 		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}

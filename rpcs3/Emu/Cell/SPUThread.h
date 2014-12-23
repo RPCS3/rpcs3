@@ -283,9 +283,9 @@ public:
 	u64 R_ADDR; // reservation address
 	u64 R_DATA[16]; // lock line data (BE)
 
-	EventPort SPUPs[64]; // SPU Thread Event Ports
+	std::shared_ptr<EventPort> SPUPs[64]; // SPU Thread Event Ports
 	EventManager SPUQs; // SPU Queue Mapping
-	SpuGroupInfo* group; // associated SPU Thread Group (null for raw spu)
+	std::shared_ptr<SpuGroupInfo> group; // associated SPU Thread Group (null for raw spu)
 
 	u64 m_dec_start; // timestamp of writing decrementer value
 	u32 m_dec_value; // written decrementer value

@@ -65,18 +65,20 @@ u32 sleep_queue_t::pop(u32 protocol)
 				u32 sel = 0;
 				for (u32 i = 0; i < list.size(); i++)
 				{
-					CPUThread* t = Emu.GetCPU().GetThread(list[i]);
-					if (!t)
+					if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(list[i]))
+					{
+						u64 prio = t->GetPrio();
+						if (prio < highest_prio)
+						{
+							highest_prio = prio;
+							sel = i;
+						}
+					}
+					else
 					{
 						list[i] = 0;
 						sel = i;
 						break;
-					}
-					u64 prio = t->GetPrio();
-					if (prio < highest_prio)
-					{
-						highest_prio = prio;
-						sel = i;
 					}
 				}
 				u32 res = list[sel];

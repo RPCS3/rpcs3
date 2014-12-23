@@ -103,41 +103,41 @@ void Emulator::SetTitleID(const std::string& id)
 
 void Emulator::CheckStatus()
 {
-	std::vector<CPUThread *>& threads = GetCPU().GetThreads();
-	if (!threads.size())
-	{
-		Stop();
-		return;	
-	}
+	//auto& threads = GetCPU().GetThreads();
+	//if (!threads.size())
+	//{
+	//	Stop();
+	//	return;	
+	//}
 
-	bool IsAllPaused = true;
-	for (u32 i = 0; i < threads.size(); ++i)
-	{
-		if (threads[i]->IsPaused()) continue;
-		IsAllPaused = false;
-		break;
-	}
+	//bool IsAllPaused = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsPaused()) continue;
+	//	IsAllPaused = false;
+	//	break;
+	//}
 
-	if(IsAllPaused)
-	{
-		//ConLog.Warning("all paused!");
-		Pause();
-		return;
-	}
+	//if(IsAllPaused)
+	//{
+	//	//ConLog.Warning("all paused!");
+	//	Pause();
+	//	return;
+	//}
 
-	bool IsAllStoped = true;
-	for (u32 i = 0; i < threads.size(); ++i)
-	{
-		if (threads[i]->IsStopped()) continue;
-		IsAllStoped = false;
-		break;
-	}
+	//bool IsAllStoped = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsStopped()) continue;
+	//	IsAllStoped = false;
+	//	break;
+	//}
 
-	if (IsAllStoped)
-	{
-		//ConLog.Warning("all stoped!");
-		Pause(); //Stop();
-	}
+	//if (IsAllStoped)
+	//{
+	//	//ConLog.Warning("all stoped!");
+	//	Pause(); //Stop();
+	//}
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct, int device)

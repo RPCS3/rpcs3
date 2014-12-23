@@ -51,7 +51,7 @@ s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%lld, vptr_addr=0x%x)", thread_id, vptr.addr());
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	while (thr->IsAlive())
@@ -72,7 +72,7 @@ s32 sys_ppu_thread_detach(u64 thread_id)
 {
 	sys_ppu_thread.Todo("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	if(!thr->IsJoinable())
@@ -93,7 +93,7 @@ s32 sys_ppu_thread_set_priority(u64 thread_id, s32 prio)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_set_priority(thread_id=%lld, prio=%d)", thread_id, prio);
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->SetPrio(prio);
@@ -105,7 +105,7 @@ s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_get_priority(thread_id=%lld, prio_addr=0x%x)", thread_id, prio_addr);
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	vm::write32(prio_addr, (s32)thr->GetPrio());
@@ -127,7 +127,7 @@ s32 sys_ppu_thread_stop(u64 thread_id)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_stop(thread_id=%lld)", thread_id);
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->Stop();
@@ -139,7 +139,7 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_restart(thread_id=%lld)", thread_id);
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if(!thr) return CELL_ESRCH;
 
 	thr->Stop();
@@ -233,7 +233,7 @@ s32 sys_ppu_thread_rename(u64 thread_id, vm::ptr<const char> name)
 {
 	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x('%s'))", thread_id, name.addr(), name.get_ptr());
 
-	CPUThread* thr = Emu.GetCPU().GetThread(thread_id);
+	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
 	if (!thr) {
 		return CELL_ESRCH;
 	}
