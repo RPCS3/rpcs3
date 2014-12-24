@@ -257,9 +257,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -545,9 +542,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_mmapper.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\Log.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -655,6 +649,9 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
       <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\cellFs.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1114,9 +1111,6 @@
     <ClInclude Include="Emu\SysCalls\lv2\sys_mmapper.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1262,6 +1256,9 @@
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\cellFs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
   </ItemGroup>

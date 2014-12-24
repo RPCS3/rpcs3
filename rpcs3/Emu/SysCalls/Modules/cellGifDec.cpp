@@ -4,7 +4,7 @@
 
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
-#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "Emu/SysCalls/lv2/cellFs.h"
 #include "cellGifDec.h"
 
 Module *cellGifDec = nullptr;

@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "stblib/stb_image.h"
-#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "Emu/SysCalls/lv2/cellFs.h"
 #include "cellJpgDec.h"
 
 Module *cellJpgDec = nullptr;

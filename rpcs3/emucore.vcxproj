@@ -132,7 +132,7 @@
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
@@ -231,7 +231,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellMouse.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
@@ -382,7 +381,7 @@
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\cellFs.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
