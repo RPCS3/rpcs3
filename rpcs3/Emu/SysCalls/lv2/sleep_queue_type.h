@@ -26,20 +26,23 @@ enum
 	SYS_SYNC_ATTR_RECURSIVE_MASK = 0xF0, //???
 };
 
-struct sleep_queue_t
+class sleep_queue_t
 {
-	std::vector<u32> list;
+	std::vector<u32> m_list;
 	std::mutex m_mutex;
-	u64 m_name;
+
+public:
+	const u64 name;
 
 	sleep_queue_t(u64 name = 0)
-		: m_name(name)
+		: name(name)
 	{
 	}
+
+	~sleep_queue_t();
 
 	void push(u32 tid, u32 protocol);
 	u32 pop(u32 protocol);
 	bool invalidate(u32 tid);
 	u32 count();
-	bool finalize();
 };

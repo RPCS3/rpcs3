@@ -19,17 +19,10 @@ Mutex::~Mutex()
 		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id, tid, recursive_count.load());
 	}
 
-	if (!queue.m_mutex.try_lock()) return;
-
-	for (u32 i = 0; i < queue.list.size(); i++)
+	if (u32 count = queue.count())
 	{
-		if (u32 owner = queue.list[i])
-		{
-			sys_mutex.Notice("Mutex(%d) was waited by thread %d", id, owner);
-		}
+		sys_mutex.Notice("Mutex(%d) was waited by %d threads", id, count);
 	}
-
-	queue.m_mutex.unlock();
 }
 
 s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute> attr)
@@ -68,9 +61,7 @@ s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_at
 	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		std::string(attr->name, 8).c_str(), (u32) attr->protocol, (is_recursive ? "true" : "false"), id);
 
-	Emu.GetSyncPrimManager().AddSyncPrimData(TYPE_MUTEX, id, std::string(attr->name, 8));
 	// TODO: unlock mutex when owner thread does exit
-
 	return CELL_OK;
 }
 
@@ -98,7 +89,7 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 		return CELL_EBUSY;
 	}
 
-	if (!mutex->queue.finalize())
+	if (mutex->queue.count()) // TODO: safely make object unusable
 	{
 		if (!mutex->owner.compare_and_swap_test(tid, 0))
 		{
@@ -112,7 +103,6 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 		assert(!"sys_mutex_destroy() failed");
 	}
 	Emu.GetIdManager().RemoveID(mutex_id);
-	Emu.GetSyncPrimManager().EraseSyncPrimData(TYPE_MUTEX, mutex_id);
 	return CELL_OK;
 }
 

@@ -225,17 +225,34 @@ public:
 		return true;
 	}
 
-	//u32 GetTypeCount(IDType type)
-	//{
-	//	if (type < TYPE_OTHER) {
-	//		return (u32)m_types[type].size();
-	//	}
-	//	return 1;
-	//}
+	u32 GetTypeCount(IDType type)
+	{
+		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-	//const std::set<u32>& GetTypeIDs(IDType type)
-	//{
-	//	assert(type < TYPE_OTHER);
-	//	return m_types[type];
-	//}
+		if (type < TYPE_OTHER)
+		{
+			return (u32)m_types[type].size();
+		}
+		else
+		{
+			assert(!"Invalid ID type");
+			return 0;
+		}
+	}
+
+	std::set<u32> GetTypeIDs(IDType type)
+	{
+		// you cannot simply return reference to existing set
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		if (type < TYPE_OTHER)
+		{
+			return m_types[type];
+		}
+		else
+		{
+			assert(!"Invalid ID type");
+			return{};
+		}
+	}
 };

@@ -17,10 +17,8 @@ u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u6
 	LV2_LOCK(0);
 
 	std::shared_ptr<Semaphore> sem(new Semaphore(initial_count, max_count, protocol, name_u64));
-	const std::string name((const char*)&name_u64, 8);
 	const u32 id = sys_semaphore.GetNewId(sem, TYPE_SEMAPHORE);
-	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", name.c_str(), protocol, id);
-	Emu.GetSyncPrimManager().AddSemaphoreData(id, name, initial_count, max_count);
+	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", std::string((const char*)&name_u64, 8).c_str(), protocol, id);
 	return id;
 }
 
@@ -76,13 +74,12 @@ s32 sys_semaphore_destroy(u32 sem_id)
 		return CELL_ESRCH;
 	}
 	
-	if (!sem->queue.finalize())
+	if (sem->queue.count()) // TODO: safely make object unusable
 	{
 		return CELL_EBUSY;
 	}
 
 	Emu.GetIdManager().RemoveID(sem_id);
-	Emu.GetSyncPrimManager().EraseSemaphoreData(sem_id);
 	return CELL_OK;
 }
 

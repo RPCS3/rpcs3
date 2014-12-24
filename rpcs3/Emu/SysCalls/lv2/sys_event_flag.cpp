@@ -5,6 +5,7 @@
 #include "Emu/Memory/atomic_type.h"
 #include "Utilities/SQueue.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue_type.h"
 #include "sys_event_flag.h"
@@ -13,9 +14,8 @@ SysCallBase sys_event_flag("sys_event_flag");
 
 u32 EventFlag::check()
 {
-	sleep_queue_t sq; // TODO: implement without sleep queue
-
 	u32 target = 0;
+	u64 highest_prio = ~0ull;
 	const u64 flag_set = flags.read_sync();
 
 	for (u32 i = 0; i < waiters.size(); i++)
@@ -28,12 +28,24 @@ u32 EventFlag::check()
 				target = waiters[i].tid;
 				break;
 			}
-			sq.list.push_back(waiters[i].tid);
+			else if (protocol == SYS_SYNC_PRIORITY)
+			{
+				if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(waiters[i].tid))
+				{
+					const u64 prio = t->GetPrio();
+					if (prio < highest_prio)
+					{
+						highest_prio = prio;
+						target = waiters[i].tid;
+					}
+				}
+				else
+				{
+					assert(!"EventFlag::check(): waiter not found");
+				}
+			}
 		}
 	}
-
-	if (protocol == SYS_SYNC_PRIORITY)
-		target = sq.pop(SYS_SYNC_PRIORITY);
 
 	return target;
 }
@@ -74,11 +86,11 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 	default: return CELL_EINVAL;
 	}
 
-	std::shared_ptr<EventFlag> ef(new EventFlag(init, (u32)attr->protocol, (int)attr->type));
+	std::shared_ptr<EventFlag> ef(new EventFlag(init, (u32)attr->protocol, (s32)attr->type, attr->name_u64));
 	u32 id = sys_event_flag.GetNewId(ef, TYPE_EVENT_FLAG);
 	*eflag_id = id;
 	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (int)attr->type, id);
+		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (s32)attr->type, id);
 
 	return CELL_OK;
 }

@@ -21,10 +21,9 @@ u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key
 		return 0;
 	}
 
-	std::string name((const char*)&name_u64, 8);
 	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x, key=0x%llx, size=0x%x): id = %d",
-		name.c_str(), protocol, type, event_queue_key, size, id);
+		std::string((const char*)&name_u64, 8).c_str(), protocol, type, event_queue_key, size, id);
 	return id;
 }
 
@@ -83,28 +82,27 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 		return CELL_EINVAL;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	eq->sq.m_mutex.lock();
+	//u32 tid = GetCurrentPPUThread().GetId();
+	//eq->sq.m_mutex.lock();
 	//eq->owner.lock(tid);
 	// check if some threads are waiting for an event
-	if (!mode && eq->sq.list.size())
-	{
-		//eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock();
-		return CELL_EBUSY;
-	}
+	//if (!mode && eq->sq.list.size())
+	//{
+	//	eq->owner.unlock(tid);
+	//	eq->sq.m_mutex.unlock();
+	//	return CELL_EBUSY;
+	//}
 	//eq->owner.unlock(tid, ~0);
-	eq->sq.m_mutex.unlock();
-	while (eq->sq.list.size())
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
-			break;
-		}
-	}
+	//eq->sq.m_mutex.unlock();
+	//while (eq->sq.list.size())
+	//{
+	//	std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+	//	if (Emu.IsStopped())
+	//	{
+	//		sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
+	//		break;
+	//	}
+	//}
 
 	Emu.GetEventManager().UnregisterKey(eq->key);
 	eq->ports.clear();
@@ -135,20 +133,19 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 		return CELL_OK;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	eq->sq.m_mutex.lock();
+	//u32 tid = GetCurrentPPUThread().GetId();
+	//eq->sq.m_mutex.lock();
 	//eq->owner.lock(tid);
-	if (eq->sq.list.size())
-	{
-		*number = 0;
-		//eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock();
-		return CELL_OK;
-	}
+	//if (eq->sq.list.size())
+	//{
+	//	*number = 0;
+	//	eq->owner.unlock(tid);
+	//	eq->sq.m_mutex.unlock();
+	//	return CELL_OK;
+	//}
 	*number = eq->events.pop_all(event_array.get_ptr(), size);
 	//eq->owner.unlock(tid);
-	eq->sq.m_mutex.unlock();
+	//eq->sq.m_mutex.unlock();
 	return CELL_OK;
 }
 
@@ -251,7 +248,7 @@ u32 event_port_create(u64 name)
 	std::shared_ptr<EventPort> eport(new EventPort());
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
-	sys_event.Warning("*** sys_event_port created: id = %d", id);
+	sys_event.Warning("*** sys_event_port created: id = %d, name=0x%llx", id, eport->name);
 	return id;
 }
 

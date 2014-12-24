@@ -17,9 +17,13 @@ struct sys_event_flag_attr
 	be_t<u32> protocol;
 	be_t<u32> pshared;
 	be_t<u64> ipc_key;
-	be_t<int> flags;
-	be_t<int> type;
-	char name[8];
+	be_t<s32> flags;
+	be_t<s32> type;
+	union
+	{
+		char name[8];
+		u64 name_u64;
+	};
 };
 
 struct EventFlagWaiter
@@ -35,12 +39,15 @@ struct EventFlag
 	SQueue<u32, 32> signal;
 	std::mutex mutex; // protects waiters
 	std::vector<EventFlagWaiter> waiters;
+
 	const u32 protocol;
 	const int type;
+	const u64 name;
 
-	EventFlag(u64 pattern, u32 protocol, int type)
+	EventFlag(u64 pattern, u32 protocol, int type, u64 name)
 		: protocol(protocol)
 		, type(type)
+		, name(name)
 	{
 		flags.write_relaxed(pattern);
 	}

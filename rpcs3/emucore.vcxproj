@@ -236,6 +236,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
     <ClCompile Include="Emu\SysCalls\Static.cpp" />
+    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
     <ClCompile Include="Ini.cpp" />

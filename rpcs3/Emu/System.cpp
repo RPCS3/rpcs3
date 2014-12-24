@@ -23,6 +23,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
+#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
 

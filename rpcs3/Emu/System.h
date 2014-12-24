@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Loader/Loader.h"
-#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 enum Status
 {

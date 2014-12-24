@@ -25,11 +25,7 @@ s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name
 	u32 sq_id = sys_lwmutex.GetNewId(sq, TYPE_LWMUTEX);
 	lwmutex.sleep_queue = sq_id;
 
-	std::string name((const char*)&name_u64, 8);
-	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", name.c_str(), protocol | recursive, sq_id);
-
-	Emu.GetSyncPrimManager().AddLwMutexData(sq_id, name, 0);
-	
+	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", std::string((const char*)&name_u64, 8).c_str(), protocol | recursive, sq_id);
 	return CELL_OK;
 }
 
@@ -65,17 +61,17 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	u32 sq_id = lwmutex->sleep_queue;
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;
 
-	// try to make it unable to lock
-	switch (int res = lwmutex->trylock(be_t<u32>::make(~0)))
+	if (s32 res = lwmutex->trylock(be_t<u32>::make(~0)))
 	{
-	case CELL_OK:
-		lwmutex->all_info() = 0;
-		lwmutex->attribute = 0xDEADBEEF;
-		lwmutex->sleep_queue = 0;
-		Emu.GetIdManager().RemoveID(sq_id);
-		Emu.GetSyncPrimManager().EraseLwMutexData(sq_id);
-	default: return res;
+		return res;
 	}
+
+	// try to make it unable to lock
+	lwmutex->all_info() = 0;
+	lwmutex->attribute = 0xDEADBEEF;
+	lwmutex->sleep_queue = 0;
+	Emu.GetIdManager().RemoveID(sq_id);
+	return CELL_OK;
 }
 
 s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout)

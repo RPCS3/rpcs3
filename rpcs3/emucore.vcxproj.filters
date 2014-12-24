@@ -653,6 +653,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

@@ -2,14 +2,25 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue_type.h"
 
+sleep_queue_t::~sleep_queue_t()
+{
+	for (auto& tid : m_list)
+	{
+		LOG_NOTICE(HLE, "~sleep_queue_t(): thread %d", tid);
+	}
+}
+
 void sleep_queue_t::push(u32 tid, u32 protocol)
 {
+	assert(tid);
+
 	switch (protocol & SYS_SYNC_ATTR_PROTOCOL_MASK)
 	{
 	case SYS_SYNC_FIFO:
@@ -17,7 +28,15 @@ void sleep_queue_t::push(u32 tid, u32 protocol)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		list.push_back(tid);
+		for (auto& v : m_list)
+		{
+			if (v == tid)
+			{
+				assert(!"sleep_queue_t::push() failed (duplication)");
+			}
+		}
+
+		m_list.push_back(tid);
 		return;
 	}
 	case SYS_SYNC_RETRY:
@@ -38,18 +57,20 @@ u32 sleep_queue_t::pop(u32 protocol)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		while (true)
+		if (m_list.size())
 		{
-			if (list.size())
+			const u32 res = m_list[0];
+			if (!Emu.GetIdManager().CheckID(res))
 			{
-				u32 res = list[0];
-				list.erase(list.begin());
-				if (res && Emu.GetIdManager().CheckID(res))
-					// check thread
-				{
-					return res;
-				}
+				LOG_ERROR(HLE, "sleep_queue_t::pop(SYS_SYNC_FIFO): invalid thread (%d)", res);
+				Emu.Pause();
 			}
+
+			m_list.erase(m_list.begin());
+			return res;
+		}
+		else
+		{
 			return 0;
 		}
 	}
@@ -57,42 +78,33 @@ u32 sleep_queue_t::pop(u32 protocol)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		while (true)
+		u64 highest_prio = ~0ull;
+		u64 sel = ~0ull;
+		for (auto& v : m_list)
 		{
-			if (list.size())
+			if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(v))
 			{
-				u64 highest_prio = ~0ull;
-				u32 sel = 0;
-				for (u32 i = 0; i < list.size(); i++)
+				const u64 prio = t->GetPrio();
+				if (prio < highest_prio)
 				{
-					if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(list[i]))
-					{
-						u64 prio = t->GetPrio();
-						if (prio < highest_prio)
-						{
-							highest_prio = prio;
-							sel = i;
-						}
-					}
-					else
-					{
-						list[i] = 0;
-						sel = i;
-						break;
-					}
-				}
-				u32 res = list[sel];
-				list.erase(list.begin() + sel);
-				/* if (Emu.GetIdManager().CheckID(res)) */
-				if (res)
-					// check thread
-				{
-					return res;
+					highest_prio = prio;
+					sel = &v - m_list.data();
 				}
 			}
-
-			return 0;
+			else
+			{
+				LOG_ERROR(HLE, "sleep_queue_t::pop(SYS_SYNC_PRIORITY): invalid thread (%d)", v);
+				Emu.Pause();
+			}
 		}
+
+		if (~sel)
+		{
+			const u32 res = m_list[sel];
+			m_list.erase(m_list.begin() + sel);
+			return res;
+		}
+		// fallthrough
 	}
 	case SYS_SYNC_RETRY:
 	{
@@ -107,13 +119,15 @@ u32 sleep_queue_t::pop(u32 protocol)
 
 bool sleep_queue_t::invalidate(u32 tid)
 {
+	assert(tid);
+
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	if (tid) for (u32 i = 0; i < list.size(); i++)
+	for (auto& v : m_list)
 	{
-		if (list[i] == tid)
+		if (v == tid)
 		{
-			list.erase(list.begin() + i);
+			m_list.erase(m_list.begin() + (&v - m_list.data()));
 			return true;
 		}
 	}
@@ -125,27 +139,5 @@ u32 sleep_queue_t::count()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	u32 result = 0;
-	for (u32 i = 0; i < list.size(); i++)
-	{
-		if (list[i]) result++;
-	}
-	return result;
-}
-
-bool sleep_queue_t::finalize()
-{
-	if (!m_mutex.try_lock()) return false;
-
-	for (u32 i = 0; i < list.size(); i++)
-	{
-		if (list[i])
-		{
-			m_mutex.unlock();
-			return false;
-		}
-	}
-
-	m_mutex.unlock();
-	return true;
+	return (u32)m_list.size();
 }
