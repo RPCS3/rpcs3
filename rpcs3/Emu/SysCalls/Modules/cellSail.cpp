@@ -98,7 +98,7 @@ int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 {
 	cellSail->Warning("cellSailDescriptorCreateDatabase(pSelf=0x%x, pDatabase=0x%x, size=0x%x, arg=0x%x", pSelf.addr(), pDatabase.addr(), size, arg);
 
-	switch (pSelf->streamType) {
+	switch ((s32)pSelf->streamType) {
 		case CELL_SAIL_STREAM_PAMF:
 		{
 			u32 addr = pSelf->internalData[1];
