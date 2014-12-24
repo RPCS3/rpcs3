@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/SQueue.h"
-
 #define a128(x) ((x + 127) & (~127))
 
 // Error Codes
@@ -693,7 +691,7 @@ int vdecRead(void* opaque, u8* buf, int buf_size);
 class VideoDecoder
 {
 public:
-	SQueue<VdecTask> job;
+	squeue_t<VdecTask> job;
 	u32 id;
 	volatile bool is_closed;
 	volatile bool is_finished;
@@ -712,7 +710,7 @@ public:
 		u32 size;
 	} reader;
 
-	SQueue<VdecFrame> frames;
+	squeue_t<VdecFrame> frames;
 
 	const CellVdecCodecType type;
 	const u32 profile;

@@ -4,7 +4,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThreadManager.h"
@@ -731,7 +730,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 				ef->flags |= (u64)1 << flag;
 				if (u32 target = ef->check())
 				{
-					ef->signal.Push(target, nullptr);
+					ef->signal.push(target);
 				}
 				SPU.In_MBox.PushUncond(CELL_OK);
 				return;
@@ -771,7 +770,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 				ef->flags |= (u64)1 << flag;
 				if (u32 target = ef->check())
 				{
-					ef->signal.Push(target, nullptr);
+					ef->signal.push(target);
 				}
 				return;
 			}

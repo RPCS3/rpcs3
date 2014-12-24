@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -78,7 +77,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 	if (u32 target = cond->queue.pop(mutex->protocol))
 	{
-		cond->signal.Push(target, nullptr);
+		cond->signal.push(target);
 
 		if (Emu.IsStopped())
 		{
@@ -103,7 +102,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 	while (u32 target = cond->queue.pop(mutex->protocol))
 	{
-		cond->signal.Push(target, nullptr);
+		cond->signal.push(target);
 
 		if (Emu.IsStopped())
 		{
@@ -139,7 +138,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	u32 target = thread_id;
 	{
-		cond->signal.Push(target, nullptr);
+		cond->signal.push(target);
 	}
 
 	if (Emu.IsStopped())
@@ -182,7 +181,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 	while (true)
 	{
 		u32 signaled;
-		if (cond->signal.Peek(signaled, &sq_no_wait) && signaled == tid) // check signaled threads
+		if (cond->signal.try_peek(signaled) && signaled == tid) // check signaled threads
 		{
 			if (mutex->owner.compare_and_swap_test(0, tid)) // try to lock
 			{
@@ -224,6 +223,6 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 	}
 
 	mutex->recursive_count = old_recursive;
-	cond->signal.Pop(cond_id /* unused result */, nullptr);
+	cond->signal.pop(cond_id /* unused result */);
 	return CELL_OK;
 }

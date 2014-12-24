@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/SQueue.h"
-
 // align size or address to 128
 #define a128(x) ((x + 127) & (~127))
 
@@ -400,7 +398,7 @@ struct DemuxerTask
 class Demuxer
 {
 public:
-	SQueue<DemuxerTask, 32> job;
+	squeue_t<DemuxerTask, 32> job;
 	const u32 memAddr;
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
@@ -429,7 +427,7 @@ class ElementaryStream
 {
 	std::mutex m_mutex;
 
-	SQueue<u32> entries; // AU starting addresses
+	squeue_t<u32> entries; // AU starting addresses
 	u32 put_count; // number of AU written
 	u32 got_count; // number of AU obtained by GetAu(Ex)
 	u32 released; // number of AU released

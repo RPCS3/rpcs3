@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/SQueue.h"
-
 // Error Codes
 enum
 {
@@ -1101,7 +1099,7 @@ static_assert(sizeof(OMAHeader) == 96, "Wrong OMAHeader size");
 class AudioDecoder
 {
 public:
-	SQueue<AdecTask> job;
+	squeue_t<AdecTask> job;
 	u32 id;
 	volatile bool is_closed;
 	volatile bool is_finished;
@@ -1128,7 +1126,7 @@ public:
 
 	} reader;
 
-	SQueue<AdecFrame> frames;
+	squeue_t<AdecFrame> frames;
 
 	const AudioCodecType type;
 	const u32 memAddr;

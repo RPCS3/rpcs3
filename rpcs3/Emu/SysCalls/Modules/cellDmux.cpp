@@ -106,13 +106,13 @@ bool ElementaryStream::is_full(u32 space)
 {
 	if (released < put_count)
 	{
-		if (entries.IsFull())
+		if (entries.is_full())
 		{
 			return true;
 		}
 
 		u32 first = 0;
-		if (!entries.Peek(first, &dmux->is_closed) || !first)
+		if (!entries.peek(first, 0, &dmux->is_closed) || !first)
 		{
 			assert(!"es::is_full() error: entries.Peek() failed");
 			return false;
@@ -188,7 +188,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		put_count++;
 	}
-	if (!entries.Push(addr, &dmux->is_closed))
+	if (!entries.push(addr, &dmux->is_closed))
 	{
 		assert(!"es::push_au() error: entries.Push() failed");
 	}
@@ -222,7 +222,7 @@ bool ElementaryStream::release()
 	}
 
 	u32 addr = 0;
-	if (!entries.Pop(addr, &dmux->is_closed) || !addr)
+	if (!entries.pop(addr, &dmux->is_closed) || !addr)
 	{
 		cellDmux->Error("es::release() error: entries.Pop() failed");
 		Emu.Pause();
@@ -248,7 +248,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 	}
 
 	u32 addr = 0;
-	if (!entries.Peek(addr, &dmux->is_closed, got_count - released) || !addr)
+	if (!entries.peek(addr, got_count - released, &dmux->is_closed) || !addr)
 	{
 		cellDmux->Error("es::peek() error: entries.Peek() failed");
 		Emu.Pause();
@@ -269,7 +269,7 @@ void ElementaryStream::reset()
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	put = memAddr;
-	entries.Clear();
+	entries.clear();
 	put_count = 0;
 	got_count = 0;
 	released = 0;
@@ -337,7 +337,7 @@ u32 dmuxOpen(Demuxer* data)
 				break;
 			}
 			
-			if (!dmux.job.Peek(task, &sq_no_wait) && dmux.is_running && stream.addr)
+			if (!dmux.job.try_peek(task) && dmux.is_running && stream.addr)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;
@@ -603,7 +603,7 @@ u32 dmuxOpen(Demuxer* data)
 			}
 
 			// wait for task if no work
-			if (!dmux.job.Pop(task, &dmux.is_closed))
+			if (!dmux.job.pop(task, &dmux.is_closed))
 			{
 				break; // Emu is stopped
 			}
@@ -859,7 +859,7 @@ int cellDmuxClose(u32 demuxerHandle)
 	}
 
 	dmux->is_closed = true;
-	dmux->job.Push(DemuxerTask(dmuxClose), &sq_no_wait);
+	dmux->job.try_push(DemuxerTask(dmuxClose));
 
 	while (!dmux->is_finished)
 	{
@@ -901,7 +901,7 @@ int cellDmuxSetStream(u32 demuxerHandle, const u32 streamAddress, u32 streamSize
 	info.discontinuity = discontinuity;
 	info.userdata = userData;
 
-	dmux->job.Push(task, &dmux->is_closed);
+	dmux->job.push(task, &dmux->is_closed);
 	return CELL_OK;
 }
 
@@ -915,7 +915,7 @@ int cellDmuxResetStream(u32 demuxerHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	dmux->job.Push(DemuxerTask(dmuxResetStream), &dmux->is_closed);
+	dmux->job.push(DemuxerTask(dmuxResetStream), &dmux->is_closed);
 	return CELL_OK;
 }
 
@@ -929,7 +929,7 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	dmux->job.Push(DemuxerTask(dmuxResetStreamAndWaitDone), &dmux->is_closed);
+	dmux->job.push(DemuxerTask(dmuxResetStreamAndWaitDone), &dmux->is_closed);
 	while (dmux->is_running && !dmux->is_closed) // TODO: ensure that it is safe
 	{
 		if (Emu.IsStopped())
@@ -1005,7 +1005,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 	task.es.es = id;
 	task.es.es_ptr = es.get();
 
-	dmux->job.Push(task, &dmux->is_closed);
+	dmux->job.push(task, &dmux->is_closed);
 	return CELL_OK;
 }
 
@@ -1023,7 +1023,7 @@ int cellDmuxDisableEs(u32 esHandle)
 	task.es.es = esHandle;
 	task.es.es_ptr = es.get();
 
-	es->dmux->job.Push(task, &es->dmux->is_closed);
+	es->dmux->job.push(task, &es->dmux->is_closed);
 	return CELL_OK;
 }
 
@@ -1041,7 +1041,7 @@ int cellDmuxResetEs(u32 esHandle)
 	task.es.es = esHandle;
 	task.es.es_ptr = es.get();
 
-	es->dmux->job.Push(task, &es->dmux->is_closed);
+	es->dmux->job.push(task, &es->dmux->is_closed);
 	return CELL_OK;
 }
 
@@ -1168,7 +1168,7 @@ int cellDmuxFlushEs(u32 esHandle)
 	task.es.es = esHandle;
 	task.es.es_ptr = es.get();
 
-	es->dmux->job.Push(task, &es->dmux->is_closed);
+	es->dmux->job.push(task, &es->dmux->is_closed);
 	return CELL_OK;
 }
 

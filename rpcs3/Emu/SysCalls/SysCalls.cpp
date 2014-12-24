@@ -6,7 +6,6 @@
 #include "Emu/System.h"
 #include "ModuleManager.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "lv2/cellFs.h"
 #include "lv2/sleep_queue_type.h"

@@ -93,7 +93,7 @@ VideoDecoder::~VideoDecoder()
 {
 	// TODO: check finalization
 	VdecFrame vf;
-	while (frames.Pop(vf, &sq_no_wait))
+	while (frames.try_pop(vf))
 	{
 		av_frame_unref(vf.data);
 		av_frame_free(&vf.data);
@@ -124,7 +124,7 @@ next:
 	if (vdec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
 	{
 		VdecTask task;
-		if (!vdec.job.Peek(task, &vdec.is_closed))
+		if (!vdec.job.peek(task, 0, &vdec.is_closed))
 		{
 			if (Emu.IsStopped()) cellVdec->Warning("vdecRead() aborted");
 			return 0;
@@ -149,7 +149,7 @@ next:
 
 			vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 
-			vdec.job.Pop(vdec.task, nullptr);
+			vdec.job.pop(vdec.task);
 
 			vdec.reader.addr = vdec.task.addr;
 			vdec.reader.size = vdec.task.size;
@@ -235,7 +235,7 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 			}
 
-			if (!vdec.job.Pop(task, &vdec.is_closed))
+			if (!vdec.job.pop(task, &vdec.is_closed))
 			{
 				break;
 			}
@@ -512,7 +512,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 						//LOG_NOTICE(HLE, "got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);
 
-						if (vdec.frames.Push(frame, &vdec.is_closed))
+						if (vdec.frames.push(frame, &vdec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
 							vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
@@ -598,7 +598,7 @@ int cellVdecClose(u32 handle)
 	}
 
 	vdec->is_closed = true;
-	vdec->job.Push(VdecTask(vdecClose), &sq_no_wait);
+	vdec->job.try_push(VdecTask(vdecClose));
 
 	while (!vdec->is_finished)
 	{
@@ -625,7 +625,7 @@ int cellVdecStartSeq(u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	vdec->job.Push(VdecTask(vdecStartSeq), &vdec->is_closed);
+	vdec->job.push(VdecTask(vdecStartSeq), &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -639,7 +639,7 @@ int cellVdecEndSeq(u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	vdec->job.Push(VdecTask(vdecEndSeq), &vdec->is_closed);
+	vdec->job.push(VdecTask(vdecEndSeq), &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -663,7 +663,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 	task.userData = auInfo->userData;
 	task.specData = auInfo->codecSpecificData;
 
-	vdec->job.Push(task, &vdec->is_closed);
+	vdec->job.push(task, &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -678,7 +678,7 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 	}
 
 	VdecFrame vf;
-	if (!vdec->frames.Pop(vf, &sq_no_wait))
+	if (!vdec->frames.try_pop(vf))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
@@ -734,7 +734,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 	}
 
 	VdecFrame vf;
-	if (!vdec->frames.Peek(vf, &sq_no_wait))
+	if (!vdec->frames.try_peek(vf))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
@@ -882,7 +882,7 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	VdecTask task(vdecSetFrameRate);
 	task.frc = frc;
 
-	vdec->job.Push(task, &vdec->is_closed);
+	vdec->job.push(task, &vdec->is_closed);
 	return CELL_OK;
 }
 

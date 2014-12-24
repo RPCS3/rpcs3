@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "sleep_queue_type.h"
@@ -72,7 +71,7 @@ s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 
 	if (u32 target = lw->queue.pop(mutex->attribute))
 	{
-		lw->signal.Push(target, nullptr);
+		lw->signal.push(target);
 
 		if (Emu.IsStopped())
 		{
@@ -98,7 +97,7 @@ s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 
 	while (u32 target = lw->queue.pop(mutex->attribute))
 	{
-		lw->signal.Push(target, nullptr);
+		lw->signal.push(target);
 
 		if (Emu.IsStopped())
 		{
@@ -132,7 +131,7 @@ s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 
 	u32 target = ppu_thread_id;
 	{
-		lw->signal.Push(target, nullptr);
+		lw->signal.push(target);
 
 		if (Emu.IsStopped())
 		{
@@ -186,7 +185,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	while (true)
 	{
 		u32 signaled;
-		if (lw->signal.Peek(signaled, &sq_no_wait) && signaled == tid_le) // check signaled threads
+		if (lw->signal.try_peek(signaled) && signaled == tid_le) // check signaled threads
 		{
 			s32 res = mutex->lock(tid, timeout ? get_system_time() - time_start : 0); // this is bad
 			if (res == CELL_OK)
@@ -200,34 +199,34 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 			{
 				sys_lwcond.Error("sys_lwcond_wait(id=%d): associated mutex was locked", (u32)lwcond->lwcond_queue);
 				lw->queue.invalidate(tid_le);
-				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				lw->signal.pop(tid_le /* unused result */);
 				return CELL_OK; // mutex not locked (but already locked in the incorrect way)
 			}
 			case static_cast<int>(CELL_ESRCH):
 			{
 				sys_lwcond.Error("sys_lwcond_wait(id=%d): associated mutex not found (%d)", (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
 				lw->queue.invalidate(tid_le);
-				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				lw->signal.pop(tid_le /* unused result */);
 				return CELL_ESRCH; // mutex not locked
 			}
 			case static_cast<int>(CELL_ETIMEDOUT):
 			{
 				lw->queue.invalidate(tid_le);
-				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				lw->signal.pop(tid_le /* unused result */);
 				return CELL_ETIMEDOUT; // mutex not locked
 			}
 			case static_cast<int>(CELL_EINVAL):
 			{
 				sys_lwcond.Error("sys_lwcond_wait(id=%d): invalid associated mutex (%d)", (u32)lwcond->lwcond_queue, (u32)mutex->sleep_queue);
 				lw->queue.invalidate(tid_le);
-				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				lw->signal.pop(tid_le /* unused result */);
 				return CELL_EINVAL; // mutex not locked
 			}
 			default:
 			{
 				sys_lwcond.Error("sys_lwcond_wait(id=%d): mutex->lock() returned 0x%x", (u32)lwcond->lwcond_queue, res);
 				lw->queue.invalidate(tid_le);
-				lw->signal.Pop(tid_le /* unused result */, nullptr);
+				lw->signal.pop(tid_le /* unused result */);
 				return CELL_EINVAL; // mutex not locked
 			}
 			}
@@ -249,6 +248,6 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	}
 
 	mutex->recursive_count.exchange(old_recursive);
-	lw->signal.Pop(tid_le /* unused result */, nullptr);
+	lw->signal.pop(tid_le /* unused result */);
 	return CELL_OK;
 }

@@ -4,7 +4,6 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"

@@ -89,7 +89,7 @@ AudioDecoder::~AudioDecoder()
 {
 	// TODO: check finalization
 	AdecFrame af;
-	while (frames.Pop(af, &sq_no_wait))
+	while (frames.try_pop(af))
 	{
 		av_frame_unref(af.data);
 		av_frame_free(&af.data);
@@ -151,7 +151,7 @@ next:
 	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
 	{
 		AdecTask task;
-		if (!adec.job.Peek(task, &adec.is_closed))
+		if (!adec.job.peek(task, 0, &adec.is_closed))
 		{
 			if (Emu.IsStopped()) cellAdec->Warning("adecRawRead() aborted");
 			return 0;
@@ -176,7 +176,7 @@ next:
 
 			adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
-			adec.job.Pop(adec.task, nullptr);
+			adec.job.pop(adec.task);
 
 			adec.reader.addr = adec.task.au.addr;
 			adec.reader.size = adec.task.au.size;
@@ -245,7 +245,7 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			if (!adec.job.Pop(task, &adec.is_closed))
+			if (!adec.job.pop(task, &adec.is_closed))
 			{
 				break;
 			}
@@ -451,7 +451,7 @@ u32 adecOpen(AudioDecoder* data)
 						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
 
-						if (adec.frames.Push(frame, &adec.is_closed))
+						if (adec.frames.push(frame, &adec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
 							adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
@@ -562,7 +562,7 @@ int cellAdecClose(u32 handle)
 	}
 
 	adec->is_closed = true;
-	adec->job.Push(AdecTask(adecClose), &sq_no_wait);
+	adec->job.try_push(AdecTask(adecClose));
 
 	while (!adec->is_finished)
 	{
@@ -627,7 +627,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	}
 	}
 
-	adec->job.Push(task, &adec->is_closed);
+	adec->job.push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -641,7 +641,7 @@ int cellAdecEndSeq(u32 handle)
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adec->job.Push(AdecTask(adecEndSeq), &adec->is_closed);
+	adec->job.push(AdecTask(adecEndSeq), &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -663,7 +663,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.userdata = auInfo->userData;
 
 	//cellAdec->Notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
-	adec->job.Push(task, &adec->is_closed);
+	adec->job.push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -678,7 +678,7 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	}
 
 	AdecFrame af;
-	if (!adec->frames.Pop(af, &sq_no_wait))
+	if (!adec->frames.try_pop(af))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
@@ -792,7 +792,7 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 	}
 
 	AdecFrame af;
-	if (!adec->frames.Peek(af, &sq_no_wait))
+	if (!adec->frames.try_peek(af))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;

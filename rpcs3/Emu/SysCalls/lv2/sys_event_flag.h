@@ -36,7 +36,7 @@ struct EventFlagWaiter
 struct EventFlag
 {
 	atomic_le_t<u64> flags;
-	SQueue<u32, 32> signal;
+	squeue_t<u32, 32> signal;
 	std::mutex mutex; // protects waiters
 	std::vector<EventFlagWaiter> waiters;
 

@@ -3,7 +3,6 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/Memory/atomic_type.h"
-#include "Utilities/SQueue.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -182,13 +181,13 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result,
 	while (true)
 	{
 		u32 signaled;
-		if (ef->signal.Peek(signaled, &sq_no_wait) && signaled == tid)
+		if (ef->signal.try_peek(signaled) && signaled == tid)
 		{
 			std::lock_guard<std::mutex> lock(ef->mutex);
 
 			const u64 flag_set = ef->flags.read_sync();
 
-			ef->signal.Pop(signaled, nullptr);
+			ef->signal.pop(signaled);
 
 			for (u32 i = 0; i < ef->waiters.size(); i++)
 			{
@@ -207,7 +206,7 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result,
 
 					if (u32 target = ef->check())
 					{
-						ef->signal.Push(target, nullptr);
+						ef->signal.push(target);
 					}
 
 					if (result)
@@ -310,7 +309,7 @@ s32 sys_event_flag_set(u32 eflag_id, u64 bitptn)
 	ef->flags |= bitptn;
 	if (u32 target = ef->check())
 	{
-		ef->signal.Push(target, nullptr);
+		ef->signal.push(target);
 	}
 	return CELL_OK;
 }
@@ -346,9 +345,9 @@ s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num)
 		ef->waiters.clear();
 	}
 
-	for (u32 i = 0; i < tids.size(); i++)
+	for (auto& v : tids)
 	{
-		ef->signal.Push(tids[i], nullptr);
+		ef->signal.push(v);
 	}
 
 	if (Emu.IsStopped())

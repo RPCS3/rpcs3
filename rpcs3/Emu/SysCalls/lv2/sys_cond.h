@@ -15,7 +15,7 @@ struct sys_cond_attribute
 struct Cond
 {
 	std::shared_ptr<Mutex> mutex; // associated with mutex
-	SQueue<u32, 32> signal;
+	squeue_t<u32, 32> signal;
 	sleep_queue_t queue;
 
 	Cond(std::shared_ptr<Mutex>& mutex, u64 name)

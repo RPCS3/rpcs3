@@ -5,7 +5,6 @@
 #include "Emu/Memory/atomic_type.h"
 
 #include "rpcs3/Ini.h"
-#include "Utilities/SQueue.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
@@ -77,11 +76,8 @@ int cellAudioInit()
 				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size] {} );
 			}
 
-			SQueue<s16*, 31> queue;
-			queue.Clear();
-
-			SQueue<float*, 31> queue_float;
-			queue_float.Clear();
+			squeue_t<s16*, 31> queue;
+			squeue_t<float*, 31> queue_float;
 
 			std::vector<u64> keys;
 
@@ -108,9 +104,9 @@ int cellAudioInit()
 					float* oal_buffer_float = nullptr;
 
 					if (g_is_u16)
-						queue.Pop(oal_buffer, nullptr);
+						queue.pop(oal_buffer);
 					else
-						queue_float.Pop(oal_buffer_float, nullptr);
+						queue_float.pop(oal_buffer_float);
 
 					if (g_is_u16)
 					{
@@ -373,9 +369,9 @@ int cellAudioInit()
 					if(m_audio_out)
 					{
 						if (g_is_u16)
-							queue.Push(&oal_buffer[oal_pos][0], nullptr);
+							queue.push(&oal_buffer[oal_pos][0]);
 
-						queue_float.Push(&oal_buffer_float[oal_pos][0], nullptr);
+						queue_float.push(&oal_buffer_float[oal_pos][0]);
 					}
 
 					oal_buffer_offset = 0;
@@ -441,8 +437,8 @@ int cellAudioInit()
 			}
 			cellAudio->Notice("Audio thread ended");
 abort:
-			queue.Push(nullptr, nullptr);
-			queue_float.Push(nullptr, nullptr);
+			queue.push(nullptr);
+			queue_float.push(nullptr);
 
 			if(do_dump)
 				m_dump.Finalize();
