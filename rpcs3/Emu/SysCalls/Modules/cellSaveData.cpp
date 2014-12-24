@@ -112,7 +112,7 @@ void setSaveDataList(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDa
 	while (entry != saveEntries.end())
 	{
 		bool found = false;
-		for (u32 j=0; j<fixedListNum; j++)
+		for (u32 j = 0; j < fixedListNum; j++)
 		{
 			if (entry->dirName == (char*)fixedList[j].dirName)
 			{
