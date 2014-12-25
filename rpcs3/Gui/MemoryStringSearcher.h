@@ -15,5 +15,5 @@ public:
 		exit = true;
 	}
 
-	void MemoryStringSearcher::Search(wxCommandEvent& event);
+	void Search(wxCommandEvent& event);
 };
