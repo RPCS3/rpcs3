@@ -174,6 +174,13 @@ class squeue_t
 
 	T m_data[sq_size];
 
+	enum squeue_sync_var_result : u32
+	{
+		SQSVR_OK = 0,
+		SQSVR_LOCKED = 1,
+		SQSVR_FAILED = 2,
+	};
+
 public:
 	squeue_t()
 	{
@@ -194,22 +201,26 @@ public:
 	{
 		u32 pos = 0;
 
-		while (!m_sync.atomic_op_sync(true, [&pos](squeue_sync_var_t& sync) -> bool
+		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.write_lock || sync.count == sq_size)
+			if (sync.write_lock)
 			{
-				return false;
+				return SQSVR_LOCKED;
+			}
+			if (sync.count == sq_size)
+			{
+				return SQSVR_FAILED;
 			}
 
 			sync.write_lock = 1;
 			pos = sync.position + sync.count;
-			return true;
+			return SQSVR_OK;
 		}))
 		{
-			if (squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
 			{
 				return false;
 			}
@@ -245,22 +256,26 @@ public:
 	{
 		u32 pos = 0;
 
-		while (!m_sync.atomic_op_sync(true, [&pos](squeue_sync_var_t& sync) -> bool
+		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.read_lock || !sync.count)
+			if (sync.read_lock)
 			{
-				return false;
+				return SQSVR_LOCKED;
+			}
+			if (!sync.count)
+			{
+				return SQSVR_FAILED;
 			}
 
 			sync.read_lock = 1;
 			pos = sync.position;
-			return true;
+			return SQSVR_OK;
 		}))
 		{
-			if (squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
 			{
 				return false;
 			}
@@ -299,19 +314,19 @@ public:
 
 	void clear()
 	{
-		while (!m_sync.atomic_op_sync(true, [](squeue_sync_var_t& sync) -> bool
+		while (m_sync.atomic_op_sync(SQSVR_OK, [](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
 			if (sync.read_lock || sync.write_lock)
 			{
-				return false;
+				return SQSVR_LOCKED;
 			}
 
 			sync.read_lock = 1;
 			sync.write_lock = 1;
-			return true;
+			return SQSVR_OK;
 		}))
 		{
 			std::unique_lock<std::mutex> rcv_lock(m_rcv_mutex);
@@ -328,22 +343,26 @@ public:
 		assert(start_pos < sq_size);
 		u32 pos = 0;
 
-		while (!m_sync.atomic_op_sync(true, [&pos, start_pos](squeue_sync_var_t& sync) -> bool
+		while (u32 res = m_sync.atomic_op_sync(SQSVR_OK, [&pos, start_pos](squeue_sync_var_t& sync) -> u32
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.read_lock || sync.count <= start_pos)
+			if (sync.read_lock)
 			{
-				return false;
+				return SQSVR_LOCKED;
+			}
+			if (sync.count <= start_pos)
+			{
+				return SQSVR_FAILED;
 			}
 			
 			sync.read_lock = 1;
 			pos = sync.position + start_pos;
-			return true;
+			return SQSVR_OK;
 		}))
 		{
-			if (squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
 			{
 				return false;
 			}
