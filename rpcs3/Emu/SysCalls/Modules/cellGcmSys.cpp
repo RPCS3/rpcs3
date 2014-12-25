@@ -805,7 +805,7 @@ s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
 	cellGcmSys->Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
 
 	// Address not on main memory or local memory
-	if (!address || address >= 0xD0000000) {
+	if (address >= 0xD0000000) {
 		cellGcmSys->Error("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
 		return CELL_GCM_ERROR_FAILURE;
 	}
