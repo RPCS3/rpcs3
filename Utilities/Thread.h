@@ -148,6 +148,8 @@ public:
 	void notify(u64 signal_id);
 };
 
+bool squeue_test_exit(const volatile bool* do_exit);
+
 template<typename T, u32 sq_size = 256>
 class squeue_t
 {
@@ -207,7 +209,7 @@ public:
 			return true;
 		}))
 		{
-			if (Emu.IsStopped() || (do_exit && *do_exit))
+			if (squeue_test_exit(do_exit))
 			{
 				return false;
 			}
@@ -258,7 +260,7 @@ public:
 			return true;
 		}))
 		{
-			if (Emu.IsStopped() || (do_exit && *do_exit))
+			if (squeue_test_exit(do_exit))
 			{
 				return false;
 			}
@@ -341,7 +343,7 @@ public:
 			return true;
 		}))
 		{
-			if (Emu.IsStopped() || (do_exit && *do_exit))
+			if (squeue_test_exit(do_exit))
 			{
 				return false;
 			}
