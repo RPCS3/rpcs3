@@ -158,12 +158,12 @@ class squeue_t
 		struct
 		{
 			u32 position : 31;
-			u32 read_lock : 1;
+			u32 pop_lock : 1;
 		};
 		struct
 		{
 			u32 count : 31;
-			u32 write_lock : 1;
+			u32 push_lock : 1;
 		};
 	};
 
@@ -206,7 +206,7 @@ public:
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.write_lock)
+			if (sync.push_lock)
 			{
 				return SQSVR_LOCKED;
 			}
@@ -215,7 +215,7 @@ public:
 				return SQSVR_FAILED;
 			}
 
-			sync.write_lock = 1;
+			sync.push_lock = 1;
 			pos = sync.position + sync.count;
 			return SQSVR_OK;
 		}))
@@ -235,8 +235,8 @@ public:
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
-			assert(sync.write_lock);
-			sync.write_lock = 0;
+			assert(sync.push_lock);
+			sync.push_lock = 0;
 			sync.count++;
 		});
 
@@ -261,16 +261,16 @@ public:
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.read_lock)
-			{
-				return SQSVR_LOCKED;
-			}
 			if (!sync.count)
 			{
 				return SQSVR_FAILED;
 			}
+			if (sync.pop_lock)
+			{
+				return SQSVR_LOCKED;
+			}
 
-			sync.read_lock = 1;
+			sync.pop_lock = 1;
 			pos = sync.position;
 			return SQSVR_OK;
 		}))
@@ -290,8 +290,8 @@ public:
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
-			assert(sync.read_lock);
-			sync.read_lock = 0;
+			assert(sync.pop_lock);
+			sync.pop_lock = 0;
 			sync.position++;
 			sync.count--;
 			if (sync.position == sq_size)
@@ -319,13 +319,13 @@ public:
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.read_lock || sync.write_lock)
+			if (sync.pop_lock || sync.push_lock)
 			{
 				return SQSVR_LOCKED;
 			}
 
-			sync.read_lock = 1;
-			sync.write_lock = 1;
+			sync.pop_lock = 1;
+			sync.push_lock = 1;
 			return SQSVR_OK;
 		}))
 		{
@@ -348,16 +348,16 @@ public:
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
 
-			if (sync.read_lock)
-			{
-				return SQSVR_LOCKED;
-			}
 			if (sync.count <= start_pos)
 			{
 				return SQSVR_FAILED;
 			}
+			if (sync.pop_lock)
+			{
+				return SQSVR_LOCKED;
+			}
 			
-			sync.read_lock = 1;
+			sync.pop_lock = 1;
 			pos = sync.position + start_pos;
 			return SQSVR_OK;
 		}))
@@ -377,8 +377,8 @@ public:
 		{
 			assert(sync.count <= sq_size);
 			assert(sync.position < sq_size);
-			assert(sync.read_lock);
-			sync.read_lock = 0;
+			assert(sync.pop_lock);
+			sync.pop_lock = 0;
 		});
 
 		m_rcv.notify_one();
