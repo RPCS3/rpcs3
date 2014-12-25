@@ -1169,12 +1169,16 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
 
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
-
 	if (1)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
+
+		if (res != 0)
+		{
+			GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+		}
+
 		memmove(vm::get_ptr<void>(context->begin), vm::get_ptr<void>(context->current - res), res);
 
 		context->current = context->begin + res;
