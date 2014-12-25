@@ -238,7 +238,7 @@ s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<Cell
 			cellSysutil->Error("modifySaveDataFiles: CellSaveDataFileCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) {
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM) {
 			break;
 		}
 
