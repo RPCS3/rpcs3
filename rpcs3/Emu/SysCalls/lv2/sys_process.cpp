@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/FS/VFS.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -103,17 +104,11 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 		Emu.Stop();
 	});
 
-	int device = -1;
+	std::string real_path;
 
-	if (_path.substr(1, 8) == "dev_hdd0")
-		device = 0;
-	else if (_path.substr(1, 8) == "dev_hdd1")
-		device = 1;
-	else if (_path.substr(1, 8) == "dev_bdvd")
-		device = 2;
+	Emu.GetVFS().GetDevice(_path.c_str(), real_path);
 
-	if (device != 0)
-		Emu.BootGame(_path.c_str(), true, device);
+	Emu.BootGame(real_path, true);
 
 	return;
 }
@@ -185,16 +180,11 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 		Emu.Stop();
 	});
 	
-	int device = -1;
+	std::string real_path;
 
-	if (_path.substr(1, 8) == "dev_hdd0")
-		device = 0;
-	else if (_path.substr(1, 8) == "dev_hdd1")
-		device = 1;
-	else if (_path.substr(1, 8) == "dev_bdvd")
-		device = 2;
+	Emu.GetVFS().GetDevice(_path.c_str(), real_path);
 
-	Emu.BootGame(_path.c_str(), true, device);
+	Emu.BootGame(real_path, true);
 
 	return;
 }
