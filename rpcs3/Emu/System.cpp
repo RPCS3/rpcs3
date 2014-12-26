@@ -181,6 +181,8 @@ bool Emulator::BootGame(const std::string& path, bool direct, int device)
 			Emu.GetVFS().GetDevice("dev_hdd0", pathy);
 		else if (device == 1)
 			Emu.GetVFS().GetDevice("dev_hdd1", pathy);
+		else if (device == 2)
+			Emu.GetVFS().GetDevice("dev_bdvd", pathy);
 
 		curpath = pathy.substr(0, pathy.length() - 9) + path;
 

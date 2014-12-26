@@ -10,6 +10,14 @@
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
+#ifdef _WIN32
+	#include <windows.h>
+	#undef CreateFile
+#else
+	#include <sys/types.h>
+	#include <sys/stat.h>
+#endif
+
 extern Module *cellSysutil;
 
 // Auxiliary Classes
@@ -38,7 +46,6 @@ public:
 		return true;
 	}
 };
-
 
 // Auxiliary Functions
 u64 getSaveDataSize(const std::string& dirName)
@@ -69,6 +76,28 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 	std::string localPath;
 	Emu.GetVFS().GetDevice(saveDir + "/ICON0.PNG", localPath);
 
+	u64 atime = 0;
+	u64 mtime = 0;
+	u64 ctime = 0;
+
+	cellSysutil->Error("Running _stat in cellSaveData. Please report this to a RPCS3 developer!");
+
+	std::string pathy;
+
+	Emu.GetVFS().GetDevice("dev_hdd0", pathy);
+
+	struct stat buf;
+	int result = stat((pathy.substr(0, pathy.length() - 9) + f.GetPath()).c_str(), &buf);
+
+	if (result != 0)
+		cellSysutil->Error("_stat failed! (%s)", (pathy.substr(0, pathy.length() - 9) + f.GetPath()).c_str());
+	else
+	{
+		atime = buf.st_atime;
+		mtime = buf.st_mtime;
+		ctime = buf.st_ctime;
+	}
+
 	SaveDataEntry saveEntry;
 	saveEntry.dirName = psf.GetString("SAVEDATA_DIRECTORY");
 	saveEntry.listParam = psf.GetString("SAVEDATA_LIST_PARAM");
@@ -76,9 +105,9 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 	saveEntry.subtitle = psf.GetString("SUB_TITLE");
 	saveEntry.details = psf.GetString("DETAIL");
 	saveEntry.sizeKB = (u32)(getSaveDataSize(saveDir) / 1024);
-	saveEntry.st_atime_ = 0; // TODO
-	saveEntry.st_mtime_ = 0; // TODO
-	saveEntry.st_ctime_ = 0; // TODO
+	saveEntry.st_atime_ = atime;
+	saveEntry.st_mtime_ = mtime;
+	saveEntry.st_ctime_ = ctime;
 	saveEntry.iconBuf = NULL; // TODO: Here should be the PNG buffer
 	saveEntry.iconBufSize = 0; // TODO: Size of the PNG file
 	saveEntry.isNew = false;
@@ -238,7 +267,7 @@ s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<Cell
 			cellSysutil->Error("modifySaveDataFiles: CellSaveDataFileCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) {
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM) {
 			break;
 		}
 
