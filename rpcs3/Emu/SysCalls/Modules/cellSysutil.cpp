@@ -289,9 +289,9 @@ int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 as
 	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=%d, option=%d)",
 		videoOut, resolutionId, aspect, option);
 
-	if (!Ini.GS3DTV.GetValue() && resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
+	if (!Ini.GS3DTV.GetValue() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||
-								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING)
+								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING))
 		return 0;
 
 	switch(videoOut)

@@ -1845,12 +1845,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	// Windows Clipping
+	// Windows Clipping (Doesn't seem to be relevant?)
 	case NV4097_SET_WINDOW_OFFSET:
 	{
 		const u16 x = ARGS(0);
 		const u16 y = ARGS(0) >> 16;
-		LOG_WARNING(RSX, "TODO: NV4097_SET_WINDOW_OFFSET: x=%d, y=%d", x, y);
+		//LOG_WARNING(RSX, "TODO: NV4097_SET_WINDOW_OFFSET: x=%d, y=%d", x, y);
 	}
 	break;
 
