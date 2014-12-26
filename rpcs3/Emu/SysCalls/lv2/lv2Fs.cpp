@@ -251,34 +251,13 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 	u64 ctime = 0;
 	u64 size = 0;
 
-	int device = -1;
-
-	if (_path.substr(1, 8) == "dev_hdd0")
-		device = 0;
-	else if (_path.substr(1, 8) == "dev_hdd1")
-		device = 1;
-	else if (_path.substr(1, 8) == "dev_bdvd")
-		device = 2;
-
-	std::string pathy;
-
-	if (device == 0)
-		Emu.GetVFS().GetDevice("dev_hdd0", pathy);
-	else if (device == 1)
-		Emu.GetVFS().GetDevice("dev_hdd1", pathy);
-	else if (device == 2)
-		Emu.GetVFS().GetDevice("dev_bdvd", pathy);
-
+	std::string real_path;
 	struct stat buf;
-	int result = 1;
 
-	if (device == 2)
-		result = stat((pathy + _path.substr(9, _path.length())).c_str(), &buf);
-	else
-		result = stat((pathy.substr(0, pathy.length() - 9) + _path).c_str(), &buf);
+	Emu.GetVFS().GetDevice(_path, real_path);
 
-	if (result != 0)
-		sys_fs->Error("_stat failed! (%s)", (pathy.substr(0, pathy.length() - 9) + _path).c_str());
+	if (stat(real_path.c_str(), &buf) != 0)
+		sys_fs->Error("stat failed! (%s)", real_path.c_str());
 	else
 	{
 		mode = buf.st_mode;

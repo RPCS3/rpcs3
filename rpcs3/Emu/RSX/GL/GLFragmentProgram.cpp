@@ -491,10 +491,10 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
 			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
 			case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)");  break;
-			case RSX_FP_OPCODE_TXP: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXP"); break;
+			case RSX_FP_OPCODE_TXP: LOG_ERROR(RSX, "TEX_SRB texture projection used. Please report this to a RPCS3 developer!"); SetDst("textureProj($t, $0.xy, $1)"); break; //TODO: Test this
 			case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); break;
-			case RSX_FP_OPCODE_TXB: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXB"); break;
-			case RSX_FP_OPCODE_TXL: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXL"); break;
+			case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1)"); break;
+			case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); break;
 			case RSX_FP_OPCODE_UP2: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP2"); break;
 			case RSX_FP_OPCODE_UP4: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP4"); break;
 			case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); break;
