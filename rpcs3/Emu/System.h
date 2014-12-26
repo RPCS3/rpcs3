@@ -114,6 +114,7 @@ public:
 	std::string m_elf_path;
 	std::string m_emu_path;
 	std::string m_title_id;
+	std::string m_title;
 	s32 m_sdk_version;
 
 	Emulator();
@@ -122,6 +123,7 @@ public:
 	void Init();
 	void SetPath(const std::string& path, const std::string& elf_path = "");
 	void SetTitleID(const std::string& id);
+	void SetTitle(const std::string& title);
 
 	std::string GetPath() const
 	{
@@ -131,6 +133,16 @@ public:
 	std::string GetEmulatorPath() const
 	{
 		return m_emu_path;
+	}
+
+	std::string GetTitleID() const
+	{
+		return m_title_id;
+	}
+
+	std::string GetTitle() const
+	{
+		return m_title;
 	}
 
 	void SetEmulatorPath(const std::string& path)

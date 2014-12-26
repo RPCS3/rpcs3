@@ -25,7 +25,7 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	memset(entry, 0, sizeof(entry));
 	X86CpuInfo inf;
 	X86CpuUtil::detect(&inf);
-	if (!inf.hasFeature(kX86CpuFeatureSse41))
+	if (!inf.hasFeature(kX86CpuFeatureSSE4_1))
 	{
 		LOG_ERROR(SPU, "SPU JIT requires SSE4.1 instruction set support");
 		Emu.Pause();

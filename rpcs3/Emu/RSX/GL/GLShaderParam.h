@@ -1,5 +1,6 @@
 #pragma once
 #include "OpenGL.h"
+#include <unordered_map>
 
 enum GLParamFlag
 {
@@ -41,9 +42,9 @@ struct GLParamType
 
 	bool SearchName(const std::string& name)
 	{
-		for(u32 i=0; i<items.size(); ++i)
+		for (u32 i = 0; i<items.size(); ++i)
 		{
-			if(items[i].name.compare(name) == 0) return true;
+			if (items[i].name.compare(name) == 0) return true;
 		}
 
 		return false;
@@ -53,10 +54,10 @@ struct GLParamType
 	{
 		std::string ret = "";
 
-		for(u32 n=0; n<items.size(); ++n)
+		for (u32 n = 0; n<items.size(); ++n)
 		{
 			ret += items[n].location + type + " " + items[n].name;
-			if(!items[n].value.empty())
+			if (!items[n].value.empty())
 			{
 				ret += " = " + items[n].value;
 			}
@@ -73,7 +74,7 @@ struct GLParamArray
 
 	GLParamType* SearchParam(const std::string& type)
 	{
-		for(u32 i=0; i<params.size(); ++i)
+		for (u32 i = 0; i<params.size(); ++i)
 		{
 			if (params[i].type.compare(type) == 0)
 				return &params[i];
@@ -84,7 +85,7 @@ struct GLParamArray
 
 	std::string GetParamFlag(const GLParamFlag flag)
 	{
-		switch(flag)
+		switch (flag)
 		{
 		case PARAM_OUT:     return "out ";
 		case PARAM_IN:      return "in ";
@@ -106,9 +107,9 @@ struct GLParamArray
 		type = GetParamFlag(flag) + type;
 		GLParamType* t = SearchParam(type);
 
-		if(t)
+		if (t)
 		{
-			if(!t->SearchName(name)) t->items.emplace_back(name, -1, value);
+			if (!t->SearchName(name)) t->items.emplace_back(name, -1, value);
 		}
 		else
 		{
@@ -125,9 +126,9 @@ struct GLParamArray
 		type = GetParamFlag(flag) + type;
 		GLParamType* t = SearchParam(type);
 
-		if(t)
+		if (t)
 		{
-			if(!t->SearchName(name)) t->items.emplace_back(name, location);
+			if (!t->SearchName(name)) t->items.emplace_back(name, location);
 		}
 		else
 		{
@@ -137,5 +138,92 @@ struct GLParamArray
 		}
 
 		return name;
+	}
+};
+
+class ShaderVar
+{
+public:
+	std::string name;
+	std::vector<std::string> swizzles;
+
+	ShaderVar() = default;
+	ShaderVar(const std::string& var)
+	{
+		auto var_blocks = fmt::split(var, { "." });
+
+		if (var_blocks.size() == 0)
+		{
+			assert(0);
+		}
+
+		name = var_blocks[0];
+
+		if (var_blocks.size() == 1)
+		{
+			swizzles.push_back("xyzw");
+		}
+		else
+		{
+			swizzles = std::vector<std::string>(var_blocks.begin() + 1, var_blocks.end());
+		}
+	}
+
+	int get_vector_size() const
+	{
+		return swizzles[swizzles.size() - 1].length();
+	}
+
+	ShaderVar& symplify()
+	{
+		std::unordered_map<char, char> swizzle;
+
+		static std::unordered_map<int, char> pos_to_swizzle =
+		{
+			{ 0, 'x' },
+			{ 1, 'y' },
+			{ 2, 'z' },
+			{ 3, 'w' }
+		};
+
+		for (auto &i : pos_to_swizzle)
+		{
+			swizzle[i.second] = swizzles[0].length() > i.first ? swizzles[0][i.first] : 0;
+		}
+
+		for (int i = 1; i < swizzles.size(); ++i)
+		{
+			std::unordered_map<char, char> new_swizzle;
+
+			for (auto &sw : pos_to_swizzle)
+			{
+				new_swizzle[sw.second] = swizzle[swizzles[i].length() <= sw.first ? '\0' : swizzles[i][sw.first]];
+			}
+
+			swizzle = new_swizzle;
+		}
+
+		swizzles.clear();
+		std::string new_swizzle;
+
+		for (auto &i : pos_to_swizzle)
+		{
+			if (swizzle[i.second] != '\0')
+				new_swizzle += swizzle[i.second];
+		}
+
+		swizzles.push_back(new_swizzle);
+
+		return *this;
+	}
+
+	std::string get() const
+	{
+		if (swizzles.size() == 1 && swizzles[0] == "xyzw")
+		{
+			return name;
+		}
+
+		return name + "." + fmt::merge({ swizzles }, ".");
 	}
 };

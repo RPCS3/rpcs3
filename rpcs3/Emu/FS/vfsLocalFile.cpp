@@ -75,7 +75,12 @@ bool vfsLocalFile::Create(const std::string& path)
 	if(m != '/' && m != '\\' && !rExists(path)) // ???
 	{
 		rFile f;
-		return f.Create(path);
+		if (!f.Create(path)) {
+			LOG_NOTICE(HLE, "vfsLocalFile::Create: couldn't create file");
+			return false;
+		}
+		else
+			return true;
 	}
 
 	return true;

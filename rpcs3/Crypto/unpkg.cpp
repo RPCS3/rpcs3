@@ -43,13 +43,13 @@ bool CheckHeader(rFile& pkg_f, PKGHeader* m_header)
 	}
 
 	if (m_header->pkg_size != pkg_f.Length()) {
-		LOG_ERROR(LOADER, "PKG: File size mismatch.");
-		return false;
+		LOG_WARNING(LOADER, "PKG: File size mismatch.");
+		//return false;
 	}
 
 	if (m_header->data_size + m_header->data_offset + 0x60 != pkg_f.Length()) {
-		LOG_ERROR(LOADER, "PKG: Data size mismatch.");
-		return false;
+		LOG_WARNING(LOADER, "PKG: Data size mismatch.");
+		//return false;
 	}
 
 	return true;

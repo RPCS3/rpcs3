@@ -5,6 +5,14 @@
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 
+#ifdef _WIN32
+	#include <windows.h>
+	#undef CreateFile
+#else
+	#include <sys/types.h>
+	#include <sys/stat.h>
+#endif
+
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
@@ -234,16 +242,48 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 	const std::string _path = path.get_ptr();
 
+	u32 mode = 0;
+	s32 uid = 0;
+	s32 gid = 0;
+	u64 atime = 0;
+	u64 mtime = 0;
+	u64 ctime = 0;
+	u64 size = 0;
+
+	std::string real_path;
+
+	Emu.GetVFS().GetDevice(_path, real_path);
+
+	struct stat buf;
+
+	if (int result = stat(real_path.c_str(), &buf))
+	{
+		sys_fs->Error("_stat failed! (%s)", real_path.c_str());
+	}
+	else
+	{
+		mode = buf.st_mode;
+		uid = buf.st_uid;
+		gid = buf.st_gid;
+		atime = buf.st_atime;
+		mtime = buf.st_mtime;
+		ctime = buf.st_ctime;
+		size = buf.st_size;
+	}
+
 	sb->st_mode = 
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
 		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
 
-	sb->st_uid = 0;
-	sb->st_gid = 0;
-	sb->st_atime_ = 0; //TODO
-	sb->st_mtime_ = 0; //TODO
-	sb->st_ctime_ = 0; //TODO
+	if (sb->st_mode == mode)
+		sys_fs->Error("Mode is the same. Report this to a RPCS3 developer! (%d)", mode);
+
+	sb->st_uid = uid;
+	sb->st_gid = gid;
+	sb->st_atime_ = atime;
+	sb->st_mtime_ = mtime;
+	sb->st_ctime_ = ctime;
 	sb->st_blksize = 4096;
 
 	{
@@ -264,6 +304,9 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 			return CELL_OK;
 		}
 	}
+
+	if (sb->st_size == size && size != 0)
+		sys_fs->Error("Size is the same. Report this to a RPCS3 developer! (%d)", size);
 
 	sys_fs->Warning("cellFsStat: \"%s\" not found.", path.get_ptr());
 	return CELL_ENOENT;

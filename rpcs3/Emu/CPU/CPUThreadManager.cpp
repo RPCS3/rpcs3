@@ -133,7 +133,7 @@ void CPUThreadManager::Exec()
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	for(u32 i=0; i<m_threads.size(); ++i)
+	for(u32 i = 0; i < m_threads.size(); ++i)
 	{
 		m_threads[i]->Exec();
 	}

@@ -102,6 +102,11 @@ void Emulator::SetTitleID(const std::string& id)
 	m_title_id = id;
 }
 
+void Emulator::SetTitle(const std::string& title)
+{
+	m_title = title;
+}
+
 void Emulator::CheckStatus()
 {
 	//auto& threads = GetCPU().GetThreads();
@@ -150,7 +155,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, int device)
 		"/BOOT.BIN",
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
 		"/USRDIR/EBOOT.BIN",
-		"/EBOOT.BIN",
+		"/EBOOT.BIN"
 	};
 	auto curpath = path;
 
@@ -177,6 +182,8 @@ bool Emulator::BootGame(const std::string& path, bool direct, int device)
 			Emu.GetVFS().GetDevice("dev_hdd0", pathy);
 		else if (device == 1)
 			Emu.GetVFS().GetDevice("dev_hdd1", pathy);
+		else if (device == 2)
+			Emu.GetVFS().GetDevice("dev_bdvd", pathy);
 
 		curpath = pathy.substr(0, pathy.length() - 9) + path;
 
@@ -236,6 +243,9 @@ void Emulator::Load()
 	std::string title_id = psf.GetString("TITLE_ID");
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
 	LOG_NOTICE(LOADER, "Serial: %s", title_id.c_str());
+
+	title.length() ? SetTitle(title) : SetTitle(m_path);
+	SetTitleID(title_id);
 
 	// bdvd inserting imitation
 	vfsFile f1("/app_home/../dev_bdvd.path");

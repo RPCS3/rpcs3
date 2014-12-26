@@ -391,3 +391,5 @@ struct CellPamfReader
 };
 
 static_assert(sizeof(CellPamfReader) == 128, "Invalid CellPamfReader size");
+
+s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::ptr<const PamfHeader> pAddr, u64 fileSize, u32 attribute);

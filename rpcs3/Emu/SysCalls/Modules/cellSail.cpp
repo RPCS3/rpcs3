@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/FS/vfsFile.h"
 
 #include "cellSail.h"
+#include "cellPamf.h"
 
 Module *cellSail = nullptr;
 
@@ -11,6 +13,7 @@ int cellSailMemAllocatorInitialize(vm::ptr<CellSailMemAllocator> pSelf, vm::ptr<
 	cellSail->Warning("cellSailMemAllocatorInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x)", pSelf.addr(), pCallbacks.addr());
 
 	pSelf->callbacks = pCallbacks;
+	// TODO: Create a cellSail thread
 
 	return CELL_OK;
 }
@@ -91,9 +94,22 @@ int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 	return CELL_OK;
 }
 
-int cellSailDescriptorCreateDatabase()
+int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, be_t<u32> size, be_t<u64> arg)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail->Warning("cellSailDescriptorCreateDatabase(pSelf=0x%x, pDatabase=0x%x, size=0x%x, arg=0x%x", pSelf.addr(), pDatabase.addr(), size, arg);
+
+	switch ((s32)pSelf->streamType) {
+		case CELL_SAIL_STREAM_PAMF:
+		{
+			u32 addr = pSelf->internalData[1];
+			auto ptr = vm::ptr<CellPamfReader>::make(addr);
+			memcpy(pDatabase.get_ptr(), ptr.get_ptr(), sizeof(CellPamfReader));
+			break;
+		}
+		default:
+			cellSail->Error("Unhandled stream type: %d", pSelf->streamType);
+	}
+
 	return CELL_OK;
 }
 
@@ -616,28 +632,52 @@ int cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailD
 	return CELL_OK;
 }
 
-int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<CellSailDescriptor> ppDesc)
+int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<u32> pMediaInfo, vm::ptr<const char> pUri, vm::ptr<u32> ppDesc)
 {
-	cellSail->Todo("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
+	cellSail->Warning("cellSailPlayerCreateDescriptor(pSelf_addr=0x%x, streamType=%d, pMediaInfo_addr=0x%x, pUri_addr=0x%x, ppDesc_addr=0x%x)", pSelf.addr(), streamType,
 					pMediaInfo.addr(), pUri.addr(), ppDesc.addr());
 	
-	//cellSail->Todo("Descriptor: %i", sizeof(CellSailDescriptor));
-	//cellSail->Todo("Player: %i", sizeof(CellSailPlayer));
+	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), 1);
+	auto descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
+	*ppDesc = descriptorAddress;
+	descriptor->streamType = streamType;
+	descriptor->registered = false;
 
-	// TODO: Let the game allocate memory for the descriptor, setup the descriptor and pass it back to the game
-
-	//CellSailDescriptor *pDesc = new CellSailDescriptor();
-	//u32 descriptorAddress = pSelf->allocator->callbacks->pAlloc(pSelf->allocator->pArg, sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	u32 descriptorAddress = Memory.Alloc(sizeof(CellSailDescriptor), sizeof(CellSailDescriptor));
-	cellSail->Error("Address: 0x%x", descriptorAddress);
-	//vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(Memory.RealToVirtualAddr(&descriptorAddress));
-	vm::ptr<CellSailDescriptor> descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
-	//descriptor->streamType = streamType;
-	//descriptor->registered = false;
-
-	pSelf->descriptors = 0;
+	//pSelf->descriptors = 0;
 	pSelf->repeatMode = 0;
-	//ppDesc = descriptor;
+
+	switch (streamType)
+	{
+		case CELL_SAIL_STREAM_PAMF:
+		{
+			std::string uri = pUri.get_ptr();
+			if (uri.substr(0, 12) == "x-cell-fs://") {
+				std::string path = uri.substr(12);
+				vfsFile f;
+				if (f.Open(path)) {
+					u64 size = f.GetSize();
+					u32 buf_ = Memory.Alloc(size, 1);
+					auto bufPtr = vm::ptr<const PamfHeader>::make(buf_);
+					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
+					assert(f.Read(buf, size) == size);
+					u32 sp_ = Memory.Alloc(sizeof(CellPamfReader), 1);
+					auto sp = vm::ptr<CellPamfReader>::make(sp_);
+					u32 r = cellPamfReaderInitialize(sp, bufPtr, size, 0);
+
+					descriptor->internalData[0] = buf_;
+					descriptor->internalData[1] = sp_;
+				}
+				else
+					cellSail->Warning("Couldn't open PAMF: %s", uri.c_str());
+
+			}
+			else
+				cellSail->Warning("Unhandled uri: %s", uri.c_str());
+			break;
+		}
+		default:
+			cellSail->Error("Unhandled stream type: %d", streamType);
+	}
 
 	//cellSail->Todo("pSelf_addr=0x%x, pDesc_addr=0x%x", pSelf.addr(), descriptor.addr());
 	//cellSailPlayerAddDescriptor(pSelf, ppDesc);

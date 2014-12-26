@@ -155,6 +155,7 @@ struct GLFragmentDecompilerThread : public ThreadBase
 	std::string AddTex();
 	std::string Format(const std::string& code);
 
+	void AddCodeCond(const std::string& dst, const std::string& src);
 	std::string GetCond();
 	template<typename T> std::string GetSRC(T src);
 	std::string BuildCode();

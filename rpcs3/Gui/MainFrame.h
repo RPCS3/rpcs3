@@ -45,6 +45,7 @@ private:
 	void OpenKernelExplorer(wxCommandEvent& evt);
 	void OpenMemoryViewer(wxCommandEvent& evt);
 	void OpenRSXDebugger(wxCommandEvent& evt);
+	void OpenStringSearch(wxCommandEvent& evt);
 	void OpenFnIdGenerator(wxCommandEvent& evt);
 	void AboutDialogHandler(wxCommandEvent& event);
 	void UpdateUI(wxCommandEvent& event);

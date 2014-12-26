@@ -175,6 +175,7 @@
     <ClCompile Include="Gui\KernelExplorer.cpp" />
     <ClCompile Include="Gui\LLEModulesManager.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
+    <ClCompile Include="Gui\MemoryStringSearcher.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Gui\MsgDialog.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />

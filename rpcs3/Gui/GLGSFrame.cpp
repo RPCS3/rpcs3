@@ -1,5 +1,6 @@
 #include "stdafx_gui.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
 #include "GLGSFrame.h"
 #include "Utilities/Timer.h"
 
@@ -61,10 +62,12 @@ void GLGSFrame::Flip(void* context)
 	canvas->SwapBuffers();
 	m_frames++;
 
+	const std::string sub_title = Emu.GetTitle() += Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ";
+
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
 		// can freeze on exit
-		SetTitle(wxString::Format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+		SetTitle(sub_title + wxString::Format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 		m_frames = 0;
 		fps_t.Start();
 	}

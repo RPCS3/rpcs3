@@ -425,7 +425,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 		free(unswizzledPixels);
 	}
-	break;																					  break;
+	break;
 
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN):
 	{
@@ -450,7 +450,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 		free(unswizzledPixels);
 	}
-	break;																						  break;
+	break;
 
 	default: LOG_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format,
 		(is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40); 
@@ -984,7 +984,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
 
-		if(0 && !m_vertex_data[i].addr)
+		if(!m_vertex_data[i].addr)
 		{
 			switch(m_vertex_data[i].type)
 			{
@@ -1647,6 +1647,21 @@ void GLGSRender::InitDrawBuffers()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	break;
 	}
+
+	if (m_read_buffer)
+	{
+		u32 format = GL_BGRA;
+		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
+		u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+		if (Memory.IsGoodAddr(addr))
+		{
+			u32 width = buffers[m_gcm_current_buffer].width;
+			u32 height = buffers[m_gcm_current_buffer].height;
+
+			glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
+		}
+	}
 }
 
 void GLGSRender::ExecCMD(u32 cmd)
@@ -1719,24 +1734,6 @@ void GLGSRender::ExecCMD()
 	{
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
-	}
-
-	if (!m_indexed_array.m_count && !m_draw_array_count)
-	{
-		u32 min_vertex_size = ~0;
-		for(auto &i : m_vertex_data)
-		{
-			if (!i.size)
-				continue;
-
-			u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
-
-			if (min_vertex_size > vertex_size)
-				min_vertex_size = vertex_size;
-		}
-
-		m_draw_array_count = min_vertex_size;
-		m_draw_array_first = 0;
 	}
 
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
@@ -1993,6 +1990,20 @@ void GLGSRender::ExecCMD()
 		m_program.SetTex(i);
 		m_gl_textures[i].Init(m_textures[i]);
 		checkForGlError(fmt::Format("m_gl_textures[%d].Init", i));
+	}
+
+	for (u32 i = 0; i < m_textures_count; ++i)
+	{
+		if (!m_vertex_textures[i].IsEnabled()) continue;
+
+		glActiveTexture(GL_TEXTURE0 + m_textures_count + i);
+		checkForGlError("glActiveTexture");
+		m_gl_vertex_textures[i].Create();
+		m_gl_vertex_textures[i].Bind();
+		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Bind", i));
+		m_program.SetTex(i);
+		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
+		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
 	}
 
 	m_vao.Bind();

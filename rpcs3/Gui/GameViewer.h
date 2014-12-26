@@ -157,7 +157,7 @@ public:
 	{
 		list->DeleteAllItems();
 		list->SetImageList(m_img_list, wxIMAGE_LIST_SMALL);
-		for(int c=0; c<list->GetColumnCount(); ++c)
+		for(int c=1; c<list->GetColumnCount(); ++c)
 		{
 			Column* col = GetColumnByPos(c);
 
@@ -175,7 +175,6 @@ public:
 					list->SetItemData(i, i);
 				}
 				list->SetItem(i, c, fmt::FromUTF8(col->data[i]));
-				list->SetItem(i, 0, wxEmptyString); // don't insert icon path
 				list->SetItemColumnImage(i, 0, m_icon_indexes[i]);
 			}			
 		}

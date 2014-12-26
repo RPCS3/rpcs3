@@ -22,12 +22,12 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	wxStaticBoxSizer* s_tools_mem = new wxStaticBoxSizer(wxHORIZONTAL, this, "Memory Viewer Options");
 
 	wxStaticBoxSizer* s_tools_mem_addr = new wxStaticBoxSizer(wxHORIZONTAL, this, "Address");
-	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60,-1));
+	t_addr = new wxTextCtrl(this, wxID_ANY, "00000000", wxDefaultPosition, wxSize(60, -1));
 	t_addr->SetMaxLength(8);
 	s_tools_mem_addr->Add(t_addr);
 
 	wxStaticBoxSizer* s_tools_mem_bytes = new wxStaticBoxSizer(wxHORIZONTAL, this, "Bytes");
-	sc_bytes = new wxSpinCtrl(this, wxID_ANY, "16", wxDefaultPosition, wxSize(44,-1));
+	sc_bytes = new wxSpinCtrl(this, wxID_ANY, "16", wxDefaultPosition, wxSize(44, -1));
 	sc_bytes->SetRange(1, 16);
 	s_tools_mem_bytes->Add(sc_bytes);
 
@@ -49,8 +49,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	wxStaticBoxSizer* s_tools_img = new wxStaticBoxSizer(wxHORIZONTAL, this, "Raw Image Preview");
 
 	wxStaticBoxSizer* s_tools_img_size = new wxStaticBoxSizer(wxHORIZONTAL, this, "Size");
-	sc_img_size_x = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60,-1));
-	sc_img_size_y = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60,-1));
+	sc_img_size_x = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60, -1));
+	sc_img_size_y = new wxSpinCtrl(this, wxID_ANY, "256", wxDefaultPosition, wxSize(60, -1));
 	s_tools_img_size->Add(sc_img_size_x);
 	s_tools_img_size->Add(new wxStaticText(this, wxID_ANY, " x "));
 	s_tools_img_size->Add(sc_img_size_y);
@@ -72,7 +72,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 
 	//Tools: Run tools
 	wxStaticBoxSizer* s_tools_buttons = new wxStaticBoxSizer(wxVERTICAL, this, "Tools");
-	wxButton* b_img = new wxButton(this, wxID_ANY, "View\nimage", wxDefaultPosition, wxSize(52,-1));
+	wxButton* b_img = new wxButton(this, wxID_ANY, "View\nimage", wxDefaultPosition, wxSize(52, -1));
 	s_tools_buttons->Add(b_img);
 
 	//Tools: Tools = Memory Viewer Options + Raw Image Preview Options + Buttons
@@ -108,8 +108,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	//Memory Panel: Set size of the wxTextCtrl's
 	int x, y;
 	t_mem_hex->GetTextExtent(wxT("T"), &x, &y);
-	t_mem_hex->SetMinSize(wxSize(x * 3*m_colcount + 6, 228));
-	t_mem_hex->SetMaxSize(wxSize(x * 3*m_colcount + 6, 228));
+	t_mem_hex->SetMinSize(wxSize(x * 3 * m_colcount + 6, 228));
+	t_mem_hex->SetMaxSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_ascii->SetMinSize(wxSize(x * m_colcount + 6, 228));
 	t_mem_ascii->SetMaxSize(wxSize(x * m_colcount + 6, 228));
 
@@ -156,8 +156,8 @@ void MemoryViewerPanel::OnChangeToolsBytes(wxCommandEvent& event)
 
 	int x, y;
 	t_mem_hex->GetTextExtent(wxT("T"), &x, &y);
-	t_mem_hex->SetMinSize(wxSize(x * 3*m_colcount + 6, 228));
-	t_mem_hex->SetMaxSize(wxSize(x * 3*m_colcount + 6, 228));
+	t_mem_hex->SetMinSize(wxSize(x * 3 * m_colcount + 6, 228));
+	t_mem_hex->SetMaxSize(wxSize(x * 3 * m_colcount + 6, 228));
 	t_mem_ascii->SetMinSize(wxSize(x * m_colcount + 6, 228));
 	t_mem_ascii->SetMaxSize(wxSize(x * m_colcount + 6, 228));
 	this->Layout();
@@ -242,43 +242,43 @@ void MemoryViewerPanel::ShowImage(wxWindow* parent, u32 addr, int mode, u32 widt
 	break;
 
 	case(1): // ARGB
-		for (u32 y=0; y<height; y++){
-			for (u32 i=0, j=0; j<width*4; i+=3, j+=4){
-				convertedBuffer[i+0 + y*width*3] = originalBuffer[j+1 + y*width*4];
-				convertedBuffer[i+1 + y*width*3] = originalBuffer[j+2 + y*width*4];
-				convertedBuffer[i+2 + y*width*3] = originalBuffer[j+3 + y*width*4];
+		for (u32 y = 0; y < height; y++) {
+			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
+				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 3 + y * width * 4];
 			}
 		}
 	break;
 
 	case(2): // RGBA
-		for (u32 y=0; y<height; y++){
-			for (u32 i=0, j=0; j<width*4; i+=3, j+=4){
-				convertedBuffer[i+0 + y*width*3] = originalBuffer[j+0 + y*width*4];
-				convertedBuffer[i+1 + y*width*3] = originalBuffer[j+1 + y*width*4];
-				convertedBuffer[i+2 + y*width*3] = originalBuffer[j+2 + y*width*4];
+		for (u32 y = 0; y < height; y++) {
+			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
+				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 0 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
 			}
 		}
 	break;
 
 	case(3): // ABGR
-		for (u32 y=0; y<height; y++){
-			for (u32 i=0, j=0; j<width*4; i+=3, j+=4){
-				convertedBuffer[i+0 + y*width*3] = originalBuffer[j+3 + y*width*4];
-				convertedBuffer[i+1 + y*width*3] = originalBuffer[j+2 + y*width*4];
-				convertedBuffer[i+2 + y*width*3] = originalBuffer[j+1 + y*width*4];
+		for (u32 y = 0; y < height; y++) {
+			for (u32 i = 0, j = 0; j < width * 4; i += 3, j += 4) {
+				convertedBuffer[i + 0 + y * width * 3] = originalBuffer[j + 3 + y * width * 4];
+				convertedBuffer[i + 1 + y * width * 3] = originalBuffer[j + 2 + y * width * 4];
+				convertedBuffer[i + 2 + y * width * 3] = originalBuffer[j + 1 + y * width * 4];
 			}
 		}
 	break;
 	}
 
 	// Flip vertically
-	if (flipv){
-		for (u32 y=0; y<height/2; y++){
-			for (u32 x=0; x<width*3; x++){
-				const u8 t = convertedBuffer[x + y*width*3];
-				convertedBuffer[x + y*width*3] = convertedBuffer[x + (height-y-1)*width*3];
-				convertedBuffer[x + (height-y-1)*width*3] = t;
+	if (flipv) {
+		for (u32 y = 0; y < height / 2; y++) {
+			for (u32 x = 0; x < width * 3; x++) {
+				const u8 t = convertedBuffer[x + y * width * 3];
+				convertedBuffer[x + y * width * 3] = convertedBuffer[x + (height - y - 1) * width * 3];
+				convertedBuffer[x + (height - y - 1) * width * 3] = t;
 			}
 		}
 	}
