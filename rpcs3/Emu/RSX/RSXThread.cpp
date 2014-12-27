@@ -192,23 +192,23 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 #define case_2(offset, step) \
     case offset: \
     case offset + step: \
-	index = (cmd - offset) / step;
+    index = (cmd - offset) / step;
 #define case_4(offset, step) \
     case_2(offset, step) \
     case_2(offset + 2*step, step) \
-	index = (cmd - offset) / step;
+    index = (cmd - offset) / step;
 #define case_8(offset, step) \
     case_4(offset, step) \
     case_4(offset + 4*step, step) \
-	index = (cmd - offset) / step;
+    index = (cmd - offset) / step;
 #define case_16(offset, step) \
     case_8(offset, step) \
     case_8(offset + 8*step, step) \
-	index = (cmd - offset) / step;
+    index = (cmd - offset) / step;
 #define case_32(offset, step) \
     case_16(offset, step) \
     case_16(offset + 16*step, step) \
-	index = (cmd - offset) / step;
+    index = (cmd - offset) / step;
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
