@@ -189,66 +189,26 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	return 0;
 }
 
-#define case_4(a, m) \
-	case a + m: \
-	case a + m * 2: \
-	case a + m * 3: \
-	index = (cmd - a) / m; \
-	case a \
-
-#define case_16(a, m) \
-	case a + m: \
-	case a + m * 2: \
-	case a + m * 3: \
-	case a + m * 4: \
-	case a + m * 5: \
-	case a + m * 6: \
-	case a + m * 7: \
-	case a + m * 8: \
-	case a + m * 9: \
-	case a + m * 10: \
-	case a + m * 11: \
-	case a + m * 12: \
-	case a + m * 13: \
-	case a + m * 14: \
-	case a + m * 15: \
-	index = (cmd - a) / m; \
-	case a \
-
-#define case_32(a, m) \
-	case a + m: \
-	case a + m * 2: \
-	case a + m * 3: \
-	case a + m * 4: \
-	case a + m * 5: \
-	case a + m * 6: \
-	case a + m * 7: \
-	case a + m * 8: \
-	case a + m * 9: \
-	case a + m * 10: \
-	case a + m * 11: \
-	case a + m * 12: \
-	case a + m * 13: \
-	case a + m * 14: \
-	case a + m * 15: \
-	case a + m * 16: \
-	case a + m * 17: \
-	case a + m * 18: \
-	case a + m * 19: \
-	case a + m * 20: \
-	case a + m * 21: \
-	case a + m * 22: \
-	case a + m * 23: \
-	case a + m * 24: \
-	case a + m * 25: \
-	case a + m * 26: \
-	case a + m * 27: \
-	case a + m * 28: \
-	case a + m * 29: \
-	case a + m * 30: \
-	case a + m * 31: \
-	index = (cmd - a) / m; \
-	case a \
+#define case_2(offset, step) \
+    case offset: \
+    case offset + step: \
+	index = (cmd - offset) / step;
+#define case_4(offset, step) \
+    case_2(offset, step) \
+    case_2(offset + 2*step, step) \
+	index = (cmd - offset) / step;
+#define case_8(offset, step) \
+    case_4(offset, step) \
+    case_4(offset + 4*step, step) \
+	index = (cmd - offset) / step;
+#define case_16(offset, step) \
+    case_8(offset, step) \
+    case_8(offset + 8*step, step) \
+	index = (cmd - offset) / step;
+#define case_32(offset, step) \
+    case_16(offset, step) \
+    case_16(offset + 16*step, step) \
+	index = (cmd - offset) / step;
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
@@ -397,26 +357,26 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	break;
 
 	// Texture
-	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20) :
-	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20) :
-	case_16(NV4097_SET_TEXTURE_FILTER, 0x20) :
-	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20) :
-	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32) :
-	case_16(NV4097_SET_TEXTURE_BORDER_COLOR, 0x20) :
-	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20) :
-	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20) :
+	case_16(NV4097_SET_TEXTURE_FORMAT, 0x20)
+	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20)
+	case_16(NV4097_SET_TEXTURE_FILTER, 0x20)
+	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20)
+	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32)
+	case_16(NV4097_SET_TEXTURE_BORDER_COLOR, 0x20)
+	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20)
+	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20)
 	{
 		// Done using methodRegisters in RSXTexture.cpp
 	}
 	break;
 
-	case_16(NV4097_SET_TEX_COORD_CONTROL, 4) :
+	case_16(NV4097_SET_TEX_COORD_CONTROL, 4)
 	{
 		LOG_WARNING(RSX, "NV4097_SET_TEX_COORD_CONTROL");
 	}
 	break;
 
-	case_16(NV4097_SET_TEXTURE_CONTROL3, 4) :
+	case_16(NV4097_SET_TEXTURE_CONTROL3, 4)
 	{
 		RSXTexture& tex = m_textures[index];
 		const u32 a0 = ARGS(0);
@@ -427,19 +387,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	break;
 	
 	// Vertex Texture
-	case_4(NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20) :
-	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20) :
+	case_4(NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20)
+	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20)
 	{
 		// Done using methodRegisters in RSXTexture.cpp
 	}
 	break;
 
-	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20) :
+	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20)
 	{
 		RSXVertexTexture& tex = m_vertex_textures[index];
 		const u32 a0 = ARGS(0);
@@ -450,7 +410,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	break;
 
 	// Vertex data
-	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4) :
+	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4)
 	{
 		const u32 a0 = ARGS(0);
 		u8 v0 = a0;
@@ -469,7 +429,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA2F_M, 8) :
+	case_16(NV4097_SET_VERTEX_DATA2F_M, 8)
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
@@ -489,7 +449,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA4F_M, 16) :
+	case_16(NV4097_SET_VERTEX_DATA4F_M, 16)
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
@@ -515,7 +475,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4) :
+	case_16(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4)
 	{
 		const u32 addr = GetAddress(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
 		CMD_LOG("num=%d, addr=0x%x", index, addr);
@@ -526,7 +486,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_16(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4):
+	case_16(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4)
 	{
 		const u32 a0 = ARGS(0);
 		u16 frequency = a0 >> 16;
@@ -1136,7 +1096,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_32(NV4097_SET_TRANSFORM_PROGRAM, 4):
+	case_32(NV4097_SET_TRANSFORM_PROGRAM, 4)
 	{
 		//LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM[%d](%d)", index, count);
 
