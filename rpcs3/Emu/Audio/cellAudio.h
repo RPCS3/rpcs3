@@ -84,6 +84,7 @@ struct AudioPortConfig
 	u64 counter; // copy of global counter
 	u32 addr;
 	u32 read_index_addr;
+	u32 size;
 };
 
 struct AudioConfig  //custom structure

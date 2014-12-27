@@ -529,6 +529,7 @@ int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 			port.attr = audioParam->attr;
 			port.addr = m_config.m_buffer + (128 * 1024 * i);
 			port.read_index_addr = m_config.m_indexes + (sizeof(u64) * i);
+			port.size = port.channel * port.block * 256 * sizeof(float);
 			if (port.attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 			{
 				port.level = audioParam->level;
@@ -580,7 +581,7 @@ int cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 
 	portConfig->nChannel = port.channel;
 	portConfig->nBlock = port.block;
-	portConfig->portSize = port.channel * port.block * 256 * sizeof(float);
+	portConfig->portSize = port.size;
 	portConfig->portAddr = port.addr; // 0x20020000
 	portConfig->readIndexAddr = port.read_index_addr; // 0x20010010 on ps3
 
@@ -867,8 +868,11 @@ int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 
 int cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Todo("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	cellAudio->Warning("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
 	
+	if (src.addr() % 16)
+		return CELL_AUDIO_ERROR_PARAM;
+
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT)
@@ -888,21 +892,23 @@ int cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 
 	std::lock_guard<std::mutex> lock(audioMutex);
 	
-	//u32 addr = port.addr;
-	//for (u32 i = 0; i < samples; i++)
-	//{
-	//	vm::write32(addr, src[i]);
-	//	addr += port.channel * port.block * sizeof(float);
-	//}
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
 
-	m_config.m_buffer = src.addr(); // TODO: write data from src in selected port
+	for (u32 i = 0; i < samples; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (port.size / samples);
+		addr += (port.size / samples);
+	}
 
 	return CELL_OK;
 }
 
-int cellAudioAdd2chData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, float volume)
+int cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Todo("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	cellAudio->Warning("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
 	
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
@@ -923,14 +929,23 @@ int cellAudioAdd2chData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, floa
 
 	std::lock_guard<std::mutex> lock(audioMutex);
 
-	m_config.m_buffer = src.addr(); // TODO
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
+
+	for (u32 i = 0; i < samples; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (2 * port.block * 256 * sizeof(float) / samples);
+		addr += (2 * port.block * 256 * sizeof(float) / samples);
+	}
 	
 	return CELL_OK;
 }
 
-int cellAudioAdd6chData(u32 portNum, vm::ptr<be_t<float>> src, float volume)
+int cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
-	cellAudio->Todo("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
+	cellAudio->Warning("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
 	
 	AudioPortConfig& port = m_config.m_ports[portNum];
 
@@ -951,7 +966,16 @@ int cellAudioAdd6chData(u32 portNum, vm::ptr<be_t<float>> src, float volume)
 
 	std::lock_guard<std::mutex> lock(audioMutex);
 
-	m_config.m_buffer = src.addr(); // TODO
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
+
+	for (u32 i = 0; i < 256; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (6 * port.block * sizeof(float));
+		addr += (6 * port.block * sizeof(float));
+	}
 	
 	return CELL_OK;
 }
