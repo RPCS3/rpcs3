@@ -2188,7 +2188,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_WINDOW_CLIP_HORIZONTAL:
 	case NV4097_SET_WINDOW_CLIP_VERTICAL:
 	{
-		LOG_WARNING(RSX, "Unused NV4097 windows clipping methods 0x%x detected!", cmd);
+		LOG_WARNING(RSX, "Unused NV4097 method 0x%x detected!", cmd);
 	}
 	break;
 
@@ -2200,7 +2200,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV0039_SET_OBJECT:
 	case NV0039_SET_CONTEXT_DMA_NOTIFIES:
 	{
-		LOG_WARNING(RSX, "Unused NV0039 methods 0x%x detected!", cmd);
+		LOG_WARNING(RSX, "Unused NV0039 method 0x%x detected!", cmd);
 	}
 	break;
 
@@ -2210,7 +2210,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV3062_SET_PITCH:
 	case NV3062_SET_OFFSET_SOURCE:
 	{
-		LOG_WARNING(RSX, "Unused NV3062 methods 0x%x detected!", cmd);
+		LOG_WARNING(RSX, "Unused NV3062 method 0x%x detected!", cmd);
 	}
 	break;
 
@@ -2229,7 +2229,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV308A_SIZE_OUT:
 	case NV308A_SIZE_IN:
 	{
-		LOG_WARNING(RSX, "Unused NV308A methods 0x%x detected!", cmd);
+		LOG_WARNING(RSX, "Unused NV308A method 0x%x detected!", cmd);
 	}
 	break;
 
@@ -2237,7 +2237,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
 	case NV309E_SET_OFFSET:
 	{
-		LOG_WARNING(RSX, "Unused NV309E methods 0x%x detected!", cmd);
+		LOG_WARNING(RSX, "Unused NV309E method 0x%x detected!", cmd);
 	}
 	break;
 
