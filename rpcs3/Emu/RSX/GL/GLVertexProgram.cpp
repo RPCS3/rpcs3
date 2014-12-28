@@ -822,7 +822,10 @@ void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
 
 void GLVertexProgram::Compile()
 {
-	if (id) glDeleteShader(id);
+	if (id) 
+	{
+		glDeleteShader(id);
+	}
 
 	id = glCreateShader(GL_VERTEX_SHADER);
 
