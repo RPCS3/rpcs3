@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Emu/SysCalls/Modules/cellSpurs.h"
-
 class SPURSManagerEventFlag
 {
 public:

@@ -89,7 +89,7 @@ AudioDecoder::~AudioDecoder()
 {
 	// TODO: check finalization
 	AdecFrame af;
-	while (frames.Pop(af, &sq_no_wait))
+	while (frames.try_pop(af))
 	{
 		av_frame_unref(af.data);
 		av_frame_free(&af.data);
@@ -151,7 +151,7 @@ next:
 	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
 	{
 		AdecTask task;
-		if (!adec.job.Peek(task, &adec.is_closed))
+		if (!adec.job.peek(task, 0, &adec.is_closed))
 		{
 			if (Emu.IsStopped()) cellAdec->Warning("adecRawRead() aborted");
 			return 0;
@@ -176,7 +176,7 @@ next:
 
 			adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
-			adec.job.Pop(adec.task, nullptr);
+			adec.job.pop(adec.task);
 
 			adec.reader.addr = adec.task.au.addr;
 			adec.reader.size = adec.task.au.size;
@@ -214,11 +214,12 @@ next:
 	}
 }
 
-u32 adecOpen(AudioDecoder* data)
+u32 adecOpen(AudioDecoder* adec_ptr)
 {
-	AudioDecoder& adec = *data;
+	std::shared_ptr<AudioDecoder> sptr(adec_ptr);
+	AudioDecoder& adec = *adec_ptr;
 
-	u32 adec_id = cellAdec->GetNewId(data);
+	u32 adec_id = cellAdec->GetNewId(sptr);
 
 	adec.id = adec_id;
 
@@ -231,8 +232,9 @@ u32 adecOpen(AudioDecoder* data)
 	adec.adecCb->InitRegs();
 	adec.adecCb->DoRun();
 
-	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&]()
+	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [adec_ptr, sptr]()
 	{
+		AudioDecoder& adec = *adec_ptr;
 		cellAdec->Notice("Audio Decoder thread started");
 
 		AdecTask& task = adec.task;
@@ -244,13 +246,7 @@ u32 adecOpen(AudioDecoder* data)
 				break;
 			}
 
-			//if (!adec.job.GetCountUnsafe() && adec.is_running)
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	continue;
-			//}
-
-			if (!adec.job.Pop(task, &adec.is_closed))
+			if (!adec.job.pop(task, &adec.is_closed))
 			{
 				break;
 			}
@@ -456,7 +452,7 @@ u32 adecOpen(AudioDecoder* data)
 						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
 
-						if (adec.frames.Push(frame, &adec.is_closed))
+						if (adec.frames.push(frame, &adec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
 							adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
@@ -560,14 +556,14 @@ int cellAdecClose(u32 handle)
 {
 	cellAdec->Warning("cellAdecClose(handle=%d)", handle);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	adec->is_closed = true;
-	adec->job.Push(AdecTask(adecClose), &sq_no_wait);
+	adec->job.try_push(AdecTask(adecClose));
 
 	while (!adec->is_finished)
 	{
@@ -576,7 +572,7 @@ int cellAdecClose(u32 handle)
 			cellAdec->Warning("cellAdecClose(%d) aborted", handle);
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
@@ -588,7 +584,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 {
 	cellAdec->Warning("cellAdecStartSeq(handle=%d, param_addr=0x%x)", handle, param_addr);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -632,7 +628,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	}
 	}
 
-	adec->job.Push(task, &adec->is_closed);
+	adec->job.push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -640,13 +636,13 @@ int cellAdecEndSeq(u32 handle)
 {
 	cellAdec->Warning("cellAdecEndSeq(handle=%d)", handle);
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adec->job.Push(AdecTask(adecEndSeq), &adec->is_closed);
+	adec->job.push(AdecTask(adecEndSeq), &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -654,7 +650,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
 	cellAdec->Log("cellAdecDecodeAu(handle=%d, auInfo_addr=0x%x)", handle, auInfo.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
@@ -668,7 +664,7 @@ int cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.userdata = auInfo->userData;
 
 	//cellAdec->Notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
-	adec->job.Push(task, &adec->is_closed);
+	adec->job.push(task, &adec->is_closed);
 	return CELL_OK;
 }
 
@@ -676,14 +672,14 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
 	cellAdec->Log("cellAdecGetPcm(handle=%d, outBuffer_addr=0x%x)", handle, outBuffer.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	AdecFrame af;
-	if (!adec->frames.Pop(af, &sq_no_wait))
+	if (!adec->frames.try_pop(af))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;
@@ -790,14 +786,14 @@ int cellAdecGetPcmItem(u32 handle, vm::ptr<u32> pcmItem_ptr)
 {
 	cellAdec->Log("cellAdecGetPcmItem(handle=%d, pcmItem_ptr_addr=0x%x)", handle, pcmItem_ptr.addr());
 
-	AudioDecoder* adec;
+	std::shared_ptr<AudioDecoder> adec;
 	if (!Emu.GetIdManager().GetIDData(handle, adec))
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
 	AdecFrame af;
-	if (!adec->frames.Peek(af, &sq_no_wait))
+	if (!adec->frames.try_peek(af))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_ADEC_ERROR_EMPTY;

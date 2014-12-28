@@ -7,16 +7,17 @@
 
 class SysCallBase;
 
-namespace detail{
-	template<typename T> bool CheckId(u32 id, T*& data,const std::string &name)
+namespace detail
+{
+	bool CheckIdID(u32 id, ID*& _id, const std::string& name);
+
+	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data, const std::string& name)
 	{
 		ID* id_data;
-		if(!CheckId(id, id_data,name)) return false;
+		if(!CheckIdID(id, id_data, name)) return false;
 		data = id_data->GetData()->get<T>();
 		return true;
 	}
-
-	template<> bool CheckId<ID>(u32 id, ID*& _id,const std::string &name);
 }
 
 class SysCallBase : public LogBase
@@ -44,13 +45,13 @@ public:
 	}
 
 	template<typename T>
-	bool CheckId(u32 id, T*& data) const
+	bool CheckId(u32 id, std::shared_ptr<T>& data) const
 	{
-		return detail::CheckId(id,data,GetName());
+		return detail::CheckId(id, data, GetName());
 	}
 
 	template<typename T>
-	u32 GetNewId(T* data, IDType type = TYPE_OTHER)
+	u32 GetNewId(std::shared_ptr<T>& data, IDType type = TYPE_OTHER)
 	{
 		return GetIdManager().GetNewID<T>(GetName(), data, type);
 	}

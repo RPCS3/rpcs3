@@ -39,14 +39,12 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 		m_gauge2 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
 		m_text2 = new wxStaticText(m_dialog, wxID_ANY, "");
 		m_text2->SetAutoLayout(true);
+		// fallthrough
 
 	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE:
 		m_gauge1 = new wxGauge(m_dialog, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1), wxGA_HORIZONTAL | wxGA_SMOOTH);
 		m_text1 = new wxStaticText(m_dialog, wxID_ANY, "");
 		m_text1->SetAutoLayout(true);
-
-	default: // ???
-		break;
 	}
 
 	if (m_gauge1)
@@ -66,9 +64,6 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 
 	switch (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE)
 	{
-	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
-		break;
-
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
 		m_button_yes = new wxButton(m_dialog, wxID_YES);
 		buttons->Add(m_button_yes, 0, wxALIGN_CENTER_HORIZONTAL | wxRIGHT, 8);

@@ -93,7 +93,7 @@ VideoDecoder::~VideoDecoder()
 {
 	// TODO: check finalization
 	VdecFrame vf;
-	while (frames.Pop(vf, &sq_no_wait))
+	while (frames.try_pop(vf))
 	{
 		av_frame_unref(vf.data);
 		av_frame_free(&vf.data);
@@ -124,7 +124,7 @@ next:
 	if (vdec.reader.size < (u32)buf_size /*&& !vdec.just_started*/)
 	{
 		VdecTask task;
-		if (!vdec.job.Peek(task, &vdec.is_closed))
+		if (!vdec.job.peek(task, 0, &vdec.is_closed))
 		{
 			if (Emu.IsStopped()) cellVdec->Warning("vdecRead() aborted");
 			return 0;
@@ -149,7 +149,7 @@ next:
 
 			vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 
-			vdec.job.Pop(vdec.task, nullptr);
+			vdec.job.pop(vdec.task);
 
 			vdec.reader.addr = vdec.task.addr;
 			vdec.reader.size = vdec.task.size;
@@ -204,11 +204,12 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 	return CELL_OK;
 }
 
-u32 vdecOpen(VideoDecoder* data)
+u32 vdecOpen(VideoDecoder* vdec_ptr)
 {
-	VideoDecoder& vdec = *data;
+	std::shared_ptr<VideoDecoder> sptr(vdec_ptr);
+	VideoDecoder& vdec = *vdec_ptr;
 
-	u32 vdec_id = cellVdec->GetNewId(data);
+	u32 vdec_id = cellVdec->GetNewId(sptr);
 
 	vdec.id = vdec_id;
 
@@ -221,8 +222,9 @@ u32 vdecOpen(VideoDecoder* data)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&]()
+	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [vdec_ptr, sptr]()
 	{
+		VideoDecoder& vdec = *vdec_ptr;
 		cellVdec->Notice("Video Decoder thread started");
 
 		VdecTask& task = vdec.task;
@@ -234,13 +236,7 @@ u32 vdecOpen(VideoDecoder* data)
 				break;
 			}
 
-			//if (!vdec.job.GetCountUnsafe() && vdec.is_running)
-			//{
-			//	std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			//	continue;
-			//}
-
-			if (!vdec.job.Pop(task, &vdec.is_closed))
+			if (!vdec.job.pop(task, &vdec.is_closed))
 			{
 				break;
 			}
@@ -517,7 +513,7 @@ u32 vdecOpen(VideoDecoder* data)
 
 						//LOG_NOTICE(HLE, "got picture (pts=0x%llx, dts=0x%llx)", frame.pts, frame.dts);
 
-						if (vdec.frames.Push(frame, &vdec.is_closed))
+						if (vdec.frames.push(frame, &vdec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
 							vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
@@ -596,14 +592,14 @@ int cellVdecClose(u32 handle)
 {
 	cellVdec->Warning("cellVdecClose(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
 	vdec->is_closed = true;
-	vdec->job.Push(VdecTask(vdecClose), &sq_no_wait);
+	vdec->job.try_push(VdecTask(vdecClose));
 
 	while (!vdec->is_finished)
 	{
@@ -612,7 +608,7 @@ int cellVdecClose(u32 handle)
 			cellVdec->Warning("cellVdecClose(%d) aborted", handle);
 			break;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());
@@ -624,13 +620,13 @@ int cellVdecStartSeq(u32 handle)
 {
 	cellVdec->Log("cellVdecStartSeq(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	vdec->job.Push(VdecTask(vdecStartSeq), &vdec->is_closed);
+	vdec->job.push(VdecTask(vdecStartSeq), &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -638,13 +634,13 @@ int cellVdecEndSeq(u32 handle)
 {
 	cellVdec->Warning("cellVdecEndSeq(handle=%d)", handle);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	vdec->job.Push(VdecTask(vdecEndSeq), &vdec->is_closed);
+	vdec->job.push(VdecTask(vdecEndSeq), &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -652,7 +648,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 {
 	cellVdec->Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -668,7 +664,7 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 	task.userData = auInfo->userData;
 	task.specData = auInfo->codecSpecificData;
 
-	vdec->job.Push(task, &vdec->is_closed);
+	vdec->job.push(task, &vdec->is_closed);
 	return CELL_OK;
 }
 
@@ -676,14 +672,14 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 {
 	cellVdec->Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, outBuff_addr=0x%x)", handle, format.addr(), outBuff.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
 	VdecFrame vf;
-	if (!vdec->frames.Pop(vf, &sq_no_wait))
+	if (!vdec->frames.try_pop(vf))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
@@ -732,14 +728,14 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 {
 	cellVdec->Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.addr());
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
 	VdecFrame vf;
-	if (!vdec->frames.Peek(vf, &sq_no_wait))
+	if (!vdec->frames.try_peek(vf))
 	{
 		//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		return CELL_VDEC_ERROR_EMPTY;
@@ -877,7 +873,7 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
 	cellVdec->Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
 
-	VideoDecoder* vdec;
+	std::shared_ptr<VideoDecoder> vdec;
 	if (!Emu.GetIdManager().GetIDData(handle, vdec))
 	{
 		return CELL_VDEC_ERROR_ARG;
@@ -887,7 +883,7 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	VdecTask task(vdecSetFrameRate);
 	task.frc = frc;
 
-	vdec->job.Push(task, &vdec->is_closed);
+	vdec->job.push(task, &vdec->is_closed);
 	return CELL_OK;
 }
 

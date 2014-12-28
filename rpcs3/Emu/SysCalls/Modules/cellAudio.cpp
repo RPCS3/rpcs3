@@ -2,11 +2,13 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "rpcs3/Ini.h"
-#include "Utilities/SQueue.h"
-#include "Emu/Event.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
+#include "Emu/Event.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
 #include "Emu/Audio/cellAudio.h"
@@ -74,11 +76,8 @@ int cellAudioInit()
 				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size] {} );
 			}
 
-			SQueue<s16*, 31> queue;
-			queue.Clear();
-
-			SQueue<float*, 31> queue_float;
-			queue_float.Clear();
+			squeue_t<s16*, 31> queue;
+			squeue_t<float*, 31> queue_float;
 
 			std::vector<u64> keys;
 
@@ -105,9 +104,9 @@ int cellAudioInit()
 					float* oal_buffer_float = nullptr;
 
 					if (g_is_u16)
-						queue.Pop(oal_buffer, nullptr);
+						queue.pop(oal_buffer);
 					else
-						queue_float.Pop(oal_buffer_float, nullptr);
+						queue_float.pop(oal_buffer_float);
 
 					if (g_is_u16)
 					{
@@ -370,9 +369,9 @@ int cellAudioInit()
 					if(m_audio_out)
 					{
 						if (g_is_u16)
-							queue.Push(&oal_buffer[oal_pos][0], nullptr);
+							queue.push(&oal_buffer[oal_pos][0]);
 
-						queue_float.Push(&oal_buffer_float[oal_pos][0], nullptr);
+						queue_float.push(&oal_buffer_float[oal_pos][0]);
 					}
 
 					oal_buffer_offset = 0;
@@ -438,8 +437,8 @@ int cellAudioInit()
 			}
 			cellAudio->Notice("Audio thread ended");
 abort:
-			queue.Push(nullptr, nullptr);
-			queue_float.Push(nullptr, nullptr);
+			queue.push(nullptr);
+			queue_float.push(nullptr);
 
 			if(do_dump)
 				m_dump.Finalize();
@@ -457,7 +456,7 @@ abort:
 
 			while (!internal_finished)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			}
 
 			m_config.m_is_audio_finalized = true;
@@ -471,7 +470,7 @@ abort:
 			cellAudio->Warning("cellAudioInit() aborted");
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	return CELL_OK;
@@ -490,7 +489,7 @@ int cellAudioQuit()
 
 	while (!m_config.m_is_audio_finalized)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
 			cellAudio->Warning("cellAudioQuit(): aborted");
@@ -774,11 +773,10 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	}
 	event_key = (event_key << 48) | 0x80004d494f323221; // left part: 0x8000, 0x8001, 0x8002 ...
 
-	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32);
+	std::shared_ptr<EventQueue> eq(new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
 
 	if (!Emu.GetEventManager().RegisterKey(eq, event_key))
 	{
-		delete eq;
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 

@@ -30,7 +30,7 @@ public:
 		{
 			//wait until there's actually something to get
 			//throwing an exception might be better, blocking here is a little awkward
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 		size_t ret = mGet;
 		mGet = moveGet();
@@ -45,7 +45,7 @@ public:
 		{
 			//if this is reached a lot it's time to increase the buffer size
 			//or implement dynamic re-sizing
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 		mBuffer[mPut] = std::forward(putEle);
 		mPut = movePut();
@@ -94,7 +94,7 @@ public:
 		{
 			//if this is reached a lot it's time to increase the buffer size
 			//or implement dynamic re-sizing
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 		if (mPut + length <= mBuffer.size())
 		{

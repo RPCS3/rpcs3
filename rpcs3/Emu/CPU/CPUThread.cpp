@@ -21,8 +21,6 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_stack_addr(0)
 	, m_offset(0)
 	, m_prio(0)
-	, m_sync_wait(false)
-	, m_wait_thread_id(-1)
 	, m_dec(nullptr)
 	, m_is_step(false)
 	, m_is_branch(false)
@@ -44,7 +42,7 @@ bool CPUThread::IsStopped() const { return m_status == Stopped; }
 
 void CPUThread::Close()
 {
-	ThreadBase::Stop(m_sync_wait);
+	ThreadBase::Stop(false);
 	DoStop();
 
 	delete m_dec;
@@ -54,9 +52,6 @@ void CPUThread::Close()
 void CPUThread::Reset()
 {
 	CloseStack();
-
-	m_sync_wait = 0;
-	m_wait_thread_id = -1;
 
 	SetPc(0);
 	cycle = 0;
@@ -89,24 +84,6 @@ void CPUThread::SetName(const std::string& name)
 	NamedThreadBase::SetThreadName(name);
 }
 
-void CPUThread::Wait(bool wait)
-{
-	std::lock_guard<std::mutex> lock(m_cs_sync);
-	m_sync_wait = wait;
-}
-
-void CPUThread::Wait(const CPUThread& thr)
-{
-	std::lock_guard<std::mutex> lock(m_cs_sync);
-	m_wait_thread_id = thr.GetId();
-	m_sync_wait = true;
-}
-
-bool CPUThread::Sync()
-{
-	return m_sync_wait;
-}
-
 int CPUThread::ThreadStatus()
 {
 	if(Emu.IsStopped() || IsStopped() || IsPaused())
@@ -124,7 +101,7 @@ int CPUThread::ThreadStatus()
 		return CPUThread_Step;
 	}
 
-	if (Emu.IsPaused() || Sync())
+	if (Emu.IsPaused())
 	{
 		return CPUThread_Sleeping;
 	}
@@ -334,7 +311,7 @@ void CPUThread::Task()
 
 			if (status == CPUThread_Sleeping)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 				continue;
 			}
 

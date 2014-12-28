@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-//#include "Emu/System.h"
+#include "Emu/Memory/atomic_type.h"
+
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
 #include "Event.h"
 
 void EventManager::Init()
@@ -20,7 +23,7 @@ bool EventManager::CheckKey(u64 key)
 	return key_map.find(key) != key_map.end();
 }
 
-bool EventManager::RegisterKey(EventQueue* data, u64 key)
+bool EventManager::RegisterKey(std::shared_ptr<EventQueue>& data, u64 key)
 {
 	if (!key) return true;
 	std::lock_guard<std::mutex> lock(m_lock);
@@ -37,7 +40,7 @@ bool EventManager::RegisterKey(EventQueue* data, u64 key)
 	return true;
 }
 
-bool EventManager::GetEventQueue(u64 key, EventQueue*& data)
+bool EventManager::GetEventQueue(u64 key, std::shared_ptr<EventQueue>& data)
 {
 	data = nullptr;
 	if (!key) return false;
@@ -76,8 +79,7 @@ bool EventManager::SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3)
 	{
 		return false;
 	}
-	EventQueue* eq = f->second;
-
-	eq->events.push(source, d1, d2, d3);
+	
+	f->second->events.push(source, d1, d2, d3);
 	return true;
 }

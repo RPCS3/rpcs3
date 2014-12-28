@@ -23,6 +23,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
+#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
 
@@ -108,41 +109,41 @@ void Emulator::SetTitle(const std::string& title)
 
 void Emulator::CheckStatus()
 {
-	std::vector<CPUThread *>& threads = GetCPU().GetThreads();
-	if (!threads.size())
-	{
-		Stop();
-		return;	
-	}
+	//auto& threads = GetCPU().GetThreads();
+	//if (!threads.size())
+	//{
+	//	Stop();
+	//	return;	
+	//}
 
-	bool IsAllPaused = true;
-	for (u32 i = 0; i < threads.size(); ++i)
-	{
-		if (threads[i]->IsPaused()) continue;
-		IsAllPaused = false;
-		break;
-	}
+	//bool IsAllPaused = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsPaused()) continue;
+	//	IsAllPaused = false;
+	//	break;
+	//}
 
-	if(IsAllPaused)
-	{
-		//ConLog.Warning("all paused!");
-		Pause();
-		return;
-	}
+	//if(IsAllPaused)
+	//{
+	//	//ConLog.Warning("all paused!");
+	//	Pause();
+	//	return;
+	//}
 
-	bool IsAllStoped = true;
-	for (u32 i = 0; i < threads.size(); ++i)
-	{
-		if (threads[i]->IsStopped()) continue;
-		IsAllStoped = false;
-		break;
-	}
+	//bool IsAllStoped = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsStopped()) continue;
+	//	IsAllStoped = false;
+	//	break;
+	//}
 
-	if (IsAllStoped)
-	{
-		//ConLog.Warning("all stoped!");
-		Pause(); //Stop();
-	}
+	//if (IsAllStoped)
+	//{
+	//	//ConLog.Warning("all stoped!");
+	//	Pause(); //Stop();
+	//}
 }
 
 bool Emulator::BootGame(const std::string& path, bool direct)
@@ -222,7 +223,7 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " ");//used to be skip_line
-	vfsFile sfo("/app_home/../../PARAM.SFO");
+	vfsFile sfo("/app_home/../PARAM.SFO");
 	PSFLoader psf(sfo);
 	psf.Load(false);
 	std::string title = psf.GetString("TITLE");
@@ -268,7 +269,7 @@ void Emulator::Load()
 	}
 
 	// trying to load some info from PARAM.SFO
-	vfsFile f2("/app_home/../../PARAM.SFO");
+	vfsFile f2("/app_home/../PARAM.SFO");
 	if (f2.IsOpened())
 	{
 		PSFLoader psf(f2);
@@ -359,7 +360,6 @@ void Emulator::Stop()
 	m_status = Stopped;
 
 	u32 uncounted = 0;
-	u32 counter = 0;
 	while (true)
 	{
 		if (g_thread_count <= uncounted)

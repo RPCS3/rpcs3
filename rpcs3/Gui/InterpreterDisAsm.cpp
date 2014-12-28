@@ -108,13 +108,12 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 {
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
-	auto& thrs = Emu.GetCPU().GetThreads();
+	//auto& thrs = Emu.GetCPU().GetThreads();
 
-	for(uint i=0; i<thrs.size(); ++i)
-	{
-		if (thrs[i]->GetType() != CPU_THREAD_ARMv7)
-			m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
-	}
+	//for (auto& t : thrs)
+	//{
+	//	m_choice_units->Append(t->GetFName(), t.get());
+	//}
 
 	m_choice_units->Thaw();
 }

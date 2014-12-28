@@ -48,14 +48,14 @@ public:
 		m_destr(m_ptr);
 	}
 
-	template<typename T> T* get()
+	template<typename T> std::shared_ptr<T> get()
 	{
-		return (T*)m_ptr;
+		return *(std::shared_ptr<T>*)m_ptr;
 	}
 
-	template<typename T> const T* get() const
+	template<typename T> std::shared_ptr<const T> get() const
 	{
-		return (const T*)m_ptr;
+		return *(std::shared_ptr<const T>*)m_ptr;
 	}
 };
 
@@ -67,11 +67,11 @@ class ID
 
 public:
 	template<typename T>
-	ID(const std::string& name, T* data, const IDType type)
+	ID(const std::string& name, std::shared_ptr<T>& data, const IDType type)
 		: m_name(name)
 		, m_type(type)
 	{
-		m_data = new IDData(data, [](void *ptr) -> void { delete (T*)ptr; });
+		m_data = new IDData(new std::shared_ptr<T>(data), [](void *ptr) -> void { delete (std::shared_ptr<T>*)ptr; });
 	}
 
 	ID() : m_data(nullptr)
@@ -85,6 +85,7 @@ public:
 		m_data = other.m_data;
 		other.m_data = nullptr;
 	}
+
 	ID& operator=(ID&& other)
 	{
 		std::swap(m_name,other.m_name);
@@ -159,7 +160,7 @@ public:
 		= char
 #endif
 	>
-	u32 GetNewID(const std::string& name = "", T* data = nullptr, const IDType type = TYPE_OTHER)
+	u32 GetNewID(const std::string& name = "", std::shared_ptr<T>& data = nullptr, const IDType type = TYPE_OTHER)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
@@ -179,7 +180,7 @@ public:
 	}
 
 	template<typename T>
-	bool GetIDData(const u32 id, T*& result)
+	bool GetIDData(const u32 id, std::shared_ptr<T>& result)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
@@ -226,15 +227,32 @@ public:
 
 	u32 GetTypeCount(IDType type)
 	{
-		if (type < TYPE_OTHER) {
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		if (type < TYPE_OTHER)
+		{
 			return (u32)m_types[type].size();
 		}
-		return 1;
+		else
+		{
+			assert(!"Invalid ID type");
+			return 0;
+		}
 	}
 
-	const std::set<u32>& GetTypeIDs(IDType type)
+	std::set<u32> GetTypeIDs(IDType type)
 	{
-		assert(type < TYPE_OTHER);
-		return m_types[type];
+		// you cannot simply return reference to existing set
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		if (type < TYPE_OTHER)
+		{
+			return m_types[type];
+		}
+		else
+		{
+			assert(!"Invalid ID type");
+			return{};
+		}
 	}
 };

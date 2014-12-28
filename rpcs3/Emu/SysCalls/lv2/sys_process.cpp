@@ -191,7 +191,7 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
-	sys_process.Warning("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
+	sys_process.Todo("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
 		object, nump.addr());
 
 	switch(object)
@@ -234,7 +234,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 
 #define ADD_OBJECTS(type) { \
 	u32 i=0; \
-	const auto& objects = Emu.GetIdManager().GetTypeIDs(type); \
+	const auto objects = Emu.GetIdManager().GetTypeIDs(type); \
 	for(auto id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
 		buffer[i] = *id; \
 	*set_size = i; \

@@ -4,7 +4,7 @@
 
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
-#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "Emu/SysCalls/lv2/cellFs.h"
 #include "cellGifDec.h"
 
 Module *cellGifDec = nullptr;
@@ -26,7 +26,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	cellGifDec->Warning("cellGifDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
-	CellGifDecSubHandle *current_subHandle = new CellGifDecSubHandle;
+	std::shared_ptr<CellGifDecSubHandle> current_subHandle(new CellGifDecSubHandle);
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
@@ -62,7 +62,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	cellGifDec->Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
 		mainHandle, subHandle, info.addr());
 
-	CellGifDecSubHandle* subHandle_data;
+	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
@@ -112,7 +112,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifD
 	cellGifDec->Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
-	CellGifDecSubHandle* subHandle_data;
+	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
@@ -144,7 +144,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
-	CellGifDecSubHandle* subHandle_data;
+	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
@@ -259,7 +259,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 	cellGifDec->Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)",
 		mainHandle, subHandle);
 
-	CellGifDecSubHandle* subHandle_data;
+	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
 	if(!cellGifDec->CheckId(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 

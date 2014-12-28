@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "rpcs3.h"
 #include "Ini.h"
+#include "Utilities/Log.h"
 #include "Gui/ConLogFrame.h"
 #include "Emu/GameInfo.h"
 
@@ -205,46 +206,46 @@ bool Rpcs3App::OnInit()
 	{
 		wxGetApp().SendDbgCommand(id, t);
 	});
+
 	SetCallAfterCallback([](std::function<void()> func)
 	{
 		wxGetApp().CallAfter(func);
 	});
+
 	SetGetKeyboardHandlerCountCallback([]()
 	{
 		return 2;
 	});
+
 	SetGetKeyboardHandlerCallback([](int i) -> KeyboardHandlerBase*
 	{
 		switch (i)
 		{
-		case 0:
-			return new NullKeyboardHandler();
-			break;
-		case 1:
-			return new WindowsKeyboardHandler();
-			break;
-		default:
-			return new NullKeyboardHandler();
+		case 0: return new NullKeyboardHandler();
+		case 1: return new WindowsKeyboardHandler();
 		}
+
+		assert(!"Invalid keyboard handler number");
+		return new NullKeyboardHandler();
 	});
+
 	SetGetMouseHandlerCountCallback([]()
 	{
 		return 2;
 	});
+
 	SetGetMouseHandlerCallback([](int i) -> MouseHandlerBase*
 	{
 		switch (i)
 		{
-		case 0:
-			return new NullMouseHandler();
-			break;
-		case 1:
-			return new WindowsMouseHandler();
-			break;
-		default:
-			return new NullMouseHandler();
+		case 0: return new NullMouseHandler();
+		case 1: return new WindowsMouseHandler();
 		}
+
+		assert(!"Invalid mouse handler number");
+		return new NullMouseHandler();
 	});
+
 	SetGetPadHandlerCountCallback([]()
 	{
 #if defined(_WIN32)
@@ -253,34 +254,28 @@ bool Rpcs3App::OnInit()
 		return 2;
 #endif
 	});
+
 	SetGetPadHandlerCallback([](int i) -> PadHandlerBase*
 	{
 		switch (i)
 		{
-		case 0:
-			return new NullPadHandler();
-			break;
-		case 1:
-			return new WindowsPadHandler();
-			break;
+		case 0: return new NullPadHandler();
+		case 1: return new WindowsPadHandler();
 #if defined(_WIN32)
-		case 2:
-			return new XInputPadHandler();
-			break;
+		case 2: return new XInputPadHandler();
 #endif
-		default:
-			return new NullPadHandler();
 		}
+
+		assert(!"Invalid pad handler number");
+		return new NullPadHandler();
 	});
+
 	SetGetGSFrameCallback([]() -> GSFrameBase*
 	{
 		return new GLGSFrame();
 	});
-	SetMsgDialogCreateCallback(MsgDialogCreate);
-	SetMsgDialogDestroyCallback(MsgDialogDestroy);
-	SetMsgDialogProgressBarSetMsgCallback(MsgDialogProgressBarSetMsg);
-	SetMsgDialogProgressBarResetCallback(MsgDialogProgressBarReset);
-	SetMsgDialogProgressBarIncCallback(MsgDialogProgressBarInc);
+
+	SetMsgDialogCallbacks(MsgDialogCreate, MsgDialogDestroy, MsgDialogProgressBarSetMsg, MsgDialogProgressBarReset, MsgDialogProgressBarInc);
 
 	TheApp = this;
 	SetAppName(_PRGNAME_);

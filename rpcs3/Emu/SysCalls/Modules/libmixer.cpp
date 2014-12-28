@@ -347,7 +347,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 			if (mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 				continue;
 			}
 

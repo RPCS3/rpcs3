@@ -138,7 +138,9 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 std::string fmt::merge(std::vector<std::string> source, const std::string& separator)
 {
 	if (!source.size())
+	{
 		return "";
+	}
 
 	std::string result;
 
@@ -152,11 +154,25 @@ std::string fmt::merge(std::vector<std::string> source, const std::string& separ
 
 std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)
 {
+	if (!sources.size())
+	{
+		return "";
+	}
+
 	std::string result;
+	bool first = true;
 
 	for (auto &v : sources)
 	{
-		result += fmt::merge(v, separator);
+		if (first)
+		{
+			result = fmt::merge(v, separator);
+			first = false;
+		}
+		else
+		{
+			result += separator + fmt::merge(v, separator);
+		}
 	}
 
 	return result;

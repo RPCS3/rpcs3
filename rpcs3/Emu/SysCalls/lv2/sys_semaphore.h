@@ -1,7 +1,5 @@
 #pragma once
 
-#include "sys_lwmutex.h"
-
 struct sys_semaphore_attribute
 {
 	be_t<u32> protocol;
@@ -18,9 +16,9 @@ struct sys_semaphore_attribute
 
 struct Semaphore
 {
-	std::mutex m_mutex;
-	SleepQueue m_queue;
-	s32 m_value;
+	std::mutex mutex;
+	sleep_queue_t queue;
+	s32 value;
 	u32 signal;
 
 	const s32 max;
@@ -28,7 +26,7 @@ struct Semaphore
 	const u64 name;
 
 	Semaphore(s32 initial_count, s32 max_count, u32 protocol, u64 name)
-		: m_value(initial_count)
+		: value(initial_count)
 		, signal(0)
 		, max(max_count)
 		, protocol(protocol)
