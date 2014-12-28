@@ -455,7 +455,7 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_EX2: SetDst("exp2($0)"); break;
 			case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
 			case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
-			case RSX_FP_OPCODE_LIT: LOG_ERROR(RSX, "Unimplemented SCB instruction: LIT"); break;
+			case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); break;
 			case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
 			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
 			case RSX_FP_OPCODE_LG2: SetDst("log2($0)"); break;
