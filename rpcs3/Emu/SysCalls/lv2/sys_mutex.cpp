@@ -29,8 +29,6 @@ s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_at
 {
 	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.addr());
 
-	LV2_LOCK(0);
-
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_FIFO): break;
@@ -55,12 +53,14 @@ s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_at
 	}
 
 	std::shared_ptr<Mutex> mutex(new Mutex((u32)attr->protocol, is_recursive, attr->name_u64));
+
 	const u32 id = sys_mutex.GetNewId(mutex, TYPE_MUTEX);
 	mutex->id.exchange(id);
 	*mutex_id = id;
+	mutex->queue.set_full_name(fmt::Format("Mutex(%d)", id));
+
 	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
 		std::string(attr->name, 8).c_str(), (u32) attr->protocol, (is_recursive ? "true" : "false"), id);
-
 	// TODO: unlock mutex when owner thread does exit
 	return CELL_OK;
 }
@@ -69,15 +69,14 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 {
 	sys_mutex.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
 
-	LV2_LOCK(0);
-
 	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (mutex->cond_count) // check if associated condition variable exists
+	// check if associated condition variable exists
+	if (mutex->cond_count) // TODO: check safety
 	{
 		return CELL_EPERM;
 	}

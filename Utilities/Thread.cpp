@@ -249,7 +249,7 @@ bool waiter_map_t::is_stopped(u64 signal_id)
 {
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(Log::HLE, "%s.waiter_op() aborted (signal_id=0x%llx)", m_name.c_str(), signal_id);
+		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (signal_id=0x%llx)", m_name.c_str(), signal_id);
 		return true;
 	}
 	return false;

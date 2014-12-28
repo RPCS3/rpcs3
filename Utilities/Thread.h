@@ -169,8 +169,10 @@ class squeue_t
 
 	atomic_le_t<squeue_sync_var_t> m_sync;
 
-	mutable std::mutex m_rcv_mutex, m_wcv_mutex;
-	mutable std::condition_variable m_rcv, m_wcv;
+	mutable std::mutex m_rcv_mutex;
+	mutable std::mutex m_wcv_mutex;
+	mutable std::condition_variable m_rcv;
+	mutable std::condition_variable m_wcv;
 
 	T m_data[sq_size];
 

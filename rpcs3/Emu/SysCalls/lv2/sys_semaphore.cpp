@@ -14,10 +14,11 @@ SysCallBase sys_semaphore("sys_semaphore");
 
 u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u64)
 {
-	LV2_LOCK(0);
-
 	std::shared_ptr<Semaphore> sem(new Semaphore(initial_count, max_count, protocol, name_u64));
+
 	const u32 id = sys_semaphore.GetNewId(sem, TYPE_SEMAPHORE);
+	sem->queue.set_full_name(fmt::Format("Semaphore(%d)", id));
+
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", std::string((const char*)&name_u64, 8).c_str(), protocol, id);
 	return id;
 }
@@ -27,15 +28,17 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr
 	sys_semaphore.Warning("sys_semaphore_create(sem_addr=0x%x, attr_addr=0x%x, initial_count=%d, max_count=%d)",
 		sem.addr(), attr.addr(), initial_count, max_count);
 
-        if (sem.addr() == NULL) {
-            sys_semaphore.Error("sys_semaphore_create(): invalid memory access (sem_addr=0x%x)", sem.addr());
-            return CELL_EFAULT;
-        }
+	if (!sem)
+	{
+		sys_semaphore.Error("sys_semaphore_create(): invalid memory access (sem_addr=0x%x)", sem.addr());
+		return CELL_EFAULT;
+	}
 
-        if (attr.addr() == NULL) {
-            sys_semaphore.Error("sys_semaphore_create(): An invalid argument value is specified (attr_addr=0x%x)", attr.addr());
-            return CELL_EFAULT;
-        }
+	if (!attr)
+	{
+		sys_semaphore.Error("sys_semaphore_create(): An invalid argument value is specified (attr_addr=0x%x)", attr.addr());
+		return CELL_EFAULT;
+	}
 
 	if (max_count <= 0 || initial_count > max_count || initial_count < 0)
 	{
@@ -65,8 +68,6 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr
 s32 sys_semaphore_destroy(u32 sem_id)
 {
 	sys_semaphore.Warning("sys_semaphore_destroy(sem_id=%d)", sem_id);
-
-	LV2_LOCK(0);
 
 	std::shared_ptr<Semaphore> sem;
 	if (!Emu.GetIdManager().GetIDData(sem_id, sem))

@@ -30,6 +30,7 @@ class sleep_queue_t
 {
 	std::vector<u32> m_list;
 	std::mutex m_mutex;
+	std::string m_name;
 
 public:
 	const u64 name;
@@ -40,6 +41,9 @@ public:
 	}
 
 	~sleep_queue_t();
+
+	void set_full_name(const std::string& name) { m_name = name; }
+	const std::string& get_full_name() { return m_name; }
 
 	void push(u32 tid, u32 protocol);
 	u32 pop(u32 protocol);

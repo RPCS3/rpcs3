@@ -7,7 +7,7 @@ struct sys_mutex_attribute
 	be_t<u32> pshared; // always 0x200 (not shared)
 	be_t<u32> adaptive;
 	be_t<u64> ipc_key;
-	be_t<int> flags;
+	be_t<s32> flags;
 	be_t<u32> pad;
 	union
 	{

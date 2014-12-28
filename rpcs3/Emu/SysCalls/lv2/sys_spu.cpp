@@ -442,18 +442,17 @@ s32 sys_spu_thread_group_terminate(u32 id, int value)
 
 std::shared_ptr<SpuGroupInfo> spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container)
 {
-	LV2_LOCK(0);
-
 	if (type)
 	{
 		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", type);
 	}
 
 	std::shared_ptr<SpuGroupInfo> group(new SpuGroupInfo(name, num, prio, type, container));
+
 	const u32 _id = sys_spu.GetNewId(group);
 	group->m_id = _id;
-	sys_spu.Notice("*** SPU Thread Group created [%s] (num=%d, prio=%d, type=0x%x, container=%d): id=%d",
-		name.c_str(), num, prio, type, container, _id);
+
+	sys_spu.Notice("*** SPU Thread Group created [%s] (num=%d, prio=%d, type=0x%x, container=%d): id=%d", name.c_str(), num, prio, type, container, _id);
 	return group;
 }
 

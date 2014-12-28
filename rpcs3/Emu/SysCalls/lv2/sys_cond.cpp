@@ -15,10 +15,7 @@ SysCallBase sys_cond("sys_cond");
 
 s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute> attr)
 {
-	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)",
-		cond_id.addr(), mutex_id, attr.addr());
-
-	LV2_LOCK(0);
+	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)", cond_id.addr(), mutex_id, attr.addr());
 
 	if (attr->pshared.ToBE() != se32(0x200))
 	{
@@ -33,19 +30,19 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 	}
 
 	std::shared_ptr<Cond> cond(new Cond(mutex, attr->name_u64));
-	const u32 id = sys_cond.GetNewId(cond, TYPE_COND);
-	*cond_id = id;
-	mutex->cond_count++;
-	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
 
+	const u32 id = sys_cond.GetNewId(cond, TYPE_COND);
+	cond->queue.set_full_name(fmt::Format("Cond(%d, mutex_id=%d)", id, mutex_id));
+	*cond_id = id;
+	mutex->cond_count++; // TODO: check safety
+
+	sys_cond.Warning("*** condition created [%s] (mutex_id=%d): id = %d", std::string(attr->name, 8).c_str(), mutex_id, id);
 	return CELL_OK;
 }
 
 s32 sys_cond_destroy(u32 cond_id)
 {
 	sys_cond.Warning("sys_cond_destroy(cond_id=%d)", cond_id);
-
-	LV2_LOCK(0);
 
 	std::shared_ptr<Cond> cond;
 	if (!Emu.GetIdManager().GetIDData(cond_id, cond))
@@ -58,7 +55,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		return CELL_EBUSY;
 	}
 
-	cond->mutex->cond_count--;
+	cond->mutex->cond_count--; // TODO: check safety
 	Emu.GetIdManager().RemoveID(cond_id);
 	return CELL_OK;
 }
@@ -73,9 +70,7 @@ s32 sys_cond_signal(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<Mutex> mutex = cond->mutex;
-
-	if (u32 target = cond->queue.pop(mutex->protocol))
+	if (u32 target = cond->queue.pop(cond->mutex->protocol))
 	{
 		cond->signal.push(target);
 
@@ -98,7 +93,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<Mutex> mutex = cond->mutex;
+	Mutex* mutex = cond->mutex.get();
 
 	while (u32 target = cond->queue.pop(mutex->protocol))
 	{
@@ -134,8 +129,6 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 		return CELL_EPERM;
 	}
 
-	std::shared_ptr<Mutex> mutex = cond->mutex;
-
 	u32 target = thread_id;
 	{
 		cond->signal.push(target);
@@ -159,7 +152,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<Mutex> mutex = cond->mutex;
+	Mutex* mutex = cond->mutex.get();
 
 	const u32 tid = CPU.GetId();
 	if (mutex->owner.read_sync() != tid)

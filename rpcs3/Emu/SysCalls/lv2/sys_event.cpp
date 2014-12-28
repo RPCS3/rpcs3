@@ -21,7 +21,8 @@ u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key
 		return 0;
 	}
 
-	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	const u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	eq->sq.set_full_name(fmt::Format("EventQueue(%d)", id));
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x, key=0x%llx, size=0x%x): id = %d",
 		std::string((const char*)&name_u64, 8).c_str(), protocol, type, event_queue_key, size, id);
 	return id;

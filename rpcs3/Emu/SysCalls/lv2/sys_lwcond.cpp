@@ -14,11 +14,11 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64)
 {
-	LV2_LOCK(0);
+	std::shared_ptr<Lwcond> lw(new Lwcond(name_u64, Memory.RealToVirtualAddr(&lwcond)));
 
-	std::shared_ptr<Lwcond> lw(new Lwcond(name_u64));
-	u32 id = sys_lwcond.GetNewId(lw, TYPE_LWCOND);
-	u32 addr = Memory.RealToVirtualAddr(&lwmutex);
+	const u32 id = sys_lwcond.GetNewId(lw, TYPE_LWCOND);
+	const u32 addr = Memory.RealToVirtualAddr(&lwmutex);
+	lw->queue.set_full_name(fmt::Format("Lwcond(%d, addr=0x%x)", id, lw->addr));
 	lwcond.lwmutex.set(addr);
 	lwcond.lwcond_queue = id;
 
@@ -37,8 +37,6 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 {
 	sys_lwcond.Warning("sys_lwcond_destroy(lwcond_addr=0x%x)", lwcond.addr());
-
-	LV2_LOCK(0);
 
 	u32 id = lwcond->lwcond_queue;
 

@@ -13,7 +13,7 @@ sleep_queue_t::~sleep_queue_t()
 {
 	for (auto& tid : m_list)
 	{
-		LOG_NOTICE(HLE, "~sleep_queue_t(): thread %d", tid);
+		LOG_NOTICE(HLE, "~sleep_queue_t('%s'): m_list[%lld]=%d", m_name.c_str(), &tid - m_list.data(), tid);
 	}
 }
 

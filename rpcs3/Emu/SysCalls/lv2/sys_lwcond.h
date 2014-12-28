@@ -22,8 +22,11 @@ struct Lwcond
 	squeue_t<u32, 32> signal;
 	sleep_queue_t queue;
 
-	Lwcond(u64 name)
+	const u32 addr;
+
+	Lwcond(u64 name, u32 addr)
 		: queue(name)
+		, addr(addr)
 	{
 	}
 };
