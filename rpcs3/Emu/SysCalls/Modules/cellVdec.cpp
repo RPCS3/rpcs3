@@ -204,12 +204,12 @@ u32 vdecQueryAttr(CellVdecCodecType type, u32 profile, u32 spec_addr /* may be 0
 	return CELL_OK;
 }
 
-u32 vdecOpen(VideoDecoder* data)
+u32 vdecOpen(VideoDecoder* vdec_ptr)
 {
-	std::shared_ptr<VideoDecoder> data_ptr(data);
-	VideoDecoder& vdec = *data;
+	std::shared_ptr<VideoDecoder> sptr(vdec_ptr);
+	VideoDecoder& vdec = *vdec_ptr;
 
-	u32 vdec_id = cellVdec->GetNewId(data_ptr);
+	u32 vdec_id = cellVdec->GetNewId(sptr);
 
 	vdec.id = vdec_id;
 
@@ -222,8 +222,9 @@ u32 vdecOpen(VideoDecoder* data)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [&, data_ptr]()
+	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [vdec_ptr, sptr]()
 	{
+		VideoDecoder& vdec = *vdec_ptr;
 		cellVdec->Notice("Video Decoder thread started");
 
 		VdecTask& task = vdec.task;

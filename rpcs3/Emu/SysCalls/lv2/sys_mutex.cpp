@@ -83,7 +83,7 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 
 	const u32 tid = CPU.GetId();
 
-	if (mutex->owner.compare_and_swap_test(0, tid)) // check if locked
+	if (!mutex->owner.compare_and_swap_test(0, tid)) // check if locked
 	{
 		return CELL_EBUSY;
 	}

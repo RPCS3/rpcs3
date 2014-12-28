@@ -198,19 +198,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	auto args = vm::ptr<u32>::make(args_addr);
 
 #if	CMD_DEBUG
-<<<<<<< HEAD
-		std::string debug = GetMethodName(cmd);
-		debug += "(";
-		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
-		debug += ")";
-		LOG_NOTICE(RSX, debug);
-=======
 	std::string debug = GetMethodName(cmd);
 	debug += "(";
 	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 	debug += ")";
 	LOG_NOTICE(RSX, debug);
->>>>>>> 4b8d61736460fe75f264c7180bd7d9d898b540f5
 #endif
 
 	u32 index = 0;

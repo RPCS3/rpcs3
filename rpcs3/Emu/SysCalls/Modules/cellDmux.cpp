@@ -288,20 +288,20 @@ void dmuxQueryEsAttr(u32 info_addr /* may be 0 */, vm::ptr<const CellCodecEsFilt
 					 const u32 esSpecificInfo_addr, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
-		attr->memSize = 0x400000; // 0x45fa49 from ps3
+		attr->memSize = 0x500000; // 0x45fa49 from ps3
 	else
-		attr->memSize = 0x6000; // 0x73d9 from ps3
+		attr->memSize = 0x7000; // 0x73d9 from ps3
 
 	cellDmux->Warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", (u32)esFilterId->filterIdMajor, (u32)esFilterId->filterIdMinor,
 		(u32)esFilterId->supplementalInfo1, (u32)esFilterId->supplementalInfo2);
 }
 
-u32 dmuxOpen(Demuxer* data)
+u32 dmuxOpen(Demuxer* dmux_ptr)
 {
-	std::shared_ptr<Demuxer> data_ptr(data);
-	Demuxer& dmux = *data;
+	std::shared_ptr<Demuxer> sptr(dmux_ptr);
+	Demuxer& dmux = *dmux_ptr;
 
-	u32 dmux_id = cellDmux->GetNewId(data_ptr);
+	u32 dmux_id = cellDmux->GetNewId(sptr);
 
 	dmux.id = dmux_id;
 
@@ -314,8 +314,9 @@ u32 dmuxOpen(Demuxer* data)
 	dmux.dmuxCb->InitRegs();
 	dmux.dmuxCb->DoRun();
 
-	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [&, data_ptr]()
+	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [dmux_ptr, sptr]()
 	{
+		Demuxer& dmux = *dmux_ptr;
 		cellDmux->Notice("Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
 
 		DemuxerTask task;

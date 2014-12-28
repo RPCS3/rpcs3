@@ -214,12 +214,12 @@ next:
 	}
 }
 
-u32 adecOpen(AudioDecoder* data)
+u32 adecOpen(AudioDecoder* adec_ptr)
 {
-	std::shared_ptr<AudioDecoder> data_ptr(data);
-	AudioDecoder& adec = *data;
+	std::shared_ptr<AudioDecoder> sptr(adec_ptr);
+	AudioDecoder& adec = *adec_ptr;
 
-	u32 adec_id = cellAdec->GetNewId(data_ptr);
+	u32 adec_id = cellAdec->GetNewId(sptr);
 
 	adec.id = adec_id;
 
@@ -232,8 +232,9 @@ u32 adecOpen(AudioDecoder* data)
 	adec.adecCb->InitRegs();
 	adec.adecCb->DoRun();
 
-	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [&, data_ptr]()
+	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [adec_ptr, sptr]()
 	{
+		AudioDecoder& adec = *adec_ptr;
 		cellAdec->Notice("Audio Decoder thread started");
 
 		AdecTask& task = adec.task;
