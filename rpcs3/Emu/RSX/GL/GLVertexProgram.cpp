@@ -562,7 +562,9 @@ void GLVertexDecompilerThread::Task()
 			m_instr_count++;
 
 			if (i < m_data.size())
+			{
 				LOG_ERROR(RSX, "Program end before buffer end.");
+			}
 
 			break;
 		}
@@ -737,17 +739,6 @@ void GLVertexDecompilerThread::Task()
 			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
 			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
 			Emu.Pause();
-			break;
-		}
-
-		if (d3.end)
-		{
-			m_instr_count++;
-
-			if (i < m_data.size())
-			{
-				LOG_ERROR(RSX, "Program end before buffer end.");
-			}
 			break;
 		}
 	}
