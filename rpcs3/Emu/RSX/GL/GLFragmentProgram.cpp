@@ -670,7 +670,10 @@ void GLShaderProgram::DecompileAsync(RSXShaderProgram& prog)
 
 void GLShaderProgram::Compile()
 {
-	if (m_id) glDeleteShader(m_id);
+	if (m_id) 
+	{
+		glDeleteShader(m_id);
+	}
 
 	m_id = glCreateShader(GL_FRAGMENT_SHADER);
 
