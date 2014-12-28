@@ -967,6 +967,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	break;
 
 	// Arrays
+	case NV4097_INLINE_ARRAY:
+	{
+		if (ARGS(0))
+		{
+			LOG_WARNING(RSX, "TODO: NNV4097_INLINE_ARRAY: 0x%x", ARGS(0));
+		}
+	}
+	break;
+
 	case NV4097_DRAW_ARRAYS:
 	{
 		for (u32 c = 0; c < count; ++c)
