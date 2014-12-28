@@ -637,6 +637,7 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
+		/* This triggers opengl driver lost connection error code 7
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
 			uint jump_position;
@@ -668,6 +669,7 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
+		*/
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
 			AddCode("$ifcond $f(); //CAL");
