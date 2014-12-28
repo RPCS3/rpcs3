@@ -451,18 +451,21 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
 			case RSX_FP_OPCODE_DP2A: SetDst("vec4($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
 			case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); break;
+			case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); break; // TODO: Is this in the right category?
 			case RSX_FP_OPCODE_EX2: SetDst("exp2($0)"); break;
 			case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
 			case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
+			case RSX_FP_OPCODE_LIT: LOG_ERROR(RSX, "Unimplemented SCB instruction: LIT"); break;
 			case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
+			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
 			case RSX_FP_OPCODE_LG2: SetDst("log2($0)"); break;
 			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
 			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
 			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
 			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
 			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_PK2: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK2"); break;
-			case RSX_FP_OPCODE_PK4: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK4"); break;
+			case RSX_FP_OPCODE_PK2: SetDst("packSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+			case RSX_FP_OPCODE_PK4: SetDst("packSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 			case RSX_FP_OPCODE_PK16: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK16"); break;
 			case RSX_FP_OPCODE_PKB: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKB"); break;
 			case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); break;
@@ -490,13 +493,16 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_DDX: SetDst("dFdx($0)"); break;
 			case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
 			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
+			case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); break;
 			case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)");  break;
-			case RSX_FP_OPCODE_TXP: LOG_ERROR(RSX, "TEX_SRB texture projection used. Please report this to a RPCS3 developer!"); SetDst("textureProj($t, $0.xy, $1)"); break; //TODO: Test this
+			case RSX_FP_OPCODE_TEXBEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TEXBEM"); break;
+			case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xy, $1)"); break; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
+			case RSX_FP_OPCODE_TXPBEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXPBEM"); break;
 			case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); break;
 			case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); break;
 			case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_UP2: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP2"); break;
-			case RSX_FP_OPCODE_UP4: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP4"); break;
+			case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
+			case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
 			case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); break;
 			case RSX_FP_OPCODE_UPB: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPB"); break;
 			case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); break;
