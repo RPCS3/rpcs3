@@ -242,7 +242,7 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 	if (int result = stat(real_path.c_str(), &buf))
 	{
-		sys_fs->Error("_stat failed! (%s)", real_path.c_str());
+		sys_fs->Error("stat('%s') failed -> 0x%x", real_path.c_str(), result);
 	}
 	else
 	{

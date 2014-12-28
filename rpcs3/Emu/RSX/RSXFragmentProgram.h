@@ -49,7 +49,7 @@ enum
 	RSX_FP_OPCODE_PKG        = 0x2C, // Pack with sRGB transformation
 	RSX_FP_OPCODE_UPG        = 0x2D, // Unpack gamma
 	RSX_FP_OPCODE_DP2A       = 0x2E, // 2-component dot product with scalar addition
-	RSX_FP_OPCODE_TXL        = 0x2F, // Texture sample with LOD
+	RSX_FP_OPCODE_TXL        = 0x2F, // Texture sample with explicit LOD
 	RSX_FP_OPCODE_TXB        = 0x31, // Texture sample with bias
 	RSX_FP_OPCODE_TEXBEM     = 0x33,
 	RSX_FP_OPCODE_TXPBEM     = 0x34,

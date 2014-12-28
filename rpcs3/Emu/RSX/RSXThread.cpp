@@ -419,13 +419,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	break;
 	
 	// Vertex Texture
-	case_4(NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20) :
-		case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20) :
+	case_4(NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20):
+	case_4(NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20):
 	{
 		// Done using methodRegisters in RSXTexture.cpp
 	}
@@ -1586,7 +1586,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
 	{
 		if (ARGS(0))
+		{
 			LOG_WARNING(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_D: 0x%x", ARGS(0));
+		}
 	}
 	break;
 
@@ -2355,10 +2357,6 @@ void RSXThread::Task()
 		{
 			//LOG_WARNING(RSX, "non increment cmd! 0x%x", cmd);
 			inc = 0;
-		}
-		else
-		{
-			//LOG_WARNING(RSX, "increment cmd! 0x%x", cmd);
 		}
 
 		if(cmd == 0) //nop

@@ -146,7 +146,7 @@ void Emulator::CheckStatus()
 	//}
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, int device)
+bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* elf_path[6] =
 	{
@@ -159,34 +159,21 @@ bool Emulator::BootGame(const std::string& path, bool direct, int device)
 	};
 	auto curpath = path;
 
-	if (!direct)
+	if (direct)
 	{
-		for (int i = 0; i < sizeof(elf_path) / sizeof(*elf_path); i++)
+		if (rFile::Access(curpath, rFile::read))
 		{
-			curpath = path + elf_path[i];
+			SetPath(curpath);
+			Load();
 
-			if (rFile::Access(curpath, rFile::read))
-			{
-				SetPath(curpath);
-				Load();
-
-				return true;
-			}
+			return true;
 		}
 	}
-	else
+
+	for (int i = 0; i < sizeof(elf_path) / sizeof(*elf_path); i++)
 	{
-		std::string pathy;
-
-		if (device == 0)
-			Emu.GetVFS().GetDevice("dev_hdd0", pathy);
-		else if (device == 1)
-			Emu.GetVFS().GetDevice("dev_hdd1", pathy);
-		else if (device == 2)
-			Emu.GetVFS().GetDevice("dev_bdvd", pathy);
-
-		curpath = pathy.substr(0, pathy.length() - 9) + path;
-
+		curpath = path + elf_path[i];
+		
 		if (rFile::Access(curpath, rFile::read))
 		{
 			SetPath(curpath);

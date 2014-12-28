@@ -133,7 +133,6 @@ namespace loader
 							if (import_count)
 							{
 								LOG_ERROR(LOADER, "**** Lib '%s'has %d imports!", module_info.name, import_count);
-								break;
 							}
 
 							sys_prx_library_info_t lib;

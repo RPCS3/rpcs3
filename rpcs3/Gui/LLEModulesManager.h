@@ -11,4 +11,5 @@ public:
 	LLEModulesManagerFrame(wxWindow *parent);
 	void Refresh();
 	void UpdateSelection(int index);
+	void OnSelectAll(wxCommandEvent& WXUNUSED(event), bool is_checked);
 };

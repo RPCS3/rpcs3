@@ -82,15 +82,13 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 
 	cellSysutil->Error("Running _stat in cellSaveData. Please report this to a RPCS3 developer!");
 
-	std::string pathy;
-
-	Emu.GetVFS().GetDevice("dev_hdd0", pathy);
-
+	std::string real_path;
 	struct stat buf;
-	int result = stat((pathy.substr(0, pathy.length() - 9) + f.GetPath()).c_str(), &buf);
 
-	if (result != 0)
-		cellSysutil->Error("_stat failed! (%s)", (pathy.substr(0, pathy.length() - 9) + f.GetPath()).c_str());
+	Emu.GetVFS().GetDevice(f.GetPath(), real_path);
+
+	if (stat(real_path.c_str(), &buf) != 0)
+		cellSysutil->Error("stat failed! (%s)", real_path.c_str());
 	else
 	{
 		atime = buf.st_atime;
