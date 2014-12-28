@@ -893,6 +893,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
+	case NV4097_SET_CYLINDRICAL_WRAP:
+	{
+		if (ARGS(0))
+		{
+			LOG_WARNING(RSX, "TODO: NV4097_SET_CYLINDRICAL_WRAP: 0x%x", ARGS(0));
+		}
+	}
+	break;
+
 	// Clearing
 	case NV4097_CLEAR_ZCULL_SURFACE:
 	{
@@ -1114,6 +1123,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
+	case NV4097_SET_SHADER_PACKER:
+	{
+		if (ARGS(0))
+		{
+			LOG_WARNING(RSX, "TODO: NV4097_SET_SHADER_PACKER: 0x%x", ARGS(0));
+		}
+	}
+
 	case NV4097_SET_SHADER_WINDOW:
 	{
 		const u32 a0 = ARGS(0);
@@ -1179,6 +1196,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 
 		//m_cur_vertex_prog->Decompile();
+	}
+	break;
+
+	case NV4097_SET_TRANSFORM_BRANCH_BITS:
+	{
+		if (ARGS(0))
+		{
+			LOG_WARNING(RSX, "TODO: NV4097_SET_TRANSFORM_BRANCH_BITS: 0x%x", ARGS(0));
+		}
 	}
 	break;
 
