@@ -30,11 +30,27 @@ private:
 	virtual void OnReset()
 	{
 	}
-	
-	virtual void ExecCMD(u32 cmd)
+
+	virtual void ClearColor()
 	{
 	}
-	
+
+	virtual void ClearStencil()
+	{
+	}
+
+	virtual void ClearDepth()
+	{
+	}
+
+	virtual void ClearSurface()
+	{
+	}
+
+	virtual void ColorMask()
+	{
+	}
+
 	virtual void ExecCMD()
 	{
 	}
