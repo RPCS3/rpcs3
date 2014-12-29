@@ -1801,7 +1801,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		case CELL_GCM_ZCULL_STATS2:
 		case CELL_GCM_ZCULL_STATS3:
 			value = 0;
-			LOG_ERROR(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
+			LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
 		break;
 
 		default:

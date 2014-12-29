@@ -562,7 +562,9 @@ void GLVertexDecompilerThread::Task()
 			m_instr_count++;
 
 			if (i < m_data.size())
+			{
 				LOG_ERROR(RSX, "Program end before buffer end.");
+			}
 
 			break;
 		}
@@ -635,6 +637,7 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
+		/* This triggers opengl driver lost connection error code 7
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
 			uint jump_position;
@@ -666,6 +669,7 @@ void GLVertexDecompilerThread::Task()
 			AddCode("}");
 		}
 		break;
+		*/
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
 			AddCode("$ifcond $f(); //CAL");
@@ -737,17 +741,6 @@ void GLVertexDecompilerThread::Task()
 			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
 			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
 			Emu.Pause();
-			break;
-		}
-
-		if (d3.end)
-		{
-			m_instr_count++;
-
-			if (i < m_data.size())
-			{
-				LOG_ERROR(RSX, "Program end before buffer end.");
-			}
 			break;
 		}
 	}
@@ -829,7 +822,10 @@ void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
 
 void GLVertexProgram::Compile()
 {
-	if (id) glDeleteShader(id);
+	if (id) 
+	{
+		glDeleteShader(id);
+	}
 
 	id = glCreateShader(GL_VERTEX_SHADER);
 
