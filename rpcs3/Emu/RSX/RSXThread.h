@@ -519,12 +519,15 @@ protected:
 		m_line_stipple_factor = 1;
 		m_vertex_data_base_offset = 0;
 		m_vertex_data_base_index = 0;
-		for (size_t i = 0; i < 32; i++) {
+
+		// Construct Stipple Pattern
+		for (size_t i = 0; i < 32; i++) 
+		{
 			m_polygon_stipple_pattern[i] = 0xFFFFFFFF;
 		}
 
 		// Construct Textures
-		for(int i=0; i<16; i++)
+		for (int i = 0; i < 16; i++)
 		{
 			m_textures[i] = RSXTexture(i);
 		}
@@ -611,7 +614,7 @@ protected:
 		m_clear_surface_mask = 0;
 		m_begin_end = 0;
 
-		for(uint i=0; i<m_textures_count; ++i)
+		for (uint i = 0; i < m_textures_count; ++i)
 		{
 			m_textures[i].Init();
 		}
@@ -622,19 +625,23 @@ protected:
 
 	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
 	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
-	void nativeRescale(float width, float height);
+	void NativeRescale(float width, float height);
 	
 	virtual void OnInit() = 0;
 	virtual void OnInitThread() = 0;
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
-	virtual void ExecCMD(u32 cmd) = 0;
+	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b) = 0;
+	virtual void ClearStencil(u32 stencil) = 0;
+	virtual void ClearDepth(u32 depth) = 0;
+	virtual void ClearSurface(u32 mask) = 0;
+	virtual void ColorMask(bool a, bool r, bool g, bool b) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{
-		for(u32 i=0; i<m_vertex_count; ++i)
+		for (u32 i = 0; i < m_vertex_count; ++i)
 		{
 			if(!m_vertex_data[i].IsEnabled()) continue;
 
