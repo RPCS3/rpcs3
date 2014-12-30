@@ -31,6 +31,10 @@ private:
 	{
 	}
 
+	virtual void Enable(u32 cmd, u32 enable)
+	{
+	}
+
 	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b)
 	{
 	}

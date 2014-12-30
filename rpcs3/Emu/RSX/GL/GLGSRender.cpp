@@ -797,18 +797,6 @@ GLGSRender::~GLGSRender()
 	m_frame->DeleteContext(m_context);
 }
 
-void GLGSRender::Enable(bool enable, const u32 cap)
-{
-	if (enable)
-	{
-		glEnable(cap);
-	}
-	else
-	{
-		glDisable(cap);
-	}
-}
-
 extern CellGcmContextData current_context;
 
 void GLGSRender::Close()
@@ -1640,6 +1628,99 @@ void GLGSRender::InitDrawBuffers()
 	}
 }
 
+void GLGSRender::Enable(u32 cmd, u32 enable)
+{
+	switch (cmd) {
+	case NV4097_SET_DITHER_ENABLE:
+		enable ? glEnable(GL_DITHER) : glDisable(GL_DITHER);
+		break;
+
+	case NV4097_SET_ALPHA_TEST_ENABLE:
+		enable ? glEnable(GL_ALPHA_TEST) : glDisable(GL_ALPHA_TEST);
+		break;
+
+	case NV4097_SET_STENCIL_TEST_ENABLE:
+		enable ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST);
+		break;
+
+	case NV4097_SET_DEPTH_TEST_ENABLE:
+		enable ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
+		break;
+
+	case NV4097_SET_CULL_FACE_ENABLE:
+		enable ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+		break;
+
+	case NV4097_SET_BLEND_ENABLE:
+		enable ? glEnable(GL_BLEND) : glDisable(GL_BLEND);
+		break;
+
+	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
+		enable ? glEnable(GL_POLYGON_OFFSET_FILL) : glDisable(GL_POLYGON_OFFSET_FILL);
+		break;
+
+	case NV4097_SET_POLY_OFFSET_LINE_ENABLE:
+		enable ? glEnable(GL_POLYGON_OFFSET_LINE) : glDisable(GL_POLYGON_OFFSET_LINE);
+		break;
+
+	case NV4097_SET_POLY_OFFSET_POINT_ENABLE:
+		enable ? glEnable(GL_POLYGON_OFFSET_POINT) : glDisable(GL_POLYGON_OFFSET_POINT);
+		break;
+
+	case NV4097_SET_LOGIC_OP_ENABLE:
+		enable ? glEnable(GL_LOGIC_OP) : glDisable(GL_LOGIC_OP);
+		break;
+
+	case NV4097_SET_SPECULAR_ENABLE:
+		enable ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
+		break;
+
+	case NV4097_SET_LINE_SMOOTH_ENABLE:
+		enable ? glEnable(GL_LINE_SMOOTH) : glDisable(GL_LINE_SMOOTH);
+		break;
+
+	case NV4097_SET_POLY_SMOOTH_ENABLE:
+		enable ? glEnable(GL_POLYGON_SMOOTH) : glDisable(GL_POLYGON_SMOOTH);
+		break;
+
+	case NV4097_SET_RESTART_INDEX:
+		enable ? glEnable(GL_PRIMITIVE_RESTART) : glDisable(GL_PRIMITIVE_RESTART);
+		break;
+
+	case NV4097_SET_POINT_SPRITE_CONTROL:
+		enable ? glEnable(GL_POINT_SPRITE) : glDisable(GL_POINT_SPRITE);
+		break;
+
+	case NV4097_SET_LINE_STIPPLE:
+		enable ? glEnable(GL_LINE_STIPPLE) : glDisable(GL_LINE_STIPPLE);
+		break;
+
+	case NV4097_SET_POLYGON_STIPPLE:
+		enable ? glEnable(GL_POLYGON_STIPPLE) : glDisable(GL_POLYGON_STIPPLE);
+		break;
+
+	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
+		enable ? glEnable(GL_DEPTH_BOUNDS_TEST_EXT) : glDisable(GL_DEPTH_BOUNDS_TEST_EXT);
+		break;
+
+	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
+		u32 clip_plane_0 = enable & 0xf;
+		u32 clip_plane_1 = (enable >> 4) & 0xf;
+		u32 clip_plane_2 = (enable >> 8) & 0xf;
+		u32 clip_plane_3 = (enable >> 12) & 0xf;
+		u32 clip_plane_4 = (enable >> 16) & 0xf;
+		u32 clip_plane_5 = enable >> 20;
+
+		clip_plane_0 ? glEnable(GL_CLIP_PLANE0) : glDisable(GL_CLIP_PLANE0);
+		clip_plane_1 ? glEnable(GL_CLIP_PLANE1) : glDisable(GL_CLIP_PLANE1);
+		clip_plane_2 ? glEnable(GL_CLIP_PLANE2) : glDisable(GL_CLIP_PLANE2);
+		clip_plane_3 ? glEnable(GL_CLIP_PLANE3) : glDisable(GL_CLIP_PLANE3);
+		clip_plane_4 ? glEnable(GL_CLIP_PLANE4) : glDisable(GL_CLIP_PLANE4);
+		clip_plane_5 ? glEnable(GL_CLIP_PLANE5) : glDisable(GL_CLIP_PLANE5);
+		break;
+	}
+}
+
 void GLGSRender::ClearColor(u32 a, u32 r, u32 g, u32 b)
 {
 	glClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
@@ -1689,40 +1770,6 @@ void GLGSRender::ExecCMD()
 	}
 
 	InitDrawBuffers();
-
-	Enable(m_set_depth_test, GL_DEPTH_TEST);
-	Enable(m_set_alpha_test, GL_ALPHA_TEST);
-	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
-	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
-	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
-	Enable(m_set_logic_op, GL_LOGIC_OP);
-	Enable(m_set_cull_face, GL_CULL_FACE);
-	Enable(m_set_dither, GL_DITHER);
-	Enable(m_set_stencil_test, GL_STENCIL_TEST);
-	Enable(m_set_line_smooth, GL_LINE_SMOOTH);
-	Enable(m_set_poly_smooth, GL_POLYGON_SMOOTH);
-	Enable(m_set_point_sprite_control, GL_POINT_SPRITE);
-	Enable(m_set_specular, GL_LIGHTING);
-	Enable(m_set_poly_offset_fill, GL_POLYGON_OFFSET_FILL);
-	Enable(m_set_poly_offset_line, GL_POLYGON_OFFSET_LINE);
-	Enable(m_set_poly_offset_point, GL_POLYGON_OFFSET_POINT);
-	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART);
-	Enable(m_set_line_stipple, GL_LINE_STIPPLE);
-	Enable(m_set_polygon_stipple, GL_POLYGON_STIPPLE);
-	
-	if (m_set_clip_plane)
-	{
-		Enable(m_clip_plane_0, GL_CLIP_PLANE0);
-		Enable(m_clip_plane_1, GL_CLIP_PLANE1);
-		Enable(m_clip_plane_2, GL_CLIP_PLANE2);
-		Enable(m_clip_plane_3, GL_CLIP_PLANE3);
-		Enable(m_clip_plane_4, GL_CLIP_PLANE4);
-		Enable(m_clip_plane_5, GL_CLIP_PLANE5);
-
-		checkForGlError("m_set_clip_plane");
-	}
-
-	checkForGlError("glEnable");
 
 	if (m_set_front_polygon_mode)
 	{

@@ -171,7 +171,6 @@ private:
 	void InitVertexData();
 	void InitFragmentData();
 
-	void Enable(bool enable, const u32 cap);
 	virtual void Close();
 	bool LoadProgram();
 	void WriteBuffers();
@@ -191,6 +190,7 @@ protected:
 	virtual void OnExitThread();
 	virtual void OnReset();
 	virtual void ExecCMD();
+	virtual void Enable(u32 cmd, u32 enable);
 	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b);
 	virtual void ClearStencil(u32 stencil);
 	virtual void ClearDepth(u32 depth);

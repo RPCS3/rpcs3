@@ -557,7 +557,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Alpha testing
 	case NV4097_SET_ALPHA_TEST_ENABLE:
 	{
-		m_set_alpha_test = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -586,7 +586,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Cull face
 	case NV4097_SET_CULL_FACE_ENABLE:
 	{
-		m_set_cull_face = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -606,7 +606,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Blending
 	case NV4097_SET_BLEND_ENABLE:
 	{
-		m_set_blend = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -680,7 +680,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Depth bound testing
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 	{
-		m_set_depth_bounds_test = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -769,7 +769,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Depth testing
 	case NV4097_SET_DEPTH_TEST_ENABLE:
 	{
-		m_set_depth_test = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 	
@@ -804,19 +804,19 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	
 	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
 	{
-		m_set_poly_offset_fill = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_POLY_OFFSET_LINE_ENABLE:
 	{
-		m_set_poly_offset_line = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_POLY_OFFSET_POINT_ENABLE:
 	{
-		m_set_poly_offset_point = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1218,7 +1218,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Logic Ops
 	case NV4097_SET_LOGIC_OP_ENABLE:
 	{
-		m_set_logic_op = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1231,14 +1231,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Dithering
 	case NV4097_SET_DITHER_ENABLE:
 	{
-		m_set_dither = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
 	// Stencil testing
 	case NV4097_SET_STENCIL_TEST_ENABLE:
 	{
-		m_set_stencil_test = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1384,7 +1384,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Primitive restart index
 	case NV4097_SET_RESTART_INDEX_ENABLE:
 	{
-		m_set_restart_index = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1415,7 +1415,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POINT_SPRITE_CONTROL:
 	{
-		m_set_point_sprite_control = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 
 		// TODO:
 		//(cmd)[1] = CELL_GCM_ENDIAN_SWAP((enable) | ((rmode) << 1) | (texcoordMask));
@@ -1425,7 +1425,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Lighting
 	case NV4097_SET_SPECULAR_ENABLE:
 	{
-		m_set_specular = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1683,13 +1683,13 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Line/Polygon smoothing
 	case NV4097_SET_LINE_SMOOTH_ENABLE:
 	{
-		m_set_line_smooth = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
 	case NV4097_SET_POLY_SMOOTH_ENABLE:
 	{
-		m_set_poly_smooth = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1705,7 +1705,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Line/Polygon stipple
 	case NV4097_SET_LINE_STIPPLE:
 	{
-		m_set_line_stipple = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1720,7 +1720,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_STIPPLE:
 	{
-		m_set_polygon_stipple = ARGS(0) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1836,14 +1836,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// Clip Plane
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
 	{
-		const u32 a0 = ARGS(0);
-		m_set_clip_plane = true;
-		m_clip_plane_0 = (a0 & 0xf) ? true : false;
-		m_clip_plane_1 = ((a0 >> 4)) & 0xf ? true : false;
-		m_clip_plane_2 = ((a0 >> 8)) & 0xf ? true : false;
-		m_clip_plane_3 = ((a0 >> 12)) & 0xf ? true : false;
-		m_clip_plane_4 = ((a0 >> 16)) & 0xf ? true : false;
-		m_clip_plane_5 = (a0 >> 20) ? true : false;
+		Enable(cmd, ARGS(0));
 	}
 	break;
 

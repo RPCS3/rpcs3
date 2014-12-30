@@ -632,6 +632,7 @@ protected:
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
+	virtual void Enable(u32 cmd, u32 enable) = 0;
 	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b) = 0;
 	virtual void ClearStencil(u32 stencil) = 0;
 	virtual void ClearDepth(u32 depth) = 0;
