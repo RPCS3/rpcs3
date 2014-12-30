@@ -190,7 +190,11 @@ protected:
 	virtual void OnInitThread();
 	virtual void OnExitThread();
 	virtual void OnReset();
-	virtual void ExecCMD(u32 cmd);
 	virtual void ExecCMD();
+	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b);
+	virtual void ClearStencil(u32 stencil);
+	virtual void ClearDepth(u32 depth);
+	virtual void ClearSurface(u32 mask);
+	virtual void ColorMask(bool a, bool r, bool g, bool b);
 	virtual void Flip();
 };
