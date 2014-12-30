@@ -31,23 +31,23 @@ private:
 	{
 	}
 
-	virtual void ClearColor()
+	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b)
 	{
 	}
 
-	virtual void ClearStencil()
+	virtual void ClearStencil(u32 stencil)
 	{
 	}
 
-	virtual void ClearDepth()
+	virtual void ClearDepth(u32 depth)
 	{
 	}
 
-	virtual void ClearSurface()
+	virtual void ClearSurface(u32 mask)
 	{
 	}
 
-	virtual void ColorMask()
+	virtual void ColorMask(bool a, bool r, bool g, bool b)
 	{
 	}
 
