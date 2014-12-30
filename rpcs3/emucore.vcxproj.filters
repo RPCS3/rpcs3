@@ -209,6 +209,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -450,9 +453,6 @@
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp">
@@ -782,6 +782,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h">

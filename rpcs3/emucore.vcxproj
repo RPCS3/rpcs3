@@ -194,10 +194,10 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPngDec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPngEnc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp" />
-    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSail.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellScreenshot.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp" />
@@ -425,11 +425,12 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellPamf.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPng.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
-    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
