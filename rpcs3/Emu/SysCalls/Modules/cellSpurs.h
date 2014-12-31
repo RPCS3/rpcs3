@@ -114,34 +114,6 @@ enum RangeofEventQueuePortNumbers
 	CELL_SPURS_DYNAMIC_PORT_RANGE_BOTTOM = 63,
 };
 
-enum SPURSTraceTypes
-{
-	CELL_SPURS_TRACE_TAG_LOAD = 0x2a,
-	CELL_SPURS_TRACE_TAG_MAP = 0x2b,
-	CELL_SPURS_TRACE_TAG_START = 0x2c,
-	CELL_SPURS_TRACE_TAG_STOP = 0x2d,
-	CELL_SPURS_TRACE_TAG_USER = 0x2e,
-	CELL_SPURS_TRACE_TAG_GUID = 0x2f,
-};
-
-// SPURS task defines.
-enum TaskConstants
-{
-	CELL_SPURS_MAX_TASK = 128,
-	CELL_SPURS_TASK_TOP = 0x3000,
-	CELL_SPURS_TASK_BOTTOM = 0x40000,
-	CELL_SPURS_MAX_TASK_NAME_LENGTH = 32,
-	CELL_SPURS_TASK_ATTRIBUTE_REVISION = 1,
-	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION = 1,
-	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE = 1024,
-};
-
-class SPURSManager;
-class SPURSManagerEventFlag;
-class SPURSManagerTaskset;
-
-struct CellSpurs;
-
 enum SpursAttrFlags : u32
 {
 	SAF_NONE = 0x0,
@@ -167,6 +139,68 @@ enum SpursFlags1 : u8
 	SF1_32_WORKLOADS    = 0x40,
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
+
+enum SpursWorkloadConstants
+{
+	// Workload states
+	SPURS_WKL_STATE_NON_EXISTENT    = 0,
+	SPURS_WKL_STATE_PREPARING       = 1,
+	SPURS_WKL_STATE_RUNNABLE        = 2,
+	SPURS_WKL_STATE_SHUTTING_DOWN   = 3,
+	SPURS_WKL_STATE_REMOVABLE       = 4,
+	SPURS_WKL_STATE_INVALID         = 5,
+};
+
+enum CellSpursModulePollStatus
+{
+	CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT  = 1,
+	CELL_SPURS_MODULE_POLL_STATUS_SIGNAL      = 2,
+	CELL_SPURS_MODULE_POLL_STATUS_FLAG        = 4
+};
+
+enum SpursTraceConstants
+{
+	// Trace tag types
+	CELL_SPURS_TRACE_TAG_KERNEL     = 0x20,
+	CELL_SPURS_TRACE_TAG_SERVICE    = 0x21,
+	CELL_SPURS_TRACE_TAG_TASK       = 0x22,
+	CELL_SPURS_TRACE_TAG_JOB        = 0x23,
+	CELL_SPURS_TRACE_TAG_OVIS       = 0x24,
+	CELL_SPURS_TRACE_TAG_LOAD       = 0x2a,
+	CELL_SPURS_TRACE_TAG_MAP        = 0x2b,
+	CELL_SPURS_TRACE_TAG_START      = 0x2c,
+	CELL_SPURS_TRACE_TAG_STOP       = 0x2d,
+	CELL_SPURS_TRACE_TAG_USER       = 0x2e,
+	CELL_SPURS_TRACE_TAG_GUID       = 0x2f,
+
+	// Service incident
+	CELL_SPURS_TRACE_SERVICE_INIT   = 0x01,
+	CELL_SPURS_TRACE_SERVICE_WAIT   = 0x02,
+	CELL_SPURS_TRACE_SERVICE_EXIT   = 0x03,
+
+	// Trace mode flags
+	CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER              = 0x1,
+	CELL_SPURS_TRACE_MODE_FLAG_SYNCHRONOUS_START_STOP   = 0x2,
+	CELL_SPURS_TRACE_MODE_FLAG_MASK                     = 0x3,
+};
+
+// SPURS task constants
+enum SpursTaskConstants
+{
+	CELL_SPURS_MAX_TASK                     = 128,
+	CELL_SPURS_TASK_TOP                     = 0x3000,
+	CELL_SPURS_TASK_BOTTOM                  = 0x40000,
+	CELL_SPURS_MAX_TASK_NAME_LENGTH         = 32,
+	CELL_SPURS_TASK_ATTRIBUTE_REVISION      = 1,
+	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION   = 1,
+	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE  = 1024,
+};
+
+class SPURSManager;
+class SPURSManagerEventFlag;
+class SPURSManagerTaskset;
+
+struct CellSpurs;
 
 struct CellSpursAttribute
 {
@@ -215,12 +249,6 @@ struct CellSpursWorkloadFlag
 
 typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
-enum CellSpursModulePollStatus {
-	CELL_SPURS_MODULE_POLL_STATUS_READYCOUNT  = 1,
-	CELL_SPURS_MODULE_POLL_STATUS_SIGNAL      = 2,
-	CELL_SPURS_MODULE_POLL_STATUS_FLAG        = 4
-};
-
 // Core CellSpurs structures
 struct CellSpurs
 {
@@ -259,7 +287,7 @@ struct CellSpurs
 		be_t<u64> arg; // spu argument
 		be_t<u32> size;
 		atomic_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
-		be_t<u64> priority;
+		be_t<u8> priority[8];
 	};
 
 	static_assert(sizeof(WorkloadInfo) == 0x20, "Wrong WorkloadInfo size");
@@ -294,36 +322,41 @@ struct CellSpurs
 			CellSpursWorkloadFlag wklFlag;                      // 0x60
 			atomic_t<u16> wklSignal1;                           // 0x70 (bitset for 0..15 wids)
 			atomic_t<u8> sysSrvMessage;                         // 0x72
-			u8 sysSrvIdling;                                    // 0x73
+			u8 spuIdling;                                       // 0x73
 			u8 flags1;                                          // 0x74 Type is SpursFlags1
 			u8 sysSrvTraceControl;                              // 0x75
 			u8 nSpus;                                           // 0x76
 			atomic_t<u8> wklFlagReceiver;                       // 0x77
 			atomic_t<u16> wklSignal2;                           // 0x78 (bitset for 16..32 wids)
 			u8 x7A[6];                                          // 0x7A
-			atomic_t<u8> wklStat1[0x10]; // 0x80 - Workload state (16*u8) - State enum {non_exitent, preparing, runnable, shutting_down, removable, invalid}
-			u8 wklD1[0x10];       // 0x90 - Workload status (16*u8)
-			u8 wklE1[0x10];       // 0xA0 - Workload event (16*u8)
+			atomic_t<u8> wklState1[0x10];                       // 0x80 SPURS_WKL_STATE_*
+			u8 wklStatus1[0x10];       // 0x90
+			u8 wklEvent1[0x10];       // 0xA0
 			atomic_t<u32> wklMskA; // 0xB0 - System service - Available workloads (32*u1)
 			atomic_t<u32> wklMskB; // 0xB4 - System service - Available module id
 			u8 xB8[5];            // 0xB8 - 0xBC - Syetem service exit barrier
-			atomic_t<u8> xBD;     // 0xBD - System service message - update workload
-			u8 xBE[2];            // 0xBE - 0xBF - System service message - terminate
+			atomic_t<u8> sysSrvMsgUpdateWorkload;     // 0xBD
+			u8 xBE[2];            // 0xBE
+			u8 sysSrvMsgTerminate;  // 0xBF
 			u8 xC0[8];            // 0xC0 - System workload
-			u8 xC8;               // 0xC8 - System service - on spu
+			u8 sysSrvOnSpu;       // 0xC8
 			u8 spuPort;           // 0xC9 - SPU port for system service
 			u8 xCA;               // 0xCA
 			u8 xCB;               // 0xCB
 			u8 xCC;               // 0xCC
 			u8 xCD;               // 0xCD
-			u8 xCE;               // 0xCE - System service message - update trace
+			u8 sysSrvMsgUpdateTrace; // 0xCE
 			u8 xCF;               // 0xCF
-			atomic_t<u8> wklStat2[0x10]; // 0xD0 - Workload state (16*u8)
-			u8 wklD2[0x10];       // 0xE0 - Workload status (16*u8)
-			u8 wklE2[0x10];       // 0xF0 - Workload event (16*u8)
+			atomic_t<u8> wklState2[0x10]; // 0xD0 SPURS_WKL_STATE_*
+			u8 wklStatus2[0x10];       // 0xE0
+			u8 wklEvent2[0x10];       // 0xF0
 			_sub_str1 wklF1[0x10]; // 0x100
-			be_t<u64> unk22;      // 0x900 - SPURS trace buffer
-			u8 unknown7[0x980 - 0x908]; // 0x908 - Per SPU trace info ??? (8*u32) 0x950 - SPURS trace mode (u32)
+			be_t<u64> traceBuffer; // 0x900
+			be_t<u32> x908[6];     // 0x908 - Indices to traceData (a guess)
+			u8 unknown7[0x948 - 0x920]; // 0x920
+			be_t<u64> traceDataSize; // 0x948
+			be_t<u32> traceMode;  // 0x950
+			u8 unknown8[0x980 - 0x954]; // 0x954
 			be_t<u64> semPrv;     // 0x980
 			be_t<u32> unk11;      // 0x988
 			be_t<u32> unk12;      // 0x98C
@@ -371,15 +404,15 @@ struct CellSpurs
 		} c;
 	};
 
-	__forceinline atomic_t<u8>& wklStat(const u32 wid)
+	__forceinline atomic_t<u8>& wklState(const u32 wid)
 	{
 		if (wid & 0x10)
 		{
-			return m.wklStat2[wid & 0xf];
+			return m.wklState2[wid & 0xf];
 		}
 		else
 		{
-			return m.wklStat1[wid & 0xf];
+			return m.wklState1[wid & 0xf];
 		}
 	}
 
@@ -526,25 +559,21 @@ struct CellSpursExceptionInfo
 
 struct CellSpursTraceInfo
 {
-	be_t<u32> spu_thread[8];
-	be_t<u32> count[8];
-	be_t<u32> spu_thread_grp;
-	be_t<u32> nspu;
-	//u8 padding[];
-};
+	static const u32 size = 0x80;
+	static const u32 align = 16;
 
-struct CellTraceHeader
-{
-	u8 tag;
-	u8 length;
-	u8 cpu;
-	u8 thread;
-	be_t<u32> time;
+	be_t<u32> spu_thread[8];    // 0x00
+	be_t<u32> count[8];         // 0x20
+	be_t<u32> spu_thread_grp;   // 0x40
+	be_t<u32> nspu;             // 0x44
+	//u8 padding[];
 };
 
 struct CellSpursTracePacket
 {
-	struct header_struct
+	static const u32 size = 16;
+
+	struct
 	{
 		u8 tag;
 		u8 length;
@@ -553,23 +582,29 @@ struct CellSpursTracePacket
 		be_t<u32> time;
 	} header;
 
-	struct data_struct
+	union
 	{
-		struct load_struct
+		struct
+		{
+			be_t<u32> incident;
+			be_t<u32> reserved;
+		} service;
+
+		struct
 		{
 			be_t<u32> ea;
 			be_t<u16> ls;
 			be_t<u16> size;
 		} load;
 
-		struct map_struct
+		struct
 		{
 			be_t<u32> offset;
 			be_t<u16> ls;
 			be_t<u16> size;
 		} map;
 
-		struct start_struct
+		struct
 		{
 			s8 module[4];
 			be_t<u16> level;
@@ -578,6 +613,7 @@ struct CellSpursTracePacket
 
 		be_t<u64> user;
 		be_t<u64> guid;
+		be_t<u64> stop;
 	} data;
 };
 
@@ -771,12 +807,15 @@ struct SpursKernelMgmtData {
 	be_t<u32> selectWorkloadAddr;                   // 0x1E4
 	u8 x1E8;                                        // 0x1E8
 	u8 x1E9;                                        // 0x1E9
-	u8 x1EA;                                        // 0x1EA
-	u8 x1EB;                                        // 0x1EB - This might be spuIdling
-	be_t<u16> x1EC;                                 // 0x1EC - This might be wklEnable1
-	be_t<u16> x1EE;                                 // 0x1EE - This might be wklEnable2
-    u8 x1F0[0x220 - 0x1F0];                         // 0x1F0
-    u8 wklUniqueId[0x10];                           // 0x220
+	u8 sysSrvInitialised;                           // 0x1EA
+	u8 spuIdling;                                   // 0x1EB
+	be_t<u16> wklRunnable1;                         // 0x1EC
+    be_t<u16> wklRunnable2;                         // 0x1EE
+	u8 x1F0[0x210 - 0x1F0];                         // 0x1F0
+	be_t<u64> traceBuffer;                          // 0x210
+	be_t<u32> traceMsgCount;                        // 0x218
+	be_t<u32> traceMaxCount;                        // 0x21C
+	u8 wklUniqueId[0x10];                           // 0x220
 };
 
 s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);

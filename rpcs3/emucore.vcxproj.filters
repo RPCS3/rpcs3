@@ -653,6 +653,9 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="cellSpursSpu.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

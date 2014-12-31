@@ -54,6 +54,7 @@
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\ec.cpp" />
     <ClCompile Include="Crypto\key_vault.cpp" />
