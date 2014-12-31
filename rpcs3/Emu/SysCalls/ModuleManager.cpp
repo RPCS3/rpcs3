@@ -38,6 +38,7 @@ extern void cellRtc_init(Module *pxThis);
 extern void cellSail_init(Module *pxThis);
 extern void cellSpurs_init(Module *pxThis);
 extern void cellSpursJq_init(Module *pxThis);
+extern void cellSubdisplay_init(Module *pxThis);
 extern void cellSync_init(Module *pxThis);
 extern void cellSync2_init(Module *pxThis);
 extern void cellSysutil_init(Module *pxThis);
@@ -125,7 +126,7 @@ static const g_modules_list[] =
 	{ 0x0031, "cellAvconfExt", cellAvconfExt_init, nullptr, nullptr },
 	{ 0x0032, "cellUserInfo", cellUserInfo_init, nullptr, nullptr },
 	{ 0x0033, "cellSysutilSavedata", nullptr, nullptr, nullptr },
-	{ 0x0034, "cellSubdisplay", nullptr, nullptr, nullptr },
+	{ 0x0034, "cellSubdisplay", cellSubdisplay_init, nullptr, nullptr },
 	{ 0x0035, "cellSysutilRec", nullptr, nullptr, nullptr },
 	{ 0x0036, "cellVideoExport", nullptr, nullptr, nullptr },
 	{ 0x0037, "cellGameExec", nullptr, nullptr, nullptr },
