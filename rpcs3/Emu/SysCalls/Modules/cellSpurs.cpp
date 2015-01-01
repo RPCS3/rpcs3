@@ -104,7 +104,7 @@ s64 spursInit(
 	spurs->m.sysSrvMsgUpdateTrace = 0;
 	for (u32 i = 0; i < 8; i++)
 	{
-		spurs->m.xC0[i] = -1;
+		spurs->m.sysSrvWorkload[i] = -1;
 	}
 
 	// default or system workload:
@@ -755,7 +755,7 @@ s64 spursInit(
 		}
 	}
 	
-	spurs->m.traceBuffer = 0;
+	spurs->m.traceBuffer.set(0);
 	// can also use cellLibprof if available (omitted)
 
 	// some unknown subroutine
@@ -3418,13 +3418,13 @@ s64 spursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> b
 
 	buffer->spu_thread_grp = spurs->m.spuTG;
 	buffer->nspu           = spurs->m.nSpus;
-	spurs->m.traceBuffer   = buffer.addr() | (mode & CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER ? 1 : 0);
+	spurs->m.traceBuffer.set(buffer.addr() | (mode & CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER ? 1 : 0));
 	spurs->m.traceMode     = mode;
 
 	u32 spuTraceDataCount = (spurs->m.traceDataSize / CellSpursTracePacket::size) / spurs->m.nSpus;
 	for (u32 i = 0, j = 8; i < 6; i++)
 	{
-		spurs->m.x908[i] = j;
+		spurs->m.traceStartIndex[i] = j;
 		j += spuTraceDataCount;
 	}
 
@@ -3548,7 +3548,7 @@ s64 cellSpursTraceFinalize(vm::ptr<CellSpurs> spurs)
 
 	spurs->m.sysSrvTraceControl = 0;
 	spurs->m.traceMode          = 0;
-	spurs->m.traceBuffer        = 0;
+	spurs->m.traceBuffer.set(0);
 	spursTraceStatusUpdate(spurs);
 	return CELL_OK;
 }

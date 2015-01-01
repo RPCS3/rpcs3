@@ -249,6 +249,8 @@ struct CellSpursWorkloadFlag
 
 typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
+struct CellSpursTraceInfo;
+
 // Core CellSpurs structures
 struct CellSpurs
 {
@@ -336,9 +338,9 @@ struct CellSpurs
 			atomic_t<u32> wklMskB; // 0xB4 - System service - Available module id
 			u8 xB8[5];            // 0xB8 - 0xBC - Syetem service exit barrier
 			atomic_t<u8> sysSrvMsgUpdateWorkload;     // 0xBD
-			u8 xBE[2];            // 0xBE
+			u8 xBE;            // 0xBE
 			u8 sysSrvMsgTerminate;  // 0xBF
-			u8 xC0[8];            // 0xC0 - System workload
+			u8 sysSrvWorkload[8];            // 0xC0
 			u8 sysSrvOnSpu;       // 0xC8
 			u8 spuPort;           // 0xC9 - SPU port for system service
 			u8 xCA;               // 0xCA
@@ -351,8 +353,8 @@ struct CellSpurs
 			u8 wklStatus2[0x10];       // 0xE0
 			u8 wklEvent2[0x10];       // 0xF0
 			_sub_str1 wklF1[0x10]; // 0x100
-			be_t<u64> traceBuffer; // 0x900
-			be_t<u32> x908[6];     // 0x908 - Indices to traceData (a guess)
+			vm::bptr<CellSpursTraceInfo, 1, u64> traceBuffer; // 0x900
+			be_t<u32> traceStartIndex[6];     // 0x908
 			u8 unknown7[0x948 - 0x920]; // 0x920
 			be_t<u64> traceDataSize; // 0x948
 			be_t<u32> traceMode;  // 0x950
@@ -810,7 +812,7 @@ struct SpursKernelMgmtData {
 	u8 sysSrvInitialised;                           // 0x1EA
 	u8 spuIdling;                                   // 0x1EB
 	be_t<u16> wklRunnable1;                         // 0x1EC
-    be_t<u16> wklRunnable2;                         // 0x1EE
+	be_t<u16> wklRunnable2;                         // 0x1EE
 	u8 x1F0[0x210 - 0x1F0];                         // 0x1F0
 	be_t<u64> traceBuffer;                          // 0x210
 	be_t<u32> traceMsgCount;                        // 0x218
