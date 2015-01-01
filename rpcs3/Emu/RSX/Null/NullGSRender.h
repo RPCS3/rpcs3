@@ -59,6 +59,18 @@ private:
 	{
 	}
 
+	virtual void AlphaFunc(u32 func, float ref)
+	{
+	}
+
+	virtual void DepthFunc(u32 func)
+	{
+	}
+
+	virtual void DepthMask(u32 flag)
+	{
+	}
+
 	virtual void Flip()
 	{
 	}

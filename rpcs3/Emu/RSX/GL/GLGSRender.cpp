@@ -1683,7 +1683,7 @@ void GLGSRender::Enable(u32 cmd, u32 enable)
 		enable ? glEnable(GL_POLYGON_SMOOTH) : glDisable(GL_POLYGON_SMOOTH);
 		break;
 
-	case NV4097_SET_RESTART_INDEX:
+	case NV4097_SET_RESTART_INDEX_ENABLE:
 		enable ? glEnable(GL_PRIMITIVE_RESTART) : glDisable(GL_PRIMITIVE_RESTART);
 		break;
 
@@ -1704,12 +1704,12 @@ void GLGSRender::Enable(u32 cmd, u32 enable)
 		break;
 
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
-		u32 clip_plane_0 = enable & 0xf;
-		u32 clip_plane_1 = (enable >> 4) & 0xf;
-		u32 clip_plane_2 = (enable >> 8) & 0xf;
-		u32 clip_plane_3 = (enable >> 12) & 0xf;
-		u32 clip_plane_4 = (enable >> 16) & 0xf;
-		u32 clip_plane_5 = enable >> 20;
+		const u32 clip_plane_0 = enable & 0xf;
+		const u32 clip_plane_1 = (enable >> 4) & 0xf;
+		const u32 clip_plane_2 = (enable >> 8) & 0xf;
+		const u32 clip_plane_3 = (enable >> 12) & 0xf;
+		const u32 clip_plane_4 = (enable >> 16) & 0xf;
+		const u32 clip_plane_5 = enable >> 20;
 
 		clip_plane_0 ? glEnable(GL_CLIP_PLANE0) : glDisable(GL_CLIP_PLANE0);
 		clip_plane_1 ? glEnable(GL_CLIP_PLANE1) : glDisable(GL_CLIP_PLANE1);
@@ -1758,6 +1758,24 @@ void GLGSRender::ColorMask(bool a, bool r, bool g, bool b)
 {
 	glColorMask(r, g, b, a);
 	checkForGlError("glColorMask");
+}
+
+void GLGSRender::AlphaFunc(u32 func, float ref)
+{
+	glAlphaFunc(func, ref);
+	checkForGlError("glAlphaFunc");
+}
+
+void GLGSRender::DepthFunc(u32 func)
+{
+	glDepthFunc(func);
+	checkForGlError("glDepthFunc");
+}
+
+void GLGSRender::DepthMask(u32 flag)
+{
+	glDepthMask(flag);
+	checkForGlError("glDepthMask");
 }
 
 void GLGSRender::ExecCMD()
@@ -1878,18 +1896,6 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glShadeModel");
 	}
 
-	if (m_set_depth_mask)
-	{
-		glDepthMask(m_depth_mask);
-		checkForGlError("glDepthMask");
-	}
-
-	if (m_set_depth_func)
-	{
-		glDepthFunc(m_depth_func);
-		checkForGlError("glDepthFunc");
-	}
-
 	if (m_set_depth_bounds)
 	{
 		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
@@ -1948,12 +1954,6 @@ void GLGSRender::ExecCMD()
 	{
 		glFrontFace(m_front_face);
 		checkForGlError("glFrontFace");
-	}
-
-	if (m_set_alpha_func && m_set_alpha_ref)
-	{
-		glAlphaFunc(m_alpha_func, m_alpha_ref);
-		checkForGlError("glAlphaFunc");
 	}
 
 	if (m_set_fog_mode)
