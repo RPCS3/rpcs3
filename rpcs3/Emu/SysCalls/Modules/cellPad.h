@@ -14,6 +14,17 @@ enum CELL_PAD_ERROR_CODE
 	CELL_PAD_ERROR_EBUSY = 0x8012110a,
 };
 
+// Controller types
+enum
+{
+	CELL_PAD_PCLASS_TYPE_STANDARD   = 0x00,
+	CELL_PAD_PCLASS_TYPE_GUITAR     = 0x01,
+	CELL_PAD_PCLASS_TYPE_DRUM       = 0x02,
+	CELL_PAD_PCLASS_TYPE_DJ         = 0x03,
+	CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
+	CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
+};
+
 struct CellPadData
 {
 	be_t<s32> len;
@@ -39,6 +50,19 @@ struct CellPadInfo2
 	be_t<u32> port_setting[CELL_PAD_MAX_PORT_NUM];
 	be_t<u32> device_capability[CELL_PAD_MAX_PORT_NUM];
 	be_t<u32> device_type[CELL_PAD_MAX_PORT_NUM];
+};
+
+struct CellPadPeriphInfo
+{
+	be_t<u32> max_connect;
+	be_t<u32> now_connect;
+	be_t<u32> system_info;
+	be_t<u32> port_status[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> port_setting[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> device_capability[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> device_type[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> pclass_type[CELL_PAD_MAX_PORT_NUM];
+	be_t<u32> pclass_profile[CELL_PAD_MAX_PORT_NUM];
 };
 
 struct CellCapabilityInfo

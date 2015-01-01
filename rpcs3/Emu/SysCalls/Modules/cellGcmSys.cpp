@@ -92,7 +92,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024*1024) {
+		if (index >= 1024 * 1024) {
 			cellGcmSys->Error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
 			return vm::ptr<CellGcmReportData>::make(0);
 		}

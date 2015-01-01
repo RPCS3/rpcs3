@@ -385,8 +385,7 @@ int cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<be_t<float>> slantPar
 
 int cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> fontId, vm::ptr<u32> fontCode)
 {
-	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x",
-		font.addr(), code, fontId.addr(), fontCode.addr());
+	cellFont->Todo("cellFontGetFontIdCode(font_addr=0x%x, code=0x%x, fontId_addr=0x%x, fontCode_addr=0x%x)", font.addr(), code, fontId.addr(), fontCode.addr());
 
 	// TODO: ?
 	return CELL_FONT_OK;
@@ -406,8 +405,7 @@ int cellFontCloseFont(vm::ptr<CellFont> font)
 
 int cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr<CellFontGlyphMetrics> metrics)
 {
-	cellFont->Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x",
-		font.addr(), code, metrics.addr());
+	cellFont->Log("cellFontGetCharGlyphMetrics(font_addr=0x%x, code=0x%x, metrics_addr=0x%x)", font.addr(), code, metrics.addr());
 
 	int x0, y0, x1, y1;
 	int advanceWidth, leftSideBearing;
