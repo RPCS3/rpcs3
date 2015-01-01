@@ -18,9 +18,9 @@ void SetGetGSFrameCallback(GetGSFrameCb value)
 #define DUMP_VERTEX_DATA 0
 
 #if CMD_DEBUG
-	#define CMD_LOG(...) LOG_NOTICE(RSX, __VA_ARGS__)
+#define CMD_LOG(...) LOG_NOTICE(RSX, __VA_ARGS__)
 #else
-	#define CMD_LOG(...)
+#define CMD_LOG(...)
 #endif
 
 GLuint g_flip_tex, g_depth_tex, g_pbo[6];
@@ -41,7 +41,7 @@ void printGlError(GLenum err, const std::string& situation)
 }
 
 #if 0
-	#define checkForGlError(x) /*x*/
+#define checkForGlError(x) /*x*/
 #endif
 
 void GLTexture::Create()
@@ -147,7 +147,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_A1R5G5B5)");
-	break;
+		break;
 
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	{
@@ -195,7 +195,7 @@ void GLTexture::Init(RSXTexture& tex)
 				}
 			}
 		}
-	
+
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, is_swizzled ? unswizzledPixels : pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_A8R8G8B8)");
 	}
@@ -405,7 +405,7 @@ void GLTexture::Init(RSXTexture& tex)
 	}
 	break;
 
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN):
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) :
 	{
 		const u32 numPixels = tex.GetWidth() * tex.GetHeight();
 		unswizzledPixels = (u8 *)malloc(numPixels * 4);
@@ -428,9 +428,9 @@ void GLTexture::Init(RSXTexture& tex)
 
 		free(unswizzledPixels);
 	}
-	break;
+																							  break;
 
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN):
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) :
 	{
 		const u32 numPixels = tex.GetWidth() * tex.GetHeight();
 		unswizzledPixels = (u8 *)malloc(numPixels * 4);
@@ -453,9 +453,9 @@ void GLTexture::Init(RSXTexture& tex)
 
 		free(unswizzledPixels);
 	}
-	break;
+																							  break;
 
-	default: LOG_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, (is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40); 
+	default: LOG_ERROR(RSX, "Init tex error: Bad tex format (0x%x | %s | 0x%x)", format, (is_swizzled ? "swizzled" : "linear"), tex.GetFormat() & 0x40);
 		break;
 	}
 
@@ -887,58 +887,58 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		switch (m_vertex_data[i].type)
 		{
 		case CELL_GCM_VERTEX_S1:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j+=2)
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
-				if (!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
+			break;
 
 		case CELL_GCM_VERTEX_F:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j+=4)
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 4)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
-				if (!(((j+4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!(((j + 4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
+			break;
 
 		case CELL_GCM_VERTEX_SF:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j+=2)
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
-				if (!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
+			break;
 
 		case CELL_GCM_VERTEX_UB:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
-				if (!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
+			break;
 
 		case CELL_GCM_VERTEX_S32K:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j+=2)
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
-				if (!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
-		
-		// case CELL_GCM_VERTEX_CMP:
-		
+			break;
+
+			// case CELL_GCM_VERTEX_CMP:
+
 		case CELL_GCM_VERTEX_UB256:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
-				if (!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
+				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-		break;
+			break;
 
 		default:
 			LOG_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
-		return;
+			return;
 		}
 
 		dump.Write("\n");
@@ -966,7 +966,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			GL_FALSE,
 		};
 
-		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7) 
+		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7)
 		{
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
@@ -977,14 +977,14 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			{
 			case CELL_GCM_VERTEX_S32K:
 			case CELL_GCM_VERTEX_S1:
-				switch(m_vertex_data[i].size)
+				switch (m_vertex_data[i].size)
 				{
 				case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
 				case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
 				case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
 				case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
 				}
-			break;
+				break;
 
 			case CELL_GCM_VERTEX_F:
 				switch (m_vertex_data[i].size)
@@ -994,12 +994,12 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 				case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
 				case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
 				}
-			break;
+				break;
 
 			case CELL_GCM_VERTEX_CMP:
 			case CELL_GCM_VERTEX_UB:
 				glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
-			break;
+				break;
 			}
 
 			checkForGlError("glVertexAttrib");
@@ -1034,9 +1034,9 @@ void GLGSRender::InitVertexData()
 	int l;
 	GLfloat scaleOffsetMat[16] =
 	{
-		1.0f, 0.0f, 0.0f, 0.0f, 
-		0.0f, 1.0f, 0.0f, 0.0f, 
-		0.0f, 0.0f, 1.0f, 0.0f, 
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
@@ -1051,13 +1051,13 @@ void GLGSRender::InitVertexData()
 	}
 
 	// Scale
-	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[0] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[5] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
-	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[3] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
+	scaleOffsetMat[7] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
 	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
@@ -1076,7 +1076,7 @@ void GLGSRender::InitFragmentData()
 		return;
 	}
 
-	for (const RSXTransformConstant& c : m_fragment_constants) 
+	for (const RSXTransformConstant& c : m_fragment_constants)
 	{
 		u32 id = c.id - m_cur_shader_prog->offset;
 
@@ -1101,15 +1101,15 @@ bool GLGSRender::LoadProgram()
 		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
 	}
-	
+
 	m_cur_shader_prog->ctrl = m_shader_ctrl;
-	
+
 	if (!m_cur_vertex_prog)
 	{
 		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
 		return false;
 	}
-	
+
 	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog, m_shader_prog);
 	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
 
@@ -1381,7 +1381,7 @@ void GLGSRender::WriteColorBuffers()
 	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 
-	switch(m_surface_color_target)
+	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
@@ -1391,14 +1391,14 @@ void GLGSRender::WriteColorBuffers()
 		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteColorBufferA();
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
 		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteColorBufferB();
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 		for (int i = 0; i < 2; i++)
@@ -1409,7 +1409,7 @@ void GLGSRender::WriteColorBuffers()
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		WriteColorBufferA();
 		WriteColorBufferB();
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 		for (int i = 0; i < 3; i++)
@@ -1421,7 +1421,7 @@ void GLGSRender::WriteColorBuffers()
 		WriteColorBufferA();
 		WriteColorBufferB();
 		WriteColorBufferC();
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 		for (int i = 0; i < 4; i++)
@@ -1434,7 +1434,7 @@ void GLGSRender::WriteColorBuffers()
 		WriteColorBufferB();
 		WriteColorBufferC();
 		WriteColorBufferD();
-	break;
+		break;
 	}
 }
 
@@ -1480,7 +1480,7 @@ void GLGSRender::OnExitThread()
 	glDeleteTextures(1, &g_flip_tex);
 	glDeleteTextures(1, &g_depth_tex);
 	glDeleteBuffers(6, g_pbo);
-	
+
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
@@ -1530,35 +1530,28 @@ void GLGSRender::InitDrawBuffers()
 
 		m_rbo.Bind(4);
 
-		switch (m_surface_depth_format)
-		{
-		case CELL_GCM_SURFACE_Z16:
-			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
-		break;
-
-		case CELL_GCM_SURFACE_Z24S8:
-			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
-		break;
-
-		default:
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
-			assert(0);
-		break;
-		}
-
 		for (int i = 0; i < 4; ++i)
 		{
 			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
 			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 
-		m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-		checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-		if (m_surface_depth_format == 2)
+		if (m_surface_depth_format == CELL_GCM_SURFACE_Z16)
 		{
+			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
+
+			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
+		}
+		else if (m_surface_depth_format == CELL_GCM_SURFACE_Z24S8)
+		{
+			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
+
+			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");	
+
 			m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
 			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
 		}
@@ -1575,41 +1568,41 @@ void GLGSRender::InitDrawBuffers()
 		m_surface_clip_y = 0;
 		m_surface_clip_h = RSXThread::m_height;
 	}
-		
+
 	m_fbo.Bind();
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
-	switch(m_surface_color_target)
+	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
 		glDrawBuffer(draw_buffers[0]);
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
 		glDrawBuffer(draw_buffers[1]);
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 		glDrawBuffers(2, draw_buffers);
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 		glDrawBuffers(3, draw_buffers);
-	break;
+		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 		glDrawBuffers(4, draw_buffers);
-	break;
+		break;
 
-	checkForGlError("glDrawBuffers");
+		checkForGlError("glDrawBuffers");
 
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
-	break;
+		break;
 	}
 
 	if (m_read_buffer)
@@ -1747,7 +1740,7 @@ void GLGSRender::ClearSurface(u32 mask)
 	if (mask & 0x01) clearMask |= GL_DEPTH_BUFFER_BIT;
 	if (mask & 0x02) clearMask |= GL_STENCIL_BUFFER_BIT;
 	if (mask & 0xF0) clearMask |= GL_COLOR_BUFFER_BIT;
-	
+
 	glClear(clearMask);
 	checkForGlError("glClear");
 
@@ -1824,7 +1817,7 @@ void GLGSRender::ExecCMD()
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
-	
+
 	if (m_set_two_sided_stencil_test_enable)
 	{
 		if (m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
@@ -1925,7 +1918,7 @@ void GLGSRender::ExecCMD()
 		glPolygonStipple((const GLubyte*)m_polygon_stipple_pattern);
 		checkForGlError("glPolygonStipple");
 	}
-	
+
 	if (m_set_blend_equation)
 	{
 		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
@@ -1981,7 +1974,7 @@ void GLGSRender::ExecCMD()
 		LOG_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
 
-	for (u32 i=0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < m_textures_count; ++i)
 	{
 		if (!m_textures[i].IsEnabled()) continue;
 
@@ -2026,21 +2019,21 @@ void GLGSRender::ExecCMD()
 
 	if (m_indexed_array.m_count)
 	{
-		switch(m_indexed_array.m_type)
+		switch (m_indexed_array.m_type)
 		{
 		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
 			checkForGlError("glDrawElements #4");
-		break;
+			break;
 
 		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
 			checkForGlError("glDrawElements #2");
-		break;
+			break;
 
 		default:
 			LOG_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
-		break;
+			break;
 		}
 
 		DisableVertexData();
@@ -2054,7 +2047,7 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glDrawArrays");
 		DisableVertexData();
 	}
-	
+
 	WriteBuffers();
 }
 
@@ -2065,7 +2058,7 @@ void GLGSRender::Flip()
 		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
 		checkForGlError("glScissor");
 	}
-	
+
 	static u8* src_buffer = nullptr;
 	static u32 width = 0;
 	static u32 height = 0;
@@ -2099,7 +2092,7 @@ void GLGSRender::Flip()
 		glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
 		checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
 		GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-		if (packed) 
+		if (packed)
 		{
 			memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -2165,7 +2158,7 @@ void GLGSRender::Flip()
 	}
 
 	m_frame->Flip(m_context);
-	
+
 	// Restore scissor
 	if (m_set_scissor_horizontal && m_set_scissor_vertical)
 	{
