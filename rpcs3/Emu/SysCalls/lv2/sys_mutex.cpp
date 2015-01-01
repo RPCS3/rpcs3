@@ -81,26 +81,11 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	const u32 tid = CPU.GetId();
-
-	if (!mutex->owner.compare_and_swap_test(0, tid)) // check if locked
+	if (!mutex->owner.compare_and_swap_test(0, ~0)) // check if locked and make unusable
 	{
 		return CELL_EBUSY;
 	}
 
-	if (mutex->queue.count()) // TODO: safely make object unusable
-	{
-		if (!mutex->owner.compare_and_swap_test(tid, 0))
-		{
-			assert(!"sys_mutex_destroy() failed (busy)");
-		}
-		return CELL_EBUSY;
-	}
-
-	if (!mutex->owner.compare_and_swap_test(tid, ~0))
-	{
-		assert(!"sys_mutex_destroy() failed");
-	}
 	Emu.GetIdManager().RemoveID(mutex_id);
 	return CELL_OK;
 }
@@ -108,6 +93,8 @@ s32 sys_mutex_destroy(PPUThread& CPU, u32 mutex_id)
 s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 {
 	sys_mutex.Log("sys_mutex_lock(mutex_id=%d, timeout=%lld)", mutex_id, timeout);
+
+	const u64 start_time = get_system_time();
 
 	std::shared_ptr<Mutex> mutex;
 	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
@@ -117,7 +104,12 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	const u32 tid = CPU.GetId();
 
-	if (mutex->owner.read_sync() == tid)
+	const u32 old_owner = mutex->owner.compare_and_swap(0, tid);
+	if (!~old_owner)
+	{
+		return CELL_ESRCH; // mutex is going to be destroyed
+	}
+	if (old_owner == tid)
 	{
 		if (mutex->is_recursive)
 		{
@@ -133,8 +125,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 			return CELL_EDEADLK;
 		}
 	}
-
-	if (mutex->owner.compare_and_swap_test(0, tid))
+	else if (!old_owner)
 	{
 		mutex->recursive_count = 1;
 		CPU.owned_mutexes++;
@@ -143,25 +134,22 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	mutex->queue.push(tid, mutex->protocol);
 
-	const u64 time_start = get_system_time();
 	while (true)
 	{
 		auto old_owner = mutex->owner.compare_and_swap(0, tid);
-		if (!old_owner)
-		{
-			mutex->queue.invalidate(tid);
-			break;
-		}
-		if (old_owner == tid)
+		if (!old_owner || old_owner == tid)
 		{
 			break;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-		if (timeout && get_system_time() - time_start > timeout)
+		if (timeout && get_system_time() - start_time > timeout)
 		{
-			mutex->queue.invalidate(tid);
+			if (!mutex->queue.invalidate(tid, mutex->protocol))
+			{
+				assert(!"sys_mutex_lock() failed (timeout)");
+			}
 			return CELL_ETIMEDOUT;
 		}
 
@@ -172,6 +160,10 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		}
 	}
 
+	if (!mutex->queue.invalidate(tid, mutex->protocol))
+	{
+		assert(!"sys_mutex_lock() failed (locking)");
+	}
 	mutex->recursive_count = 1;
 	CPU.owned_mutexes++;
 	return CELL_OK;
@@ -189,7 +181,12 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 
 	const u32 tid = CPU.GetId();
 
-	if (mutex->owner.read_sync() == tid)
+	const u32 old_owner = mutex->owner.compare_and_swap(0, tid);
+	if (!~old_owner)
+	{
+		return CELL_ESRCH; // mutex is going to be destroyed
+	}
+	if (old_owner == tid)
 	{
 		if (mutex->is_recursive)
 		{
@@ -205,15 +202,14 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 			return CELL_EDEADLK;
 		}
 	}
-
-	if (!mutex->owner.compare_and_swap_test(0, tid))
+	else if (!old_owner)
 	{
-		return CELL_EBUSY;
+		mutex->recursive_count = 1;
+		CPU.owned_mutexes++;
+		return CELL_OK;
 	}
 
-	mutex->recursive_count = 1;
-	CPU.owned_mutexes++;
-	return CELL_OK;
+	return CELL_EBUSY;
 }
 
 s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
@@ -228,7 +224,12 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 
 	const u32 tid = CPU.GetId();
 
-	if (mutex->owner.read_sync() != tid)
+	const u32 owner = mutex->owner.read_sync();
+	if (!~owner)
+	{
+		return CELL_ESRCH; // mutex is going to be destroyed
+	}
+	if (owner != tid)
 	{
 		return CELL_EPERM;
 	}
@@ -241,7 +242,7 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 
 	if (!--mutex->recursive_count)
 	{
-		if (!mutex->owner.compare_and_swap_test(tid, mutex->queue.pop(mutex->protocol)))
+		if (!mutex->owner.compare_and_swap_test(tid, mutex->queue.signal(mutex->protocol)))
 		{
 			assert(!"sys_mutex_unlock() failed");
 		}

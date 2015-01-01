@@ -64,25 +64,19 @@ namespace vm
 
 		static u32 read32(u32 addr)
 		{
-			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET)
+			u32 res;
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !Memory.ReadMMIO32((u32)addr, res))
 			{
-				return re32(*(u32*)((u8*)g_base_addr + addr));
+				res = re32(*(u32*)((u8*)g_base_addr + addr));
 			}
-			else
-			{
-				return Memory.ReadMMIO32((u32)addr);
-			}
+			return res;
 		}
 
 		static void write32(u32 addr, be_t<u32> value)
 		{
-			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET)
+			if (addr < RAW_SPU_BASE_ADDR || (addr % RAW_SPU_OFFSET) < RAW_SPU_PROB_OFFSET || !Memory.WriteMMIO32((u32)addr, value))
 			{
 				*(be_t<u32>*)((u8*)g_base_addr + addr) = value;
-			}
-			else
-			{
-				Memory.WriteMMIO32((u32)addr, value);
 			}
 		}
 

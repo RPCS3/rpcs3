@@ -170,36 +170,28 @@ void MemoryBase::Close()
 	MemoryBlocks.clear();
 }
 
-void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
+bool MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 {
-	{
-		LV2_LOCK(0);
+	LV2_LOCK(0);
 
-		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
-		{
-			return;
-		}
+	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
+	{
+		return true;
 	}
 
-	*(u32*)((u8*)GetBaseAddr() + addr) = re32(data); // provoke error
+	return false;
 }
 
-u32 MemoryBase::ReadMMIO32(u32 addr)
+bool MemoryBase::ReadMMIO32(u32 addr, u32& res)
 {
-	u32 res;
-	{
-		LV2_LOCK(0);
+	LV2_LOCK(0);
 
-		if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] &&
-			((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
-		{
-			return res;
-		}
+	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
+	{
+		return true;
 	}
 
-	res = re32(*(u32*)((u8*)GetBaseAddr() + addr)); // provoke error
-	return res;
+	return false;
 }
 
 bool MemoryBase::Map(const u64 addr, const u32 size)

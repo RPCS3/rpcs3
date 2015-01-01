@@ -7,6 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
 #include "sleep_queue_type.h"
+#include "sys_time.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
@@ -156,6 +157,8 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 	sys_event.Log("sys_event_queue_receive(equeue_id=%d, dummy_event_addr=0x%x, timeout=%lld)",
 		equeue_id, dummy_event.addr(), timeout);
 
+	const u64 start_time = get_system_time();
+
 	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
@@ -167,22 +170,20 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 		return CELL_EINVAL;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
 	eq->sq.push(tid, eq->protocol); // add thread to sleep queue
 
-	timeout = timeout ? (timeout / 1000) : ~0;
-	u64 counter = 0;
 	while (true)
 	{
-		u32 old_owner = eq->owner.compare_and_swap(0, tid);
+		const u32 old_owner = eq->owner.compare_and_swap(0, tid);
 		const s32 res = old_owner ? (old_owner == tid ? 1 : 2) : 0;
 
 		switch (res)
 		{
 		case 0:
 		{
-			const u32 next = eq->events.count() ? eq->sq.pop(eq->protocol) : 0;
+			const u32 next = eq->events.count() ? eq->sq.signal(eq->protocol) : 0;
 			if (next != tid)
 			{
 				if (!eq->owner.compare_and_swap_test(tid, next))
@@ -209,22 +210,38 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 			t.GPR[5] = event.data1;
 			t.GPR[6] = event.data2;
 			t.GPR[7] = event.data3;
+			if (!eq->sq.invalidate(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (receiving)");
+			}
 			return CELL_OK;
 		}
 		}
 
 		if (!~old_owner)
 		{
-			eq->sq.invalidate(tid);
+			if (!eq->sq.invalidate(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (cancelling)");
+			}
 			return CELL_ECANCELED;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (counter++ > timeout || Emu.IsStopped())
+
+		if (timeout && get_system_time() - start_time > timeout)
 		{
-			if (Emu.IsStopped()) sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
-			eq->sq.invalidate(tid);
+			if (!eq->sq.invalidate(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (timeout)");
+			}
 			return CELL_ETIMEDOUT;
+		}
+
+		if (Emu.IsStopped())
+		{
+			sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
+			return CELL_OK;
 		}
 	}
 }

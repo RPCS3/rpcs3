@@ -20,7 +20,7 @@ SemaphoreAttributes SyncPrimManager::GetSemaphoreData(u32 id)
 		return{};
 	}
 	
-	return{ std::string((const char*)&sem->name, 8), sem->value, sem->max };
+	return{ std::string((const char*)&sem->name, 8), sem->value.read_sync(), sem->max };
 }
 
 LwMutexAttributes SyncPrimManager::GetLwMutexData(u32 id)

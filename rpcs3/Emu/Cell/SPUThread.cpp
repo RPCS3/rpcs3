@@ -1095,7 +1095,7 @@ void SPUThread::StopAndSignal(u32 code)
 			{
 			case 0:
 			{
-				const u32 next = eq->events.count() ? eq->sq.pop(eq->protocol) : 0;
+				const u32 next = eq->events.count() ? eq->sq.signal(eq->protocol) : 0;
 				if (next != tid)
 				{
 					if (!eq->owner.compare_and_swap_test(tid, next))
@@ -1118,13 +1118,20 @@ void SPUThread::StopAndSignal(u32 code)
 				SPU.In_MBox.PushUncond((u32)event.data1);
 				SPU.In_MBox.PushUncond((u32)event.data2);
 				SPU.In_MBox.PushUncond((u32)event.data3);
+				if (!eq->sq.invalidate(tid, eq->protocol))
+				{
+					assert(!"sys_spu_thread_receive_event() failed (receiving)");
+				}
 				return;
 			}
 			}
 
 			if (!~old_owner)
 			{
-				eq->sq.invalidate(tid);
+				if (!eq->sq.invalidate(tid, eq->protocol))
+				{
+					assert(!"sys_spu_thread_receive_event() failed (cancelling)");
+				}
 				SPU.In_MBox.PushUncond(CELL_ECANCELED);
 				return;
 			}
@@ -1133,7 +1140,6 @@ void SPUThread::StopAndSignal(u32 code)
 			if (Emu.IsStopped())
 			{
 				LOG_WARNING(Log::SPU, "sys_spu_thread_receive_event(spuq=0x%x) aborted", spuq);
-				eq->sq.invalidate(tid);
 				return;
 			}
 		}
