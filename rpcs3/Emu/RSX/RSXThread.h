@@ -496,7 +496,7 @@ protected:
 		m_front_face = 0x0901; // GL_CCW
 		m_cull_face = 0x0405; // GL_BACK
 		m_alpha_func = 0x0207; // GL_ALWAYS
-		m_alpha_ref = 0; 
+		m_alpha_ref = 0.0; 
 		m_logic_op = 0x1503; // GL_COPY
 		m_shade_mode = 0x1D01; // GL_SMOOTH
 		m_depth_mask = 1;
@@ -638,6 +638,9 @@ protected:
 	virtual void ClearDepth(u32 depth) = 0;
 	virtual void ClearSurface(u32 mask) = 0;
 	virtual void ColorMask(bool a, bool r, bool g, bool b) = 0;
+	virtual void AlphaFunc(u32 func, float ref) = 0;
+	virtual void DepthFunc(u32 func) = 0;
+	virtual void DepthMask(u32 flag) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)
