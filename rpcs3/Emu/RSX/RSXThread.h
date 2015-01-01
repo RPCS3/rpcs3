@@ -115,9 +115,9 @@ public:
 	std::vector<RSXTransformConstant> m_fragment_constants;
 	std::vector<RSXTransformConstant> m_transform_constants;
 	
-	u32 m_shader_ctrl, m_cur_shader_prog_num;
-	RSXShaderProgram m_shader_progs[m_fragment_count];
-	RSXShaderProgram* m_cur_shader_prog;
+	u32 m_shader_ctrl, m_cur_fragment_prog_num;
+	RSXFragmentProgram m_fragment_progs[m_fragment_count];
+	RSXFragmentProgram* m_cur_fragment_prog;
 	RSXVertexProgram m_vertex_progs[m_vertex_count];
 	RSXVertexProgram* m_cur_vertex_prog;
 

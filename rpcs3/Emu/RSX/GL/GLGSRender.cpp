@@ -655,7 +655,7 @@ void PostDrawObj::Initialize()
 	InitializeShaders();
 	m_fp.Compile();
 	m_vp.Compile();
-	m_program.Create(m_vp.id, m_fp.GetId());
+	m_program.Create(m_vp.id, m_fp.id);
 	m_program.Use();
 	InitializeLocations();
 }
@@ -746,7 +746,7 @@ void DrawCursorObj::InitializeShaders()
 		"	gl_Position = in_pos;\n"
 		"}\n";
 
-	m_fp.SetShaderText(
+	m_fp.shader =
 		"#version 330\n"
 		"\n"
 		"in vec2 tc;\n"
@@ -756,7 +756,7 @@ void DrawCursorObj::InitializeShaders()
 		"void main()\n"
 		"{\n"
 		"	res = texture(tex0, tc);\n"
-		"}\n");
+		"}\n";
 }
 
 void DrawCursorObj::SetTexture(void* pixels, int width, int height)
@@ -1070,7 +1070,7 @@ void GLGSRender::InitVertexData()
 
 void GLGSRender::InitFragmentData()
 {
-	if (!m_cur_shader_prog)
+	if (!m_cur_fragment_prog)
 	{
 		LOG_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
 		return;
@@ -1078,7 +1078,7 @@ void GLGSRender::InitFragmentData()
 
 	for (const RSXTransformConstant& c : m_fragment_constants) 
 	{
-		u32 id = c.id - m_cur_shader_prog->offset;
+		u32 id = c.id - m_cur_fragment_prog->offset;
 
 		//LOG_WARNING(RSX,"fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
 
@@ -1096,13 +1096,13 @@ void GLGSRender::InitFragmentData()
 
 bool GLGSRender::LoadProgram()
 {
-	if (!m_cur_shader_prog)
+	if (!m_cur_fragment_prog)
 	{
 		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
 		return false;
 	}
 	
-	m_cur_shader_prog->ctrl = m_shader_ctrl;
+	m_cur_fragment_prog->ctrl = m_shader_ctrl;
 	
 	if (!m_cur_vertex_prog)
 	{
@@ -1110,19 +1110,19 @@ bool GLGSRender::LoadProgram()
 		return false;
 	}
 	
-	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog, m_shader_prog);
+	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog);
 	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
 
 	if (m_fp_buf_num == -1)
 	{
 		LOG_WARNING(RSX, "FP not found in buffer!");
-		m_shader_prog.Decompile(*m_cur_shader_prog);
-		m_shader_prog.Compile();
-		checkForGlError("m_shader_prog.Compile");
+		m_fragment_prog.Decompile(*m_cur_fragment_prog);
+		m_fragment_prog.Compile();
+		checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
 		rFile f("./FragmentProgram.txt", rFile::write);
-		f.Write(m_shader_prog.GetShaderText());
+		f.Write(m_fragment_prog.shader);
 	}
 
 	if (m_vp_buf_num == -1)
@@ -1153,21 +1153,21 @@ bool GLGSRender::LoadProgram()
 				{
 					// TODO: This isn't working perfectly. Is there any better/shorter way to update the program
 					m_vertex_prog.shader = program.vp_shader;
-					m_shader_prog.SetShaderText(program.fp_shader);
+					m_fragment_prog.shader = program.fp_shader;
 					m_vertex_prog.Wait();
 					m_vertex_prog.Compile();
 					checkForGlError("m_vertex_prog.Compile");
-					m_shader_prog.Wait();
-					m_shader_prog.Compile();
-					checkForGlError("m_shader_prog.Compile");
+					m_fragment_prog.Wait();
+					m_fragment_prog.Compile();
+					checkForGlError("m_fragment_prog.Compile");
 					glAttachShader(m_program.id, m_vertex_prog.id);
-					glAttachShader(m_program.id, m_shader_prog.GetId());
+					glAttachShader(m_program.id, m_fragment_prog.id);
 					glLinkProgram(m_program.id);
 					checkForGlError("glLinkProgram");
 					glDetachShader(m_program.id, m_vertex_prog.id);
-					glDetachShader(m_program.id, m_shader_prog.GetId());
+					glDetachShader(m_program.id, m_fragment_prog.id);
 					program.vp_id = m_vertex_prog.id;
-					program.fp_id = m_shader_prog.GetId();
+					program.fp_id = m_fragment_prog.id;
 					program.modified = false;
 				}
 			}
@@ -1176,9 +1176,9 @@ bool GLGSRender::LoadProgram()
 	}
 	else
 	{
-		m_program.Create(m_vertex_prog.id, m_shader_prog.GetId());
+		m_program.Create(m_vertex_prog.id, m_fragment_prog.id);
 		checkForGlError("m_program.Create");
-		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_shader_prog, m_vertex_prog, *m_cur_vertex_prog);
+		m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
 		checkForGlError("m_prog_buffer.Add");
 		m_program.Use();
 
@@ -1188,9 +1188,9 @@ bool GLGSRender::LoadProgram()
 			RSXDebuggerProgram program;
 			program.id = m_program.id;
 			program.vp_id = m_vertex_prog.id;
-			program.fp_id = m_shader_prog.GetId();
+			program.fp_id = m_fragment_prog.id;
 			program.vp_shader = m_vertex_prog.shader;
-			program.fp_shader = m_shader_prog.GetShaderText();
+			program.fp_shader = m_fragment_prog.shader;
 			m_debug_programs.push_back(program);
 		}
 	}
