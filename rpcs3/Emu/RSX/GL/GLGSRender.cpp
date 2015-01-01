@@ -1530,37 +1530,30 @@ void GLGSRender::InitDrawBuffers()
 
 		m_rbo.Bind(4);
 
-		switch (m_surface_depth_format)
+		if (m_surface_depth_format == CELL_GCM_SURFACE_Z16)
 		{
-		case CELL_GCM_SURFACE_Z16:
 			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
-		break;
 
-		case CELL_GCM_SURFACE_Z24S8:
+			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
+		}
+		else if (m_surface_depth_format == CELL_GCM_SURFACE_Z24S8)
+		{
 			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
-		break;
 
-		default:
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
-			assert(0);
-		break;
+			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
+
+			m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
+			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
 		}
 
 		for (int i = 0; i < 4; ++i)
 		{
 			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
 			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
-		}
-
-		m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-		checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-		if (m_surface_depth_format == 2)
-		{
-			m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
 		}
 	}
 
@@ -1580,10 +1573,10 @@ void GLGSRender::InitDrawBuffers()
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
-	switch(m_surface_color_target)
+	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
-		break;
+	break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
 		glDrawBuffer(draw_buffers[0]);
