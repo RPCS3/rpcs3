@@ -210,7 +210,7 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 		}
 	}
 
-	if (!sq->invalidate(tid, attribute))
+	if (!sq->invalidate(tid, attribute) && !sq->pop(tid, attribute))
 	{
 		assert(!"sys_lwmutex_t::lock() failed (locking)");
 	}

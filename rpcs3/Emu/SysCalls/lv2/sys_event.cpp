@@ -210,7 +210,7 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 			t.GPR[5] = event.data1;
 			t.GPR[6] = event.data2;
 			t.GPR[7] = event.data3;
-			if (!eq->sq.invalidate(tid, eq->protocol))
+			if (!eq->sq.invalidate(tid, eq->protocol) && !eq->sq.pop(tid, eq->protocol))
 			{
 				assert(!"sys_event_queue_receive() failed (receiving)");
 			}

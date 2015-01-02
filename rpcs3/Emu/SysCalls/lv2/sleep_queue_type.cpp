@@ -210,6 +210,10 @@ bool sleep_queue_t::invalidate(u32 tid, u32 protocol)
 		{
 			if (v == tid)
 			{
+				if (&v == m_signaled.data())
+				{
+					return false; // if the thread is signaled, pop() should be used
+				}
 				m_signaled.erase(m_signaled.begin() + (&v - m_signaled.data()));
 				return true;
 			}

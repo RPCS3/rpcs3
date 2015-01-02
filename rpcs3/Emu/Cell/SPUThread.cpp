@@ -1118,7 +1118,7 @@ void SPUThread::StopAndSignal(u32 code)
 				SPU.In_MBox.PushUncond((u32)event.data1);
 				SPU.In_MBox.PushUncond((u32)event.data2);
 				SPU.In_MBox.PushUncond((u32)event.data3);
-				if (!eq->sq.invalidate(tid, eq->protocol))
+				if (!eq->sq.invalidate(tid, eq->protocol) && !eq->sq.pop(tid, eq->protocol))
 				{
 					assert(!"sys_spu_thread_receive_event() failed (receiving)");
 				}

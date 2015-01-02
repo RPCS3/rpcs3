@@ -212,7 +212,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 		}
 	}
 
-	if (!rw->wqueue.invalidate(tid, rw->protocol))
+	if (!rw->wqueue.invalidate(tid, rw->protocol) && !rw->wqueue.pop(tid, rw->protocol))
 	{
 		assert(!"sys_rwlock_wlock() failed (locking)");
 	}

@@ -191,7 +191,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 		}
 	}
 
-	if (pushed_in_sleep_queue && !mutex->queue.invalidate(tid, mutex->protocol))
+	if (pushed_in_sleep_queue && !mutex->queue.invalidate(tid, mutex->protocol) && !mutex->queue.pop(tid, mutex->protocol))
 	{
 		assert(!"sys_cond_wait() failed (locking)");
 	}

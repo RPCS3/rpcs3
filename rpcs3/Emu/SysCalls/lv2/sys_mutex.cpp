@@ -160,7 +160,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 		}
 	}
 
-	if (!mutex->queue.invalidate(tid, mutex->protocol))
+	if (!mutex->queue.invalidate(tid, mutex->protocol) && !mutex->queue.pop(tid, mutex->protocol))
 	{
 		assert(!"sys_mutex_lock() failed (locking)");
 	}

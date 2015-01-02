@@ -100,8 +100,6 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 	s32 old_value;
 
 	{
-		LV2_LOCK(0);
-
 		sem->value.atomic_op_sync([&old_value](s32& value)
 		{
 			old_value = value;
@@ -134,6 +132,10 @@ s32 sys_semaphore_wait(u32 sem_id, u64 timeout)
 		{
 			if (!sem->queue.invalidate(tid, sem->protocol))
 			{
+				if (sem->queue.pop(tid, sem->protocol))
+				{
+					return CELL_OK;
+				}
 				assert(!"sys_semaphore_wait() failed (timeout)");
 			}
 			return CELL_ETIMEDOUT;
@@ -194,8 +196,6 @@ s32 sys_semaphore_post(u32 sem_id, s32 count)
 	{
 		return CELL_EINVAL;
 	}
-
-	LV2_LOCK(0);
 
 	if (count + sem->value.read_sync() - (s32)sem->queue.count() > sem->max)
 	{
