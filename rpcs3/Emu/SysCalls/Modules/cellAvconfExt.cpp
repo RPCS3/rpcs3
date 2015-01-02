@@ -16,16 +16,18 @@ int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
 	cellAvconfExt->Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize_addr=0x%x)", videoOut, screenSize.addr());
 
-	if (!videoOut == CELL_VIDEO_OUT_PRIMARY)
+	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
+	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
 
 	//TODO: Use virtual screen size
 #ifdef _WIN32
 	HDC screen = GetDC(NULL);
-	float diagonal = round(sqrt((pow(GetDeviceCaps(screen, HORZSIZE), 2) + pow(GetDeviceCaps(screen, VERTSIZE), 2))) * 0.0393);
+	float diagonal = roundf(sqrtf((powf(float(GetDeviceCaps(screen, HORZSIZE)), 2) + powf(float(GetDeviceCaps(screen, VERTSIZE)), 2))) * 0.0393f);
 #else
 	// TODO: Linux implementation, without using wx
-	// float diagonal = round(sqrt((pow(wxGetDisplaySizeMM().GetWidth(), 2) + pow(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393);
+	// float diagonal = roundf(sqrtf((powf(wxGetDisplaySizeMM().GetWidth(), 2) + powf(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393f);
 #endif
 
 	if (Ini.GS3DTV.GetValue())
@@ -55,7 +57,8 @@ void cellAvconfExt_init(Module *pxThis)
 {
 	cellAvconfExt = pxThis;
 
-	cellAvconfExt->AddFunc(0x4ec8c141, cellVideoOutConvertCursorColor);
-	cellAvconfExt->AddFunc(0xfaa275a4, cellVideoOutGetScreenSize);
-	cellAvconfExt->AddFunc(0xc7020f62, cellVideoOutSetGamma);
+	REG_FUNC(cellAvconfExt, cellVideoOutConvertCursorColor);
+	REG_FUNC(cellAvconfExt, cellVideoOutGetScreenSize);
+	REG_FUNC(cellAvconfExt, cellVideoOutGetGamma);
+	REG_FUNC(cellAvconfExt, cellVideoOutSetGamma);
 }

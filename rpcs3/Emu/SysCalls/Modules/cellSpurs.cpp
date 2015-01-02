@@ -2441,7 +2441,7 @@ s64 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> at
 	return GetCurrentPPUThread().FastCall2(libsre + 0x1474C, libsre_rtoc);
 #else
 	attribute->revision = revision;
-	attribute->name_addr = NULL;
+	attribute->name_addr = 0;
 	attribute->argTaskset = 0;
 
 	for (s32 i = 0; i < 8; i++)
@@ -2554,7 +2554,7 @@ s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribut
 #else
 	attribute->revision = revision;
 	attribute->sizeContext = 0;
-	attribute->eaContext = NULL;
+	attribute->eaContext = 0;
 	
 	for (s32 c = 0; c < 4; c++)
 	{

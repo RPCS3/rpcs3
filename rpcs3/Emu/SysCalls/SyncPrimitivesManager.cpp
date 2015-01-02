@@ -67,6 +67,7 @@ std::string SyncPrimManager::GetSyncPrimName(u32 id, IDType type)
 		}
 		break;
 	}
+	default: break;
 	}
 
 	LOG_ERROR(GENERAL, "SyncPrimManager::GetSyncPrimName(id=%d, type=%d) failed", id, type);
