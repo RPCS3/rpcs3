@@ -49,7 +49,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
-	if (!rw->sync.compare_and_swap_test({ 0, 0 }, { -1, -1 })) // check if locked and make unusable
+	if (!rw->sync.compare_and_swap_test({ 0, 0 }, { ~0, ~0 })) // check if locked and make unusable
 	{
 		return CELL_EBUSY;
 	}
@@ -76,7 +76,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 		rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
 		{
 			assert(~sync.readers);
-			if (succeeded = !sync.writer)
+			if ((succeeded = !sync.writer))
 			{
 				sync.readers++;
 			}
@@ -118,7 +118,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 	rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
 	{
 		assert(~sync.readers);
-		if (succeeded = !sync.writer)
+		if ((succeeded = !sync.writer))
 		{
 			sync.readers++;
 		}
@@ -145,7 +145,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 	bool succeeded;
 	rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
 	{
-		if (succeeded = sync.readers != 0)
+		if ((succeeded = sync.readers != 0))
 		{
 			assert(!sync.writer);
 			sync.readers--;
