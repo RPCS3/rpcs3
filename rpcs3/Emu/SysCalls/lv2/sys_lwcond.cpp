@@ -169,7 +169,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	bool signaled = false;
 	while (true)
 	{
-		if (signaled = signaled || lw->queue.pop(tid, mutex->attribute)) // check signaled threads
+		if ((signaled = signaled || lw->queue.pop(tid, mutex->attribute))) // check signaled threads
 		{
 			s32 res = mutex->lock(tid, timeout ? get_system_time() - start_time : 0); // this is bad
 			if (res == CELL_OK)

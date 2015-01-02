@@ -49,7 +49,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
-	if (!rw->sync.compare_and_swap_test({ 0, 0 }, { ~0, ~0 })) // check if locked and make unusable
+	if (!rw->sync.compare_and_swap_test({ 0, 0 }, { ~0u, ~0u })) // check if locked and make unusable
 	{
 		return CELL_EBUSY;
 	}

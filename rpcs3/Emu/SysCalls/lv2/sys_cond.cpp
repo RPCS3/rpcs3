@@ -152,7 +152,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 	bool pushed_in_sleep_queue = false, signaled = false;
 	while (true)
 	{
-		if (signaled = signaled || cond->queue.pop(tid, mutex->protocol)) // check if signaled
+		if ((signaled = signaled || cond->queue.pop(tid, mutex->protocol))) // check if signaled
 		{
 			if (mutex->owner.compare_and_swap_test(0, tid)) // try to lock
 			{
