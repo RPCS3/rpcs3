@@ -67,7 +67,7 @@ public:
 class PostDrawObj
 {
 protected:
-	GLShaderProgram m_fp;
+	GLFragmentProgram m_fp;
 	GLVertexProgram m_vp;
 	GLProgram m_program;
 	GLfbo m_fbo;
@@ -144,7 +144,7 @@ private:
 	int m_vp_buf_num;
 	GLProgramBuffer m_prog_buffer;
 
-	GLShaderProgram m_shader_prog;
+	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
 	GLTexture m_gl_textures[m_textures_count];

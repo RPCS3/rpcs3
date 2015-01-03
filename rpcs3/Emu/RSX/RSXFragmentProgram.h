@@ -71,14 +71,14 @@ enum
 	RSX_FP_OPCODE_RET        = 0x45, // Return
 };
 
-struct RSXShaderProgram
+struct RSXFragmentProgram
 {
 	u32 size;
 	u32 addr;
 	u32 offset;
 	u32 ctrl;
 
-	RSXShaderProgram()
+	RSXFragmentProgram()
 		: size(0)
 		, addr(0)
 		, offset(0)
