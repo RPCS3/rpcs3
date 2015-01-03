@@ -1771,6 +1771,130 @@ void GLGSRender::DepthMask(u32 flag)
 	checkForGlError("glDepthMask");
 }
 
+void GLGSRender::PolygonMode(u32 face, u32 mode)
+{
+	switch (face)
+	{
+	case NV4097_SET_FRONT_POLYGON_MODE:
+		glPolygonMode(GL_FRONT, mode);
+		break;
+	case NV4097_SET_BACK_POLYGON_MODE:
+		glPolygonMode(GL_BACK, mode);
+		break;
+	}
+	checkForGlError("glPolygonMode");
+}
+
+void GLGSRender::PointSize(float size)
+{
+	glPointSize(m_point_size);
+	checkForGlError("glPointSize");
+}
+
+void GLGSRender::LogicOp(u32 opcdoe)
+{
+	glLogicOp(opcdoe);
+	checkForGlError("glLogicOp");
+}
+
+void GLGSRender::LineWidth(float width)
+{
+	glLineWidth(width);
+	checkForGlError("glLineWidth");
+}
+
+void GLGSRender::LineStipple(u16 factor, u16 pattern)
+{
+	glLineStipple(factor, pattern);
+	checkForGlError("glLineStipple");
+}
+
+void GLGSRender::PrimitiveRestartIndex(u32 index)
+{
+	glPrimitiveRestartIndex(index);
+	checkForGlError("glPrimitiveRestartIndex");
+}
+
+void GLGSRender::CullFace(u32 mode)
+{
+	glCullFace(mode);
+	checkForGlError("glCullFace");
+}
+
+void GLGSRender::FrontFace(u32 mode)
+{
+	glFrontFace(mode);
+	checkForGlError("glFrontFace");
+}
+
+void GLGSRender::Fogi(u32 mode)
+{
+	glFogi(GL_FOG_MODE, mode);
+	checkForGlError("glFogi(GL_FOG_MODE)");
+}
+
+void GLGSRender::Fogf(float start, float end)
+{
+	glFogf(GL_FOG_START, start);
+	checkForGlError("glFogf(GL_FOG_START)");
+	glFogf(GL_FOG_END, end);
+	checkForGlError("glFogf(GL_FOG_END)");
+}
+
+void GLGSRender::PolygonOffset(float factor , float bias)
+{
+	glPolygonOffset(factor, bias);
+	checkForGlError("glPolygonOffset");
+}
+
+void GLGSRender::DepthRangef(float min, float max)
+{
+	glDepthRangef(min, max);
+	checkForGlError("glDepthRangef");
+}
+
+void GLGSRender::BlendEquationSeparate(u16 rgb, u16 a)
+{
+	glBlendEquationSeparate(rgb, a);
+	checkForGlError("glBlendEquationSeparate");
+}
+
+void GLGSRender::BlendFuncSeparate(u16 srcRGB, u16 dstRGB, u16 srcAlpha, u16 dstAlpha)
+{
+	glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
+	checkForGlError("glBlendFuncSeparate");
+}
+
+void GLGSRender::BlendColor(u8 r, u8 g, u8 b, u8 a)
+{
+	glBlendColor(r, g, b, a);
+	checkForGlError("glBlendColor");
+}
+
+void GLGSRender::LightModeli(u32 enable)
+{
+	enable ? glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE) : glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+	checkForGlError("glLightModeli");
+}
+
+void GLGSRender::ShadeModel(u32 mode)
+{
+	glShadeModel(m_shade_mode);
+	checkForGlError("glShadeModel");
+}
+
+void GLGSRender::DepthBoundsEXT(float min, float max)
+{
+	glDepthBoundsEXT(min, max);
+	checkForGlError("glDepthBoundsEXT");
+}
+
+void GLGSRender::Scissor(u16 x, u16 y, u16 width, u16 height)
+{
+	glScissor(x, y, width, height);
+	checkForGlError("glScissor");
+}
+
 void GLGSRender::ExecCMD()
 {
 	if (!LoadProgram())
@@ -1781,42 +1905,6 @@ void GLGSRender::ExecCMD()
 	}
 
 	InitDrawBuffers();
-
-	if (m_set_front_polygon_mode)
-	{
-		glPolygonMode(GL_FRONT, m_front_polygon_mode);
-		checkForGlError("glPolygonMode(Front)");
-	}
-
-	if (m_set_back_polygon_mode)
-	{
-		glPolygonMode(GL_BACK, m_back_polygon_mode);
-		checkForGlError("glPolygonMode(Back)");
-	}
-
-	if (m_set_point_size)
-	{
-		glPointSize(m_point_size);
-		checkForGlError("glPointSize");
-	}
-
-	if (m_set_poly_offset_mode)
-	{
-		glPolygonOffset(m_poly_offset_scale_factor, m_poly_offset_bias);
-		checkForGlError("glPolygonOffset");
-	}
-
-	if (m_set_logic_op)
-	{
-		glLogicOp(m_logic_op);
-		checkForGlError("glLogicOp");
-	}
-
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
-	}
 	
 	if (m_set_two_sided_stencil_test_enable)
 	{
@@ -1877,96 +1965,10 @@ void GLGSRender::ExecCMD()
 		}
 	}
 
-	if (m_set_two_side_light_enable)
-	{
-		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
-		checkForGlError("glLightModeli");
-	}
-
-	if (m_set_shade_mode)
-	{
-		glShadeModel(m_shade_mode);
-		checkForGlError("glShadeModel");
-	}
-
-	if (m_set_depth_bounds)
-	{
-		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
-		checkForGlError("glDepthBounds");
-	}
-
-	if (m_set_clip)
-	{
-		glDepthRangef(m_clip_min, m_clip_max);
-		checkForGlError("glDepthRangef");
-	}
-
-	if (m_set_line_width)
-	{
-		glLineWidth(m_line_width);
-		checkForGlError("glLineWidth");
-	}
-
-	if (m_set_line_stipple)
-	{
-		glLineStipple(m_line_stipple_factor, m_line_stipple_pattern);
-		checkForGlError("glLineStipple");
-	}
-
 	if (m_set_polygon_stipple)
 	{
 		glPolygonStipple((const GLubyte*)m_polygon_stipple_pattern);
 		checkForGlError("glPolygonStipple");
-	}
-	
-	if (m_set_blend_equation)
-	{
-		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
-		checkForGlError("glBlendEquationSeparate");
-	}
-
-	if (m_set_blend_sfactor && m_set_blend_dfactor)
-	{
-		glBlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
-		checkForGlError("glBlendFuncSeparate");
-	}
-
-	if (m_set_blend_color)
-	{
-		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
-		checkForGlError("glBlendColor");
-	}
-
-	if (m_set_cull_face)
-	{
-		glCullFace(m_cull_face);
-		checkForGlError("glCullFace");
-	}
-
-	if (m_set_front_face)
-	{
-		glFrontFace(m_front_face);
-		checkForGlError("glFrontFace");
-	}
-
-	if (m_set_fog_mode)
-	{
-		glFogi(GL_FOG_MODE, m_fog_mode);
-		checkForGlError("glFogi(GL_FOG_MODE)");
-	}
-
-	if (m_set_fog_params)
-	{
-		glFogf(GL_FOG_START, m_fog_param0);
-		checkForGlError("glFogf(GL_FOG_START)");
-		glFogf(GL_FOG_END, m_fog_param1);
-		checkForGlError("glFogf(GL_FOG_END)");
-	}
-
-	if (m_set_restart_index)
-	{
-		glPrimitiveRestartIndex(m_restart_index);
-		checkForGlError("glPrimitiveRestartIndex");
 	}
 
 	if (m_indexed_array.m_count && m_draw_array_count)

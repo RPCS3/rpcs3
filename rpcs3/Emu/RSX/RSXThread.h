@@ -641,6 +641,25 @@ protected:
 	virtual void AlphaFunc(u32 func, float ref) = 0;
 	virtual void DepthFunc(u32 func) = 0;
 	virtual void DepthMask(u32 flag) = 0;
+	virtual void PolygonMode(u32 face, u32 mode) = 0;
+	virtual void PointSize(float size) = 0;
+	virtual void LogicOp(u32 opcdoe) = 0;
+	virtual void LineWidth(float width) = 0;
+	virtual void LineStipple(u16 factor, u16 pattern) = 0;
+	virtual void PrimitiveRestartIndex(u32 index) = 0;
+	virtual void CullFace(u32 mode) = 0;
+	virtual void FrontFace(u32 mode) = 0;
+	virtual void Fogi(u32 mode) = 0;
+	virtual void Fogf(float start, float end) = 0;
+	virtual void PolygonOffset(float factor, float bias) = 0;
+	virtual void DepthRangef(float min, float max) = 0;
+	virtual void BlendEquationSeparate(u16 rgb, u16 a) = 0;
+	virtual void BlendFuncSeparate(u16 srcRGB, u16 dstRGB, u16 srcAlpha, u16 dstAlpha) = 0;
+	virtual void BlendColor(u8 r, u8 g, u8 b, u8 a) = 0;
+	virtual void LightModeli(u32 enable) = 0;
+	virtual void ShadeModel(u32 mode) = 0;
+	virtual void DepthBoundsEXT(float min, float max) = 0;
+	virtual void Scissor(u16 x, u16 y, u16 width, u16 height) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)
