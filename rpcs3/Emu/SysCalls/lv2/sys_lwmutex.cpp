@@ -157,7 +157,7 @@ s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 			return CELL_ESRCH;
 		}
 
-		if (!owner.compare_and_swap_test(tid, be_t<u32>::make(sq->pop(attribute))))
+		if (!owner.compare_and_swap_test(tid, be_t<u32>::make(sq->signal(attribute))))
 		{
 			assert(!"sys_lwmutex_t::unlock() failed");
 		}
@@ -168,6 +168,8 @@ s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 
 s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 {
+	const u64 start_time = get_system_time();
+
 	switch (s32 res = trylock(tid))
 	{
 	case static_cast<s32>(CELL_EBUSY): break;
@@ -182,25 +184,22 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 
 	sq->push(tid, attribute);
 
-	const u64 time_start = get_system_time();
 	while (true)
 	{
 		auto old_owner = owner.compare_and_swap(be_t<u32>::make(0), tid);
-		if (!old_owner.ToBE())
-		{
-			sq->invalidate(tid);
-			break;
-		}
-		if (old_owner == tid)
+		if (!old_owner.ToBE() || old_owner == tid)
 		{
 			break;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-		if (timeout && get_system_time() - time_start > timeout)
+		if (timeout && get_system_time() - start_time > timeout)
 		{
-			sq->invalidate(tid);
+			if (!sq->invalidate(tid, attribute))
+			{
+				assert(!"sys_lwmutex_t::lock() failed (timeout)");
+			}
 			return CELL_ETIMEDOUT;
 		}
 
@@ -211,6 +210,10 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 		}
 	}
 
+	if (!sq->invalidate(tid, attribute) && !sq->pop(tid, attribute))
+	{
+		assert(!"sys_lwmutex_t::lock() failed (locking)");
+	}
 	recursive_count.exchange(be_t<u32>::make(1));
 	return CELL_OK;
 }

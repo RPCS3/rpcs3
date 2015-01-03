@@ -169,6 +169,7 @@ template<typename T> T ARMv7_instrs::Shift_C(T value, SRType type, s32 amount, b
 		case SRType_ASR: return ASR_C(value, amount, carry_out);
 		case SRType_ROR: return ROR_C(value, amount, carry_out);
 		case SRType_RRX: return RRX_C(value, carry_in, carry_out);
+		default: throw __FUNCTION__;
 		}
 	}
 
@@ -710,6 +711,7 @@ void ARMv7_instrs::B(ARMv7Thread* thr, const ARMv7_encoding type)
 		jump = 1 + 4 + sign<26, u32>((thr->code.data & 0xffffff) << 2);
 		break;
 	}
+	default: throw __FUNCTION__;
 	}
 
 	if (ConditionPassed(thr, cond))
@@ -1410,7 +1412,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Thread* thr, const ARMv7_encoding type)
 	if (ConditionPassed(thr, cond))
 	{
 		bool carry;
-		const u32 res = Shift_C(thr->read_gpr(m), SRType_LSL, shift_n, thr->APSR.C, carry);
+		const u32 res = Shift_C<u32>(thr->read_gpr(m), SRType_LSL, shift_n, thr->APSR.C, carry);
 		thr->write_gpr(d, res);
 		if (set_flags)
 		{

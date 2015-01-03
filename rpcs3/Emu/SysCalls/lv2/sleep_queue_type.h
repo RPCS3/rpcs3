@@ -28,7 +28,8 @@ enum
 
 class sleep_queue_t
 {
-	std::vector<u32> m_list;
+	std::vector<u32> m_waiting;
+	std::vector<u32> m_signaled;
 	std::mutex m_mutex;
 	std::string m_name;
 
@@ -46,7 +47,9 @@ public:
 	const std::string& get_full_name() { return m_name; }
 
 	void push(u32 tid, u32 protocol);
-	u32 pop(u32 protocol);
-	bool invalidate(u32 tid);
+	bool pop(u32 tid, u32 protocol);
+	u32 signal(u32 protocol);
+	bool signal_selected(u32 tid);
+	bool invalidate(u32 tid, u32 protocol);
 	u32 count();
 };

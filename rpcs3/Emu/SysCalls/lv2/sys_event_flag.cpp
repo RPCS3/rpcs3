@@ -43,6 +43,10 @@ u32 EventFlag::check()
 					assert(!"EventFlag::check(): waiter not found");
 				}
 			}
+			else
+			{
+				assert(!"EventFlag::check(): unknown protocol");
+			}
 		}
 	}
 
@@ -51,8 +55,7 @@ u32 EventFlag::check()
 
 s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {
-	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)",
-		eflag_id.addr(), attr.addr(), init);
+	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)", eflag_id.addr(), attr.addr(), init);
 
 	if (!eflag_id)
 	{
@@ -76,7 +79,9 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 	}
 
 	if (attr->pshared.ToBE() != se32(0x200))
+	{
 		return CELL_EINVAL;
+	}
 
 	switch (attr->type.ToBE())
 	{

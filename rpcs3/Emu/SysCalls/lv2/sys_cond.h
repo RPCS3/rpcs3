@@ -4,7 +4,7 @@ struct sys_cond_attribute
 {
 	be_t<u32> pshared;
 	be_t<u64> ipc_key;
-	be_t<int> flags;
+	be_t<s32> flags;
 	union
 	{
 		char name[8];
@@ -15,7 +15,6 @@ struct sys_cond_attribute
 struct Cond
 {
 	std::shared_ptr<Mutex> mutex; // associated with mutex
-	squeue_t<u32, 32> signal;
 	sleep_queue_t queue;
 
 	Cond(std::shared_ptr<Mutex>& mutex, u64 name)

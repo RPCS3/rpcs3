@@ -92,7 +92,7 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(memAddr)
+	, put(a128(addr))
 	, put_count(0)
 	, got_count(0)
 	, released(0)

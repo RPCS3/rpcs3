@@ -19,7 +19,6 @@ struct sys_lwcond_t
 
 struct Lwcond
 {
-	squeue_t<u32, 32> signal;
 	sleep_queue_t queue;
 
 	const u32 addr;

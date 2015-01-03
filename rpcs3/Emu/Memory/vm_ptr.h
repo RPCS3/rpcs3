@@ -67,12 +67,12 @@ namespace vm
 
 		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr);
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>((u32)m_addr);
 		}
 
 		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(m_addr + sizeof(AT)* index);
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>((u32)(m_addr + sizeof(AT)* index));
 		}
 
 		//typedef typename invert_be_t<AT>::type AT2;
@@ -112,7 +112,7 @@ namespace vm
 
 		__forceinline T* const operator -> () const
 		{
-			return vm::get_ptr<T>(m_addr);
+			return vm::get_ptr<T>((u32)m_addr);
 		}
 
 		_ptr_base operator++ (int)
@@ -160,17 +160,17 @@ namespace vm
 
 		__forceinline T& operator *() const
 		{
-			return vm::get_ref<T>(m_addr);
+			return vm::get_ref<T>((u32)m_addr);
 		}
 
 		__forceinline T& operator [](typename remove_be_t<AT>::type index) const
 		{
-			return vm::get_ref<T>(m_addr + sizeof(T)* index);
+			return vm::get_ref<T>((u32)(m_addr + sizeof(T) * index));
 		}
 
 		__forceinline T& operator [](typename to_be_t<AT>::forced_type index) const
 		{
-			return vm::get_ref<T>(m_addr + sizeof(T)* index);
+			return vm::get_ref<T>((u32)(m_addr + sizeof(T)* index));
 		}
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
@@ -224,7 +224,7 @@ namespace vm
 
 		T* get_ptr() const
 		{
-			return vm::get_ptr<T>(m_addr);
+			return vm::get_ptr<T>((u32)m_addr);
 		}
 		
 		static _ptr_base make(AT addr)
@@ -253,7 +253,7 @@ namespace vm
 
 		void* get_ptr() const
 		{
-			return vm::get_ptr<void>(m_addr);
+			return vm::get_ptr<void>((u32)m_addr);
 		}
 
 		explicit operator void*() const
@@ -313,7 +313,7 @@ namespace vm
 
 		const void* get_ptr() const
 		{
-			return vm::get_ptr<const void>(m_addr);
+			return vm::get_ptr<const void>((u32)m_addr);
 		}
 
 		explicit operator const void*() const
@@ -356,9 +356,9 @@ namespace vm
 	public:
 		typedef RT(*type)(T...);
 
-		RT call(CPUThread& CPU, T... args) const; // call using specified CPU thread context, defined in CB_FUNC.h
+		RT call(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified CPU thread context
 
-		RT operator()(T... args) const; // call using current CPU thread context, defined in CB_FUNC.h
+		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current CPU thread context
 
 		AT addr() const
 		{

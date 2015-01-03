@@ -2,11 +2,11 @@
 
 struct sys_rwlock_attribute_t
 {
-	be_t<u32> attr_protocol;
-	be_t<u32> attr_pshared; // == 0x200 (NOT SHARED)
-	be_t<u64> key; // process-shared key (not used)
-	be_t<s32> flags; // process-shared flags (not used)
-	be_t<u32> pad; // not used
+	be_t<u32> protocol;
+	be_t<u32> pshared;
+	be_t<u64> ipc_key;
+	be_t<s32> flags;
+	be_t<u32> pad;
 	union
 	{
 		char name[8];
@@ -16,136 +16,22 @@ struct sys_rwlock_attribute_t
 
 struct RWLock
 {
-	std::mutex m_lock; // internal lock
-	u32 wlock_thread; // write lock owner
-	std::vector<u32> wlock_queue; // write lock queue
-	std::vector<u32> rlock_list; // read lock list
-	u32 m_protocol; // TODO
-
-	union
+	struct sync_var_t
 	{
-		u64 m_name_u64;
-		char m_name[8];
+		u32 readers; // reader count
+		u32 writer; // writer thread id
 	};
 
+	sleep_queue_t wqueue;
+	atomic_le_t<sync_var_t> sync;
+
+	const u32 protocol;
+
 	RWLock(u32 protocol, u64 name)
-		: m_protocol(protocol)
-		, m_name_u64(name)
-		, wlock_thread(0)
+		: protocol(protocol)
+		, wqueue(name)
 	{
-	}
-
-	bool rlock_trylock(u32 tid)
-	{
-		std::lock_guard<std::mutex> lock(m_lock);
-
-		if (!wlock_thread && !wlock_queue.size())
-		{
-			rlock_list.push_back(tid);
-			return true;
-		}
-		return false;
-	}
-
-	bool rlock_unlock(u32 tid)
-	{
-		std::lock_guard<std::mutex> lock(m_lock);
-
-		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
-		{
-			if (rlock_list[i] == tid)
-			{
-				rlock_list.erase(rlock_list.begin() + i);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool wlock_check(u32 tid)
-	{
-		std::lock_guard<std::mutex> lock(m_lock);
-
-		if (wlock_thread == tid)
-		{
-			return false; // deadlock
-		}
-		for (u32 i = (u32)rlock_list.size() - 1; ~i; i--)
-		{
-			if (rlock_list[i] == tid)
-			{
-				return false; // deadlock
-			}
-		}
-		return true;
-	}
-
-	bool wlock_trylock(u32 tid, bool enqueue)
-	{
-		std::lock_guard<std::mutex> lock(m_lock);
-
-		if (wlock_thread || rlock_list.size()) // already locked
-		{
-			if (!enqueue)
-			{
-				return false; // do not enqueue
-			}
-			for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
-			{
-				if (wlock_queue[i] == tid)
-				{
-					return false; // already enqueued
-				}
-			}
-			wlock_queue.push_back(tid); // enqueue new thread
-			return false;
-		}
-		else
-		{
-			if (wlock_queue.size())
-			{
-				// SYNC_FIFO only yet
-				if (wlock_queue[0] == tid)
-				{
-					wlock_thread = tid;
-					wlock_queue.erase(wlock_queue.begin());
-					return true;
-				}
-				else
-				{
-					if (!enqueue)
-					{
-						return false; // do not enqueue
-					}
-					for (u32 i = (u32)wlock_queue.size() - 1; ~i; i--)
-					{
-						if (wlock_queue[i] == tid)
-						{
-							return false; // already enqueued
-						}
-					}
-					wlock_queue.push_back(tid); // enqueue new thread
-					return false;
-				}
-			}
-			else
-			{
-				wlock_thread = tid; // easy way
-				return true;
-			}
-		}
-	}
-
-	bool wlock_unlock(u32 tid)
-	{
-		std::lock_guard<std::mutex> lock(m_lock);
-
-		if (wlock_thread == tid)
-		{
-			wlock_thread = 0;
-			return true;
-		}
-		return false;
+		sync.write_relaxed({ 0, 0 });
 	}
 };
 
@@ -155,6 +41,6 @@ s32 sys_rwlock_destroy(u32 rw_lock_id);
 s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout);
 s32 sys_rwlock_tryrlock(u32 rw_lock_id);
 s32 sys_rwlock_runlock(u32 rw_lock_id);
-s32 sys_rwlock_wlock(u32 rw_lock_id, u64 timeout);
-s32 sys_rwlock_trywlock(u32 rw_lock_id);
-s32 sys_rwlock_wunlock(u32 rw_lock_id);
+s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout);
+s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id);
+s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id);
