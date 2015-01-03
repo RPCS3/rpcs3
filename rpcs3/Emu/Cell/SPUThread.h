@@ -511,7 +511,7 @@ public:
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
 	std::function<void(SPUThread& SPU)> m_custom_task;
-	std::function<u64(SPUThread& SPU)> m_code3_func;
+	std::function<void(SPUThread& SPU)> m_code3_func;
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);

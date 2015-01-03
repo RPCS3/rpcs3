@@ -140,7 +140,7 @@ enum SpursFlags1 : u8
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
 
-enum SpursWorkloadConstants
+enum SpursWorkloadConstants : u64
 {
 	// Workload states
 	SPURS_WKL_STATE_NON_EXISTENT    = 0,
@@ -149,6 +149,12 @@ enum SpursWorkloadConstants
 	SPURS_WKL_STATE_SHUTTING_DOWN   = 3,
 	SPURS_WKL_STATE_REMOVABLE       = 4,
 	SPURS_WKL_STATE_INVALID         = 5,
+
+	// GUID
+	SPURS_GUID_SYS_WKL              = 0x1BB841BF38F89D33ull,
+
+	// Image addresses
+	SPURS_IMG_ADDR_SYS_SRV_WORKLOAD = 0x100,
 };
 
 enum CellSpursModulePollStatus
@@ -199,7 +205,6 @@ enum SpursTaskConstants
 class SPURSManager;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
-
 struct CellSpurs;
 
 struct CellSpursAttribute
@@ -249,7 +254,65 @@ struct CellSpursWorkloadFlag
 
 typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
-struct CellSpursTraceInfo;
+struct CellSpursTraceInfo
+{
+	static const u32 size = 0x80;
+	static const u32 align = 16;
+
+	be_t<u32> spu_thread[8];    // 0x00
+	be_t<u32> count[8];         // 0x20
+	be_t<u32> spu_thread_grp;   // 0x40
+	be_t<u32> nspu;             // 0x44
+	//u8 padding[];
+};
+
+struct CellSpursTracePacket
+{
+	static const u32 size = 16;
+
+	struct
+	{
+		u8 tag;
+		u8 length;
+		u8 spu;
+		u8 workload;
+		be_t<u32> time;
+	} header;
+
+	union
+	{
+		struct
+		{
+			be_t<u32> incident;
+			be_t<u32> reserved;
+		} service;
+
+		struct
+		{
+			be_t<u32> ea;
+			be_t<u16> ls;
+			be_t<u16> size;
+		} load;
+
+		struct
+		{
+			be_t<u32> offset;
+			be_t<u16> ls;
+			be_t<u16> size;
+		} map;
+
+		struct
+		{
+			s8 module[4];
+			be_t<u16> level;
+			be_t<u16> ls;
+		} start;
+
+		be_t<u64> user;
+		be_t<u64> guid;
+		be_t<u64> stop;
+	} data;
+};
 
 // Core CellSpurs structures
 struct CellSpurs
@@ -289,7 +352,7 @@ struct CellSpurs
 		be_t<u64> arg; // spu argument
 		be_t<u32> size;
 		atomic_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
-		be_t<u8> priority[8];
+		u8 priority[8];
 	};
 
 	static_assert(sizeof(WorkloadInfo) == 0x20, "Wrong WorkloadInfo size");
@@ -311,10 +374,6 @@ struct CellSpurs
 		// real data
 		struct
 		{
-			// The first 0x80 bytes of the CellSpurs structure is shared by all instances of the SPURS kernel in a SPURS instance and the PPU.
-			// The SPURS kernel copies this from main memory to the LS (address 0x100) then runs its scheduling algorithm using this as one
-			// of the inputs. After selecting a new workload, the SPURS kernel updates this and writes it back to main memory.
-			// The read-modify-write is performed atomically by the SPURS kernel.
 			atomic_t<u8> wklReadyCount1[0x10];                  // 0x00 Number of SPUs requested by each workload (0..15 wids).
 			atomic_t<u8> wklIdleSpuCountOrReadyCount2[0x10];    // 0x10 SPURS1: Number of idle SPUs requested by each workload (0..15 wids). SPURS2: Number of SPUs requested by each workload (16..31 wids).
 			u8 wklCurrentContention[0x10];                      // 0x20 Number of SPUs used by each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
@@ -332,33 +391,34 @@ struct CellSpurs
 			atomic_t<u16> wklSignal2;                           // 0x78 (bitset for 16..32 wids)
 			u8 x7A[6];                                          // 0x7A
 			atomic_t<u8> wklState1[0x10];                       // 0x80 SPURS_WKL_STATE_*
-			u8 wklStatus1[0x10];       // 0x90
-			u8 wklEvent1[0x10];       // 0xA0
-			atomic_t<u32> wklMskA; // 0xB0 - System service - Available workloads (32*u1)
-			atomic_t<u32> wklMskB; // 0xB4 - System service - Available module id
-			u8 xB8[5];            // 0xB8 - 0xBC - Syetem service exit barrier
-			atomic_t<u8> sysSrvMsgUpdateWorkload;     // 0xBD
-			u8 xBE;            // 0xBE
-			u8 sysSrvMsgTerminate;  // 0xBF
-			u8 sysSrvWorkload[8];            // 0xC0
-			u8 sysSrvOnSpu;       // 0xC8
-			u8 spuPort;           // 0xC9 - SPU port for system service
-			u8 xCA;               // 0xCA
-			u8 xCB;               // 0xCB
-			u8 xCC;               // 0xCC
-			u8 xCD;               // 0xCD
-			u8 sysSrvMsgUpdateTrace; // 0xCE
-			u8 xCF;               // 0xCF
-			atomic_t<u8> wklState2[0x10]; // 0xD0 SPURS_WKL_STATE_*
-			u8 wklStatus2[0x10];       // 0xE0
-			u8 wklEvent2[0x10];       // 0xF0
-			_sub_str1 wklF1[0x10]; // 0x100
-			vm::bptr<CellSpursTraceInfo, 1, u64> traceBuffer; // 0x900
-			be_t<u32> traceStartIndex[6];     // 0x908
-			u8 unknown7[0x948 - 0x920]; // 0x920
-			be_t<u64> traceDataSize; // 0x948
-			be_t<u32> traceMode;  // 0x950
-			u8 unknown8[0x980 - 0x954]; // 0x954
+			u8 wklStatus1[0x10];                                // 0x90
+			u8 wklEvent1[0x10];                                 // 0xA0
+			atomic_t<u32> wklMskA;                              // 0xB0 - System service - Available workloads (32*u1)
+			atomic_t<u32> wklMskB;                              // 0xB4 - System service - Available module id
+			u32 xB8;                                            // 0xB8
+			u8 sysSrvExitBarrier;                               // 0xBC
+			atomic_t<u8> sysSrvMsgUpdateWorkload;               // 0xBD
+			u8 xBE;                                             // 0xBE
+			u8 sysSrvMsgTerminate;                              // 0xBF
+			u8 sysSrvWorkload[8];                               // 0xC0
+			u8 sysSrvOnSpu;                                     // 0xC8
+			u8 spuPort;                                         // 0xC9
+			u8 xCA;                                             // 0xCA
+			u8 xCB;                                             // 0xCB
+			u8 xCC;                                             // 0xCC
+			u8 xCD;                                             // 0xCD
+			u8 sysSrvMsgUpdateTrace;                            // 0xCE
+			u8 xCF;                                             // 0xCF
+			atomic_t<u8> wklState2[0x10];                       // 0xD0 SPURS_WKL_STATE_*
+			u8 wklStatus2[0x10];                                // 0xE0
+			u8 wklEvent2[0x10];                                 // 0xF0
+			_sub_str1 wklF1[0x10];                              // 0x100
+			vm::bptr<CellSpursTraceInfo, 1, u64> traceBuffer;   // 0x900
+			be_t<u32> traceStartIndex[6];                       // 0x908
+			u8 unknown7[0x948 - 0x920];                         // 0x920
+			be_t<u64> traceDataSize;                            // 0x948
+			be_t<u32> traceMode;                                // 0x950
+			u8 unknown8[0x980 - 0x954];                         // 0x954
 			be_t<u64> semPrv;     // 0x980
 			be_t<u32> unk11;      // 0x988
 			be_t<u32> unk12;      // 0x98C
@@ -559,66 +619,6 @@ struct CellSpursExceptionInfo
 	be_t<u64> option;
 };
 
-struct CellSpursTraceInfo
-{
-	static const u32 size = 0x80;
-	static const u32 align = 16;
-
-	be_t<u32> spu_thread[8];    // 0x00
-	be_t<u32> count[8];         // 0x20
-	be_t<u32> spu_thread_grp;   // 0x40
-	be_t<u32> nspu;             // 0x44
-	//u8 padding[];
-};
-
-struct CellSpursTracePacket
-{
-	static const u32 size = 16;
-
-	struct
-	{
-		u8 tag;
-		u8 length;
-		u8 spu;
-		u8 workload;
-		be_t<u32> time;
-	} header;
-
-	union
-	{
-		struct
-		{
-			be_t<u32> incident;
-			be_t<u32> reserved;
-		} service;
-
-		struct
-		{
-			be_t<u32> ea;
-			be_t<u16> ls;
-			be_t<u16> size;
-		} load;
-
-		struct
-		{
-			be_t<u32> offset;
-			be_t<u16> ls;
-			be_t<u16> size;
-		} map;
-
-		struct
-		{
-			s8 module[4];
-			be_t<u16> level;
-			be_t<u16> ls;
-		} start;
-
-		be_t<u64> user;
-		be_t<u64> guid;
-		be_t<u64> stop;
-	} data;
-};
-
 // Exception handlers.
 //typedef void (*CellSpursGlobalExceptionEventHandler)(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursExceptionInfo> info, 
 //													   u32 id, vm::ptr<void> arg);
@@ -793,7 +793,6 @@ struct CellSpursTaskBinInfo
 
 // The SPURS kernel data store. This resides at 0x00 of the LS.
 struct SpursKernelMgmtData {
-	u8 unk0[0x100];                                 // 0x00
 	u8 tempArea[0x80];                              // 0x100
 	u8 wklLocContention[0x10];                      // 0x180
 	u8 wklLocPendingContention[0x10];               // 0x190
@@ -804,7 +803,7 @@ struct SpursKernelMgmtData {
 	be_t<u32> dmaTagId;                             // 0x1CC
 	vm::bptr<const void, 1, u64> wklCurrentAddr;    // 0x1D0
 	be_t<u32> wklCurrentUniqueId;                   // 0x1D8
-	u32 wklCurrentId;                               // 0x1DC
+	be_t<u32> wklCurrentId;                         // 0x1DC
 	be_t<u32> yieldToKernelAddr;                    // 0x1E0
 	be_t<u32> selectWorkloadAddr;                   // 0x1E4
 	u8 x1E8;                                        // 0x1E8

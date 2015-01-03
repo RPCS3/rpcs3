@@ -653,7 +653,7 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="cellSpursSpu.cpp">
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>

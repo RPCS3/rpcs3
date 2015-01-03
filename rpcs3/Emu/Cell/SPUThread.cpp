@@ -1029,7 +1029,7 @@ void SPUThread::StopAndSignal(u32 code)
 
 	case 0x003:
 	{
-		GPR[3]._u64[1] = m_code3_func(*this);
+		m_code3_func(*this);
 		break;
 	}
 
