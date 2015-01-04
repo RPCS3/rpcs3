@@ -290,26 +290,63 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 {
 	decoded_size = 0;
 
-	u8 reg = 0;
-	if ((*code & 0xf0) == 0x40) // check REX prefix
-	{
-		if (*code & 0x80) // check REX.W bit
-		{
-			throw fmt::Format("decode_x64_reg_op(%.16llXh): REX.W bit found", code - decoded_size);
-		}
-		if (*code & 0x04) // check REX.R bit
-		{
-			reg = 8;
-		}
-		code++;
-		decoded_size++;
-	}
+	u8 rex = 0;
+	u8 reg = 0; // set to 8 by REX prefix
+	u8 pg2 = 0;
 
-	if (*code == 0x66)
+	// check prefixes:
+	for (;; code++, decoded_size++)
 	{
-		throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x66 prefix found", code - decoded_size);
-		code++;
-		decoded_size++;
+		switch (const u8 prefix = *code)
+		{
+		case 0xf0: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (LOCK prefix) found", code - decoded_size, prefix); // group 1
+		case 0xf2: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REPNE/REPNZ prefix) found", code - decoded_size, prefix); // group 1
+		case 0xf3: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REP/REPE/REPZ prefix) found", code - decoded_size, prefix); // group 1
+
+		case 0x2e: // group 2
+		case 0x36:
+		case 0x3e:
+		case 0x26:
+		case 0x64:
+		case 0x65:
+		{
+			if (!pg2)
+			{
+				pg2 = prefix; // probably, segment selector
+				continue;
+			}
+			else
+			{
+				throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (group 2 prefix) found after 0x%.2X", code - decoded_size, prefix, pg2);
+			}
+		}
+
+		case 0x66: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (operand-size override prefix) found", code - decoded_size, prefix); // group 3
+		case 0x67: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (address-size override prefix) found", code - decoded_size, prefix); // group 4
+
+		default:
+		{
+			if ((prefix & 0xf0) == 0x40) // check REX prefix
+			{
+				if (rex)
+				{
+					throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REX prefix) found after 0x%.2X", code - decoded_size, prefix, rex);
+				}
+				if (prefix & 0x80) // check REX.W bit
+				{
+					throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REX.W bit) found", code - decoded_size, prefix);
+				}
+				if (prefix & 0x04) // check REX.R bit
+				{
+					reg = 8;
+				}
+				rex = prefix;
+				continue;
+			}
+		}
+		}
+
+		break;
 	}
 
 	auto get_modRM_r32 = [](const u8* code, const u8 reg_base) -> x64_reg_t
