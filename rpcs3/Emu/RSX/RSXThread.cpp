@@ -607,7 +607,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_FRONT_FACE:
 	{
 		const u32 value = ARGS(0);
-		FrontFace(value);
+		//FrontFace(value);
 	}
 	break;
 
