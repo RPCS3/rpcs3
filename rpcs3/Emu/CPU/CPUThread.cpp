@@ -404,8 +404,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
-	CPUThread* t = GetCurrentCPUThread();
-	if (u == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000 && t)
+	if (u == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000)
 	{
 		const u32 addr = (u32)addr64;
 		if (addr >= RAW_SPU_BASE_ADDR && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
@@ -452,7 +451,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 			}
 			default: assert(!"Invalid x64_op_t value");
 			}
-			
+
 			// save x64 reg value (for load operations)
 			if (save_reg)
 			{
@@ -475,8 +474,15 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 			// it's dangerous because destructors won't be executed
 		}
 		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
-			is_writing ? "writing" : "reading", (u32)addr, t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
+		if (CPUThread* t = GetCurrentCPUThread())
+		{
+			throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))", is_writing ? "writing" : "reading", (u32)addr,
+				t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
+		}
+		else
+		{
+			throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", (u32)addr);
+		}
 	}
 
 	// else some fatal error (should crash)
@@ -504,8 +510,6 @@ void CPUThread::Task()
 
 #ifdef _WIN32
 	auto old_se_translator = _set_se_translator(_se_translator);
-#else
-	// TODO: linux version
 #endif
 
 	try
@@ -558,8 +562,6 @@ void CPUThread::Task()
 
 #ifdef _WIN32
 	_set_se_translator(old_se_translator);
-#else
-	// TODO: linux version
 #endif
 
 	if (trace.size())

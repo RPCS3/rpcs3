@@ -28,16 +28,13 @@ bool PKGLoader::Install(std::string dest)
 	std::string titleID = std::string(title_id).substr(7, 9);
 
 	if (rExists(dest + titleID)) {
-		rMessageDialog d_overwrite(NULL, "Another installation was found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
+		rMessageDialog d_overwrite(NULL, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
 		if (d_overwrite.ShowModal() != rID_YES) {
 			LOG_ERROR(LOADER, "PKG Loader: Another installation found in: %s", titleID.c_str());
 			return false;
 		}
-		
-		rRmdir(dest + titleID);
-	}
-	if (!rMkdir(dest + titleID)) {
-		LOG_ERROR(LOADER, "PKG Loader: Could not make the installation directory: %s", titleID.c_str());
+	} else if (!rMkdir(dest + titleID)) {
+		LOG_ERROR(LOADER, "PKG Loader: Could not create the installation directory: %s", titleID.c_str());
 		return false;
 	}
 
