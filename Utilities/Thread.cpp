@@ -277,14 +277,16 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 #else
 
-static const typename decltype(REG_RIP) reg_table[16] =
+typedef decltype(REG_RIP) reg_table_t;
+static const reg_table_t reg_table[16] =
 {
 	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
 	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15
 };
 
-void signal_handler(int sig, siginfo_t* info, ucontext_t* ctx)
+void signal_handler(int sig, siginfo_t* info, void* uct)
 {
+	ucontext_t* const ctx = (ucontext_t*)uct;
 	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
 	//const bool is_writing = false; // TODO: get it correctly
 	if (addr64 < 0x100000000ull)
@@ -380,7 +382,7 @@ const int sigaction_result = []() -> int
 	sigemptyset(&sa.sa_mask);
 	sa.sa_sigaction = signal_handler;
 	return sigaction(SIGSEGV, &sa, NULL);
-};
+}();
 
 #endif
 
