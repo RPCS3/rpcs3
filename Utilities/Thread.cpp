@@ -2,7 +2,7 @@
 #include "Log.h"
 #include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/Syscalls/Syscalls.h"
+#include "Emu/SysCalls/SysCalls.h"
 #include "Thread.h"
 
 #ifdef _WIN32
