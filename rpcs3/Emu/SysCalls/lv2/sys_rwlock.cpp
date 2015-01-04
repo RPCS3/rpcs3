@@ -15,6 +15,12 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 {
 	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.addr(), attr.addr());
 
+	if (!attr)
+	{
+		sys_rwlock.Error("sys_rwlock_create(): null attr address");
+		return CELL_EFAULT;
+	}
+
 	switch (attr->protocol.ToBE())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
