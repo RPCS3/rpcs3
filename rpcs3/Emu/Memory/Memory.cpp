@@ -170,28 +170,29 @@ void MemoryBase::Close()
 	MemoryBlocks.clear();
 }
 
-bool MemoryBase::WriteMMIO32(u32 addr, const u32 data)
+void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 {
 	LV2_LOCK(0);
 
 	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
 	{
-		return true;
+		return;
 	}
 
-	return false;
+	throw fmt::Format("%s(addr=0x%x, data=0x%x) failed", __FUNCTION__, addr, data);
 }
 
-bool MemoryBase::ReadMMIO32(u32 addr, u32& res)
+u32 MemoryBase::ReadMMIO32(u32 addr)
 {
 	LV2_LOCK(0);
 
+	u32 res;
 	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
 	{
-		return true;
+		return res;
 	}
 
-	return false;
+	throw fmt::Format("%s(addr=0x%x) failed", __FUNCTION__, addr);
 }
 
 bool MemoryBase::Map(const u64 addr, const u32 size)
