@@ -197,6 +197,9 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 #define case_32(offset, step) \
     case_16(offset, step) \
     case_16(offset + 16*step, step)
+#define case_64(offset, step) \
+    case_32(offset, step) \
+    case_32(offset + 32*step, step)
 #define case_range(n, offset, step) \
     case_##n(offset, step) \
     index = (cmd - offset) / step;
@@ -437,7 +440,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA2F_M, 8)
+	case_range(32, NV4097_SET_VERTEX_DATA2F_M, 4)
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
@@ -457,7 +460,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA4F_M, 16)
+	case_range(64, NV4097_SET_VERTEX_DATA4F_M, 4)
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
