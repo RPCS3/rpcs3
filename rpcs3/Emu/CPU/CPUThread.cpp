@@ -254,27 +254,6 @@ void CPUThread::ExecOnce()
 	SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
-#ifdef _WIN32
-void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
-{
-	const u64 addr = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
-	CPUThread* t = GetCurrentCPUThread();
-	if (u == EXCEPTION_ACCESS_VIOLATION && addr < 0x100000000 && t)
-	{
-		// TODO: allow recovering from a page fault
-		throw fmt::Format("Access violation: addr = 0x%x (is_alive=%d, last_syscall=0x%llx (%s))",
-			(u32)addr, t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
-	}
-	else
-	{
-		// some fatal error (should crash)
-		return;
-	}
-}
-#else
-// TODO: linux version
-#endif
-
 void CPUThread::Task()
 {
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s enter", CPUThread::GetFName().c_str());
@@ -291,12 +270,6 @@ void CPUThread::Task()
 	}
 
 	std::vector<u32> trace;
-
-#ifdef _WIN32
-	auto old_se_translator = _set_se_translator(_se_translator);
-#else
-	// TODO: linux version
-#endif
 
 	try
 	{
@@ -345,12 +318,6 @@ void CPUThread::Task()
 		LOG_ERROR(GENERAL, "Exception: %s", e);
 		Emu.Pause();
 	}
-
-#ifdef _WIN32
-	_set_se_translator(old_se_translator);
-#else
-	// TODO: linux version
-#endif
 
 	if (trace.size())
 	{

@@ -18,7 +18,6 @@
 #include "cellMsgDialog.h"
 #include "cellGame.h"
 #include "cellSysutil.h"
-#include "cellSaveData.h"
 
 typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
@@ -842,6 +841,8 @@ extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u3
 extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
+extern void cellSysutil_SaveData_init();
+
 void cellSysutil_init(Module *pxThis)
 {
 	cellSysutil = pxThis;
@@ -894,36 +895,13 @@ void cellSysutil_init(Module *pxThis)
 	//cellSysutil->AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
 	//cellSysutil->AddFunc(0xafd605b3, cellHddGameExitBroken);
 
-	//cellSysutil_SaveData
-	//cellSysutil->AddFunc(0x04c06fc2, cellSaveDataGetListItem);
-	//cellSysutil->AddFunc(0x273d116a, cellSaveDataUserListExport);
-	//cellSysutil->AddFunc(0x27cb8bc2, cellSaveDataListDelete);
-	//cellSysutil->AddFunc(0x39d6ee43, cellSaveDataUserListImport);
-	//cellSysutil->AddFunc(0x46a2d878, cellSaveDataFixedExport);
-	//cellSysutil->AddFunc(0x491cc554, cellSaveDataListExport);
-	//cellSysutil->AddFunc(0x52541151, cellSaveDataFixedImport);
-	//cellSysutil->AddFunc(0x529231b0, cellSaveDataUserFixedImport);
-	//cellSysutil->AddFunc(0x6b4e0de6, cellSaveDataListImport);
-	//cellSysutil->AddFunc(0x7048a9ba, cellSaveDataUserListDelete);
-	//cellSysutil->AddFunc(0x95ae2cde, cellSaveDataUserFixedExport);
-	//cellSysutil->AddFunc(0xf6482036, cellSaveDataUserGetListItem);
-	cellSysutil->AddFunc(0x2de0d663, cellSaveDataListSave2);
-	cellSysutil->AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
-	cellSysutil->AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
-	cellSysutil->AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
-	cellSysutil->AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
-	cellSysutil->AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
-	cellSysutil->AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
-	cellSysutil->AddFunc(0x21425307, cellSaveDataListAutoLoad);
-	//cellSysutil->AddFunc(0xedadd797, cellSaveDataDelete2);
-	//cellSysutil->AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
-	//cellSysutil->AddFunc(0x39dd8425, cellSaveDataUserListLoad);
-	//cellSysutil->AddFunc(0x40b34847, cellSaveDataUserFixedSave);
-	//cellSysutil->AddFunc(0x6e7264ed, cellSaveDataUserFixedLoad);
-	//cellSysutil->AddFunc(0x52aac4fa, cellSaveDataUserAutoSave);
-	//cellSysutil->AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
-	//cellSysutil->AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
-	//cellSysutil->AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
+	//cellSysutil->AddFunc(0x886D0747, cellSysutilRegisterCallbackDispatcher);
+	//cellSysutil->AddFunc(0xA2720DF2, cellSysutilPacketWrite);
+	//cellSysutil->AddFunc(0x75AA7373, doc.write);
+	//cellSysutil->AddFunc(0x2D96313F, packet_read);
+
+	// cellSaveData functions
+	cellSysutil_SaveData_init();
 
 	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
 
