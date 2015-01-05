@@ -4,11 +4,13 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "stblib/stb_image.h"
-#include "Emu/SysCalls/lv2/lv2Fs.h"
+#include "Emu/SysCalls/lv2/cellFs.h"
 #include "cellPngDec.h"
 #include <map>
 
 Module *cellPngDec = nullptr;
+
+#undef PRX_DEBUG
 
 #ifdef PRX_DEBUG
 #include "prx_libpngdec.h"
@@ -75,13 +77,13 @@ s64 pngDecOpen(
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch (src->srcSelect.ToLE())
+	switch ((u32)src->srcSelect.ToBE())
 	{
-	case CELL_PNGDEC_BUFFER:
+	case se32(CELL_PNGDEC_BUFFER):
 		stream->fileSize = src->streamSize.ToLE();
 		break;
 
-	case CELL_PNGDEC_FILE:
+	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
 		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
@@ -143,7 +145,7 @@ s64 pngReadHeader(
 	auto buffer_32 = buffer.To<be_t<u32>>();
 	vm::var<be_t<u64>> pos, nread;
 
-	switch (stream->src.srcSelect.ToBE())
+	switch ((u32)stream->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
 		memmove(buffer.begin(), stream->src.streamPtr.get_ptr(), buffer.size());
@@ -204,17 +206,21 @@ s64 pngDecSetParameter(
 	current_outParam.outputHeight = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch ((u32)current_outParam.outputColorSpace)
+	switch ((u32)current_outParam.outputColorSpace.ToBE())
 	{
-	case CELL_PNGDEC_PALETTE:
-	case CELL_PNGDEC_GRAYSCALE:       current_outParam.outputComponents = 1; break;
+	case se32(CELL_PNGDEC_PALETTE):
+	case se32(CELL_PNGDEC_GRAYSCALE):
+		current_outParam.outputComponents = 1; break;
 
-	case CELL_PNGDEC_GRAYSCALE_ALPHA: current_outParam.outputComponents = 2; break;
+	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
+		current_outParam.outputComponents = 2; break;
 
-	case CELL_PNGDEC_RGB:             current_outParam.outputComponents = 3; break;
+	case se32(CELL_PNGDEC_RGB):
+		current_outParam.outputComponents = 3; break;
 
-	case CELL_PNGDEC_RGBA:
-	case CELL_PNGDEC_ARGB:            current_outParam.outputComponents = 4; break;
+	case se32(CELL_PNGDEC_RGBA):
+	case se32(CELL_PNGDEC_ARGB):
+		current_outParam.outputComponents = 4; break;
 
 	default:
 		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
@@ -248,7 +254,7 @@ s64 pngDecodeData(
 	vm::var<unsigned char[]> png((u32)fileSize);
 	vm::var<be_t<u64>> pos, nread;
 
-	switch (stream->src.srcSelect.ToBE())
+	switch ((u32)stream->src.srcSelect.ToBE())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
 		memmove(png.begin(), stream->src.streamPtr.get_ptr(), png.size());
@@ -277,10 +283,10 @@ s64 pngDecodeData(
 	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	uint image_size = width * height;
 
-	switch ((u32)current_outParam.outputColorSpace)
+	switch ((u32)current_outParam.outputColorSpace.ToBE())
 	{
-	case CELL_PNGDEC_RGB:
-	case CELL_PNGDEC_RGBA:
+	case se32(CELL_PNGDEC_RGB):
+	case se32(CELL_PNGDEC_RGBA):
 	{
 		const char nComponents = current_outParam.outputColorSpace == CELL_PNGDEC_RGBA ? 4 : 3;
 		image_size *= nComponents;
@@ -298,10 +304,10 @@ s64 pngDecodeData(
 		{
 			memcpy(data.get_ptr(), image.get(), image_size);
 		}
-	}
 		break;
+	}
 
-	case CELL_PNGDEC_ARGB:
+	case se32(CELL_PNGDEC_ARGB):
 	{
 		const int nComponents = 4;
 		image_size *= nComponents;
@@ -340,12 +346,12 @@ s64 pngDecodeData(
 			memcpy(data.get_ptr(), img, image_size);
 			delete[] img;
 		}
-	}
 		break;
+	}
 
-	case CELL_PNGDEC_GRAYSCALE:
-	case CELL_PNGDEC_PALETTE:
-	case CELL_PNGDEC_GRAYSCALE_ALPHA:
+	case se32(CELL_PNGDEC_GRAYSCALE):
+	case se32(CELL_PNGDEC_PALETTE):
+	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
 		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
 		break;
 

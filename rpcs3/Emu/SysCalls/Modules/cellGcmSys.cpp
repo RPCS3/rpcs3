@@ -92,7 +92,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024*1024) {
+		if (index >= 1024 * 1024) {
 			cellGcmSys->Error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
 			return vm::ptr<CellGcmReportData>::make(0);
 		}
@@ -195,7 +195,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 	}
 
 	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024*1024) {
+		if (index >= 1024 * 1024) {
 			cellGcmSys->Error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
 			return 0;
 		}
@@ -300,7 +300,7 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys->Log("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (size_t i=0; i < sizeof(tiled_pitches)/sizeof(tiled_pitches[0]) - 1; i++) {
+	for (size_t i=0; i < sizeof(tiled_pitches) / sizeof(tiled_pitches[0]) - 1; i++) {
 		if (tiled_pitches[i] < size && size <= tiled_pitches[i+1]) {
 			return tiled_pitches[i+1];
 		}
@@ -369,7 +369,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
 	current_context.begin = ctx_begin;
-	current_context.end = ctx_begin + ctx_size;
+	current_context.end = ctx_begin + ctx_size - 4;
 	current_context.current = current_context.begin;
 	current_context.callback.set(be_t<u32>::make(Emu.GetRSXCallback() - 4));
 
@@ -805,8 +805,7 @@ s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset)
 	cellGcmSys->Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
 
 	// Address not on main memory or local memory
-	if (!address || address >= 0xD0000000) {
-		cellGcmSys->Error("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
+	if (address >= 0xD0000000) {
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
@@ -1170,12 +1169,16 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys->Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
 
-	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
-
 	if (1)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
+
+		if (res != 0)
+		{
+			GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+		}
+
 		memmove(vm::get_ptr<void>(context->begin), vm::get_ptr<void>(context->current - res), res);
 
 		context->current = context->begin + res;

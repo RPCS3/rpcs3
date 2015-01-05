@@ -28,28 +28,28 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	CPUThread* new_thread;
+	std::shared_ptr<CPUThread> new_thread;
 
 	switch(type)
 	{
 	case CPU_THREAD_PPU:
 	{
-		new_thread = new PPUThread();
+		new_thread.reset(new PPUThread());
 		break;
 	}
 	case CPU_THREAD_SPU:
 	{
-		new_thread = new SPUThread();
+		new_thread.reset(new SPUThread());
 		break;
 	}
 	case CPU_THREAD_RAW_SPU:
 	{
-		new_thread = new RawSPUThread();
+		new_thread.reset(new RawSPUThread());
 		break;
 	}
 	case CPU_THREAD_ARMv7:
 	{
-		new_thread = new ARMv7Thread();
+		new_thread.reset(new ARMv7Thread());
 		break;
 	}
 	default: assert(0);
@@ -58,7 +58,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	new_thread->SetId(Emu.GetIdManager().GetNewID(fmt::Format("%s Thread", new_thread->GetTypeString().c_str()), new_thread));
 
 	m_threads.push_back(new_thread);
-	SendDbgCommand(DID_CREATE_THREAD, new_thread);
+	SendDbgCommand(DID_CREATE_THREAD, new_thread.get());
 
 	return *new_thread;
 }
@@ -67,17 +67,11 @@ void CPUThreadManager::RemoveThread(const u32 id)
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	CPUThread* thr = nullptr;
+	std::shared_ptr<CPUThread> thr;
 	u32 thread_index = 0;
 
 	for (u32 i = 0; i < m_threads.size(); ++i)
 	{
-		if (m_threads[i]->m_wait_thread_id == id)
-		{
-			m_threads[i]->Wait(false);
-			m_threads[i]->m_wait_thread_id = -1;
-		}
-
 		if (m_threads[i]->GetId() != id) continue;
 
 		thr = m_threads[i];
@@ -86,7 +80,7 @@ void CPUThreadManager::RemoveThread(const u32 id)
 
 	if (thr)
 	{
-		SendDbgCommand(DID_REMOVE_THREAD, thr);
+		SendDbgCommand(DID_REMOVE_THREAD, thr.get());
 		thr->Close();
 
 		m_threads.erase(m_threads.begin() + thread_index);
@@ -112,9 +106,9 @@ s32 CPUThreadManager::GetThreadNumById(CPUThreadType type, u32 id)
 	return -1;
 }
 
-CPUThread* CPUThreadManager::GetThread(u32 id)
+std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id)
 {
-	CPUThread* res;
+	std::shared_ptr<CPUThread> res;
 
 	if (!id) return nullptr;
 
@@ -139,7 +133,7 @@ void CPUThreadManager::Exec()
 {
 	std::lock_guard<std::mutex> lock(m_mtx_thread);
 
-	for(u32 i=0; i<m_threads.size(); ++i)
+	for(u32 i = 0; i < m_threads.size(); ++i)
 	{
 		m_threads[i]->Exec();
 	}

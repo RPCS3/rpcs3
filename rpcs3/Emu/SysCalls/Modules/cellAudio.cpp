@@ -2,11 +2,13 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "rpcs3/Ini.h"
-#include "Utilities/SQueue.h"
-#include "Emu/Event.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
+#include "Emu/Event.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/Audio/AudioDumper.h"
 #include "Emu/Audio/cellAudio.h"
@@ -74,11 +76,8 @@ int cellAudioInit()
 				oal_buffer_float[i] = std::unique_ptr<float[]>(new float[oal_buffer_size] {} );
 			}
 
-			SQueue<s16*, 31> queue;
-			queue.Clear();
-
-			SQueue<float*, 31> queue_float;
-			queue_float.Clear();
+			squeue_t<s16*, 31> queue;
+			squeue_t<float*, 31> queue_float;
 
 			std::vector<u64> keys;
 
@@ -105,9 +104,9 @@ int cellAudioInit()
 					float* oal_buffer_float = nullptr;
 
 					if (g_is_u16)
-						queue.Pop(oal_buffer, nullptr);
+						queue.pop(oal_buffer);
 					else
-						queue_float.Pop(oal_buffer_float, nullptr);
+						queue_float.pop(oal_buffer_float);
 
 					if (g_is_u16)
 					{
@@ -370,9 +369,9 @@ int cellAudioInit()
 					if(m_audio_out)
 					{
 						if (g_is_u16)
-							queue.Push(&oal_buffer[oal_pos][0], nullptr);
+							queue.push(&oal_buffer[oal_pos][0]);
 
-						queue_float.Push(&oal_buffer_float[oal_pos][0], nullptr);
+						queue_float.push(&oal_buffer_float[oal_pos][0]);
 					}
 
 					oal_buffer_offset = 0;
@@ -438,8 +437,8 @@ int cellAudioInit()
 			}
 			cellAudio->Notice("Audio thread ended");
 abort:
-			queue.Push(nullptr, nullptr);
-			queue_float.Push(nullptr, nullptr);
+			queue.push(nullptr);
+			queue_float.push(nullptr);
 
 			if(do_dump)
 				m_dump.Finalize();
@@ -457,7 +456,7 @@ abort:
 
 			while (!internal_finished)
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			}
 
 			m_config.m_is_audio_finalized = true;
@@ -471,7 +470,7 @@ abort:
 			cellAudio->Warning("cellAudioInit() aborted");
 			return CELL_OK;
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
 
 	return CELL_OK;
@@ -490,7 +489,7 @@ int cellAudioQuit()
 
 	while (!m_config.m_is_audio_finalized)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		if (Emu.IsStopped())
 		{
 			cellAudio->Warning("cellAudioQuit(): aborted");
@@ -527,6 +526,9 @@ int cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 			port.channel = (u8)audioParam->nChannel;
 			port.block = (u8)audioParam->nBlock;
 			port.attr = audioParam->attr;
+			port.addr = m_config.m_buffer + (128 * 1024 * i);
+			port.read_index_addr = m_config.m_indexes + (sizeof(u64) * i);
+			port.size = port.channel * port.block * 256 * sizeof(float);
 			if (port.attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 			{
 				port.level = audioParam->level;
@@ -578,9 +580,9 @@ int cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 
 	portConfig->nChannel = port.channel;
 	portConfig->nBlock = port.block;
-	portConfig->portSize = port.channel * port.block * 256 * sizeof(float);
-	portConfig->portAddr = m_config.m_buffer + (128 * 1024 * portNum); // 0x20020000
-	portConfig->readIndexAddr = m_config.m_indexes + (sizeof(u64) * portNum); // 0x20010010 on ps3
+	portConfig->portSize = port.size;
+	portConfig->portAddr = port.addr; // 0x20020000
+	portConfig->readIndexAddr = port.read_index_addr; // 0x20010010 on ps3
 
 	cellAudio->Log("*** port config: nChannel=%d, nBlock=%d, portSize=0x%x, portAddr=0x%x, readIndexAddr=0x%x",
 		(u32)portConfig->nChannel, (u32)portConfig->nBlock, (u32)portConfig->portSize, (u32)portConfig->portAddr, (u32)portConfig->readIndexAddr);
@@ -731,6 +733,28 @@ int cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 int cellAudioSetPortLevel(u32 portNum, float level)
 {
 	cellAudio->Todo("cellAudioSetPortLevel(portNum=0x%x, level=%f)", portNum, level);
+
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	port.level = level; // TODO
+
 	return CELL_OK;
 }
 
@@ -749,11 +773,10 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	}
 	event_key = (event_key << 48) | 0x80004d494f323221; // left part: 0x8000, 0x8001, 0x8002 ...
 
-	EventQueue* eq = new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32);
+	std::shared_ptr<EventQueue> eq(new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
 
 	if (!Emu.GetEventManager().RegisterKey(eq, event_key))
 	{
-		delete eq;
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
@@ -841,21 +864,117 @@ int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 	return CELL_OK;
 }
 
-int cellAudioAddData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, float volume)
+int cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Todo("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	cellAudio->Warning("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	
+	if (src.addr() % 16)
+		return CELL_AUDIO_ERROR_PARAM;
+
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+	
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
+
+	for (u32 i = 0; i < samples; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (port.size / samples);
+		addr += (port.size / samples);
+	}
+
 	return CELL_OK;
 }
 
-int cellAudioAdd2chData(u32 portNum, vm::ptr<be_t<float>> src, u32 samples, float volume)
+int cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Todo("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	cellAudio->Warning("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
+
+	for (u32 i = 0; i < samples; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (2 * port.block * 256 * sizeof(float) / samples);
+		addr += (2 * port.block * 256 * sizeof(float) / samples);
+	}
+	
 	return CELL_OK;
 }
 
-int cellAudioAdd6chData(u32 portNum, vm::ptr<be_t<float>> src, float volume)
+int cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
-	cellAudio->Todo("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
+	cellAudio->Warning("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
+	
+	AudioPortConfig& port = m_config.m_ports[portNum];
+
+	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	{
+		return CELL_AUDIO_ERROR_PARAM;
+	}
+
+	if (!port.m_is_audio_port_opened)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+	}
+
+	if (!port.m_is_audio_port_started)
+	{
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	}
+
+	std::lock_guard<std::mutex> lock(audioMutex);
+
+	u32 addr = port.addr;
+	u32 src_addr = src.addr();
+
+	for (u32 i = 0; i < 256; i++)
+	{
+		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
+		vm::write32(addr, vm::read32(src_addr));
+		src_addr += (6 * port.block * sizeof(float));
+		addr += (6 * port.block * sizeof(float));
+	}
+	
 	return CELL_OK;
 }
 

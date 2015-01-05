@@ -12,10 +12,9 @@ static const char* g_arm_cond_name[16] =
 
 class ARMv7DisAsm
 	: public CPUDisAsm
-	, public ARMv7Opcodes
 {
 public:
-	ARMv7DisAsm(CPUDisAsmMode mode) : CPUDisAsm(mode)
+	ARMv7DisAsm() : CPUDisAsm(CPUDisAsm_InterpreterMode)
 	{
 	}
 

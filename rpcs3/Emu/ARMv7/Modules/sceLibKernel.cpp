@@ -121,7 +121,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 {
 	sceLibKernel.Error("sceKernelStartThread(threadId=%d, argSize=%d, pArgBlock_addr=0x%x)", threadId, argSize, pArgBlock.addr());
 
-	CPUThread* t = Emu.GetCPU().GetThread(threadId);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId);
 
 	if (!t || t->GetType() != CPU_THREAD_ARMv7)
 	{
@@ -129,12 +129,12 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 	}
 
 	// push arg block onto the stack
-	u32 pos = (static_cast<ARMv7Thread*>(t)->SP -= argSize);
+	u32 pos = (static_cast<ARMv7Thread*>(t.get())->SP -= argSize);
 	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
-	static_cast<ARMv7Thread*>(t)->write_gpr(0, argSize);
-	static_cast<ARMv7Thread*>(t)->write_gpr(1, pos);
+	static_cast<ARMv7Thread*>(t.get())->write_gpr(0, argSize);
+	static_cast<ARMv7Thread*>(t.get())->write_gpr(1, pos);
 
 	t->Exec();
 	return SCE_OK;

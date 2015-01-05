@@ -3,6 +3,9 @@
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_lwcond.h"
+#include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/Modules/cellSpurs.h"
 
 //

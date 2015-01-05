@@ -679,8 +679,8 @@ typedef void(*CellSailPlayerFuncNotified)(u32 pArg, vm::ptr<CellSailEvent> event
 
 struct CellSailMemAllocatorFuncs
 {
-	CellSailMemAllocatorFuncAlloc pAlloc;
-	CellSailMemAllocatorFuncFree pFree;
+	vm::ptr<CellSailMemAllocatorFuncAlloc> pAlloc;
+	vm::ptr<CellSailMemAllocatorFuncFree> pFree;
 };
 
 struct CellSailMemAllocator
@@ -691,8 +691,8 @@ struct CellSailMemAllocator
 
 struct CellSailFuture
 {
-	u32 mutex_id;
-	u32 cond_id;
+	be_t<u32> mutex_id;
+	be_t<u32> cond_id;
 	volatile be_t<u32> flags;
 	be_t<s32> result;
 	be_t<u64> userParam;
@@ -1038,8 +1038,10 @@ struct CellSailDescriptor
 	bool autoSelection;
 	bool registered;
 	be_t<s32> streamType;
-	be_t<u64> internalData[32];
+	be_t<u64> internalData[31];
 };
+
+static_assert(sizeof(CellSailDescriptor) == 0x100, "Invalid CellSailDescriptor size");
 
 struct CellSailStartCommand
 {
@@ -1102,4 +1104,8 @@ struct CellSailPlayer
 	be_t<s32> repeatMode;
 	be_t<s32> descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
+	bool paused = true;
+	be_t<u64> internalData[26];
 };
+
+static_assert(sizeof(CellSailPlayer) == 0x100, "Invalid CellSailPlayer size");

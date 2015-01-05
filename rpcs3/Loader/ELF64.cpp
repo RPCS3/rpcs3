@@ -133,7 +133,6 @@ namespace loader
 							if (import_count)
 							{
 								LOG_ERROR(LOADER, "**** Lib '%s'has %d imports!", module_info.name, import_count);
-								break;
 							}
 
 							sys_prx_library_info_t lib;
@@ -343,17 +342,17 @@ namespace loader
 			Emu.SetRSXCallback(rsx_callback_data.addr());
 
 			rsx_callback_data[0] = ADDI(r11, 0, 0x3ff);
-			rsx_callback_data[1] = SC(2);
+			rsx_callback_data[1] = SC(0);
 			rsx_callback_data[2] = BLR();
 
 			auto ppu_thr_exit_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(3 * 4));
 			ppu_thr_exit_data[0] = ADDI(r11, 0, 41);
-			ppu_thr_exit_data[1] = SC(2);
+			ppu_thr_exit_data[1] = SC(0);
 			ppu_thr_exit_data[2] = BLR();
 			Emu.SetCPUThreadExit(ppu_thr_exit_data.addr());
 
 			auto ppu_thr_stop_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(2 * 4));
-			ppu_thr_stop_data[0] = SC(4);
+			ppu_thr_stop_data[0] = SC(3);
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
@@ -493,7 +492,7 @@ namespace loader
 							static const stub_data =
 							{
 								be_t<u32>::make(MR(11, 2)),
-								be_t<u32>::make(SC(2)),
+								be_t<u32>::make(SC(0)),
 								be_t<u32>::make(BLR())
 							};
 

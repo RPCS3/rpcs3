@@ -1,7 +1,5 @@
 #pragma once
 
-#include "sys_lwmutex.h"
-
 #define FIX_SPUQ(x) ((u64)x | 0x5350555100000000ULL)
 // arbitrary code to prevent "special" zero value in key argument
 
@@ -58,7 +56,7 @@ struct EventQueue;
 struct EventPort
 {
 	u64 name; // generated or user-specified code that is passed to sys_event_data struct
-	EventQueue* eq; // event queue this port has been connected to
+	std::shared_ptr<EventQueue> eq; // event queue this port has been connected to
 	std::mutex m_mutex; // may be locked until the event sending is finished
 
 	EventPort(u64 name = 0)
@@ -152,7 +150,7 @@ public:
 
 class EventPortList
 {
-	std::vector<EventPort*> data;
+	std::vector<std::shared_ptr<EventPort>> data;
 	std::mutex m_mutex;
 
 public:
@@ -169,18 +167,18 @@ public:
 		data.clear();
 	}
 
-	void add(EventPort* port)
+	void add(std::shared_ptr<EventPort>& port)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		data.push_back(port);
 	}
 
-	void remove(EventPort* port)
+	void remove(std::shared_ptr<EventPort>& port)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 		for (u32 i = 0; i < data.size(); i++)
 		{
-			if (data[i] == port)
+			if (data[i].get() == port.get())
 			{
 				data.erase(data.begin() + i);
 				return;
@@ -191,10 +189,10 @@ public:
 
 struct EventQueue
 {
-	SleepQueue sq;
+	sleep_queue_t sq;
 	EventPortList ports;
 	EventRingBuffer events;
-	SMutex owner;
+	atomic_le_t<u32> owner;
 
 	const union
 	{
@@ -212,7 +210,7 @@ struct EventQueue
 		, key(key)
 		, events(size) // size: max event count this queue can hold
 	{
-		owner.initialize();
+		owner.write_relaxed(0);
 	}
 };
 

@@ -23,6 +23,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
+#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
 
@@ -86,8 +87,6 @@ void Emulator::Init()
 		m_modules_init[0]->Init();
 		m_modules_init.erase(m_modules_init.begin());
 	}
-	//if(m_memory_viewer) m_memory_viewer->Close();
-	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -101,44 +100,51 @@ void Emulator::SetTitleID(const std::string& id)
 	m_title_id = id;
 }
 
-void Emulator::CheckStatus()
+void Emulator::SetTitle(const std::string& title)
 {
-	std::vector<CPUThread *>& threads = GetCPU().GetThreads();
-	if(!threads.size())
-	{
-		Stop();
-		return;	
-	}
-
-	bool IsAllPaused = true;
-	for(u32 i=0; i<threads.size(); ++i)
-	{
-		if(threads[i]->IsPaused()) continue;
-		IsAllPaused = false;
-		break;
-	}
-	if(IsAllPaused)
-	{
-		//ConLog.Warning("all paused!");
-		Pause();
-		return;
-	}
-
-	bool IsAllStoped = true;
-	for(u32 i=0; i<threads.size(); ++i)
-	{
-		if(threads[i]->IsStopped()) continue;
-		IsAllStoped = false;
-		break;
-	}
-	if(IsAllStoped)
-	{
-		//ConLog.Warning("all stoped!");
-		Pause(); //Stop();
-	}
+	m_title = title;
 }
 
-bool Emulator::BootGame(const std::string& path)
+void Emulator::CheckStatus()
+{
+	//auto& threads = GetCPU().GetThreads();
+	//if (!threads.size())
+	//{
+	//	Stop();
+	//	return;	
+	//}
+
+	//bool IsAllPaused = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsPaused()) continue;
+	//	IsAllPaused = false;
+	//	break;
+	//}
+
+	//if(IsAllPaused)
+	//{
+	//	//ConLog.Warning("all paused!");
+	//	Pause();
+	//	return;
+	//}
+
+	//bool IsAllStoped = true;
+	//for (u32 i = 0; i < threads.size(); ++i)
+	//{
+	//	if (threads[i]->IsStopped()) continue;
+	//	IsAllStoped = false;
+	//	break;
+	//}
+
+	//if (IsAllStoped)
+	//{
+	//	//LOG_WARNING(GENERAL, "all stoped!");
+	//	Pause(); //Stop();
+	//}
+}
+
+bool Emulator::BootGame(const std::string& path, bool direct)
 {
 	static const char* elf_path[6] =
 	{
@@ -147,14 +153,26 @@ bool Emulator::BootGame(const std::string& path)
 		"/BOOT.BIN",
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
 		"/USRDIR/EBOOT.BIN",
-		"/EBOOT.BIN",
+		"/EBOOT.BIN"
 	};
+	auto curpath = path;
 
-	for(int i=0; i<sizeof(elf_path) / sizeof(*elf_path);i++)
+	if (direct)
 	{
-		const std::string& curpath = path + elf_path[i];
+		if (rFile::Access(curpath, rFile::read))
+		{
+			SetPath(curpath);
+			Load();
 
-		if(rFile::Access(curpath, rFile::read))
+			return true;
+		}
+	}
+
+	for (int i = 0; i < sizeof(elf_path) / sizeof(*elf_path); i++)
+	{
+		curpath = path + elf_path[i];
+		
+		if (rFile::Access(curpath, rFile::read))
 		{
 			SetPath(curpath);
 			Load();
@@ -170,9 +188,9 @@ void Emulator::Load()
 {
 	GetModuleManager().init();
 
-	if(!rExists(m_path)) return;
+	if (!rExists(m_path)) return;
 
-	if(IsSelf(m_path))
+	if (IsSelf(m_path))
 	{
 		std::string elf_path = rFileName(m_path).GetPath();
 
@@ -185,7 +203,7 @@ void Emulator::Load()
 			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
 		}
 
-		if(!DecryptSelf(elf_path, m_path))
+		if (!DecryptSelf(elf_path, m_path))
 			return;
 
 		m_path = elf_path;
@@ -197,12 +215,12 @@ void Emulator::Load()
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
-	for(uint i=0; i<GetVFS().m_devices.size(); ++i)
+	for (uint i = 0; i < GetVFS().m_devices.size(); ++i)
 	{
 		LOG_NOTICE(LOADER, "%s -> %s", GetVFS().m_devices[i]->GetPs3Path().c_str(), GetVFS().m_devices[i]->GetLocalPath().c_str());
 	}
 
-	LOG_NOTICE(LOADER, " ");//used to be skip_line
+	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	vfsFile sfo("/app_home/../PARAM.SFO");
 	PSFLoader psf(sfo);
 	psf.Load(false);
@@ -210,6 +228,9 @@ void Emulator::Load()
 	std::string title_id = psf.GetString("TITLE_ID");
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
 	LOG_NOTICE(LOADER, "Serial: %s", title_id.c_str());
+
+	title.length() ? SetTitle(title) : SetTitle(m_path);
+	SetTitleID(title_id);
 
 	// bdvd inserting imitation
 	vfsFile f1("/app_home/../dev_bdvd.path");
@@ -223,16 +244,16 @@ void Emulator::Load()
 		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
 		LOG_NOTICE(LOADER, "/dev_bdvd/ remounted into %s", bdvd.c_str());
 	}
-	LOG_NOTICE(LOADER, " ");//used to be skip_line
+	LOG_NOTICE(LOADER, " "); //used to be skip_line
 
-	if(m_elf_path.empty())
+	if (m_elf_path.empty())
 	{
 		GetVFS().GetDeviceLocal(m_path, m_elf_path);
 	}
 
 	vfsFile f(m_elf_path);
 
-	if(!f.IsOpened())
+	if (!f.IsOpened())
 	{
 		LOG_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
 		return;
@@ -276,28 +297,23 @@ void Emulator::Load()
 
 void Emulator::Run()
 {
-	if(!IsReady())
+	if (!IsReady())
 	{
 		Load();
 		if(!IsReady()) return;
 	}
 
-	if(IsRunning()) Stop();
-	if(IsPaused())
+	if (IsRunning()) Stop();
+
+	if (IsPaused())
 	{
 		Resume();
 		return;
 	}
+
 	SendDbgCommand(DID_START_EMU);
 
-	//ConLog.Write("run...");
 	m_status = Running;
-
-	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
-
-	//m_memory_viewer->SetPC(loader.GetEntry());
-	//m_memory_viewer->Show();
-	//m_memory_viewer->ShowPC();
 
 	GetCPU().Exec();
 	SendDbgCommand(DID_STARTED_EMU);
@@ -305,8 +321,7 @@ void Emulator::Run()
 
 void Emulator::Pause()
 {
-	if(!IsRunning()) return;
-	//ConLog.Write("pause...");
+	if (!IsRunning()) return;
 	SendDbgCommand(DID_PAUSE_EMU);
 
 	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
@@ -317,27 +332,24 @@ void Emulator::Pause()
 
 void Emulator::Resume()
 {
-	if(!IsPaused()) return;
-	//ConLog.Write("resume...");
+	if (!IsPaused()) return;
 	SendDbgCommand(DID_RESUME_EMU);
 
 	m_status = Running;
 
 	CheckStatus();
-	//if(IsRunning() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+
 	SendDbgCommand(DID_RESUMED_EMU);
 }
 
 void Emulator::Stop()
 {
 	if(IsStopped()) return;
-	//ConLog.Write("shutdown...");
 
 	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
 	u32 uncounted = 0;
-	u32 counter = 0;
 	while (true)
 	{
 		if (g_thread_count <= uncounted)
@@ -374,7 +386,6 @@ void Emulator::Stop()
 	CurGameInfo.Reset();
 	Memory.Close();
 
-	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
 	SendDbgCommand(DID_STOPPED_EMU);
 }
 
@@ -387,12 +398,12 @@ void Emulator::SavePoints(const std::string& path)
 
 	f << bpdb_version << break_count << marked_count;
 	
-	if(break_count)
+	if (break_count)
 	{
 		f.write(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
 	}
 
-	if(marked_count)
+	if (marked_count)
 	{
 		f.write(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
 	}
@@ -413,20 +424,19 @@ void Emulator::LoadPoints(const std::string& path)
 	u16 version;
 	f >> version >> break_count >> marked_count;
 
-	if(version != bpdb_version ||
-		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
+	if (version != bpdb_version || (sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
 		LOG_ERROR(LOADER, "'%s' is broken", path.c_str());
 		return;
 	}
 
-	if(break_count > 0)
+	if (break_count > 0)
 	{
 		m_break_points.resize(break_count);
 		f.read(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
 	}
 
-	if(marked_count > 0)
+	if (marked_count > 0)
 	{
 		m_marked_points.resize(marked_count);
 		f.read(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);

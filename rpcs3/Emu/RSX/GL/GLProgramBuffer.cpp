@@ -4,14 +4,14 @@
 
 #include "GLProgramBuffer.h"
 
-int GLProgramBuffer::SearchFp(const RSXShaderProgram& rsx_fp, GLShaderProgram& gl_fp)
+int GLProgramBuffer::SearchFp(const RSXFragmentProgram& rsx_fp, GLFragmentProgram& gl_fp)
 {
 	for(u32 i=0; i<m_buf.size(); ++i)
 	{
 		if(memcmp(&m_buf[i].fp_data[0], vm::get_ptr<void>(rsx_fp.addr), m_buf[i].fp_data.size()) != 0) continue;
 
-		gl_fp.SetId(m_buf[i].fp_id);
-		gl_fp.SetShaderText(m_buf[i].fp_shader);
+		gl_fp.id = m_buf[i].fp_id;
+		gl_fp.shader = m_buf[i].fp_shader.c_str();
 
 		return i;
 	}
@@ -85,37 +85,37 @@ u32 GLProgramBuffer::GetProg(u32 fp, u32 vp) const
 	return 0;
 }
 
-void GLProgramBuffer::Add(GLProgram& prog, GLShaderProgram& gl_fp, RSXShaderProgram& rsx_fp, GLVertexProgram& gl_vp, RSXVertexProgram& rsx_vp)
+void GLProgramBuffer::Add(GLProgram& prog, GLFragmentProgram& gl_fp, RSXFragmentProgram& rsx_fp, GLVertexProgram& gl_vp, RSXVertexProgram& rsx_vp)
 {
 	GLBufferInfo new_buf;
 
 	LOG_NOTICE(RSX, "Add program (%d):", m_buf.size());
 	LOG_NOTICE(RSX, "*** prog id = %d", prog.id);
 	LOG_NOTICE(RSX, "*** vp id = %d", gl_vp.id);
-	LOG_NOTICE(RSX, "*** fp id = %d", gl_fp.GetId());
+	LOG_NOTICE(RSX, "*** fp id = %d", gl_fp.id);
 	LOG_NOTICE(RSX, "*** vp data size = %d", rsx_vp.data.size() * 4);
 	LOG_NOTICE(RSX, "*** fp data size = %d", rsx_fp.size);
 
 	LOG_NOTICE(RSX, "*** vp shader = \n%s", gl_vp.shader.c_str());
-	LOG_NOTICE(RSX, "*** fp shader = \n%s", gl_fp.GetShaderText().c_str());
+	LOG_NOTICE(RSX, "*** fp shader = \n%s", gl_fp.shader.c_str());
 	
 
 	new_buf.prog_id = prog.id;
 	new_buf.vp_id = gl_vp.id;
-	new_buf.fp_id = gl_fp.GetId();
+	new_buf.fp_id = gl_fp.id;
 
 	new_buf.fp_data.insert(new_buf.fp_data.end(), vm::get_ptr<u8>(rsx_fp.addr), vm::get_ptr<u8>(rsx_fp.addr + rsx_fp.size));
 	new_buf.vp_data = rsx_vp.data;
 
 	new_buf.vp_shader = gl_vp.shader;
-	new_buf.fp_shader = gl_fp.GetShaderText();
+	new_buf.fp_shader = gl_fp.shader;
 
 	m_buf.push_back(new_buf);
 }
 
 void GLProgramBuffer::Clear()
 {
-	for(u32 i=0; i<m_buf.size(); ++i)
+	for (u32 i = 0; i < m_buf.size(); ++i)
 	{
 		glDetachShader(m_buf[i].prog_id, m_buf[i].fp_id);
 		glDetachShader(m_buf[i].prog_id, m_buf[i].vp_id);

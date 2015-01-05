@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/SQueue.h"
-
 // Error Codes
 enum
 {
@@ -283,6 +281,14 @@ enum AudioCodecType
 	CELL_ADEC_TYPE_RESERVED24,
 	CELL_ADEC_TYPE_RESERVED25,
 };
+
+static bool adecIsAtracX(const AudioCodecType type)
+{
+	return type == CELL_ADEC_TYPE_ATRACX
+		|| type == CELL_ADEC_TYPE_ATRACX_2CH
+		|| type == CELL_ADEC_TYPE_ATRACX_6CH
+		|| type == CELL_ADEC_TYPE_ATRACX_8CH;
+}
 
 // Output Channel Number
 enum CellAdecChannel
@@ -1093,13 +1099,15 @@ static_assert(sizeof(OMAHeader) == 96, "Wrong OMAHeader size");
 class AudioDecoder
 {
 public:
-	SQueue<AdecTask> job;
+	squeue_t<AdecTask> job;
 	u32 id;
 	volatile bool is_closed;
 	volatile bool is_finished;
 	bool just_started;
 	bool just_finished;
 
+	AVCodec* codec;
+	AVInputFormat* input_format;
 	AVCodecContext* ctx;
 	AVFormatContext* fmt;
 	u8* io_buf;
@@ -1118,7 +1126,7 @@ public:
 
 	} reader;
 
-	SQueue<AdecFrame> frames;
+	squeue_t<AdecFrame> frames;
 
 	const AudioCodecType type;
 	const u32 memAddr;
@@ -1130,7 +1138,8 @@ public:
 	AdecTask task;
 	u64 last_pts, first_pts;
 
-	u32 channels;
+	u32 ch_out;
+	u32 ch_cfg;
 	u32 frame_size;
 	u32 sample_rate;
 	bool use_ats_headers;

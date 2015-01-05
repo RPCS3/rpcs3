@@ -20,6 +20,7 @@
 #include "Gui/KernelExplorer.h"
 #include "Gui/MemoryViewer.h"
 #include "Gui/RSXDebugger.h"
+#include "Gui/MemoryStringSearcher.h"
 #include "Gui/LLEModulesManager.h"
 
 #include <wx/dynlib.h>
@@ -51,6 +52,7 @@ enum IDs
 	id_tools_kernel_explorer,
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
+	id_tools_string_search,
 	id_help_about,
 	id_update_dbg,
 };
@@ -63,7 +65,7 @@ wxString GetPaneName()
 }
 
 MainFrame::MainFrame()
-	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(800, 600))
+	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(900, 600))
 	, m_aui_mgr(this)
 	, m_sys_menu_opened(false)
 {
@@ -112,6 +114,7 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_kernel_explorer, "&Kernel Explorer")->Enable(false);
 	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
 	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
+	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -151,6 +154,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::OpenKernelExplorer, this, id_tools_kernel_explorer);
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
+	Bind(wxEVT_MENU, &MainFrame::OpenStringSearch, this, id_tools_string_search);
 
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
@@ -342,7 +346,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 	static const u32 width = 425;
-	static const u32 height = 400;
+	static const u32 height = 460;
 
 	// Settings panels
 	wxNotebook* nb_config = new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
@@ -378,6 +382,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
 	wxStaticBoxSizer* s_round_gs_res    = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default resolution"));
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default aspect ratio"));
+	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Frame limit"));
 
 	// Input / Output
 	wxStaticBoxSizer* s_round_io_pad_handler      = new wxStaticBoxSizer(wxVERTICAL, p_io, _("Pad Handler"));
@@ -402,6 +407,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_gs_render        = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_resolution    = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_aspect        = new wxComboBox(p_graphics, wxID_ANY);
+	wxComboBox* cbox_gs_frame_limit   = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_pad_handler      = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_keyboard_handler = new wxComboBox(p_io, wxID_ANY);
 	wxComboBox* cbox_mouse_handler    = new wxComboBox(p_io, wxID_ANY);
@@ -414,6 +420,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
 	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
+	wxCheckBox* chbox_gs_read_color       = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffer");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
@@ -446,6 +453,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_gs_aspect->Append("4:3");
 	cbox_gs_aspect->Append("16:9");
+
+	for (auto item : { "Off", "50", "59.94", "30", "60", "Auto" })
+		cbox_gs_frame_limit->Append(item);
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
@@ -501,6 +511,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
 	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
+	chbox_gs_read_color      ->SetValue(Ini.GSReadColorBuffer.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_gs_3dmonitor       ->SetValue(Ini.GS3DTV.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
@@ -521,6 +532,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_gs_resolution   ->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect       ->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
+	cbox_gs_frame_limit  ->SetSelection(Ini.GSFrameLimit.GetValue());
 	cbox_pad_handler     ->SetSelection(Ini.PadHandlerMode.GetValue());
 	cbox_keyboard_handler->SetSelection(Ini.KeyboardHandlerMode.GetValue());
 	cbox_mouse_handler   ->SetSelection(Ini.MouseHandlerMode.GetValue());
@@ -543,6 +555,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	s_round_io_pad_handler->Add(cbox_pad_handler, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_io_keyboard_handler->Add(cbox_keyboard_handler, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -565,9 +578,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_3dmonitor, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -625,9 +640,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
+		Ini.GSFrameLimit.SetValue(cbox_gs_frame_limit->GetSelection());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
 		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
+		Ini.GSReadColorBuffer.SetValue(chbox_gs_read_color->GetValue());
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
@@ -707,6 +724,10 @@ void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 	(new RSXDebugger(this)) -> Show();
 }
 
+void MainFrame::OpenStringSearch(wxCommandEvent& WXUNUSED(event))
+{
+	(new MemoryStringSearcher(this)) -> Show();
+}
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))
 {
@@ -805,9 +826,12 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& kernel_explorer = *menubar.FindItem(id_tools_kernel_explorer);
 	wxMenuItem& memory_viewer = *menubar.FindItem(id_tools_memory_viewer);
 	wxMenuItem& rsx_debugger = *menubar.FindItem(id_tools_rsx_debugger);
+	wxMenuItem& string_search = *menubar.FindItem(id_tools_string_search);
 	kernel_explorer.Enable(!is_stopped);
 	memory_viewer.Enable(!is_stopped);
 	rsx_debugger.Enable(!is_stopped);
+	string_search.Enable(!is_stopped);
+	
 
 
 	//m_aui_mgr.Update();

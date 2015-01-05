@@ -19,7 +19,7 @@ __Windows__
 * [Visual C++ Redistributable Packages for Visual Studio 2013](http://www.microsoft.com/en-us/download/details.aspx?id=40784)
 
 __Linux__
-* Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential`
+* Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
 
 __Mac OSX__
 * Install with Homebrew: `brew install glew wxwidgets`

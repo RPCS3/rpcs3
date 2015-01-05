@@ -136,23 +136,6 @@ protected:
 public:
 	virtual ~CPUThread();
 
-	u32 m_wait_thread_id;
-
-	std::mutex m_cs_sync;
-	bool m_sync_wait;
-	void Wait(bool wait);
-	void Wait(const CPUThread& thr);
-	bool Sync();
-
-	template<typename T>
-	void WaitFor(T func)
-	{
-		while(func(ThreadStatus()))
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		}
-	}
-
 	int ThreadStatus();
 
 	void NextPc(u8 instr_size);
@@ -280,7 +263,7 @@ public:
 		thread->SetJoinable(false);
 
 		while (thread->IsRunning())
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
 		return thread->GetExitStatus();
 	}

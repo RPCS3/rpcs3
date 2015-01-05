@@ -24,7 +24,7 @@ public:
 	bool operator()(const GameInfo& game1, const GameInfo& game2) const
 	{
 		// Note that the column index has to match the appropriate GameInfo member
-		switch (sortColumn)
+		switch (sortColumn - 1) // skip *icon* column
 		{
 		case 0: return sortAscending ? (game1.name < game2.name)         : (game1.name > game2.name);
 		case 1: return sortAscending ? (game1.serial < game2.serial)     : (game1.serial > game2.serial);
@@ -67,7 +67,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 	LoadSettings();
 	m_columns.Show(this);
 
-	m_sortColumn = 0;
+	m_sortColumn = 1;
 	m_sortAscending = true;
 	m_path = "/dev_hdd0/game/";
 	m_popup = new wxMenu();
@@ -148,6 +148,10 @@ void GameViewer::LoadPSF()
 		if(!psf.Load(false))
 			continue;
 
+		// get local path from VFS...
+		std::string local_path;
+		Emu.GetVFS().GetDevice(m_path, local_path);
+
 		GameInfo game;
 		game.root = m_games[i];
 		game.serial = psf.GetString("TITLE_ID");
@@ -159,13 +163,21 @@ void GameViewer::LoadPSF()
 		game.resolution = psf.GetInteger("RESOLUTION");
 		game.sound_format = psf.GetInteger("SOUND_FORMAT");
 		
-		if(game.serial.length() == 9)
+		if (game.serial.length() == 9)
+		{
 			game.serial = game.serial.substr(0, 4) + "-" + game.serial.substr(4, 5);
+		}
 
 		if (game.category.substr(0, 2) == "HG")
+		{
 			game.category = "HDD Game";
+			game.icon_path = local_path + "/" + m_games[i] + "/ICON0.PNG";
+		}
 		else if (game.category.substr(0, 2) == "DG")
+		{
 			game.category = "Disc Game";
+			game.icon_path = local_path + "/" + m_games[i] + "/PS3_GAME/ICON0.PNG";
+		}
 			
 		m_game_data.push_back(game);
 	}
@@ -233,26 +245,20 @@ void GameViewer::RightClick(wxListEvent& event)
 
 void GameViewer::RemoveGame(wxCommandEvent& event)
 {
-	wxString GameName = this->GetItemText(event.GetId(), 5);
+	Emu.GetVFS().Init("/");
 
-	// TODO: VFS is only available at emulation time, this is a temporary solution to locate the game
-	Emu.GetVFS().Init(m_path);
-
-	vfsDir dir(m_path);	
-	if (!dir.IsOpened())
-		return;
-	const std::string sPath = dir.GetPath().erase(0, 1);
-	const std::string sGameFolder = GameName.mb_str().data();
-	const std::string localPath = sPath + sGameFolder;
+	// get local path from VFS
+	std::string local_path;
+	Emu.GetVFS().GetDevice(m_path, local_path);
+	std::string del_path = local_path + "/" + this->GetItemText(event.GetId(), 6).ToStdString();
 
 	Emu.GetVFS().UnMountAll();
 
-	if (!rExists(localPath))
-		return;
 	//TODO: Replace wxWidgetsSpecific filesystem stuff?
 	WxDirDeleteTraverser deleter;
-	wxDir localDir(localPath);
+	wxDir localDir(del_path);
 	localDir.Traverse(deleter);
+	wxRmdir(del_path); // delete empty directory
 
 	Refresh();
 }

@@ -2,9 +2,12 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Event.h"
+#include "sleep_queue_type.h"
+#include "sys_time.h"
 #include "sys_process.h"
 #include "sys_event.h"
 
@@ -12,18 +15,17 @@ SysCallBase sys_event("sys_event");
 
 u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size)
 {
-	EventQueue* eq = new EventQueue(protocol, type, name_u64, event_queue_key, size);
+	std::shared_ptr<EventQueue> eq(new EventQueue(protocol, type, name_u64, event_queue_key, size));
 
 	if (event_queue_key && !Emu.GetEventManager().RegisterKey(eq, event_queue_key))
 	{
-		delete eq;
 		return 0;
 	}
 
-	std::string name((const char*)&name_u64, 8);
-	u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	const u32 id = sys_event.GetNewId(eq, TYPE_EVENT_QUEUE);
+	eq->sq.set_full_name(fmt::Format("EventQueue(%d)", id));
 	sys_event.Warning("*** event_queue created [%s] (protocol=0x%x, type=0x%x, key=0x%llx, size=0x%x): id = %d",
-		name.c_str(), protocol, type, event_queue_key, size, id);
+		std::string((const char*)&name_u64, 8).c_str(), protocol, type, event_queue_key, size, id);
 	return id;
 }
 
@@ -71,7 +73,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 {
 	sys_event.Todo("sys_event_queue_destroy(equeue_id=%d, mode=0x%x)", equeue_id, mode);
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -82,28 +84,27 @@ s32 sys_event_queue_destroy(u32 equeue_id, int mode)
 		return CELL_EINVAL;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	eq->sq.m_mutex.lock();
-	eq->owner.lock(tid);
+	//u32 tid = GetCurrentPPUThread().GetId();
+	//eq->sq.m_mutex.lock();
+	//eq->owner.lock(tid);
 	// check if some threads are waiting for an event
-	if (!mode && eq->sq.list.size())
-	{
-		eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock();
-		return CELL_EBUSY;
-	}
-	eq->owner.unlock(tid, ~0);
-	eq->sq.m_mutex.unlock();
-	while (eq->sq.list.size())
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		if (Emu.IsStopped())
-		{
-			sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
-			break;
-		}
-	}
+	//if (!mode && eq->sq.list.size())
+	//{
+	//	eq->owner.unlock(tid);
+	//	eq->sq.m_mutex.unlock();
+	//	return CELL_EBUSY;
+	//}
+	//eq->owner.unlock(tid, ~0);
+	//eq->sq.m_mutex.unlock();
+	//while (eq->sq.list.size())
+	//{
+	//	std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+	//	if (Emu.IsStopped())
+	//	{
+	//		sys_event.Warning("sys_event_queue_destroy(equeue=%d) aborted", equeue_id);
+	//		break;
+	//	}
+	//}
 
 	Emu.GetEventManager().UnregisterKey(eq->key);
 	eq->ports.clear();
@@ -117,7 +118,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 	sys_event.Todo("sys_event_queue_tryreceive(equeue_id=%d, event_array_addr=0x%x, size=%d, number_addr=0x%x)",
 		equeue_id, event_array.addr(), size, number.addr());
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -134,20 +135,19 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_data> event_arra
 		return CELL_OK;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
-
-	eq->sq.m_mutex.lock();
-	eq->owner.lock(tid);
-	if (eq->sq.list.size())
-	{
-		*number = 0;
-		eq->owner.unlock(tid);
-		eq->sq.m_mutex.unlock();
-		return CELL_OK;
-	}
+	//u32 tid = GetCurrentPPUThread().GetId();
+	//eq->sq.m_mutex.lock();
+	//eq->owner.lock(tid);
+	//if (eq->sq.list.size())
+	//{
+	//	*number = 0;
+	//	eq->owner.unlock(tid);
+	//	eq->sq.m_mutex.unlock();
+	//	return CELL_OK;
+	//}
 	*number = eq->events.pop_all(event_array.get_ptr(), size);
-	eq->owner.unlock(tid);
-	eq->sq.m_mutex.unlock();
+	//eq->owner.unlock(tid);
+	//eq->sq.m_mutex.unlock();
 	return CELL_OK;
 }
 
@@ -157,7 +157,9 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 	sys_event.Log("sys_event_queue_receive(equeue_id=%d, dummy_event_addr=0x%x, timeout=%lld)",
 		equeue_id, dummy_event.addr(), timeout);
 
-	EventQueue* eq;
+	const u64 start_time = get_system_time();
+
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -168,36 +170,38 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 		return CELL_EINVAL;
 	}
 
-	u32 tid = GetCurrentPPUThread().GetId();
+	const u32 tid = GetCurrentPPUThread().GetId();
 
-	eq->sq.push(tid); // add thread to sleep queue
+	eq->sq.push(tid, eq->protocol); // add thread to sleep queue
 
-	timeout = timeout ? (timeout / 1000) : ~0;
-	u64 counter = 0;
 	while (true)
 	{
-		switch (eq->owner.trylock(tid))
+		const u32 old_owner = eq->owner.compare_and_swap(0, tid);
+		const s32 res = old_owner ? (old_owner == tid ? 1 : 2) : 0;
+
+		switch (res)
 		{
-		case SMR_OK:
-			if (!eq->events.count())
+		case 0:
+		{
+			const u32 next = eq->events.count() ? eq->sq.signal(eq->protocol) : 0;
+			if (next != tid)
 			{
-				eq->owner.unlock(tid);
+				if (!eq->owner.compare_and_swap_test(tid, next))
+				{
+					assert(!"sys_event_queue_receive() failed (I)");
+				}
 				break;
 			}
-			else
-			{
-				u32 next = (eq->protocol == SYS_SYNC_FIFO) ? eq->sq.pop() : eq->sq.pop_prio();
-				if (next != tid)
-				{
-					eq->owner.unlock(tid, next);
-					break;
-				}
-			}
-		case SMR_SIGNAL:
+			// fallthrough
+		}
+		case 1:
 		{
 			sys_event_data event;
 			eq->events.pop(event);
-			eq->owner.unlock(tid);
+			if (!eq->owner.compare_and_swap_test(tid, 0))
+			{
+				assert(!"sys_event_queue_receive() failed (II)");
+			}
 			sys_event.Log(" *** event received: source=0x%llx, d1=0x%llx, d2=0x%llx, d3=0x%llx", 
 				(u64)event.source, (u64)event.data1, (u64)event.data2, (u64)event.data3);
 			/* passing event data in registers */
@@ -206,18 +210,38 @@ s32 sys_event_queue_receive(u32 equeue_id, vm::ptr<sys_event_data> dummy_event, 
 			t.GPR[5] = event.data1;
 			t.GPR[6] = event.data2;
 			t.GPR[7] = event.data3;
+			if (!eq->sq.invalidate(tid, eq->protocol) && !eq->sq.pop(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (receiving)");
+			}
 			return CELL_OK;
 		}
-		case SMR_FAILED: break;
-		default: eq->sq.invalidate(tid); return CELL_ECANCELED;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		if (counter++ > timeout || Emu.IsStopped())
+		if (!~old_owner)
 		{
-			if (Emu.IsStopped()) sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
-			eq->sq.invalidate(tid);
+			if (!eq->sq.invalidate(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (cancelling)");
+			}
+			return CELL_ECANCELED;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+
+		if (timeout && get_system_time() - start_time > timeout)
+		{
+			if (!eq->sq.invalidate(tid, eq->protocol))
+			{
+				assert(!"sys_event_queue_receive() failed (timeout)");
+			}
 			return CELL_ETIMEDOUT;
+		}
+
+		if (Emu.IsStopped())
+		{
+			sys_event.Warning("sys_event_queue_receive(equeue=%d) aborted", equeue_id);
+			return CELL_OK;
 		}
 	}
 }
@@ -226,7 +250,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 {
 	sys_event.Log("sys_event_queue_drain(equeue_id=%d)", equeue_id);
 
-	EventQueue* eq;
+	std::shared_ptr<EventQueue> eq;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, eq))
 	{
 		return CELL_ESRCH;
@@ -239,10 +263,10 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 u32 event_port_create(u64 name)
 {
-	EventPort* eport = new EventPort();
+	std::shared_ptr<EventPort> eport(new EventPort());
 	u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
-	sys_event.Warning("*** sys_event_port created: id = %d", id);
+	sys_event.Warning("*** sys_event_port created: id = %d, name=0x%llx", id, eport->name);
 	return id;
 }
 
@@ -265,7 +289,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 {
 	sys_event.Warning("sys_event_port_destroy(eport_id=%d)", eport_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -291,7 +315,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 {
 	sys_event.Warning("sys_event_port_connect_local(eport_id=%d, equeue_id=%d)", eport_id, equeue_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -308,7 +332,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_EISCONN;
 	}
 
-	EventQueue* equeue;
+	std::shared_ptr<EventQueue> equeue;
 	if (!Emu.GetIdManager().GetIDData(equeue_id, equeue))
 	{
 		sys_event.Error("sys_event_port_connect_local: event_queue(%d) not found!", equeue_id);
@@ -329,7 +353,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 {
 	sys_event.Warning("sys_event_port_disconnect(eport_id=%d)", eport_id);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -356,7 +380,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	sys_event.Log("sys_event_port_send(eport_id=%d, data1=0x%llx, data2=0x%llx, data3=0x%llx)",
 		eport_id, data1, data2, data3);
 
-	EventPort* eport;
+	std::shared_ptr<EventPort> eport;
 	if (!Emu.GetIdManager().GetIDData(eport_id, eport))
 	{
 		return CELL_ESRCH;
@@ -364,7 +388,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	std::lock_guard<std::mutex> lock(eport->m_mutex);
 
-	EventQueue* eq = eport->eq;
+	std::shared_ptr<EventQueue> eq = eport->eq;
 	if (!eq)
 	{
 		return CELL_ENOTCONN;

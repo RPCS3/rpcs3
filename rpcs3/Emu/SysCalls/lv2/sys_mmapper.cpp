@@ -75,7 +75,8 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<u32> mem_id)
 	}
 
 	// Generate a new mem ID.
-	*mem_id = sys_mmapper.GetNewId(new mmapper_info(size, flags));
+	std::shared_ptr<mmapper_info> info(new mmapper_info(size, flags));
+	*mem_id = sys_mmapper.GetNewId(info);
 
 	return CELL_OK;
 }
@@ -86,7 +87,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 		size, cid, flags, mem_id.addr());
 
 	// Check if this container ID is valid.
-	MemoryContainerInfo* ct;
+	std::shared_ptr<MemoryContainerInfo> ct;
 	if(!sys_mmapper.CheckId(cid, ct))
 		return CELL_ESRCH;
 
@@ -110,7 +111,8 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 	ct->size = size;
 
 	// Generate a new mem ID.
-	*mem_id = sys_mmapper.GetNewId(new mmapper_info(ct->size, flags), TYPE_MEM);
+	std::shared_ptr<mmapper_info> info(new mmapper_info(ct->size, flags));
+	*mem_id = sys_mmapper.GetNewId(info, TYPE_MEM);
 
 	return CELL_OK;
 }
@@ -138,7 +140,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 	sys_mmapper.Warning("sys_mmapper_free_memory(mem_id=0x%x)", mem_id);
 
 	// Check if this mem ID is valid.
-	mmapper_info* info;
+	std::shared_ptr<mmapper_info> info;
 	if(!sys_mmapper.CheckId(mem_id, info))
 		return CELL_ESRCH;
 
@@ -153,7 +155,7 @@ s32 sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 	sys_mmapper.Warning("sys_mmapper_map_memory(start_addr=0x%x, mem_id=0x%x, flags=0x%llx)", start_addr, mem_id, flags);
 
 	// Check if this mem ID is valid.
-	mmapper_info* info;
+	std::shared_ptr<mmapper_info> info;
 	if(!sys_mmapper.CheckId(mem_id, info))
 		return CELL_ESRCH;
 
@@ -173,7 +175,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 		start_addr, mem_id, flags, alloc_addr);
 
 	// Check if this mem ID is valid.
-	mmapper_info* info;
+	std::shared_ptr<mmapper_info> info;
 	if(!sys_mmapper.CheckId(mem_id, info))
 		return CELL_ESRCH;
 	

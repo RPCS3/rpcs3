@@ -69,16 +69,16 @@
     <Filter Include="Emu\CPU\ARMv7\Modules">
       <UniqueIdentifier>{1d9e6fc4-9a79-4329-a8b5-081e24822aaa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GPU">
+    <Filter Include="Emu\GPU">
       <UniqueIdentifier>{6674e2ab-90cd-47de-a852-d21643ab18c2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GPU\RSX">
+    <Filter Include="Emu\GPU\RSX">
       <UniqueIdentifier>{fadb4b36-57af-4583-891d-d22ff369e266}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GPU\RSX\Null">
+    <Filter Include="Emu\GPU\RSX\Null">
       <UniqueIdentifier>{4adca4fa-b90f-4662-9eb0-1d29cf3cd2eb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="GPU\RSX\GL">
+    <Filter Include="Emu\GPU\RSX\GL">
       <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -209,6 +209,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursJq.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSync.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
@@ -255,9 +258,6 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp">
@@ -383,13 +383,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\SMutex.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\Thread.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\ModuleManager.cpp">
@@ -459,9 +453,6 @@
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSubdisplay.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp">
@@ -548,9 +539,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_mmapper.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\lv2Fs.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\Log.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -558,37 +546,37 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLProgram.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLProgramBuffer.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLBuffers.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSManager.cpp">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXThread.cpp">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -652,6 +640,18 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\cellFs.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\Thread.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
@@ -745,6 +745,9 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellL10n.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellMic.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellMouse.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
@@ -782,6 +785,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellSync.h">
@@ -1012,16 +1018,7 @@
     <ClInclude Include="..\Utilities\BEType.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\SMutex.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\SQueue.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\StrFmt.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\Thread.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Timer.h">
@@ -1117,9 +1114,6 @@
     <ClInclude Include="Emu\SysCalls\lv2\sys_mmapper.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\lv2Fs.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\Log.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1127,58 +1121,58 @@
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
-      <Filter>GPU\RSX\Null</Filter>
+      <Filter>Emu\GPU\RSX\Null</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProgram.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLShaderParam.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\OpenGL.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h">
-      <Filter>GPU\RSX\GL</Filter>
+      <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSManager.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSRender.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXTexture.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXThread.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\sysutil_video.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GCM.h">
-      <Filter>GPU\RSX</Filter>
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1255,14 +1249,20 @@
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
     </ClInclude>
-    <ClInclude Include="cellMic.h">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
       <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\cellFs.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Thread.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

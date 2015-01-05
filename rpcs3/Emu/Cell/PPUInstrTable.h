@@ -162,8 +162,8 @@ namespace PPU_instr
 		//This field mask is used to identify the CR fields that are to be updated by the mtcrf instruction.
 		static CodeField<12, 19> CRM;
 
-		//
-		static CodeField<6, 31> SYS;
+		// This field is used to identify the system call level
+		static CodeField<20, 26> LEV;
 
 		//Immediate field specifying a 16-bit signed two's complement integer that is sign-extended to 64 bits
 		static CodeFieldSigned<16, 31> D;
@@ -238,7 +238,7 @@ namespace PPU_instr
 		bind_instr(main_list, ADDI, RD, RA, simm16);
 		bind_instr(main_list, ADDIS, RD, RA, simm16);
 		bind_instr(main_list, BC, BO, BI, BD, AA, LK);
-		bind_instr(main_list, SC, SYS);
+		bind_instr(main_list, SC, LEV);
 		bind_instr(main_list, B, LI, AA, LK);
 		bind_instr(main_list, RLWIMI, RA, RS, SH, MB, ME, RC);
 		bind_instr(main_list, RLWINM, RA, RS, SH, MB, ME, RC);

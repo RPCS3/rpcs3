@@ -3,8 +3,13 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_lwcond.h"
+#include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_ppu_thread.h"
 #include "Emu/SysCalls/lv2/sys_memory.h"
 #include "Emu/SysCalls/lv2/sys_process.h"
@@ -251,13 +256,13 @@ s64 spursInit(
 
 			if (spurs->m.flags1 & SF1_EXIT_IF_NO_WORK)
 			{
-				if (s32 res = sys_lwmutex_lock(spurs->get_lwmutex(), 0))
+				if (s32 res = sys_lwmutex_lock(CPU, spurs->get_lwmutex(), 0))
 				{
 					assert(!"sys_lwmutex_lock() failed");
 				}
 				if (spurs->m.xD66.read_relaxed())
 				{
-					if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+					if (s32 res = sys_lwmutex_unlock(CPU, spurs->get_lwmutex()))
 					{
 						assert(!"sys_lwmutex_unlock() failed");
 					}
@@ -265,6 +270,8 @@ s64 spursInit(
 				}
 				else while (true)
 				{
+					if (Emu.IsStopped()) break;
+
 					spurs->m.xD64.exchange(0);
 					if (spurs->m.exception.ToBE() == 0)
 					{
@@ -311,7 +318,7 @@ s64 spursInit(
 					spurs->m.xD65.exchange(1);
 					if (spurs->m.xD64.read_relaxed() == 0)
 					{
-						if (s32 res = sys_lwcond_wait(spurs->get_lwcond(), 0))
+						if (s32 res = sys_lwcond_wait(CPU, spurs->get_lwcond(), 0))
 						{
 							assert(!"sys_lwcond_wait() failed");
 						}
@@ -319,14 +326,17 @@ s64 spursInit(
 					spurs->m.xD65.exchange(0);
 					if (spurs->m.xD66.read_relaxed())
 					{
-						if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+						if (s32 res = sys_lwmutex_unlock(CPU, spurs->get_lwmutex()))
 						{
 							assert(!"sys_lwmutex_unlock() failed");
 						}
 						return;
 					}
 				}
-				if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+
+				if (Emu.IsStopped()) continue;
+
+				if (s32 res = sys_lwmutex_unlock(CPU, spurs->get_lwmutex()))
 				{
 					assert(!"sys_lwmutex_unlock() failed");
 				}
@@ -393,7 +403,7 @@ s64 spursInit(
 	}
 	else if (flags & SAF_EXIT_IF_NO_WORK) // wakeup
 	{
-		return spursWakeUp(spurs);
+		return spursWakeUp(GetCurrentPPUThread(), spurs);
 	}
 
 	return CELL_OK;
@@ -953,7 +963,7 @@ s64 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
 #endif
 }
 
-s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
+s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
 #ifdef PRX_DEBUG_XXX
 	return cb_call<s32, vm::ptr<CellSpurs>>(GetCurrentPPUThread(), libsre + 0x84D8, libsre_rtoc, spurs);
@@ -975,7 +985,7 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 	spurs->m.xD64.exchange(1);
 	if (spurs->m.xD65.read_sync())
 	{
-		if (s32 res = sys_lwmutex_lock(spurs->get_lwmutex(), 0))
+		if (s32 res = sys_lwmutex_lock(CPU, spurs->get_lwmutex(), 0))
 		{
 			assert(!"sys_lwmutex_lock() failed");
 		}
@@ -983,7 +993,7 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 		{
 			assert(!"sys_lwcond_signal() failed");
 		}
-		if (s32 res = sys_lwmutex_unlock(spurs->get_lwmutex()))
+		if (s32 res = sys_lwmutex_unlock(CPU, spurs->get_lwmutex()))
 		{
 			assert(!"sys_lwmutex_unlock() failed");
 		}
@@ -991,11 +1001,11 @@ s64 spursWakeUp(vm::ptr<CellSpurs> spurs)
 	return CELL_OK;
 }
 
-s64 cellSpursWakeUp(vm::ptr<CellSpurs> spurs)
+s64 cellSpursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
 	cellSpurs->Warning("%s(spurs_addr=0x%x)", __FUNCTION__, spurs.addr());
 
-	return spursWakeUp(spurs);
+	return spursWakeUp(CPU, spurs);
 }
 
 s32 spursAddWorkload(
@@ -2509,7 +2519,7 @@ s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribut
 #else
 	attribute->revision = revision;
 	attribute->sizeContext = 0;
-	attribute->eaContext = NULL;
+	attribute->eaContext = 0;
 	
 	for (s32 c = 0; c < 4; c++)
 	{

@@ -1,10 +1,12 @@
 #pragma once
 #include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
+#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "MFC.h"
 
-enum SPUchannels 
+enum SPUchannels
 {
 	SPU_RdEventStat     = 0,  //Read event status with mask applied
 	SPU_WrEventMask     = 1,  //Write event mask
@@ -22,7 +24,7 @@ enum SPUchannels
 	SPU_WrOutIntrMbox   = 30, //Write outbound interrupt mailbox contents (interrupting PPU)
 };
 
-enum MFCchannels 
+enum MFCchannels
 {
 	MFC_WrMSSyncReq     = 9,  //Write multisource synchronization request
 	MFC_RdTagMask       = 12, //Read tag mask
@@ -281,9 +283,9 @@ public:
 	u64 R_ADDR; // reservation address
 	u64 R_DATA[16]; // lock line data (BE)
 
-	EventPort SPUPs[64]; // SPU Thread Event Ports
+	std::shared_ptr<EventPort> SPUPs[64]; // SPU Thread Event Ports
 	EventManager SPUQs; // SPU Queue Mapping
-	SpuGroupInfo* group; // associated SPU Thread Group (null for raw spu)
+	std::shared_ptr<SpuGroupInfo> group; // associated SPU Thread Group (null for raw spu)
 
 	u64 m_dec_start; // timestamp of writing decrementer value
 	u32 m_dec_value; // written decrementer value

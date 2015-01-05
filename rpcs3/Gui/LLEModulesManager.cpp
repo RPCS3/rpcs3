@@ -13,14 +13,26 @@ LLEModulesManagerFrame::LLEModulesManagerFrame(wxWindow* parent) : FrameBase(par
 	wxBoxSizer *s_p_panel = new wxBoxSizer(wxVERTICAL);
 	wxPanel *p_main = new wxPanel(this);
 	m_check_list = new wxCheckListBox(p_main, wxID_ANY);
+
+	// select / unselect
+	wxStaticBoxSizer* s_selection = new wxStaticBoxSizer(wxHORIZONTAL, p_main);
+	wxButton* b_select = new wxButton(p_main, wxID_ANY, "Select All", wxDefaultPosition, wxSize(80, -1));
+	wxButton* b_unselect = new wxButton(p_main, wxID_ANY, "Unselect All", wxDefaultPosition, wxSize(80, -1));
+	s_selection->Add(b_select);
+	s_selection->Add(b_unselect);
+
+	s_p_panel->Add(s_selection);
 	s_p_panel->Add(m_check_list, 1, wxEXPAND | wxALL, 5);
 	p_main->SetSizerAndFit(s_p_panel);
+
 	s_panel->Add(p_main, 1, wxEXPAND | wxALL, 5);
 	SetSizerAndFit(s_panel);
-
 	Refresh();
+
+	b_select->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { OnSelectAll(event, true); event.Skip(); });
+	b_unselect->Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { OnSelectAll(event, false); event.Skip(); });
 	Bind(wxEVT_CHECKLISTBOX, [this](wxCommandEvent& event) { UpdateSelection(event.GetInt()); event.Skip(); });
-	Bind(wxEVT_SIZE, [p_main, this](wxSizeEvent& event) { p_main->SetSize(GetClientSize()); m_check_list->SetSize(p_main->GetClientSize() - wxSize(10, 10)); event.Skip(); });
+	Bind(wxEVT_SIZE, [p_main, this](wxSizeEvent& event) { p_main->SetSize(GetClientSize()); m_check_list->SetSize(p_main->GetClientSize() - wxSize(10, 50)); event.Skip(); });
 }
 
 void LLEModulesManagerFrame::Refresh()
@@ -91,4 +103,13 @@ void LLEModulesManagerFrame::UpdateSelection(int index)
 	IniEntry<bool> load_lib;
 	load_lib.Init(m_funcs[index], "LLE");
 	load_lib.SaveValue(m_check_list->IsChecked(index));
+}
+
+void LLEModulesManagerFrame::OnSelectAll(wxCommandEvent& WXUNUSED(event), bool is_checked)
+{
+	for (uint i = 0; i < m_check_list->GetCount(); i++)
+	{
+		m_check_list->Check(i, is_checked);
+		UpdateSelection(i);
+	}
 }

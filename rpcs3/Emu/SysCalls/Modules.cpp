@@ -188,7 +188,7 @@ void fix_import(Module* module, u32 func, u32 addr)
 	*ptr++ = ORI(11, 11, func & 0xffff);
 	*ptr++ = NOP();
 	++ptr;
-	*ptr++ = SC(2);
+	*ptr++ = SC(0);
 	*ptr++ = BLR();
 	*ptr++ = NOP();
 	*ptr++ = NOP();

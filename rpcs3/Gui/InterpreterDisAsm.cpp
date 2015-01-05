@@ -108,12 +108,12 @@ void InterpreterDisAsmFrame::UpdateUnitList()
 {
 	m_choice_units->Freeze();
 	m_choice_units->Clear();
-	auto& thrs = Emu.GetCPU().GetThreads();
+	//auto& thrs = Emu.GetCPU().GetThreads();
 
-	for(uint i=0; i<thrs.size(); ++i)
-	{
-		m_choice_units->Append(thrs[i]->GetFName(), thrs[i]);
-	}
+	//for (auto& t : thrs)
+	//{
+	//	m_choice_units->Append(t->GetFName(), t.get());
+	//}
 
 	m_choice_units->Thaw();
 }
@@ -150,9 +150,9 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 		case CPU_THREAD_ARMv7:
 		{
-			ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
-			decoder = new ARMv7Decoder(dis_asm);
-			disasm = &dis_asm;
+			//ARMv7DisAsm& dis_asm = *new ARMv7DisAsm(CPUDisAsm_InterpreterMode);
+			//decoder = new ARMv7Decoder(dis_asm);
+			//disasm = &dis_asm;
 		}
 		break;
 		}

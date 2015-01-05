@@ -10,7 +10,11 @@
 #include "ARMv7DisAsm.h"
 #include "ARMv7Interpreter.h"
 
-ARMv7Thread::ARMv7Thread() : CPUThread(CPU_THREAD_ARMv7)
+ARMv7Thread::ARMv7Thread()
+	: CPUThread(CPU_THREAD_ARMv7)
+	, m_arg(0)
+	, m_last_instr_size(0)
+	, m_last_instr_name("UNK")
 {
 }
 
@@ -81,7 +85,7 @@ void ARMv7Thread::DoRun()
 
 	case 1:
 	case 2:
-		m_dec = new ARMv7Decoder(*new ARMv7Interpreter(*this));
+		m_dec = new ARMv7Decoder(*this);
 	break;
 	}
 }

@@ -54,16 +54,39 @@ int cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
+int cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
+{
+	sys_io->Warning("cellPadPeriphGetInfo(info_addr=0x%x)", info.addr());
+
+	// TODO: Support other types of controllers
+	for (int i = 0; i < info->now_connect; i++)
+	{
+		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+	}
+
+	return CELL_OK;
+}
+
 int cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io->Log("cellPadGetData(port_no=%d, data_addr=0x%x)", port_no, data.addr());
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited()) {
+		return CELL_PAD_ERROR_UNINITIALIZED;
+	}
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if(port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
+
+	if (port_no >= rinfo.max_connect) {
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	}
+
 	//We have a choice here of NO_DEVICE or READ_FAILED...lets try no device for now
-	if(port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+	if (port_no >= rinfo.now_connect) {
+		return CELL_PAD_ERROR_NO_DEVICE;
+	}
 
 	Pad& pad = pads[port_no];
 
@@ -409,6 +432,7 @@ void cellPad_init()
 	sys_io->AddFunc(0xf65544ee, cellPadSetActDirect);
 	sys_io->AddFunc(0x3aaad464, cellPadGetInfo);
 	sys_io->AddFunc(0xa703a51d, cellPadGetInfo2);
+	sys_io->AddFunc(0x4cc9b68d, cellPadPeriphGetInfo);
 	sys_io->AddFunc(0x578e3c98, cellPadSetPortSetting);
 	sys_io->AddFunc(0x0e2dfaad, cellPadInfoPressMode);
 	sys_io->AddFunc(0x78200559, cellPadInfoSensorMode);

@@ -10,6 +10,14 @@
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
+#ifdef _WIN32
+	#include <windows.h>
+	#undef CreateFile
+#else
+	#include <sys/types.h>
+	#include <sys/stat.h>
+#endif
+
 extern Module *cellSysutil;
 
 // Auxiliary Classes
@@ -38,7 +46,6 @@ public:
 		return true;
 	}
 };
-
 
 // Auxiliary Functions
 u64 getSaveDataSize(const std::string& dirName)
@@ -69,6 +76,26 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 	std::string localPath;
 	Emu.GetVFS().GetDevice(saveDir + "/ICON0.PNG", localPath);
 
+	u64 atime = 0;
+	u64 mtime = 0;
+	u64 ctime = 0;
+
+	cellSysutil->Error("Running _stat in cellSaveData. Please report this to a RPCS3 developer!");
+
+	std::string real_path;
+	struct stat buf;
+
+	Emu.GetVFS().GetDevice(f.GetPath(), real_path);
+
+	if (stat(real_path.c_str(), &buf) != 0)
+		cellSysutil->Error("stat failed! (%s)", real_path.c_str());
+	else
+	{
+		atime = buf.st_atime;
+		mtime = buf.st_mtime;
+		ctime = buf.st_ctime;
+	}
+
 	SaveDataEntry saveEntry;
 	saveEntry.dirName = psf.GetString("SAVEDATA_DIRECTORY");
 	saveEntry.listParam = psf.GetString("SAVEDATA_LIST_PARAM");
@@ -76,9 +103,9 @@ void addSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, const std::string
 	saveEntry.subtitle = psf.GetString("SUB_TITLE");
 	saveEntry.details = psf.GetString("DETAIL");
 	saveEntry.sizeKB = (u32)(getSaveDataSize(saveDir) / 1024);
-	saveEntry.st_atime_ = 0; // TODO
-	saveEntry.st_mtime_ = 0; // TODO
-	saveEntry.st_ctime_ = 0; // TODO
+	saveEntry.st_atime_ = atime;
+	saveEntry.st_mtime_ = mtime;
+	saveEntry.st_ctime_ = ctime;
 	saveEntry.iconBuf = NULL; // TODO: Here should be the PNG buffer
 	saveEntry.iconBufSize = 0; // TODO: Size of the PNG file
 	saveEntry.isNew = false;
@@ -112,7 +139,7 @@ void setSaveDataList(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDa
 	while (entry != saveEntries.end())
 	{
 		bool found = false;
-		for (u32 j=0; j<fixedListNum; j++)
+		for (u32 j = 0; j < fixedListNum; j++)
 		{
 			if (entry->dirName == (char*)fixedList[j].dirName)
 			{
@@ -196,10 +223,15 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 			CellSaveDataFileStat fileEntry;
 			vfsFile file(saveDir + "/" + dirEntry->name);
 
-			if (dirEntry->name == "ICON0.PNG") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-			if (dirEntry->name == "ICON1.PAM") fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-			if (dirEntry->name == "PIC1.PNG")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-			if (dirEntry->name == "SND0.AT3")  fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+			if (dirEntry->name == "ICON0.PNG")
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+			else if (dirEntry->name == "ICON1.PAM")
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+			else if (dirEntry->name == "PIC1.PNG") 
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+			else if (dirEntry->name == "SND0.AT3") 
+				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+
 			fileEntry.st_size = file.GetSize();
 			fileEntry.st_atime_ = 0; // TODO ?
 			fileEntry.st_mtime_ = 0; // TODO ?
@@ -210,9 +242,11 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		}
 	}
 
-	statGet->fileList = vm::bptr<CellSaveDataFileStat>::make(be_t<u32>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * (u32)fileEntries.size(), sizeof(CellSaveDataFileStat))));
-	for (u32 i=0; i<fileEntries.size(); i++)
-		memcpy(&statGet->fileList[i], &fileEntries[i], sizeof(CellSaveDataFileStat));
+	statGet->fileList = vm::ptr<CellSaveDataFileStat>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), 8));
+	for (u32 i = 0; i < fileEntries.size(); i++) {
+		CellSaveDataFileStat *dst = &statGet->fileList[i];
+		memcpy(dst, &fileEntries[i], sizeof(CellSaveDataFileStat));
+	}
 }
 
 s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<CellSaveDataCBResult> result, const std::string& saveDataDir)
@@ -231,7 +265,7 @@ s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<Cell
 			cellSysutil->Error("modifySaveDataFiles: CellSaveDataFileCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 			return CELL_SAVEDATA_ERROR_CBRESULT;
 		}
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST) {
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM) {
 			break;
 		}
 
@@ -637,7 +671,9 @@ int cellSaveDataAutoSave2(u32 version, vm::ptr<const char> dirName, u32 errDialo
 	result->userdata = userdata;
 	funcStat(result, statGet, statSet);
 
-	Memory.Free(statGet->fileList.addr());
+	if (statGet->fileList)
+		Memory.Free(statGet->fileList.addr());
+
 	if (result->result < 0)	{
 		cellSysutil->Error("cellSaveDataAutoSave2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
 		return CELL_SAVEDATA_ERROR_CBRESULT;

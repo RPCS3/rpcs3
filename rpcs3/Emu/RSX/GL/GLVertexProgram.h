@@ -2,6 +2,60 @@
 #include "GLShaderParam.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Utilities/Thread.h"
+#include <set>
+
+enum sca_opcode
+{
+	RSX_SCA_OPCODE_NOP = 0x00,
+	RSX_SCA_OPCODE_MOV = 0x01,
+	RSX_SCA_OPCODE_RCP = 0x02,
+	RSX_SCA_OPCODE_RCC = 0x03,
+	RSX_SCA_OPCODE_RSQ = 0x04,
+	RSX_SCA_OPCODE_EXP = 0x05,
+	RSX_SCA_OPCODE_LOG = 0x06,
+	RSX_SCA_OPCODE_LIT = 0x07,
+	RSX_SCA_OPCODE_BRA = 0x08,
+	RSX_SCA_OPCODE_BRI = 0x09,
+	RSX_SCA_OPCODE_CAL = 0x0a,
+	RSX_SCA_OPCODE_CLI = 0x0b,
+	RSX_SCA_OPCODE_RET = 0x0c,
+	RSX_SCA_OPCODE_LG2 = 0x0d,
+	RSX_SCA_OPCODE_EX2 = 0x0e,
+	RSX_SCA_OPCODE_SIN = 0x0f,
+	RSX_SCA_OPCODE_COS = 0x10,
+	RSX_SCA_OPCODE_BRB = 0x11,
+	RSX_SCA_OPCODE_CLB = 0x12,
+	RSX_SCA_OPCODE_PSH = 0x13,
+	RSX_SCA_OPCODE_POP = 0x14,
+};
+
+enum vec_opcode
+{
+	RSX_VEC_OPCODE_NOP = 0x00,
+	RSX_VEC_OPCODE_MOV = 0x01,
+	RSX_VEC_OPCODE_MUL = 0x02,
+	RSX_VEC_OPCODE_ADD = 0x03,
+	RSX_VEC_OPCODE_MAD = 0x04,
+	RSX_VEC_OPCODE_DP3 = 0x05,
+	RSX_VEC_OPCODE_DPH = 0x06,
+	RSX_VEC_OPCODE_DP4 = 0x07,
+	RSX_VEC_OPCODE_DST = 0x08,
+	RSX_VEC_OPCODE_MIN = 0x09,
+	RSX_VEC_OPCODE_MAX = 0x0a,
+	RSX_VEC_OPCODE_SLT = 0x0b,
+	RSX_VEC_OPCODE_SGE = 0x0c,
+	RSX_VEC_OPCODE_ARL = 0x0d,
+	RSX_VEC_OPCODE_FRC = 0x0e,
+	RSX_VEC_OPCODE_FLR = 0x0f,
+	RSX_VEC_OPCODE_SEQ = 0x10,
+	RSX_VEC_OPCODE_SFL = 0x11,
+	RSX_VEC_OPCODE_SGT = 0x12,
+	RSX_VEC_OPCODE_SLE = 0x13,
+	RSX_VEC_OPCODE_SNE = 0x14,
+	RSX_VEC_OPCODE_STR = 0x15,
+	RSX_VEC_OPCODE_SSG = 0x16,
+	RSX_VEC_OPCODE_TEX = 0x19,
+};
 
 struct GLVertexDecompilerThread : public ThreadBase
 {
@@ -154,8 +208,8 @@ struct GLVertexDecompilerThread : public ThreadBase
 	Instruction* m_cur_instr;
 	size_t m_instr_count;
 
+	std::set<int> m_jump_lvls;
 	std::vector<std::string> m_body;
-
 	std::vector<FuncInfo> m_funcs;
 
 	//wxString main;
@@ -184,12 +238,14 @@ struct GLVertexDecompilerThread : public ThreadBase
 	std::string GetDST(bool is_sca = false);
 	std::string GetSRC(const u32 n);
 	std::string GetFunc();
+	std::string GetTex();
 	std::string GetCond();
 	std::string AddAddrMask();
 	std::string AddAddrReg();
 	u32 GetAddr();
 	std::string Format(const std::string& code);
 
+	void AddCodeCond(const std::string& dst, const std::string& src);
 	void AddCode(const std::string& code);
 	void SetDST(bool is_sca, std::string value);
 	void SetDSTVec(const std::string& code);

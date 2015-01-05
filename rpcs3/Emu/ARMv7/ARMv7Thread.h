@@ -1,17 +1,23 @@
 #pragma once
+
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Memory/Memory.h"
 
 enum ARMv7InstructionSet
 {
 	ARM,
 	Thumb,
 	Jazelle,
-	ThumbEE,
+	ThumbEE
 };
 
 class ARMv7Thread : public CPUThread
 {
 public:
+	u32 m_arg;
+	u8 m_last_instr_size;
+	const char* m_last_instr_name;
+
 	ARMv7Thread();
 
 	union
@@ -60,6 +66,18 @@ public:
 		u32 IPSR;
 
 	} IPSR;
+
+	union
+	{
+		struct
+		{
+			u32 code1 : 16;
+			u32 code0 : 16;
+		};
+
+		u32 data;
+
+	} code;
 
 	ARMv7InstructionSet ISET;
 
@@ -117,6 +135,13 @@ public:
 		}
 		
 		return PC;
+	}
+
+	void update_code(const u32 address)
+	{
+		code.code0 = vm::psv::read16(address & ~1);
+		code.code1 = vm::psv::read16(address + 2 & ~1);
+		m_arg = address & 0x1 ? code.code1 << 16 | code.code0 : code.data;
 	}
 
 public:

@@ -32,29 +32,13 @@ MsgDialogProgressBarSetMsgCb MsgDialogProgressBarSetMsg = nullptr;
 MsgDialogProgressBarResetCb MsgDialogProgressBarReset = nullptr;
 MsgDialogProgressBarIncCb MsgDialogProgressBarInc = nullptr;
 
-void SetMsgDialogCreateCallback(MsgDialogCreateCb cb)
+void SetMsgDialogCallbacks(MsgDialogCreateCb ccb, MsgDialogDestroyCb dcb, MsgDialogProgressBarSetMsgCb pbscb, MsgDialogProgressBarResetCb pbrcb, MsgDialogProgressBarIncCb pbicb)
 {
-	MsgDialogCreate = cb;
-}
-
-void SetMsgDialogDestroyCallback(MsgDialogDestroyCb cb)
-{
-	MsgDialogDestroy = cb;
-}
-
-void SetMsgDialogProgressBarSetMsgCallback(MsgDialogProgressBarSetMsgCb cb)
-{
-	MsgDialogProgressBarSetMsg = cb;
-}
-
-void SetMsgDialogProgressBarResetCallback(MsgDialogProgressBarResetCb cb)
-{
-	MsgDialogProgressBarReset = cb;
-}
-
-void SetMsgDialogProgressBarIncCallback(MsgDialogProgressBarIncCb cb)
-{
-	MsgDialogProgressBarInc = cb;
+	MsgDialogCreate = ccb;
+	MsgDialogDestroy = dcb;
+	MsgDialogProgressBarSetMsg = pbscb;
+	MsgDialogProgressBarReset = pbrcb;
+	MsgDialogProgressBarInc = pbicb;
 }
 
 void MsgDialogClose()
@@ -63,13 +47,64 @@ void MsgDialogClose()
 	g_msg_dialog_wait_until = get_system_time();
 }
 
-int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
+s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
 		type, msgString.addr(), callback.addr(), userData, extParam);
-	
-	//type |= CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE | CELL_MSGDIALOG_TYPE_BG_INVISIBLE;
-	//type |= CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO;
+
+	if (!msgString || strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
+	{
+		return CELL_MSGDIALOG_ERROR_PARAM;
+	}
+
+	switch (type & CELL_MSGDIALOG_TYPE_BUTTON_TYPE)
+	{
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
+	{
+		if (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+		{
+		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_NONE: break;
+		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: break;
+		case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: break;
+		default: return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		break;
+	}
+
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
+	{
+		switch (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
+		{
+		case CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_YES: break;
+		case CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO: break;
+		default: return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		if (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		break;
+	}
+
+	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
+	{
+		if (type & CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		if (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
+		{
+			return CELL_MSGDIALOG_ERROR_PARAM;
+		}
+		break;
+	}
+
+	default: return CELL_MSGDIALOG_ERROR_PARAM;
+	}
 
 	MsgDialogState old = msgDialogNone;
 	if (!g_msg_dialog_state.compare_exchange_strong(old, msgDialogOpen))
@@ -83,7 +118,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	{
 	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_DOUBLE: g_msg_dialog_progress_bar_count = 2; break;
 	case CELL_MSGDIALOG_TYPE_PROGRESSBAR_SINGLE: g_msg_dialog_progress_bar_count = 1; break;
-	default: g_msg_dialog_progress_bar_count = 0; break; // ???
+	default: g_msg_dialog_progress_bar_count = 0; break;
 	}
 
 	std::string msg = msgString.get_ptr();
@@ -121,7 +156,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 				cellSysutil->Warning("MsgDialog thread aborted");
 				return;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
 		while (g_msg_dialog_state == msgDialogOpen || (s64)(get_system_time() - g_msg_dialog_wait_until) < 0)
@@ -131,7 +166,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 				g_msg_dialog_state = msgDialogAbort;
 				break;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
@@ -156,7 +191,7 @@ int cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	return CELL_OK;
 }
 
-int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
+s32 cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
 	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=0x%x, extParam=%d)",
 		errorCode, callback.addr(), userData, extParam);
@@ -174,15 +209,15 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> cal
 	case 0x80010007: errorMessage = "The file is in unrecognized format / The file is not a valid ELF file."; break;
 	case 0x80010008: errorMessage = "Resource deadlock is avoided."; break;
 	case 0x80010009: errorMessage = "Operation not permitted."; break;
-	case 0x8001000A: errorMessage = "The device or resource is bus."; break;
-	case 0x8001000B: errorMessage = "The operation is timed ou."; break;
-	case 0x8001000C: errorMessage = "The operation is aborte."; break;
+	case 0x8001000A: errorMessage = "The device or resource is busy."; break;
+	case 0x8001000B: errorMessage = "The operation is timed out."; break;
+	case 0x8001000C: errorMessage = "The operation is aborted."; break;
 	case 0x8001000D: errorMessage = "Invalid memory access."; break;
 	case 0x8001000F: errorMessage = "State of the target thread is invalid."; break;
 	case 0x80010010: errorMessage = "Alignment is invalid."; break;
 	case 0x80010011: errorMessage = "Shortage of the kernel resources."; break;
 	case 0x80010012: errorMessage = "The file is a directory."; break;
-	case 0x80010013: errorMessage = "Operation canceled."; break;
+	case 0x80010013: errorMessage = "Operation cancelled."; break;
 	case 0x80010014: errorMessage = "Entry already exists."; break;
 	case 0x80010015: errorMessage = "Port is already connected."; break;
 	case 0x80010016: errorMessage = "Port is not connected."; break;
@@ -255,7 +290,7 @@ int cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> cal
 	return CELL_OK;
 }
 
-int cellMsgDialogClose(float delay)
+s32 cellMsgDialogClose(float delay)
 {
 	cellSysutil->Warning("cellMsgDialogClose(delay=%f)", delay);
 
@@ -277,7 +312,7 @@ int cellMsgDialogClose(float delay)
 	return CELL_OK;
 }
 
-int cellMsgDialogAbort()
+s32 cellMsgDialogAbort()
 {
 	cellSysutil->Warning("cellMsgDialogAbort()");
 
@@ -298,7 +333,7 @@ int cellMsgDialogAbort()
 	return CELL_OK;
 }
 
-int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
+s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
 {
 	cellSysutil->Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x ['%s'])",
 		progressBarIndex, msgString.addr(), msgString.get_ptr());
@@ -322,7 +357,7 @@ int cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msg
 	return CELL_OK;
 }
 
-int cellMsgDialogProgressBarReset(u32 progressBarIndex)
+s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
 	cellSysutil->Warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
@@ -343,7 +378,7 @@ int cellMsgDialogProgressBarReset(u32 progressBarIndex)
 	return CELL_OK;
 }
 
-int cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
+s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
 	cellSysutil->Warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 

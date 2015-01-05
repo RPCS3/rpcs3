@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/SQueue.h"
-
 // align size or address to 128
 #define a128(x) ((x + 127) & (~127))
 
@@ -288,15 +286,8 @@ enum
 	PACKET_START_CODE_MASK   = 0xffffff00,
 	PACKET_START_CODE_PREFIX = 0x00000100,
 
-	USER_DATA_START_CODE     = 0x000001b2,
-	SEQUENCE_START_CODE      = 0x000001b3,
-	EXT_START_CODE           = 0x000001b5,
-	SEQUENCE_END_CODE        = 0x000001b7,
-	GOP_START_CODE           = 0x000001b8,
-	ISO_11172_END_CODE       = 0x000001b9,
 	PACK_START_CODE          = 0x000001ba,
 	SYSTEM_HEADER_START_CODE = 0x000001bb,
-	PROGRAM_STREAM_MAP       = 0x000001bc,
 	PRIVATE_STREAM_1         = 0x000001bd,
 	PADDING_STREAM           = 0x000001be,
 	PRIVATE_STREAM_2         = 0x000001bf,
@@ -336,6 +327,11 @@ struct DemuxerStream
 		size = size > count ? size - count : 0;
 	}
 
+	bool check(u32 count) const
+	{
+		return count <= size;
+	}
+
 	u64 get_ts(u8 c)
 	{
 		u8 v[4]; get((u32&)v); 
@@ -345,12 +341,6 @@ struct DemuxerStream
 			(((u64)v[1] & 0x7e) << 15) |
 			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
 	}
-
-	u64 get_ts()
-	{
-		u8 v; get(v);
-		return get_ts(v);
-	}
 };
 
 struct PesHeader
@@ -359,6 +349,7 @@ struct PesHeader
 	u64 dts;
 	u8 size;
 	bool has_ts;
+	bool is_ok;
 
 	PesHeader(DemuxerStream& stream);
 };
@@ -407,7 +398,7 @@ struct DemuxerTask
 class Demuxer
 {
 public:
-	SQueue<DemuxerTask, 32> job;
+	squeue_t<DemuxerTask, 32> job;
 	const u32 memAddr;
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
@@ -436,7 +427,7 @@ class ElementaryStream
 {
 	std::mutex m_mutex;
 
-	SQueue<u32> entries; // AU starting addresses
+	squeue_t<u32> entries; // AU starting addresses
 	u32 put_count; // number of AU written
 	u32 got_count; // number of AU obtained by GetAu(Ex)
 	u32 released; // number of AU released
@@ -446,6 +437,8 @@ class ElementaryStream
 	bool is_full(u32 space);
 	
 public:
+	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
+
 	Demuxer* dmux;
 	u32 id;
 	const u32 memAddr;
@@ -464,27 +457,6 @@ public:
 	u64 last_pts;
 
 	void push(DemuxerStream& stream, u32 size); // called by demuxer thread (not multithread-safe)
-
-	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-		: dmux(dmux)
-		, memAddr(a128(addr))
-		, memSize(size - (addr - memAddr))
-		, fidMajor(fidMajor)
-		, fidMinor(fidMinor)
-		, sup1(sup1)
-		, sup2(sup2)
-		, cbFunc(cbFunc)
-		, cbArg(cbArg)
-		, spec(spec)
-		, put(memAddr)
-		, put_count(0)
-		, got_count(0)
-		, released(0)
-		, raw_pos(0)
-		, last_dts(0xffffffffffffffffull)
-		, last_pts(0xffffffffffffffffull)
-	{
-	}
 
 	bool isfull(u32 space);
 

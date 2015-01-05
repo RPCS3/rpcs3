@@ -98,6 +98,13 @@ void GLProgram::SetTex(u32 index)
 	checkForGlError(fmt::Format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
+void GLProgram::SetVTex(u32 index)
+{
+	int loc = GetLocation(fmt::Format("vtex%u", index));
+	glProgramUniform1i(id, loc, index);
+	checkForGlError(fmt::Format("SetVTex(%u - %d - %d)", id, index, loc));
+}
+
 void GLProgram::Delete()
 {
 	if(!IsCreated()) return;
