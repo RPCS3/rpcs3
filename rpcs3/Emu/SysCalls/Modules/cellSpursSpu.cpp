@@ -585,6 +585,8 @@ void spursSysServiceUpdateWorkload(SPUThread & spu, SpursKernelMgmtData * mgmt) 
 
 /// Process any messages
 void spursSysServiceProcessMessages(SPUThread & spu, SpursKernelMgmtData * mgmt) {
+    LV2_LOCK(0);
+
     // Process update workload message
     if (mgmt->spurs->m.sysSrvMsgUpdateWorkload.read_relaxed() & (1 << mgmt->spuNum)) {
         mgmt->spurs->m.sysSrvMsgUpdateWorkload &= ~(1 << mgmt->spuNum);
@@ -606,6 +608,8 @@ void spursSysServiceProcessMessages(SPUThread & spu, SpursKernelMgmtData * mgmt)
 /// Wait for an external event or exit the SPURS thread group if no workloads can be scheduled
 void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
     while (true) {
+        Emu.GetCoreMutex().lock();
+
         // Find the number of SPUs that are idling in this SPURS instance
         u32 nIdlingSpus = 0;
         for (u32 i = 0; i < 8; i++) {
@@ -665,7 +669,10 @@ void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
             // not yet completely implemented in rpcs3. So we busy wait here.
             //u128 r;
             //spu.ReadChannel(r, 0);
+
+            Emu.GetCoreMutex().unlock();
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            Emu.GetCoreMutex().lock();
         }
 
         if ((allSpusIdle == true && exitIfNoWork == true) || foundReadyWorkload == false) {
@@ -673,6 +680,8 @@ void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
         } else {
             mgmt->spurs->m.spuIdling &= ~(1 << mgmt->spuNum);
         }
+
+        Emu.GetCoreMutex().unlock();
 
         if (allSpusIdle == false || exitIfNoWork == false) {
             if (foundReadyWorkload == true) {
@@ -696,6 +705,7 @@ void spursSysServiceWorkloadMain(SPUThread & spu, u32 pollStatus) {
     if (mgmt->sysSrvInitialised == 0) {
         mgmt->sysSrvInitialised = 1;
 
+        LV2_LOCK(0);
         if (mgmt->spurs->m.sysSrvOnSpu & (1 << mgmt->spuNum)) {
             assert(0);
         }
