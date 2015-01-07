@@ -531,23 +531,7 @@ namespace vm
 		}
 
 	public:
-		stackvar(PPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
-			: m_size(size)
-			, m_align(align)
-			, m_thread(CPU)
-		{
-			alloc();
-		}
-
-		stackvar(SPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
-			: m_size(size)
-			, m_align(align)
-			, m_thread(CPU)
-		{
-			alloc();
-		}
-
-		stackvar(ARMv7Thread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
+		stackvar(CPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
 			: m_size(size)
 			, m_align(align)
 			, m_thread(CPU)
