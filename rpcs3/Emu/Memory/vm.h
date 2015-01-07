@@ -1,6 +1,8 @@
 #pragma once
 #include "Memory.h"
 
+class CPUThread;
+
 namespace vm
 {
 	enum memory_location : uint
@@ -171,6 +173,9 @@ namespace vm
 	}
 
 	void close();
+
+	u32 stack_push(CPUThread& CPU, u32 size, u32 align, u32& old_pos);
+	void stack_pop(CPUThread& CPU, u32 addr, u32 old_pos);
 }
 
 #include "vm_ref.h"
