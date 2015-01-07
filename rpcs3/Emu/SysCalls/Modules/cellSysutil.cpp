@@ -835,10 +835,10 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 	return CELL_OK;
 }
 
-extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
-extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern void cellSysutil_SaveData_init();

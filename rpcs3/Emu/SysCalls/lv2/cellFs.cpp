@@ -1000,13 +1000,13 @@ int cellFsAioFinish(vm::ptr<const char> mount_point)
 	return CELL_OK;
 }
 
-int cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<be_t<u64>> nread)
+int cellFsReadWithOffset(PPUThread& CPU, u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<be_t<u64>> nread)
 {
 	sys_fs->Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf_addr=0x%x, buffer_size=%lld nread=0x%llx)",
 		fd, offset, buf.addr(), buffer_size, nread.addr());
 
 	int ret;
-	vm::var<be_t<u64>> oldPos, newPos;
+	vm::stackvar<be_t<u64>> oldPos(CPU), newPos(CPU);
 	ret = cellFsLseek(fd, 0, CELL_SEEK_CUR, oldPos);       // Save the current position
 	if (ret) return ret;
 	ret = cellFsLseek(fd, offset, CELL_SEEK_SET, newPos);  // Move to the specified offset
