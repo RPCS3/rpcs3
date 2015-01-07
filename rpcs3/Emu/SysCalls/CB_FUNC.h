@@ -24,9 +24,9 @@ namespace cb_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_GENERAL");
 		
-		__forceinline static void set_value(PPUThread& CPU, const T arg)
+		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			(T&)CPU.GPR[g_count + 2] = arg;
+			CPU.GPR[g_count + 2] = cast_ppu_gpr<T>::func(arg);
 		}
 	};
 
@@ -35,7 +35,7 @@ namespace cb_detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_FLOAT");
 
-		__forceinline static void set_value(PPUThread& CPU, const T arg)
+		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
 			CPU.FPR[f_count] = arg;
 		}
@@ -46,9 +46,9 @@ namespace cb_detail
 	{
 		static_assert(std::is_same<T, u128>::value, "Invalid callback argument type for ARG_VECTOR");
 
-		__forceinline static void set_value(PPUThread& CPU, const T arg)
+		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			(T&)CPU.VPR[v_count + 1] = arg;
+			CPU.VPR[v_count + 1] = arg;
 		}
 	};
 
@@ -59,13 +59,11 @@ namespace cb_detail
 		static_assert(v_count <= 12, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 8, "Invalid callback argument type for ARG_STACK");
 
-		__forceinline static void set_value(PPUThread& CPU, const T arg)
+		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
 			const int stack_pos = 0x70 + (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
-			u64 value = 0;
-			(T&)value = arg;
-			vm::write64(CPU.GPR[1] + stack_pos, value);
+			vm::write64(CPU.GPR[1] + stack_pos, cast_ppu_gpr<T>::func(arg));
 		}
 	};
 
@@ -121,11 +119,11 @@ namespace cb_detail
 	template<typename T>
 	struct _func_res<T, ARG_VECTOR>
 	{
-		static_assert(sizeof(T) == 16, "Invalid callback result type for ARG_VECTOR");
+		static_assert(std::is_same<T, u128>::value, "Invalid callback result type for ARG_VECTOR");
 
 		__forceinline static T get_value(const PPUThread& CPU)
 		{
-			return (T&)CPU.VPR[2];
+			return CPU.VPR[2];
 		}
 	};
 
@@ -167,8 +165,8 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::call(CPUThread& CPU, T... args) const
 	{
-		const u32 pc = vm::get_ref<be_t<u32>>(m_addr);
-		const u32 rtoc = vm::get_ref<be_t<u32>>(m_addr + 4);
+		const u32 pc = vm::get_ref<be_t<u32>>((u32)m_addr);
+		const u32 rtoc = vm::get_ref<be_t<u32>>((u32)m_addr + 4);
 
 		return cb_detail::_func_caller<RT, T...>::call(static_cast<PPUThread&>(CPU), pc, rtoc, args...);
 	}

@@ -475,6 +475,7 @@ namespace psv_func_detail
 
 		static __forceinline void func(ARMv7Thread& CPU, T result)
 		{
+			CPU.GPR[0] = 0; // TODO
 			(T&)CPU.GPR[0] = result;
 		}
 	};

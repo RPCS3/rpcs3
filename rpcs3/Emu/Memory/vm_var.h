@@ -1,5 +1,7 @@
 #pragma once
 
+class CPUThread;
+
 namespace vm
 {
 	template<typename T>
@@ -493,6 +495,132 @@ namespace vm
 		NT* To(uint offset = 0)
 		{
 			return (NT*)(m_ptr + offset);
+		}
+	};
+
+	template<typename T>
+	class stackvar
+	{
+		struct stack_allocation
+		{
+			T* ptr;
+			u32 addr;
+			u32 size;
+			u32 align;
+			u32 old_pos;
+
+			stack_allocation(CPUThread& CPU, u32 size, u32 align)
+				: size(size)
+				, align(align)
+			{
+				addr = stack_push(CPU, size, align, old_pos);
+				ptr = vm::get_ptr<T>(addr);
+			}
+
+			stack_allocation() = delete;
+			stack_allocation(const stack_allocation& r) = delete;
+			stack_allocation(stack_allocation&& r) = delete;
+			stack_allocation& operator = (const stack_allocation& r) = delete;
+			stack_allocation& operator = (stack_allocation&& r) = delete;
+
+		} const m_data;
+
+		CPUThread& m_thread;
+
+	public:
+		stackvar(CPUThread& CPU, u32 size = sizeof(T), u32 align = __alignof(T))
+			: m_data(CPU, size, align)
+			, m_thread(CPU)
+		{
+		}
+
+		stackvar(const stackvar& r)
+			: m_data(r.m_thread, r.m_data.m_size, r.m_data.m_align)
+			, m_thread(r.m_thread)
+		{
+			*m_data.ptr = *r.m_data.ptr;
+		}
+
+		stackvar(stackvar&& r) = delete;
+
+		~stackvar()
+		{
+			stack_pop(m_thread, m_data.addr, m_data.old_pos);
+		}
+
+		stackvar& operator = (const stackvar& r)
+		{
+			*m_data.ptr = *r.m_data.ptr;
+			return *this;
+		}
+
+		stackvar& operator = (stackvar&& r) = delete;
+
+		T* operator -> ()
+		{
+			return m_data.ptr;
+		}
+
+		const T* operator -> () const
+		{
+			return m_data.ptr;
+		}
+
+		T* get_ptr()
+		{
+			return m_data.ptr;
+		}
+
+		const T* get_ptr() const
+		{
+			return m_data.ptr;
+		}
+
+		T& value()
+		{
+			return *m_data.ptr;
+		}
+
+		const T& value() const
+		{
+			return *m_data.ptr;
+		}
+
+		u32 addr() const
+		{
+			return m_data.addr;
+		}
+
+		u32 size() const
+		{
+			return m_data.size;
+		}
+
+		/*
+		operator const ref<T>() const
+		{
+		return addr();
+		}
+		*/
+
+		template<typename AT> operator const ps3::ptr<T, 1, AT>() const
+		{
+			return ps3::ptr<T, 1, AT>::make(m_data.addr);
+		}
+
+		template<typename AT> operator const ps3::ptr<const T, 1, AT>() const
+		{
+			return ps3::ptr<const T, 1, AT>::make(m_data.addr);
+		}
+
+		operator T&()
+		{
+			return *m_data.ptr;
+		}
+
+		operator const T&() const
+		{
+			return *m_data.ptr;
 		}
 	};
 }

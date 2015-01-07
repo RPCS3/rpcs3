@@ -812,3 +812,88 @@ public:
 	cpu_thread& run() override;
 	ppu_thread& gpr(uint index, u64 value);
 };
+
+template<typename T, size_t size = sizeof(T)>
+struct cast_ppu_gpr
+{
+	static_assert(sizeof(T) <= 8, "Type for cast_ppu_gpr is invalid (too big)");
+
+	static u64 func(const T& value)
+	{
+		u64 result = 0;
+		(T&)result = value;
+		return result;
+	}
+};
+
+template<typename T>
+struct cast_ppu_gpr<T, 1>
+{
+	static u64 func(const T& value)
+	{
+		return (u8&)value;
+	}
+};
+
+template<typename T>
+struct cast_ppu_gpr<T, 2>
+{
+	static u64 func(const T& value)
+	{
+		return (u16&)value;
+	}
+};
+
+template<typename T>
+struct cast_ppu_gpr<T, 4>
+{
+	static u64 func(const T& value)
+	{
+		return (u32&)value;
+	}
+};
+
+template<typename T>
+struct cast_ppu_gpr<T, 8>
+{
+	static u64 func(const T& value)
+	{
+		return (u64&)value;
+	}
+};
+
+template<>
+struct cast_ppu_gpr<s8, 1>
+{
+	static u64 func(const s8& value)
+	{
+		return value;
+	}
+};
+
+template<>
+struct cast_ppu_gpr<s16, 2>
+{
+	static u64 func(const s16& value)
+	{
+		return value;
+	}
+};
+
+template<>
+struct cast_ppu_gpr<s32, 4>
+{
+	static u64 func(const s32& value)
+	{
+		return value;
+	}
+};
+
+template<>
+struct cast_ppu_gpr<s64, 8>
+{
+	static u64 func(const s64& value)
+	{
+		return value;
+	}
+};

@@ -46,11 +46,11 @@ namespace detail
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
-		static_assert(sizeof(T) == 16, "Invalid function argument type for ARG_VECTOR");
+		static_assert(std::is_same<T, u128>::value, "Invalid function argument type for ARG_VECTOR");
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T&)CPU.VPR[v_count + 1];
+			return CPU.VPR[v_count + 1];
 		}
 	};
 
@@ -75,9 +75,9 @@ namespace detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_GENERAL");
 
-		static __forceinline void func(PPUThread& CPU, T result)
+		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
-			(T&)CPU.GPR[3] = result;
+			CPU.GPR[3] = cast_ppu_gpr<T>::func(result);
 		}
 	};
 
@@ -86,7 +86,7 @@ namespace detail
 	{
 		static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-		static __forceinline void func(PPUThread& CPU, T result)
+		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
 			CPU.FPR[1] = (double)result;
 		}
@@ -95,11 +95,11 @@ namespace detail
 	template<typename T>
 	struct bind_result<T, ARG_VECTOR>
 	{
-		static_assert(sizeof(T) == 16, "Invalid function result type for ARG_VECTOR");
+		static_assert(std::is_same<T, u128>::value, "Invalid function result type for ARG_VECTOR");
 
-		static __forceinline void func(PPUThread& CPU, const T result)
+		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
-			(T&)CPU.VPR[2] = result;
+			CPU.VPR[2] = result;
 		}
 	};
 
