@@ -1920,10 +1920,10 @@ s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
 }
 
-s32 syncLFQueueDetachLv2EventQueue(PPUThread& CPU, vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
+s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 #ifdef PRX_DEBUG
-	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(CPU, libsre + 0x1DA0, libsre_rtoc,
+	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x1DA0, libsre_rtoc,
 		spus, num, queue);
 #endif
 
