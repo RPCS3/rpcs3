@@ -370,8 +370,8 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 	}
 
-	// else some fatal error (not sure what will happen)
-	//exit(EXIT_FAILURE);
+	// else some fatal error
+	exit(EXIT_FAILURE);
 }
 
 const int sigaction_result = []() -> int

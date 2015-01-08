@@ -13,6 +13,8 @@
 //#include "Emu/Cell/PPURecompiler.h"
 #include "Emu/CPU/CPUThreadManager.h"
 
+u64 rotate_mask[64][64];
+
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
