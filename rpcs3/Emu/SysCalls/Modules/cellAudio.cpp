@@ -864,115 +864,151 @@ int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 	return CELL_OK;
 }
 
-int cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
+s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Warning("cellAudioAddData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+	cellAudio->Log("cellAudioAddData(portNum=%d, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
 	
-	if (src.addr() % 16)
-		return CELL_AUDIO_ERROR_PARAM;
+	if (!m_config.m_is_audio_initialized)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
 
-	AudioPortConfig& port = m_config.m_ports[portNum];
-
-	if (portNum >= m_config.AUDIO_PORT_COUNT)
+	if (portNum >= m_config.AUDIO_PORT_COUNT || !src || src.addr() % 4)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!port.m_is_audio_port_opened)
+	if (samples != 256)
 	{
-		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+		// despite the docs, seems that only fixed value is supported
+		cellAudio->Error("cellAudioAddData(): invalid samples value (0x%x)", samples);
+		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!port.m_is_audio_port_started)
-	{
-		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	}
-
-	std::lock_guard<std::mutex> lock(audioMutex);
+	const AudioPortConfig& port = m_config.m_ports[portNum];
 	
-	u32 addr = port.addr;
-	u32 src_addr = src.addr();
+	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
 
-	for (u32 i = 0; i < samples; i++)
+	for (u32 i = 0; i < samples * port.channel; i++)
 	{
-		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
-		vm::write32(addr, vm::read32(src_addr));
-		src_addr += (port.size / samples);
-		addr += (port.size / samples);
+		dst[i] += src[i] * volume; // mix all channels
 	}
 
 	return CELL_OK;
 }
 
-int cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
+s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio->Warning("cellAudioAdd2chData(portNum=0x%x, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
-	
-	AudioPortConfig& port = m_config.m_ports[portNum];
+	cellAudio->Log("cellAudioAdd2chData(portNum=%d, src_addr=0x%x, samples=%d, volume=%f)", portNum, src.addr(), samples, volume);
+
+	if (!m_config.m_is_audio_initialized)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!port.m_is_audio_port_opened)
+	if (portNum >= m_config.AUDIO_PORT_COUNT || !src || src.addr() % 4)
 	{
-		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!port.m_is_audio_port_started)
+	if (samples != 256)
 	{
-		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+		// despite the docs, seems that only fixed value is supported
+		cellAudio->Error("cellAudioAdd2chData(): invalid samples value (0x%x)", samples);
+		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	std::lock_guard<std::mutex> lock(audioMutex);
+	const AudioPortConfig& port = m_config.m_ports[portNum];
 
-	u32 addr = port.addr;
-	u32 src_addr = src.addr();
+	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
 
-	for (u32 i = 0; i < samples; i++)
+	if (port.channel == 2)
 	{
-		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
-		vm::write32(addr, vm::read32(src_addr));
-		src_addr += (2 * port.block * 256 * sizeof(float) / samples);
-		addr += (2 * port.block * 256 * sizeof(float) / samples);
+		cellAudio->Error("cellAudioAdd2chData(portNum=%d): port.channel = 2", portNum);
 	}
-	
+	else if (port.channel == 6)
+	{
+		for (u32 i = 0; i < samples; i++)
+		{
+			dst[i * 6 + 0] += src[i * 2 + 0] * volume; // mix L ch
+			dst[i * 6 + 1] += src[i * 2 + 1] * volume; // mix R ch
+			//dst[i * 6 + 2] += 0.0f; // center
+			//dst[i * 6 + 3] += 0.0f; // LFE
+			//dst[i * 6 + 4] += 0.0f; // rear L
+			//dst[i * 6 + 5] += 0.0f; // rear R
+		}
+	}
+	else if (port.channel == 8)
+	{
+		for (u32 i = 0; i < samples; i++)
+		{
+			dst[i * 8 + 0] += src[i * 2 + 0] * volume; // mix L ch
+			dst[i * 8 + 1] += src[i * 2 + 1] * volume; // mix R ch
+			//dst[i * 8 + 2] += 0.0f; // center
+			//dst[i * 8 + 3] += 0.0f; // LFE
+			//dst[i * 8 + 4] += 0.0f; // rear L
+			//dst[i * 8 + 5] += 0.0f; // rear R
+			//dst[i * 8 + 6] += 0.0f; // side L
+			//dst[i * 8 + 7] += 0.0f; // side R
+		}
+	}
+	else
+	{
+		cellAudio->Error("cellAudioAdd2chData(portNum=%d): invalid port.channel value (%d)", portNum, port.channel);
+	}
+
 	return CELL_OK;
 }
 
-int cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
+s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
-	cellAudio->Warning("cellAudioAdd6chData(portNum=0x%x, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
-	
-	AudioPortConfig& port = m_config.m_ports[portNum];
+	cellAudio->Log("cellAudioAdd6chData(portNum=%d, src_addr=0x%x, volume=%f)", portNum, src.addr(), volume);
+
+	if (!m_config.m_is_audio_initialized)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
 
 	if (portNum >= m_config.AUDIO_PORT_COUNT)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	if (!port.m_is_audio_port_opened)
+	if (portNum >= m_config.AUDIO_PORT_COUNT || !src || src.addr() % 4)
 	{
-		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
+		return CELL_AUDIO_ERROR_PARAM;
 	}
+	
+	const AudioPortConfig& port = m_config.m_ports[portNum];
 
-	if (!port.m_is_audio_port_started)
+	const auto dst = vm::ptr<float>::make(port.addr + (port.tag % port.block) * port.channel * 256 * sizeof(float));
+
+	if (port.channel == 2 || port.channel == 6)
 	{
-		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+		cellAudio->Error("cellAudioAdd2chData(portNum=%d): port.channel = %d", portNum, port.channel);
 	}
-
-	std::lock_guard<std::mutex> lock(audioMutex);
-
-	u32 addr = port.addr;
-	u32 src_addr = src.addr();
-
-	for (u32 i = 0; i < 256; i++)
+	else if (port.channel == 8)
 	{
-		// vm::write32(addr, (u32)((float)vm::read32(src_addr) * volume)); // TODO: use volume?
-		vm::write32(addr, vm::read32(src_addr));
-		src_addr += (6 * port.block * sizeof(float));
-		addr += (6 * port.block * sizeof(float));
+		for (u32 i = 0; i < 256; i++)
+		{
+			dst[i * 8 + 0] += src[i * 6 + 0] * volume; // mix L ch
+			dst[i * 8 + 1] += src[i * 6 + 1] * volume; // mix R ch
+			dst[i * 8 + 2] += src[i * 6 + 2] * volume; // mix center
+			dst[i * 8 + 3] += src[i * 6 + 3] * volume; // mix LFE
+			dst[i * 8 + 4] += src[i * 6 + 4] * volume; // mix rear L
+			dst[i * 8 + 5] += src[i * 6 + 5] * volume; // mix rear R
+			//dst[i * 8 + 6] += 0.0f; // side L
+			//dst[i * 8 + 7] += 0.0f; // side R
+		}
+	}
+	else
+	{
+		cellAudio->Error("cellAudioAdd6chData(portNum=%d): invalid port.channel value (%d)", portNum, port.channel);
 	}
 	
 	return CELL_OK;
@@ -1019,6 +1055,7 @@ void cellAudio_init(Module *pxThis)
 	cellAudio->AddFunc(0x377e0cd9, cellAudioSetNotifyEventQueue);
 	cellAudio->AddFunc(0x4109d08c, cellAudioGetPortTimestamp);
 	cellAudio->AddFunc(0x9e4b1db8, cellAudioAdd2chData);
+	cellAudio->AddFunc(0x832df17e, cellAudioAdd6chData);
 	cellAudio->AddFunc(0xdab029aa, cellAudioAddData);
 	cellAudio->AddFunc(0xe4046afe, cellAudioGetPortBlockTag);
 	cellAudio->AddFunc(0xff3626fd, cellAudioRemoveNotifyEventQueue);
