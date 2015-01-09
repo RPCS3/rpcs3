@@ -1042,21 +1042,27 @@ void cellAudio_init(Module *pxThis)
 {
 	cellAudio = pxThis;
 
-	cellAudio->AddFunc(0x0b168f92, cellAudioInit);
-	cellAudio->AddFunc(0x4129fe2d, cellAudioPortClose);
-	cellAudio->AddFunc(0x5b1e2c73, cellAudioPortStop);
-	cellAudio->AddFunc(0x74a66af0, cellAudioGetPortConfig);
-	cellAudio->AddFunc(0x89be28f2, cellAudioPortStart);
-	cellAudio->AddFunc(0xca5ac370, cellAudioQuit);
-	cellAudio->AddFunc(0xcd7bc431, cellAudioPortOpen);
-	cellAudio->AddFunc(0x56dfe179, cellAudioSetPortLevel);
-	cellAudio->AddFunc(0x04af134e, cellAudioCreateNotifyEventQueue);
-	cellAudio->AddFunc(0x31211f6b, cellAudioMiscSetAccessoryVolume);
-	cellAudio->AddFunc(0x377e0cd9, cellAudioSetNotifyEventQueue);
-	cellAudio->AddFunc(0x4109d08c, cellAudioGetPortTimestamp);
-	cellAudio->AddFunc(0x9e4b1db8, cellAudioAdd2chData);
-	cellAudio->AddFunc(0x832df17e, cellAudioAdd6chData);
-	cellAudio->AddFunc(0xdab029aa, cellAudioAddData);
-	cellAudio->AddFunc(0xe4046afe, cellAudioGetPortBlockTag);
-	cellAudio->AddFunc(0xff3626fd, cellAudioRemoveNotifyEventQueue);
+	REG_FUNC(cellAudio, cellAudioInit);
+	REG_FUNC(cellAudio, cellAudioPortClose);
+	REG_FUNC(cellAudio, cellAudioPortStop);
+	REG_FUNC(cellAudio, cellAudioGetPortConfig);
+	REG_FUNC(cellAudio, cellAudioPortStart);
+	REG_FUNC(cellAudio, cellAudioQuit);
+	REG_FUNC(cellAudio, cellAudioPortOpen);
+	REG_FUNC(cellAudio, cellAudioSetPortLevel);
+	REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueue);
+	REG_FUNC(cellAudio, cellAudioCreateNotifyEventQueueEx);
+	REG_FUNC(cellAudio, cellAudioMiscSetAccessoryVolume);
+	REG_FUNC(cellAudio, cellAudioSetNotifyEventQueue);
+	REG_FUNC(cellAudio, cellAudioSetNotifyEventQueueEx);
+	REG_FUNC(cellAudio, cellAudioGetPortTimestamp);
+	REG_FUNC(cellAudio, cellAudioAdd2chData);
+	REG_FUNC(cellAudio, cellAudioAdd6chData);
+	REG_FUNC(cellAudio, cellAudioAddData);
+	REG_FUNC(cellAudio, cellAudioGetPortBlockTag);
+	REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueue);
+	REG_FUNC(cellAudio, cellAudioRemoveNotifyEventQueueEx);
+	REG_FUNC(cellAudio, cellAudioSendAck);
+	REG_FUNC(cellAudio, cellAudioSetPersonalDevice);
+	REG_FUNC(cellAudio, cellAudioUnsetPersonalDevice);
 }
