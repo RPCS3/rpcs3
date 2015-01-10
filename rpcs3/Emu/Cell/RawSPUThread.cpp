@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Callback.h"
 
 #include "Emu/Cell/RawSPUThread.h"
 
@@ -137,8 +139,14 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 	{
 		if (value == SPU_RUNCNTL_RUNNABLE)
 		{
-			SPU.Status.SetValue(SPU_STATUS_RUNNING);
-			Exec();
+			// calling Exec() directly in SIGSEGV handler may cause problems
+			// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
+			Emu.GetCallbackManager().Async([this]()
+			{
+				SPU.Status.SetValue(SPU_STATUS_RUNNING);
+				Exec();
+			});
+			
 		}
 		else if (value == SPU_RUNCNTL_STOP)
 		{

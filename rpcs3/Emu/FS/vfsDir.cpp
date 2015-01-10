@@ -29,7 +29,7 @@ bool vfsDir::Open(const std::string& path)
 
 	DirEntryInfo info;
 
-	m_cwd = simplify_path(Emu.GetVFS().GetLinked(0 && m_stream && m_stream->IsOpened() ? m_stream->GetPath() : path), true);
+	m_cwd = simplify_path(Emu.GetVFS().GetLinked(0 && m_stream && m_stream->IsOpened() ? m_stream->GetPath() : path), true, true);
 
 	auto blocks = simplify_path_blocks(GetPath());
 
