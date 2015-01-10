@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Emu/Audio/AudioThread.h"
 #include "OpenAL/include/alext.h"
 
-class OpenALThread
+class OpenALThread : public AudioThread
 {
 private:
 	static const uint g_al_buffers_count = 16;
@@ -14,15 +15,13 @@ private:
 	ALsizei m_buffer_size;
 
 public:
-	~OpenALThread();
+	virtual ~OpenALThread();
 
-	void Init();
-	void Quit();
-	void Play();
-	void Open(const void* src, ALsizei size);
-	void Close();
-	void Stop();
-	bool AddBlock(const ALuint buffer_id, ALsizei size, const void* src);
-	void AddData(const void* src, ALsizei size);
+	virtual void Init();
+	virtual void Quit();
+	virtual void Play();
+	virtual void Open(const void* src, int size);
+	virtual void Close();
+	virtual void Stop();
+	virtual void AddData(const void* src, int size);
 };
-
