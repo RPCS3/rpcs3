@@ -7,25 +7,33 @@
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Callback.h"
 
-void CallbackManager::Register(const std::function<s32()>& func)
+void CallbackManager::Register(const std::function<s32(PPUThread& PPU)>& func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_cb_list.push_back(func);
+	m_cb_list.push_back([=](CPUThread& CPU) -> s32
+	{
+		assert(CPU.GetType() == CPU_THREAD_PPU);
+		return func(static_cast<PPUThread&>(CPU));
+	});
 }
 
-void CallbackManager::Async(const std::function<void()>& func)
+void CallbackManager::Async(const std::function<void(PPUThread& PPU)>& func)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_async_list.push_back(func);
+	m_async_list.push_back([=](CPUThread& CPU)
+	{
+		assert(CPU.GetType() == CPU_THREAD_PPU);
+		func(static_cast<PPUThread&>(CPU));
+	});
+
 	m_cb_thread->Notify();
 }
 
-bool CallbackManager::Check(s32& result)
+bool CallbackManager::Check(CPUThread& CPU, s32& result)
 {
-	std::function<s32()> func = nullptr;
-
+	std::function<s32(CPUThread& CPU)> func;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -38,7 +46,7 @@ bool CallbackManager::Check(s32& result)
 	
 	if (func)
 	{
-		result = func();
+		result = func(CPU);
 		return true;
 	}
 	else
@@ -80,7 +88,7 @@ void CallbackManager::Init()
 
 		while (!Emu.IsStopped())
 		{
-			std::function<void()> func = nullptr;
+			std::function<void(CPUThread& CPU)> func;
 			{
 				std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -93,9 +101,10 @@ void CallbackManager::Init()
 
 			if (func)
 			{
-				func();
+				func(*m_cb_thread);
 				continue;
 			}
+
 			m_cb_thread->WaitForAnySignal();
 		}
 	});

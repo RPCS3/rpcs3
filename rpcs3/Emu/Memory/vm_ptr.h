@@ -356,7 +356,7 @@ namespace vm
 	public:
 		typedef RT(*type)(T...);
 
-		RT call(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified CPU thread context
+		RT operator()(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified CPU thread context
 
 		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current CPU thread context
 

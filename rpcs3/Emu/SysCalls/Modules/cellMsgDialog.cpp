@@ -171,10 +171,10 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 		if (callback && (g_msg_dialog_state != msgDialogAbort))
 		{
-			s32 status = (s32)g_msg_dialog_status;
-			Emu.GetCallbackManager().Register([callback, userData, status]() -> s32
+			const s32 status = (s32)g_msg_dialog_status;
+			Emu.GetCallbackManager().Register([callback, userData, status](PPUThread& PPU) -> s32
 			{
-				callback(status, userData);
+				callback(PPU, status, userData);
 				return CELL_OK;
 			});
 		}

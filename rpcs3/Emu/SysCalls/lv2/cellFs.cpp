@@ -919,7 +919,6 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 		const u64 old_pos = file.Tell();
 		file.Seek((u64)aio->offset);
 
-		// TODO: use code from cellFsRead or something
 		if (nbytes != (u32)nbytes)
 		{
 			error = CELL_ENOMEM;
@@ -935,11 +934,11 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 			fd, (u64)aio->offset, aio->buf.addr(), (u64)aio->size, error, res, xid);
 	}
 
-	if (func) // start callback thread
+	if (func)
 	{
-		Emu.GetCallbackManager().Async([func, aio, error, xid, res]()
+		Emu.GetCallbackManager().Async([func, aio, error, xid, res](PPUThread& CPU)
 		{
-			func(aio, error, xid, res);
+			func(CPU, aio, error, xid, res);
 		});
 	}
 

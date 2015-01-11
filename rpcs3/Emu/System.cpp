@@ -11,6 +11,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsDeviceLocalFile.h"
 #include "Emu/DbgCommand.h"
 
@@ -261,7 +262,7 @@ void Emulator::Load()
 
 	if (!m_loader.load(f))
 	{
-		LOG_ERROR(LOADER, "Loading '%s' failed", m_elf_path.c_str());
+		LOG_ERROR(LOADER, "Loading '%s' failed", m_path.c_str());
 		vm::close();
 		return;
 	}

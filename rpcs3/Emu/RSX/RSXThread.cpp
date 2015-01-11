@@ -289,9 +289,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (m_flip_handler)
 		{
 			auto cb = m_flip_handler;
-			Emu.GetCallbackManager().Async([cb]()
+			Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
 			{
-				cb(1);
+				cb(CPU, 1);
 			});
 		}
 
@@ -2201,9 +2201,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 cause = ARGS(0);
 		auto cb = m_user_handler;
-		Emu.GetCallbackManager().Async([cb, cause]()
+		Emu.GetCallbackManager().Async([cb, cause](PPUThread& CPU)
 		{
-			cb(cause);
+			cb(CPU, cause);
 		});
 	}
 	break;
@@ -2370,9 +2370,9 @@ void RSXThread::Task()
 				if (m_vblank_handler)
 				{
 					auto cb = m_vblank_handler;
-					Emu.GetCallbackManager().Async([cb]()
+					Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
 					{
-						cb(1);
+						cb(CPU, 1);
 					});
 				}
 				continue;

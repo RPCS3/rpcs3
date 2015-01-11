@@ -350,7 +350,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
 					dmux.is_running = false;
 					continue;
@@ -500,7 +500,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 						}
 					}
 					else
@@ -565,7 +565,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 						}
 						
 						if (pes.has_ts)
@@ -637,7 +637,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 				dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 				dmuxMsg->supplementalInfo = stream.userdata;
-				dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+				dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
 				stream = {};
 				dmux.is_running = false;
@@ -725,7 +725,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
-					es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+					es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 				}
 				
 				if (es.raw_data.size())
@@ -737,7 +737,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
-				es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+				es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 				break;
 			}
 

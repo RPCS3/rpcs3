@@ -141,7 +141,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 		{
 			// calling Exec() directly in SIGSEGV handler may cause problems
 			// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
-			Emu.GetCallbackManager().Async([this]()
+			Emu.GetCallbackManager().Async([this](PPUThread& PPU)
 			{
 				SPU.Status.SetValue(SPU_STATUS_RUNNING);
 				Exec();

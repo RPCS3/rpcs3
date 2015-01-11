@@ -295,7 +295,7 @@ s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_agcb.call(CPU, group);
+	return spu_printf_agcb(CPU, group);
 }
 
 s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
@@ -307,7 +307,7 @@ s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dgcb.call(CPU, group);
+	return spu_printf_dgcb(CPU, group);
 }
 
 s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
@@ -319,7 +319,7 @@ s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_atcb.call(CPU, thread);
+	return spu_printf_atcb(CPU, thread);
 }
 
 s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
@@ -331,7 +331,7 @@ s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dtcb.call(CPU, thread);
+	return spu_printf_dtcb(CPU, thread);
 }
 
 s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...

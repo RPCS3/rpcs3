@@ -147,7 +147,7 @@ next:
 			buf_size -= vdec.reader.size;
 			res += vdec.reader.size;
 
-			vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+			vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 
 			vdec.job.pop(vdec.task);
 
@@ -259,7 +259,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 				// TODO: finalize
 				cellVdec->Warning("vdecEndSeq:");
 
-				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
+				vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 
 				vdec.just_finished = true;
 				break;
@@ -516,12 +516,12 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 						if (vdec.frames.push(frame, &vdec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
-							vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
+							vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
 						}
 					}
 				}
 
-				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+				vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 				break;
 			}
 
