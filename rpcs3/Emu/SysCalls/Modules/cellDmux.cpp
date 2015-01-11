@@ -83,7 +83,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 	: dmux(dmux)
-	, memAddr(a128(addr))
+	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
@@ -92,7 +92,7 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(a128(addr))
+	, put(align(addr, 128))
 	, put_count(0)
 	, got_count(0)
 	, released(0)
@@ -184,7 +184,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		addr = put;
 
-		put = a128(put + 128 + size);
+		put = align(put + 128 + size, 128);
 
 		put_count++;
 	}
@@ -347,7 +347,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				if (!stream.peek(code)) 
 				{
 					// demuxing finished
-					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
@@ -497,7 +497,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", ((be_t<u64>*)data)->ToLE(), frame_size);
 
-							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
@@ -562,7 +562,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							// callback
-							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
 							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
@@ -634,7 +634,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 			case dmuxResetStream:
 			case dmuxResetStreamAndWaitDone:
 			{
-				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 				dmuxMsg->supplementalInfo = stream.userdata;
 				dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
@@ -722,7 +722,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false, 0);
 
 					// callback
-					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
 					es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
@@ -734,7 +734,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				}
 
 				// callback
-				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
 				es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);

@@ -1,8 +1,5 @@
 #pragma once
 
-// align size or address to 128
-#define a128(x) ((x + 127) & (~127))
-
 // Error Codes
 enum
 {

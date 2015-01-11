@@ -693,7 +693,7 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 	if (outBuff)
 	{
-		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
+		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
@@ -753,7 +753,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	info->size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
+	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 	info->auNum = 1;
 	info->auPts[0].lower = (u32)vf.pts;
 	info->auPts[0].upper = vf.pts >> 32;
