@@ -81,6 +81,12 @@
     <Filter Include="Emu\GPU\RSX\GL">
       <UniqueIdentifier>{6f1da5b2-52c5-416b-9b5c-b9897bc1b300}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Audio\Null">
+      <UniqueIdentifier>{1eae80f6-5aef-4049-81a0-bbfd7602f8f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Audio\XAudio2">
+      <UniqueIdentifier>{1d6abf72-0f18-43ec-9351-1fed1a3d1a1e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -652,6 +658,9 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio2Thread.cpp">
+      <Filter>Emu\Audio\XAudio2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1260,6 +1269,15 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\Thread.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\Null\NullAudioThread.h">
+      <Filter>Emu\Audio\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\AudioThread.h">
+      <Filter>Emu\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\XAudio2\XAudio2Thread.h">
+      <Filter>Emu\Audio\XAudio2</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

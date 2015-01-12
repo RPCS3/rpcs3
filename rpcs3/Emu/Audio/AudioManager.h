@@ -1,17 +1,17 @@
 #pragma once
 #include "sysutil_audio.h"
-#include "AL/OpenALThread.h"
+#include "AudioThread.h"
 
 struct AudioInfo
 {
 	struct
 	{
-		u8 type; 
+		u8 type;
 		u8 channel;
-		u8 encoder; 
+		u8 encoder;
 		u8 fs;
-		u32 layout; 
-		u32 downMixer; 
+		u32 layout;
+		u32 downMixer;
 	} mode;
 
 	AudioInfo()
@@ -32,16 +32,15 @@ struct AudioInfo
 class AudioManager
 {
 	AudioInfo m_audio_info;
+	AudioThread* m_audio_out;
 public:
 	AudioManager();
 
 	void Init();
 	void Close();
 
+	AudioThread& GetAudioOut() { assert(m_audio_out); return *m_audio_out; }
 	AudioInfo& GetInfo() { return m_audio_info; }
 
 	u8 GetState();
 };
-
-extern OpenALThread* m_audio_out;
-

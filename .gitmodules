@@ -12,3 +12,6 @@
 	path = llvm
 	url = https://github.com/llvm-mirror/llvm.git
 	branch = release_35
+[submodule "minidx9"]
+	path = minidx9
+	url = https://github.com/hrydgard/minidx9.git
