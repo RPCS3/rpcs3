@@ -695,7 +695,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 			LOG_NOTICE(LOADER, "SDAT HEADER");
 			LOG_NOTICE(LOADER, "SDAT flags: 0x%08X", EDAT->flags);
 			LOG_NOTICE(LOADER, "SDAT block size: 0x%08X", EDAT->block_size);
-			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", EDAT->file_size);
+			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", (u64)EDAT->file_size);
 		}
 
 		// Generate SDAT key.
@@ -708,7 +708,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 			LOG_NOTICE(LOADER, "EDAT HEADER");
 			LOG_NOTICE(LOADER, "EDAT flags: 0x%08X", EDAT->flags);
 			LOG_NOTICE(LOADER, "EDAT block size: 0x%08X", EDAT->block_size);
-			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", EDAT->file_size);
+			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", (u64)EDAT->file_size);
 		}
 
 		// Perform header validation (EDAT only).
