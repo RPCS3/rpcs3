@@ -81,16 +81,14 @@ int cellAudioInit()
 
 			std::vector<u64> keys;
 
-			if(m_audio_out)
-			{
-				m_audio_out->Init();
+			Emu.GetAudioManager().GetAudioOut().Init();
 
-				// Note: What if the ini value changes?
-				if (g_is_u16)
-					m_audio_out->Open(oal_buffer[0].get(), oal_buffer_size * sizeof(s16));
-				else
-					m_audio_out->Open(oal_buffer_float[0].get(), oal_buffer_size * sizeof(float));
-			}
+			// Note: What if the ini value changes?
+			if (g_is_u16)
+				Emu.GetAudioManager().GetAudioOut().Open(oal_buffer[0].get(), oal_buffer_size * sizeof(s16));
+			else
+				Emu.GetAudioManager().GetAudioOut().Open(oal_buffer_float[0].get(), oal_buffer_size * sizeof(float));
+			
 
 			m_config.start_time = get_system_time();
 
@@ -112,7 +110,7 @@ int cellAudioInit()
 					{
 						if (oal_buffer)
 						{
-							m_audio_out->AddData(oal_buffer, oal_buffer_size * sizeof(s16));
+							Emu.GetAudioManager().GetAudioOut().AddData(oal_buffer, oal_buffer_size * sizeof(s16));
 							continue;
 						}
 					}
@@ -120,7 +118,7 @@ int cellAudioInit()
 					{
 						if (oal_buffer_float)
 						{
-							m_audio_out->AddData(oal_buffer_float, oal_buffer_size * sizeof(float));
+							Emu.GetAudioManager().GetAudioOut().AddData(oal_buffer_float, oal_buffer_size * sizeof(float));
 							continue;
 						}
 					}
@@ -366,14 +364,10 @@ int cellAudioInit()
 
 				if(oal_buffer_offset >= oal_buffer_size)
 				{
-					if(m_audio_out)
-					{
-						if (g_is_u16)
-							queue.push(&oal_buffer[oal_pos][0]);
+					if (g_is_u16)
+						queue.push(&oal_buffer[oal_pos][0]);
 
-						queue_float.push(&oal_buffer_float[oal_pos][0]);
-					}
-
+					queue_float.push(&oal_buffer_float[oal_pos][0]);
 					oal_buffer_offset = 0;
 				}
 

@@ -474,6 +474,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
+#if defined (_WIN32)
+	cbox_audio_out->Append("XAudio2");
+#endif
 
 	cbox_camera->Append("Null");
 
