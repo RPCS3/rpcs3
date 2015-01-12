@@ -288,7 +288,7 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 			if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data, dec_data, length, key_result, iv, hash, hash_result))
 			{
 				if (verbose)
-					LOG_WARNING(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", offset);
+					LOG_WARNING(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", (u64)offset);
 					
 				return 1;
 			}
