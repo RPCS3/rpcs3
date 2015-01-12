@@ -382,7 +382,7 @@ int cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 
 int cellRtcSetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin32FileTime)
 {
-	cellRtc->Log("cellRtcSetWin32FileTime(pDateTime=0x%x, ulWin32FileTime=0x%llx)", pDateTime, ulWin32FileTime);
+	cellRtc->Log("cellRtcSetWin32FileTime(pDateTime_addr=0x%x, ulWin32FileTime=0x%llx)", pDateTime.addr(), ulWin32FileTime);
 
 	rDateTime date_time = rDateTime((time_t)ulWin32FileTime);
 	

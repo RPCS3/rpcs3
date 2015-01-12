@@ -18,7 +18,7 @@ void XAudio2Thread::Init()
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CoInitializeEx() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : CoInitializeEx() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}
@@ -26,7 +26,7 @@ void XAudio2Thread::Init()
 	hr = XAudio2Create(&m_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : XAudio2Create() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : XAudio2Create() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}
@@ -34,7 +34,7 @@ void XAudio2Thread::Init()
 	hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
 		m_xaudio2_instance->Release();
 		Emu.Pause();
 	}
@@ -57,7 +57,7 @@ void XAudio2Thread::Play()
 	HRESULT hr = m_source_voice->Start();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : Start() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : Start() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
@@ -68,7 +68,7 @@ void XAudio2Thread::Close()
 	HRESULT hr = m_source_voice->FlushSourceBuffers();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : FlushSourceBuffers() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : FlushSourceBuffers() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
@@ -78,7 +78,7 @@ void XAudio2Thread::Stop()
 	HRESULT hr = m_source_voice->Stop();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : Stop() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : Stop() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
@@ -99,7 +99,7 @@ void XAudio2Thread::Open(const void* src, int size)
 	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}
@@ -125,7 +125,7 @@ void XAudio2Thread::AddData(const void* src, int size)
 	HRESULT hr = m_source_voice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : AddData() failed(0x%08x)", hr);
+		LOG_ERROR(GENERAL, "XAudio2Thread : AddData() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }

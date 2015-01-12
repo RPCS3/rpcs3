@@ -23,8 +23,7 @@ std::vector<SSPlayer> ssp;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
-	libmixer->Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr=0x%x, samples=%d)",
-		aan_handle, aan_port, offset, addr.addr(), samples);
+	libmixer->Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
 
 	u32 type = aan_port >> 16;
 	u32 port = aan_port & 0xffff;
@@ -45,8 +44,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 
 	if (aan_handle != 0x11111111 || samples != 256 || !type || offset != 0)
 	{
-		libmixer->Error("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr=0x%x, samples=%d): invalid parameters",
-			aan_handle, aan_port, offset, addr, samples);
+		libmixer->Error("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d): invalid parameters", aan_handle, aan_port, offset, addr.addr(), samples);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 

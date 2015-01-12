@@ -784,13 +784,13 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 	if (!packed_stream || !packed_stream->IsOpened())
 	{
-		sys_fs->Error("'%s' not found! flags: 0x%08x", packed_file.c_str(), vfsRead);
+		sys_fs->Error("'%s' not found! flags: 0x%02x", packed_file.c_str(), vfsRead);
 		return CELL_ENOENT;
 	}
 
 	if (!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		sys_fs->Error("'%s' couldn't be created! flags: 0x%08x", unpacked_file.c_str(), vfsWrite);
+		sys_fs->Error("'%s' couldn't be created! flags: 0x%02x", unpacked_file.c_str(), vfsWrite);
 		return CELL_ENOENT;
 	}
 
@@ -931,7 +931,7 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 		file.Seek(old_pos);
 
 		sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x)",
-			fd, (u64)aio->offset, aio->buf.addr(), (u64)aio->size, error, res, xid);
+			fd, (u64)aio->offset, aio->buf.addr().ToLE(), (u64)aio->size, error, res, xid);
 	}
 
 	if (func)

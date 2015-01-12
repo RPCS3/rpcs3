@@ -71,7 +71,7 @@ struct sys_prx_module_info_t
 {
 	be_t<u16> attributes;
 	be_t<u16> version;
-	s8 name[28];
+	char name[28];
 	be_t<u32> toc;
 	vm::bptr<sys_prx_library_info_t> exports_start;
 	vm::bptr<sys_prx_library_info_t> exports_end;

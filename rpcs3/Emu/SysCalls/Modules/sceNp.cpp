@@ -311,7 +311,7 @@ int sceNpBasicAddFriend()
 
 int sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	sceNp->Warning("sceNpBasicGetFriendListEntryCount(count=%d)", count);
+	sceNp->Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -476,7 +476,7 @@ int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
-	sceNp->Warning("sceNpBasicGetMessageEntryCount(type=%d, count=%d)", type, count);
+	sceNp->Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -984,7 +984,7 @@ int sceNpManagerGetAccountAge()
 
 int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	sceNp->Warning("sceNpManagerGetContentRatingFlag(isRestricted=%d, age=%d)", isRestricted, age);
+	sceNp->Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;

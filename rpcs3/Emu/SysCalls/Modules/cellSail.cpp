@@ -94,7 +94,7 @@ int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 	return CELL_OK;
 }
 
-int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, be_t<u32> size, be_t<u64> arg)
+int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, u32 size, u64 arg)
 {
 	cellSail->Warning("cellSailDescriptorCreateDatabase(pSelf=0x%x, pDatabase=0x%x, size=0x%x, arg=0x%x", pSelf.addr(), pDatabase.addr(), size, arg);
 
@@ -107,7 +107,7 @@ int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 			break;
 		}
 		default:
-			cellSail->Error("Unhandled stream type: %d", pSelf->streamType);
+			cellSail->Error("Unhandled stream type: %d", pSelf->streamType.ToLE());
 	}
 
 	return CELL_OK;

@@ -14,8 +14,10 @@
 
 void SetCurrentThreadDebugName(const char* threadName)
 {
-#ifdef _WIN32 // this is VS-specific way to set thread names for the debugger
+#if defined(_MSC_VER) // this is VS-specific way to set thread names for the debugger
+
 	#pragma pack(push,8)
+
 	struct THREADNAME_INFO
 	{
 		DWORD dwType;
@@ -23,6 +25,7 @@ void SetCurrentThreadDebugName(const char* threadName)
 		DWORD dwThreadID;
 		DWORD dwFlags;
 	} info;
+
 	#pragma pack(pop)
 
 	info.dwType = 0x1000;
@@ -37,6 +40,7 @@ void SetCurrentThreadDebugName(const char* threadName)
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
 	}
+
 #endif
 }
 

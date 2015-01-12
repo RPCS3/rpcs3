@@ -284,15 +284,9 @@ union _CRT_ALIGN(16) u128
 		_u64[1] = _u64[0] = 0;
 	}
 
-	std::string to_hex() const
-	{
-		return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
-	}
+	std::string to_hex() const;
 
-	std::string to_xyzw() const
-	{
-		return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
-	}
+	std::string to_xyzw() const;
 
 	static __forceinline u128 byteswap(const u128 val)
 	{
@@ -606,6 +600,15 @@ public:
 		return ToLE();
 #else
 		return ToBE();
+#endif
+	}
+
+	const stype& data() const
+	{
+#ifdef IS_LE_MACHINE
+		return ToBE();
+#else
+		return ToLE();
 #endif
 	}
 	

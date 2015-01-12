@@ -135,9 +135,9 @@ inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* tex
 	Log::LogManager::getInstance().log(msg);
 }
 
-template<typename T, typename ...Ts> 
-inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text, T arg, Ts... args)
+template<typename T, size_t N, typename ...Ts> 
+inline void log_message(Log::LogType type, Log::LogSeverity sev, const char(&text)[N], T arg, Ts... args)
 {
-	Log::LogMessage msg{type, sev, fmt::Format(text, arg, args...)};
+	Log::LogMessage msg{type, sev, fmt::format(text, arg, args...)};
 	Log::LogManager::getInstance().log(msg);
 }
