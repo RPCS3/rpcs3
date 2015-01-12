@@ -603,6 +603,14 @@ namespace fmt
 			}
 		};
 
+		static std::string format(const char* fmt, size_t len)
+		{
+			const size_t fmt_start = get_fmt_start(fmt, len);
+			assert(fmt_start == len);
+
+			return std::string(fmt, len);
+		}
+
 		template<typename T, typename... Args>
 		static std::string format(const char* fmt, size_t len, const T& arg, Args... args)
 		{
@@ -611,14 +619,6 @@ namespace fmt
 			const size_t fmt_end = fmt_start + fmt_len;
 
 			return std::string(fmt, fmt_start) + get_fmt<T>::text(fmt + fmt_start, fmt_len, arg) + format(fmt + fmt_end, len - fmt_end, args...);
-		}
-
-		static std::string format(const char* fmt, size_t len)
-		{
-			const size_t fmt_start = get_fmt_start(fmt, len);
-			assert(fmt_start == len);
-
-			return std::string(fmt, len);
 		}
 	};
 
