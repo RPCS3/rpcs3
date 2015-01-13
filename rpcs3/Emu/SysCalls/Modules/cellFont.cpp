@@ -20,7 +20,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 	if (config->FileCache.size < 24)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	if (config->flags != 0)
-		cellFont->Warning("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags);
+		cellFont->Warning("cellFontInitializeWithRevision: Unknown flags (0x%x)", config->flags.ToLE());
 
 	s_fontInternalInstance->m_buffer_addr = config->FileCache.buffer_addr;
 	s_fontInternalInstance->m_buffer_size = config->FileCache.size;
@@ -168,12 +168,12 @@ int cellFontOpenFontset(PPUThread& CPU, vm::ptr<CellFontLibrary> library, vm::pt
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_RSANS2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_YG_DFHEI5_VAGR2_SET:
 	case CELL_FONT_TYPE_SEURAT_CAPIE_MARU_GOTHIC_VAGR2_SET:
-		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type);
+		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported yet. RD-R-LATIN.TTF will be used instead.", fontType->type.ToLE());
 		file = "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF";
 		break;
 
 	default:
-		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type);
+		cellFont->Warning("cellFontOpenFontset: fontType->type = %d not supported.", fontType->type.ToLE());
 		return CELL_FONT_ERROR_NO_SUPPORT_FONTSET;
 	}
 

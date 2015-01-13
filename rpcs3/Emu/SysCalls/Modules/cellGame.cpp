@@ -272,7 +272,7 @@ int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 	if (cbSet->setParam)
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr());
+		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr().ToLE());
 	}
 
 	switch ((s32)cbResult->result)

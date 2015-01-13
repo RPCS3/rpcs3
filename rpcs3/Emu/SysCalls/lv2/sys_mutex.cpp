@@ -16,12 +16,12 @@ Mutex::~Mutex()
 {
 	if (u32 tid = owner.read_sync())
 	{
-		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id, tid, recursive_count.load());
+		sys_mutex.Notice("Mutex(%d) was owned by thread %d (recursive=%d)", id.read_relaxed(), tid, recursive_count.load());
 	}
 
 	if (u32 count = queue.count())
 	{
-		sys_mutex.Notice("Mutex(%d) was waited by %d threads", id, count);
+		sys_mutex.Notice("Mutex(%d) was waited by %d threads", id.read_relaxed(), count);
 	}
 }
 

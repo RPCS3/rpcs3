@@ -4623,7 +4623,7 @@ private:
 		Emu.Pause();
 
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
-		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]);
+		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]._double);
 		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].to_hex().c_str(), CPU.VPR[i].to_xyzw().c_str());
 		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR.CR);
 		LOG_NOTICE(PPU, "LR = 0x%llx", CPU.LR);

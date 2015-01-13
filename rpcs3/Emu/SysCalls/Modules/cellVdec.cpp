@@ -147,7 +147,7 @@ next:
 			buf_size -= vdec.reader.size;
 			res += vdec.reader.size;
 
-			vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+			vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 
 			vdec.job.pop(vdec.task);
 
@@ -259,7 +259,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 				// TODO: finalize
 				cellVdec->Warning("vdecEndSeq:");
 
-				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
+				vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, vdec.cbArg);
 
 				vdec.just_finished = true;
 				break;
@@ -516,12 +516,12 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 						if (vdec.frames.push(frame, &vdec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
-							vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
+							vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, vdec.cbArg);
 						}
 					}
 				}
 
-				vdec.cbFunc.call(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
+				vdec.cbFunc(*vdec.vdecCb, vdec.id, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, vdec.cbArg);
 				break;
 			}
 
@@ -693,7 +693,7 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 	if (outBuff)
 	{
-		u32 buf_size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
+		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
@@ -753,7 +753,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	info->size = a128(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1));
+	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 	info->auNum = 1;
 	info->auPts[0].lower = (u32)vf.pts;
 	info->auPts[0].upper = vf.pts >> 32;

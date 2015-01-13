@@ -125,14 +125,14 @@ namespace loader
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_paddr.addr());
 							m_stream->Read(&module_info, sizeof(module_info));
 							LOG_ERROR(LOADER, "%s (%x):", module_info.name, (u32)module_info.toc);
-							info.name = std::string((const char*)module_info.name, 28);
+							info.name = std::string(module_info.name, 28);
 							info.rtoc = module_info.toc;
 
 							int import_count = (module_info.imports_end - module_info.imports_start) / sizeof(sys_prx_library_info_t);
 
 							if (import_count)
 							{
-								LOG_ERROR(LOADER, "**** Lib '%s'has %d imports!", module_info.name, import_count);
+								LOG_ERROR(LOADER, "**** Lib '%s' has %d imports!", module_info.name, import_count);
 							}
 
 							sys_prx_library_info_t lib;
@@ -406,7 +406,8 @@ namespace loader
 					{
 						if (!vm::alloc(phdr.p_vaddr.addr(), (u32)phdr.p_memsz, vm::main))
 						{
-							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr, (u32)phdr.p_memsz);
+							// addr() has be_t<> type (test)
+							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr.addr(), (u32)phdr.p_memsz);
 
 							return loading_error;
 						}

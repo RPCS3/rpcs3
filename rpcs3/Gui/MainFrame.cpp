@@ -221,7 +221,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
 	}
 }
 

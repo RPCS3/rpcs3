@@ -174,7 +174,7 @@ next:
 			buf_size -= adec.reader.size;
 			res += adec.reader.size;
 
-			adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
+			adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
 
 			adec.job.pop(adec.task);
 
@@ -279,7 +279,7 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 			{
 				// TODO: finalize
 				cellAdec->Warning("adecEndSeq:");
-				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
+				adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, adec.cbArg);
 
 				adec.just_finished = true;
 				break;
@@ -455,12 +455,12 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 						if (adec.frames.push(frame, &adec.is_closed))
 						{
 							frame.data = nullptr; // to prevent destruction
-							adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
+							adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, adec.cbArg);
 						}
 					}
 				}
 
-				adec.cbFunc.call(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
+				adec.cbFunc(*adec.adecCb, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, adec.cbArg);
 				break;
 			}
 

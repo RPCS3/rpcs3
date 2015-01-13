@@ -1212,7 +1212,7 @@ int CreateInterlaceTable(u32 ea_addr, float srcH, float dstH, CellRescTableEleme
 
 int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement depth, int length)
 {
-	cellResc->Warning("cellRescCreateInterlaceTable(ea_addr=0x%x, depth = %i, length = %i)", ea_addr, depth, length);
+	cellResc->Warning("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, depth, length);
 
 	if (!s_rescInternalInstance->m_bInitialized)
 	{

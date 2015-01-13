@@ -316,23 +316,23 @@ void sysutilSendSystemCommand(u64 status, u64 param)
 	{
 		if (cb.func)
 		{
-			Emu.GetCallbackManager().Register([=]() -> s32
+			Emu.GetCallbackManager().Register([=](PPUThread& PPU) -> s32
 			{
-				cb.func(status, param, cb.arg);
+				cb.func(PPU, status, param, cb.arg);
 				return CELL_OK;
 			});
 		}
 	}
 }
 
-s32 cellSysutilCheckCallback()
+s32 cellSysutilCheckCallback(PPUThread& CPU)
 {
 	cellSysutil->Log("cellSysutilCheckCallback()");
 
 	s32 res;
 	u32 count = 0;
 
-	while (Emu.GetCallbackManager().Check(res))
+	while (Emu.GetCallbackManager().Check(CPU, res))
 	{
 		count++;
 

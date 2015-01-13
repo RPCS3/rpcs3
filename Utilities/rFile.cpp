@@ -114,7 +114,7 @@ bool rRmdir(const std::string &dir)
 	if (int err = rmdir(dir.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting directory %s: %i", dir.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting directory %s: 0x%llx", dir.c_str(), (u64)GET_API_ERROR);
 		return false;
 	}
 	return true;
@@ -149,7 +149,7 @@ bool rRemoveFile(const std::string &file)
 	if (int err = unlink(file.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting %s: %i", file.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting file %s: 0x%llx", file.c_str(), (u64)GET_API_ERROR);
 		return false;
 	}
 	return true;

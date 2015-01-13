@@ -24,7 +24,8 @@ s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name
 	lwmutex.sleep_queue = sq_id;
 	sq->set_full_name(fmt::Format("Lwmutex(%d, addr=0x%x)", sq_id, Memory.RealToVirtualAddr(&lwmutex)));
 
-	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", std::string((const char*)&name_u64, 8).c_str(), protocol | recursive, sq_id);
+	// passing be_t<u32> (test)
+	sys_lwmutex.Notice("*** lwmutex created [%s] (attribute=0x%x): sq_id = %d", std::string((const char*)&name_u64, 8).c_str(), lwmutex.attribute, sq_id);
 	return CELL_OK;
 }
 

@@ -55,8 +55,8 @@ template<typename T> __forceinline T align(const T addr, int align)
 	return (addr + (align - 1)) & ~(align - 1);
 }
 
-#include "Utilities/StrFmt.h"
 #include "Utilities/BEType.h"
+#include "Utilities/StrFmt.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"
