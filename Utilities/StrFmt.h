@@ -567,23 +567,41 @@ namespace fmt
 			}
 		};
 
-		template<size_t size>
-		struct get_fmt<const char[size], false>
-		{
-			static std::string text(const char* fmt, size_t len, const char(&arg)[size])
-			{
-				if (fmt[len - 1] == 's')
-				{
-					return std::string(arg, size);
-				}
-				else
-				{
-					throw "Invalid formatting (const char[size])";
-				}
+		//template<size_t size>
+		//struct get_fmt<char[size], false>
+		//{
+		//	static std::string text(const char* fmt, size_t len, const char(&arg)[size])
+		//	{
+		//		if (fmt[len - 1] == 's')
+		//		{
+		//			return std::string(arg, size);
+		//		}
+		//		else
+		//		{
+		//			throw "Invalid formatting (char[size])";
+		//		}
 
-				return{};
-			}
-		};
+		//		return{};
+		//	}
+		//};
+
+		//template<size_t size>
+		//struct get_fmt<const char[size], false>
+		//{
+		//	static std::string text(const char* fmt, size_t len, const char(&arg)[size])
+		//	{
+		//		if (fmt[len - 1] == 's')
+		//		{
+		//			return std::string(arg, size);
+		//		}
+		//		else
+		//		{
+		//			throw "Invalid formatting (const char[size])";
+		//		}
+
+		//		return{};
+		//	}
+		//};
 
 		template<>
 		struct get_fmt<std::string>
@@ -633,8 +651,9 @@ namespace fmt
 	float (%x, %f)
 	double (%x, %f)
 	bool (%x, %d, %s)
-	char*, const char*, const char[N], std::string (%s)
+	char*, const char*, std::string (%s)
 	be_t<> of any appropriate type in this list
+	enum of any appropriate type in this list
 	
 	Supported formatting:
 	%d - decimal; only basic std::to_string() functionality
