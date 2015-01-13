@@ -356,7 +356,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					continue;
 				}
 				
-				switch (code)
+				switch (code.value())
 				{
 				case PACK_START_CODE:
 				{

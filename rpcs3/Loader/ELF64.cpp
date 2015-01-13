@@ -399,7 +399,7 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type)
+				switch (phdr.p_type.value())
 				{
 				case 0x00000001: //LOAD
 					if (phdr.p_memsz)
