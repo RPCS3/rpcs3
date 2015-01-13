@@ -970,11 +970,11 @@ int cellRescSetSrc(s32 idx, vm::ptr<CellRescSrc> src)
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
-	cellResc->Log(" *** format=0x%x", src->format.ToLE());
-	cellResc->Log(" *** pitch=%d", src->pitch.ToLE());
-	cellResc->Log(" *** width=%d", src->width.ToLE());
-	cellResc->Log(" *** height=%d", src->height.ToLE());
-	cellResc->Log(" *** offset=0x%x", src->offset.ToLE());
+	cellResc->Log(" *** format=0x%x", src->format);
+	cellResc->Log(" *** pitch=%d", src->pitch);
+	cellResc->Log(" *** width=%d", src->width);
+	cellResc->Log(" *** height=%d", src->height);
+	cellResc->Log(" *** offset=0x%x", src->offset);
 
 	s_rescInternalInstance->m_rescSrc[idx] = *src;
 
@@ -1054,7 +1054,7 @@ int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray
 
 	for (int i=0; i<GetNumColorBuffers(); i++)
 	{
-		s_rescInternalInstance->m_dstOffsets[i] = dstOffset->ToLE() + i * s_rescInternalInstance->m_dstBufInterval;
+		s_rescInternalInstance->m_dstOffsets[i] = dstOffset.value() + i * s_rescInternalInstance->m_dstBufInterval;
 	}
 
 	for (int i=0; i<GetNumColorBuffers(); i++)

@@ -940,7 +940,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
-			old_value = old.ToLE();
+			old_value = old;
 		}
 		else
 		{
@@ -1314,7 +1314,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 #ifdef PRX_DEBUG_XXX
 			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x24B0, libsre_rtoc,
 				queue, position_v.addr(), isBlocking, 0);
-			position = position_v->ToLE();
+			position = position_v.value();
 #else
 			res = syncLFQueueGetPushPointer(queue, position, isBlocking, 0);
 #endif
@@ -1324,7 +1324,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 #ifdef PRX_DEBUG
 			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x3050, libsre_rtoc,
 				queue, position_v.addr(), isBlocking, 0);
-			position = position_v->ToLE();
+			position = position_v.value();
 #else
 			res = syncLFQueueGetPushPointer2(queue, position, isBlocking, 0);
 #endif
@@ -1689,7 +1689,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 #ifdef PRX_DEBUG_XXX
 			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64, u64>(CPU, libsre + 0x2A90, libsre_rtoc,
 				queue, position_v.addr(), isBlocking, 0, 0);
-			position = position_v->ToLE();
+			position = position_v.value();
 #else
 			res = syncLFQueueGetPopPointer(queue, position, isBlocking, 0, 0);
 #endif
@@ -1699,7 +1699,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 #ifdef PRX_DEBUG
 			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x39AC, libsre_rtoc,
 				queue, position_v.addr(), isBlocking, 0);
-			position = position_v->ToLE();
+			position = position_v.value();
 #else
 			res = syncLFQueueGetPopPointer2(queue, position, isBlocking, 0);
 #endif

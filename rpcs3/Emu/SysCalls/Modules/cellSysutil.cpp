@@ -285,8 +285,7 @@ int cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=%d, option=%d)",
-		videoOut, resolutionId, aspect, option);
+	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
 
 	if (!Ini.GS3DTV.GetValue() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||
@@ -748,8 +747,8 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 
 	funcStat(result, get, set);
 
-	if (result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK &&
-        result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
+	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
+        result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
 		return CELL_HDDGAME_ERROR_CBRESULT;
     }
 

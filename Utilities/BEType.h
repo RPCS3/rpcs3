@@ -556,7 +556,6 @@ private:
 		return m_data;
 	}
 
-public:
 	type ToLE() const
 	{
 		return se_t<type, sizeof(T2)>::from_be(m_data);
@@ -572,6 +571,7 @@ public:
 		m_data = se_t<type, sizeof(T2)>::to_be(value);
 	}
 
+public:
 	static be_t MakeFromLE(const type& value)
 	{
 		stype data = se_t<type, sizeof(T2)>::to_be(value);

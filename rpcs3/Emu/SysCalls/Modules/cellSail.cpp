@@ -107,7 +107,7 @@ int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 			break;
 		}
 		default:
-			cellSail->Error("Unhandled stream type: %d", pSelf->streamType.ToLE());
+			cellSail->Error("Unhandled stream type: %d", pSelf->streamType);
 	}
 
 	return CELL_OK;

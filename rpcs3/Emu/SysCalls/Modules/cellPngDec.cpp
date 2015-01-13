@@ -80,14 +80,14 @@ s64 pngDecOpen(
 	switch (src->srcSelect.data())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		stream->fileSize = src->streamSize.ToLE();
+		stream->fileSize = src->streamSize;
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
 		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
-		stream->fd = fd->ToLE();
+		stream->fd = fd.value();
 		if (ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
@@ -223,7 +223,7 @@ s64 pngDecSetParameter(
 		current_outParam.outputComponents = 4; break;
 
 	default:
-		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 
@@ -352,11 +352,11 @@ s64 pngDecodeData(
 	case se32(CELL_PNGDEC_GRAYSCALE):
 	case se32(CELL_PNGDEC_PALETTE):
 	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		break;
 
 	default:
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 

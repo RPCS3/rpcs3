@@ -3263,7 +3263,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).ToLE();
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).value();
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3342,8 +3342,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		(u64&)CPU.FPR[frd] = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)CPU.FPR[frd];
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).value();
 		CPU.GPR[ra] = addr;
 	}
 	void SYNC(u32 l)
@@ -3359,7 +3358,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>((u32)addr).value();
 	}
 	void LFDUX(u32 frd, u32 ra, u32 rb)
 	{
@@ -3370,7 +3369,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>((u32)addr).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STVLX(u32 vs, u32 ra, u32 rb)
@@ -3410,7 +3409,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>((u32)addr) = (float)CPU.FPR[frs];
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
 	{
@@ -3434,7 +3433,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>((u32)addr) = (float)CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
@@ -3480,7 +3479,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>((u32)addr) = CPU.FPR[frs];
 	}
 	void STFDUX(u32 frs, u32 ra, u32 rb)
 	{
@@ -3491,7 +3490,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>((u32)addr) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
@@ -3873,8 +3872,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		const u32 v = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)v;
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).value();
 	}
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
@@ -3885,8 +3883,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		const u32 v = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)v;
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).value();
 		CPU.GPR[ra] = addr;
 	}
 	void LFD(u32 frd, u32 ra, s32 d)
@@ -3898,7 +3895,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>((u32)addr).value();
 	}
 	void LFDU(u32 frd, u32 ra, s32 ds)
 	{
@@ -3909,7 +3906,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>((u32)addr).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STFS(u32 frs, u32 ra, s32 d)
@@ -3921,7 +3918,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>((u32)addr) = (float)CPU.FPR[frs];
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
@@ -3932,7 +3929,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>((u32)addr) = (float)CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)
@@ -3944,7 +3941,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>((u32)addr) = CPU.FPR[frs];
 	}
 	void STFDU(u32 frs, u32 ra, s32 d)
 	{
@@ -3955,7 +3952,7 @@ private:
 			Emu.Pause();
 			return;
 		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>((u32)addr) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LD(u32 rd, u32 ra, s32 ds)

@@ -356,7 +356,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					continue;
 				}
 				
-				switch (code.ToLE())
+				switch (code)
 				{
 				case PACK_START_CODE:
 				{
@@ -387,9 +387,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PADDING_STREAM, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PADDING_STREAM, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -404,11 +404,11 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					cellDmux->Notice("PRIVATE_STREAM_2 (%d)", len.ToLE());
+					cellDmux->Notice("PRIVATE_STREAM_2 (%d)", len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_2, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PRIVATE_STREAM_2, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -426,20 +426,20 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_1, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (PRIVATE_STREAM_1, len=%d)", len.ToLE());
+						DMUX_ERROR("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					if (len < pes.size + 4)
 					{
-						DMUX_ERROR("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len.ToLE());
+						DMUX_ERROR("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
 					}
 					len -= pes.size + 4;
 					
@@ -462,7 +462,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 						if (len < 3 || !stream.check(3))
 						{
-							DMUX_ERROR("End of block (ATX, unknown header, len=%d)", len.ToLE());
+							DMUX_ERROR("End of block (ATX, unknown header, len=%d)", len);
 						}
 						len -= 3;
 						stream.skip(3);
@@ -484,7 +484,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								DMUX_ERROR("ATX: 0x0fd0 header not found (ats=0x%llx)", ((be_t<u64>*)data)->ToLE());
+								DMUX_ERROR("ATX: 0x0fd0 header not found (ats=0x%llx)", *(be_t<u64>*)data);
 							}
 
 							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
@@ -495,7 +495,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							
 							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
-							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", ((be_t<u64>*)data)->ToLE(), frame_size);
+							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", *(be_t<u64>*)data, frame_size);
 
 							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
@@ -505,7 +505,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					}
 					else
 					{
-						cellDmux->Notice("PRIVATE_STREAM_1 (len=%d, fid_minor=0x%x)", len.ToLE(), fid_minor);
+						cellDmux->Notice("PRIVATE_STREAM_1 (len=%d, fid_minor=0x%x)", len, fid_minor);
 						stream.skip(len);
 					}
 					break;
@@ -521,29 +521,29 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x)", code.ToLE());
+						DMUX_ERROR("End of stream (video, code=0x%x)", code);
 					}
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						DMUX_ERROR("End of stream (video, code=0x%x, len=%d)", code, len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (video, code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						DMUX_ERROR("PesHeader error (video, code=0x%x, len=%d)", code, len);
 					}
 
 					if (len < pes.size + 3)
 					{
-						DMUX_ERROR("End of block (video, code=0x%x, PesHeader)", code.ToLE());
+						DMUX_ERROR("End of block (video, code=0x%x, PesHeader)", code);
 					}
 					len -= pes.size + 3;
 
-					const u32 ch = code.ToLE() % 16;
+					const u32 ch = code % 16;
 					if (esAVC[ch])
 					{
 						ElementaryStream& es = *esAVC[ch];
@@ -576,13 +576,13 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 						}
 
 						// reconstruction of MPEG2-PS stream for vdec module
-						const u32 size = (u32)len.ToLE() + pes.size + 9;
+						const u32 size = len + pes.size + 9;
 						stream = backup;
 						es.push(stream, size);
 					}
 					else
 					{
-						cellDmux->Notice("Video stream (code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						cellDmux->Notice("Video stream (code=0x%x, len=%d)", code, len);
 						stream.skip(len);
 					}
 					break;
@@ -590,9 +590,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 				default:
 				{
-					if ((code.ToLE() & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
+					if ((code & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
 					{
-						DMUX_ERROR("Unknown code found (0x%x)", code.ToLE());
+						DMUX_ERROR("Unknown code found (0x%x)", code);
 					}
 
 					// search
@@ -1000,7 +1000,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 	*esHandle = id;
 
 	cellDmux->Warning("*** New ES(dmux=%d, addr=0x%x, size=0x%x, filter(0x%x, 0x%x, 0x%x, 0x%x), cb=0x%x(arg=0x%x), spec=0x%x): id = %d",
-		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, esCb->cbEsMsgFunc.addr().ToLE(), es->cbArg, es->spec, id);
+		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, esCb->cbEsMsgFunc, es->cbArg, es->spec, id);
 
 	DemuxerTask task(dmuxEnableEs);
 	task.es.es = id;

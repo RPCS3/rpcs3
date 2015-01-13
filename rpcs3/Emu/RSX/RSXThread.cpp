@@ -10,7 +10,7 @@
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0
 
 u32 methodRegisters[0xffff];
