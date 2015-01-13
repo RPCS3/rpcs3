@@ -109,3 +109,37 @@ namespace vm
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
 }
+
+namespace fmt
+{
+	// external specializations for fmt::format function
+	namespace detail
+	{
+		template<typename T, typename AT>
+		struct get_fmt<vm::ps3::ref<T, AT>, false>
+		{
+			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::ref<T, AT>& arg)
+			{
+				return get_fmt<AT>::text(fmt, len, arg.addr());
+			}
+		};
+
+		template<typename T, typename AT>
+		struct get_fmt<vm::ps3::bref<T, AT>, false>
+		{
+			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::bref<T, AT>& arg)
+			{
+				return get_fmt<AT>::text(fmt, len, arg.addr());
+			}
+		};
+
+		template<typename T, typename AT>
+		struct get_fmt<vm::psv::ref<T, AT>, false>
+		{
+			__forceinline static std::string text(const char* fmt, size_t len, const vm::psv::ref<T, AT>& arg)
+			{
+				return get_fmt<AT>::text(fmt, len, arg.addr());
+			}
+		};
+	}
+}
