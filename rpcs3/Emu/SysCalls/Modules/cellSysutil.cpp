@@ -240,7 +240,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info_addr=0x%x)",
 		videoOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;

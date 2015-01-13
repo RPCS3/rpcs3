@@ -825,7 +825,7 @@ int cellSailPlayerIsPaused(vm::ptr<CellSailPlayer> pSelf)
 
 int cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
 {
-	cellSail->Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%i, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
+	cellSail->Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%d, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
 
 	pSelf->repeatMode = repeatMode;
 	pSelf->playbackCommand = pCommand;

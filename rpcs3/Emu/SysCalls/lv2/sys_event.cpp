@@ -39,20 +39,20 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 		return CELL_EINVAL;
 	}
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_event.Error("Invalid SYS_SYNC_RETRY protocol attr"); return CELL_EINVAL;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
+	case se32(SYS_SYNC_RETRY): sys_event.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event.Error("Invalid protocol (SYS_SYNC_PRIORITY_INHERIT)"); return CELL_EINVAL;
 	case se32(SYS_SYNC_FIFO): break;
-	default: sys_event.Error("Unknown 0x%x protocol attr", (u32)attr->protocol); return CELL_EINVAL;
+	default: sys_event.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	switch (attr->type.ToBE())
+	switch (attr->type.data())
 	{
 	case se32(SYS_PPU_QUEUE): break;
 	case se32(SYS_SPU_QUEUE): break;
-	default: sys_event.Error("Unknown 0x%x type attr", (s32)attr->type); return CELL_EINVAL;
+	default: sys_event.Error("Unknown event queue type (0x%x)", attr->type); return CELL_EINVAL;
 	}
 
 	if (event_queue_key && Emu.GetEventManager().CheckKey(event_queue_key))

@@ -81,7 +81,7 @@ int cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 	date.Add(tz);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
-	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::UTC);
+	const std::string str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::UTC);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -95,7 +95,7 @@ int cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 	rDateTime date = rDateTime((time_t)pUtc->tick);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
-	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::Local);
+	const std::string str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::Local);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -113,7 +113,7 @@ int cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 	date.Add(tz);
 
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
-	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::UTC);
+	const std::string str = date.Format("%FT%T.%zZ", rDateTime::TZ::UTC);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -127,7 +127,7 @@ int cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 	rDateTime date = rDateTime((time_t) pUtc->tick);
 	
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
-	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::Local);
+	const std::string str = date.Format("%FT%T.%zZ", rDateTime::TZ::Local);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;

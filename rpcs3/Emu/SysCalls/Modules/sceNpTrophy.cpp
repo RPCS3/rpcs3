@@ -378,7 +378,7 @@ int sceNpTrophyGetTrophyIcon()
 
 int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
-	sceNpTrophy->Warning("sceNpTrophyGetTrophyInfo(context=%u, handle=%u, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
+	sceNpTrophy->Warning("sceNpTrophyGetTrophyInfo(context=%d, handle=%d, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, trophyId, details.addr(), data.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)

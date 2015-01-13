@@ -21,9 +21,9 @@ void sys_spinlock_lock(vm::ptr<atomic_t<u32>> lock)
 	sys_spinlock.Log("sys_spinlock_lock(lock_addr=0x%x)", lock.addr());
 
 	// prx: exchange with 0xabadcafe, repeat until exchanged with 0
-	while (lock->exchange(be_t<u32>::make(0xabadcafe)).ToBE())
+	while (lock->exchange(be_t<u32>::make(0xabadcafe)).data())
 	{
-		while (lock->read_relaxed().ToBE())
+		while (lock->read_relaxed().data())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			if (Emu.IsStopped())
@@ -45,7 +45,7 @@ s32 sys_spinlock_trylock(vm::ptr<atomic_t<u32>> lock)
 	sys_spinlock.Log("sys_spinlock_trylock(lock_addr=0x%x)", lock.addr());
 
 	// prx: exchange with 0xabadcafe, translate exchanged value
-	if (lock->exchange(be_t<u32>::make(0xabadcafe)).ToBE())
+	if (lock->exchange(be_t<u32>::make(0xabadcafe)).data())
 	{
 		return CELL_EBUSY;
 	}

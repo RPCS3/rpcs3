@@ -21,22 +21,22 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 		return CELL_EFAULT;
 	}
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_rwlock.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
+	case se32(SYS_SYNC_RETRY): sys_rwlock.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
 	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
 	case se32(SYS_SYNC_FIFO): break;
-	default: return CELL_EINVAL;
+	default: sys_rwlock.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.ToBE() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200))
 	{
-		sys_rwlock.Error("Invalid pshared value (0x%x)", (u32)attr->pshared);
+		sys_rwlock.Error("Unknown pshared attribute (0x%x)", attr->pshared);
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<RWLock> rw(new RWLock((u32)attr->protocol, attr->name_u64));
+	std::shared_ptr<RWLock> rw(new RWLock(attr->protocol, attr->name_u64));
 	const u32 id = sys_rwlock.GetNewId(rw, TYPE_RWLOCK);
 	*rw_lock_id = id;
 	rw->wqueue.set_full_name(fmt::Format("Rwlock(%d)", id));
