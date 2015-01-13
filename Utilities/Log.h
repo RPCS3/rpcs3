@@ -131,13 +131,19 @@ inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* tex
 	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
 	//Log::LogManager::getInstance().log({logType, severity, text})
 
-	Log::LogMessage msg{type, sev, text};
+	Log::LogMessage msg{ type, sev, text };
+	Log::LogManager::getInstance().log(msg);
+}
+
+inline void log_message(Log::LogType type, Log::LogSeverity sev, const std::string& text)
+{
+	Log::LogMessage msg{ type, sev, text };
 	Log::LogManager::getInstance().log(msg);
 }
 
 template<typename T, typename... Ts> 
 inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text, T arg, Ts... args)
 {
-	Log::LogMessage msg{type, sev, fmt::format(text, arg, args...)};
+	Log::LogMessage msg{ type, sev, fmt::format(text, arg, args...) };
 	Log::LogManager::getInstance().log(msg);
 }

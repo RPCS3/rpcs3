@@ -48,7 +48,7 @@ std::string GLVertexDecompilerThread::GetDST(bool isSca)
 
 	default:
 		if (d3.dst > 15)
-			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
+			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
 		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? "vec4(0.0f, 0.0f, 0.0f, 1.0f)" : "vec4(0.0)");
 		break;
 	}
@@ -92,7 +92,7 @@ std::string GLVertexDecompilerThread::GetSRC(const u32 n)
 		break;
 
 	default:
-		LOG_ERROR(RSX, "Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type));
+		LOG_ERROR(RSX, fmt::Format("Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type)));
 		Emu.Pause();
 		break;
 	}

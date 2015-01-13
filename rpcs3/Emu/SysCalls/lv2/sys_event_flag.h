@@ -41,10 +41,10 @@ struct EventFlag
 	std::vector<EventFlagWaiter> waiters;
 
 	const u32 protocol;
-	const int type;
+	const s32 type;
 	const u64 name;
 
-	EventFlag(u64 pattern, u32 protocol, int type, u64 name)
+	EventFlag(u64 pattern, u32 protocol, s32 type, u64 name)
 		: protocol(protocol)
 		, type(type)
 		, name(name)

@@ -34,7 +34,7 @@ namespace loader
 				be_t<u16> e_shnum;
 				be_t<u16> e_shstrndx;
 
-				bool check() const { return e_magic.ToBE() == se32(0x7F454C46); }
+				bool check() const { return e_magic.data() == se32(0x7F454C46); }
 			} m_ehdr;
 
 			struct phdr

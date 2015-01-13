@@ -177,7 +177,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	debug += "(";
 	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 	debug += ")";
-	LOG_NOTICE(RSX, "OutOfArgsCount(x=%u, count=%u): %s", x, count, debug.c_str());
+	LOG_NOTICE(RSX, "OutOfArgsCount(x=%d, count=%d): %s", x, count, debug.c_str());
 
 	return 0;
 }

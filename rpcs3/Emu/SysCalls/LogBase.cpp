@@ -60,22 +60,22 @@ void hle::error::print(const char* func)
 		{
 			if (func)
 			{
-				base->Error("%s(): %s (0x%X)", func, text.c_str(), code);
+				base->Error("%s(): %s (0x%x)", func, text.c_str(), code);
 			}
 			else
 			{
-				base->Error("%s (0x%X)", text.c_str(), code);
+				base->Error("%s (0x%x)", text.c_str(), code);
 			}
 		}
 		else
 		{
 			if (func)
 			{
-				LOG_ERROR(HLE, "%s(): %s (0x%X)", func, text.c_str(), code);
+				LOG_ERROR(HLE, "%s(): %s (0x%x)", func, text.c_str(), code);
 			}
 			else
 			{
-				LOG_ERROR(HLE, "%s (0x%X)", text.c_str(), code);
+				LOG_ERROR(HLE, "%s (0x%x)", text.c_str(), code);
 			}
 		}
 	}

@@ -164,12 +164,12 @@ bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 	dec_pkg_f.Read(buf, entry.name_size);
 	buf[entry.name_size] = 0;
 	
-	switch (entry.type.data())
+	switch (entry.type.data() >> 24)
 	{
-	case se32(PKG_FILE_ENTRY_NPDRM):
-	case se32(PKG_FILE_ENTRY_NPDRMEDAT):
-	case se32(PKG_FILE_ENTRY_SDAT):
-	case se32(PKG_FILE_ENTRY_REGULAR):
+	case PKG_FILE_ENTRY_NPDRM:
+	case PKG_FILE_ENTRY_NPDRMEDAT:
+	case PKG_FILE_ENTRY_SDAT:
+	case PKG_FILE_ENTRY_REGULAR:
 	{
 		rFile out;
 		auto path = dir + std::string(buf, entry.name_size);
@@ -199,7 +199,7 @@ bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 		}
 	}
 
-	case se32(PKG_FILE_ENTRY_FOLDER):
+	case PKG_FILE_ENTRY_FOLDER:
 	{
 		auto path = dir + std::string(buf, entry.name_size);
 		if (!rExists(path) && !rMkdir(path))

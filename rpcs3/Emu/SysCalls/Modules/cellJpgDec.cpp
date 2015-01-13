@@ -36,7 +36,7 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
-	switch(src->srcSelect.ToBE())
+	switch(src->srcSelect.data())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
 		current_subHandle->fileSize = src->streamSize.ToLE();
@@ -94,7 +94,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	vm::var<u8[]> buffer((u32)fileSize);
 	vm::var<be_t<u64>> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToBE())
+	switch(subHandle_data->src.srcSelect.data())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
 		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
@@ -163,7 +163,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	vm::var<unsigned char[]> jpg((u32)fileSize);
 	vm::var<be_t<u64>> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToBE())
+	switch(subHandle_data->src.srcSelect.data())
 	{
 	case se32(CELL_JPGDEC_BUFFER):
 		memmove(jpg.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), jpg.size());

@@ -576,13 +576,13 @@ s64 spursInit(
 					if (Emu.IsStopped()) break;
 
 					spurs->m.xD64.exchange(0);
-					if (spurs->m.exception.ToBE() == 0)
+					if (spurs->m.exception.data() == 0)
 					{
 						bool do_break = false;
 						for (u32 i = 0; i < 16; i++)
 						{
 							if (spurs->m.wklStat1[i].read_relaxed() == 2 &&
-								spurs->m.wklG1[i].priority.ToBE() != 0 &&
+								spurs->m.wklG1[i].priority.data() != 0 &&
 								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf
 								)
 							{
@@ -600,7 +600,7 @@ s64 spursInit(
 						if (spurs->m.flags1 & SF1_IS_SECOND) for (u32 i = 0; i < 16; i++)
 						{
 							if (spurs->m.wklStat2[i].read_relaxed() == 2 &&
-								spurs->m.wklG2[i].priority.ToBE() != 0 &&
+								spurs->m.wklG2[i].priority.data() != 0 &&
 								spurs->m.wklMaxCnt[i].read_relaxed() & 0xf0
 								)
 							{
@@ -1040,7 +1040,7 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	{
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
-	if (spurs->m.exception.ToBE())
+	if (spurs->m.exception.data())
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -1280,7 +1280,7 @@ s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
-	if (spurs->m.exception.ToBE())
+	if (spurs->m.exception.data())
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -1343,7 +1343,7 @@ s32 spursAddWorkload(
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if (spurs->m.exception.ToBE())
+	if (spurs->m.exception.data())
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -1689,7 +1689,7 @@ s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
-	if (spurs->m.exception.ToBE())
+	if (spurs->m.exception.data())
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
@@ -1801,7 +1801,7 @@ s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
-	if (spurs->m.exception.ToBE() || spurs->wklStat(wid).read_relaxed() != 2)
+	if (spurs->m.exception.data() || spurs->wklStat(wid).read_relaxed() != 2)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}

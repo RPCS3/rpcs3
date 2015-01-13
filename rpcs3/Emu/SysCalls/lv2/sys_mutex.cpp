@@ -29,38 +29,37 @@ s32 sys_mutex_create(PPUThread& CPU, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_at
 {
 	sys_mutex.Log("sys_mutex_create(mutex_id_addr=0x%x, attr_addr=0x%x)", mutex_id.addr(), attr.addr());
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mutex.Todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_RETRY): sys_mutex.Error("sys_mutex_create(): SYS_SYNC_RETRY"); return CELL_EINVAL;
-	default: sys_mutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_mutex.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_mutex.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
+	default: sys_mutex.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
 	bool is_recursive;
-	switch (attr->recursive.ToBE())
+	switch (attr->recursive.data())
 	{
 	case se32(SYS_SYNC_RECURSIVE): is_recursive = true; break;
 	case se32(SYS_SYNC_NOT_RECURSIVE): is_recursive = false; break;
-	default: sys_mutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
+	default: sys_mutex.Error("Unknown recursive attribute (0x%x)", attr->recursive); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.ToBE() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200))
 	{
-		sys_mutex.Error("Unknown pshared attribute(0x%x)", (u32)attr->pshared);
+		sys_mutex.Error("Unknown pshared attribute (0x%x)", attr->pshared);
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<Mutex> mutex(new Mutex((u32)attr->protocol, is_recursive, attr->name_u64));
+	std::shared_ptr<Mutex> mutex(new Mutex(attr->protocol, is_recursive, attr->name_u64));
 
 	const u32 id = sys_mutex.GetNewId(mutex, TYPE_MUTEX);
 	mutex->id.exchange(id);
 	*mutex_id = id;
 	mutex->queue.set_full_name(fmt::Format("Mutex(%d)", id));
 
-	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d",
-		std::string(attr->name, 8).c_str(), (u32) attr->protocol, (is_recursive ? "true" : "false"), id);
+	sys_mutex.Warning("*** mutex created [%s] (protocol=0x%x, recursive=%s): id = %d", std::string(attr->name, 8).c_str(), attr->protocol, is_recursive, id);
 	// TODO: unlock mutex when owner thread does exit
 	return CELL_OK;
 }

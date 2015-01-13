@@ -45,20 +45,20 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr
 		sys_semaphore.Error("sys_semaphore_create(): invalid parameters (initial_count=%d, max_count=%d)", initial_count, max_count);
 		return CELL_EINVAL;
 	}
-	
-	if (attr->pshared.ToBE() != se32(0x200))
-	{
-		sys_semaphore.Error("sys_semaphore_create(): invalid pshared value(0x%x)", (u32)attr->pshared);
-		return CELL_EINVAL;
-	}
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_FIFO): break;
 	case se32(SYS_SYNC_PRIORITY): break;
 	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_semaphore.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_RETRY): sys_semaphore.Error("SYS_SYNC_RETRY"); return CELL_EINVAL;
-	default: sys_semaphore.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
+	case se32(SYS_SYNC_RETRY): sys_semaphore.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
+	default: sys_semaphore.Error("Unknown protocol attribute (0x%x)", attr->protocol); return CELL_EINVAL;
+	}
+
+	if (attr->pshared.data() != se32(0x200))
+	{
+		sys_semaphore.Error("Unknown pshared attribute (0x%x)", attr->pshared);
+		return CELL_EINVAL;
 	}
 
 	*sem = semaphore_create(initial_count, max_count, attr->protocol, attr->name_u64);

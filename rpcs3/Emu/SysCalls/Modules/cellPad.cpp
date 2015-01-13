@@ -386,7 +386,7 @@ int cellPadInfoSensorMode(u32 port_no)
 
 int cellPadSetPressMode(u32 port_no, u32 mode)
 {
-	sys_io->Log("cellPadSetPressMode(port_no=%u, mode=%u)", port_no, mode);
+	sys_io->Log("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
@@ -405,7 +405,7 @@ int cellPadSetPressMode(u32 port_no, u32 mode)
 
 int cellPadSetSensorMode(u32 port_no, u32 mode)
 {
-	sys_io->Log("cellPadSetSensorMode(port_no=%u, mode=%u)", port_no, mode);
+	sys_io->Log("cellPadSetSensorMode(port_no=%d, mode=%d)", port_no, mode);
 	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();

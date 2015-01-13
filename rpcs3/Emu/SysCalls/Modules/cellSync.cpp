@@ -308,7 +308,7 @@ s32 cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 bu
 
 s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
 {
-	if (rwm.m_writers.ToBE())
+	if (rwm.m_writers.data())
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -319,7 +319,7 @@ s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
 
 s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
 {
-	if (!rwm.m_readers.ToBE())
+	if (!rwm.m_readers.data())
 	{
 		cellSync->Error("syncRwmReadEndOp(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", Memory.RealToVirtualAddr(&rwm), (u16)rwm.m_writers);
 		return CELL_SYNC_ERROR_ABORT;
@@ -392,7 +392,7 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 
 s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
 {
-	if (rwm.m_writers.ToBE())
+	if (rwm.m_writers.data())
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
@@ -422,7 +422,7 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	// prx: wait until m_readers == 0
 	g_sync_rwm_write_wm.wait_op(rwm.addr(), [rwm]()
 	{
-		return rwm->data.read_relaxed().m_readers.ToBE() == 0;
+		return rwm->data.read_relaxed().m_readers.data() == 0;
 	});
 
 	// prx: copy data from buffer_addr
@@ -934,7 +934,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 		const auto old = queue->init.read_relaxed();
 		auto init = old;
 
-		if (old.ToBE())
+		if (old.data())
 		{
 			if (sdk_ver > 0x17ffff && old != 2)
 			{
@@ -1030,7 +1030,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 
 			s32 var2 = (s32)(s16)push.m_h8;
 			s32 res;
-			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7.ToBE() != 0))
+			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7.data() != 0))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
@@ -1058,7 +1058,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				else if (!isBlocking)
 				{
 					res = CELL_SYNC_ERROR_AGAIN;
-					if (!push.m_h7.ToBE() || res)
+					if (!push.m_h7.data() || res)
 					{
 						return res;
 					}
@@ -1081,7 +1081,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 
 			if (queue->push1.compare_and_swap_test(old, push))
 			{
-				if (!push.m_h7.ToBE() || res)
+				if (!push.m_h7.data() || res)
 				{
 					return res;
 				}
@@ -1406,7 +1406,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 
 			s32 var2 = (s32)(s16)pop.m_h4;
 			s32 res;
-			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3.ToBE() != 0))
+			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3.data() != 0))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
@@ -1434,7 +1434,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 				else if (!isBlocking)
 				{
 					res = CELL_SYNC_ERROR_AGAIN;
-					if (!pop.m_h3.ToBE() || res)
+					if (!pop.m_h3.data() || res)
 					{
 						return res;
 					}
@@ -1457,7 +1457,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 
 			if (queue->pop1.compare_and_swap_test(old, pop))
 			{
-				if (!pop.m_h3.ToBE() || res)
+				if (!pop.m_h3.data() || res)
 				{
 					return res;
 				}

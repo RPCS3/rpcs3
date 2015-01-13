@@ -300,7 +300,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (u8)";
+					throw "Invalid formatting (u8): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -322,7 +322,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (u16)";
+					throw "Invalid formatting (u16): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -344,7 +344,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (u32)";
+					throw "Invalid formatting (u32): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -366,7 +366,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (u64)";
+					throw "Invalid formatting (u64): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -388,7 +388,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (s8)";
+					throw "Invalid formatting (s8): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -410,7 +410,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (s16)";
+					throw "Invalid formatting (s16): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -432,7 +432,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (s32)";
+					throw "Invalid formatting (s32): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -454,7 +454,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (s64)";
+					throw "Invalid formatting (s64): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -476,7 +476,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (float)";
+					throw "Invalid formatting (float): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -498,7 +498,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (double)";
+					throw "Invalid formatting (double): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -524,7 +524,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (bool)";
+					throw "Invalid formatting (bool): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -542,7 +542,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (char*)";
+					throw "Invalid formatting (char*): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -560,7 +560,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (const char*)";
+					throw "Invalid formatting (const char*): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -578,7 +578,7 @@ namespace fmt
 		//		}
 		//		else
 		//		{
-		//			throw "Invalid formatting (char[size])";
+		//			throw "Invalid formatting (char[size]): " + std::string(fmt, len);
 		//		}
 
 		//		return{};
@@ -596,7 +596,7 @@ namespace fmt
 		//		}
 		//		else
 		//		{
-		//			throw "Invalid formatting (const char[size])";
+		//			throw "Invalid formatting (const char[size]): " + std::string(fmt, len);
 		//		}
 
 		//		return{};
@@ -614,7 +614,7 @@ namespace fmt
 				}
 				else
 				{
-					throw "Invalid formatting (std::string)";
+					throw "Invalid formatting (std::string): " + std::string(fmt, len);
 				}
 
 				return{};
@@ -654,6 +654,11 @@ namespace fmt
 	char*, const char*, std::string (%s)
 	be_t<> of any appropriate type in this list
 	enum of any appropriate type in this list
+
+	External specializations (can be found in another headers):
+	vm::ps3::ptr (vm_ptr.h) (of appropriate address type, writing .addr() for printing can be avoided)
+	vm::ps3::bptr (vm_ptr.h)
+	vm::psv::ptr (vm_ptr.h)
 	
 	Supported formatting:
 	%d - decimal; only basic std::to_string() functionality

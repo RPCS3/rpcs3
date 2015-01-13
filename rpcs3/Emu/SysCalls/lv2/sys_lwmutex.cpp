@@ -33,20 +33,20 @@ s32 sys_lwmutex_create(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<s
 {
 	sys_lwmutex.Warning("sys_lwmutex_create(lwmutex_addr=0x%x, attr_addr=0x%x)", lwmutex.addr(), attr.addr());
 
-	switch (attr->recursive.ToBE())
+	switch (attr->recursive.data())
 	{
 	case se32(SYS_SYNC_RECURSIVE): break;
 	case se32(SYS_SYNC_NOT_RECURSIVE): break;
-	default: sys_lwmutex.Error("Unknown recursive attribute(0x%x)", (u32)attr->recursive); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown recursive attribute (0x%x)", attr->recursive); return CELL_EINVAL;
 	}
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
 	case se32(SYS_SYNC_RETRY): break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwmutex.Error("Invalid SYS_SYNC_PRIORITY_INHERIT protocol attr"); return CELL_EINVAL;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_lwmutex.Error("Invalid protocol (SYS_SYNC_PRIORITY_INHERIT)"); return CELL_EINVAL;
 	case se32(SYS_SYNC_FIFO): break;
-	default: sys_lwmutex.Error("Unknown protocol attribute(0x%x)", (u32)attr->protocol); return CELL_EINVAL;
+	default: sys_lwmutex.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
 	return lwmutex_create(*lwmutex, attr->protocol, attr->recursive, attr->name_u64);
@@ -97,7 +97,10 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 
 s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 {
-	if (attribute.ToBE() == se32(0xDEADBEEF)) return CELL_EINVAL;
+	if (attribute.data() == se32(0xDEADBEEF))
+	{
+		return CELL_EINVAL;
+	}
 
 	if (!Emu.GetIdManager().CheckID(sleep_queue))
 	{
@@ -108,10 +111,10 @@ s32 sys_lwmutex_t::trylock(be_t<u32> tid)
 
 	if (old_owner == tid)
 	{
-		if (attribute.ToBE() & se32(SYS_SYNC_RECURSIVE))
+		if (attribute.data() & se32(SYS_SYNC_RECURSIVE))
 		{
 			auto rv = recursive_count.read_relaxed();
-			if (!~(rv++).ToBE())
+			if (!~(rv++).data())
 			{
 				return CELL_EKRESOURCE;
 			}
@@ -142,7 +145,7 @@ s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 	}
 
 	auto rv = recursive_count.read_relaxed();
-	if (!rv.ToBE() || (rv.ToBE() != se32(1) && (attribute.ToBE() & se32(SYS_SYNC_NOT_RECURSIVE))))
+	if (!rv.data() || (rv.data() != se32(1) && (attribute.data() & se32(SYS_SYNC_NOT_RECURSIVE))))
 	{
 		sys_lwmutex.Error("sys_lwmutex_t::unlock(%d): wrong recursive value fixed (%d)", (u32)sleep_queue, (u32)rv);
 		rv = 1;
@@ -150,7 +153,7 @@ s32 sys_lwmutex_t::unlock(be_t<u32> tid)
 
 	rv--;
 	recursive_count.exchange(rv);
-	if (!rv.ToBE())
+	if (!rv.data())
 	{
 		std::shared_ptr<sleep_queue_t> sq;
 		if (!Emu.GetIdManager().GetIDData(sleep_queue, sq))
@@ -188,7 +191,7 @@ s32 sys_lwmutex_t::lock(be_t<u32> tid, u64 timeout)
 	while (true)
 	{
 		auto old_owner = owner.compare_and_swap(be_t<u32>::make(0), tid);
-		if (!old_owner.ToBE() || old_owner == tid)
+		if (!old_owner.data() || old_owner == tid)
 		{
 			break;
 		}

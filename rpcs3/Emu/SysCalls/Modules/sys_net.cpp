@@ -114,7 +114,7 @@ int sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> pad
 
 int sys_net_bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 {
-	sys_net->Warning("bind(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.addr(), addrlen);
+	sys_net->Warning("bind(s=%d, family_addr=0x%x, addrlen=%d)", s, addr.addr(), addrlen);
 	sockaddr_in saddr;
 	memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 	saddr.sin_family = addr->sin_family;
@@ -127,7 +127,7 @@ int sys_net_bind(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 
 int sys_net_connect(s32 s, vm::ptr<sys_net_sockaddr_in> addr, u32 addrlen)
 {
-	sys_net->Warning("connect(s=%d, family_addr=0x%x, addrlen=%u)", s, addr.addr(), addrlen);
+	sys_net->Warning("connect(s=%d, family_addr=0x%x, addrlen=%d)", s, addr.addr(), addrlen);
 	sockaddr_in saddr;
 	memcpy(&saddr, addr.get_ptr(), sizeof(sockaddr_in));
 	saddr.sin_family = addr->sin_family;
@@ -242,7 +242,7 @@ int sys_net_recv(s32 s, vm::ptr<char> buf, u32 len, s32 flags)
 
 int sys_net_recvfrom(s32 s, vm::ptr<char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<pck_len_t> paddrlen)
 {
-	sys_net->Warning("recvfrom(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr_addr=0x%x, paddrlen=0x%x)",
+	sys_net->Warning("recvfrom(s=%d, buf_addr=0x%x, len=%d, flags=0x%x, addr_addr=0x%x, paddrlen=0x%x)",
 		s, buf.addr(), len, flags, addr.addr(), paddrlen.addr());
 
 	sockaddr _addr;
@@ -278,7 +278,7 @@ int sendmsg()
 
 int sys_net_sendto(s32 s, vm::ptr<const char> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 {
-	sys_net->Warning("sendto(s=%d, buf_addr=0x%x, len=%u, flags=0x%x, addr=0x%x, addrlen=%u)",
+	sys_net->Warning("sendto(s=%d, buf_addr=0x%x, len=%d, flags=0x%x, addr=0x%x, addrlen=%d)",
 		s, buf.addr(), len, flags, addr.addr(), addrlen);
 
 	sockaddr _addr;
@@ -291,7 +291,7 @@ int sys_net_sendto(s32 s, vm::ptr<const char> buf, u32 len, s32 flags, vm::ptr<s
 
 int sys_net_setsockopt(s32 s, s32 level, s32 optname, vm::ptr<const char> optval, u32 optlen)
 {
-	sys_net->Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%u)", s, level, optname, optval.addr(), optlen);
+	sys_net->Warning("socket(s=%d, level=%d, optname=%d, optval_addr=0x%x, optlen=%d)", s, level, optname, optval.addr(), optlen);
 
 	int ret = setsockopt(s, level, optname, optval.get_ptr(), optlen);
 	*g_lastError = getLastError();

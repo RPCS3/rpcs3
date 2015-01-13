@@ -930,8 +930,8 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 
 		file.Seek(old_pos);
 
-		sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%x, error=0x%x, res=0x%x, xid=0x%x)",
-			fd, (u64)aio->offset, aio->buf.addr().ToLE(), (u64)aio->size, error, res, xid);
+		sys_fs->Log("*** fsAioRead(fd=%d, offset=0x%llx, buf_addr=0x%x, size=0x%llx, error=0x%x, res=0x%llx, xid=0x%x)",
+			fd, aio->offset, aio->buf, aio->size, error, res, xid);
 	}
 
 	if (func)
@@ -945,9 +945,9 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<u32> aio_id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ref<u32> id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
-	sys_fs->Warning("cellFsAioRead(aio_addr=0x%x, id_addr=0x%x, func_addr=0x%x)", aio.addr(), aio_id.addr(), func.addr());
+	sys_fs->Warning("cellFsAioRead(aio=0x%x, id=0x%x, func=0x%x)", aio, id, func);
 
 	if (!aio_init)
 	{
@@ -964,7 +964,7 @@ int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<u32> aio_id, vm::ptr<void(*)(v
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-	*aio_id = xid;
+	id = xid;
 
 	{
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));

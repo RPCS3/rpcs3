@@ -551,12 +551,12 @@ private:
 		}
 	};
 
-public:
 	const stype& ToBE() const
 	{
 		return m_data;
 	}
 
+public:
 	type ToLE() const
 	{
 		return se_t<type, sizeof(T2)>::from_be(m_data);
@@ -605,11 +605,7 @@ public:
 
 	const stype& data() const
 	{
-#ifdef IS_LE_MACHINE
 		return ToBE();
-#else
-		return ToLE();
-#endif
 	}
 	
 	be_t& operator = (const be_t& value) = default;
