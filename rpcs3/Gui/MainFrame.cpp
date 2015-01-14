@@ -5,7 +5,6 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
-#include "git-version.h"
 #include "Ini.h"
 #include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
@@ -22,6 +21,9 @@
 #include "Gui/RSXDebugger.h"
 #include "Gui/MemoryStringSearcher.h"
 #include "Gui/LLEModulesManager.h"
+#ifndef _WIN32
+#include "git-version.h"
+#endif
 
 #include <wx/dynlib.h>
 
