@@ -265,15 +265,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 			// it's dangerous because destructors won't be executed
 		}
 		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		if (CPUThread* t = GetCurrentCPUThread())
-		{
-			throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))", is_writing ? "writing" : "reading", addr,
-				t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
-		}
-		else
-		{
-			throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
-		}
+		throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 	}
 
 	// else some fatal error (should crash)
@@ -363,15 +355,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		if (CPUThread* t = GetCurrentCPUThread())
-		{
-			throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))", /*is_writing ? "writing" : "reading"*/ "at", addr,
-				t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
-		}
-		else
-		{
-			throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", addr);
-		}
+		throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", addr);
 	}
 
 	// else some fatal error
