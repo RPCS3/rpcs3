@@ -310,7 +310,7 @@ struct sys_callback
 
 void sysutilSendSystemCommand(u64 status, u64 param)
 {
-	// TODO: check it and find the source of the return value (not sure that void becomes CELL_OK)
+	// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 	for (auto& cb : g_sys_callback)
 	{
 		if (cb.func)

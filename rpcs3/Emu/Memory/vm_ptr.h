@@ -11,49 +11,50 @@ namespace vm
 
 	public:
 		typedef typename std::remove_cv<T>::type type;
+		static const u32 address_size = (u32)sizeof(AT);
 
 		_ptr_base operator++ (int)
 		{
 			AT result = m_addr;
-			m_addr += sizeof(AT);
+			m_addr += address_size;
 			return make(result);
 		}
 
 		_ptr_base& operator++ ()
 		{
-			m_addr += sizeof(AT);
+			m_addr += address_size;
 			return *this;
 		}
 
 		_ptr_base operator-- (int)
 		{
 			AT result = m_addr;
-			m_addr -= sizeof(AT);
+			m_addr -= address_size;
 			return make(result);
 		}
 
 		_ptr_base& operator-- ()
 		{
-			m_addr -= sizeof(AT);
+			m_addr -= address_size;
 			return *this;
 		}
 
 		_ptr_base& operator += (AT count)
 		{
-			m_addr += count * sizeof(AT);
+			m_addr += count * address_size;
 			return *this;
 		}
 
 		_ptr_base& operator -= (AT count)
 		{
-			m_addr -= count * sizeof(AT);
+			m_addr -= count * address_size;
 			return *this;
 		}
 
-		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * sizeof(AT)); }
-		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * sizeof(AT)); }
-		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * sizeof(AT)); }
-		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * sizeof(AT)); }
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * address_size); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * address_size); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * address_size); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * address_size); }
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
 		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
@@ -67,12 +68,12 @@ namespace vm
 
 		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>((u32)m_addr);
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr));
 		}
 
 		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>((u32)(m_addr + sizeof(AT)* index));
+			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr + sizeof(AT)* index));
 		}
 
 		//typedef typename invert_be_t<AT>::type AT2;
@@ -109,68 +110,69 @@ namespace vm
 		
 	public:
 		typedef typename std::remove_cv<T>::type type;
+		static const u32 data_size = (u32)sizeof(T);
 
 		__forceinline T* const operator -> () const
 		{
-			return vm::get_ptr<T>((u32)m_addr);
+			return vm::get_ptr<T>(vm::cast(m_addr));
 		}
 
 		_ptr_base operator++ (int)
 		{
 			AT result = m_addr;
-			m_addr += sizeof(T);
+			m_addr += data_size;
 			return make(result);
 		}
 
 		_ptr_base& operator++ ()
 		{
-			m_addr += sizeof(T);
+			m_addr += data_size;
 			return *this;
 		}
 
 		_ptr_base operator-- (int)
 		{
 			AT result = m_addr;
-			m_addr -= sizeof(T);
+			m_addr -= data_size;
 			return make(result);
 		}
 
 		_ptr_base& operator-- ()
 		{
-			m_addr -= sizeof(T);
+			m_addr -= data_size;
 			return *this;
 		}
 
 		_ptr_base& operator += (AT count)
 		{
-			m_addr += count * sizeof(T);
+			m_addr += count * data_size;
 			return *this;
 		}
 
 		_ptr_base& operator -= (AT count)
 		{
-			m_addr -= count * sizeof(T);
+			m_addr -= count * data_size;
 			return *this;
 		}
 
-		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * sizeof(T)); }
-		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * sizeof(T)); }
-		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * sizeof(T)); }
-		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * sizeof(T)); }
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * data_size); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * data_size); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size); }
 
 		__forceinline T& operator *() const
 		{
-			return vm::get_ref<T>((u32)m_addr);
+			return vm::get_ref<T>(vm::cast(m_addr));
 		}
 
 		__forceinline T& operator [](typename remove_be_t<AT>::type index) const
 		{
-			return vm::get_ref<T>((u32)(m_addr + sizeof(T) * index));
+			return vm::get_ref<T>(vm::cast(m_addr + data_size * index));
 		}
 
 		__forceinline T& operator [](typename to_be_t<AT>::forced_type index) const
 		{
-			return vm::get_ref<T>((u32)(m_addr + sizeof(T)* index));
+			return vm::get_ref<T>(vm::cast(m_addr + data_size * index));
 		}
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
@@ -224,7 +226,7 @@ namespace vm
 
 		T* get_ptr() const
 		{
-			return vm::get_ptr<T>((u32)m_addr);
+			return vm::get_ptr<T>(vm::cast(m_addr));
 		}
 		
 		static _ptr_base make(AT addr)
@@ -253,7 +255,7 @@ namespace vm
 
 		void* get_ptr() const
 		{
-			return vm::get_ptr<void>((u32)m_addr);
+			return vm::get_ptr<void>(vm::cast(m_addr));
 		}
 
 		explicit operator void*() const
@@ -313,7 +315,7 @@ namespace vm
 
 		const void* get_ptr() const
 		{
-			return vm::get_ptr<const void>((u32)m_addr);
+			return vm::get_ptr<const void>(vm::cast(m_addr));
 		}
 
 		explicit operator const void*() const

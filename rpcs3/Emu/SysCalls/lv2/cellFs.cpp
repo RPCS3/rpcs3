@@ -945,7 +945,7 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(*)(vm::ptr<
 	g_FsAioReadCur++;
 }
 
-int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ref<u32> id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
+int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<u32> id, vm::ptr<void(*)(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
 {
 	sys_fs->Warning("cellFsAioRead(aio=0x%x, id=0x%x, func=0x%x)", aio, id, func);
 
@@ -964,7 +964,7 @@ int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ref<u32> id, vm::ptr<void(*)(vm::p
 
 	//get a unique id for the callback (may be used by cellFsAioCancel)
 	const u32 xid = g_FsAioReadID++;
-	id = xid;
+	*id = xid;
 
 	{
 		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));

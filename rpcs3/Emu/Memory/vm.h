@@ -40,6 +40,56 @@ namespace vm
 		return *get_ptr<T>(addr);
 	}
 
+	template<typename T>
+	struct cast_ptr
+	{
+		static_assert(std::is_same<T, u32>::value, "Unsupported vm::cast() type");
+
+		__forceinline static u32 cast(const T& addr, const char* func)
+		{
+			return 0;
+		}
+	};
+
+	template<>
+	struct cast_ptr<u32>
+	{
+		__forceinline static u32 cast(const u32 addr, const char* func)
+		{
+			return addr;
+		}
+	};
+
+	template<>
+	struct cast_ptr<u64>
+	{
+		__forceinline static u32 cast(const u64 addr, const char* func)
+		{
+			const u32 res = (u32)addr;
+			if (res != addr)
+			{
+				throw fmt::Format("%s(): invalid address 0x%llx", func, addr);
+			}
+
+			return res;
+		}
+	};
+
+	template<typename T, typename T2>
+	struct cast_ptr<be_t<T, T2>>
+	{
+		__forceinline static u32 cast(const be_t<T, T2>& addr, const char* func)
+		{
+			return cast_ptr<T>::cast(addr.value(), func);
+		}
+	};
+
+	template<typename T>
+	__forceinline static u32 cast(const T& addr, const char* func = "vm::cast")
+	{
+		return cast_ptr<T>::cast(addr, func);
+	}
+
 	namespace ps3
 	{
 		void init();
