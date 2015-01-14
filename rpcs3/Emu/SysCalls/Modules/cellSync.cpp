@@ -1349,7 +1349,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 
 	const s32 depth = (u32)queue->m_depth;
 	const s32 size = (u32)queue->m_size;
-	const u32 addr = vm::cast((queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position));
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position));
 	memcpy(vm::get_ptr<void>(addr), buffer.get_ptr(), size);
 
 	s32 res;
@@ -1725,7 +1725,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 
 	const s32 depth = (u32)queue->m_depth;
 	const s32 size = (u32)queue->m_size;
-	const u32 addr = vm::cast((queue->m_buffer.addr() & ~1) + size * (position >= depth ? position - depth : position));
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (position >= depth ? position - depth : position));
 	memcpy(buffer.get_ptr(), vm::get_ptr<void>(addr), size);
 
 	s32 res;
