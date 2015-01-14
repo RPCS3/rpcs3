@@ -310,12 +310,14 @@ void CPUThread::Task()
 	}
 	catch (const std::string& e)
 	{
-		LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, SysCalls::GetHLEFuncName((u32)m_last_syscall));
+		LOG_NOTICE(GENERAL, RegsToString());
 		Emu.Pause();
 	}
 	catch (const char* e)
 	{
-		LOG_ERROR(GENERAL, "Exception: %s", e);
+		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, SysCalls::GetHLEFuncName((u32)m_last_syscall));
+		LOG_NOTICE(GENERAL, RegsToString());
 		Emu.Pause();
 	}
 

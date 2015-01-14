@@ -617,7 +617,7 @@ int cellAdecStartSeq(u32 handle, u32 param_addr)
 	{
 		auto param = vm::ptr<const CellAdecParamMP3>::make(param_addr);
 
-		cellAdec->Todo("*** CellAdecParamMP3: bw_pcm=%d", param->bw_pcm.ToLE());
+		cellAdec->Todo("*** CellAdecParamMP3: bw_pcm=%d", param->bw_pcm);
 		break;
 	}
 	default:

@@ -656,9 +656,12 @@ namespace fmt
 	enum of any appropriate type in this list
 
 	External specializations (can be found in another headers):
-	vm::ps3::ptr (vm_ptr.h) (of appropriate address type, writing .addr() for printing can be avoided)
+	vm::ps3::ptr (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
 	vm::ps3::bptr (vm_ptr.h)
 	vm::psv::ptr (vm_ptr.h)
+	vm::ps3::ref (vm_ref.h)
+	vm::ps3::bref (vm_ref.h)
+	vm::psv::ref (vm_ref.h)
 	
 	Supported formatting:
 	%d - decimal; only basic std::to_string() functionality

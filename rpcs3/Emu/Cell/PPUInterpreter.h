@@ -17,8 +17,6 @@
 #define _rotl64(x,r) (((u64)(x) << (r)) | ((u64)(x) >> (64 - (r))))
 #endif
 
-#define UNIMPLEMENTED() UNK(__FUNCTION__)
-
 #if 0//def _DEBUG
 #define HLE_CALL_DEBUG
 #endif
@@ -98,7 +96,7 @@ private:
 
 	void NULL_OP()
 	{
-		UNK("null");
+		throw "Null operation";
 	}
 
 	void NOP()
@@ -168,8 +166,7 @@ private:
 		case 0x117: return CPU.SPRG[n - 0x110];
 		}
 
-		UNK(fmt::Format("ReadSPR error: Unknown SPR 0x%x!", n));
-		return CPU.XER.XER;
+		throw fmt::Format("ReadSPR(0x%x) error: unknown SPR (0x%x)", spr, n);
 	}
 
 	void WriteSPR(u32 spr, u64 value)
@@ -190,8 +187,8 @@ private:
 		case 0x106:
 		case 0x107: CPU.USPRG[n - 0x100] = value; return;
 
-		case 0x10C: UNK("WriteSPR: Write to time-based SPR. Report this to a developer!"); return;
-		case 0x10D: UNK("WriteSPR: Write to time-based SPR upper. Report this to a developer!"); return;
+		case 0x10C: throw fmt::Format("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
+		case 0x10D: throw fmt::Format("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
 
 		case 0x110:
 		case 0x111:
@@ -203,8 +200,7 @@ private:
 		case 0x117: CPU.SPRG[n - 0x110] = value; return;
 		}
 
-		UNK(fmt::Format("WriteSPR error: Unknown SPR 0x%x!", n));
-		return;
+		throw fmt::Format("WriteSPR(0x%x, 0x%llx) error: unknown SPR (0x%x)", spr, value, n);
 	}
 	
 	void TDI(u32 to, u32 ra, s32 simm16)
@@ -217,7 +213,7 @@ private:
 			((u64)a < (u64)simm16 && (to & 0x2)) ||
 			((u64)a > (u64)simm16 && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16));
+			throw fmt::Format("Trap! (tdi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -231,7 +227,7 @@ private:
 			((u32)a < (u32)simm16 && (to & 0x2)) ||
 			((u32)a > (u32)simm16 && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16));
+			throw fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", to, ra, simm16);
 		}
 	}
 
@@ -2169,7 +2165,7 @@ private:
 		switch (lev)
 		{
 		case 0x0: SysCall(); break;
-		case 0x1: UNK("HyperCall LV1"); break;
+		case 0x1: throw "SC(): HyperCall LV1";
 		case 0x2:
 			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
 			if (Ini.HLELogging.GetValue())
@@ -2179,7 +2175,7 @@ private:
 			}
 			break;
 		case 0x3: CPU.FastStop(); break;
-		default: UNK(fmt::Format("Unknown sc: 0x%x", lev)); break;
+		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
 		}
 	}
 	void B(s32 ll, u32 aa, u32 lk)
@@ -2343,7 +2339,7 @@ private:
 			((u32)a < (u32)b && (to & 0x2)) ||
 			((u32)a > (u32)b && (to & 0x1)) )
 		{
-			UNK(fmt::Format("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb));
+			throw fmt::Format("Trap! (tw 0x%x, r%d, r%d)", to, ra, rb);
 		}
 	}
 	void LVSL(u32 vd, u32 ra, u32 rb)
@@ -2376,13 +2372,7 @@ private:
 	void LVEBX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.VPR[vd]._u8[15 - (addr & 0xf)] = vm::read8((u32)addr);
+		CPU.VPR[vd]._u8[15 - (addr & 0xf)] = vm::read8(vm::cast(addr));
 		// check LVEWX comments
 	}
 	void SUBFC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -2391,7 +2381,7 @@ private:
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + 1;
 		CPU.XER.CA = CPU.IsCarry(~RA, RB, 1);
-		if(oe) UNK("subfco");
+		if(oe) throw "SUBFC(): subfco";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -2400,7 +2390,7 @@ private:
 		const s64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
 		CPU.XER.CA = CPU.IsCarry(RA, RB);
-		if(oe) UNK("addco");
+		if(oe) throw "ADDC(): addco";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
@@ -2448,36 +2438,18 @@ private:
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)CPU.R_ADDR != CPU.R_ADDR)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, CPU.R_ADDR);
-			Emu.Pause();
-			return;
-		}
-		CPU.R_VALUE = vm::get_ref<u32>((u32)CPU.R_ADDR);
+		CPU.R_VALUE = vm::get_ref<u32>(vm::cast(CPU.R_ADDR));
 		CPU.GPR[rd] = re32((u32)CPU.R_VALUE);
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read64((u32)addr);
+		CPU.GPR[rd] = vm::read64(vm::cast(addr));
 	}
 	void LWZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read32((u32)addr);
+		CPU.GPR[rd] = vm::read32(vm::cast(addr));
 	}
 	void SLW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2549,31 +2521,19 @@ private:
 	void LVEHX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16((u32)addr);
+		CPU.VPR[vd]._u16[7 - ((addr >> 1) & 0x7)] = vm::read16(vm::cast(addr));
 		// check LVEWX comments
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		CPU.GPR[rd] = CPU.GPR[rb] - CPU.GPR[ra];
-		if(oe) UNK("subfo");
+		if(oe) throw "SUBF(): subfo";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LDUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read64((u32)addr);
+		CPU.GPR[rd] = vm::read64(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DCBST(u32 ra, u32 rb)
@@ -2582,13 +2542,7 @@ private:
 	void LWZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read32((u32)addr);
+		CPU.GPR[rd] = vm::read32(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void CNTLZD(u32 ra, u32 rs, bool rc)
@@ -2609,18 +2563,12 @@ private:
 	}
 	void TD(u32 to, u32 ra, u32 rb)
 	{
-		UNK("td");
+		throw "TD()";
 	}
 	void LVEWX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32((u32)addr);
+		CPU.VPR[vd]._u32[3 - ((addr >> 2) & 0x3)] = vm::read32(vm::cast(addr));
 		// It's not very good idea to implement it using read128(),
 		// because it can theoretically read RawSPU 32-bit MMIO register (read128() will fail)
 		//CPU.VPR[vd] = vm::read128((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL);
@@ -2640,13 +2588,7 @@ private:
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
 		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)CPU.R_ADDR != CPU.R_ADDR)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, CPU.R_ADDR);
-			Emu.Pause();
-			return;
-		}
-		CPU.R_VALUE = vm::get_ref<u64>((u32)CPU.R_ADDR);
+		CPU.R_VALUE = vm::get_ref<u64>(vm::cast(CPU.R_ADDR));
 		CPU.GPR[rd] = re64(CPU.R_VALUE);
 	}
 	void DCBF(u32 ra, u32 rb)
@@ -2655,13 +2597,7 @@ private:
 	void LBZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read8((u32)addr);
+		CPU.GPR[rd] = vm::read8(vm::cast(addr));
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
@@ -2670,7 +2606,7 @@ private:
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		CPU.GPR[rd] = 0-CPU.GPR[ra];
-		if(oe) UNK("nego");
+		if(oe) throw "NEG(): nego";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LBZUX(u32 rd, u32 ra, u32 rb)
@@ -2678,13 +2614,7 @@ private:
 		//if(ra == 0 || ra == rd) throw "Bad instruction [LBZUX]";
 
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read8((u32)addr);
+		CPU.GPR[rd] = vm::read8(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void NOR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -2695,14 +2625,8 @@ private:
 	void STVEBX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = addr & 0xf;
-		vm::write8((u32)addr, CPU.VPR[vs]._u8[15 - eb]);
+		vm::write8(vm::cast(addr), CPU.VPR[vs]._u8[15 - eb]);
 	}
 	void SUBFE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2711,7 +2635,7 @@ private:
 		CPU.GPR[rd] = ~RA + RB + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(~RA, RB, CPU.XER.CA);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) UNK("subfeo");
+		if(oe) throw "SUBFE(): subfeo";
 	}
 	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2736,7 +2660,7 @@ private:
 			CPU.XER.CA = CPU.IsCarry(RA, RB);
 		}
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) UNK("addeo");
+		if(oe) throw "ADDE(): addeo";
 	}
 	void MTOCRF(u32 l, u32 crm, u32 rs)
 	{
@@ -2774,27 +2698,15 @@ private:
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, CPU.GPR[rs]);
+		vm::write64(vm::cast(addr), CPU.GPR[rs]);
 	}
 	void STWCX_(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>((u32)CPU.R_ADDR), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(vm::cast(CPU.R_ADDR)), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
 			CPU.R_ADDR = 0;
 		}
 		else
@@ -2805,61 +2717,31 @@ private:
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32)CPU.GPR[rs]);
+		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
 	}
 	void STVEHX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~1ULL;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = (addr & 0xf) >> 1;
-		vm::write16((u32)addr, CPU.VPR[vs]._u16[7 - eb]);
+		vm::write16(vm::cast(addr), CPU.VPR[vs]._u16[7 - eb]);
 	}
 	void STDUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, CPU.GPR[rs]);
+		vm::write64(vm::cast(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STWUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32)CPU.GPR[rs]);
+		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STVEWX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~3ULL;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = (addr & 0xf) >> 2;
-		vm::write32((u32)addr, CPU.VPR[vs]._u32[3 - eb]);
+		vm::write32(vm::cast(addr), CPU.VPR[vs]._u32[3 - eb]);
 	}
 	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2880,16 +2762,10 @@ private:
 	void STDCX_(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 
 		if (CPU.R_ADDR == addr)
 		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>((u32)CPU.R_ADDR), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
+			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(vm::cast(CPU.R_ADDR)), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
 			CPU.R_ADDR = 0;
 		}
 		else
@@ -2900,13 +2776,7 @@ private:
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write8((u32)addr, (u8)CPU.GPR[rs]);
+		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
@@ -2924,7 +2794,7 @@ private:
 	{
 		CPU.GPR[rd] = (s64)((s64)CPU.GPR[ra] * (s64)CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) UNK("mulldo");
+		if(oe) throw "MULLD(): mulldo";
 	}
 	void ADDME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2932,14 +2802,14 @@ private:
 		CPU.GPR[rd] = RA + CPU.XER.CA - 1;
 		CPU.XER.CA |= RA != 0;
 
-		if(oe) UNK("addmeo");
+		if(oe) throw "ADDME(): addmeo";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		CPU.GPR[rd] = (s64)((s64)(s32)CPU.GPR[ra] * (s64)(s32)CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) UNK("mullwo");
+		if(oe) throw "MULLW(): mullwo";
 	}
 	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
@@ -2947,13 +2817,7 @@ private:
 	void STBUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write8((u32)addr, (u8)CPU.GPR[rs]);
+		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void ADD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
@@ -2961,7 +2825,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
-		if(oe) UNK("addo");
+		if(oe) throw "ADD(): addo";
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void DCBT(u32 ra, u32 rb, u32 th)
@@ -2970,13 +2834,7 @@ private:
 	void LHZX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read16((u32)addr);
+		CPU.GPR[rd] = vm::read16(vm::cast(addr));
 	}
 	void EQV(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -2987,24 +2845,12 @@ private:
 	{
 		//HACK!
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read32((u32)addr);
+		CPU.GPR[rd] = vm::read32(vm::cast(addr));
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read16((u32)addr);
+		CPU.GPR[rd] = vm::read16(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void XOR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -3019,13 +2865,7 @@ private:
 	void LWAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s32)vm::read32((u32)addr);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
 	}
 	void DST(u32 ra, u32 rb, u32 strm, u32 t)
 	{
@@ -3033,13 +2873,7 @@ private:
 	void LHAX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s16)vm::read16((u32)addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
@@ -3054,19 +2888,13 @@ private:
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
 		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
-		default: UNK(fmt::Format("mftb r%d, %d", rd, spr)); break;
+		default: throw fmt::Format("mftb r%d, %d", rd, spr);
 		}
 	}
 	void LWAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s32)vm::read32((u32)addr);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void DSTST(u32 ra, u32 rb, u32 strm, u32 t)
@@ -3075,25 +2903,13 @@ private:
 	void LHAUX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s16)vm::read16((u32)addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STHX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write16((u32)addr, (u16)CPU.GPR[rs]);
+		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
 	}
 	void ORC(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3104,24 +2920,12 @@ private:
 	{
 		//HACK!
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32)CPU.GPR[rs]);
+		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write16((u32)addr, (u16)CPU.GPR[rs]);
+		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void OR(u32 ra, u32 rs, u32 rb, bool rc)
@@ -3136,7 +2940,7 @@ private:
 
 		if(RB == 0)
 		{
-			if(oe) UNK("divduo");
+			if(oe) throw "DIVDU(): divduo";
 			CPU.GPR[rd] = 0;
 		}
 		else
@@ -3153,7 +2957,7 @@ private:
 
 		if(RB == 0)
 		{
-			if(oe) UNK("divwuo");
+			if(oe) throw "DIVWU(): divwuo";
 			CPU.GPR[rd] = 0;
 		}
 		else
@@ -3187,7 +2991,7 @@ private:
 
 		if (RB == 0 || ((u64)RA == (1ULL << 63) && RB == -1))
 		{
-			if(oe) UNK("divdo");
+			if(oe) throw "DIVD(): divdo";
 			CPU.GPR[rd] = /*(((u64)RA & (1ULL << 63)) && RB == 0) ? -1 :*/ 0;
 		}
 		else
@@ -3204,7 +3008,7 @@ private:
 
 		if (RB == 0 || ((u32)RA == (1 << 31) && RB == -1))
 		{
-			if(oe) UNK("divwo");
+			if(oe) throw "DIVW(): divwo";
 			CPU.GPR[rd] = /*(((u32)RA & (1 << 31)) && RB == 0) ? -1 :*/ 0;
 		}
 		else
@@ -3217,53 +3021,29 @@ private:
 	void LVLX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8((u32)addr + i);
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
 	}
 	void LDBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::get_ref<u64>((u32)addr);
+		CPU.GPR[rd] = vm::get_ref<u64>(vm::cast(addr));
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
-		UNK("lswx");
+		throw "LSWX()";
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::get_ref<u32>((u32)addr);
+		CPU.GPR[rd] = vm::get_ref<u32>(vm::cast(addr));
 	}
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>((u32)addr).ToLE();
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3286,26 +3066,14 @@ private:
 	void LVRX(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8((u32)addr + i - 16);
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
 	}
 	void LSWI(u32 rd, u32 ra, u32 nb)
 	{
 		u64 addr = ra ? CPU.GPR[ra] : 0;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		u64 N = nb ? nb : 32;
 		u8 reg = rd;
 
@@ -3313,7 +3081,7 @@ private:
 		{
 			if (N > 3)
 			{
-				CPU.GPR[reg] = vm::read32((u32)addr);
+				CPU.GPR[reg] = vm::read32(vm::cast(addr));
 				addr += 4;
 				N -= 4;
 			}
@@ -3324,7 +3092,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					buf |= vm::read8((u32)addr) << (i * 8);
+					buf |= vm::read8(vm::cast(addr)) << (i * 8);
 					addr++;
 					i--;
 				}
@@ -3336,14 +3104,7 @@ private:
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		(u64&)CPU.FPR[frd] = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)CPU.FPR[frd];
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void SYNC(u32 l)
@@ -3353,99 +3114,51 @@ private:
 	void LFDX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
 	}
 	void LFDUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STVLX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16u - eb; ++i) vm::write8((u32)addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
-		UNK("stwsx");
+		throw "STSWX()";
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::get_ref<u32>((u32)addr) = (u32)CPU.GPR[rs];
+		vm::get_ref<u32>(vm::cast(addr)) = (u32)CPU.GPR[rs];
 	}
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) vm::write8((u32)addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
 	{
 		u64 addr = ra ? CPU.GPR[ra] : 0;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		u64 N = nb ? nb : 32;
 		u8 reg = rd;
 
@@ -3453,7 +3166,7 @@ private:
 		{
 			if (N > 3)
 			{
-				vm::write32((u32)addr, (u32)CPU.GPR[reg]);
+				vm::write32(vm::cast(addr), (u32)CPU.GPR[reg]);
 				addr += 4;
 				N -= 4;
 			}
@@ -3463,7 +3176,7 @@ private:
 				while (N > 0)
 				{
 					N = N - 1;
-					vm::write8((u32)addr, (0xFF000000 & buf) >> 24);
+					vm::write8(vm::cast(addr), (0xFF000000 & buf) >> 24);
 					buf <<= 8;
 					addr++;
 				}
@@ -3474,50 +3187,26 @@ private:
 	void STFDX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
 	}
 	void STFDUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LVLXL(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u32 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8((u32)addr + i);
+		for (u32 i = 0; i < 16u - eb; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i));
 	}
 	void LHBRX(u32 rd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::get_ref<u16>((u32)addr);
+		CPU.GPR[rd] = vm::get_ref<u16>(vm::cast(addr));
 	}
 	void SRAW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3556,16 +3245,10 @@ private:
 	void LVRXL(u32 vd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = addr & 0xf;
 
 		CPU.VPR[vd].clear();
-		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8((u32)addr + i - 16);
+		for (u32 i = 16 - eb; i < 16; ++i) CPU.VPR[vd]._u8[15 - i] = vm::read8(vm::cast(addr + i - 16));
 	}
 	void DSS(u32 strm, u32 a)
 	{
@@ -3597,26 +3280,14 @@ private:
 	void STVLXL(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u32 eb = addr & 0xf;
 
-		for (u32 i = 0; i < 16u - eb; ++i) vm::write8((u32)addr + i, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void STHBRX(u32 rs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::get_ref<u16>((u32)addr) = (u16)CPU.GPR[rs];
+		vm::get_ref<u16>(vm::cast(addr)) = (u16)CPU.GPR[rs];
 	}
 	void EXTSH(u32 ra, u32 rs, bool rc)
 	{
@@ -3626,15 +3297,9 @@ private:
 	void STVRXL(u32 vs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		const u8 eb = addr & 0xf;
 
-		for (u32 i = 16 - eb; i < 16; ++i) vm::write8((u32)addr + i - 16, CPU.VPR[vs]._u8[15 - i]);
+		for (u32 i = 16 - eb; i < 16; ++i) vm::write8(vm::cast(addr + i - 16), CPU.VPR[vs]._u8[15 - i]);
 	}
 	void EXTSB(u32 ra, u32 rs, bool rc)
 	{
@@ -3644,13 +3309,7 @@ private:
 	void STFIWX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32&)CPU.FPR[frs]);
+		vm::write32(vm::cast(addr), (u32&)CPU.FPR[frs]);
 	}
 	void EXTSW(u32 ra, u32 rs, bool rc)
 	{
@@ -3664,334 +3323,164 @@ private:
 	void DCBZ(u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 
-		auto const cache_line = vm::get_ptr<u8>((u32)addr & ~127);
+		auto const cache_line = vm::get_ptr<u8>(vm::cast(addr) & ~127);
 		if (cache_line)
 			memset(cache_line, 0, 128);
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read32((u32)addr);
+		CPU.GPR[rd] = vm::read32(vm::cast(addr));
 	}
 	void LWZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read32((u32)addr);
+		CPU.GPR[rd] = vm::read32(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LBZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read8((u32)addr);
+		CPU.GPR[rd] = vm::read8(vm::cast(addr));
 	}
 	void LBZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read8((u32)addr);
+		CPU.GPR[rd] = vm::read8(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STW(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32)CPU.GPR[rs]);
+		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
 	}
 	void STWU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, (u32)CPU.GPR[rs]);
+		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void STB(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write8((u32)addr, (u8)CPU.GPR[rs]);
+		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
 	}
 	void STBU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write8((u32)addr, (u8)CPU.GPR[rs]);
+		vm::write8(vm::cast(addr), (u8)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LHZ(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read16((u32)addr);
+		CPU.GPR[rd] = vm::read16(vm::cast(addr));
 	}
 	void LHZU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read16((u32)addr);
+		CPU.GPR[rd] = vm::read16(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LHA(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s16)vm::read16((u32)addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
 	}
 	void LHAU(u32 rd, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s16)vm::read16((u32)addr);
+		CPU.GPR[rd] = (s64)(s16)vm::read16(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void STH(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write16((u32)addr, (u16)CPU.GPR[rs]);
+		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
 	}
 	void STHU(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write16((u32)addr, (u16)CPU.GPR[rs]);
+		vm::write16(vm::cast(addr), (u16)CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void LMW(u32 rd, u32 ra, s32 d)
 	{
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		for(u32 i=rd; i<32; ++i, addr += 4)
 		{
-			CPU.GPR[i] = vm::read32((u32)addr);
+			CPU.GPR[i] = vm::read32(vm::cast(addr));
 		}
 	}
 	void STMW(u32 rs, u32 ra, s32 d)
 	{
 		u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
 		for(u32 i=rs; i<32; ++i, addr += 4)
 		{
-			vm::write32((u32)addr, (u32)CPU.GPR[i]);
+			vm::write32(vm::cast(addr), (u32)CPU.GPR[i]);
 		}
 	}
 	void LFS(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		const u32 v = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)v;
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
 	}
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		const u32 v = vm::read32((u32)addr);
-		CPU.FPR[frd] = (float&)v;
+		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void LFD(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
 	}
 	void LFDU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		(u64&)CPU.FPR[frd] = vm::read64((u32)addr);
+		CPU.FPR[frd] = vm::get_ref<be_t<double>>(vm::cast(addr)).value();
 		CPU.GPR[ra] = addr;
 	}
 	void STFS(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write32((u32)addr, CPU.FPR[frs].To32());
+		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
 	}
 	void STFDU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, (u64&)CPU.FPR[frs]);
+		vm::get_ref<be_t<double>>(vm::cast(addr)) = CPU.FPR[frs];
 		CPU.GPR[ra] = addr;
 	}
 	void LD(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read64((u32)addr);
+		CPU.GPR[rd] = vm::read64(vm::cast(addr));
 	}
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
 		//if(ra == 0 || rt == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = vm::read64((u32)addr);
+		CPU.GPR[rd] = vm::read64(vm::cast(addr));
 		CPU.GPR[ra] = addr;
 	}
 	void LWA(u32 rd, u32 ra, s32 ds)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		CPU.GPR[rd] = (s64)(s32)vm::read32((u32)addr);
+		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
 	}
 	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
@@ -4031,25 +3520,25 @@ private:
 		}
 
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fdivs.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FDIVS(): fdivs.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FSUBS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] - CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fsubs.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FSUBS(): fsubs.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FADDS(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] + CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fadds.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FADDS(): fadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FSQRTS(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(sqrt(CPU.FPR[frb]));
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fsqrts.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FSQRTS(): fsqrts.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FRES(u32 frd, u32 frb, bool rc)
 	{
@@ -4058,7 +3547,7 @@ private:
 			CPU.SetFPSCRException(FPSCR_ZX);
 		}
 		CPU.FPR[frd] = static_cast<float>(1.0 / CPU.FPR[frb]);
-		if(rc) UNK("fres.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FRES(): fres.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMULS(u32 frd, u32 fra, u32 frc, bool rc)
 	{
@@ -4066,54 +3555,42 @@ private:
 		CPU.FPSCR.FI = 0;
 		CPU.FPSCR.FR = 0;
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fmuls.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMULS(): fmuls.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fmadds.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMADDS(): fmadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fmsubs.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMSUBS(): fmsubs.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(-(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]));
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fnmsubs.");////CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNMSUBS(): fnmsubs.";////CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = static_cast<float>(-(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]));
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fnmadds.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNMADDS(): fnmadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void STD(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, CPU.GPR[rs]);
+		vm::write64(vm::cast(addr), CPU.GPR[rs]);
 	}
 	void STDU(u32 rs, u32 ra, s32 ds)
 	{
 		//if(ra == 0 || rs == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
-		if ((u32)addr != addr)
-		{
-			LOG_ERROR(PPU, "%s(): invalid address (0x%llx)", __FUNCTION__, addr);
-			Emu.Pause();
-			return;
-		}
-		vm::write64((u32)addr, CPU.GPR[rs]);
+		vm::write64(vm::cast(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
 	void MTFSB1(u32 crbd, bool rc)
@@ -4122,7 +3599,7 @@ private:
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		CPU.FPSCR.FPSCR |= mask;
 
-		if(rc) UNIMPLEMENTED();
+		if(rc) throw "MTFSB1(): mtfsb1.";
 	}
 	void MCRFS(u32 crbd, u32 crbs)
 	{
@@ -4155,7 +3632,7 @@ private:
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
 		CPU.FPSCR.FPSCR &= ~mask;
 
-		if(rc) UNIMPLEMENTED();
+		if(rc) throw "MTFSB0(): mtfsb0.";
 	}
 	void MTFSFI(u32 crfd, u32 i, bool rc)
 	{
@@ -4173,12 +3650,12 @@ private:
 				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
 
-		if(rc) UNIMPLEMENTED();
+		if(rc) throw "MTFSFI(): mtfsfi.";
 	}
 	void MFFS(u32 frd, bool rc)
 	{
 		(u64&)CPU.FPR[frd] = CPU.FPSCR.FPSCR;
-		if(rc) UNIMPLEMENTED();
+		if(rc) throw "MFFS(): mffs.";
 	}
 	void MTFSF(u32 flm, u32 frb, bool rc)
 	{
@@ -4197,7 +3674,7 @@ private:
 			else
 				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
-		if(rc) UNK("mtfsf.");
+		if(rc) throw "MTFSF(): mtfsf.";
 	}
 	void FCMPU(u32 crfd, u32 fra, u32 frb)
 	{
@@ -4285,7 +3762,7 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = r;
-		if(rc) UNK("fctiw.");
+		if(rc) throw "FCTIW(): fctiw.";
 	}
 	void FCTIWZ(u32 frd, u32 frb, bool rc)
 	{
@@ -4323,7 +3800,7 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = (u64)value;
-		if(rc) UNK("fctiwz.");
+		if(rc) throw "FCTIWZ(): fctiwz.";
 	}
 	void FDIV(u32 frd, u32 fra, u32 frb, bool rc)
 	{
@@ -4366,30 +3843,30 @@ private:
 
 		CPU.FPR[frd] = res;
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fdiv.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FDIV(): fdiv.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FSUB(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] - CPU.FPR[frb];
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fsub.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FSUB(): fsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FADD(u32 frd, u32 fra, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] + CPU.FPR[frb];
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fadd.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FASS(): fadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FSQRT(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = sqrt(CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fsqrt.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FSQRT(): fsqrt.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] >= 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
-		if(rc) UNK("fsel.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FSEL(): fsel.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)
 	{
@@ -4412,7 +3889,7 @@ private:
 			CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		}
 
-		if(rc) UNK("fmul.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMUL(): fmul.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
@@ -4421,31 +3898,31 @@ private:
 			CPU.SetFPSCRException(FPSCR_ZX);
 		}
 		CPU.FPR[frd] = 1.0 / sqrt(CPU.FPR[frb]);
-		if(rc) UNK("frsqrte.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FRSQRTE(): frsqrte.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb];
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fmsub.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMSUB(): fmsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb];
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fmadd.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMADD(): fmadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fnmsub.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNMSUB(): fnmsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fnmadd.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNMADD(): fnmadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FCMPO(u32 crfd, u32 fra, u32 frb)
 	{
@@ -4472,22 +3949,22 @@ private:
 	void FNEG(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -CPU.FPR[frb];
-		if(rc) UNK("fneg.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNEG(): fneg.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMR(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[frb];
-		if(rc) UNK("fmr.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FMR(): fmr.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FNABS(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -fabs(CPU.FPR[frb]);
-		if(rc) UNK("fnabs.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FNABS(): fnabs.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FABS(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = fabs(CPU.FPR[frb]);
-		if(rc) UNK("fabs.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FABS(): fabs.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FCTID(u32 frd, u32 frb, bool rc)
 	{
@@ -4546,7 +4023,7 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = r;
-		if(rc) UNK("fctid.");
+		if(rc) throw "FCTID(): fctid.";
 	}
 	void FCTIDZ(u32 frd, u32 frb, bool rc)
 	{
@@ -4584,7 +4061,7 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = r;
-		if(rc) UNK("fctidz.");
+		if(rc) throw "FCTIDZ(): fctidz.";
 	}
 	void FCFID(u32 frd, u32 frb, bool rc)
 	{
@@ -4606,41 +4083,11 @@ private:
 		CPU.FPR[frd] = bf;
 
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) UNK("fcfid.");//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) throw "FCFID(): fcfid.";//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 
 	void UNK(const u32 code, const u32 opcode, const u32 gcode)
 	{
-		UNK(fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
-	}
-
-	void UNK(const std::string& err, bool pause = true)
-	{
-		LOG_ERROR(PPU, "%s #pc: 0x%x", err.c_str(), CPU.PC);
-
-		if(!pause) return;
-
-		Emu.Pause();
-
-		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "r%d = 0x%llx", i, CPU.GPR[i]);
-		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "f%d = %llf", i, CPU.FPR[i]._double);
-		for(uint i=0; i<32; ++i) LOG_NOTICE(PPU, "v%d = 0x%s [%s]", i, CPU.VPR[i].to_hex().c_str(), CPU.VPR[i].to_xyzw().c_str());
-		LOG_NOTICE(PPU, "CR = 0x%08x", CPU.CR.CR);
-		LOG_NOTICE(PPU, "LR = 0x%llx", CPU.LR);
-		LOG_NOTICE(PPU, "CTR = 0x%llx", CPU.CTR);
-		LOG_NOTICE(PPU, "XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]", CPU.XER.XER, fmt::by_value(CPU.XER.CA), fmt::by_value(CPU.XER.OV), fmt::by_value(CPU.XER.SO));
-		LOG_NOTICE(PPU, "FPSCR = 0x%x "
-			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
-			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
-			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
-			"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
-			"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]",
-			CPU.FPSCR.FPSCR,
-			fmt::by_value(CPU.FPSCR.RN),
-			fmt::by_value(CPU.FPSCR.NI), fmt::by_value(CPU.FPSCR.XE), fmt::by_value(CPU.FPSCR.ZE), fmt::by_value(CPU.FPSCR.UE), fmt::by_value(CPU.FPSCR.OE), fmt::by_value(CPU.FPSCR.VE),
-			fmt::by_value(CPU.FPSCR.VXCVI), fmt::by_value(CPU.FPSCR.VXSQRT), fmt::by_value(CPU.FPSCR.VXSOFT), fmt::by_value(CPU.FPSCR.FPRF),
-			fmt::by_value(CPU.FPSCR.FI), fmt::by_value(CPU.FPSCR.FR), fmt::by_value(CPU.FPSCR.VXVC), fmt::by_value(CPU.FPSCR.VXIMZ),
-			fmt::by_value(CPU.FPSCR.VXZDZ), fmt::by_value(CPU.FPSCR.VXIDI), fmt::by_value(CPU.FPSCR.VXISI), fmt::by_value(CPU.FPSCR.VXSNAN),
-			fmt::by_value(CPU.FPSCR.XX), fmt::by_value(CPU.FPSCR.ZX), fmt::by_value(CPU.FPSCR.UX), fmt::by_value(CPU.FPSCR.OX), fmt::by_value(CPU.FPSCR.VX), fmt::by_value(CPU.FPSCR.FEX), fmt::by_value(CPU.FPSCR.FX));
+		throw fmt::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode);
 	}
 };

@@ -47,7 +47,7 @@ namespace loader
 
 			if (m_ehdr.e_machine != MACHINE_PPC64 && m_ehdr.e_machine != MACHINE_SPU)
 			{
-				LOG_ERROR(LOADER, "Unknown elf64 machine type: 0x%x", m_ehdr.e_machine.ToLE());
+				LOG_ERROR(LOADER, "Unknown elf64 machine type: 0x%x", m_ehdr.e_machine);
 				return bad_version;
 			}
 
@@ -399,7 +399,7 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type.ToLE())
+				switch (phdr.p_type.value())
 				{
 				case 0x00000001: //LOAD
 					if (phdr.p_memsz)
@@ -442,12 +442,12 @@ namespace loader
 						{
 							sys_process_param_info& info = Emu.GetInfo().GetProcParam();
 							/*
-							LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version.ToLE());
-							LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio.ToLE());
-							LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize.ToLE());
-							LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize.ToLE());
-							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg.ToLE());
-							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr.ToLE());
+							LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
+							LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
+							LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
+							LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
+							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
+							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 							*/
 
 							info = proc_param.info;
@@ -463,7 +463,7 @@ namespace loader
 
 						if (proc_prx_param.magic != 0x1b434cec)
 						{
-							LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic.ToLE());
+							LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic);
 							break;
 						}
 

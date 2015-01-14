@@ -165,8 +165,9 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::operator()(CPUThread& CPU, T... args) const
 	{
-		const u32 pc = vm::get_ref<be_t<u32>>((u32)m_addr);
-		const u32 rtoc = vm::get_ref<be_t<u32>>((u32)m_addr + 4);
+		auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
+		const u32 pc = data[0];
+		const u32 rtoc = data[1];
 
 		assert(CPU.GetType() == CPU_THREAD_PPU);
 		return cb_detail::_func_caller<RT, T...>::call(static_cast<PPUThread&>(CPU), pc, rtoc, args...);

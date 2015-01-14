@@ -32,7 +32,7 @@ s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8
 	vm::var<be_t<u32>> queue;
 	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
 		spurs, queue, port, size, vm::read32(libsre_rtoc - 0x7E2C));
-	queue_id = queue->ToLE();
+	queue_id = queue;
 	return res;
 #endif
 
@@ -763,7 +763,7 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 		attr->m.nSpus,
 		attr->m.spuPriority,
 		attr->m.ppuPriority,
-		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0),
+		attr->m.flags | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0),
 		attr->m.prefix,
 		attr->m.prefixSize,
 		attr->m.container,
@@ -799,7 +799,7 @@ s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const Ce
 		attr->m.nSpus,
 		attr->m.spuPriority,
 		attr->m.ppuPriority,
-		attr->m.flags.ToLE() | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0) | SAF_SECOND_VERSION,
+		attr->m.flags | (attr->m.exitIfNoWork ? SAF_EXIT_IF_NO_WORK : 0) | SAF_SECOND_VERSION,
 		attr->m.prefix,
 		attr->m.prefixSize,
 		attr->m.container,
@@ -851,7 +851,7 @@ s64 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 		return CELL_SPURS_CORE_ERROR_ALIGN;
 	}
 
-	if (attr->m.flags.ToLE() & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
+	if (attr->m.flags & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -925,7 +925,7 @@ s64 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s3
 
 	if (type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)
 	{
-		if (attr->m.flags.ToLE() & SAF_SPU_MEMORY_CONTAINER_SET)
+		if (attr->m.flags & SAF_SPU_MEMORY_CONTAINER_SET)
 		{
 			return CELL_SPURS_CORE_ERROR_STAT;
 		}
@@ -976,7 +976,7 @@ s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 			{
 				return CELL_SPURS_CORE_ERROR_PERM;
 			}
-			if (attr->m.flags.ToLE() & SAF_SYSTEM_WORKLOAD_ENABLED)
+			if (attr->m.flags & SAF_SYSTEM_WORKLOAD_ENABLED)
 			{
 				return CELL_SPURS_CORE_ERROR_BUSY;
 			}
@@ -1442,7 +1442,7 @@ s32 spursAddWorkload(
 	CellSpurs::_sub_str3& wkl = wnum <= 15 ? spurs->m.wklG1[wnum] : spurs->m.wklG2[wnum & 0xf];
 	spurs->m.wklMskB.atomic_op_sync([spurs, &wkl, wnum, &res_wkl](be_t<u32>& v)
 	{
-		const u32 mask = v.ToLE() & ~(0x80000000u >> wnum);
+		const u32 mask = v & ~(0x80000000u >> wnum);
 		res_wkl = 0;
 
 		for (u32 i = 0, m = 0x80000000, k = 0; i < 32; i++, m >>= 1)
@@ -1685,7 +1685,7 @@ s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if ((spurs->m.wklMskA.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	if ((spurs->m.wklMskA.read_relaxed() & (0x80000000u >> wid)) == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}
@@ -1797,7 +1797,7 @@ s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
-	if ((spurs->m.wklMskA.read_relaxed().ToLE() & (0x80000000u >> wid)) == 0)
+	if ((spurs->m.wklMskA.read_relaxed() & (0x80000000u >> wid)) == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
 	}

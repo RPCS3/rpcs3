@@ -184,7 +184,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 	}
 	default:
 	{
-		throw fmt::Format("decode_x64_reg_op(%.16llX): unsupported opcode found (0x%.2X, 0x%.2X, 0x%.2X)", code - decoded_size, op1, code[0], code[1]);
+		throw fmt::Format("decode_x64_reg_op(%.16llXh): unsupported opcode found (0x%.2X, 0x%.2X, 0x%.2X)", code - decoded_size, op1, code[0], code[1]);
 	}
 	}
 }
@@ -198,7 +198,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 	if (u == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
 	{
 		const u32 addr = (u32)addr64;
-		if (addr >= RAW_SPU_BASE_ADDR && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
 		{
 			// one x64 instruction is manually decoded and interpreted
 			x64_op_t op;
@@ -265,15 +265,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 			// it's dangerous because destructors won't be executed
 		}
 		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		if (CPUThread* t = GetCurrentCPUThread())
-		{
-			throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))", is_writing ? "writing" : "reading", (u32)addr,
-				t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
-		}
-		else
-		{
-			throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", (u32)addr);
-		}
+		throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 	}
 
 	// else some fatal error (should crash)
@@ -296,7 +288,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	if (addr64 < 0x100000000ull)
 	{
 		const u32 addr = (u32)addr64;
-		if (addr >= RAW_SPU_BASE_ADDR && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
 		{
 			// one x64 instruction is manually decoded and interpreted
 			x64_op_t op;
@@ -363,15 +355,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		if (CPUThread* t = GetCurrentCPUThread())
-		{
-			throw fmt::Format("Access violation %s location 0x%x (is_alive=%d, last_syscall=0x%llx (%s))", /*is_writing ? "writing" : "reading"*/ "at", (u32)addr,
-				t->IsAlive() ? 1 : 0, t->m_last_syscall, SysCalls::GetHLEFuncName((u32)t->m_last_syscall).c_str());
-		}
-		else
-		{
-			throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", (u32)addr);
-		}
+		throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", addr);
 	}
 
 	// else some fatal error
