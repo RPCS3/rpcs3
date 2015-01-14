@@ -77,7 +77,7 @@ namespace detail
 
 		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
-			CPU.GPR[3] = cast_ppu_gpr<T>::func(result);
+			CPU.GPR[3] = cast_to_ppu_gpr<T>(result);
 		}
 	};
 
@@ -88,7 +88,7 @@ namespace detail
 
 		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
-			CPU.FPR[1] = (double)result;
+			CPU.FPR[1] = result;
 		}
 	};
 

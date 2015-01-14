@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <unordered_map>
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "PSVFuncList.h"
@@ -7,29 +8,19 @@ std::vector<psv_func> g_psv_func_list;
 
 void add_psv_func(psv_func& data)
 {
+	// setup special functions (without NIDs)
 	if (!g_psv_func_list.size())
 	{
 		psv_func unimplemented;
-		unimplemented.nid = 0x00000000; // must not be a valid id
-		unimplemented.name = "INVALID FUNCTION (0x0)";
-		unimplemented.func.reset(new psv_func_detail::func_binder<u32>([]() -> u32
-		{
-			LOG_ERROR(HLE, "Unimplemented function executed");
-			Emu.Pause();
-
-			return 0xffffffffu;
-		}));
+		unimplemented.nid = 0;
+		unimplemented.name = "Special function (unimplemented stub)";
+		unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU){ CPU.m_last_syscall = vm::psv::read32(CPU.PC + 4); throw "Unimplemented function executed"; }));
 		g_psv_func_list.push_back(unimplemented);
 
 		psv_func hle_return;
-		hle_return.nid = 0x00000001; // must not be a valid id
-		hle_return.name = "INVALID FUNCTION (0x1)";
-		hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU)
-		{
-			CPU.FastStop();
-
-			return;
-		}));
+		hle_return.nid = 1;
+		hle_return.name = "Special function (return from HLE)";
+		hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU){ CPU.FastStop(); }));
 		g_psv_func_list.push_back(hle_return);
 	}
 
@@ -40,7 +31,7 @@ psv_func* get_psv_func_by_nid(u32 nid)
 {
 	for (auto& f : g_psv_func_list)
 	{
-		if (f.nid == nid)
+		if (f.nid == nid && &f - g_psv_func_list.data() >= 2 /* special functions count */)
 		{
 			return &f;
 		}
@@ -61,8 +52,13 @@ u32 get_psv_func_index(psv_func* func)
 void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)
 {
 	assert(index < g_psv_func_list.size());
+	
+	auto old_last_syscall = CPU.m_last_syscall;
+	CPU.m_last_syscall = g_psv_func_list[index].nid;
 
 	(*g_psv_func_list[index].func)(CPU);
+
+	CPU.m_last_syscall = old_last_syscall;
 }
 
 extern psv_log_base sceLibc;

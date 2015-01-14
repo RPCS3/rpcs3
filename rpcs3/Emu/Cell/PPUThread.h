@@ -816,9 +816,9 @@ public:
 template<typename T, size_t size = sizeof(T)>
 struct cast_ppu_gpr
 {
-	static_assert(sizeof(T) <= 8, "Type for cast_ppu_gpr is invalid (too big)");
+	static_assert(sizeof(T) <= 8, "Invalid type for cast_ppu_gpr");
 
-	static u64 func(const T& value)
+	__forceinline static u64 to_gpr(const T& value)
 	{
 		u64 result = 0;
 		(T&)result = value;
@@ -829,7 +829,7 @@ struct cast_ppu_gpr
 template<typename T>
 struct cast_ppu_gpr<T, 1>
 {
-	static u64 func(const T& value)
+	__forceinline static u64 to_gpr(const T& value)
 	{
 		return (u8&)value;
 	}
@@ -838,7 +838,7 @@ struct cast_ppu_gpr<T, 1>
 template<typename T>
 struct cast_ppu_gpr<T, 2>
 {
-	static u64 func(const T& value)
+	__forceinline static u64 to_gpr(const T& value)
 	{
 		return (u16&)value;
 	}
@@ -847,7 +847,7 @@ struct cast_ppu_gpr<T, 2>
 template<typename T>
 struct cast_ppu_gpr<T, 4>
 {
-	static u64 func(const T& value)
+	__forceinline static u64 to_gpr(const T& value)
 	{
 		return (u32&)value;
 	}
@@ -856,7 +856,7 @@ struct cast_ppu_gpr<T, 4>
 template<typename T>
 struct cast_ppu_gpr<T, 8>
 {
-	static u64 func(const T& value)
+	__forceinline static u64 to_gpr(const T& value)
 	{
 		return (u64&)value;
 	}
@@ -865,7 +865,7 @@ struct cast_ppu_gpr<T, 8>
 template<>
 struct cast_ppu_gpr<s8, 1>
 {
-	static u64 func(const s8& value)
+	__forceinline static u64 to_gpr(const s8& value)
 	{
 		return value;
 	}
@@ -874,7 +874,7 @@ struct cast_ppu_gpr<s8, 1>
 template<>
 struct cast_ppu_gpr<s16, 2>
 {
-	static u64 func(const s16& value)
+	__forceinline static u64 to_gpr(const s16& value)
 	{
 		return value;
 	}
@@ -883,7 +883,7 @@ struct cast_ppu_gpr<s16, 2>
 template<>
 struct cast_ppu_gpr<s32, 4>
 {
-	static u64 func(const s32& value)
+	__forceinline static u64 to_gpr(const s32& value)
 	{
 		return value;
 	}
@@ -892,8 +892,14 @@ struct cast_ppu_gpr<s32, 4>
 template<>
 struct cast_ppu_gpr<s64, 8>
 {
-	static u64 func(const s64& value)
+	__forceinline static u64 to_gpr(const s64& value)
 	{
 		return value;
 	}
 };
+
+template<typename T>
+__forceinline static u64 cast_to_ppu_gpr(const T& value)
+{
+	return cast_ppu_gpr<T>::to_gpr(value);
+}

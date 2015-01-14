@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "rpcs3/Ini.h"
-#include "Emu/SysCalls/SysCalls.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/DbgCommand.h"
+#include "Emu/SysCalls/SysCalls.h"
+#include "Emu/ARMv7/PSVFuncList.h"
 
 #include "CPUDecoder.h"
 #include "CPUThread.h"
@@ -256,6 +257,62 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
+	auto get_syscall_name = [this](u64 syscall) -> std::string
+	{
+		switch (GetType())
+		{
+		case CPU_THREAD_ARMv7:
+		{
+			if ((u32)syscall == syscall)
+			{
+				if (syscall)
+				{
+					if (auto func = get_psv_func_by_nid((u32)syscall))
+					{
+						return func->name;
+					}
+				}
+				else
+				{
+					return{};
+				}
+			}
+
+			return "unknown function";
+		}
+		case CPU_THREAD_PPU:
+		{
+			if ((u32)syscall == syscall)
+			{
+				if (syscall)
+				{
+					if (syscall < 1024)
+					{
+						// TODO:
+						//return SysCalls::GetSyscallName((u32)syscall);
+					}
+					else
+					{
+						return SysCalls::GetHLEFuncName((u32)syscall);
+					}
+				}
+				else
+				{
+					return{};
+				}
+			}
+
+			// fallthrough
+		}
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
+		default:
+		{
+			return "unknown syscall";
+		}
+		}
+	};
+
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
@@ -310,13 +367,13 @@ void CPUThread::Task()
 	}
 	catch (const std::string& e)
 	{
-		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, SysCalls::GetHLEFuncName((u32)m_last_syscall));
+		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
 		LOG_NOTICE(GENERAL, RegsToString());
 		Emu.Pause();
 	}
 	catch (const char* e)
 	{
-		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, SysCalls::GetHLEFuncName((u32)m_last_syscall));
+		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
 		LOG_NOTICE(GENERAL, RegsToString());
 		Emu.Pause();
 	}
