@@ -5,7 +5,7 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
-#ifndef __unix__
+#ifdef _WIN32
 #include "git-version.h"
 #endif
 #include "Ini.h"
@@ -72,7 +72,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef WIN32
+#ifdef _WIN32
 	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
 #else
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
