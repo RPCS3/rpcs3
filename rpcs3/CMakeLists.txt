@@ -5,7 +5,7 @@ include(cotire)
 
 project(rpcs3)
 
-# Generate git-version.cpp at build time.
+# Generate git-version.h at build time.
 add_custom_target(GitVersion ALL
 	DEPENDS something_that_never_exists)
 add_custom_command(OUTPUT something_that_never_exists
