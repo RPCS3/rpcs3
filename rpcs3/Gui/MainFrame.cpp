@@ -5,9 +5,7 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
-#ifdef _WIN32
 #include "git-version.h"
-#endif
 #include "Ini.h"
 #include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
@@ -72,11 +70,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef _WIN32
 	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
-#else
-	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
-#endif
 
 	wxMenuBar* menubar = new wxMenuBar();
 
