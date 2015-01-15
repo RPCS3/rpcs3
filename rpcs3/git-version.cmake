@@ -1,4 +1,4 @@
-set(GIT_VERSION_FILE "${SOURCE_DIR}/git-version.h")
+set(GIT_VERSION_FILE "${SOURCE_DIR}/rpcs3/git-version.h")
 set(GIT_VERSION "unknown")
 set(GIT_VERSION_UPDATE "1")
 
@@ -33,7 +33,7 @@ if(EXISTS ${GIT_VERSION_FILE})
 endif()
 
 set(code_string "// This is a generated file.\n\n"
-	"#define RPCS3_GIT_VERSION \"${GIT_VERSION}\"\;\n\n"
+	"#define RPCS3_GIT_VERSION \"${GIT_VERSION}\"\n\n"
 	"// If you don't want this file to update/recompile, change to 1.\n"
 	"#define RPCS3_GIT_VERSION_NO_UPDATE 0\n")
 
