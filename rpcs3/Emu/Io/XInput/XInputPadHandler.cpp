@@ -1,5 +1,5 @@
 #include "stdafx_gui.h"
-#if defined (_WIN32)
+#if defined _WIN64
 #include "Utilities/Log.h"
 #include "XInputPadHandler.h"
 

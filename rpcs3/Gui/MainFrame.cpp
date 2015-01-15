@@ -72,7 +72,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef WIN32
+#ifdef _WIN64
 	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
 #else
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
@@ -461,7 +461,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
-#if defined (_WIN32)
+#if defined _WIN64
 	cbox_pad_handler->Append("XInput");
 #endif
 	//cbox_pad_handler->Append("DirectInput");
@@ -476,7 +476,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
-#if defined (_WIN32)
+#if defined _WIN64
 	cbox_audio_out->Append("XAudio2");
 #endif
 

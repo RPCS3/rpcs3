@@ -22,7 +22,7 @@ int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 	}
 
 	//TODO: Use virtual screen size
-#ifdef _WIN32
+#ifdef _WIN64
 	HDC screen = GetDC(NULL);
 	float diagonal = roundf(sqrtf((powf(float(GetDeviceCaps(screen, HORZSIZE)), 2) + powf(float(GetDeviceCaps(screen, VERTSIZE)), 2))) * 0.0393f);
 #else
@@ -32,7 +32,7 @@ int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 
 	if (Ini.GS3DTV.GetValue())
 	{
-#ifdef _WIN32
+#ifdef _WIN64
 		*screenSize = diagonal;
 #endif
 		return CELL_OK;

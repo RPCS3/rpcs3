@@ -36,7 +36,7 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	t_descr->SetForegroundColour(wxColor(255,255,255));
 	t_descr->SetPosition(wxPoint(12,50));
 
-#ifdef WIN32
+#ifdef _WIN64
 	wxStaticText* t_version = new wxStaticText(this, wxID_ANY, wxString::Format(_PRGNAME_" Version : " "git-" RPCS3_GIT_VERSION));
 #else
 	wxStaticText* t_version = new wxStaticText(this, wxID_ANY, wxString::Format(_PRGNAME_" Version : " _PRGVER_));

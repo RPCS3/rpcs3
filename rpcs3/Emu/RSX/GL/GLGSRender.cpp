@@ -1469,7 +1469,7 @@ void GLGSRender::OnInitThread()
 	glGenTextures(1, &g_flip_tex);
 	glGenBuffers(6, g_pbo); // 4 for color buffers + 1 for depth buffer + 1 for flip()
 
-#ifdef _WIN32
+#ifdef _WIN64
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 #endif
 

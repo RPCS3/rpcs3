@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 	#include <windows.h>
 	#undef CreateFile
 #else

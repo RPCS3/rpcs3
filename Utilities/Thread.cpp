@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "Thread.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <windows.h>
 #else
 #include <signal.h>
@@ -189,7 +189,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 	}
 }
 
-#ifdef _WIN32
+#ifdef _WIN64
 
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
@@ -458,7 +458,7 @@ void ThreadBase::Start()
 	{
 		SetCurrentThreadDebugName(GetThreadName().c_str());
 
-#ifdef _WIN32
+#ifdef _WIN64
 		auto old_se_translator = _set_se_translator(_se_translator);
 #else
 		if (sigaction_result == -1) assert(!"sigaction() failed");
@@ -484,7 +484,7 @@ void ThreadBase::Start()
 		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 
-#ifdef _WIN32
+#ifdef _WIN64
 		_set_se_translator(old_se_translator);
 #endif
 	});
@@ -557,7 +557,7 @@ void thread::start(std::function<void()> func)
 	{
 		SetCurrentThreadDebugName(name.c_str());
 
-#ifdef _WIN32
+#ifdef _WIN64
 		auto old_se_translator = _set_se_translator(_se_translator);
 #else
 		if (sigaction_result == -1) assert(!"sigaction() failed");
@@ -583,7 +583,7 @@ void thread::start(std::function<void()> func)
 		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 
-#ifdef _WIN32
+#ifdef _WIN64
 		_set_se_translator(old_se_translator);
 #endif
 	});

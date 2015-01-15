@@ -10,7 +10,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <Windows.h>
 #endif
 #include "sys_time.h"
@@ -23,7 +23,7 @@ extern int cellSysutilGetSystemParamInt(int id, vm::ptr<u32> value);
 // Auxiliary functions
 u64 get_time()
 {
-#ifdef _WIN32
+#ifdef _WIN64
 	static struct PerformanceFreqHolder
 	{
 		u64 value;

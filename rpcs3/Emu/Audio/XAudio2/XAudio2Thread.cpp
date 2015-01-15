@@ -3,7 +3,7 @@
 #include "Emu/System.h"
 #include "rpcs3/Ini.h"
 
-#if defined (_WIN32)
+#if defined _WIN64
 #include "XAudio2Thread.h"
 
 XAudio2Thread::~XAudio2Thread()

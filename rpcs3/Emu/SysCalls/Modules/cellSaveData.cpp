@@ -10,7 +10,7 @@
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 	#include <windows.h>
 	#undef CreateFile
 #else

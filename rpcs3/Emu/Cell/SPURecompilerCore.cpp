@@ -168,7 +168,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	{
 		log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
 			entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
-#ifdef _WIN32
+#ifdef _WIN64
 		//if (!RtlAddFunctionTable(&info, 1, (u64)entry[start].pointer))
 		//{
 		//	LOG_ERROR(Log::SPU, "RtlAddFunctionTable() failed");
@@ -217,7 +217,7 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 					i < (u32)pos + (u32)entry[pos].count)
 				{
 					runtime.release(entry[i].pointer);
-#ifdef _WIN32
+#ifdef _WIN64
 					//RtlDeleteFunctionTable(&entry[i].info);
 #endif
 					entry[i].pointer = nullptr;

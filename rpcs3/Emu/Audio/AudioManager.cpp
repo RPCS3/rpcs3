@@ -20,7 +20,7 @@ void AudioManager::Init()
 	default:
 	case 0: m_audio_out = new NullAudioThread(); break;
 	case 1: m_audio_out = new OpenALThread(); break;
-#if defined (_WIN32)
+#if defined _WIN64
 	case 2: m_audio_out = new XAudio2Thread(); break;
 #endif
 	}

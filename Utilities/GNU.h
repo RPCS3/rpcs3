@@ -2,13 +2,13 @@
 
 #include <emmintrin.h>
 
-#ifdef _WIN32
+#ifdef _WIN64
 #define thread_local __declspec(thread)
 #elif __APPLE__
 #define thread_local __thread
 #endif
 
-#ifdef _WIN32
+#ifdef _WIN64
 #define __noinline __declspec(noinline)
 #else
 #define __noinline __attribute__((noinline))

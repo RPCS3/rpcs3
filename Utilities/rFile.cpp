@@ -5,7 +5,7 @@
 #include <wx/filename.h>
 #include "rFile.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <Windows.h>
 
 // Maybe in StrFmt?
@@ -21,7 +21,7 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 }
 #endif
 
-#ifdef _WIN32
+#ifdef _WIN64
 #define GET_API_ERROR GetLastError()
 #else
 #define GET_API_ERROR err
@@ -31,7 +31,7 @@ bool getFileInfo(const char *path, FileInfo *fileInfo) {
 	// TODO: Expand relative paths?
 	fileInfo->fullName = path;
 
-#ifdef _WIN32
+#ifdef _WIN64
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
 	if (!GetFileAttributesExW(ConvertUTF8ToWString(path).c_str(), GetFileExInfoStandard, &attrs)) {
 		fileInfo->size = 0;

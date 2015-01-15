@@ -18,7 +18,7 @@
 #include "Emu/Io/Pad.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Windows/WindowsPadHandler.h"
-#if defined(_WIN32)
+#if defined _WIN64
 #include "Emu/Io/XInput/XInputPadHandler.h"
 #endif
 
@@ -28,7 +28,7 @@
 #include "Gui/GLGSFrame.h"
 #include <wx/stdpaths.h>
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <wx/msw/wrapwin.h>
 #endif
 

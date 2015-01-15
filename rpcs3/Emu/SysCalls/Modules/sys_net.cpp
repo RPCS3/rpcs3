@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <winsock.h>
 #else
 extern "C"
@@ -75,7 +75,7 @@ int inet_pton(int af, const char *src, char *dst)
 
 s32 getLastError()
 {
-#ifdef _WIN32
+#ifdef _WIN64
 	s32 ret = WSAGetLastError();
 	if (ret > 10000 && ret < 11000)
 		return ret % 10000;
@@ -85,7 +85,7 @@ s32 getLastError()
 	return errno;
 #endif
 }
-#ifdef _WIN32
+#ifdef _WIN64
 using pck_len_t = s32;
 #else
 using pck_len_t = u32;
@@ -317,7 +317,7 @@ int sys_net_socket(s32 family, s32 type, s32 protocol)
 int sys_net_socketclose(s32 s)
 {
 	sys_net->Warning("socket(s=%d)", s);
-#ifdef _WIN32
+#ifdef _WIN64
 	int ret = closesocket(s);
 #else
 	int ret = close(s);
@@ -342,7 +342,7 @@ int sys_net_initialize_network_ex(vm::ptr<sys_net_initialize_parameter> param)
 {
 	sys_net->Warning("sys_net_initialize_network_ex(param_addr=0x%x)", param.addr());
 	g_lastError = vm::ptr<s32>::make((u32)Memory.Alloc(4, 1));
-#ifdef _WIN32
+#ifdef _WIN64
 	WSADATA wsaData;
 	WORD wVersionRequested = MAKEWORD(1,1);
 	WSAStartup(wVersionRequested, &wsaData);
@@ -475,7 +475,7 @@ int sys_net_finalize_network()
 	sys_net->Warning("sys_net_initialize_network_ex()");
 	Memory.Free(g_lastError.addr());
 	g_lastError = vm::ptr<s32>::make(0);
-#ifdef _WIN32
+#ifdef _WIN64
 	WSACleanup();
 #endif
 	return CELL_OK;
