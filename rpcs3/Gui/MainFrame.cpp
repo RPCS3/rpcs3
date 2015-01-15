@@ -5,9 +5,7 @@
 #include "rpcs3.h"
 #include "MainFrame.h"
 
-#ifndef __unix__
 #include "git-version.h"
-#endif
 #include "Ini.h"
 #include "Emu/SysCalls/Modules/cellSysutil.h"
 #include "Emu/RSX/sysutil_video.h"
@@ -72,11 +70,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef _WIN64
 	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
-#else
-	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
-#endif
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -461,7 +455,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
-#if defined _WIN64
+#if defined (_WIN32)
 	cbox_pad_handler->Append("XInput");
 #endif
 	//cbox_pad_handler->Append("DirectInput");
@@ -476,7 +470,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
-#if defined _WIN64
+#if defined (_WIN32)
 	cbox_audio_out->Append("XAudio2");
 #endif
 
