@@ -94,6 +94,7 @@
     </Link>
     <PreBuildEvent>
       <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -120,6 +121,7 @@
     </Link>
     <PreBuildEvent>
       <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Message>Updating git-version.h</Message>
     </PreBuildEvent>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -156,8 +158,8 @@
       <AdditionalLibraryDirectories>..\wxWidgets\lib\vc_x64_lib;..\ffmpeg\Windows\x86_64\lib;..\OpenAL\Win64</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>"$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
