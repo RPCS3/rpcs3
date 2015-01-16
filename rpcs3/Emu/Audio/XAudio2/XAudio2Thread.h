@@ -5,9 +5,9 @@
 
 // forced define Win7, delete this for using XAudio2 2.8
 #define WINVER 0x0601
-#define _WIN64_WINNT 0x0601
+#define _WIN32_WINNT 0x0601
 
-#if _WIN64_WINNT >= 0x0602 /*_WIN64_WINNT_WIN8*/
+#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
 #include <xaudio2.h>
 #pragma comment(lib,"xaudio2.lib")
 #else
