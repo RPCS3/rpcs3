@@ -1,9 +1,9 @@
 #pragma once
-#ifndef _WIN32
+#ifndef _WIN64
 #include <GL/glew.h>
 #endif
 
-#ifdef _WIN32
+#ifdef _WIN64
 #include <Windows.h>
 #include "GL/gl.h"
 #include "GL/glext.h"

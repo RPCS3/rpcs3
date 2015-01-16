@@ -4,7 +4,7 @@
 #include "Memory.h"
 #include "Emu/Cell/RawSPUThread.h"
 
-#ifndef _WIN32
+#ifndef _WIN64
 #include <sys/mman.h>
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
@@ -107,7 +107,7 @@ void MemoryBase::Init(MemoryType type)
 	memset(m_pages, 0, sizeof(m_pages));
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
-#ifdef _WIN32
+#ifdef _WIN64
 	if (!vm::g_base_addr)
 #else
 	if ((s64)vm::g_base_addr == (s64)-1)
@@ -237,7 +237,7 @@ MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	: MemInfo(_addr, PAGE_4K(_size))
 {
 	void* real_addr = (void*)((u64)Memory.GetBaseAddr() + _addr);
-#ifdef _WIN32
+#ifdef _WIN64
 	mem = VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE);
 #else
 	if (::mprotect(real_addr, size, PROT_READ | PROT_WRITE))
@@ -266,7 +266,7 @@ void MemBlockInfo::Free()
 	if (mem)
 	{
 		Memory.UnregisterPages(addr, size);
-#ifdef _WIN32
+#ifdef _WIN64
 		if (!VirtualFree(mem, size, MEM_DECOMMIT))
 #else
 		if (::mprotect(mem, size, PROT_NONE))

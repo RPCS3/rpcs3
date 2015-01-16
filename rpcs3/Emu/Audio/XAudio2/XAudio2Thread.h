@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Audio/AudioThread.h"
-#if defined (_WIN32)
+#if defined _WIN64
 
 // forced define Win7, delete this for using XAudio2 2.8
 #define WINVER 0x0601

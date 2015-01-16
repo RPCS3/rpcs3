@@ -5,7 +5,7 @@
 
 namespace vm
 {
-	#ifdef _WIN32
+	#ifdef _WIN64
 	#include <Windows.h>
 		void* const g_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 	#else

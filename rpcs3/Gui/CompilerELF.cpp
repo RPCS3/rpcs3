@@ -124,7 +124,7 @@ CompilerELF::CompilerELF(wxWindow* parent)
 		"	b 	exit, 0, 0\n"
 	);
 
-#ifdef _WIN32
+#ifdef _WIN64
 	::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
 	::SendMessage((HWND)asm_list->GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
 #endif
@@ -317,7 +317,7 @@ void CompilerELF::OnScroll(wxScrollWinEvent& event)
 		dst = hex_list;
 	}
 
-#ifdef _WIN32
+#ifdef _WIN64
 	if(!m_disable_scroll && src && dst && event.GetOrientation() == wxVERTICAL)
 	{
 		s64 kind = -1;

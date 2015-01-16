@@ -38,7 +38,7 @@ std::string simplify_path(const std::string& path, bool is_dir, bool is_ps3)
 
 	std::string result = fmt::merge(path_blocks, "/");
 	
-#ifdef _WIN32
+#ifdef _WIN64
 	if (is_ps3)
 #endif
 	{

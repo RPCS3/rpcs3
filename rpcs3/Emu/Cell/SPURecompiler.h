@@ -28,7 +28,7 @@ public:
 		u16 count; // count of instructions compiled from current point (and to be checked)
 		u32 valid; // copy of valid opcode for validation
 		void* pointer; // pointer to executable memory object
-#ifdef _WIN32
+#ifdef _WIN64
 		//_IMAGE_RUNTIME_FUNCTION_ENTRY info;
 #endif
 	};
@@ -50,7 +50,7 @@ public:
 
 #define c (*compiler)
 
-#ifdef _WIN32
+#ifdef _WIN64
 #define cpu_xmm(x) oword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 16) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 16")
 #define cpu_qword(x) qword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 8) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 8")
 #define cpu_dword(x) dword_ptr(*cpu_var, (sizeof((*(SPUThread*)nullptr).x) == 4) ? (s32)offsetof(SPUThread, x) : throw "sizeof("#x") != 4")

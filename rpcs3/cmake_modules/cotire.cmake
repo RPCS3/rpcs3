@@ -55,7 +55,7 @@ function (cotire_determine_compiler_version _language _versionPrefix)
 		# use CMake's predefined compiler version variable (available since CMake 2.8.8)
 		if (DEFINED CMAKE_${_language}_COMPILER_VERSION)
 			set (${_versionPrefix}_VERSION "${CMAKE_${_language}_COMPILER_VERSION}")
-		elseif (WIN32)
+		elseif (WIN64)
 			# cl.exe messes with the output streams unless the environment variable VS_UNICODE_OUTPUT is cleared
 			unset (ENV{VS_UNICODE_OUTPUT})
 			string (STRIP "${CMAKE_${_language}_COMPILER_ARG1}" _compilerArg1)
@@ -256,7 +256,7 @@ function (cotire_copy_set_properites _configurations _type _source _target)
 endfunction()
 
 function (cotire_filter_compile_flags _language _flagFilter _matchedOptionsVar _unmatchedOptionsVar)
-	if (WIN32 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
+	if (WIN64 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
 		set (_flagPrefix "[/-]")
 	else()
 		set (_flagPrefix "--?")
@@ -369,7 +369,7 @@ function (cotire_get_target_compile_flags _config _language _directory _target _
 	endif()
 	if (UNIX)
 		separate_arguments(_compileFlags UNIX_COMMAND "${_compileFlags}")
-	elseif(WIN32)
+	elseif(WIN64)
 		separate_arguments(_compileFlags WINDOWS_COMMAND "${_compileFlags}")
 	else()
 		separate_arguments(_compileFlags)
@@ -670,7 +670,7 @@ endfunction()
 
 macro (cotire_add_definitions_to_cmd _cmdVar _language)
 	foreach (_definition ${ARGN})
-		if (WIN32 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
+		if (WIN64 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
 			list (APPEND ${_cmdVar} "/D${_definition}")
 		else()
 			list (APPEND ${_cmdVar} "-D${_definition}")
@@ -680,7 +680,7 @@ endmacro()
 
 macro (cotire_add_includes_to_cmd _cmdVar _language)
 	foreach (_include ${ARGN})
-		if (WIN32 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
+		if (WIN64 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
 			file (TO_NATIVE_PATH "${_include}" _include)
 			list (APPEND ${_cmdVar} "/I${_include}")
 		else()
@@ -842,7 +842,7 @@ macro (cotire_parse_line _line _headerFileVar _headerDepthVar)
 endmacro()
 
 function (cotire_parse_includes _language _scanOutput _ignoredIncudeDirs _honoredIncudeDirs _ignoredExtensions _selectedIncludesVar _unparsedLinesVar)
-	if (WIN32)
+	if (WIN64)
 		# prevent CMake macro invocation errors due to backslash characters in Windows paths
 		string (REPLACE "\\" "/" _scanOutput "${_scanOutput}")
 	endif()
@@ -1111,7 +1111,7 @@ function (cotire_generate_unity_source _unityFile)
 			endif()
 		endforeach()
 		get_filename_component(_sourceFile "${_sourceFile}" ABSOLUTE)
-		if (WIN32)
+		if (WIN64)
 			file (TO_NATIVE_PATH "${_sourceFile}" _sourceFile)
 		endif()
 		list (APPEND _contents "#include \"${_sourceFile}\"")
@@ -1234,7 +1234,7 @@ function (cotire_add_makedep_flags _language _compilerID _compilerVersion _flags
 			set (_flags "-H -E")
 		endif()
 	elseif (_compilerID MATCHES "Intel")
-		if (WIN32)
+		if (WIN64)
 			# Windows Intel options used
 			# /nologo do not display compiler version information
 			# /QH display the include file order
@@ -1314,7 +1314,7 @@ function (cotire_add_pch_compilation_flags _language _compilerID _compilerVersio
 			set (_flags "-w -x ${_xLanguage_${_language}} -c \"${_prefixFile}\" -o \"${_pchFile}\"")
 		endif()
 	elseif (_compilerID MATCHES "Intel")
-		if (WIN32)
+		if (WIN64)
 			file (TO_NATIVE_PATH "${_prefixFile}" _prefixFileNative)
 			file (TO_NATIVE_PATH "${_pchFile}" _pchFileNative)
 			file (TO_NATIVE_PATH "${_hostFile}" _hostFileNative)
@@ -1440,7 +1440,7 @@ function (cotire_add_prefix_pch_inclusion_flags _language _compilerID _compilerV
 			endif()
 		endif()
 	elseif (_compilerID MATCHES "Intel")
-		if (WIN32)
+		if (WIN64)
 			file (TO_NATIVE_PATH "${_prefixFile}" _prefixFileNative)
 			# Windows Intel options used
 			# /Yu use a precompiled header (PCH) file
@@ -2078,7 +2078,7 @@ function (cotire_setup_unity_generation_commands _language _targetSourceDir _tar
 		if (_dependencySources)
 			set_property (SOURCE "${_unityFile}" PROPERTY OBJECT_DEPENDS ${_dependencySources})
 		endif()
-		if (WIN32 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
+		if (WIN64 AND CMAKE_${_language}_COMPILER_ID MATCHES "MSVC|Intel")
 			# unity file compilation results in potentially huge object file, thus use /bigobj by default unter MSVC and Windows Intel
 			set_property (SOURCE "${_unityFile}" APPEND_STRING PROPERTY COMPILE_FLAGS "/bigobj")
 		endif()
@@ -2593,7 +2593,7 @@ function (cotire_setup_unity_build_target _languages _configurations _targetSour
 		PDB_NAME PDB_NAME_<CONFIG> PDB_OUTPUT_DIRECTORY PDB_OUTPUT_DIRECTORY_<CONFIG>
 		VS_DOTNET_REFERENCES VS_GLOBAL_KEYWORD VS_GLOBAL_PROJECT_TYPES VS_GLOBAL_ROOTNAMESPACE VS_KEYWORD
 		VS_SCC_AUXPATH VS_SCC_LOCALPATH VS_SCC_PROJECTNAME VS_SCC_PROVIDER
-		VS_WINRT_EXTENSIONS VS_WINRT_REFERENCES WIN32_EXECUTABLE)
+		VS_WINRT_EXTENSIONS VS_WINRT_REFERENCES WIN64_EXECUTABLE)
 	# use output name from original target
 	get_target_property(_targetOutputName ${_unityTargetName} OUTPUT_NAME)
 	if (NOT _targetOutputName)
@@ -2852,7 +2852,7 @@ if (CMAKE_SCRIPT_MODE_FILE)
 		message (STATUS "${COTIRE_ARGV0} ${COTIRE_ARGV1} ${COTIRE_ARGV2} ${COTIRE_ARGV3} ${COTIRE_ARGV4} ${COTIRE_ARGV5}")
 	endif()
 
-	if (WIN32)
+	if (WIN64)
 		# for MSVC, compiler IDs may not always be set correctly
 		if (MSVC)
 			set (CMAKE_C_COMPILER_ID "MSVC")

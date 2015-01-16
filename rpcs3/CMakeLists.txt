@@ -68,7 +68,7 @@ include("${wxWidgets_USE_FILE}")
 
 if(APPLE)
 	set(PLATFORM_ARCH "macosx/x86_64")
-elseif(WIN32)
+elseif(WIN64)
 	set(PLATFORM_ARCH "Windows/x86_64")
 else()
 	set(PLATFORM_ARCH "linux/x86_64")

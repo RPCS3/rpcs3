@@ -49,7 +49,7 @@ u32 vfsDevice::CmpLocalPath(const std::string& local_path)
 	rFileName path0(m_local_path);
 	path0.Normalize();
 
-#ifdef _WIN32
+#ifdef _WIN64
 #define DL "\\"
 #else
 #define DL "/"
