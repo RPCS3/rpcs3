@@ -162,7 +162,7 @@ public:
 	void notify(u64 signal_id);
 };
 
-bool squeue_test_exit(const volatile bool* do_exit);
+bool squeue_test_exit();
 
 template<typename T, u32 sq_size = 256>
 class squeue_t
@@ -213,7 +213,7 @@ public:
 		return m_sync.read_relaxed().count == sq_size;
 	}
 
-	bool push(const T& data, const volatile bool* do_exit = nullptr)
+	bool push(const T& data, const std::function<bool()>& test_exit)
 	{
 		u32 pos = 0;
 
@@ -236,7 +236,7 @@ public:
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -261,14 +261,22 @@ public:
 		return true;
 	}
 
-	bool try_push(const T& data)
+	bool push(const T& data, const volatile bool* do_exit)
 	{
-		static const volatile bool no_wait = true;
-
-		return push(data, &no_wait);
+		return push(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool pop(T& data, const volatile bool* do_exit = nullptr)
+	bool push(const T& data)
+	{
+		return push(data, [](){ return false; });
+	}
+
+	bool try_push(const T& data)
+	{
+		return push(data, [](){ return true; });
+	}
+
+	bool pop(T& data, const std::function<bool()>& test_exit)
 	{
 		u32 pos = 0;
 
@@ -291,7 +299,7 @@ public:
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -321,14 +329,22 @@ public:
 		return true;
 	}
 
-	bool try_pop(T& data)
+	bool pop(T& data, const volatile bool* do_exit)
 	{
-		static const volatile bool no_wait = true;
-
-		return pop(data, &no_wait);
+		return pop(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool peek(T& data, u32 start_pos = 0, const volatile bool* do_exit = nullptr)
+	bool pop(T& data)
+	{
+		return pop(data, [](){ return false; });
+	}
+
+	bool try_pop(T& data)
+	{
+		return pop(data, [](){ return true; });
+	}
+
+	bool peek(T& data, u32 start_pos, const std::function<bool()>& test_exit)
 	{
 		assert(start_pos < sq_size);
 		u32 pos = 0;
@@ -352,7 +368,7 @@ public:
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -375,11 +391,19 @@ public:
 		return true;
 	}
 
+	bool peek(T& data, u32 start_pos, const volatile bool* do_exit)
+	{
+		return peek(data, start_pos, [do_exit](){ return do_exit && *do_exit; });
+	}
+
+	bool peek(T& data, u32 start_pos = 0)
+	{
+		return peek(data, start_pos, [](){ return false; });
+	}
+
 	bool try_peek(T& data, u32 start_pos = 0)
 	{
-		static const volatile bool no_wait = true;
-
-		return peek(data, start_pos, &no_wait);
+		return peek(data, start_pos, [](){ return true; });
 	}
 
 	class squeue_data_t

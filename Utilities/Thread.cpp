@@ -717,7 +717,7 @@ void waiter_map_t::notify(u64 signal_id)
 	}
 }
 
-bool squeue_test_exit(const volatile bool* do_exit)
+bool squeue_test_exit()
 {
-	return Emu.IsStopped() || (do_exit && *do_exit);
+	return Emu.IsStopped();
 }

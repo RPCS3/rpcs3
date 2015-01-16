@@ -84,7 +84,7 @@ int cellAudioInit()
 			while (g_audio.state.read_relaxed() == AUDIO_STATE_INITIALIZED && !Emu.IsStopped())
 			{
 				float* buffer;
-				if (out_queue.pop(buffer))
+				if (out_queue.pop(buffer, [](){ return g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED; }))
 				{
 					if (use_u16)
 					{
@@ -343,7 +343,10 @@ int cellAudioInit()
 				memset(out_buffer[out_pos].get(), 0, out_buffer_size * sizeof(float));
 			}
 
-			out_queue.push(out_buffer[out_pos].get());
+			if (!out_queue.push(out_buffer[out_pos].get(), [](){ return g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED; }))
+			{
+				break;
+			}
 
 			//const u64 stamp2 = get_system_time();
 
