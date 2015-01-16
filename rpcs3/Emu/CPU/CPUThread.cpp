@@ -280,6 +280,7 @@ void CPUThread::Task()
 
 			return "unknown function";
 		}
+
 		case CPU_THREAD_PPU:
 		{
 			if ((u32)syscall == syscall)
@@ -290,6 +291,7 @@ void CPUThread::Task()
 					{
 						// TODO:
 						//return SysCalls::GetSyscallName((u32)syscall);
+						return "unknown syscall";
 					}
 					else
 					{
@@ -302,13 +304,19 @@ void CPUThread::Task()
 				}
 			}
 
-			// fallthrough
+			return "unknown function";
 		}
+
 		case CPU_THREAD_SPU:
 		case CPU_THREAD_RAW_SPU:
 		default:
 		{
-			return "unknown syscall";
+			if (!syscall)
+			{
+				return{};
+			}
+
+			return "unknown function";
 		}
 		}
 	};

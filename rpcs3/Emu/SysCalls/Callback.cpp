@@ -82,7 +82,7 @@ void CallbackManager::Init()
 		static_cast<PPUThread*>(m_cb_thread)->DoRun();
 	}
 
-	thread cb_async_thread("CallbackManager::Async() thread", [this]()
+	thread_t cb_async_thread("CallbackManager thread", [this]()
 	{
 		SetCurrentNamedThread(m_cb_thread);
 
@@ -108,8 +108,6 @@ void CallbackManager::Init()
 			m_cb_thread->WaitForAnySignal();
 		}
 	});
-
-	cb_async_thread.detach();
 }
 
 void CallbackManager::Clear()

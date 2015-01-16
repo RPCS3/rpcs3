@@ -11,8 +11,6 @@ ALCenum g_last_alc_error = ALC_NO_ERROR;
 #define checkForAlError(sit) if((g_last_al_error = alGetError()) != AL_NO_ERROR) printAlError(g_last_al_error, sit)
 #define checkForAlcError(sit) if((g_last_alc_error = alcGetError(m_device)) != ALC_NO_ERROR) printAlcError(g_last_alc_error, sit)
 
-static const ALenum g_audio_format = Ini.AudioConvertToU16.GetValue() ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32;
-
 void printAlError(ALenum err, const char* situation)
 {
 	if (err != AL_NO_ERROR)
@@ -102,7 +100,7 @@ void OpenALThread::Open(const void* src, int size)
 
 	for (uint i = 0; i<g_al_buffers_count; ++i)
 	{
-		alBufferData(m_buffers[i], g_audio_format, src, m_buffer_size, 48000);
+		alBufferData(m_buffers[i], Ini.AudioConvertToU16.GetValue() ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32, src, m_buffer_size, 48000);
 		checkForAlError("alBufferData");
 	}
 
@@ -137,7 +135,7 @@ void OpenALThread::AddData(const void* src, int size)
 
 		int bsize = size < m_buffer_size ? size : m_buffer_size;
 
-		alBufferData(buffer, g_audio_format, bsrc, bsize, 48000);
+		alBufferData(buffer, Ini.AudioConvertToU16.GetValue() ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO_FLOAT32, bsrc, bsize, 48000);
 		checkForAlError("alBufferData");
 
 		alSourceQueueBuffers(m_source, 1, &buffer);

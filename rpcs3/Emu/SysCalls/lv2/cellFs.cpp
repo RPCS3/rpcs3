@@ -966,11 +966,7 @@ int cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<u32> id, vm::ptr<void(*)(vm::p
 	const u32 xid = g_FsAioReadID++;
 	*id = xid;
 
-	{
-		thread t("fsAioRead", std::bind(fsAioRead, fd, aio, xid, func));
-		t.detach();
-	}
-
+	thread_t t("CellFsAio Reading Thread", std::bind(fsAioRead, fd, aio, xid, func));
 	return CELL_OK;
 }
 

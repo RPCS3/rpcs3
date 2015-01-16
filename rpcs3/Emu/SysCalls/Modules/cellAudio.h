@@ -72,10 +72,32 @@ struct CellAudioPortConfig
 	be_t<u32> portAddr;
 };
 
+enum : u32
+{
+	BUFFER_NUM = 32,
+	BUFFER_SIZE = 256,
+	AUDIO_PORT_COUNT = 8,
+};
+
+enum AudioState : u32
+{
+	AUDIO_STATE_NOT_INITIALIZED,
+	AUDIO_STATE_INITIALIZED,
+	AUDIO_STATE_FINALIZED,
+};
+
+enum AudioPortState : u32
+{
+	AUDIO_PORT_STATE_NOT_OPENED,
+	AUDIO_PORT_STATE_OPENED,
+	AUDIO_PORT_STATE_STARTED,
+};
+
 struct AudioPortConfig
 {
-	bool m_is_audio_port_opened;
-	bool m_is_audio_port_started;
+	std::mutex mutex;
+	atomic_le_t<AudioPortState> state;
+
 	u8 channel;
 	u8 block;
 	float level;
@@ -89,34 +111,20 @@ struct AudioPortConfig
 
 struct AudioConfig  //custom structure
 {
-	enum
-	{
-		AUDIO_PORT_COUNT = 8,
-	};
-	AudioPortConfig m_ports[AUDIO_PORT_COUNT];
-	u32 m_buffer; // 1 MB memory for audio ports
-	u32 m_indexes; // current block indexes and other info
-	bool m_is_audio_initialized;
-	bool m_is_audio_finalized;
-	u32 m_port_in_use;
+	std::mutex mutex;
+	atomic_le_t<AudioState> state;
+	thread_t audio_thread;
+
+	AudioPortConfig ports[AUDIO_PORT_COUNT];
+	u32 buffer; // 1 MB memory for audio ports
+	u32 indexes; // current block indexes and other info
 	u64 counter;
 	u64 start_time;
-	std::vector<u64> m_keys;
+	std::vector<u64> keys;
 
-	AudioConfig()
-		: m_is_audio_initialized(false)
-		, m_is_audio_finalized(false)
-		, m_port_in_use(0)
-		, counter(0)
+	AudioConfig() : audio_thread("Audio Thread")
 	{
-		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
-	}
-
-	void Clear()
-	{
-		memset(&m_ports, 0, sizeof(AudioPortConfig) * AUDIO_PORT_COUNT);
-		m_port_in_use = 0;
 	}
 };
 
-extern AudioConfig m_config;
+extern AudioConfig g_audio;

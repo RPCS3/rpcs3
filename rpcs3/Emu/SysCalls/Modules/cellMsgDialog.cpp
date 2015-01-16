@@ -123,7 +123,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 	std::string msg = msgString.get_ptr();
 
-	thread t("MsgDialog thread", [type, msg, callback, userData, extParam]()
+	thread_t t("MsgDialog Thread", [type, msg, callback, userData, extParam]()
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
@@ -186,7 +186,6 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 			g_msg_dialog_state = msgDialogNone;
 		});
 	});
-	t.detach();
 
 	return CELL_OK;
 }

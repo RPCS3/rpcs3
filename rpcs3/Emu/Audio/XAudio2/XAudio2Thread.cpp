@@ -8,7 +8,7 @@
 
 XAudio2Thread::~XAudio2Thread()
 {
-	Quit();
+	if (m_source_voice) Quit();
 }
 
 void XAudio2Thread::Init()
@@ -87,13 +87,15 @@ void XAudio2Thread::Open(const void* src, int size)
 {
 	HRESULT hr;
 
+	WORD sample_size = Ini.AudioConvertToU16.GetValue() ? sizeof(u16) : sizeof(float);
+
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.wFormatTag = Ini.AudioConvertToU16.GetValue() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = 2;
 	waveformatex.nSamplesPerSec = 48000;
-	waveformatex.nAvgBytesPerSec = 48000 * 2 * sizeof(float);
-	waveformatex.nBlockAlign = 2 * sizeof(float);
-	waveformatex.wBitsPerSample = 32;
+	waveformatex.nAvgBytesPerSec = 48000 * 2 * (DWORD)sample_size;
+	waveformatex.nBlockAlign = 2 * sample_size;
+	waveformatex.wBitsPerSample = sample_size * 8;
 	waveformatex.cbSize = 0;
 
 	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);

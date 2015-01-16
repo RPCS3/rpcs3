@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Log.h"
+#include "rpcs3/Ini.h"
 #include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -285,7 +286,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	ucontext_t* const ctx = (ucontext_t*)uct;
 	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
 	//const bool is_writing = false; // TODO: get it correctly
-	if (addr64 < 0x100000000ull)
+	if (addr64 < 0x100000000ull && GetCurrentNamedThread())
 	{
 		const u32 addr = (u32)addr64;
 		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
@@ -384,7 +385,7 @@ NamedThreadBase* GetCurrentNamedThread()
 
 void SetCurrentNamedThread(NamedThreadBase* value)
 {
-	auto old_value = g_tls_this_thread;
+	const auto old_value = g_tls_this_thread;
 
 	if (old_value == value)
 	{
@@ -536,23 +537,40 @@ bool ThreadBase::TestDestroy() const
 	return m_destroy;
 }
 
-thread::thread(const std::string& name, std::function<void()> func) : m_name(name)
+thread_t::thread_t(const std::string& name, std::function<void()> func) : m_name(name), m_state(TS_NON_EXISTENT)
 {
 	start(func);
 }
 
-thread::thread(const std::string& name) : m_name(name)
+thread_t::thread_t(const std::string& name) : m_name(name), m_state(TS_NON_EXISTENT)
 {
 }
 
-thread::thread()
+thread_t::thread_t() : m_state(TS_NON_EXISTENT)
 {
 }
 
-void thread::start(std::function<void()> func)
+void thread_t::set_name(const std::string& name)
 {
+	m_name = name;
+}
+
+thread_t::~thread_t()
+{
+	if (m_state == TS_JOINABLE)
+	{
+		m_thr.detach();
+	}
+}
+
+void thread_t::start(std::function<void()> func)
+{
+	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	{
+		m_thr.join(); // forcefully join previously created thread
+	}
+
 	std::string name = m_name;
-
 	m_thr = std::thread([func, name]()
 	{
 		SetCurrentThreadDebugName(name.c_str());
@@ -567,6 +585,11 @@ void thread::start(std::function<void()> func)
 		SetCurrentNamedThread(&info);
 		g_thread_count++;
 
+		if (Ini.HLELogging.GetValue())
+		{
+			LOG_NOTICE(HLE, name + " started");
+		}
+
 		try
 		{
 			func();
@@ -580,6 +603,15 @@ void thread::start(std::function<void()> func)
 			LOG_ERROR(GENERAL, "%s: %s", name.c_str(), e.c_str());
 		}
 
+		if (Emu.IsStopped())
+		{
+			LOG_NOTICE(HLE, name + " aborted");
+		}
+		else if (Ini.HLELogging.GetValue())
+		{
+			LOG_NOTICE(HLE, name + " ended");
+		}
+
 		SetCurrentNamedThread(nullptr);
 		g_thread_count--;
 
@@ -587,21 +619,41 @@ void thread::start(std::function<void()> func)
 		_set_se_translator(old_se_translator);
 #endif
 	});
+
+	if (m_state.exchange(TS_JOINABLE) == TS_JOINABLE)
+	{
+		assert(!"thread_t::start() failed"); // probably started from another thread
+	}
 }
 
-void thread::detach()
+void thread_t::detach()
 {
-	m_thr.detach();
+	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	{
+		m_thr.detach();
+	}
+	else
+	{
+		assert(!"thread_t::detach() failed"); // probably joined or detached
+	}
 }
 
-void thread::join()
+void thread_t::join()
 {
-	m_thr.join();
+	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	{
+		m_thr.join();
+	}
+	else
+	{
+		assert(!"thread_t::join() failed"); // probably joined or detached
+	}
 }
 
-bool thread::joinable() const
+bool thread_t::joinable() const
 {
-	return m_thr.joinable();
+	//return m_thr.joinable();
+	return m_state == TS_JOINABLE;
 }
 
 bool waiter_map_t::is_stopped(u64 signal_id)

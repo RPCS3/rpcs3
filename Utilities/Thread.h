@@ -54,18 +54,32 @@ public:
 	virtual void Task() = 0;
 };
 
-class thread
+class thread_t
 {
+	enum thread_state_t
+	{
+		TS_NON_EXISTENT,
+		TS_JOINABLE,
+	};
+
+	std::atomic<thread_state_t> m_state;
 	std::string m_name;
 	std::thread m_thr;
 
 public:
-	thread(const std::string& name, std::function<void()> func);
-	thread(const std::string& name);
-	thread();
+	thread_t(const std::string& name, std::function<void()> func);
+	thread_t(const std::string& name);
+	thread_t();
+	~thread_t();
 
+	thread_t(const thread_t& right) = delete;
+	thread_t(thread_t&& right) = delete;
+
+	thread_t& operator =(const thread_t& right) = delete;
+	thread_t& operator =(thread_t&& right) = delete;
 
 public:
+	void set_name(const std::string& name);
 	void start(std::function<void()> func);
 	void detach();
 	void join();

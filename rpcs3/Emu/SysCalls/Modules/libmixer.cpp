@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/CB_FUNC.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/Audio/cellAudio.h"
+#include "cellAudio.h"
 #include "libmixer.h"
 
 Module *libmixer = nullptr;
@@ -298,9 +298,9 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 	surMixer = *config;
 
-	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
+	AudioPortConfig& port = g_audio.ports[SUR_PORT];
 
-	if (port.m_is_audio_port_opened)
+	if (!port.state.compare_and_swap_test(AUDIO_PORT_STATE_NOT_OPENED, AUDIO_PORT_STATE_OPENED))
 	{
 		return CELL_LIBMIXER_ERROR_FULL;
 	}
@@ -309,22 +309,19 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	port.block = 16;
 	port.attr = 0;
 	port.level = 1.0f;
+	port.tag = 0;
 
 	libmixer->Warning("*** audio port opened(default)");
-
-	port.m_is_audio_port_opened = true;
-	port.tag = 0;
-	m_config.m_port_in_use++;
-
-	libmixer->Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)",
-		(u32)surMixer.chStrips1, (u32)surMixer.chStrips2, (u32)surMixer.chStrips6, (u32)surMixer.chStrips8);
 
 	mixcount = 0;
 	surMixerCb.set(0);
 
-	thread t("Surmixer Thread", []()
+	libmixer->Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)",
+		(u32)surMixer.chStrips1, (u32)surMixer.chStrips2, (u32)surMixer.chStrips6, (u32)surMixer.chStrips8);
+
+	thread_t t("Surmixer Thread", []()
 	{
-		AudioPortConfig& port = m_config.m_ports[SUR_PORT];
+		AudioPortConfig& port = g_audio.ports[SUR_PORT];
 
 		PPUThread& cb_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		cb_thread.SetName("Surmixer Callback Thread");
@@ -335,7 +332,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 		cb_thread.InitRegs();
 		cb_thread.DoRun();
 
-		while (port.m_is_audio_port_opened)
+		while (port.state.read_relaxed() != AUDIO_PORT_STATE_NOT_OPENED)
 		{
 			if (Emu.IsStopped())
 			{
@@ -349,7 +346,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 				continue;
 			}
 
-			if (port.m_is_audio_port_started)
+			if (port.state.read_relaxed() == AUDIO_PORT_STATE_STARTED)
 			{
 				//u64 stamp0 = get_system_time();
 
@@ -440,7 +437,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 				//u64 stamp2 = get_system_time();
 
-				auto buf = vm::get_ptr<be_t<float>>(m_config.m_buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float));
+				auto buf = vm::get_ptr<be_t<float>>(g_audio.buffer + (128 * 1024 * SUR_PORT) + (mixcount % port.block) * port.channel * 256 * sizeof(float));
 
 				for (u32 i = 0; i < (sizeof(mixdata) / sizeof(float)); i++)
 				{
@@ -464,7 +461,6 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 		Emu.GetCPU().RemoveThread(cb_thread.GetId());
 		surMixerCb.set(0);
 	});
-	t.detach();
 
 	return CELL_OK;
 }
@@ -515,13 +511,8 @@ int cellSurMixerStart()
 {
 	libmixer->Warning("cellSurMixerStart()");
 
-	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
+	g_audio.ports[SUR_PORT].state.compare_and_swap(AUDIO_PORT_STATE_OPENED, AUDIO_PORT_STATE_STARTED);
 
-	if (port.m_is_audio_port_opened)
-	{
-		port.m_is_audio_port_started = true;
-	}
-	
 	return CELL_OK;
 }
 
@@ -535,14 +526,7 @@ int cellSurMixerFinalize()
 {
 	libmixer->Warning("cellSurMixerFinalize()");
 
-	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
-
-	if (port.m_is_audio_port_opened)
-	{
-		port.m_is_audio_port_started = false;
-		port.m_is_audio_port_opened = false;
-		m_config.m_port_in_use--;
-	}
+	g_audio.ports[SUR_PORT].state.compare_and_swap(AUDIO_PORT_STATE_OPENED, AUDIO_PORT_STATE_NOT_OPENED);
 
 	return CELL_OK;
 }
@@ -581,12 +565,7 @@ int cellSurMixerPause(u32 type)
 {
 	libmixer->Warning("cellSurMixerPause(type=%d)", type);
 
-	AudioPortConfig& port = m_config.m_ports[SUR_PORT];
-
-	if (port.m_is_audio_port_opened)
-	{
-		port.m_is_audio_port_started = false;
-	}
+	g_audio.ports[SUR_PORT].state.compare_and_swap(AUDIO_PORT_STATE_STARTED, AUDIO_PORT_STATE_OPENED);
 
 	return CELL_OK;
 }
@@ -603,7 +582,7 @@ int cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
 
-	*stamp = m_config.start_time + (tag) * 256000000 / 48000; // ???
+	*stamp = g_audio.start_time + (tag) * 256000000 / 48000; // ???
 	return CELL_OK;
 }
 

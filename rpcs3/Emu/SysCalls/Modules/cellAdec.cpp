@@ -224,7 +224,7 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 	adec.id = adec_id;
 
 	adec.adecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-	adec.adecCb->SetName("Audio Decoder[" + std::to_string(adec_id) + "] Callback");
+	adec.adecCb->SetName(fmt::format("AudioDecoder[%d] Callback", adec_id));
 	adec.adecCb->SetEntry(0);
 	adec.adecCb->SetPrio(1001);
 	adec.adecCb->SetStackSize(0x10000);
@@ -232,11 +232,9 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 	adec.adecCb->InitRegs();
 	adec.adecCb->DoRun();
 
-	thread t("Audio Decoder[" + std::to_string(adec_id) + "] Thread", [adec_ptr, sptr]()
+	thread_t t(fmt::format("AudioDecoder[%d] Thread", adec_id), [adec_ptr, sptr]()
 	{
 		AudioDecoder& adec = *adec_ptr;
-		cellAdec->Notice("Audio Decoder thread started");
-
 		AdecTask& task = adec.task;
 
 		while (true)
@@ -471,17 +469,14 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 
 			default:
 			{
-				ADEC_ERROR("Audio Decoder thread error: unknown task(%d)", task.type);
+				ADEC_ERROR("AudioDecoder thread error: unknown task(%d)", task.type);
 			}
 			}
 		}
 
 		adec.is_finished = true;
-		if (adec.is_closed) cellAdec->Notice("Audio Decoder thread ended");
-		if (Emu.IsStopped()) cellAdec->Warning("Audio Decoder thread aborted");
+		if (Emu.IsStopped()) cellAdec->Warning("AudioDecoder thread aborted");
 	});
-
-	t.detach();
 
 	return adec_id;
 }

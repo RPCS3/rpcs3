@@ -214,7 +214,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.id = vdec_id;
 
 	vdec.vdecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-	vdec.vdecCb->SetName("Video Decoder[" + std::to_string(vdec_id) + "] Callback");
+	vdec.vdecCb->SetName(fmt::format("VideoDecoder[%d] Callback", vdec_id));
 	vdec.vdecCb->SetEntry(0);
 	vdec.vdecCb->SetPrio(1001);
 	vdec.vdecCb->SetStackSize(0x10000);
@@ -222,11 +222,9 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread t("Video Decoder[" + std::to_string(vdec_id) + "] Thread", [vdec_ptr, sptr]()
+	thread_t t(fmt::format("VideoDecoder[%d] Thread", vdec_id), [vdec_ptr, sptr]()
 	{
 		VideoDecoder& vdec = *vdec_ptr;
-		cellVdec->Notice("Video Decoder thread started");
-
 		VdecTask& task = vdec.task;
 
 		while (true)
@@ -431,7 +429,15 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 						{
 							if (vdec.last_pts == -1)
 							{
-								vdec.last_pts = 0x8000; //av_frame_get_best_effort_timestamp(frame.data);
+								u64 ts = av_frame_get_best_effort_timestamp(frame.data);
+								if (ts != AV_NOPTS_VALUE)
+								{
+									vdec.last_pts = ts;
+								}
+								else
+								{
+									vdec.last_pts = 0;
+								}
 							}
 							else switch (vdec.frc_set)
 							{
@@ -539,17 +545,14 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 
 			default:
 			{
-				VDEC_ERROR("Video Decoder thread error: unknown task(%d)", task.type);
+				VDEC_ERROR("VideoDecoder thread error: unknown task(%d)", task.type);
 			}
 			}
 		}
 
 		vdec.is_finished = true;
-		if (Emu.IsStopped()) cellVdec->Warning("Video Decoder thread aborted");
-		if (vdec.is_closed) cellVdec->Notice("Video Decoder thread ended");
+		if (Emu.IsStopped()) cellVdec->Warning("VideoDecoder thread aborted");
 	});
-
-	t.detach();
 
 	return vdec_id;
 }

@@ -2350,7 +2350,7 @@ void RSXThread::Task()
 	m_last_flip_time = get_system_time() - 1000000;
 	volatile bool is_vblank_stopped = false;
 
-	thread vblank("VBlank thread", [&]()
+	thread_t vblank("VBlank thread", [&]()
 	{
 		const u64 start_time = get_system_time();
 
