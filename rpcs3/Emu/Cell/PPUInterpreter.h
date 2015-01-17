@@ -3956,7 +3956,7 @@ private:
 	{
 		const double b = CPU.FPR[frb];
 		u64 r;
-		if(b > (double)0x7fffffffffffffff)
+		if(b >= (double)0x8000000000000000)
 		{
 			r = 0x7fffffffffffffff;
 			CPU.SetFPSCRException(FPSCR_VXCVI);
