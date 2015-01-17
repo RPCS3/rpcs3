@@ -860,11 +860,11 @@ namespace ppu_recompiler_llvm {
         /// Set the SO bit of XER
         void SetXerSo(llvm::Value * so);
 
-        /// Get USPRG0
-        llvm::Value * GetUsprg0();
+        /// Get VRSAVE
+        llvm::Value * GetVrsave();
 
-        /// Set USPRG0
-        void SetUsprg0(llvm::Value * val_x64);
+        /// Set VRSAVE
+        void SetVrsave(llvm::Value * val_x64);
 
         /// Load FPSCR
         llvm::Value * GetFpscr();

@@ -144,14 +144,8 @@ private:
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
-		case 0x100: 
-		case 0x101:
-		case 0x102:
-		case 0x103:
-		case 0x104:
-		case 0x105:
-		case 0x106:
-		case 0x107: return CPU.USPRG[n - 0x100];
+		case 0x100: return CPU.VRSAVE;
+		case 0x103: return CPU.SPRG[3];
 
 		case 0x10C: CPU.TB = get_time(); return CPU.TB;
 		case 0x10D: CPU.TB = get_time(); return CPU.TBH;
@@ -178,14 +172,8 @@ private:
 		case 0x001: CPU.XER.XER = value; return;
 		case 0x008: CPU.LR = value; return;
 		case 0x009: CPU.CTR = value; return;
-		case 0x100: 
-		case 0x101:
-		case 0x102:
-		case 0x103:
-		case 0x104:
-		case 0x105:
-		case 0x106:
-		case 0x107: CPU.USPRG[n - 0x100] = value; return;
+		case 0x100: CPU.VRSAVE = (u32)value; return;
+		case 0x103: throw fmt::Format("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
 
 		case 0x10C: throw fmt::Format("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
 		case 0x10D: throw fmt::Format("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);

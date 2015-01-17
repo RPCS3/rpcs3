@@ -531,7 +531,8 @@ public:
 	u64 LR;     //SPR 0x008 : Link Register
 	u64 CTR;    //SPR 0x009 : Count Register
 
-	u64 USPRG[8];	//SPR 0x100 - 0x107: User-SPR General-Purpose Registers
+	u32 VRSAVE; //SPR 0x100: VR Save/Restore Register (32 bits)
+
 	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
