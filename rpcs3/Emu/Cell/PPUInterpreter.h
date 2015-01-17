@@ -865,7 +865,7 @@ private:
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
 			{
-				CPU.VPR[vd]._f[w] = a * c + b;
+				CPU.VPR[vd]._f[w] = fmaf(a, c, b);
 				if (std::isnan(CPU.VPR[vd]._f[w]))
 					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			}
@@ -1288,7 +1288,7 @@ private:
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
 			{
-				CPU.VPR[vd]._f[w] = -(a * c - b);
+				CPU.VPR[vd]._f[w] = -fmaf(a, c, -b);
 				if (std::isnan(CPU.VPR[vd]._f[w]))
 					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			}
