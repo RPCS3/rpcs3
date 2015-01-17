@@ -1930,15 +1930,14 @@ private:
 	}
 	void VSUMSWS(u32 vd, u32 va, u32 vb)
 	{
-		CPU.VPR[vd].clear();
-			
-		s64 sum = CPU.VPR[vb]._s32[3];
+		s64 sum = CPU.VPR[vb]._s32[0];
 
 		for (uint w = 0; w < 4; w++)
 		{
 			sum += CPU.VPR[va]._s32[w];
 		}
 
+		CPU.VPR[vd].clear();
 		if (sum > INT32_MAX)
 		{
 			CPU.VPR[vd]._s32[0] = (s32)INT32_MAX;
