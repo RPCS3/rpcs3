@@ -2693,7 +2693,7 @@ private:
 			{
 				if(crm & (1 << i))
 				{
-					CPU.SetCR(7 - i, CPU.GPR[rs] & (0xf << (i * 4)));
+					CPU.SetCR(7 - i, (CPU.GPR[rs] >> (i * 4)) & 0xf);
 				}
 			}
 		}
