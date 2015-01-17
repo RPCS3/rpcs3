@@ -2698,12 +2698,12 @@ private:
 		if (CPU.R_ADDR == addr)
 		{
 			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(vm::cast(CPU.R_ADDR)), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
-			CPU.R_ADDR = 0;
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
 		}
+		CPU.R_ADDR = 0;
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2757,12 +2757,12 @@ private:
 		if (CPU.R_ADDR == addr)
 		{
 			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(vm::cast(CPU.R_ADDR)), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
-			CPU.R_ADDR = 0;
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
 		}
+		CPU.R_ADDR = 0;
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
