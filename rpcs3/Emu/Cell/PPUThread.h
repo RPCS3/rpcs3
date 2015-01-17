@@ -53,6 +53,8 @@ enum FPSCR_EXP
 	FPSCR_VXSOFT    = 0x00000400,
 	FPSCR_VXSQRT    = 0x00000200,
 	FPSCR_VXCVI     = 0x00000100,
+
+	FPSCR_VX_ALL    = FPSCR_VXSNAN | FPSCR_VXISI | FPSCR_VXIDI | FPSCR_VXZDZ | FPSCR_VXIMZ | FPSCR_VXVC | FPSCR_VXSOFT | FPSCR_VXSQRT | FPSCR_VXCVI,
 };
 
 enum FPSCR_RN
@@ -675,6 +677,25 @@ public:
 	{
 		XER.OV = set;
 		XER.SO |= set;
+	}
+
+	void UpdateFPSCR_FEX()
+	{
+		const u32 exceptions = (FPSCR.FPSCR >> 25) & 0x1F;
+		const u32 enabled = (FPSCR.FPSCR >> 3) & 0x1F;
+		if (exceptions & enabled) FPSCR.FEX = 1;
+	}
+
+	void UpdateFPSCR_VX()
+	{
+		if (FPSCR.FPSCR & FPSCR_VX_ALL) FPSCR.VX = 1;
+	}
+
+	void SetFPSCR(const u32 val)
+	{
+		FPSCR.FPSCR = val & ~(FPSCR_FEX | FPSCR_VX);
+		UpdateFPSCR_VX();
+		UpdateFPSCR_FEX();
 	}
 
 	void SetFPSCRException(const FPSCR_EXP mask)
