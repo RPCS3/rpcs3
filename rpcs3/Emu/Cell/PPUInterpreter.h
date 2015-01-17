@@ -247,8 +247,8 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -256,7 +256,7 @@ private:
 			else if (std::isinf(a) && std::isinf(b) && a != b)
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
-				CPU.VPR[vd]._f[w] = a + b;
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(a + b);
 		}
 	}
 	void VADDSBS(u32 vd, u32 va, u32 vb) //nf
@@ -465,11 +465,11 @@ private:
 		{
 			u32 mask = 1<<31 | 1<<30;
 
-			const float A = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
-			const float B = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 
-			if (A <=  B) mask &= ~(1 << 31);
-			if (A >= -B) mask &= ~(1 << 30);
+			if (a <=  b) mask &= ~(1 << 31);
+			if (a >= -b) mask &= ~(1 << 30);
 
 			CPU.VPR[vd]._u32[w] = mask;
 
@@ -768,7 +768,7 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 			{
 				CPU.VPR[vd]._s32[w] = 0;
@@ -797,7 +797,7 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 			{
 				CPU.VPR[vd]._s32[w] = 0;
@@ -828,11 +828,11 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
-				CPU.VPR[vd]._f[w] = powf(2.0f, b);
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(powf(2.0f, b));
 		}
 	}
 	void VLOGEFP(u32 vd, u32 vb)
@@ -841,20 +841,20 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
-				CPU.VPR[vd]._f[w] = log2f(b);
+				CPU.VPR[vd]._f[w] = log2f(b);  // Can never be denormal.
 		}
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
-			const float c = CPU.VPR[vc]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float c = CheckVSCR_NJ(CPU.VPR[vc]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -865,9 +865,11 @@ private:
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
 			{
-				CPU.VPR[vd]._f[w] = fmaf(a, c, b);
-				if (std::isnan(CPU.VPR[vd]._f[w]))
+				const float result = fmaf(a, c, b);
+				if (std::isnan(result))
 					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+				else
+					CPU.VPR[vd]._f[w] = CheckVSCR_NJ(result);
 			}
 		}
 	}
@@ -875,8 +877,8 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -975,8 +977,8 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -1275,9 +1277,9 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
-			const float c = CPU.VPR[vc]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float c = CheckVSCR_NJ(CPU.VPR[vc]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -1288,9 +1290,11 @@ private:
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
 			{
-				CPU.VPR[vd]._f[w] = -fmaf(a, c, -b);
-				if (std::isnan(CPU.VPR[vd]._f[w]))
+				const float result = -fmaf(a, c, -b);
+				if (std::isnan(result))
 					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+				else
+					CPU.VPR[vd]._f[w] = CheckVSCR_NJ(result);
 			}
 		}
 	}
@@ -1566,18 +1570,18 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
-				CPU.VPR[vd]._f[w] = 1.0f / b;
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(1.0f / b);
 		}
 	}
 	void VRFIM(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
@@ -1588,7 +1592,7 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
@@ -1599,7 +1603,7 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
@@ -1610,7 +1614,7 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
@@ -1645,13 +1649,13 @@ private:
 		for (uint w = 0; w < 4; w++)
 		{
 			//TODO: accurate div
-			const float b = CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else if (b < 0)
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
-				CPU.VPR[vd]._f[w] = 1.0f / sqrtf(b);
+				CPU.VPR[vd]._f[w] = 1.0f / sqrtf(b);  // Can never be denormal.
 		}
 	}
 	void VSEL(u32 vd, u32 va, u32 vb, u32 vc)
@@ -1844,8 +1848,8 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			const float a = CPU.VPR[va]._f[w];
-			const float b = CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 			if (std::isnan(a))
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
@@ -1853,7 +1857,7 @@ private:
 			else if (std::isinf(a) && std::isinf(b) && a == b)
 				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
 			else
-				CPU.VPR[vd]._f[w] = a - b;
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(a - b);
 		}
 	}
 	void VSUBSBS(u32 vd, u32 va, u32 vb) //nf
