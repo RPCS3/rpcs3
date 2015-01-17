@@ -3895,7 +3895,7 @@ private:
 		const double a = CPU.FPR[fra];
 		const double b = CPU.FPR[frb];
 		const double c = CPU.FPR[frc];
-		const double res = a * c + (sub ? -b : b);
+		const double res = fma(a, c, sub ? -b : b);
 		if(single) CPU.FPR[frd] = (float)(neg ? -res : res);
 		else       CPU.FPR[frd] = (neg ? -res : res);
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
