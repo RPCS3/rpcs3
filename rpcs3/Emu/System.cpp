@@ -354,16 +354,12 @@ void Emulator::Stop()
 	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
-	u32 uncounted = 0;
-	while (true)
+	while (g_thread_count)
 	{
-		if (g_thread_count <= uncounted)
-		{
-			LOG_NOTICE(HLE, "All threads stopped...");
-			break;
-		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
+
+	LOG_NOTICE(HLE, "All threads stopped...");
 
 	m_rsx_callback = 0;
 

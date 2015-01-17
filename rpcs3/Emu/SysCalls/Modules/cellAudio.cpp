@@ -54,7 +54,7 @@ s32 cellAudioInit()
 		const bool do_dump = Ini.AudioDumpToFile.GetValue();
 
 		AudioDumper m_dump;
-		if (do_dump && !m_dump.Init(8)) // Init AudioDumper for 8 channels
+		if (do_dump && !m_dump.Init(2)) // Init AudioDumper for 2 channels
 		{
 			throw "AudioDumper::Init() failed";
 		}
@@ -62,13 +62,13 @@ s32 cellAudioInit()
 		float buf2ch[2 * BUFFER_SIZE]; // intermediate buffer for 2 channels
 		float buf8ch[8 * BUFFER_SIZE]; // intermediate buffer for 8 channels
 
-		static const size_t out_buffer_size = 2 * BUFFER_SIZE;
+		static const size_t out_buffer_size = 8 * BUFFER_SIZE; // output buffer for 8 channels
 
 		std::unique_ptr<float[]> out_buffer[BUFFER_NUM];
 
 		for (u32 i = 0; i < BUFFER_NUM; i++)
 		{
-			out_buffer[i].reset(new float[2 * BUFFER_SIZE] {});
+			out_buffer[i].reset(new float[out_buffer_size] {});
 		}
 
 		squeue_t<float*, BUFFER_NUM - 1> out_queue;
@@ -347,9 +347,16 @@ s32 cellAudioInit()
 
 			if (!first_mix)
 			{
-				for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
+				// copy output data (2 ch)
+				//for (u32 i = 0; i < (sizeof(buf2ch) / sizeof(float)); i++)
+				//{
+				//	out_buffer[out_pos][i] = buf2ch[i];
+				//}
+
+				// copy output data (8 ch)
+				for (u32 i = 0; i < (sizeof(buf8ch) / sizeof(float)); i++)
 				{
-					out_buffer[out_pos][i] = buf2ch[i];
+					out_buffer[out_pos][i] = buf8ch[i];
 				}
 			}
 
@@ -399,16 +406,16 @@ s32 cellAudioInit()
 			{
 				if (m_dump.GetCh() == 8)
 				{
-					if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data
+					if (m_dump.WriteData(&buf8ch, sizeof(buf8ch)) != sizeof(buf8ch)) // write file data (8 ch)
 					{
-						throw "AudioDumper::WriteData() failed (2 ch)";
+						throw "AudioDumper::WriteData() failed (8 ch)";
 					}
 				}
 				else if (m_dump.GetCh() == 2)
 				{
-					if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data
+					if (m_dump.WriteData(&buf2ch, sizeof(buf2ch)) != sizeof(buf2ch)) // write file data (2 ch)
 					{
-						throw "AudioDumper::WriteData() failed (8 ch)";
+						throw "AudioDumper::WriteData() failed (2 ch)";
 					}
 				}
 				else

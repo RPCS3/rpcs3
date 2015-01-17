@@ -21,9 +21,9 @@ struct AudioInfo
 	void Init()
 	{
 		mode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		mode.channel = CELL_AUDIO_OUT_CHNUM_2;
+		mode.channel = CELL_AUDIO_OUT_CHNUM_8;
 		mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
-		mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+		mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
 		mode.encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
 		mode.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 	}

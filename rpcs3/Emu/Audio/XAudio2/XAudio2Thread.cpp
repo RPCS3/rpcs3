@@ -94,13 +94,14 @@ void XAudio2Thread::Open(const void* src, int size)
 	HRESULT hr;
 
 	WORD sample_size = Ini.AudioConvertToU16.GetValue() ? sizeof(u16) : sizeof(float);
+	WORD channels = 8;
 
 	WAVEFORMATEX waveformatex;
 	waveformatex.wFormatTag = Ini.AudioConvertToU16.GetValue() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
-	waveformatex.nChannels = 2;
+	waveformatex.nChannels = channels;
 	waveformatex.nSamplesPerSec = 48000;
-	waveformatex.nAvgBytesPerSec = 48000 * 2 * (DWORD)sample_size;
-	waveformatex.nBlockAlign = 2 * sample_size;
+	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;
+	waveformatex.nBlockAlign = channels * sample_size;
 	waveformatex.wBitsPerSample = sample_size * 8;
 	waveformatex.cbSize = 0;
 

@@ -2348,9 +2348,8 @@ void RSXThread::Task()
 	OnInitThread();
 
 	m_last_flip_time = get_system_time() - 1000000;
-	volatile bool is_vblank_stopped = false;
 
-	thread_t vblank("VBlank thread", [&]()
+	thread_t vblank("VBlank thread", true /* autojoin */, [this]()
 	{
 		const u64 start_time = get_system_time();
 
@@ -2374,8 +2373,6 @@ void RSXThread::Task()
 
 			std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
 		}
-
-		is_vblank_stopped = true;
 	});
 
 	while (!TestDestroy()) try
@@ -2383,7 +2380,7 @@ void RSXThread::Task()
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(RSX, "RSX thread aborted");
-			return;
+			break;
 		}
 		std::lock_guard<std::mutex> lock(m_cs_main);
 
@@ -2402,7 +2399,7 @@ void RSXThread::Task()
 				m_sem_flush.post_and_wait();
 			}
 
-			std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}
 
@@ -2469,22 +2466,15 @@ void RSXThread::Task()
 			value += (count + 1) * 4;
 		});
 	}
-
 	catch (const std::string& e)
 	{
 		LOG_ERROR(RSX, "Exception: %s", e.c_str());
 		Emu.Pause();
 	}
-
 	catch (const char* e)
 	{
 		LOG_ERROR(RSX, "Exception: %s", e);
 		Emu.Pause();
-	}
-
-	while (!is_vblank_stopped)
-	{
-		std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
 	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");

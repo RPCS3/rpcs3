@@ -390,7 +390,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -431,7 +431,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -578,9 +578,9 @@ int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
 	info->latency = 1000;
 	info->availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
-	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_2;
+	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
 	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
 
 	return CELL_AUDIO_OUT_SUCCEEDED;
 }
