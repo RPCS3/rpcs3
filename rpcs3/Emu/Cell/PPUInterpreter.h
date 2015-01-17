@@ -148,7 +148,7 @@ private:
 		case 0x103: return CPU.SPRG[3];
 
 		case 0x10C: CPU.TB = get_time(); return CPU.TB;
-		case 0x10D: CPU.TB = get_time(); return CPU.TBH;
+		case 0x10D: CPU.TB = get_time(); return CPU.TB >> 32;
 
 		case 0x110:
 		case 0x111:
@@ -2884,7 +2884,7 @@ private:
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
-		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
+		case 0x10D: CPU.GPR[rd] = CPU.TB >> 32; break;
 		default: throw fmt::Format("mftb r%d, %d", rd, spr);
 		}
 	}

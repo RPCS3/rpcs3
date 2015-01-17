@@ -542,16 +542,7 @@ public:
 	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
-	union
-	{
-		u64 TB;	//TBR 0x10C - 0x10D
-
-		struct
-		{
-			u32 TBH;
-			u32 TBL;
-		};
-	};
+	u64 TB;	//TBR 0x10C - 0x10D
 
 	u64 cycle;
 
