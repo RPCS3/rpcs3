@@ -247,7 +247,16 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] + CPU.VPR[vb]._f[w];
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isinf(a) && std::isinf(b) && a != b)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = a + b;
 		}
 	}
 	void VADDSBS(u32 vd, u32 va, u32 vb) //nf
@@ -759,20 +768,27 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			double result = (double)CPU.VPR[vb]._f[w] * nScale;
-
-			if (result > 0x7fffffff)
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
 			{
-				CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
-				CPU.VSCR.SAT = 1;
+				CPU.VPR[vd]._s32[w] = 0;
 			}
-			else if (result < -pow(2, 31))
+			else
 			{
-				CPU.VPR[vd]._s32[w] = (int)0x80000000;
-				CPU.VSCR.SAT = 1;
+				double result = (double)b * nScale;
+				if (result > 0x7fffffff)
+				{
+					CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < -pow(2, 31))
+				{
+					CPU.VPR[vd]._s32[w] = (int)0x80000000;
+					CPU.VSCR.SAT = 1;
+				}
+				else // C rounding = Round towards 0
+					CPU.VPR[vd]._s32[w] = (int)result;
 			}
-			else // C rounding = Round towards 0
-				CPU.VPR[vd]._s32[w] = (int)result;
 		}
 	}
 	void VCTUXS(u32 vd, u32 uimm5, u32 vb)
@@ -781,21 +797,28 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			// C rounding = Round towards 0
-			double result = (double)CPU.VPR[vb]._f[w] * nScale;
-
-			if (result > 0xffffffffu)
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
 			{
-				CPU.VPR[vd]._u32[w] = 0xffffffffu;
-				CPU.VSCR.SAT = 1;
-			}
-			else if (result < 0)
-			{
-				CPU.VPR[vd]._u32[w] = 0;
-				CPU.VSCR.SAT = 1;
+				CPU.VPR[vd]._s32[w] = 0;
 			}
 			else
-				CPU.VPR[vd]._u32[w] = (u32)result;
+			{
+				// C rounding = Round towards 0
+				double result = (double)b * nScale;
+				if (result > 0xffffffffu)
+				{
+					CPU.VPR[vd]._u32[w] = 0xffffffffu;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u32[w] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u32[w] = (u32)result;
+			}
 		}
 	}
 	void VEXPTEFP(u32 vd, u32 vb)
@@ -805,7 +828,11 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = powf(2.0f, CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = powf(2.0f, b);
 		}
 	}
 	void VLOGEFP(u32 vd, u32 vb)
@@ -814,21 +841,48 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = log2f(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = log2f(b);
 		}
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] * CPU.VPR[vc]._f[w] + CPU.VPR[vb]._f[w];
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			const float c = CPU.VPR[vc]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isnan(c))
+				CPU.VPR[vd]._f[w] = SilenceNaN(c);
+			else if ((std::isinf(a) && c == 0) || (a == 0 && std::isinf(c)))
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+			{
+				CPU.VPR[vd]._f[w] = a * c + b;
+				if (std::isnan(CPU.VPR[vd]._f[w]))
+					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			}
 		}
 	}
 	void VMAXFP(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = std::max(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = std::max(a, b);
 		}
 	}
 	void VMAXSB(u32 vd, u32 va, u32 vb) //nf
@@ -915,7 +969,14 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = std::min(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = std::min(a, b);
 		}
 	}
 	void VMINSB(u32 vd, u32 va, u32 vb) //nf
@@ -1202,7 +1263,23 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = -(CPU.VPR[va]._f[w] * CPU.VPR[vc]._f[w] - CPU.VPR[vb]._f[w]);
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			const float c = CPU.VPR[vc]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isnan(c))
+				CPU.VPR[vd]._f[w] = SilenceNaN(c);
+			else if ((std::isinf(a) && c == 0) || (a == 0 && std::isinf(c)))
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+			{
+				CPU.VPR[vd]._f[w] = -(a * c - b);
+				if (std::isnan(CPU.VPR[vd]._f[w]))
+					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			}
 		}
 	}
 	void VNOR(u32 vd, u32 va, u32 vb)
@@ -1477,35 +1554,55 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = 1.0f / CPU.VPR[vb]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = 1.0f / b;
 		}
 	}
 	void VRFIM(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = floorf(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = floorf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIN(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = nearbyintf(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = nearbyintf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIP(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = ceilf(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = ceilf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIZ(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = truncf(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = truncf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRLB(u32 vd, u32 va, u32 vb) //nf
@@ -1536,7 +1633,13 @@ private:
 		for (uint w = 0; w < 4; w++)
 		{
 			//TODO: accurate div
-			CPU.VPR[vd]._f[w] = 1.0f / sqrtf(CPU.VPR[vb]._f[w]);
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (b < 0)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = 1.0f / sqrtf(b);
 		}
 	}
 	void VSEL(u32 vd, u32 va, u32 vb, u32 vc)
@@ -1729,7 +1832,16 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] - CPU.VPR[vb]._f[w];
+			const float a = CPU.VPR[va]._f[w];
+			const float b = CPU.VPR[vb]._f[w];
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isinf(a) && std::isinf(b) && a == b)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = a - b;
 		}
 	}
 	void VSUBSBS(u32 vd, u32 va, u32 vb) //nf
