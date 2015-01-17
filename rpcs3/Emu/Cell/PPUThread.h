@@ -652,7 +652,7 @@ public:
 		UpdateCRn<T>(0, val, 0);
 	}
 
-	template<typename T> void UpdateCR1()
+	void UpdateCR1()
 	{
 		SetCR_LT(1, FPSCR.FX);
 		SetCR_GT(1, FPSCR.FEX);
@@ -669,6 +669,12 @@ public:
 
 	bool IsCarry(const u64 a, const u64 b) { return (a + b) < a; }
 	bool IsCarry(const u64 a, const u64 b, const u64 c) { return IsCarry(a, b) || IsCarry(a + b, c); }
+
+	void SetOV(const bool set)
+	{
+		XER.OV = set;
+		XER.SO |= set;
+	}
 
 	void SetFPSCRException(const FPSCR_EXP mask)
 	{

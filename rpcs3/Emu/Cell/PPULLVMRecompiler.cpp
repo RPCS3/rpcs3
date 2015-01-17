@@ -3746,6 +3746,16 @@ void Compiler::STVLX(u32 vs, u32 ra, u32 rb) {
                               addr_i8_ptr, vs_i8_ptr, size_i64, m_ir_builder->getInt32(1), m_ir_builder->getInt1(false));
 }
 
+void Compiler::STDBRX(u32 rs, u32 ra, u32 rb) {
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    WriteMemory(addr_i64, GetGpr(rs), 0, false);
+}
+
 void Compiler::STSWX(u32 rs, u32 ra, u32 rb) {
     CompilationError("STSWX");
 }

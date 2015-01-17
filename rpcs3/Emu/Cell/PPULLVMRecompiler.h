@@ -598,6 +598,7 @@ namespace ppu_recompiler_llvm {
         void LFDX(u32 frd, u32 ra, u32 rb) override;
         void LFDUX(u32 frd, u32 ra, u32 rb) override;
         void STVLX(u32 vs, u32 ra, u32 rb) override;
+        void STDBRX(u32 rd, u32 ra, u32 rb) override;
         void STSWX(u32 rs, u32 ra, u32 rb) override;
         void STWBRX(u32 rs, u32 ra, u32 rb) override;
         void STFSX(u32 frs, u32 ra, u32 rb) override;
