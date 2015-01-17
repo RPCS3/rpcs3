@@ -2243,7 +2243,7 @@ private:
 	}
 	void BCCTR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
-		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
+		if(bo & 0x10 || CPU.IsCR(bi) == ((bo & 0x8) != 0))
 		{
 			const u32 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, (u32)CPU.CTR), true);
