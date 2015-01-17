@@ -740,8 +740,8 @@ void waiter_map_t::notify(u64 signal_id)
 	}
 }
 
-static const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
-static const std::function<bool()> SQUEUE_NEVER_EXIT = [](){ return false; };
+const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
+const std::function<bool()> SQUEUE_NEVER_EXIT = [](){ return false; };
 
 bool squeue_test_exit()
 {
