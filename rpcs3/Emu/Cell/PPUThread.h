@@ -702,6 +702,8 @@ public:
 	{
 		if ((FPSCR.FPSCR & mask) != mask) FPSCR.FX = 1;
 		FPSCR.FPSCR |= mask;
+		UpdateFPSCR_VX();
+		UpdateFPSCR_FEX();
 	}
 
 	void SetFPSCR_FI(const u32 val)
