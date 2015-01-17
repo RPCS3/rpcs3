@@ -3059,7 +3059,16 @@ private:
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3120,7 +3129,16 @@ private:
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void SYNC(u32 l)
@@ -3176,7 +3194,17 @@ private:
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
 	{
@@ -3188,7 +3216,17 @@ private:
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
@@ -3459,12 +3497,30 @@ private:
 	void LFS(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 	}
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void LFD(u32 frd, u32 ra, s32 d)
@@ -3481,12 +3537,32 @@ private:
 	void STFS(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)

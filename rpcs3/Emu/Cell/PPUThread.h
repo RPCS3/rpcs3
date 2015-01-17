@@ -443,18 +443,22 @@ struct PPCdouble
 
 	PPCdouble() : _u64(0)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(double val) : _double(val)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(u64 val) : _u64(val)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(u32 val) : _u64(val)
 	{
+		type = UpdateType();
 	}
 };
 
