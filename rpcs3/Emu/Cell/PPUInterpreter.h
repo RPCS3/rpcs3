@@ -463,13 +463,13 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			u32 mask = 0;
+			u32 mask = 1<<31 | 1<<30;
 
 			const float A = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
 			const float B = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 
-			if (A >  B) mask |= 1 << 31;
-			if (A < -B) mask |= 1 << 30;
+			if (A <=  B) mask &= ~(1 << 31);
+			if (A >= -B) mask &= ~(1 << 30);
 
 			CPU.VPR[vd]._u32[w] = mask;
 
@@ -881,8 +881,14 @@ private:
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (a > b)
+				CPU.VPR[vd]._f[w] = a;
+			else if (b > a)
+				CPU.VPR[vd]._f[w] = b;
+			else if (CPU.VPR[vb]._u32[w] == 0x80000000)
+				CPU.VPR[vd]._f[w] = a;  // max(+0,-0) = +0
 			else
-				CPU.VPR[vd]._f[w] = std::max(a, b);
+				CPU.VPR[vd]._f[w] = b;
 		}
 	}
 	void VMAXSB(u32 vd, u32 va, u32 vb) //nf
@@ -975,8 +981,14 @@ private:
 				CPU.VPR[vd]._f[w] = SilenceNaN(a);
 			else if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (a < b)
+				CPU.VPR[vd]._f[w] = a;
+			else if (b < a)
+				CPU.VPR[vd]._f[w] = b;
+			else if (CPU.VPR[vb]._u32[w] == 0x00000000)
+				CPU.VPR[vd]._f[w] = a;  // min(-0,+0) = -0
 			else
-				CPU.VPR[vd]._f[w] = std::min(a, b);
+				CPU.VPR[vd]._f[w] = b;
 		}
 	}
 	void VMINSB(u32 vd, u32 va, u32 vb) //nf
