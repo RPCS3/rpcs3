@@ -3746,22 +3746,16 @@ private:
 			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
-				{
-					double t = b + 0.5;
-					i = (s32)t;
-					if (t - i < 0 || (t - i == 0 && b > 0)) i--;
-					break;
-				}
+				i = (s32)nearbyint(b);
+				break;
 			case FPSCR_RN_ZERO:
 				i = (s32)b;
 				break;
 			case FPSCR_RN_PINF:
-				i = (s32)b;
-				if (b - i > 0) i++;
+				i = (s32)ceil(b);
 				break;
 			case FPSCR_RN_MINF:
-				i = (s32)b;
-				if (b - i < 0) i--;
+				i = (s32)floor(b);
 				break;
 			}
 			r = (u32)i;
@@ -3977,22 +3971,16 @@ private:
 			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
-				{
-					double t = b + 0.5;
-					i = (s64)t;
-					if (t - i < 0 || (t - i == 0 && b > 0)) i--;
-					break;
-				}
+				i = (s64)nearbyint(b);
+				break;
 			case FPSCR_RN_ZERO:
 				i = (s64)b;
 				break;
 			case FPSCR_RN_PINF:
-				i = (s64)b;
-				if (b - i > 0) i++;
+				i = (s64)ceil(b);
 				break;
 			case FPSCR_RN_MINF:
-				i = (s64)b;
-				if (b - i < 0) i--;
+				i = (s64)floor(b);
 				break;
 			}
 			r = (u64)i;
