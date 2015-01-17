@@ -3311,7 +3311,7 @@ void Compiler::MFSPR(u32 rd, u32 spr) {
         rd_i64 = GetCtr();
         break;
     case 0x100:
-        rd_i64 = GetUsprg0();
+        rd_i64 = GetVrsave();
         break;
     case 0x10C:
         rd_i64 = Call<u64>("get_time", get_time);
@@ -3503,7 +3503,7 @@ void Compiler::MTSPR(u32 spr, u32 rs) {
         SetCtr(rs_i64);
         break;
     case 0x100:
-        SetUsprg0(rs_i64);
+        SetVrsave(rs_i64);
         break;
     default:
         assert(0);
@@ -3744,6 +3744,16 @@ void Compiler::STVLX(u32 vs, u32 ra, u32 rb) {
     Type * types[3] = { m_ir_builder->getInt8PtrTy(), m_ir_builder->getInt8PtrTy(), m_ir_builder->getInt64Ty() };
     m_ir_builder->CreateCall5(Intrinsic::getDeclaration(m_module, Intrinsic::memcpy, types),
                               addr_i8_ptr, vs_i8_ptr, size_i64, m_ir_builder->getInt32(1), m_ir_builder->getInt1(false));
+}
+
+void Compiler::STDBRX(u32 rs, u32 ra, u32 rb) {
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
+
+    WriteMemory(addr_i64, GetGpr(rs), 0, false);
 }
 
 void Compiler::STSWX(u32 rs, u32 ra, u32 rb) {
@@ -5268,17 +5278,19 @@ void Compiler::SetXerSo(Value * so) {
     SetXer(xer_i64);
 }
 
-Value * Compiler::GetUsprg0() {
-    auto usrpg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG));
-    auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usrpg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    return m_ir_builder->CreateAlignedLoad(usprg0_i64_ptr, 8);
+Value * Compiler::GetVrsave() {
+    auto vrsave_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VRSAVE));
+    auto vrsave_i32_ptr = m_ir_builder->CreateBitCast(vrsave_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    auto val_i32        = m_ir_builder->CreateAlignedLoad(vrsave_i32_ptr, 4);
+    return m_ir_builder->CreateZExtOrTrunc(val_i32, m_ir_builder->getInt64Ty());
 }
 
-void Compiler::SetUsprg0(Value * val_x64) {
+void Compiler::SetVrsave(Value * val_x64) {
     auto val_i64        = m_ir_builder->CreateBitCast(val_x64, m_ir_builder->getInt64Ty());
-    auto usprg0_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, USPRG));
-    auto usprg0_i64_ptr = m_ir_builder->CreateBitCast(usprg0_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    m_ir_builder->CreateAlignedStore(val_i64, usprg0_i64_ptr, 8);
+    auto val_i32        = m_ir_builder->CreateZExtOrTrunc(val_i64, m_ir_builder->getInt32Ty());
+    auto vrsave_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, VRSAVE));
+    auto vrsave_i32_ptr = m_ir_builder->CreateBitCast(vrsave_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
+    m_ir_builder->CreateAlignedStore(val_i32, vrsave_i32_ptr, 8);
 }
 
 Value * Compiler::GetFpscr() {

@@ -344,6 +344,8 @@ namespace PPU_opcodes
 		DIVD   = 0x1e9,
 		DIVW   = 0x1eb,
 		LVLX   = 0x207, //Load Vector Left Indexed
+		SUBFCO = 0x208,
+		ADDCO  = 0x20a,
 		LDBRX  = 0x214,
 		LSWX   = 0x215,
 		LWBRX  = 0x216,
@@ -351,21 +353,33 @@ namespace PPU_opcodes
 		SRW    = 0x218,
 		SRD    = 0x21b,
 		LVRX   = 0x227, //Load Vector Right Indexed
+		SUBFO  = 0x228,
 		LFSUX  = 0x237,
 		LSWI   = 0x255,
 		SYNC   = 0x256,
 		LFDX   = 0x257,
+		NEGO   = 0x268,
 		LFDUX  = 0x277,
 		STVLX  = 0x287, //Store Vector Left Indexed
+		SUBFEO = 0x288,
+		ADDEO  = 0x28a,
+		STDBRX = 0x294,
 		STSWX  = 0x295,
 		STWBRX = 0x296,
 		STFSX  = 0x297,
 		STVRX  = 0x2a7, //Store Vector Right Indexed
 		STFSUX = 0x2b7,
+		SUBFZEO= 0x2c8,
+		ADDZEO = 0x2ca,
 		STSWI  = 0x2d5,
 		STFDX  = 0x2d7, //Store Floating-Point Double Indexed
+		SUBFMEO= 0x2e8,
+		MULLDO = 0x2e9,
+		ADDMEO = 0x2ea,
+		MULLWO = 0x2eb,
 		STFDUX = 0x2f7,
 		LVLXL  = 0x307, //Load Vector Left Indexed Last
+		ADDO   = 0x30a,
 		LHBRX  = 0x316,
 		SRAW   = 0x318,
 		SRAD   = 0x31a,
@@ -380,9 +394,13 @@ namespace PPU_opcodes
 		EXTSH  = 0x39a,
 		STVRXL = 0x3a7, //Store Vector Right Indexed Last
 		EXTSB  = 0x3ba,
+		DIVDUO = 0x3c9,
+		DIVWUO = 0x3cb,
 		STFIWX = 0x3d7,
 		EXTSW  = 0x3da,
 		ICBI   = 0x3d6, //Instruction Cache Block Invalidate
+		DIVDO  = 0x3e9,
+		DIVWO  = 0x3eb,
 		DCBZ   = 0x3f6, //Data Cache Block Set to Zero
 	};
 
@@ -759,6 +777,7 @@ public:
 	virtual void LFDX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void LFDUX(u32 frd, u32 ra, u32 rb) = 0;
 	virtual void STVLX(u32 vs, u32 ra, u32 rb) = 0;
+	virtual void STDBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STSWX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STWBRX(u32 rs, u32 ra, u32 rb) = 0;
 	virtual void STFSX(u32 frs, u32 ra, u32 rb) = 0;

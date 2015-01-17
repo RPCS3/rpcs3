@@ -53,6 +53,13 @@ u64 rotr64(const u64 x, const u8 n) { return (x >> n) | (x << (64 - n)); }
 #define rotl64 _rotl64
 #define rotr64 _rotr64
 
+static double SilenceNaN(double x)
+{
+	u64 bits = (u64&)x;
+	bits |= 0x0008000000000000ULL;
+	return (double&)bits;
+}
+
 namespace ppu_recompiler_llvm {
 	class Compiler;
 }
@@ -144,17 +151,11 @@ private:
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
-		case 0x100: 
-		case 0x101:
-		case 0x102:
-		case 0x103:
-		case 0x104:
-		case 0x105:
-		case 0x106:
-		case 0x107: return CPU.USPRG[n - 0x100];
+		case 0x100: return CPU.VRSAVE;
+		case 0x103: return CPU.SPRG[3];
 
 		case 0x10C: CPU.TB = get_time(); return CPU.TB;
-		case 0x10D: CPU.TB = get_time(); return CPU.TBH;
+		case 0x10D: CPU.TB = get_time(); return CPU.TB >> 32;
 
 		case 0x110:
 		case 0x111:
@@ -178,14 +179,8 @@ private:
 		case 0x001: CPU.XER.XER = value; return;
 		case 0x008: CPU.LR = value; return;
 		case 0x009: CPU.CTR = value; return;
-		case 0x100: 
-		case 0x101:
-		case 0x102:
-		case 0x103:
-		case 0x104:
-		case 0x105:
-		case 0x106:
-		case 0x107: CPU.USPRG[n - 0x100] = value; return;
+		case 0x100: CPU.VRSAVE = (u32)value; return;
+		case 0x103: throw fmt::Format("WriteSPR(0x103, 0x%llx): Write to read-only SPR", value);
 
 		case 0x10C: throw fmt::Format("WriteSPR(0x10C, 0x%llx): Write to time-based SPR", value);
 		case 0x10D: throw fmt::Format("WriteSPR(0x10D, 0x%llx): Write to time-based SPR", value);
@@ -252,7 +247,16 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] + CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isinf(a) && std::isinf(b) && a != b)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(a + b);
 		}
 	}
 	void VADDSBS(u32 vd, u32 va, u32 vb) //nf
@@ -453,34 +457,19 @@ private:
 			CPU.VPR[vd]._f[w] = ((float)CPU.VPR[vb]._u32[w]) / scale;
 		}
 	}
-	void VCMPBFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			u32 mask = 0;
-
-			const float A = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
-			const float B = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
-
-			if (A >  B) mask |= 1 << 31;
-			if (A < -B) mask |= 1 << 30;
-
-			CPU.VPR[vd]._u32[w] = mask;
-		}
-	}
-	void VCMPBFP_(u32 vd, u32 va, u32 vb)
+	void VCMPBFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		bool allInBounds = true;
 
 		for (uint w = 0; w < 4; w++)
 		{
-			u32 mask = 0;
+			u32 mask = 1<<31 | 1<<30;
 
-			const float A = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
-			const float B = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
 
-			if (A >  B) mask |= 1 << 31;
-			if (A < -B) mask |= 1 << 30;
+			if (a <=  b) mask &= ~(1 << 31);
+			if (a >= -b) mask &= ~(1 << 30);
 
 			CPU.VPR[vd]._u32[w] = mask;
 
@@ -488,18 +477,16 @@ private:
 				allInBounds = false;
 		}
 
-		// Bit n°2 of CR6
-		CPU.SetCR(6, 0);
-		CPU.SetCRBit(6, 0x2, allInBounds);
-	}
-	void VCMPEQFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
+		if (rc)
 		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] == CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
+			// Bit n°2 of CR6
+			CPU.SetCR(6, 0);
+			CPU.SetCRBit(6, 0x2, allInBounds);
 		}
 	}
-	void VCMPEQFP_(u32 vd, u32 va, u32 vb)
+	void VCMPBFP(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, false);}
+	void VCMPBFP_(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, true);}
+	void VCMPEQFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -518,16 +505,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUB(u32 vd, u32 va, u32 vb)
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b] == CPU.VPR[vb]._u8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPEQUB_(u32 vd, u32 va, u32 vb)
+	void VCMPEQFP(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, false);}
+	void VCMPEQFP_(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, true);}
+	void VCMPEQUB(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -546,16 +528,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUH(u32 vd, u32 va, u32 vb) //nf
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] == CPU.VPR[vb]._u16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPEQUH_(u32 vd, u32 va, u32 vb) //nf
+	void VCMPEQUB(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, false);}
+	void VCMPEQUB_(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, true);}
+	void VCMPEQUH(u32 vd, u32 va, u32 vb, bool rc) //nf
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -574,16 +551,11 @@ private:
 			}
 		}
 			
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] == CPU.VPR[vb]._u32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPEQUW_(u32 vd, u32 va, u32 vb)
+	void VCMPEQUH(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, false);}
+	void VCMPEQUH_(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, true);}
+	void VCMPEQUW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -602,16 +574,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPGEFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] >= CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGEFP_(u32 vd, u32 va, u32 vb)
+	void VCMPEQUW(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, false);}
+	void VCMPEQUW_(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, true);}
+	void VCMPGEFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -630,16 +597,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_ge | none_ge;
+		if (rc) CPU.CR.cr6 = all_ge | none_ge;
 	}
-	void VCMPGTFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] > CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTFP_(u32 vd, u32 va, u32 vb)
+	void VCMPGEFP(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, false);}
+	void VCMPGEFP_(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, true);}
+	void VCMPGTFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -658,16 +620,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_ge | none_ge;
+		if (rc) CPU.CR.cr6 = all_ge | none_ge;
 	}
-	void VCMPGTSB(u32 vd, u32 va, u32 vb) //nf
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._s8[b] > CPU.VPR[vb]._s8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPGTSB_(u32 vd, u32 va, u32 vb)
+	void VCMPGTFP(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, false);}
+	void VCMPGTFP_(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, true);}
+	void VCMPGTSB(u32 vd, u32 va, u32 vb, bool rc) //nf
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -686,16 +643,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTSH(u32 vd, u32 va, u32 vb)
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._s16[h] > CPU.VPR[vb]._s16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPGTSH_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSB(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, false);}
+	void VCMPGTSB_(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, true);}
+	void VCMPGTSH(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -714,16 +666,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTSW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._s32[w] > CPU.VPR[vb]._s32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTSW_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSH(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, false);}
+	void VCMPGTSH_(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, true);}
+	void VCMPGTSW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -742,16 +689,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUB(u32 vd, u32 va, u32 vb)
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b] > CPU.VPR[vb]._u8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPGTUB_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSW(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, false);}
+	void VCMPGTSW_(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, true);}
+	void VCMPGTUB(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -770,16 +712,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUH(u32 vd, u32 va, u32 vb)
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] > CPU.VPR[vb]._u16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPGTUH_(u32 vd, u32 va, u32 vb)
+	void VCMPGTUB(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, false);}
+	void VCMPGTUB_(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, true);}
+	void VCMPGTUH(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -798,16 +735,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] > CPU.VPR[vb]._u32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTUW_(u32 vd, u32 va, u32 vb)
+	void VCMPGTUH(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, false);}
+	void VCMPGTUH_(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, true);}
+	void VCMPGTUW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -826,28 +758,37 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
+	void VCMPGTUW(u32 vd, u32 va, u32 vb) {VCMPGTUW(vd, va, vb, false);}
+	void VCMPGTUW_(u32 vd, u32 va, u32 vb) {VCMPGTUW(vd, va, vb, true);}
 	void VCTSXS(u32 vd, u32 uimm5, u32 vb)
 	{
 		u32 nScale = 1 << uimm5;
 
 		for (uint w = 0; w < 4; w++)
 		{
-			double result = (double)CPU.VPR[vb]._f[w] * nScale;
-
-			if (result > 0x7fffffff)
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
 			{
-				CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
-				CPU.VSCR.SAT = 1;
+				CPU.VPR[vd]._s32[w] = 0;
 			}
-			else if (result < -pow(2, 31))
+			else
 			{
-				CPU.VPR[vd]._s32[w] = (int)0x80000000;
-				CPU.VSCR.SAT = 1;
+				double result = (double)b * nScale;
+				if (result > 0x7fffffff)
+				{
+					CPU.VPR[vd]._s32[w] = (int)0x7fffffff;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < -pow(2, 31))
+				{
+					CPU.VPR[vd]._s32[w] = (int)0x80000000;
+					CPU.VSCR.SAT = 1;
+				}
+				else // C rounding = Round towards 0
+					CPU.VPR[vd]._s32[w] = (int)result;
 			}
-			else // C rounding = Round towards 0
-				CPU.VPR[vd]._s32[w] = (int)result;
 		}
 	}
 	void VCTUXS(u32 vd, u32 uimm5, u32 vb)
@@ -856,21 +797,28 @@ private:
 
 		for (uint w = 0; w < 4; w++)
 		{
-			// C rounding = Round towards 0
-			double result = (double)CPU.VPR[vb]._f[w] * nScale;
-
-			if (result > 0xffffffffu)
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
 			{
-				CPU.VPR[vd]._u32[w] = 0xffffffffu;
-				CPU.VSCR.SAT = 1;
-			}
-			else if (result < 0)
-			{
-				CPU.VPR[vd]._u32[w] = 0;
-				CPU.VSCR.SAT = 1;
+				CPU.VPR[vd]._s32[w] = 0;
 			}
 			else
-				CPU.VPR[vd]._u32[w] = (u32)result;
+			{
+				// C rounding = Round towards 0
+				double result = (double)b * nScale;
+				if (result > 0xffffffffu)
+				{
+					CPU.VPR[vd]._u32[w] = 0xffffffffu;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u32[w] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u32[w] = (u32)result;
+			}
 		}
 	}
 	void VEXPTEFP(u32 vd, u32 vb)
@@ -880,7 +828,11 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = powf(2.0f, CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(powf(2.0f, b));
 		}
 	}
 	void VLOGEFP(u32 vd, u32 vb)
@@ -889,21 +841,56 @@ private:
 		// and between different executions on the same implementation.
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = log2f(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = log2f(b);  // Can never be denormal.
 		}
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] * CPU.VPR[vc]._f[w] + CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float c = CheckVSCR_NJ(CPU.VPR[vc]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isnan(c))
+				CPU.VPR[vd]._f[w] = SilenceNaN(c);
+			else if ((std::isinf(a) && c == 0) || (a == 0 && std::isinf(c)))
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+			{
+				const float result = fmaf(a, c, b);
+				if (std::isnan(result))
+					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+				else
+					CPU.VPR[vd]._f[w] = CheckVSCR_NJ(result);
+			}
 		}
 	}
 	void VMAXFP(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = std::max(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (a > b)
+				CPU.VPR[vd]._f[w] = a;
+			else if (b > a)
+				CPU.VPR[vd]._f[w] = b;
+			else if (CPU.VPR[vb]._u32[w] == 0x80000000)
+				CPU.VPR[vd]._f[w] = a;  // max(+0,-0) = +0
+			else
+				CPU.VPR[vd]._f[w] = b;
 		}
 	}
 	void VMAXSB(u32 vd, u32 va, u32 vb) //nf
@@ -990,7 +977,20 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = std::min(CPU.VPR[va]._f[w], CPU.VPR[vb]._f[w]);
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (a < b)
+				CPU.VPR[vd]._f[w] = a;
+			else if (b < a)
+				CPU.VPR[vd]._f[w] = b;
+			else if (CPU.VPR[vb]._u32[w] == 0x00000000)
+				CPU.VPR[vd]._f[w] = a;  // min(-0,+0) = -0
+			else
+				CPU.VPR[vd]._f[w] = b;
 		}
 	}
 	void VMINSB(u32 vd, u32 va, u32 vb) //nf
@@ -1277,7 +1277,25 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = -(CPU.VPR[va]._f[w] * CPU.VPR[vc]._f[w] - CPU.VPR[vb]._f[w]);
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			const float c = CheckVSCR_NJ(CPU.VPR[vc]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isnan(c))
+				CPU.VPR[vd]._f[w] = SilenceNaN(c);
+			else if ((std::isinf(a) && c == 0) || (a == 0 && std::isinf(c)))
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+			{
+				const float result = -fmaf(a, c, -b);
+				if (std::isnan(result))
+					CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+				else
+					CPU.VPR[vd]._f[w] = CheckVSCR_NJ(result);
+			}
 		}
 	}
 	void VNOR(u32 vd, u32 va, u32 vb)
@@ -1552,35 +1570,55 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = 1.0f / CPU.VPR[vb]._f[w];
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(1.0f / b);
 		}
 	}
 	void VRFIM(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = floorf(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = floorf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIN(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = nearbyintf(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = nearbyintf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIP(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = ceilf(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = ceilf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRFIZ(u32 vd, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = truncf(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else
+				CPU.VPR[vd]._f[w] = truncf(CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VRLB(u32 vd, u32 va, u32 vb) //nf
@@ -1611,7 +1649,13 @@ private:
 		for (uint w = 0; w < 4; w++)
 		{
 			//TODO: accurate div
-			CPU.VPR[vd]._f[w] = 1.0f / sqrtf(CPU.VPR[vb]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (b < 0)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = 1.0f / sqrtf(b);  // Can never be denormal.
 		}
 	}
 	void VSEL(u32 vd, u32 va, u32 vb, u32 vc)
@@ -1804,7 +1848,16 @@ private:
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = CPU.VPR[va]._f[w] - CPU.VPR[vb]._f[w];
+			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
+			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
+			if (std::isnan(a))
+				CPU.VPR[vd]._f[w] = SilenceNaN(a);
+			else if (std::isnan(b))
+				CPU.VPR[vd]._f[w] = SilenceNaN(b);
+			else if (std::isinf(a) && std::isinf(b) && a == b)
+				CPU.VPR[vd]._f[w] = (float)FPR_NAN;
+			else
+				CPU.VPR[vd]._f[w] = CheckVSCR_NJ(a - b);
 		}
 	}
 	void VSUBSBS(u32 vd, u32 va, u32 vb) //nf
@@ -1935,15 +1988,14 @@ private:
 	}
 	void VSUMSWS(u32 vd, u32 va, u32 vb)
 	{
-		CPU.VPR[vd].clear();
-			
-		s64 sum = CPU.VPR[vb]._s32[3];
+		s64 sum = CPU.VPR[vb]._s32[0];
 
 		for (uint w = 0; w < 4; w++)
 		{
 			sum += CPU.VPR[va]._s32[w];
 		}
 
+		CPU.VPR[vd].clear();
 		if (sum > INT32_MAX)
 		{
 			CPU.VPR[vd]._s32[0] = (s32)INT32_MAX;
@@ -2243,7 +2295,7 @@ private:
 	}
 	void BCCTR(u32 bo, u32 bi, u32 bh, u32 lk)
 	{
-		if(bo & 0x10 || CPU.IsCR(bi) == (bo & 0x8))
+		if(bo & 0x10 || CPU.IsCR(bi) == ((bo & 0x8) != 0))
 		{
 			const u32 nextLR = CPU.PC + 4;
 			CPU.SetBranch(branchTarget(0, (u32)CPU.CTR), true);
@@ -2381,16 +2433,16 @@ private:
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + 1;
 		CPU.XER.CA = CPU.IsCarry(~RA, RB, 1);
-		if(oe) throw "SUBFC(): subfco";
+		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		const s64 RA = CPU.GPR[ra];
-		const s64 RB = CPU.GPR[rb];
+		const u64 RA = CPU.GPR[ra];
+		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
 		CPU.XER.CA = CPU.IsCarry(RA, RB);
-		if(oe) throw "ADDC(): addco";
+		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
@@ -2526,8 +2578,10 @@ private:
 	}
 	void SUBF(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		CPU.GPR[rd] = CPU.GPR[rb] - CPU.GPR[ra];
-		if(oe) throw "SUBF(): subfo";
+		const u64 RA = CPU.GPR[ra];
+		const u64 RB = CPU.GPR[rb];
+		CPU.GPR[rd] = RB - RA;
+		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LDUX(u32 rd, u32 ra, u32 rb)
@@ -2605,8 +2659,9 @@ private:
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
-		CPU.GPR[rd] = 0-CPU.GPR[ra];
-		if(oe) throw "NEG(): nego";
+		const u64 RA = CPU.GPR[ra];
+		CPU.GPR[rd] = 0 - RA;
+		if(oe) CPU.SetOV((~RA>>63 == 0) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void LBZUX(u32 rd, u32 ra, u32 rb)
@@ -2634,8 +2689,8 @@ private:
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = ~RA + RB + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(~RA, RB, CPU.XER.CA);
+		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) throw "SUBFE(): subfeo";
 	}
 	void ADDE(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2659,8 +2714,8 @@ private:
 			CPU.GPR[rd] = RA + RB;
 			CPU.XER.CA = CPU.IsCarry(RA, RB);
 		}
+		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) throw "ADDE(): addeo";
 	}
 	void MTOCRF(u32 l, u32 crm, u32 rs)
 	{
@@ -2690,7 +2745,7 @@ private:
 			{
 				if(crm & (1 << i))
 				{
-					CPU.SetCR(7 - i, CPU.GPR[rs] & (0xf << (i * 4)));
+					CPU.SetCR(7 - i, (CPU.GPR[rs] >> (i * 4)) & 0xf);
 				}
 			}
 		}
@@ -2707,12 +2762,12 @@ private:
 		if (CPU.R_ADDR == addr)
 		{
 			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(vm::cast(CPU.R_ADDR)), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
-			CPU.R_ADDR = 0;
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
 		}
+		CPU.R_ADDR = 0;
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2748,7 +2803,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = RA + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(RA, CPU.XER.CA);
-		if(oe) LOG_WARNING(PPU, "addzeo");
+		if(oe) CPU.SetOV((RA>>63 == 0) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
@@ -2756,8 +2811,8 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA);
-		if (oe) LOG_WARNING(PPU, "subfzeo");
-		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		if(oe) CPU.SetOV((~RA>>63 == 0) && (~RA>>63 != CPU.GPR[rd]>>63));
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void STDCX_(u32 rs, u32 ra, u32 rb)
 	{
@@ -2766,12 +2821,12 @@ private:
 		if (CPU.R_ADDR == addr)
 		{
 			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(vm::cast(CPU.R_ADDR)), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
-			CPU.R_ADDR = 0;
 		}
 		else
 		{
 			CPU.SetCR_EQ(0, false);
 		}
+		CPU.R_ADDR = 0;
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2787,14 +2842,20 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
 		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA, ~0ULL);
-		if (oe) LOG_WARNING(PPU, "subfmeo");
-		if (rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+		if(oe) CPU.SetOV((~RA>>63 == 1) && (~RA>>63 != CPU.GPR[rd]>>63));
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
-		CPU.GPR[rd] = (s64)((s64)CPU.GPR[ra] * (s64)CPU.GPR[rb]);
+		const s64 RA = CPU.GPR[ra];
+		const s64 RB = CPU.GPR[rb];
+		CPU.GPR[rd] = (s64)(RA * RB);
+		if(oe)
+		{
+			const s64 high = __mulh(RA, RB);
+			CPU.SetOV(high != s64(CPU.GPR[rd]) >> 63);
+		}
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) throw "MULLD(): mulldo";
 	}
 	void ADDME(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2802,14 +2863,14 @@ private:
 		CPU.GPR[rd] = RA + CPU.XER.CA - 1;
 		CPU.XER.CA |= RA != 0;
 
-		if(oe) throw "ADDME(): addmeo";
+		if(oe) CPU.SetOV((u64(RA)>>63 == 1) && (u64(RA)>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULLW(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		CPU.GPR[rd] = (s64)((s64)(s32)CPU.GPR[ra] * (s64)(s32)CPU.GPR[rb]);
+		if(oe) CPU.SetOV(s64(CPU.GPR[rd]) < s64(-1)<<31 || s64(CPU.GPR[rd]) >= s64(1)<<31);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-		if(oe) throw "MULLW(): mullwo";
 	}
 	void DCBTST(u32 ra, u32 rb, u32 th)
 	{
@@ -2825,7 +2886,7 @@ private:
 		const u64 RA = CPU.GPR[ra];
 		const u64 RB = CPU.GPR[rb];
 		CPU.GPR[rd] = RA + RB;
-		if(oe) throw "ADD(): addo";
+		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void DCBT(u32 ra, u32 rb, u32 th)
@@ -2887,7 +2948,7 @@ private:
 		switch(n)
 		{
 		case 0x10C: CPU.GPR[rd] = CPU.TB; break;
-		case 0x10D: CPU.GPR[rd] = CPU.TBH; break;
+		case 0x10D: CPU.GPR[rd] = CPU.TB >> 32; break;
 		default: throw fmt::Format("mftb r%d, %d", rd, spr);
 		}
 	}
@@ -2940,11 +3001,12 @@ private:
 
 		if(RB == 0)
 		{
-			if(oe) throw "DIVDU(): divduo";
+			if(oe) CPU.SetOV(true);
 			CPU.GPR[rd] = 0;
 		}
 		else
 		{
+			if(oe) CPU.SetOV(false);
 			CPU.GPR[rd] = RA / RB;
 		}
 
@@ -2957,11 +3019,12 @@ private:
 
 		if(RB == 0)
 		{
-			if(oe) throw "DIVWU(): divwuo";
+			if(oe) CPU.SetOV(true);
 			CPU.GPR[rd] = 0;
 		}
 		else
 		{
+			if(oe) CPU.SetOV(false);
 			CPU.GPR[rd] = RA / RB;
 		}
 
@@ -2991,11 +3054,12 @@ private:
 
 		if (RB == 0 || ((u64)RA == (1ULL << 63) && RB == -1))
 		{
-			if(oe) throw "DIVD(): divdo";
+			if(oe) CPU.SetOV(true);
 			CPU.GPR[rd] = /*(((u64)RA & (1ULL << 63)) && RB == 0) ? -1 :*/ 0;
 		}
 		else
 		{
+			if(oe) CPU.SetOV(false);
 			CPU.GPR[rd] = RA / RB;
 		}
 
@@ -3008,11 +3072,12 @@ private:
 
 		if (RB == 0 || ((u32)RA == (1 << 31) && RB == -1))
 		{
-			if(oe) throw "DIVW(): divwo";
+			if(oe) CPU.SetOV(true);
 			CPU.GPR[rd] = /*(((u32)RA & (1 << 31)) && RB == 0) ? -1 :*/ 0;
 		}
 		else
 		{
+			if(oe) CPU.SetOV(false);
 			CPU.GPR[rd] = (u32)(RA / RB);
 		}
 
@@ -3033,7 +3098,22 @@ private:
 	}
 	void LSWX(u32 rd, u32 ra, u32 rb)
 	{
-		throw "LSWX()";
+		u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		u32 count = CPU.XER.XER & 0x7F;
+		for (; count >= 4; count -= 4, addr += 4, rd = (rd+1) & 31)
+		{
+			CPU.GPR[rd] = vm::get_ref<be_t<u32>>(vm::cast(addr));
+		}
+		if (count)
+		{
+			u32 value = 0;
+			for (u32 byte = 0; byte < count; byte++)
+			{
+				u32 byte_value = vm::get_ref<u8>(vm::cast(addr+byte));
+				value |= byte_value << ((3^byte)*8);
+			}
+			CPU.GPR[rd] = value;
+		}
 	}
 	void LWBRX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3043,7 +3123,16 @@ private:
 	void LFSX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 	}
 	void SRW(u32 ra, u32 rs, u32 rb, bool rc)
 	{
@@ -3104,7 +3193,16 @@ private:
 	void LFSUX(u32 frd, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void SYNC(u32 l)
@@ -3129,9 +3227,28 @@ private:
 
 		for (u32 i = 0; i < 16u - eb; ++i) vm::write8(vm::cast(addr + i), CPU.VPR[vs]._u8[15 - i]);
 	}
+	void STDBRX(u32 rs, u32 ra, u32 rb)
+	{
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		vm::get_ref<u64>(vm::cast(addr)) = CPU.GPR[rs];
+	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
-		throw "STSWX()";
+		u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		u32 count = CPU.XER.XER & 0x7F;
+		for (; count >= 4; count -= 4, addr += 4, rs = (rs+1) & 31)
+		{
+			vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		}
+		if (count)
+		{
+			u32 value = (u32)CPU.GPR[rs];
+			for (u32 byte = 0; byte < count; byte++)
+			{
+				u32 byte_value = (u8)(value >> ((3^byte)*8));
+				vm::write8(vm::cast(addr+byte), byte_value);
+			}
+		}
 	}
 	void STWBRX(u32 rs, u32 ra, u32 rb)
 	{
@@ -3141,7 +3258,17 @@ private:
 	void STFSX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
 	{
@@ -3153,7 +3280,17 @@ private:
 	void STFSUX(u32 frs, u32 ra, u32 rb)
 	{
 		const u64 addr = CPU.GPR[ra] + CPU.GPR[rb];
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void STSWI(u32 rd, u32 ra, u32 nb)
@@ -3424,12 +3561,30 @@ private:
 	void LFS(u32 frd, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 	}
 	void LFSU(u32 frd, u32 ra, s32 ds)
 	{
 		const u64 addr = CPU.GPR[ra] + ds;
-		CPU.FPR[frd] = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		float val = vm::get_ref<be_t<float>>(vm::cast(addr)).value();
+		if (!FPRdouble::IsNaN(val))
+		{
+			CPU.FPR[frd] = val;
+		}
+		else
+		{
+			u64 bits = (u32&)val;
+			(u64&)CPU.FPR[frd] = (bits & 0x80000000) << 32 | 7ULL << 60 | (bits & 0x7fffffff) << 29;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void LFD(u32 frd, u32 ra, s32 d)
@@ -3446,12 +3601,32 @@ private:
 	void STFS(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
 	{
 		const u64 addr = CPU.GPR[ra] + d;
-		vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)CPU.FPR[frs];
+		double val = CPU.FPR[frs];
+		if (!FPRdouble::IsNaN(val))
+		{
+			vm::get_ref<be_t<float>>(vm::cast(addr)) = (float)val;
+		}
+		else
+		{
+			u64 bits = (u64&)val;
+			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+		}
 		CPU.GPR[ra] = addr;
 	}
 	void STFD(u32 frs, u32 ra, s32 d)
@@ -3482,105 +3657,52 @@ private:
 		const u64 addr = ra ? CPU.GPR[ra] + ds : ds;
 		CPU.GPR[rd] = (s64)(s32)vm::read32(vm::cast(addr));
 	}
-	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc)
+	void FDIVS(u32 frd, u32 fra, u32 frb, bool rc) {FDIV(frd, fra, frb, rc, true);}
+	void FSUBS(u32 frd, u32 fra, u32 frb, bool rc) {FSUB(frd, fra, frb, rc, true);}
+	void FADDS(u32 frd, u32 fra, u32 frb, bool rc) {FADD(frd, fra, frb, rc, true);}
+	void FSQRTS(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, true);}
+	void FRES(u32 frd, u32 frb, bool rc)
 	{
-		if(FPRdouble::IsNaN(CPU.FPR[fra]))
+		const double b = CPU.FPR[frb];
+		if(FPRdouble::IsSNaN(b))
 		{
-			CPU.FPR[frd] = CPU.FPR[fra];
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
 		}
-		else if(FPRdouble::IsNaN(CPU.FPR[frb]))
+		if(FPRdouble::IsNaN(b))
 		{
-			CPU.FPR[frd] = CPU.FPR[frb];
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(b == 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_ZX);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if (CPU.FPSCR.ZE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = 1.0 / b;
 		}
 		else
 		{
-			if(CPU.FPR[frb] == 0.0)
-			{
-				if(CPU.FPR[fra] == 0.0)
-				{
-					CPU.FPSCR.VXZDZ = true;
-					CPU.FPR[frd] = FPR_NAN;
-				}
-				else
-				{
-					CPU.FPR[frd] = (float)(CPU.FPR[fra] / CPU.FPR[frb]);
-				}
-
-				CPU.FPSCR.ZX = true;
-			}
-			else if(FPRdouble::IsINF(CPU.FPR[fra]) && FPRdouble::IsINF(CPU.FPR[frb]))
-			{
-				CPU.FPSCR.VXIDI = true;
-				CPU.FPR[frd] = FPR_NAN;
-			}
-			else
-			{
-				CPU.FPR[frd] = (float)(CPU.FPR[fra] / CPU.FPR[frb]);
-			}
+			CPU.FPR[frd] = static_cast<float>(1.0 / b);
 		}
-
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FDIVS(): fdivs.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
-	void FSUBS(u32 frd, u32 fra, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] - CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FSUBS(): fsubs.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FADDS(u32 frd, u32 fra, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] + CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FADDS(): fadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FSQRTS(u32 frd, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(sqrt(CPU.FPR[frb]));
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FSQRTS(): fsqrts.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FRES(u32 frd, u32 frb, bool rc)
-	{
-		if(CPU.FPR[frb] == 0.0)
-		{
-			CPU.SetFPSCRException(FPSCR_ZX);
-		}
-		CPU.FPR[frd] = static_cast<float>(1.0 / CPU.FPR[frb]);
-		if(rc) throw "FRES(): fres.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FMULS(u32 frd, u32 fra, u32 frc, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] * CPU.FPR[frc]);
-		CPU.FPSCR.FI = 0;
-		CPU.FPSCR.FR = 0;
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FMULS(): fmuls.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FMADDS(): fmadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FMSUBS(): fmsubs.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(-(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]));
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FNMSUBS(): fnmsubs.";////CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = static_cast<float>(-(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]));
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FNMADDS(): fnmadds.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
+	void FMULS(u32 frd, u32 fra, u32 frc, bool rc) {FMUL(frd, fra, frc, rc, true);}
+	void FMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, false, true);}
+	void FMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, true, true);}
+	void FNMSUBS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, true, true);}
+	void FNMADDS(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, false, true);}
 	void STD(u32 rs, u32 ra, s32 d)
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + d : d;
@@ -3596,43 +3718,25 @@ private:
 	void MTFSB1(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << (31 - crbd));
+		if ((crbd >= 3 && crbd <= 6) && !(CPU.FPSCR.FPSCR & mask)) mask |= 1ULL << 31;  //FPSCR.FX
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
-		CPU.FPSCR.FPSCR |= mask;
+		CPU.SetFPSCR(CPU.FPSCR.FPSCR | mask);
 
-		if(rc) throw "MTFSB1(): mtfsb1.";
+		if(rc) CPU.UpdateCR1();
 	}
 	void MCRFS(u32 crbd, u32 crbs)
 	{
-		CPU.SetCR(crbd, (CPU.FPSCR.FPSCR  >> ((7 - crbs) * 4)) & 0xf);
-
-		switch (crbs)
-		{
-		case 0:
-			CPU.FPSCR.FX = CPU.FPSCR.OX = 0;
-			break;
-		case 1:
-			CPU.FPSCR.UX = CPU.FPSCR.ZX = CPU.FPSCR.XX = CPU.FPSCR.VXSNAN = 0;
-			break;
-		case 2:
-			CPU.FPSCR.VXISI = CPU.FPSCR.VXIDI = CPU.FPSCR.VXZDZ = CPU.FPSCR.VXIMZ = 0;
-			break;
-		case 3:
-			CPU.FPSCR.VXVC = 0;
-			break;
-		case 5:
-			CPU.FPSCR.VXSOFT = CPU.FPSCR.VXSQRT = CPU.FPSCR.VXCVI = 0;
-			break;
-		default:
-			break;
-		}
+		CPU.SetCR(crbd, (CPU.FPSCR.FPSCR >> ((7 - crbs) * 4)) & 0xf);
+		const u32 exceptions_mask = 0x9FF80700;
+		CPU.SetFPSCR(CPU.FPSCR.FPSCR & ~(exceptions_mask & 0xf << ((7 - crbs) * 4)));
 	}
 	void MTFSB0(u32 crbd, bool rc)
 	{
 		u64 mask = (1ULL << (31 - crbd));
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
-		CPU.FPSCR.FPSCR &= ~mask;
+		CPU.SetFPSCR(CPU.FPSCR.FPSCR & ~mask);
 
-		if(rc) throw "MTFSB0(): mtfsb0.";
+		if(rc) CPU.UpdateCR1();
 	}
 	void MTFSFI(u32 crfd, u32 i, bool rc)
 	{
@@ -3640,8 +3744,7 @@ private:
 		u32 val  = (i & 0xF) << ((7 - crfd) * 4);
 
 		const u32 oldNI  = CPU.FPSCR.NI;
-		CPU.FPSCR.FPSCR &= ~mask;
-		CPU.FPSCR.FPSCR |= val;
+		CPU.SetFPSCR((CPU.FPSCR.FPSCR & ~mask) | val);
 		if (CPU.FPSCR.NI != oldNI)
 		{
 			if (oldNI)
@@ -3650,12 +3753,12 @@ private:
 				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
 
-		if(rc) throw "MTFSFI(): mtfsfi.";
+		if(rc) CPU.UpdateCR1();
 	}
 	void MFFS(u32 frd, bool rc)
 	{
 		(u64&)CPU.FPR[frd] = CPU.FPSCR.FPSCR;
-		if(rc) throw "MFFS(): mffs.";
+		if(rc) CPU.UpdateCR1();
 	}
 	void MTFSF(u32 flm, u32 frb, bool rc)
 	{
@@ -3664,9 +3767,10 @@ private:
 		{
 			if(flm & (1 << i)) mask |= 0xf << (i * 4);
 		}
+		mask &= ~0x60000000;
 
 		const u32 oldNI = CPU.FPSCR.NI;
-		CPU.FPSCR.FPSCR = (CPU.FPSCR.FPSCR & ~mask) | ((u32&)CPU.FPR[frb] & mask);
+		CPU.SetFPSCR((CPU.FPSCR.FPSCR & ~mask) | ((u32&)CPU.FPR[frb] & mask));
 		if (CPU.FPSCR.NI != oldNI)
 		{
 			if (oldNI)
@@ -3674,7 +3778,7 @@ private:
 			else
 				LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		}
-		if(rc) throw "MTFSF(): mtfsf.";
+		if(rc) CPU.UpdateCR1();
 	}
 	void FCMPU(u32 crfd, u32 fra, u32 frb)
 	{
@@ -3694,57 +3798,87 @@ private:
 	void FRSP(u32 frd, u32 frb, bool rc)
 	{
 		const double b = CPU.FPR[frb];
+		if (FPRdouble::IsSNaN(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if (CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
 		double b0 = b;
 		if(CPU.FPSCR.NI)
 		{
 			if (((u64&)b0 & DOUBLE_EXP) < 0x3800000000000000ULL) (u64&)b0 &= DOUBLE_SIGN;
 		}
 		const double r = static_cast<float>(b0);
-		CPU.FPSCR.FR = fabs(r) > fabs(b);
-		CPU.SetFPSCR_FI(b != r);
-		CPU.FPSCR.FPRF = PPCdouble(r).GetType();
+		if (FPRdouble::IsNaN(r))
+		{
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+		}
+		else
+		{
+			CPU.FPSCR.FR = fabs(r) > fabs(b);
+			CPU.SetFPSCR_FI(b != r);
+		}
+		u32 type = PPCdouble(r).GetType();
+		if (type == FPR_PN && r < ldexp(1.0, -126)) type = FPR_PD;
+		else if (type == FPR_NN && r > ldexp(-1.0, -126)) type = FPR_ND;
+		CPU.FPSCR.FPRF = type;
 		CPU.FPR[frd] = r;
+		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIW(u32 frd, u32 frb, bool rc)
+	void FCTIW(u32 frd, u32 frb, bool rc) {FCTIW(frd, frb, rc, false);}
+	void FCTIW(u32 frd, u32 frb, bool rc, bool truncate)
 	{
 		const double b = CPU.FPR[frb];
 		u32 r;
-		if(b > (double)0x7fffffff)
+		if (FPRdouble::IsNaN(b) || b < -(double)0x80000000)
 		{
-			r = 0x7fffffff;
 			CPU.SetFPSCRException(FPSCR_VXCVI);
+			if(FPRdouble::IsSNaN(b)) CPU.SetFPSCRException(FPSCR_VXSNAN);
 			CPU.FPSCR.FI = 0;
 			CPU.FPSCR.FR = 0;
-		}
-		else if (b < -(double)0x80000000)
-		{
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
 			r = 0x80000000;
+		}
+		else if(b > (double)0x7fffffff)
+		{
 			CPU.SetFPSCRException(FPSCR_VXCVI);
 			CPU.FPSCR.FI = 0;
 			CPU.FPSCR.FR = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			r = 0x7fffffff;
 		}
 		else
 		{
 			s32 i = 0;
-			switch(CPU.FPSCR.RN)
+			const u32 rn = truncate ? FPSCR_RN_ZERO : CPU.FPSCR.RN;
+			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
-				{
-					double t = b + 0.5;
-					i = (s32)t;
-					if (t - i < 0 || (t - i == 0 && b > 0)) i--;
-					break;
-				}
+				i = (s32)nearbyint(b);
+				break;
 			case FPSCR_RN_ZERO:
 				i = (s32)b;
 				break;
 			case FPSCR_RN_PINF:
-				i = (s32)b;
-				if (b - i > 0) i++;
+				i = (s32)ceil(b);
 				break;
 			case FPSCR_RN_MINF:
-				i = (s32)b;
-				if (b - i < 0) i--;
+				i = (s32)floor(b);
 				break;
 			}
 			r = (u32)i;
@@ -3762,168 +3896,375 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = r;
-		if(rc) throw "FCTIW(): fctiw.";
+		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIWZ(u32 frd, u32 frb, bool rc)
+	void FCTIWZ(u32 frd, u32 frb, bool rc) {FCTIW(frd, frb, rc, true);}
+	void FDIV(u32 frd, u32 fra, u32 frb, bool rc) {FDIV(frd, fra, frb, rc, false);}
+	void FDIV(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	{
+		const double a = CPU.FPR[fra];
+		const double b = CPU.FPR[frb];
+		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(a))
+		{
+			CPU.FPR[frd] = SilenceNaN(a);
+		}
+		else if(FPRdouble::IsNaN(b))
+		{
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(a == 0.0 && b == 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_VXZDZ);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else if(FPRdouble::IsINF(a) && FPRdouble::IsINF(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXIDI);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else
+		{
+			if(b == 0.0)
+			{
+				CPU.SetFPSCRException(FPSCR_ZX);
+				CPU.FPSCR.FR = 0;
+				CPU.FPSCR.FI = 0;
+				if (CPU.FPSCR.ZE)
+				{
+					if(rc) CPU.UpdateCR1();
+					return;
+				}
+			}
+			const double res = a / b;
+			if(single) CPU.FPR[frd] = (float)res;
+			else       CPU.FPR[frd] = res;
+		}
+
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		if(rc) CPU.UpdateCR1();
+	}
+	void FSUB(u32 frd, u32 fra, u32 frb, bool rc) {FSUB(frd, fra, frb, rc, false);}
+	void FSUB(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	{
+		const double a = CPU.FPR[fra];
+		const double b = CPU.FPR[frb];
+		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(a))
+		{
+			CPU.FPR[frd] = SilenceNaN(a);
+		}
+		else if(FPRdouble::IsNaN(b))
+		{
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(FPRdouble::IsINF(a) && FPRdouble::IsINF(b) && a == b)
+		{
+			CPU.SetFPSCRException(FPSCR_VXISI);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else
+		{
+			const double res = a - b;
+			if(single) CPU.FPR[frd] = (float)res;
+			else       CPU.FPR[frd] = res;
+		}
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		if(rc) CPU.UpdateCR1();
+	}
+	void FADD(u32 frd, u32 fra, u32 frb, bool rc) {FADD(frd, fra, frb, rc, false);}
+	void FADD(u32 frd, u32 fra, u32 frb, bool rc, bool single)
+	{
+		const double a = CPU.FPR[fra];
+		const double b = CPU.FPR[frb];
+		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(a))
+		{
+			CPU.FPR[frd] = SilenceNaN(a);
+		}
+		else if(FPRdouble::IsNaN(b))
+		{
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(FPRdouble::IsINF(a) && FPRdouble::IsINF(b) && a != b)
+		{
+			CPU.SetFPSCRException(FPSCR_VXISI);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else
+		{
+			const double res = a + b;
+			if(single) CPU.FPR[frd] = (float)res;
+			else       CPU.FPR[frd] = res;
+		}
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		if(rc) CPU.UpdateCR1();
+	}
+	void FSQRT(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, false);}
+	void FSQRT(u32 frd, u32 frb, bool rc, bool single)
 	{
 		const double b = CPU.FPR[frb];
-		u32 value;
-		if (b > (double)0x7fffffff)
+		if(FPRdouble::IsSNaN(b))
 		{
-			value = 0x7fffffff;
-			CPU.SetFPSCRException(FPSCR_VXCVI);
-			CPU.FPSCR.FI = 0;
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
 			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
 		}
-		else if (b < -(double)0x80000000)
+		if(FPRdouble::IsNaN(b))
 		{
-			value = 0x80000000;
-			CPU.SetFPSCRException(FPSCR_VXCVI);
-			CPU.FPSCR.FI = 0;
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(b < 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_VXSQRT);
 			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
 		}
 		else
 		{
-			s32 i = (s32)b;
-			double di = i;
-			if (di == b)
-			{
-				CPU.SetFPSCR_FI(0);
-				CPU.FPSCR.FR = 0;
-			}
-			else
-			{
-				CPU.SetFPSCR_FI(1);
-				CPU.FPSCR.FR = fabs(di) > fabs(b);
-			}
-			value = (u32)i;
+			const double res = sqrt(b);
+			if(single) CPU.FPR[frd] = (float)res;
+			else       CPU.FPR[frd] = res;
 		}
-
-		(u64&)CPU.FPR[frd] = (u64)value;
-		if(rc) throw "FCTIWZ(): fctiwz.";
-	}
-	void FDIV(u32 frd, u32 fra, u32 frb, bool rc)
-	{
-		double res;
-
-		if(FPRdouble::IsNaN(CPU.FPR[fra]))
-		{
-			res = CPU.FPR[fra];
-		}
-		else if(FPRdouble::IsNaN(CPU.FPR[frb]))
-		{
-			res = CPU.FPR[frb];
-		}
-		else
-		{
-			if(CPU.FPR[frb] == 0.0)
-			{
-				if(CPU.FPR[fra] == 0.0)
-				{
-					CPU.FPSCR.VXZDZ = 1;
-					res = FPR_NAN;
-				}
-				else
-				{
-					res = CPU.FPR[fra] / CPU.FPR[frb];
-				}
-
-				CPU.SetFPSCRException(FPSCR_ZX);
-			}
-			else if(FPRdouble::IsINF(CPU.FPR[fra]) && FPRdouble::IsINF(CPU.FPR[frb]))
-			{
-				CPU.FPSCR.VXIDI = 1;
-				res = FPR_NAN;
-			}
-			else
-			{
-				res = CPU.FPR[fra] / CPU.FPR[frb];
-			}
-		}
-
-		CPU.FPR[frd] = res;
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FDIV(): fdiv.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FSUB(u32 frd, u32 fra, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = CPU.FPR[fra] - CPU.FPR[frb];
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FSUB(): fsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FADD(u32 frd, u32 fra, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = CPU.FPR[fra] + CPU.FPR[frb];
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FASS(): fadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FSQRT(u32 frd, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = sqrt(CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FSQRT(): fsqrt.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
 	void FSEL(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] >= 0.0 ? CPU.FPR[frc] : CPU.FPR[frb];
-		if(rc) throw "FSEL(): fsel.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
-	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)
+	void FMUL(u32 frd, u32 fra, u32 frc, bool rc) {FMUL(frd, fra, frc, rc, false);}
+	void FMUL(u32 frd, u32 fra, u32 frc, bool rc, bool single)
 	{
-		if((FPRdouble::IsINF(CPU.FPR[fra]) && CPU.FPR[frc] == 0.0) || (FPRdouble::IsINF(CPU.FPR[frc]) && CPU.FPR[fra] == 0.0))
+		const double a = CPU.FPR[fra];
+		const double c = CPU.FPR[frc];
+		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(c))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(a))
+		{
+			CPU.FPR[frd] = SilenceNaN(a);
+		}
+		else if(FPRdouble::IsNaN(c))
+		{
+			CPU.FPR[frd] = SilenceNaN(c);
+		}
+		else if((FPRdouble::IsINF(a) && c == 0.0) || (a == 0.0 && FPRdouble::IsINF(c)))
 		{
 			CPU.SetFPSCRException(FPSCR_VXIMZ);
-			CPU.FPR[frd] = FPR_NAN;
-			CPU.FPSCR.FI = 0;
 			CPU.FPSCR.FR = 0;
-			CPU.FPSCR.FPRF = FPR_QNAN;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
 		}
 		else
 		{
-			if(FPRdouble::IsSNaN(CPU.FPR[fra]) || FPRdouble::IsSNaN(CPU.FPR[frc]))
-			{
-				CPU.SetFPSCRException(FPSCR_VXSNAN);
-			}
-
-			CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc];
-			CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+			const double res = a * c;
+			if(single) CPU.FPR[frd] = (float)res;
+			else       CPU.FPR[frd] = res;
 		}
-
-		if(rc) throw "FMUL(): fmul.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		if(rc) CPU.UpdateCR1();
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
-		if(CPU.FPR[frb] == 0.0)
+		const double b = CPU.FPR[frb];
+		if(FPRdouble::IsSNaN(b))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(b))
+		{
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(b < 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_VXSQRT);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else if(b == 0.0)
 		{
 			CPU.SetFPSCRException(FPSCR_ZX);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if (CPU.FPSCR.ZE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = 1.0 / b;
 		}
-		CPU.FPR[frd] = 1.0 / sqrt(CPU.FPR[frb]);
-		if(rc) throw "FRSQRTE(): frsqrte.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb];
+		else
+		{
+			CPU.FPR[frd] = 1.0 / sqrt(b);
+		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FMSUB(): fmsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
-	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
+	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, true, false);}
+	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, false, false);}
+	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc, bool neg, bool sub, bool single)
 	{
-		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb];
+		const double a = CPU.FPR[fra];
+		const double b = CPU.FPR[frb];
+		const double c = CPU.FPR[frc];
+		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b) || FPRdouble::IsSNaN(c))
+		{
+			CPU.SetFPSCRException(FPSCR_VXSNAN);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+		}
+		if(FPRdouble::IsNaN(a))
+		{
+			CPU.FPR[frd] = SilenceNaN(a);
+		}
+		else if(FPRdouble::IsNaN(b))
+		{
+			CPU.FPR[frd] = SilenceNaN(b);
+		}
+		else if(FPRdouble::IsNaN(c))
+		{
+			CPU.FPR[frd] = SilenceNaN(c);
+		}
+		else if((FPRdouble::IsINF(a) && c == 0.0) || (a == 0.0 && FPRdouble::IsINF(c)))
+		{
+			CPU.SetFPSCRException(FPSCR_VXIMZ);
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FI = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			CPU.FPR[frd] = FPR_NAN;
+		}
+		else
+		{
+			const double res = fma(a, c, sub ? -b : b);
+			if(FPRdouble::IsNaN(res))
+			{
+				CPU.SetFPSCRException(FPSCR_VXISI);
+				CPU.FPSCR.FR = 0;
+				CPU.FPSCR.FI = 0;
+				if(CPU.FPSCR.VE)
+				{
+					if(rc) CPU.UpdateCR1();
+					return;
+				}
+				CPU.FPR[frd] = FPR_NAN;
+			}
+			else
+			{
+				if(single) CPU.FPR[frd] = (float)(neg ? -res : res);
+				else       CPU.FPR[frd] = (neg ? -res : res);
+			}
+		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FMADD(): fmadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
-	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = -(CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FNMSUB(): fnmsub.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
-	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
-	{
-		CPU.FPR[frd] = -(CPU.FPR[fra] * CPU.FPR[frc] + CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FNMADD(): fnmadd.";//CPU.UpdateCR1(CPU.FPR[frd]);
-	}
+	void FNMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, true, false);}
+	void FNMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, true, false, false);}
 	void FCMPO(u32 crfd, u32 fra, u32 frb)
 	{
 		int cmp_res = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb]);
@@ -3949,63 +4290,70 @@ private:
 	void FNEG(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -CPU.FPR[frb];
-		if(rc) throw "FNEG(): fneg.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
 	void FMR(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[frb];
-		if(rc) throw "FMR(): fmr.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
 	void FNABS(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = -fabs(CPU.FPR[frb]);
-		if(rc) throw "FNABS(): fnabs.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
 	void FABS(u32 frd, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = fabs(CPU.FPR[frb]);
-		if(rc) throw "FABS(): fabs.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
-	void FCTID(u32 frd, u32 frb, bool rc)
+	void FCTID(u32 frd, u32 frb, bool rc) {FCTID(frd, frb, rc, false);}
+	void FCTID(u32 frd, u32 frb, bool rc, bool truncate)
 	{
 		const double b = CPU.FPR[frb];
 		u64 r;
-		if(b > (double)0x7fffffffffffffff)
+		if (FPRdouble::IsNaN(b) || b < -(double)0x8000000000000000)
 		{
-			r = 0x7fffffffffffffff;
 			CPU.SetFPSCRException(FPSCR_VXCVI);
+			if(FPRdouble::IsSNaN(b)) CPU.SetFPSCRException(FPSCR_VXSNAN);
 			CPU.FPSCR.FI = 0;
 			CPU.FPSCR.FR = 0;
-		}
-		else if (b < -(double)0x8000000000000000)
-		{
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
 			r = 0x8000000000000000;
+		}
+		else if(b >= (double)0x8000000000000000)
+		{
 			CPU.SetFPSCRException(FPSCR_VXCVI);
 			CPU.FPSCR.FI = 0;
 			CPU.FPSCR.FR = 0;
+			if(CPU.FPSCR.VE)
+			{
+				if(rc) CPU.UpdateCR1();
+				return;
+			}
+			r = 0x7fffffffffffffff;
 		}
 		else
 		{
 			s64 i = 0;
-			switch(CPU.FPSCR.RN)
+			const u32 rn = truncate ? FPSCR_RN_ZERO : CPU.FPSCR.RN;
+			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
-				{
-					double t = b + 0.5;
-					i = (s64)t;
-					if (t - i < 0 || (t - i == 0 && b > 0)) i--;
-					break;
-				}
+				i = (s64)nearbyint(b);
+				break;
 			case FPSCR_RN_ZERO:
 				i = (s64)b;
 				break;
 			case FPSCR_RN_PINF:
-				i = (s64)b;
-				if (b - i > 0) i++;
+				i = (s64)ceil(b);
 				break;
 			case FPSCR_RN_MINF:
-				i = (s64)b;
-				if (b - i < 0) i--;
+				i = (s64)floor(b);
 				break;
 			}
 			r = (u64)i;
@@ -4023,46 +4371,9 @@ private:
 		}
 
 		(u64&)CPU.FPR[frd] = r;
-		if(rc) throw "FCTID(): fctid.";
+		if(rc) CPU.UpdateCR1();
 	}
-	void FCTIDZ(u32 frd, u32 frb, bool rc)
-	{
-		const double b = CPU.FPR[frb];
-		u64 r;
-		if(b > (double)0x7fffffffffffffff)
-		{
-			r = 0x7fffffffffffffff;
-			CPU.SetFPSCRException(FPSCR_VXCVI);
-			CPU.FPSCR.FI = 0;
-			CPU.FPSCR.FR = 0;
-		}
-		else if (b < -(double)0x8000000000000000)
-		{
-			r = 0x8000000000000000;
-			CPU.SetFPSCRException(FPSCR_VXCVI);
-			CPU.FPSCR.FI = 0;
-			CPU.FPSCR.FR = 0;
-		}
-		else
-		{
-			s64 i = (s64)b;
-			double di = (double)i;
-			if (di == b)
-			{
-				CPU.SetFPSCR_FI(0);
-				CPU.FPSCR.FR = 0;
-			}
-			else
-			{
-				CPU.SetFPSCR_FI(1);
-				CPU.FPSCR.FR = fabs(di) > fabs(b);
-			}
-			r = (u64)i;
-		}
-
-		(u64&)CPU.FPR[frd] = r;
-		if(rc) throw "FCTIDZ(): fctidz.";
-	}
+	void FCTIDZ(u32 frd, u32 frb, bool rc) {FCTID(frd, frb, rc, true);}
 	void FCFID(u32 frd, u32 frb, bool rc)
 	{
 		s64 bi = (s64&)CPU.FPR[frb];
@@ -4083,7 +4394,7 @@ private:
 		CPU.FPR[frd] = bf;
 
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		if(rc) throw "FCFID(): fcfid.";//CPU.UpdateCR1(CPU.FPR[frd]);
+		if(rc) CPU.UpdateCR1();
 	}
 
 	void UNK(const u32 code, const u32 opcode, const u32 gcode)

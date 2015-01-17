@@ -53,6 +53,8 @@ enum FPSCR_EXP
 	FPSCR_VXSOFT    = 0x00000400,
 	FPSCR_VXSQRT    = 0x00000200,
 	FPSCR_VXCVI     = 0x00000100,
+
+	FPSCR_VX_ALL    = FPSCR_VXSNAN | FPSCR_VXISI | FPSCR_VXIDI | FPSCR_VXZDZ | FPSCR_VXIMZ | FPSCR_VXVC | FPSCR_VXSOFT | FPSCR_VXSQRT | FPSCR_VXCVI,
 };
 
 enum FPSCR_RN
@@ -441,18 +443,22 @@ struct PPCdouble
 
 	PPCdouble() : _u64(0)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(double val) : _double(val)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(u64 val) : _u64(val)
 	{
+		type = UpdateType();
 	}
 
 	PPCdouble(u32 val) : _u64(val)
 	{
+		type = UpdateType();
 	}
 };
 
@@ -531,20 +537,12 @@ public:
 	u64 LR;     //SPR 0x008 : Link Register
 	u64 CTR;    //SPR 0x009 : Count Register
 
-	u64 USPRG[8];	//SPR 0x100 - 0x107: User-SPR General-Purpose Registers
+	u32 VRSAVE; //SPR 0x100: VR Save/Restore Register (32 bits)
+
 	u64 SPRG[8]; //SPR 0x110 - 0x117 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
-	union
-	{
-		u64 TB;	//TBR 0x10C - 0x10D
-
-		struct
-		{
-			u32 TBH;
-			u32 TBL;
-		};
-	};
+	u64 TB;	//TBR 0x10C - 0x10D
 
 	u64 cycle;
 
@@ -652,7 +650,7 @@ public:
 		UpdateCRn<T>(0, val, 0);
 	}
 
-	template<typename T> void UpdateCR1()
+	void UpdateCR1()
 	{
 		SetCR_LT(1, FPSCR.FX);
 		SetCR_GT(1, FPSCR.FEX);
@@ -670,10 +668,37 @@ public:
 	bool IsCarry(const u64 a, const u64 b) { return (a + b) < a; }
 	bool IsCarry(const u64 a, const u64 b, const u64 c) { return IsCarry(a, b) || IsCarry(a + b, c); }
 
+	void SetOV(const bool set)
+	{
+		XER.OV = set;
+		XER.SO |= set;
+	}
+
+	void UpdateFPSCR_FEX()
+	{
+		const u32 exceptions = (FPSCR.FPSCR >> 25) & 0x1F;
+		const u32 enabled = (FPSCR.FPSCR >> 3) & 0x1F;
+		if (exceptions & enabled) FPSCR.FEX = 1;
+	}
+
+	void UpdateFPSCR_VX()
+	{
+		if (FPSCR.FPSCR & FPSCR_VX_ALL) FPSCR.VX = 1;
+	}
+
+	void SetFPSCR(const u32 val)
+	{
+		FPSCR.FPSCR = val & ~(FPSCR_FEX | FPSCR_VX);
+		UpdateFPSCR_VX();
+		UpdateFPSCR_FEX();
+	}
+
 	void SetFPSCRException(const FPSCR_EXP mask)
 	{
 		if ((FPSCR.FPSCR & mask) != mask) FPSCR.FX = 1;
 		FPSCR.FPSCR |= mask;
+		UpdateFPSCR_VX();
+		UpdateFPSCR_FEX();
 	}
 
 	void SetFPSCR_FI(const u32 val)
