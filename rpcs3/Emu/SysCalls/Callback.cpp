@@ -117,3 +117,40 @@ void CallbackManager::Clear()
 	m_cb_list.clear();
 	m_async_list.clear();
 }
+
+u64 CallbackManager::AddPauseCallback(const std::function<PauseResumeCB>& func)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	m_pause_cb_list.push_back({ func, next_tag });
+	return next_tag++;
+}
+
+void CallbackManager::RemovePauseCallback(const u64 tag)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+	
+	for (auto& data : m_pause_cb_list)
+	{
+		if (data.tag == tag)
+		{
+			m_pause_cb_list.erase(m_pause_cb_list.begin() + (&data - m_pause_cb_list.data()));
+			return;
+		}
+	}
+
+	assert(!"CallbackManager()::RemovePauseCallback(): tag not found");
+}
+
+void CallbackManager::RunPauseCallbacks(const bool is_paused)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	for (auto& data : m_pause_cb_list)
+	{
+		if (data.cb)
+		{
+			data.cb(is_paused);
+		}
+	}
+}

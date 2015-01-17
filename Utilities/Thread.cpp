@@ -537,16 +537,32 @@ bool ThreadBase::TestDestroy() const
 	return m_destroy;
 }
 
-thread_t::thread_t(const std::string& name, std::function<void()> func) : m_name(name), m_state(TS_NON_EXISTENT)
+thread_t::thread_t(const std::string& name, bool autojoin, std::function<void()> func)
+	: m_name(name)
+	, m_state(TS_NON_EXISTENT)
+	, m_autojoin(autojoin)
 {
 	start(func);
 }
 
-thread_t::thread_t(const std::string& name) : m_name(name), m_state(TS_NON_EXISTENT)
+thread_t::thread_t(const std::string& name, std::function<void()> func)
+	: m_name(name)
+	, m_state(TS_NON_EXISTENT)
+	, m_autojoin(false)
+{
+	start(func);
+}
+
+thread_t::thread_t(const std::string& name)
+	: m_name(name)
+	, m_state(TS_NON_EXISTENT)
+	, m_autojoin(false)
 {
 }
 
-thread_t::thread_t() : m_state(TS_NON_EXISTENT)
+thread_t::thread_t()
+	: m_state(TS_NON_EXISTENT)
+	, m_autojoin(false)
 {
 }
 
@@ -559,7 +575,14 @@ thread_t::~thread_t()
 {
 	if (m_state == TS_JOINABLE)
 	{
-		m_thr.detach();
+		if (m_autojoin)
+		{
+			m_thr.join();
+		}
+		else
+		{
+			m_thr.detach();
+		}
 	}
 }
 
@@ -716,6 +739,9 @@ void waiter_map_t::notify(u64 signal_id)
 		}
 	}
 }
+
+static const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
+static const std::function<bool()> SQUEUE_NEVER_EXIT = [](){ return false; };
 
 bool squeue_test_exit()
 {

@@ -77,6 +77,8 @@ enum : u32
 	BUFFER_NUM = 32,
 	BUFFER_SIZE = 256,
 	AUDIO_PORT_COUNT = 8,
+	AUDIO_PORT_OFFSET = 256 * 1024,
+	AUDIO_SAMPLES = CELL_AUDIO_BLOCK_SAMPLES,
 };
 
 enum AudioState : u32
@@ -88,7 +90,7 @@ enum AudioState : u32
 
 enum AudioPortState : u32
 {
-	AUDIO_PORT_STATE_NOT_OPENED,
+	AUDIO_PORT_STATE_CLOSED,
 	AUDIO_PORT_STATE_OPENED,
 	AUDIO_PORT_STATE_STARTED,
 };
@@ -98,15 +100,17 @@ struct AudioPortConfig
 	std::mutex mutex;
 	atomic_le_t<AudioPortState> state;
 
-	u8 channel;
-	u8 block;
-	float level;
+	u32 channel;
+	u32 block;
 	u64 attr;
 	u64 tag;
 	u64 counter; // copy of global counter
 	u32 addr;
 	u32 read_index_addr;
 	u32 size;
+	float level;
+	float level_set;
+	float level_inc;
 };
 
 struct AudioConfig  //custom structure
@@ -124,6 +128,19 @@ struct AudioConfig  //custom structure
 
 	AudioConfig() : audio_thread("Audio Thread")
 	{
+	}
+
+	u32 open_port()
+	{
+		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+		{
+			if (ports[i].state.compare_and_swap_test(AUDIO_PORT_STATE_CLOSED, AUDIO_PORT_STATE_OPENED))
+			{
+				return i;
+			}
+		}
+
+		return ~0;
 	}
 };
 

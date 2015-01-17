@@ -1,6 +1,7 @@
 #pragma once
 
-enum //libmixer Error Codes
+// Error Codes
+enum
 {
 	CELL_LIBMIXER_ERROR_NOT_INITIALIZED   = 0x80310002,
 	CELL_LIBMIXER_ERROR_INVALID_PARAMATER = 0x80310003,
@@ -162,6 +163,16 @@ struct CellSurMixerChStripParam
 	be_t<s32> dBSwitch;
 	be_t<float> floatVal;
 	be_t<s32> intVal;
+};
+
+struct SurMixerConfig
+{
+	u32 audio_port;
+	s32 priority;
+	u32 ch_strips_1;
+	u32 ch_strips_2;
+	u32 ch_strips_6;
+	u32 ch_strips_8;
 };
 
 struct SSPlayer

@@ -65,8 +65,10 @@ class thread_t
 	std::atomic<thread_state_t> m_state;
 	std::string m_name;
 	std::thread m_thr;
+	bool m_autojoin;
 
 public:
+	thread_t(const std::string& name, bool autojoin, std::function<void()> func);
 	thread_t(const std::string& name, std::function<void()> func);
 	thread_t(const std::string& name);
 	thread_t();
@@ -161,6 +163,9 @@ public:
 	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
 	void notify(u64 signal_id);
 };
+
+extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;
+extern const std::function<bool()> SQUEUE_NEVER_EXIT;
 
 bool squeue_test_exit();
 
@@ -266,14 +271,14 @@ public:
 		return push(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool push(const T& data)
+	__forceinline bool push(const T& data)
 	{
-		return push(data, [](){ return false; });
+		return push(data, SQUEUE_NEVER_EXIT);
 	}
 
-	bool try_push(const T& data)
+	__forceinline bool try_push(const T& data)
 	{
-		return push(data, [](){ return true; });
+		return push(data, SQUEUE_ALWAYS_EXIT);
 	}
 
 	bool pop(T& data, const std::function<bool()>& test_exit)
@@ -334,14 +339,14 @@ public:
 		return pop(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool pop(T& data)
+	__forceinline bool pop(T& data)
 	{
-		return pop(data, [](){ return false; });
+		return pop(data, SQUEUE_NEVER_EXIT);
 	}
 
-	bool try_pop(T& data)
+	__forceinline bool try_pop(T& data)
 	{
-		return pop(data, [](){ return true; });
+		return pop(data, SQUEUE_ALWAYS_EXIT);
 	}
 
 	bool peek(T& data, u32 start_pos, const std::function<bool()>& test_exit)
@@ -362,7 +367,7 @@ public:
 			{
 				return SQSVR_LOCKED;
 			}
-			
+
 			sync.pop_lock = 1;
 			pos = sync.position + start_pos;
 			return SQSVR_OK;
@@ -396,14 +401,14 @@ public:
 		return peek(data, start_pos, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool peek(T& data, u32 start_pos = 0)
+	__forceinline bool peek(T& data, u32 start_pos = 0)
 	{
-		return peek(data, start_pos, [](){ return false; });
+		return peek(data, start_pos, SQUEUE_NEVER_EXIT);
 	}
 
-	bool try_peek(T& data, u32 start_pos = 0)
+	__forceinline bool try_peek(T& data, u32 start_pos = 0)
 	{
-		return peek(data, start_pos, [](){ return true; });
+		return peek(data, start_pos, SQUEUE_ALWAYS_EXIT);
 	}
 
 	class squeue_data_t

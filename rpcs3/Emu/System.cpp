@@ -328,6 +328,8 @@ void Emulator::Pause()
 	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
+
+		GetCallbackManager().RunPauseCallbacks(true);
 	}
 }
 
@@ -341,6 +343,8 @@ void Emulator::Resume()
 	CheckStatus();
 
 	SendDbgCommand(DID_RESUMED_EMU);
+
+	GetCallbackManager().RunPauseCallbacks(false);
 }
 
 void Emulator::Stop()
