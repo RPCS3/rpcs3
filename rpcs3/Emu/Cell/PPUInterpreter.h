@@ -3795,7 +3795,10 @@ private:
 		const double r = static_cast<float>(b0);
 		CPU.FPSCR.FR = fabs(r) > fabs(b);
 		CPU.SetFPSCR_FI(b != r);
-		CPU.FPSCR.FPRF = PPCdouble(r).GetType();
+		u32 type = PPCdouble(r).GetType();
+		if (type == FPR_PN && r < ldexp(1.0, -126)) type = FPR_PD;
+		else if (type == FPR_NN && r > ldexp(-1.0, -126)) type = FPR_ND;
+		CPU.FPSCR.FPRF = type;
 		CPU.FPR[frd] = r;
 	}
 	void FCTIW(u32 frd, u32 frb, bool rc)
