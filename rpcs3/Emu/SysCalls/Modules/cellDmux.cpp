@@ -759,7 +759,6 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 		}
 
 		dmux.is_finished = true;
-		if (Emu.IsStopped()) cellDmux->Warning("Demuxer thread aborted");
 	});
 
 	return dmux_id;

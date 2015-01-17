@@ -475,7 +475,6 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 		}
 
 		adec.is_finished = true;
-		if (Emu.IsStopped()) cellAdec->Warning("AudioDecoder thread aborted");
 	});
 
 	return adec_id;

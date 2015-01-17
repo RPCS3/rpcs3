@@ -2356,14 +2356,8 @@ void RSXThread::Task()
 
 		m_vblank_count = 0;
 
-		while (!TestDestroy())
+		while (!TestDestroy() && !Emu.IsStopped())
 		{
-			if (Emu.IsStopped())
-			{
-				LOG_WARNING(RSX, "VBlank thread aborted");
-				return;
-			}
-
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
 				m_vblank_count++;
@@ -2383,7 +2377,6 @@ void RSXThread::Task()
 
 		is_vblank_stopped = true;
 	});
-	vblank.detach();
 
 	while (!TestDestroy()) try
 	{

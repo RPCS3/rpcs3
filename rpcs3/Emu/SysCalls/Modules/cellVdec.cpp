@@ -551,7 +551,6 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 		}
 
 		vdec.is_finished = true;
-		if (Emu.IsStopped()) cellVdec->Warning("VideoDecoder thread aborted");
 	});
 
 	return vdec_id;
