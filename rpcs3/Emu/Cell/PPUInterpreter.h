@@ -448,22 +448,7 @@ private:
 			CPU.VPR[vd]._f[w] = ((float)CPU.VPR[vb]._u32[w]) / scale;
 		}
 	}
-	void VCMPBFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			u32 mask = 0;
-
-			const float A = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
-			const float B = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
-
-			if (A >  B) mask |= 1 << 31;
-			if (A < -B) mask |= 1 << 30;
-
-			CPU.VPR[vd]._u32[w] = mask;
-		}
-	}
-	void VCMPBFP_(u32 vd, u32 va, u32 vb)
+	void VCMPBFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		bool allInBounds = true;
 
@@ -483,18 +468,16 @@ private:
 				allInBounds = false;
 		}
 
-		// Bit n°2 of CR6
-		CPU.SetCR(6, 0);
-		CPU.SetCRBit(6, 0x2, allInBounds);
-	}
-	void VCMPEQFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
+		if (rc)
 		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] == CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
+			// Bit n°2 of CR6
+			CPU.SetCR(6, 0);
+			CPU.SetCRBit(6, 0x2, allInBounds);
 		}
 	}
-	void VCMPEQFP_(u32 vd, u32 va, u32 vb)
+	void VCMPBFP(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, false);}
+	void VCMPBFP_(u32 vd, u32 va, u32 vb) {VCMPBFP(vd, va, vb, true);}
+	void VCMPEQFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -513,16 +496,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUB(u32 vd, u32 va, u32 vb)
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b] == CPU.VPR[vb]._u8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPEQUB_(u32 vd, u32 va, u32 vb)
+	void VCMPEQFP(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, false);}
+	void VCMPEQFP_(u32 vd, u32 va, u32 vb) {VCMPEQFP(vd, va, vb, true);}
+	void VCMPEQUB(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -541,16 +519,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUH(u32 vd, u32 va, u32 vb) //nf
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] == CPU.VPR[vb]._u16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPEQUH_(u32 vd, u32 va, u32 vb) //nf
+	void VCMPEQUB(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, false);}
+	void VCMPEQUB_(u32 vd, u32 va, u32 vb) {VCMPEQUB(vd, va, vb, true);}
+	void VCMPEQUH(u32 vd, u32 va, u32 vb, bool rc) //nf
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -569,16 +542,11 @@ private:
 			}
 		}
 			
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPEQUW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] == CPU.VPR[vb]._u32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPEQUW_(u32 vd, u32 va, u32 vb)
+	void VCMPEQUH(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, false);}
+	void VCMPEQUH_(u32 vd, u32 va, u32 vb) {VCMPEQUH(vd, va, vb, true);}
+	void VCMPEQUW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_equal = 0x8;
 		int none_equal = 0x2;
@@ -597,16 +565,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_equal | none_equal;
+		if (rc) CPU.CR.cr6 = all_equal | none_equal;
 	}
-	void VCMPGEFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] >= CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGEFP_(u32 vd, u32 va, u32 vb)
+	void VCMPEQUW(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, false);}
+	void VCMPEQUW_(u32 vd, u32 va, u32 vb) {VCMPEQUW(vd, va, vb, true);}
+	void VCMPGEFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -625,16 +588,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_ge | none_ge;
+		if (rc) CPU.CR.cr6 = all_ge | none_ge;
 	}
-	void VCMPGTFP(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._f[w] > CPU.VPR[vb]._f[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTFP_(u32 vd, u32 va, u32 vb)
+	void VCMPGEFP(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, false);}
+	void VCMPGEFP_(u32 vd, u32 va, u32 vb) {VCMPGEFP(vd, va, vb, true);}
+	void VCMPGTFP(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_ge = 0x8;
 		int none_ge = 0x2;
@@ -653,16 +611,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_ge | none_ge;
+		if (rc) CPU.CR.cr6 = all_ge | none_ge;
 	}
-	void VCMPGTSB(u32 vd, u32 va, u32 vb) //nf
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._s8[b] > CPU.VPR[vb]._s8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPGTSB_(u32 vd, u32 va, u32 vb)
+	void VCMPGTFP(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, false);}
+	void VCMPGTFP_(u32 vd, u32 va, u32 vb) {VCMPGTFP(vd, va, vb, true);}
+	void VCMPGTSB(u32 vd, u32 va, u32 vb, bool rc) //nf
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -681,16 +634,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTSH(u32 vd, u32 va, u32 vb)
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._s16[h] > CPU.VPR[vb]._s16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPGTSH_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSB(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, false);}
+	void VCMPGTSB_(u32 vd, u32 va, u32 vb) {VCMPGTSB(vd, va, vb, true);}
+	void VCMPGTSH(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -709,16 +657,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTSW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._s32[w] > CPU.VPR[vb]._s32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTSW_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSH(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, false);}
+	void VCMPGTSH_(u32 vd, u32 va, u32 vb) {VCMPGTSH(vd, va, vb, true);}
+	void VCMPGTSW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -737,16 +680,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUB(u32 vd, u32 va, u32 vb)
-	{
-		for (uint b = 0; b < 16; b++)
-		{
-			CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b] > CPU.VPR[vb]._u8[b] ? 0xff : 0;
-		}
-	}
-	void VCMPGTUB_(u32 vd, u32 va, u32 vb)
+	void VCMPGTSW(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, false);}
+	void VCMPGTSW_(u32 vd, u32 va, u32 vb) {VCMPGTSW(vd, va, vb, true);}
+	void VCMPGTUB(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -765,16 +703,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUH(u32 vd, u32 va, u32 vb)
-	{
-		for (uint h = 0; h < 8; h++)
-		{
-			CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] > CPU.VPR[vb]._u16[h] ? 0xffff : 0;
-		}
-	}
-	void VCMPGTUH_(u32 vd, u32 va, u32 vb)
+	void VCMPGTUB(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, false);}
+	void VCMPGTUB_(u32 vd, u32 va, u32 vb) {VCMPGTUB(vd, va, vb, true);}
+	void VCMPGTUH(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -793,16 +726,11 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
-	void VCMPGTUW(u32 vd, u32 va, u32 vb)
-	{
-		for (uint w = 0; w < 4; w++)
-		{
-			CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] > CPU.VPR[vb]._u32[w] ? 0xffffffff : 0;
-		}
-	}
-	void VCMPGTUW_(u32 vd, u32 va, u32 vb)
+	void VCMPGTUH(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, false);}
+	void VCMPGTUH_(u32 vd, u32 va, u32 vb) {VCMPGTUH(vd, va, vb, true);}
+	void VCMPGTUW(u32 vd, u32 va, u32 vb, bool rc)
 	{
 		int all_gt = 0x8;
 		int none_gt = 0x2;
@@ -821,8 +749,10 @@ private:
 			}
 		}
 
-		CPU.CR.cr6 = all_gt | none_gt;
+		if (rc) CPU.CR.cr6 = all_gt | none_gt;
 	}
+	void VCMPGTUW(u32 vd, u32 va, u32 vb) {VCMPGTUW(vd, va, vb, false);}
+	void VCMPGTUW_(u32 vd, u32 va, u32 vb) {VCMPGTUW(vd, va, vb, true);}
 	void VCTSXS(u32 vd, u32 uimm5, u32 vb)
 	{
 		u32 nScale = 1 << uimm5;
