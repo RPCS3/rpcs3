@@ -47,7 +47,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED(); // not used
+		CPU.GPR[rt].clear();  // All SPRs read as zero.
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -243,7 +243,7 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED(); // not used
+		// SPR writes are ignored.
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
