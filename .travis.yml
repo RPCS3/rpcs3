@@ -53,3 +53,6 @@ addons:
 
 script:
  - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then make -j 4; fi
+
+after_success:
+ - cat /home/travis/build/DHrpcs3/rpcs3/build/cov-int/build-log.txt
