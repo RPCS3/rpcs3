@@ -981,8 +981,10 @@ private:
 	
 	void FSCRRD(u32 rt)
 	{
-		// TODO (rarely used)
-		CPU.GPR[rt].clear();
+		CPU.GPR[rt]._u32[3] = CPU.FPSCR._u32[3];
+		CPU.GPR[rt]._u32[2] = CPU.FPSCR._u32[2];
+		CPU.GPR[rt]._u32[1] = CPU.FPSCR._u32[1];
+		CPU.GPR[rt]._u32[0] = CPU.FPSCR._u32[0];
 	}
 	void FESD(u32 rt, u32 ra)
 	{
@@ -998,12 +1000,10 @@ private:
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		// TODO (rarely used)
-		if (CPU.GPR[ra]._u64[0] || CPU.GPR[ra]._u64[1])
-		{
-			LOG_ERROR(SPU, "FSCRWR(%d,%d): value = %s", rt, ra, CPU.GPR[ra].to_hex().c_str());
-			UNIMPLEMENTED();
-		}
+		CPU.FPSCR._u32[3] = CPU.GPR[ra]._u32[3] & 0x00000F07;
+		CPU.FPSCR._u32[2] = CPU.GPR[ra]._u32[2] & 0x00003F07;
+		CPU.FPSCR._u32[1] = CPU.GPR[ra]._u32[1] & 0x00003F07;
+		CPU.FPSCR._u32[0] = CPU.GPR[ra]._u32[0] & 0x00000F07;
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{
