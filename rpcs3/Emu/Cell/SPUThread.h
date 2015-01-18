@@ -276,6 +276,7 @@ class SPUThread : public PPCThread
 public:
 	u128 GPR[128]; // General-Purpose Registers
 	SPU_FPSCR FPSCR;
+	u32 SRR0;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
 	u64 R_ADDR; // reservation address
