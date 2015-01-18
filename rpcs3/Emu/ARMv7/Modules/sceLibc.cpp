@@ -26,7 +26,7 @@ namespace sce_libc_func
 		});
 	}
 
-	void printf(vm::psv::ptr<const char> fmt)
+	void printf(vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Error("printf(fmt=0x%x)", fmt);
 

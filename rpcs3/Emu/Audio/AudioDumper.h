@@ -55,15 +55,16 @@ struct WAVHeader
 
 class AudioDumper
 {
-private:
 	WAVHeader m_header;
 	rFile m_output;
+	bool m_init;
 	
 public:
-	AudioDumper(u8 ch);
+	AudioDumper();
 	~AudioDumper();
 
-	bool Init();
+public:
+	bool Init(u8 ch);
 	void WriteHeader();
 	size_t WriteData(const void* buffer, size_t size);
 	void Finalize();

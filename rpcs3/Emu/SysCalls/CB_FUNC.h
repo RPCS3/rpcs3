@@ -26,7 +26,7 @@ namespace cb_detail
 		
 		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			CPU.GPR[g_count + 2] = cast_ppu_gpr<T>::func(arg);
+			CPU.GPR[g_count + 2] = cast_to_ppu_gpr<T>(arg);
 		}
 	};
 
@@ -63,7 +63,7 @@ namespace cb_detail
 		{
 			const int stack_pos = 0x70 + (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
-			vm::write64(CPU.GPR[1] + stack_pos, cast_ppu_gpr<T>::func(arg));
+			vm::write64(CPU.GPR[1] + stack_pos, cast_to_ppu_gpr<T>(arg));
 		}
 	};
 

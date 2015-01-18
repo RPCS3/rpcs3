@@ -1,6 +1,9 @@
 #pragma once
 
-#define MHZ (1000000)
+enum : u32
+{
+	MHZ = 1000000,
+};
 
 // Auxiliary functions
 u64 get_time();

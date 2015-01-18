@@ -306,7 +306,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 	dmux.id = dmux_id;
 
 	dmux.dmuxCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
+	dmux.dmuxCb->SetName(fmt::format("Demuxer[%d] Callback", dmux_id));
 	dmux.dmuxCb->SetEntry(0);
 	dmux.dmuxCb->SetPrio(1001);
 	dmux.dmuxCb->SetStackSize(0x10000);
@@ -314,10 +314,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 	dmux.dmuxCb->InitRegs();
 	dmux.dmuxCb->DoRun();
 
-	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [dmux_ptr, sptr]()
+	thread_t t(fmt::format("Demuxer[%d] Thread", dmux_id), [dmux_ptr, sptr]()
 	{
 		Demuxer& dmux = *dmux_ptr;
-		cellDmux->Notice("Demuxer thread started (mem=0x%x, size=0x%x, cb_addr=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc.addr(), dmux.cbArg);
 
 		DemuxerTask task;
 		DemuxerStream stream = {};
@@ -760,11 +759,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 		}
 
 		dmux.is_finished = true;
-		if (Emu.IsStopped()) cellDmux->Warning("Demuxer thread aborted");
-		if (dmux.is_closed) cellDmux->Notice("Demuxer thread ended");
 	});
-
-	t.detach();
 
 	return dmux_id;
 }

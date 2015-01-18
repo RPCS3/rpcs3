@@ -54,18 +54,34 @@ public:
 	virtual void Task() = 0;
 };
 
-class thread
+class thread_t
 {
+	enum thread_state_t
+	{
+		TS_NON_EXISTENT,
+		TS_JOINABLE,
+	};
+
+	std::atomic<thread_state_t> m_state;
 	std::string m_name;
 	std::thread m_thr;
+	bool m_autojoin;
 
 public:
-	thread(const std::string& name, std::function<void()> func);
-	thread(const std::string& name);
-	thread();
+	thread_t(const std::string& name, bool autojoin, std::function<void()> func);
+	thread_t(const std::string& name, std::function<void()> func);
+	thread_t(const std::string& name);
+	thread_t();
+	~thread_t();
 
+	thread_t(const thread_t& right) = delete;
+	thread_t(thread_t&& right) = delete;
+
+	thread_t& operator =(const thread_t& right) = delete;
+	thread_t& operator =(thread_t&& right) = delete;
 
 public:
+	void set_name(const std::string& name);
 	void start(std::function<void()> func);
 	void detach();
 	void join();
@@ -148,7 +164,10 @@ public:
 	void notify(u64 signal_id);
 };
 
-bool squeue_test_exit(const volatile bool* do_exit);
+extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;
+extern const std::function<bool()> SQUEUE_NEVER_EXIT;
+
+bool squeue_test_exit();
 
 template<typename T, u32 sq_size = 256>
 class squeue_t
@@ -199,7 +218,7 @@ public:
 		return m_sync.read_relaxed().count == sq_size;
 	}
 
-	bool push(const T& data, const volatile bool* do_exit = nullptr)
+	bool push(const T& data, const std::function<bool()>& test_exit)
 	{
 		u32 pos = 0;
 
@@ -222,7 +241,7 @@ public:
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -247,14 +266,22 @@ public:
 		return true;
 	}
 
-	bool try_push(const T& data)
+	bool push(const T& data, const volatile bool* do_exit)
 	{
-		static const volatile bool no_wait = true;
-
-		return push(data, &no_wait);
+		return push(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool pop(T& data, const volatile bool* do_exit = nullptr)
+	__forceinline bool push(const T& data)
+	{
+		return push(data, SQUEUE_NEVER_EXIT);
+	}
+
+	__forceinline bool try_push(const T& data)
+	{
+		return push(data, SQUEUE_ALWAYS_EXIT);
+	}
+
+	bool pop(T& data, const std::function<bool()>& test_exit)
 	{
 		u32 pos = 0;
 
@@ -277,7 +304,7 @@ public:
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -307,14 +334,22 @@ public:
 		return true;
 	}
 
-	bool try_pop(T& data)
+	bool pop(T& data, const volatile bool* do_exit)
 	{
-		static const volatile bool no_wait = true;
-
-		return pop(data, &no_wait);
+		return pop(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	bool peek(T& data, u32 start_pos = 0, const volatile bool* do_exit = nullptr)
+	__forceinline bool pop(T& data)
+	{
+		return pop(data, SQUEUE_NEVER_EXIT);
+	}
+
+	__forceinline bool try_pop(T& data)
+	{
+		return pop(data, SQUEUE_ALWAYS_EXIT);
+	}
+
+	bool peek(T& data, u32 start_pos, const std::function<bool()>& test_exit)
 	{
 		assert(start_pos < sq_size);
 		u32 pos = 0;
@@ -332,13 +367,13 @@ public:
 			{
 				return SQSVR_LOCKED;
 			}
-			
+
 			sync.pop_lock = 1;
 			pos = sync.position + start_pos;
 			return SQSVR_OK;
 		}))
 		{
-			if (res == SQSVR_FAILED && squeue_test_exit(do_exit))
+			if (res == SQSVR_FAILED && (test_exit() || squeue_test_exit()))
 			{
 				return false;
 			}
@@ -361,11 +396,19 @@ public:
 		return true;
 	}
 
-	bool try_peek(T& data, u32 start_pos = 0)
+	bool peek(T& data, u32 start_pos, const volatile bool* do_exit)
 	{
-		static const volatile bool no_wait = true;
+		return peek(data, start_pos, [do_exit](){ return do_exit && *do_exit; });
+	}
 
-		return peek(data, start_pos, &no_wait);
+	__forceinline bool peek(T& data, u32 start_pos = 0)
+	{
+		return peek(data, start_pos, SQUEUE_NEVER_EXIT);
+	}
+
+	__forceinline bool try_peek(T& data, u32 start_pos = 0)
+	{
+		return peek(data, start_pos, SQUEUE_ALWAYS_EXIT);
 	}
 
 	class squeue_data_t

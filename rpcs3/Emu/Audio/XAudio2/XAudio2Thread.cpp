@@ -8,13 +8,14 @@
 
 XAudio2Thread::~XAudio2Thread()
 {
-	Quit();
+	if (m_source_voice) Quit();
 }
 
 void XAudio2Thread::Init()
 {
 	HRESULT hr = S_OK;
 
+#if (_WIN32_WINNT < 0x0602)
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
@@ -22,6 +23,7 @@ void XAudio2Thread::Init()
 		Emu.Pause();
 		return;
 	}
+#endif
 
 	hr = XAudio2Create(&m_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
@@ -50,6 +52,10 @@ void XAudio2Thread::Quit()
 	m_xaudio2_instance->StopEngine();
 	m_xaudio2_instance->Release();
 	m_xaudio2_instance = nullptr;
+
+#if (_WIN32_WINNT < 0x0602)
+	CoUninitialize();
+#endif
 }
 
 void XAudio2Thread::Play()
@@ -87,13 +93,16 @@ void XAudio2Thread::Open(const void* src, int size)
 {
 	HRESULT hr;
 
+	WORD sample_size = Ini.AudioConvertToU16.GetValue() ? sizeof(u16) : sizeof(float);
+	WORD channels = 8;
+
 	WAVEFORMATEX waveformatex;
-	waveformatex.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-	waveformatex.nChannels = 2;
+	waveformatex.wFormatTag = Ini.AudioConvertToU16.GetValue() ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
+	waveformatex.nChannels = channels;
 	waveformatex.nSamplesPerSec = 48000;
-	waveformatex.nAvgBytesPerSec = 48000 * 2 * sizeof(float);
-	waveformatex.nBlockAlign = 2 * sizeof(float);
-	waveformatex.wBitsPerSample = 32;
+	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;
+	waveformatex.nBlockAlign = channels * sample_size;
+	waveformatex.wBitsPerSample = sample_size * 8;
 	waveformatex.cbSize = 0;
 
 	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);

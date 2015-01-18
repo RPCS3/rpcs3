@@ -1279,5 +1279,8 @@
     <ClInclude Include="Emu\Audio\XAudio2\XAudio2Thread.h">
       <Filter>Emu\Audio\XAudio2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
