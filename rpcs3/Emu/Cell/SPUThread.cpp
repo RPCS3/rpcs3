@@ -558,6 +558,8 @@ u32 SPUThread::GetChannelCount(u32 ch)
 
 	switch (ch)
 	{
+	case SPU_WrSRR0:          res = 1; break;
+	case SPU_RdSRR0:          res = 1; break;
 	case SPU_WrOutMbox:       res = SPU.Out_MBox.GetFreeCount(); break;
 	case SPU_WrOutIntrMbox:   res = SPU.Out_IntrMBox.GetFreeCount(); break;
 	case SPU_RdInMbox:        res = SPU.In_MBox.GetCount(); break;
@@ -589,6 +591,9 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 
 	switch (ch)
 	{
+	case SPU_WrSRR0:
+		SRR0 = v & 0x3FFFC;  //LSLR & ~3
+		break;
 	case SPU_WrOutIntrMbox:
 	{
 		if (!group) // if RawSPU
@@ -910,6 +915,9 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 
 	switch (ch)
 	{
+	case SPU_RdSRR0:
+		v = SRR0;
+		break;
 	case SPU_RdInMbox:
 	{
 		while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped())

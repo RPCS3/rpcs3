@@ -350,7 +350,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 		p += param.Format();
 	}
 
-	return std::string("#version 330\n"
+	return std::string("#version 420\n"
 		"\n"
 		+ p + "\n"
 		"void main()\n{\n" + main + "}\n");

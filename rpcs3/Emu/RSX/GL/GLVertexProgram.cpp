@@ -498,7 +498,7 @@ std::string GLVertexDecompilerThread::BuildCode()
 	}
 
 	static const std::string& prot =
-		"#version 330\n"
+		"#version 420\n"
 		"\n"
 		"uniform mat4 scaleOffsetMat = mat4(1.0);\n"
 		"%s\n"
