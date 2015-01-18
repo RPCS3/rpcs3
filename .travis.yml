@@ -52,4 +52,4 @@ addons:
     branch_pattern: coverity_scan
 
 script:
- - make -j 4
+ - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then make -j 4; fi
