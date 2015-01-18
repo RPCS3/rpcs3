@@ -81,6 +81,7 @@ static void SetHostRoundingMode(u32 rn)
 	}
 }
 
+
 namespace ppu_recompiler_llvm {
 	class Compiler;
 }
@@ -100,6 +101,13 @@ public:
 	}
 
 private:
+	void CheckHostFPExceptions()
+	{
+		CPU.SetFPSCR_FI(fetestexcept(FE_INEXACT) != 0);
+		if (fetestexcept(FE_UNDERFLOW)) CPU.SetFPSCRException(FPSCR_UX);
+		if (fetestexcept(FE_OVERFLOW)) CPU.SetFPSCRException(FPSCR_OX);
+	}
+
 	void Exit() {}
 
 	void SysCall()
@@ -3727,7 +3735,9 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			CPU.FPR[frd] = static_cast<float>(1.0 / b);
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -3849,6 +3859,7 @@ private:
 		{
 			if (((u64&)b0 & DOUBLE_EXP) < 0x3800000000000000ULL) (u64&)b0 &= DOUBLE_SIGN;
 		}
+		feclearexcept(FE_ALL_EXCEPT);
 		const double r = static_cast<float>(b0);
 		if (FPRdouble::IsNaN(r))
 		{
@@ -3858,7 +3869,7 @@ private:
 		else
 		{
 			CPU.FPSCR.FR = fabs(r) > fabs(b);
-			CPU.SetFPSCR_FI(b != r);
+			CheckHostFPExceptions();
 		}
 		u32 type = PPCdouble(r).GetType();
 		if (type == FPR_PN && r < ldexp(1.0, -126)) type = FPR_PD;
@@ -3997,9 +4008,11 @@ private:
 					return;
 				}
 			}
+			feclearexcept(FE_ALL_EXCEPT);
 			const double res = a / b;
 			if(single) CPU.FPR[frd] = (float)res;
 			else       CPU.FPR[frd] = res;
+			CheckHostFPExceptions();
 		}
 
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
@@ -4044,9 +4057,11 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			const double res = a - b;
 			if(single) CPU.FPR[frd] = (float)res;
 			else       CPU.FPR[frd] = res;
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -4090,9 +4105,11 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			const double res = a + b;
 			if(single) CPU.FPR[frd] = (float)res;
 			else       CPU.FPR[frd] = res;
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -4131,9 +4148,11 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			const double res = sqrt(b);
 			if(single) CPU.FPR[frd] = (float)res;
 			else       CPU.FPR[frd] = res;
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -4182,9 +4201,11 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			const double res = a * c;
 			if(single) CPU.FPR[frd] = (float)res;
 			else       CPU.FPR[frd] = res;
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -4234,7 +4255,9 @@ private:
 		}
 		else
 		{
+			feclearexcept(FE_ALL_EXCEPT);
 			CPU.FPR[frd] = 1.0 / sqrt(b);
+			CheckHostFPExceptions();
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) CPU.UpdateCR1();
@@ -4299,8 +4322,10 @@ private:
 			}
 			else
 			{
+				feclearexcept(FE_ALL_EXCEPT);
 				if(single) CPU.FPR[frd] = (float)(neg ? -res : res);
 				else       CPU.FPR[frd] = (neg ? -res : res);
+				CheckHostFPExceptions();
 			}
 		}
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
