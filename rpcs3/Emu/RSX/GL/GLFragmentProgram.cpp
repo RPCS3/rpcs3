@@ -102,7 +102,7 @@ std::string GLFragmentDecompilerThread::AddConst()
 		return name;
 	}
 
-	auto data = vm::ptr<u32>::make(m_addr + m_size + m_offset);
+	auto data = vm::ptr<u32>::make(m_addr + m_size + 4 * sizeof(u32));
 
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
