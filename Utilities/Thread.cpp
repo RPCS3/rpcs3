@@ -192,81 +192,112 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 
 #ifdef _WIN32
 
+typedef CONTEXT x64_context;
+
+#define RIP 16
+#define X64REG(context, reg) ((&context->Rax)[reg])
+
+#else
+
+typedef ucontext_t x64_context;
+typedef decltype(REG_RIP) reg_table_t;
+#define RIP 16
+
+static const reg_table_t reg_table[17] =
+{
+	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
+	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
+};
+
+#define X64REG(context, reg) (context->uc_mcontext.gregs[reg_table[reg]])
+
+#endif
+
+bool handle_access_violation(const u32 addr, x64_context* context)
+{
+	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+	{
+		// one x64 instruction is manually decoded and interpreted
+		x64_op_t op;
+		x64_reg_t reg;
+		size_t size;
+		decode_x64_reg_op((const u8*)X64REG(context, RIP), op, reg, size);
+
+		// get x64 reg value (for store operations)
+		u64 reg_value;
+		if (reg - X64R32 < 16)
+		{
+			// load the value from x64 register
+			reg_value = (u32)X64REG(context, reg - X64R32);
+		}
+		else if (reg == X64_IMM32)
+		{
+			// load the immediate value (assuming it's at the end of the instruction)
+			reg_value = *(u32*)(X64REG(context, RIP) + size - 4);
+		}
+		else
+		{
+			assert(!"Invalid x64_reg_t value");
+		}
+
+		bool save_reg = false;
+
+		switch (op)
+		{
+		case X64OP_LOAD:
+		{
+			reg_value = re32(Memory.ReadMMIO32(addr));
+			save_reg = true;
+			break;
+		}
+		case X64OP_STORE:
+		{
+			Memory.WriteMMIO32(addr, re32((u32)reg_value));
+			break;
+		}
+		default: assert(!"Invalid x64_op_t value");
+		}
+
+		// save x64 reg value (for load operations)
+		if (save_reg)
+		{
+			if (reg - X64R32 < 16)
+			{
+				// store the value into x64 register
+				X64REG(context, reg - X64R32) = (u32)reg_value;
+			}
+			else
+			{
+				assert(!"Invalid x64_reg_t value (saving)");
+			}
+		}
+
+		// skip decoded instruction
+		X64REG(context, RIP) += size;
+		return true;
+	}
+
+	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
+	return false;
+}
+
+#ifdef _WIN32
+
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
 	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
-	if (u == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
+	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
 	{
-		const u32 addr = (u32)addr64;
-		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+		if (handle_access_violation((u32)addr64, pExp->ContextRecord))
 		{
-			// one x64 instruction is manually decoded and interpreted
-			x64_op_t op;
-			x64_reg_t reg;
-			size_t size;
-			decode_x64_reg_op((const u8*)pExp->ContextRecord->Rip, op, reg, size);
-
-			// get x64 reg value (for store operations)
-			u64 reg_value;
-			if (reg - X64R32 < 16)
-			{
-				// load the value from x64 register
-				reg_value = (u32)(&pExp->ContextRecord->Rax)[reg - X64R32];
-			}
-			else if (reg == X64_IMM32)
-			{
-				// load the immediate value (assuming it's at the end of the instruction)
-				reg_value = *(u32*)(pExp->ContextRecord->Rip + size - 4);
-			}
-			else
-			{
-				assert(!"Invalid x64_reg_t value");
-			}
-
-			bool save_reg = false;
-
-			switch (op)
-			{
-			case X64OP_LOAD:
-			{
-				assert(!is_writing);
-				reg_value = re32(Memory.ReadMMIO32(addr));
-				save_reg = true;
-				break;
-			}
-			case X64OP_STORE:
-			{
-				assert(is_writing);
-				Memory.WriteMMIO32(addr, re32((u32)reg_value));
-				break;
-			}
-			default: assert(!"Invalid x64_op_t value");
-			}
-
-			// save x64 reg value (for load operations)
-			if (save_reg)
-			{
-				if (reg - X64R32 < 16)
-				{
-					// store the value into x64 register
-					(&pExp->ContextRecord->Rax)[reg - X64R32] = (u32)reg_value;
-				}
-				else
-				{
-					assert(!"Invalid x64_reg_t value (saving)");
-				}
-			}
-
-			// skip decoded instruction
-			pExp->ContextRecord->Rip += size;
 			// restore context (further code shouldn't be reached)
 			RtlRestoreContext(pExp->ContextRecord, nullptr);
 
 			// it's dangerous because destructors won't be executed
 		}
-		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-		throw fmt::Format("Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+
+		throw fmt::Format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error (should crash)
@@ -283,79 +314,15 @@ static const reg_table_t reg_table[16] =
 
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	ucontext_t* const ctx = (ucontext_t*)uct;
 	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
-	//const bool is_writing = false; // TODO: get it correctly
-	if (addr64 < 0x100000000ull && GetCurrentNamedThread())
+	if ((u32)addr64 == addr64 && GetCurrentNamedThread())
 	{
-		const u32 addr = (u32)addr64;
-		if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+		if (handle_access_violation((u32)addr64, (ucontext_t*)uct))
 		{
-			// one x64 instruction is manually decoded and interpreted
-			x64_op_t op;
-			x64_reg_t reg;
-			size_t size;
-			decode_x64_reg_op((const u8*)ctx->uc_mcontext.gregs[REG_RIP], op, reg, size);
-
-			// get x64 reg value (for store operations)
-			u64 reg_value;
-			if (reg - X64R32 < 16)
-			{
-				// load the value from x64 register
-				reg_value = (u32)ctx->uc_mcontext.gregs[reg_table[reg - X64R32]];
-			}
-			else if (reg == X64_IMM32)
-			{
-				// load the immediate value (assuming it's at the end of the instruction)
-				reg_value = *(u32*)(ctx->uc_mcontext.gregs[REG_RIP] + size - 4);
-			}
-			else
-			{
-				assert(!"Invalid x64_reg_t value");
-			}
-
-			bool save_reg = false;
-
-			switch (op)
-			{
-			case X64OP_LOAD:
-			{
-				//assert(!is_writing);
-				reg_value = re32(Memory.ReadMMIO32(addr));
-				save_reg = true;
-				break;
-			}
-			case X64OP_STORE:
-			{
-				//assert(is_writing);
-				Memory.WriteMMIO32(addr, re32((u32)reg_value));
-				break;
-			}
-			default: assert(!"Invalid x64_op_t value");
-			}
-
-			// save x64 reg value (for load operations)
-			if (save_reg)
-			{
-				if (reg - X64R32 < 16)
-				{
-					// store the value into x64 register
-					ctx->uc_mcontext.gregs[reg_table[reg - X64R32]] = (u32)reg_value;
-				}
-				else
-				{
-					assert(!"Invalid x64_reg_t value (saving)");
-				}
-			}
-
-			// skip decoded instruction
-			ctx->uc_mcontext.gregs[REG_RIP] += size;
-
-			return; // now execution should proceed
-			//setcontext(ctx);
+			return; // proceed execution
 		}
 
-		// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
+		// TODO: this may be wrong
 		throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", addr);
 	}
 
