@@ -46,6 +46,8 @@ addons:
     project:
       name: "DHrpcs3/rpcs3"
       description: "PS3 emulator/debugger"
+    notification_email: raul.tambre@gmail.com
+    build_command_prepend: ""
     build_command:   "make -j 4"
     branch_pattern: coverity_scan
 
