@@ -113,33 +113,37 @@ namespace vm
 namespace fmt
 {
 	// external specializations for fmt::format function
-	namespace detail
+
+	template<typename T, typename AT>
+	struct unveil<vm::ps3::ref<T, AT>, false>
 	{
-		template<typename T, typename AT>
-		struct get_fmt<vm::ps3::ref<T, AT>, false>
-		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::ref<T, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
+		typedef typename unveil<AT>::result_type result_type;
 
-		template<typename T, typename AT>
-		struct get_fmt<vm::ps3::bref<T, AT>, false>
+		__forceinline static result_type get_value(const vm::ps3::ref<T, AT>& arg)
 		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::bref<T, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
 
-		template<typename T, typename AT>
-		struct get_fmt<vm::psv::ref<T, AT>, false>
+	template<typename T, typename AT>
+	struct unveil<vm::ps3::bref<T, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::ps3::bref<T, AT>& arg)
 		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::psv::ref<T, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
-	}
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
+
+	template<typename T, typename AT>
+	struct unveil<vm::psv::ref<T, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::psv::ref<T, AT>& arg)
+		{
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
 }

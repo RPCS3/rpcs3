@@ -90,9 +90,9 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 	{
 		switch (const u8 prefix = *code)
 		{
-		case 0xf0: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (LOCK prefix) found", code - decoded_size, prefix); // group 1
-		case 0xf2: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REPNE/REPNZ prefix) found", code - decoded_size, prefix); // group 1
-		case 0xf3: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REP/REPE/REPZ prefix) found", code - decoded_size, prefix); // group 1
+		case 0xf0: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (LOCK prefix) found", (size_t)code - decoded_size, prefix); // group 1
+		case 0xf2: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REPNE/REPNZ prefix) found", (size_t)code - decoded_size, prefix); // group 1
+		case 0xf3: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REP/REPE/REPZ prefix) found", (size_t)code - decoded_size, prefix); // group 1
 
 		case 0x2e: // group 2
 		case 0x36:
@@ -108,12 +108,12 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 			}
 			else
 			{
-				throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (group 2 prefix) found after 0x%.2X", code - decoded_size, prefix, pg2);
+				throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - decoded_size, prefix, pg2);
 			}
 		}
 
-		case 0x66: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (operand-size override prefix) found", code - decoded_size, prefix); // group 3
-		case 0x67: throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (address-size override prefix) found", code - decoded_size, prefix); // group 4
+		case 0x66: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (operand-size override prefix) found", (size_t)code - decoded_size, prefix); // group 3
+		case 0x67: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (address-size override prefix) found", (size_t)code - decoded_size, prefix); // group 4
 
 		default:
 		{
@@ -121,11 +121,11 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 			{
 				if (rex)
 				{
-					throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REX prefix) found after 0x%.2X", code - decoded_size, prefix, rex);
+					throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - decoded_size, prefix, rex);
 				}
 				if (prefix & 0x80) // check REX.W bit
 				{
-					throw fmt::Format("decode_x64_reg_op(%.16llXh): 0x%.2X (REX.W bit) found", code - decoded_size, prefix);
+					throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REX.W bit) found", (size_t)code - decoded_size, prefix);
 				}
 				if (prefix & 0x04) // check REX.R bit
 				{
@@ -185,7 +185,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 	}
 	default:
 	{
-		throw fmt::Format("decode_x64_reg_op(%.16llXh): unsupported opcode found (0x%.2X, 0x%.2X, 0x%.2X)", code - decoded_size, op1, code[0], code[1]);
+		throw fmt::format("decode_x64_reg_op(%016llxh): unsupported opcode found (0x%02x, 0x%02x, 0x%02x)", (size_t)code - decoded_size, op1, code[0], code[1]);
 	}
 	}
 }
@@ -297,7 +297,7 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 			// it's dangerous because destructors won't be executed
 		}
 
-		throw fmt::Format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
+		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error (should crash)
@@ -316,7 +316,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: this may be wrong
-		throw fmt::Format("Access violation %s location 0x%llx", /*is_writing ? "writing" : "reading"*/ "at", addr64);
+		throw fmt::format("Access violation at location 0x%llx", addr64);
 	}
 
 	// else some fatal error
@@ -354,7 +354,7 @@ void SetCurrentNamedThread(NamedThreadBase* value)
 
 	if (value && value->m_tls_assigned.exchange(true))
 	{
-		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", value->GetThreadName().c_str());
+		LOG_ERROR(GENERAL, "Thread '%s' was already assigned to g_tls_this_thread of another thread", value->GetThreadName());
 		g_tls_this_thread = nullptr;
 	}
 	else

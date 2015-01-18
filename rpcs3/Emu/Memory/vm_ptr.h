@@ -501,33 +501,37 @@ namespace vm
 namespace fmt
 {
 	// external specializations for fmt::format function
-	namespace detail
+
+	template<typename T, int lvl, typename AT>
+	struct unveil<vm::ps3::ptr<T, lvl, AT>, false>
 	{
-		template<typename T, int lvl, typename AT>
-		struct get_fmt<vm::ps3::ptr<T, lvl, AT>, false>
-		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::ptr<T, lvl, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
+		typedef typename unveil<AT>::result_type result_type;
 
-		template<typename T, int lvl, typename AT>
-		struct get_fmt<vm::ps3::bptr<T, lvl, AT>, false>
+		__forceinline static result_type get_value(const vm::ps3::ptr<T, lvl, AT>& arg)
 		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::ps3::bptr<T, lvl, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
 
-		template<typename T, int lvl, typename AT>
-		struct get_fmt<vm::psv::ptr<T, lvl, AT>, false>
+	template<typename T, int lvl, typename AT>
+	struct unveil<vm::ps3::bptr<T, lvl, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::ps3::bptr<T, lvl, AT>& arg)
 		{
-			__forceinline static std::string text(const char* fmt, size_t len, const vm::psv::ptr<T, lvl, AT>& arg)
-			{
-				return get_fmt<AT>::text(fmt, len, arg.addr());
-			}
-		};
-	}
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
+
+	template<typename T, int lvl, typename AT>
+	struct unveil<vm::psv::ptr<T, lvl, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::psv::ptr<T, lvl, AT>& arg)
+		{
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
 }

@@ -122,21 +122,21 @@ namespace detail
 	};
 
 	template <typename RT, typename F, typename Tuple>
-	static __forceinline RT call(F f, Tuple && t)
+	__forceinline RT call(F f, Tuple && t)
 	{
 		typedef typename std::decay<Tuple>::type ttype;
 		return detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 	}
 
 	template<int g_count, int f_count, int v_count>
-	static __forceinline std::tuple<> iterate(PPUThread& CPU)
+	__forceinline std::tuple<> iterate(PPUThread& CPU)
 	{
 		// terminator
 		return std::tuple<>();
 	}
 
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
-	static __forceinline std::tuple<T, A...> iterate(PPUThread& CPU)
+	__forceinline std::tuple<T, A...> iterate(PPUThread& CPU)
 	{
 		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
 		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");

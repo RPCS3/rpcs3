@@ -181,13 +181,13 @@ namespace vm
 }
 
 template<typename RT, typename... T>
-RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+__forceinline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 {
 	return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 }
 
-template<typename... T>
-void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
-{
-	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
-}
+//template<typename... T>
+//void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+//{
+//	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
+//}

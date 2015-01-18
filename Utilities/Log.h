@@ -126,24 +126,11 @@ static struct { inline operator Log::LogType() { return Log::LogType::SPU; } } S
 static struct { inline operator Log::LogType() { return Log::LogType::ARMv7; } } ARMv7;
 static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } TTY;
 
-inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)
-{
-	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
-	//Log::LogManager::getInstance().log({logType, severity, text})
+void log_message(Log::LogType type, Log::LogSeverity sev, const char* text);
+void log_message(Log::LogType type, Log::LogSeverity sev, const std::string& text);
 
-	Log::LogMessage msg{ type, sev, text };
-	Log::LogManager::getInstance().log(msg);
-}
-
-inline void log_message(Log::LogType type, Log::LogSeverity sev, const std::string& text)
+template<typename... Targs> 
+__noinline void log_message(Log::LogType type, Log::LogSeverity sev, const char* fmt, Targs... args)
 {
-	Log::LogMessage msg{ type, sev, text };
-	Log::LogManager::getInstance().log(msg);
-}
-
-template<typename T, typename... Ts> 
-inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* text, T arg, Ts... args)
-{
-	Log::LogMessage msg{ type, sev, fmt::format(text, arg, args...) };
-	Log::LogManager::getInstance().log(msg);
+	log_message(type, sev, fmt::detail::format(fmt, strlen(fmt), fmt::do_unveil(args)...));
 }

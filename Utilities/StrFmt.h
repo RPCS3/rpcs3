@@ -175,114 +175,16 @@ namespace fmt
 
 	namespace detail
 	{
-		static std::string to_hex(u64 value, size_t count = 1)
-		{
-			assert(count - 1 < 16);
-			count = std::max<u64>(count, 16 - cntlz64(value) / 4);
+		std::string to_hex(u64 value, size_t count = 1);
 
-			char res[16] = {};
+		size_t get_fmt_start(const char* fmt, size_t len);
+		size_t get_fmt_len(const char* fmt, size_t len);
+		size_t get_fmt_precision(const char* fmt, size_t len);
 
-			for (size_t i = count - 1; ~i; i--, value /= 16)
-			{
-				res[i] = "0123456789abcdef"[value % 16];
-			}
-
-			return std::string(res, count);
-		}
-
-		static size_t get_fmt_start(const char* fmt, size_t len)
-		{
-			for (size_t i = 0; i < len; i++)
-			{
-				if (fmt[i] == '%')
-				{
-					return i;
-				}
-			}
-
-			return len;
-		}
-
-		static size_t get_fmt_len(const char* fmt, size_t len)
-		{
-			assert(len >= 2 && fmt[0] == '%');
-
-			size_t res = 2;
-
-			if (fmt[1] == '.' || fmt[1] == '0')
-			{
-				assert(len >= 4 && fmt[2] - '1' < 9);
-				res += 2;
-				fmt += 2;
-				len -= 2;
-
-				if (fmt[1] == '1')
-				{
-					assert(len >= 3 && fmt[2] - '0' < 7);
-					res++;
-					fmt++;
-					len--;
-				}
-			}
-
-			if (fmt[1] == 'l')
-			{
-				assert(len >= 3);
-				res++;
-				fmt++;
-				len--;
-			}
-
-			if (fmt[1] == 'l')
-			{
-				assert(len >= 3);
-				res++;
-				fmt++;
-				len--;
-			}
-
-			return res;
-		}
-
-		static size_t get_fmt_precision(const char* fmt, size_t len)
-		{
-			assert(len >= 2);
-
-			if (fmt[1] == '.' || fmt[1] == '0')
-			{
-				assert(len >= 4 && fmt[2] - '1' < 9);
-
-				if (fmt[2] == '1')
-				{
-					assert(len >= 5 && fmt[3] - '0' < 7);
-					return 10 + fmt[3] - '0';
-				}
-
-				return fmt[2] - '0';
-			}
-
-			return 1;
-		}
-
-		template<typename T, bool is_enum = std::is_enum<T>::value>
+		template<typename T>
 		struct get_fmt
 		{
-			static_assert(is_enum, "Unsupported fmt::format argument");
-			typedef typename std::underlying_type<T>::type underlying_type;
-
-			static std::string text(const char* fmt, size_t len, const T& arg)
-			{
-				return get_fmt<underlying_type>::text(fmt, len, (underlying_type)arg);
-			}
-		};
-
-		template<typename T, typename T2>
-		struct get_fmt<be_t<T, T2>, false>
-		{
-			static std::string text(const char* fmt, size_t len, const be_t<T, T2>& arg)
-			{
-				return get_fmt<T>::text(fmt, len, arg.value());
-			}
+			static_assert(!sizeof(T), "Unsupported fmt::format argument");
 		};
 
 		template<>
@@ -621,16 +523,10 @@ namespace fmt
 			}
 		};
 
-		static std::string format(const char* fmt, size_t len)
-		{
-			const size_t fmt_start = get_fmt_start(fmt, len);
-			assert(fmt_start == len);
-
-			return std::string(fmt, len);
-		}
+		std::string format(const char* fmt, size_t len); // terminator
 
 		template<typename T, typename... Args>
-		static std::string format(const char* fmt, size_t len, const T& arg, Args... args)
+		std::string format(const char* fmt, size_t len, const T& arg, Args... args)
 		{
 			const size_t fmt_start = get_fmt_start(fmt, len);
 			const size_t fmt_len = get_fmt_len(fmt + fmt_start, len - fmt_start);
@@ -640,8 +536,72 @@ namespace fmt
 		}
 	};
 
-	// formatting function with very limited functionality (compared to printf-like formatting) and be_t<> support
+	template<typename T, bool is_enum = std::is_enum<T>::value>
+	struct unveil
+	{
+		typedef T result_type;
+
+		__forceinline static result_type get_value(const T& arg)
+		{
+			return arg;
+		}
+	};
+
+	template<size_t N>
+	struct unveil<const char[N], false>
+	{
+		typedef const char* result_type;
+
+		__forceinline static result_type get_value(const char(&arg)[N])
+		{
+			return arg;
+		}
+	};
+
+	template<>
+	struct unveil<std::string, false>
+	{
+		typedef const std::string& result_type;
+
+		__forceinline static result_type get_value(const std::string& arg)
+		{
+			return arg;
+		}
+	};
+
+	template<typename T>
+	struct unveil<T, true>
+	{
+		typedef typename std::underlying_type<T>::type result_type;
+
+		__forceinline static result_type get_value(const T& arg)
+		{
+			return static_cast<result_type>(arg);
+		}
+	};
+
+	template<typename T, typename T2>
+	struct unveil<be_t<T, T2>, false>
+	{
+		typedef typename unveil<T>::result_type result_type;
+
+		__forceinline static result_type get_value(const be_t<T, T2>& arg)
+		{
+			return unveil<T>::get_value(arg.value());
+		}
+	};
+
+	template<typename T>
+	__forceinline typename unveil<T>::result_type do_unveil(const T& arg)
+	{
+		return unveil<T>::get_value(arg);
+	}
+
 	/*
+	fmt::format(const char* fmt, args...)
+
+	Formatting function with very limited functionality (compared to printf-like formatting) and be_t<> support
+
 	Supported types:
 
 	u8, s8 (%x, %d)
@@ -652,16 +612,17 @@ namespace fmt
 	double (%x, %f)
 	bool (%x, %d, %s)
 	char*, const char*, std::string (%s)
-	be_t<> of any appropriate type in this list
-	enum of any appropriate type in this list
+
+	be_t<> of any appropriate type in this list (fmt::unveil)
+	enum of any appropriate type in this list (fmt::unveil)
 
 	External specializations (can be found in another headers):
-	vm::ps3::ptr (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
-	vm::ps3::bptr (vm_ptr.h)
-	vm::psv::ptr (vm_ptr.h)
-	vm::ps3::ref (vm_ref.h)
-	vm::ps3::bref (vm_ref.h)
-	vm::psv::ref (vm_ref.h)
+	vm::ps3::ptr (fmt::unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
+	vm::ps3::bptr (fmt::unveil) (vm_ptr.h)
+	vm::psv::ptr (fmt::unveil) (vm_ptr.h)
+	vm::ps3::ref (fmt::unveil) (vm_ref.h)
+	vm::ps3::bref (fmt::unveil) (vm_ref.h)
+	vm::psv::ref (fmt::unveil) (vm_ref.h)
 	
 	Supported formatting:
 	%d - decimal; only basic std::to_string() functionality
@@ -672,9 +633,9 @@ namespace fmt
 	Other features are not supported.
 	*/
 	template<typename... Args>
-	__forceinline static std::string format(const char* fmt, Args... args)
+	__forceinline std::string format(const char* fmt, Args... args)
 	{
-		return detail::format(fmt, strlen(fmt), args...);
+		return detail::format(fmt, strlen(fmt), do_unveil(args)...);
 	}
 
 	//convert a wxString to a std::string encoded in utf8

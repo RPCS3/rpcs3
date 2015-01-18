@@ -432,7 +432,7 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 	case CELL_SEEK_CUR: seek_mode = vfsSeekCur; break;
 	case CELL_SEEK_END: seek_mode = vfsSeekEnd; break;
 	default:
-		sys_fs->Error(fd, "Unknown seek whence! (0x%x)", whence);
+		sys_fs->Error("cellFsLseek(fd=%d): Unknown seek whence! (0x%x)", fd, whence);
 	return CELL_EINVAL;
 	}
 

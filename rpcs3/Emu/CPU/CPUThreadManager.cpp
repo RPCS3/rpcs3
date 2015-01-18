@@ -55,7 +55,7 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	default: assert(0);
 	}
 	
-	new_thread->SetId(Emu.GetIdManager().GetNewID(fmt::Format("%s Thread", new_thread->GetTypeString().c_str()), new_thread));
+	new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread->GetTypeString() + " Thread", new_thread));
 
 	m_threads.push_back(new_thread);
 	SendDbgCommand(DID_CREATE_THREAD, new_thread.get());

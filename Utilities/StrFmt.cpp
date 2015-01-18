@@ -3,12 +3,112 @@
 
 std::string u128::to_hex() const
 {
-	return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
+	return fmt::format("%016llx%016llx", _u64[1], _u64[0]);
 }
 
 std::string u128::to_xyzw() const
 {
 	return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
+}
+
+std::string fmt::detail::to_hex(u64 value, size_t count)
+{
+	assert(count - 1 < 16);
+	count = std::max<u64>(count, 16 - cntlz64(value) / 4);
+
+	char res[16] = {};
+
+	for (size_t i = count - 1; ~i; i--, value /= 16)
+	{
+		res[i] = "0123456789abcdef"[value % 16];
+	}
+
+	return std::string(res, count);
+}
+
+size_t fmt::detail::get_fmt_start(const char* fmt, size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+	{
+		if (fmt[i] == '%')
+		{
+			return i;
+		}
+	}
+
+	return len;
+}
+
+size_t fmt::detail::get_fmt_len(const char* fmt, size_t len)
+{
+	assert(len >= 2 && fmt[0] == '%');
+
+	size_t res = 2;
+
+	if (fmt[1] == '.' || fmt[1] == '0')
+	{
+		assert(len >= 4 && fmt[2] - '1' < 9);
+		res += 2;
+		fmt += 2;
+		len -= 2;
+
+		if (fmt[1] == '1')
+		{
+			assert(len >= 3 && fmt[2] - '0' < 7);
+			res++;
+			fmt++;
+			len--;
+		}
+	}
+
+	if (fmt[1] == 'l')
+	{
+		assert(len >= 3);
+		res++;
+		fmt++;
+		len--;
+	}
+
+	if (fmt[1] == 'l')
+	{
+		assert(len >= 3);
+		res++;
+		fmt++;
+		len--;
+	}
+
+	return res;
+}
+
+size_t fmt::detail::get_fmt_precision(const char* fmt, size_t len)
+{
+	assert(len >= 2);
+
+	if (fmt[1] == '.' || fmt[1] == '0')
+	{
+		assert(len >= 4 && fmt[2] - '1' < 9);
+
+		if (fmt[2] == '1')
+		{
+			assert(len >= 5 && fmt[3] - '0' < 7);
+			return 10 + fmt[3] - '0';
+		}
+
+		return fmt[2] - '0';
+	}
+
+	return 1;
+}
+
+std::string fmt::detail::format(const char* fmt, size_t len)
+{
+	const size_t fmt_start = get_fmt_start(fmt, len);
+	if (fmt_start != len)
+	{
+		throw "Excessive formatting: " + std::string(fmt, len);
+	}
+
+	return std::string(fmt, len);
 }
 
 extern const std::string fmt::placeholder = "???";
