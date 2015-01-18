@@ -10,7 +10,7 @@ env:
 
 branches:
   only:
-    - master
+    - coverity_scan
 
 git:
   submodules: false
