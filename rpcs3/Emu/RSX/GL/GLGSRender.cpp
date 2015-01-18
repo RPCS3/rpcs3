@@ -734,7 +734,7 @@ void DrawCursorObj::Draw()
 void DrawCursorObj::InitializeShaders()
 {
 	m_vp.shader =
-		"#version 330\n"
+		"#version 420\n"
 		"\n"
 		"uniform vec4 in_pos;\n"
 		"uniform vec2 in_tc;\n"
@@ -747,10 +747,10 @@ void DrawCursorObj::InitializeShaders()
 		"}\n";
 
 	m_fp.shader =
-		"#version 330\n"
+		"#version 420\n"
 		"\n"
 		"in vec2 tc;\n"
-		"uniform sampler2D tex0;\n"
+		"layout (binding = 0) uniform sampler2D tex0;\n"
 		"layout (location = 0) out vec4 res;\n"
 		"\n"
 		"void main()\n"
