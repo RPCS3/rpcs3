@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Cell/Common.h"
 #include "Emu/Cell/PPCThread.h"
 #include "Emu/Memory/vm.h"
 
@@ -55,14 +56,6 @@ enum FPSCR_EXP
 	FPSCR_VXCVI     = 0x00000100,
 
 	FPSCR_VX_ALL    = FPSCR_VXSNAN | FPSCR_VXISI | FPSCR_VXIDI | FPSCR_VXZDZ | FPSCR_VXIMZ | FPSCR_VXVC | FPSCR_VXSOFT | FPSCR_VXSQRT | FPSCR_VXCVI,
-};
-
-enum FPSCR_RN
-{
-	FPSCR_RN_NEAR = 0,
-	FPSCR_RN_ZERO = 1,
-	FPSCR_RN_PINF = 2,
-	FPSCR_RN_MINF = 3,
 };
 
 static const u64 DOUBLE_SIGN = 0x8000000000000000ULL;

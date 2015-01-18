@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Cell/Common.h"
 #include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
@@ -201,10 +202,7 @@ public:
 	}
 	//slice -> 0 - 1 (double-precision slice index)
 	//NOTE: slices follow u128 indexing, i.e. slice 0 is RIGHT end of register!
-	//0 -> round even
-	//1 -> round towards zero (truncate)
-	//2 -> round towards positive inf
-	//3 -> round towards neg inf
+	//roundTo -> FPSCR_RN_*
 	void setSliceRounding(u8 slice, u8 roundTo)
 	{
 		int shift = 8 + 2*slice;
