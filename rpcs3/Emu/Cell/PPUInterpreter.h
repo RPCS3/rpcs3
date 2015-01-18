@@ -17,6 +17,8 @@
 #define _rotl64(x,r) (((u64)(x) << (r)) | ((u64)(x) >> (64 - (r))))
 #endif
 
+#include <fenv.h>
+
 #if 0//def _DEBUG
 #define HLE_CALL_DEBUG
 #endif
@@ -58,6 +60,25 @@ static double SilenceNaN(double x)
 	u64 bits = (u64&)x;
 	bits |= 0x0008000000000000ULL;
 	return (double&)bits;
+}
+
+static void SetHostRoundingMode(u32 rn)
+{
+	switch (rn)
+	{
+	case FPSCR_RN_NEAR:
+		fesetround(FE_TONEAREST);
+		break;
+	case FPSCR_RN_ZERO:
+		fesetround(FE_TOWARDZERO);
+		break;
+	case FPSCR_RN_PINF:
+		fesetround(FE_UPWARD);
+		break;
+	case FPSCR_RN_MINF:
+		fesetround(FE_DOWNWARD);
+		break;
+	}
 }
 
 namespace ppu_recompiler_llvm {
@@ -245,6 +266,7 @@ private:
 	}
 	void VADDFP(u32 vd, u32 va, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
@@ -441,6 +463,7 @@ private:
 	}
 	void VCFSX(u32 vd, u32 uimm5, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		u32 scale = 1 << uimm5;
 			
 		for (uint w = 0; w < 4; w++)
@@ -450,6 +473,7 @@ private:
 	}
 	void VCFUX(u32 vd, u32 uimm5, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		u32 scale = 1 << uimm5;
 			
 		for (uint w = 0; w < 4; w++)
@@ -786,8 +810,8 @@ private:
 					CPU.VPR[vd]._s32[w] = (int)0x80000000;
 					CPU.VSCR.SAT = 1;
 				}
-				else // C rounding = Round towards 0
-					CPU.VPR[vd]._s32[w] = (int)result;
+				else
+					CPU.VPR[vd]._s32[w] = (int)trunc(result);
 			}
 		}
 	}
@@ -804,7 +828,6 @@ private:
 			}
 			else
 			{
-				// C rounding = Round towards 0
 				double result = (double)b * nScale;
 				if (result > 0xffffffffu)
 				{
@@ -817,7 +840,7 @@ private:
 					CPU.VSCR.SAT = 1;
 				}
 				else
-					CPU.VPR[vd]._u32[w] = (u32)result;
+					CPU.VPR[vd]._u32[w] = (u32)trunc(result);
 			}
 		}
 	}
@@ -826,6 +849,7 @@ private:
 		// vd = 2^x
 		// ISA : Note that the value placed into the element of vD may vary between implementations
 		// and between different executions on the same implementation.
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
@@ -839,6 +863,7 @@ private:
 	{
 		// ISA : Note that the value placed into the element of vD may vary between implementations
 		// and between different executions on the same implementation.
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
@@ -850,6 +875,7 @@ private:
 	}
 	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
@@ -1275,6 +1301,7 @@ private:
 	}
 	void VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
@@ -1568,6 +1595,7 @@ private:
 	}
 	void VREFP(u32 vd, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float b = CheckVSCR_NJ(CPU.VPR[vb]._f[w]);
@@ -1596,7 +1624,10 @@ private:
 			if (std::isnan(b))
 				CPU.VPR[vd]._f[w] = SilenceNaN(b);
 			else
+			{
+				SetHostRoundingMode(FPSCR_RN_NEAR);
 				CPU.VPR[vd]._f[w] = nearbyintf(CPU.VPR[vb]._f[w]);
+			}
 		}
 	}
 	void VRFIP(u32 vd, u32 vb)
@@ -1646,6 +1677,7 @@ private:
 	}
 	void VRSQRTEFP(u32 vd, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			//TODO: accurate div
@@ -1846,6 +1878,7 @@ private:
 	}
 	void VSUBFP(u32 vd, u32 va, u32 vb)
 	{
+		SetHostRoundingMode(FPSCR_RN_NEAR);
 		for (uint w = 0; w < 4; w++)
 		{
 			const float a = CheckVSCR_NJ(CPU.VPR[va]._f[w]);
@@ -3663,6 +3696,7 @@ private:
 	void FSQRTS(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, true);}
 	void FRES(u32 frd, u32 frb, bool rc)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(b))
 		{
@@ -3797,6 +3831,7 @@ private:
 	}
 	void FRSP(u32 frd, u32 frb, bool rc)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
 		if (FPRdouble::IsSNaN(b))
 		{
@@ -3869,6 +3904,7 @@ private:
 			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
+				SetHostRoundingMode(FPSCR_RN_NEAR);
 				i = (s32)nearbyint(b);
 				break;
 			case FPSCR_RN_ZERO:
@@ -3902,6 +3938,7 @@ private:
 	void FDIV(u32 frd, u32 fra, u32 frb, bool rc) {FDIV(frd, fra, frb, rc, false);}
 	void FDIV(u32 frd, u32 fra, u32 frb, bool rc, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
@@ -3971,6 +4008,7 @@ private:
 	void FSUB(u32 frd, u32 fra, u32 frb, bool rc) {FSUB(frd, fra, frb, rc, false);}
 	void FSUB(u32 frd, u32 fra, u32 frb, bool rc, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
@@ -4016,6 +4054,7 @@ private:
 	void FADD(u32 frd, u32 fra, u32 frb, bool rc) {FADD(frd, fra, frb, rc, false);}
 	void FADD(u32 frd, u32 fra, u32 frb, bool rc, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(b))
@@ -4061,6 +4100,7 @@ private:
 	void FSQRT(u32 frd, u32 frb, bool rc) {FSQRT(frd, frb, rc, false);}
 	void FSQRT(u32 frd, u32 frb, bool rc, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(b))
 		{
@@ -4106,6 +4146,7 @@ private:
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc) {FMUL(frd, fra, frc, rc, false);}
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
 		const double c = CPU.FPR[frc];
 		if(FPRdouble::IsSNaN(a) || FPRdouble::IsSNaN(c))
@@ -4150,6 +4191,7 @@ private:
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double b = CPU.FPR[frb];
 		if(FPRdouble::IsSNaN(b))
 		{
@@ -4201,6 +4243,7 @@ private:
 	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc) {FMADD(frd, fra, frc, frb, rc, false, false, false);}
 	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc, bool neg, bool sub, bool single)
 	{
+		SetHostRoundingMode(CPU.FPSCR.RN);
 		const double a = CPU.FPR[fra];
 		const double b = CPU.FPR[frb];
 		const double c = CPU.FPR[frc];
@@ -4344,6 +4387,7 @@ private:
 			switch(rn)
 			{
 			case FPSCR_RN_NEAR:
+				SetHostRoundingMode(FPSCR_RN_NEAR);
 				i = (s64)nearbyint(b);
 				break;
 			case FPSCR_RN_ZERO:
