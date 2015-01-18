@@ -305,13 +305,6 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 #else
 
-typedef decltype(REG_RIP) reg_table_t;
-static const reg_table_t reg_table[16] =
-{
-	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
-	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15
-};
-
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
 	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
@@ -323,7 +316,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 		}
 
 		// TODO: this may be wrong
-		throw fmt::Format("Access violation %s location 0x%x", /*is_writing ? "writing" : "reading"*/ "at", addr);
+		throw fmt::Format("Access violation %s location 0x%llx", /*is_writing ? "writing" : "reading"*/ "at", addr64);
 	}
 
 	// else some fatal error
