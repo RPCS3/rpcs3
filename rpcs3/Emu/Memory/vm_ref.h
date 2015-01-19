@@ -28,9 +28,9 @@ namespace vm
 			return m_addr;
 		}
 
-		static _ref_base make(AT addr)
+		static _ref_base make(const AT& addr)
 		{
-			return (_ref_base&)addr;
+			return reinterpret_cast<_ref_base&>(addr);
 		}
 
 		_ref_base& operator = (le_type right)

@@ -35,7 +35,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = (u32)Memory.Alloc(size(), m_align);
+			m_addr = vm::cast(Memory.Alloc(size(), m_align));
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
@@ -162,7 +162,7 @@ namespace vm
 
 		void alloc()
 		{
-			m_addr = (u32)Memory.Alloc(size(), m_align);
+			m_addr = vm::cast(Memory.Alloc(size(), m_align));
 			m_ptr = vm::get_ptr<T>(m_addr);
 		}
 
