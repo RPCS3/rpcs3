@@ -39,7 +39,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
+		int ret = cellFsOpen(src->fileName.to_le(), 0, fd, vm::ptr<u32>::make(0), 0);
 		current_subHandle->fd = fd.value();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 

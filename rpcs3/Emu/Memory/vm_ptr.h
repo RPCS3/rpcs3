@@ -410,11 +410,10 @@ namespace vm
 	{
 		static bptrl make(AT addr)
 		{
-			return (bptrl&)addr;
+			return (bptrl&)_ptr_base<T, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
 		}
 
 		using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator=;
-		//using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator const _ptr_base<T, lvl, AT>;
 	};
 
 	//BE pointer to BE data
@@ -422,11 +421,10 @@ namespace vm
 	{
 		static bptrb make(AT addr)
 		{
-			return (bptrb&)addr;
+			return (bptrb&)_ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator=;
-		//using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 	};
 
 	//LE pointer to BE data
@@ -434,11 +432,10 @@ namespace vm
 	{
 		static lptrb make(AT addr)
 		{
-			return (lptrb&)addr;
+			return (lptrb&)_ptr_base<typename to_be_t<T>::type, lvl, AT>::make(addr);
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator=;
-		//using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>;
 	};
 
 	//LE pointer to LE data
@@ -446,37 +443,47 @@ namespace vm
 	{
 		static lptrl make(AT addr)
 		{
-			return (lptrl&)addr;
+			return (lptrl&)_ptr_base<T, lvl, AT>::make(addr);
 		}
 
 		using _ptr_base<T, lvl, AT>::operator=;
-		//using _ptr_base<T, lvl, AT>::operator const _ptr_base<T, lvl, typename to_be_t<AT>::type>;
 	};
 
 	namespace ps3
 	{
+		template<typename T, int lvl = 1, typename AT = u32> struct ptr;
+		template<typename T, int lvl = 1, typename AT = u32> struct bptr;
+
 		//default pointer for HLE functions (LE pointer to BE data)
-		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrb<T, lvl, AT>
+		template<typename T, int lvl, typename AT> struct ptr : public lptrb<T, lvl, AT>
 		{
 			static ptr make(AT addr)
 			{
-				return (ptr&)addr;
+				return (ptr&)lptrb<T, lvl, AT>::make(addr);
+			}
+
+			vm::ps3::bptr<T, lvl, AT> to_be() const
+			{
+				return vm::ps3::bptr<T, lvl, AT>::make(addr());
 			}
 
 			using lptrb<T, lvl, AT>::operator=;
-			//using lptrb<T, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 		};
 
 		//default pointer for HLE structures (BE pointer to BE data)
-		template<typename T, int lvl = 1, typename AT = u32> struct bptr : public bptrb<T, lvl, AT>
+		template<typename T, int lvl, typename AT> struct bptr : public bptrb<T, lvl, AT>
 		{
 			static bptr make(AT addr)
 			{
-				return (bptr&)addr;
+				return (bptr&)bptrb<T, lvl, AT>::make(addr);
+			}
+
+			vm::ps3::ptr<T, lvl, AT> to_le() const
+			{
+				return vm::ps3::ptr<T, lvl, AT>::make(addr());
 			}
 
 			using bptrb<T, lvl, AT>::operator=;
-			//using bptrb<T, lvl, AT>::operator const _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 		};
 	}
 
@@ -487,7 +494,7 @@ namespace vm
 		{
 			static ptr make(AT addr)
 			{
-				return (ptr&)addr;
+				return (ptr&)lptrl<T, lvl, AT>::make(addr);
 			}
 
 			using lptrl<T, lvl, AT>::operator=;
