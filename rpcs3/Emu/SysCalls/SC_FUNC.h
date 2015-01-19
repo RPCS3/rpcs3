@@ -28,7 +28,7 @@ namespace detail
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T&)CPU.GPR[g_count + 2];
+			return cast_from_ppu_gpr<T>(CPU.GPR[g_count + 2]);
 		}
 	};
 
@@ -39,7 +39,7 @@ namespace detail
 
 		static __forceinline T func(PPUThread& CPU)
 		{
-			return (T)CPU.FPR[f_count];
+			return static_cast<T>(CPU.FPR[f_count]);
 		}
 	};
 
@@ -65,7 +65,7 @@ namespace detail
 		{
 			// TODO: check stack argument displacement
 			const u64 res = CPU.GetStackArg(8 + std::max(g_count - 8, 0) + std::max(f_count - 13, 0) + std::max(v_count - 12, 0));
-			return (T&)res;
+			return cast_from_ppu_gpr<T>(res);
 		}
 	};
 
@@ -88,7 +88,7 @@ namespace detail
 
 		static __forceinline void func(PPUThread& CPU, const T& result)
 		{
-			CPU.FPR[1] = result;
+			CPU.FPR[1] = static_cast<T>(result);
 		}
 	};
 

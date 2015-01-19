@@ -147,3 +147,22 @@ namespace fmt
 		}
 	};
 }
+
+// external specializations for PPU GPR (SC_FUNC.h, CB_FUNC.h)
+
+template<typename T, bool is_enum>
+struct cast_ppu_gpr;
+
+template<typename T, typename AT>
+struct cast_ppu_gpr<vm::ps3::ref<T, AT>, false>
+{
+	__forceinline static u64 to_gpr(const vm::ps3::ref<T, AT>& value)
+	{
+		return value.addr();
+	}
+
+	__forceinline static vm::ps3::ref<T, AT> from_gpr(const u64 reg)
+	{
+		return vm::ps3::ref<T, AT>::make(cast_ppu_gpr<AT>::from_gpr(reg));
+	}
+};
