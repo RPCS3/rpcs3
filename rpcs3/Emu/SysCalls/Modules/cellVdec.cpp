@@ -575,7 +575,7 @@ int cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResourc
 	cellVdec->Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
 
-	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, vm::ptr<CellVdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc.to_le(), cb->cbArg));
 
 	return CELL_OK;
 }
@@ -585,7 +585,7 @@ int cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecRes
 	cellVdec->Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
 		type.addr(), res.addr(), cb.addr(), handle.addr());
 
-	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, vm::ptr<CellVdecCbMsg>::make(cb->cbFunc.addr()), cb->cbArg));
+	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc.to_le(), cb->cbArg));
 
 	return CELL_OK;
 }

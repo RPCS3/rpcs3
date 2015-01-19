@@ -228,7 +228,7 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 					//need_check = true;
 				}
 			}
-			//LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls_addr=0x%x): code has changed", pos * sizeof(u32));
+			//LOG_ERROR(Log::SPU, "SPURecompilerCore::DecodeMemory(ls=0x%x): code has changed", pos * sizeof(u32));
 		}
 	}
 
@@ -239,7 +239,7 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 		did_compile = true;
 		if (entry[pos].valid == 0)
 		{
-			LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(ls_addr=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
+			LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(ls=0x%x): branch to 0x0 opcode", pos * sizeof(u32));
 			Emu.Pause();
 			return 0;
 		}
@@ -255,7 +255,7 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 
 	//if (did_compile)
 	{
-		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
+		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
 		//if (pos == 0x19c >> 2)
 		{
 			//Emu.Pause();
@@ -281,7 +281,7 @@ u8 SPURecompilerCore::DecodeMemory(const u32 address)
 
 	if (did_compile)
 	{
-		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls_addr=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
+		//LOG2_OPCODE("SPURecompilerCore::DecodeMemory(ls=0x%x): NewPC = 0x%llx", address, (u64)res << 2);
 		//if (pos == 0x340 >> 2)
 		{
 			//Emu.Pause();

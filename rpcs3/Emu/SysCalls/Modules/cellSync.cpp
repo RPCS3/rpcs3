@@ -321,7 +321,6 @@ s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
 {
 	if (!rwm.m_readers.data())
 	{
-		cellSync->Error("syncRwmReadEndOp(rwm_addr=0x%x): m_readers == 0 (m_writers=%d)", Memory.RealToVirtualAddr(&rwm), (u16)rwm.m_writers);
 		return CELL_SYNC_ERROR_ABORT;
 	}
 
@@ -354,6 +353,7 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	// prx: decrease m_readers (return 0x8041010C if already zero)
 	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
 	{
+		cellSync->Error("syncRwmReadEndOp(rwm=0x%x) failed: m_readers == 0", rwm);
 		return res;
 	}
 

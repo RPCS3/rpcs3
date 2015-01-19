@@ -205,7 +205,7 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 	strcpy_trunc(statGet->getParam.listParam, entry.listParam);
 
 	statGet->fileNum = 0;
-	statGet->fileList.set(be_t<u32>::make(0));
+	statGet->fileList.set(0);
 	statGet->fileListNum = 0;
 	std::string saveDir = "/dev_hdd0/home/00000001/savedata/" + entry.dirName; // TODO: Get the path of the current user
 	vfsDir dir(saveDir);
@@ -242,7 +242,7 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		}
 	}
 
-	statGet->fileList = vm::ptr<CellSaveDataFileStat>::make((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), 8));
+	statGet->fileList.set((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), 8));
 	for (u32 i = 0; i < fileEntries.size(); i++) {
 		CellSaveDataFileStat *dst = &statGet->fileList[i];
 		memcpy(dst, &fileEntries[i], sizeof(CellSaveDataFileStat));
@@ -366,8 +366,8 @@ s32 cellSaveDataListSave2(
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
+	listGet->dirList.set(setBuf->buf.addr());
+	auto dirList = listGet->dirList.get_ptr();
 
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
@@ -382,9 +382,9 @@ s32 cellSaveDataListSave2(
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, vm::ptr<CellSaveDataDirList>::make(listSet->fixedList.addr()), listSet->fixedListNum);
+	setSaveDataList(saveEntries, listSet->fixedList.to_le(), listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, vm::ptr<CellSaveDataListNewData>::make(listSet->newData.addr()));
+		addNewSaveDataEntry(saveEntries, listSet->newData.to_le());
 	if (saveEntries.size() == 0) {
 		cellSysutil->Error("cellSaveDataListSave2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_OK;
@@ -458,8 +458,8 @@ s32 cellSaveDataListLoad2(
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
+	listGet->dirList.set(setBuf->buf.addr());
+	auto dirList = listGet->dirList.get_ptr();
 
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
@@ -474,9 +474,9 @@ s32 cellSaveDataListLoad2(
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, vm::ptr<CellSaveDataDirList>::make(listSet->fixedList.addr()), listSet->fixedListNum);
+	setSaveDataList(saveEntries, listSet->fixedList.to_le(), listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, vm::ptr<CellSaveDataListNewData>::make(listSet->newData.addr()));
+		addNewSaveDataEntry(saveEntries, listSet->newData.to_le());
 	if (saveEntries.size() == 0) {
 		cellSysutil->Error("cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_OK;
@@ -548,8 +548,8 @@ s32 cellSaveDataFixedSave2(
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
+	listGet->dirList.set(setBuf->buf.addr());
+	auto dirList = listGet->dirList.get_ptr();
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
@@ -624,8 +624,8 @@ s32 cellSaveDataFixedLoad2(
 
 	// Sort the entries and fill the listGet->dirList array
 	std::sort(saveEntries.begin(), saveEntries.end(), sortSaveDataEntry(setList->sortType, setList->sortOrder));
-	listGet->dirList = vm::bptr<CellSaveDataDirList>::make(setBuf->buf.addr());
-	auto dirList = vm::get_ptr<CellSaveDataDirList>(listGet->dirList.addr());
+	listGet->dirList.set(setBuf->buf.addr());
+	auto dirList = listGet->dirList.get_ptr();
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);

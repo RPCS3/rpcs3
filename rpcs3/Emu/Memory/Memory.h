@@ -83,21 +83,6 @@ public:
 
 	void UnregisterPages(u64 addr, u32 size);
 
-	u32 RealToVirtualAddr(const void* addr)
-	{
-		const u64 res = (u64)addr - (u64)GetBaseAddr();
-		
-		if ((u32)res == res)
-		{
-			return (u32)res;
-		}
-		else
-		{
-			assert(!addr);
-			return 0;
-		}
-	}
-
 	u32 InitRawSPU(MemoryBlock* raw_spu);
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num);

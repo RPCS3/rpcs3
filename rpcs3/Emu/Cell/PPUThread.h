@@ -831,93 +831,158 @@ public:
 	ppu_thread& gpr(uint index, u64 value);
 };
 
-template<typename T, size_t size = sizeof(T)>
+template<typename T, bool is_enum = std::is_enum<T>::value>
 struct cast_ppu_gpr
 {
-	static_assert(sizeof(T) <= 8, "Invalid type for cast_ppu_gpr");
+	static_assert(is_enum, "Invalid type for cast_ppu_gpr");
+
+	typedef typename std::underlying_type<T>::type underlying_type;
 
 	__forceinline static u64 to_gpr(const T& value)
 	{
-		u64 result = 0;
-		(T&)result = value;
-		return result;
+		return cast_ppu_gpr<underlying_type>::to_gpr(static_cast<underlying_type>(value));
 	}
-};
 
-template<typename T>
-struct cast_ppu_gpr<T, 1>
-{
-	__forceinline static u64 to_gpr(const T& value)
+	__forceinline static T from_gpr(const u64 reg)
 	{
-		return (u8&)value;
-	}
-};
-
-template<typename T>
-struct cast_ppu_gpr<T, 2>
-{
-	__forceinline static u64 to_gpr(const T& value)
-	{
-		return (u16&)value;
-	}
-};
-
-template<typename T>
-struct cast_ppu_gpr<T, 4>
-{
-	__forceinline static u64 to_gpr(const T& value)
-	{
-		return (u32&)value;
-	}
-};
-
-template<typename T>
-struct cast_ppu_gpr<T, 8>
-{
-	__forceinline static u64 to_gpr(const T& value)
-	{
-		return (u64&)value;
+		return static_cast<T>(cast_ppu_gpr<underlying_type>::from_gpr(reg));
 	}
 };
 
 template<>
-struct cast_ppu_gpr<s8, 1>
+struct cast_ppu_gpr<u8, false>
+{
+	__forceinline static u64 to_gpr(const u8& value)
+	{
+		return value;
+	}
+
+	__forceinline static u8 from_gpr(const u64 reg)
+	{
+		return static_cast<u8>(reg);
+	}
+};
+
+template<>
+struct cast_ppu_gpr<u16, false>
+{
+	__forceinline static u64 to_gpr(const u16& value)
+	{
+		return value;
+	}
+
+	__forceinline static u16 from_gpr(const u64 reg)
+	{
+		return static_cast<u16>(reg);
+	}
+};
+
+template<>
+struct cast_ppu_gpr<u32, false>
+{
+	__forceinline static u64 to_gpr(const u32& value)
+	{
+		return value;
+	}
+
+	__forceinline static u32 from_gpr(const u64 reg)
+	{
+		return static_cast<u32>(reg);
+	}
+};
+
+template<>
+struct cast_ppu_gpr<u64, false>
+{
+	__forceinline static u64 to_gpr(const u64& value)
+	{
+		return value;
+	}
+
+	__forceinline static u64 from_gpr(const u64 reg)
+	{
+		return reg;
+	}
+};
+
+template<>
+struct cast_ppu_gpr<s8, false>
 {
 	__forceinline static u64 to_gpr(const s8& value)
 	{
 		return value;
 	}
+
+	__forceinline static s8 from_gpr(const u64 reg)
+	{
+		return static_cast<s8>(reg);
+	}
 };
 
 template<>
-struct cast_ppu_gpr<s16, 2>
+struct cast_ppu_gpr<s16, false>
 {
 	__forceinline static u64 to_gpr(const s16& value)
 	{
 		return value;
 	}
+
+	__forceinline static s16 from_gpr(const u64 reg)
+	{
+		return static_cast<s16>(reg);
+	}
 };
 
 template<>
-struct cast_ppu_gpr<s32, 4>
+struct cast_ppu_gpr<s32, false>
 {
 	__forceinline static u64 to_gpr(const s32& value)
 	{
 		return value;
 	}
+
+	__forceinline static s32 from_gpr(const u64 reg)
+	{
+		return static_cast<s32>(reg);
+	}
 };
 
 template<>
-struct cast_ppu_gpr<s64, 8>
+struct cast_ppu_gpr<s64, false>
 {
 	__forceinline static u64 to_gpr(const s64& value)
 	{
 		return value;
 	}
+
+	__forceinline static s64 from_gpr(const u64 reg)
+	{
+		return static_cast<s64>(reg);
+	}
+};
+
+template<>
+struct cast_ppu_gpr<bool, false>
+{
+	__forceinline static u64 to_gpr(const bool& value)
+	{
+		return value;
+	}
+
+	__forceinline static bool from_gpr(const u64 reg)
+	{
+		return reinterpret_cast<const bool&>(reg);
+	}
 };
 
 template<typename T>
-__forceinline static u64 cast_to_ppu_gpr(const T& value)
+__forceinline u64 cast_to_ppu_gpr(const T& value)
 {
 	return cast_ppu_gpr<T>::to_gpr(value);
+}
+
+template<typename T>
+__forceinline T cast_from_ppu_gpr(const u64 reg)
+{
+	return cast_ppu_gpr<T>::from_gpr(reg);
 }
