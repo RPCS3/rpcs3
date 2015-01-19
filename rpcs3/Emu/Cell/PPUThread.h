@@ -971,7 +971,7 @@ struct cast_ppu_gpr<bool, false>
 
 	__forceinline static bool from_gpr(const u64 reg)
 	{
-		return (bool&)reg;
+		return reinterpret_cast<const bool&>(reg);
 	}
 };
 

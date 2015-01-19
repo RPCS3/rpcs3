@@ -568,3 +568,22 @@ struct cast_ppu_gpr<vm::ps3::ptr<T, lvl, AT>, false>
 		return vm::ps3::ptr<T, lvl, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };
+
+// external specializations for ARMv7 GPR
+
+template<typename T, bool is_enum>
+struct cast_armv7_gpr;
+
+template<typename T, int lvl, typename AT>
+struct cast_armv7_gpr<vm::psv::ptr<T, lvl, AT>, false>
+{
+	__forceinline static u32 to_gpr(const vm::psv::ptr<T, lvl, AT>& value)
+	{
+		return value.addr();
+	}
+
+	__forceinline static vm::psv::ptr<T, lvl, AT> from_gpr(const u32 reg)
+	{
+		return vm::psv::ptr<T, lvl, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+	}
+};

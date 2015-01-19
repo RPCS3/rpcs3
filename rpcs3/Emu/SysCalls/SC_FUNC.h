@@ -8,7 +8,7 @@ public:
 	virtual ~func_caller(){};
 };
 
-namespace detail
+namespace ppu_func_detail
 {
 	enum bind_arg_type
 	{
@@ -125,7 +125,7 @@ namespace detail
 	__forceinline RT call(F f, Tuple && t)
 	{
 		typedef typename std::decay<Tuple>::type ttype;
-		return detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
+		return ppu_func_detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 	}
 
 	template<int g_count, int f_count, int v_count>
@@ -152,6 +152,16 @@ namespace detail
 
 		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
 	}
+
+	template<typename RT>
+	struct result_type
+	{
+		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
+		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
+		static const bool is_float = std::is_floating_point<RT>::value;
+		static const bool is_vector = std::is_same<RT, u128>::value;
+		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+	};
 
 	template<typename RT, typename... T>
 	class func_binder;
@@ -209,13 +219,7 @@ namespace detail
 
 		virtual void operator()(PPUThread& CPU)
 		{
-			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<RT, u128>::value;
-			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-
-			bind_result<RT, t>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
 		}
 	};
 
@@ -234,13 +238,7 @@ namespace detail
 
 		virtual void operator()(PPUThread& CPU)
 		{
-			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<RT, u128>::value;
-			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-
-			bind_result<RT, t>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
 		}
 	};
 }
@@ -248,5 +246,5 @@ namespace detail
 template<typename RT, typename... T>
 func_caller* bind_func(RT(*call)(T...))
 {
-	return new detail::func_binder<RT, T...>(call);
+	return new ppu_func_detail::func_binder<RT, T...>(call);
 }
