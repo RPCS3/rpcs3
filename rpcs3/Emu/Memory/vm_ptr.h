@@ -410,7 +410,8 @@ namespace vm
 	{
 		static bptrl make(AT addr)
 		{
-			return (bptrl&)_ptr_base<T, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
+			auto res = _ptr_base<T, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
+			return (bptrl&)res;
 		}
 
 		using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator=;
@@ -421,7 +422,8 @@ namespace vm
 	{
 		static bptrb make(AT addr)
 		{
-			return (bptrb&)_ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
+			auto res = _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
+			return (bptrb&)res;
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator=;
@@ -432,7 +434,8 @@ namespace vm
 	{
 		static lptrb make(AT addr)
 		{
-			return (lptrb&)_ptr_base<typename to_be_t<T>::type, lvl, AT>::make(addr);
+			auto res = _ptr_base<typename to_be_t<T>::type, lvl, AT>::make(addr);
+			return (lptrb&)res;
 		}
 
 		using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator=;
@@ -443,7 +446,8 @@ namespace vm
 	{
 		static lptrl make(AT addr)
 		{
-			return (lptrl&)_ptr_base<T, lvl, AT>::make(addr);
+			auto res = _ptr_base<T, lvl, AT>::make(addr);
+			return (lptrl&)res;
 		}
 
 		using _ptr_base<T, lvl, AT>::operator=;
@@ -459,12 +463,13 @@ namespace vm
 		{
 			static ptr make(AT addr)
 			{
-				return (ptr&)lptrb<T, lvl, AT>::make(addr);
+				auto res = lptrb<T, lvl, AT>::make(addr);
+				return (ptr&)res;
 			}
 
 			vm::ps3::bptr<T, lvl, AT> to_be() const
 			{
-				return vm::ps3::bptr<T, lvl, AT>::make(addr());
+				return vm::ps3::bptr<T, lvl, AT>::make(this->addr());
 			}
 
 			using lptrb<T, lvl, AT>::operator=;
@@ -475,12 +480,13 @@ namespace vm
 		{
 			static bptr make(AT addr)
 			{
-				return (bptr&)bptrb<T, lvl, AT>::make(addr);
+				auto res = bptrb<T, lvl, AT>::make(addr);
+				return (bptr&)res;
 			}
 
 			vm::ps3::ptr<T, lvl, AT> to_le() const
 			{
-				return vm::ps3::ptr<T, lvl, AT>::make(addr());
+				return vm::ps3::ptr<T, lvl, AT>::make(this->addr());
 			}
 
 			using bptrb<T, lvl, AT>::operator=;
@@ -494,7 +500,8 @@ namespace vm
 		{
 			static ptr make(AT addr)
 			{
-				return (ptr&)lptrl<T, lvl, AT>::make(addr);
+				auto res = lptrl<T, lvl, AT>::make(addr);
+				return (ptr&)res;
 			}
 
 			using lptrl<T, lvl, AT>::operator=;
