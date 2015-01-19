@@ -173,10 +173,12 @@ namespace fmt
 		return src;
 	}
 
+	std::string to_hex(u64 value, size_t count = 1);
+	std::string to_udec(u64 value);
+	std::string to_sdec(s64 value);
+
 	namespace detail
 	{
-		std::string to_hex(u64 value, size_t count = 1);
-
 		size_t get_fmt_start(const char* fmt, size_t len);
 		size_t get_fmt_len(const char* fmt, size_t len);
 		size_t get_fmt_precision(const char* fmt, size_t len);
@@ -198,7 +200,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string((u32)arg);
+					return to_udec(arg);
 				}
 				else
 				{
@@ -220,7 +222,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string((u32)arg);
+					return to_udec(arg);
 				}
 				else
 				{
@@ -242,7 +244,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string(arg);
+					return to_udec(arg);
 				}
 				else
 				{
@@ -264,7 +266,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string(arg);
+					return to_udec(arg);
 				}
 				else
 				{
@@ -286,7 +288,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string((s32)arg);
+					return to_sdec(arg);
 				}
 				else
 				{
@@ -308,7 +310,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string((s32)arg);
+					return to_sdec(arg);
 				}
 				else
 				{
@@ -330,7 +332,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string(arg);
+					return to_sdec(arg);
 				}
 				else
 				{
@@ -352,7 +354,7 @@ namespace fmt
 				}
 				else if (fmt[len - 1] == 'd')
 				{
-					return std::to_string(arg);
+					return to_sdec(arg);
 				}
 				else
 				{
@@ -625,8 +627,8 @@ namespace fmt
 	vm::psv::ref (fmt::unveil) (vm_ref.h)
 	
 	Supported formatting:
-	%d - decimal; only basic std::to_string() functionality
-	%x - hexadecimal; %.8x - hexadecimal with the precision (from .2 to .16)
+	%d - decimal; to_sdec() and to_udec()
+	%x - hexadecimal; to_hex(), %08x - hexadecimal with minimal length (from 02 to 016)
 	%s - string; generates "true" or "false" for bool
 	%f - floating point; only basic std::to_string() functionality
 

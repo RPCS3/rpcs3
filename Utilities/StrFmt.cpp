@@ -11,7 +11,7 @@ std::string u128::to_xyzw() const
 	return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 }
 
-std::string fmt::detail::to_hex(u64 value, size_t count)
+std::string fmt::to_hex(u64 value, size_t count)
 {
 	assert(count - 1 < 16);
 	count = std::max<u64>(count, 16 - cntlz64(value) / 4);
@@ -24,6 +24,50 @@ std::string fmt::detail::to_hex(u64 value, size_t count)
 	}
 
 	return std::string(res, count);
+}
+
+std::string fmt::to_udec(u64 value)
+{
+	char res[20] = {};
+	size_t first = sizeof(res);
+
+	if (!value)
+	{
+		res[--first] = '0';
+	}
+
+	for (; value; value /= 10)
+	{
+		res[--first] = '0' + (value % 10);
+	}
+
+	return std::string(&res[first], sizeof(res) - first);
+}
+
+std::string fmt::to_sdec(s64 svalue)
+{
+	const bool sign = svalue < 0;
+	u64 value = sign ? -svalue : svalue;
+
+	char res[20] = {};
+	size_t first = sizeof(res);
+
+	if (!value)
+	{
+		res[--first] = '0';
+	}
+
+	for (; value; value /= 10)
+	{
+		res[--first] = '0' + (value % 10);
+	}
+
+	if (sign)
+	{
+		res[--first] = '-';
+	}
+
+	return std::string(&res[first], sizeof(res) - first);
 }
 
 size_t fmt::detail::get_fmt_start(const char* fmt, size_t len)
