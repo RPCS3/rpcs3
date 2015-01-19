@@ -551,6 +551,6 @@ struct cast_ppu_gpr<vm::ps3::ptr<T, lvl, AT>, false>
 
 	__forceinline static vm::ps3::ptr<T, lvl, AT> from_gpr(const u64 reg)
 	{
-		return vm::ps3::ptr<T, lvl, AT>::make(cast_ppu_gpr<AT>::from_gpr(reg));
+		return vm::ps3::ptr<T, lvl, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };
