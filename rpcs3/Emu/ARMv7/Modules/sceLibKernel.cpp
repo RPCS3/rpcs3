@@ -106,7 +106,7 @@ s32 sceKernelCreateThread(
 	new_thread.SetStackSize(stackSize);
 	new_thread.SetName(pName.get_ptr());
 
-	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry_addr=0x%x)^1: id = %d", pName.get_ptr(), entry, id);
+	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x)^1: id = %d", pName.get_ptr(), entry, id);
 
 	new_thread.Run();
 
