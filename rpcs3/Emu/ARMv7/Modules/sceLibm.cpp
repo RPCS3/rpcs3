@@ -12,7 +12,7 @@ namespace sce_libm_func
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibm, #name, &sce_libm_func::name)
 
-psv_log_base sceLibm = []() -> psv_log_base
+psv_log_base sceLibm("SceLibm", []()
 {
 	//REG_FUNC(0xC73FE76D, _Exp);
 	//REG_FUNC(0xFF4EAE04, _FExp);
@@ -212,6 +212,4 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x5BD0F71C, _Dsign);
 	//REG_FUNC(0xC4F7E42C, _FDsign);
 	//REG_FUNC(0x1DF73D2B, _LDsign);
-
-	return psv_log_base("SceLibm");
-}();
+});

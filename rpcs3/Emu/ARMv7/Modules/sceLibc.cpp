@@ -112,7 +112,7 @@ namespace sce_libc_func
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibc, #name, &sce_libc_func::name)
 
-psv_log_base sceLibc = []() -> psv_log_base
+psv_log_base sceLibc("SceLibc", []()
 {
 	REG_FUNC(0xE4531F85, _Assert);
 	//REG_FUNC(0xE71C5CDE, _Stoul);
@@ -406,6 +406,4 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x677CDE35, _Snan);
 	//REG_FUNC(0x7D35108B, _FSnan);
 	//REG_FUNC(0x48AEEF2A, _LSnan);
-
-	return psv_log_base("SceLibc");
-}();
+});

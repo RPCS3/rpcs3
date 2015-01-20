@@ -7,9 +7,10 @@ class psv_log_base : public LogBase
 	std::string m_name;
 
 public:
-	psv_log_base(const std::string& name)
+	psv_log_base(const std::string& name, void(*init_func)())
 		: m_name(name)
 	{
+		init_func();
 	}
 
 	virtual const std::string& GetName() const override

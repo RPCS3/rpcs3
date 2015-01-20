@@ -325,7 +325,7 @@ s32 sceKernelWaitThreadEndCB(u32 threadId, vm::psv::ptr<s32> pExitStatus, vm::ps
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
 
-psv_log_base sceLibKernel = []() -> psv_log_base
+psv_log_base sceLibKernel("sceLibKernel", []()
 {
 	//REG_FUNC(0x23EAA62, sceKernelPuts);
 	//REG_FUNC(0xB0335388, sceClibToupper);
@@ -691,6 +691,4 @@ psv_log_base sceLibKernel = []() -> psv_log_base
 
 	/* SceDebugLed */
 	//REG_FUNC(0x78E702D3, sceKernelSetGPO);
-
-	return psv_log_base("sceLibKernel");
-}();
+});
