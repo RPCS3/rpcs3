@@ -1,4 +1,4 @@
-#include "stdafx.h"
+Ôªø#include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
@@ -44,7 +44,7 @@ namespace sce_libc_func
 			case '%':
 			{
 				const auto start = fmt - 1;
-				const bool Åî = *fmt == '#' ? fmt++, true : false;
+				const bool number_sign = *fmt == '#' ? fmt++, true : false;
 
 				switch (*fmt++)
 				{
@@ -67,7 +67,7 @@ namespace sce_libc_func
 					// hexadecimal
 					const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
 
-					if (Åî && value)
+					if (number_sign && value)
 					{
 						result += "0x";
 					}
