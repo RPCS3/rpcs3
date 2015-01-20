@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/ARMv7/PSVFuncList.h"
+
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
-#include "Emu/ARMv7/PSVFuncList.h"
 
 extern psv_log_base sceLibKernel;
 
@@ -129,23 +130,23 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
 
 	// push arg block onto the stack
-	const u32 pos = (thread.SP -= argSize);
+	const u32 pos = (thread.context.SP -= argSize);
 	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
-	thread.write_gpr(0, argSize);
-	thread.write_gpr(1, pos);
+	thread.context.write_gpr(0, argSize);
+	thread.context.write_gpr(1, pos);
 
 	thread.Exec();
 	return SCE_OK;
 }
 
-s32 sceKernelExitThread(ARMv7Thread& CPU, s32 exitStatus)
+s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 {
 	sceLibKernel.Error("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
-	CPU.Stop();
+	context.thread.Stop();
 
 	return SCE_OK;
 }

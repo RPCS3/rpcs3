@@ -10,22 +10,38 @@
 #include "ARMv7DisAsm.h"
 #include "ARMv7Interpreter.h"
 
+void ARMv7Context::write_pc(u32 value)
+{
+	thread.SetBranch(value);
+}
+
+u32 ARMv7Context::read_pc()
+{
+	return thread.PC;
+}
+
+u32 ARMv7Context::get_stack_arg(u32 pos)
+{
+	return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
+}
+
 ARMv7Thread::ARMv7Thread()
 	: CPUThread(CPU_THREAD_ARMv7)
-	, m_arg(0)
-	, m_last_instr_size(0)
-	, m_last_instr_name("UNK")
+	, context(*this)
+	//, m_arg(0)
+	//, m_last_instr_size(0)
+	//, m_last_instr_name("UNK")
 {
 }
 
 void ARMv7Thread::InitRegs()
 {
-	memset(GPR, 0, sizeof(GPR[0]) * 15);
-	APSR.APSR = 0;
-	IPSR.IPSR = 0;
-	ISET = Thumb;
-	ITSTATE.IT = 0;
-	SP = m_stack_addr + m_stack_size;
+	memset(context.GPR, 0, sizeof(context.GPR[0]) * 15);
+	context.APSR.APSR = 0;
+	context.IPSR.IPSR = 0;
+	context.ISET = Thumb;
+	context.ITSTATE.IT = 0;
+	context.SP = m_stack_addr + m_stack_size;
 }
 
 void ARMv7Thread::InitStack()
@@ -37,26 +53,21 @@ void ARMv7Thread::InitStack()
 	}
 }
 
-u32 ARMv7Thread::GetStackArg(u32 pos)
-{
-	return vm::psv::read32(SP + sizeof(u32) * (pos - 5));
-}
-
 std::string ARMv7Thread::RegsToString()
 {
 	std::string result = "Registers:\n=========\n";
 	for(int i=0; i<15; ++i)
 	{
-		result += fmt::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], GPR[i]);
+		result += fmt::Format("%s\t= 0x%08x\n", g_arm_reg_name[i], context.GPR[i]);
 	}
 
 	result += fmt::Format("APSR\t= 0x%08x [N: %d, Z: %d, C: %d, V: %d, Q: %d]\n", 
-		APSR.APSR,
-		fmt::by_value(APSR.N),
-		fmt::by_value(APSR.Z),
-		fmt::by_value(APSR.C),
-		fmt::by_value(APSR.V),
-		fmt::by_value(APSR.Q));
+		context.APSR.APSR,
+		fmt::by_value(context.APSR.N),
+		fmt::by_value(context.APSR.Z),
+		fmt::by_value(context.APSR.C),
+		fmt::by_value(context.APSR.V),
+		fmt::by_value(context.APSR.Q));
 	
 	return result;
 }
@@ -110,21 +121,21 @@ void ARMv7Thread::FastCall(u32 addr)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
-	auto old_stack = SP;
-	auto old_LR = LR;
+	auto old_stack = context.SP;
+	auto old_LR = context.LR;
 	auto old_thread = GetCurrentNamedThread();
 
 	m_status = Running;
 	PC = addr;
-	LR = Emu.GetCPUThreadStop();
+	context.LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
 
 	CPUThread::Task();
 
 	m_status = old_status;
 	PC = old_PC;
-	SP = old_stack;
-	LR = old_LR;
+	context.SP = old_stack;
+	context.LR = old_LR;
 	SetCurrentNamedThread(old_thread);
 }
 

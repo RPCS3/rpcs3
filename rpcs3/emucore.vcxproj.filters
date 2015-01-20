@@ -1282,5 +1282,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\ARMv7\ARMv7Context.h">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

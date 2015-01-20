@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include "Utilities/Log.h"
 #include "Emu/System.h"
+#include "ARMv7Thread.h"
 #include "PSVFuncList.h"
 
 std::vector<psv_func> g_psv_func_list;
@@ -14,13 +15,20 @@ void add_psv_func(psv_func& data)
 		psv_func unimplemented;
 		unimplemented.nid = 0;
 		unimplemented.name = "Special function (unimplemented stub)";
-		unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU){ CPU.m_last_syscall = vm::psv::read32(CPU.PC + 4); throw "Unimplemented function executed"; }));
+		unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
+		{
+			context.thread.m_last_syscall = vm::psv::read32(context.thread.PC + 4);
+			throw "Unimplemented function executed";
+		}));
 		g_psv_func_list.push_back(unimplemented);
 
 		psv_func hle_return;
 		hle_return.nid = 1;
 		hle_return.name = "Special function (return from HLE)";
-		hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Thread&>([](ARMv7Thread& CPU){ CPU.FastStop(); }));
+		hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
+		{
+			context.thread.FastStop();
+		}));
 		g_psv_func_list.push_back(hle_return);
 	}
 
@@ -49,16 +57,16 @@ u32 get_psv_func_index(psv_func* func)
 	return (u32)res;
 }
 
-void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index)
+void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 {
 	assert(index < g_psv_func_list.size());
 	
-	auto old_last_syscall = CPU.m_last_syscall;
-	CPU.m_last_syscall = g_psv_func_list[index].nid;
+	auto old_last_syscall = context.thread.m_last_syscall;
+	context.thread.m_last_syscall = g_psv_func_list[index].nid;
 
-	(*g_psv_func_list[index].func)(CPU);
+	(*g_psv_func_list[index].func)(context);
 
-	CPU.m_last_syscall = old_last_syscall;
+	context.thread.m_last_syscall = old_last_syscall;
 }
 
 extern psv_log_base sceLibc;
