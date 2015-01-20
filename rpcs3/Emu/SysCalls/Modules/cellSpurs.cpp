@@ -1460,13 +1460,63 @@ s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpur
 	return CELL_OK;
 }
 
-s64 cellSpursSendWorkloadSignal()
+s64 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
 {
+	cellSpurs->Warning("%s(spurs=0x%x, workloadId=0x%x)", __FUNCTION__, spurs.addr(), workloadId);
+
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0xA658, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!spurs)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+
+	if (spurs.addr() %  CellSpurs::align)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+
+	if (workloadId >= CELL_SPURS_MAX_WORKLOAD2 || (workloadId >= CELL_SPURS_MAX_WORKLOAD && (spurs->m.flags1 & SF1_32_WORKLOADS) == 0))
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+
+	if ((spurs->m.wklMskA.read_relaxed() & (0x80000000u >> workloadId)) == 0)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
+	}
+
+	if (spurs->m.exception)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+
+	u8 state;
+	if (workloadId >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		state = spurs->m.wklState2[workloadId & 0x0F].read_relaxed();
+	}
+	else
+	{
+		state = spurs->m.wklState1[workloadId].read_relaxed();
+	}
+
+	if (state != SPURS_WKL_STATE_RUNNABLE)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+
+	// TODO: Make the below block execute atomically
+	if (workloadId >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		spurs->m.wklSignal2 |= be_t<u16>::make(0x8000 >> (workloadId & 0x0F));
+	}
+	else
+	{
+		spurs->m.wklSignal1 |= be_t<u16>::make(0x8000 >> workloadId);
+	}
+
 	return CELL_OK;
 #endif
 }
@@ -1611,64 +1661,250 @@ s64 cellSpursUnsetExceptionEventHandler()
 
 s64 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%d, flagDirection=%d)",
 		spurs.addr(), taskset.addr(), eventFlag.addr(), flagClearMode, flagDirection);
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x1564C, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (taskset.addr() == 0 || spurs.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (spurs.addr() % CellSpurs::align || taskset.addr() % CellSpursTaskset::align || eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskset.addr() && taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD2)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	if (flagDirection > CELL_SPURS_EVENT_FLAG_LAST || flagClearMode > CELL_SPURS_EVENT_FLAG_CLEAR_LAST)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	memset(eventFlag.get_ptr(), 0, CellSpursEventFlag::size);
+	eventFlag->m.direction = flagDirection;
+	eventFlag->m.clearMode = flagClearMode;
+	eventFlag->m.spuPort   = -1;
+
+	if (taskset.addr())
+	{
+		eventFlag->m.addr = taskset.addr();
+	}
+	else
+	{
+		eventFlag->m.isIwl = 1;
+		eventFlag->m.addr  = spurs.addr();
+	}
+
 	return CELL_OK;
 #endif
 }
 
 s64 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x157B8, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!eventFlag)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_AGAIN;
+	}
+
+	if (eventFlag->m.direction != CELL_SPURS_EVENT_FLAG_SPU2PPU && eventFlag->m.direction != CELL_SPURS_EVENT_FLAG_ANY2ANY)
+	{
+		return CELL_SPURS_TASK_ERROR_PERM;
+	}
+
+	if (eventFlag->m.spuPort != -1)
+	{
+		return CELL_SPURS_TASK_ERROR_STAT;
+	}
+
+	vm::ptr<CellSpurs> spurs;
+	if (eventFlag->m.isIwl == 1)
+	{
+		spurs.set((u32)eventFlag->m.addr);
+	}
+	else
+	{
+		auto taskset = vm::ptr<CellSpursTaskset>::make((u32)eventFlag->m.addr);
+		spurs.set((u32)taskset->m.spurs.addr());
+	}
+
+	u32 eventQueueId;
+	auto _port = vm::ptr<u8>::make((u32)Memory.Alloc(1, 1));
+	auto rc    = spursCreateLv2EventQueue(spurs, eventQueueId, _port, 1, *((u64 *)"_spuEvF"));
+	auto port  = *_port;
+	Memory.Free(_port.addr());
+	if (rc != CELL_OK)
+	{
+		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
+	}
+
+	if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
+	{
+		auto _eventPortId = vm::ptr<u32>::make((u32)Memory.Alloc(4, 4));
+		rc                = sys_event_port_create(_eventPortId, SYS_EVENT_PORT_LOCAL, 0);
+		auto eventPortId  = *_eventPortId;
+		Memory.Free(_eventPortId.addr());
+		if (rc == CELL_OK)
+		{
+			rc = sys_event_port_connect_local(eventPortId, eventQueueId);
+			if (rc == CELL_OK)
+			{
+				eventFlag->m.eventPortId = eventPortId;
+				goto success;
+			}
+
+			sys_event_port_destroy(eventPortId);
+		}
+
+		// TODO: Implement the following
+		// if (spursDetachLv2EventQueue(spurs, port, 1) == CELL_OK)
+		// {
+		//     sys_event_queue_destroy(eventQueueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
+		// }
+		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
+	}
+
+success:
+	eventFlag->m.eventQueueId = eventQueueId;
+	eventFlag->m.spuPort      = port;
 	return CELL_OK;
 #endif
 }
 
 s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15998, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!eventFlag)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_AGAIN;
+	}
+
+	if (eventFlag->m.direction != CELL_SPURS_EVENT_FLAG_SPU2PPU && eventFlag->m.direction != CELL_SPURS_EVENT_FLAG_ANY2ANY)
+	{
+		return CELL_SPURS_TASK_ERROR_PERM;
+	}
+
+	if (eventFlag->m.spuPort == -1)
+	{
+		return CELL_SPURS_TASK_ERROR_STAT;
+	}
+
+	if (eventFlag->m.x04 || eventFlag->m.x06 & 0xFF00)
+	{
+		return CELL_SPURS_TASK_ERROR_BUSY;
+	}
+
+	auto port            = eventFlag->m.spuPort;
+	eventFlag->m.spuPort = -1; // TODO: Make this execute atomically
+
+	vm::ptr<CellSpurs> spurs;
+	if (eventFlag->m.isIwl == 1)
+	{
+		spurs.set((u32)eventFlag->m.addr);
+	}
+	else
+	{
+		auto taskset = vm::ptr<CellSpursTaskset>::make((u32)eventFlag->m.addr);
+		spurs.set((u32)taskset->m.spurs.addr());
+	}
+
+	if(eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
+	{
+		sys_event_port_disconnect(eventFlag->m.eventPortId);
+		sys_event_port_destroy(eventFlag->m.eventPortId);
+	}
+
+	s64 rc = CELL_OK;
+	// TODO: Implement the following
+	// auto rc = spursDetachLv2EventQueue(spurs, port, 1);
+	// if (rc == CELL_OK)
+	// {
+	//     rc = sys_event_queue_destroy(eventFlag->m.eventQueueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
+	// }
+
+	if (rc != CELL_OK)
+	{
+		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
+	}
+
 	return CELL_OK;
 #endif
 }
 
-s64 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
+s64 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode, u32 block)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.addr(), mask.addr(), mode);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15E68, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
+}
+
+s64 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
+{
+	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.addr(), mask.addr(), mode);
+
+#ifdef PRX_DEBUG
+	return GetCurrentPPUThread().FastCall2(libsre + 0x15E68, libsre_rtoc);
+#else
+	return _cellSpursEventFlagWait(eventFlag, mask, mode, 1/*block*/);
 #endif
 }
 
 s64 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15E9C, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (eventFlag.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	eventFlag->m.bits &= ~bits; // TODO: Make this execute atomically
 	return CELL_OK;
 #endif
 }
 
 s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15F04, libsre_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpurs);
@@ -1678,44 +1914,77 @@ s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 
 s64 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.addr(), mask.addr(), mode);
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x15E70, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
-	return CELL_OK;
+	return _cellSpursEventFlagWait(eventFlag, mask, mode, 0/*block*/);
 #endif
 }
 
 s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> direction)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=0x%x)", eventFlag.addr(), direction.addr());
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x162C4, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (eventFlag.addr() == 0 || direction.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	*direction = eventFlag->m.direction;
 	return CELL_OK;
 #endif
 }
 
 s64 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> clear_mode)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=0x%x)", eventFlag.addr(), clear_mode.addr());
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x16310, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (eventFlag.addr() == 0 || clear_mode.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	*clear_mode = eventFlag->m.clearMode;
 	return CELL_OK;
 #endif
 }
 
 s64 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<CellSpursTaskset> taskset)
 {
-#ifdef PRX_DEBUG
 	cellSpurs->Warning("cellSpursEventFlagGetTasksetAddress(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.addr(), taskset.addr());
+
+#ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x1635C, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (eventFlag.addr() == 0 || taskset.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (eventFlag.addr() % CellSpursEventFlag::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	taskset.set(eventFlag->m.isIwl ? 0 : eventFlag->m.addr);
 	return CELL_OK;
 #endif
 }
@@ -2302,7 +2571,54 @@ s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID)
 	cellSpurs->Warning("_cellSpursSendSignal(taskset_addr=0x%x, taskID=%d)", taskset.addr(), taskID);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x124CC, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (!taskset)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	if (taskID >= CELL_SPURS_MAX_TASK || taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD2)
+	{
+		return CELL_SPURS_TASK_ERROR_INVAL;
+	}
+
+	auto word      = taskID >> 5;
+	auto mask      = 0x80000000u >> (taskID & 0x1F);
+	auto disabled  = taskset->m.enabled_set[word] & mask ? false : true;
+	auto running   = taskset->m.running_set[word];
+	auto ready     = taskset->m.ready_set[word];
+	auto ready2    = taskset->m.ready2_set[word];
+	auto waiting   = taskset->m.waiting_set[word];
+	auto signalled = taskset->m.signal_received_set[word];
+	auto enabled   = taskset->m.enabled_set[word];
+	auto invalid   = (ready & ready2) || (running & waiting) || ((running | ready | ready2 | waiting | signalled) & ~enabled) || disabled;
+
+	if (invalid)
+	{
+		return CELL_SPURS_TASK_ERROR_SRCH;
+	}
+
+	auto shouldSignal = waiting & ~signalled & mask ? true : false;
+	taskset->m.signal_received_set[word] |= mask; // TODO: Make this execute atomically
+	if (shouldSignal)
+	{
+		cellSpursSendWorkloadSignal(vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()), taskset->m.wid);
+		auto rc = cellSpursWakeUp(GetCurrentPPUThread(), vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()));
+		if (rc == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
+		{
+			return CELL_SPURS_TASK_ERROR_STAT;
+		}
+
+		if (rc != CELL_OK)
+		{
+			assert(0);
+		}
+	}
+
 	return CELL_OK;
 #endif
 }

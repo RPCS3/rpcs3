@@ -199,6 +199,28 @@ enum SpursTaskConstants
 	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE  = 1024,
 };
 
+enum CellSpursEventFlagWaitMode
+{
+	CELL_SPURS_EVENT_FLAG_OR  = 0,
+	CELL_SPURS_EVENT_FLAG_AND = 1
+};
+
+enum CellSpursEventFlagClearMode
+{
+	CELL_SPURS_EVENT_FLAG_CLEAR_AUTO   = 0,
+	CELL_SPURS_EVENT_FLAG_CLEAR_MANUAL = 1,
+	CELL_SPURS_EVENT_FLAG_CLEAR_LAST   = CELL_SPURS_EVENT_FLAG_CLEAR_MANUAL,
+};
+
+enum CellSpursEventFlagDirection
+{
+	CELL_SPURS_EVENT_FLAG_SPU2SPU,
+	CELL_SPURS_EVENT_FLAG_SPU2PPU,
+	CELL_SPURS_EVENT_FLAG_PPU2SPU,
+	CELL_SPURS_EVENT_FLAG_ANY2ANY,
+	CELL_SPURS_EVENT_FLAG_LAST = CELL_SPURS_EVENT_FLAG_ANY2ANY,
+};
+
 class SPURSManager;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
@@ -519,7 +541,38 @@ struct CellSpursWorkloadAttribute
 
 struct CellSpursEventFlag
 {
-	SPURSManagerEventFlag *eventFlag;
+	static const u32 align = 128;
+	static const u32 size = 128;
+
+	union
+	{
+		// Raw data
+		u8 _u8[size];
+
+		// Real data
+		struct _CellSpursEventFlag
+		{
+			be_t<u16> bits;                     // 0x00
+			be_t<u16> x02;                      // 0x02
+			be_t<u16> x04;                      // 0x04
+			be_t<u16> x06;                      // 0x06
+			be_t<u16> x08;                      // 0x08
+			be_t<u16> x0A;                      // 0x0A
+			u8 spuPort;                         // 0x0C
+			u8 isIwl;                           // 0x0D
+			u8 direction;                       // 0x0E
+			u8 clearMode;                       // 0x0F
+			u16 x10[16];                        // 0x10
+			u8 x30[0x70 - 0x30];                // 0x30
+			be_t<u64> addr;                     // 0x70
+			be_t<u32> eventPortId;              // 0x78
+			be_t<u32> eventQueueId;             // 0x7C
+		} m;
+
+		static_assert(sizeof(_CellSpursEventFlag) == size, "Wrong _CellSpursEventFlag size");
+
+		SPURSManagerEventFlag *eventFlag;
+	};
 };
 
 union CellSpursTaskArgument
@@ -559,7 +612,7 @@ struct CellSpursTaskset
 		{
 			be_t<u32> running_set[4];                    // 0x00
 			be_t<u32> ready_set[4];                      // 0x10
-			be_t<u32> unk_set[4];                        // 0x20 - TODO: Find out what this is
+			be_t<u32> ready2_set[4];                     // 0x20 - TODO: Find out what this is
 			be_t<u32> enabled_set[4];                    // 0x30
 			be_t<u32> signal_received_set[4];            // 0x40
 			be_t<u32> waiting_set[4];                    // 0x50
@@ -668,7 +721,7 @@ struct CellSpursTaskset2
 		{
 			be_t<u32> running_set[4];                    // 0x00
 			be_t<u32> ready_set[4];                      // 0x10
-			be_t<u32> unk_set[4];                        // 0x20 - TODO: Find out what this is
+			be_t<u32> ready2_set[4];                     // 0x20 - TODO: Find out what this is
 			be_t<u32> enabled_set[4];                    // 0x30
 			be_t<u32> signal_received_set[4];            // 0x40
 			be_t<u32> waiting_set[4];                    // 0x50
