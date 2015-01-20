@@ -235,3 +235,17 @@ LogChannel &LogManager::getChannel(LogType type)
 {
 	return mChannels[static_cast<u32>(type)];
 }
+
+void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)
+{
+	log_message(type, sev, std::string(text));
+}
+
+void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
+{
+	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
+	//Log::LogManager::getInstance().log({logType, severity, text})
+
+	Log::LogMessage msg{ type, sev, std::move(text) };
+	Log::LogManager::getInstance().log(msg);
+}

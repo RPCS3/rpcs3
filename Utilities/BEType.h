@@ -284,15 +284,9 @@ union _CRT_ALIGN(16) u128
 		_u64[1] = _u64[0] = 0;
 	}
 
-	std::string to_hex() const
-	{
-		return fmt::Format("%016llx%016llx", _u64[1], _u64[0]);
-	}
+	std::string to_hex() const;
 
-	std::string to_xyzw() const
-	{
-		return fmt::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
-	}
+	std::string to_xyzw() const;
 
 	static __forceinline u128 byteswap(const u128 val)
 	{
@@ -378,65 +372,97 @@ template<typename T, int size = sizeof(T)> struct se_t;
 
 template<typename T> struct se_t<T, 1>
 {
-	static __forceinline T func(const T src)
+	static __forceinline u8 to_be(const T& src)
 	{
-		return src;
+		return (u8&)src;
+	}
+
+	static __forceinline T from_be(const u8 src)
+	{
+		return (T&)src;
 	}
 };
 
 template<typename T> struct se_t<T, 2>
 {
-	static __forceinline T func(const T src)
+	static __forceinline u16 to_be(const T& src)
 	{
-		const u16 res = _byteswap_ushort((u16&)src);
+		return _byteswap_ushort((u16&)src);
+	}
+
+	static __forceinline T from_be(const u16 src)
+	{
+		const u16 res = _byteswap_ushort(src);
 		return (T&)res;
 	}
 };
 
 template<typename T> struct se_t<T, 4>
 {
-	static __forceinline T func(const T src)
+	static __forceinline u32 to_be(const T& src)
 	{
-		const u32 res = _byteswap_ulong((u32&)src);
+		return _byteswap_ulong((u32&)src);
+	}
+
+	static __forceinline T from_be(const u32 src)
+	{
+		const u32 res = _byteswap_ulong(src);
 		return (T&)res;
 	}
 };
 
 template<typename T> struct se_t<T, 8>
 {
-	static __forceinline T func(const T src)
+	static __forceinline u64 to_be(const T& src)
 	{
-		const u64 res = _byteswap_uint64((u64&)src);
+		return _byteswap_uint64((u64&)src);
+	}
+
+	static __forceinline T from_be(const u64 src)
+	{
+		const u64 res = _byteswap_uint64(src);
 		return (T&)res;
 	}
 };
 
-//template<typename T> T re(const T val) { T res; se_t<T>::func(res, val); return res; }
-//template<typename T1, typename T2> void re(T1& dst, const T2 val) { se_t<T1>::func(dst, val); }
-
-template<typename T, u64 _value, int size = sizeof(T)> struct const_se_t;
-template<typename T, u64 _value> struct const_se_t<T, _value, 1>
+template<typename T> struct se_t<T, 16>
 {
-	static const T value = (T)_value;
+	static __forceinline u128 to_be(const T& src)
+	{
+		return u128::byteswap((u128&)src);
+	}
+
+	static __forceinline T from_be(const u128& src)
+	{
+		const u128 res = u128::byteswap(src);
+		return (T&)res;
+	}
 };
 
-template<typename T, u64 _value> struct const_se_t<T, _value, 2>
+template<typename T, T _value, size_t size = sizeof(T)> struct const_se_t;
+
+template<u8 _value> struct const_se_t<u8, _value, 1>
 {
-	static const T value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
+	static const u8 value = _value;
 };
 
-template<typename T, u64 _value> struct const_se_t<T, _value, 4>
+template<u16 _value> struct const_se_t<u16, _value, 2>
 {
-	static const T value = 
+	static const u16 value = ((_value >> 8) & 0xff) | ((_value << 8) & 0xff00);
+};
+
+template<u32 _value> struct const_se_t<u32, _value, 4>
+{
+	static const u32 value = 
 		((_value >> 24) & 0x000000ff) |
 		((_value >>  8) & 0x0000ff00) |
 		((_value <<  8) & 0x00ff0000) |
 		((_value << 24) & 0xff000000);
 };
 
-template<typename T, u64 _value> struct const_se_t<T, _value, 8>
+template<u64 _value> struct const_se_t<u64, _value, 8>
 {
-	static const T value = 
+	static const u64 value = 
 		((_value >> 56) & 0x00000000000000ff) |
 		((_value >> 40) & 0x000000000000ff00) |
 		((_value >> 24) & 0x0000000000ff0000) |
@@ -447,17 +473,53 @@ template<typename T, u64 _value> struct const_se_t<T, _value, 8>
 		((_value << 56) & 0xff00000000000000);
 };
 
+template<typename T, size_t size = sizeof(T)>
+struct be_storage_t
+{
+	static_assert(!size, "Bad be_storage_t type");
+};
+
+template<typename T>
+struct be_storage_t<T, 1>
+{
+	typedef u8 type;
+};
+
+template<typename T>
+struct be_storage_t<T, 2>
+{
+	typedef u16 type;
+};
+
+template<typename T>
+struct be_storage_t<T, 4>
+{
+	typedef u32 type;
+};
+
+template<typename T>
+struct be_storage_t<T, 8>
+{
+	typedef u64 type;
+};
+
+template<typename T>
+struct be_storage_t<T, 16>
+{
+	typedef u128 type;
+};
+
+#define IS_LE_MACHINE
+
 template<typename T, typename T2 = T>
 class be_t
 {
-	static_assert(sizeof(T2) == 1 || sizeof(T2) == 2 || sizeof(T2) == 4 || sizeof(T2) == 8, "Bad be_t type");
-
 public:
 	typedef typename std::remove_cv<T>::type type;
-	static const bool is_le_machine = true;
+	typedef typename be_storage_t<T2>::type stype;
 
 private:
-	type m_data;
+	stype m_data;
 
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
@@ -489,63 +551,68 @@ private:
 		}
 	};
 
-public:
-	const type& ToBE() const
+	const stype& ToBE() const
 	{
 		return m_data;
 	}
 
 	type ToLE() const
 	{
-		return se_t<type, sizeof(T2)>::func(m_data);
+		return se_t<type, sizeof(T2)>::from_be(m_data);
 	}
 
-	void FromBE(const type& value)
+	void FromBE(const stype& value)
 	{
 		m_data = value;
 	}
 
 	void FromLE(const type& value)
 	{
-		m_data = se_t<type, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::to_be(value);
 	}
 
-	static be_t MakeFromLE(const type value)
+public:
+	static be_t MakeFromLE(const type& value)
 	{
-		type data = se_t<type, sizeof(T2)>::func(value);
+		stype data = se_t<type, sizeof(T2)>::to_be(value);
 		return (be_t&)data;
 	}
 
-	static be_t MakeFromBE(const type value)
+	static be_t MakeFromBE(const stype& value)
 	{
 		return (be_t&)value;
 	}
 
 	//make be_t from current machine byte ordering
-	static be_t make(const type value)
+	static be_t make(const type& value)
 	{
-		return is_le_machine ? MakeFromLE(value) : MakeFromBE(value);
+#ifdef IS_LE_MACHINE
+		return MakeFromLE(value);
+#else
+		return MakeFromBE(value);
+#endif
 	}
 
 	//get value in current machine byte ordering
 	__forceinline type value() const
 	{
-		return is_le_machine ? ToLE() : ToBE();
+#ifdef IS_LE_MACHINE
+		return ToLE();
+#else
+		return ToBE();
+#endif
 	}
 
-	//be_t() = default;
-	//be_t(const be_t& value) = default;
-
-	//be_t(type value)
-	//{
-	//	m_data = se_t<type, sizeof(T2)>::func(value);
-	//}
+	const stype& data() const
+	{
+		return ToBE();
+	}
 	
 	be_t& operator = (const be_t& value) = default;
 
-	be_t& operator = (type value)
+	be_t& operator = (const type& value)
 	{
-		m_data = se_t<type, sizeof(T2)>::func(value);
+		m_data = se_t<type, sizeof(T2)>::to_be(value);
 
 		return *this;
 	}
@@ -691,86 +758,86 @@ template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : pub
 #define se32(x) _se<u32, decltype(x), x>::value
 #define se64(x) _se<u64, decltype(x), x>::value
 
-template<typename T> __forceinline static u8 Read8(T& f)
+template<typename T> __forceinline u8 Read8(T& f)
 {
 	u8 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u16 Read16(T& f)
+template<typename T> __forceinline u16 Read16(T& f)
 {
 	be_t<u16> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u32 Read32(T& f)
+template<typename T> __forceinline u32 Read32(T& f)
 {
 	be_t<u32> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u64 Read64(T& f)
+template<typename T> __forceinline u64 Read64(T& f)
 {
 	be_t<u64> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u16 Read16LE(T& f)
+template<typename T> __forceinline u16 Read16LE(T& f)
 {
 	u16 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u32 Read32LE(T& f)
+template<typename T> __forceinline u32 Read32LE(T& f)
 {
 	u32 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static u64 Read64LE(T& f)
+template<typename T> __forceinline u64 Read64LE(T& f)
 {
 	u64 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-template<typename T> __forceinline static void Write8(T& f, const u8 data)
+template<typename T> __forceinline void Write8(T& f, const u8 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-template<typename T> __forceinline static void Write16LE(T& f, const u16 data)
+template<typename T> __forceinline void Write16LE(T& f, const u16 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-template<typename T> __forceinline static void Write32LE(T& f, const u32 data)
+template<typename T> __forceinline void Write32LE(T& f, const u32 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-template<typename T> __forceinline static void Write64LE(T& f, const u64 data)
+template<typename T> __forceinline void Write64LE(T& f, const u64 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-template<typename T> __forceinline static void Write16(T& f, const u16 data)
+template<typename T> __forceinline void Write16(T& f, const u16 data)
 {
 	Write16LE(f, re16(data));
 }
 
-template<typename T> __forceinline static void Write32(T& f, const u32 data)
+template<typename T> __forceinline void Write32(T& f, const u32 data)
 {
 	Write32LE(f, re32(data));
 }
 
-template<typename T> __forceinline static void Write64(T& f, const u64 data)
+template<typename T> __forceinline void Write64(T& f, const u64 data)
 {
 	Write64LE(f, re64(data));
 }

@@ -1675,6 +1675,10 @@ private:
 	{
 		DisAsm_V1_R2("stvlx", vs, ra, rb);
 	}
+	void STDBRX(u32 rs, u32 ra, u32 rb)
+	{
+		DisAsm_R3("stdbrx", rs, ra, rb);
+	}
 	void STSWX(u32 rs, u32 ra, u32 rb)
 	{
 		DisAsm_R3("swswx", rs, ra, rb);

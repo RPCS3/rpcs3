@@ -292,8 +292,8 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 
 void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs)
 {
-	u32 list_addr = ea & 0x3ffff;
-	u32 list_size = size / 8;
+	const u32 list_addr = ea & 0x3ffff;
+	const u32 list_size = size / 8;
 	lsa &= 0x3fff0;
 
 	struct list_element
@@ -309,27 +309,31 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 	{
 		auto rec = vm::ptr<list_element>::make(ls_offset + list_addr + i * 8);
 
-		u32 size = rec->ts;
-		if (!(rec->s.ToBE() & se16(0x8000)) && size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
+		const u32 size = rec->ts;
+		if (!(rec->s.data() & se16(0x8000)) && size < 16 && size != 1 && size != 2 && size != 4 && size != 8)
 		{
 			LOG_ERROR(Log::SPU, "DMA List: invalid transfer size(%d)", size);
 			result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
 			break;
 		}
 
-		u32 addr = rec->ea;
-
+		const u32 addr = rec->ea;
 		if (size)
+		{
 			ProcessCmd(cmd, tag, lsa | (addr & 0xf), addr, size);
+		}
 
-		if (Ini.HLELogging.GetValue() || rec->s.ToBE())
-			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)",
-			i, list_size, (u16)rec->s, (u16)rec->ts, (u32)rec->ea, lsa | (addr & 0xf));
+		if (Ini.HLELogging.GetValue() || rec->s.data())
+		{
+			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)", i, list_size, rec->s, rec->ts, rec->ea, lsa | (addr & 0xf));
+		}
 
 		if (size)
-			lsa += std::max(size, (u32)16);
+		{
+			lsa += std::max<u32>(size, 16);
+		}
 
-		if (rec->s.ToBE() & se16(0x8000))
+		if (rec->s.data() & se16(0x8000))
 		{
 			StallStat.PushUncond_OR(1 << tag);
 
@@ -339,12 +343,12 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 				result = MFC_PPU_DMA_CMD_SEQUENCE_ERROR;
 				break;
 			}
+
 			StallList[tag].MFCArgs = &MFCArgs;
 			StallList[tag].cmd = cmd;
 			StallList[tag].ea = (ea & ~0xffffffff) | (list_addr + (i + 1) * 8);
 			StallList[tag].lsa = lsa;
 			StallList[tag].size = (list_size - i - 1) * 8;
-
 			break;
 		}
 	}
@@ -554,6 +558,8 @@ u32 SPUThread::GetChannelCount(u32 ch)
 
 	switch (ch)
 	{
+	case SPU_WrSRR0:          res = 1; break;
+	case SPU_RdSRR0:          res = 1; break;
 	case SPU_WrOutMbox:       res = SPU.Out_MBox.GetFreeCount(); break;
 	case SPU_WrOutIntrMbox:   res = SPU.Out_IntrMBox.GetFreeCount(); break;
 	case SPU_RdInMbox:        res = SPU.In_MBox.GetCount(); break;
@@ -585,6 +591,9 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 
 	switch (ch)
 	{
+	case SPU_WrSRR0:
+		SRR0 = v & 0x3FFFC;  //LSLR & ~3
+		break;
 	case SPU_WrOutIntrMbox:
 	{
 		if (!group) // if RawSPU
@@ -906,6 +915,9 @@ void SPUThread::ReadChannel(u128& r, u32 ch)
 
 	switch (ch)
 	{
+	case SPU_RdSRR0:
+		v = SRR0;
+		break;
 	case SPU_RdInMbox:
 	{
 		while (!SPU.In_MBox.Pop(v) && !Emu.IsStopped())

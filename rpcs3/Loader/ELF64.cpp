@@ -47,7 +47,7 @@ namespace loader
 
 			if (m_ehdr.e_machine != MACHINE_PPC64 && m_ehdr.e_machine != MACHINE_SPU)
 			{
-				LOG_ERROR(LOADER, "Unknown elf64 machine type: 0x%x", m_ehdr.e_machine.ToLE());
+				LOG_ERROR(LOADER, "Unknown elf64 machine type: 0x%x", m_ehdr.e_machine);
 				return bad_version;
 			}
 
@@ -125,14 +125,14 @@ namespace loader
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_paddr.addr());
 							m_stream->Read(&module_info, sizeof(module_info));
 							LOG_ERROR(LOADER, "%s (%x):", module_info.name, (u32)module_info.toc);
-							info.name = std::string((const char*)module_info.name, 28);
+							info.name = std::string(module_info.name, 28);
 							info.rtoc = module_info.toc;
 
 							int import_count = (module_info.imports_end - module_info.imports_start) / sizeof(sys_prx_library_info_t);
 
 							if (import_count)
 							{
-								LOG_ERROR(LOADER, "**** Lib '%s'has %d imports!", module_info.name, import_count);
+								LOG_ERROR(LOADER, "**** Lib '%s' has %d imports!", module_info.name, import_count);
 							}
 
 							sys_prx_library_info_t lib;
@@ -399,14 +399,15 @@ namespace loader
 		{
 			for (auto &phdr : m_phdrs)
 			{
-				switch (phdr.p_type.ToLE())
+				switch (phdr.p_type.value())
 				{
 				case 0x00000001: //LOAD
 					if (phdr.p_memsz)
 					{
 						if (!vm::alloc(phdr.p_vaddr.addr(), (u32)phdr.p_memsz, vm::main))
 						{
-							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr, (u32)phdr.p_memsz);
+							// addr() has be_t<> type (test)
+							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr.addr(), (u32)phdr.p_memsz);
 
 							return loading_error;
 						}
@@ -441,12 +442,12 @@ namespace loader
 						{
 							sys_process_param_info& info = Emu.GetInfo().GetProcParam();
 							/*
-							LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version.ToLE());
-							LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio.ToLE());
-							LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize.ToLE());
-							LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize.ToLE());
-							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg.ToLE());
-							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr.ToLE());
+							LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
+							LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
+							LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
+							LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
+							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
+							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 							*/
 
 							info = proc_param.info;
@@ -462,7 +463,7 @@ namespace loader
 
 						if (proc_prx_param.magic != 0x1b434cec)
 						{
-							LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic.ToLE());
+							LOG_ERROR(LOADER, "Bad magic! (0x%x)", proc_prx_param.magic);
 							break;
 						}
 

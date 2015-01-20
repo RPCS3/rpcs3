@@ -1,5 +1,26 @@
 #pragma once
 
+#include <fenv.h>
+
+static void SetHostRoundingMode(u32 rn)
+{
+	switch (rn)
+	{
+	case FPSCR_RN_NEAR:
+		fesetround(FE_TONEAREST);
+		break;
+	case FPSCR_RN_ZERO:
+		fesetround(FE_TOWARDZERO);
+		break;
+	case FPSCR_RN_PINF:
+		fesetround(FE_UPWARD);
+		break;
+	case FPSCR_RN_MINF:
+		fesetround(FE_DOWNWARD);
+		break;
+	}
+}
+
 #define UNIMPLEMENTED() UNK(__FUNCTION__)
 
 #define MEM_AND_REG_HASH() \
@@ -10,6 +31,54 @@
 #define LOG2_OPCODE(...) //MEM_AND_REG_HASH(); LOG_NOTICE(Log::SPU, __FUNCTION__ "(): " __VA_ARGS__)
 
 #define LOG5_OPCODE(...) ///
+
+// Floating-point utility constants and functions
+static const u32 FLOAT_MAX_NORMAL_I = 0x7F7FFFFF;
+static const float& FLOAT_MAX_NORMAL = (float&)FLOAT_MAX_NORMAL_I;
+static const u32 FLOAT_NAN_I = 0x7FC00000;
+static const float& FLOAT_NAN = (float&)FLOAT_NAN_I;
+static const u64 DOUBLE_NAN_I = 0x7FF8000000000000ULL;
+static const double& DOUBLE_NAN = (double&)DOUBLE_NAN_I;
+static inline bool issnan(double x) {return isnan(x) && ((s64&)x)<<12 > 0;}
+static inline bool issnan(float x) {return isnan(x) && ((s32&)x)<<9 > 0;}
+static inline int fexpf(float x) {return ((u32&)x >> 23) & 0xFF;}
+static inline bool isextended(float x) {return fexpf(x) == 255;}
+static inline float extended(bool sign, u32 mantissa) // returns -1^sign * 2^127 * (1.mantissa)
+{
+    u32 bits = sign<<31 | 0x7F800000 | mantissa;
+    return (float&)bits;
+}
+static inline float ldexpf_extended(float x, int exp)  // ldexpf() for extended values, assumes result is in range
+{
+    u32 bits = (u32&)x;
+    if (bits << 1 != 0) bits += exp * 0x00800000;
+    return (float&)bits;
+}
+static inline bool isdenormal(float x)
+{
+	const int fpc = _fpclass(x);
+#ifdef __GNUG__
+	return fpc == FP_SUBNORMAL;
+#else
+	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
+#endif
+}
+static inline bool isdenormal(double x)
+{
+	const int fpc = _fpclass(x);
+#ifdef __GNUG__
+	return fpc == FP_SUBNORMAL;
+#else
+	return (fpc & (_FPCLASS_PD | _FPCLASS_ND)) != 0;
+#endif
+}
+static double SilenceNaN(double x)
+{
+	u64 bits = (u64&)x;
+	bits |= 0x0008000000000000ULL;
+	return (double&)bits;
+}
+
 
 class SPUInterpreter : public SPUOpcodes
 {
@@ -47,7 +116,7 @@ private:
 	}
 	void MFSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED(); // not used
+		CPU.GPR[rt].clear();  // All SPRs read as zero.
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
@@ -243,7 +312,7 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED(); // not used
+		// SPR writes are ignored.
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
@@ -431,16 +500,41 @@ private:
 	}
 	void FREST(u32 rt, u32 ra)
 	{
-		//CPU.GPR[rt]._m128 = _mm_rcp_ps(CPU.GPR[ra]._m128);
+		SetHostRoundingMode(FPSCR_RN_ZERO);
 		for (int i = 0; i < 4; i++)
-			CPU.GPR[rt]._f[i] = 1 / CPU.GPR[ra]._f[i];
+		{
+			const float a = CPU.GPR[ra]._f[i];
+			float result;
+			if (fexpf(a) == 0)
+			{
+				CPU.FPSCR.setDivideByZeroFlag(i);
+				result = extended(std::signbit(a), 0x7FFFFF);
+			}
+			else if (isextended(a))
+				result = 0.0f;
+			else
+				result = 1 / a;
+			CPU.GPR[rt]._f[i] = result;
+		}
 	}
 	void FRSQEST(u32 rt, u32 ra)
 	{
-		//const __u32x4 FloatAbsMask = {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-		//CPU.GPR[rt]._m128 = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[ra]._m128, FloatAbsMask.m128));
+		SetHostRoundingMode(FPSCR_RN_ZERO);
 		for (int i = 0; i < 4; i++)
-			CPU.GPR[rt]._f[i] = 1 / sqrt(abs(CPU.GPR[ra]._f[i]));
+		{
+			const float a = CPU.GPR[ra]._f[i];
+			float result;
+			if (fexpf(a) == 0)
+			{
+				CPU.FPSCR.setDivideByZeroFlag(i);
+				result = extended(0, 0x7FFFFF);
+			}
+			else if (isextended(a))
+				result = 0.5f / sqrtf(fabsf(ldexpf_extended(a, -2)));
+			else
+				result = 1 / sqrtf(fabsf(a));
+			CPU.GPR[rt]._f[i] = result;
+		}
 	}
 	void LQX(u32 rt, u32 ra, u32 rb)
 	{
@@ -828,37 +922,186 @@ private:
 	}
 	void FCGT(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._f[0] > CPU.GPR[rb]._f[0] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._f[1] > CPU.GPR[rb]._f[1] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._f[2] > CPU.GPR[rb]._f[2] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._f[3] > CPU.GPR[rb]._f[3] ? 0xffffffff : 0;
+		for (int i = 0; i < 4; i++)
+		{
+			const u32 a = CPU.GPR[ra]._u32[i];
+			const u32 b = CPU.GPR[rb]._u32[i];
+			const u32 abs_a = a & 0x7FFFFFFF;
+			const u32 abs_b = b & 0x7FFFFFFF;
+			const bool a_zero = (abs_a < 0x00800000);
+			const bool b_zero = (abs_b < 0x00800000);
+			bool pass;
+			if (a_zero)
+				pass = b >= 0x80800000;
+			else if (b_zero)
+				pass = (s32)a >= 0x00800000;
+			else if (a >= 0x80000000)
+				pass = (b >= 0x80000000 && a < b);
+			else
+				pass = (b >= 0x80000000 || a > b);
+			CPU.GPR[rt]._u32[i] = pass ? 0xFFFFFFFF : 0;
+		}
 	}
 	void DFCGT(u32 rt, u32 ra, u32 rb)
 	{
 		UNIMPLEMENTED(); // cannot be used
 	}
-	void FA(u32 rt, u32 ra, u32 rb)
+	void FA_FS(u32 rt, u32 ra, u32 rb, bool sub)
 	{
+		SetHostRoundingMode(FPSCR_RN_ZERO);
 		for (int w = 0; w < 4; w++)
 		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[ra]._f[w] + CPU.GPR[rb]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
+			const float a = CPU.GPR[ra]._f[w];
+			const float b = sub ? -CPU.GPR[rb]._f[w] : CPU.GPR[rb]._f[w];
+			float result;
+			if (isdenormal(a))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				if (b == 0.0f || isdenormal(b))
+					result = +0.0f;
+				else
+					result = b;
+			}
+			else if (isdenormal(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				if (a == 0.0f)
+					result = +0.0f;
+				else
+					result = a;
+			}
+			else if (isextended(a) || isextended(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				if (isextended(a) && fexpf(b) < 255-32)
+				{
+					if (std::signbit(a) != std::signbit(b))
+					{
+						const u32 bits = (u32&)a - 1;
+						result = (float&)bits;
+					}
+					else
+
+						result = a;
+				}
+				else if (isextended(b) && fexpf(a) < 255-32)
+				{
+					if (std::signbit(a) != std::signbit(b))
+					{
+						const u32 bits = (u32&)b - 1;
+						result = (float&)bits;
+					}
+					else
+						result = b;
+				}
+				else
+				{
+					feclearexcept(FE_ALL_EXCEPT);
+					result = ldexpf_extended(a, -1) + ldexpf_extended(b, -1);
+					result = ldexpf_extended(result, 1);
+					if (fetestexcept(FE_OVERFLOW))
+					{
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+						result = extended(std::signbit(result), 0x7FFFFF);
+					}
+				}
+			}
+			else
+			{
+				result = a + b;
+				if (result == copysignf(FLOAT_MAX_NORMAL, result))
+				{
+					result = ldexpf_extended(ldexpf(a,-1) + ldexpf(b,-1), 1);
+					if (isextended(result))
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				}
+				else if (isdenormal(result))
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+					result = +0.0f;
+				}
+				else if (result == 0.0f)
+				{
+					if (fabsf(a) != fabsf(b))
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+					result = +0.0f;
+				}
+			}
+			CPU.GPR[rt]._f[w] = result;
 		}
 	}
-	void FS(u32 rt, u32 ra, u32 rb)
-	{
-		for (int w = 0; w < 4; w++)
-		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[ra]._f[w] - CPU.GPR[rb]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
-		}
-	}
+	void FA(u32 rt, u32 ra, u32 rb) {FA_FS(rt, ra, rb, false);}
+	void FS(u32 rt, u32 ra, u32 rb) {FA_FS(rt, ra, rb, true);}
 	void FM(u32 rt, u32 ra, u32 rb)
 	{
+		SetHostRoundingMode(FPSCR_RN_ZERO);
 		for (int w = 0; w < 4; w++)
 		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[ra]._f[w] * CPU.GPR[rb]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
+			const float a = CPU.GPR[ra]._f[w];
+			const float b = CPU.GPR[rb]._f[w];
+			float result;
+			if (isdenormal(a) || isdenormal(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				result = +0.0f;
+			}
+			else if (isextended(a) || isextended(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				const bool sign = std::signbit(a) ^ std::signbit(b);
+				if (a == 0.0f || b == 0.0f)
+				{
+					result = +0.0f;
+				}
+				else if ((fexpf(a)-127) + (fexpf(b)-127) >= 129)
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+					result = extended(sign, 0x7FFFFF);
+				}
+				else
+				{
+					if (isextended(a))
+						result = ldexpf_extended(a, -1) * b;
+					else
+						result = a * ldexpf_extended(b, -1);
+					if (result == copysignf(FLOAT_MAX_NORMAL, result))
+					{
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+						result = extended(sign, 0x7FFFFF);
+					}
+					else
+						result = ldexpf_extended(result, 1);
+				}
+			}
+			else
+			{
+				result = a * b;
+				if (result == copysignf(FLOAT_MAX_NORMAL, result))
+				{
+					feclearexcept(FE_ALL_EXCEPT);
+					if (fexpf(a) > fexpf(b))
+						result = ldexpf(a, -1) * b;
+					else
+						result = a * ldexpf(b, -1);
+					result = ldexpf_extended(result, 1);
+					if (isextended(result))
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+					if (fetestexcept(FE_OVERFLOW))
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+				}
+				else if (isdenormal(result))
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+					result = +0.0f;
+				}
+				else if (result == 0.0f)
+				{
+					if (a != 0.0f & b != 0.0f)
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+					result = +0.0f;
+				}
+			}
+			CPU.GPR[rt]._f[w] = result;
 		}
 	}
 	void CLGTH(u32 rt, u32 ra, u32 rb)
@@ -873,30 +1116,84 @@ private:
 	}
 	void FCMGT(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = fabs(CPU.GPR[ra]._f[0]) > fabs(CPU.GPR[rb]._f[0]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = fabs(CPU.GPR[ra]._f[1]) > fabs(CPU.GPR[rb]._f[1]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = fabs(CPU.GPR[ra]._f[2]) > fabs(CPU.GPR[rb]._f[2]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = fabs(CPU.GPR[ra]._f[3]) > fabs(CPU.GPR[rb]._f[3]) ? 0xffffffff : 0;
+		for (int i = 0; i < 4; i++)
+		{
+			const u32 a = CPU.GPR[ra]._u32[i];
+			const u32 b = CPU.GPR[rb]._u32[i];
+			const u32 abs_a = a & 0x7FFFFFFF;
+			const u32 abs_b = b & 0x7FFFFFFF;
+			const bool a_zero = (abs_a < 0x00800000);
+			const bool b_zero = (abs_b < 0x00800000);
+			bool pass;
+			if (a_zero)
+				pass = false;
+			else if (b_zero)
+				pass = !a_zero;
+			else
+				pass = abs_a > abs_b;
+			CPU.GPR[rt]._u32[i] = pass ? 0xFFFFFFFF : 0;
+		}
 	}
 	void DFCMGT(u32 rt, u32 ra, u32 rb)
 	{
 		UNIMPLEMENTED(); // cannot be used
 	}
-	void DFA(u32 rt, u32 ra, u32 rb)
+	enum DoubleOp {DFASM_A, DFASM_S, DFASM_M};
+	void DFASM(u32 rt, u32 ra, u32 rb, DoubleOp op)
 	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] + CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] + CPU.GPR[rb]._d[1];
+		for (int i = 0; i < 2; i++)
+		{
+			double a = CPU.GPR[ra]._d[i];
+			double b = CPU.GPR[rb]._d[i];
+			if (isdenormal(a))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				a = copysign(0.0, a);
+			}
+			if (isdenormal(b))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				b = copysign(0.0, b);
+			}
+			double result;
+			if (isnan(a) || isnan(b))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
+				if (issnan(a) || issnan(b))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+				result = DOUBLE_NAN;
+			}
+			else
+			{
+				SetHostRoundingMode(CPU.FPSCR.checkSliceRounding(i));
+				feclearexcept(FE_ALL_EXCEPT);
+				switch (op)
+				{
+				case DFASM_A: result = a + b; break;
+				case DFASM_S: result = a - b; break;
+				case DFASM_M: result = a * b; break;
+				}
+				if (fetestexcept(FE_INVALID))
+				{
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+					result = DOUBLE_NAN;
+				}
+				else
+				{
+					if (fetestexcept(FE_OVERFLOW))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
+					if (fetestexcept(FE_UNDERFLOW))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
+					if (fetestexcept(FE_INEXACT))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
+				}
+			}
+			CPU.GPR[rt]._d[i] = result;
+		}
 	}
-	void DFS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] - CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] - CPU.GPR[rb]._d[1];
-	}
-	void DFM(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
-	}
+	void DFA(u32 rt, u32 ra, u32 rb) {DFASM(rt, ra, rb, DFASM_A);}
+	void DFS(u32 rt, u32 ra, u32 rb) {DFASM(rt, ra, rb, DFASM_S);}
+	void DFM(u32 rt, u32 ra, u32 rb) {DFASM(rt, ra, rb, DFASM_M);}
 	void CLGTB(u32 rt, u32 ra, u32 rb)
 	{
 		for (int b = 0; b < 16; b++)
@@ -910,26 +1207,64 @@ private:
 			CPU.Stop();
 		}
 	}
-	void DFMA(u32 rt, u32 ra, u32 rb)
+	void DFMA(u32 rt, u32 ra, u32 rb, bool neg, bool sub)
 	{
-		CPU.GPR[rt]._d[0] += CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] += CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
+		for (int i = 0; i < 2; i++)
+		{
+			double a = CPU.GPR[ra]._d[i];
+			double b = CPU.GPR[rb]._d[i];
+			double c = CPU.GPR[rt]._d[i];
+			if (isdenormal(a))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				a = copysign(0.0, a);
+			}
+			if (isdenormal(b))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				b = copysign(0.0, b);
+			}
+			if (isdenormal(c))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				c = copysign(0.0, c);
+			}
+			double result;
+			if (isnan(a) || isnan(b) || isnan(c))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
+				if (issnan(a) || issnan(b) || issnan(c) || (isinf(a) && b == 0.0f) || (a == 0.0f && isinf(b)))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+				result = DOUBLE_NAN;
+			}
+			else
+			{
+				SetHostRoundingMode(CPU.FPSCR.checkSliceRounding(i));
+				feclearexcept(FE_ALL_EXCEPT);
+				result = fma(a, b, sub ? -c : c);
+				if (fetestexcept(FE_INVALID))
+				{
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+					result = DOUBLE_NAN;
+				}
+				else
+				{
+					if (fetestexcept(FE_OVERFLOW))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
+					if (fetestexcept(FE_UNDERFLOW))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
+					if (fetestexcept(FE_INEXACT))
+						CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
+					if (neg) result = -result;
+				}
+			}
+			CPU.GPR[rt]._d[i] = result;
+		}
 	}
-	void DFMS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0] - CPU.GPR[rt]._d[0];
-		CPU.GPR[rt]._d[1] = CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1] - CPU.GPR[rt]._d[1];
-	}
-	void DFNMS(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] -= CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0];
-		CPU.GPR[rt]._d[1] -= CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1];
-	}
-	void DFNMA(u32 rt, u32 ra, u32 rb)
-	{
-		CPU.GPR[rt]._d[0] = -(CPU.GPR[ra]._d[0] * CPU.GPR[rb]._d[0] + CPU.GPR[rt]._d[0]);
-		CPU.GPR[rt]._d[1] = -(CPU.GPR[ra]._d[1] * CPU.GPR[rb]._d[1] + CPU.GPR[rt]._d[1]);
-	}
+	void DFMA(u32 rt, u32 ra, u32 rb) {DFMA(rt, ra, rb, false, false);}
+	void DFMS(u32 rt, u32 ra, u32 rb) {DFMA(rt, ra, rb, false, true);}
+	void DFNMS(u32 rt, u32 ra, u32 rb) {DFMA(rt, ra, rb, true, true);}
+	void DFNMA(u32 rt, u32 ra, u32 rb) {DFMA(rt, ra, rb, true, false);}
 	void CEQ(u32 rt, u32 ra, u32 rb)
 	{
 		for (int w = 0; w < 4; w++)
@@ -981,29 +1316,67 @@ private:
 	
 	void FSCRRD(u32 rt)
 	{
-		// TODO (rarely used)
-		CPU.GPR[rt].clear();
+		CPU.GPR[rt]._u32[3] = CPU.FPSCR._u32[3];
+		CPU.GPR[rt]._u32[2] = CPU.FPSCR._u32[2];
+		CPU.GPR[rt]._u32[1] = CPU.FPSCR._u32[1];
+		CPU.GPR[rt]._u32[0] = CPU.FPSCR._u32[0];
 	}
 	void FESD(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt]._d[0] = (double)CPU.GPR[ra]._f[1];
-		CPU.GPR[rt]._d[1] = (double)CPU.GPR[ra]._f[3];
+		for (int i = 0; i < 2; i++)
+		{
+			const float a = CPU.GPR[ra]._f[i*2+1];
+			if (isnan(a))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
+				if (issnan(a))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+				CPU.GPR[rt]._d[i] = DOUBLE_NAN;
+			}
+			else if (isdenormal(a))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DDENORM);
+				CPU.GPR[rt]._d[i] = 0.0;
+			}
+			else
+			{
+				CPU.GPR[rt]._d[i] = (double)a;
+			}
+		}
 	}
 	void FRDS(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt]._f[1] = (float)CPU.GPR[ra]._d[0];
-		CPU.GPR[rt]._u32[0] = 0x00000000;
-		CPU.GPR[rt]._f[3] = (float)CPU.GPR[ra]._d[1];
-		CPU.GPR[rt]._u32[2] = 0x00000000;
+		for (int i = 0; i < 2; i++)
+		{
+			SetHostRoundingMode(CPU.FPSCR.checkSliceRounding(i));
+			const double a = CPU.GPR[ra]._d[i];
+			if (isnan(a))
+			{
+				CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DNAN);
+				if (issnan(a))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINV);
+				CPU.GPR[rt]._f[i*2+1] = FLOAT_NAN;
+			}
+			else
+			{
+				feclearexcept(FE_ALL_EXCEPT);
+				CPU.GPR[rt]._f[i*2+1] = (float)a;
+				if (fetestexcept(FE_OVERFLOW))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
+				if (fetestexcept(FE_UNDERFLOW))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DUNF);
+				if (fetestexcept(FE_INEXACT))
+					CPU.FPSCR.setDoublePrecisionExceptionFlags(i, FPSCR_DINX);
+			}
+			CPU.GPR[rt]._u32[i*2] = 0;
+		}
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		// TODO (rarely used)
-		if (CPU.GPR[ra]._u64[0] || CPU.GPR[ra]._u64[1])
-		{
-			LOG_ERROR(SPU, "FSCRWR(%d,%d): value = %s", rt, ra, CPU.GPR[ra].to_hex().c_str());
-			UNIMPLEMENTED();
-		}
+		CPU.FPSCR._u32[3] = CPU.GPR[ra]._u32[3] & 0x00000F07;
+		CPU.FPSCR._u32[2] = CPU.GPR[ra]._u32[2] & 0x00003F07;
+		CPU.FPSCR._u32[1] = CPU.GPR[ra]._u32[1] & 0x00003F07;
+		CPU.FPSCR._u32[0] = CPU.GPR[ra]._u32[0] & 0x00000F07;
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{
@@ -1011,10 +1384,17 @@ private:
 	}
 	void FCEQ(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._f[0] == CPU.GPR[rb]._f[0] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._f[1] == CPU.GPR[rb]._f[1] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._f[2] == CPU.GPR[rb]._f[2] ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._f[3] == CPU.GPR[rb]._f[3] ? 0xffffffff : 0;
+		for (int i = 0; i < 4; i++)
+		{
+			const u32 a = CPU.GPR[ra]._u32[i];
+			const u32 b = CPU.GPR[rb]._u32[i];
+			const u32 abs_a = a & 0x7FFFFFFF;
+			const u32 abs_b = b & 0x7FFFFFFF;
+			const bool a_zero = (abs_a < 0x00800000);
+			const bool b_zero = (abs_b < 0x00800000);
+			const bool pass = a == b || (a_zero && b_zero);
+			CPU.GPR[rt]._u32[i] = pass ? 0xFFFFFFFF : 0;
+		}
 	}
 	void DFCEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -1047,10 +1427,17 @@ private:
 	}
 	void FCMEQ(u32 rt, u32 ra, u32 rb)
 	{
-		CPU.GPR[rt]._u32[0] = fabs(CPU.GPR[ra]._f[0]) == fabs(CPU.GPR[rb]._f[0]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[1] = fabs(CPU.GPR[ra]._f[1]) == fabs(CPU.GPR[rb]._f[1]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[2] = fabs(CPU.GPR[ra]._f[2]) == fabs(CPU.GPR[rb]._f[2]) ? 0xffffffff : 0;
-		CPU.GPR[rt]._u32[3] = fabs(CPU.GPR[ra]._f[3]) == fabs(CPU.GPR[rb]._f[3]) ? 0xffffffff : 0;
+		for (int i = 0; i < 4; i++)
+		{
+			const u32 a = CPU.GPR[ra]._u32[i];
+			const u32 b = CPU.GPR[rb]._u32[i];
+			const u32 abs_a = a & 0x7FFFFFFF;
+			const u32 abs_b = b & 0x7FFFFFFF;
+			const bool a_zero = (abs_a < 0x00800000);
+			const bool b_zero = (abs_b < 0x00800000);
+			const bool pass = abs_a == abs_b || (a_zero && b_zero);
+			CPU.GPR[rt]._u32[i] = pass ? 0xFFFFFFFF : 0;
+		}
 	}
 	void DFCMEQ(u32 rt, u32 ra, u32 rb)
 	{
@@ -1084,53 +1471,54 @@ private:
 	//0 - 9
 	void CFLTS(u32 rt, u32 ra, s32 i8)
 	{
-		const u32 scale = 173 - (i8 & 0xff); //unsigned immediate
+		const int scale = 173 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
-			u32 exp = ((CPU.GPR[ra]._u32[i] >> 23) & 0xff) + scale;
-
-			if (exp > 255) 
-				exp = 255;
-
-			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
-
-			if (CPU.GPR[rt]._f[i] > 0x7fffffff)
-				CPU.GPR[rt]._u32[i] = 0x7fffffff;
-			else if (CPU.GPR[rt]._f[i] < -pow(2, 31))
-				CPU.GPR[rt]._u32[i] = 0x80000000;
+			const float a = CPU.GPR[ra]._f[i];
+			float scaled;
+			if ((fexpf(a)-127) + scale >= 32)
+				scaled = copysignf(4294967296.0f, a);
 			else
-				CPU.GPR[rt]._s32[i] = (s32)CPU.GPR[rt]._f[i]; //trunc
+				scaled = ldexpf(a, scale);
+			s32 result;
+			if (scaled >= 2147483648.0f)
+				result = 0x7FFFFFFF;
+			else if (scaled < -2147483648.0f)
+				result = 0x80000000;
+			else
+				result = (s32)scaled;
+			CPU.GPR[rt]._s32[i] = result;
 		}
 	}
 	void CFLTU(u32 rt, u32 ra, s32 i8)
 	{
-		const u32 scale = 173 - (i8 & 0xff); //unsigned immediate
+		const int scale = 173 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
-			u32 exp = ((CPU.GPR[ra]._u32[i] >> 23) & 0xff) + scale;
-
-			if (exp > 255) 
-				exp = 255;
-
-			if (CPU.GPR[ra]._u32[i] & 0x80000000) //if negative, result = 0
-				CPU.GPR[rt]._u32[i] = 0;
+			const float a = CPU.GPR[ra]._f[i];
+			float scaled;
+			if ((fexpf(a)-127) + scale >= 32)
+				scaled = copysignf(4294967296.0f, a);
 			else
-			{
-				CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] & 0x807fffff) | (exp << 23);
-
-				if (CPU.GPR[rt]._f[i] > 0xffffffff) //if big, result = max
-					CPU.GPR[rt]._u32[i] = 0xffffffff;
-				else
-					CPU.GPR[rt]._u32[i] = (u32)floor(CPU.GPR[rt]._f[i]);
-			}
+				scaled = ldexpf(a, scale);
+			u32 result;
+			if (scaled >= 4294967296.0f)
+				result = 0xFFFFFFFF;
+			else if (scaled < 0.0f)
+				result = 0;
+			else
+				result = (u32)scaled;
+			CPU.GPR[rt]._u32[i] = result;
 		}
 	}
 	void CSFLT(u32 rt, u32 ra, s32 i8)
 	{
-		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
+		SetHostRoundingMode(FPSCR_RN_ZERO);
+		const int scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
-			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._s32[i];
+			const s32 a = CPU.GPR[ra]._s32[i];
+			CPU.GPR[rt]._f[i] = (float)a;
 
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
@@ -1138,14 +1526,21 @@ private:
 				exp = 0;
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] & 0x807fffff) | (exp << 23);
+			if (isdenormal(CPU.GPR[rt]._f[i]) || (CPU.GPR[rt]._f[i] == 0.0f && a != 0))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(i, FPSCR_SUNF | FPSCR_SDIFF);
+				CPU.GPR[rt]._f[i] = 0.0f;
+			}
 		}
 	}
 	void CUFLT(u32 rt, u32 ra, s32 i8)
 	{
-		const u32 scale = 155 - (i8 & 0xff); //unsigned immediate
+		SetHostRoundingMode(FPSCR_RN_ZERO);
+		const int scale = 155 - (i8 & 0xff); //unsigned immediate
 		for (int i = 0; i < 4; i++)
 		{
-			CPU.GPR[rt]._f[i] = (float)CPU.GPR[ra]._u32[i];
+			const u32 a = CPU.GPR[ra]._u32[i];
+			CPU.GPR[rt]._f[i] = (float)a;
 
 			u32 exp = ((CPU.GPR[rt]._u32[i] >> 23) & 0xff) - scale;
 
@@ -1153,6 +1548,11 @@ private:
 				exp = 0;
 
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[rt]._u32[i] & 0x807fffff) | (exp << 23);
+			if (isdenormal(CPU.GPR[rt]._f[i]) || (CPU.GPR[rt]._f[i] == 0.0f && a != 0))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(i, FPSCR_SUNF | FPSCR_SDIFF);
+				CPU.GPR[rt]._f[i] = 0.0f;
+			}
 		}
 	}
 
@@ -1524,28 +1924,151 @@ private:
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._s32[w] = CPU.GPR[ra]._s16[w*2] * CPU.GPR[rb]._s16[w*2] + CPU.GPR[rc]._s32[w];
 	}
-	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
+	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc) {FMA(rt, ra, rb, rc, true, true);}
+	void FMA(u32 rt, u32 ra, u32 rb, u32 rc) {FMA(rt, ra, rb, rc, false, false);}
+	void FMS(u32 rt, u32 ra, u32 rb, u32 rc) {FMA(rt, ra, rb, rc, false, true);}
+	void FMA(u32 rt, u32 ra, u32 rb, u32 rc, bool neg, bool sub)
 	{
+		SetHostRoundingMode(FPSCR_RN_ZERO);
 		for (int w = 0; w < 4; w++)
 		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[rc]._f[w] - CPU.GPR[ra]._f[w] * CPU.GPR[rb]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
-		}
-	}
-	void FMA(u32 rt, u32 ra, u32 rb, u32 rc)
-	{
-		for (int w = 0; w < 4; w++)
-		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[rc]._f[w] + CPU.GPR[ra]._f[w] * CPU.GPR[rb]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
-		}
-	}
-	void FMS(u32 rt, u32 ra, u32 rb, u32 rc)
-	{
-		for (int w = 0; w < 4; w++)
-		{
-			CPU.GPR[rt]._f[w] = CPU.GPR[ra]._f[w] * CPU.GPR[rb]._f[w] - CPU.GPR[rc]._f[w];
-			//if (CPU.GPR[rt]._f[w] == -0.0f) CPU.GPR[rt]._f[w] = 0.0f;
+			float a = CPU.GPR[ra]._f[w];
+			float b = neg ? -CPU.GPR[rb]._f[w] : CPU.GPR[rb]._f[w];
+			float c = (neg != sub) ? -CPU.GPR[rc]._f[w] : CPU.GPR[rc]._f[w];
+			if (isdenormal(a))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				a = 0.0f;
+			}
+			if (isdenormal(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				b = 0.0f;
+			}
+			if (isdenormal(c))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				c = 0.0f;
+			}
+
+			const bool sign = std::signbit(a) ^ std::signbit(b);
+			float result;
+
+			if (isextended(a) || isextended(b))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				if (a == 0.0f || b == 0.0f)
+				{
+					result = c;
+				}
+				else if ((fexpf(a)-127) + (fexpf(b)-127) >= 130)
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+					result = extended(sign, 0x7FFFFF);
+				}
+				else
+				{
+					float new_a, new_b;
+					if (isextended(a))
+					{
+						new_a = ldexpf_extended(a, -2);
+						new_b = b;
+					}
+					else
+					{
+						new_a = a;
+						new_b = ldexpf_extended(b, -2);
+					}
+					if (fexpf(c) < 3)
+					{
+						result = new_a * new_b;
+						if (c != 0.0f && std::signbit(c) != sign)
+						{
+							u32 bits = (u32&)result - 1;
+							result = (float&)bits;
+						}
+					}
+					else
+					{
+						result = fmaf(new_a, new_b, ldexpf_extended(c, -2));
+					}
+					if (fabsf(result) >= ldexpf(1.0f, 127))
+					{
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+						result = extended(sign, 0x7FFFFF);
+					}
+					else
+					{
+						result = ldexpf_extended(result, 2);
+					}
+				}
+			}
+			else if (isextended(c))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+				if (a == 0.0f || b == 0.0f)
+				{
+					result = c;
+				}
+				else if ((fexpf(a)-127) + (fexpf(b)-127) < 96)
+				{
+					result = c;
+					if (sign != std::signbit(c))
+					{
+					    u32 bits = (u32&)result - 1;
+					    result = (float&)bits;
+					}
+				}
+				else
+				{
+					result = fmaf(ldexpf(a,-1), ldexpf(b,-1), ldexpf_extended(c,-2));
+					if (fabsf(result) >= ldexpf(1.0f, 127))
+					{
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+						result = extended(sign, 0x7FFFFF);
+					}
+					else
+					{
+						result = ldexpf_extended(result, 2);
+					}
+				}
+			}
+			else
+			{
+				feclearexcept(FE_ALL_EXCEPT);
+				result = fmaf(a, b, c);
+				if (fetestexcept(FE_OVERFLOW))
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SDIFF);
+					if (fexpf(a) > fexpf(b))
+						result = fmaf(ldexpf(a,-2), b, ldexpf(c,-2));
+					else
+						result = fmaf(a, ldexpf(b,-2), ldexpf(c,-2));
+					if (fabsf(result) >= ldexpf(1.0f, 127))
+					{
+						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SOVF);
+						result = extended(sign, 0x7FFFFF);
+					}
+					else
+					{
+						result = ldexpf_extended(result, 2);
+					}
+				}
+				else if (fetestexcept(FE_UNDERFLOW))
+				{
+					CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+				}
+			}
+			if (isdenormal(result))
+			{
+				CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
+				result = 0.0f;
+			}
+			else if (result == 0.0f)
+			{
+				result = +0.0f;
+			}
+			CPU.GPR[rt]._f[w] = result;
 		}
 	}
 

@@ -13,6 +13,8 @@
 //#include "Emu/Cell/PPURecompiler.h"
 #include "Emu/CPU/CPUThreadManager.h"
 
+u64 rotate_mask[64][64];
+
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
@@ -41,7 +43,6 @@ void PPUThread::DoReset()
 	memset(FPR,  0, sizeof(FPR));
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
-	memset(USPRG, 0, sizeof(USPRG));
 
 	CR.CR       = 0;
 	LR          = 0;
@@ -50,6 +51,7 @@ void PPUThread::DoReset()
 	XER.XER     = 0;
 	FPSCR.FPSCR = 0;
 	VSCR.VSCR   = 0;
+        VRSAVE      = 0;
 
 	cycle = 0;
 }
@@ -187,7 +189,7 @@ int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 
 u64 PPUThread::GetStackArg(s32 i)
 {
-	return vm::read64(GPR[1] + 0x70 + 0x8 * (i - 9));
+	return vm::read64(vm::cast(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
 u64 PPUThread::FastCall2(u32 addr, u32 rtoc)

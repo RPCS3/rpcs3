@@ -102,9 +102,9 @@ std::string GLFragmentDecompilerThread::AddConst()
 		return name;
 	}
 
-	auto data = vm::ptr<u32>::make(m_addr + m_size + m_offset);
+	auto data = vm::ptr<u32>::make(m_addr + m_size + 4 * sizeof(u32));
 
-	m_offset += 4 * 4;
+	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
@@ -350,7 +350,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 		p += param.Format();
 	}
 
-	return std::string("#version 330\n"
+	return std::string("#version 420\n"
 		"\n"
 		+ p + "\n"
 		"void main()\n{\n" + main + "}\n");

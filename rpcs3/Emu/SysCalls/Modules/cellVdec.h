@@ -1,7 +1,5 @@
 #pragma once
 
-#define a128(x) ((x + 127) & (~127))
-
 // Error Codes
 enum
 {

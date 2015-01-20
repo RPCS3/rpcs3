@@ -187,9 +187,8 @@ namespace loader
 								LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
 
 								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
-								vm::psv::write16(addr + 2, 0x0000); // index 0
-								vm::psv::write16(addr + 4, 0x4770); // BX LR
-								vm::psv::write16(addr + 6, 0); // null
+								vm::psv::write16(addr + 2, 0); // index 0 (unimplemented stub)
+								vm::psv::write32(addr + 4, nid); // nid
 							}
 						}
 					}

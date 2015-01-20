@@ -17,9 +17,9 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 {
 	sys_cond.Log("sys_cond_create(cond_id_addr=0x%x, mutex_id=%d, attr_addr=0x%x)", cond_id.addr(), mutex_id, attr.addr());
 
-	if (attr->pshared.ToBE() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200))
 	{
-		sys_cond.Error("Invalid pshared attribute(0x%x)", (u32)attr->pshared);
+		sys_cond.Error("Unknown pshared attribute (0x%x)", attr->pshared);
 		return CELL_EINVAL;
 	}
 

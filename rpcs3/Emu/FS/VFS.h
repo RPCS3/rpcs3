@@ -44,7 +44,7 @@ struct VFSManagerEntry
 };
 
 std::vector<std::string> simplify_path_blocks(const std::string& path);
-std::string simplify_path(const std::string& path, bool is_dir);
+std::string simplify_path(const std::string& path, bool is_dir, bool is_ps3);
 
 struct VFS
 {
@@ -74,7 +74,7 @@ struct VFS
 	void UnMount(const std::string& ps3_path);
 	void UnMountAll();
 
-	std::string GetLinked(std::string ps3_path) const;
+	std::string GetLinked(const std::string& ps3_path) const;
 
 	vfsFileBase* OpenFile(const std::string& ps3_path, vfsOpenMode mode) const;
 	vfsDirBase* OpenDir(const std::string& ps3_path) const;

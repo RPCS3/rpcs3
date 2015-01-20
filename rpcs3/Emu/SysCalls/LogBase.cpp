@@ -9,25 +9,15 @@ bool LogBase::CheckLogging() const
 	return Ini.HLELogging.GetValue() || m_logging;
 }
 
-void LogBase::LogOutput(LogType type, const char* info, const std::string& text) const
+void LogBase::LogOutput(LogType type, const std::string& text) const
 {
 	switch (type)
 	{
-	case LogNotice: LOG_NOTICE(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
-	case LogSuccess: LOG_SUCCESS(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
-	case LogWarning: LOG_WARNING(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
-	case LogError: LOG_ERROR(HLE, "%s%s%s", GetName().c_str(), info, text.c_str()); break;
-	}
-}
-
-void LogBase::LogOutput(LogType type, const u32 id, const char* info, const std::string& text) const
-{
-	switch (type)
-	{
-	case LogNotice: LOG_NOTICE(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
-	case LogSuccess: LOG_SUCCESS(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
-	case LogWarning: LOG_WARNING(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
-	case LogError: LOG_ERROR(HLE, "%s[%d]%s%s", GetName().c_str(), id, info, text.c_str()); break;
+	case LogNotice: LOG_NOTICE(HLE, GetName() + ": " + text); break;
+	case LogSuccess: LOG_SUCCESS(HLE, GetName() + ": " + text); break;
+	case LogWarning: LOG_WARNING(HLE, GetName() + ": " + text); break;
+	case LogError: LOG_ERROR(HLE, GetName() + " error: " + text); break;
+	case LogTodo: LOG_ERROR(HLE, GetName() + " TODO: " + text); break;
 	}
 }
 
@@ -60,22 +50,22 @@ void hle::error::print(const char* func)
 		{
 			if (func)
 			{
-				base->Error("%s(): %s (0x%X)", func, text.c_str(), code);
+				base->Error("%s(): %s (0x%x)", func, text.c_str(), code);
 			}
 			else
 			{
-				base->Error("%s (0x%X)", text.c_str(), code);
+				base->Error("%s (0x%x)", text.c_str(), code);
 			}
 		}
 		else
 		{
 			if (func)
 			{
-				LOG_ERROR(HLE, "%s(): %s (0x%X)", func, text.c_str(), code);
+				LOG_ERROR(HLE, "%s(): %s (0x%x)", func, text.c_str(), code);
 			}
 			else
 			{
-				LOG_ERROR(HLE, "%s (0x%X)", text.c_str(), code);
+				LOG_ERROR(HLE, "%s (0x%x)", text.c_str(), code);
 			}
 		}
 	}

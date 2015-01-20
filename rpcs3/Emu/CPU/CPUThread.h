@@ -70,12 +70,7 @@ public:
 	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
 	std::string GetFName() const
 	{
-		return 
-			fmt::Format("%s[%d] Thread%s", 
-				GetTypeString().c_str(),
-				m_id,
-				(GetName().empty() ? std::string("") : fmt::Format(" (%s)", GetName().c_str())).c_str()
-			);
+		return fmt::format("%s[%d] Thread (%s)", GetTypeString(), m_id, GetName());
 	}
 
 	static std::string CPUThreadTypeToString(CPUThreadType type)
@@ -111,8 +106,7 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		std::string temp = (GetFName() + fmt::Format("[0x%08x]", PC));
-		return temp;
+		return fmt::format("%s[0x%08x]", GetFName(), PC);
 	}
 
 	CPUDecoder * GetDecoder() { return m_dec; };

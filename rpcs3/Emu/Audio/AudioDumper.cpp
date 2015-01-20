@@ -1,22 +1,32 @@
 #include "stdafx.h"
 #include "AudioDumper.h"
 
-AudioDumper::AudioDumper(u8 ch) : m_header(ch)
+AudioDumper::AudioDumper() : m_header(0), m_init(false)
 {
 }
 
 AudioDumper::~AudioDumper()
 {
+	Finalize();
 }
 
-bool AudioDumper::Init()
+bool AudioDumper::Init(u8 ch)
 {
-	return m_output.Open("audio.wav", rFile::write);
+	if ((m_init = m_output.Open("audio.wav", rFile::write)))
+	{
+		m_header = WAVHeader(ch);
+		WriteHeader();
+	}
+
+	return m_init;
 }
 
 void AudioDumper::WriteHeader()
 {
-	m_output.Write(&m_header, sizeof(m_header)); // write file header
+	if (m_init)
+	{
+		m_output.Write(&m_header, sizeof(m_header)); // write file header
+	}
 }
 
 size_t AudioDumper::WriteData(const void* buffer, size_t size)
@@ -31,17 +41,27 @@ size_t AudioDumper::WriteData(const void* buffer, size_t size)
 	{
 		if (((u8*)buffer)[i + (size & ~7)]) do_save = true;
 	}
-	if (!do_save) return size; // ignore empty data
+
+	if (m_init && do_save)
+#else
+	if (m_init)
 #endif
-	size_t ret = m_output.Write(buffer, size);
-	m_header.Size += (u32)ret;
-	m_header.RIFF.Size += (u32)ret;
-	return ret;
+	{
+		size_t ret = m_output.Write(buffer, size);
+		m_header.Size += (u32)ret;
+		m_header.RIFF.Size += (u32)ret;
+		return ret;
+	}
+	
+	return size;
 }
 
 void AudioDumper::Finalize()
 {
-	m_output.Seek(0);
-	m_output.Write(&m_header, sizeof(m_header)); // write fixed file header
-	m_output.Close();
+	if (m_init)
+	{
+		m_output.Seek(0);
+		m_output.Write(&m_header, sizeof(m_header)); // write fixed file header
+		m_output.Close();
+	}
 }

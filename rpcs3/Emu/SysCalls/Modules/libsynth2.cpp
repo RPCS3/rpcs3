@@ -60,13 +60,13 @@ u32 cellSoundSynth2GetAddr(u16 reg)
 
 int cellSoundSynth2SetEffectAttr(s16 bus, vm::ptr<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Todo("cellSoundSynth2SetEffectAttr(bus=%d, attr_addr=0x%x)", bus, attr.addr());
+	libsynth2.Todo("cellSoundSynth2SetEffectAttr(bus=%d, attr=0x%x)", bus, attr);
 	return CELL_OK;
 }
 
 int cellSoundSynth2SetEffectMode(s16 bus, vm::ptr<CellSoundSynth2EffectAttr> attr)
 {
-	libsynth2.Todo("cellSoundSynth2SetEffectMode(bus=%d, attr_addr=0x%x)", bus, attr.addr());
+	libsynth2.Todo("cellSoundSynth2SetEffectMode(bus=%d, attr=0x%x)", bus, attr);
 	return CELL_OK;
 }
 
@@ -77,8 +77,7 @@ void cellSoundSynth2SetCoreAttr(u16 entry, u16 value)
 
 int cellSoundSynth2Generate(u16 samples, u32 L_addr, u32 R_addr, u32 Lr_addr, u32 Rr_addr)
 {
-	libsynth2.Todo("cellSoundSynth2Generate(samples=0x%x, left=0x%x, right=0x%x, left_rear=0x%x, right_rear=0x%x)",
-		samples, L_addr, R_addr, Lr_addr, Rr_addr);
+	libsynth2.Todo("cellSoundSynth2Generate(samples=0x%x, left=0x%x, right=0x%x, left_rear=0x%x, right_rear=0x%x)", samples, L_addr, R_addr, Lr_addr, Rr_addr);
 	return CELL_OK;
 }
 

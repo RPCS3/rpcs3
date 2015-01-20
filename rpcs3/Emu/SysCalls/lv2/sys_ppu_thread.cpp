@@ -214,10 +214,9 @@ void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::p
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, init_addr=0x%x)", once_ctrl.addr(), init.addr());
 
-	be_t<u32> cmp = be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT);
-	if (once_ctrl->compare_and_swap(cmp, be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)) == cmp)
+	if (once_ctrl->compare_and_swap_test(be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT), be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)))
 	{
-		init.call(CPU);
+		init(CPU);
 	}
 }
 

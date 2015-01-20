@@ -288,7 +288,7 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 			if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data, dec_data, length, key_result, iv, hash, hash_result))
 			{
 				if (verbose)
-					LOG_WARNING(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", offset);
+					LOG_WARNING(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", (u64)offset);
 					
 				return 1;
 			}
@@ -695,7 +695,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 			LOG_NOTICE(LOADER, "SDAT HEADER");
 			LOG_NOTICE(LOADER, "SDAT flags: 0x%08X", EDAT->flags);
 			LOG_NOTICE(LOADER, "SDAT block size: 0x%08X", EDAT->block_size);
-			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", EDAT->file_size);
+			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", (u64)EDAT->file_size);
 		}
 
 		// Generate SDAT key.
@@ -708,7 +708,7 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 			LOG_NOTICE(LOADER, "EDAT HEADER");
 			LOG_NOTICE(LOADER, "EDAT flags: 0x%08X", EDAT->flags);
 			LOG_NOTICE(LOADER, "EDAT block size: 0x%08X", EDAT->block_size);
-			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", EDAT->file_size);
+			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", (u64)EDAT->file_size);
 		}
 
 		// Perform header validation (EDAT only).

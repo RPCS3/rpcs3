@@ -30,17 +30,17 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
-	switch(src->srcSelect.ToBE())
+	switch(src->srcSelect.data())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
-		current_subHandle->fileSize = src->streamSize.ToLE();
+		current_subHandle->fileSize = src->streamSize;
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
-		current_subHandle->fd = fd->ToLE();
+		int ret = cellFsOpen(src->fileName.to_le(), 0, fd, vm::ptr<const void>::make(0), 0);
+		current_subHandle->fd = fd.value();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
@@ -74,7 +74,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
 	vm::var<be_t<u64>> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToBE())
+	switch(subHandle_data->src.srcSelect.data())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
 		memmove(buffer.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), buffer.size());
@@ -156,7 +156,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	vm::var<unsigned char[]> gif((u32)fileSize);
 	vm::var<be_t<u64>> pos, nread;
 
-	switch(subHandle_data->src.srcSelect.ToBE())
+	switch(subHandle_data->src.srcSelect.data())
 	{
 	case se32(CELL_GIFDEC_BUFFER):
 		memmove(gif.begin(), vm::get_ptr<void>(subHandle_data->src.streamPtr), gif.size());

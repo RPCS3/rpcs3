@@ -26,9 +26,9 @@ namespace sce_libc_func
 		});
 	}
 
-	void printf(vm::psv::ptr<const char> fmt)
+	void printf(vm::psv::ptr<const char> fmt) // va_args...
 	{
-		sceLibc.Error("printf(fmt_addr=0x%x)", fmt.addr());
+		sceLibc.Error("printf(fmt=0x%x)", fmt);
 
 		LOG_NOTICE(TTY, "%s", fmt.get_ptr());
 	}
@@ -40,14 +40,14 @@ namespace sce_libc_func
 
 	void memcpy(vm::psv::ptr<void> dst, vm::psv::ptr<const void> src, u32 size)
 	{
-		sceLibc.Error("memcpy(dst_addr=0x%x, src_addr=0x%x, size=0x%x)", dst.addr(), src.addr(), size);
+		sceLibc.Error("memcpy(dst=0x%x, src=0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
 	}
 
 	void _Assert(vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
 	{
-		sceLibc.Error("_Assert(text_addr=0x%x, func_addr=0x%x)", text.addr(), func.addr());
+		sceLibc.Error("_Assert(text=0x%x, func=0x%x)", text, func);
 
 		LOG_ERROR(TTY, "%s : %s", func.get_ptr(), text.get_ptr());
 		Emu.Pause();

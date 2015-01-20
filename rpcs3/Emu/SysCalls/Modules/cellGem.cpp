@@ -190,10 +190,9 @@ int cellGemGetInfo()
 	return CELL_OK;
 }
 
-// Should int be used, even when type is int_32t (s32)?
-s32 cellGemGetMemorySize(be_t<s32> max_connect)
+s32 cellGemGetMemorySize(s32 max_connect)
 {
-	cellGem->Warning("cellGemGetMemorySize(max_connect=%i)", max_connect);
+	cellGem->Warning("cellGemGetMemorySize(max_connect=%d)", max_connect);
 
 	if (max_connect > CELL_GEM_MAX_NUM)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;

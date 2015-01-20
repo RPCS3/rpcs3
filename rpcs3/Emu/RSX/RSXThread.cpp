@@ -10,7 +10,7 @@
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
-#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].ToLE())
+#define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0
 
 u32 methodRegisters[0xffff];
@@ -177,7 +177,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 	debug += "(";
 	for (u32 i = 0; i < count; ++i) debug += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 	debug += ")";
-	LOG_NOTICE(RSX, "OutOfArgsCount(x=%u, count=%u): %s", x, count, debug.c_str());
+	LOG_NOTICE(RSX, "OutOfArgsCount(x=%d, count=%d): %s", x, count, debug.c_str());
 
 	return 0;
 }
@@ -289,9 +289,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (m_flip_handler)
 		{
 			auto cb = m_flip_handler;
-			Emu.GetCallbackManager().Async([cb]()
+			Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
 			{
-				cb(1);
+				cb(CPU, 1);
 			});
 		}
 
@@ -1270,7 +1270,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
 	{
-		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
+		const u32 value = ARGS(0);
+		Enable(cmd, ARGS(0));
 	}
 	break;
 
@@ -1283,84 +1284,85 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_STENCIL_MASK:
 	{
+		const u32 value = ARGS(0);
 		m_set_stencil_mask = true;
-		m_stencil_mask = ARGS(0);
+		StencilMask(value);
 	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC:
 	{
-		m_set_stencil_func = true;
-		m_stencil_func = ARGS(0);
-
-		if (count >= 2)
+		if (count == 3)
 		{
-			m_set_stencil_func_ref = true;
+			m_set_stencil_func = true;
+			m_stencil_func = ARGS(0);
 			m_stencil_func_ref = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_stencil_func_mask = true;
-				m_stencil_func_mask = ARGS(2);
-			}
+			m_stencil_func_mask = ARGS(2);
+			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
 		}
 	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC_REF:
 	{
-		m_set_stencil_func_ref = true;
 		m_stencil_func_ref = ARGS(0);
+
+		if (m_set_stencil_func)
+		{
+			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
+		}
 	}
 	break;
 
 	case NV4097_SET_STENCIL_FUNC_MASK:
 	{
-		m_set_stencil_func_mask = true;
 		m_stencil_func_mask = ARGS(0);
+
+		if (m_set_stencil_func)
+		{
+			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
+		}
 	}
 	break;
 
 	case NV4097_SET_STENCIL_OP_FAIL:
 	{
-		m_set_stencil_fail = true;
-		m_stencil_fail = ARGS(0);
-
-		if (count >= 2)
+		if (count == 3)
 		{
-			m_set_stencil_zfail = true;
+			m_set_stencil_op_fail = true;
+			m_stencil_fail = ARGS(0);
 			m_stencil_zfail = ARGS(1);
-
-			if (count >= 3)
-			{
-				m_set_stencil_zpass = true;
-				m_stencil_zpass = ARGS(2);
-			}
+			m_stencil_zpass = ARGS(2);
+			StencilOp(m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
 		}
 	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_MASK:
 	{
-		m_set_back_stencil_mask = true;
 		m_back_stencil_mask = ARGS(0);
+
+		StencilMaskSeparate(0, m_back_stencil_mask); // GL_BACK
+
+		if (m_set_stencil_mask)
+		{
+			StencilMaskSeparate(1, m_stencil_mask); // GL_FRONT
+		}
 	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC:
 	{
-		m_set_back_stencil_func = true;
-		m_back_stencil_func = ARGS(0);
-
-		if (count >= 2)
+		if (count == 3)
 		{
-			m_set_back_stencil_func_ref = true;
+			m_set_back_stencil_func = true;
+			m_back_stencil_func = ARGS(0);
 			m_back_stencil_func_ref = ARGS(1);
-
-			if (count >= 3)
+			m_back_stencil_func_mask = ARGS(2);
+			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
+			if (m_set_stencil_func)
 			{
-				m_set_back_stencil_func_mask = true;
-				m_back_stencil_func_mask = ARGS(2);
+				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
 			}
 		}
 	}
@@ -1368,34 +1370,52 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_BACK_STENCIL_FUNC_REF:
 	{
-		m_set_back_stencil_func_ref = true;
 		m_back_stencil_func_ref = ARGS(0);
+
+		if (m_set_back_stencil_func)
+		{
+			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
+
+			if (m_set_stencil_func)
+			{
+				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
+			}
+		}
+
 	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC_MASK:
 	{
-		m_set_back_stencil_func_mask = true;
 		m_back_stencil_func_mask = ARGS(0);
+
+		if (m_set_back_stencil_func)
+		{
+			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
+
+			if (m_set_stencil_func)
+			{
+				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
+			}
+		}
 	}
 	break;
 
 	case NV4097_SET_BACK_STENCIL_OP_FAIL:
 	{
-		m_set_stencil_fail = true;
-		m_stencil_fail = ARGS(0);
-
-		if (count >= 2)
+		if (count == 3)
 		{
-			m_set_back_stencil_zfail = true;
+			m_back_stencil_fail = ARGS(0);
 			m_back_stencil_zfail = ARGS(1);
+			m_back_stencil_zpass = ARGS(2);
+			StencilOpSeparate(0, m_back_stencil_fail, m_back_stencil_zfail, m_back_stencil_zpass); // GL_BACK
 
-			if (count >= 3)
+			if (m_set_stencil_op_fail)
 			{
-				m_set_back_stencil_zpass = true;
-				m_back_stencil_zpass = ARGS(2);
+				StencilOpSeparate(1, m_stencil_fail, m_stencil_zfail, m_stencil_zpass); // GL_FRONT
 			}
 		}
+
 	}
 	break;
 
@@ -1764,9 +1784,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
 	{
+		u32 pattern[32];
 		for (u32 i = 0; i < 32; i++)
 		{
-			m_polygon_stipple_pattern[i] = ARGS(i);
+			pattern[i] = ARGS(i);
+			PolygonStipple(pattern[i]);
 		}
 	}
 	break;
@@ -2179,9 +2201,9 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 cause = ARGS(0);
 		auto cb = m_user_handler;
-		Emu.GetCallbackManager().Async([cb, cause]()
+		Emu.GetCallbackManager().Async([cb, cause](PPUThread& CPU)
 		{
-			cb(cause);
+			cb(CPU, cause);
 		});
 	}
 	break;
@@ -2326,31 +2348,24 @@ void RSXThread::Task()
 	OnInitThread();
 
 	m_last_flip_time = get_system_time() - 1000000;
-	volatile bool is_vblank_stopped = false;
 
-	thread vblank("VBlank thread", [&]()
+	thread_t vblank("VBlank thread", true /* autojoin */, [this]()
 	{
 		const u64 start_time = get_system_time();
 
 		m_vblank_count = 0;
 
-		while (!TestDestroy())
+		while (!TestDestroy() && !Emu.IsStopped())
 		{
-			if (Emu.IsStopped())
-			{
-				LOG_WARNING(RSX, "VBlank thread aborted");
-				return;
-			}
-
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
 				m_vblank_count++;
 				if (m_vblank_handler)
 				{
 					auto cb = m_vblank_handler;
-					Emu.GetCallbackManager().Async([cb]()
+					Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
 					{
-						cb(1);
+						cb(CPU, 1);
 					});
 				}
 				continue;
@@ -2358,17 +2373,14 @@ void RSXThread::Task()
 
 			std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
 		}
-
-		is_vblank_stopped = true;
 	});
-	vblank.detach();
 
 	while (!TestDestroy()) try
 	{
 		if (Emu.IsStopped())
 		{
 			LOG_WARNING(RSX, "RSX thread aborted");
-			return;
+			break;
 		}
 		std::lock_guard<std::mutex> lock(m_cs_main);
 
@@ -2387,7 +2399,7 @@ void RSXThread::Task()
 				m_sem_flush.post_and_wait();
 			}
 
-			std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 			continue;
 		}
 
@@ -2454,22 +2466,15 @@ void RSXThread::Task()
 			value += (count + 1) * 4;
 		});
 	}
-
 	catch (const std::string& e)
 	{
 		LOG_ERROR(RSX, "Exception: %s", e.c_str());
 		Emu.Pause();
 	}
-
 	catch (const char* e)
 	{
 		LOG_ERROR(RSX, "Exception: %s", e);
 		Emu.Pause();
-	}
-
-	while (!is_vblank_stopped)
-	{
-		std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
 	}
 
 	LOG_NOTICE(RSX, "RSX thread ended");
@@ -2500,7 +2505,7 @@ u32 RSXThread::ReadIO32(u32 addr)
 	u32 value;
 	if (!Memory.RSXIOMem.Read32(addr, &value))
 	{
-		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
 	return value;
 }
@@ -2509,6 +2514,6 @@ void RSXThread::WriteIO32(u32 addr, u32 value)
 {
 	if (!Memory.RSXIOMem.Write32(addr, value))
 	{
-		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
 }

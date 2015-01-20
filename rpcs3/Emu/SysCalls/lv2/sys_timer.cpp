@@ -41,7 +41,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 s32 sys_timer_start(u32 timer_id, s64 base_time, u64 period)
 {
-	sys_timer.Warning("sys_timer_start_periodic_absolute(timer_id=%d, basetime=%lld, period=%llu)", timer_id, base_time, period);
+	sys_timer.Warning("sys_timer_start_periodic_absolute(timer_id=%d, basetime=%lld, period=%lld)", timer_id, base_time, period);
 
 	std::shared_ptr<timer> timer_data = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
@@ -76,7 +76,7 @@ s32 sys_timer_stop(u32 timer_id)
 
 s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
-	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=%d, queue_id=%d, name=%llu, data1=%llu, data2=%llu)",
+	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=%d, queue_id=%d, name=0x%llx, data1=0x%llx, data2=0x%llx)",
 		timer_id, queue_id, name, data1, data2);
 
 	std::shared_ptr<timer> timer_data = nullptr;

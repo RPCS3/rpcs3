@@ -82,7 +82,7 @@ int cellCameraGetDeviceGUID()
 
 int cellCameraGetType(s32 dev_num, vm::ptr<CellCameraType> type)
 {
-	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type);
+	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type.addr());
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;

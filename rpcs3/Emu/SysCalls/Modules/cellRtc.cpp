@@ -81,7 +81,7 @@ int cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 	date.Add(tz);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
-	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::UTC);
+	const std::string str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::UTC);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -95,7 +95,7 @@ int cellRtcFormatRfc2822LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 	rDateTime date = rDateTime((time_t)pUtc->tick);
 
 	// Format date string in RFC2822 format (e.g.: Mon, 01 Jan 1990 12:00:00 +0000).
-	const std::string& str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::Local);
+	const std::string str = date.Format("%a, %d %b %Y %T %z", rDateTime::TZ::Local);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -113,7 +113,7 @@ int cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick> pUtc, s
 	date.Add(tz);
 
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
-	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::UTC);
+	const std::string str = date.Format("%FT%T.%zZ", rDateTime::TZ::UTC);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -127,7 +127,7 @@ int cellRtcFormatRfc3339LocalTime(vm::ptr<char> pszDateTime, vm::ptr<CellRtcTick
 	rDateTime date = rDateTime((time_t) pUtc->tick);
 	
 	// Format date string in RFC3339 format (e.g.: 1990-01-01T12:00:00.00Z).
-	const std::string& str = date.Format("%FT%T.%zZ", rDateTime::TZ::Local);
+	const std::string str = date.Format("%FT%T.%zZ", rDateTime::TZ::Local);
 	memcpy(pszDateTime.get_ptr(), str.c_str(), str.size() + 1);
 
 	return CELL_OK;
@@ -163,7 +163,7 @@ int cellRtcGetTick(vm::ptr<CellRtcDateTime> pTime, vm::ptr<CellRtcTick> pTick)
 {
 	cellRtc->Log("cellRtcGetTick(pTime=0x%x, pTick=0x%x)", pTime.addr(), pTick.addr());
 
-	rDateTime datetime = rDateTime(pTime->day, (rDateTime::Month)pTime->month.ToLE(), pTime->year, pTime->hour, pTime->minute, pTime->second, (pTime->microsecond / 1000));
+	rDateTime datetime = rDateTime(pTime->day, (rDateTime::Month)pTime->month.value(), pTime->year, pTime->hour, pTime->minute, pTime->second, (pTime->microsecond / 1000));
 	pTick->tick = datetime.GetTicks();
 	
 	return CELL_OK;
@@ -315,7 +315,7 @@ int cellRtcGetDosTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u32> puiDosTim
 	cellRtc->Log("cellRtcGetDosTime(pDateTime=0x%x, puiDosTime=0x%x)", pDateTime.addr(), puiDosTime.addr());
 
 	// Convert to DOS time.
-	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.value(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	*puiDosTime = date_time.GetAsDOS();
 
 	return CELL_OK;
@@ -326,7 +326,7 @@ int cellRtcGetTime_t(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<s64> piTime)
 	cellRtc->Log("cellRtcGetTime_t(pDateTime=0x%x, piTime=0x%x)", pDateTime.addr(), piTime.addr());
 
 	// Convert to POSIX time_t.
-	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.value(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	*piTime = convertToUNIXTime(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
 		date_time.GetHour(rDateTime::TZ::UTC), date_time.GetDay(rDateTime::TZ::UTC), date_time.GetYear(rDateTime::TZ::UTC));
 
@@ -338,7 +338,7 @@ int cellRtcGetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, vm::ptr<u64> pul
 	cellRtc->Log("cellRtcGetWin32FileTime(pDateTime=0x%x, pulWin32FileTime=0x%x)", pDateTime.addr(), pulWin32FileTime.addr());
 
 	// Convert to WIN32 FILETIME.
-	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.ToLE(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
+	rDateTime date_time = rDateTime(pDateTime->day, (rDateTime::Month)pDateTime->month.value(), pDateTime->year, pDateTime->hour, pDateTime->minute, pDateTime->second, (pDateTime->microsecond / 1000));
 	*pulWin32FileTime = convertToWin32FILETIME(date_time.GetSecond(rDateTime::TZ::UTC), date_time.GetMinute(rDateTime::TZ::UTC),
 		date_time.GetHour(rDateTime::TZ::UTC), date_time.GetDay(rDateTime::TZ::UTC), date_time.GetYear(rDateTime::TZ::UTC));
 
@@ -382,7 +382,7 @@ int cellRtcSetTime_t(vm::ptr<CellRtcDateTime> pDateTime, u64 iTime)
 
 int cellRtcSetWin32FileTime(vm::ptr<CellRtcDateTime> pDateTime, u64 ulWin32FileTime)
 {
-	cellRtc->Log("cellRtcSetWin32FileTime(pDateTime=0x%x, ulWin32FileTime=0x%llx)", pDateTime, ulWin32FileTime);
+	cellRtc->Log("cellRtcSetWin32FileTime(pDateTime_addr=0x%x, ulWin32FileTime=0x%llx)", pDateTime.addr(), ulWin32FileTime);
 
 	rDateTime date_time = rDateTime((time_t)ulWin32FileTime);
 	

@@ -734,7 +734,7 @@ void DrawCursorObj::Draw()
 void DrawCursorObj::InitializeShaders()
 {
 	m_vp.shader =
-		"#version 330\n"
+		"#version 420\n"
 		"\n"
 		"uniform vec4 in_pos;\n"
 		"uniform vec2 in_tc;\n"
@@ -747,10 +747,10 @@ void DrawCursorObj::InitializeShaders()
 		"}\n";
 
 	m_fp.shader =
-		"#version 330\n"
+		"#version 420\n"
 		"\n"
 		"in vec2 tc;\n"
-		"uniform sampler2D tex0;\n"
+		"layout (binding = 0) uniform sampler2D tex0;\n"
 		"layout (location = 0) out vec4 res;\n"
 		"\n"
 		"void main()\n"
@@ -1623,7 +1623,8 @@ void GLGSRender::InitDrawBuffers()
 
 void GLGSRender::Enable(u32 cmd, u32 enable)
 {
-	switch (cmd) {
+	switch (cmd)
+	{
 	case NV4097_SET_DITHER_ENABLE:
 		enable ? glEnable(GL_DITHER) : glDisable(GL_DITHER);
 		break;
@@ -1694,6 +1695,10 @@ void GLGSRender::Enable(u32 cmd, u32 enable)
 
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 		enable ? glEnable(GL_DEPTH_BOUNDS_TEST_EXT) : glDisable(GL_DEPTH_BOUNDS_TEST_EXT);
+		break;
+
+	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+		enable ? glEnable(GL_STENCIL_TEST_TWO_SIDE_EXT) : glDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 		break;
 
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
@@ -1791,9 +1796,9 @@ void GLGSRender::PointSize(float size)
 	checkForGlError("glPointSize");
 }
 
-void GLGSRender::LogicOp(u32 opcdoe)
+void GLGSRender::LogicOp(u32 opcode)
 {
-	glLogicOp(opcdoe);
+	glLogicOp(opcode);
 	checkForGlError("glLogicOp");
 }
 
@@ -1807,6 +1812,12 @@ void GLGSRender::LineStipple(u16 factor, u16 pattern)
 {
 	glLineStipple(factor, pattern);
 	checkForGlError("glLineStipple");
+}
+
+void GLGSRender::PolygonStipple(u32 pattern)
+{
+	glPolygonStipple((const GLubyte*)pattern);
+	checkForGlError("glPolygonStipple");
 }
 
 void GLGSRender::PrimitiveRestartIndex(u32 index)
@@ -1895,6 +1906,39 @@ void GLGSRender::Scissor(u16 x, u16 y, u16 width, u16 height)
 	checkForGlError("glScissor");
 }
 
+void GLGSRender::StencilOp(u32 fail, u32 zfail, u32 zpass)
+{
+	glStencilOp(fail, zfail, zpass);
+	checkForGlError("glStencilOp");
+}
+
+void GLGSRender::StencilMask(u32 mask)
+{
+	glStencilMask(mask);
+	checkForGlError("glStencilMask");
+}
+
+void GLGSRender::StencilFunc(u32 func, u32 ref, u32 mask)
+{
+	glStencilFunc(func, ref, mask);
+	checkForGlError("glStencilFunc");
+}
+
+void GLGSRender::StencilOpSeparate(u32 mode, u32 fail, u32 zfail, u32 zpass)
+{
+	mode ? glStencilOpSeparate(GL_FRONT, fail, zfail, zpass) : glStencilOpSeparate(GL_BACK, fail, zfail, zpass);
+}
+
+void GLGSRender::StencilMaskSeparate(u32 mode, u32 mask)
+{
+	mode ? glStencilMaskSeparate(GL_FRONT, mask) : glStencilMaskSeparate(GL_BACK, mask);
+}
+
+void GLGSRender::StencilFuncSeparate(u32 mode, u32 func, u32 ref, u32 mask)
+{
+	mode ? glStencilFuncSeparate(GL_FRONT, func, ref, mask) : glStencilFuncSeparate(GL_BACK, func, ref, mask);
+}
+
 void GLGSRender::ExecCMD()
 {
 	if (!LoadProgram())
@@ -1906,77 +1950,12 @@ void GLGSRender::ExecCMD()
 
 	InitDrawBuffers();
 	
-	if (m_set_two_sided_stencil_test_enable)
-	{
-		if (m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
-		{
-			glStencilOpSeparate(GL_FRONT, m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
-			checkForGlError("glStencilOpSeparate");
-		}
-
-		if (m_set_stencil_mask)
-		{
-			glStencilMaskSeparate(GL_FRONT, m_stencil_mask);
-			checkForGlError("glStencilMaskSeparate");
-		}
-
-		if (m_set_stencil_func && m_set_stencil_func_ref && m_set_stencil_func_mask)
-		{
-			glStencilFuncSeparate(GL_FRONT, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
-			checkForGlError("glStencilFuncSeparate");
-		}
-
-		if (m_set_back_stencil_fail && m_set_back_stencil_zfail && m_set_back_stencil_zpass)
-		{
-			glStencilOpSeparate(GL_BACK, m_back_stencil_fail, m_back_stencil_zfail, m_back_stencil_zpass);
-			checkForGlError("glStencilOpSeparate(GL_BACK)");
-		}
-
-		if (m_set_back_stencil_mask)
-		{
-			glStencilMaskSeparate(GL_BACK, m_back_stencil_mask);
-			checkForGlError("glStencilMaskSeparate(GL_BACK)");
-		}
-
-		if (m_set_back_stencil_func && m_set_back_stencil_func_ref && m_set_back_stencil_func_mask)
-		{
-			glStencilFuncSeparate(GL_BACK, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask);
-			checkForGlError("glStencilFuncSeparate(GL_BACK)");
-		}
-	}
-	else
-	{
-		if (m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
-		{
-			glStencilOp(m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
-			checkForGlError("glStencilOp");
-		}
-
-		if (m_set_stencil_mask)
-		{
-			glStencilMask(m_stencil_mask);
-			checkForGlError("glStencilMask");
-		}
-
-		if (m_set_stencil_func && m_set_stencil_func_ref && m_set_stencil_func_mask)
-		{
-			glStencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
-			checkForGlError("glStencilFunc");
-		}
-	}
-
-	if (m_set_polygon_stipple)
-	{
-		glPolygonStipple((const GLubyte*)m_polygon_stipple_pattern);
-		checkForGlError("glPolygonStipple");
-	}
-
 	if (m_indexed_array.m_count && m_draw_array_count)
 	{
 		LOG_WARNING(RSX, "m_indexed_array.m_count && draw_array_count");
 	}
 
-	for (u32 i=0; i < m_textures_count; ++i)
+	for (u32 i = 0; i < m_textures_count; ++i)
 	{
 		if (!m_textures[i].IsEnabled()) continue;
 
@@ -1999,7 +1978,7 @@ void GLGSRender::ExecCMD()
 		m_gl_vertex_textures[i].Create();
 		m_gl_vertex_textures[i].Bind();
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Bind", i));
-		m_program.SetTex(i);
+		m_program.SetVTex(i);
 		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
 	}
@@ -2055,12 +2034,6 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
-		checkForGlError("glScissor");
-	}
-	
 	static u8* src_buffer = nullptr;
 	static u32 width = 0;
 	static u32 height = 0;
@@ -2161,13 +2134,6 @@ void GLGSRender::Flip()
 
 	m_frame->Flip(m_context);
 	
-	// Restore scissor
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
-	}
-
 }
 
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)

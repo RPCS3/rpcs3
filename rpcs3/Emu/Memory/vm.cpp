@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Memory.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 
 namespace vm
 {
@@ -48,6 +50,20 @@ namespace vm
 	void dealloc(u32 addr, memory_location location)
 	{
 		return g_locations[location].deallocator(addr);
+	}
+
+	u32 get_addr(const void* real_pointer)
+	{
+		const u64 diff = (u64)real_pointer - (u64)g_base_addr;
+		const u32 res = (u32)diff;
+
+		if (res == diff)
+		{
+			return res;
+		}
+		
+		assert(!real_pointer);
+		return 0;
 	}
 
 	namespace ps3
@@ -142,5 +158,85 @@ namespace vm
 	void close()
 	{
 		Memory.Close();
+	}
+
+	u32 stack_push(CPUThread& CPU, u32 size, u32 align_v, u32& old_pos)
+	{
+		switch (CPU.GetType())
+		{
+		case CPU_THREAD_PPU:
+		{
+			PPUThread& PPU = static_cast<PPUThread&>(CPU);
+
+			assert(align_v);
+			old_pos = (u32)PPU.GPR[1];
+			PPU.GPR[1] -= align(size, 8); // room minimal possible size
+			PPU.GPR[1] &= ~(align_v - 1); // fix stack alignment
+
+			if (PPU.GPR[1] < CPU.GetStackAddr())
+			{
+				// stack overflow
+				PPU.GPR[1] = old_pos;
+				return 0;
+			}
+			else
+			{
+				return (u32)PPU.GPR[1];
+			}
+		}
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
+		{
+			assert(!"stack_push(): SPU not supported");
+			return 0;
+		}
+
+		case CPU_THREAD_ARMv7:
+		{
+			assert(!"stack_push(): ARMv7 not supported");
+			return 0;
+		}
+
+		default:
+		{
+			assert(!"stack_push(): invalid thread type");
+			return 0;
+		}
+		}
+	}
+
+	void stack_pop(CPUThread& CPU, u32 addr, u32 old_pos)
+	{
+		switch (CPU.GetType())
+		{
+		case CPU_THREAD_PPU:
+		{
+			PPUThread& PPU = static_cast<PPUThread&>(CPU);
+
+			assert(PPU.GPR[1] == addr);
+			PPU.GPR[1] = old_pos;
+			return;
+		}
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
+		{
+			assert(!"stack_pop(): SPU not supported");
+			return;
+		}
+
+		case CPU_THREAD_ARMv7:
+		{
+			assert(!"stack_pop(): ARMv7 not supported");
+			return;
+		}
+
+		default:
+		{
+			assert(!"stack_pop(): invalid thread type");
+			return;
+		}
+		}
 	}
 }

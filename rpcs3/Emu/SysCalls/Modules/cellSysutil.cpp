@@ -18,7 +18,6 @@
 #include "cellMsgDialog.h"
 #include "cellGame.h"
 #include "cellSysutil.h"
-#include "cellSaveData.h"
 
 typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
@@ -241,7 +240,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%u, deviceIndex=%u, info_addr=0x%x)",
+	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info_addr=0x%x)",
 		videoOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -286,8 +285,7 @@ int cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=%d, option=%d)",
-		videoOut, resolutionId, aspect, option);
+	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
 
 	if (!Ini.GS3DTV.GetValue() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||
@@ -312,28 +310,28 @@ struct sys_callback
 
 void sysutilSendSystemCommand(u64 status, u64 param)
 {
-	// TODO: check it and find the source of the return value (not sure that void becomes CELL_OK)
+	// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 	for (auto& cb : g_sys_callback)
 	{
 		if (cb.func)
 		{
-			Emu.GetCallbackManager().Register([=]() -> s32
+			Emu.GetCallbackManager().Register([=](PPUThread& PPU) -> s32
 			{
-				cb.func(status, param, cb.arg);
+				cb.func(PPU, status, param, cb.arg);
 				return CELL_OK;
 			});
 		}
 	}
 }
 
-s32 cellSysutilCheckCallback()
+s32 cellSysutilCheckCallback(PPUThread& CPU)
 {
 	cellSysutil->Log("cellSysutilCheckCallback()");
 
 	s32 res;
 	u32 count = 0;
 
-	while (Emu.GetCallbackManager().Check(res))
+	while (Emu.GetCallbackManager().Check(CPU, res))
 	{
 		count++;
 
@@ -392,7 +390,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -433,7 +431,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 	option = 0;
 
-	int available = 2; // should be at least 2
+	int available = 8; // should be at least 2
 
 	switch(fs)
 	{
@@ -580,9 +578,9 @@ int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 	info->state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
 	info->latency = 1000;
 	info->availableModes[0].type = CELL_AUDIO_IN_CODING_TYPE_LPCM;
-	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_2;
+	info->availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
 	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
 
 	return CELL_AUDIO_OUT_SUCCEEDED;
 }
@@ -749,8 +747,8 @@ int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 
 	funcStat(result, get, set);
 
-	if (result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK &&
-        result->result.ToLE() != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
+	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
+        result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
 		return CELL_HDDGAME_ERROR_CBRESULT;
     }
 
@@ -836,11 +834,13 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 	return CELL_OK;
 }
 
-extern int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
-extern int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog,
+extern int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
+
+extern void cellSysutil_SaveData_init();
 
 void cellSysutil_init(Module *pxThis)
 {
@@ -894,36 +894,13 @@ void cellSysutil_init(Module *pxThis)
 	//cellSysutil->AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
 	//cellSysutil->AddFunc(0xafd605b3, cellHddGameExitBroken);
 
-	//cellSysutil_SaveData
-	//cellSysutil->AddFunc(0x04c06fc2, cellSaveDataGetListItem);
-	//cellSysutil->AddFunc(0x273d116a, cellSaveDataUserListExport);
-	//cellSysutil->AddFunc(0x27cb8bc2, cellSaveDataListDelete);
-	//cellSysutil->AddFunc(0x39d6ee43, cellSaveDataUserListImport);
-	//cellSysutil->AddFunc(0x46a2d878, cellSaveDataFixedExport);
-	//cellSysutil->AddFunc(0x491cc554, cellSaveDataListExport);
-	//cellSysutil->AddFunc(0x52541151, cellSaveDataFixedImport);
-	//cellSysutil->AddFunc(0x529231b0, cellSaveDataUserFixedImport);
-	//cellSysutil->AddFunc(0x6b4e0de6, cellSaveDataListImport);
-	//cellSysutil->AddFunc(0x7048a9ba, cellSaveDataUserListDelete);
-	//cellSysutil->AddFunc(0x95ae2cde, cellSaveDataUserFixedExport);
-	//cellSysutil->AddFunc(0xf6482036, cellSaveDataUserGetListItem);
-	cellSysutil->AddFunc(0x2de0d663, cellSaveDataListSave2);
-	cellSysutil->AddFunc(0x1dfbfdd6, cellSaveDataListLoad2);
-	cellSysutil->AddFunc(0x2aae9ef5, cellSaveDataFixedSave2);
-	cellSysutil->AddFunc(0x2a8eada2, cellSaveDataFixedLoad2);
-	cellSysutil->AddFunc(0x8b7ed64b, cellSaveDataAutoSave2);
-	cellSysutil->AddFunc(0xfbd5c856, cellSaveDataAutoLoad2);
-	cellSysutil->AddFunc(0x4dd03a4e, cellSaveDataListAutoSave);
-	cellSysutil->AddFunc(0x21425307, cellSaveDataListAutoLoad);
-	//cellSysutil->AddFunc(0xedadd797, cellSaveDataDelete2);
-	//cellSysutil->AddFunc(0x0f03cfb0, cellSaveDataUserListSave);
-	//cellSysutil->AddFunc(0x39dd8425, cellSaveDataUserListLoad);
-	//cellSysutil->AddFunc(0x40b34847, cellSaveDataUserFixedSave);
-	//cellSysutil->AddFunc(0x6e7264ed, cellSaveDataUserFixedLoad);
-	//cellSysutil->AddFunc(0x52aac4fa, cellSaveDataUserAutoSave);
-	//cellSysutil->AddFunc(0xcdc6aefd, cellSaveDataUserAutoLoad);
-	//cellSysutil->AddFunc(0x0e091c36, cellSaveDataUserListAutoSave);
-	//cellSysutil->AddFunc(0xe7fa820b, cellSaveDataEnableOverlay);
+	//cellSysutil->AddFunc(0x886D0747, cellSysutilRegisterCallbackDispatcher);
+	//cellSysutil->AddFunc(0xA2720DF2, cellSysutilPacketWrite);
+	//cellSysutil->AddFunc(0x75AA7373, doc.write);
+	//cellSysutil->AddFunc(0x2D96313F, packet_read);
+
+	// cellSaveData functions
+	cellSysutil_SaveData_init();
 
 	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
 

@@ -194,5 +194,8 @@
     <ClInclude Include="Gui\LLEModulesManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
+    <ClCompile Include="git-version.h">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -128,7 +128,7 @@ struct CellFsRingBuffer
 };
 
 // SysCalls
-s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<u32> arg, u64 size);
+s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<const void> arg, u64 size);
 s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread);
 s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 cellFsClose(u32 fd);
@@ -150,15 +150,5 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size);
 s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count);
 s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32 entries_size, vm::ptr<u32> data_count);
-s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf);
-s32 cellFsStReadFinish(u32 fd);
-s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf);
-s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status);
-s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid);
-s32 cellFsStReadStart(u32 fd, u64 offset, u64 size);
-s32 cellFsStReadStop(u32 fd);
-s32 cellFsStRead(u32 fd, u32 buf_addr, u64 size, vm::ptr<u64> rsize);
-s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr_addr, vm::ptr<u64> size);
-s32 cellFsStReadPutCurrentAddr(u32 fd, u32 addr_addr, u64 size);
-s32 cellFsStReadWait(u32 fd, u64 size);
-s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void (*)(int xfd, u64 xsize)> func);
+
+// no need to add every function here

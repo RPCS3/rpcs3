@@ -83,7 +83,7 @@ PesHeader::PesHeader(DemuxerStream& stream)
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
 	: dmux(dmux)
-	, memAddr(a128(addr))
+	, memAddr(align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
@@ -92,7 +92,7 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(a128(addr))
+	, put(align(addr, 128))
 	, put_count(0)
 	, got_count(0)
 	, released(0)
@@ -184,7 +184,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		addr = put;
 
-		put = a128(put + 128 + size);
+		put = align(put + 128 + size, 128);
 
 		put_count++;
 	}
@@ -306,7 +306,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 	dmux.id = dmux_id;
 
 	dmux.dmuxCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-	dmux.dmuxCb->SetName("Demuxer[" + std::to_string(dmux_id) + "] Callback");
+	dmux.dmuxCb->SetName(fmt::format("Demuxer[%d] Callback", dmux_id));
 	dmux.dmuxCb->SetEntry(0);
 	dmux.dmuxCb->SetPrio(1001);
 	dmux.dmuxCb->SetStackSize(0x10000);
@@ -314,10 +314,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 	dmux.dmuxCb->InitRegs();
 	dmux.dmuxCb->DoRun();
 
-	thread t("Demuxer[" + std::to_string(dmux_id) + "] Thread", [dmux_ptr, sptr]()
+	thread_t t(fmt::format("Demuxer[%d] Thread", dmux_id), [dmux_ptr, sptr]()
 	{
 		Demuxer& dmux = *dmux_ptr;
-		cellDmux->Notice("Demuxer thread started (mem=0x%x, size=0x%x, cb=0x%x, arg=0x%x)", dmux.memAddr, dmux.memSize, dmux.cbFunc, dmux.cbArg);
 
 		DemuxerTask task;
 		DemuxerStream stream = {};
@@ -347,16 +346,16 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				if (!stream.peek(code)) 
 				{
 					// demuxing finished
-					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
-					dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
 					dmux.is_running = false;
 					continue;
 				}
 				
-				switch (code.ToLE())
+				switch (code.value())
 				{
 				case PACK_START_CODE:
 				{
@@ -387,9 +386,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PADDING_STREAM, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PADDING_STREAM, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -404,11 +403,11 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					cellDmux->Notice("PRIVATE_STREAM_2 (%d)", len.ToLE());
+					cellDmux->Notice("PRIVATE_STREAM_2 (%d)", len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_2, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PRIVATE_STREAM_2, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -426,20 +425,20 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (PRIVATE_STREAM_1, len=%d)", len.ToLE());
+						DMUX_ERROR("End of stream (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (PRIVATE_STREAM_1, len=%d)", len.ToLE());
+						DMUX_ERROR("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					if (len < pes.size + 4)
 					{
-						DMUX_ERROR("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len.ToLE());
+						DMUX_ERROR("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
 					}
 					len -= pes.size + 4;
 					
@@ -462,7 +461,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 						if (len < 3 || !stream.check(3))
 						{
-							DMUX_ERROR("End of block (ATX, unknown header, len=%d)", len.ToLE());
+							DMUX_ERROR("End of block (ATX, unknown header, len=%d)", len);
 						}
 						len -= 3;
 						stream.skip(3);
@@ -484,7 +483,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								DMUX_ERROR("ATX: 0x0fd0 header not found (ats=0x%llx)", ((be_t<u64>*)data)->ToLE());
+								DMUX_ERROR("ATX: 0x0fd0 header not found (ats=0x%llx)", *(be_t<u64>*)data);
 							}
 
 							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
@@ -495,17 +494,17 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							
 							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
-							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", ((be_t<u64>*)data)->ToLE(), frame_size);
+							//cellDmux->Notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", *(be_t<u64>*)data, frame_size);
 
-							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 						}
 					}
 					else
 					{
-						cellDmux->Notice("PRIVATE_STREAM_1 (len=%d, fid_minor=0x%x)", len.ToLE(), fid_minor);
+						cellDmux->Notice("PRIVATE_STREAM_1 (len=%d, fid_minor=0x%x)", len, fid_minor);
 						stream.skip(len);
 					}
 					break;
@@ -521,29 +520,29 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 					if (!stream.check(6))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x)", code.ToLE());
+						DMUX_ERROR("End of stream (video, code=0x%x)", code);
 					}
 					stream.skip(4);
 					stream.get(len);
 
-					if (!stream.check(len.ToLE()))
+					if (!stream.check(len))
 					{
-						DMUX_ERROR("End of stream (video, code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						DMUX_ERROR("End of stream (video, code=0x%x, len=%d)", code, len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						DMUX_ERROR("PesHeader error (video, code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						DMUX_ERROR("PesHeader error (video, code=0x%x, len=%d)", code, len);
 					}
 
 					if (len < pes.size + 3)
 					{
-						DMUX_ERROR("End of block (video, code=0x%x, PesHeader)", code.ToLE());
+						DMUX_ERROR("End of block (video, code=0x%x, PesHeader)", code);
 					}
 					len -= pes.size + 3;
 
-					const u32 ch = code.ToLE() % 16;
+					const u32 ch = code % 16;
 					if (esAVC[ch])
 					{
 						ElementaryStream& es = *esAVC[ch];
@@ -562,10 +561,10 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 							es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							// callback
-							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+							auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 							esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 							esMsg->supplementalInfo = stream.userdata;
-							es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+							es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 						}
 						
 						if (pes.has_ts)
@@ -576,13 +575,13 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 						}
 
 						// reconstruction of MPEG2-PS stream for vdec module
-						const u32 size = (u32)len.ToLE() + pes.size + 9;
+						const u32 size = len + pes.size + 9;
 						stream = backup;
 						es.push(stream, size);
 					}
 					else
 					{
-						cellDmux->Notice("Video stream (code=0x%x, len=%d)", code.ToLE(), len.ToLE());
+						cellDmux->Notice("Video stream (code=0x%x, len=%d)", code, len);
 						stream.skip(len);
 					}
 					break;
@@ -590,9 +589,9 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 				default:
 				{
-					if ((code.ToLE() & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
+					if ((code & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
 					{
-						DMUX_ERROR("Unknown code found (0x%x)", code.ToLE());
+						DMUX_ERROR("Unknown code found (0x%x)", code);
 					}
 
 					// search
@@ -634,10 +633,10 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 			case dmuxResetStream:
 			case dmuxResetStreamAndWaitDone:
 			{
-				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 				dmuxMsg->supplementalInfo = stream.userdata;
-				dmux.cbFunc.call(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+				dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
 				stream = {};
 				dmux.is_running = false;
@@ -722,10 +721,10 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					es.push_au(old_size, es.last_dts, es.last_pts, stream.userdata, false, 0);
 
 					// callback
-					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+					auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_AU_FOUND;
 					esMsg->supplementalInfo = stream.userdata;
-					es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+					es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 				}
 				
 				if (es.raw_data.size())
@@ -734,10 +733,10 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				}
 
 				// callback
-				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(a128(dmux.memAddr) + (cb_add ^= 16));
+				auto esMsg = vm::ptr<CellDmuxEsMsg>::make(dmux.memAddr + (cb_add ^= 16));
 				esMsg->msgType = CELL_DMUX_ES_MSG_TYPE_FLUSH_DONE;
 				esMsg->supplementalInfo = stream.userdata;
-				es.cbFunc.call(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
+				es.cbFunc(*dmux.dmuxCb, dmux.id, es.id, esMsg, es.cbArg);
 				break;
 			}
 
@@ -760,11 +759,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 		}
 
 		dmux.is_finished = true;
-		if (Emu.IsStopped()) cellDmux->Warning("Demuxer thread aborted");
-		if (dmux.is_closed) cellDmux->Notice("Demuxer thread ended");
 	});
-
-	t.detach();
 
 	return dmux_id;
 }
@@ -808,7 +803,7 @@ int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmux
 
 	// TODO: check demuxerResource and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -826,7 +821,7 @@ int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDm
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -844,7 +839,7 @@ int cellDmuxOpen2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellD
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, vm::ptr<CellDmuxCbMsg>::make(demuxerCb->cbMsgFunc.addr()), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -993,14 +988,14 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 
 	std::shared_ptr<ElementaryStream> es(new ElementaryStream(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
-		vm::ptr<CellDmuxCbEsMsg>::make(esCb->cbEsMsgFunc.addr()), esCb->cbArg, esSpecificInfo_addr));
+		esCb->cbEsMsgFunc.to_le(), esCb->cbArg, esSpecificInfo_addr));
 
 	u32 id = cellDmux->GetNewId(es);
 	es->id = id;
 	*esHandle = id;
 
 	cellDmux->Warning("*** New ES(dmux=%d, addr=0x%x, size=0x%x, filter(0x%x, 0x%x, 0x%x, 0x%x), cb=0x%x(arg=0x%x), spec=0x%x): id = %d",
-		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, esCb->cbEsMsgFunc.addr(), es->cbArg, es->spec, id);
+		demuxerHandle, es->memAddr, es->memSize, es->fidMajor, es->fidMinor, es->sup1, es->sup2, es->cbFunc, es->cbArg, es->spec, id);
 
 	DemuxerTask task(dmuxEnableEs);
 	task.es.es = id;

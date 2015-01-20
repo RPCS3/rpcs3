@@ -168,7 +168,7 @@ void compile_shader(std::string path)
 	}
 
 	CgBinaryProgram& prog = vm::get_ref<CgBinaryProgram>(ptr);
-	LOG_ERROR(GENERAL, "%d - %x", (u32)prog.profile, (u32)prog.binaryFormatRevision);
+	LOG_ERROR(GENERAL, "%d - 0x%x", (u32)prog.profile, (u32)prog.binaryFormatRevision);
 
 	std::string shader;
 	GLParamArray param_array;

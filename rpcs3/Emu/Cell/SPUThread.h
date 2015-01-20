@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/Cell/Common.h"
 #include "Emu/Memory/atomic_type.h"
 #include "PPCThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
@@ -167,45 +168,46 @@ struct g_imm_table_struct
 
 extern const g_imm_table_struct g_imm_table;
 
-//Floating point status and control register.  Unsure if this is one of the GPRs or SPRs
+enum FPSCR_EX
+{
+	//Single-precision exceptions
+	FPSCR_SOVF = 1 << 2,    //Overflow
+	FPSCR_SUNF = 1 << 1,    //Underflow
+	FPSCR_SDIFF = 1 << 0,   //Different (could be IEEE non-compliant)
+	//Double-precision exceptions
+	FPSCR_DOVF = 1 << 13,   //Overflow
+	FPSCR_DUNF = 1 << 12,   //Underflow
+	FPSCR_DINX = 1 << 11,   //Inexact
+	FPSCR_DINV = 1 << 10,   //Invalid operation
+	FPSCR_DNAN = 1 << 9,    //NaN
+	FPSCR_DDENORM = 1 << 8, //Denormal
+};
+
 //Is 128 bits, but bits 0-19, 24-28, 32-49, 56-60, 64-81, 88-92, 96-115, 120-124 are unused
-class FPSCR
+class SPU_FPSCR
 {
 public:
-	u64 low;
-	u64 hi;
+	u32 _u32[4];
 
-	FPSCR() {}
+	SPU_FPSCR() {}
 
 	std::string ToString() const
 	{
-		return "FPSCR writer not yet implemented"; //fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		return fmt::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
 	void Reset()
 	{
 		memset(this, 0, sizeof(*this));
 	}
-	//slice -> 0 - 1 (4 slices total, only two have rounding)
-	//0 -> round even
-	//1 -> round towards zero (truncate)
-	//2 -> round towards positive inf
-	//3 -> round towards neg inf
+	//slice -> 0 - 1 (double-precision slice index)
+	//NOTE: slices follow u128 indexing, i.e. slice 0 is RIGHT end of register!
+	//roundTo -> FPSCR_RN_*
 	void setSliceRounding(u8 slice, u8 roundTo)
 	{
-		u64 mask = roundTo;
-		switch(slice)
-		{
-		case 0:
-			mask = mask << 20;
-			break;
-		case 1:
-			mask = mask << 22;
-			break;	
-		}
-
-		//rounding is located in the low end of the FPSCR
-		this->low = this->low & mask;
+		int shift = 8 + 2*slice;
+		//rounding is located in the left end of the FPSCR
+		this->_u32[3] = (this->_u32[3] & ~(3 << shift)) | (roundTo << shift);
 	}
 	//Slice 0 or 1
 	u8 checkSliceRounding(u8 slice) const
@@ -213,10 +215,10 @@ public:
 		switch(slice)
 		{
 		case 0:
-			return this->low >> 20 & 0x3;
+			return this->_u32[3] >> 8 & 0x3;
 		
 		case 1:
-			return this->low >> 22 & 0x3;
+			return this->_u32[3] >> 10 & 0x3;
 
 		default:
 			throw fmt::Format("Unexpected slice value in FPSCR::checkSliceRounding(): %d", slice);
@@ -224,34 +226,28 @@ public:
 		}
 	}
 
-	//Single Precision Exception Flags (all 3 slices)
+	//Single-precision exception flags (all 4 slices)
 	//slice -> slice number (0-3)
-	//exception: 1 -> Overflow 2 -> Underflow 4-> Diff (could be IE^3 non compliant)
-	void setSinglePrecisionExceptionFlags(u8 slice, u8 exception)
+	//exception: FPSCR_S* bitmask
+	void setSinglePrecisionExceptionFlags(u8 slice, u32 exceptions)
 	{
-		u64 mask = exception;
-		switch(slice)
-		{
-		case 0:
-			mask = mask << 29;
-			this->low = this->low & mask;
-			break;
-		case 1: 
-			mask = mask << 61;
-			this->low = this->low & mask;
-			break;
-		case 2:
-			mask = mask << 29;
-			this->hi = this->hi & mask;
-			break;
-		case 3:
-			mask = mask << 61;
-			this->hi = this->hi & mask;
-			break;
-		}
-		
+		_u32[slice] |= exceptions;
 	}
-	
+
+	//Single-precision divide-by-zero flags (all 4 slices)
+	//slice -> slice number (0-3)
+	void setDivideByZeroFlag(u8 slice)
+	{
+		_u32[0] |= 1 << (8 + slice);
+	}
+
+	//Double-precision exception flags
+	//slice -> slice number (0-1)
+	//exception: FPSCR_D* bitmask
+	void setDoublePrecisionExceptionFlags(u8 slice, u32 exceptions)
+	{
+		_u32[1+slice] |= exceptions;
+	}
 };
 
 union SPU_SNRConfig_hdr
@@ -277,7 +273,8 @@ class SPUThread : public PPCThread
 {
 public:
 	u128 GPR[128]; // General-Purpose Registers
-	//FPSCR FPSCR;
+	SPU_FPSCR FPSCR;
+	u32 SRR0;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
 	u64 R_ADDR; // reservation address

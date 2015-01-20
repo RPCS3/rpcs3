@@ -18,19 +18,19 @@ protected:
 		switch(m_mode)
 		{
 			case CPUDisAsm_DumpMode:
-				last_opcode = fmt::Format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
+				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
-					offset[dump_pc + 3], value.c_str());
+					offset[dump_pc + 3], value);
 			break;
 
 			case CPUDisAsm_InterpreterMode:
-				last_opcode = fmt::Format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
+				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
 					offset[dump_pc],
 					offset[dump_pc + 1],
 					offset[dump_pc + 2],
-					offset[dump_pc + 3], value.c_str());
+					offset[dump_pc + 3], value);
 			break;
 
 			case CPUDisAsm_CompilerElfMode:

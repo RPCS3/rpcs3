@@ -77,17 +77,17 @@ s64 pngDecOpen(
 	stream->fd = 0;
 	stream->src = *src;
 
-	switch ((u32)src->srcSelect.ToBE())
+	switch (src->srcSelect.data())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
-		stream->fileSize = src->streamSize.ToLE();
+		stream->fileSize = src->streamSize;
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(vm::ptr<const char>::make(src->fileName.addr()), 0, fd, vm::ptr<u32>::make(0), 0);
-		stream->fd = fd->ToLE();
+		int ret = cellFsOpen(src->fileName.to_le(), 0, fd, vm::ptr<const void>::make(0), 0);
+		stream->fd = fd.value();
 		if (ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
 
 		// Get size of file
@@ -145,7 +145,7 @@ s64 pngReadHeader(
 	auto buffer_32 = buffer.To<be_t<u32>>();
 	vm::var<be_t<u64>> pos, nread;
 
-	switch ((u32)stream->src.srcSelect.ToBE())
+	switch (stream->src.srcSelect.data())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
 		memmove(buffer.begin(), stream->src.streamPtr.get_ptr(), buffer.size());
@@ -156,9 +156,9 @@ s64 pngReadHeader(
 		break;
 	}
 
-	if (buffer_32[0].ToBE() != se32(0x89504E47) ||
-		buffer_32[1].ToBE() != se32(0x0D0A1A0A) ||  // Error: The first 8 bytes are not a valid PNG signature
-		buffer_32[3].ToBE() != se32(0x49484452))   // Error: The PNG file does not start with an IHDR chunk
+	if (buffer_32[0].data() != se32(0x89504E47) ||
+		buffer_32[1].data() != se32(0x0D0A1A0A) ||  // Error: The first 8 bytes are not a valid PNG signature
+		buffer_32[3].data() != se32(0x49484452))   // Error: The PNG file does not start with an IHDR chunk
 	{
 		return CELL_PNGDEC_ERROR_HEADER;
 	}
@@ -206,7 +206,7 @@ s64 pngDecSetParameter(
 	current_outParam.outputHeight = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch ((u32)current_outParam.outputColorSpace.ToBE())
+	switch (current_outParam.outputColorSpace.data())
 	{
 	case se32(CELL_PNGDEC_PALETTE):
 	case se32(CELL_PNGDEC_GRAYSCALE):
@@ -223,7 +223,7 @@ s64 pngDecSetParameter(
 		current_outParam.outputComponents = 4; break;
 
 	default:
-		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 
@@ -254,7 +254,7 @@ s64 pngDecodeData(
 	vm::var<unsigned char[]> png((u32)fileSize);
 	vm::var<be_t<u64>> pos, nread;
 
-	switch ((u32)stream->src.srcSelect.ToBE())
+	switch (stream->src.srcSelect.data())
 	{
 	case se32(CELL_PNGDEC_BUFFER):
 		memmove(png.begin(), stream->src.streamPtr.get_ptr(), png.size());
@@ -283,7 +283,7 @@ s64 pngDecodeData(
 	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
 	uint image_size = width * height;
 
-	switch ((u32)current_outParam.outputColorSpace.ToBE())
+	switch (current_outParam.outputColorSpace.data())
 	{
 	case se32(CELL_PNGDEC_RGB):
 	case se32(CELL_PNGDEC_RGBA):
@@ -352,11 +352,11 @@ s64 pngDecodeData(
 	case se32(CELL_PNGDEC_GRAYSCALE):
 	case se32(CELL_PNGDEC_PALETTE):
 	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		break;
 
 	default:
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace.ToLE());
+		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 

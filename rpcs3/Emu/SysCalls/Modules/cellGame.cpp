@@ -201,7 +201,7 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	return CELL_GAME_RET_OK;
 }
 
-int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDialog,
+int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	cellGame->Warning("cellGameDataCheckCreate(2)(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
@@ -238,10 +238,9 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
-	// TODO: use memory container
-	vm::var<CellGameDataCBResult> cbResult;
-	vm::var<CellGameDataStatGet> cbGet;
-	vm::var<CellGameDataStatSet> cbSet;
+	vm::stackvar<CellGameDataCBResult> cbResult(CPU);
+	vm::stackvar<CellGameDataStatGet> cbGet(CPU);
+	vm::stackvar<CellGameDataStatSet> cbSet(CPU);
 
 	cbGet.value() = {};
 
@@ -273,7 +272,7 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 	if (cbSet->setParam)
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam.addr());
+		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam);
 	}
 
 	switch ((s32)cbResult->result)
@@ -307,11 +306,11 @@ int cellGameDataCheckCreate2(u32 version, vm::ptr<const char> dirName, u32 errDi
 	}
 }
 
-int cellGameDataCheckCreate(u32 version, vm::ptr<const char> dirName, u32 errDialog, 
+int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
-	return cellGameDataCheckCreate2(version, dirName, errDialog, funcStat, container);
+	return cellGameDataCheckCreate2(CPU, version, dirName, errDialog, funcStat, container);
 }
 
 int cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char> tmp_contentInfoPath, vm::ptr<char> tmp_usrdirPath)
@@ -444,11 +443,11 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> 
 	std::string errorMsg;
 	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB", errorName.c_str(), errNeedSizeKB, dirName);
+		errorMsg = fmt::format("ERROR: %s\nSpace needed: %d KB", errorName, errNeedSizeKB);
 	}
 	else
 	{
-		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+		errorMsg = fmt::format("ERROR: %s", errorName);
 	}
 
 	if (dirName)

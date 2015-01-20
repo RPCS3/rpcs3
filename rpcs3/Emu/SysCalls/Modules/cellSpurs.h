@@ -499,12 +499,12 @@ struct CellSpurs
 
 	__forceinline vm::ptr<sys_lwmutex_t> get_lwmutex()
 	{
-		return vm::ptr<sys_lwmutex_t>::make(Memory.RealToVirtualAddr(&m.mutex));
+		return vm::ptr<sys_lwmutex_t>::make(vm::get_addr(&m.mutex));
 	}
 
 	__forceinline vm::ptr<sys_lwcond_t> get_lwcond()
 	{
-		return vm::ptr<sys_lwcond_t>::make(Memory.RealToVirtualAddr(&m.cond));
+		return vm::ptr<sys_lwcond_t>::make(vm::get_addr(&m.cond));
 	}
 };
 

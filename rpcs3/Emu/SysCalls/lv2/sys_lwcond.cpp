@@ -14,10 +14,12 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64)
 {
-	std::shared_ptr<Lwcond> lw(new Lwcond(name_u64, Memory.RealToVirtualAddr(&lwcond)));
+	const u32 addr = vm::get_addr(&lwmutex);
+
+	std::shared_ptr<Lwcond> lw(new Lwcond(name_u64, addr));
 
 	const u32 id = sys_lwcond.GetNewId(lw, TYPE_LWCOND);
-	const u32 addr = Memory.RealToVirtualAddr(&lwmutex);
+
 	lw->queue.set_full_name(fmt::Format("Lwcond(%d, addr=0x%x)", id, lw->addr));
 	lwcond.lwmutex.set(addr);
 	lwcond.lwcond_queue = id;
@@ -65,7 +67,7 @@ s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
+	auto mutex = lwcond->lwmutex.to_le();
 
 	if (u32 target = lw->queue.signal(mutex->attribute))
 	{
@@ -89,7 +91,7 @@ s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
+	auto mutex = lwcond->lwmutex.to_le();
 
 	while (u32 target = lw->queue.signal(mutex->attribute))
 	{
@@ -138,9 +140,9 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = vm::ptr<sys_lwmutex_t>::make(lwcond->lwmutex.addr());
+	auto mutex = lwcond->lwmutex.to_le();
 	u32 tid_le = CPU.GetId();
-	be_t<u32> tid = be_t<u32>::make(tid_le);
+	auto tid = be_t<u32>::make(tid_le);
 
 	std::shared_ptr<sleep_queue_t> sq;
 	if (!Emu.GetIdManager().GetIDData((u32)mutex->sleep_queue, sq))
@@ -160,7 +162,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	auto old_recursive = mutex->recursive_count.read_relaxed();
 	mutex->recursive_count.exchange(be_t<u32>::make(0));
 
-	be_t<u32> target = be_t<u32>::make(sq->signal(mutex->attribute));
+	auto target = be_t<u32>::make(sq->signal(mutex->attribute));
 	if (!mutex->owner.compare_and_swap_test(tid, target))
 	{
 		assert(!"sys_lwcond_wait(): mutex unlocking failed");

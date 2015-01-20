@@ -158,24 +158,31 @@ bool LoadEntries(rFile& dec_pkg_f, PKGHeader* m_header, PKGEntry *m_entries)
 
 bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 {
-	u8 buf[BUF_SIZE];
+	char buf[BUF_SIZE];
 
 	dec_pkg_f.Seek(entry.name_offset);
 	dec_pkg_f.Read(buf, entry.name_size);
 	buf[entry.name_size] = 0;
 	
-	switch (entry.type & (0xff))
+	switch (entry.type.data() >> 24)
 	{
-		case PKG_FILE_ENTRY_NPDRM:
-		case PKG_FILE_ENTRY_NPDRMEDAT:
-		case PKG_FILE_ENTRY_SDAT:
-		case PKG_FILE_ENTRY_REGULAR:
+	case PKG_FILE_ENTRY_NPDRM:
+	case PKG_FILE_ENTRY_NPDRMEDAT:
+	case PKG_FILE_ENTRY_SDAT:
+	case PKG_FILE_ENTRY_REGULAR:
+	{
+		rFile out;
+		auto path = dir + std::string(buf, entry.name_size);
+		if (rExists(path))
 		{
-			rFile out;
-			out.Create(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
+			LOG_WARNING(LOADER, "PKG Loader: File is overwritten: %s", path.c_str());
+		}
+
+		if (out.Create(path, true /* overwriting */))
+		{
 			dec_pkg_f.Seek(entry.file_offset);
 
-			for (u64 size = 0; size < entry.file_size; ) {
+			for (u64 size = 0; size < entry.file_size;) {
 				size += dec_pkg_f.Read(buf, BUF_SIZE);
 				if (size > entry.file_size)
 					out.Write(buf, BUF_SIZE - (size - entry.file_size));
@@ -183,14 +190,33 @@ bool UnpackEntry(rFile& dec_pkg_f, const PKGEntry& entry, std::string dir)
 					out.Write(buf, BUF_SIZE);
 			}
 			out.Close();
+			return true;
 		}
-		break;
-			
-		case PKG_FILE_ENTRY_FOLDER:
-			rMkdir(dir + std::string(reinterpret_cast<char *>(buf), entry.name_size));
-		break;
+		else
+		{
+			LOG_ERROR(LOADER, "PKG Loader: Could not create file: %s", path.c_str());
+			return false;
+		}
 	}
-	return true;
+
+	case PKG_FILE_ENTRY_FOLDER:
+	{
+		auto path = dir + std::string(buf, entry.name_size);
+		if (!rExists(path) && !rMkdir(path))
+		{
+			LOG_ERROR(LOADER, "PKG Loader: Could not create directory: %s", path.c_str());
+			return false;
+		}
+
+		return true;
+	}
+
+	default:
+	{
+		LOG_ERROR(LOADER, "PKG Loader: unknown PKG file entry: 0x%x", entry.type);
+		return false;
+	}
+	}
 }
 
 int Unpack(rFile& pkg_f, std::string src, std::string dst)

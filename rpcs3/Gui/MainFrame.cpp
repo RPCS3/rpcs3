@@ -70,11 +70,7 @@ MainFrame::MainFrame()
 	, m_sys_menu_opened(false)
 {
 
-#ifdef _DEBUG
-	SetLabel(wxString::Format(_PRGNAME_ " git-" RPCS3_GIT_VERSION));
-#else
-	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
-#endif
+	SetLabel(wxString::Format(_PRGNAME_ " " RPCS3_GIT_VERSION));
 
 	wxMenuBar* menubar = new wxMenuBar();
 
@@ -221,7 +217,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else
 	{
-		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", ctrl.GetPath().wx_str());
+		LOG_ERROR(HLE, "PS3 executable not found in selected folder (%s)", fmt::ToUTF8(ctrl.GetPath())); // passing std::string (test)
 	}
 }
 
@@ -448,7 +444,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
-		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.ToLE(), ResolutionTable[i].height.ToLE()));
+		cbox_gs_resolution->Append(wxString::Format("%dx%d", ResolutionTable[i].width.value(), ResolutionTable[i].height.value()));
 	}
 
 	cbox_gs_aspect->Append("4:3");
@@ -474,6 +470,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_audio_out->Append("Null");
 	cbox_audio_out->Append("OpenAL");
+#if defined (_WIN32)
+	cbox_audio_out->Append("XAudio2");
+#endif
 
 	cbox_camera->Append("Null");
 

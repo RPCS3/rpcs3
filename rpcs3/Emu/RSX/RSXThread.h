@@ -307,6 +307,7 @@ public:
 	u32 m_back_stencil_zfail;
 	bool m_set_back_stencil_zpass;
 	u32 m_back_stencil_zpass;
+	bool m_set_stencil_op_fail;
 
 	// Line width
 	bool m_set_line_width;
@@ -578,6 +579,7 @@ protected:
 		m_set_back_stencil_fail = false;
 		m_set_back_stencil_zfail = false;
 		m_set_back_stencil_zpass = false;
+		m_set_stencil_op_fail = false;
 		m_set_point_sprite_control = false;
 		m_set_point_size = false;
 		m_set_line_width = false;
@@ -643,9 +645,10 @@ protected:
 	virtual void DepthMask(u32 flag) = 0;
 	virtual void PolygonMode(u32 face, u32 mode) = 0;
 	virtual void PointSize(float size) = 0;
-	virtual void LogicOp(u32 opcdoe) = 0;
+	virtual void LogicOp(u32 opcode) = 0;
 	virtual void LineWidth(float width) = 0;
 	virtual void LineStipple(u16 factor, u16 pattern) = 0;
+	virtual void PolygonStipple(u32 pattern) = 0;
 	virtual void PrimitiveRestartIndex(u32 index) = 0;
 	virtual void CullFace(u32 mode) = 0;
 	virtual void FrontFace(u32 mode) = 0;
@@ -660,6 +663,12 @@ protected:
 	virtual void ShadeModel(u32 mode) = 0;
 	virtual void DepthBoundsEXT(float min, float max) = 0;
 	virtual void Scissor(u16 x, u16 y, u16 width, u16 height) = 0;
+	virtual void StencilOp(u32 fail, u32 zfail, u32 zpass) = 0;
+	virtual void StencilMask(u32 mask) = 0;
+	virtual void StencilFunc(u32 func, u32 ref, u32 mask) = 0;
+	virtual void StencilOpSeparate(u32 mode, u32 fail, u32 zfail, u32 zpass) = 0;
+	virtual void StencilMaskSeparate(u32 mode, u32 mask) = 0;
+	virtual void StencilFuncSeparate(u32 mode, u32 func, u32 ref, u32 mask) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)

@@ -11,6 +11,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUInstrTable.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsDeviceLocalFile.h"
 #include "Emu/DbgCommand.h"
 
@@ -261,7 +262,7 @@ void Emulator::Load()
 
 	if (!m_loader.load(f))
 	{
-		LOG_ERROR(LOADER, "Loading '%s' failed", m_elf_path.c_str());
+		LOG_ERROR(LOADER, "Loading '%s' failed", m_path.c_str());
 		vm::close();
 		return;
 	}
@@ -327,6 +328,8 @@ void Emulator::Pause()
 	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
+
+		GetCallbackManager().RunPauseCallbacks(true);
 	}
 }
 
@@ -340,6 +343,8 @@ void Emulator::Resume()
 	CheckStatus();
 
 	SendDbgCommand(DID_RESUMED_EMU);
+
+	GetCallbackManager().RunPauseCallbacks(false);
 }
 
 void Emulator::Stop()
@@ -349,16 +354,12 @@ void Emulator::Stop()
 	SendDbgCommand(DID_STOP_EMU);
 	m_status = Stopped;
 
-	u32 uncounted = 0;
-	while (true)
+	while (g_thread_count)
 	{
-		if (g_thread_count <= uncounted)
-		{
-			LOG_NOTICE(HLE, "All threads stopped...");
-			break;
-		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
+
+	LOG_NOTICE(HLE, "All threads stopped...");
 
 	m_rsx_callback = 0;
 

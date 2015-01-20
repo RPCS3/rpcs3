@@ -286,7 +286,7 @@ s32 _sys_spu_printf_finalize()
 	return CELL_OK;
 }
 
-s64 _sys_spu_printf_attach_group(u32 group)
+s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_group(group=%d)", group);
 
@@ -295,10 +295,10 @@ s64 _sys_spu_printf_attach_group(u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_agcb(group);
+	return spu_printf_agcb(CPU, group);
 }
 
-s64 _sys_spu_printf_detach_group(u32 group)
+s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_group(group=%d)", group);
 
@@ -307,10 +307,10 @@ s64 _sys_spu_printf_detach_group(u32 group)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dgcb(group);
+	return spu_printf_dgcb(CPU, group);
 }
 
-s64 _sys_spu_printf_attach_thread(u32 thread)
+s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_attach_thread(thread=%d)", thread);
 
@@ -319,10 +319,10 @@ s64 _sys_spu_printf_attach_thread(u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_atcb(thread);
+	return spu_printf_atcb(CPU, thread);
 }
 
-s64 _sys_spu_printf_detach_thread(u32 thread)
+s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 {
 	sysPrxForUser->Warning("_sys_spu_printf_detach_thread(thread=%d)", thread);
 
@@ -331,7 +331,7 @@ s64 _sys_spu_printf_detach_thread(u32 thread)
 		return CELL_ESTAT;
 	}
 
-	return spu_printf_dtcb(thread);
+	return spu_printf_dtcb(CPU, thread);
 }
 
 s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...

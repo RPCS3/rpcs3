@@ -69,32 +69,32 @@ s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> at
 		return CELL_EFAULT;
 	}
 
-	switch (attr->protocol.ToBE())
+	switch (attr->protocol.data())
 	{
 	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_RETRY"); break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
+	case se32(SYS_SYNC_RETRY): sys_event_flag.Todo("SYS_SYNC_RETRY"); break;
+	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event_flag.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
 	case se32(SYS_SYNC_FIFO): break;
-	default: return CELL_EINVAL;
+	default: sys_event_flag.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.ToBE() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200))
 	{
+		sys_event_flag.Error("Unknown pshared attribute (0x%x)", attr->pshared);
 		return CELL_EINVAL;
 	}
 
-	switch (attr->type.ToBE())
+	switch (attr->type.data())
 	{
 	case se32(SYS_SYNC_WAITER_SINGLE): break;
 	case se32(SYS_SYNC_WAITER_MULTIPLE): break;
-	default: return CELL_EINVAL;
+	default: sys_event_flag.Error("Unknown event flag type (0x%x)", attr->type); return CELL_EINVAL;
 	}
 
-	std::shared_ptr<EventFlag> ef(new EventFlag(init, (u32)attr->protocol, (s32)attr->type, attr->name_u64));
+	std::shared_ptr<EventFlag> ef(new EventFlag(init, attr->protocol, attr->type, attr->name_u64));
 	u32 id = sys_event_flag.GetNewId(ef, TYPE_EVENT_FLAG);
 	*eflag_id = id;
-	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d",
-		std::string(attr->name, 8).c_str(), (u32)attr->protocol, (s32)attr->type, id);
+	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d", std::string(attr->name, 8).c_str(), attr->protocol, attr->type, id);
 
 	return CELL_OK;
 }

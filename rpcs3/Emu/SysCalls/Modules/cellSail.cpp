@@ -94,7 +94,7 @@ int cellSailDescriptorIsAutoSelection(vm::ptr<CellSailDescriptor> pSelf)
 	return CELL_OK;
 }
 
-int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, be_t<u32> size, be_t<u64> arg)
+int cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<void> pDatabase, u32 size, u64 arg)
 {
 	cellSail->Warning("cellSailDescriptorCreateDatabase(pSelf=0x%x, pDatabase=0x%x, size=0x%x, arg=0x%x", pSelf.addr(), pDatabase.addr(), size, arg);
 
@@ -825,7 +825,7 @@ int cellSailPlayerIsPaused(vm::ptr<CellSailPlayer> pSelf)
 
 int cellSailPlayerSetRepeatMode(vm::ptr<CellSailPlayer> pSelf, s32 repeatMode, vm::ptr<CellSailStartCommand> pCommand)
 {
-	cellSail->Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%i, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
+	cellSail->Warning("cellSailPlayerSetRepeatMode(pSelf_addr=0x%x, repeatMode=%d, pCommand_addr=0x%x)", pSelf.addr(), repeatMode, pCommand.addr());
 
 	pSelf->repeatMode = repeatMode;
 	pSelf->playbackCommand = pCommand;

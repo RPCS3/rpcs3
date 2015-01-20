@@ -201,9 +201,10 @@ protected:
 	virtual void DepthMask(u32 flag);
 	virtual void PolygonMode(u32 face, u32 mode);
 	virtual void PointSize(float size);
-	virtual void LogicOp(u32 opcdoe);
+	virtual void LogicOp(u32 opcode);
 	virtual void LineWidth(float width);
 	virtual void LineStipple(u16 factor, u16 pattern);
+	virtual void PolygonStipple(u32 pattern);
 	virtual void PrimitiveRestartIndex(u32 index);
 	virtual void CullFace(u32 mode);
 	virtual void FrontFace(u32 mode);
@@ -218,5 +219,11 @@ protected:
 	virtual void ShadeModel(u32 mode);
 	virtual void DepthBoundsEXT(float min, float max);
 	virtual void Scissor(u16 x, u16 y, u16 width, u16 height);
+	virtual void StencilOp(u32 fail, u32 zfail, u32 zpass);
+	virtual void StencilMask(u32 mask);
+	virtual void StencilFunc(u32 func, u32 ref, u32 mask);
+	virtual void StencilOpSeparate(u32 mode, u32 fail, u32 zfail, u32 zpass);
+	virtual void StencilMaskSeparate(u32 mode, u32 mask);
+	virtual void StencilFuncSeparate(u32 mode, u32 func, u32 ref, u32 mask);
 	virtual void Flip();
 };

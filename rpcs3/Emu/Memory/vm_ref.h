@@ -28,9 +28,9 @@ namespace vm
 			return m_addr;
 		}
 
-		static _ref_base make(AT addr)
+		static _ref_base make(const AT& addr)
 		{
-			return (_ref_base&)addr;
+			return reinterpret_cast<_ref_base&>(addr);
 		}
 
 		_ref_base& operator = (le_type right)
@@ -109,3 +109,79 @@ namespace vm
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
 }
+
+namespace fmt
+{
+	// external specializations for fmt::format function
+
+	template<typename T, typename AT>
+	struct unveil<vm::ps3::ref<T, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::ps3::ref<T, AT>& arg)
+		{
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
+
+	template<typename T, typename AT>
+	struct unveil<vm::ps3::bref<T, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::ps3::bref<T, AT>& arg)
+		{
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
+
+	template<typename T, typename AT>
+	struct unveil<vm::psv::ref<T, AT>, false>
+	{
+		typedef typename unveil<AT>::result_type result_type;
+
+		__forceinline static result_type get_value(const vm::psv::ref<T, AT>& arg)
+		{
+			return unveil<AT>::get_value(arg.addr());
+		}
+	};
+}
+
+// external specializations for PPU GPR (SC_FUNC.h, CB_FUNC.h)
+
+template<typename T, bool is_enum>
+struct cast_ppu_gpr;
+
+template<typename T, typename AT>
+struct cast_ppu_gpr<vm::ps3::ref<T, AT>, false>
+{
+	__forceinline static u64 to_gpr(const vm::ps3::ref<T, AT>& value)
+	{
+		return value.addr();
+	}
+
+	__forceinline static vm::ps3::ref<T, AT> from_gpr(const u64 reg)
+	{
+		return vm::ps3::ref<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+	}
+};
+
+// external specializations for ARMv7 GPR
+
+template<typename T, bool is_enum>
+struct cast_armv7_gpr;
+
+template<typename T, typename AT>
+struct cast_armv7_gpr<vm::psv::ref<T, AT>, false>
+{
+	__forceinline static u32 to_gpr(const vm::psv::ref<T, AT>& value)
+	{
+		return value.addr();
+	}
+
+	__forceinline static vm::psv::ref<T, AT> from_gpr(const u32 reg)
+	{
+		return vm::psv::ref<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+	}
+};

@@ -10,7 +10,8 @@
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
-	std::vector<std::string> path_blocks = std::move(fmt::split(fmt::tolower(path), { "/", "\\" }));
+	// fmt::tolower() removed
+	std::vector<std::string> path_blocks = std::move(fmt::split(path, { "/", "\\" }));
 
 	for (size_t i = 0; i < path_blocks.size(); ++i)
 	{
@@ -28,7 +29,7 @@ std::vector<std::string> simplify_path_blocks(const std::string& path)
 	return path_blocks;
 }
 
-std::string simplify_path(const std::string& path, bool is_dir)
+std::string simplify_path(const std::string& path, bool is_dir, bool is_ps3)
 {
 	std::vector<std::string> path_blocks = simplify_path_blocks(path);
 
@@ -36,8 +37,17 @@ std::string simplify_path(const std::string& path, bool is_dir)
 		return "";
 
 	std::string result = fmt::merge(path_blocks, "/");
+	
+#ifdef _WIN32
+	if (is_ps3)
+#endif
+	{
+		result = "/" + result;
+	}
 
-	return is_dir ? result + "/" : result;
+	if (is_dir) result = result + "/";
+
+	return result;
 }
 
 VFS::~VFS()
@@ -47,11 +57,11 @@ VFS::~VFS()
 
 void VFS::Mount(const std::string& ps3_path, const std::string& local_path, vfsDevice* device)
 {
-	std::string simpl_ps3_path = simplify_path(ps3_path, true);
+	std::string simpl_ps3_path = simplify_path(ps3_path, true, true);
 
 	UnMount(simpl_ps3_path);
 
-	device->SetPath(simpl_ps3_path, simplify_path(local_path, true));
+	device->SetPath(simpl_ps3_path, simplify_path(local_path, true, false));
 	m_devices.push_back(device);
 
 	if (m_devices.size() > 1)
@@ -65,9 +75,9 @@ void VFS::Link(const std::string& mount_point, const std::string& ps3_path)
 	links[simplify_path_blocks(mount_point)] = simplify_path_blocks(ps3_path);
 }
 
-std::string VFS::GetLinked(std::string ps3_path) const
+std::string VFS::GetLinked(const std::string& ps3_path) const
 {
-	ps3_path = fmt::tolower(ps3_path);
+	// fmt::tolower removed
 	auto path_blocks = fmt::split(ps3_path, { "/", "\\" });
 
 	for (auto link : links)
@@ -95,7 +105,7 @@ std::string VFS::GetLinked(std::string ps3_path) const
 
 void VFS::UnMount(const std::string& ps3_path)
 {
-	std::string simpl_ps3_path = simplify_path(ps3_path, true);
+	std::string simpl_ps3_path = simplify_path(ps3_path, true, true);
 
 	for (u32 i = 0; i < m_devices.size(); ++i)
 	{
@@ -320,18 +330,21 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 			path += "/" + ps3_path_blocks[i];
 		}
 
-		path = simplify_path(path, false);
-
+		path = simplify_path(path, false, false);
+		
 		return m_devices[max_i];
 	};
 
-	if (auto res = try_get_device(GetLinked(ps3_path)))
-		return res;
+	if (!ps3_path.size() || ps3_path[0] != '/')
+	{
+		return nullptr;
+	}
 
-	if (auto res = try_get_device(GetLinked(cwd + ps3_path)))
-		return res;
+	return try_get_device(GetLinked(ps3_path));
 
-	return nullptr;
+	// What is it? cwd is real path, ps3_path is ps3 path, but GetLinked accepts ps3 path
+	//if (auto res = try_get_device(GetLinked(cwd + ps3_path))) 
+	//	return res;
 }
 
 vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path) const
@@ -374,14 +387,14 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 		path += "/" + local_path_blocks[i];
 	}
 
-	path = simplify_path(path, false);
+	path = simplify_path(path, false, true);
 
 	return m_devices[max_i];
 }
 
 void VFS::Init(const std::string& path)
 {
-	cwd = simplify_path(path, true);
+	cwd = simplify_path(path, true, false);
 
 	UnMountAll();
 
