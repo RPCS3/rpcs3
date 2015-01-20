@@ -1204,12 +1204,12 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
 
+		context.write_gpr(t, vm::psv::read32(addr));
+
 		if (wback)
 		{
 			context.write_gpr(n, offset_addr);
 		}
-
-		context.write_gpr(t, vm::psv::read32(addr));
 	}
 }
 
@@ -1224,10 +1224,55 @@ void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond = context.ITSTATE.advance();
+	u32 t = 0;
+	u32 n = 0;
+	u32 m = 0;
+	bool index = true;
+	bool add = true;
+	bool wback = false;
+	auto shift_t = SRType_LSL;
+	u32 shift_n = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		t = (code.data & 0x7);
+		n = (code.data & 0x38) >> 3;
+		m = (code.data & 0x1c0) >> 6;
+		break;
+	}
+	case T2:
+	{
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		m = (code.data & 0xf);
+		shift_n = (code.data & 0x30) >> 4;
+
+		if (n == 15)
+		{
+			throw "LDR (literal)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
+		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const u32 data = vm::psv::read32(addr);
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
+
+		context.write_gpr(t, data);
 	}
 }
 
@@ -1262,10 +1307,54 @@ void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond = context.ITSTATE.advance();
+	u32 t = 0;
+	u32 t2 = 0;
+	u32 n = 13;
+	u32 imm32 = 0;
+	bool index = true;
+	bool add = true;
+	bool wback = false;
+
 	switch (type)
 	{
+	case T1:
+	{
+		t = (code.data & 0xf000) >> 12;
+		t2 = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff) << 2;
+		index = (code.data & 0x1000000);
+		add = (code.data & 0x800000);
+		wback = (code.data & 0x200000);
+
+		if (!index && !wback)
+		{
+			throw "LDRD_IMM_T1: Related encodings";
+		}
+		if (n == 15)
+		{
+			throw "LDRD (literal)";
+		}
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const u64 value = vm::psv::read64(addr);
+
+		context.write_gpr(t, (u32)(value));
+		context.write_gpr(t2, (u32)(value >> 32));
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 
@@ -1374,10 +1463,32 @@ void ARMv7_instrs::LDRSH_REG(ARMv7Context& context, const ARMv7Code code, const 
 
 void ARMv7_instrs::LDREX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond = context.ITSTATE.advance();
+	u32 t = 0;
+	u32 n = 0;
+	u32 imm32 = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff) << 2;
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 addr = context.read_gpr(n) + imm32;
+		const u32 value = vm::psv::read32(addr);
+		
+		context.R_ADDR = addr;
+		context.R_DATA = value;
+		context.write_gpr(t, value);
 	}
 }
 
@@ -1853,14 +1964,17 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
+		u32 written = 0;
 		for (u16 mask = 1, i = 0; mask; mask <<= 1, i++)
 		{
 			if (reg_list & mask)
 			{
-				context.write_gpr(i, vm::psv::read32(context.SP));
-				context.SP += 4;
+				context.write_gpr(i, vm::psv::read32(context.SP + written));
+				written += 4;
 			}
 		}
+
+		context.SP += written;
 	}
 }
 
@@ -1907,14 +2021,17 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
+		u32 read = 0;
 		for (u16 mask = 1 << 15, i = 15; mask; mask >>= 1, i--)
 		{
 			if (reg_list & mask)
 			{
-				context.SP -= 4;
-				vm::psv::write32(context.SP, context.read_gpr(i));
+				read += 4;
+				vm::psv::write32(context.SP - read, context.read_gpr(i));
 			}
 		}
+
+		context.SP -= read;
 	}
 }
 
@@ -2692,10 +2809,34 @@ void ARMv7_instrs::STRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 void ARMv7_instrs::STREX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond = context.ITSTATE.advance();
+	u32 d = 0;
+	u32 t = 0;
+	u32 n = 0;
+	u32 imm32 = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = (code.data & 0xf00) >> 8;
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff) << 2;
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 addr = context.read_gpr(n) + imm32;
+		const u32 value = context.read_gpr(t);
+		
+		auto& sync_obj = vm::get_ref<atomic_le_t<u32>>(addr);
+		context.write_gpr(d, addr != context.R_ADDR || sync_obj.compare_and_swap((u32)context.R_DATA, value) != context.R_DATA);
+		context.R_ADDR = 0;
 	}
 }
 

@@ -110,6 +110,9 @@ struct ARMv7Context
 
 	} ITSTATE;
 
+	u32 R_ADDR;
+	u64 R_DATA;
+
 	void write_gpr(u32 n, u32 value)
 	{
 		assert(n < 16);
@@ -134,6 +137,21 @@ struct ARMv7Context
 		}
 
 		return read_pc();
+	}
+
+	// function for processing va_args in printf-like functions
+	u32 get_next_gpr_arg(u32& g_count, u32& f_count, u32& v_count)
+	{
+		assert(!f_count && !v_count); // not supported
+
+		if (g_count < 4)
+		{
+			return GPR[g_count++];
+		}
+		else
+		{
+			return get_stack_arg(g_count++);
+		}
 	}
 };
 

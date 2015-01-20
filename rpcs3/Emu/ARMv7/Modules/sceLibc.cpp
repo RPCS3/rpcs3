@@ -26,11 +26,67 @@ namespace sce_libc_func
 		});
 	}
 
-	void printf(vm::psv::ptr<const char> fmt) // va_args...
+	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Error("printf(fmt=0x%x)", fmt);
 
-		LOG_NOTICE(TTY, "%s", fmt.get_ptr());
+		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+
+		std::string result;
+		u32 g_count = 1;
+		u32 f_count = 0;
+		u32 v_count = 0;
+
+		for (char c = *fmt++; c; c = *fmt++)
+		{
+			switch (c)
+			{
+			case '%':
+			{
+				const auto start = fmt - 1;
+				const bool Åî = *fmt == '#' ? fmt++, true : false;
+
+				switch (*fmt++)
+				{
+				case '%':
+				{
+					result += '%';
+					continue;
+				}
+				case 'd':
+				case 'i':
+				{
+					// signed decimal
+					const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+					result += fmt::to_sdec(value);
+					continue;
+				}
+				case 'x':
+				{
+					// hexadecimal
+					const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+					if (Åî && value)
+					{
+						result += "0x";
+					}
+
+					result += fmt::to_hex(value);
+					continue;
+				}
+				default:
+				{
+					throw fmt::Format("printf(): unknown formatting: '%s'", start.get_ptr());
+				}
+				}
+			}
+			}
+
+			result += c;
+		}
+
+		LOG_NOTICE(TTY, result);
 	}
 
 	void __cxa_set_dso_handle_main()
