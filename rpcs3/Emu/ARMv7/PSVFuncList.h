@@ -497,7 +497,7 @@ namespace psv_func_detail
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
 
-			context.write_stack_arg(stack_pos, cast_to_armv7_gpr<T>(arg));
+			context.put_stack_arg(stack_pos, cast_to_armv7_gpr<T>(arg));
 		}
 	};
 
@@ -613,8 +613,8 @@ namespace psv_func_detail
 		static_assert(!std::is_pointer<T1>::value, "Invalid callback argument type (pointer)");
 		static_assert(!std::is_reference<T1>::value, "Invalid callback argument type (reference)");
 		// TODO: check calculations
-		const bool is_float = std::is_floating_point<T>::value;
-		const bool is_vector = std::is_same<T, u128>::value;
+		const bool is_float = std::is_floating_point<T1>::value;
+		const bool is_vector = std::is_same<T1, u128>::value;
 		const bind_arg_type t = is_float
 			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
 			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
