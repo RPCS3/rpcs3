@@ -550,6 +550,22 @@ namespace psv_func_detail
 		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
+	template<typename T, int g_count, int f_count, int v_count>
+	struct arg_type
+	{
+		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
+		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
+		// TODO: check calculations
+		static const bool is_float = std::is_floating_point<T>::value;
+		static const bool is_vector = std::is_same<T, u128>::value;
+		static const bind_arg_type value = is_float
+			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
+			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
+		static const int g_value = g_count + (is_float || is_vector ? 0 : 1);
+		static const int f_value = f_count + (is_float ? 1 : 0);
+		static const int v_value = v_count + (is_vector ? 1 : 0);
+	};
+
 	template <typename RT, typename F, typename Tuple, bool Done, int Total, int... N>
 	struct call_impl
 	{
@@ -576,28 +592,22 @@ namespace psv_func_detail
 	}
 
 	template<int g_count, int f_count, int v_count>
-	__forceinline std::tuple<> iterate(ARMv7Context& context)
+	__forceinline std::tuple<> get_func_args(ARMv7Context& context)
 	{
 		// terminator
 		return std::tuple<>();
 	}
 
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
-	__forceinline std::tuple<T, A...> iterate(ARMv7Context& context)
+	__forceinline std::tuple<T, A...> get_func_args(ARMv7Context& context)
 	{
-		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
-		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
-		// TODO: check calculations
-		const bool is_float = std::is_floating_point<T>::value;
-		const bool is_vector = std::is_same<T, u128>::value;
-		const bind_arg_type t = is_float
-			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
-			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
-		const int g = g_count + (is_float || is_vector ? 0 : 1);
-		const int f = f_count + (is_float ? 1 : 0);
-		const int v = v_count + (is_vector ? 1 : 0);
+		typedef arg_type<T, g_count, f_count, v_count> type;
+		const bind_arg_type t = type::value;
+		const int g = type::g_value;
+		const int f = type::f_value;
+		const int v = type::v_value;
 
-		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::get_arg(context)), iterate<g, f, v, A...>(context));
+		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::get_arg(context)), get_func_args<g, f, v, A...>(context));
 	}
 
 	template<int g_count, int f_count, int v_count>
@@ -610,19 +620,14 @@ namespace psv_func_detail
 	template<int g_count, int f_count, int v_count, typename T1, typename... T>
 	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
 	{
-		static_assert(!std::is_pointer<T1>::value, "Invalid callback argument type (pointer)");
-		static_assert(!std::is_reference<T1>::value, "Invalid callback argument type (reference)");
-		// TODO: check calculations
-		const bool is_float = std::is_floating_point<T1>::value;
-		const bool is_vector = std::is_same<T1, u128>::value;
-		const bind_arg_type t = is_float
-			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
-			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
-		const int g = g_count + (is_float || is_vector ? 0 : 1);
-		const int f = f_count + (is_float ? 1 : 0);
-		const int v = v_count + (is_vector ? 1 : 0);
+		typedef arg_type<T1, g_count, f_count, v_count> type;
+		const bind_arg_type t = type::value;
+		const int g = type::g_value;
+		const int f = type::f_value;
+		const int v = type::v_value;
 
 		bind_arg<T1, t, g, f, v>::put_arg(context, arg);
+
 		// return true if stack was used
 		return put_func_args<g, f, v>(context, args...) || (t == ARG_STACK);
 	}
@@ -645,7 +650,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			call<void>(m_call, iterate<0, 0, 0, T...>(context));
+			call<void>(m_call, get_func_args<0, 0, 0, T...>(context));
 		}
 	};
 
@@ -664,7 +669,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			call<void>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), iterate<0, 0, 0, T...>(context)));
+			call<void>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
@@ -683,7 +688,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, iterate<0, 0, 0, T...>(context)));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
@@ -702,7 +707,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), iterate<0, 0, 0, T...>(context))));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
 		}
 	};
 
