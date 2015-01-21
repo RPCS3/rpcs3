@@ -257,13 +257,13 @@ bool ARMv7_instrs::ConditionPassed(ARMv7Context& context, u32 cond)
 // instructions
 void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 {
-	LOG_ERROR(HLE, "Unknown/illegal opcode! (0x%04x : 0x%04x)", code.data >> 16, code.data & 0xffff);
+	LOG_ERROR(HLE, "Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
 	Emu.Pause();
 }
 
 void ARMv7_instrs::NULL_OP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
-	LOG_ERROR(HLE, "Null opcode found: data = 0x%x", code.data);
+	LOG_ERROR(HLE, "Null opcode found: 0x%04x 0x%04x", code.code1, code.code0);
 	Emu.Pause();
 }
 
@@ -687,7 +687,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 	}
 	case T3:
 	{
-		cond = (code.data >> 6) & 0xf;
+		cond = (code.data >> 22) & 0xf;
 		if (cond >= 0xe)
 		{
 			throw "B_T3: Related encodings";
@@ -4852,5 +4852,36 @@ void ARMv7_instrs::YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv
 	{
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	u32 cond = context.ITSTATE.advance();
+	u32 t = 0;
+	u32 cp = 0;
+
+	switch (type)
+	{
+	case T1:
+	case A1:
+	{
+		t = (code.data & 0xf000) >> 12;
+		cp = (code.data & 0xf00) >> 8;
+
+		if (cp - 10 < 2)
+		{
+			throw "Advanced SIMD and VFP";
+		}
+		break;
+	}
+	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		LOG_ERROR(ARMv7, "Bad instruction (MRC): 0x%04x 0x%04x", code.code1, code.code0);
+		throw __FUNCTION__;
 	}
 }

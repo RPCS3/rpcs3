@@ -25,8 +25,8 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 {
 	ARMv7_OP2(0xffff, 0x0000, T1, NULL_OP), // ???
 
-	ARMv7_OP4(0xffff, 0x0000, 0xf870, 0x0000, T1, HACK), // "Undefined" Thumb opcode
-	ARMv7_OP4(0x0ff0, 0x00f0, 0x0070, 0x0090, A1, HACK), // "Undefined" ARM opcode
+	ARMv7_OP4(0xffff, 0x0000, 0xf870, 0x0000, T1, HACK), // "Undefined" Thumb opcode used
+	ARMv7_OP4(0x0ff0, 0x00f0, 0x0070, 0x0090, A1, HACK), // "Undefined" ARM opcode used
 
 	ARMv7_OP4(0xfbe0, 0x8000, 0xf140, 0x0000, T1, ADC_IMM),
 	ARMv7_OP4(0x0fe0, 0x0000, 0x02a0, 0x0000, A1, ADC_IMM),
@@ -594,6 +594,11 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP2(0xffff, 0xbf10, T1, YIELD),
 	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8001, T2, YIELD),
 	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf001, A1, YIELD),
+
+	ARMv7_OP4(0xff10, 0x0010, 0xee10, 0x0010, T1, MRC_),
+	ARMv7_OP4(0x0f10, 0x0010, 0x0e10, 0x0010, A1, MRC_),
+	ARMv7_OP4(0xff10, 0x0010, 0xfe10, 0x0010, T2, MRC_),
+	ARMv7_OP4(0xff10, 0x0010, 0xfe10, 0x0010, A2, MRC_),
 };
 
 struct ARMv7_op2_table_t

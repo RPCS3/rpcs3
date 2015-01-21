@@ -215,6 +215,7 @@ namespace loader
 								const u32 addr = *++code;
 								vm::psv::write16(addr + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
 								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
+								LOG_NOTICE(LOADER, "sceRefs: movw written at 0x%x (data=0x%x)", addr, data);
 								break;
 							}
 							case 0x00000030:
@@ -223,16 +224,18 @@ namespace loader
 								const u32 addr = *++code;
 								vm::psv::write16(addr + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
 								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
+								LOG_NOTICE(LOADER, "sceRefs: movt written at 0x%x (data=0x%x)", addr, data);
 								break;
 							}
 							case 0x00000000:
 							{
 								// probably, no operation
+								LOG_NOTICE(LOADER, "sceRefs: zero code");
 								break;
 							}
 							default:
 							{
-								LOG_NOTICE(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
+								LOG_ERROR(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
 							}
 							}
 						}
