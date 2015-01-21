@@ -1,5 +1,16 @@
 #pragma once
 
+union ARMv7Code
+{
+	struct
+	{
+		u16 code0;
+		u16 code1;
+	};
+
+	u32 data;
+};
+
 enum ARMv7_encoding
 {
 	T1, T2, T3, T4, A1, A2

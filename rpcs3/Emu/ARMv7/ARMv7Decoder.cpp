@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <unordered_map>
 #include "Utilities/Log.h"
 #include "ARMv7Thread.h"
 #include "ARMv7Interpreter.h"
@@ -595,31 +596,164 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf001, A1, YIELD),
 };
 
-u8 ARMv7Decoder::DecodeMemory(const u32 address)
+struct ARMv7_op2_table_t
 {
-	ARMv7Code code;
-	code.code0 = vm::psv::read16(address & ~1);
-	code.code1 = vm::psv::read16(address + 2 & ~1);
-	u32 arg = address & 0x1 ? code.data : (u32)code.code0 << 16 | code.code1;
+	const ARMv7_opcode_t* data[0x10000];
 
-	//LOG_NOTICE(GENERAL, "code0 = 0x%04x, code1 = 0x%04x, data = 0x%08x, arg = 0x%08x", code.code0, code.code1, code.data, arg);
-
-	// old decoding algorithm
-
-	for (auto& opcode : ARMv7_opcode_table)
+	ARMv7_op2_table_t()
 	{
-		if ((opcode.type < A1) == ((address & 0x1) == 0) && (arg & opcode.mask) == opcode.code)
+		std::vector<const ARMv7_opcode_t*> t2;
+
+		for (auto& opcode : ARMv7_opcode_table)
 		{
-			code.data = opcode.length == 2 ? code.code0 : arg;
-			(*opcode.func)(m_thr.context, code, opcode.type);
-			//LOG_NOTICE(ARMv7, "%s, %s", opcode.name, m_thr.RegsToString());
-			return opcode.length;
+			if (opcode.length == 2)
+			{
+				t2.push_back(&opcode);
+			}
+		}
+
+		for (u32 i = 0; i < 0x10000; i++)
+		{
+			data[i] = nullptr;
+
+			for (auto& opcode : t2)
+			{
+				if (((i << 16) & opcode->mask) == opcode->code)
+				{
+					data[i] = opcode;
+					break;
+				}
+			}
 		}
 	}
 
-	ARMv7_instrs::UNK(m_thr.context, code);
-	return address & 0x1 ? 4 : 2;
+} g_op2t;
 
+struct ARMv7_op4t_table_t
+{
+	std::vector<const ARMv7_opcode_t*> table;
+
+	ARMv7_op4t_table_t()
+	{
+		for (auto& opcode : ARMv7_opcode_table)
+		{
+			if (opcode.length == 4 && opcode.type < A1)
+			{
+				table.push_back(&opcode);
+			}
+		}
+	}
+	
+} g_op4t;
+
+std::unordered_map<u32, const ARMv7_opcode_t*> g_opct;
+
+void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
+{
+	// 1. Find every 4-byte thumb instruction and cache it
+	// 2. If some instruction is not recognized, print the error
+	// 3. Possibly print disasm
+	g_opct.clear();
+
+	while (addr < end_addr)
+	{
+		ARMv7Code code = {};
+		code.code0 = vm::psv::read16(addr);
+
+		auto found = g_op2t.data[code.code0];
+
+		if (!found)
+		{
+			code.code1 = code.code0;
+			code.code0 = vm::psv::read16(addr + 2);
+
+			auto op = g_opct.find(code.data);
+			if (op != g_opct.end())
+			{
+				found = op->second;
+			}
+		}
+
+		if (!found)
+		{
+			for (auto opcode : g_op4t.table)
+			{
+				if ((code.data & opcode->mask) == opcode->code)
+				{
+					g_opct[code.data] = (found = opcode);
+					break;
+				}
+			}
+		}
+		
+		if (!found)
+		{
+			LOG_ERROR(ARMv7, "Unknown instruction found at address 0x%08x: %04x %04x", addr, code.code1, code.code0);
+			addr += 4;
+		}
+		else
+		{
+			if (dump) if (found->length == 2)
+			{
+				LOG_NOTICE(ARMv7, "0x%08x: %04x       %s", addr, code.code0, found->name);
+			}
+			else
+			{
+				LOG_NOTICE(ARMv7, "0x%08x: %04x %04x  %s", addr, code.code1, code.code0, found->name);
+			}
+
+			addr += found->length;
+		}
+	}
+
+	while (vm::psv::read16(addr) == 0xf870)
+	{
+		g_opct[0xf8700000 | vm::psv::read16(addr + 2)] = g_op4t.table[0];
+		addr += 16;
+	}
+
+	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", g_opct.size());
+}
+
+u32 ARMv7Decoder::DecodeMemory(const u32 address)
+{
+	if (address & 0x1)
+	{
+		throw "ARMv7Decoder::DecodeMemory() failed (something is wrong with instruction set)";
+	}
+
+	ARMv7Code code = {};
+	code.code0 = vm::psv::read16(address);
+
+	if (auto opcode = g_op2t.data[code.code0])
+	{
+		(*opcode->func)(m_ctx, code, opcode->type);
+		return 2;
+	}
+
+	code.code1 = code.code0;
+	code.code0 = vm::psv::read16(address + 2);
+
+	auto op = g_opct.find(code.data);
+	if (op != g_opct.end())
+	{
+		(*op->second->func)(m_ctx, code, op->second->type);
+		return 4;
+	}
+
+	//for (auto opcode : g_op4t.table)
+	//{
+	//	if ((code.data & opcode->mask) == opcode->code)
+	//	{
+	//		(*opcode->func)(m_ctx, code, opcode->type);
+	//		return 4;
+	//	}
+	//}
+
+	ARMv7_instrs::UNK(m_ctx, code);
+	return 2;
+
+	// "group" decoding algorithm (temporarily disabled)
 
 	//execute_main_group(&m_thr);
 	//// LOG_NOTICE(GENERAL, "%s, %d \n\n", m_thr.m_last_instr_name, m_thr.m_last_instr_size);

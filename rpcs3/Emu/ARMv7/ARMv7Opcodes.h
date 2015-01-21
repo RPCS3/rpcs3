@@ -1,16 +1,8 @@
 #pragma once
-
+#if 0
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Interpreter.h"
 
-static const char* g_arm_reg_name[16] =
-{
-	"r0", "r1", "r2", "r3",
-	"r4", "r5", "r6", "r7",
-	"r8", "r9", "r10", "r11",
-	"r12", "sp", "lr", "pc",
-};
-#if 0
 using namespace ARMv7_instrs;
 
 struct ARMv7_Instruction

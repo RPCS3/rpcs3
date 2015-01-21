@@ -106,7 +106,7 @@ void ARMv7Thread::DoRun()
 
 	case 1:
 	case 2:
-		m_dec = new ARMv7Decoder(*this);
+		m_dec = new ARMv7Decoder(context);
 	break;
 	}
 }

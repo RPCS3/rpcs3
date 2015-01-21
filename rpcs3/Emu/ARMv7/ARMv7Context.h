@@ -10,17 +10,6 @@ enum ARMv7InstructionSet
 	ThumbEE
 };
 
-union ARMv7Code
-{
-	struct
-	{
-		u16 code0;
-		u16 code1;
-	};
-
-	u32 data;
-};
-
 struct ARMv7Context
 {
 	ARMv7Thread& thread;

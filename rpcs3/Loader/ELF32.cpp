@@ -6,6 +6,7 @@
 #include "ELF32.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
+#include "Emu/ARMv7/ARMv7Decoder.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/System.h"
 
@@ -98,17 +99,8 @@ namespace loader
 
 				u32 entry = 0; // actual entry point (ELFs entry point is ignored)
 				u32 fnid_addr = 0;
-
-				// load section names
-				//assert(m_ehdr.data_le.e_shstrndx < m_shdrs.size());
-				//const u32 sname_off = m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset;
-				//const u32 sname_size = m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_size;
-				//const u32 sname_base = sname_size ? Memory.PSV.RAM.AllocAlign(sname_size) : 0;
-				//if (sname_base)
-				//{
-				//	m_stream->Seek(handler::get_stream_offset() + sname_off);
-				//	m_stream->Read(vm::get_ptr<void>(sname_base), sname_size);
-				//}
+				u32 code_start = 0;
+				u32 code_end = 0;
 
 				for (auto& shdr : m_shdrs)
 				{
@@ -125,7 +117,14 @@ namespace loader
 						name.push_back(c);
 					}
 
-					if (!strcmp(name.c_str(), ".sceModuleInfo.rodata"))
+					if (!strcmp(name.c_str(), ".text"))
+					{
+						LOG_NOTICE(LOADER, ".text analysis...");
+
+						code_start = shdr.data_le.sh_addr;
+						code_end = shdr.data_le.sh_size + code_start;
+					}
+					else if (!strcmp(name.c_str(), ".sceModuleInfo.rodata"))
 					{
 						LOG_NOTICE(LOADER, ".sceModuleInfo.rodata analysis...");
 
@@ -190,6 +189,8 @@ namespace loader
 								vm::psv::write16(addr + 2, 0); // index 0 (unimplemented stub)
 								vm::psv::write32(addr + 4, nid); // nid
 							}
+
+							code_end = std::min<u32>(addr, code_end);
 						}
 					}
 					else if (!strcmp(name.c_str(), ".sceRefs.rodata"))
@@ -237,6 +238,8 @@ namespace loader
 						}
 					}
 				}
+
+				armv7_decoder_initialize(code_start, code_end);
 
 				arm7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
 				break;

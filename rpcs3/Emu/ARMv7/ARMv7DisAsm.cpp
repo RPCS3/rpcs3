@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if 0
 #include "ARMv7DisAsm.h"
 
 void ARMv7DisAsm::UNK(const u32 data)
@@ -1119,4 +1120,4 @@ void ARMv7DisAsm::UXTH(const u32 data, const ARMv7_encoding type)
 {
 	Write(__FUNCTION__);
 }
-
+#endif
