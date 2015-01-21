@@ -6030,7 +6030,7 @@ ppu_recompiler_llvm::ExecutionEngine::~ExecutionEngine() {
 
 }
 
-u8 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
+u32 ppu_recompiler_llvm::ExecutionEngine::DecodeMemory(const u32 address) {
     ExecuteFunction(&m_ppu, 0);
     return 0;
 }
