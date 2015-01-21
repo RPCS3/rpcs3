@@ -2,8 +2,6 @@
 
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Interpreter.h"
-//#include "Emu/System.h"
-//#include "Utilities/Log.h"
 
 static const char* g_arm_reg_name[16] =
 {
@@ -12,7 +10,7 @@ static const char* g_arm_reg_name[16] =
 	"r8", "r9", "r10", "r11",
 	"r12", "sp", "lr", "pc",
 };
-
+#if 0
 using namespace ARMv7_instrs;
 
 struct ARMv7_Instruction
@@ -22,8 +20,6 @@ struct ARMv7_Instruction
 	ARMv7_encoding type;
 	const char* name;
 };
-
-#if 0
 
 #define ARMv7_OP_2(func, type) { func, 2, type, #func "_" #type }
 #define ARMv7_OP_4(func, type) { func, 4, type, #func "_" #type }
