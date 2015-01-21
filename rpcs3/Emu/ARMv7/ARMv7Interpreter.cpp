@@ -3511,3 +3511,1346 @@ void ARMv7_instrs::UXTH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	default: throw __FUNCTION__;
 	}
 }
+
+
+void ARMv7_instrs::VABA_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VABD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VABD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VAC__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VADD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VAND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VAND_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VBIC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VBIC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VB__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCEQ_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCEQ_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCGE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCGE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCGT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCGT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCMP_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCNT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_FIA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_FIF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_FFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_FFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_DF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_HFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VCVT_HFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VDIV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VDUP_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VDUP_R(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VEOR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VEXT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VHADDSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD1_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD2_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD3_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLD4_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VLDR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VML__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VML_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VML__S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_RS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_SR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_RF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_RF2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOV_RD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOVL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMOVN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMRS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMUL_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMUL_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMUL_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMVN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VMVN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VNM__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VORN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VORN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VORR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VORR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPADAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPADDL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPOP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VPUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQDML_L(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQDMULL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQMOV_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQRDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQRSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VQSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRECPE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRECPS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VREV__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRHADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSQRTE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSQRTS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VRSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSHLL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSLI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSQRT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSRI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VST4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSTM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSTR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSUB_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSUB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VSWP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VTBL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VTBX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VTRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VTST(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VUZP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::VZIP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+
+void ARMv7_instrs::WFE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::WFI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}
+
+void ARMv7_instrs::YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	switch (type)
+	{
+	case A1: throw __FUNCTION__;
+	default: throw __FUNCTION__;
+	}
+}

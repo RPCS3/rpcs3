@@ -364,6 +364,157 @@ namespace ARMv7_instrs
 	void UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void UXTB16(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void UXTH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+
+	void VABA_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VABD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VABD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VAC__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VADD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VAND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VAND_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VBIC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VBIC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VB__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCEQ_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCEQ_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCGE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCGE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCGT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCGT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCMP_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCNT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_FIA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_FIF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_FFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_FFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_DF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_HFA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VCVT_HFF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VDIV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VDUP_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VDUP_R(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VEOR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VEXT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VHADDSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD1_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD2_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD3_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLD4_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VLDR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VML__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VML_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VML__S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_RS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_SR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_RF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_RF2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOV_RD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOVL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMOVN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMRS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMUL_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMUL_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMUL_S(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMVN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VMVN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VNM__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VORN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VORN_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VORR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VORR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPADAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPADDL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPMAXMIN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPMAXMIN_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPOP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VPUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQABS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQDML_L(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQDMULL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQMOV_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQRDMULH(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQRSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQSHR_N(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VQSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRECPE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRECPS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VREV__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRHADD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSHL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSQRTE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSQRTS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VRSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSHL_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSHL_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSHLL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSHR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSHRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSLI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSQRT(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSRA(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSRI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST1_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VST4_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSTM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSTR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSUB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSUB_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSUBHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSUB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VSWP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VTBL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VTBX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VTRN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VTST(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VUZP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VZIP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+
+	void WFE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void WFI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 };
 
 
@@ -942,7 +1093,22 @@ static const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xffff, 0xf0c0, 0xfa1f, 0xf080, T2, UXTH),
 	ARMv7_OP4(0x0fff, 0x03f0, 0x06ff, 0x0070, A1, UXTH),
 
-	// TODO (V*)
+	ARMv7_OP4(0xef80, 0x0f10, 0xef00, 0x0710, T1, VABA_),
+	ARMv7_OP4(0xfe80, 0x0f10, 0xf200, 0x0710, A1, VABA_),
+	ARMv7_OP4(0xef80, 0x0f50, 0xef80, 0x0500, T2, VABA_),
+	ARMv7_OP4(0xfe80, 0x0f50, 0xf280, 0x0500, A2, VABA_),
+
+	// TODO: vector instructions
+
+	ARMv7_OP2(0xffff, 0xbf20, T1, WFE),
+	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8002, T2, WFE),
+	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf002, A1, WFE),
+	ARMv7_OP2(0xffff, 0xbf30, T1, WFI),
+	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8003, T2, WFI),
+	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf003, A1, WFI),
+	ARMv7_OP2(0xffff, 0xbf10, T1, YIELD),
+	ARMv7_OP4(0xffff, 0xffff, 0xf3af, 0x8001, T2, YIELD),
+	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf001, A1, YIELD),
 };
 
 #undef ARMv7_OP2
