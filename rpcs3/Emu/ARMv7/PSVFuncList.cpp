@@ -1,7 +1,4 @@
 #include "stdafx.h"
-#include <unordered_map>
-#include "Utilities/Log.h"
-#include "Emu/System.h"
 #include "ARMv7Thread.h"
 #include "PSVFuncList.h"
 

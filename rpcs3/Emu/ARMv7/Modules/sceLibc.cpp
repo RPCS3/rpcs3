@@ -14,6 +14,12 @@ namespace sce_libc_func
 		Emu.Pause();
 	}
 
+	void __aeabi_atexit()
+	{
+		sceLibc.Todo(__FUNCTION__);
+		Emu.Pause();
+	}
+
 	void exit()
 	{
 		sceLibc.Error("exit()");
@@ -99,6 +105,13 @@ namespace sce_libc_func
 		sceLibc.Error("memcpy(dst=0x%x, src=0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
+	}
+
+	void memset(vm::psv::ptr<void> dst, s32 value, u32 size)
+	{
+		sceLibc.Error("memset(dst=0x%x, value=%d, size=0x%x)", dst, value, size);
+
+		::memset(dst.get_ptr(), value, size);
 	}
 
 	void _Assert(vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
@@ -256,7 +269,7 @@ psv_log_base sceLibc("SceLibc", []()
 	//REG_FUNC(0x7747F6D7, memcmp);
 	REG_FUNC(0x7205BFDB, memcpy);
 	//REG_FUNC(0xAF5C218D, memmove);
-	//REG_FUNC(0x6DC1F0D8, memset);
+	REG_FUNC(0x6DC1F0D8, memset);
 	//REG_FUNC(0x1434FA46, strcat);
 	//REG_FUNC(0xB9336E16, strchr);
 	//REG_FUNC(0x1B58FA3B, strcmp);
@@ -373,7 +386,7 @@ psv_log_base sceLibc("SceLibc", []()
 	//REG_FUNC(0x9D885076, _Towctrans);
 	//REG_FUNC(0xE980110A, _Iswctype);
 	REG_FUNC(0x33b83b70, __cxa_atexit);
-	//REG_FUNC(0xEDC939E1, __aeabi_atexit);
+	REG_FUNC(0xEDC939E1, __aeabi_atexit);
 	//REG_FUNC(0xB538BF48, __cxa_finalize);
 	//REG_FUNC(0xD0310E31, __cxa_guard_acquire);
 	//REG_FUNC(0x4ED1056F, __cxa_guard_release);
