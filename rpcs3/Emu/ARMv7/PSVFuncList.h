@@ -8,6 +8,11 @@ class psv_log_base : public LogBase
 	void(*m_init_func)();
 
 public:
+	std::function<void()> on_load;
+	std::function<void()> on_unload;
+	std::function<void()> on_stop;
+
+public:
 	psv_log_base(const std::string& name, void(*init_func)())
 		: m_name(name)
 		, m_init_func(init_func)
@@ -422,6 +427,8 @@ namespace psv_func_detail
 		ARG_STACK,
 	};
 
+	static const auto FIXED_STACK_FRAME_SIZE = 0x100; // described in CB_FUNC.h
+
 	template<typename T, bind_arg_type type, int g_count, int f_count, int v_count>
 	struct bind_arg;
 
@@ -430,9 +437,14 @@ namespace psv_func_detail
 	{
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_GENERAL");
 
-		static __forceinline T func(ARMv7Context& context)
+		__forceinline static T get_arg(ARMv7Context& context)
 		{
 			return cast_from_armv7_gpr<T>(context.GPR[g_count - 1]);
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		{
+			context.GPR[g_count - 1] = cast_to_armv7_gpr<T>(arg);
 		}
 	};
 
@@ -442,7 +454,11 @@ namespace psv_func_detail
 		static_assert(f_count <= 0, "TODO: Unsupported argument type (float)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		static __forceinline T func(ARMv7Context& context)
+		__forceinline static T get_arg(ARMv7Context& context)
+		{
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -453,7 +469,11 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
 		static_assert(std::is_same<T, u128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		static __forceinline T func(ARMv7Context& context)
+		__forceinline static T get_arg(ARMv7Context& context)
+		{
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -465,11 +485,19 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_STACK");
 
-		static __forceinline T func(ARMv7Context& context)
+		__forceinline static T get_arg(ARMv7Context& context)
 		{
 			// TODO: check
-			const u32 res = context.get_stack_arg(g_count);
-			return cast_from_armv7_gpr<T>(res);
+			return cast_from_armv7_gpr<T>(context.get_stack_arg(g_count));
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		{
+			// TODO: check
+			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
+			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
+
+			context.write_stack_arg(stack_pos, cast_to_armv7_gpr<T>(arg));
 		}
 	};
 
@@ -481,7 +509,12 @@ namespace psv_func_detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 4, "Invalid function result type for ARG_GENERAL");
 
-		static __forceinline void func(ARMv7Context& context, const T& result)
+		__forceinline static T get_result(ARMv7Context& context)
+		{
+			return cast_from_armv7_gpr<T>(context.GPR[0]);
+		}
+
+		__forceinline static void put_result(ARMv7Context& context, const T& result)
 		{
 			context.GPR[0] = cast_to_armv7_gpr<T>(result);
 		}
@@ -492,7 +525,7 @@ namespace psv_func_detail
 	//{
 	//	static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-	//	static __forceinline void func(ARMv7Context& context, const T& result)
+	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
@@ -502,10 +535,20 @@ namespace psv_func_detail
 	//{
 	//	static_assert(std::is_same<T, u128>::value, "Invalid function result type for ARG_VECTOR");
 
-	//	static __forceinline void func(ARMv7Context& context, const T& result)
+	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
+
+	template<typename RT>
+	struct result_type
+	{
+		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
+		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
+		static const bool is_float = std::is_floating_point<RT>::value;
+		static const bool is_vector = std::is_same<RT, u128>::value;
+		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+	};
 
 	template <typename RT, typename F, typename Tuple, bool Done, int Total, int... N>
 	struct call_impl
@@ -554,18 +597,35 @@ namespace psv_func_detail
 		const int f = f_count + (is_float ? 1 : 0);
 		const int v = v_count + (is_vector ? 1 : 0);
 
-		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(context)), iterate<g, f, v, A...>(context));
+		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::get_arg(context)), iterate<g, f, v, A...>(context));
 	}
 
-	template<typename RT>
-	struct result_type
+	template<int g_count, int f_count, int v_count>
+	__forceinline static bool put_func_args(ARMv7Context& context)
 	{
-		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-		static const bool is_float = std::is_floating_point<RT>::value;
-		static const bool is_vector = std::is_same<RT, u128>::value;
-		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-	};
+		// terminator
+		return false;
+	}
+
+	template<int g_count, int f_count, int v_count, typename T1, typename... T>
+	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
+	{
+		static_assert(!std::is_pointer<T1>::value, "Invalid callback argument type (pointer)");
+		static_assert(!std::is_reference<T1>::value, "Invalid callback argument type (reference)");
+		// TODO: check calculations
+		const bool is_float = std::is_floating_point<T>::value;
+		const bool is_vector = std::is_same<T, u128>::value;
+		const bind_arg_type t = is_float
+			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
+			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
+		const int g = g_count + (is_float || is_vector ? 0 : 1);
+		const int f = f_count + (is_float ? 1 : 0);
+		const int v = v_count + (is_vector ? 1 : 0);
+
+		bind_arg<T1, t, g, f, v>::put_arg(context, arg);
+		// return true if stack was used
+		return put_func_args<g, f, v>(context, args...) || (t == ARG_STACK);
+	}
 
 	template<typename RT, typename... T>
 	class func_binder;
@@ -623,7 +683,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::func(context, call<RT>(m_call, iterate<0, 0, 0, T...>(context)));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, iterate<0, 0, 0, T...>(context)));
 		}
 	};
 
@@ -642,7 +702,36 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::func(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), iterate<0, 0, 0, T...>(context))));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), iterate<0, 0, 0, T...>(context))));
+		}
+	};
+
+	template<typename RT, typename... T>
+	struct func_caller
+	{
+		__forceinline static RT call(ARMv7Context& context, u32 addr, T... args)
+		{
+			func_caller<void, T...>::call(context, addr, args...);
+
+			return bind_result<RT, result_type<RT>::value>::get_result(context);
+		}
+	};
+
+	template<typename... T>
+	struct func_caller<void, T...>
+	{
+		__forceinline static void call(ARMv7Context& context, u32 addr, T... args)
+		{
+			if (put_func_args<0, 0, 0, T...>(context, args...))
+			{
+				context.SP -= FIXED_STACK_FRAME_SIZE;
+				context.fast_call(addr);
+				context.SP += FIXED_STACK_FRAME_SIZE;
+			}
+			else
+			{
+				context.fast_call(addr);
+			}
 		}
 	};
 }
@@ -673,4 +762,5 @@ psv_func* get_psv_func_by_nid(u32 nid);
 u32 get_psv_func_index(psv_func* func);
 
 void execute_psv_func_by_index(ARMv7Context& context, u32 index);
-void list_known_psv_modules();
+void initialize_psv_modules();
+void finalize_psv_modules();

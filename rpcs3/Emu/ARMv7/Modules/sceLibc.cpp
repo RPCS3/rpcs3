@@ -3,29 +3,51 @@
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Callback.h"
 
 extern psv_log_base sceLibc;
 
+vm::psv::ptr<void> g_dso;
+
+typedef void(*atexit_func_t)(vm::psv::ptr<void>);
+
+std::vector<std::function<void(ARMv7Context&)>> g_atexit;
+
 namespace sce_libc_func
 {
-	void __cxa_atexit()
+	void __cxa_atexit(vm::psv::ptr<atexit_func_t> func, vm::psv::ptr<void> arg, vm::psv::ptr<void> dso)
 	{
-		sceLibc.Todo(__FUNCTION__);
-		Emu.Pause();
+		sceLibc.Error("__cxa_atexit(func=0x%x, arg=0x%x, dso=0x%x)", func, arg, dso);
+		
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		{
+			func(context, arg);
+		});
 	}
 
-	void __aeabi_atexit()
+	void __aeabi_atexit(vm::psv::ptr<void> arg, vm::psv::ptr<atexit_func_t> func, vm::psv::ptr<void> dso)
 	{
-		sceLibc.Todo(__FUNCTION__);
-		Emu.Pause();
+		sceLibc.Error("__aeabi_atexit(arg=0x%x, func=0x%x, dso=0x%x)", arg, func, dso);
+
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		{
+			func(context, arg);
+		});
 	}
 
-	void exit()
+	void exit(ARMv7Context& context)
 	{
 		sceLibc.Error("exit()");
-		Emu.Pause();
+		
+		for (auto func : g_atexit)
+		{
+			func(context);
+		}
+
+		g_atexit.clear();
 
 		sceLibc.Success("Process finished");
+
 		CallAfter([]()
 		{
 			Emu.Stop();
@@ -95,9 +117,11 @@ namespace sce_libc_func
 		LOG_NOTICE(TTY, result);
 	}
 
-	void __cxa_set_dso_handle_main()
+	void __cxa_set_dso_handle_main(vm::psv::ptr<void> dso)
 	{
-		sceLibc.Error("__cxa_set_dso_handle_main()");
+		sceLibc.Error("__cxa_set_dso_handle_main(dso=0x%x)", dso);
+
+		g_dso = dso;
 	}
 
 	void memcpy(vm::psv::ptr<void> dst, vm::psv::ptr<const void> src, u32 size)
@@ -127,6 +151,13 @@ namespace sce_libc_func
 
 psv_log_base sceLibc("SceLibc", []()
 {
+	g_dso.set(0);
+	g_atexit.clear();
+
+	sceLibc.on_load = nullptr;
+	sceLibc.on_unload = nullptr;
+	sceLibc.on_stop = nullptr;
+
 	REG_FUNC(0xE4531F85, _Assert);
 	//REG_FUNC(0xE71C5CDE, _Stoul);
 	//REG_FUNC(0x7A5CA6A3, _Stoulx);

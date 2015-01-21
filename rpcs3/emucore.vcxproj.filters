@@ -1285,5 +1285,8 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Context.h">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\ARMv7\ARMv7Callback.h">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -327,6 +327,10 @@ s32 sceKernelWaitThreadEndCB(u32 threadId, vm::psv::ptr<s32> pExitStatus, vm::ps
 
 psv_log_base sceLibKernel("sceLibKernel", []()
 {
+	sceLibKernel.on_load = nullptr;
+	sceLibKernel.on_unload = nullptr;
+	sceLibKernel.on_stop = nullptr;
+
 	//REG_FUNC(0x23EAA62, sceKernelPuts);
 	//REG_FUNC(0xB0335388, sceClibToupper);
 	//REG_FUNC(0x4C5471BC, sceClibTolower);

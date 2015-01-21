@@ -30,6 +30,10 @@ namespace sce_libstdcxx_func
 
 psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 {
+	sceLibstdcxx.on_load = nullptr;
+	sceLibstdcxx.on_unload = nullptr;
+	sceLibstdcxx.on_stop = nullptr;
+
 	//REG_FUNC(0x52B0C625, std::bad_typeid::what() const);
 	//REG_FUNC(0x64D7D074, std::bad_typeid::_Doraise() const);
 	//REG_FUNC(0x15FB88E2, std::logic_error::what() const);

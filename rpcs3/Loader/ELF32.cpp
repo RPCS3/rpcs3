@@ -89,7 +89,7 @@ namespace loader
 			case MACHINE_MIPS: break;
 			case MACHINE_ARM:
 			{
-				list_known_psv_modules();
+				initialize_psv_modules();
 
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
 				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
