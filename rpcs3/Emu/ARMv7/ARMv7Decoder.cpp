@@ -14,12 +14,18 @@ struct ARMv7_opcode_t
 	const char* name;
 	ARMv7_encoding type;
 	void(*func)(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	bool(*skip)(u32 code);
 };
 
 // single 16-bit value
-#define ARMv7_OP2(mask, code, type, name) { (u32)((mask) << 16), (u32)((code) << 16), 2, #name "_" #type, type, ARMv7_instrs::name }
+#define ARMv7_OP2(mask, code, type, name, ...) { (u32)((mask) << 16), (u32)((code) << 16), 2, #name "_" #type, type, ARMv7_instrs::name, __VA_ARGS__ }
 // two 16-bit values
-#define ARMv7_OP4(mask0, mask1, code0, code1, type, name) { (u32)((mask0) << 16) | (mask1), (u32)((code0) << 16) | (code1), 4, #name "_" #type, type, ARMv7_instrs::name }
+#define ARMv7_OP4(mask0, mask1, code0, code1, type, name, ...) { (u32)((mask0) << 16) | (mask1), (u32)((code0) << 16) | (code1), 4, #name "_" #type, type, ARMv7_instrs::name, __VA_ARGS__ }
+
+#define SKIP_IF(cond) [](u32 c) -> bool { return cond; }
+
+#define BF(start, end) ((c << (31 - (end))) >> ((start) + 31 - (end)))
+#define BT(pos) ((c >> (pos)) & 1)
 
 const ARMv7_opcode_t ARMv7_opcode_table[] =
 {
@@ -35,6 +41,16 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0x0fe0, 0x0010, 0x00a0, 0x0000, A1, ADC_REG),
 	ARMv7_OP4(0x0fe0, 0x0090, 0x00a0, 0x0010, A1, ADC_RSR),
 
+	ARMv7_OP2(0xfe00, 0x1c00, T1, ADD_IMM),
+	ARMv7_OP2(0xf800, 0x3000, T2, ADD_IMM),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf200, 0x0000, T4, ADD_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0280, 0x0000, A1, ADD_IMM),
+	ARMv7_OP2(0xfe00, 0x1800, T1, ADD_REG),
+	ARMv7_OP2(0xff00, 0x4400, T2, ADD_REG, SKIP_IF( (c & 0x87) == 0x85 || BF(3, 6) == 13 )),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeb00, 0x0000, T3, ADD_REG),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0080, 0x0000, A1, ADD_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0080, 0x0010, A1, ADD_RSR),
 	ARMv7_OP2(0xf800, 0xa800, T1, ADD_SPI),
 	ARMv7_OP2(0xff80, 0xb000, T2, ADD_SPI),
 	ARMv7_OP4(0xfbef, 0x8000, 0xf10d, 0x0000, T3, ADD_SPI),
@@ -44,16 +60,6 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP2(0xff87, 0x4485, T2, ADD_SPR),
 	ARMv7_OP4(0xffef, 0x8000, 0xeb0d, 0x0000, T3, ADD_SPR),
 	ARMv7_OP4(0x0fef, 0x0010, 0x008d, 0x0000, A1, ADD_SPR),
-	ARMv7_OP2(0xfe00, 0x1c00, T1, ADD_IMM),
-	ARMv7_OP2(0xf800, 0x3000, T2, ADD_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf200, 0x0000, T4, ADD_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0280, 0x0000, A1, ADD_IMM),
-	ARMv7_OP2(0xfe00, 0x1800, T1, ADD_REG),
-	ARMv7_OP2(0xff00, 0x4400, T2, ADD_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeb00, 0x0000, T3, ADD_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0080, 0x0000, A1, ADD_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0080, 0x0010, A1, ADD_RSR),
 
 	ARMv7_OP2(0xf800, 0xa000, T1, ADR),
 	ARMv7_OP4(0xfbff, 0x8000, 0xf2af, 0x0000, T2, ADR),
@@ -166,7 +172,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xfff0, 0x0fc0, 0xf810, 0x0000, T2, LDRB_REG),
 	ARMv7_OP4(0x0e50, 0x0010, 0x0650, 0x0000, A1, LDRB_REG),
 
-	ARMv7_OP4(0xfe50, 0x0000, 0xe850, 0x0000, T1, LDRD_IMM),
+	ARMv7_OP4(0xfe50, 0x0000, 0xe850, 0x0000, T1, LDRD_IMM, SKIP_IF( (!BT(21) && !BT(24)) || BF(16, 19) == 15 )),
 	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00d0, A1, LDRD_IMM),
 	ARMv7_OP4(0xfe7f, 0x0000, 0xe85f, 0x0000, T1, LDRD_LIT),
 	ARMv7_OP4(0x0f7f, 0x00f0, 0x014f, 0x00d0, A1, LDRD_LIT),
@@ -488,7 +494,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xfff0, 0x0fc0, 0xf800, 0x0000, T2, STRB_REG),
 	ARMv7_OP4(0x0e50, 0x0010, 0x0640, 0x0000, A1, STRB_REG),
 
-	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM),
+	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM, SKIP_IF(!BT(21) && !BT(24))),
 	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00f0, A1, STRD_IMM),
 	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00f0, A1, STRD_REG),
 
@@ -509,21 +515,21 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xfff0, 0x0fc0, 0xf820, 0x0000, T2, STRH_REG),
 	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00b0, A1, STRH_REG),
 
+	ARMv7_OP2(0xfe00, 0x1e00, T1, SUB_IMM),
+	ARMv7_OP2(0xf800, 0x3800, T2, SUB_IMM),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0xfbf0, 0x8000, 0xf2a0, 0x0000, T4, SUB_IMM),
+	ARMv7_OP4(0x0fe0, 0x0000, 0x0240, 0x0000, A1, SUB_IMM),
+	ARMv7_OP2(0xfe00, 0x1a00, T1, SUB_REG),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0x0fe0, 0x0010, 0x0040, 0x0000, A1, SUB_REG),
+	ARMv7_OP4(0x0fe0, 0x0090, 0x0040, 0x0010, A1, SUB_RSR),
 	ARMv7_OP2(0xff80, 0xb080, T1, SUB_SPI),
 	ARMv7_OP4(0xfbef, 0x8000, 0xf1ad, 0x0000, T2, SUB_SPI),
 	ARMv7_OP4(0xfbff, 0x8000, 0xf2ad, 0x0000, T3, SUB_SPI),
 	ARMv7_OP4(0x0fef, 0x0000, 0x024d, 0x0000, A1, SUB_SPI),
 	ARMv7_OP4(0xffef, 0x8000, 0xebad, 0x0000, T1, SUB_SPR),
 	ARMv7_OP4(0x0fef, 0x0010, 0x004d, 0x0000, A1, SUB_SPR),
-	ARMv7_OP2(0xfe00, 0x1e00, T1, SUB_IMM),
-	ARMv7_OP2(0xf800, 0x3800, T2, SUB_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM),
-	ARMv7_OP4(0xfbf0, 0x8000, 0xf2a0, 0x0000, T4, SUB_IMM),
-	ARMv7_OP4(0x0fe0, 0x0000, 0x0240, 0x0000, A1, SUB_IMM),
-	ARMv7_OP2(0xfe00, 0x1a00, T1, SUB_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG),
-	ARMv7_OP4(0x0fe0, 0x0010, 0x0040, 0x0000, A1, SUB_REG),
-	ARMv7_OP4(0x0fe0, 0x0090, 0x0040, 0x0010, A1, SUB_RSR),
 
 	ARMv7_OP2(0xff00, 0xdf00, T1, SVC),
 	ARMv7_OP4(0x0f00, 0x0000, 0x0f00, 0x0000, A1, SVC),
@@ -1091,6 +1097,12 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0x0fff, 0xffff, 0x0320, 0xf001, A1, YIELD),
 };
 
+#undef ARMv7_OP2
+#undef ARMv7_OP4
+#undef SKIP_IF
+#undef BF
+#undef BT
+
 struct ARMv7_op2_table_t
 {
 	const ARMv7_opcode_t* data[0x10000];
@@ -1103,6 +1115,11 @@ struct ARMv7_op2_table_t
 		{
 			if (opcode.length == 2)
 			{
+				if (opcode.code & ~opcode.mask)
+				{
+					LOG_ERROR(GENERAL, "%s: wrong opcode mask (mask=0x%04x, code=0x%04x)", opcode.name, opcode.mask >> 16, opcode.code >> 16);
+				}
+
 				t2.push_back(&opcode);
 			}
 		}
@@ -1113,7 +1130,7 @@ struct ARMv7_op2_table_t
 
 			for (auto& opcode : t2)
 			{
-				if (((i << 16) & opcode->mask) == opcode->code)
+				if (((i << 16) & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(i)))
 				{
 					data[i] = opcode;
 					break;
@@ -1134,6 +1151,11 @@ struct ARMv7_op4t_table_t
 		{
 			if (opcode.length == 4 && opcode.type < A1)
 			{
+				if (opcode.code & ~opcode.mask)
+				{
+					LOG_ERROR(GENERAL, "%s: wrong opcode mask (mask=0x%04x 0x%04x, code=0x%04x 0x%04x)", opcode.name, opcode.mask >> 16, (u16)opcode.mask, opcode.code >> 16, (u16)opcode.code);
+				}
+
 				table.push_back(&opcode);
 			}
 		}
@@ -1173,7 +1195,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 		{
 			for (auto opcode : g_op4t.table)
 			{
-				if ((code.data & opcode->mask) == opcode->code)
+				if ((code.data & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(code.data)))
 				{
 					g_opct[code.data] = (found = opcode);
 					break;

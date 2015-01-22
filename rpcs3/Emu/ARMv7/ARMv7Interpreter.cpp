@@ -354,11 +354,11 @@ void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMN (immediate)";
+			throw "ADD_IMM_T3: CMN (immediate)";
 		}
 		if (n == 13)
 		{
-			throw "ADD (SP plus immediate)";
+			throw "ADD_IMM_T3: ADD (SP plus immediate)";
 		}
 		break;
 	}
@@ -371,11 +371,11 @@ void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (n == 15)
 		{
-			throw "ADR";
+			throw "ADD_IMM_T4: ADR";
 		}
 		if (n == 13)
 		{
-			throw "ADD (SP plus immediate)";
+			throw "ADD_IMM_T4: ADD (SP plus immediate)";
 		}
 		break;
 	}
@@ -429,7 +429,7 @@ void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (n == 13 || m == 13)
 		{
-			throw "ADD (SP plus register)";
+			throw "ADD_REG_T2: ADD (SP plus register)";
 		}
 		break;
 	}
@@ -443,11 +443,11 @@ void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMN (register)";
+			throw "ADD_REG_T3: CMN (register)";
 		}
 		if (n == 13)
 		{
-			throw "ADD (SP plus register)";
+			throw "ADD_REG_T3: ADD (SP plus register)";
 		}
 		break;
 	}
@@ -512,7 +512,7 @@ void ARMv7_instrs::ADD_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMN (immediate)";
+			throw "ADD_SPI_T3: CMN (immediate)";
 		}
 		break;
 	}
@@ -674,7 +674,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 		cond = (code.data >> 8) & 0xf;
 		if (cond == 0xf)
 		{
-			throw "SVC";
+			throw "B_T1: SVC";
 		}
 
 		jump = 4 + sign<9, u32>((code.data & 0xff) << 1);
@@ -1165,7 +1165,7 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (n == 15)
 		{
-			throw "LDR (literal)";
+			throw "LDR_IMM_T3: LDR (literal)";
 		}
 		break;
 	}
@@ -1180,15 +1180,15 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (n == 15)
 		{
-			throw "LDR (literal)";
+			throw "LDR_IMM_T4: LDR (literal)";
 		}
 		if (index && add && !wback)
 		{
-			throw "LDRT";
+			throw "LDR_IMM_T4: LDRT";
 		}
 		if (n == 13 && !index && add && wback && imm32 == 4)
 		{
-			throw "POP";
+			throw "LDR_IMM_T4: POP";
 		}
 		if (!index && !wback)
 		{
@@ -1252,7 +1252,7 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (n == 15)
 		{
-			throw "LDR (literal)";
+			throw "LDR_REG_T2: LDR (literal)";
 		}
 		break;
 	}
@@ -1334,7 +1334,7 @@ void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		}
 		if (n == 15)
 		{
-			throw "LDRD (literal)";
+			throw "LDRD_IMM_T1: LDRD (literal)";
 		}
 		break;
 	}
@@ -1538,7 +1538,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (!shift_n)
 		{
-			throw "MOV (register)";
+			throw "LSL_IMM_T1: MOV (register)";
 		}
 		break;
 	}
@@ -1551,7 +1551,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (!shift_n)
 		{
-			throw "MOV (register)";
+			throw "LSL_IMM_T2: MOV (register)";
 		}
 		break;
 	}
@@ -1949,7 +1949,7 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		reg_list = code.data & 0xffff;
 		if (BitCount(reg_list) < 2)
 		{
-			throw "LDM / LDMIA / LDMFD";
+			throw "POP_A1: LDM / LDMIA / LDMFD";
 		}
 		break;
 	}
@@ -2006,7 +2006,7 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 		reg_list = code.data & 0xffff;
 		if (BitCount(reg_list) < 2)
 		{
-			throw "STMDB / STMFD";
+			throw "PUSH_A1: STMDB / STMFD";
 		}
 		break;
 	}
@@ -2666,11 +2666,11 @@ void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (index && add && !wback)
 		{
-			throw "STRT";
+			throw "STR_IMM_T4: STRT";
 		}
 		if (n == 13 && index && !add && wback && imm32 == 4)
 		{
-			throw "PUSH";
+			throw "STR_IMM_T4: PUSH";
 		}
 		if (n == 15 || (!index && !wback))
 		{
@@ -2900,11 +2900,11 @@ void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMP (immediate)";
+			throw "SUB_IMM_T3: CMP (immediate)";
 		}
 		if (n == 13)
 		{
-			throw "SUB (SP minus immediate)";
+			throw "SUB_IMM_T3: SUB (SP minus immediate)";
 		}
 		break;
 	}
@@ -2917,11 +2917,11 @@ void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15)
 		{
-			throw "ADR";
+			throw "SUB_IMM_T4: ADR";
 		}
 		if (n == 13)
 		{
-			throw "SUB (SP minus immediate)";
+			throw "SUB_IMM_T4: SUB (SP minus immediate)";
 		}
 		break;
 	}
@@ -2977,11 +2977,11 @@ void ARMv7_instrs::SUB_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMP (register)";
+			throw "SUB_REG_T2: CMP (register)";
 		}
 		if (n == 13)
 		{
-			throw "SUB (SP minus register)";
+			throw "SUB_REG_T2: SUB (SP minus register)";
 		}
 		break;
 	}
@@ -3040,7 +3040,7 @@ void ARMv7_instrs::SUB_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 
 		if (d == 15 && set_flags)
 		{
-			throw "CMP (immediate)";
+			throw "SUB_SPI_T2: CMP (immediate)";
 		}
 		break;
 	}
@@ -4773,7 +4773,7 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 		if (cp - 10 < 2)
 		{
-			throw "Advanced SIMD and VFP";
+			throw "MRC_(T1/A1): Advanced SIMD and VFP";
 		}
 		break;
 	}
