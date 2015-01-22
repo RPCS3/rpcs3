@@ -21,9 +21,11 @@ namespace loader
 
 				LOG_ERROR(LOADER, "loader::load() failed: %s", i->get_error_code().c_str());
 			}
-
-			LOG_ERROR(LOADER, "loader::init() failed: %s", i->get_error_code().c_str());
-			stream.Seek(i->get_stream_offset());
+			else
+			{
+				LOG_ERROR(LOADER, "loader::init() failed: %s", i->get_error_code().c_str());
+				stream.Seek(i->get_stream_offset());
+			}
 		}
 
 		return false;
