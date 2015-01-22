@@ -799,6 +799,9 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xef80, 0x0b10, 0xef00, 0x0000, T1, VHADDSUB),
 	ARMv7_OP4(0xfe80, 0x0b10, 0xf200, 0x0000, A1, VHADDSUB),
 
+	ARMv7_OP4(0xffb0, 0x0000, 0xf920, 0x0000, T1, VLD__MS), // VLD1, VLD2, VLD3, VLD4
+	ARMv7_OP4(0xffb0, 0x0000, 0xf420, 0x0000, A1, VLD__MS),
+
 	ARMv7_OP4(0xffb0, 0x0f00, 0xf9a0, 0x0c00, T1, VLD1_SAL),
 	ARMv7_OP4(0xffb0, 0x0f00, 0xf4a0, 0x0c00, A1, VLD1_SAL),
 
@@ -822,9 +825,6 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 
 	ARMv7_OP4(0xffb0, 0x0300, 0xf9a0, 0x0300, T1, VLD4_SL),
 	ARMv7_OP4(0xffb0, 0x0300, 0xf4a0, 0x0300, A1, VLD4_SL),
-
-	ARMv7_OP4(0xffb0, 0x0000, 0xf920, 0x0000, T1, VLD__MS), // VLD1, VLD2, VLD3, VLD4
-	ARMv7_OP4(0xffb0, 0x0000, 0xf420, 0x0000, A1, VLD__MS),
 
 	ARMv7_OP4(0xfe10, 0x0f00, 0xec10, 0x0b00, T1, VLDM),
 	ARMv7_OP4(0x0e10, 0x0f00, 0x0c10, 0x0b00, A1, VLDM),
@@ -1170,6 +1170,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 	// 1. Find every 4-byte thumb instruction and cache it
 	// 2. If some instruction is not recognized, print the error
 	// 3. Possibly print disasm
+
 	g_opct.clear();
 
 	while (addr < end_addr)
@@ -1217,6 +1218,31 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 			else
 			{
 				LOG_NOTICE(ARMv7, "0x%08x: %04x %04x  %s", addr, code.code1, code.code0, found->name);
+			}
+
+			if (found->func == ARMv7_instrs::BLX && found->type == T2)
+			{
+				const u32 s = (code.data >> 26) & 0x1;
+				const u32 i1 = (code.data >> 13) & 0x1 ^ s ^ 1;
+				const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
+				const u32 target = (addr + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
+
+				// possibly a call to imported function:
+				if (target >= end_addr && ((target - end_addr) % 16) == 0 && vm::psv::read16(target) == 0xf870)
+				{
+					const u32 instr = vm::psv::read32(target);
+
+					// check if not "unimplemented"
+					if (instr >> 16)
+					{
+						// replace BLX with "hack" instruction directly, it can help to see where it was called from
+						vm::psv::write32(addr, instr);
+					}
+				}
+				else
+				{
+					LOG_ERROR(ARMv7, "Unrecognized BLX call found at adddress 0x%08x (target=0x%08x)", addr, target);
+				}
 			}
 
 			addr += found->length;
