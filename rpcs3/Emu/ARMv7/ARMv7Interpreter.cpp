@@ -3855,7 +3855,7 @@ void ARMv7_instrs::VHADDSUB(ARMv7Context& context, const ARMv7Code code, const A
 	}
 }
 
-void ARMv7_instrs::VLD1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VLD__MS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3882,15 +3882,6 @@ void ARMv7_instrs::VLD1_SAL(ARMv7Context& context, const ARMv7Code code, const A
 	}
 }
 
-void ARMv7_instrs::VLD2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
 void ARMv7_instrs::VLD2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
@@ -3909,15 +3900,6 @@ void ARMv7_instrs::VLD2_SAL(ARMv7Context& context, const ARMv7Code code, const A
 	}
 }
 
-void ARMv7_instrs::VLD3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
 void ARMv7_instrs::VLD3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
@@ -3928,15 +3910,6 @@ void ARMv7_instrs::VLD3_SL(ARMv7Context& context, const ARMv7Code code, const AR
 }
 
 void ARMv7_instrs::VLD3_SAL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VLD4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4008,7 +3981,7 @@ void ARMv7_instrs::VML__(ARMv7Context& context, const ARMv7Code code, const ARMv
 	}
 }
 
-void ARMv7_instrs::VML_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VML__FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4071,7 +4044,7 @@ void ARMv7_instrs::VMOV_RF(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 }
 
-void ARMv7_instrs::VMOV_RF2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VMOV_2RF(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4080,7 +4053,7 @@ void ARMv7_instrs::VMOV_RF2(ARMv7Context& context, const ARMv7Code code, const A
 	}
 }
 
-void ARMv7_instrs::VMOV_RD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VMOV_2RD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4180,15 +4153,6 @@ void ARMv7_instrs::VNEG(ARMv7Context& context, const ARMv7Code code, const ARMv7
 }
 
 void ARMv7_instrs::VNM__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VORN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4611,7 +4575,7 @@ void ARMv7_instrs::VSRI(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	}
 }
 
-void ARMv7_instrs::VST1_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VST__MS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4629,15 +4593,6 @@ void ARMv7_instrs::VST1_SL(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 }
 
-void ARMv7_instrs::VST2_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
 void ARMv7_instrs::VST2_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
@@ -4647,25 +4602,7 @@ void ARMv7_instrs::VST2_SL(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 }
 
-void ARMv7_instrs::VST3_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
 void ARMv7_instrs::VST3_SL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VST4_MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -4746,16 +4683,7 @@ void ARMv7_instrs::VSWP(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	}
 }
 
-void ARMv7_instrs::VTBL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VTBX(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VTB_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
