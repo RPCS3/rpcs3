@@ -9,7 +9,7 @@ public:
 
 	virtual std::string GetThreadName() const
 	{
-		return (GetFName() + fmt::Format("[0x%08x]", PC));
+		return fmt::format("%s[0x%08x]", GetFName(), PC);
 	}
 
 protected:

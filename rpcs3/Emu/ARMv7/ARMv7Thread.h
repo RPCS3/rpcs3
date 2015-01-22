@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/Memory.h"
 
@@ -210,3 +209,131 @@ public:
 		return *this;
 	}
 };
+
+template<typename T, bool is_enum = std::is_enum<T>::value>
+struct cast_armv7_gpr
+{
+	static_assert(is_enum, "Invalid type for cast_armv7_gpr");
+
+	typedef typename std::underlying_type<T>::type underlying_type;
+
+	__forceinline static u32 to_gpr(const T& value)
+	{
+		return cast_armv7_gpr<underlying_type>::to_gpr(static_cast<underlying_type>(value));
+	}
+
+	__forceinline static T from_gpr(const u32 reg)
+	{
+		return static_cast<T>(cast_armv7_gpr<underlying_type>::from_gpr(reg));
+	}
+};
+
+template<>
+struct cast_armv7_gpr<u8, false>
+{
+	__forceinline static u32 to_gpr(const u8& value)
+	{
+		return value;
+	}
+
+	__forceinline static u8 from_gpr(const u32 reg)
+	{
+		return static_cast<u8>(reg);
+	}
+};
+
+template<>
+struct cast_armv7_gpr<u16, false>
+{
+	__forceinline static u32 to_gpr(const u16& value)
+	{
+		return value;
+	}
+
+	__forceinline static u16 from_gpr(const u32 reg)
+	{
+		return static_cast<u16>(reg);
+	}
+};
+
+template<>
+struct cast_armv7_gpr<u32, false>
+{
+	__forceinline static u32 to_gpr(const u32& value)
+	{
+		return value;
+	}
+
+	__forceinline static u32 from_gpr(const u32 reg)
+	{
+		return reg;
+	}
+};
+
+template<>
+struct cast_armv7_gpr<s8, false>
+{
+	__forceinline static u32 to_gpr(const s8& value)
+	{
+		return value;
+	}
+
+	__forceinline static s8 from_gpr(const u32 reg)
+	{
+		return static_cast<s8>(reg);
+	}
+};
+
+template<>
+struct cast_armv7_gpr<s16, false>
+{
+	__forceinline static u32 to_gpr(const s16& value)
+	{
+		return value;
+	}
+
+	__forceinline static s16 from_gpr(const u32 reg)
+	{
+		return static_cast<s16>(reg);
+	}
+};
+
+template<>
+struct cast_armv7_gpr<s32, false>
+{
+	__forceinline static u32 to_gpr(const s32& value)
+	{
+		return value;
+	}
+
+	__forceinline static s32 from_gpr(const u32 reg)
+	{
+		return static_cast<s32>(reg);
+	}
+};
+
+template<>
+struct cast_armv7_gpr<bool, false>
+{
+	__forceinline static u32 to_gpr(const bool& value)
+	{
+		return value;
+	}
+
+	__forceinline static bool from_gpr(const u32 reg)
+	{
+		return reinterpret_cast<const bool&>(reg);
+	}
+};
+
+template<typename T>
+__forceinline u32 cast_to_armv7_gpr(const T& value)
+{
+	return cast_armv7_gpr<T>::to_gpr(value);
+}
+
+template<typename T>
+__forceinline T cast_from_armv7_gpr(const u32 reg)
+{
+	return cast_armv7_gpr<T>::from_gpr(reg);
+}

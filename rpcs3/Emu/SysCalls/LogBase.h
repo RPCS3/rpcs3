@@ -11,10 +11,16 @@ class LogBase
 		LogSuccess,
 		LogWarning,
 		LogError,
+		LogTodo,
 	};
 
-	void LogOutput(LogType type, const char* info, const std::string& text) const;
-	void LogOutput(LogType type, const u32 id, const char* info, const std::string& text) const;
+	void LogOutput(LogType type, const std::string& text) const;
+
+	template<typename... Targs>
+	__noinline void LogPrepare(LogType type, const char* fmt, size_t len, Targs... args) const
+	{
+		LogOutput(type, fmt::detail::format(fmt, len, args...));
+	}
 
 public:
 	void SetLogging(bool value)
@@ -29,17 +35,14 @@ public:
 
 	virtual const std::string& GetName() const = 0;
 
-	template<typename... Targs> __noinline void Notice(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Notice(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogNotice, id, " : ", fmt::format(fmt, args...));
+		LogPrepare(LogNotice, fmt, strlen(fmt), fmt::do_unveil(args)...);
 	}
 
-	template<typename... Targs> __noinline void Notice(const char* fmt, Targs... args) const
-	{
-		LogOutput(LogNotice, ": ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __forceinline void Log(const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Log(const char* fmt, Targs... args) const
 	{
 		if (CheckLogging())
 		{
@@ -47,52 +50,28 @@ public:
 		}
 	}
 
-	template<typename... Targs> __forceinline void Log(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Success(const char* fmt, Targs... args) const
 	{
-		if (CheckLogging())
-		{
-			Notice(id, fmt, args...);
-		}
+		LogPrepare(LogSuccess, fmt, strlen(fmt), fmt::do_unveil(args)...);
 	}
 
-	template<typename... Targs> __noinline void Success(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Warning(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogSuccess, id, " : ", fmt::format(fmt, args...));
+		LogPrepare(LogWarning, fmt, strlen(fmt), fmt::do_unveil(args)...);
 	}
 
-	template<typename... Targs> __noinline void Success(const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Error(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogSuccess, ": ", fmt::format(fmt, args...));
+		LogPrepare(LogError, fmt, strlen(fmt), fmt::do_unveil(args)...);
 	}
 
-	template<typename... Targs> __noinline void Warning(const u32 id, const char* fmt, Targs... args) const
+	template<typename... Targs>
+	__forceinline void Todo(const char* fmt, Targs... args) const
 	{
-		LogOutput(LogWarning, id, " warning: ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __noinline void Warning(const char* fmt, Targs... args) const
-	{
-		LogOutput(LogWarning, " warning: ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __noinline void Error(const u32 id, const char* fmt, Targs... args) const
-	{
-		LogOutput(LogError, id, " error: ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __noinline void Error(const char* fmt, Targs... args) const
-	{
-		LogOutput(LogError, " error: ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __noinline void Todo(const u32 id, const char* fmt, Targs... args) const
-	{
-		LogOutput(LogError, id, " TODO: ", fmt::format(fmt, args...));
-	}
-
-	template<typename... Targs> __noinline void Todo(const char* fmt, Targs... args) const
-	{
-		LogOutput(LogError, " TODO: ", fmt::format(fmt, args...));
+		LogPrepare(LogTodo, fmt, strlen(fmt), fmt::do_unveil(args)...);
 	}
 };
 

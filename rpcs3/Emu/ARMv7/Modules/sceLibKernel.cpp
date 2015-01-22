@@ -95,20 +95,18 @@ s32 sceKernelCreateThread(
 	s32 cpuAffinityMask,
 	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateThread(pName=0x%x ('%s'), entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
-		pName, pName.get_ptr(), entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
+	sceLibKernel.Error("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
+		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
-	std::string name = pName.get_ptr();
-
-	ARMv7Thread& new_thread = *(ARMv7Thread*)&Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+	ARMv7Thread& new_thread = static_cast<ARMv7Thread&>(Emu.GetCPU().AddThread(CPU_THREAD_ARMv7));
 
 	u32 id = new_thread.GetId();
 	new_thread.SetEntry(entry.addr() ^ 1);
 	new_thread.SetPrio(initPriority);
 	new_thread.SetStackSize(stackSize);
-	new_thread.SetName(name);
+	new_thread.SetName(pName.get_ptr());
 
-	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry_addr=0x%x): id = %d", name.c_str(), entry.addr(), id);
+	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x)^1: id = %d", pName.get_ptr(), entry, id);
 
 	new_thread.Run();
 
@@ -128,15 +126,17 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
 	}
 
+	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
+
 	// push arg block onto the stack
-	u32 pos = (static_cast<ARMv7Thread*>(t.get())->SP -= argSize);
+	const u32 pos = (thread.SP -= argSize);
 	memcpy(vm::get_ptr<void>(pos), pArgBlock.get_ptr(), argSize);
 
 	// set SceKernelThreadEntry function arguments
-	static_cast<ARMv7Thread*>(t.get())->write_gpr(0, argSize);
-	static_cast<ARMv7Thread*>(t.get())->write_gpr(1, pos);
+	thread.write_gpr(0, argSize);
+	thread.write_gpr(1, pos);
 
-	t->Exec();
+	thread.Exec();
 	return SCE_OK;
 }
 

@@ -66,7 +66,7 @@ s64 spursInit(
 {
 #ifdef PRX_DEBUG_XXX
 	return cb_call<s32, vm::ptr<CellSpurs>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
-		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, Memory.RealToVirtualAddr(prefix), prefixSize, container, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
+		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, vm::get_addr(prefix), prefixSize, container, vm::get_addr(swlPriority), swlMaxSpu, swlIsPreem);
 #endif
 
 	// SPURS initialization (asserts should actually rollback and return the error instead)
@@ -700,7 +700,7 @@ s64 spursInit(
 		s32 res = CELL_OK;
 #ifdef PRX_DEBUG
 		res = cb_call<s32, vm::ptr<CellSpurs>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x10428, libsre_rtoc,
-			spurs, Memory.RealToVirtualAddr(swlPriority), swlMaxSpu, swlIsPreem);
+			spurs, vm::get_addr(swlPriority), swlMaxSpu, swlIsPreem);
 #endif
 		assert(res == CELL_OK);
 	}
@@ -1327,7 +1327,7 @@ s32 spursAddWorkload(
 {
 #ifdef PRX_DEBUG_XXX
 	return cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<const void>, u32, u64, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x96EC, libsre_rtoc,
-		spurs, wid, pm, size, data, Memory.RealToVirtualAddr(priorityTable), minContention, maxContention,
+		spurs, wid, pm, size, data, vm::get_addr(priorityTable), minContention, maxContention,
 		nameClass.addr(), nameInstance.addr(), hook.addr(), hookArg.addr());
 #endif
 
@@ -1752,7 +1752,7 @@ s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpur
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	flag->set(Memory.RealToVirtualAddr(&spurs->m.wklFlag));
+	flag->set(vm::get_addr(&spurs->m.wklFlag));
 	return CELL_OK;
 }
 

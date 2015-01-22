@@ -37,7 +37,7 @@ namespace cb_detail
 
 		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			CPU.FPR[f_count] = arg;
+			CPU.FPR[f_count] = static_cast<T>(arg);
 		}
 	};
 
@@ -101,7 +101,7 @@ namespace cb_detail
 
 		__forceinline static T get_value(const PPUThread& CPU)
 		{
-			return (T&)CPU.GPR[3];
+			return cast_from_ppu_gpr<T>(CPU.GPR[3]);
 		}
 	};
 
@@ -112,7 +112,7 @@ namespace cb_detail
 
 		__forceinline static T get_value(const PPUThread& CPU)
 		{
-			return (T)CPU.FPR[1];
+			return static_cast<T>(CPU.FPR[1]);
 		}
 	};
 
@@ -181,13 +181,13 @@ namespace vm
 }
 
 template<typename RT, typename... T>
-RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+__forceinline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 {
 	return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 }
 
-template<typename... T>
-void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
-{
-	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
-}
+//template<typename... T>
+//void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
+//{
+//	cb_detail::_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
+//}

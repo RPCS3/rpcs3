@@ -425,7 +425,7 @@ namespace psv_func_detail
 
 		static __forceinline T func(ARMv7Thread& CPU)
 		{
-			return (T&)CPU.GPR[g_count - 1];
+			return cast_from_armv7_gpr<T>(CPU.GPR[g_count - 1]);
 		}
 	};
 
@@ -444,7 +444,7 @@ namespace psv_func_detail
 	struct bind_arg<T, ARG_VECTOR, g_count, f_count, v_count>
 	{
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
-		static_assert(sizeof(T) == 16, "Invalid function argument type for ARG_VECTOR");
+		static_assert(std::is_same<T, u128>::value, "Invalid function argument type for ARG_VECTOR");
 
 		static __forceinline T func(ARMv7Thread& CPU)
 		{
@@ -460,8 +460,9 @@ namespace psv_func_detail
 
 		static __forceinline T func(ARMv7Thread& CPU)
 		{
+			// TODO: check
 			const u32 res = CPU.GetStackArg(g_count);
-			return (T&)res;
+			return cast_from_armv7_gpr<T>(res);
 		}
 	};
 
@@ -473,10 +474,9 @@ namespace psv_func_detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 4, "Invalid function result type for ARG_GENERAL");
 
-		static __forceinline void func(ARMv7Thread& CPU, T result)
+		static __forceinline void func(ARMv7Thread& CPU, const T& result)
 		{
-			CPU.GPR[0] = 0; // TODO
-			(T&)CPU.GPR[0] = result;
+			CPU.GPR[0] = cast_to_armv7_gpr<T>(result);
 		}
 	};
 
@@ -485,7 +485,7 @@ namespace psv_func_detail
 	//{
 	//	static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-	//	static __forceinline void func(ARMv7Thread& CPU, T result)
+	//	static __forceinline void func(ARMv7Thread& CPU, const T& result)
 	//	{
 	//	}
 	//};
@@ -493,9 +493,9 @@ namespace psv_func_detail
 	//template<typename T>
 	//struct bind_result<T, ARG_VECTOR>
 	//{
-	//	static_assert(sizeof(T) == 16, "Invalid function result type for ARG_VECTOR");
+	//	static_assert(std::is_same<T, u128>::value, "Invalid function result type for ARG_VECTOR");
 
-	//	static __forceinline void func(ARMv7Thread& CPU, const T result)
+	//	static __forceinline void func(ARMv7Thread& CPU, const T& result)
 	//	{
 	//	}
 	//};
@@ -519,21 +519,21 @@ namespace psv_func_detail
 	};
 
 	template <typename RT, typename F, typename Tuple>
-	static __forceinline RT call(F f, Tuple && t)
+	__forceinline RT call(F f, Tuple && t)
 	{
 		typedef typename std::decay<Tuple>::type ttype;
 		return psv_func_detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 	}
 
 	template<int g_count, int f_count, int v_count>
-	static __forceinline std::tuple<> iterate(ARMv7Thread& CPU)
+	__forceinline std::tuple<> iterate(ARMv7Thread& CPU)
 	{
 		// terminator
 		return std::tuple<>();
 	}
 
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
-	static __forceinline std::tuple<T, A...> iterate(ARMv7Thread& CPU)
+	__forceinline std::tuple<T, A...> iterate(ARMv7Thread& CPU)
 	{
 		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
 		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
@@ -549,6 +549,16 @@ namespace psv_func_detail
 
 		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
 	}
+
+	template<typename RT>
+	struct result_type
+	{
+		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
+		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
+		static const bool is_float = std::is_floating_point<RT>::value;
+		static const bool is_vector = std::is_same<RT, u128>::value;
+		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+	};
 
 	template<typename RT, typename... T>
 	class func_binder;
@@ -606,13 +616,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Thread& CPU)
 		{
-			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<RT, u128>::value;
-			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-
-			bind_result<RT, t>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
 		}
 	};
 
@@ -631,13 +635,7 @@ namespace psv_func_detail
 
 		virtual void operator()(ARMv7Thread& CPU)
 		{
-			static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-			static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-			const bool is_float = std::is_floating_point<RT>::value;
-			const bool is_vector = std::is_same<RT, u128>::value;
-			const bind_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-
-			bind_result<RT, t>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Thread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Thread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
 		}
 	};
 }

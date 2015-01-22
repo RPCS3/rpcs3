@@ -1067,5 +1067,5 @@ void cellAudio_init(Module *pxThis)
 
 void cellAudio_load()
 {
-	// never called :(
+	// CELL_SYSMODULE AUDIO module is rarely loaded manually, so cellAudio_load() won't be called in every case
 }

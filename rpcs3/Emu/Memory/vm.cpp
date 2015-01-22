@@ -52,6 +52,20 @@ namespace vm
 		return g_locations[location].deallocator(addr);
 	}
 
+	u32 get_addr(const void* real_pointer)
+	{
+		const u64 diff = (u64)real_pointer - (u64)g_base_addr;
+		const u32 res = (u32)diff;
+
+		if (res == diff)
+		{
+			return res;
+		}
+		
+		assert(!real_pointer);
+		return 0;
+	}
+
 	namespace ps3
 	{
 		u32 main_alloc(u32 size)

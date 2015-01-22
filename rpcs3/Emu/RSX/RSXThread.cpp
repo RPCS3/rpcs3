@@ -2505,7 +2505,7 @@ u32 RSXThread::ReadIO32(u32 addr)
 	u32 value;
 	if (!Memory.RSXIOMem.Read32(addr, &value))
 	{
-		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
 	return value;
 }
@@ -2514,6 +2514,6 @@ void RSXThread::WriteIO32(u32 addr, u32 value)
 {
 	if (!Memory.RSXIOMem.Write32(addr, value))
 	{
-		throw fmt::Format("%s(rsxio_addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
+		throw fmt::Format("%s(addr=0x%x): RSXIO memory not mapped", __FUNCTION__, addr);
 	}
 }

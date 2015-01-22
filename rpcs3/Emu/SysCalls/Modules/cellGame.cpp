@@ -443,11 +443,11 @@ int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> 
 	std::string errorMsg;
 	if (type == CELL_GAME_ERRDIALOG_NOSPACE || type == CELL_GAME_ERRDIALOG_NOSPACE_EXIT)
 	{
-		errorMsg = fmt::Format("ERROR: %s\nSpace needed: %d KB", errorName.c_str(), errNeedSizeKB, dirName);
+		errorMsg = fmt::format("ERROR: %s\nSpace needed: %d KB", errorName, errNeedSizeKB);
 	}
 	else
 	{
-		errorMsg = fmt::Format("ERROR: %s", errorName.c_str());
+		errorMsg = fmt::format("ERROR: %s", errorName);
 	}
 
 	if (dirName)
