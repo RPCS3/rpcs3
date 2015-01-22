@@ -3594,16 +3594,7 @@ void ARMv7_instrs::VADD_(ARMv7Context& context, const ARMv7Code code, const ARMv
 	}
 }
 
-void ARMv7_instrs::VAND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VAND_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+void ARMv7_instrs::VAND(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{
@@ -3693,15 +3684,6 @@ void ARMv7_instrs::VCGT_ZERO(ARMv7Context& context, const ARMv7Code code, const 
 	}
 }
 
-void ARMv7_instrs::VCLE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
 void ARMv7_instrs::VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
@@ -3712,15 +3694,6 @@ void ARMv7_instrs::VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const 
 }
 
 void ARMv7_instrs::VCLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	switch (type)
-	{
-	case A1: throw __FUNCTION__;
-	default: throw __FUNCTION__;
-	}
-}
-
-void ARMv7_instrs::VCLT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	switch (type)
 	{

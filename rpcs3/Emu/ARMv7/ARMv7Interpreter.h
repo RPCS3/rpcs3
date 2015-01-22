@@ -385,8 +385,7 @@ namespace ARMv7_instrs
 	void VADD_FP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VADDHN(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VADD_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-	void VAND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-	void VAND_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void VAND(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VBIC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VBIC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VB__(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
@@ -396,10 +395,8 @@ namespace ARMv7_instrs
 	void VCGE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCGT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCGT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-	void VCLE_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCLE_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCLS(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-	void VCLT_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCLT_ZERO(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void VCMP_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
