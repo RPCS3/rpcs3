@@ -201,8 +201,9 @@ enum SpursTaskConstants
 
 enum CellSpursEventFlagWaitMode
 {
-	CELL_SPURS_EVENT_FLAG_OR  = 0,
-	CELL_SPURS_EVENT_FLAG_AND = 1
+	CELL_SPURS_EVENT_FLAG_OR             = 0,
+	CELL_SPURS_EVENT_FLAG_AND            = 1,
+	CELL_SPURS_EVENT_FLAG_WAIT_MODE_LAST = CELL_SPURS_EVENT_FLAG_AND,
 };
 
 enum CellSpursEventFlagClearMode
@@ -552,18 +553,21 @@ struct CellSpursEventFlag
 		// Real data
 		struct _CellSpursEventFlag
 		{
-			be_t<u16> bits;                     // 0x00
-			be_t<u16> x02;                      // 0x02
-			be_t<u16> x04;                      // 0x04
-			be_t<u16> x06;                      // 0x06
-			be_t<u16> x08;                      // 0x08
-			be_t<u16> x0A;                      // 0x0A
+			be_t<u16> bits;                     // 0x00 Bit mask of event set bits
+			be_t<u16> x02;                      // 0x02 Bit mask of SPU thread slots whose conditions have met
+			be_t<u16> x04;                      // 0x04 Wait mask for PPU thread
+			u8 x06;                             // 0x06 Top 4 bits: Bit number for PPU thread. Bottom 4 bits: Wait mode of PPU thread
+			u8 x07;                             // 0x07 Set to 1 if the blocked PPU thread's condition has been met
+			be_t<u16> x08;                      // 0x08 Bit mask of used wait slots
+			be_t<u16> x0A;                      // 0x0A Bit mask of used wait slots whose wait mode is AND
 			u8 spuPort;                         // 0x0C
 			u8 isIwl;                           // 0x0D
 			u8 direction;                       // 0x0E
 			u8 clearMode;                       // 0x0F
-			u16 x10[16];                        // 0x10
-			u8 x30[0x70 - 0x30];                // 0x30
+			be_t<u16> x10[16];                  // 0x10 Wait mask for SPU threads
+			be_t<u16> x30[16];                  // 0x30 Received event flag mask for SPU threads
+			u8 x50[16];                         // 0x50 Task id of waiting SPU threads
+			u8 x60[16];                         // 0x50 Workload Ids of waiting SPU threads
 			be_t<u64> addr;                     // 0x70
 			be_t<u32> eventPortId;              // 0x78
 			be_t<u32> eventQueueId;             // 0x7C
