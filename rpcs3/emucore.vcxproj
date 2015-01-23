@@ -52,6 +52,7 @@
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
     <ClCompile Include="Crypto\utils.cpp" />
+    <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
@@ -266,6 +267,8 @@
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
     <ClInclude Include="define_new_memleakdetect.h" />
+    <ClInclude Include="Emu\ARMv7\ARMv7Callback.h" />
+    <ClInclude Include="Emu\ARMv7\ARMv7Context.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Decoder.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7DisAsm.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />

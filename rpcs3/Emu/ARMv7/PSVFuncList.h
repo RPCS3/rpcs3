@@ -1,15 +1,27 @@
 #pragma once
-#include "ARMv7Thread.h"
+#include "ARMv7Context.h"
 #include "Emu/SysCalls/LogBase.h"
 
 class psv_log_base : public LogBase
 {
 	std::string m_name;
+	void(*m_init_func)();
 
 public:
-	psv_log_base(const std::string& name)
+	std::function<void()> on_load;
+	std::function<void()> on_unload;
+	std::function<void()> on_stop;
+
+public:
+	psv_log_base(const std::string& name, void(*init_func)())
 		: m_name(name)
+		, m_init_func(init_func)
 	{
+	}
+
+	void Init()
+	{
+		m_init_func();
 	}
 
 	virtual const std::string& GetName() const override
@@ -401,7 +413,7 @@ enum psv_error_codes
 class psv_func_caller
 {
 public:
-	virtual void operator()(ARMv7Thread& CPU) = 0;
+	virtual void operator()(ARMv7Context& CPU) = 0;
 	virtual ~psv_func_caller(){};
 };
 
@@ -415,6 +427,8 @@ namespace psv_func_detail
 		ARG_STACK,
 	};
 
+	static const auto FIXED_STACK_FRAME_SIZE = 0x100; // described in CB_FUNC.h
+
 	template<typename T, bind_arg_type type, int g_count, int f_count, int v_count>
 	struct bind_arg;
 
@@ -423,9 +437,14 @@ namespace psv_func_detail
 	{
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_GENERAL");
 
-		static __forceinline T func(ARMv7Thread& CPU)
+		__forceinline static T get_arg(ARMv7Context& context)
 		{
-			return cast_from_armv7_gpr<T>(CPU.GPR[g_count - 1]);
+			return cast_from_armv7_gpr<T>(context.GPR[g_count - 1]);
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		{
+			context.GPR[g_count - 1] = cast_to_armv7_gpr<T>(arg);
 		}
 	};
 
@@ -435,7 +454,11 @@ namespace psv_func_detail
 		static_assert(f_count <= 0, "TODO: Unsupported argument type (float)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		static __forceinline T func(ARMv7Thread& CPU)
+		__forceinline static T get_arg(ARMv7Context& context)
+		{
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -446,7 +469,11 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
 		static_assert(std::is_same<T, u128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		static __forceinline T func(ARMv7Thread& CPU)
+		__forceinline static T get_arg(ARMv7Context& context)
+		{
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -458,11 +485,19 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_STACK");
 
-		static __forceinline T func(ARMv7Thread& CPU)
+		__forceinline static T get_arg(ARMv7Context& context)
 		{
 			// TODO: check
-			const u32 res = CPU.GetStackArg(g_count);
-			return cast_from_armv7_gpr<T>(res);
+			return cast_from_armv7_gpr<T>(context.get_stack_arg(g_count));
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		{
+			// TODO: check
+			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
+			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
+
+			context.put_stack_arg(stack_pos, cast_to_armv7_gpr<T>(arg));
 		}
 	};
 
@@ -474,9 +509,14 @@ namespace psv_func_detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 4, "Invalid function result type for ARG_GENERAL");
 
-		static __forceinline void func(ARMv7Thread& CPU, const T& result)
+		__forceinline static T get_result(ARMv7Context& context)
 		{
-			CPU.GPR[0] = cast_to_armv7_gpr<T>(result);
+			return cast_from_armv7_gpr<T>(context.GPR[0]);
+		}
+
+		__forceinline static void put_result(ARMv7Context& context, const T& result)
+		{
+			context.GPR[0] = cast_to_armv7_gpr<T>(result);
 		}
 	};
 
@@ -485,7 +525,7 @@ namespace psv_func_detail
 	//{
 	//	static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-	//	static __forceinline void func(ARMv7Thread& CPU, const T& result)
+	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
@@ -495,10 +535,36 @@ namespace psv_func_detail
 	//{
 	//	static_assert(std::is_same<T, u128>::value, "Invalid function result type for ARG_VECTOR");
 
-	//	static __forceinline void func(ARMv7Thread& CPU, const T& result)
+	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
+
+	template<typename RT>
+	struct result_type
+	{
+		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
+		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
+		static const bool is_float = std::is_floating_point<RT>::value;
+		static const bool is_vector = std::is_same<RT, u128>::value;
+		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+	};
+
+	template<typename T, int g_count, int f_count, int v_count>
+	struct arg_type
+	{
+		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
+		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
+		// TODO: check calculations
+		static const bool is_float = std::is_floating_point<T>::value;
+		static const bool is_vector = std::is_same<T, u128>::value;
+		static const bind_arg_type value = is_float
+			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
+			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
+		static const int g_value = g_count + (is_float || is_vector ? 0 : 1);
+		static const int f_value = f_count + (is_float ? 1 : 0);
+		static const int v_value = v_count + (is_vector ? 1 : 0);
+	};
 
 	template <typename RT, typename F, typename Tuple, bool Done, int Total, int... N>
 	struct call_impl
@@ -526,39 +592,45 @@ namespace psv_func_detail
 	}
 
 	template<int g_count, int f_count, int v_count>
-	__forceinline std::tuple<> iterate(ARMv7Thread& CPU)
+	__forceinline std::tuple<> get_func_args(ARMv7Context& context)
 	{
 		// terminator
 		return std::tuple<>();
 	}
 
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
-	__forceinline std::tuple<T, A...> iterate(ARMv7Thread& CPU)
+	__forceinline std::tuple<T, A...> get_func_args(ARMv7Context& context)
 	{
-		static_assert(!std::is_pointer<T>::value, "Invalid function argument type (pointer)");
-		static_assert(!std::is_reference<T>::value, "Invalid function argument type (reference)");
-		// TODO: check calculations
-		const bool is_float = std::is_floating_point<T>::value;
-		const bool is_vector = std::is_same<T, u128>::value;
-		const bind_arg_type t = is_float
-			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
-			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
-		const int g = g_count + (is_float || is_vector ? 0 : 1);
-		const int f = f_count + (is_float ? 1 : 0);
-		const int v = v_count + (is_vector ? 1 : 0);
+		typedef arg_type<T, g_count, f_count, v_count> type;
+		const bind_arg_type t = type::value;
+		const int g = type::g_value;
+		const int f = type::f_value;
+		const int v = type::v_value;
 
-		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::func(CPU)), iterate<g, f, v, A...>(CPU));
+		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::get_arg(context)), get_func_args<g, f, v, A...>(context));
 	}
 
-	template<typename RT>
-	struct result_type
+	template<int g_count, int f_count, int v_count>
+	__forceinline static bool put_func_args(ARMv7Context& context)
 	{
-		static_assert(!std::is_pointer<RT>::value, "Invalid function result type (pointer)");
-		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
-		static const bool is_float = std::is_floating_point<RT>::value;
-		static const bool is_vector = std::is_same<RT, u128>::value;
-		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
-	};
+		// terminator
+		return false;
+	}
+
+	template<int g_count, int f_count, int v_count, typename T1, typename... T>
+	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
+	{
+		typedef arg_type<T1, g_count, f_count, v_count> type;
+		const bind_arg_type t = type::value;
+		const int g = type::g_value;
+		const int f = type::f_value;
+		const int v = type::v_value;
+
+		bind_arg<T1, t, g, f, v>::put_arg(context, arg);
+
+		// return true if stack was used
+		return put_func_args<g, f, v>(context, args...) || (t == ARG_STACK);
+	}
 
 	template<typename RT, typename... T>
 	class func_binder;
@@ -576,16 +648,16 @@ namespace psv_func_detail
 		{
 		}
 
-		virtual void operator()(ARMv7Thread& CPU)
+		virtual void operator()(ARMv7Context& context)
 		{
-			call<void>(m_call, iterate<0, 0, 0, T...>(CPU));
+			call<void>(m_call, get_func_args<0, 0, 0, T...>(context));
 		}
 	};
 
 	template<typename... T>
-	class func_binder<void, ARMv7Thread&, T...> : public psv_func_caller
+	class func_binder<void, ARMv7Context&, T...> : public psv_func_caller
 	{
-		typedef void(*func_t)(ARMv7Thread&, T...);
+		typedef void(*func_t)(ARMv7Context&, T...);
 		const func_t m_call;
 
 	public:
@@ -595,9 +667,9 @@ namespace psv_func_detail
 		{
 		}
 
-		virtual void operator()(ARMv7Thread& CPU)
+		virtual void operator()(ARMv7Context& context)
 		{
-			call<void>(m_call, std::tuple_cat(std::tuple<ARMv7Thread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
+			call<void>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
@@ -614,16 +686,16 @@ namespace psv_func_detail
 		{
 		}
 
-		virtual void operator()(ARMv7Thread& CPU)
+		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
 	template<typename RT, typename... T>
-	class func_binder<RT, ARMv7Thread&, T...> : public psv_func_caller
+	class func_binder<RT, ARMv7Context&, T...> : public psv_func_caller
 	{
-		typedef RT(*func_t)(ARMv7Thread&, T...);
+		typedef RT(*func_t)(ARMv7Context&, T...);
 		const func_t m_call;
 
 	public:
@@ -633,9 +705,38 @@ namespace psv_func_detail
 		{
 		}
 
-		virtual void operator()(ARMv7Thread& CPU)
+		virtual void operator()(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Thread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
+		}
+	};
+
+	template<typename RT, typename... T>
+	struct func_caller
+	{
+		__forceinline static RT call(ARMv7Context& context, u32 addr, T... args)
+		{
+			func_caller<void, T...>::call(context, addr, args...);
+
+			return bind_result<RT, result_type<RT>::value>::get_result(context);
+		}
+	};
+
+	template<typename... T>
+	struct func_caller<void, T...>
+	{
+		__forceinline static void call(ARMv7Context& context, u32 addr, T... args)
+		{
+			if (put_func_args<0, 0, 0, T...>(context, args...))
+			{
+				context.SP -= FIXED_STACK_FRAME_SIZE;
+				context.fast_call(addr);
+				context.SP += FIXED_STACK_FRAME_SIZE;
+			}
+			else
+			{
+				context.fast_call(addr);
+			}
 		}
 	};
 }
@@ -665,5 +766,6 @@ void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*func)(T..
 psv_func* get_psv_func_by_nid(u32 nid);
 u32 get_psv_func_index(psv_func* func);
 
-void execute_psv_func_by_index(ARMv7Thread& CPU, u32 index);
-void list_known_psv_modules();
+void execute_psv_func_by_index(ARMv7Context& context, u32 index);
+void initialize_psv_modules();
+void finalize_psv_modules();

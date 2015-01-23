@@ -115,7 +115,7 @@ void CPUThread::SetEntry(const u32 pc)
 	entry = pc;
 }
 
-void CPUThread::NextPc(u8 instr_size)
+void CPUThread::NextPc(u32 instr_size)
 {
 	if(m_is_branch)
 	{

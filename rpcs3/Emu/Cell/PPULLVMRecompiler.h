@@ -1128,7 +1128,7 @@ namespace ppu_recompiler_llvm {
         ExecutionEngine & operator = (const ExecutionEngine & other) = delete;
         ExecutionEngine & operator = (ExecutionEngine && other) = delete;
 
-        u8 DecodeMemory(const u32 address) override;
+        u32 DecodeMemory(const u32 address) override;
 
     private:
         /// PPU processor context

@@ -516,7 +516,7 @@ namespace loader
 
 									if (module && !module->Load(nid))
 									{
-										LOG_WARNING(LOADER, "Unimplemented function '%s' in '%s' module (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+										LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
 									}
 									else //if (Ini.HLELogging.GetValue())
 									{

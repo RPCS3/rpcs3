@@ -70,7 +70,7 @@ namespace vm
 			const u32 res = static_cast<u32>(addr);
 			if (res != addr)
 			{
-				throw fmt::Format("%s(): invalid address 0x%llx", func, addr);
+				throw fmt::format("%s(): invalid address 0x%llx", func, addr);
 			}
 
 			return res;

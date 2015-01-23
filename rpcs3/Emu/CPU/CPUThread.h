@@ -132,7 +132,7 @@ public:
 
 	int ThreadStatus();
 
-	void NextPc(u8 instr_size);
+	void NextPc(u32 instr_size);
 	void SetBranch(const u32 pc, bool record_branch = false);
 	void SetPc(const u32 pc);
 	void SetEntry(const u32 entry);

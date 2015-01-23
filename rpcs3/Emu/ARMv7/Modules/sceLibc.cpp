@@ -1,41 +1,142 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Callback.h"
 
 extern psv_log_base sceLibc;
 
+vm::psv::ptr<void> g_dso;
+
+typedef void(*atexit_func_t)(vm::psv::ptr<void>);
+
+std::vector<std::function<void(ARMv7Context&)>> g_atexit;
+
 namespace sce_libc_func
 {
-	void __cxa_atexit()
+	void __cxa_atexit(vm::psv::ptr<atexit_func_t> func, vm::psv::ptr<void> arg, vm::psv::ptr<void> dso)
 	{
-		sceLibc.Todo(__FUNCTION__);
-		Emu.Pause();
+		sceLibc.Error("__cxa_atexit(func=0x%x, arg=0x%x, dso=0x%x)", func, arg, dso);
+		
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		{
+			func(context, arg);
+		});
 	}
 
-	void exit()
+	void __aeabi_atexit(vm::psv::ptr<void> arg, vm::psv::ptr<atexit_func_t> func, vm::psv::ptr<void> dso)
+	{
+		sceLibc.Error("__aeabi_atexit(arg=0x%x, func=0x%x, dso=0x%x)", arg, func, dso);
+
+		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
+		{
+			func(context, arg);
+		});
+	}
+
+	void exit(ARMv7Context& context)
 	{
 		sceLibc.Error("exit()");
-		Emu.Pause();
+		
+		for (auto func : g_atexit)
+		{
+			func(context);
+		}
+
+		g_atexit.clear();
 
 		sceLibc.Success("Process finished");
+
 		CallAfter([]()
 		{
 			Emu.Stop();
 		});
 	}
 
-	void printf(vm::psv::ptr<const char> fmt) // va_args...
+	std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
+	{
+		std::string result;
+
+		for (char c = *fmt++; c; c = *fmt++)
+		{
+			switch (c)
+			{
+			case '%':
+			{
+				const auto start = fmt - 1;
+				const bool number_sign = *fmt == '#' ? fmt++, true : false;
+
+				switch (*fmt++)
+				{
+				case '%':
+				{
+					result += '%';
+					continue;
+				}
+				case 'd':
+				case 'i':
+				{
+					// signed decimal
+					const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+					result += fmt::to_sdec(value);
+					continue;
+				}
+				case 'x':
+				{
+					// hexadecimal
+					const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+					if (number_sign && value)
+					{
+						result += "0x";
+					}
+
+					result += fmt::to_hex(value);
+					continue;
+				}
+				default:
+				{
+					throw fmt::Format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
+				}
+				}
+			}
+			}
+
+			result += c;
+		}
+
+		return result;
+	}
+
+	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Error("printf(fmt=0x%x)", fmt);
 
-		LOG_NOTICE(TTY, "%s", fmt.get_ptr());
+		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+
+		LOG_NOTICE(TTY, armv7_fmt(context, fmt, 1, 0, 0));
 	}
 
-	void __cxa_set_dso_handle_main()
+	void sprintf(ARMv7Context& context, vm::psv::ptr<char> str, vm::psv::ptr<const char> fmt) // va_args...
 	{
-		sceLibc.Error("__cxa_set_dso_handle_main()");
+		sceLibc.Error("sprintf(str=0x%x, fmt=0x%x)", str, fmt);
+
+		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+
+		const std::string& result = armv7_fmt(context, fmt, 2, 0, 0);
+
+		sceLibc.Notice("*** res -> '%s'", result);
+
+		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);
+	}
+
+	void __cxa_set_dso_handle_main(vm::psv::ptr<void> dso)
+	{
+		sceLibc.Error("__cxa_set_dso_handle_main(dso=0x%x)", dso);
+
+		g_dso = dso;
 	}
 
 	void memcpy(vm::psv::ptr<void> dst, vm::psv::ptr<const void> src, u32 size)
@@ -43,6 +144,13 @@ namespace sce_libc_func
 		sceLibc.Error("memcpy(dst=0x%x, src=0x%x, size=0x%x)", dst, src, size);
 
 		::memcpy(dst.get_ptr(), src.get_ptr(), size);
+	}
+
+	void memset(vm::psv::ptr<void> dst, s32 value, u32 size)
+	{
+		sceLibc.Error("memset(dst=0x%x, value=%d, size=0x%x)", dst, value, size);
+
+		::memset(dst.get_ptr(), value, size);
 	}
 
 	void _Assert(vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
@@ -56,8 +164,15 @@ namespace sce_libc_func
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibc, #name, &sce_libc_func::name)
 
-psv_log_base sceLibc = []() -> psv_log_base
+psv_log_base sceLibc("SceLibc", []()
 {
+	g_dso.set(0);
+	g_atexit.clear();
+
+	sceLibc.on_load = nullptr;
+	sceLibc.on_unload = nullptr;
+	sceLibc.on_stop = nullptr;
+
 	REG_FUNC(0xE4531F85, _Assert);
 	//REG_FUNC(0xE71C5CDE, _Stoul);
 	//REG_FUNC(0x7A5CA6A3, _Stoulx);
@@ -147,7 +262,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x395490DA, setbuf);
 	//REG_FUNC(0x2CA980A0, setvbuf);
 	//REG_FUNC(0xA1BFF606, snprintf);
-	//REG_FUNC(0x7449B359, sprintf);
+	REG_FUNC(0x7449B359, sprintf);
 	//REG_FUNC(0xEC585241, sscanf);
 	//REG_FUNC(0x2BCB3F01, ungetc);
 	//REG_FUNC(0xF7915685, vfprintf);
@@ -200,7 +315,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x7747F6D7, memcmp);
 	REG_FUNC(0x7205BFDB, memcpy);
 	//REG_FUNC(0xAF5C218D, memmove);
-	//REG_FUNC(0x6DC1F0D8, memset);
+	REG_FUNC(0x6DC1F0D8, memset);
 	//REG_FUNC(0x1434FA46, strcat);
 	//REG_FUNC(0xB9336E16, strchr);
 	//REG_FUNC(0x1B58FA3B, strcmp);
@@ -317,7 +432,7 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x9D885076, _Towctrans);
 	//REG_FUNC(0xE980110A, _Iswctype);
 	REG_FUNC(0x33b83b70, __cxa_atexit);
-	//REG_FUNC(0xEDC939E1, __aeabi_atexit);
+	REG_FUNC(0xEDC939E1, __aeabi_atexit);
 	//REG_FUNC(0xB538BF48, __cxa_finalize);
 	//REG_FUNC(0xD0310E31, __cxa_guard_acquire);
 	//REG_FUNC(0x4ED1056F, __cxa_guard_release);
@@ -350,6 +465,4 @@ psv_log_base sceLibc = []() -> psv_log_base
 	//REG_FUNC(0x677CDE35, _Snan);
 	//REG_FUNC(0x7D35108B, _FSnan);
 	//REG_FUNC(0x48AEEF2A, _LSnan);
-
-	return psv_log_base("SceLibc");
-}();
+});

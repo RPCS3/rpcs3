@@ -28,8 +28,12 @@ namespace sce_libstdcxx_func
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibstdcxx, #name, &sce_libstdcxx_func::name)
 
-psv_log_base sceLibstdcxx = []() -> psv_log_base
+psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 {
+	sceLibstdcxx.on_load = nullptr;
+	sceLibstdcxx.on_unload = nullptr;
+	sceLibstdcxx.on_stop = nullptr;
+
 	//REG_FUNC(0x52B0C625, std::bad_typeid::what() const);
 	//REG_FUNC(0x64D7D074, std::bad_typeid::_Doraise() const);
 	//REG_FUNC(0x15FB88E2, std::logic_error::what() const);
@@ -976,9 +980,7 @@ psv_log_base sceLibstdcxx = []() -> psv_log_base
 	//REG_FUNC(0x7321E731, vtable for __cxxabiv1::__vmi_class_type_info);
 	//REG_FUNC(0x33836375, vtable for __cxxabiv1::__fundamental_type_info);
 	//REG_FUNC(0x94664DEB, vtable for __cxxabiv1::__pointer_to_member_type_info);
-
-	return psv_log_base("SceLibstdcxx");
-}();
+});
 
 /*
 // original names
