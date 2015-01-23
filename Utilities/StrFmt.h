@@ -198,7 +198,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -220,7 +220,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -242,7 +242,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -264,7 +264,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -418,7 +418,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return arg ? "1" : "0";
 				}
