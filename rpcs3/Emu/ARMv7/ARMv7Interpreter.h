@@ -99,6 +99,8 @@ namespace ARMv7_instrs
 
 	void HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
+	void MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+
 	void ADC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void ADC_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void ADC_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
@@ -515,6 +517,4 @@ namespace ARMv7_instrs
 	void WFE(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void WFI(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-
-	void MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 };

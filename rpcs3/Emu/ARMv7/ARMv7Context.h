@@ -50,7 +50,7 @@ struct ARMv7Context
 			u32 C : 1; //Carry condition code flag
 			u32 V : 1; //Overflow condition code flag
 			u32 Q : 1; //Set to 1 if an SSAT or USAT instruction changes (saturates) the input value for the signed or unsigned range of the result
-		u32: 27;
+			u32 dummy : 27;
 		};
 
 		u32 APSR;
@@ -61,7 +61,7 @@ struct ARMv7Context
 	{
 		struct
 		{
-		u32: 24;
+			u32 dummy : 24;
 			u32 exception : 8;
 		};
 

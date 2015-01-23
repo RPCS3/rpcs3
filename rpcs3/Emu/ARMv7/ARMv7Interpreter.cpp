@@ -257,14 +257,12 @@ bool ARMv7_instrs::ConditionPassed(ARMv7Context& context, u32 cond)
 // instructions
 void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 {
-	LOG_ERROR(HLE, "Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
-	Emu.Pause();
+	throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
 }
 
 void ARMv7_instrs::NULL_OP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
-	LOG_ERROR(HLE, "Null opcode found: 0x%04x 0x%04x", code.code1, code.code0);
-	Emu.Pause();
+	throw fmt::format("Null opcode found: 0x%04x 0x%04x", code.code1, code.code0);
 }
 
 void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
@@ -291,6 +289,54 @@ void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	if (ConditionPassed(context, cond))
 	{
 		execute_psv_func_by_index(context, func);
+	}
+}
+
+void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
+{
+	u32 cond = context.ITSTATE.advance();
+	u32 t = 0;
+	u32 cp = 0;
+	u32 opc1 = 0;
+	u32 opc2 = 0;
+	u32 cn = 0;
+	u32 cm = 0;
+
+	switch (type)
+	{
+	case T1:
+	case A1:
+	{
+		t = (code.data & 0xf000) >> 12;
+		cp = (code.data & 0xf00) >> 8;
+		opc1 = (code.data & 0xe00000) >> 21;
+		opc2 = (code.data & 0xe0) >> 5;
+		cn = (code.data & 0xf0000) >> 16;
+		cm = (code.data & 0xf);
+
+		if (cp - 10 < 2)
+		{
+			throw "MRC_(T1/A1): Advanced SIMD and VFP";
+		}
+		break;
+	}
+	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		if (cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
+		{
+			LOG_ERROR(ARMv7, "TODO: TLS requested");
+
+			if (t < 15)
+			{
+				context.GPR[t] = 0;
+				return;
+			}
+		}
+
+		throw fmt::format("Bad instruction: mrc p%d,%d,r%d,c%d,c%d,%d", cp, opc1, t, cn, cm, opc2);
 	}
 }
 
@@ -4753,36 +4799,5 @@ void ARMv7_instrs::YIELD(ARMv7Context& context, const ARMv7Code code, const ARMv
 	{
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
-	}
-}
-
-
-void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	u32 cond = context.ITSTATE.advance();
-	u32 t = 0;
-	u32 cp = 0;
-
-	switch (type)
-	{
-	case T1:
-	case A1:
-	{
-		t = (code.data & 0xf000) >> 12;
-		cp = (code.data & 0xf00) >> 8;
-
-		if (cp - 10 < 2)
-		{
-			throw "MRC_(T1/A1): Advanced SIMD and VFP";
-		}
-		break;
-	}
-	default: throw __FUNCTION__;
-	}
-
-	if (ConditionPassed(context, cond))
-	{
-		LOG_ERROR(ARMv7, "Bad instruction (MRC): 0x%04x 0x%04x", code.code1, code.code0);
-		throw __FUNCTION__;
 	}
 }

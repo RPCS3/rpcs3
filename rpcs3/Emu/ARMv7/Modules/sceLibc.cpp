@@ -54,16 +54,9 @@ namespace sce_libc_func
 		});
 	}
 
-	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
+	std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
 	{
-		sceLibc.Error("printf(fmt=0x%x)", fmt);
-
-		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
-
 		std::string result;
-		u32 g_count = 1;
-		u32 f_count = 0;
-		u32 v_count = 0;
 
 		for (char c = *fmt++; c; c = *fmt++)
 		{
@@ -105,7 +98,7 @@ namespace sce_libc_func
 				}
 				default:
 				{
-					throw fmt::Format("printf(): unknown formatting: '%s'", start.get_ptr());
+					throw fmt::Format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
 				}
 				}
 			}
@@ -114,7 +107,29 @@ namespace sce_libc_func
 			result += c;
 		}
 
-		LOG_NOTICE(TTY, result);
+		return result;
+	}
+
+	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
+	{
+		sceLibc.Error("printf(fmt=0x%x)", fmt);
+
+		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+
+		LOG_NOTICE(TTY, armv7_fmt(context, fmt, 1, 0, 0));
+	}
+
+	void sprintf(ARMv7Context& context, vm::psv::ptr<char> str, vm::psv::ptr<const char> fmt) // va_args...
+	{
+		sceLibc.Error("sprintf(str=0x%x, fmt=0x%x)", str, fmt);
+
+		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+
+		const std::string& result = armv7_fmt(context, fmt, 2, 0, 0);
+
+		sceLibc.Notice("*** res -> '%s'", result);
+
+		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);
 	}
 
 	void __cxa_set_dso_handle_main(vm::psv::ptr<void> dso)
@@ -247,7 +262,7 @@ psv_log_base sceLibc("SceLibc", []()
 	//REG_FUNC(0x395490DA, setbuf);
 	//REG_FUNC(0x2CA980A0, setvbuf);
 	//REG_FUNC(0xA1BFF606, snprintf);
-	//REG_FUNC(0x7449B359, sprintf);
+	REG_FUNC(0x7449B359, sprintf);
 	//REG_FUNC(0xEC585241, sscanf);
 	//REG_FUNC(0x2BCB3F01, ungetc);
 	//REG_FUNC(0xF7915685, vfprintf);
