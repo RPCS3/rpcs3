@@ -1846,10 +1846,44 @@ void ARMv7_instrs::MSR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	bool set_flags = !context.ITSTATE;
+	u32 cond = context.ITSTATE.advance();
+	u32 d = 0;
+	u32 n = 0;
+	u32 m = 0;
+
 	switch (type)
 	{
+	case T1:
+	{
+		d = m = code.data & 0x7;
+		n = (code.data & 0x38) >> 3;
+		break;
+	}
+	case T2:
+	{
+		d = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		m = (code.data & 0xf);
+		set_flags = false;
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 op1 = context.read_gpr(n);
+		const u32 op2 = context.read_gpr(m);
+		const u32 result = op1 * op2;
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+		}
 	}
 }
 

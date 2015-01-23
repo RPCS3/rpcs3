@@ -43,7 +43,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 
 	ARMv7_OP2(0xfe00, 0x1c00, T1, ADD_IMM),
 	ARMv7_OP2(0xf800, 0x3000, T2, ADD_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf100, 0x0000, T3, ADD_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || BF(16, 19) == 13 )),
 	ARMv7_OP4(0xfbf0, 0x8000, 0xf200, 0x0000, T4, ADD_IMM),
 	ARMv7_OP4(0x0fe0, 0x0000, 0x0280, 0x0000, A1, ADD_IMM),
 	ARMv7_OP2(0xfe00, 0x1800, T1, ADD_REG),
@@ -229,7 +229,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xffe0, 0xf0f0, 0xfa20, 0xf000, T2, LSR_REG),
 	ARMv7_OP4(0x0fef, 0x00f0, 0x01a0, 0x0030, A1, LSR_REG),
 
-	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0000, T1, MLA),
+	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0000, T1, MLA, SKIP_IF( BF(12, 15) == 15 )),
 	ARMv7_OP4(0x0fe0, 0x00f0, 0x0020, 0x0090, A1, MLA),
 
 	ARMv7_OP4(0xfff0, 0x00f0, 0xfb00, 0x0010, T1, MLS),
@@ -494,7 +494,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 	ARMv7_OP4(0xfff0, 0x0fc0, 0xf800, 0x0000, T2, STRB_REG),
 	ARMv7_OP4(0x0e50, 0x0010, 0x0640, 0x0000, A1, STRB_REG),
 
-	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM, SKIP_IF(!BT(21) && !BT(24))),
+	ARMv7_OP4(0xfe50, 0x0000, 0xe840, 0x0000, T1, STRD_IMM, SKIP_IF( !BT(21) && !BT(24) )),
 	ARMv7_OP4(0x0e50, 0x00f0, 0x0040, 0x00f0, A1, STRD_IMM),
 	ARMv7_OP4(0x0e50, 0x0ff0, 0x0000, 0x00f0, A1, STRD_REG),
 
@@ -517,11 +517,11 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 
 	ARMv7_OP2(0xfe00, 0x1e00, T1, SUB_IMM),
 	ARMv7_OP2(0xf800, 0x3800, T2, SUB_IMM),
-	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0xfbe0, 0x8000, 0xf1a0, 0x0000, T3, SUB_IMM, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || BF(16, 19) == 13 )),
 	ARMv7_OP4(0xfbf0, 0x8000, 0xf2a0, 0x0000, T4, SUB_IMM),
 	ARMv7_OP4(0x0fe0, 0x0000, 0x0240, 0x0000, A1, SUB_IMM),
 	ARMv7_OP2(0xfe00, 0x1a00, T1, SUB_REG),
-	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || (BF(16, 19) == 13) )),
+	ARMv7_OP4(0xffe0, 0x8000, 0xeba0, 0x0000, T2, SUB_REG, SKIP_IF( (BF(8, 11) == 15 && BT(20)) || BF(16, 19) == 13 )),
 	ARMv7_OP4(0x0fe0, 0x0010, 0x0040, 0x0000, A1, SUB_REG),
 	ARMv7_OP4(0x0fe0, 0x0090, 0x0040, 0x0010, A1, SUB_RSR),
 	ARMv7_OP2(0xff80, 0xb080, T1, SUB_SPI),
@@ -1286,7 +1286,7 @@ u32 ARMv7Decoder::DecodeMemory(const u32 address)
 
 	//for (auto opcode : g_op4t.table)
 	//{
-	//	if ((code.data & opcode->mask) == opcode->code)
+	//	if ((code.data & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(code.data)))
 	//	{
 	//		(*opcode->func)(m_ctx, code, opcode->type);
 	//		return 4;
@@ -1294,7 +1294,7 @@ u32 ARMv7Decoder::DecodeMemory(const u32 address)
 	//}
 
 	ARMv7_instrs::UNK(m_ctx, code);
-	return 2;
+	return 4;
 
 	// "group" decoding algorithm (temporarily disabled)
 
