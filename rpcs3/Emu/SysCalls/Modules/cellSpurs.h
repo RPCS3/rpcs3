@@ -222,6 +222,13 @@ enum CellSpursEventFlagDirection
 	CELL_SPURS_EVENT_FLAG_LAST = CELL_SPURS_EVENT_FLAG_ANY2ANY,
 };
 
+// Event flag constants
+enum SpursEventFlagConstants
+{
+	CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS   = 16,
+	CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT = 0xFF,
+};
+
 class SPURSManager;
 class SPURSManagerEventFlag;
 class SPURSManagerTaskset;
@@ -553,24 +560,24 @@ struct CellSpursEventFlag
 		// Real data
 		struct _CellSpursEventFlag
 		{
-			be_t<u16> bits;                     // 0x00 Bit mask of event set bits
-			be_t<u16> x02;                      // 0x02 Bit mask of SPU thread slots whose conditions have met
-			be_t<u16> x04;                      // 0x04 Wait mask for PPU thread
-			u8 x06;                             // 0x06 Top 4 bits: Bit number for PPU thread. Bottom 4 bits: Wait mode of PPU thread
-			u8 x07;                             // 0x07 Set to 1 if the blocked PPU thread's condition has been met
-			be_t<u16> x08;                      // 0x08 Bit mask of used wait slots
-			be_t<u16> x0A;                      // 0x0A Bit mask of used wait slots whose wait mode is AND
-			u8 spuPort;                         // 0x0C
-			u8 isIwl;                           // 0x0D
-			u8 direction;                       // 0x0E
-			u8 clearMode;                       // 0x0F
-			be_t<u16> x10[16];                  // 0x10 Wait mask for SPU threads
-			be_t<u16> x30[16];                  // 0x30 Received event flag mask for SPU threads
-			u8 x50[16];                         // 0x50 Task id of waiting SPU threads
-			u8 x60[16];                         // 0x50 Workload Ids of waiting SPU threads
-			be_t<u64> addr;                     // 0x70
-			be_t<u32> eventPortId;              // 0x78
-			be_t<u32> eventQueueId;             // 0x7C
+			be_t<u16> events;                    // 0x00 Event bits
+			be_t<u16> spuTaskPendingRecv;        // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
+			be_t<u16> ppuWaitMask;               // 0x04 Wait mask for blocked PPU thread
+			u8 ppuWaitSlotAndMode;               // 0x06 Top 4 bits: Wait slot number of the blocked PPU threa, Bottom 4 bits: Wait mode of the blocked PPU thread
+			u8 ppuPendingRecv;                   // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is ublocked
+			be_t<u16> spuTaskUsedWaitSlots;      // 0x08 A bit is set to 1 if the wait slot corresponding to the bit is used by an SPU task and 0 otherwise
+			be_t<u16> spuTaskWaitMode;           // 0x0A A bit is set to 1 if the wait mode for the SPU task corresponding to the bit is AND and 0 otherwise
+			u8 spuPort;                          // 0x0C
+			u8 isIwl;                            // 0x0D
+			u8 direction;                        // 0x0E
+			u8 clearMode;                        // 0x0F
+			be_t<u16> spuTaskWaitMask[16];       // 0x10 Wait mask for blocked SPU tasks
+			be_t<u16> pendingRecvTaskEvents[16]; // 0x30 The value of event flag when the wait condition for the thread/task was met
+			u8 waitingTaskId[16];                // 0x50 Task id of waiting SPU threads
+			u8 waitingTaskWklId[16];             // 0x60 Workload id of waiting SPU threads
+			be_t<u64> addr;                      // 0x70
+			be_t<u32> eventPortId;               // 0x78
+			be_t<u32> eventQueueId;              // 0x7C
 		} m;
 
 		static_assert(sizeof(_CellSpursEventFlag) == size, "Wrong _CellSpursEventFlag size");

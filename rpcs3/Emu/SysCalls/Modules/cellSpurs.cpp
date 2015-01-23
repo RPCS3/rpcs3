@@ -1696,7 +1696,7 @@ s64 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 	memset(eventFlag.get_ptr(), 0, CellSpursEventFlag::size);
 	eventFlag->m.direction = flagDirection;
 	eventFlag->m.clearMode = flagClearMode;
-	eventFlag->m.spuPort   = -1;
+	eventFlag->m.spuPort   = CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT;
 
 	if (taskset.addr())
 	{
@@ -1734,7 +1734,7 @@ s64 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 		return CELL_SPURS_TASK_ERROR_PERM;
 	}
 
-	if (eventFlag->m.spuPort != -1)
+	if (eventFlag->m.spuPort != CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT)
 	{
 		return CELL_SPURS_TASK_ERROR_STAT;
 	}
@@ -1755,6 +1755,7 @@ s64 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 	auto rc = spursCreateLv2EventQueue(spurs, eventQueueId, port, 1, *((u64 *)"_spuEvF"));
 	if (rc != CELL_OK)
 	{
+		// Return rc if its an error code from SPURS otherwise convert the error code to a SPURS task error code
 		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
 	}
 
@@ -1779,6 +1780,8 @@ s64 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 		// {
 		//     sys_event_queue_destroy(eventQueueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
 		// }
+
+		// Return rc if its an error code from SPURS otherwise convert the error code to a SPURS task error code
 		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
 	}
 
@@ -1811,18 +1814,18 @@ s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 		return CELL_SPURS_TASK_ERROR_PERM;
 	}
 
-	if (eventFlag->m.spuPort == -1)
+	if (eventFlag->m.spuPort == CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT)
 	{
 		return CELL_SPURS_TASK_ERROR_STAT;
 	}
 
-	if (eventFlag->m.x04 || eventFlag->m.x07)
+	if (eventFlag->m.ppuWaitMask || eventFlag->m.ppuPendingRecv)
 	{
 		return CELL_SPURS_TASK_ERROR_BUSY;
 	}
 
 	auto port            = eventFlag->m.spuPort;
-	eventFlag->m.spuPort = -1;
+	eventFlag->m.spuPort = CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT;
 
 	vm::ptr<CellSpurs> spurs;
 	if (eventFlag->m.isIwl == 1)
@@ -1851,6 +1854,7 @@ s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 
 	if (rc != CELL_OK)
 	{
+		// Return rc if its an error code from SPURS otherwise convert the error code to a SPURS task error code
 		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
 	}
 
@@ -1880,83 +1884,104 @@ s64 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> 
 		return CELL_SPURS_TASK_ERROR_PERM;
 	}
 
-	if (block && eventFlag->m.spuPort == -1)
+	if (block && eventFlag->m.spuPort == CELL_SPURS_EVENT_FLAG_INVALID_SPU_PORT)
 	{
 		return CELL_SPURS_TASK_ERROR_STAT;
 	}
 
-	if (eventFlag->m.x04 || eventFlag->m.x07)
+	if (eventFlag->m.ppuWaitMask || eventFlag->m.ppuPendingRecv)
 	{
 		return CELL_SPURS_TASK_ERROR_BUSY;
 	}
 
-	u16 bits = eventFlag->m.bits & *mask;
+	u16 relevantEvents = eventFlag->m.events & *mask;
 	if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
-		u16 tmp = eventFlag->m.x08 & ~eventFlag->m.x02;
-		if (mode != CELL_SPURS_EVENT_FLAG_AND)
+		// Make sure the wait mask and mode specified does not conflict with that of the already waiting tasks.
+		// Conflict scenarios:
+		// OR  vs OR  - A conflict never occurs
+		// OR  vs AND - A conflict occurs if the masks for the two tasks overlap
+		// AND vs AND - A conflict occurs if the masks for the two tasks are not the same
+
+		// Determine the set of all already waiting tasks whose wait mode/mask can possibly conflict with the specified wait mode/mask.
+		// This set is equal to 'set of all tasks waiting' - 'set of all tasks whose wait conditions have been met'.
+		// If the wait mode is OR, we prune the set of all tasks that are waiting in OR mode from the set since a conflict cannot occur
+		// with an already waiting task in OR mode.
+		u16 relevantWaitSlots = eventFlag->m.spuTaskUsedWaitSlots & ~eventFlag->m.spuTaskPendingRecv;
+		if (mode == CELL_SPURS_EVENT_FLAG_OR)
 		{
-			tmp &= eventFlag->m.x0A;
+			relevantWaitSlots &= eventFlag->m.spuTaskWaitMode;
 		}
 
-		int i = 15;
-		while (tmp)
+		int i = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
+		while (relevantWaitSlots)
 		{
-			if (tmp & 0x1)
+			if (relevantWaitSlots & 0x0001)
 			{
-				if (eventFlag->m.x10[i] & *mask && eventFlag->m.x10[i] != *mask)
+				if (eventFlag->m.spuTaskWaitMask[i] & *mask && eventFlag->m.spuTaskWaitMask[i] != *mask)
 				{
 					return CELL_SPURS_TASK_ERROR_AGAIN;
 				}
 			}
 
-			tmp >>= 1;
+			relevantWaitSlots >>= 1;
 			i--;
 		}
 	}
 
+	// There is no need to block if all bits required by the wait operation have already been set or
+	// if the wait mode is OR and atleast one of the bits required by the wait operation has been set.
 	bool recv;
-	if ((*mask & ~bits) == 0 || (mode == CELL_SPURS_EVENT_FLAG_OR && bits))
+	if ((*mask & ~relevantEvents) == 0 || (mode == CELL_SPURS_EVENT_FLAG_OR && relevantEvents))
 	{
+		// If the clear flag is AUTO then clear the bits comnsumed by this thread
 		if (eventFlag->m.clearMode == CELL_SPURS_EVENT_FLAG_CLEAR_AUTO)
 		{
-			eventFlag->m.bits &= ~bits;
+			eventFlag->m.events &= ~relevantEvents;
 		}
 
 		recv = false;
 	}
 	else
 	{
+		// If we reach here it means that the conditions for this thread have not been met.
+		// If this is a try wait operation then do not block but return an error code.
 		if (block == 0)
 		{
 			return CELL_SPURS_TASK_ERROR_BUSY;
 		}
 
-		eventFlag->m.x06 = 0;
+		eventFlag->m.ppuWaitSlotAndMode = 0;
 		if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 		{
-			u8 i    = 0;
-			u16 tmp = eventFlag->m.x08;
-			while (tmp & 0x01)
+			// Find an unsed wait slot
+			int i                    = 0;
+			u16 spuTaskUsedWaitSlots = eventFlag->m.spuTaskUsedWaitSlots;
+			while (spuTaskUsedWaitSlots & 0x0001)
 			{
-				tmp >>= 1;
+				spuTaskUsedWaitSlots >>= 1;
 				i++;
 			}
 
-			if (i == 16)
+			if (i == CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS)
 			{
+				// Event flag has no empty wait slots
 				return CELL_SPURS_TASK_ERROR_BUSY;
 			}
 
-			eventFlag->m.x06 = (15 - i) << 4;
+			// Mark the found wait slot as used by this thread
+			eventFlag->m.ppuWaitSlotAndMode = (CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1 - i) << 4;
 		}
 
-		eventFlag->m.x06 |= mode;
-		eventFlag->m.x04  = *mask;
-		recv              = true;
+		// Save the wait mask and mode for this thread
+		eventFlag->m.ppuWaitSlotAndMode |= mode;
+		eventFlag->m.ppuWaitMask         = *mask;
+		recv                             = true;
 	}
 
+	u16 receivedEventFlag;
 	if (recv) {
+		// Block till something happens
 		vm::var<sys_event_data> data;
 		auto rc = sys_event_queue_receive(eventFlag->m.eventQueueId, data, 0);
 		if (rc != CELL_OK)
@@ -1964,17 +1989,17 @@ s64 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> 
 			assert(0);
 		}
 
-		u8 i = 0;
+		int i = 0;
 		if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 		{
-			i = eventFlag->m.x06 >> 4;
+			i = eventFlag->m.ppuWaitSlotAndMode >> 4;
 		}
 
-		bits             = eventFlag->m.x30[i];
-		eventFlag->m.x07 = 0;
+		receivedEventFlag           = eventFlag->m.pendingRecvTaskEvents[i];
+		eventFlag->m.ppuPendingRecv = 0;
 	}
 
-	*mask = bits;
+	*mask = receivedEventFlag;
 	return CELL_OK;
 }
 
@@ -2006,7 +2031,7 @@ s64 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	eventFlag->m.bits &= ~bits;
+	eventFlag->m.events &= ~bits;
 	return CELL_OK;
 #endif
 }
@@ -2033,82 +2058,95 @@ s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 		return CELL_SPURS_TASK_ERROR_PERM;
 	}
 
-	u16 tmp1 = 0;
-	auto send = false;
-	u16 tmp3 = 0;
-	u16 tmp4 = 0;
-
-	if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY && eventFlag->m.x04)
+	u16 ppuEventFlag  = 0;
+	bool send         = false;
+	int ppuWaitSlot   = 0;
+	u16 eventsToClear = 0;
+	if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY && eventFlag->m.ppuWaitMask)
 	{
-		u16 tmp = (eventFlag->m.bits | bits) & eventFlag->m.x04;
-		if ((eventFlag->m.x04 & ~tmp) == 0 || ((eventFlag->m.x06 & 0x0F) == 0 && tmp != 0))
+		u16 ppuRelevantEvents = (eventFlag->m.events | bits) & eventFlag->m.ppuWaitMask;
+
+		// Unblock the waiting PPU thread if either all the bits being waited by the thread have been set or
+		// if the wait mode of the thread is OR and atleast one bit the thread is waiting on has been set
+		if ((eventFlag->m.ppuWaitMask & ~ppuRelevantEvents) == 0 ||
+			((eventFlag->m.ppuWaitSlotAndMode & 0x0F) == CELL_SPURS_EVENT_FLAG_OR && ppuRelevantEvents != 0))
 		{
-			eventFlag->m.x07 = 1;
-			eventFlag->m.x04 = 0;
-			tmp1 = tmp;
-			send = true;
-			tmp3 = eventFlag->m.x06 >> 4;
-			tmp4 = tmp;
+			eventFlag->m.ppuPendingRecv = 1;
+			eventFlag->m.ppuWaitMask    = 0;
+			ppuEventFlag                = ppuRelevantEvents;
+			eventsToClear               = ppuRelevantEvents;
+			ppuWaitSlot                 = eventFlag->m.ppuWaitSlotAndMode >> 4;
+			send                        = true;
 		}
 	}
 
-	u16 i    = 15;
-	u16 j    = 0;
-	u16 tmp  = eventFlag->m.x08 & ~eventFlag->m.x02;
-	u16 tmp5 = 0;
-	u16 x30[16];
-	while (tmp)
+	int i                  = CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS - 1;
+	int j                  = 0;
+	u16 relevantWaitSlots  = eventFlag->m.spuTaskUsedWaitSlots & ~eventFlag->m.spuTaskPendingRecv;
+	u16 spuTaskPendingRecv = 0;
+	u16 pendingRecvTaskEvents[16];
+	while (relevantWaitSlots)
 	{
-		if (tmp & 0x0001)
+		if (relevantWaitSlots & 0x0001)
 		{
-			u16 tmp6 = (eventFlag->m.bits | bits) & eventFlag->m.x10[i];
-			if ((eventFlag->m.x10[i] & ~tmp6) == 0 || (((eventFlag->m.x0A >> j) & 0x01) == 0 && (eventFlag->m.x10[i] & ~tmp6) != 0))
+			u16 spuTaskRelevantEvents = (eventFlag->m.events | bits) & eventFlag->m.spuTaskWaitMask[i];
+
+			// Unblock the waiting SPU task if either all the bits being waited by the task have been set or
+			// if the wait mode of the task is OR and atleast one bit the thread is waiting on has been set
+			if ((eventFlag->m.spuTaskWaitMask[i] & ~spuTaskRelevantEvents) == 0 || 
+				(((eventFlag->m.spuTaskWaitMode >> j) & 0x0001) == CELL_SPURS_EVENT_FLAG_OR && spuTaskRelevantEvents != 0))
 			{
-				tmp4   |= tmp6;
-				tmp5   |= 1 << j;
-				x30[j]  = tmp6;
+				eventsToClear            |= spuTaskRelevantEvents;
+				spuTaskPendingRecv       |= 1 << j;
+				pendingRecvTaskEvents[j]  = spuTaskRelevantEvents;
 			}
 		}
 
-		tmp >>= 1;
+		relevantWaitSlots >>= 1;
 		i--;
 		j++;
 	}
 
-	eventFlag->m.bits |= bits;
-	eventFlag->m.x02  |= tmp5;
+	eventFlag->m.events             |= bits;
+	eventFlag->m.spuTaskPendingRecv |= spuTaskPendingRecv;
+
+	// If the clear flag is AUTO then clear the bits comnsumed by all tasks marked to be unblocked
 	if (eventFlag->m.clearMode == CELL_SPURS_EVENT_FLAG_CLEAR_AUTO)
 	{
-		 eventFlag->m.bits &= ~tmp4;
+		 eventFlag->m.events &= ~eventsToClear;
 	}
 
 	if (send)
 	{
-		eventFlag->m.x30[tmp3] = tmp1;
+		// Signal the PPU thread to be woken up
+		eventFlag->m.pendingRecvTaskEvents[ppuWaitSlot] = ppuEventFlag;
 		if (sys_event_port_send(eventFlag->m.eventPortId, 0, 0, 0) != CELL_OK)
 		{
 			assert(0);
 		}
 	}
 
-	if (tmp5)
+	if (spuTaskPendingRecv)
 	{
-		for (auto i = 0; i < 16; i++)
+		// Signal each SPU task whose conditions have been met to be woken up
+		for (int i = 0; i < CELL_SPURS_EVENT_FLAG_MAX_WAIT_SLOTS; i++)
 		{
-			if (tmp5 & (0x8000 >> i))
+			if (spuTaskPendingRecv & (0x8000 >> i))
 			{
-				eventFlag->m.x30[i] = x30[i];
+				eventFlag->m.pendingRecvTaskEvents[i] = pendingRecvTaskEvents[i];
 				vm::var<u32> taskset;
 				if (eventFlag->m.isIwl)
 				{
-					cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs>::make((u32)eventFlag->m.addr), vm::ptr<CellSpursTaskset>::make(taskset.addr()), eventFlag->m.x60[i]);
+					cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs>::make((u32)eventFlag->m.addr),
+												  vm::ptr<CellSpursTaskset>::make(taskset.addr()),
+												  eventFlag->m.waitingTaskWklId[i]);
 				}
 				else
 				{
 					taskset.value() = (u32)eventFlag->m.addr;
 				}
 
-				auto rc = _cellSpursSendSignal(vm::ptr<CellSpursTaskset>::make(taskset.addr()), eventFlag->m.x50[i]);
+				auto rc = _cellSpursSendSignal(vm::ptr<CellSpursTaskset>::make(taskset.addr()), eventFlag->m.waitingTaskId[i]);
 				if (rc == CELL_SPURS_TASK_ERROR_INVAL || rc == CELL_SPURS_TASK_ERROR_STAT)
 				{
 					return CELL_SPURS_TASK_ERROR_FATAL;
