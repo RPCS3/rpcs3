@@ -693,6 +693,7 @@ void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 	case T1:
 	{
+		cond = context.ITSTATE.advance();
 		d = n = (code.data & 0x7);
 		m = (code.data & 0x38) >> 3;
 		shift_t = SRType_LSL;
@@ -701,6 +702,7 @@ void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 	case T2:
 	{
+		cond = context.ITSTATE.advance();
 		d = (code.data & 0xf00) >> 8;
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
@@ -1054,10 +1056,27 @@ void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, m;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		m = (code.data & 0xf);
+
+		reject((code.data & 0xf0000) >> 16 != m, "UNPREDICTABLE");
+		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		context.write_gpr(d, cntlz32(context.read_gpr(m)));
 	}
 }
 
@@ -1991,10 +2010,36 @@ void ARMv7_instrs::MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 void ARMv7_instrs::MVN_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, imm32;
+	bool set_flags, carry;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		set_flags = (code.data & 0x100000);
+		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), context.APSR.C, carry);
+
+		reject(d == 13 || d == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 result = ~imm32;
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+			context.APSR.C = carry;
+		}
 	}
 }
 
@@ -3677,10 +3722,35 @@ void ARMv7_instrs::UXTAH(ARMv7Context& context, const ARMv7Code code, const ARMv
 
 void ARMv7_instrs::UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, m, rot;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0x7);
+		m = (code.data & 0x38) >> 3;
+		rot = 0;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		m = (code.data & 0xf);
+		rot = (code.data & 0x30) >> 1;
+
+		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		context.write_gpr(d, (context.read_gpr(m) >> rot) & 0xff);
 	}
 }
 
