@@ -4,88 +4,12 @@
 #include "Emu/ARMv7/PSVFuncList.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
+#include "Emu/SysCalls/Callback.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
-extern psv_log_base sceLibKernel;
+#include "sceLibKernel.h"
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
-
-#pragma pack(push, 4)
-
-typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
-
-union SceKernelSysClock
-{
-	struct
-	{
-		u32 low;
-		u32 hi;
-	};
-	u64 quad;
-};
-
-struct SceKernelThreadOptParam
-{
-	u32 size;
-	u32 attr;
-};
-
-struct SceKernelThreadInfo
-{
-	u32 size;
-	s32 processId;
-	char name[32];
-	u32 attr;
-	u32 status;
-	SceKernelThreadEntry entry;
-	vm::psv::ptr<void> pStack;
-	u32 stackSize;
-	s32 initPriority;
-	s32 currentPriority;
-	s32 initCpuAffinityMask;
-	s32 currentCpuAffinityMask;
-	s32 currentCpuId;
-	s32 lastExecutedCpuId;
-	u32 waitType;
-	s32 waitId;
-	s32 exitStatus;
-	SceKernelSysClock runClocks;
-	u32 intrPreemptCount;
-	u32 threadPreemptCount;
-	u32 threadReleaseCount;
-	s32 changeCpuCount;
-	s32 fNotifyCallback;
-	s32 reserved;
-};
-
-struct SceKernelThreadRunStatus
-{
-	u32 size;
-
-	struct
-	{
-		s32 processId;
-		s32 threadId;
-		s32 priority;
-
-	} cpuInfo[4];
-};
-
-struct SceKernelSystemInfo
-{
-	u32 size;
-	u32 activeCpuMask;
-
-	struct
-	{
-		SceKernelSysClock idleClock;
-		u32 comesOutOfIdleCount;
-		u32 threadSwitchCount;
-
-	} cpuInfo[4];
-};
-
-#pragma pack(pop)
 
 u32 sceKernelCreateThread(
 	vm::psv::ptr<const char> pName,
@@ -113,15 +37,22 @@ u32 sceKernelCreateThread(
 	return id;
 }
 
-s32 sceKernelStartThread(u32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
+s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
 {
 	sceLibKernel.Error("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=0x%x)", threadId, argSize, pArgBlock);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
-	if (!t || t->GetType() != CPU_THREAD_ARMv7)
+	if (!t)
 	{
 		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+	}
+
+	// thread should be in DORMANT state, but it's not possible to check it correctly atm
+
+	if (t->IsAlive())
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_NOT_DORMANT);
 	}
 
 	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
@@ -148,35 +79,60 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 	return SCE_OK;
 }
 
-s32 sceKernelDeleteThread(u32 threadId)
+s32 sceKernelDeleteThread(s32 threadId)
 {
-	sceLibKernel.Todo("sceKernelDeleteThread(threadId=0x%x)", threadId);
+	sceLibKernel.Error("sceKernelDeleteThread(threadId=0x%x)", threadId);
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+
+	if (!t)
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+	}
+
+	// thread should be in DORMANT state, but it's not possible to check it correctly atm
+
+	if (t->IsAlive())
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_NOT_DORMANT);
+	}
+
+	Emu.GetCPU().RemoveThread(threadId);
+	return SCE_OK;
+}
+
+s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
+{
+	sceLibKernel.Error("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
+
+	// exit status is stored in r0
+	context.thread.Stop();
+
+	// current thread should be deleted
+	const u32 id = context.thread.GetId();
+	CallAfter([id]()
+	{
+		Emu.GetCPU().RemoveThread(id);
+	});
 
 	return SCE_OK;
 }
 
-s32 sceKernelExitDeleteThread(s32 exitStatus)
-{
-	sceLibKernel.Todo("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
-
-	return SCE_OK;
-}
-
-s32 sceKernelChangeThreadCpuAffinityMask(u32 threadId, s32 cpuAffinityMask)
+s32 sceKernelChangeThreadCpuAffinityMask(s32 threadId, s32 cpuAffinityMask)
 {
 	sceLibKernel.Todo("sceKernelChangeThreadCpuAffinityMask(threadId=0x%x, cpuAffinityMask=0x%x)", threadId, cpuAffinityMask);
 
 	return SCE_OK;
 }
 
-s32 sceKernelGetThreadCpuAffinityMask(u32 threadId)
+s32 sceKernelGetThreadCpuAffinityMask(s32 threadId)
 {
 	sceLibKernel.Todo("sceKernelGetThreadCpuAffinityMask(threadId=0x%x)", threadId);
 
 	return SCE_OK;
 }
 
-s32 sceKernelChangeThreadPriority(u32 threadId, s32 priority)
+s32 sceKernelChangeThreadPriority(s32 threadId, s32 priority)
 {
 	sceLibKernel.Todo("sceKernelChangeThreadPriority(threadId=0x%x, priority=%d)", threadId, priority);
 
@@ -204,7 +160,7 @@ s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
 	return SCE_OK;
 }
 
-s32 sceKernelGetThreadExitStatus(u32 threadId, vm::psv::ptr<s32> pExitStatus)
+s32 sceKernelGetThreadExitStatus(s32 threadId, vm::psv::ptr<s32> pExitStatus)
 {
 	sceLibKernel.Todo("sceKernelGetThreadExitStatus(threadId=0x%x, pExitStatus=0x%x)", threadId, pExitStatus);
 
@@ -225,7 +181,7 @@ s32 sceKernelCheckWaitableStatus()
 	return SCE_OK;
 }
 
-s32 sceKernelGetThreadInfo(u32 threadId, vm::psv::ptr<SceKernelThreadInfo> pInfo)
+s32 sceKernelGetThreadInfo(s32 threadId, vm::psv::ptr<SceKernelThreadInfo> pInfo)
 {
 	sceLibKernel.Todo("sceKernelGetThreadInfo(threadId=0x%x, pInfo=0x%x)", threadId, pInfo);
 
@@ -281,13 +237,13 @@ s32 sceKernelDelayThreadCB(u32 usec)
 	return SCE_OK;
 }
 
-s32 sceKernelWaitThreadEnd(u32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
 	sceLibKernel.Error("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
-	if (!t || t->GetType() != CPU_THREAD_ARMv7)
+	if (!t)
 	{
 		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
 	}
@@ -316,7 +272,7 @@ s32 sceKernelWaitThreadEnd(u32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv:
 	return SCE_OK;
 }
 
-s32 sceKernelWaitThreadEndCB(u32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
 	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 

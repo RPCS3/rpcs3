@@ -274,6 +274,7 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
