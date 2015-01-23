@@ -1469,12 +1469,12 @@ s64 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0xA658, libsre_rtoc);
 #else
-	if (!spurs)
+	if (spurs.addr() == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
 	}
 
-	if (spurs.addr() %  CellSpurs::align)
+	if (spurs.addr() % CellSpurs::align)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
@@ -1522,13 +1522,47 @@ s64 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
 #endif
 }
 
-s64 cellSpursGetWorkloadData()
+s64 cellSpursGetWorkloadData(vm::ptr<CellSpurs> spurs, vm::ptr<u64> data, u32 workloadId)
 {
+	cellSpurs->Warning("%s(spurs_addr=0x%x, data=0x%x, workloadId=%d)", __FUNCTION__, spurs.addr(), data.addr(), workloadId);
+
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsre + 0xA78C, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (spurs.addr() == 0 || data.addr() == 0)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
+	}
+
+	if (spurs.addr() % CellSpurs::align)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
+	}
+
+	if (workloadId >= CELL_SPURS_MAX_WORKLOAD2 || (workloadId >= CELL_SPURS_MAX_WORKLOAD && (spurs->m.flags1 & SF1_32_WORKLOADS) == 0))
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
+	}
+
+	if ((spurs->m.wklMskA.read_relaxed() & (0x80000000u >> workloadId)) == 0)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_SRCH;
+	}
+
+	if (spurs->m.exception)
+	{
+		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
+	}
+
+	if (workloadId >= CELL_SPURS_MAX_WORKLOAD)
+	{
+		*data = spurs->m.wklInfo2[workloadId & 0x0F].arg;
+	}
+	else
+	{
+		*data = spurs->m.wklInfo1[workloadId].arg;
+	}
+
 	return CELL_OK;
 #endif
 }
@@ -3272,7 +3306,20 @@ s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x133AC, libsre_rtoc);
 #else
-	UNIMPLEMENTED_FUNC(cellSpurs);
+	if (taskset.addr() == 0)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	vm::var<be_t<u64>> data;
+	auto rc = cellSpursGetWorkloadData(spurs, vm::ptr<u64>::make(data.addr()), id);
+	if (rc != CELL_OK)
+	{
+		// Convert policy module error code to a task error code
+		return rc ^ 0x100;
+	}
+
+	taskset.set((u32)data.value());
 	return CELL_OK;
 #endif
 }
