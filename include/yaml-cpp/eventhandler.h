@@ -7,8 +7,10 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/anchor.h"
 #include <string>
+
+#include "yaml-cpp/anchor.h"
+#include "yaml-cpp/emitterstyle.h"
 
 namespace YAML {
 struct Mark;
@@ -26,11 +28,11 @@ class EventHandler {
                         anchor_t anchor, const std::string& value) = 0;
 
   virtual void OnSequenceStart(const Mark& mark, const std::string& tag,
-                               anchor_t anchor) = 0;
+                               anchor_t anchor, EmitterStyle::value style) = 0;
   virtual void OnSequenceEnd() = 0;
 
   virtual void OnMapStart(const Mark& mark, const std::string& tag,
-                          anchor_t anchor) = 0;
+                          anchor_t anchor, EmitterStyle::value style) = 0;
   virtual void OnMapEnd() = 0;
 };
 }

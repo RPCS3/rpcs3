@@ -11,8 +11,7 @@ using ::testing::_;
   ASSERT_THROW(statement, ParserException);               \
   try {                                                   \
     statement;                                            \
-  }                                                       \
-  catch (const ParserException& e) {                      \
+  } catch (const ParserException& e) {                    \
     EXPECT_EQ(e.msg, message);                            \
   }
 
@@ -26,7 +25,7 @@ TEST_F(HandlerTest, NoEndOfMapFlow) {
 
 TEST_F(HandlerTest, PlainScalarStartingWithQuestionMark) {
   EXPECT_CALL(handler, OnDocumentStart(_));
-  EXPECT_CALL(handler, OnMapStart(_, "?", 0));
+  EXPECT_CALL(handler, OnMapStart(_, "?", 0, EmitterStyle::Block));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "foo"));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "?bar"));
   EXPECT_CALL(handler, OnMapEnd());
@@ -36,7 +35,7 @@ TEST_F(HandlerTest, PlainScalarStartingWithQuestionMark) {
 
 TEST_F(HandlerTest, NullStringScalar) {
   EXPECT_CALL(handler, OnDocumentStart(_));
-  EXPECT_CALL(handler, OnMapStart(_, "?", 0));
+  EXPECT_CALL(handler, OnMapStart(_, "?", 0, EmitterStyle::Block));
   EXPECT_CALL(handler, OnScalar(_, "?", 0, "foo"));
   EXPECT_CALL(handler, OnNull(_, 0));
   EXPECT_CALL(handler, OnMapEnd());

@@ -1,3 +1,4 @@
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/yaml.h"  // IWYU pragma: keep
 #include "gtest/gtest.h"
@@ -14,10 +15,12 @@ class NullEventHandler : public EventHandler {
   virtual void OnScalar(const Mark&, const std::string&, anchor_t,
                         const std::string&) {}
 
-  virtual void OnSequenceStart(const Mark&, const std::string&, anchor_t) {}
+  virtual void OnSequenceStart(const Mark&, const std::string&, anchor_t,
+                               EmitterStyle::value style) {}
   virtual void OnSequenceEnd() {}
 
-  virtual void OnMapStart(const Mark&, const std::string&, anchor_t) {}
+  virtual void OnMapStart(const Mark&, const std::string&, anchor_t,
+                          EmitterStyle::value style) {}
   virtual void OnMapEnd() {}
 };
 
@@ -775,13 +778,13 @@ TEST_F(EmitterTest, Binary) {
 
 TEST_F(EmitterTest, LongBinary) {
   out << Binary(
-             reinterpret_cast<const unsigned char*>(
-                 "Man is distinguished, not only by his reason, but by this "
-                 "singular passion from other animals, which is a lust of the "
-                 "mind, that by a perseverance of delight in the continued and "
-                 "indefatigable generation of knowledge, exceeds the short "
-                 "vehemence of any carnal pleasure.\n"),
-             270);
+      reinterpret_cast<const unsigned char*>(
+          "Man is distinguished, not only by his reason, but by this "
+          "singular passion from other animals, which is a lust of the "
+          "mind, that by a perseverance of delight in the continued and "
+          "indefatigable generation of knowledge, exceeds the short "
+          "vehemence of any carnal pleasure.\n"),
+      270);
   ExpectEmit(
       "!!binary "
       "\"TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyByZWFzb24sIGJ1dCBieS"

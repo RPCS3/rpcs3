@@ -52,7 +52,7 @@ def scalar(value, tag='', anchor='', anchor_id=0):
 def comment(value):
     return {'emit': 'Comment("%s")' % value, 'handle': ''}
 
-def seq_start(tag='', anchor='', anchor_id=0):
+def seq_start(tag='', anchor='', anchor_id=0, style='_'):
     emit = []
     if tag:
         emit += ['VerbatimTag("%s")' % encode(tag)]
@@ -63,12 +63,12 @@ def seq_start(tag='', anchor='', anchor_id=0):
     else:
         out_tag = '?'
     emit += ['BeginSeq']
-    return {'emit': emit, 'handle': 'OnSequenceStart(_, "%s", %s)' % (out_tag, anchor_id)}
+    return {'emit': emit, 'handle': 'OnSequenceStart(_, "%s", %s, %s)' % (out_tag, anchor_id, style)}
 
 def seq_end():
     return {'emit': 'EndSeq', 'handle': 'OnSequenceEnd()'}
 
-def map_start(tag='', anchor='', anchor_id=0):
+def map_start(tag='', anchor='', anchor_id=0, style='_'):
     emit = []
     if tag:
         emit += ['VerbatimTag("%s")' % encode(tag)]
@@ -79,7 +79,7 @@ def map_start(tag='', anchor='', anchor_id=0):
     else:
         out_tag = '?'
     emit += ['BeginMap']
-    return {'emit': emit, 'handle': 'OnMapStart(_, "%s", %s)' % (out_tag, anchor_id)}
+    return {'emit': emit, 'handle': 'OnMapStart(_, "%s", %s, %s)' % (out_tag, anchor_id, style)}
 
 def map_end():
     return {'emit': 'EndMap', 'handle': 'OnMapEnd()'}

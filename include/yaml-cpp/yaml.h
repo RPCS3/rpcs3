@@ -9,6 +9,7 @@
 
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/emitter.h"
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/stlemitter.h"
 #include "yaml-cpp/exceptions.h"
 

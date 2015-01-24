@@ -44,9 +44,20 @@ void EmitFromEvents::OnScalar(const Mark&, const std::string& tag,
 }
 
 void EmitFromEvents::OnSequenceStart(const Mark&, const std::string& tag,
-                                     anchor_t anchor) {
+                                     anchor_t anchor,
+                                     EmitterStyle::value style) {
   BeginNode();
   EmitProps(tag, anchor);
+  switch (style) {
+    case EmitterStyle::Block:
+      m_emitter << Block;
+      break;
+    case EmitterStyle::Flow:
+      m_emitter << Flow;
+      break;
+    default:
+      break;
+  }
   m_emitter << BeginSeq;
   m_stateStack.push(State::WaitingForSequenceEntry);
 }
@@ -58,9 +69,19 @@ void EmitFromEvents::OnSequenceEnd() {
 }
 
 void EmitFromEvents::OnMapStart(const Mark&, const std::string& tag,
-                                anchor_t anchor) {
+                                anchor_t anchor, EmitterStyle::value style) {
   BeginNode();
   EmitProps(tag, anchor);
+  switch (style) {
+    case EmitterStyle::Block:
+      m_emitter << Block;
+      break;
+    case EmitterStyle::Flow:
+      m_emitter << Flow;
+      break;
+    default:
+      break;
+  }
   m_emitter << BeginMap;
   m_stateStack.push(State::WaitingForKey);
 }

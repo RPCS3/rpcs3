@@ -317,8 +317,9 @@ void Scanner::PopIndentToHere() {
     const IndentMarker& indent = *m_indents.top();
     if (indent.column < INPUT.column())
       break;
-    if (indent.column == INPUT.column() && !(indent.type == IndentMarker::SEQ &&
-                                             !Exp::BlockEntry().Matches(INPUT)))
+    if (indent.column == INPUT.column() &&
+        !(indent.type == IndentMarker::SEQ &&
+          !Exp::BlockEntry().Matches(INPUT)))
       break;
 
     PopIndent();
