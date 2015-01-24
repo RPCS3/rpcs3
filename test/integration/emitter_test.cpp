@@ -956,6 +956,12 @@ TEST_F(EmitterTest, ForceSingleQuotedToDouble) {
   ExpectEmit("\"Hello\\nWorld\"");
 }
 
+TEST_F(EmitterTest, QuoteNull) {
+  out << "null";
+
+  ExpectEmit("\"null\"");
+}
+
 class EmitterErrorTest : public ::testing::Test {
  protected:
   void ExpectEmitError(const std::string& expectedError) {

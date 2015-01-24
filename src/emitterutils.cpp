@@ -32,22 +32,29 @@ bool IsAnchorChar(int ch) {  // test for ns-anchor-char
       return true;
   }
 
-  if (ch < 0x20)
+  if (ch < 0x20) {
     return false;
+  }
 
-  if (ch < 0x7E)
+  if (ch < 0x7E) {
     return true;
+  }
 
-  if (ch < 0xA0)
+  if (ch < 0xA0) {
     return false;
-  if (ch >= 0xD800 && ch <= 0xDFFF)
+  }
+  if (ch >= 0xD800 && ch <= 0xDFFF) {
     return false;
-  if ((ch & 0xFFFE) == 0xFFFE)
+  }
+  if ((ch & 0xFFFE) == 0xFFFE) {
     return false;
-  if ((ch >= 0xFDD0) && (ch <= 0xFDEF))
+  }
+  if ((ch >= 0xFDD0) && (ch <= 0xFDEF)) {
     return false;
-  if (ch > 0x10FFFF)
+  }
+  if (ch > 0x10FFFF) {
     return false;
+  }
 
   return true;
 }
@@ -145,19 +152,27 @@ void WriteCodePoint(ostream_wrapper& out, int codePoint) {
 
 bool IsValidPlainScalar(const std::string& str, FlowType::value flowType,
                         bool allowOnlyAscii) {
-  if (str.empty())
+  if (str.empty()) {
     return false;
+  }
 
-  // first check the start
+  // check against null
+  if (str == "null") {
+    return false;
+  }
+
+  // check the start
   const RegEx& start = (flowType == FlowType::Flow ? Exp::PlainScalarInFlow()
                                                    : Exp::PlainScalar());
-  if (!start.Matches(str))
+  if (!start.Matches(str)) {
     return false;
+  }
 
   // and check the end for plain whitespace (which can't be faithfully kept in a
   // plain scalar)
-  if (!str.empty() && *str.rbegin() == ' ')
+  if (!str.empty() && *str.rbegin() == ' ') {
     return false;
+  }
 
   // then check until something is disallowed
   const RegEx& disallowed = (flowType == FlowType::Flow ? Exp::EndScalarInFlow()
@@ -167,10 +182,12 @@ bool IsValidPlainScalar(const std::string& str, FlowType::value flowType,
                             Exp::Break() || Exp::Tab();
   StringCharSource buffer(str.c_str(), str.size());
   while (buffer) {
-    if (disallowed.Matches(buffer))
+    if (disallowed.Matches(buffer)) {
       return false;
-    if (allowOnlyAscii && (0x80 <= static_cast<unsigned char>(buffer[0])))
+    }
+    if (allowOnlyAscii && (0x80 <= static_cast<unsigned char>(buffer[0]))) {
       return false;
+    }
     ++buffer;
   }
 
@@ -180,23 +197,27 @@ bool IsValidPlainScalar(const std::string& str, FlowType::value flowType,
 bool IsValidSingleQuotedScalar(const std::string& str, bool escapeNonAscii) {
   // TODO: check for non-printable characters?
   for (std::size_t i = 0; i < str.size(); i++) {
-    if (escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i])))
+    if (escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i]))) {
       return false;
-    if (str[i] == '\n')
+    }
+    if (str[i] == '\n') {
       return false;
+    }
   }
   return true;
 }
 
 bool IsValidLiteralScalar(const std::string& str, FlowType::value flowType,
                           bool escapeNonAscii) {
-  if (flowType == FlowType::Flow)
+  if (flowType == FlowType::Flow) {
     return false;
+  }
 
   // TODO: check for non-printable characters?
   for (std::size_t i = 0; i < str.size(); i++) {
-    if (escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i])))
+    if (escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i]))) {
       return false;
+    }
   }
   return true;
 }
@@ -226,8 +247,9 @@ bool WriteAliasName(ostream_wrapper& out, const std::string& str) {
   int codePoint;
   for (std::string::const_iterator i = str.begin();
        GetNextCodePointAndAdvance(codePoint, i, str.end());) {
-    if (!IsAnchorChar(codePoint))
+    if (!IsAnchorChar(codePoint)) {
       return false;
+    }
 
     WriteCodePoint(out, codePoint);
   }
@@ -241,18 +263,21 @@ StringFormat::value ComputeStringFormat(const std::string& str,
                                         bool escapeNonAscii) {
   switch (strFormat) {
     case Auto:
-      if (IsValidPlainScalar(str, flowType, escapeNonAscii))
+      if (IsValidPlainScalar(str, flowType, escapeNonAscii)) {
         return StringFormat::Plain;
+      }
       return StringFormat::DoubleQuoted;
     case SingleQuoted:
-      if (IsValidSingleQuotedScalar(str, escapeNonAscii))
+      if (IsValidSingleQuotedScalar(str, escapeNonAscii)) {
         return StringFormat::SingleQuoted;
+      }
       return StringFormat::DoubleQuoted;
     case DoubleQuoted:
       return StringFormat::DoubleQuoted;
     case Literal:
-      if (IsValidLiteralScalar(str, flowType, escapeNonAscii))
+      if (IsValidLiteralScalar(str, flowType, escapeNonAscii)) {
         return StringFormat::Literal;
+      }
       return StringFormat::DoubleQuoted;
     default:
       break;
@@ -266,14 +291,16 @@ bool WriteSingleQuotedString(ostream_wrapper& out, const std::string& str) {
   int codePoint;
   for (std::string::const_iterator i = str.begin();
        GetNextCodePointAndAdvance(codePoint, i, str.end());) {
-    if (codePoint == '\n')
+    if (codePoint == '\n') {
       return false;  // We can't handle a new line and the attendant indentation
                      // yet
+    }
 
-    if (codePoint == '\'')
+    if (codePoint == '\'') {
       out << "''";
-    else
+    } else {
       WriteCodePoint(out, codePoint);
+    }
   }
   out << "'";
   return true;
@@ -307,15 +334,16 @@ bool WriteDoubleQuotedString(ostream_wrapper& out, const std::string& str,
       default:
         if (codePoint < 0x20 ||
             (codePoint >= 0x80 &&
-             codePoint <= 0xA0))  // Control characters and non-breaking space
+             codePoint <= 0xA0)) {  // Control characters and non-breaking space
           WriteDoubleQuoteEscapeSequence(out, codePoint);
-        else if (codePoint == 0xFEFF)  // Byte order marks (ZWNS) should be
-                                       // escaped (YAML 1.2, sec. 5.2)
+        } else if (codePoint == 0xFEFF) {  // Byte order marks (ZWNS) should be
+                                           // escaped (YAML 1.2, sec. 5.2)
           WriteDoubleQuoteEscapeSequence(out, codePoint);
-        else if (escapeNonAscii && codePoint > 0x7E)
+        } else if (escapeNonAscii && codePoint > 0x7E) {
           WriteDoubleQuoteEscapeSequence(out, codePoint);
-        else
+        } else {
           WriteCodePoint(out, codePoint);
+        }
     }
   }
   out << "\"";
@@ -329,26 +357,27 @@ bool WriteLiteralString(ostream_wrapper& out, const std::string& str,
   int codePoint;
   for (std::string::const_iterator i = str.begin();
        GetNextCodePointAndAdvance(codePoint, i, str.end());) {
-    if (codePoint == '\n')
+    if (codePoint == '\n') {
       out << "\n" << IndentTo(indent);
-    else
+    } else {
       WriteCodePoint(out, codePoint);
+    }
   }
   return true;
 }
 
 bool WriteChar(ostream_wrapper& out, char ch) {
-  if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
+  if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z')) {
     out << ch;
-  else if ((0x20 <= ch && ch <= 0x7e) || ch == ' ')
+  } else if ((0x20 <= ch && ch <= 0x7e) || ch == ' ') {
     out << "\"" << ch << "\"";
-  else if (ch == '\t')
+  } else if (ch == '\t') {
     out << "\"\\t\"";
-  else if (ch == '\n')
+  } else if (ch == '\n') {
     out << "\"\\n\"";
-  else if (ch == '\b')
+  } else if (ch == '\b') {
     out << "\"\\b\"";
-  else {
+  } else {
     out << "\"";
     WriteDoubleQuoteEscapeSequence(out, ch);
     out << "\"";
@@ -391,16 +420,18 @@ bool WriteTag(ostream_wrapper& out, const std::string& str, bool verbatim) {
   const RegEx& reValid = verbatim ? Exp::URI() : Exp::Tag();
   while (buffer) {
     int n = reValid.Match(buffer);
-    if (n <= 0)
+    if (n <= 0) {
       return false;
+    }
 
     while (--n >= 0) {
       out << buffer[0];
       ++buffer;
     }
   }
-  if (verbatim)
+  if (verbatim) {
     out << ">";
+  }
   return true;
 }
 
@@ -410,8 +441,9 @@ bool WriteTagWithPrefix(ostream_wrapper& out, const std::string& prefix,
   StringCharSource prefixBuffer(prefix.c_str(), prefix.size());
   while (prefixBuffer) {
     int n = Exp::URI().Match(prefixBuffer);
-    if (n <= 0)
+    if (n <= 0) {
       return false;
+    }
 
     while (--n >= 0) {
       out << prefixBuffer[0];
@@ -423,8 +455,9 @@ bool WriteTagWithPrefix(ostream_wrapper& out, const std::string& prefix,
   StringCharSource tagBuffer(tag.c_str(), tag.size());
   while (tagBuffer) {
     int n = Exp::Tag().Match(tagBuffer);
-    if (n <= 0)
+    if (n <= 0) {
       return false;
+    }
 
     while (--n >= 0) {
       out << tagBuffer[0];
