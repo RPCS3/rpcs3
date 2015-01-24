@@ -7,25 +7,27 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/ostream_wrapper.h"
 #include <iostream>
+#include <cstddef>
+
+#include "yaml-cpp/ostream_wrapper.h"
 
 namespace YAML {
 struct Indentation {
-  Indentation(unsigned n_) : n(n_) {}
-  unsigned n;
+  Indentation(std::size_t n_) : n(n_) {}
+  std::size_t n;
 };
 
 inline ostream_wrapper& operator<<(ostream_wrapper& out,
                                    const Indentation& indent) {
-  for (unsigned i = 0; i < indent.n; i++)
+  for (std::size_t i = 0; i < indent.n; i++)
     out << ' ';
   return out;
 }
 
 struct IndentTo {
-  IndentTo(unsigned n_) : n(n_) {}
-  unsigned n;
+  IndentTo(std::size_t n_) : n(n_) {}
+  std::size_t n;
 };
 
 inline ostream_wrapper& operator<<(ostream_wrapper& out,

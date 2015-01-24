@@ -7,6 +7,7 @@
 #pragma once
 #endif
 
+#include <cstddef>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -48,11 +49,11 @@ class YAML_CPP_API Emitter : private noncopyable {
   bool SetIntBase(EMITTER_MANIP value);
   bool SetSeqFormat(EMITTER_MANIP value);
   bool SetMapFormat(EMITTER_MANIP value);
-  bool SetIndent(unsigned n);
-  bool SetPreCommentIndent(unsigned n);
-  bool SetPostCommentIndent(unsigned n);
-  bool SetFloatPrecision(unsigned n);
-  bool SetDoublePrecision(unsigned n);
+  bool SetIndent(std::size_t n);
+  bool SetPreCommentIndent(std::size_t n);
+  bool SetPostCommentIndent(std::size_t n);
+  bool SetFloatPrecision(std::size_t n);
+  bool SetDoublePrecision(std::size_t n);
 
   // local setters
   Emitter& SetLocalValue(EMITTER_MANIP value);
@@ -79,8 +80,8 @@ class YAML_CPP_API Emitter : private noncopyable {
  private:
   template <typename T>
   void SetStreamablePrecision(std::stringstream&) {}
-  unsigned GetFloatPrecision() const;
-  unsigned GetDoublePrecision() const;
+  std::size_t GetFloatPrecision() const;
+  std::size_t GetDoublePrecision() const;
 
   void PrepareIntegralStream(std::stringstream& stream) const;
   void StartedScalar();
@@ -115,7 +116,7 @@ class YAML_CPP_API Emitter : private noncopyable {
   void BlockMapPrepareSimpleKey(EmitterNodeType::value child);
   void BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child);
 
-  void SpaceOrIndentTo(bool requireSpace, unsigned indent);
+  void SpaceOrIndentTo(bool requireSpace, std::size_t indent);
 
   const char* ComputeFullBoolName(bool b) const;
   bool CanEmitNewline() const;
