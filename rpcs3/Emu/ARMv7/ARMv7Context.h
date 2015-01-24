@@ -39,6 +39,11 @@ struct ARMv7Context
 
 			u32 LR;
 		};
+
+		struct
+		{
+			u64 GPR_D[8];
+		};
 	};
 
 	union

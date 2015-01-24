@@ -459,6 +459,39 @@ namespace psv_func_detail
 		}
 	};
 
+	template<int g_count, int f_count, int v_count>
+	struct bind_arg<u64, ARG_GENERAL, g_count, f_count, v_count>
+	{
+		// first u64 argument is passed in r0-r1, second one is passed in r2-r3 (if g_count = 3)
+		static_assert(g_count == 1 || g_count == 3, "Wrong u64 argument position");
+
+		__forceinline static u64 get_arg(ARMv7Context& context)
+		{
+			return context.GPR_D[g_count >> 1];
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, u64 arg)
+		{
+			context.GPR_D[g_count >> 1] = arg;
+		}
+	};
+
+	template<int g_count, int f_count, int v_count>
+	struct bind_arg<s64, ARG_GENERAL, g_count, f_count, v_count>
+	{
+		static_assert(g_count == 1 || g_count == 3, "Wrong s64 argument position");
+
+		__forceinline static s64 get_arg(ARMv7Context& context)
+		{
+			return context.GPR_D[g_count >> 1];
+		}
+
+		__forceinline static void put_arg(ARMv7Context& context, s64 arg)
+		{
+			context.GPR_D[g_count >> 1] = arg;
+		}
+	};
+
 	template<typename T, int g_count, int f_count, int v_count>
 	struct bind_arg<T, ARG_FLOAT, g_count, f_count, v_count>
 	{
@@ -531,6 +564,34 @@ namespace psv_func_detail
 		}
 	};
 
+	template<>
+	struct bind_result<u64, ARG_GENERAL>
+	{
+		__forceinline static u64 get_result(ARMv7Context& context)
+		{
+			return context.GPR_D[0];
+		}
+
+		__forceinline static void put_result(ARMv7Context& context, u64 result)
+		{
+			context.GPR_D[0] = result;
+		}
+	};
+
+	template<>
+	struct bind_result<s64, ARG_GENERAL>
+	{
+		__forceinline static s64 get_result(ARMv7Context& context)
+		{
+			return context.GPR_D[0];
+		}
+
+		__forceinline static void put_result(ARMv7Context& context, s64 result)
+		{
+			context.GPR_D[0] = result;
+		}
+	};
+
 	//template<typename T>
 	//struct bind_result<T, ARG_FLOAT>
 	//{
@@ -571,10 +632,12 @@ namespace psv_func_detail
 		static const bool is_vector = std::is_same<T, u128>::value;
 		static const bind_arg_type value = is_float
 			? ((f_count >= 4) ? ARG_STACK : ARG_FLOAT)
-			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR) : ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
-		static const int g_value = g_count + (is_float || is_vector ? 0 : 1);
-		static const int f_value = f_count + (is_float ? 1 : 0);
-		static const int v_value = v_count + (is_vector ? 1 : 0);
+			: (is_vector ? ((v_count >= 4) ? ARG_STACK : ARG_VECTOR): ((g_count >= 4) ? ARG_STACK : ARG_GENERAL));
+		static const int g_align = __alignof(T) > 4 ? __alignof(T) >> 2 : 1;
+		static const int g_pos = (is_float || is_vector) ? g_count : ((g_count + (g_align - 1)) & ~(g_align - 1)) + 1;
+		static const int g_next = g_pos + g_align - 1;
+		static const int f_value = !is_float ? f_count : f_count + 1;
+		static const int v_value = !is_vector ? v_count : v_count + 1;
 	};
 
 	template <typename RT, typename F, typename Tuple, bool Done, int Total, int... N>
@@ -614,11 +677,12 @@ namespace psv_func_detail
 	{
 		typedef arg_type<T, g_count, f_count, v_count> type;
 		const bind_arg_type t = type::value;
-		const int g = type::g_value;
+		const int g0 = type::g_pos;
+		const int g1 = type::g_next;
 		const int f = type::f_value;
 		const int v = type::v_value;
 
-		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g, f, v>::get_arg(context)), get_func_args<g, f, v, A...>(context));
+		return std::tuple_cat(std::tuple<T>(bind_arg<T, t, g0, f, v>::get_arg(context)), get_func_args<g1, f, v, A...>(context));
 	}
 
 	template<int g_count, int f_count, int v_count>
@@ -633,14 +697,15 @@ namespace psv_func_detail
 	{
 		typedef arg_type<T1, g_count, f_count, v_count> type;
 		const bind_arg_type t = type::value;
-		const int g = type::g_value;
+		const int g0 = type::g_pos;
+		const int g1 = type::g_next;
 		const int f = type::f_value;
 		const int v = type::v_value;
 
-		bind_arg<T1, t, g, f, v>::put_arg(context, arg);
+		bind_arg<T1, t, g0, f, v>::put_arg(context, arg);
 
 		// return true if stack was used
-		return put_func_args<g, f, v>(context, args...) || (t == ARG_STACK);
+		return put_func_args<g1, f, v>(context, args...) || (t == ARG_STACK);
 	}
 
 	template<typename RT, typename... T>

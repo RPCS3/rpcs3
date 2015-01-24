@@ -30,6 +30,15 @@ struct SceKernelMemBlockInfo
 	u32 access;
 };
 
+struct SceKernelAllocMemBlockOpt
+{
+	u32 size;
+	u32 attr;
+	u32 alignment;
+	s32 uidBaseBlock;
+	vm::psv::ptr<const char> strBaseBlockName;
+};
+
 // Thread Manager definitions (threads)
 
 typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);

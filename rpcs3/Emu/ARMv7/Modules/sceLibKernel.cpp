@@ -11,6 +11,26 @@
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
+s32 sceKernelAllocMemBlock(vm::psv::ptr<const char> name, s32 type, u32 vsize, vm::psv::ptr<SceKernelAllocMemBlockOpt> pOpt)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelFreeMemBlock(s32 uid)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetMemBlockBase(s32 uid, vm::psv::ptr<vm::psv::ptr<void>> ppBase)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetMemBlockInfoByAddr(vm::psv::ptr<void> vbase, vm::psv::ptr<SceKernelMemBlockInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
 s32 sceKernelCreateThread(
 	vm::psv::ptr<const char> pName,
 	vm::psv::ptr<SceKernelThreadEntry> entry,
@@ -272,14 +292,14 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv:
 	return SCE_OK;
 }
 
-// Callback functions
-
 s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
 	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 
 	throw __FUNCTION__;
 }
+
+// Callback functions
 
 s32 sceKernelCreateCallback(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<SceKernelCallbackFunction> callbackFunc, vm::psv::ptr<void> pCommon)
 {
@@ -368,6 +388,475 @@ s32 sceKernelWaitMultipleEventsCB(vm::psv::ptr<SceKernelWaitEvent> pWaitEventLis
 	throw __FUNCTION__;
 }
 
+// Event flag functions
+
+s32 sceKernelCreateEventFlag(vm::psv::ptr<const char> pName, u32 attr, u32 initPattern, vm::psv::ptr<const SceKernelEventFlagOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteEventFlag(s32 evfId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenEventFlag(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseEventFlag(s32 evfId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitEventFlagCB(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSetEventFlag(s32 evfId, u32 bitPattern)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::psv::ptr<s32> pNumWaitThreads)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetEventFlagInfo(s32 evfId, vm::psv::ptr<SceKernelEventFlagInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Semaphore functions
+
+s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, s32 maxCount, vm::psv::ptr<const SceKernelSemaOptParam> pOptParam)
+{
+	sceLibKernel.Error("sceKernelCreateSema(pName=0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=0x%x)", pName, attr, initCount, maxCount, pOptParam);
+
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteSema(s32 semaId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenSema(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseSema(s32 semaId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitSemaCB(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelPollSema(s32 semaId, s32 needCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalSema(s32 semaId, s32 signalCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelSema(s32 semaId, s32 setCount, vm::psv::ptr<s32> pNumWaitThreads)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetSemaInfo(s32 semaId, vm::psv::ptr<SceKernelSemaInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Mutex functions
+
+s32 sceKernelCreateMutex(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelMutexOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteMutex(s32 mutexId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenMutex(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseMutex(s32 mutexId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockMutex(s32 mutexId, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockMutexCB(s32 mutexId, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelTryLockMutex(s32 mutexId, s32 lockCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnlockMutex(s32 mutexId, s32 unlockCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelMutex(s32 mutexId, s32 newCount, vm::psv::ptr<s32> pNumWaitThreads)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetMutexInfo(s32 mutexId, vm::psv::ptr<SceKernelMutexInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Lightweight mutex functions
+
+s32 sceKernelCreateLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelLwMutexOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockLwMutexCB(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelTryLockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnlockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 unlockCount)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetLwMutexInfo(vm::psv::ptr<SceKernelLwMutexWork> pWork, vm::psv::ptr<SceKernelLwMutexInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::psv::ptr<SceKernelLwMutexInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Condition variable functions
+
+s32 sceKernelCreateCond(vm::psv::ptr<const char> pName, u32 attr, s32 mutexId, vm::psv::ptr<const SceKernelCondOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteCond(s32 condId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenCond(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseCond(s32 condId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitCond(s32 condId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitCondCB(s32 condId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalCond(s32 condId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalCondAll(s32 condId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalCondTo(s32 condId, s32 threadId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetCondInfo(s32 condId, vm::psv::ptr<SceKernelCondInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Lightweight condition variable functions
+
+s32 sceKernelCreateLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<SceKernelLwMutexWork> pLwMutex, vm::psv::ptr<const SceKernelLwCondOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitLwCondCB(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalLwCondAll(vm::psv::ptr<SceKernelLwCondWork> pWork)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSignalLwCondTo(vm::psv::ptr<SceKernelLwCondWork> pWork, s32 threadId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetLwCondInfo(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<SceKernelLwCondInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetLwCondInfoById(s32 lwCondId, vm::psv::ptr<SceKernelLwCondInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Time functions
+
+s32 sceKernelGetSystemTime(vm::psv::ptr<SceKernelSysClock> pClock)
+{
+	throw __FUNCTION__;
+}
+
+u64 sceKernelGetSystemTimeWide()
+{
+	throw __FUNCTION__;
+}
+
+u32 sceKernelGetSystemTimeLow()
+{
+	throw __FUNCTION__;
+}
+
+// Timer functions
+
+s32 sceKernelCreateTimer(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<const SceKernelTimerOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteTimer(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenTimer(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseTimer(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelStartTimer(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelStopTimer(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetTimerBase(s32 timerId, vm::psv::ptr<SceKernelSysClock> pBase)
+{
+	throw __FUNCTION__;
+}
+
+u64 sceKernelGetTimerBaseWide(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetTimerTime(s32 timerId, vm::psv::ptr<SceKernelSysClock> pClock)
+{
+	throw __FUNCTION__;
+}
+
+u64 sceKernelGetTimerTimeWide(s32 timerId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSetTimerTime(s32 timerId, vm::psv::ptr<SceKernelSysClock> pClock)
+{
+	throw __FUNCTION__;
+}
+
+u64 sceKernelSetTimerTimeWide(s32 timerId, u64 clock)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelSetTimerEvent(s32 timerId, s32 type, vm::psv::ptr<SceKernelSysClock> pInterval, s32 fRepeat)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelTimer(s32 timerId, vm::psv::ptr<s32> pNumWaitThreads)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetTimerInfo(s32 timerId, vm::psv::ptr<SceKernelTimerInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+// Reader/writer lock functions
+
+s32 sceKernelCreateRWLock(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<const SceKernelRWLockOptParam> pOptParam)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelOpenRWLock(vm::psv::ptr<const char> pName)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCloseRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockReadRWLock(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockReadRWLockCB(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelTryLockReadRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnlockReadRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockWriteRWLock(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelLockWriteRWLockCB(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelTryLockWriteRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnlockWriteRWLock(s32 rwLockId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelRWLock(s32 rwLockId, vm::psv::ptr<s32> pNumReadWaitThreads, vm::psv::ptr<s32> pNumWriteWaitThreads, s32 flag)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetRWLockInfo(s32 rwLockId, vm::psv::ptr<SceKernelRWLockInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
 
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
@@ -501,11 +990,11 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x4E81DD5C, sceKernelReceiveMsgPipe);
 	//REG_FUNC(0x33AF829B, sceKernelReceiveMsgPipeCB);
 	//REG_FUNC(0x5615B006, sceKernelTryReceiveMsgPipe);
-	//REG_FUNC(0xA7819967, sceKernelLockLwMutex);
-	//REG_FUNC(0x6F9C4CC1, sceKernelLockLwMutexCB);
-	//REG_FUNC(0x9EF798C1, sceKernelTryLockLwMutex);
-	//REG_FUNC(0x499EA781, sceKernelUnlockLwMutex);
-	//REG_FUNC(0xF7D8F1FC, sceKernelGetLwMutexInfo);
+	REG_FUNC(0xA7819967, sceKernelLockLwMutex);
+	REG_FUNC(0x6F9C4CC1, sceKernelLockLwMutexCB);
+	REG_FUNC(0x9EF798C1, sceKernelTryLockLwMutex);
+	REG_FUNC(0x499EA781, sceKernelUnlockLwMutex);
+	REG_FUNC(0xF7D8F1FC, sceKernelGetLwMutexInfo);
 	REG_FUNC(0xDDB395A9, sceKernelWaitThreadEnd);
 	REG_FUNC(0xC54941ED, sceKernelWaitThreadEndCB);
 	REG_FUNC(0xD5DC26C4, sceKernelGetThreadExitStatus);
@@ -538,47 +1027,47 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0x603AB770, sceKernelCancelEvent);
 	REG_FUNC(0x10586418, sceKernelWaitMultipleEvents);
 	REG_FUNC(0x4263DBC9, sceKernelWaitMultipleEventsCB);
-	//REG_FUNC(0x8516D040, sceKernelCreateEventFlag);
-	//REG_FUNC(0x11FE9B8B, sceKernelDeleteEventFlag);
-	//REG_FUNC(0xE04EC73A, sceKernelOpenEventFlag);
-	//REG_FUNC(0x9C0B8285, sceKernelCloseEventFlag);
-	//REG_FUNC(0x83C0E2AF, sceKernelWaitEventFlag);
-	//REG_FUNC(0xE737B1DF, sceKernelWaitEventFlagCB);
-	//REG_FUNC(0x1FBB0FE1, sceKernelPollEventFlag);
-	//REG_FUNC(0x2A12D9B7, sceKernelCancelEventFlag);
-	//REG_FUNC(0x8BA4C0C1, sceKernelGetEventFlagInfo);
-	//REG_FUNC(0x9EF9C0C5, sceKernelSetEventFlag);
-	//REG_FUNC(0xD018793F, sceKernelClearEventFlag);
-	//REG_FUNC(0x297AA2AE, sceKernelCreateSema);
-	//REG_FUNC(0xC08F5BC5, sceKernelDeleteSema);
-	//REG_FUNC(0xB028AB78, sceKernelOpenSema);
-	//REG_FUNC(0x817707AB, sceKernelCloseSema);
-	//REG_FUNC(0xC7B834B, sceKernelWaitSema);
-	//REG_FUNC(0x174692B4, sceKernelWaitSemaCB);
-	//REG_FUNC(0x66D6BF05, sceKernelCancelSema);
-	//REG_FUNC(0x595D3FA6, sceKernelGetSemaInfo);
-	//REG_FUNC(0x3012A9C6, sceKernelPollSema);
-	//REG_FUNC(0x2053A496, sceKernelSignalSema);
-	//REG_FUNC(0xED53334A, sceKernelCreateMutex);
-	//REG_FUNC(0x12D11F65, sceKernelDeleteMutex);
-	//REG_FUNC(0x16B85235, sceKernelOpenMutex);
-	//REG_FUNC(0x43DDC9CC, sceKernelCloseMutex);
-	//REG_FUNC(0x1D8D7945, sceKernelLockMutex);
-	//REG_FUNC(0x2BDAA524, sceKernelLockMutexCB);
-	//REG_FUNC(0x2144890D, sceKernelCancelMutex);
-	//REG_FUNC(0x9A6C43CA, sceKernelGetMutexInfo);
-	//REG_FUNC(0xE5901FF9, sceKernelTryLockMutex);
-	//REG_FUNC(0x34746309, sceKernelUnlockMutex);
-	//REG_FUNC(0x50572FDA, sceKernelCreateCond);
-	//REG_FUNC(0xFD295414, sceKernelDeleteCond);
-	//REG_FUNC(0xCB2A73A9, sceKernelOpenCond);
-	//REG_FUNC(0x4FB91A89, sceKernelCloseCond);
-	//REG_FUNC(0xC88D44AD, sceKernelWaitCond);
-	//REG_FUNC(0x4CE42CE2, sceKernelWaitCondCB);
-	//REG_FUNC(0x6864DCE2, sceKernelGetCondInfo);
-	//REG_FUNC(0x10A4976F, sceKernelSignalCond);
-	//REG_FUNC(0x2EB86929, sceKernelSignalCondAll);
-	//REG_FUNC(0x87629E6, sceKernelSignalCondTo);
+	REG_FUNC(0x8516D040, sceKernelCreateEventFlag);
+	REG_FUNC(0x11FE9B8B, sceKernelDeleteEventFlag);
+	REG_FUNC(0xE04EC73A, sceKernelOpenEventFlag);
+	REG_FUNC(0x9C0B8285, sceKernelCloseEventFlag);
+	REG_FUNC(0x83C0E2AF, sceKernelWaitEventFlag);
+	REG_FUNC(0xE737B1DF, sceKernelWaitEventFlagCB);
+	REG_FUNC(0x1FBB0FE1, sceKernelPollEventFlag);
+	REG_FUNC(0x2A12D9B7, sceKernelCancelEventFlag);
+	REG_FUNC(0x8BA4C0C1, sceKernelGetEventFlagInfo);
+	REG_FUNC(0x9EF9C0C5, sceKernelSetEventFlag);
+	REG_FUNC(0xD018793F, sceKernelClearEventFlag);
+	REG_FUNC(0x297AA2AE, sceKernelCreateSema);
+	REG_FUNC(0xC08F5BC5, sceKernelDeleteSema);
+	REG_FUNC(0xB028AB78, sceKernelOpenSema);
+	REG_FUNC(0x817707AB, sceKernelCloseSema);
+	REG_FUNC(0xC7B834B, sceKernelWaitSema);
+	REG_FUNC(0x174692B4, sceKernelWaitSemaCB);
+	REG_FUNC(0x66D6BF05, sceKernelCancelSema);
+	REG_FUNC(0x595D3FA6, sceKernelGetSemaInfo);
+	REG_FUNC(0x3012A9C6, sceKernelPollSema);
+	REG_FUNC(0x2053A496, sceKernelSignalSema);
+	REG_FUNC(0xED53334A, sceKernelCreateMutex);
+	REG_FUNC(0x12D11F65, sceKernelDeleteMutex);
+	REG_FUNC(0x16B85235, sceKernelOpenMutex);
+	REG_FUNC(0x43DDC9CC, sceKernelCloseMutex);
+	REG_FUNC(0x1D8D7945, sceKernelLockMutex);
+	REG_FUNC(0x2BDAA524, sceKernelLockMutexCB);
+	REG_FUNC(0x2144890D, sceKernelCancelMutex);
+	REG_FUNC(0x9A6C43CA, sceKernelGetMutexInfo);
+	REG_FUNC(0xE5901FF9, sceKernelTryLockMutex);
+	REG_FUNC(0x34746309, sceKernelUnlockMutex);
+	REG_FUNC(0x50572FDA, sceKernelCreateCond);
+	REG_FUNC(0xFD295414, sceKernelDeleteCond);
+	REG_FUNC(0xCB2A73A9, sceKernelOpenCond);
+	REG_FUNC(0x4FB91A89, sceKernelCloseCond);
+	REG_FUNC(0xC88D44AD, sceKernelWaitCond);
+	REG_FUNC(0x4CE42CE2, sceKernelWaitCondCB);
+	REG_FUNC(0x6864DCE2, sceKernelGetCondInfo);
+	REG_FUNC(0x10A4976F, sceKernelSignalCond);
+	REG_FUNC(0x2EB86929, sceKernelSignalCondAll);
+	REG_FUNC(0x87629E6, sceKernelSignalCondTo);
 	//REG_FUNC(0xA10C1C8, sceKernelCreateMsgPipe);
 	//REG_FUNC(0x69F6575D, sceKernelDeleteMsgPipe);
 	//REG_FUNC(0x230691DA, sceKernelOpenMsgPipe);
@@ -591,48 +1080,48 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x86ECC0FF, sceKernelTryReceiveMsgPipeVector);
 	//REG_FUNC(0xEF14BA37, sceKernelCancelMsgPipe);
 	//REG_FUNC(0x4046D16B, sceKernelGetMsgPipeInfo);
-	//REG_FUNC(0xDA6EC8EF, sceKernelCreateLwMutex);
-	//REG_FUNC(0x244E76D2, sceKernelDeleteLwMutex);
-	//REG_FUNC(0x4846613D, sceKernelGetLwMutexInfoById);
-	//REG_FUNC(0x48C7EAE6, sceKernelCreateLwCond);
-	//REG_FUNC(0x721F6CB3, sceKernelDeleteLwCond);
-	//REG_FUNC(0xE1878282, sceKernelWaitLwCond);
-	//REG_FUNC(0x8FA54B07, sceKernelWaitLwCondCB);
-	//REG_FUNC(0x3AC63B9A, sceKernelSignalLwCond);
-	//REG_FUNC(0xE5241A0C, sceKernelSignalLwCondAll);
-	//REG_FUNC(0xFC1A48EB, sceKernelSignalLwCondTo);
-	//REG_FUNC(0xE4DF36A0, sceKernelGetLwCondInfo);
-	//REG_FUNC(0x971F1DE8, sceKernelGetLwCondInfoById);
-	//REG_FUNC(0x2255B2A5, sceKernelCreateTimer);
-	//REG_FUNC(0x746F3290, sceKernelDeleteTimer);
-	//REG_FUNC(0x2F3D35A3, sceKernelOpenTimer);
-	//REG_FUNC(0x17283DE6, sceKernelCloseTimer);
-	//REG_FUNC(0x1478249B, sceKernelStartTimer);
-	//REG_FUNC(0x75B1329, sceKernelStopTimer);
-	//REG_FUNC(0x1F59E04D, sceKernelGetTimerBase);
-	//REG_FUNC(0x3223CCD1, sceKernelGetTimerBaseWide);
-	//REG_FUNC(0x381DC300, sceKernelGetTimerTime);
-	//REG_FUNC(0x53C5D833, sceKernelGetTimerTimeWide);
-	//REG_FUNC(0xFFAD717F, sceKernelSetTimerTime);
-	//REG_FUNC(0xAF67678B, sceKernelSetTimerTimeWide);
-	//REG_FUNC(0x621D293B, sceKernelSetTimerEvent);
-	//REG_FUNC(0x9CCF768C, sceKernelCancelTimer);
-	//REG_FUNC(0x7E35E10A, sceKernelGetTimerInfo);
-	//REG_FUNC(0x8667951D, sceKernelCreateRWLock);
-	//REG_FUNC(0x3D750204, sceKernelDeleteRWLock);
-	//REG_FUNC(0xBA4DAC9A, sceKernelOpenRWLock);
-	//REG_FUNC(0xA7F94E64, sceKernelCloseRWLock);
-	//REG_FUNC(0xFA670F0F, sceKernelLockReadRWLock);
-	//REG_FUNC(0x2D4A62B7, sceKernelLockReadRWLockCB);
-	//REG_FUNC(0x1B8586C0, sceKernelTryLockReadRWLock);
-	//REG_FUNC(0x675D10A8, sceKernelUnlockReadRWLock);
-	//REG_FUNC(0x67A187BB, sceKernelLockWriteRWLock);
-	//REG_FUNC(0xA4777082, sceKernelLockWriteRWLockCB);
-	//REG_FUNC(0x597D4607, sceKernelTryLockWriteRWLock);
-	//REG_FUNC(0xD9369DF2, sceKernelUnlockWriteRWLock);
-	//REG_FUNC(0x190CA94B, sceKernelCancelRWLock);
-	//REG_FUNC(0x79A573B, sceKernelGetRWLockInfo);
-	//REG_FUNC(0x8AF15B5F, sceKernelGetSystemTime);
+	REG_FUNC(0xDA6EC8EF, sceKernelCreateLwMutex);
+	REG_FUNC(0x244E76D2, sceKernelDeleteLwMutex);
+	REG_FUNC(0x4846613D, sceKernelGetLwMutexInfoById);
+	REG_FUNC(0x48C7EAE6, sceKernelCreateLwCond);
+	REG_FUNC(0x721F6CB3, sceKernelDeleteLwCond);
+	REG_FUNC(0xE1878282, sceKernelWaitLwCond);
+	REG_FUNC(0x8FA54B07, sceKernelWaitLwCondCB);
+	REG_FUNC(0x3AC63B9A, sceKernelSignalLwCond);
+	REG_FUNC(0xE5241A0C, sceKernelSignalLwCondAll);
+	REG_FUNC(0xFC1A48EB, sceKernelSignalLwCondTo);
+	REG_FUNC(0xE4DF36A0, sceKernelGetLwCondInfo);
+	REG_FUNC(0x971F1DE8, sceKernelGetLwCondInfoById);
+	REG_FUNC(0x2255B2A5, sceKernelCreateTimer);
+	REG_FUNC(0x746F3290, sceKernelDeleteTimer);
+	REG_FUNC(0x2F3D35A3, sceKernelOpenTimer);
+	REG_FUNC(0x17283DE6, sceKernelCloseTimer);
+	REG_FUNC(0x1478249B, sceKernelStartTimer);
+	REG_FUNC(0x75B1329, sceKernelStopTimer);
+	REG_FUNC(0x1F59E04D, sceKernelGetTimerBase);
+	REG_FUNC(0x3223CCD1, sceKernelGetTimerBaseWide);
+	REG_FUNC(0x381DC300, sceKernelGetTimerTime);
+	REG_FUNC(0x53C5D833, sceKernelGetTimerTimeWide);
+	REG_FUNC(0xFFAD717F, sceKernelSetTimerTime);
+	REG_FUNC(0xAF67678B, sceKernelSetTimerTimeWide);
+	REG_FUNC(0x621D293B, sceKernelSetTimerEvent);
+	REG_FUNC(0x9CCF768C, sceKernelCancelTimer);
+	REG_FUNC(0x7E35E10A, sceKernelGetTimerInfo);
+	REG_FUNC(0x8667951D, sceKernelCreateRWLock);
+	REG_FUNC(0x3D750204, sceKernelDeleteRWLock);
+	REG_FUNC(0xBA4DAC9A, sceKernelOpenRWLock);
+	REG_FUNC(0xA7F94E64, sceKernelCloseRWLock);
+	REG_FUNC(0xFA670F0F, sceKernelLockReadRWLock);
+	REG_FUNC(0x2D4A62B7, sceKernelLockReadRWLockCB);
+	REG_FUNC(0x1B8586C0, sceKernelTryLockReadRWLock);
+	REG_FUNC(0x675D10A8, sceKernelUnlockReadRWLock);
+	REG_FUNC(0x67A187BB, sceKernelLockWriteRWLock);
+	REG_FUNC(0xA4777082, sceKernelLockWriteRWLockCB);
+	REG_FUNC(0x597D4607, sceKernelTryLockWriteRWLock);
+	REG_FUNC(0xD9369DF2, sceKernelUnlockWriteRWLock);
+	REG_FUNC(0x190CA94B, sceKernelCancelRWLock);
+	REG_FUNC(0x79A573B, sceKernelGetRWLockInfo);
+	REG_FUNC(0x8AF15B5F, sceKernelGetSystemTime);
 	//REG_FUNC(0x99B2BF15, sceKernelPMonThreadGetCounter);
 	//REG_FUNC(0x7C21C961, sceKernelPMonCpuGetCounter);
 	//REG_FUNC(0xADCA94E5, sceKernelWaitSignal);
@@ -712,12 +1201,12 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x35EE7CF5, sceKernelStderr);
 
 	/* SceSysmem */
-	//REG_FUNC(0xB9D5EBDE, sceKernelAllocMemBlock);
-	//REG_FUNC(0xA91E15EE, sceKernelFreeMemBlock);
-	//REG_FUNC(0xB8EF5818, sceKernelGetMemBlockBase);
+	REG_FUNC(0xB9D5EBDE, sceKernelAllocMemBlock);
+	REG_FUNC(0xA91E15EE, sceKernelFreeMemBlock);
+	REG_FUNC(0xB8EF5818, sceKernelGetMemBlockBase);
 	//REG_FUNC(0x3B29E0F5, sceKernelRemapMemBlock);
 	//REG_FUNC(0xA33B99D1, sceKernelFindMemBlockByAddr);
-	//REG_FUNC(0x4010AD65, sceKernelGetMemBlockInfoByAddr);
+	REG_FUNC(0x4010AD65, sceKernelGetMemBlockInfoByAddr);
 
 	/* SceCpu */
 	//REG_FUNC(0x2704CFEE, sceKernelCpuId);
@@ -738,8 +1227,8 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0xD9BD74EB, sceKernelCheckWaitableStatus);
 	REG_FUNC(0x9DCB4B7A, sceKernelGetProcessId);
 	REG_FUNC(0xE53E41F6, sceKernelCheckCallback);
-	//REG_FUNC(0xF4EE4FA9, sceKernelGetSystemTimeWide);
-	//REG_FUNC(0x47F6DE49, sceKernelGetSystemTimeLow);
+	REG_FUNC(0xF4EE4FA9, sceKernelGetSystemTimeWide);
+	REG_FUNC(0x47F6DE49, sceKernelGetSystemTimeLow);
 	//REG_FUNC(0xC0FAF6A3, sceKernelCreateThreadForUser);
 
 	/* SceDebugLed */
