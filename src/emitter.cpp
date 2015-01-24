@@ -146,7 +146,7 @@ void Emitter::EmitBeginDoc() {
   if (!good())
     return;
 
-  if (m_pState->CurGroupType() != GroupType::None) {
+  if (m_pState->CurGroupType() != GroupType::NoType) {
     m_pState->SetError("Unexpected begin document");
     return;
   }
@@ -168,7 +168,7 @@ void Emitter::EmitEndDoc() {
   if (!good())
     return;
 
-  if (m_pState->CurGroupType() != GroupType::None) {
+  if (m_pState->CurGroupType() != GroupType::NoType) {
     m_pState->SetError("Unexpected begin document");
     return;
   }
@@ -248,7 +248,7 @@ void Emitter::EmitNewline() {
   if (!good())
     return;
 
-  PrepareNode(EmitterNodeType::None);
+  PrepareNode(EmitterNodeType::NoType);
   m_stream << "\n";
   m_pState->SetNonContent();
 }
@@ -259,7 +259,7 @@ bool Emitter::CanEmitNewline() const { return true; }
 // E.g., if we're in a sequence, write the "- "
 void Emitter::PrepareNode(EmitterNodeType::value child) {
   switch (m_pState->CurGroupNodeType()) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       PrepareTopNode(child);
       break;
     case EmitterNodeType::FlowSeq:
@@ -282,16 +282,16 @@ void Emitter::PrepareNode(EmitterNodeType::value child) {
 }
 
 void Emitter::PrepareTopNode(EmitterNodeType::value child) {
-  if (child == EmitterNodeType::None)
+  if (child == EmitterNodeType::NoType)
     return;
 
   if (m_pState->CurGroupChildCount() > 0 && m_stream.col() > 0) {
-    if (child != EmitterNodeType::None)
+    if (child != EmitterNodeType::NoType)
       EmitBeginDoc();
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -323,7 +323,7 @@ void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -344,7 +344,7 @@ void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child) {
   const std::size_t curIndent = m_pState->CurIndent();
   const std::size_t nextIndent = curIndent + m_pState->CurGroupIndent();
 
-  if (child == EmitterNodeType::None)
+  if (child == EmitterNodeType::NoType)
     return;
 
   if (!m_pState->HasBegunContent()) {
@@ -356,7 +356,7 @@ void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -405,7 +405,7 @@ void Emitter::FlowMapPrepareLongKey(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -433,7 +433,7 @@ void Emitter::FlowMapPrepareLongKeyValue(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -464,7 +464,7 @@ void Emitter::FlowMapPrepareSimpleKey(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -492,7 +492,7 @@ void Emitter::FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -533,7 +533,7 @@ void Emitter::BlockMapPrepareLongKey(EmitterNodeType::value child) {
   const std::size_t curIndent = m_pState->CurIndent();
   const std::size_t childCount = m_pState->CurGroupChildCount();
 
-  if (child == EmitterNodeType::None)
+  if (child == EmitterNodeType::NoType)
     return;
 
   if (!m_pState->HasBegunContent()) {
@@ -548,7 +548,7 @@ void Emitter::BlockMapPrepareLongKey(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -565,7 +565,7 @@ void Emitter::BlockMapPrepareLongKey(EmitterNodeType::value child) {
 void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child) {
   const std::size_t curIndent = m_pState->CurIndent();
 
-  if (child == EmitterNodeType::None)
+  if (child == EmitterNodeType::NoType)
     return;
 
   if (!m_pState->HasBegunContent()) {
@@ -575,7 +575,7 @@ void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -592,7 +592,7 @@ void Emitter::BlockMapPrepareSimpleKey(EmitterNodeType::value child) {
   const std::size_t curIndent = m_pState->CurIndent();
   const std::size_t childCount = m_pState->CurGroupChildCount();
 
-  if (child == EmitterNodeType::None)
+  if (child == EmitterNodeType::NoType)
     return;
 
   if (!m_pState->HasBegunNode()) {
@@ -602,7 +602,7 @@ void Emitter::BlockMapPrepareSimpleKey(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -625,7 +625,7 @@ void Emitter::BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child) {
   }
 
   switch (child) {
-    case EmitterNodeType::None:
+    case EmitterNodeType::NoType:
       break;
     case EmitterNodeType::Property:
     case EmitterNodeType::Scalar:
@@ -871,7 +871,7 @@ Emitter& Emitter::Write(const _Comment& comment) {
   if (!good())
     return *this;
 
-  PrepareNode(EmitterNodeType::None);
+  PrepareNode(EmitterNodeType::NoType);
 
   if (m_stream.col() > 0)
     m_stream << Indentation(m_pState->GetPreCommentIndent());

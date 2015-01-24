@@ -22,10 +22,10 @@ struct FmtScope {
   enum value { Local, Global };
 };
 struct GroupType {
-  enum value { None, Seq, Map };
+  enum value { NoType, Seq, Map };
 };
 struct FlowType {
-  enum value { None, Flow, Block };
+  enum value { NoType, Flow, Block };
 };
 
 class EmitterState {
@@ -170,7 +170,7 @@ class EmitterState {
 
       // can't get here
       assert(false);
-      return EmitterNodeType::None;
+      return EmitterNodeType::NoType;
     }
   };
 
