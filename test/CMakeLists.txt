@@ -31,4 +31,4 @@ set_target_properties(run-tests PROPERTIES
 )
 target_link_libraries(run-tests yaml-cpp gtest gmock)
 
-#add_test(yaml-reader-test run-tests)
+add_test(yaml-test ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests)
