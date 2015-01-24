@@ -171,6 +171,11 @@ TEST(LoadNodeTest, ResetNode) {
   EXPECT_EQ(node, other);
 }
 
+TEST(LoadNodeTest, EmptyString) {
+  Node node = Load("\"\"");
+  EXPECT_TRUE(!node.IsNull());
+}
+
 TEST(LoadNodeTest, DereferenceIteratorError) {
   Node node = Load("[{a: b}, 1, 2]");
   EXPECT_THROW(node.begin()->first.as<int>(), InvalidNode);
