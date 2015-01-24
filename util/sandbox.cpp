@@ -26,11 +26,11 @@ class NullEventHandler : public YAML::EventHandler {
 };
 
 int main() {
-  const YAML::Node node;
+  YAML::Node root;
 
-  std::string key = "doesnotexist";
   for (;;) {
-    node[key];
+    YAML::Node node;
+    root = node;
   }
   return 0;
 }

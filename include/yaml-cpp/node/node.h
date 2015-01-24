@@ -129,7 +129,6 @@ class YAML_CPP_API Node {
   bool m_isValid;
   mutable detail::shared_memory_holder m_pMemory;
   mutable detail::node* m_pNode;
-  mutable const detail::node* m_pConstNode;
 };
 
 YAML_CPP_API bool operator==(const Node& lhs, const Node& rhs);
