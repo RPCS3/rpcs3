@@ -58,28 +58,28 @@ struct get_idx<Key, typename boost::enable_if<boost::is_signed<Key> >::type> {
 
 // indexing
 template <typename Key>
-inline node& node_data::get(const Key& key,
+inline node* node_data::get(const Key& key,
                             shared_memory_holder pMemory) const {
   switch (m_type) {
     case NodeType::Map:
       break;
     case NodeType::Undefined:
     case NodeType::Null:
-      return pMemory->create_node();
+      return NULL;
     case NodeType::Sequence:
       if (node* pNode = get_idx<Key>::get(m_sequence, key, pMemory))
-        return *pNode;
-      return pMemory->create_node();
+        return pNode;
+      return NULL;
     case NodeType::Scalar:
       throw BadSubscript();
   }
 
   for (node_map::const_iterator it = m_map.begin(); it != m_map.end(); ++it) {
     if (equals(*it->first, key, pMemory))
-      return *it->second;
+      return it->second;
   }
 
-  return pMemory->create_node();
+  return NULL;
 }
 
 template <typename Key>

@@ -63,13 +63,13 @@ class YAML_CPP_API node_data : private boost::noncopyable {
 
   // indexing
   template <typename Key>
-  node& get(const Key& key, shared_memory_holder pMemory) const;
+  node* get(const Key& key, shared_memory_holder pMemory) const;
   template <typename Key>
   node& get(const Key& key, shared_memory_holder pMemory);
   template <typename Key>
   bool remove(const Key& key, shared_memory_holder pMemory);
 
-  node& get(node& key, shared_memory_holder pMemory) const;
+  node* get(node& key, shared_memory_holder pMemory) const;
   node& get(node& key, shared_memory_holder pMemory);
   bool remove(node& key, shared_memory_holder pMemory);
 

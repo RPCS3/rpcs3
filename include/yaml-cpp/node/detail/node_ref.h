@@ -57,7 +57,7 @@ class node_ref : private boost::noncopyable {
 
   // indexing
   template <typename Key>
-  node& get(const Key& key, shared_memory_holder pMemory) const {
+  node* get(const Key& key, shared_memory_holder pMemory) const {
     return static_cast<const node_data&>(*m_pData).get(key, pMemory);
   }
   template <typename Key>
@@ -69,7 +69,7 @@ class node_ref : private boost::noncopyable {
     return m_pData->remove(key, pMemory);
   }
 
-  node& get(node& key, shared_memory_holder pMemory) const {
+  node* get(node& key, shared_memory_holder pMemory) const {
     return static_cast<const node_data&>(*m_pData).get(key, pMemory);
   }
   node& get(node& key, shared_memory_holder pMemory) {

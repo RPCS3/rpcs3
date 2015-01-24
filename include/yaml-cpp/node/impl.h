@@ -366,9 +366,12 @@ inline const Node Node::operator[](const Key& key) const {
   if (!m_isValid)
     throw InvalidNode();
   EnsureNodeExists();
-  detail::node& value = static_cast<const detail::node&>(*m_pNode)
+  detail::node* value = static_cast<const detail::node&>(*m_pNode)
                             .get(detail::to_value(key), m_pMemory);
-  return Node(value, m_pMemory);
+  if (!value) {
+    return Node(ZombieNode);
+  }
+  return Node(*value, m_pMemory);
 }
 
 template <typename Key>
@@ -394,9 +397,12 @@ inline const Node Node::operator[](const Node& key) const {
   EnsureNodeExists();
   key.EnsureNodeExists();
   m_pMemory->merge(*key.m_pMemory);
-  detail::node& value =
+  detail::node* value =
       static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
-  return Node(value, m_pMemory);
+  if (!value) {
+    return Node(ZombieNode);
+  }
+  return Node(*value, m_pMemory);
 }
 
 inline Node Node::operator[](const Node& key) {

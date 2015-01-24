@@ -192,16 +192,17 @@ void node_data::insert(node& key, node& value, shared_memory_holder pMemory) {
 }
 
 // indexing
-node& node_data::get(node& key, shared_memory_holder pMemory) const {
-  if (m_type != NodeType::Map)
-    return pMemory->create_node();
+node* node_data::get(node& key, shared_memory_holder /* pMemory */) const {
+  if (m_type != NodeType::Map) {
+    return NULL;
+  }
 
   for (node_map::const_iterator it = m_map.begin(); it != m_map.end(); ++it) {
     if (it->first->is(key))
-      return *it->second;
+      return it->second;
   }
 
-  return pMemory->create_node();
+  return NULL;
 }
 
 node& node_data::get(node& key, shared_memory_holder pMemory) {

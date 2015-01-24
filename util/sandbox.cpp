@@ -26,10 +26,11 @@ class NullEventHandler : public YAML::EventHandler {
 };
 
 int main() {
-  std::stringstream stream("---{header: {id: 1");
-  YAML::Parser parser(stream);
-  //    parser.PrintTokens(std::cout);
-  NullEventHandler handler;
-  parser.HandleNextDocument(handler);
+  const YAML::Node node;
+
+  std::string key = "doesnotexist";
+  for (;;) {
+    node[key];
+  }
   return 0;
 }
