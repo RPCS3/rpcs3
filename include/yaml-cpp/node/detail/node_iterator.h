@@ -63,11 +63,18 @@ class node_iterator_base
   typedef typename node_iterator_type<V>::map MapIter;
   typedef node_iterator_value<V> value_type;
 
-  node_iterator_base() : m_type(iterator_type::None) {}
+  node_iterator_base()
+      : m_type(iterator_type::None), m_seqIt(), m_mapIt(), m_mapEnd() {}
   explicit node_iterator_base(SeqIter seqIt)
-      : m_type(iterator_type::Sequence), m_seqIt(seqIt) {}
+      : m_type(iterator_type::Sequence),
+        m_seqIt(seqIt),
+        m_mapIt(),
+        m_mapEnd() {}
   explicit node_iterator_base(MapIter mapIt, MapIter mapEnd)
-      : m_type(iterator_type::Map), m_mapIt(mapIt), m_mapEnd(mapEnd) {
+      : m_type(iterator_type::Map),
+        m_seqIt(),
+        m_mapIt(mapIt),
+        m_mapEnd(mapEnd) {
     m_mapIt = increment_until_defined(m_mapIt);
   }
 
