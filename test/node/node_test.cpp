@@ -267,8 +267,8 @@ TEST(NodeTest, KeyNodeExitsScope) {
     Node temp("Hello, world");
     node[temp] = 0;
   }
-  for (const auto& kv : node) {
-    (void)kv;
+  for (Node::const_iterator it = node.begin(); it != node.end(); ++it) {
+    (void)it;
   }
 }
 
