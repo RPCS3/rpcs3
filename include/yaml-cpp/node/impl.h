@@ -164,6 +164,19 @@ inline void Node::SetTag(const std::string& tag) {
   m_pNode->set_tag(tag);
 }
 
+inline EmitterStyle::value Node::Style() const {
+  if (!m_isValid)
+    throw InvalidNode();
+  return m_pNode ? m_pNode->style() : EmitterStyle::Default;
+}
+
+inline void Node::SetStyle(EmitterStyle::value style) {
+  if (!m_isValid)
+    throw InvalidNode();
+  EnsureNodeExists();
+  m_pNode->set_style(style);
+}
+
 // assignment
 inline bool Node::is(const Node& rhs) const {
   if (!m_isValid || !rhs.m_isValid)

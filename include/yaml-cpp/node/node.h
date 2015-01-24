@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/node/detail/bool_type.h"
 #include "yaml-cpp/node/detail/iterator_fwd.h"
 #include "yaml-cpp/node/ptr.h"
@@ -63,8 +64,14 @@ class YAML_CPP_API Node {
   template <typename T, typename S>
   const T as(const S& fallback) const;
   const std::string& Scalar() const;
+
   const std::string& Tag() const;
   void SetTag(const std::string& tag);
+
+  // style
+  // WARNING: This API might change in future releases.
+  EmitterStyle::value Style() const;
+  void SetStyle(EmitterStyle::value style);
 
   // assignment
   bool is(const Node& rhs) const;

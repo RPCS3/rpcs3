@@ -16,7 +16,10 @@ namespace detail {
 std::string node_data::empty_scalar;
 
 node_data::node_data()
-    : m_isDefined(false), m_type(NodeType::Null), m_seqSize(0) {}
+    : m_isDefined(false),
+      m_type(NodeType::Null),
+      m_seqSize(0),
+      m_style(EmitterStyle::Default) {}
 
 void node_data::mark_defined() {
   if (m_type == NodeType::Undefined)
@@ -56,6 +59,8 @@ void node_data::set_type(NodeType::value type) {
 }
 
 void node_data::set_tag(const std::string& tag) { m_tag = tag; }
+
+void node_data::set_style(EmitterStyle::value style) { m_style = style; }
 
 void node_data::set_null() {
   m_isDefined = true;

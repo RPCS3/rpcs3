@@ -7,6 +7,7 @@
 #pragma once
 #endif
 
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/node/type.h"
 #include "yaml-cpp/node/ptr.h"
@@ -28,6 +29,7 @@ class node : private boost::noncopyable {
 
   const std::string& scalar() const { return m_pRef->scalar(); }
   const std::string& tag() const { return m_pRef->tag(); }
+  EmitterStyle::value style() const { return m_pRef->style(); }
 
   void mark_defined() {
     if (is_defined())
@@ -74,6 +76,12 @@ class node : private boost::noncopyable {
   void set_tag(const std::string& tag) {
     mark_defined();
     m_pRef->set_tag(tag);
+  }
+
+  // style
+  void set_style(EmitterStyle::value style) {
+    mark_defined();
+    m_pRef->set_style(style);
   }
 
   // size/iterator

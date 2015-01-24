@@ -38,6 +38,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   void set_tag(const std::string& tag);
   void set_null();
   void set_scalar(const std::string& scalar);
+  void set_style(EmitterStyle::value style);
 
   bool is_defined() const { return m_isDefined; }
   NodeType::value type() const {
@@ -45,6 +46,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   }
   const std::string& scalar() const { return m_scalar; }
   const std::string& tag() const { return m_tag; }
+  EmitterStyle::value style() const { return m_style; }
 
   // size/iterator
   std::size_t size() const;
@@ -101,6 +103,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   bool m_isDefined;
   NodeType::value m_type;
   std::string m_tag;
+  EmitterStyle::value m_style;
 
   // scalar
   std::string m_scalar;

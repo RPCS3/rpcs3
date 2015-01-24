@@ -54,6 +54,7 @@ void NodeBuilder::OnSequenceStart(const Mark& /* mark */,
   detail::node& node = Push(anchor);
   node.set_tag(tag);
   node.set_type(NodeType::Sequence);
+  node.set_style(style);
 }
 
 void NodeBuilder::OnSequenceEnd() { Pop(); }
@@ -63,6 +64,7 @@ void NodeBuilder::OnMapStart(const Mark& /* mark */, const std::string& tag,
   detail::node& node = Push(anchor);
   node.set_type(NodeType::Map);
   node.set_tag(tag);
+  node.set_style(style);
   m_mapDepth++;
 }
 

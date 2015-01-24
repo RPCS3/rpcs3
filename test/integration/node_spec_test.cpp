@@ -7,8 +7,7 @@
   ASSERT_THROW(statement, ParserException);               \
   try {                                                   \
     statement;                                            \
-  }                                                       \
-  catch (const ParserException& e) {                      \
+  } catch (const ParserException& e) {                    \
     EXPECT_EQ(e.msg, message);                            \
   }
 

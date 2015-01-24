@@ -76,15 +76,14 @@ void NodeEvents::Emit(const detail::node& node, EventHandler& handler,
       handler.OnScalar(Mark(), node.tag(), anchor, node.scalar());
       break;
     case NodeType::Sequence:
-      handler.OnSequenceStart(Mark(), node.tag(), anchor,
-                              EmitterStyle::Default);
+      handler.OnSequenceStart(Mark(), node.tag(), anchor, node.style());
       for (detail::const_node_iterator it = node.begin(); it != node.end();
            ++it)
         Emit(**it, handler, am);
       handler.OnSequenceEnd();
       break;
     case NodeType::Map:
-      handler.OnMapStart(Mark(), node.tag(), anchor, EmitterStyle::Default);
+      handler.OnMapStart(Mark(), node.tag(), anchor, node.style());
       for (detail::const_node_iterator it = node.begin(); it != node.end();
            ++it) {
         Emit(*it->first, handler, am);
