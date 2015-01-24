@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
@@ -858,6 +857,108 @@ s32 sceKernelGetRWLockInfo(s32 rwLockId, vm::psv::ptr<SceKernelRWLockInfo> pInfo
 	throw __FUNCTION__;
 }
 
+// IO/File functions
+
+s32 sceIoRemove(vm::psv::ptr<const char> filename)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoMkdir(vm::psv::ptr<const char> dirname, s32 mode)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoRmdir(vm::psv::ptr<const char> dirname)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoRename(vm::psv::ptr<const char> oldname, vm::psv::ptr<const char> newname)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoDevctl(vm::psv::ptr<const char> devname, s32 cmd, vm::psv::ptr<const void> arg, u32 arglen, vm::psv::ptr<void> bufp, u32 buflen)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoSync(vm::psv::ptr<const char> devname, s32 flag)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoOpen(vm::psv::ptr<const char> filename, s32 flag, s32 mode)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoClose(s32 fd)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoIoctl(s32 fd, s32 cmd, vm::psv::ptr<const void> argp, u32 arglen, vm::psv::ptr<void> bufp, u32 buflen)
+{
+	throw __FUNCTION__;
+}
+
+s64 sceIoLseek(s32 fd, s64 offset, s32 whence)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoLseek32(s32 fd, s32 offset, s32 whence)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoRead(s32 fd, vm::psv::ptr<void> buf, u32 nbyte)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoWrite(s32 fd, vm::psv::ptr<const void> buf, u32 nbyte)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoPread(s32 fd, vm::psv::ptr<void> buf, u32 nbyte, s64 offset)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoPwrite(s32 fd, vm::psv::ptr<const void> buf, u32 nbyte, s64 offset)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoDopen(vm::psv::ptr<const char> dirname)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoDclose(s32 fd)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoDread(s32 fd, vm::psv::ptr<SceIoDirent> buf)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoChstat(vm::psv::ptr<const char> name, vm::psv::ptr<const SceIoStat> buf, u32 cbit)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceIoGetstat(vm::psv::ptr<const char> name, vm::psv::ptr<SceIoStat> buf)
+{
+	throw __FUNCTION__;
+}
+
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
 
@@ -1128,24 +1229,24 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x24460BB3, sceKernelWaitSignalCB);
 	//REG_FUNC(0x7BE9C4C8, sceKernelSendSignal);
 	REG_FUNC(0xC5C11EE7, sceKernelCreateThread);
-	//REG_FUNC(0x6C60AC61, sceIoOpen);
-	//REG_FUNC(0xF5C6F098, sceIoClose);
-	//REG_FUNC(0x713523E1, sceIoRead);
-	//REG_FUNC(0x11FED231, sceIoWrite);
-	//REG_FUNC(0x99BA173E, sceIoLseek);
-	//REG_FUNC(0x5CC983AC, sceIoLseek32);
-	//REG_FUNC(0xE20ED0F3, sceIoRemove);
-	//REG_FUNC(0xF737E369, sceIoRename);
-	//REG_FUNC(0x9670D39F, sceIoMkdir);
-	//REG_FUNC(0xE9F91EC8, sceIoRmdir);
-	//REG_FUNC(0xA9283DD0, sceIoDopen);
-	//REG_FUNC(0x9DFF9C59, sceIoDclose);
-	//REG_FUNC(0x9C8B6624, sceIoDread);
-	//REG_FUNC(0xBCA5B623, sceIoGetstat);
-	//REG_FUNC(0x29482F7F, sceIoChstat);
-	//REG_FUNC(0x98ACED6D, sceIoSync);
-	//REG_FUNC(0x4B30CB2, sceIoDevctl);
-	//REG_FUNC(0x54ABACFA, sceIoIoctl);
+	REG_FUNC(0x6C60AC61, sceIoOpen);
+	REG_FUNC(0xF5C6F098, sceIoClose);
+	REG_FUNC(0x713523E1, sceIoRead);
+	REG_FUNC(0x11FED231, sceIoWrite);
+	REG_FUNC(0x99BA173E, sceIoLseek);
+	REG_FUNC(0x5CC983AC, sceIoLseek32);
+	REG_FUNC(0xE20ED0F3, sceIoRemove);
+	REG_FUNC(0xF737E369, sceIoRename);
+	REG_FUNC(0x9670D39F, sceIoMkdir);
+	REG_FUNC(0xE9F91EC8, sceIoRmdir);
+	REG_FUNC(0xA9283DD0, sceIoDopen);
+	REG_FUNC(0x9DFF9C59, sceIoDclose);
+	REG_FUNC(0x9C8B6624, sceIoDread);
+	REG_FUNC(0xBCA5B623, sceIoGetstat);
+	REG_FUNC(0x29482F7F, sceIoChstat);
+	REG_FUNC(0x98ACED6D, sceIoSync);
+	REG_FUNC(0x4B30CB2, sceIoDevctl);
+	REG_FUNC(0x54ABACFA, sceIoIoctl);
 	//REG_FUNC(0x6A7EA9FD, sceIoOpenAsync);
 	//REG_FUNC(0x84201C9B, sceIoCloseAsync);
 	//REG_FUNC(0x7B3BE857, sceIoReadAsync);
@@ -1165,8 +1266,8 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0xF7C7FBFE, sceIoSyncAsync);
 	//REG_FUNC(0xEC96EA71, sceIoCancel);
 	//REG_FUNC(0x857E0C71, sceIoComplete);
-	//REG_FUNC(0x52315AD7, sceIoPread);
-	//REG_FUNC(0x8FFFF5A8, sceIoPwrite);
+	REG_FUNC(0x52315AD7, sceIoPread);
+	REG_FUNC(0x8FFFF5A8, sceIoPwrite);
 	//REG_FUNC(0xA010141E, sceIoPreadAsync);
 	//REG_FUNC(0xED25BEEF, sceIoPwriteAsync);
 	//REG_FUNC(0xA792C404, sceIoCompleteMultiple);
