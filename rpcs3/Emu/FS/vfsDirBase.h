@@ -62,14 +62,12 @@ public:
 
 	public:
 		iterator(vfsDirBase* parent)
-			: parent(parent)
-			, data(parent->First())
+			: data(parent->First())
 		{
 		}
 
 		iterator(const DirEntryInfo* data)
-			: parent(parent)
-			, data(data)
+			: data(data)
 		{
 		}
 

@@ -210,7 +210,7 @@ void CompilerELF::OnUpdate(wxCommandEvent& event)
 	DoAnalyzeCode(false);
 
 	return;
-	asm_list->Freeze();
+	/*asm_list->Freeze();
 	asm_list->SetStyle(0, asm_list->GetValue().Len(), wxTextAttr("Black"));
 
 	/*
@@ -220,7 +220,7 @@ void CompilerELF::OnUpdate(wxCommandEvent& event)
 	}
 	*/
 	
-	SetOpStyle(".int", "Blue");
+	/*SetOpStyle(".int", "Blue");
 	SetOpStyle(".string", "Blue");
 	SetOpStyle(".strlen", "Blue");
 	SetOpStyle(".buf", "Blue");
@@ -294,7 +294,7 @@ void CompilerELF::OnUpdate(wxCommandEvent& event)
 
 	asm_list->Thaw();
 
-	UpdateScroll(true, wxVERTICAL);
+	UpdateScroll(true, wxVERTICAL);*/
 }
 
 void CompilerELF::OnScroll(wxScrollWinEvent& event)

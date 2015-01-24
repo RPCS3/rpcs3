@@ -1062,7 +1062,6 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 					{
 						return res;
 					}
-					break;
 				}
 				else if (!useEventQueue)
 				{
@@ -1439,7 +1438,6 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 					{
 						return res;
 					}
-					break;
 				}
 				else if (!useEventQueue)
 				{

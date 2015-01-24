@@ -338,8 +338,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s32): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -360,8 +358,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s64): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -448,8 +444,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (const char*): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
