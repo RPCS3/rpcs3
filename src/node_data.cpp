@@ -18,8 +18,8 @@ std::string node_data::empty_scalar;
 node_data::node_data()
     : m_isDefined(false),
       m_type(NodeType::Null),
-      m_seqSize(0),
-      m_style(EmitterStyle::Default) {}
+      m_style(EmitterStyle::Default),
+      m_seqSize(0) {}
 
 void node_data::mark_defined() {
   if (m_type == NodeType::Undefined)
