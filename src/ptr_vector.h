@@ -7,11 +7,12 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/noncopyable.h"
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <vector>
+
+#include "yaml-cpp/noncopyable.h"
 
 namespace YAML {
 
@@ -22,7 +23,7 @@ class ptr_vector : private YAML::noncopyable {
   ~ptr_vector() { clear(); }
 
   void clear() {
-    for (unsigned i = 0; i < m_data.size(); i++)
+    for (std::size_t i = 0; i < m_data.size(); i++)
       delete m_data[i];
     m_data.clear();
   }

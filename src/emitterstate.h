@@ -94,12 +94,12 @@ class EmitterState {
   bool SetIntFormat(EMITTER_MANIP value, FmtScope::value scope);
   EMITTER_MANIP GetIntFormat() const { return m_intFmt.get(); }
 
-  bool SetIndent(unsigned value, FmtScope::value scope);
+  bool SetIndent(std::size_t value, FmtScope::value scope);
   int GetIndent() const { return m_indent.get(); }
 
-  bool SetPreCommentIndent(unsigned value, FmtScope::value scope);
+  bool SetPreCommentIndent(std::size_t value, FmtScope::value scope);
   int GetPreCommentIndent() const { return m_preCommentIndent.get(); }
-  bool SetPostCommentIndent(unsigned value, FmtScope::value scope);
+  bool SetPostCommentIndent(std::size_t value, FmtScope::value scope);
   int GetPostCommentIndent() const { return m_postCommentIndent.get(); }
 
   bool SetFlowType(GroupType::value groupType, EMITTER_MANIP value,
@@ -110,9 +110,9 @@ class EmitterState {
   EMITTER_MANIP GetMapKeyFormat() const { return m_mapKeyFmt.get(); }
 
   bool SetFloatPrecision(int value, FmtScope::value scope);
-  unsigned GetFloatPrecision() const { return m_floatPrecision.get(); }
+  std::size_t GetFloatPrecision() const { return m_floatPrecision.get(); }
   bool SetDoublePrecision(int value, FmtScope::value scope);
-  unsigned GetDoublePrecision() const { return m_doublePrecision.get(); }
+  std::size_t GetDoublePrecision() const { return m_doublePrecision.get(); }
 
  private:
   template <typename T>
@@ -132,8 +132,8 @@ class EmitterState {
   Setting<EMITTER_MANIP> m_boolLengthFmt;
   Setting<EMITTER_MANIP> m_boolCaseFmt;
   Setting<EMITTER_MANIP> m_intFmt;
-  Setting<unsigned> m_indent;
-  Setting<unsigned> m_preCommentIndent, m_postCommentIndent;
+  Setting<std::size_t> m_indent;
+  Setting<std::size_t> m_preCommentIndent, m_postCommentIndent;
   Setting<EMITTER_MANIP> m_seqFmt;
   Setting<EMITTER_MANIP> m_mapFmt;
   Setting<EMITTER_MANIP> m_mapKeyFmt;
@@ -175,7 +175,7 @@ class EmitterState {
   };
 
   ptr_stack<Group> m_groups;
-  unsigned m_curIndent;
+  std::size_t m_curIndent;
   bool m_hasAnchor;
   bool m_hasTag;
   bool m_hasNonContent;

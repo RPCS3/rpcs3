@@ -358,7 +358,7 @@ bool WriteChar(ostream_wrapper& out, char ch) {
 
 bool WriteComment(ostream_wrapper& out, const std::string& str,
                   int postCommentIndent) {
-  const unsigned curIndent = out.col();
+  const std::size_t curIndent = out.col();
   out << "#" << Indentation(postCommentIndent);
   out.set_comment();
   int codePoint;

@@ -7,6 +7,7 @@
 #pragma once
 #endif
 
+#include <cstddef>
 #include <ios>
 #include <map>
 #include <queue>
@@ -60,7 +61,7 @@ class Scanner {
 
   bool InFlowContext() const { return !m_flows.empty(); }
   bool InBlockContext() const { return m_flows.empty(); }
-  int GetFlowLevel() const { return m_flows.size(); }
+  std::size_t GetFlowLevel() const { return m_flows.size(); }
 
   Token::TYPE GetStartTokenFor(IndentMarker::INDENT_TYPE type) const;
   IndentMarker *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
@@ -83,13 +84,13 @@ class Scanner {
   const RegEx &GetValueRegex() const;
 
   struct SimpleKey {
-    SimpleKey(const Mark &mark_, int flowLevel_);
+    SimpleKey(const Mark &mark_, std::size_t flowLevel_);
 
     void Validate();
     void Invalidate();
 
     Mark mark;
-    int flowLevel;
+    std::size_t flowLevel;
     IndentMarker *pIndent;
     Token *pMapStart, *pKey;
   };
