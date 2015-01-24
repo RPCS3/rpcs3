@@ -11,7 +11,7 @@
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
-u32 sceKernelCreateThread(
+s32 sceKernelCreateThread(
 	vm::psv::ptr<const char> pName,
 	vm::psv::ptr<SceKernelThreadEntry> entry,
 	s32 initPriority,
@@ -122,28 +122,28 @@ s32 sceKernelChangeThreadCpuAffinityMask(s32 threadId, s32 cpuAffinityMask)
 {
 	sceLibKernel.Todo("sceKernelChangeThreadCpuAffinityMask(threadId=0x%x, cpuAffinityMask=0x%x)", threadId, cpuAffinityMask);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadCpuAffinityMask(s32 threadId)
 {
 	sceLibKernel.Todo("sceKernelGetThreadCpuAffinityMask(threadId=0x%x)", threadId);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelChangeThreadPriority(s32 threadId, s32 priority)
 {
 	sceLibKernel.Todo("sceKernelChangeThreadPriority(threadId=0x%x, priority=%d)", threadId, priority);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadCurrentPriority()
 {
 	sceLibKernel.Todo("sceKernelGetThreadCurrentPriority()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 u32 sceKernelGetThreadId(ARMv7Context& context)
@@ -157,84 +157,84 @@ s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
 {
 	sceLibKernel.Todo("sceKernelChangeCurrentThreadAttr()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadExitStatus(s32 threadId, vm::psv::ptr<s32> pExitStatus)
 {
 	sceLibKernel.Todo("sceKernelGetThreadExitStatus(threadId=0x%x, pExitStatus=0x%x)", threadId, pExitStatus);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetProcessId()
 {
 	sceLibKernel.Todo("sceKernelGetProcessId()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelCheckWaitableStatus()
 {
 	sceLibKernel.Todo("sceKernelCheckWaitableStatus()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadInfo(s32 threadId, vm::psv::ptr<SceKernelThreadInfo> pInfo)
 {
 	sceLibKernel.Todo("sceKernelGetThreadInfo(threadId=0x%x, pInfo=0x%x)", threadId, pInfo);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadRunStatus(vm::psv::ptr<SceKernelThreadRunStatus> pStatus)
 {
 	sceLibKernel.Todo("sceKernelGetThreadRunStatus(pStatus=0x%x)", pStatus);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetSystemInfo(vm::psv::ptr<SceKernelSystemInfo> pInfo)
 {
 	sceLibKernel.Todo("sceKernelGetSystemInfo(pInfo=0x%x)", pInfo);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetThreadmgrUIDClass(s32 uid)
 {
 	sceLibKernel.Todo("sceKernelGetThreadmgrUIDClass(uid=0x%x)", uid);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelChangeThreadVfpException(s32 clearMask, s32 setMask)
 {
 	sceLibKernel.Todo("sceKernelChangeThreadVfpException(clearMask=0x%x, setMask=0x%x)", clearMask, setMask);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelGetCurrentThreadVfpException()
 {
 	sceLibKernel.Todo("sceKernelGetCurrentThreadVfpException()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelDelayThread(u32 usec)
 {
 	sceLibKernel.Todo("sceKernelDelayThread()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelDelayThreadCB(u32 usec)
 {
 	sceLibKernel.Todo("sceKernelDelayThreadCB()");
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
 
 s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
@@ -272,12 +272,103 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv:
 	return SCE_OK;
 }
 
+// Callback functions
+
 s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
 	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 
-	return SCE_OK;
+	throw __FUNCTION__;
 }
+
+s32 sceKernelCreateCallback(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<SceKernelCallbackFunction> callbackFunc, vm::psv::ptr<void> pCommon)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelDeleteCallback(s32 callbackId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelNotifyCallback(s32 callbackId, s32 notifyArg)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelCallback(s32 callbackId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetCallbackCount(s32 callbackId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCheckCallback()
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetCallbackInfo(s32 callbackId, vm::psv::ptr<SceKernelCallbackInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelRegisterCallbackToEvent(s32 eventId, s32 callbackId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnregisterCallbackFromEvent(s32 eventId, s32 callbackId)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelUnregisterCallbackFromEventAll(s32 eventId)
+{
+	throw __FUNCTION__;
+}
+
+// Event functions
+
+s32 sceKernelWaitEvent(s32 eventId, u32 waitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitEventCB(s32 eventId, u32 waitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelPollEvent(s32 eventId, u32 bitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelCancelEvent(s32 eventId, vm::psv::ptr<s32> pNumWaitThreads)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelGetEventInfo(s32 eventId, vm::psv::ptr<SceKernelEventInfo> pInfo)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitMultipleEvents(vm::psv::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::psv::ptr<SceKernelResultEvent> pResultEventList, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+s32 sceKernelWaitMultipleEventsCB(vm::psv::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::psv::ptr<SceKernelResultEvent> pResultEventList, vm::psv::ptr<u32> pTimeout)
+{
+	throw __FUNCTION__;
+}
+
+
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
 
@@ -286,6 +377,8 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	sceLibKernel.on_load = nullptr;
 	sceLibKernel.on_unload = nullptr;
 	sceLibKernel.on_stop = nullptr;
+
+	// REG_FUNC(???, sceKernelGetEventInfo);
 
 	//REG_FUNC(0x23EAA62, sceKernelPuts);
 	//REG_FUNC(0xB0335388, sceClibToupper);
@@ -430,21 +523,21 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0xF994FE65, sceKernelGetThreadmgrUIDClass);
 	//REG_FUNC(0xB4DE10C7, sceKernelGetActiveCpuMask);
 	REG_FUNC(0x2C1321A3, sceKernelChangeThreadVfpException);
-	//REG_FUNC(0x3849359A, sceKernelCreateCallback);
-	//REG_FUNC(0x88DD1BC8, sceKernelGetCallbackInfo);
-	//REG_FUNC(0x464559D3, sceKernelDeleteCallback);
-	//REG_FUNC(0xBD9C8F2B, sceKernelNotifyCallback);
-	//REG_FUNC(0x3137A687, sceKernelCancelCallback);
-	//REG_FUNC(0x76A2EF81, sceKernelGetCallbackCount);
-	//REG_FUNC(0xD4F75281, sceKernelRegisterCallbackToEvent);
-	//REG_FUNC(0x8D3940DF, sceKernelUnregisterCallbackFromEvent);
-	//REG_FUNC(0x2BD1E682, sceKernelUnregisterCallbackFromEventAll);
-	//REG_FUNC(0x120F03AF, sceKernelWaitEvent);
-	//REG_FUNC(0xA0490795, sceKernelWaitEventCB);
-	//REG_FUNC(0x241F3634, sceKernelPollEvent);
-	//REG_FUNC(0x603AB770, sceKernelCancelEvent);
-	//REG_FUNC(0x10586418, sceKernelWaitMultipleEvents);
-	//REG_FUNC(0x4263DBC9, sceKernelWaitMultipleEventsCB);
+	REG_FUNC(0x3849359A, sceKernelCreateCallback);
+	REG_FUNC(0x88DD1BC8, sceKernelGetCallbackInfo);
+	REG_FUNC(0x464559D3, sceKernelDeleteCallback);
+	REG_FUNC(0xBD9C8F2B, sceKernelNotifyCallback);
+	REG_FUNC(0x3137A687, sceKernelCancelCallback);
+	REG_FUNC(0x76A2EF81, sceKernelGetCallbackCount);
+	REG_FUNC(0xD4F75281, sceKernelRegisterCallbackToEvent);
+	REG_FUNC(0x8D3940DF, sceKernelUnregisterCallbackFromEvent);
+	REG_FUNC(0x2BD1E682, sceKernelUnregisterCallbackFromEventAll);
+	REG_FUNC(0x120F03AF, sceKernelWaitEvent);
+	REG_FUNC(0xA0490795, sceKernelWaitEventCB);
+	REG_FUNC(0x241F3634, sceKernelPollEvent);
+	REG_FUNC(0x603AB770, sceKernelCancelEvent);
+	REG_FUNC(0x10586418, sceKernelWaitMultipleEvents);
+	REG_FUNC(0x4263DBC9, sceKernelWaitMultipleEventsCB);
 	//REG_FUNC(0x8516D040, sceKernelCreateEventFlag);
 	//REG_FUNC(0x11FE9B8B, sceKernelDeleteEventFlag);
 	//REG_FUNC(0xE04EC73A, sceKernelOpenEventFlag);
@@ -644,7 +737,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0x751C9B7A, sceKernelChangeCurrentThreadAttr);
 	REG_FUNC(0xD9BD74EB, sceKernelCheckWaitableStatus);
 	REG_FUNC(0x9DCB4B7A, sceKernelGetProcessId);
-	//REG_FUNC(0xE53E41F6, sceKernelCheckCallback);
+	REG_FUNC(0xE53E41F6, sceKernelCheckCallback);
 	//REG_FUNC(0xF4EE4FA9, sceKernelGetSystemTimeWide);
 	//REG_FUNC(0x47F6DE49, sceKernelGetSystemTimeLow);
 	//REG_FUNC(0xC0FAF6A3, sceKernelCreateThreadForUser);

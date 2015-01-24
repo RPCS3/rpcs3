@@ -11,6 +11,12 @@ union SceKernelSysClock
 	u64 quad;
 };
 
+struct SceKernelCallFrame
+{
+	u32 sp;
+	u32 pc;
+};
+
 // Memory Manager definitions
 
 typedef s32 SceKernelMemoryType;
@@ -301,6 +307,27 @@ struct SceKernelRWLockInfo
 	s32 writeOwnerId;
 	s32 numReadWaitThreads;
 	s32 numWriteWaitThreads;
+};
+
+// IO/File Manager definitions
+
+struct SceIoStat
+{
+	s32 mode;
+	u32 attr;
+	s64 size;
+	SceDateTime ctime;
+	SceDateTime atime;
+	SceDateTime mtime;
+	u64 _private[6];
+};
+
+struct SceIoDirent
+{
+	SceIoStat d_stat;
+	char d_name[256];
+	vm::psv::ptr<void> d_private;
+	s32 dummy;
 };
 
 // Module

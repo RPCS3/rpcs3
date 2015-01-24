@@ -410,6 +410,17 @@ enum psv_error_codes
 	SCE_KERNEL_ERROR_NO_AUTH			 = 0x8002F001,
 };
 
+struct SceDateTime
+{
+	u16 year;
+	u16 month;
+	u16 day;
+	u16 hour;
+	u16 minute;
+	u16 second;
+	u32 microsecond;
+};
+
 class psv_func_caller
 {
 public:
