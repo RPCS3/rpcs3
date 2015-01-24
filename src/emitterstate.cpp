@@ -98,7 +98,7 @@ EmitterNodeType::value EmitterState::NextGroupType(
 
   // can't happen
   assert(false);
-  return EmitterNodeType::None;
+  return EmitterNodeType::NoType;
 }
 
 void EmitterState::StartedDoc() {
@@ -168,17 +168,17 @@ void EmitterState::EndedGroup(GroupType::value type) {
 
 EmitterNodeType::value EmitterState::CurGroupNodeType() const {
   if (m_groups.empty())
-    return EmitterNodeType::None;
+    return EmitterNodeType::NoType;
 
   return m_groups.top().NodeType();
 }
 
 GroupType::value EmitterState::CurGroupType() const {
-  return m_groups.empty() ? GroupType::None : m_groups.top().type;
+  return m_groups.empty() ? GroupType::NoType : m_groups.top().type;
 }
 
 FlowType::value EmitterState::CurGroupFlowType() const {
-  return m_groups.empty() ? FlowType::None : m_groups.top().flowType;
+  return m_groups.empty() ? FlowType::NoType : m_groups.top().flowType;
 }
 
 int EmitterState::CurGroupIndent() const {

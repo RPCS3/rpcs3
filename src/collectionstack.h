@@ -12,14 +12,14 @@
 
 namespace YAML {
 struct CollectionType {
-  enum value { None, BlockMap, BlockSeq, FlowMap, FlowSeq, CompactMap };
+  enum value { NoCollection, BlockMap, BlockSeq, FlowMap, FlowSeq, CompactMap };
 };
 
 class CollectionStack {
  public:
   CollectionType::value GetCurCollectionType() const {
     if (collectionStack.empty())
-      return CollectionType::None;
+      return CollectionType::NoCollection;
     return collectionStack.top();
   }
 
