@@ -16,11 +16,11 @@ class NullEventHandler : public EventHandler {
                         const std::string&) {}
 
   virtual void OnSequenceStart(const Mark&, const std::string&, anchor_t,
-                               EmitterStyle::value style) {}
+                               EmitterStyle::value /* style */) {}
   virtual void OnSequenceEnd() {}
 
   virtual void OnMapStart(const Mark&, const std::string&, anchor_t,
-                          EmitterStyle::value style) {}
+                          EmitterStyle::value /* style */) {}
   virtual void OnMapEnd() {}
 };
 

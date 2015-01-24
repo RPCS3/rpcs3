@@ -31,7 +31,7 @@ void GraphBuilderAdapter::OnScalar(const Mark &mark, const std::string &tag,
 void GraphBuilderAdapter::OnSequenceStart(const Mark &mark,
                                           const std::string &tag,
                                           anchor_t anchor,
-                                          EmitterStyle::value style) {
+                                          EmitterStyle::value /* style */) {
   void *pNode = m_builder.NewSequence(mark, tag, GetCurrentParent());
   m_containers.push(ContainerFrame(pNode));
   RegisterAnchor(anchor, pNode);
@@ -46,7 +46,7 @@ void GraphBuilderAdapter::OnSequenceEnd() {
 
 void GraphBuilderAdapter::OnMapStart(const Mark &mark, const std::string &tag,
                                      anchor_t anchor,
-                                     EmitterStyle::value style) {
+                                     EmitterStyle::value /* style */) {
   void *pNode = m_builder.NewMap(mark, tag, GetCurrentParent());
   m_containers.push(ContainerFrame(pNode, m_pKeyNode));
   m_pKeyNode = NULL;
