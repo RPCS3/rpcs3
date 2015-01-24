@@ -393,6 +393,7 @@ inline const Node Node::operator[](const Node& key) const {
     throw InvalidNode();
   EnsureNodeExists();
   key.EnsureNodeExists();
+  m_pMemory->merge(*key.m_pMemory);
   detail::node& value =
       static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
   return Node(value, m_pMemory);
@@ -403,6 +404,7 @@ inline Node Node::operator[](const Node& key) {
     throw InvalidNode();
   EnsureNodeExists();
   key.EnsureNodeExists();
+  m_pMemory->merge(*key.m_pMemory);
   detail::node& value = m_pNode->get(*key.m_pNode, m_pMemory);
   return Node(value, m_pMemory);
 }
