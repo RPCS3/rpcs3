@@ -60,7 +60,8 @@ static const unsigned char decoding[] = {
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-    255, };
+    255,
+};
 
 std::vector<unsigned char> DecodeBase64(const std::string &input) {
   typedef std::vector<unsigned char> ret_type;

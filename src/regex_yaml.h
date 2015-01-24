@@ -34,7 +34,7 @@ class RegEx {
   RegEx(const std::string& str, REGEX_OP op = REGEX_SEQ);
   ~RegEx() {}
 
-  friend RegEx operator!(const RegEx & ex);
+  friend RegEx operator!(const RegEx& ex);
   friend RegEx operator||(const RegEx& ex1, const RegEx& ex2);
   friend RegEx operator&&(const RegEx& ex1, const RegEx& ex2);
   friend RegEx operator+(const RegEx& ex1, const RegEx& ex2);

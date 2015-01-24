@@ -14,6 +14,7 @@
 #include "yaml-cpp/anchor.h"
 #include "yaml-cpp/contrib/anchordict.h"
 #include "yaml-cpp/contrib/graphbuilder.h"
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/eventhandler.h"
 
 namespace YAML {
@@ -36,11 +37,11 @@ class GraphBuilderAdapter : public EventHandler {
                         anchor_t anchor, const std::string& value);
 
   virtual void OnSequenceStart(const Mark& mark, const std::string& tag,
-                               anchor_t anchor);
+                               anchor_t anchor, EmitterStyle::value style);
   virtual void OnSequenceEnd();
 
   virtual void OnMapStart(const Mark& mark, const std::string& tag,
-                          anchor_t anchor);
+                          anchor_t anchor, EmitterStyle::value style);
   virtual void OnMapEnd();
 
   void* RootNode() const { return m_pRootNode; }

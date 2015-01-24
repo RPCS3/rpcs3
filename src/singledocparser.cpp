@@ -7,6 +7,7 @@
 #include "singledocparser.h"
 #include "tag.h"
 #include "token.h"
+#include "yaml-cpp/emitterstyle.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/exceptions.h"  // IWYU pragma: keep
 #include "yaml-cpp/mark.h"
@@ -55,7 +56,7 @@ void SingleDocParser::HandleNode(EventHandler& eventHandler) {
 
   // special case: a value node by itself must be a map, with no header
   if (m_scanner.peek().type == Token::VALUE) {
-    eventHandler.OnMapStart(mark, "?", NullAnchor);
+    eventHandler.OnMapStart(mark, "?", NullAnchor, EmitterStyle::Default);
     HandleMap(eventHandler);
     eventHandler.OnMapEnd();
     return;
@@ -92,14 +93,22 @@ void SingleDocParser::HandleNode(EventHandler& eventHandler) {
       m_scanner.pop();
       return;
     case Token::FLOW_SEQ_START:
+      eventHandler.OnSequenceStart(mark, tag, anchor, EmitterStyle::Flow);
+      HandleSequence(eventHandler);
+      eventHandler.OnSequenceEnd();
+      return;
     case Token::BLOCK_SEQ_START:
-      eventHandler.OnSequenceStart(mark, tag, anchor);
+      eventHandler.OnSequenceStart(mark, tag, anchor, EmitterStyle::Block);
       HandleSequence(eventHandler);
       eventHandler.OnSequenceEnd();
       return;
     case Token::FLOW_MAP_START:
+      eventHandler.OnMapStart(mark, tag, anchor, EmitterStyle::Flow);
+      HandleMap(eventHandler);
+      eventHandler.OnMapEnd();
+      return;
     case Token::BLOCK_MAP_START:
-      eventHandler.OnMapStart(mark, tag, anchor);
+      eventHandler.OnMapStart(mark, tag, anchor, EmitterStyle::Block);
       HandleMap(eventHandler);
       eventHandler.OnMapEnd();
       return;
@@ -107,7 +116,7 @@ void SingleDocParser::HandleNode(EventHandler& eventHandler) {
       // compact maps can only go in a flow sequence
       if (m_pCollectionStack->GetCurCollectionType() ==
           CollectionType::FlowSeq) {
-        eventHandler.OnMapStart(mark, tag, anchor);
+        eventHandler.OnMapStart(mark, tag, anchor, EmitterStyle::Flow);
         HandleMap(eventHandler);
         eventHandler.OnMapEnd();
         return;

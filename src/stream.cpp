@@ -7,7 +7,7 @@
 #endif
 
 #define S_ARRAY_SIZE(A) (sizeof(A) / sizeof(*(A)))
-#define S_ARRAY_END(A) ((A) + S_ARRAY_SIZE(A))
+#define S_ARRAY_END(A) ((A)+S_ARRAY_SIZE(A))
 
 #define CP_REPLACEMENT_CHARACTER (0xFFFD)
 
@@ -46,25 +46,26 @@ enum UtfIntroCharType {
   uictMax
 };
 
-static bool s_introFinalState[] = {false,  // uis_start
-                                   false,  // uis_utfbe_b1
-                                   false,  // uis_utf32be_b2
-                                   false,  // uis_utf32be_bom3
-                                   true,   // uis_utf32be
-                                   true,   // uis_utf16be
-                                   false,  // uis_utf16be_bom1
-                                   false,  // uis_utfle_bom1
-                                   false,  // uis_utf16le_bom2
-                                   false,  // uis_utf32le_bom3
-                                   true,   // uis_utf16le
-                                   true,   // uis_utf32le
-                                   false,  // uis_utf8_imp
-                                   false,  // uis_utf16le_imp
-                                   false,  // uis_utf32le_imp3
-                                   false,  // uis_utf8_bom1
-                                   false,  // uis_utf8_bom2
-                                   true,   // uis_utf8
-                                   true,   // uis_error
+static bool s_introFinalState[] = {
+    false,  // uis_start
+    false,  // uis_utfbe_b1
+    false,  // uis_utf32be_b2
+    false,  // uis_utf32be_bom3
+    true,   // uis_utf32be
+    true,   // uis_utf16be
+    false,  // uis_utf16be_bom1
+    false,  // uis_utfle_bom1
+    false,  // uis_utf16le_bom2
+    false,  // uis_utf32le_bom3
+    true,   // uis_utf16le
+    true,   // uis_utf32le
+    false,  // uis_utf8_imp
+    false,  // uis_utf16le_imp
+    false,  // uis_utf32le_imp3
+    false,  // uis_utf8_bom1
+    false,  // uis_utf8_bom2
+    true,   // uis_utf8
+    true,   // uis_error
 };
 
 static UtfIntroState s_introTransitions[][uictMax] = {
@@ -105,7 +106,8 @@ static UtfIntroState s_introTransitions[][uictMax] = {
     {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
      uis_utf8},
     {uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8, uis_utf8,
-     uis_utf8}, };
+     uis_utf8},
+};
 
 static char s_introUngetCount[][uictMax] = {
     // uict00, uictBB, uictBF, uictEF, uictFE, uictFF, uictAscii, uictOther
@@ -126,7 +128,8 @@ static char s_introUngetCount[][uictMax] = {
     {4, 4, 4, 4, 4, 4, 4, 4},
     {2, 0, 2, 2, 2, 2, 2, 2},
     {3, 3, 0, 3, 3, 3, 3, 3},
-    {1, 1, 1, 1, 1, 1, 1, 1}, };
+    {1, 1, 1, 1, 1, 1, 1, 1},
+};
 
 inline UtfIntroCharType IntroCharTypeOf(std::istream::int_type ch) {
   if (std::istream::traits_type::eof() == ch) {

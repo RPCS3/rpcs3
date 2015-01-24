@@ -16,7 +16,7 @@ RegEx::RegEx(const std::string& str, REGEX_OP op) : m_op(op) {
 }
 
 // combination constructors
-RegEx operator!(const RegEx & ex) {
+RegEx operator!(const RegEx& ex) {
   RegEx ret(REGEX_NOT);
   ret.m_params.push_back(ex);
   return ret;
