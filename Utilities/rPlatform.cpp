@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "restore_new.h"
+#pragma warning(disable : 4996)
 #include <wx/image.h>
 #include "define_new_memleakdetect.h"
 

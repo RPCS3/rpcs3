@@ -1,6 +1,5 @@
 #pragma once
 #include "CPUInstrTable.h"
-#pragma warning( disable : 4800 )
 
 class CPUDecoder
 {

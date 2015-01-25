@@ -18,7 +18,6 @@ struct ARMv7Context
 
 	void write_pc(u32 value);
 	u32 read_pc();
-	void put_stack_arg(u32 shift, u32 value);
 	u32 get_stack_arg(u32 pos);
 	void fast_call(u32 addr);
 
@@ -38,6 +37,11 @@ struct ARMv7Context
 			};
 
 			u32 LR;
+		};
+
+		struct
+		{
+			u64 GPR_D[8];
 		};
 	};
 

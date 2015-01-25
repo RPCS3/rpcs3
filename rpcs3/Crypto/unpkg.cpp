@@ -5,6 +5,7 @@
 #include "key_vault.h"
 #include "unpkg.h"
 #include "restore_new.h"
+#pragma warning(disable : 4996)
 #include <wx/progdlg.h>
 #include "define_new_memleakdetect.h"
 

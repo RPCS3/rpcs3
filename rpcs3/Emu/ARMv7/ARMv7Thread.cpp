@@ -20,11 +20,6 @@ u32 ARMv7Context::read_pc()
 	return thread.PC;
 }
 
-void ARMv7Context::put_stack_arg(u32 shift, u32 value)
-{
-	vm::psv::write32(SP + shift, value);
-}
-
 u32 ARMv7Context::get_stack_arg(u32 pos)
 {
 	return vm::psv::read32(SP + sizeof(u32) * (pos - 5));

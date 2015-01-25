@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "restore_new.h"
+#pragma warning(disable : 4996)
 #include <wx/msgdlg.h>
 #include "define_new_memleakdetect.h"
 #include "rMsgBox.h"
