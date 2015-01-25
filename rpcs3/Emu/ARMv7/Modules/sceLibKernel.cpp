@@ -1,12 +1,14 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/PSVObjectList.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
 #include "sceLibKernel.h"
+#include "psv_sema_object.h"
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
@@ -450,7 +452,18 @@ s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount,
 {
 	sceLibKernel.Error("sceKernelCreateSema(pName=0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
-	throw __FUNCTION__;
+	std::shared_ptr<psv_sema_t> sema(new psv_sema_t);
+
+	strcpy_trunc(sema->name, pName.get_ptr());
+	sema->attr = attr;
+	sema->initCount = initCount;
+	sema->maxCount = maxCount;
+
+	const s32 id = g_psv_sema_list.add(sema);
+
+	sceLibKernel.Error("*** semaphore created -> id=0x%x", id);
+
+	return id;
 }
 
 s32 sceKernelDeleteSema(s32 semaId)

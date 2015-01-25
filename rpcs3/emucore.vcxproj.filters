@@ -87,6 +87,9 @@
     <Filter Include="Emu\Audio\XAudio2">
       <UniqueIdentifier>{1d6abf72-0f18-43ec-9351-1fed1a3d1a1e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\CPU\ARMv7\Thread Manager">
+      <UniqueIdentifier>{368770cf-c8d9-4f4a-9ac3-5bdf48101ffe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -663,6 +666,12 @@
       <Filter>Emu\Audio\XAudio2</Filter>
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\psv_sema_object.cpp">
+      <Filter>Emu\CPU\ARMv7\Thread Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\PSVObjectList.cpp">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1293,6 +1302,12 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\psv_sema_object.h">
+      <Filter>Emu\CPU\ARMv7\Thread Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\PSVObjectList.h">
+      <Filter>Emu\CPU\ARMv7</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
