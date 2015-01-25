@@ -6,7 +6,7 @@
 #include "utils.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
-
+#pragma warning(disable : 4996)
 #include <wx/mstream.h>
 #include <wx/zstream.h>
 
