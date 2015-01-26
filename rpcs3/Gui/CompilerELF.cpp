@@ -210,91 +210,91 @@ void CompilerELF::OnUpdate(wxCommandEvent& event)
 	DoAnalyzeCode(false);
 
 	return;
-	/*asm_list->Freeze();
-	asm_list->SetStyle(0, asm_list->GetValue().Len(), wxTextAttr("Black"));
+	//asm_list->Freeze();
+	//asm_list->SetStyle(0, asm_list->GetValue().Len(), wxTextAttr("Black"));
 
-	/*
-	for(u32 i=0; i<instr_count; ++i)
-	{
-		SetOpStyle(m_instructions[i].name, "Blue");
-	}
-	*/
-	
-	/*SetOpStyle(".int", "Blue");
-	SetOpStyle(".string", "Blue");
-	SetOpStyle(".strlen", "Blue");
-	SetOpStyle(".buf", "Blue");
-	SetOpStyle(".srl", "Blue");
-	SetOpStyle(".srr", "Blue");
-	SetOpStyle(".mul", "Blue");
-	SetOpStyle(".div", "Blue");
-	SetOpStyle(".add", "Blue");
-	SetOpStyle(".sub", "Blue");
-	SetOpStyle(".and", "Blue");
-	SetOpStyle(".or", "Blue");
-	SetOpStyle(".xor", "Blue");
-	SetOpStyle(".not", "Blue");
-	SetOpStyle(".nor", "Blue");
+	///*
+	//for(u32 i=0; i<instr_count; ++i)
+	//{
+	//	SetOpStyle(m_instructions[i].name, "Blue");
+	//}
+	//*/
+	//
+	//SetOpStyle(".int", "Blue");
+	//SetOpStyle(".string", "Blue");
+	//SetOpStyle(".strlen", "Blue");
+	//SetOpStyle(".buf", "Blue");
+	//SetOpStyle(".srl", "Blue");
+	//SetOpStyle(".srr", "Blue");
+	//SetOpStyle(".mul", "Blue");
+	//SetOpStyle(".div", "Blue");
+	//SetOpStyle(".add", "Blue");
+	//SetOpStyle(".sub", "Blue");
+	//SetOpStyle(".and", "Blue");
+	//SetOpStyle(".or", "Blue");
+	//SetOpStyle(".xor", "Blue");
+	//SetOpStyle(".not", "Blue");
+	//SetOpStyle(".nor", "Blue");
 
-	SetTextStyle("[", "Red");
-	SetTextStyle("]", "Red");
-	SetTextStyle(":", "Red");
-	SetTextStyle(",", "Red");
+	//SetTextStyle("[", "Red");
+	//SetTextStyle("]", "Red");
+	//SetTextStyle(":", "Red");
+	//SetTextStyle(",", "Red");
 
-	for(int p=0; (p = asm_list->GetValue().find('#', p)) >= 0;)
-	{
-		const int from = p++;
-		p = asm_list->GetValue().find('\n', p);
+	//for(int p=0; (p = asm_list->GetValue().find('#', p)) >= 0;)
+	//{
+	//	const int from = p++;
+	//	p = asm_list->GetValue().find('\n', p);
 
-		if(p < 0) p = asm_list->GetValue().Len();
+	//	if(p < 0) p = asm_list->GetValue().Len();
 
-		asm_list->SetStyle(from, p, wxTextAttr(0x009900));
-	}
-	
-	for(int p=0; (p = asm_list->GetValue().find('"', p)) >= 0;)
-	{
-		const int from = p++;
-		const int p1 = asm_list->GetValue().find('\n', p);
+	//	asm_list->SetStyle(from, p, wxTextAttr(0x009900));
+	//}
+	//
+	//for(int p=0; (p = asm_list->GetValue().find('"', p)) >= 0;)
+	//{
+	//	const int from = p++;
+	//	const int p1 = asm_list->GetValue().find('\n', p);
 
-		int p2 = p;
-		for(;;)
-		{
-			p2 = asm_list->GetValue().find('"', p2);
-			if(p2 == -1) break;
+	//	int p2 = p;
+	//	for(;;)
+	//	{
+	//		p2 = asm_list->GetValue().find('"', p2);
+	//		if(p2 == -1) break;
 
-			if(asm_list->GetValue()[p2 - 1] == '\\')
-			{
-				if(p2 > 2 && asm_list->GetValue()[p2 - 2] == '\\') break;
+	//		if(asm_list->GetValue()[p2 - 1] == '\\')
+	//		{
+	//			if(p2 > 2 && asm_list->GetValue()[p2 - 2] == '\\') break;
 
-				p2++;
-				continue;
-			}
-			break;
-		}
+	//			p2++;
+	//			continue;
+	//		}
+	//		break;
+	//	}
 
-		if(p1 < 0 && p2 < 0)
-		{
-			p = asm_list->GetValue().Len();
-		}
-		else if(p1 >= 0 && p2 < 0)
-		{
-			p = p1;
-		}
-		else if(p2 >= 0 && p1 < 0)
-		{
-			p = p2 + 1;
-		}
-		else
-		{
-			p = p1 > p2 ? p2 + 1 : p1;
-		}
+	//	if(p1 < 0 && p2 < 0)
+	//	{
+	//		p = asm_list->GetValue().Len();
+	//	}
+	//	else if(p1 >= 0 && p2 < 0)
+	//	{
+	//		p = p1;
+	//	}
+	//	else if(p2 >= 0 && p1 < 0)
+	//	{
+	//		p = p2 + 1;
+	//	}
+	//	else
+	//	{
+	//		p = p1 > p2 ? p2 + 1 : p1;
+	//	}
 
-		asm_list->SetStyle(from, p, wxTextAttr(0x000099));
-	}
+	//	asm_list->SetStyle(from, p, wxTextAttr(0x000099));
+	//}
 
-	asm_list->Thaw();
+	//asm_list->Thaw();
 
-	UpdateScroll(true, wxVERTICAL);*/
+	//UpdateScroll(true, wxVERTICAL);
 }
 
 void CompilerELF::OnScroll(wxScrollWinEvent& event)

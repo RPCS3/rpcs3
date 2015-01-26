@@ -206,8 +206,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u8): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -228,8 +226,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u16): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -250,8 +246,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u32): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -272,8 +266,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u64): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -294,8 +286,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s8): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -316,8 +306,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s16): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -378,8 +366,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (float): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -400,8 +386,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (double): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -426,8 +410,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (bool): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 

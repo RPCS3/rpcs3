@@ -127,8 +127,8 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(TTY, "%s\n", msg.c_str()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(TTY, "%s\n", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: LOG_WARNING(HLE, "%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: LOG_ERROR(HLE, "%s", msg.c_str()); break;
 		}
 
 		switch (type & CELL_MSGDIALOG_TYPE_SE_MUTE) // TODO
@@ -264,7 +264,11 @@ s32 cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> cal
 	}
 
 	char errorCodeHex[12];
+#if __STDC_WANT_SECURE_LIB__ && !_WIN32_WCE
 	sprintf_s(errorCodeHex, "\n(%08x)", errorCode);
+#else
+	sprintf(errorCodeHex, "\n(%08x)", errorCode);
+#endif
 	errorMessage.append(errorCodeHex);
 
 	u64 status;

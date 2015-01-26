@@ -62,7 +62,8 @@ public:
 
 	public:
 		iterator(vfsDirBase* parent)
-			: data(parent->First())
+			: parent(parent)
+			, data(parent->First())
 		{
 		}
 
