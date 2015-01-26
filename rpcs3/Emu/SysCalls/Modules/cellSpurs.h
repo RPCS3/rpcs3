@@ -564,7 +564,7 @@ struct CellSpursEventFlag
 			be_t<u16> spuTaskPendingRecv;        // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
 			be_t<u16> ppuWaitMask;               // 0x04 Wait mask for blocked PPU thread
 			u8 ppuWaitSlotAndMode;               // 0x06 Top 4 bits: Wait slot number of the blocked PPU threa, Bottom 4 bits: Wait mode of the blocked PPU thread
-			u8 ppuPendingRecv;                   // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is ublocked
+			u8 ppuPendingRecv;                   // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is unblocked
 			be_t<u16> spuTaskUsedWaitSlots;      // 0x08 A bit is set to 1 if the wait slot corresponding to the bit is used by an SPU task and 0 otherwise
 			be_t<u16> spuTaskWaitMode;           // 0x0A A bit is set to 1 if the wait mode for the SPU task corresponding to the bit is AND and 0 otherwise
 			u8 spuPort;                          // 0x0C
@@ -852,8 +852,9 @@ struct CellSpursTaskBinInfo
 	CellSpursTaskLsPattern lsPattern;
 };
 
-// The SPURS kernel data store. This resides at 0x00 of the LS.
-struct SpursKernelMgmtData {
+// The SPURS kernel data store. This resides at 0x100 of the LS.
+struct SpursKernelMgmtData
+{
 	u8 tempArea[0x80];                              // 0x100
 	u8 wklLocContention[0x10];                      // 0x180
 	u8 wklLocPendingContention[0x10];               // 0x190
@@ -867,8 +868,7 @@ struct SpursKernelMgmtData {
 	be_t<u32> wklCurrentId;                         // 0x1DC
 	be_t<u32> yieldToKernelAddr;                    // 0x1E0
 	be_t<u32> selectWorkloadAddr;                   // 0x1E4
-	u8 x1E8;                                        // 0x1E8
-	u8 x1E9;                                        // 0x1E9
+	u8 moduleId[2];                                 // 0x1E8
 	u8 sysSrvInitialised;                           // 0x1EA
 	u8 spuIdling;                                   // 0x1EB
 	be_t<u16> wklRunnable1;                         // 0x1EC
@@ -879,6 +879,29 @@ struct SpursKernelMgmtData {
 	be_t<u32> traceMaxCount;                        // 0x21C
 	u8 wklUniqueId[0x10];                           // 0x220
 };
+
+static_assert(sizeof(SpursKernelMgmtData) == 0x130, "Incorrect size for SpursKernelMgmtData");
+
+// The SPURS taskset policy module data store. This resides at 0x2700 of the LS.
+struct SpursTasksetPmMgmtData
+{
+    u8 tempArea[0x80];                              // 0x2700
+    u8 x2780[0x27B8 - 0x2780];                      // 0x2780
+    vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
+    be_t<u32> kernelMgmt;                           // 0x27C0
+    be_t<u32> yieldAddr;                            // 0x27C4
+    be_t<u32> x27C8;                                // 0x27C8
+    be_t<u32> spuNum;                               // 0x27CC
+    be_t<u32> dmaTagId;                             // 0x27D0
+    be_t<u32> taskId;                               // 0x27D4
+    u8 x27D8[0x2840 - 0x27D8];                      // 0x27D8
+    u8 moduleId[16];                                // 0x2840
+    u8 x2850[0x2C80 - 0x2850];                      // 0x2850
+    be_t<u128> contextSaveArea[50];                 // 0x2C80
+    u8 x2FA0[0x3000 - 0x2FA0];                      // 0x2FA0
+};
+
+static_assert(sizeof(SpursTasksetPmMgmtData) == 0x900, "Incorrect size for SpursTasksetPmMgmtData");
 
 s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
 s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs);

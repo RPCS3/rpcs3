@@ -33,6 +33,10 @@ void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt);
 void spursSysServiceWorkloadMain(SPUThread & spu, u32 pollStatus);
 void spursSysServiceWorkloadEntry(SPUThread & spu);
 
+//
+// SPURS taskset polict module functions
+//
+
 extern Module *cellSpurs;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -378,8 +382,8 @@ void spursKernelMain(SPUThread & spu) {
         }
 
         if (!isSecond) {
-            mgmt->x1E8 = 0;
-            mgmt->x1E9 = 0;
+            mgmt->moduleId[0] = 0;
+            mgmt->moduleId[1] = 0;
         }
 
         // Run workload
@@ -387,6 +391,7 @@ void spursKernelMain(SPUThread & spu) {
         spu.GPR[3]._u32[3] = 0x100;
         spu.GPR[4]._u64[1] = wkl.arg;
         spu.GPR[5]._u32[3] = pollStatus;
+        spu.SetPc(0xA00);
         switch (mgmt->wklCurrentAddr.addr()) {
         case SPURS_IMG_ADDR_SYS_SRV_WORKLOAD:
             spursSysServiceWorkloadEntry(spu);
@@ -796,4 +801,137 @@ void spursSysServiceWorkloadEntry(SPUThread & spu) {
 
     // TODO: Ensure that this function always returns to the SPURS kernel
     return;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// SPURS taskset policy module functions
+//////////////////////////////////////////////////////////////////////////////
+
+bool spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 * isWaiting) {
+    auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
+    auto mgmt       = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+
+    // Verify taskset state is valid
+    for (auto i = 0; i < 4; i ++) {
+        if ((mgmt->taskset->m.waiting_set[i] & mgmt->taskset->m.running_set[i]) ||
+            (mgmt->taskset->m.ready_set[i] & mgmt->taskset->m.ready2_set[i]) ||
+            ((mgmt->taskset->m.running_set[i] | mgmt->taskset->m.ready_set[i] |
+              mgmt->taskset->m.ready2_set[i] | mgmt->taskset->m.signal_received_set[i] |
+              mgmt->taskset->m.waiting_set[i]) & ~mgmt->taskset->m.enabled_set[i])) {
+            assert(0);
+        }
+    }
+
+    // TODO: Implement cases
+    s32 delta = 0;
+    switch (request + 1) {
+    case 0:
+        break;
+    case 1:
+        break;
+    case 2:
+        break;
+    case 3:
+        break;
+    case 4:
+        break;
+    case 5:
+        break;
+    case 6:
+        break;
+    default:
+        assert(0);
+        break;
+    }
+
+    // Set the ready count of the workload to the number of ready tasks
+    do {
+        s32 readyCount = kernelMgmt->wklCurrentId >= CELL_SPURS_MAX_WORKLOAD ?
+                         kernelMgmt->spurs->m.wklIdleSpuCountOrReadyCount2[kernelMgmt->wklCurrentId & 0x0F].read_relaxed() :
+                         kernelMgmt->spurs->m.wklReadyCount1[kernelMgmt->wklCurrentId].read_relaxed();
+
+        auto newReadyCount = readyCount + delta > 0xFF ? 0xFF : readyCount + delta < 0 ? 0 : readyCount + delta;
+
+        if (kernelMgmt->wklCurrentId >= CELL_SPURS_MAX_WORKLOAD) {
+            kernelMgmt->spurs->m.wklIdleSpuCountOrReadyCount2[kernelMgmt->wklCurrentId & 0x0F].write_relaxed(newReadyCount);
+        } else {
+            kernelMgmt->spurs->m.wklReadyCount1[kernelMgmt->wklCurrentId].write_relaxed(newReadyCount);
+        }
+
+        delta += readyCount;
+    } while (delta > 0);
+
+    // TODO: Implement return
+    return false;
+}
+
+void spursTasksetDispatch() {
+}
+
+void spursTasksetProcessPollStatus(SPUThread & spu, u32 pollStatus) {
+    if (pollStatus & CELL_SPURS_MODULE_POLL_STATUS_FLAG) {
+        spursTasksetProcessRequest(spu, 6, nullptr, nullptr);
+    }
+}
+
+bool spursTasksetShouldYield(SPUThread & spu) {
+    u32 pollStatus;
+
+    if (cellSpursModulePollStatus(spu, &pollStatus)) {
+        return true;
+    }
+
+    spursTasksetProcessPollStatus(spu, pollStatus);
+    return false;
+}
+
+void spursTasksetInit(SPUThread & spu, u32 pollStatus) {
+    auto mgmt       = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+    auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
+
+    kernelMgmt->moduleId[0] = 'T';
+    kernelMgmt->moduleId[1] = 'K';
+
+    // Trace - START: Module='TKST'
+    CellSpursTracePacket pkt;
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.header.tag = 0x52; // Its not clear what this tag means exactly but it seems similar to CELL_SPURS_TRACE_TAG_START
+    memcpy(pkt.data.start.module, "TKST", 4);
+    pkt.data.start.level = 2;
+    pkt.data.start.ls    = 0xA00 >> 2;
+    cellSpursModulePutTrace(&pkt, mgmt->dmaTagId);
+
+    spursTasksetProcessPollStatus(spu, pollStatus);
+}
+
+void spursTasksetEntry(SPUThread & spu) {
+    auto mgmt = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+
+    // Check if the function was invoked by the SPURS kernel or because of a syscall
+    if (spu.PC != 0xA70) {
+        // Called from kernel
+        auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + spu.GPR[3]._u32[3]);
+        auto arg        = spu.GPR[4]._u64[1];
+        auto pollStatus = spu.GPR[5]._u32[3];
+
+        memset(mgmt, 0, sizeof(*mgmt));
+        mgmt->taskset.set(arg);
+        memcpy(mgmt->moduleId, "SPURSTASK MODULE", 16);
+        mgmt->kernelMgmt = spu.GPR[3]._u32[3];
+        mgmt->yieldAddr  = 0xA70;
+        mgmt->spuNum     = kernelMgmt->spuNum;
+        mgmt->dmaTagId   = kernelMgmt->dmaTagId;
+        mgmt->taskId     = 0xFFFFFFFF;
+
+        spursTasksetInit(spu, pollStatus);
+        // TODO: Dispatch
+    }
+
+    mgmt->contextSaveArea[0] = spu.GPR[0];
+    mgmt->contextSaveArea[1] = spu.GPR[1];
+    for (auto i = 0; i < 48; i++) {
+        mgmt->contextSaveArea[i + 2] = spu.GPR[80 + i];
+    }
+
+    // TODO: Process syscall
 }

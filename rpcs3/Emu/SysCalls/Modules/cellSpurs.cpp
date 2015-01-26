@@ -1702,7 +1702,7 @@ s64 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x1564C, libsre_rtoc);
 #else
-	if (taskset.addr() == 0 || spurs.addr() == 0)
+	if (taskset.addr() == 0 && spurs.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
@@ -3365,7 +3365,7 @@ s64 cellSpursGetTasksetInfo()
 
 s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::ptr<const u8> priority, u32 max_contention)
 {
-	cellSpurs->Warning("%s(attribute=0x%x, revision=%u, skd_version=%u, args=0x%llx, priority=0x%x, max_contention=%u)",
+	cellSpurs->Warning("%s(attribute=0x%x, revision=%d, skd_version=%d, args=0x%llx, priority=0x%x, max_contention=%d)",
 		__FUNCTION__, attribute.addr(), revision, sdk_version, args, priority.addr(), max_contention);
 
 #ifdef PRX_DEBUG
