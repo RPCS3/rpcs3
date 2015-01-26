@@ -1,6 +1,6 @@
 #pragma once
 
-union uid_t
+union psv_uid_t
 {
 	// true UID format is partially unknown
 	s32 uid;
@@ -13,9 +13,9 @@ union uid_t
 		u32 sign : 1; // UIDs are positive, error codes are negative
 	};
 
-	static uid_t make(s32 uid)
+	static psv_uid_t make(s32 uid)
 	{
-		uid_t result;
+		psv_uid_t result;
 		result.uid = uid;
 		return result;
 	}
@@ -32,7 +32,7 @@ public:
 	// check if UID is potentially valid (will return true if the object doesn't exist)
 	bool check(s32 uid)
 	{
-		const uid_t id = uid_t::make(uid);
+		const psv_uid_t id = psv_uid_t::make(uid);
 
 		// check sign bit, uid class and ensure that value is odd
 		return !id.sign && id.type == uid_class && id.oddness == 1;
@@ -46,7 +46,7 @@ public:
 			return nullptr;
 		}
 
-		return m_data[uid_t::make(uid).number];
+		return m_data[psv_uid_t::make(uid).number];
 	}
 
 	std::shared_ptr<T> operator [](s32 uid)
@@ -63,7 +63,7 @@ public:
 			std::shared_ptr<T> old_ptr = nullptr;
 			if (std::atomic_compare_exchange_strong(&value, &old_ptr, data))
 			{
-				uid_t id = uid_t::make(1); // odd number
+				psv_uid_t id = psv_uid_t::make(1); // odd number
 				id.type = uid_class; // set type
 				id.number = &value - m_data.data(); // set position
 				return id.uid;
@@ -81,7 +81,7 @@ public:
 			return nullptr;
 		}
 
-		return std::atomic_exchange(&m_data[uid_t::make(uid).number], nullptr);
+		return std::atomic_exchange(&m_data[psv_uid_t::make(uid).number], nullptr);
 	}
 
 	// remove all objects
