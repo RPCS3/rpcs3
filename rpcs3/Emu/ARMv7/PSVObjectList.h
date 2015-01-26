@@ -25,6 +25,7 @@ template<typename T, u32 type>
 class psv_object_list_t // Class for managing object data
 {
 	std::array<std::shared_ptr<T>, 0x8000> m_data;
+	std::mutex m_mutex; // TODO: remove it when shared_ptr atomic ops are fully available
 
 public:
 	static const u32 uid_class = type;
@@ -57,12 +58,16 @@ public:
 	// generate UID for newly created object (will return zero if the limit exceeded)
 	s32 add(std::shared_ptr<T>& data)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		for (auto& value : m_data)
 		{
 			// find an empty position and move the pointer
-			std::shared_ptr<T> old_ptr = nullptr;
-			if (std::atomic_compare_exchange_strong(&value, &old_ptr, data))
+			//std::shared_ptr<T> old_ptr = nullptr;
+			//if (std::atomic_compare_exchange_strong(&value, &old_ptr, data))
+			if (!value)
 			{
+				value = data;
 				psv_uid_t id = psv_uid_t::make(1); // odd number
 				id.type = uid_class; // set type
 				id.number = &value - m_data.data(); // set position
@@ -81,12 +86,19 @@ public:
 			return nullptr;
 		}
 
-		return std::atomic_exchange(&m_data[psv_uid_t::make(uid).number], nullptr);
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		std::shared_ptr<T> old_ptr = nullptr;
+		m_data[psv_uid_t::make(uid).number].swap(old_ptr);
+		return old_ptr;
+		//return std::atomic_exchange<std::shared_ptr<T>>(&m_data[psv_uid_t::make(uid).number], nullptr);
 	}
 
 	// remove all objects
 	void clear()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		for (auto& value : m_data)
 		{
 			value = nullptr;
@@ -94,3 +106,4 @@ public:
 	}
 };
 
+void clear_all_psv_objects();

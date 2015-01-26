@@ -79,8 +79,8 @@ struct ARMv7Context
 	{
 		struct
 		{
-			u8 cond : 3;
 			u8 state : 5;
+			u8 cond : 3;
 		};
 
 		u8 IT;

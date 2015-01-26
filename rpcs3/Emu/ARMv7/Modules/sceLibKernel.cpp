@@ -468,7 +468,14 @@ s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount,
 
 s32 sceKernelDeleteSema(s32 semaId)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelDeleteSema(semaId=0x%x)", semaId);
+
+	if (!g_psv_sema_list.remove(semaId))
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+	}
+
+	throw SCE_OK;
 }
 
 s32 sceKernelOpenSema(vm::psv::ptr<const char> pName)
