@@ -686,6 +686,15 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceCtrl.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceDeci4p.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceDisplay.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceGxm.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

@@ -59,6 +59,9 @@
     <ClCompile Include="Emu\ARMv7\Modules\psv_event_flag.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\psv_sema.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceCtrl.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceDeci4p.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceDisplay.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceGxm.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibKernel.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp" />
