@@ -3,14 +3,14 @@
 
 struct vfsStreamMemory : public vfsStream
 {
-	u64 m_addr;
+	u32 m_addr;
 	u64 m_size;
 
 public:
 	vfsStreamMemory();
-	vfsStreamMemory(u64 addr, u64 size = 0);
+	vfsStreamMemory(u32 addr, u32 size = 0);
 
-	void Open(u64 addr, u64 size = 0);
+	void Open(u32 addr, u32 size = 0);
 
 	virtual u64 GetSize() override;
 

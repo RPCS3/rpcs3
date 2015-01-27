@@ -1060,8 +1060,10 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 					res = CELL_SYNC_ERROR_AGAIN;
 					if (!push.m_h7.data() || res)
 					{
+						// TODO: This condition is always true - wrong implementation?
 						return res;
 					}
+
 					break;
 				}
 				else if (!useEventQueue)
@@ -1437,8 +1439,10 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 					res = CELL_SYNC_ERROR_AGAIN;
 					if (!pop.m_h3.data() || res)
 					{
+						// TODO: This condition is always true - wrong implementation?
 						return res;
 					}
+
 					break;
 				}
 				else if (!useEventQueue)

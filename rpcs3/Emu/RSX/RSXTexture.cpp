@@ -289,19 +289,19 @@ u16 RSXVertexTexture::GetMipmap() const
 u8 RSXVertexTexture::GetWrapS() const
 {
 	return 1;
-	return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)]) & 0xf);
+	//return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)]) & 0xf);
 }
 
 u8 RSXVertexTexture::GetWrapT() const
 {
 	return 1;
-	return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)] >> 8) & 0xf);
+	//return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)] >> 8) & 0xf);
 }
 
 u8 RSXVertexTexture::GetWrapR() const
 {
 	return 1;
-	return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)] >> 16) & 0xf);
+	//return ((methodRegisters[NV4097_SET_VERTEX_TEXTURE_ADDRESS + (m_index * 32)] >> 16) & 0xf);
 }
 
 u8 RSXVertexTexture::GetUnsignedRemap() const

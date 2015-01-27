@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/ARMv7/ARMv7Callback.h"
 

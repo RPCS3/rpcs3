@@ -363,6 +363,7 @@ struct PPCdouble
 		case _FPCLASS_PD:    return FPR_PD;
 		case _FPCLASS_PN:    return FPR_PN;
 		case _FPCLASS_PINF:  return FPR_PINF;
+		default: throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 		}
 #else
 		switch (fpc)
@@ -374,8 +375,6 @@ struct PPCdouble
 		default:            return std::signbit(_double) ? FPR_NN : FPR_PN;
 		}
 #endif
-
-		throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 	}
 
 	FPRType GetType() const

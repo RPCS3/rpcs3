@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "rTime.h"
-
+#pragma warning(disable : 4996)
 #include <wx/datetime.h>
 
 std::string rDefaultDateTimeFormat = "%c";
