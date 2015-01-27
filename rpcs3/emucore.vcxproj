@@ -56,11 +56,14 @@
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
-    <ClCompile Include="Emu\ARMv7\Modules\psv_sema_object.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_event_flag.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_sema.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibKernel.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibstdcxx.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\scePerf.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSysmodule.cpp" />
     <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp" />
     <ClCompile Include="Emu\ARMv7\PSVObjectList.cpp" />
     <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
@@ -276,7 +279,8 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
-    <ClInclude Include="Emu\ARMv7\Modules\psv_sema_object.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_event_flag.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_sema.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />

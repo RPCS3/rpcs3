@@ -25,7 +25,8 @@ namespace sce_libstdcxx_func
 	}
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibstdcxx, #name, &sce_libstdcxx_func::name)
+// Attention: find and set correct original mangled name in third parameter, for example: REG_FUNC(0xAE71DC3, operator_new_nothrow, "_ZnwjRKSt9nothrow_t");
+#define REG_FUNC(nid, name, orig_name) reg_psv_func(nid, &sceLibstdcxx, orig_name, &sce_libstdcxx_func::name)
 
 psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 {
@@ -376,9 +377,9 @@ psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 	//REG_FUNC(0xE7889A5B, _Unwind_VRS_Get);
 	//REG_FUNC(0xF106D050, _Unwind_VRS_Pop);
 	//REG_FUNC(0x91CDA2F9, _Unwind_VRS_Set);
-	REG_FUNC(0x173E7421, __aeabi_unwind_cpp_pr0);
-	REG_FUNC(0x3C78DDE3, __aeabi_unwind_cpp_pr1);
-	REG_FUNC(0xF95BDD36, __aeabi_unwind_cpp_pr2);
+	REG_FUNC(0x173E7421, __aeabi_unwind_cpp_pr0, "__aeabi_unwind_cpp_pr0");
+	REG_FUNC(0x3C78DDE3, __aeabi_unwind_cpp_pr1, "__aeabi_unwind_cpp_pr1");
+	REG_FUNC(0xF95BDD36, __aeabi_unwind_cpp_pr2, "__aeabi_unwind_cpp_pr2");
 	//REG_FUNC(0x8C93EFDA, __cxa_allocate_exception);
 	//REG_FUNC(0x6165EE89, __cxa_begin_catch);
 	//REG_FUNC(0x5D74285C, __cxa_begin_cleanup);

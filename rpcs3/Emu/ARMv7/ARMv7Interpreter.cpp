@@ -965,7 +965,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	}
 	case A2:
 	{
-		cond = 15;
+		cond = 0xe; // always true
 		newLR = (context.thread.PC + 4) - 4;
 		target = (context.thread.PC + 4 | 1) + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
 		break;
@@ -1871,7 +1871,7 @@ void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 	case T2:
 	{
-		cond = 15;
+		cond = 0xe; // always true
 		d = (code.data & 0x7);
 		m = (code.data & 0x38) >> 3;
 		set_flags = true;
