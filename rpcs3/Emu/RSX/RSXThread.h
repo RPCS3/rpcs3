@@ -136,6 +136,9 @@ public:
 	u32 m_ctxt_addr;
 	u32 m_report_main_addr;
 
+	// DMA
+	u32 dma_report;
+
 	u32 m_local_mem_addr, m_main_mem_addr;
 	bool m_strict_ordering[0x1000];
 

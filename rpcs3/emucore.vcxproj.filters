@@ -665,6 +665,9 @@
     <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXDMA.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1293,6 +1296,9 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXDMA.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

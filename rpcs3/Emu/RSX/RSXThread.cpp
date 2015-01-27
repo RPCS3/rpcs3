@@ -4,6 +4,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSManager.h"
+#include "Emu/RSX/RSXDMA.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
@@ -333,6 +334,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_REPORT: 0x%x", ARGS(0));
 		}
+
+		dma_report = ARGS(0);
 	}
 	break;
 
@@ -891,9 +894,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_CLEAR_SURFACE:
 	{
-		const u32 mask = ARGS(0);
-
-		ClearSurface(mask);
+		ClearSurface(ARGS(0));
 	}
 	break;
 
@@ -901,8 +902,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		const u32 value = ARGS(0);
 
-		ClearStencil(value & 0xff);
 		ClearDepth(value >> 8);
+		ClearStencil(value & 0xff);
 	}
 	break;
 
@@ -1076,7 +1077,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		m_cur_fragment_prog = &m_fragment_progs[m_cur_fragment_prog_num];
 
-		const  u32 a0 = ARGS(0);
+		const u32 a0 = ARGS(0);
 		m_cur_fragment_prog->offset = a0 & ~0x3;
 		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
@@ -1091,8 +1092,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	case NV4097_SET_SHADE_MODE:
 	{
-		const u32 value = ARGS(0);
-		ShadeModel(value);
+		ShadeModel(ARGS(0));
 	}
 	break;
 
@@ -1867,9 +1867,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		u64 timestamp = get_system_time() * 1000;
 
 		// TODO: Reports can be written to the main memory or the local memory (controlled by NV4097_SET_CONTEXT_DMA_REPORT)
-		vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
-		vm::write32(m_local_mem_addr + offset + 0x8, value);
-		vm::write32(m_local_mem_addr + offset + 0xc, 0);
+		// NOTE: Uncomment these, if DMA implementation is broken
+		//vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
+		//vm::write32(m_local_mem_addr + offset + 0x8, value);
+		//vm::write32(m_local_mem_addr + offset + 0xc, 0);
+
+		dma_write64(dma_report, offset + 0x0, timestamp);
+		dma_write32(dma_report, offset + 0x8, value);
+		dma_write32(dma_report, offset + 0xc, 0);
 	}
 	break;
 
