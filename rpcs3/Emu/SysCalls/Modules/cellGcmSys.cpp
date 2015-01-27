@@ -547,10 +547,10 @@ int cellGcmSetSecondVFrequency(u32 freq)
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: Scanout"); break;
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: Disabled"); break;
-	default: cellGcmSys->Error("Improper display frequency specified!"); return;
+	default: cellGcmSys->Error("Improper display frequency specified!"); return CELL_OK;
 	}
 
-	return;
+	return CELL_OK;
 }
 
 int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
