@@ -1196,7 +1196,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//cmd[3] = 0; // some incrementing by module value
 	//context->current += 0x10;
 
-	if (1)
+	if (0)
 	{
 		const u32 address = context->begin;
 		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
