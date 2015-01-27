@@ -68,8 +68,7 @@ public:
 		}
 
 		iterator(const DirEntryInfo* data)
-			: parent(parent)
-			, data(data)
+			: data(data)
 		{
 		}
 
