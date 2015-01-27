@@ -180,7 +180,7 @@ void SPURecompilerCore::Compile(u16 pos)
 	first = false;
 }
 
-u8 SPURecompilerCore::DecodeMemory(const u32 address)
+u32 SPURecompilerCore::DecodeMemory(const u32 address)
 {
 	assert(CPU.ls_offset == address - CPU.PC);
 	const u32 m_offset = CPU.ls_offset;

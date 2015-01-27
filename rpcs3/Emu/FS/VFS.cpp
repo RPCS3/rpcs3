@@ -325,7 +325,7 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 
 		path = m_devices[max_i]->GetLocalPath();
 
-		for (u32 i = max_eq; i < ps3_path_blocks.size(); i++)
+		for (size_t i = max_eq; i < ps3_path_blocks.size(); i++)
 		{
 			path += "/" + ps3_path_blocks[i];
 		}
@@ -382,7 +382,7 @@ vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path)
 
 	path = m_devices[max_i]->GetPs3Path();
 
-	for (u32 i = max_eq; i < local_path_blocks.size(); i++)
+	for (size_t i = max_eq; i < local_path_blocks.size(); i++)
 	{
 		path += "/" + local_path_blocks[i];
 	}

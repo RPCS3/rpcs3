@@ -1,28 +1,17 @@
 #pragma once
-
+#if 0
 #include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Interpreter.h"
-#include "Emu/System.h"
-#include "Utilities/Log.h"
-
-static const char* g_arm_reg_name[16] =
-{
-	"r0", "r1", "r2", "r3",
-	"r4", "r5", "r6", "r7",
-	"r8", "r9", "r10", "r11",
-	"r12", "sp", "lr", "pc",
-};
 
 using namespace ARMv7_instrs;
 
 struct ARMv7_Instruction
 {
-	void(*func)(ARMv7Thread* thr, const ARMv7_encoding type);
+	void(*func)(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	u8 size;
 	ARMv7_encoding type;
 	const char* name;
 };
-
 
 #define ARMv7_OP_2(func, type) { func, 2, type, #func "_" #type }
 #define ARMv7_OP_4(func, type) { func, 4, type, #func "_" #type }
@@ -30,7 +19,7 @@ struct ARMv7_Instruction
 
 
 // 0x1...
-static void group_0x1(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x1(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x1_main[] =
 {
@@ -56,7 +45,7 @@ static const ARMv7_Instruction g_table_0x1[] =
 	{ group_0x1 }
 };
 
-static void group_0x1(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x1(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0e00) >> 8;
 
@@ -69,7 +58,7 @@ static void group_0x1(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x2...
-static void group_0x2(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x2_main[] =
 {
@@ -89,7 +78,7 @@ static const ARMv7_Instruction g_table_0x2[] =
 	{ group_0x2 }
 };
 
-static void group_0x2(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x2_main[index].name;
@@ -99,7 +88,7 @@ static void group_0x2(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x3...
-static void group_0x3(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x3(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x3_main[] =
 {
@@ -119,7 +108,7 @@ static const ARMv7_Instruction g_table_0x3[] =
 	{ group_0x3 }
 };
 
-static void group_0x3(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x3(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x3_main[index].name;
@@ -129,13 +118,13 @@ static void group_0x3(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x4...
-static void group_0x4(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x40(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x41(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x42(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x43(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x44(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0x47(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x4(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x40(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x41(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x42(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x43(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x44(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0x47(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x4[] =
 {
@@ -160,7 +149,7 @@ static const ARMv7_Instruction g_table_0x40[] =
 	ARMv7_OP_2(LSR_REG, T1)  // C 0xffc0
 };
 
-static void group_0x40(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x40(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
 	thr->m_last_instr_name = g_table_0x40[index].name;
@@ -186,7 +175,7 @@ static const ARMv7_Instruction g_table_0x41[] =
 	ARMv7_OP_2(ROR_REG, T1)  // C 0xffc0
 };
 
-static void group_0x41(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x41(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
 	thr->m_last_instr_name = g_table_0x41[index].name;
@@ -211,7 +200,7 @@ static const ARMv7_Instruction g_table_0x42[] =
 	ARMv7_OP_2(CMN_REG, T1)  // C 0xffc0
 };
 
-static void group_0x42(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x42(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
 	thr->m_last_instr_name = g_table_0x42[index].name;
@@ -237,7 +226,7 @@ static const ARMv7_Instruction g_table_0x43[] =
 	ARMv7_OP_2(MVN_REG, T1)  // C 0xffc0
 };
 
-static void group_0x43(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x43(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00c0) >> 4;
 	thr->m_last_instr_name = g_table_0x43[index].name;
@@ -258,7 +247,7 @@ static const ARMv7_Instruction g_table_0x44[] =
 	ARMv7_OP_2(ADD_SPR, T2)  // 8 0xff87
 };
 
-static void group_0x44(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x44(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0080) >> 4;
 
@@ -284,7 +273,7 @@ static const ARMv7_Instruction g_table_0x47[] =
 	ARMv7_OP_2(BLX, T1)      // 8 0xff80
 };
 
-static void group_0x47(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x47(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0080) >> 4;
 	thr->m_last_instr_name = g_table_0x47[index].name;
@@ -306,7 +295,7 @@ static const ARMv7_Instruction g_table_0x4_main[] =
 	ARMv7_OP_2(LDR_LIT, T1)  // 8 0xf800
 };
 
-static void group_0x4(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x4(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0f00) >> 8;
 
@@ -319,7 +308,7 @@ static void group_0x4(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x5...
-static void group_0x5(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x5(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x5_main[] =
 {
@@ -345,7 +334,7 @@ static const ARMv7_Instruction g_table_0x5[] =
 	{ group_0x5 }
 };
 
-static void group_0x5(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x5(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0e00) >> 8;
 	thr->m_last_instr_name = g_table_0x5_main[index].name;
@@ -355,7 +344,7 @@ static void group_0x5(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x6...
-static void group_0x6(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x6(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x6_main[] =
 {
@@ -375,7 +364,7 @@ static const ARMv7_Instruction g_table_0x6[] =
 	{ group_0x6 }
 };
 
-static void group_0x6(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x6(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x6_main[index].name;
@@ -385,7 +374,7 @@ static void group_0x6(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x7...
-static void group_0x7(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x7(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x7_main[] =
 {
@@ -405,7 +394,7 @@ static const ARMv7_Instruction g_table_0x7[] =
 	{ group_0x7 }
 };
 
-static void group_0x7(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x7(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x7_main[index].name;
@@ -415,7 +404,7 @@ static void group_0x7(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x8...
-static void group_0x8(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x8_main[] =
 {
@@ -427,7 +416,7 @@ static const ARMv7_Instruction g_table_0x8[] =
 	{ group_0x8 }
 };
 
-static void group_0x8(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x8_main[index].name;
@@ -437,7 +426,7 @@ static void group_0x8(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0x9...
-static void group_0x9(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0x9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0x9_main[] =
 {
@@ -457,7 +446,7 @@ static const ARMv7_Instruction g_table_0x9[] =
 	{ group_0x9 }
 };
 
-static void group_0x9(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0x9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0x9_main[index].name;
@@ -467,7 +456,7 @@ static void group_0x9(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xa...
-static void group_0xa(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xa(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0xa_main[] =
 {
@@ -487,7 +476,7 @@ static const ARMv7_Instruction g_table_0xa[] =
 	{ group_0xa }
 };
 
-static void group_0xa(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xa(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0xa_main[index].name;
@@ -497,9 +486,9 @@ static void group_0xa(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xb...
-static void group_0xb(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xb0(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xba(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xb(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xb0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xba(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0xb0[] =
 {
@@ -514,7 +503,7 @@ static const ARMv7_Instruction g_table_0xb0[] =
 	ARMv7_OP_2(SUB_SPI, T1)  // 8 0xff80
 };
 
-static void group_0xb0(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xb0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0080) >> 4;
 	thr->m_last_instr_name = g_table_0xb0[index].name;
@@ -540,7 +529,7 @@ static const ARMv7_Instruction g_table_0xba[] =
 	ARMv7_OP_2(REVSH, T1)    // C 0xffc0
 };
 
-static void group_0xba(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xba(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00c0) >> 4; // mask 0xffc0
 	thr->m_last_instr_name = g_table_0xba[index].name;
@@ -575,7 +564,7 @@ static const ARMv7_Instruction g_table_0xb[] =
 	{ group_0xb }
 };
 
-static void group_0xb(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xb(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0e00) >> 8;
 
@@ -591,7 +580,7 @@ static void group_0xb(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xc...
-static void group_0xc(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xc(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0xc_main[] =
 {
@@ -611,7 +600,7 @@ static const ARMv7_Instruction g_table_0xc[] =
 	{ group_0xc }
 };
 
-static void group_0xc(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xc(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x0800) >> 8;
 	thr->m_last_instr_name = g_table_0xc_main[index].name;
@@ -621,7 +610,7 @@ static void group_0xc(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xd...
-static void group_0xd(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xd(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0xd_main[] =
 {
@@ -648,7 +637,7 @@ static const ARMv7_Instruction g_table_0xd[] =
 	{ group_0xd }
 };
 
-static void group_0xd(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xd(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	//u32 index = (thr->code.code0 & 0x0f00) >> 8;
 	//if ((thr->code.code0 & 0xf000) == 0xd000) index = 0;
@@ -661,19 +650,19 @@ static void group_0xd(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xe...
-static void group_0xe(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xe85(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xe8(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xe9(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea4(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea4f(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea4f0000(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea4f0030(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xea6(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xeb(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xeb0(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xeba(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xe(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xe85(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xe8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xe9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea4(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea4f(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea4f0000(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea4f0030(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xea6(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xeb(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xeb0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xeba(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 
 static const ARMv7_Instruction g_table_0xe85[] =
@@ -696,7 +685,7 @@ static const ARMv7_Instruction g_table_0xe85[] =
 	ARMv7_OP_4(LDRD_LIT, T1)  // F 0xfe7f, 0x0000
 };
 
-static void group_0xe85(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xe85(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	//u32 index = thr->code.code0 & 0x000f;
 	//if ((thr->code.code0 & 0xfe50) == 0xe850) index = 0x0;
@@ -726,7 +715,7 @@ static const ARMv7_Instruction g_table_0xe8[] =
 	ARMv7_OP_4(TB_, T1)       // D 0xfff0, 0xffe0
 };
 
-static void group_0xe8(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xe8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00f0) >> 4;
 
@@ -747,7 +736,7 @@ static const ARMv7_Instruction g_table_0xe9[] =
 	ARMv7_OP_4(PUSH, T2)      // 2 0xffff, 0x0000
 };
 
-static void group_0xe9(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xe9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00d0) >> 4;
 
@@ -779,7 +768,7 @@ static const ARMv7_Instruction g_table_0xea4[] =
 	{ group_0xea4f }         // F
 };
 
-static void group_0xea4(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea4(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = 0x0;
 	if ((thr->code.code0 & 0xffef) == 0xea4f) index = 0xf; // check me
@@ -798,7 +787,7 @@ static const ARMv7_Instruction g_table_0xea4f[] =
 	{ group_0xea4f0030 }     // 3
 };
 
-static void group_0xea4f(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea4f(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code1 & 0x0030) >> 4;
 	thr->m_last_instr_name = g_table_0xea4f[index].name;
@@ -813,7 +802,7 @@ static const ARMv7_Instruction g_table_0xea4f0000[] =
 	ARMv7_OP_4(LSL_IMM, T2)  // 1 0xffef, 0x8030
 };
 
-static void group_0xea4f0000(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea4f0000(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = thr->code.code1 & 0x8030 ? 0x0 : 0x1;
 	thr->m_last_instr_name = g_table_0xea4f0000[index].name;
@@ -828,7 +817,7 @@ static const ARMv7_Instruction g_table_0xea4f0030[] =
 	ARMv7_OP_4(ROR_IMM, T1)  // 2 0xffef, 0x8030
 };
 
-static void group_0xea4f0030(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea4f0030(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = thr->code.code1 & 0x8030 ? 0x0 : 0x1;
 	thr->m_last_instr_name = g_table_0xea4f0030[index].name;
@@ -857,7 +846,7 @@ static const ARMv7_Instruction g_table_0xea6[] =
 	ARMv7_OP_4(MVN_REG, T2)  // F 0xffef, 0x8000
 };
 
-static void group_0xea6(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea6(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -886,7 +875,7 @@ static const ARMv7_Instruction g_table_0xea[] =
 	ARMv7_OP_4(PKH, T1)       // C 0xfff0, 0x8010
 };
 
-static void group_0xea(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xea(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00e0) >> 4;
 
@@ -918,7 +907,7 @@ static const ARMv7_Instruction g_table_0xeb0[] =
 	ARMv7_OP_4(ADD_SPR, T3)  // D 0xffef, 0x8000
 };
 
-static void group_0xeb0(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xeb0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -948,7 +937,7 @@ static const ARMv7_Instruction g_table_0xeba[] =
 	ARMv7_OP_4(SUB_SPR, T1)  // D 0xffef, 0x8000
 };
 
-static void group_0xeba(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xeba(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -977,7 +966,7 @@ static const ARMv7_Instruction g_table_0xeb[] =
 	ARMv7_OP_4(RSB_REG, T1)  // C 0xffe0, 0x8000
 };
 
-static void group_0xeb(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xeb(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00e0) >> 4;
 
@@ -1015,7 +1004,7 @@ static const ARMv7_Instruction g_table_0xe[] =
 	{ group_0xe }
 };
 
-static void group_0xe(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xe(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0f00) >> 8;
 
@@ -1028,36 +1017,36 @@ static void group_0xe(ARMv7Thread* thr, const ARMv7_encoding type)
 }
 
 // 0xf...
-static void group_0xf(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf000(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf04(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf06(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf0(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf1(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf1a(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf10(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf20(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf2a(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf2(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf36(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf3(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf810(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf800(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf81(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf820(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf840(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf84(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf850(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf85(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf8(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf910(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf91(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf930(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf93(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xf9(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xfa00(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xfa90(ARMv7Thread* thr, const ARMv7_encoding type);
-static void group_0xfa(ARMv7Thread* thr, const ARMv7_encoding type);
+static void group_0xf(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf000(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf04(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf06(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf1(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf1a(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf10(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf20(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf2a(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf36(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf3(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf810(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf800(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf81(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf820(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf840(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf84(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf850(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf85(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf910(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf91(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf930(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf93(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xf9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xfa00(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xfa90(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+static void group_0xfa(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 static const ARMv7_Instruction g_table_0xf000[] =
 {
@@ -1077,7 +1066,7 @@ static const ARMv7_Instruction g_table_0xf000[] =
 	ARMv7_OP_4(BL, T1)       // D 0xf800, 0xd000
 };
 
-static void group_0xf000(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf000(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0xd000) >> 12;
 
@@ -1110,7 +1099,7 @@ static const ARMv7_Instruction g_table_0xf04[] =
 	ARMv7_OP_4(MOV_IMM, T2)  // F 0xfbef, 0x8000
 };
 
-static void group_0xf04(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf04(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1142,7 +1131,7 @@ static const ARMv7_Instruction g_table_0xf06[] =
 	ARMv7_OP_4(MVN_IMM, T1)  // F 0xfbef, 0x8000
 };
 
-static void group_0xf06(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf06(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1194,7 +1183,7 @@ static const ARMv7_Instruction g_table_0xf0[] =
 
 };
 
-static void group_0xf0(ARMv7Thread* thr, const ARMv7_encoding type) // TODO: optimize this group
+static void group_0xf0(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type) // TODO: optimize this group
 {
 	u32 index = 0;
 	if ((thr->m_arg & 0xfbe08000) == 0xf0000000) index = 0x0;
@@ -1242,7 +1231,7 @@ static const ARMv7_Instruction g_table_0xf10[] =
 	ARMv7_OP_4(ADD_SPI, T3)  // D 0xfbef, 0x8000
 };
 
-static void group_0xf10(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf10(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1272,7 +1261,7 @@ static const ARMv7_Instruction g_table_0xf1a[] =
 	ARMv7_OP_4(SUB_SPI, T2)  // D 0xfbef, 0x8000
 };
 
-static void group_0xf1a(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf1a(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1301,7 +1290,7 @@ static const ARMv7_Instruction g_table_0xf1[] =
 	ARMv7_OP_4(RSB_IMM, T2)  // C 0xfbe0, 0x8000
 };
 
-static void group_0xf1(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf1(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00e0) >> 4;
 
@@ -1334,7 +1323,7 @@ static const ARMv7_Instruction g_table_0xf20[] =
 	ARMv7_OP_4(ADR, T3)      // F 0xfbff, 0x8000
 };
 
-static void group_0xf20(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf20(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1366,7 +1355,7 @@ static const ARMv7_Instruction g_table_0xf2a[] =
 	ARMv7_OP_4(ADR, T2)      // F 0xfbff, 0x8000
 };
 
-static void group_0xf2a(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf2a(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1395,7 +1384,7 @@ static const ARMv7_Instruction g_table_0xf2[] =
 	ARMv7_OP_4(MOVT, T1)     // C 0xfbf0, 0x8000
 };
 
-static void group_0xf2(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf2(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00f0) >> 4; // mask 0xfbf0
 	thr->m_last_instr_name = g_table_0xf2[index].name;
@@ -1424,7 +1413,7 @@ static const ARMv7_Instruction g_table_0xf36[] =
 	ARMv7_OP_4(BFC, T1)      // F 0xffff, 0x8020
 };
 
-static void group_0xf36(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf36(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1455,7 +1444,7 @@ static const ARMv7_Instruction g_table_0xf3[] =
 	ARMv7_OP_4(MRS, T1),     // E 0xffff, 0xf0ff
 };
 
-static void group_0xf3(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf3(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00f0) >> 4;
 	thr->m_last_instr_name = g_table_0xf3[index].name;
@@ -1477,7 +1466,7 @@ static const ARMv7_Instruction g_table_0xf800[] =
 	ARMv7_OP_4(STRB_IMM, T3)  // 8 0xfff0, 0x0800
 };
 
-static void group_0xf800(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf800(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1502,7 +1491,7 @@ static const ARMv7_Instruction g_table_0xf810[] =
 	ARMv7_OP_4(LDRB_IMM, T3)  // 8 0xfff0, 0x0800
 };
 
-static void group_0xf810(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf810(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1534,7 +1523,7 @@ static const ARMv7_Instruction g_table_0xf81[] =
 	ARMv7_OP_4(LDRB_LIT, T1) // F 0xff7f, 0x0000
 };
 
-static void group_0xf81(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf81(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1559,7 +1548,7 @@ static const ARMv7_Instruction g_table_0xf820[] =
 	ARMv7_OP_4(STRH_IMM, T3)  // 8 0xfff0, 0x0800
 };
 
-static void group_0xf820(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf820(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1584,7 +1573,7 @@ static const ARMv7_Instruction g_table_0xf840[] =
 	ARMv7_OP_4(STR_IMM, T4)   // 8 0xfff0, 0x0800
 };
 
-static void group_0xf840(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf840(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1614,7 +1603,7 @@ static const ARMv7_Instruction g_table_0xf84[] =
 	ARMv7_OP_4(PUSH, T3)      // D 0xffff, 0x0fff
 };
 
-static void group_0xf84(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf84(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1639,7 +1628,7 @@ static const ARMv7_Instruction g_table_0xf850[] =
 	ARMv7_OP_4(LDR_IMM, T4)   // 8 0xfff0, 0x0800
 };
 
-static void group_0xf850(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf850(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1671,7 +1660,7 @@ static const ARMv7_Instruction g_table_0xf85[] =
 	ARMv7_OP_4(LDR_LIT, T2)   // F 0xff7f, 0x0000
 };
 
-static void group_0xf85(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf85(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1701,7 +1690,7 @@ static const ARMv7_Instruction g_table_0xf8[] =
 	ARMv7_OP_4(LDR_IMM, T3)   // D 0xfff0, 0x0000
 };
 
-static void group_0xf8(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf8(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code0 & 0x00f0) >> 4;
 	thr->m_last_instr_name = g_table_0xf8[index].name;
@@ -1723,7 +1712,7 @@ static const ARMv7_Instruction g_table_0xf910[] =
 	ARMv7_OP_4(LDRSB_IMM, T2)  // 8 0xfff0, 0x0800
 };
 
-static void group_0xf910(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf910(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1755,7 +1744,7 @@ static const ARMv7_Instruction g_table_0xf91[] =
 	ARMv7_OP_4(LDRSB_LIT, T1) // F 0xff7f, 0x0000
 };
 
-static void group_0xf91(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf91(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1780,7 +1769,7 @@ static const ARMv7_Instruction g_table_0xf930[] =
 	ARMv7_OP_4(LDRSH_IMM, T2)  // 8 0xfff0, 0x0800
 };
 
-static void group_0xf930(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf930(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code1 & 0x0f00) >> 8;
 
@@ -1812,7 +1801,7 @@ static const ARMv7_Instruction g_table_0xf93[] =
 	ARMv7_OP_4(LDRSH_LIT, T1) // F 0xff7f, 0x0000
 };
 
-static void group_0xf93(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf93(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = thr->code.code0 & 0x000f;
 
@@ -1840,7 +1829,7 @@ static const ARMv7_Instruction g_table_0xf9[] =
 	ARMv7_OP_4(LDRSH_IMM, T1), // B 0xfff0, 0x0000
 };
 
-static void group_0xf9(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf9(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00f0) >> 4;
 
@@ -1873,7 +1862,7 @@ static const ARMv7_Instruction g_table_0xfa00[] =
 	ARMv7_OP_4(LSL_REG, T2)    // F 0xffe0, 0xf0f0
 };
 
-static void group_0xfa00(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xfa00(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code1 & 0xf0f0) == 0xf000 ? 0xf : 0x0;
 	thr->m_last_instr_name = g_table_0xfa00[index].name;
@@ -1898,7 +1887,7 @@ static const ARMv7_Instruction g_table_0xfa90[] =
 	ARMv7_OP_4(REVSH, T2)      // B 0xfff0, 0xf0f0
 };
 
-static void group_0xfa90(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xfa90(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	const u32 index = (thr->code.code1 & 0x00f0) >> 4;
 	thr->m_last_instr_name = g_table_0xfa90[index].name;
@@ -1923,7 +1912,7 @@ static const ARMv7_Instruction g_table_0xfa[] =
 	ARMv7_OP_4(CLZ, T1)        // B 0xfff0, 0xf0f0
 };
 
-static void group_0xfa(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xfa(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x00e0) >> 4;
 
@@ -1958,7 +1947,7 @@ static const ARMv7_Instruction g_table_0xf_main[] =
 
 };
 
-static void group_0xf(ARMv7Thread* thr, const ARMv7_encoding type)
+static void group_0xf(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 index = (thr->code.code0 & 0x0b00) >> 8;
 
@@ -2023,3 +2012,4 @@ static void execute_main_group(ARMv7Thread* thr)
 #undef ARMv7_OP_2
 #undef ARMv7_OP_4
 #undef ARMv7_NULL_OP
+#endif

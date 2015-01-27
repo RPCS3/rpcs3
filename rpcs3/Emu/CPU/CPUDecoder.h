@@ -1,11 +1,10 @@
 #pragma once
 #include "CPUInstrTable.h"
-#pragma warning( disable : 4800 )
 
 class CPUDecoder
 {
 public:
-	virtual u8 DecodeMemory(const u32 address)=0;
+	virtual u32 DecodeMemory(const u32 address) = 0;
 
 	virtual ~CPUDecoder() = default;
 };

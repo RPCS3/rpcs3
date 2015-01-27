@@ -6,15 +6,15 @@ vfsStreamMemory::vfsStreamMemory() : vfsStream()
 {
 }
 
-vfsStreamMemory::vfsStreamMemory(u64 addr, u64 size) : vfsStream()
+vfsStreamMemory::vfsStreamMemory(u32 addr, u32 size) : vfsStream()
 {
 	Open(addr, size);
 }
 
-void vfsStreamMemory::Open(u64 addr, u64 size)
+void vfsStreamMemory::Open(u32 addr, u32 size)
 {
 	m_addr = addr;
-	m_size = size ? size : ~0ULL;
+	m_size = size ? size : 0x100000000ull - addr; // determine max possible size
 
 	vfsStream::Reset();
 }
@@ -26,24 +26,24 @@ u64 vfsStreamMemory::GetSize()
 
 u64 vfsStreamMemory::Write(const void* src, u64 size)
 {
-	if(Tell() + size > GetSize())
+	assert(Tell() < m_size);
+	if (Tell() + size > m_size)
 	{
-		size = GetSize() - Tell();
+		size = m_size - Tell();
 	}
 
-	memcpy(vm::get_ptr<void>(m_addr + Tell()), src, size);
-
+	memcpy(vm::get_ptr<void>(vm::cast(m_addr + Tell())), src, size);
 	return vfsStream::Write(src, size);
 }
 
 u64 vfsStreamMemory::Read(void* dst, u64 size)
 {
-	if(Tell() + size > GetSize())
+	assert(Tell() < GetSize());
+	if (Tell() + size > GetSize())
 	{
 		size = GetSize() - Tell();
 	}
 
-	memcpy(dst, vm::get_ptr<void>(m_addr + Tell()), size);
-
+	memcpy(dst, vm::get_ptr<void>(vm::cast(m_addr + Tell())), size);
 	return vfsStream::Read(dst, size);
 }

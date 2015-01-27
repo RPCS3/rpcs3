@@ -96,9 +96,9 @@ size_t fmt::detail::get_fmt_len(const char* fmt, size_t len)
 		fmt += 2;
 		len -= 2;
 
-		if (fmt[1] == '1')
+		if (fmt[0] == '1')
 		{
-			assert(len >= 3 && fmt[2] - '0' < 7);
+			assert(len >= 3 && fmt[1] - '0' < 7);
 			res++;
 			fmt++;
 			len--;

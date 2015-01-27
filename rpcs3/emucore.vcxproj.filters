@@ -662,6 +662,9 @@
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Thread.cpp">
       <Filter>Emu\Audio\XAudio2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1281,6 +1284,15 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\ARMv7Context.h">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\ARMv7Callback.h">
+      <Filter>Emu\CPU\ARMv7</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

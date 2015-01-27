@@ -117,6 +117,19 @@ std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id)
 	return res;
 }
 
+std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id, CPUThreadType type)
+{
+	std::shared_ptr<CPUThread> res;
+
+	if (!id) return nullptr;
+
+	if (!Emu.GetIdManager().GetIDData(id, res)) return nullptr;
+
+	if (res->GetType() != type) return nullptr;
+
+	return res;
+}
+
 RawSPUThread* CPUThreadManager::GetRawSPUThread(u32 num)
 {
 	if (num < sizeof(Memory.RawSPUMem) / sizeof(Memory.RawSPUMem[0]))

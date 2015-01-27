@@ -14,6 +14,8 @@
 #endif
 
 // This header should be frontend-agnostic, so don't assume wx includes everything
+#pragma warning( disable : 4800 )
+
 #include <cstdio>
 #include <cstring>
 #include <cassert>

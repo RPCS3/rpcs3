@@ -198,7 +198,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -206,8 +206,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u8): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -220,7 +218,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -228,8 +226,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u16): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -242,7 +238,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -250,8 +246,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u32): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -264,7 +258,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
 				}
@@ -272,8 +266,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (u64): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -294,8 +286,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s8): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -316,8 +306,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s16): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -338,8 +326,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s32): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -360,8 +346,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (s64): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -382,8 +366,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (float): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -404,8 +386,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (double): " + std::string(fmt, len);
 				}
-
-				return{};
 			}
 		};
 
@@ -418,7 +398,7 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
-				else if (fmt[len - 1] == 'd')
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return arg ? "1" : "0";
 				}
@@ -430,26 +410,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (bool): " + std::string(fmt, len);
 				}
-
-				return{};
-			}
-		};
-
-		template<>
-		struct get_fmt<char*>
-		{
-			static std::string text(const char* fmt, size_t len, char* arg)
-			{
-				if (fmt[len - 1] == 's')
-				{
-					return arg;
-				}
-				else
-				{
-					throw "Invalid formatting (char*): " + std::string(fmt, len);
-				}
-
-				return{};
 			}
 		};
 
@@ -466,62 +426,6 @@ namespace fmt
 				{
 					throw "Invalid formatting (const char*): " + std::string(fmt, len);
 				}
-
-				return{};
-			}
-		};
-
-		//template<size_t size>
-		//struct get_fmt<char[size], false>
-		//{
-		//	static std::string text(const char* fmt, size_t len, const char(&arg)[size])
-		//	{
-		//		if (fmt[len - 1] == 's')
-		//		{
-		//			return std::string(arg, size);
-		//		}
-		//		else
-		//		{
-		//			throw "Invalid formatting (char[size]): " + std::string(fmt, len);
-		//		}
-
-		//		return{};
-		//	}
-		//};
-
-		//template<size_t size>
-		//struct get_fmt<const char[size], false>
-		//{
-		//	static std::string text(const char* fmt, size_t len, const char(&arg)[size])
-		//	{
-		//		if (fmt[len - 1] == 's')
-		//		{
-		//			return std::string(arg, size);
-		//		}
-		//		else
-		//		{
-		//			throw "Invalid formatting (const char[size]): " + std::string(fmt, len);
-		//		}
-
-		//		return{};
-		//	}
-		//};
-
-		template<>
-		struct get_fmt<std::string>
-		{
-			static std::string text(const char* fmt, size_t len, const std::string& arg)
-			{
-				if (fmt[len - 1] == 's')
-				{
-					return arg;
-				}
-				else
-				{
-					throw "Invalid formatting (std::string): " + std::string(fmt, len);
-				}
-
-				return{};
 			}
 		};
 
@@ -549,6 +453,17 @@ namespace fmt
 		}
 	};
 
+	template<>
+	struct unveil<char*, false>
+	{
+		typedef const char* result_type;
+
+		__forceinline static result_type get_value(const char* arg)
+		{
+			return arg;
+		}
+	};
+
 	template<size_t N>
 	struct unveil<const char[N], false>
 	{
@@ -563,11 +478,11 @@ namespace fmt
 	template<>
 	struct unveil<std::string, false>
 	{
-		typedef const std::string& result_type;
+		typedef const char* result_type;
 
 		__forceinline static result_type get_value(const std::string& arg)
 		{
-			return arg;
+			return arg.c_str();
 		}
 	};
 
@@ -613,8 +528,9 @@ namespace fmt
 	float (%x, %f)
 	double (%x, %f)
 	bool (%x, %d, %s)
-	char*, const char*, std::string (%s)
+	char* (%s)
 
+	std::string forced to .c_str() (fmt::unveil)
 	be_t<> of any appropriate type in this list (fmt::unveil)
 	enum of any appropriate type in this list (fmt::unveil)
 
