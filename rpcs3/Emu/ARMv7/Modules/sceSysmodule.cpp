@@ -6,21 +6,21 @@ extern psv_log_base sceSysmodule;
 
 s32 sceSysmoduleLoadModule(u16 id)
 {
-	sceSysmodule.Todo("sceSysmoduleLoadModule(id=0x%04x)", id);
+	sceSysmodule.Error("sceSysmoduleLoadModule(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // loading succeeded
 }
 
 s32 sceSysmoduleUnloadModule(u16 id)
 {
-	sceSysmodule.Todo("sceSysmoduleUnloadModule(id=0x%04x)", id);
+	sceSysmodule.Error("sceSysmoduleUnloadModule(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // unloading succeeded
 }
 
 s32 sceSysmoduleIsLoaded(u16 id)
 {
-	sceSysmodule.Todo("sceSysmoduleIsLoaded(id=0x%04x)", id);
+	sceSysmodule.Error("sceSysmoduleIsLoaded(id=0x%04x) -> SCE_OK", id);
 
 	return SCE_OK; // module is loaded
 }
