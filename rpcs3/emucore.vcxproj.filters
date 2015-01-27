@@ -683,6 +683,9 @@
     <ClCompile Include="Emu\ARMv7\Modules\scePerf.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceCtrl.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

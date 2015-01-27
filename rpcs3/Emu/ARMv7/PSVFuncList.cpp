@@ -50,6 +50,7 @@ extern psv_log_base sceLibstdcxx;
 extern psv_log_base sceLibKernel;
 extern psv_log_base sceSysmodule;
 extern psv_log_base scePerf;
+extern psv_log_base sceCtrl;
 
 void initialize_psv_modules()
 {
@@ -62,6 +63,7 @@ void initialize_psv_modules()
 	g_psv_modules.push_back(&sceLibKernel);
 	g_psv_modules.push_back(&sceSysmodule);
 	g_psv_modules.push_back(&scePerf);
+	g_psv_modules.push_back(&sceCtrl);
 
 	// setup special functions (without NIDs)
 	psv_func unimplemented;
