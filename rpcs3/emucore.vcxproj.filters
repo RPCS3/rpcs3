@@ -1333,5 +1333,8 @@
     <ClInclude Include="Emu\ARMv7\Modules\psv_sema.h">
       <Filter>Emu\CPU\ARMv7\Objects</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\sceGxm.h">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

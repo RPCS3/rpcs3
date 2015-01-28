@@ -708,7 +708,7 @@ class to_be_t
 
 public:
 	//true if need swap endianes for be
-	static const bool value = (sizeof(T2) > 1) && (std::is_arithmetic<T>::value || std::is_enum<T>::value);
+	static const bool value = std::is_arithmetic<T>::value || std::is_enum<T>::value;
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
@@ -716,26 +716,58 @@ public:
 	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
 };
 
+template<typename T, typename T2>
+class to_be_t<T, const T2>
+{
+public:
+	static const bool value = to_be_t<T, T2>::value;
+	typedef const typename to_be_t<T, T2>::type type;
+	typedef const typename to_be_t<T, T2>::forced_type forced_type;
+};
+
 template<typename T>
 class to_be_t<T, void>
 {
 public:
-	//true if need swap endianes for be
 	static const bool value = false;
-
-	//be_t<T, size> if need swap endianes, T otherwise
 	typedef void type;
+	typedef void forced_type;
 };
 
 template<typename T>
-class to_be_t<T, const void>
+class to_be_t<T, u8>
 {
 public:
-	//true if need swap endianes for be
 	static const bool value = false;
+	typedef u8 type;
+	typedef u8 forced_type;
+};
 
-	//be_t<T, size> if need swap endianes, T otherwise
-	typedef const void type;
+template<typename T>
+class to_be_t<T, s8>
+{
+public:
+	static const bool value = false;
+	typedef s8 type;
+	typedef s8 forced_type;
+};
+
+template<typename T>
+class to_be_t<T, char>
+{
+public:
+	static const bool value = false;
+	typedef char type;
+	typedef char forced_type;
+};
+
+template<typename T>
+class to_be_t<T, bool>
+{
+public:
+	static const bool value = false;
+	typedef bool type;
+	typedef bool forced_type;
 };
 
 template<typename T, typename T2 = T>

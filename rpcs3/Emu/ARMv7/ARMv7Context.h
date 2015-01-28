@@ -266,7 +266,7 @@ struct cast_armv7_gpr<bool, false>
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u32 reg)
+	__forceinline static bool from_gpr(const u32& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}

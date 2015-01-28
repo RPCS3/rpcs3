@@ -19,7 +19,7 @@
 #include "cellGame.h"
 #include "cellSysutil.h"
 
-typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
+typedef void (CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
 Module *cellSysutil = nullptr;
 
@@ -835,10 +835,10 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 }
 
 extern int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern void cellSysutil_SaveData_init();
 

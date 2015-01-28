@@ -35,22 +35,22 @@ s32 sceCtrlGetSamplingMode(vm::psv::ptr<u32> puiMode)
 	throw __FUNCTION__;
 }
 
-s32 sceCtrlPeekBufferPositive(s32 port, vm::psv::ptr<SceCtrlData>pData, s32 nBufs)
+s32 sceCtrlPeekBufferPositive(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceCtrlPeekBufferNegative(s32 port, vm::psv::ptr<SceCtrlData>pData, s32 nBufs)
+s32 sceCtrlPeekBufferNegative(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceCtrlReadBufferPositive(s32 port, vm::psv::ptr<SceCtrlData>pData, s32 nBufs)
+s32 sceCtrlReadBufferPositive(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceCtrlReadBufferNegative(s32 port, vm::psv::ptr<SceCtrlData>pData, s32 nBufs)
+s32 sceCtrlReadBufferNegative(s32 port, vm::psv::ptr<SceCtrlData> pData, s32 nBufs)
 {
 	throw __FUNCTION__;
 }

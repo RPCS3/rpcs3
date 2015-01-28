@@ -306,7 +306,7 @@ struct SceKernelAllocMemBlockOpt
 
 // Thread Manager definitions (threads)
 
-typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
+typedef s32(SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
 
 struct SceKernelThreadOptParam
 {
@@ -371,7 +371,7 @@ struct SceKernelSystemInfo
 
 // Thread Manager definitions (callbacks)
 
-typedef s32(*SceKernelCallbackFunction)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
+typedef s32(SceKernelCallbackFunction)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelCallbackInfo
 {
@@ -389,7 +389,7 @@ struct SceKernelCallbackInfo
 
 // Thread Manager definitions (events)
 
-typedef s32(*SceKernelThreadEventHandler)(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon);
+typedef s32(SceKernelThreadEventHandler)(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelEventInfo
 {

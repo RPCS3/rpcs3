@@ -285,6 +285,7 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_event_flag.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_sema.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceGxm.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />
