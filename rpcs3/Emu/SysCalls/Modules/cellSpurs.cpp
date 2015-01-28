@@ -2821,7 +2821,7 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 	}
 
 	taskset->m.task_info[tmp_task_id].elf_addr.set(elf_addr.addr());
-	taskset->m.task_info[tmp_task_id].context_save_storage.set((context_addr.addr() & 0xFFFFFFF8) | alloc_ls_blocks);
+	taskset->m.task_info[tmp_task_id].context_save_storage_and_alloc_ls_blocks = (context_addr.addr() | alloc_ls_blocks);
 	for (u32 i = 0; i < 2; i++)
 	{
 		taskset->m.task_info[tmp_task_id].args.u64[i] = arg != 0 ? arg->u64[i] : 0;

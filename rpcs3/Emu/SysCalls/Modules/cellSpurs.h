@@ -181,6 +181,12 @@ enum SpursTraceConstants
 	CELL_SPURS_TRACE_SERVICE_WAIT   = 0x02,
 	CELL_SPURS_TRACE_SERVICE_EXIT   = 0x03,
 
+	// Task incident
+	CELL_SPURS_TRACE_TASK_DISPATCH  = 0x01,
+	CELL_SPURS_TRACE_TASK_YIELD     = 0x03,
+	CELL_SPURS_TRACE_TASK_WAIT      = 0x04,
+	CELL_SPURS_TRACE_TASK_EXIT      = 0x05,
+
 	// Trace mode flags
 	CELL_SPURS_TRACE_MODE_FLAG_WRAP_BUFFER              = 0x1,
 	CELL_SPURS_TRACE_MODE_FLAG_SYNCHRONOUS_START_STOP   = 0x2,
@@ -334,6 +340,12 @@ struct CellSpursTracePacket
 			be_t<u16> level;
 			be_t<u16> ls;
 		} start;
+
+		struct
+		{
+			be_t<u32> incident;
+			be_t<u32> taskId;
+		} task;
 
 		be_t<u64> user;
 		be_t<u64> guid;
@@ -607,7 +619,7 @@ struct CellSpursTaskset
 	{
 		CellSpursTaskArgument args;
 		vm::bptr<u64, 1, u64> elf_addr;
-		vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+		be_t<u64> context_save_storage_and_alloc_ls_blocks; // This is (context_save_storage_addr | allocated_ls_blocks)
 		CellSpursTaskLsPattern ls_pattern;
 	};
 
@@ -716,7 +728,7 @@ struct CellSpursTaskset2
 	{
 		CellSpursTaskArgument args;
 		vm::bptr<u64, 1, u64> elf_addr;
-		vm::bptr<u64, 1, u64> context_save_storage; // This is ((context_save_storage_addr & 0xFFFFFFF8) | allocated_ls_blocks)
+		vm::bptr<u64, 1, u64> context_save_storage; // This is (context_save_storage_addr | allocated_ls_blocks)
 		CellSpursTaskLsPattern ls_pattern;
 	};
 
@@ -885,10 +897,11 @@ static_assert(sizeof(SpursKernelMgmtData) == 0x130, "Incorrect size for SpursKer
 // The SPURS taskset policy module data store. This resides at 0x2700 of the LS.
 struct SpursTasksetPmMgmtData
 {
-    u8 tempArea[0x80];                              // 0x2700
-    u8 x2780[0x27B8 - 0x2780];                      // 0x2780
+    u8 tempAreaTaskset[0x80];                       // 0x2700
+    u8 tempAreaTaskInfo[0x30];                      // 0x2780
+    be_t<u64> x27B0;                                // 0x27B0
     vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
-    be_t<u32> kernelMgmt;                           // 0x27C0
+    be_t<u32> kernelMgmtAddr;                       // 0x27C0
     be_t<u32> yieldAddr;                            // 0x27C4
     be_t<u32> x27C8;                                // 0x27C8
     be_t<u32> spuNum;                               // 0x27CC
@@ -896,9 +909,20 @@ struct SpursTasksetPmMgmtData
     be_t<u32> taskId;                               // 0x27D4
     u8 x27D8[0x2840 - 0x27D8];                      // 0x27D8
     u8 moduleId[16];                                // 0x2840
-    u8 x2850[0x2C80 - 0x2850];                      // 0x2850
-    be_t<u128> contextSaveArea[50];                 // 0x2C80
-    u8 x2FA0[0x3000 - 0x2FA0];                      // 0x2FA0
+    u8 stackArea[0x2C80 - 0x2850];                  // 0x2850
+    be_t<u128> savedContextLr;                      // 0x2C80
+    be_t<u128> savedContextSp;                      // 0x2C90
+    be_t<u128> savedContextR80ToR127[48];           // 0x2CA0
+    be_t<u128> savedContextFpscr;                   // 0x2FA0
+    be_t<u32> savedWriteTagGroupQueryMask;          // 0x2FB0
+    be_t<u32> savedSpuWriteEventMask;               // 0x2FB4
+    be_t<u32> tasksetMgmtAddr;                      // 0x2FB8
+    be_t<u32> lowestLoadSegmentAddr;                // 0x2FBC
+    be_t<u64> x2FC0;                                // 0x2FC0
+    be_t<u64> x2FC8;                                // 0x2FC8
+    be_t<u32> x2FD0;                                // 0x2FD0
+    be_t<u32> taskExitCode;                         // 0x2FD4
+    u8 x2FD8[0x3000 - 0x2FD8];                      // 0x2FD8
 };
 
 static_assert(sizeof(SpursTasksetPmMgmtData) == 0x900, "Incorrect size for SpursTasksetPmMgmtData");

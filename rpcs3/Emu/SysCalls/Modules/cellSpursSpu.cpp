@@ -865,7 +865,57 @@ bool spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 
     return false;
 }
 
-void spursTasksetDispatch() {
+void spursTasksetDispatch(SPUThread & spu) {
+    auto mgmt       = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+    auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
+
+    u32 taskId;
+    u32 isWaiting;
+    spursTasksetProcessRequest(spu, 5, &taskId, &isWaiting);
+    if (taskId >= CELL_SPURS_MAX_TASK) {
+        // TODO: spursTasksetExit(spu);
+    }
+
+    mgmt->taskId = taskId;
+    u64 elfAddr  = mgmt->taskset->m.task_info[taskId].elf_addr.addr() & 0xFFFFFFFFFFFFFFF8ull;
+
+    // Trace - Task: Incident=dispatch
+    CellSpursTracePacket pkt;
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.header.tag = CELL_SPURS_TRACE_TAG_TASK;
+    pkt.data.task.incident = CELL_SPURS_TRACE_TASK_DISPATCH;
+    pkt.data.task.taskId   = taskId;
+    cellSpursModulePutTrace(&pkt, 0x1F);
+
+    if (isWaiting == 0) {
+    }
+
+    if (mgmt->taskset->m.enable_clear_ls) {
+        memset(vm::get_ptr<void>(spu.ls_offset + CELL_SPURS_TASK_TOP), 0, CELL_SPURS_TASK_BOTTOM - CELL_SPURS_TASK_TOP);
+    }
+
+    // If the entire LS is saved then there is no need to load the ELF as it will be be saved in the context save area
+    if (mgmt->taskset->m.task_info[taskId].ls_pattern.u64[0] != 0xFFFFFFFFFFFFFFFFull ||
+        (mgmt->taskset->m.task_info[taskId].ls_pattern.u64[0] | 0xFC00000000000000ull) != 0xFFFFFFFFFFFFFFFFull) {
+        // Load the ELF
+        // TODO: Load ELF
+    }
+
+    // Load save context from main memory to LS
+    u64 context_save_storage = mgmt->taskset->m.task_info[taskId].context_save_storage_and_alloc_ls_blocks & 0xFFFFFFFFFFFFFF80ull;
+    for (auto i = 6; i < 128; i++) {
+        bool shouldLoad = mgmt->taskset->m.task_info[taskId].ls_pattern.u64[i < 64 ? 1 : 0] & (0x8000000000000000ull >> i) ? true : false;
+        if (shouldLoad) {
+            memcpy(vm::get_ptr<void>(spu.ls_offset + CELL_SPURS_TASK_TOP + ((i - 6) << 11)),
+                   vm::get_ptr<void>((u32)context_save_storage + 0x400 + ((i - 6) << 11)), 0x800);
+        }
+    }
+
+    // Trace - GUID
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.header.tag = CELL_SPURS_TRACE_TAG_GUID;
+    pkt.data.guid  = 0; // TODO: Put GUID of taskId here
+    cellSpursModulePutTrace(&pkt, 0x1F);
 }
 
 void spursTasksetProcessPollStatus(SPUThread & spu, u32 pollStatus) {
@@ -917,20 +967,20 @@ void spursTasksetEntry(SPUThread & spu) {
         memset(mgmt, 0, sizeof(*mgmt));
         mgmt->taskset.set(arg);
         memcpy(mgmt->moduleId, "SPURSTASK MODULE", 16);
-        mgmt->kernelMgmt = spu.GPR[3]._u32[3];
-        mgmt->yieldAddr  = 0xA70;
-        mgmt->spuNum     = kernelMgmt->spuNum;
-        mgmt->dmaTagId   = kernelMgmt->dmaTagId;
-        mgmt->taskId     = 0xFFFFFFFF;
+        mgmt->kernelMgmtAddr = spu.GPR[3]._u32[3];
+        mgmt->yieldAddr      = 0xA70;
+        mgmt->spuNum         = kernelMgmt->spuNum;
+        mgmt->dmaTagId       = kernelMgmt->dmaTagId;
+        mgmt->taskId         = 0xFFFFFFFF;
 
         spursTasksetInit(spu, pollStatus);
         // TODO: Dispatch
     }
 
-    mgmt->contextSaveArea[0] = spu.GPR[0];
-    mgmt->contextSaveArea[1] = spu.GPR[1];
+    mgmt->savedContextLr = spu.GPR[0];
+    mgmt->savedContextSp = spu.GPR[1];
     for (auto i = 0; i < 48; i++) {
-        mgmt->contextSaveArea[i + 2] = spu.GPR[80 + i];
+        mgmt->savedContextR80ToR127[i] = spu.GPR[80 + i];
     }
 
     // TODO: Process syscall
