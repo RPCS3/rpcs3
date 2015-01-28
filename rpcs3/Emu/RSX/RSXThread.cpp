@@ -1866,15 +1866,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		// Get timestamp, and convert it from microseconds to nanoseconds
 		u64 timestamp = get_system_time() * 1000;
 
-		// TODO: Reports can be written to the main memory or the local memory (controlled by NV4097_SET_CONTEXT_DMA_REPORT)
-		// NOTE: Uncomment these, if DMA implementation is broken
-		//vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
-		//vm::write32(m_local_mem_addr + offset + 0x8, value);
-		//vm::write32(m_local_mem_addr + offset + 0xc, 0);
+		// NOTE: DMA broken, implement proper lpar mapping (sys_rsx)
+		//dma_write64(dma_report, offset + 0x0, timestamp);
+		//dma_write32(dma_report, offset + 0x8, value);
+		//dma_write32(dma_report, offset + 0xc, 0);
 
-		dma_write64(dma_report, offset + 0x0, timestamp);
-		dma_write32(dma_report, offset + 0x8, value);
-		dma_write32(dma_report, offset + 0xc, 0);
+		vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
+		vm::write32(m_local_mem_addr + offset + 0x8, value);
+		vm::write32(m_local_mem_addr + offset + 0xc, 0);
 	}
 	break;
 

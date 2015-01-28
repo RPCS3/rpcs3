@@ -1,3 +1,4 @@
+// Copyright (C) 2015 AlexAltea (https://github.com/AlexAltea/nucleus)
 #pragma once
 
 enum {

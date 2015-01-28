@@ -1,3 +1,4 @@
+// Copyright (C) 2015 AlexAltea (https://github.com/AlexAltea/nucleus)
 #include "stdafx.h"
 #include "RSXDMA.h"
 #include "Emu/Memory/Memory.h"
@@ -18,7 +19,7 @@ DMAObject dma_address(u32 dma_object)
 	case RSX_CONTEXT_DMA_SEMAPHORE_R:
 		return DMAObject{ 0x40100000, 0x1000, DMAObject::READWRITE }; // TODO: Inconsistency: Gitbrew says R, test says RW
 	default:
-		LOG_WARNING(RSX, "Unknown DMA object (0x%08X)", dma_object);
+		LOG_WARNING(RSX, "Unknown DMA object (0x%08x)", dma_object);
 		return DMAObject{};
 	}
 }
