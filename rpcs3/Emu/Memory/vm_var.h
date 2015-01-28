@@ -517,11 +517,12 @@ namespace vm
 				ptr = vm::get_ptr<T>(addr);
 			}
 
+		private:
 			stack_allocation() = delete;
-			stack_allocation(const stack_allocation& r) = delete;
-			stack_allocation(stack_allocation&& r) = delete;
-			stack_allocation& operator = (const stack_allocation& r) = delete;
-			stack_allocation& operator = (stack_allocation&& r) = delete;
+			stack_allocation(const stack_allocation&) = delete;
+			stack_allocation(stack_allocation&&) = delete;
+			stack_allocation& operator = (const stack_allocation&) = delete;
+			stack_allocation& operator = (stack_allocation&&) = delete;
 
 		} const m_data;
 

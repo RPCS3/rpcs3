@@ -137,8 +137,8 @@ struct CCellRescInternal
 	bool m_isDummyFlipped;
 	u8 m_cgParamIndex[RESC_PARAM_NUM];
 	u64 m_commandIdxCaF, m_rcvdCmdIdx;
-	vm::ptr<void(*)(const u32)> s_applicationFlipHandler;
-	vm::ptr<void(*)(const u32)> s_applicationVBlankHandler;
+	vm::ptr<void(u32)> s_applicationFlipHandler;
+	vm::ptr<void(u32)> s_applicationVBlankHandler;
 
 	CCellRescInternal()
 		: m_bInitialized(false)

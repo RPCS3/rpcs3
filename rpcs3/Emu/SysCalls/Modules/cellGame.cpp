@@ -202,7 +202,7 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 }
 
 int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	cellGame->Warning("cellGameDataCheckCreate(2)(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
 		version, dirName.addr(), errDialog, funcStat.addr(), container);
@@ -307,7 +307,7 @@ int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 }
 
 int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
 	// TODO: almost identical, the only difference is that this function will always calculate the size of game data
 	return cellGameDataCheckCreate2(CPU, version, dirName, errDialog, funcStat, container);

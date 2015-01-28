@@ -14,7 +14,7 @@ struct HeapInfo
 	}
 };
 
-typedef s32(*spu_printf_cb_t)(u32 arg);
+typedef s32(spu_printf_cb_t)(u32 arg);
 
 // Aux
 extern vm::ptr<spu_printf_cb_t> spu_printf_agcb;

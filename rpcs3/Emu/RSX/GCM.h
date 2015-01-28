@@ -220,7 +220,7 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-typedef s32(*CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
+typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {

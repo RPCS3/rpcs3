@@ -12,8 +12,8 @@ Module *cellResc = nullptr;
 
 extern s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent);
 extern int cellGcmSetFlipMode(u32 mode);
-extern void cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)> handler);
-extern void cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)> handler);
+extern void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler);
+extern void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler);
 extern int cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
 extern int cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctx, u32 id);
@@ -603,7 +603,7 @@ void cellRescExit()
 	if (IsPalTemporal())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
-		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
 		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
 
 		if (IsPalInterpolate())
@@ -667,7 +667,7 @@ int cellRescSetDsts(u32 dstsMode, vm::ptr<CellRescDsts> dsts)
 	return CELL_OK;
 }
 
-void SetVBlankHandler(vm::ptr<void(*)(const u32)> handler)
+void SetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	if (!s_rescInternalInstance->m_bInitialized || s_rescInternalInstance->m_dstMode == 0) 
 	{
@@ -693,7 +693,7 @@ void SetVBlankHandler(vm::ptr<void(*)(const u32)> handler)
 }
 
 
-void SetFlipHandler(vm::ptr<void(*)(const u32)> handler)
+void SetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	if (!s_rescInternalInstance->m_bInitialized || s_rescInternalInstance->m_dstMode == 0) 
 	{
@@ -780,20 +780,20 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(IntrHandler50);
 		//cellGcmSetSecondVHandler(IntrHandler60);
-		cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)>::make(0));
+		cellGcmSetFlipHandler(vm::ptr<void(u32)>::make(0));
 	}
 	else if (IsPalDrop())
 	{
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
 		//cellGcmSetSecondVHandler(IntrHandler60Drop);
-		cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)>::make(0));
+		cellGcmSetFlipHandler(vm::ptr<void(u32)>::make(0));
 	} 
 	else if (IsPal60Hsync())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
 	}
 
 	if (s_rescInternalInstance->s_applicationVBlankHandler) SetVBlankHandler(s_rescInternalInstance->s_applicationVBlankHandler);
@@ -1073,7 +1073,7 @@ int cellRescSetBufferAddress(vm::ptr<u32> colorBuffers, vm::ptr<u32> vertexArray
 	return CELL_OK;
 }
 
-void cellRescSetFlipHandler(vm::ptr<void(*)(const u32)> handler)
+void cellRescSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc->Warning("cellRescSetFlipHandler(handler_addr=0x%x)", handler.addr());
 
@@ -1113,7 +1113,7 @@ int cellRescSetRegisterCount()
 	return CELL_OK;
 }
 
-void cellRescSetVBlankHandler(vm::ptr<void(*)(const u32)> handler)
+void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellResc->Warning("cellRescSetVBlankHandler(handler_addr=0x%x)", handler.addr());
 
