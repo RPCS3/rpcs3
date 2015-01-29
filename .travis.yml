@@ -48,7 +48,7 @@ addons:
       description: "PS3 emulator/debugger"
     notification_email: raul.tambre@gmail.com
     build_command_prepend: ""
-    build_command:   "make -j 4"
+    build_command:   "make"
     branch_pattern: coverity_scan
 
 script:
