@@ -965,7 +965,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	}
 	case A2:
 	{
-		cond = 15;
+		cond = 0xe; // always true
 		newLR = (context.thread.PC + 4) - 4;
 		target = (context.thread.PC + 4 | 1) + sign<25, u32>((code.data & 0xffffff) << 2 | (code.data & 0x1000000) >> 23);
 		break;
@@ -1355,6 +1355,7 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		reject((wback && n == t) || (t == 15 && context.ITSTATE), "UNPREDICTABLE");
 		break;
 	}
+	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
 	}
 
@@ -1441,10 +1442,69 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, t, n, imm32;
+	bool index, add, wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0x7);
+		n = (code.data & 0x38) >> 3;
+		imm32 = (code.data & 0x7c0) >> 4;
+		index = true;
+		add = true;
+		wback = false;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xfff);
+		index = true;
+		add = true;
+		wback = false;
+
+		reject(t == 15, "PLD");
+		reject(n == 15, "LDRB (literal)");
+		reject(t == 13, "UNPREDICTABLE");
+		break;
+	}
+	case T3:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff);
+		index = (code.data & 0x400);
+		add = (code.data & 0x200);
+		wback = (code.data & 0x100);
+
+		reject(t == 15 && index && !add && !wback, "PLD");
+		reject(n == 15, "LDRB (literal)");
+		reject(index && add && !wback, "LDRBT");
+		reject(!index && !wback, "UNDEFINED");
+		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+
+		context.write_gpr(t, vm::psv::read8(addr));
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 
@@ -1871,7 +1931,7 @@ void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 	case T2:
 	{
-		cond = 15;
+		cond = 0xe; // always true
 		d = (code.data & 0x7);
 		m = (code.data & 0x38) >> 3;
 		set_flags = true;
@@ -2999,10 +3059,66 @@ void ARMv7_instrs::STR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, t, n, imm32;
+	bool index, add, wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0x7);
+		n = (code.data & 0x38) >> 3;
+		imm32 = (code.data & 0x7c0) >> 4;
+		index = true;
+		add = true;
+		wback = false;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xfff);
+		index = true;
+		add = true;
+		wback = false;
+
+		reject(n == 15, "UNDEFINED");
+		reject(t == 13 || t == 15, "UNPREDICTABLE");
+		break;
+	}
+	case T3:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff);
+		index = (code.data & 0x400);
+		add = (code.data & 0x200);
+		wback = (code.data & 0x100);
+
+		reject(index && add && !wback, "STRBT");
+		reject(n == 15 || (!index && !wback), "UNDEFINED");
+		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+
+		vm::psv::write8(addr, (u8)context.read_gpr(t));
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 

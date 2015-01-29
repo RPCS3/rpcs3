@@ -251,6 +251,20 @@ enum
 	SCE_KERNEL_ERROR_NO_AUTH = 0x8002F001,
 };
 
+enum psv_object_class_t : u32
+{
+	SCE_KERNEL_UID_CLASS_PROCESS = 0,
+	SCE_KERNEL_THREADMGR_UID_CLASS_THREAD = 1,
+	SCE_KERNEL_THREADMGR_UID_CLASS_SEMA = 2,
+	SCE_KERNEL_THREADMGR_UID_CLASS_EVENT_FLAG = 3,
+	SCE_KERNEL_THREADMGR_UID_CLASS_MUTEX = 4,
+	SCE_KERNEL_THREADMGR_UID_CLASS_COND = 5,
+	SCE_KERNEL_THREADMGR_UID_CLASS_TIMER = 6,
+	SCE_KERNEL_THREADMGR_UID_CLASS_MSG_PIPE = 7,
+	SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK = 8,
+	SCE_KERNEL_THREADMGR_UID_CLASS_THREAD_EVENT = 9,
+};
+
 union SceKernelSysClock
 {
 	struct
@@ -292,7 +306,7 @@ struct SceKernelAllocMemBlockOpt
 
 // Thread Manager definitions (threads)
 
-typedef s32(*SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
+typedef s32(SceKernelThreadEntry)(u32 argSize, vm::psv::ptr<void> pArgBlock);
 
 struct SceKernelThreadOptParam
 {
@@ -357,7 +371,7 @@ struct SceKernelSystemInfo
 
 // Thread Manager definitions (callbacks)
 
-typedef s32(*SceKernelCallbackFunction)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
+typedef s32(SceKernelCallbackFunction)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelCallbackInfo
 {
@@ -375,7 +389,7 @@ struct SceKernelCallbackInfo
 
 // Thread Manager definitions (events)
 
-typedef s32(*SceKernelThreadEventHandler)(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon);
+typedef s32(SceKernelThreadEventHandler)(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon);
 
 struct SceKernelEventInfo
 {

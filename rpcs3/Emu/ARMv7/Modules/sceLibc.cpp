@@ -8,7 +8,7 @@ extern psv_log_base sceLibc;
 
 vm::psv::ptr<void> g_dso;
 
-typedef void(*atexit_func_t)(vm::psv::ptr<void>);
+typedef void(atexit_func_t)(vm::psv::ptr<void>);
 
 std::vector<std::function<void(ARMv7Context&)>> g_atexit;
 

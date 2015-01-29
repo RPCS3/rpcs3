@@ -325,7 +325,7 @@ namespace loader
 
 							for (auto &e : m.second.exports)
 							{
-								module->RegisterLLEFunc(e.first, vm::ptr<void(*)()>::make(e.second));
+								module->RegisterLLEFunc(e.first, vm::ptr<void()>::make(e.second));
 							}
 						}
 					}
