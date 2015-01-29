@@ -695,6 +695,156 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceGxm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAppMgr.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAppUtil.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudio.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudiodec.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudioenc.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudioIn.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceCamera.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceCodecEngine.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceCommonDialog.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceDbg.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceDeflt.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceFiber.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceFios.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceFpu.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceHttp.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceIme.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceJpeg.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceJpegEnc.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceLiveArea.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceLocation.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceMd5.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceMotion.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceMt19937.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNet.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNetCtl.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNgs.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpBasic.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpCommon.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpManager.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpMatching.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpScore.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpUtility.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\scePgf.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\scePhotoExport.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceRazorCapture.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceRtc.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSas.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceScreenShot.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSqlite.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSsl.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSulpha.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSystemGesture.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceTouch.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceUlt.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceVideodec.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceVoice.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceVoiceQoS.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceXml.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSfmt.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\sceSha.cpp">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

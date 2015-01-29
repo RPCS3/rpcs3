@@ -67,8 +67,9 @@ public:
 		{
 		}
 
-		iterator(const DirEntryInfo* data)
-			: data(data)
+		iterator(vfsDirBase* parent, const DirEntryInfo* data)
+			: parent(parent)
+			, data(data)
 		{
 		}
 
@@ -82,7 +83,7 @@ public:
 		{
 			const DirEntryInfo* olddata = data;
 			data = parent->Read();
-			return iterator(olddata);
+			return iterator(parent, olddata);
 		}
 
 		const DirEntryInfo* operator *()
@@ -90,7 +91,7 @@ public:
 			return data;
 		}
 
-		bool operator!=(iterator other) const
+		bool operator !=(iterator other) const
 		{
 			return data != other.data;
 		}
@@ -103,6 +104,6 @@ public:
 
 	iterator end()
 	{
-		return iterator((const DirEntryInfo*)nullptr);
+		return iterator(this, nullptr);
 	}
 };

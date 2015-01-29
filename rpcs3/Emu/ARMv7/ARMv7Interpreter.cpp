@@ -283,11 +283,6 @@ void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 	throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
 }
 
-void ARMv7_instrs::NULL_OP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
-{
-	throw fmt::format("Null opcode found: 0x%04x 0x%04x", code.code1, code.code0);
-}
-
 void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
 	u32 cond, func;

@@ -1,0 +1,34 @@
+#include "stdafx.h"
+#include "Emu/System.h"
+#include "Emu/ARMv7/PSVFuncList.h"
+
+extern psv_log_base sceVideodec;
+
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceVideodec, #name, name)
+
+psv_log_base sceVideodec("SceVideodec", []()
+{
+	sceVideodec.on_load = nullptr;
+	sceVideodec.on_unload = nullptr;
+	sceVideodec.on_stop = nullptr;
+
+	//REG_FUNC(0xF1AF65A3, sceVideodecInitLibrary);
+	//REG_FUNC(0x3A5F4924, sceVideodecTermLibrary);
+	//REG_FUNC(0x97E95EDB, sceAvcdecQueryDecoderMemSize);
+	//REG_FUNC(0xE82BB69B, sceAvcdecCreateDecoder);
+	//REG_FUNC(0x8A0E359E, sceAvcdecDeleteDecoder);
+	//REG_FUNC(0x441673E3, sceAvcdecDecodeAvailableSize);
+	//REG_FUNC(0xD6190A06, sceAvcdecDecode);
+	//REG_FUNC(0x9648D853, sceAvcdecDecodeStop);
+	//REG_FUNC(0x25F31020, sceAvcdecDecodeFlush);
+	//REG_FUNC(0xB2A428DB, sceAvcdecCsc);
+	//REG_FUNC(0x6C68A38F, sceAvcdecDecodeNalAu);
+	//REG_FUNC(0xC67C1A80, sceM4vdecQueryDecoderMemSize);
+	//REG_FUNC(0x17C6AC9E, sceM4vdecCreateDecoder);
+	//REG_FUNC(0x0EB2E4E7, sceM4vdecDeleteDecoder);
+	//REG_FUNC(0xA8CF1942, sceM4vdecDecodeAvailableSize);
+	//REG_FUNC(0x624664DB, sceM4vdecDecode);
+	//REG_FUNC(0x87CFD23B, sceM4vdecDecodeStop);
+	//REG_FUNC(0x7C460D75, sceM4vdecDecodeFlush);
+	//REG_FUNC(0xB4BC325B, sceM4vdecCsc);
+});

@@ -251,8 +251,8 @@ typedef void(CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
 
 struct CellWebBrowserMimeSet
 {
-	vm::bptr<const char> const type;
-	vm::bptr<const char> const directory;
+	const vm::bptr<const char> type;
+	const vm::bptr<const char> directory;
 };
 
 struct CellWebBrowserPos

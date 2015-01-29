@@ -29,8 +29,6 @@ struct ARMv7_opcode_t
 
 const ARMv7_opcode_t ARMv7_opcode_table[] =
 {
-	ARMv7_OP2(0xffff, 0x0000, T1, NULL_OP), // ???
-
 	ARMv7_OP4(0xffff, 0x0000, 0xf870, 0x0000, T1, HACK), // "Undefined" Thumb opcode used
 	ARMv7_OP4(0x0ff0, 0x00f0, 0x0070, 0x0090, A1, HACK), // "Undefined" ARM opcode used
 

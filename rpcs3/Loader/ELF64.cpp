@@ -423,6 +423,7 @@ namespace loader
 
 				case 0x00000007: //TLS
 					Emu.SetTLSData(phdr.p_vaddr.addr(), phdr.p_filesz.value(), phdr.p_memsz.value());
+					LOG_ERROR(LOADER, "TLS: addr=0x%x, filesz=0x%x, memsz=0x%x", Emu.GetTLSAddr(), Emu.GetTLSFilesz(), Emu.GetTLSMemsz());
 					break;
 
 				case 0x60000001: //LOOS+1

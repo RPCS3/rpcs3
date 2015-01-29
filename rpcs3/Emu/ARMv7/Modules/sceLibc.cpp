@@ -156,7 +156,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Error("_Assert(text=0x%x, func=0x%x)", text, func);
 
-		LOG_ERROR(TTY, "%s : %s", func.get_ptr(), text.get_ptr());
+		LOG_ERROR(TTY, "%s : %s\n", func.get_ptr(), text.get_ptr());
 		Emu.Pause();
 	}
 }
