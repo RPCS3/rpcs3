@@ -157,10 +157,10 @@ public:
 	SSemaphore m_sem_flush;
 	SSemaphore m_sem_flip;
 	u64 m_last_flip_time;
-	vm::ptr<void(*)(const u32)> m_flip_handler;
-	vm::ptr<void(*)(const u32)> m_user_handler;
+	vm::ptr<void(u32)> m_flip_handler;
+	vm::ptr<void(u32)> m_user_handler;
 	u64 m_vblank_count;
-	vm::ptr<void(*)(const u32)> m_vblank_handler;
+	vm::ptr<void(u32)> m_vblank_handler;
 
 public:
 	// Dither
@@ -445,6 +445,7 @@ protected:
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
 		, m_debug_level(CELL_GCM_DEBUG_LEVEL0)
 		, m_frequency_mode(CELL_GCM_DISPLAY_FREQUENCY_DISABLE)
+		, m_report_main_addr(0)
 		, m_main_mem_addr(0)
 		, m_local_mem_addr(0)
 		, m_draw_mode(0)

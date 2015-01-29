@@ -48,6 +48,12 @@ extern psv_log_base sceLibc;
 extern psv_log_base sceLibm;
 extern psv_log_base sceLibstdcxx;
 extern psv_log_base sceLibKernel;
+extern psv_log_base sceSysmodule;
+extern psv_log_base scePerf;
+extern psv_log_base sceCtrl;
+extern psv_log_base sceDeci4p;
+extern psv_log_base sceDisplay;
+extern psv_log_base sceGxm;
 
 void initialize_psv_modules()
 {
@@ -58,6 +64,12 @@ void initialize_psv_modules()
 	g_psv_modules.push_back(&sceLibm);
 	g_psv_modules.push_back(&sceLibstdcxx);
 	g_psv_modules.push_back(&sceLibKernel);
+	g_psv_modules.push_back(&sceSysmodule);
+	g_psv_modules.push_back(&scePerf);
+	g_psv_modules.push_back(&sceCtrl);
+	g_psv_modules.push_back(&sceDeci4p);
+	g_psv_modules.push_back(&sceDisplay);
+	g_psv_modules.push_back(&sceGxm);
 
 	// setup special functions (without NIDs)
 	psv_func unimplemented;
@@ -66,7 +78,7 @@ void initialize_psv_modules()
 	unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
 	{
 		context.thread.m_last_syscall = vm::psv::read32(context.thread.PC + 4);
-		throw "Unimplemented function executed";
+		throw "Unimplemented function";
 	}));
 	g_psv_func_list.push_back(unimplemented);
 

@@ -79,20 +79,26 @@ struct ARMv7Context
 	{
 		struct
 		{
-			u8 cond : 3;
-			u8 state : 5;
+			u8 shift_state : 5;
+			u8 cond_base : 3;
+		};
+
+		struct
+		{
+			u8 check_state : 4;
+			u8 condition : 4;
 		};
 
 		u8 IT;
 
 		u32 advance()
 		{
-			const u32 res = (state & 0xf) ? (cond << 1 | state >> 4) : 0xe /* true */;
+			const u32 res = check_state ? condition : 0xe /* always true */;
 
-			state <<= 1;
-			if ((state & 0xf) == 0) // if no d
+			shift_state <<= 1;
+			if (!check_state)
 			{
-				IT = 0; // clear ITSTATE
+				IT = 0; // clear
 			}
 
 			return res;
@@ -100,7 +106,7 @@ struct ARMv7Context
 
 		operator bool() const
 		{
-			return (state & 0xf) != 0;
+			return check_state;
 		}
 
 	} ITSTATE;
@@ -260,7 +266,7 @@ struct cast_armv7_gpr<bool, false>
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u32 reg)
+	__forceinline static bool from_gpr(const u32& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}

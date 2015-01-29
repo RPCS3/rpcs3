@@ -217,7 +217,7 @@ struct CellDmuxResource2
 	be_t<u32> shit[4];
 };
 
-typedef u32(*CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
+typedef u32(CellDmuxCbMsg)(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
 struct CellDmuxCb
 {
@@ -225,7 +225,7 @@ struct CellDmuxCb
 	be_t<u32> cbArg;
 };
 
-typedef u32(*CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
+typedef u32(CellDmuxCbEsMsg)(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
 struct CellDmuxEsCb
 {
