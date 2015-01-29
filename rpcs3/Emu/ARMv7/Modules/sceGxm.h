@@ -1002,9 +1002,9 @@ enum SceGxmColorMask : u8
 
 struct SceGxmBlendInfo
 {
-	SceGxmColorMask	colorMask;
-	SceGxmBlendFunc	colorFunc : 4;
-	SceGxmBlendFunc	alphaFunc : 4;
+	SceGxmColorMask colorMask;
+	SceGxmBlendFunc colorFunc : 4;
+	SceGxmBlendFunc alphaFunc : 4;
 	SceGxmBlendFactor colorSrc : 4;
 	SceGxmBlendFactor colorDst : 4;
 	SceGxmBlendFactor alphaSrc : 4;

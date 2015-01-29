@@ -6,33 +6,37 @@ extern psv_log_base sceFiber;
 
 typedef vm::psv::ptr<void(u32 argOnInitialize, u32 argOnRun)> SceFiberEntry;
 
-union SceFiber
+struct SceFiber
 {
 	static const uint size = 128;
 	static const uint align = 8;
 	u64 padding[size / sizeof(u64)];
 };
 
-union SceFiberOptParam 
+struct SceFiberOptParam 
 {
 	static const uint size = 128;
 	static const uint align = 8;
 	u64 padding[size / sizeof(u64)];
 };
 
-union SceFiberInfo
+struct SceFiberInfo
 {
 	static const uint size = 128;
 	static const uint align = 8;
-	u64 padding[size / sizeof(u64)];
 
-	struct
+	union
 	{
-		SceFiberEntry entry;
-		u32 argOnInitialize;
-		vm::psv::ptr<void> addrContext;
-		s32 sizeContext;
-		char name[32];
+		u64 padding[size / sizeof(u64)];
+
+		struct
+		{
+			SceFiberEntry entry;
+			u32 argOnInitialize;
+			vm::psv::ptr<void> addrContext;
+			s32 sizeContext;
+			char name[32];
+		};
 	};
 };
 

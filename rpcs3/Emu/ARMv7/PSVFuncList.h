@@ -647,3 +647,19 @@ struct SceDateTime
 	u16 second;
 	u32 microsecond;
 };
+
+struct SceFVector3
+{
+	float x, y, z;
+};
+
+struct SceFQuaternion
+{
+	float x, y, z, w;
+};
+
+union SceUMatrix4
+{
+	float f[4][4];
+	s32 i[4][4];
+};
