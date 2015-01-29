@@ -290,6 +290,8 @@ public:
 	u32 m_event_mask;
 	u32 m_events;
 
+	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
+
 	struct IntrTag
 	{
 		u32 enabled; // 1 == true
@@ -509,8 +511,35 @@ public:
 	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
+	void RegisterHleFuncion(u32 addr, std::function<bool(SPUThread & SPU)> function)
+	{
+		m_addr_to_hle_function_map[addr] = function;
+		WriteLS32(addr, 0x00000003); // STOP 3
+	}
+
+	void UnregisterHleFunction(u32 addr)
+	{
+		WriteLS32(addr, 0x00200000); // NOP
+		m_addr_to_hle_function_map.erase(addr);
+	}
+
+	void UnregisterHleFunctions(u32 start_addr, u32 end_addr)
+	{
+		for (auto iter = m_addr_to_hle_function_map.begin(); iter != m_addr_to_hle_function_map.end();)
+		{
+			if (iter->first >= start_addr && iter->first <= end_addr)
+			{
+				WriteLS32(iter->first, 0x00200000); // NOP
+				m_addr_to_hle_function_map.erase(iter++);
+			}
+			else
+			{
+				iter++;
+			}
+		}
+	}
+
 	std::function<void(SPUThread& SPU)> m_custom_task;
-	std::function<void(SPUThread& SPU)> m_code3_func;
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);

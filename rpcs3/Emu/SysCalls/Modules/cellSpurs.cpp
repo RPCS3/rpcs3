@@ -26,7 +26,7 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
-void spursKernelMain(SPUThread & spu);
+bool spursKernelMain(SPUThread & spu);
 s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id);
 s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
 
@@ -155,7 +155,8 @@ s64 spursInit(
 		assert(!"spu_image_import() failed");
 	}
 #else
-	spurs->m.spuImg.addr = (u32)Memory.Alloc(0x40000, 4096);
+	spurs->m.spuImg.addr        = (u32)Memory.Alloc(0x40000, 4096);
+	spurs->m.spuImg.entry_point = isSecond ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR;
 #endif
 
 	s32 tgt = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
@@ -179,17 +180,11 @@ s64 spursInit(
 	name += "CellSpursKernel0";
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		spurs->m.spus[num] = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, 0, 0, 0, 0, [spurs, num](SPUThread& SPU)
-		{
-			SPU.GPR[3]._u32[3] = num;
-			SPU.GPR[4]._u64[1] = spurs.addr();
-
-#ifdef PRX_DEBUG_XXX
-			return SPU.FastCall(SPU.PC);
+		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, num, spurs.addr(), 0, 0);
+#ifndef PRX_DEBUG_XXX
+		spu->RegisterHleFuncion(spurs->m.spuImg.entry_point, spursKernelMain);
 #endif
-
-			spursKernelMain(SPU);
-		})->GetId();
+		spurs->m.spus[num] = spu->GetId();
 	}
 
 	if (flags & SAF_SPU_PRINTF_ENABLED)

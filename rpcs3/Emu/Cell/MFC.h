@@ -35,6 +35,14 @@ enum
 	MFC_GETLLAR_SUCCESS = 4,
 };
 
+// MFC Write Tag Status Update Request Channel (ch23) operations
+enum 
+{
+	MFC_TAG_UPDATE_IMMEDIATE = 0,
+	MFC_TAG_UPDATE_ANY       = 1,
+	MFC_TAG_UPDATE_ALL       = 2,
+};
+
 enum
 {
 	MFC_SPU_TO_PPU_MAILBOX_STATUS_MASK      = 0x000000FF,

@@ -34,6 +34,8 @@
 #include <algorithm>
 #include <random>
 #include <unordered_set>
+#include <map>
+#include <unordered_map>
 
 #include <sys/stat.h>
 #include "Utilities/GNU.h"

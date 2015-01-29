@@ -102,6 +102,12 @@ enum SPURSKernelInterfaces
 	CELL_SPURS_INTERRUPT_VECTOR = 0x0,
 	CELL_SPURS_LOCK_LINE = 0x80,
 	CELL_SPURS_KERNEL_DMA_TAG_ID = 31,
+	CELL_SPURS_KERNEL1_ENTRY_ADDR = 0x818,
+	CELL_SPURS_KERNEL2_ENTRY_ADDR = 0x848,
+	CELL_SPURS_KERNEL1_YIELD_ADDR = 0x808,
+	CELL_SPURS_KERNEL2_YIELD_ADDR = 0x838,
+	CELL_SPURS_KERNEL1_SELECT_WORKLOAD_ADDR = 0x290,
+	CELL_SPURS_KERNEL2_SELECT_WORKLOAD_ADDR = 0x290,
 };
 
 enum RangeofEventQueuePortNumbers
@@ -885,14 +891,23 @@ struct SpursKernelMgmtData
 	u8 spuIdling;                                   // 0x1EB
 	be_t<u16> wklRunnable1;                         // 0x1EC
 	be_t<u16> wklRunnable2;                         // 0x1EE
-	u8 x1F0[0x210 - 0x1F0];                         // 0x1F0
+	be_t<u32> x1F0;                                 // 0x1F0
+	be_t<u32> x1F4;                                 // 0x1F4
+	be_t<u32> x1F8;                                 // 0x1F8
+	be_t<u32> x1FC;                                 // 0x1FC
+	be_t<u32> x200;                                 // 0x200
+	be_t<u32> x204;                                 // 0x204
+	be_t<u32> x208;                                 // 0x208
+	be_t<u32> x20C;                                 // 0x20C
 	be_t<u64> traceBuffer;                          // 0x210
 	be_t<u32> traceMsgCount;                        // 0x218
 	be_t<u32> traceMaxCount;                        // 0x21C
 	u8 wklUniqueId[0x10];                           // 0x220
+	u8 x230[0x280 - 0x230];                         // 0x230
+	be_t<u32> guid[4];                              // 0x280
 };
 
-static_assert(sizeof(SpursKernelMgmtData) == 0x130, "Incorrect size for SpursKernelMgmtData");
+static_assert(sizeof(SpursKernelMgmtData) == 0x190, "Incorrect size for SpursKernelMgmtData");
 
 // The SPURS taskset policy module data store. This resides at 0x2700 of the LS.
 struct SpursTasksetPmMgmtData
