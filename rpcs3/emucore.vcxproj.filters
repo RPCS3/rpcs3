@@ -1486,5 +1486,11 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceGxm.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\sceAppUtil.h">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\sceIme.h">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

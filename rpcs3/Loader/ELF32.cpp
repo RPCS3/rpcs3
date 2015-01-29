@@ -256,9 +256,7 @@ namespace loader
 							}
 							case 0x0000002f: // movw r*,# instruction is replaced
 							{
-								const u32 addr = *++code;
-
-								if (!data)
+								if (!data) // probably, imported object
 								{
 									auto found = vnid_list.find(code.addr());
 									if (found != vnid_list.end())
@@ -269,36 +267,32 @@ namespace loader
 
 								if (!data)
 								{
-									LOG_ERROR(LOADER, ".sceRefs: movw writing failed (code=0x%x, addr=0x%x)", code, addr);
-									break;
+									LOG_ERROR(LOADER, ".sceRefs: movw writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
+								}
+								else //if (Ini.HLELogging.GetValue())
+								{
+									LOG_NOTICE(LOADER, ".sceRefs: movw written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
 								}
 
+								const u32 addr = *++code;
 								vm::psv::write16(addr + 0, vm::psv::read16(addr + 0) | (data & 0x800) >> 1 | (data & 0xf000) >> 12);
 								vm::psv::write16(addr + 2, vm::psv::read16(addr + 2) | (data & 0x700) << 4 | (data & 0xff));
-
-								//if (Ini.HLELogging.GetValue())
-								{
-									LOG_NOTICE(LOADER, ".sceRefs: movw written at 0x%x (data=0x%x)", addr, data);
-								}
 								break;
 							}
 							case 0x00000030: // movt r*,# instruction is replaced
 							{
-								const u32 addr = *++code;
-
 								if (!data)
 								{
-									LOG_ERROR(LOADER, ".sceRefs: movt writing failed (code=0x%x, addr=0x%x)", code, addr);
-									break;
+									LOG_ERROR(LOADER, ".sceRefs: movt writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
 								}
-								
+								else //if (Ini.HLELogging.GetValue())
+								{
+									LOG_NOTICE(LOADER, ".sceRefs: movt written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
+								}
+
+								const u32 addr = *++code;
 								vm::psv::write16(addr + 0, vm::psv::read16(addr + 0) | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28);
 								vm::psv::write16(addr + 2, vm::psv::read16(addr + 2) | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
-
-								//if (Ini.HLELogging.GetValue())
-								{
-									LOG_NOTICE(LOADER, ".sceRefs: movt written at 0x%x (data=0x%x)", addr, data);
-								}
 								break;
 							}
 							case 0x00000000:
