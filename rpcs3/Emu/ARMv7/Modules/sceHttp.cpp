@@ -2,6 +2,8 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
+#include "sceSsl.h"
+
 extern psv_log_base sceHttp;
 
 enum SceHttpHttpVersion : s32
@@ -60,8 +62,6 @@ struct SceHttpUriElement
 typedef vm::psv::ptr<s32(s32 request, vm::psv::ptr<const char> url, vm::psv::ptr<const char> cookieHeader, u32 headerLen, vm::psv::ptr<void> userArg)> SceHttpCookieRecvCallback;
 
 typedef vm::psv::ptr<s32(s32 request, vm::psv::ptr<const char> url, vm::psv::ptr<const char> cookieHeader, vm::psv::ptr<void> userArg)> SceHttpCookieSendCallback;
-
-struct SceSslCert;
 
 struct SceHttpsData
 {
