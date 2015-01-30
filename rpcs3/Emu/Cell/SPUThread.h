@@ -511,7 +511,7 @@ public:
 	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
-	void RegisterHleFuncion(u32 addr, std::function<bool(SPUThread & SPU)> function)
+	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{
 		m_addr_to_hle_function_map[addr] = function;
 		WriteLS32(addr, 0x00000003); // STOP 3

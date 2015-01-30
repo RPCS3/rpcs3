@@ -182,7 +182,7 @@ s64 spursInit(
 	{
 		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, num, spurs.addr(), 0, 0);
 #ifndef PRX_DEBUG_XXX
-		spu->RegisterHleFuncion(spurs->m.spuImg.entry_point, spursKernelMain);
+		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelMain);
 #endif
 		spurs->m.spus[num] = spu->GetId();
 	}

@@ -17,6 +17,7 @@ u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status);
 bool spursDma(SPUThread & spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag);
 u32 spursDmaGetCompletionStatus(SPUThread & spu, u32 tagMask);
 u32 spursDmaWaitForCompletion(SPUThread & spu, u32 tagMask, bool waitForAll = true);
+void spursHalt();
 
 //
 // SPURS Kernel functions
@@ -111,6 +112,12 @@ u32 spursDmaWaitForCompletion(SPUThread & spu, u32 tagMask, bool waitForAll) {
     return rv._u32[3];
 }
 
+// Halt the SPU
+void spursHalt(SPUThread & spu) {
+    spu.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
+    spu.Stop();
+}
+
 //////////////////////////////////////////////////////////////////////////////
 // SPURS kernel functions
 //////////////////////////////////////////////////////////////////////////////
@@ -130,7 +137,7 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
     do {
         // DMA and lock the first 0x80 bytes of spurs
         spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
-        CellSpurs * spurs = (CellSpurs *)mgmt->tempArea;
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
 
         // Calculate the contention (number of SPUs used) for each workload
         u8 contention[CELL_SPURS_MAX_WORKLOAD];
@@ -279,7 +286,7 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
     do {
         // DMA and lock the first 0x80 bytes of spurs
         spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
-        CellSpurs * spurs = (CellSpurs *)mgmt->tempArea;
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
 
         // Calculate the contention (number of SPUs used) for each workload
         u8 contention[CELL_SPURS_MAX_WORKLOAD2];
@@ -408,8 +415,8 @@ bool spursKernelMain(SPUThread & spu) {
     SpursKernelMgmtData * mgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
 
     bool isKernel2;
-    u32 pollStatus;
-    const CellSpurs::WorkloadInfo * wklInfo;
+    u32  pollStatus;
+    u64  wklArg;
     if (spu.PC == CELL_SPURS_KERNEL1_ENTRY_ADDR || spu.PC == CELL_SPURS_KERNEL2_ENTRY_ADDR) {
         // Entry point of SPURS kernel
         // Save arguments
@@ -440,14 +447,15 @@ bool spursKernelMain(SPUThread & spu) {
             mgmt->guid[3] = 0x43A3C982;
         }
 
+        // Register SPURS kernel HLE functions
         spu.UnregisterHleFunctions(0, 0x40000); // TODO: use a symbolic constant
-        spu.RegisterHleFuncion(isKernel2 ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR, spursKernelMain);
-        spu.RegisterHleFuncion(mgmt->yieldToKernelAddr, spursKernelMain);
-        spu.RegisterHleFuncion(mgmt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
+        spu.RegisterHleFunction(isKernel2 ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR, spursKernelMain);
+        spu.RegisterHleFunction(mgmt->yieldToKernelAddr, spursKernelMain);
+        spu.RegisterHleFunction(mgmt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
 
-        // Start the system service workload
-        spu.RegisterHleFuncion(0xA00, spursSysServiceWorkloadEntry);
-        wklInfo    = &mgmt->spurs->m.wklInfoSysSrv;
+        // Register the system HLE service workload entry point
+        spu.RegisterHleFunction(0xA00, spursSysServiceWorkloadEntry);
+        wklArg = mgmt->spurs->m.wklInfoSysSrv.arg;
         pollStatus = 0;
     } else if (spu.PC == mgmt->yieldToKernelAddr) {
         isKernel2 = mgmt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
@@ -460,10 +468,11 @@ bool spursKernelMain(SPUThread & spu) {
             spursKernel1SelectWorkload(spu);
         }
 
-        pollStatus = (u32)(spu.GPR[3]._u64[1]);
-        auto wid   = (u32)(spu.GPR[3]._u64[1] >> 32);
-        wklInfo    = wid < CELL_SPURS_MAX_WORKLOAD ? &mgmt->spurs->m.wklInfo1[wid] :
-                        (wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &mgmt->spurs->m.wklInfo2[wid & 0xf] : &mgmt->spurs->m.wklInfoSysSrv);
+        pollStatus   = (u32)(spu.GPR[3]._u64[1]);
+        auto wid     = (u32)(spu.GPR[3]._u64[1] >> 32);
+        auto wklInfo = wid < CELL_SPURS_MAX_WORKLOAD ? &mgmt->spurs->m.wklInfo1[wid] : (wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &mgmt->spurs->m.wklInfo2[wid & 0xf] :
+                                                                                                                                      &mgmt->spurs->m.wklInfoSysSrv);
+        wklArg       = wklInfo->arg;
     } else {
         assert(0);
     }
@@ -477,7 +486,7 @@ bool spursKernelMain(SPUThread & spu) {
     spu.GPR[0]._u32[3] = mgmt->yieldToKernelAddr;
     spu.GPR[1]._u32[3] = 0x3FFB0;
     spu.GPR[3]._u32[3] = 0x100;
-    spu.GPR[4]._u64[1] = wklInfo->arg;
+    spu.GPR[4]._u64[1] = wklArg;
     spu.GPR[5]._u32[3] = pollStatus;
     spu.SetBranch(0xA00);
     return false;
@@ -489,33 +498,48 @@ bool spursKernelMain(SPUThread & spu) {
 
 /// Restore scheduling parameters after a workload has been preempted by the system service workload
 void spursSysServiceCleanupAfterPreemption(SPUThread & spu, SpursKernelMgmtData * mgmt) {
-    if (mgmt->spurs->m.sysSrvWorkload[mgmt->spuNum] != 0xFF) {
-        auto wklId = mgmt->spurs->m.sysSrvWorkload[mgmt->spuNum];
-        mgmt->spurs->m.sysSrvWorkload[mgmt->spuNum] = 0xFF;
+    u8 wklId;
 
-        spursSysServiceUpdateWorkload(spu, mgmt);
-        if (wklId >= CELL_SPURS_MAX_WORKLOAD) {
-            mgmt->spurs->m.wklCurrentContention[wklId & 0x0F] -= 0x10;
-            mgmt->spurs->m.wklReadyCount1[wklId & 0x0F].write_relaxed(mgmt->spurs->m.wklReadyCount1[wklId & 0x0F].read_relaxed() - 1);
-        } else {
-            mgmt->spurs->m.wklCurrentContention[wklId & 0x0F] -= 0x01;
-            mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[wklId & 0x0F].write_relaxed(mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[wklId & 0x0F].read_relaxed() - 1);
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
+
+        if (spurs->m.sysSrvWorkload[mgmt->spuNum] == 0xFF) {
+            return;
         }
 
-        // Set the current workload id to the id of the pre-empted workload since cellSpursModulePutTrace
-        // uses the current worload id to determine the workload to which the trace belongs
-        auto wklIdSaved    = mgmt->wklCurrentId;
-        mgmt->wklCurrentId = wklId;
+        wklId = spurs->m.sysSrvWorkload[mgmt->spuNum];
+        spurs->m.sysSrvWorkload[mgmt->spuNum] = 0xFF;
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
-        // Trace - STOP: GUID
-        CellSpursTracePacket pkt;
-        memset(&pkt, 0, sizeof(pkt));
-        pkt.header.tag = CELL_SPURS_TRACE_TAG_STOP;
-        pkt.data.stop  = SPURS_GUID_SYS_WKL;
-        cellSpursModulePutTrace(&pkt, mgmt->dmaTagId);
+    spursSysServiceUpdateWorkload(spu, mgmt);
 
-        mgmt->wklCurrentId = wklIdSaved;
-    }
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
+
+        if (wklId >= CELL_SPURS_MAX_WORKLOAD) {
+            spurs->m.wklCurrentContention[wklId & 0x0F] -= 0x10;
+            spurs->m.wklReadyCount1[wklId & 0x0F].write_relaxed(spurs->m.wklReadyCount1[wklId & 0x0F].read_relaxed() - 1);
+        } else {
+            spurs->m.wklCurrentContention[wklId & 0x0F] -= 0x01;
+            spurs->m.wklIdleSpuCountOrReadyCount2[wklId & 0x0F].write_relaxed(spurs->m.wklIdleSpuCountOrReadyCount2[wklId & 0x0F].read_relaxed() - 1);
+        }
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
+
+    // Set the current workload id to the id of the pre-empted workload since cellSpursModulePutTrace
+    // uses the current worload id to determine the workload to which the trace belongs
+    auto wklIdSaved    = mgmt->wklCurrentId;
+    mgmt->wklCurrentId = wklId;
+
+    // Trace - STOP: GUID
+    CellSpursTracePacket pkt;
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.header.tag = CELL_SPURS_TRACE_TAG_STOP;
+    pkt.data.stop  = SPURS_GUID_SYS_WKL;
+    cellSpursModulePutTrace(&pkt, mgmt->dmaTagId);
+
+    mgmt->wklCurrentId = wklIdSaved;
 }
 
 /// Update the trace count for this SPU in CellSpurs
@@ -528,39 +552,52 @@ void spursSysServiceUpdateTraceCount(SPUThread & spu, SpursKernelMgmtData * mgmt
 
 /// Update trace control in SPU from CellSpurs
 void spursSysServiceUpdateTrace(SPUThread & spu, SpursKernelMgmtData * mgmt, u32 arg2, u32 arg3, u32 arg4) {
-    auto sysSrvMsgUpdateTrace           = mgmt->spurs->m.sysSrvMsgUpdateTrace;
-    mgmt->spurs->m.sysSrvMsgUpdateTrace &= ~(1 << mgmt->spuNum);
-    mgmt->spurs->m.xCC                  &= ~(1 << mgmt->spuNum);
-    mgmt->spurs->m.xCC                  |= arg2 << mgmt->spuNum;
+    bool notify;
 
-    bool notify = false;
-    if (((sysSrvMsgUpdateTrace & (1 << mgmt->spuNum)) != 0) && (mgmt->spurs->m.sysSrvMsgUpdateTrace == 0) && (mgmt->spurs->m.xCD != 0)) {
-        mgmt->spurs->m.xCD = 0;
-        notify             = true;
-    }
+    u8 sysSrvMsgUpdateTrace;
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
 
-    if (arg4 && mgmt->spurs->m.xCD != 0) {
-        mgmt->spurs->m.xCD = 0;
-        notify             = true;
-    }
+        sysSrvMsgUpdateTrace           = spurs->m.sysSrvMsgUpdateTrace;
+        spurs->m.sysSrvMsgUpdateTrace &= ~(1 << mgmt->spuNum);
+        spurs->m.xCC                  &= ~(1 << mgmt->spuNum);
+        spurs->m.xCC                  |= arg2 << mgmt->spuNum;
+
+        notify = false;
+        if (((sysSrvMsgUpdateTrace & (1 << mgmt->spuNum)) != 0) && (spurs->m.sysSrvMsgUpdateTrace == 0) && (spurs->m.xCD != 0)) {
+            spurs->m.xCD = 0;
+            notify       = true;
+        }
+
+        if (arg4 && spurs->m.xCD != 0) {
+            spurs->m.xCD = 0;
+            notify       = true;
+        }
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
     // Get trace parameters from CellSpurs and store them in the LS
     if (((sysSrvMsgUpdateTrace & (1 << mgmt->spuNum)) != 0) || (arg3 != 0)) {
-        if (mgmt->traceMsgCount != 0xFF || mgmt->spurs->m.traceBuffer.addr() == 0) {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.traceBuffer), 0x80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x80 - offsetof(CellSpurs, m.traceBuffer));
+
+        if (mgmt->traceMsgCount != 0xFF || spurs->m.traceBuffer.addr() == 0) {
             spursSysServiceUpdateTraceCount(spu, mgmt);
         } else {
-            mgmt->traceMsgCount = mgmt->spurs->m.traceBuffer->count[mgmt->spuNum];
+            spursDma(spu, MFC_GET_CMD, spurs->m.traceBuffer.addr() & 0xFFFFFFFC, 0x2C00/*LSA*/, 0x80/*size*/, mgmt->dmaTagId);
+            auto traceBuffer    = vm::get_ptr<CellSpursTraceInfo>(spu.ls_offset + 0x2C00);
+            mgmt->traceMsgCount = traceBuffer->count[mgmt->spuNum];
         }
 
-        mgmt->traceBuffer   = mgmt->spurs->m.traceBuffer.addr() + (mgmt->spurs->m.traceStartIndex[mgmt->spuNum] << 4);
-        mgmt->traceMaxCount = mgmt->spurs->m.traceStartIndex[1] - mgmt->spurs->m.traceStartIndex[0];
+        mgmt->traceBuffer   = spurs->m.traceBuffer.addr() + (spurs->m.traceStartIndex[mgmt->spuNum] << 4);
+        mgmt->traceMaxCount = spurs->m.traceStartIndex[1] - spurs->m.traceStartIndex[0];
         if (mgmt->traceBuffer == 0) {
             mgmt->traceMsgCount = 0;
         }
     }
 
     if (notify) {
-        // TODO: sys_spu_thread_send_event(mgmt->spurs->m.spuPort, 2, 0);
+        // TODO: sys_spu_thread_send_event(spurs->m.spuPort, 2, 0);
     }
 }
 
@@ -568,81 +605,108 @@ void spursSysServiceUpdateTrace(SPUThread & spu, SpursKernelMgmtData * mgmt, u32
 void spursSysServiceUpdateEvent(SPUThread & spu, SpursKernelMgmtData * mgmt, u32 wklShutdownBitSet) {
     // Mark the workloads in wklShutdownBitSet as completed and also generate a bit set of the completed
     // workloads that have a shutdown completion hook registered
-    u32 wklNotifyBitSet = 0;
-    for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
-        if (wklShutdownBitSet & (0x80000000u >> i)) {
-            mgmt->spurs->m.wklEvent1[i] |= 0x01;
-            if (mgmt->spurs->m.wklEvent1[i] & 0x02 || mgmt->spurs->m.wklEvent1[i] & 0x10) {
-                wklNotifyBitSet |= 0x80000000u >> i;
-            }
-        }
+    u32 wklNotifyBitSet;
+    u8  spuPort;
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
 
-        if (wklShutdownBitSet & (0x8000 >> i)) {
-            mgmt->spurs->m.wklEvent2[i] |= 0x01;
-            if (mgmt->spurs->m.wklEvent2[i] & 0x02 || mgmt->spurs->m.wklEvent2[i] & 0x10) {
-                wklNotifyBitSet |= 0x8000 >> i;
+        wklNotifyBitSet = 0;
+        spuPort         = spurs->m.spuPort;;
+        for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
+            if (wklShutdownBitSet & (0x80000000u >> i)) {
+                spurs->m.wklEvent1[i] |= 0x01;
+                if (spurs->m.wklEvent1[i] & 0x02 || spurs->m.wklEvent1[i] & 0x10) {
+                    wklNotifyBitSet |= 0x80000000u >> i;
+                }
+            }
+
+            if (wklShutdownBitSet & (0x8000 >> i)) {
+                spurs->m.wklEvent2[i] |= 0x01;
+                if (spurs->m.wklEvent2[i] & 0x02 || spurs->m.wklEvent2[i] & 0x10) {
+                    wklNotifyBitSet |= 0x8000 >> i;
+                }
             }
         }
-    }
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
     if (wklNotifyBitSet) {
-        // TODO: sys_spu_thread_send_event(mgmt->spurs->m.spuPort, 0, wklNotifyMask);
+        // TODO: sys_spu_thread_send_event(spuPort, 0, wklNotifyMask);
     }
 }
 
 /// Update workload information in the SPU from CellSpurs
 void spursSysServiceUpdateWorkload(SPUThread & spu, SpursKernelMgmtData * mgmt) {
+    auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
+    spursDma(spu, MFC_GET_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklInfo1), 0x30000/*LSA*/, 0x200/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID);
+    if (spurs->m.flags1 & SF1_32_WORKLOADS) {
+        spursDma(spu, MFC_GET_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklInfo2), 0x30200/*LSA*/, 0x200/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID);
+    }
+
     u32 wklShutdownBitSet = 0;
     mgmt->wklRunnable1    = 0;
     mgmt->wklRunnable2    = 0;
     for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
+        auto wklInfo1 = vm::get_ptr<CellSpurs::WorkloadInfo>(spu.ls_offset + 0x30000);
+
         // Copy the priority of the workload for this SPU and its unique id to the LS
-        mgmt->priority[i]    = mgmt->spurs->m.wklInfo1[i].priority[mgmt->spuNum] == 0 ? 0 : 0x10 - mgmt->spurs->m.wklInfo1[i].priority[mgmt->spuNum];
-        mgmt->wklUniqueId[i] = mgmt->spurs->m.wklInfo1[i].uniqueId.read_relaxed();
+        mgmt->priority[i]    = wklInfo1[i].priority[mgmt->spuNum] == 0 ? 0 : 0x10 - wklInfo1[i].priority[mgmt->spuNum];
+        mgmt->wklUniqueId[i] = wklInfo1[i].uniqueId.read_relaxed();
 
-        // Update workload status and runnable flag based on the workload state
-        auto wklStatus = mgmt->spurs->m.wklStatus1[i];
-        if (mgmt->spurs->m.wklState1[i].read_relaxed() == SPURS_WKL_STATE_RUNNABLE) {
-            mgmt->spurs->m.wklStatus1[i] |= 1 << mgmt->spuNum;
-            mgmt->wklRunnable1           |= 0x8000 >> i;
-        } else {
-            mgmt->spurs->m.wklStatus1[i] &= ~(1 << mgmt->spuNum);
-        }
+        if (spurs->m.flags1 & SF1_32_WORKLOADS) {
+            auto wklInfo2 = vm::get_ptr<CellSpurs::WorkloadInfo>(spu.ls_offset + 0x30200);
 
-        // If the workload is shutting down and if this is the last SPU from which it is being removed then
-        // add it to the shutdown bit set
-        if (mgmt->spurs->m.wklState1[i].read_relaxed() == SPURS_WKL_STATE_SHUTTING_DOWN) {
-            if (((wklStatus & (1 << mgmt->spuNum)) != 0) && (mgmt->spurs->m.wklStatus1[i] == 0)) {
-                mgmt->spurs->m.wklState1[i].write_relaxed(SPURS_WKL_STATE_REMOVABLE);
-                wklShutdownBitSet |= 0x80000000u >> i;
-            }
-        }
-
-        if (mgmt->spurs->m.flags1 & SF1_32_WORKLOADS) {
             // Copy the priority of the workload for this SPU to the LS
-            if (mgmt->spurs->m.wklInfo2[i].priority[mgmt->spuNum]) {
-                mgmt->priority[i] |= (0x10 - mgmt->spurs->m.wklInfo2[i].priority[mgmt->spuNum]) << 4;
+            if (wklInfo2[i].priority[mgmt->spuNum]) {
+                mgmt->priority[i] |= (0x10 - wklInfo2[i].priority[mgmt->spuNum]) << 4;
             }
+        }
+    }
 
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
+
+        for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
             // Update workload status and runnable flag based on the workload state
-            wklStatus = mgmt->spurs->m.wklStatus2[i];
-            if (mgmt->spurs->m.wklState2[i].read_relaxed() == SPURS_WKL_STATE_RUNNABLE) {
-                mgmt->spurs->m.wklStatus2[i] |= 1 << mgmt->spuNum;
-                mgmt->wklRunnable2           |= 0x8000 >> i;
+            auto wklStatus = spurs->m.wklStatus1[i];
+            if (spurs->m.wklState1[i].read_relaxed() == SPURS_WKL_STATE_RUNNABLE) {
+                spurs->m.wklStatus1[i] |= 1 << mgmt->spuNum;
+                mgmt->wklRunnable1     |= 0x8000 >> i;
             } else {
-                mgmt->spurs->m.wklStatus2[i] &= ~(1 << mgmt->spuNum);
+                spurs->m.wklStatus1[i] &= ~(1 << mgmt->spuNum);
             }
 
             // If the workload is shutting down and if this is the last SPU from which it is being removed then
             // add it to the shutdown bit set
-            if (mgmt->spurs->m.wklState2[i].read_relaxed() == SPURS_WKL_STATE_SHUTTING_DOWN) {
-                if (((wklStatus & (1 << mgmt->spuNum)) != 0) && (mgmt->spurs->m.wklStatus2[i] == 0)) {
-                    mgmt->spurs->m.wklState2[i].write_relaxed(SPURS_WKL_STATE_REMOVABLE);
-                    wklShutdownBitSet |= 0x8000 >> i;
+            if (spurs->m.wklState1[i].read_relaxed() == SPURS_WKL_STATE_SHUTTING_DOWN) {
+                if (((wklStatus & (1 << mgmt->spuNum)) != 0) && (spurs->m.wklStatus1[i] == 0)) {
+                    spurs->m.wklState1[i].write_relaxed(SPURS_WKL_STATE_REMOVABLE);
+                    wklShutdownBitSet |= 0x80000000u >> i;
+                }
+            }
+
+            if (spurs->m.flags1 & SF1_32_WORKLOADS) {
+                // Update workload status and runnable flag based on the workload state
+                wklStatus = spurs->m.wklStatus2[i];
+                if (spurs->m.wklState2[i].read_relaxed() == SPURS_WKL_STATE_RUNNABLE) {
+                    spurs->m.wklStatus2[i] |= 1 << mgmt->spuNum;
+                    mgmt->wklRunnable2     |= 0x8000 >> i;
+                } else {
+                    spurs->m.wklStatus2[i] &= ~(1 << mgmt->spuNum);
+                }
+
+                // If the workload is shutting down and if this is the last SPU from which it is being removed then
+                // add it to the shutdown bit set
+                if (spurs->m.wklState2[i].read_relaxed() == SPURS_WKL_STATE_SHUTTING_DOWN) {
+                    if (((wklStatus & (1 << mgmt->spuNum)) != 0) && (spurs->m.wklStatus2[i] == 0)) {
+                        spurs->m.wklState2[i].write_relaxed(SPURS_WKL_STATE_REMOVABLE);
+                        wklShutdownBitSet |= 0x8000 >> i;
+                    }
                 }
             }
         }
-    }
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
     if (wklShutdownBitSet) {
         spursSysServiceUpdateEvent(spu, mgmt, wklShutdownBitSet);
@@ -651,57 +715,85 @@ void spursSysServiceUpdateWorkload(SPUThread & spu, SpursKernelMgmtData * mgmt) 
 
 /// Process any messages
 void spursSysServiceProcessMessages(SPUThread & spu, SpursKernelMgmtData * mgmt) {
-    LV2_LOCK(0);
+    bool updateTrace    = false;
+    bool updateWorkload = false;
+    bool terminate      = false;
+
+    do {
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
+
+        // Terminate request
+        if (spurs->m.sysSrvMsgTerminate & (1 << mgmt->spuNum)) {
+            spurs->m.sysSrvOnSpu &= ~(1 << mgmt->spuNum);
+            terminate = true;
+        }
+
+        // Update workload message
+        if (spurs->m.sysSrvMsgUpdateWorkload.read_relaxed() & (1 << mgmt->spuNum)) {
+            spurs->m.sysSrvMsgUpdateWorkload &= ~(1 << mgmt->spuNum);
+            updateWorkload = true;
+        }
+
+        // Update trace message
+        if (spurs->m.sysSrvMsgUpdateTrace & (1 << mgmt->spuNum)) {
+            updateTrace = true;
+        }
+    } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
     // Process update workload message
-    if (mgmt->spurs->m.sysSrvMsgUpdateWorkload.read_relaxed() & (1 << mgmt->spuNum)) {
-        mgmt->spurs->m.sysSrvMsgUpdateWorkload &= ~(1 << mgmt->spuNum);
+    if (updateWorkload) {
         spursSysServiceUpdateWorkload(spu, mgmt);
     }
 
     // Process update trace message
-    if (mgmt->spurs->m.sysSrvMsgUpdateTrace & (1 << mgmt->spuNum)) {
+    if (updateTrace) {
         spursSysServiceUpdateTrace(spu, mgmt, 1, 0, 0);
     }
 
     // Process terminate request
-    if (mgmt->spurs->m.sysSrvMsgTerminate & (1 << mgmt->spuNum)) {
-        mgmt->spurs->m.sysSrvOnSpu &= ~(1 << mgmt->spuNum);
+    if (terminate) {
         // TODO: Rest of the terminate processing
     }
 }
 
 /// Wait for an external event or exit the SPURS thread group if no workloads can be scheduled
 void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
+    // Monitor only lock line reservation lost events
+    spu.WriteChannel(SPU_WrEventMask, u128::from32r(SPU_EVENT_LR));
+
+    bool shouldExit;
     while (true) {
-        Emu.GetCoreMutex().lock();
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
 
         // Find the number of SPUs that are idling in this SPURS instance
         u32 nIdlingSpus = 0;
         for (u32 i = 0; i < 8; i++) {
-            if (mgmt->spurs->m.spuIdling & (1 << i)) {
+            if (spurs->m.spuIdling & (1 << i)) {
                 nIdlingSpus++;
             }
         }
 
-        bool allSpusIdle  = nIdlingSpus == mgmt->spurs->m.nSpus ? true: false;
-        bool exitIfNoWork = mgmt->spurs->m.flags1 & SF1_EXIT_IF_NO_WORK ? true : false;
+        bool allSpusIdle  = nIdlingSpus == spurs->m.nSpus ? true: false;
+        bool exitIfNoWork = spurs->m.flags1 & SF1_EXIT_IF_NO_WORK ? true : false;
+        shouldExit        = allSpusIdle && exitIfNoWork;
 
         // Check if any workloads can be scheduled
         bool foundReadyWorkload = false;
-        if (mgmt->spurs->m.sysSrvMessage.read_relaxed() & (1 << mgmt->spuNum)) {
+        if (spurs->m.sysSrvMessage.read_relaxed() & (1 << mgmt->spuNum)) {
             foundReadyWorkload = true;
         } else {
-            if (mgmt->spurs->m.flags1 & SF1_32_WORKLOADS) {
+            if (spurs->m.flags1 & SF1_32_WORKLOADS) {
                 for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++) {
                     u32 j            = i & 0x0F;
                     u8 runnable      = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->wklRunnable1 & (0x8000 >> j) : mgmt->wklRunnable2 & (0x8000 >> j);
                     u8 priority      = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->priority[j] & 0x0F : mgmt->priority[j] >> 4;
-                    u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklMaxContention[j].read_relaxed() & 0x0F : mgmt->spurs->m.wklMaxContention[j].read_relaxed() >> 4;
-                    u8 contention    = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklCurrentContention[j] & 0x0F : mgmt->spurs->m.wklCurrentContention[j] >> 4;
-                    u8 wklSignal     = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklSignal1.read_relaxed() & (0x8000 >> j) : mgmt->spurs->m.wklSignal2.read_relaxed() & (0x8000 >> j);
-                    u8 wklFlag       = mgmt->spurs->m.wklFlag.flag.read_relaxed() == 0 ? mgmt->spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
-                    u8 readyCount    = i < CELL_SPURS_MAX_WORKLOAD ? mgmt->spurs->m.wklReadyCount1[j].read_relaxed() : mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[j].read_relaxed();
+                    u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklMaxContention[j].read_relaxed() & 0x0F : spurs->m.wklMaxContention[j].read_relaxed() >> 4;
+                    u8 contention    = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklCurrentContention[j] & 0x0F : spurs->m.wklCurrentContention[j] >> 4;
+                    u8 wklSignal     = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklSignal1.read_relaxed() & (0x8000 >> j) : spurs->m.wklSignal2.read_relaxed() & (0x8000 >> j);
+                    u8 wklFlag       = spurs->m.wklFlag.flag.read_relaxed() == 0 ? spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
+                    u8 readyCount    = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklReadyCount1[j].read_relaxed() : spurs->m.wklIdleSpuCountOrReadyCount2[j].read_relaxed();
 
                     if (runnable && priority > 0 && maxContention > contention) {
                         if (wklFlag || wklSignal || readyCount > contention) {
@@ -713,14 +805,14 @@ void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
             } else {
                 for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
                     u8 runnable     = mgmt->wklRunnable1 & (0x8000 >> i);
-                    u8 wklSignal    = mgmt->spurs->m.wklSignal1.read_relaxed() & (0x8000 >> i);
-                    u8 wklFlag      = mgmt->spurs->m.wklFlag.flag.read_relaxed() == 0 ? mgmt->spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
-                    u8 readyCount   = mgmt->spurs->m.wklReadyCount1[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : mgmt->spurs->m.wklReadyCount1[i].read_relaxed();
-                    u8 idleSpuCount = mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : mgmt->spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed();
+                    u8 wklSignal    = spurs->m.wklSignal1.read_relaxed() & (0x8000 >> i);
+                    u8 wklFlag      = spurs->m.wklFlag.flag.read_relaxed() == 0 ? spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
+                    u8 readyCount   = spurs->m.wklReadyCount1[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->m.wklReadyCount1[i].read_relaxed();
+                    u8 idleSpuCount = spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed();
                     u8 requestCount = readyCount + idleSpuCount;
 
-                    if (runnable && mgmt->priority[i] != 0 && mgmt->spurs->m.wklMaxContention[i].read_relaxed() > mgmt->spurs->m.wklCurrentContention[i]) {
-                        if (wklFlag || wklSignal || (readyCount != 0 && requestCount > mgmt->spurs->m.wklCurrentContention[i])) {
+                    if (runnable && mgmt->priority[i] != 0 && spurs->m.wklMaxContention[i].read_relaxed() > spurs->m.wklCurrentContention[i]) {
+                        if (wklFlag || wklSignal || (readyCount != 0 && requestCount > spurs->m.wklCurrentContention[i])) {
                             foundReadyWorkload = true;
                             break;
                         }
@@ -729,33 +821,29 @@ void spursSysServiceWaitOrExit(SPUThread & spu, SpursKernelMgmtData * mgmt) {
             }
         }
 
+        bool spuIdling = spurs->m.spuIdling & (1 << mgmt->spuNum) ? true : false;
+        if (foundReadyWorkload && shouldExit == false) {
+            spurs->m.spuIdling &= ~(1 << mgmt->spuNum);
+        } else {
+            spurs->m.spuIdling |= 1 << mgmt->spuNum;
+        }
+
         // If all SPUs are idling and the exit_if_no_work flag is set then the SPU thread group must exit. Otherwise wait for external events.
-        if ((mgmt->spurs->m.spuIdling & (1 << mgmt->spuNum)) && (allSpusIdle == false || exitIfNoWork == false) && foundReadyWorkload == false) {
-            // The system service blocks by making a reservation and waiting on the reservation lost event. This is unfortunately
-            // not yet completely implemented in rpcs3. So we busy wait here.
-            //u128 r;
-            //spu.ReadChannel(r, 0);
-
-            Emu.GetCoreMutex().unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            Emu.GetCoreMutex().lock();
+        if (spuIdling && shouldExit == false && foundReadyWorkload == false) {
+            // The system service blocks by making a reservation and waiting on the lock line reservation lost event.
+            u128 r;
+            spu.ReadChannel(r, SPU_RdEventStat);
+            spu.WriteChannel(SPU_WrEventAck, u128::from32r(SPU_EVENT_LR));
         }
 
-        if ((allSpusIdle == true && exitIfNoWork == true) || foundReadyWorkload == false) {
-            mgmt->spurs->m.spuIdling |= 1 << mgmt->spuNum;
-        } else {
-            mgmt->spurs->m.spuIdling &= ~(1 << mgmt->spuNum);
+        auto dmaSuccess = spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
+        if (dmaSuccess && (shouldExit || foundReadyWorkload)) {
+            break;
         }
+    }
 
-        Emu.GetCoreMutex().unlock();
-
-        if (allSpusIdle == false || exitIfNoWork == false) {
-            if (foundReadyWorkload == true) {
-                return;
-            }
-        } else {
-            // TODO: exit spu thread group
-        }
+    if (shouldExit) {
+        // TODO: exit spu thread group
     }
 }
 
@@ -764,22 +852,31 @@ void spursSysServiceWorkloadMain(SPUThread & spu, u32 pollStatus) {
     auto mgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
 
     if (mgmt->spurs.addr() % CellSpurs::align) {
-        assert(0);
+        spursHalt(spu);
+        return;
     }
 
     // Initialise the system service if this is the first time its being started on this SPU
     if (mgmt->sysSrvInitialised == 0) {
         mgmt->sysSrvInitialised = 1;
 
-        LV2_LOCK(0);
-        if (mgmt->spurs->m.sysSrvOnSpu & (1 << mgmt->spuNum)) {
-            assert(0);
-        }
+        spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/);
 
-        mgmt->spurs->m.sysSrvOnSpu |= 1 << mgmt->spuNum;
-        mgmt->traceBuffer           = 0;
-        mgmt->traceMsgCount         = -1;
+        do {
+            spursDma(spu, MFC_GETLLAR_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
+            CellSpurs * spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
 
+            // Halt if already initialised
+            if (spurs->m.sysSrvOnSpu & (1 << mgmt->spuNum)) {
+                spursHalt(spu);
+                return;
+            }
+
+            spurs->m.sysSrvOnSpu |= 1 << mgmt->spuNum;
+        } while (spursDma(spu, MFC_PUTLLC_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
+
+        mgmt->traceBuffer   = 0;
+        mgmt->traceMsgCount = -1;
         spursSysServiceUpdateTrace(spu, mgmt, 1, 1, 0);
         spursSysServiceCleanupAfterPreemption(spu, mgmt);
 
@@ -818,6 +915,8 @@ poll:
             pkt.header.tag = CELL_SPURS_TRACE_TAG_STOP;
             pkt.data.stop  = SPURS_GUID_SYS_WKL;
             cellSpursModulePutTrace(&pkt, mgmt->dmaTagId);
+
+            spursDmaWaitForCompletion(spu, 1 << mgmt->dmaTagId);
             break;
         }
 
@@ -849,10 +948,6 @@ bool spursSysServiceWorkloadEntry(SPUThread & spu) {
     auto arg        = spu.GPR[4]._u64[1];
     auto pollStatus = spu.GPR[5]._u32[3];
 
-    spu.GPR[1]._u32[3]                        = 0x3FFD0;
-    *(vm::ptr<u32>::make(spu.GPR[1]._u32[3])) = 0x3FFF0;
-    memset(vm::get_ptr<void>(spu.ls_offset + 0x3FFE0), 0, 32);
-
     if (mgmt->wklCurrentId == CELL_SPURS_SYS_SERVICE_WORKLOAD_ID) {
         spursSysServiceWorkloadMain(spu, pollStatus);
     } else {
@@ -860,7 +955,6 @@ bool spursSysServiceWorkloadEntry(SPUThread & spu) {
         // system service workload. Need to implement this.
     }
 
-    // TODO: Ensure that this function always returns to the SPURS kernel
     return false;
 }
 
