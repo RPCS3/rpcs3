@@ -341,6 +341,7 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceNet.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceSsl.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceTouch.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />
     <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />

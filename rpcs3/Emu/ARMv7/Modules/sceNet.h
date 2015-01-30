@@ -35,15 +35,15 @@ struct SceNetSockaddr
 struct SceNetEpollDataExt
 {
 	s32 id;
-	u32 u32;
+	u32 data;
 };
 
 union SceNetEpollData
 {
 	vm::psv::ptr<void> ptr;
 	s32 fd;
-	u32 u32;
-	u64 u64;
+	u32 _u32;
+	u64 _u64;
 	SceNetEpollDataExt ext;
 };
 

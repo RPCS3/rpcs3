@@ -174,7 +174,7 @@ s32 sceVoiceDeletePort(u32 portId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceWriteToIPort(u32 ips, vm::psv::ptr<const void> data, vm::psv::ptr<u32> size, int16_t frameGaps)
+s32 sceVoiceWriteToIPort(u32 ips, vm::psv::ptr<const void> data, vm::psv::ptr<u32> size, s16 frameGaps)
 {
 	throw __FUNCTION__;
 }

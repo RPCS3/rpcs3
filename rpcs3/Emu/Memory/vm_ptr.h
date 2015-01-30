@@ -108,6 +108,8 @@ namespace vm
 		AT m_addr;
 		
 	public:
+		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 		typedef typename std::remove_cv<T>::type type;
 
 		__forceinline static const u32 data_size()

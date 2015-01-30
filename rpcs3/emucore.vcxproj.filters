@@ -1498,5 +1498,8 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceSsl.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\sceTouch.h">
+      <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
