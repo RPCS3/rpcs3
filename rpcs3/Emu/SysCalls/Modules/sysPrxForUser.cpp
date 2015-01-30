@@ -48,19 +48,23 @@ u32 ppu_get_tls(u32 thread)
 		sysPrxForUser->Warning("TLS initialized (g_tls_size=0x%x, g_tls_start=0x%x, g_tls_image_addr=0x%x, g_tls_image_size=0x%x)", g_tls_size, g_tls_start, g_tls_image_addr, g_tls_image_size);
 	}
 	
-	for (auto& v : g_tls_owners)
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		if (g_tls_owners[i] == thread)
+		{
+			return g_tls_start + i * g_tls_size; // if already initialized, return TLS address
+		}
+	}
+
+	for (u32 i = 0; i < TLS_MAX; i++)
 	{
 		u32 old = 0;
-		if (v.compare_exchange_strong(old, thread))
+		if (g_tls_owners[i].compare_exchange_strong(old, thread))
 		{
-			const u32 addr = g_tls_start + (&v - g_tls_owners.data()) * g_tls_size;     // get TLS address
-			memset(vm::get_ptr(addr), 0, g_tls_size);                                   // fill TLS area with zeros
+			const u32 addr = g_tls_start + i * g_tls_size; // get TLS address
+			memset(vm::get_ptr(addr), 0, g_tls_size);      // fill TLS area with zeros
 			memcpy(vm::get_ptr(addr), vm::get_ptr(g_tls_image_addr), g_tls_image_size); // initialize from TLS image
 			return addr;
-		}
-		else if (old == thread)
-		{
-			return g_tls_start + (&v - g_tls_owners.data()) * g_tls_size; // if already initialized, return TLS address again
 		}
 	}
 
