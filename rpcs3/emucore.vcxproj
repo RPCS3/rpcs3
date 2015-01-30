@@ -340,6 +340,7 @@
     <ClInclude Include="Emu\ARMv7\Modules\sceIme.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceNet.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceNpCommon.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceSsl.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceTouch.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
