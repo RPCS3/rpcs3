@@ -356,7 +356,7 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+			//vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*
 			//TODO
 			static const int branch_size = 6 * 4;
@@ -423,7 +423,6 @@ namespace loader
 
 				case 0x00000007: //TLS
 					Emu.SetTLSData(phdr.p_vaddr.addr(), phdr.p_filesz.value(), phdr.p_memsz.value());
-					LOG_ERROR(LOADER, "TLS: addr=0x%x, filesz=0x%x, memsz=0x%x", Emu.GetTLSAddr(), Emu.GetTLSFilesz(), Emu.GetTLSMemsz());
 					break;
 
 				case 0x60000001: //LOOS+1
