@@ -15,6 +15,9 @@
 
 u64 rotate_mask[64][64];
 
+extern u32 ppu_get_tls(u32 thread);
+extern void ppu_free_tls(u32 thread);
+
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
@@ -32,6 +35,7 @@ PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
 
 PPUThread::~PPUThread()
 {
+	ppu_free_tls(GetId());
 }
 
 void PPUThread::DoReset()
@@ -92,7 +96,7 @@ void PPUThread::InitRegs()
 	GPR[2] = rtoc;
 	//GPR[11] = entry;
 	//GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
+	GPR[13] = ppu_get_tls(GetId()) + 0x7000; // 0x7000 is usually subtracted from r13 to access first TLS element (details are not clear)
 
 	LR = Emu.GetCPUThreadExit();
 	CTR = PC;

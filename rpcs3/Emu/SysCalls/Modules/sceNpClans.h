@@ -109,7 +109,7 @@ enum
 
 // Request handle for clan API
 struct SceNpClansRequest;
-typedef SceNpClansRequest* SceNpClansRequestHandle;
+typedef vm::ptr<SceNpClansRequest> SceNpClansRequestHandle;
 
 // Paging request structure
 struct SceNpClansPagingRequest

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Ini.h"
 #include "Utilities/Log.h"
 #include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
@@ -102,6 +103,9 @@ namespace loader
 				u32 code_start = 0;
 				u32 code_end = 0;
 
+				u32 vnid_addr = 0;
+				std::unordered_map<u32, u32> vnid_list;
+
 				for (auto& shdr : m_shdrs)
 				{
 					// get secton name
@@ -165,15 +169,19 @@ namespace loader
 
 						for (u32 j = 0; j < shdr.data_le.sh_size / 4; j++)
 						{
-							u32 nid = fnid[j];
-							u32 addr = fstub[j];
+							const u32 nid = fnid[j];
+							const u32 addr = fstub[j];
 
 							if (auto func = get_psv_func_by_nid(nid))
 							{
 								if (func->module)
+								{
 									func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+								}
 								else
+								{
 									LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+								}
 
 								// writing Thumb code (temporarily, because it should be ARM)
 								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
@@ -183,7 +191,7 @@ namespace loader
 							}
 							else
 							{
-								LOG_ERROR(LOADER, "Unimplemented function 0x%08x (addr=0x%x)", nid, addr);
+								LOG_ERROR(LOADER, "Unknown function 0x%08x (addr=0x%x)", nid, addr);
 
 								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
 								vm::psv::write16(addr + 2, 0); // index 0 (unimplemented stub)
@@ -192,6 +200,44 @@ namespace loader
 
 							code_end = std::min<u32>(addr, code_end);
 						}
+					}
+					else if (!strcmp(name.c_str(), ".sceVNID.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceVNID.rodata analysis...");
+
+						vnid_addr = shdr.data_le.sh_addr;
+					}
+					else if (!strcmp(name.c_str(), ".sceVStub.rodata"))
+					{
+						LOG_NOTICE(LOADER, ".sceVStub.rodata analysis...");
+
+						if (!vnid_addr)
+						{
+							if (shdr.data_le.sh_size)
+							{
+								LOG_ERROR(LOADER, ".sceVNID.rodata address not found, unable to process imports");
+							}
+							continue;
+						}
+
+						auto vnid = vm::psv::ptr<const u32>::make(vnid_addr);
+						auto vstub = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+
+						for (u32 j = 0; j < shdr.data_le.sh_size / 4; j++)
+						{
+							const u32 nid = vnid[j];
+							const u32 addr = vstub[j];
+
+							LOG_ERROR(LOADER, "Unknown object 0x%08x (ref_addr=0x%x)", nid, addr);
+
+							// TODO: find imported object (vtable, typeinfo or something), assign it to vnid_list[addr]
+						}
+					}
+					else if (!strcmp(name.c_str(), ".tbss"))
+					{
+						LOG_NOTICE(LOADER, ".tbss analysis");
+
+						LOG_ERROR(LOADER, "TLS: size=0x%08x", shdr.data_le.sh_size);
 					}
 					else if (!strcmp(name.c_str(), ".sceRefs.rodata"))
 					{
@@ -203,39 +249,65 @@ namespace loader
 						{
 							switch (*code)
 							{
-							case 0x000000ff:
+							case 0x000000ff: // save address for future use
 							{
-								// save address for future use
 								data = *++code;
 								break;
 							}
-							case 0x0000002f:
+							case 0x0000002f: // movw r*,# instruction is replaced
 							{
-								// movw r12,# instruction will be replaced
+								if (!data) // probably, imported object
+								{
+									auto found = vnid_list.find(code.addr());
+									if (found != vnid_list.end())
+									{
+										data = found->second;
+									}
+								}
+
+								if (!data)
+								{
+									LOG_ERROR(LOADER, ".sceRefs: movw writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
+								}
+								else //if (Ini.HLELogging.GetValue())
+								{
+									LOG_NOTICE(LOADER, ".sceRefs: movw written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
+								}
+
 								const u32 addr = *++code;
-								vm::psv::write16(addr + 0, 0xf240 | (data & 0x800) >> 1 | (data & 0xf000) >> 12); // MOVW
-								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x700) << 4 | (data & 0xff));
-								//LOG_NOTICE(LOADER, "sceRefs: movw written at 0x%x (data=0x%x)", addr, data);
+								vm::psv::write16(addr + 0, vm::psv::read16(addr + 0) | (data & 0x800) >> 1 | (data & 0xf000) >> 12);
+								vm::psv::write16(addr + 2, vm::psv::read16(addr + 2) | (data & 0x700) << 4 | (data & 0xff));
 								break;
 							}
-							case 0x00000030:
+							case 0x00000030: // movt r*,# instruction is replaced
 							{
-								// movt r12,# instruction will be replaced
+								if (!data)
+								{
+									LOG_ERROR(LOADER, ".sceRefs: movt writing failed (ref_addr=0x%x, addr=0x%x)", code, code[1]);
+								}
+								else //if (Ini.HLELogging.GetValue())
+								{
+									LOG_NOTICE(LOADER, ".sceRefs: movt written at 0x%x (ref_addr=0x%x, data=0x%x)", code[1], code, data);
+								}
+
 								const u32 addr = *++code;
-								vm::psv::write16(addr + 0, 0xf2c0 | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28); // MOVT
-								vm::psv::write16(addr + 2, 0x0c00 | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
-								//LOG_NOTICE(LOADER, "sceRefs: movt written at 0x%x (data=0x%x)", addr, data);
+								vm::psv::write16(addr + 0, vm::psv::read16(addr + 0) | (data & 0x8000000) >> 17 | (data & 0xf0000000) >> 28);
+								vm::psv::write16(addr + 2, vm::psv::read16(addr + 2) | (data & 0x7000000) >> 12 | (data & 0xff0000) >> 16);
 								break;
 							}
 							case 0x00000000:
 							{
-								// probably, no operation
-								//LOG_NOTICE(LOADER, "sceRefs: zero code");
+								data = 0;
+
+								if (Ini.HLELogging.GetValue())
+								{
+									LOG_NOTICE(LOADER, ".sceRefs: zero code found");
+								}
 								break;
 							}
 							default:
 							{
-								LOG_ERROR(LOADER, "sceRefs: unknown code found (0x%08x)", *code);
+								LOG_ERROR(LOADER, "Unknown code in .sceRefs section (0x%08x)", *code);
 							}
 							}
 						}
