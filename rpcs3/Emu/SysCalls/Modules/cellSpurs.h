@@ -155,9 +155,11 @@ enum SpursWorkloadConstants : u64
 
 	// GUID
 	SPURS_GUID_SYS_WKL              = 0x1BB841BF38F89D33ull,
+	SPURS_GUID_TASKSET_PM           = 0x836E915B2E654143ull,
 
 	// Image addresses
 	SPURS_IMG_ADDR_SYS_SRV_WORKLOAD = 0x100,
+	SPURS_IMG_ADDR_TASKSET_PM       = 0x200,
 };
 
 enum CellSpursModulePollStatus
@@ -209,6 +211,8 @@ enum SpursTaskConstants
 	CELL_SPURS_TASK_ATTRIBUTE_REVISION      = 1,
 	CELL_SPURS_TASKSET_ATTRIBUTE_REVISION   = 1,
 	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE  = 1024,
+	CELL_SPURS_TASKSET_PM_ENTRY_ADDR        = 0xA00,
+	CELL_SPURS_TASKSET_PM_SYSCALL_ADDR      = 0xA70,
 };
 
 enum CellSpursEventFlagWaitMode
@@ -917,7 +921,7 @@ struct SpursTasksetPmMgmtData
     be_t<u64> x27B0;                                // 0x27B0
     vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
     be_t<u32> kernelMgmtAddr;                       // 0x27C0
-    be_t<u32> yieldAddr;                            // 0x27C4
+    be_t<u32> syscallAddr;                          // 0x27C4
     be_t<u32> x27C8;                                // 0x27C8
     be_t<u32> spuNum;                               // 0x27CC
     be_t<u32> dmaTagId;                             // 0x27D0

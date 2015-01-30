@@ -13,6 +13,7 @@
 //
 void cellSpursModulePutTrace(CellSpursTracePacket * packet, unsigned tag);
 u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status);
+void cellSpursModuleExit(SPUThread & spu);
 
 bool spursDma(SPUThread & spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag);
 u32 spursDmaGetCompletionStatus(SPUThread & spu, u32 tagMask);
@@ -39,8 +40,16 @@ void spursSysServiceWorkloadMain(SPUThread & spu, u32 pollStatus);
 bool spursSysServiceWorkloadEntry(SPUThread & spu);
 
 //
-// SPURS taskset polict module functions
+// SPURS taskset policy module functions
 //
+bool spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 * isWaiting);
+void spursTasksetExit(SPUThread & spu);
+void spursTasksetDispatch(SPUThread & spu);
+void spursTasksetProcessPollStatus(SPUThread & spu, u32 pollStatus);
+bool spursTasksetShouldYield(SPUThread & spu);
+void spursTasksetInit(SPUThread & spu, u32 pollStatus);
+void spursTasksetResumeTask(SPUThread & spu);
+bool spursTasksetEntry(SPUThread & spu);
 
 extern Module *cellSpurs;
 
@@ -71,6 +80,12 @@ u32 cellSpursModulePollStatus(SPUThread & spu, u32 * status) {
 
     u32 wklId = result >> 32;
     return wklId == mgmt->wklCurrentId ? 0 : 1;
+}
+
+/// Exit current workload
+void cellSpursModuleExit(SPUThread & spu) {
+    auto mgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
+    spu.SetBranch(mgmt->yieldToKernelAddr);
 }
 
 /// Execute a DMA operation
@@ -416,7 +431,6 @@ bool spursKernelMain(SPUThread & spu) {
 
     bool isKernel2;
     u32  pollStatus;
-    u64  wklArg;
     if (spu.PC == CELL_SPURS_KERNEL1_ENTRY_ADDR || spu.PC == CELL_SPURS_KERNEL2_ENTRY_ADDR) {
         // Entry point of SPURS kernel
         // Save arguments
@@ -453,9 +467,9 @@ bool spursKernelMain(SPUThread & spu) {
         spu.RegisterHleFunction(mgmt->yieldToKernelAddr, spursKernelMain);
         spu.RegisterHleFunction(mgmt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
 
-        // Register the system HLE service workload entry point
-        spu.RegisterHleFunction(0xA00, spursSysServiceWorkloadEntry);
-        wklArg = mgmt->spurs->m.wklInfoSysSrv.arg;
+        // DMA in the system service workload info
+        spursDma(spu, MFC_GET_CMD, mgmt->spurs.addr() + offsetof(CellSpurs, m.wklInfoSysSrv), 0x3FFE0/*LSA*/, 0x20/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID/*tag*/);
+        spursDmaWaitForCompletion(spu, 0x80000000);
         pollStatus = 0;
     } else if (spu.PC == mgmt->yieldToKernelAddr) {
         isKernel2 = mgmt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
@@ -468,13 +482,36 @@ bool spursKernelMain(SPUThread & spu) {
             spursKernel1SelectWorkload(spu);
         }
 
-        pollStatus   = (u32)(spu.GPR[3]._u64[1]);
-        auto wid     = (u32)(spu.GPR[3]._u64[1] >> 32);
-        auto wklInfo = wid < CELL_SPURS_MAX_WORKLOAD ? &mgmt->spurs->m.wklInfo1[wid] : (wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &mgmt->spurs->m.wklInfo2[wid & 0xf] :
-                                                                                                                                      &mgmt->spurs->m.wklInfoSysSrv);
-        wklArg       = wklInfo->arg;
+        pollStatus = (u32)(spu.GPR[3]._u64[1]);
+        auto wid   = (u32)(spu.GPR[3]._u64[1] >> 32);
+
+        // DMA in the workload info for the selected workload
+        auto wklInfoOffset =  wid < CELL_SPURS_MAX_WORKLOAD ? offsetof(CellSpurs, m.wklInfo1[wid]) :
+                                                              wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? offsetof(CellSpurs, m.wklInfo2[wid & 0xf]) :
+                                                                                                            offsetof(CellSpurs, m.wklInfoSysSrv);
+        spursDma(spu, MFC_GET_CMD, mgmt->spurs.addr() + wklInfoOffset, 0x3FFE0/*LSA*/, 0x20/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID);
+        spursDmaWaitForCompletion(spu, 0x80000000);
     } else {
         assert(0);
+    }
+
+    auto wklInfo = vm::get_ptr<CellSpurs::WorkloadInfo>(spu.ls_offset + 0x3FFE0);
+    if (mgmt->wklCurrentAddr != wklInfo->addr) {
+        switch (wklInfo->addr.addr()) {
+        case SPURS_IMG_ADDR_SYS_SRV_WORKLOAD:
+            spu.RegisterHleFunction(0xA00, spursSysServiceWorkloadEntry);
+            break;
+        case SPURS_IMG_ADDR_TASKSET_PM:
+            spu.RegisterHleFunction(0xA00, spursTasksetEntry);
+            break;
+        default:
+            spursDma(spu, MFC_GET_CMD, wklInfo-> addr.addr(), 0xA00/*LSA*/, wklInfo->size, CELL_SPURS_KERNEL_DMA_TAG_ID);
+            spursDmaWaitForCompletion(spu, 0x80000000);
+            break;
+        }
+
+        mgmt->wklCurrentAddr     = wklInfo->addr;
+        mgmt->wklCurrentUniqueId = wklInfo->uniqueId.read_relaxed();
     }
 
     if (!isKernel2) {
@@ -486,7 +523,7 @@ bool spursKernelMain(SPUThread & spu) {
     spu.GPR[0]._u32[3] = mgmt->yieldToKernelAddr;
     spu.GPR[1]._u32[3] = 0x3FFB0;
     spu.GPR[3]._u32[3] = 0x100;
-    spu.GPR[4]._u64[1] = wklArg;
+    spu.GPR[4]._u64[1] = wklInfo->arg;
     spu.GPR[5]._u32[3] = pollStatus;
     spu.SetBranch(0xA00);
     return false;
@@ -597,7 +634,8 @@ void spursSysServiceUpdateTrace(SPUThread & spu, SpursKernelMgmtData * mgmt, u32
     }
 
     if (notify) {
-        // TODO: sys_spu_thread_send_event(spurs->m.spuPort, 2, 0);
+        auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
+        sys_spu_thread_send_event(spu, spurs->m.spuPort, 2, 0);
     }
 }
 
@@ -1020,6 +1058,24 @@ bool spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 
     return false;
 }
 
+void spursTasksetExit(SPUThread & spu) {
+    auto mgmt = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+
+    // Trace - STOP
+    CellSpursTracePacket pkt;
+    memset(&pkt, 0, sizeof(pkt));
+    pkt.header.tag = 0x54; // Its not clear what this tag means exactly but it seems similar to CELL_SPURS_TRACE_TAG_STOP
+    pkt.data.stop  = SPURS_GUID_TASKSET_PM;
+    cellSpursModulePutTrace(&pkt, mgmt->dmaTagId);
+
+    // Not sure why this check exists. Perhaps to check for memory corruption.
+    if (memcmp(mgmt->moduleId, "SPURSTASK MODULE", 16) != 0) {
+        spursHalt(spu);
+    }
+
+    cellSpursModuleExit(spu);
+}
+
 void spursTasksetDispatch(SPUThread & spu) {
     auto mgmt       = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
     auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + 0x100);
@@ -1028,7 +1084,8 @@ void spursTasksetDispatch(SPUThread & spu) {
     u32 isWaiting;
     spursTasksetProcessRequest(spu, 5, &taskId, &isWaiting);
     if (taskId >= CELL_SPURS_MAX_TASK) {
-        // TODO: spursTasksetExit(spu);
+        spursTasksetExit(spu);
+        return;
     }
 
     mgmt->taskId = taskId;
@@ -1109,11 +1166,23 @@ void spursTasksetInit(SPUThread & spu, u32 pollStatus) {
     spursTasksetProcessPollStatus(spu, pollStatus);
 }
 
-void spursTasksetEntry(SPUThread & spu) {
+void spursTasksetResumeTask(SPUThread & spu) {
     auto mgmt = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
 
-    // Check if the function was invoked by the SPURS kernel or because of a syscall
-    if (spu.PC != 0xA70) {
+    // Restore task context
+    spu.GPR[0] = mgmt->savedContextLr;
+    spu.GPR[1] = mgmt->savedContextSp;
+    for (auto i = 0; i < 48; i++) {
+        spu.GPR[80 + i] = mgmt->savedContextR80ToR127[i];
+    }
+
+    spu.SetBranch(spu.GPR[0]._u32[3]);
+}
+
+bool spursTasksetEntry(SPUThread & spu) {
+    auto mgmt = vm::get_ptr<SpursTasksetPmMgmtData>(spu.ls_offset + 0x2700);
+
+    if (spu.PC == CELL_SPURS_TASKSET_PM_ENTRY_ADDR) {
         // Called from kernel
         auto kernelMgmt = vm::get_ptr<SpursKernelMgmtData>(spu.ls_offset + spu.GPR[3]._u32[3]);
         auto arg        = spu.GPR[4]._u64[1];
@@ -1123,20 +1192,31 @@ void spursTasksetEntry(SPUThread & spu) {
         mgmt->taskset.set(arg);
         memcpy(mgmt->moduleId, "SPURSTASK MODULE", 16);
         mgmt->kernelMgmtAddr = spu.GPR[3]._u32[3];
-        mgmt->yieldAddr      = 0xA70;
+        mgmt->syscallAddr    = CELL_SPURS_TASKSET_PM_SYSCALL_ADDR;
         mgmt->spuNum         = kernelMgmt->spuNum;
         mgmt->dmaTagId       = kernelMgmt->dmaTagId;
         mgmt->taskId         = 0xFFFFFFFF;
 
+        // Register SPURS takset policy module HLE functions
+        spu.UnregisterHleFunctions(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, 0x40000); // TODO: use a symbolic constant
+        spu.RegisterHleFunction(CELL_SPURS_TASKSET_PM_ENTRY_ADDR, spursTasksetEntry);
+        spu.RegisterHleFunction(mgmt->syscallAddr, spursTasksetEntry);
+
         spursTasksetInit(spu, pollStatus);
-        // TODO: Dispatch
+        spursTasksetDispatch(spu);
+    } else if (spu.PC == CELL_SPURS_TASKSET_PM_SYSCALL_ADDR) {
+        // Save task context
+        mgmt->savedContextLr = spu.GPR[0];
+        mgmt->savedContextSp = spu.GPR[1];
+        for (auto i = 0; i < 48; i++) {
+            mgmt->savedContextR80ToR127[i] = spu.GPR[80 + i];
+        }
+
+        // TODO: Process syscall
+        spursTasksetResumeTask(spu);
+    } else {
+        assert(0);
     }
 
-    mgmt->savedContextLr = spu.GPR[0];
-    mgmt->savedContextSp = spu.GPR[1];
-    for (auto i = 0; i < 48; i++) {
-        mgmt->savedContextR80ToR127[i] = spu.GPR[80 + i];
-    }
-
-    // TODO: Process syscall
+    return false;
 }
