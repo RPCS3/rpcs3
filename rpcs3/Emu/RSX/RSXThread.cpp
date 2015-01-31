@@ -25,32 +25,32 @@ void RSXThread::NativeRescale(float width, float height)
 		m_height_scale = 1080 / height * 2.0f;
 		m_width = 1920;
 		m_height = 1080;
+		break;
 	}
-	break;
 	case 2: // 1280x720 window size
 	{
 		m_width_scale = 1280 / width * 2.0f;
 		m_height_scale = 720 / height * 2.0f;
 		m_width = 1280;
 		m_height = 720;
+		break;
 	}
-	break;
 	case 4: // 720x480 window size
 	{
 		m_width_scale = 720 / width * 2.0f;
 		m_height_scale = 480 / height * 2.0f;
 		m_width = 720;
 		m_height = 480;
+		break;
 	}
-	break;
 	case 5: // 720x576 window size
 	{
 		m_width_scale = 720 / width * 2.0f;
 		m_height_scale = 576 / height * 2.0f;
 		m_width = 720;
 		m_height = 576;
+		break;
 	}
-	break;
 	}
 }
 
@@ -58,7 +58,7 @@ u32 GetAddress(u32 offset, u32 location)
 {
 	u32 res = 0;
 
-	switch(location)
+	switch (location)
 	{
 	case CELL_GCM_LOCATION_LOCAL:
 	{
@@ -70,22 +70,19 @@ u32 GetAddress(u32 offset, u32 location)
 		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
 		if (res == 0)
 		{
-			LOG_ERROR(RSX, "GetAddress(offset=0x%x): RSXIO memory not mapped", offset);
-			Emu.Pause();
-			break;
+			throw fmt::format("GetAddress(offset=0x%x, location=0x%x): RSXIO memory not mapped", offset, location);
 		}
 
 		if (Emu.GetGSManager().GetRender().m_strict_ordering[offset >> 20])
 		{
 			_mm_mfence(); // probably doesn't have any effect on current implementation
 		}
+
 		break;
 	}
 	default:
 	{
-		LOG_ERROR(RSX, "GetAddress(offset=0x%x, location=0x%x): invalid location", offset, location);
-		Emu.Pause();
-		break;
+		throw fmt::format("GetAddress(offset=0x%x, location=0x%x): invalid location", offset, location);
 	}
 	}
 
@@ -112,7 +109,7 @@ void RSXVertexData::Reset()
 	data.clear();
 }
 
-void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
+void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0)
 {
 	if (!addr) return;
 
@@ -125,29 +122,29 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex=0)
 		auto src = vm::get_ptr<const u8>(addr + baseOffset + stride * (i + baseIndex));
 		u8* dst = &data[i * tsize * size];
 
-		switch(tsize)
+		switch (tsize)
 		{
 		case 1:
 		{
-			memcpy(dst, src, size); // may be dangerous
+			memcpy(dst, src, size);
+			break;
 		}
-		break;
 
 		case 2:
 		{
 			const u16* c_src = (const u16*)src;
 			u16* c_dst = (u16*)dst;
 			for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
+			break;
 		}
-		break;
 
 		case 4:
 		{
 			const u32* c_src = (const u32*)src;
 			u32* c_dst = (u32*)dst;
 			for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
+			break;
 		}
-		break;
 		}
 	}
 }
@@ -199,7 +196,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
     case_16(offset + 16*step, step)
 #define case_range(n, offset, step) \
     case_##n(offset, step) \
-    index = (cmd - offset) / step;
+    index = (cmd - offset) / step
 
 void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count)
 {
@@ -217,14 +214,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 	m_used_gcm_commands.insert(cmd);
 
-	switch(cmd)
+	switch (cmd)
 	{
 	// NV406E
 	case NV406E_SET_REFERENCE:
 	{
 		m_ctrl->ref.exchange(be_t<u32>::make(ARGS(0)));
+		break;
 	}
-	break;
 
 	case NV406E_SET_CONTEXT_DMA_SEMAPHORE:
 	{
@@ -232,16 +229,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV406E_SET_CONTEXT_DMA_SEMAPHORE: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_SEMAPHORE_OFFSET:
 	case NV406E_SEMAPHORE_OFFSET:
 	{
 		m_set_semaphore_offset = true;
 		m_semaphore_offset = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV406E_SEMAPHORE_ACQUIRE:
 	{
@@ -249,8 +246,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV406E_SEMAPHORE_ACQUIRE: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV406E_SEMAPHORE_RELEASE:
 	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
@@ -260,8 +257,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			m_set_semaphore_offset = false;
 			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 	{
@@ -273,8 +270,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
 		}
+		break;
 	}
-	break;
 
 	// NV4097
 	case 0x0003fead:
@@ -311,30 +308,30 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				return;
 			}
 
-			std::this_thread::sleep_for (std::chrono::milliseconds((s64)(1000.0 / limit - m_timer_sync.GetElapsedTimeInMilliSec())));
+			std::this_thread::sleep_for(std::chrono::milliseconds((s64)(1000.0 / limit - m_timer_sync.GetElapsedTimeInMilliSec())));
 			m_timer_sync.Start();
 		};
 
 		sync();
 
 		//Emu.Pause();
+		break;
 	}
-	break;
 
 	case NV4097_NO_OPERATION:
 	{
 		// Nothing to do here 
+		break;
 	}
-	break;	
-	
+
 	case NV4097_SET_CONTEXT_DMA_REPORT:
 	{
 		if (ARGS(0))
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_REPORT: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_NOTIFY:
 	{
@@ -342,8 +339,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_NOTIFY: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_WAIT_FOR_IDLE:
 	{
@@ -351,8 +348,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_WAIT_FOR_IDLE: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_PM_TRIGGER:
 	{
@@ -360,64 +357,64 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_PM_TRIGGER: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	// Texture
-	case_range(16, NV4097_SET_TEXTURE_FORMAT, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_OFFSET, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_FILTER, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_ADDRESS, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_IMAGE_RECT, 32)
-	case_range(16, NV4097_SET_TEXTURE_BORDER_COLOR, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_CONTROL0, 0x20)
-	case_range(16, NV4097_SET_TEXTURE_CONTROL1, 0x20)
+	case_range(16, NV4097_SET_TEXTURE_FORMAT, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_OFFSET, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_FILTER, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_ADDRESS, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_IMAGE_RECT, 32);
+	case_range(16, NV4097_SET_TEXTURE_BORDER_COLOR, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_CONTROL0, 0x20);
+	case_range(16, NV4097_SET_TEXTURE_CONTROL1, 0x20);
 	{
 		// Done using methodRegisters in RSXTexture.cpp
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_TEX_COORD_CONTROL, 4)
+	case_range(16, NV4097_SET_TEX_COORD_CONTROL, 4);
 	{
 		LOG_WARNING(RSX, "TODO: NV4097_SET_TEX_COORD_CONTROL");
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_TEXTURE_CONTROL3, 4)
+	case_range(16, NV4097_SET_TEXTURE_CONTROL3, 4);
 	{
 		RSXTexture& tex = m_textures[index];
 		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
 		tex.SetControl3(depth, pitch);
+		break;
 	}
-	break;
-	
-	// Vertex Texture
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20)
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20)
+
+		// Vertex Texture
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_ADDRESS, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 0x20);
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_CONTROL0, 0x20);
 	{
 		// Done using methodRegisters in RSXTexture.cpp
+		break;
 	}
-	break;
 
-	case_range(4, NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20)
+	case_range(4, NV4097_SET_VERTEX_TEXTURE_CONTROL3, 0x20);
 	{
 		RSXVertexTexture& tex = m_vertex_textures[index];
 		const u32 a0 = ARGS(0);
 		u32 pitch = a0 & 0xFFFFF;
 		u16 depth = a0 >> 20;
 		tex.SetControl3(depth, pitch);
+		break;
 	}
-	break;
 
-	// Vertex data
-	case_range(16, NV4097_SET_VERTEX_DATA4UB_M, 4)
+		// Vertex data
+	case_range(16, NV4097_SET_VERTEX_DATA4UB_M, 4);
 	{
 		const u32 a0 = ARGS(0);
 		u8 v0 = a0;
@@ -434,17 +431,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_vertex_data[index].data.push_back(v3);
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4UB_M: index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA2F_M, 8)
+	case_range(16, NV4097_SET_VERTEX_DATA2F_M, 8);
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
 
 		float v0 = (float&)a0;
 		float v1 = (float&)a1;
-		
+
 		m_vertex_data[index].Reset();
 		m_vertex_data[index].type = CELL_GCM_VERTEX_F;
 		m_vertex_data[index].size = 2;
@@ -454,10 +451,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		(float&)m_vertex_data[index].data[pos + sizeof(float) * 1] = v1;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA2F_M: index = %d, v0 = %f, v1 = %f", index, v0, v1);
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA4F_M, 16)
+	case_range(16, NV4097_SET_VERTEX_DATA4F_M, 16);
 	{
 		const u32 a0 = ARGS(0);
 		const u32 a1 = ARGS(1);
@@ -480,10 +477,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		(float&)m_vertex_data[index].data[pos + sizeof(float) * 3] = v3;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4F_M: index = %d, v0 = %f, v1 = %f, v2 = %f, v3 = %f", index, v0, v1, v2, v3);
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4)
+	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4);
 	{
 		const u32 addr = GetAddress(ARGS(0) & 0x7fffffff, ARGS(0) >> 31);
 
@@ -491,10 +488,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_vertex_data[index].data.clear();
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET: num=%d, addr=0x%x", index, addr);
+		break;
 	}
-	break;
 
-	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4)
+	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4);
 	{
 		const u32 a0 = ARGS(0);
 		u16 frequency = a0 >> 16;
@@ -510,8 +507,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT: index=%d, frequency=%d, stride=%d, size=%d, type=%d", index, frequency, stride, size, type);
 
+		break;
 	}
-	break;
 
 	// Vertex Attribute
 	case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
@@ -522,8 +519,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 
 		//VertexData[0].prog.attributeInputMask = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
 	{
@@ -534,16 +531,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		//VertexData[0].prog.attributeOutputMask = ARGS(0);
 		//FragmentData.prog.attributeInputMask = ARGS(0)/* & ~0x20*/;
+		break;
 	}
-	break;
 
 	// Color Mask
 	case NV4097_SET_COLOR_MASK:
 	{
-		const u32 mask = ARGS(0);
-		ColorMask(mask & 0x1000000, mask & 0x1000000, mask & 0x1000000, mask & 0x0000001);
+		const u32 a0 = ARGS(0);
+
+		m_set_color_mask = true;
+		m_color_mask_a = a0 & 0x1000000 ? true : false;
+		m_color_mask_r = a0 & 0x0010000 ? true : false;
+		m_color_mask_g = a0 & 0x0000100 ? true : false;
+		m_color_mask_b = a0 & 0x0000001 ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
@@ -551,118 +553,105 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_COLOR_MASK_MRT: 0x%x", mask);
 		}
+		break;
 	}
-	break;
 
 	// Alpha testing
 	case NV4097_SET_ALPHA_TEST_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_alpha_test = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_ALPHA_FUNC:
 	{
-		const u32 value = ARGS(0);
-		m_alpha_func = value;
+		m_set_alpha_func = true;
+		m_alpha_func = ARGS(0);
 
-		// Sanity check here for invalid alpha func
-		if (m_alpha_func)
+		if (count == 2)
 		{
-			AlphaFunc(m_alpha_func, m_alpha_ref);
+			m_set_alpha_ref = true;
+			const u32 a1 = ARGS(1);
+			m_alpha_ref = (float&)a1;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_ALPHA_REF:
 	{
-		const u32 value = ARGS(0);
-		m_alpha_ref = (float&)value;
-
-		// Sanity check here for invalid alpha func
-		if (m_alpha_func)
-		{
-			AlphaFunc(m_alpha_func, m_alpha_ref);
-		}
+		m_set_alpha_ref = true;
+		const u32 a0 = ARGS(0);
+		m_alpha_ref = (float&)a0;
+		break;
 	}
-	break;
 
 	// Cull face
 	case NV4097_SET_CULL_FACE_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_cull_face = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_CULL_FACE:
 	{
-		const u32 value = ARGS(0);
-		CullFace(value);
+		m_cull_face = ARGS(0);
+		break;
 	}
-	break;
 
 	// Front face 
 	case NV4097_SET_FRONT_FACE:
 	{
-		const u32 value = ARGS(0);
-		//FrontFace(value);
+		m_front_face = ARGS(0);
+		break;
 	}
-	break;
 
 	// Blending
 	case NV4097_SET_BLEND_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_blend = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_ENABLE_MRT:
 	{
 		m_set_blend_mrt1 = ARGS(0) & 0x02 ? true : false;
 		m_set_blend_mrt2 = ARGS(0) & 0x04 ? true : false;
 		m_set_blend_mrt3 = ARGS(0) & 0x08 ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_FUNC_SFACTOR:
 	{
-		const u32 value = ARGS(0);
 		m_set_blend_sfactor = true;
-		m_blend_sfactor_rgb = value & 0xffff;
-		m_blend_sfactor_alpha = value >> 16;
+		m_blend_sfactor_rgb = ARGS(0) & 0xffff;
+		m_blend_sfactor_alpha = ARGS(0) >> 16;
 
 		if (count == 2)
 		{
-			const u32 value1 = ARGS(1);
-			m_blend_dfactor_rgb = value1 & 0xffff;
-			m_blend_dfactor_alpha = value1 >> 16;
-			BlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
+			m_set_blend_dfactor = true;
+			m_blend_dfactor_rgb = ARGS(1) & 0xffff;
+			m_blend_dfactor_alpha = ARGS(1) >> 16;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_FUNC_DFACTOR:
 	{
-		const u32 value = ARGS(0);
-		m_blend_dfactor_rgb = value & 0xffff;
-		m_blend_dfactor_alpha = value >> 16;
-
-		if (m_set_blend_sfactor)
-		{
-			BlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
-		}
+		m_set_blend_dfactor = true;
+		m_blend_dfactor_rgb = ARGS(0) & 0xffff;
+		m_blend_dfactor_alpha = ARGS(0) >> 16;
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_COLOR:
 	{
-		const u32 value = ARGS(0);
-		BlendColor(value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+		m_set_blend_color = true;
+		m_blend_color_r = ARGS(0) & 0xff;
+		m_blend_color_g = (ARGS(0) >> 8) & 0xff;
+		m_blend_color_b = (ARGS(0) >> 16) & 0xff;
+		m_blend_color_a = (ARGS(0) >> 24) & 0xff;
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_COLOR2:
 	{
@@ -670,15 +659,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO : NV4097_SET_BLEND_COLOR2: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BLEND_EQUATION:
 	{
-		const u32 value = ARGS(0);
-		BlendEquationSeparate(value & 0xffff, value >> 16);
+		m_set_blend_equation = true;
+		m_blend_equation_rgb = ARGS(0) & 0xffff;
+		m_blend_equation_alpha = ARGS(0) >> 16;
+		break;
 	}
-	break;
 
 	case NV4097_SET_REDUCE_DST_COLOR:
 	{
@@ -686,43 +676,37 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_REDUCE_DST_COLOR: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// Depth bound testing
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_depth_bounds_test = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_MIN:
 	{
-		const u32 value = ARGS(0);
 		m_set_depth_bounds = true;
-		m_depth_bounds_min = (float&)value;
+		const u32 a0 = ARGS(0);
+		m_depth_bounds_min = (float&)a0;
 
 		if (count == 2)
 		{
-			const u32 value1 = ARGS(1);
-			m_depth_bounds_max = (float&)value1;
-			DepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
+			const u32 a1 = ARGS(1);
+			m_depth_bounds_max = (float&)a1;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_MAX:
 	{
-		const u32 value = ARGS(0);
-		m_depth_bounds_max = (float&)value;
-
-		if (m_set_depth_bounds)
-		{
-			DepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
-		}
+		m_set_depth_bounds = true;
+		const u32 a0 = ARGS(0);
+		m_depth_bounds_max = (float&)a0;
+		break;
 	}
-	break;
 
 	// Viewport
 	case NV4097_SET_VIEWPORT_HORIZONTAL:
@@ -739,8 +723,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 
 		//LOG_NOTICE(RSX, "NV4097_SET_VIEWPORT_HORIZONTAL: x=%d, y=%d, w=%d, h=%d", m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+		break;
 	}
-	break;
 
 	case NV4097_SET_VIEWPORT_VERTICAL:
 	{
@@ -749,124 +733,120 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_viewport_h = ARGS(0) >> 16;
 
 		//LOG_NOTICE(RSX, "NV4097_SET_VIEWPORT_VERTICAL: y=%d, h=%d", m_viewport_y, m_viewport_h);
+		break;
 	}
-	break;
 
 	case NV4097_SET_VIEWPORT_SCALE:
 	case NV4097_SET_VIEWPORT_OFFSET:
 	{
 		// Done in Vertex Shader
+		break;
 	}
-	break;
 
 	// Clipping
 	case NV4097_SET_CLIP_MIN:
 	{
-		const u32 value = ARGS(0);
-		m_clip_min = (float&)value;
-		DepthRangef(m_clip_min, m_clip_max);
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
+
+		m_set_clip = true;
+		m_clip_min = (float&)a0;
+		m_clip_max = (float&)a1;
+
+		//LOG_NOTICE(RSX, "NV4097_SET_CLIP_MIN: clip_min=%.01f, clip_max=%.01f", m_clip_min, m_clip_max);
+		break;
 	}
-	break;
 
 	case NV4097_SET_CLIP_MAX:
 	{
-		const u32 value = ARGS(0);
-		m_clip_max = (float&)value;
-		DepthRangef(m_clip_min, m_clip_max);
+		const u32 a0 = ARGS(0);
+
+		m_set_clip = true;
+		m_clip_max = (float&)a0;
+
+		//LOG_NOTICE(RSX, "NV4097_SET_CLIP_MAX: clip_max=%.01f", m_clip_max);
+		break;
 	}
-	break;
 
 	// Depth testing
 	case NV4097_SET_DEPTH_TEST_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_depth_test = ARGS(0) ? true : false;
+		break;
 	}
-	break;
-	
+
 	case NV4097_SET_DEPTH_FUNC:
 	{
-		const u32 value = ARGS(0);
-		// Sanity check here for invalid depth func 
-		if (value)
-		{
-			DepthFunc(value);
-		}
+		m_set_depth_func = true;
+		m_depth_func = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_DEPTH_MASK:
 	{
-		const u32 value = ARGS(0);
-		DepthMask(value);
+		m_set_depth_mask = true;
+		m_depth_mask = ARGS(0);
+		break;
 	}
-	break;
 
 	// Polygon mode/offset
 	case NV4097_SET_FRONT_POLYGON_MODE:
 	{
-		const u32 value = ARGS(0);
-		PolygonMode(cmd, value);
+		m_set_front_polygon_mode = true;
+		m_front_polygon_mode = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_POLYGON_MODE:
 	{
-		const u32 value = ARGS(0);
-		PolygonMode(cmd, value);
+		m_set_back_polygon_mode = true;
+		m_back_polygon_mode = ARGS(0);
+		break;
 	}
-	break;
-	
+
 	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
 	{
-		Enable(cmd, ARGS(0));
+		m_set_poly_offset_fill = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLY_OFFSET_LINE_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_poly_offset_line = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLY_OFFSET_POINT_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_poly_offset_point = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR:
 	{
-		Enable(NV4097_SET_DEPTH_TEST_ENABLE, 1);
-		
-		const u32 value = ARGS(0);
+		m_set_depth_test = true;
 		m_set_poly_offset_mode = true;
-		m_poly_offset_scale_factor = (float&)value;
+
+		const u32 a0 = ARGS(0);
+		m_poly_offset_scale_factor = (float&)a0;
 
 		if (count == 2)
 		{
-			const u32 value1 = ARGS(1);
-			m_poly_offset_bias = (float&)value1;
-			PolygonOffset(m_poly_offset_scale_factor, m_poly_offset_bias);
+			const u32 a1 = ARGS(1);
+			m_poly_offset_bias = (float&)a1;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLYGON_OFFSET_BIAS:
 	{
-		Enable(NV4097_SET_DEPTH_TEST_ENABLE, 1);
+		m_set_depth_test = true;
+		m_set_poly_offset_mode = true;
 
-		const u32 value = ARGS(0);
-		m_poly_offset_bias = (float&)value;
-
-		if (m_set_poly_offset_mode)
-		{
-			PolygonOffset(m_poly_offset_scale_factor, m_poly_offset_bias);
-		}
+		const u32 a0 = ARGS(0);
+		m_poly_offset_bias = (float&)a0;
+		break;
 	}
-	break;
 
 	case NV4097_SET_CYLINDRICAL_WRAP:
 	{
@@ -874,8 +854,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CYLINDRICAL_WRAP: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	// Clearing
 	case NV4097_CLEAR_ZCULL_SURFACE:
@@ -886,33 +866,42 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (a0 & 0x02) m_clear_surface_s = m_clear_s;
 
 		m_clear_surface_mask |= a0 & 0x3;
+		break;
 	}
-	break;
 
 	case NV4097_CLEAR_SURFACE:
 	{
-		const u32 mask = ARGS(0);
+		const u32 a0 = ARGS(0);
 
-		ClearSurface(mask);
+		if (a0 & 0x01) m_clear_surface_z = m_clear_z;
+		if (a0 & 0x02) m_clear_surface_s = m_clear_s;
+		if (a0 & 0x10) m_clear_surface_color_r = m_clear_color_r;
+		if (a0 & 0x20) m_clear_surface_color_g = m_clear_color_g;
+		if (a0 & 0x40) m_clear_surface_color_b = m_clear_color_b;
+		if (a0 & 0x80) m_clear_surface_color_a = m_clear_color_a;
+
+		m_clear_surface_mask = a0;
+		ExecCMD(NV4097_CLEAR_SURFACE);
+		break;
 	}
-	break;
 
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
 	{
-		const u32 value = ARGS(0);
-
-		ClearStencil(value & 0xff);
-		ClearDepth(value >> 8);
+		const u32 a0 = ARGS(0);
+		m_clear_s = a0 & 0xff;
+		m_clear_z = a0 >> 8;
+		break;
 	}
-	break;
 
 	case NV4097_SET_COLOR_CLEAR_VALUE:
 	{
 		const u32 color = ARGS(0);
-
-		ClearColor((color >> 24) & 0xff, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
+		m_clear_color_a = (color >> 24) & 0xff;
+		m_clear_color_r = (color >> 16) & 0xff;
+		m_clear_color_g = (color >> 8) & 0xff;
+		m_clear_color_b = color & 0xff;
+		break;
 	}
-	break;
 
 	case NV4097_SET_CLEAR_RECT_HORIZONTAL:
 	{
@@ -920,8 +909,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CLEAR_RECT_HORIZONTAL: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CLEAR_RECT_VERTICAL:
 	{
@@ -929,8 +918,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CLEAR_RECT_VERTICAL: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// Arrays
 	case NV4097_INLINE_ARRAY:
@@ -939,12 +928,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NNV4097_INLINE_ARRAY: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_DRAW_ARRAYS:
 	{
-		for (u32 c=0; c<count; ++c)
+		for (u32 c = 0; c<count; ++c)
 		{
 			u32 ac = ARGS(c);
 			const u32 first = ac & 0xffffff;
@@ -961,15 +950,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			m_draw_array_count += _count;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_INDEX_ARRAY_ADDRESS:
 	{
 		m_indexed_array.m_addr = GetAddress(ARGS(0), ARGS(1) & 0xf);
 		m_indexed_array.m_type = ARGS(1) >> 4;
+		break;
 	}
-	break;
 
 	case NV4097_DRAW_INDEX_ARRAY:
 	{
@@ -985,24 +974,24 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				u32 index;
 				switch(m_indexed_array.m_type)
 				{
-					case 0:
-					{
-						int pos = (int)m_indexed_array.m_data.size();
-						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
-						index = vm::read32(m_indexed_array.m_addr + i * 4);
-						*(u32*)&m_indexed_array.m_data[pos] = index;
-						//LOG_WARNING(RSX, "index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
-					}
+				case 0:
+				{
+					int pos = (int)m_indexed_array.m_data.size();
+					m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
+					index = vm::read32(m_indexed_array.m_addr + i * 4);
+					*(u32*)&m_indexed_array.m_data[pos] = index;
+					//LOG_WARNING(RSX, "index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
+				}
 					break;
 
-					case 1:
-					{
-						int pos = (int)m_indexed_array.m_data.size();
-						m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
-						index = vm::read16(m_indexed_array.m_addr + i * 2);
-						//LOG_WARNING(RSX, "index 2: %d", index);
-						*(u16*)&m_indexed_array.m_data[pos] = index;
-					}
+				case 1:
+				{
+					int pos = (int)m_indexed_array.m_data.size();
+					m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
+					index = vm::read16(m_indexed_array.m_addr + i * 2);
+					//LOG_WARNING(RSX, "index 2: %d", index);
+					*(u16*)&m_indexed_array.m_data[pos] = index;
+				}
 					break;
 				}
 
@@ -1012,27 +1001,27 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			m_indexed_array.m_count += _count;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_VERTEX_DATA_BASE_OFFSET:
 	{
 		m_vertex_data_base_offset = ARGS(0);
 
-		if (count >= 2) 
+		if (count >= 2)
 		{
 			m_vertex_data_base_index = ARGS(1);
 		}
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_BASE_OFFSET: 0x%x", m_vertex_data_base_offset);
+		break;
 	}
-	break;
 
 	case NV4097_SET_VERTEX_DATA_BASE_INDEX:
 	{
 		m_vertex_data_base_index = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_BEGIN_END:
 	{
@@ -1068,8 +1057,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			End();
 		}
+		break;
 	}
-	break;
 
 	// Shader
 	case NV4097_SET_SHADER_PROGRAM:
@@ -1080,21 +1069,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_cur_fragment_prog->offset = a0 & ~0x3;
 		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
+		break;
 	}
-	break;
 
 	case NV4097_SET_SHADER_CONTROL:
 	{
 		m_shader_ctrl = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SHADE_MODE:
 	{
-		const u32 value = ARGS(0);
-		ShadeModel(value);
+		m_set_shade_mode = true;
+		m_shade_mode = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SHADER_PACKER:
 	{
@@ -1110,8 +1099,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_shader_window_height = a0 & 0xfff;
 		m_shader_window_origin = (a0 >> 12) & 0xf;
 		m_shader_window_pixel_centers = a0 >> 16;
+		break;
 	}
-	break;
 
 	// Transform 
 	case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
@@ -1129,20 +1118,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_LOAD: start = %d", start);
 			}
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_TRANSFORM_PROGRAM_START:
 	{
 		const u32 start = ARGS(0);
-		if (start) 
+		if (start)
 		{
 			LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_START: start = %d", start);
 		}
+		break;
 	}
-	break;
 
-	case_range(32, NV4097_SET_TRANSFORM_PROGRAM, 4)
+	case_range(32, NV4097_SET_TRANSFORM_PROGRAM, 4);
 	{
 		//LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM[%d](%d)", index, count);
 
@@ -1156,11 +1145,11 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			m_cur_vertex_prog->data.push_back(ARGS(i));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_TRANSFORM_TIMEOUT:
-
+	{
 		// TODO:
 		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((count) | ((registerCount) << 16)); \
 
@@ -1171,7 +1160,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		}
 
 		//m_cur_vertex_prog->Decompile();
-	break;
+		break;
+	}
 
 	case NV4097_SET_TRANSFORM_BRANCH_BITS:
 	{
@@ -1179,8 +1169,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_TRANSFORM_BRANCH_BITS: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
 	{
@@ -1203,8 +1193,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			//LOG_NOTICE(RSX, "NV4097_SET_TRANSFORM_CONSTANT_LOAD: [%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
 		}
+		break;
 	}
-	break;
 
 	// Invalidation
 	case NV4097_INVALIDATE_L2:
@@ -1213,20 +1203,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_INVALIDATE_L2: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
 	{
 		// Nothing to do here
+		break;
 	}
-	break;
 
 	case NV4097_INVALIDATE_VERTEX_FILE:
 	{
 		// Nothing to do here
+		break;
 	}
-	break;
 
 	case NV4097_INVALIDATE_ZCULL:
 	{
@@ -1234,190 +1224,165 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_INVALIDATE_ZCULL: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// Logic Ops
 	case NV4097_SET_LOGIC_OP_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_logic_op = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_LOGIC_OP:
 	{
-		const u32 value = ARGS(0);
-		LogicOp(value);
+		m_logic_op = ARGS(0);
+		break;
 	}
-	break;
-	
+
 	// Dithering
 	case NV4097_SET_DITHER_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_dither = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	// Stencil testing
 	case NV4097_SET_STENCIL_TEST_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, ARGS(0));
+		m_set_stencil_test = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, ARGS(0));
+		m_set_two_sided_stencil_test_enable = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_TWO_SIDE_LIGHT_EN:
 	{
-		const u32 value = ARGS(0);
-		LightModeli(value);
+		m_set_two_side_light_enable = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_STENCIL_MASK:
 	{
-		const u32 value = ARGS(0);
 		m_set_stencil_mask = true;
-		StencilMask(value);
+		m_stencil_mask = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_STENCIL_FUNC:
 	{
-		if (count == 3)
+		m_set_stencil_func = true;
+		m_stencil_func = ARGS(0);
+
+		if (count >= 2)
 		{
-			m_set_stencil_func = true;
-			m_stencil_func = ARGS(0);
+			m_set_stencil_func_ref = true;
 			m_stencil_func_ref = ARGS(1);
-			m_stencil_func_mask = ARGS(2);
-			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
+
+			if (count >= 3)
+			{
+				m_set_stencil_func_mask = true;
+				m_stencil_func_mask = ARGS(2);
+			}
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_STENCIL_FUNC_REF:
 	{
+		m_set_stencil_func_ref = true;
 		m_stencil_func_ref = ARGS(0);
-
-		if (m_set_stencil_func)
-		{
-			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
-		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_STENCIL_FUNC_MASK:
 	{
+		m_set_stencil_func_mask = true;
 		m_stencil_func_mask = ARGS(0);
-
-		if (m_set_stencil_func)
-		{
-			StencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
-		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_STENCIL_OP_FAIL:
 	{
-		if (count == 3)
+		m_set_stencil_fail = true;
+		m_stencil_fail = ARGS(0);
+
+		if (count >= 2)
 		{
-			m_set_stencil_op_fail = true;
-			m_stencil_fail = ARGS(0);
+			m_set_stencil_zfail = true;
 			m_stencil_zfail = ARGS(1);
-			m_stencil_zpass = ARGS(2);
-			StencilOp(m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
+
+			if (count >= 3)
+			{
+				m_set_stencil_zpass = true;
+				m_stencil_zpass = ARGS(2);
+			}
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_STENCIL_MASK:
 	{
+		m_set_back_stencil_mask = true;
 		m_back_stencil_mask = ARGS(0);
-
-		StencilMaskSeparate(0, m_back_stencil_mask); // GL_BACK
-
-		if (m_set_stencil_mask)
-		{
-			StencilMaskSeparate(1, m_stencil_mask); // GL_FRONT
-		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC:
 	{
-		if (count == 3)
+		m_set_back_stencil_func = true;
+		m_back_stencil_func = ARGS(0);
+
+		if (count >= 2)
 		{
-			m_set_back_stencil_func = true;
-			m_back_stencil_func = ARGS(0);
+			m_set_back_stencil_func_ref = true;
 			m_back_stencil_func_ref = ARGS(1);
-			m_back_stencil_func_mask = ARGS(2);
-			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
-			if (m_set_stencil_func)
+
+			if (count >= 3)
 			{
-				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
+				m_set_back_stencil_func_mask = true;
+				m_back_stencil_func_mask = ARGS(2);
 			}
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC_REF:
 	{
+		m_set_back_stencil_func_ref = true;
 		m_back_stencil_func_ref = ARGS(0);
-
-		if (m_set_back_stencil_func)
-		{
-			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
-
-			if (m_set_stencil_func)
-			{
-				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
-			}
-		}
-
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_STENCIL_FUNC_MASK:
 	{
+		m_set_back_stencil_func_mask = true;
 		m_back_stencil_func_mask = ARGS(0);
-
-		if (m_set_back_stencil_func)
-		{
-			StencilFuncSeparate(0, m_back_stencil_func, m_back_stencil_func_ref, m_back_stencil_func_mask); // GL_BACK
-
-			if (m_set_stencil_func)
-			{
-				StencilFuncSeparate(1, m_stencil_func, m_stencil_func_ref, m_stencil_func_mask); // GL_FRONT
-			}
-		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_BACK_STENCIL_OP_FAIL:
 	{
-		if (count == 3)
-		{
-			m_back_stencil_fail = ARGS(0);
-			m_back_stencil_zfail = ARGS(1);
-			m_back_stencil_zpass = ARGS(2);
-			StencilOpSeparate(0, m_back_stencil_fail, m_back_stencil_zfail, m_back_stencil_zpass); // GL_BACK
+		m_set_stencil_fail = true;
+		m_stencil_fail = ARGS(0);
 
-			if (m_set_stencil_op_fail)
+		if (count >= 2)
+		{
+			m_set_back_stencil_zfail = true;
+			m_back_stencil_zfail = ARGS(1);
+
+			if (count >= 3)
 			{
-				StencilOpSeparate(1, m_stencil_fail, m_stencil_zfail, m_stencil_zpass); // GL_FRONT
+				m_set_back_stencil_zpass = true;
+				m_back_stencil_zpass = ARGS(2);
 			}
 		}
-
+		break;
 	}
-	break;
 
 	case NV4097_SET_SCULL_CONTROL:
 	{
@@ -1425,31 +1390,30 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_SCULL_CONTROL: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// Primitive restart index
 	case NV4097_SET_RESTART_INDEX_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_restart_index = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_RESTART_INDEX:
 	{
-		const u32 value = ARGS(0);
-		PrimitiveRestartIndex(value);
+		m_restart_index = ARGS(0);
+		break;
 	}
-	break;
 
 	// Point size
 	case NV4097_SET_POINT_SIZE:
 	{
-		const u32 value = ARGS(0);
-		PointSize((float&)value);
+		m_set_point_size = true;
+		const u32 a0 = ARGS(0);
+		m_point_size = (float&)a0;
+		break;
 	}
-	break;
 
 	// Point sprite
 	case NV4097_SET_POINT_PARAMS_ENABLE:
@@ -1458,57 +1422,48 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_POINT_PARAMS_ENABLE: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_POINT_SPRITE_CONTROL:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_point_sprite_control = ARGS(0) ? true : false;
 
 		// TODO:
 		//(cmd)[1] = CELL_GCM_ENDIAN_SWAP((enable) | ((rmode) << 1) | (texcoordMask));
+		break;
 	}
-	break;
 
 	// Lighting
 	case NV4097_SET_SPECULAR_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_specular = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	// Scissor
 	case NV4097_SET_SCISSOR_HORIZONTAL:
 	{
-		const u32 value = ARGS(0);
 		m_set_scissor_horizontal = true;
-		m_scissor_x = value & 0xffff;
-		m_scissor_w = value >> 16;
+		m_scissor_x = ARGS(0) & 0xffff;
+		m_scissor_w = ARGS(0) >> 16;
 
 		if (count == 2)
 		{
-			const u32 value1 = ARGS(1);
-			m_scissor_y = value1 & 0xffff;
-			m_scissor_h = value1 >> 16;
-			Scissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+			m_set_scissor_vertical = true;
+			m_scissor_y = ARGS(1) & 0xffff;
+			m_scissor_h = ARGS(1) >> 16;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_SCISSOR_VERTICAL:
 	{
-		const u32 value = ARGS(0);
-		m_scissor_y = value & 0xffff;
-		m_scissor_h = value >> 16;
-
-		if (m_set_scissor_horizontal)
-		{
-			Scissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		}
+		m_set_scissor_vertical = true;
+		m_scissor_y = ARGS(0) & 0xffff;
+		m_scissor_h = ARGS(0) >> 16;
+		break;
 	}
-	break;
 
 	// Depth/Color buffer usage 
 	case NV4097_SET_SURFACE_FORMAT:
@@ -1536,56 +1491,56 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_height = buffers[m_gcm_current_buffer].height;
 
 		NativeRescale((float)m_width, (float)m_height);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_COLOR_TARGET:
 	{
 		m_surface_color_target = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
 	{
 		m_surface_offset_a = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_COLOR_BOFFSET:
 	{
 		m_surface_offset_b = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_COLOR_COFFSET:
 	{
 		m_surface_offset_c = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_COLOR_DOFFSET:
 	{
 		m_surface_offset_d = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_ZETA_OFFSET:
 	{
 		m_surface_offset_z = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_PITCH_A:
 	{
 		m_surface_pitch_a = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_PITCH_B:
 	{
 		m_surface_pitch_b = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_PITCH_C:
 	{
@@ -1599,8 +1554,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_surface_pitch_d = ARGS(1);
 		m_surface_offset_c = ARGS(2);
 		m_surface_offset_d = ARGS(3);
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_PITCH_D:
 	{
@@ -1611,8 +1566,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV4097_SET_SURFACE_PITCH_D: Bad count (%d)", count);
 			break;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_PITCH_Z:
 	{
@@ -1623,8 +1578,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV4097_SET_SURFACE_PITCH_Z: Bad count (%d)", count);
 			break;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_A:
 	{
@@ -1636,15 +1591,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV4097_SET_CONTEXT_DMA_COLOR_A: Bad count (%d)", count);
 			break;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_B:
 	{
 		m_set_context_dma_color_b = true;
 		m_context_dma_color_b = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_C:
 	{
@@ -1656,8 +1611,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			m_set_context_dma_color_d = true;
 			m_context_dma_color_d = ARGS(1);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
 	{
@@ -1665,15 +1620,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_COLOR_D: 0x%x", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_ZETA:
 	{
 		m_set_context_dma_z = true;
 		m_context_dma_z = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_SEMAPHORE:
 	{
@@ -1681,8 +1636,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_SEMAPHORE: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_CONTEXT_DMA_NOTIFIES:
 	{
@@ -1690,8 +1645,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_NOTIFIES: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
 	{
@@ -1708,8 +1663,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			m_surface_clip_y = a1;
 			m_surface_clip_h = a1 >> 16;
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_SURFACE_CLIP_VERTICAL:
 	{
@@ -1717,8 +1672,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_set_surface_clip_vertical = true;
 		m_surface_clip_y = a0;
 		m_surface_clip_h = a0 >> 16;
+		break;
 	}
-	break;
 
 	// Anti-aliasing
 	case NV4097_SET_ANTI_ALIASING_CONTROL:
@@ -1729,78 +1684,76 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u8 alphaToCoverage = (a0 >> 4) & 0xf;
 		const u8 alphaToOne = (a0 >> 8) & 0xf;
 		const u16 sampleMask = a0 >> 16;
-		
+
 		if (a0)
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_ANTI_ALIASING_CONTROL: 0x%x", a0);
 		}
+		break;
 	}
-	break;
 
 	// Line/Polygon smoothing
 	case NV4097_SET_LINE_SMOOTH_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_line_smooth = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLY_SMOOTH_ENABLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_poly_smooth = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	// Line width
 	case NV4097_SET_LINE_WIDTH:
 	{
-		const u32 value = ARGS(0);
-		LineWidth((float)value / 8.0f);
+		m_set_line_width = true;
+		const u32 a0 = ARGS(0);
+		m_line_width = (float)a0 / 8.0f;
+		break;
 	}
-	break;
 
 	// Line/Polygon stipple
 	case NV4097_SET_LINE_STIPPLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_line_stipple = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_LINE_STIPPLE_PATTERN:
 	{
-		const u32 value = ARGS(0);
-		LineStipple(value & 0xffff, value >> 16);
+		m_set_line_stipple = true;
+		const u32 a0 = ARGS(0);
+		m_line_stipple_factor = a0 & 0xffff;
+		m_line_stipple_pattern = a0 >> 16;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLYGON_STIPPLE:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		m_set_polygon_stipple = ARGS(0) ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_POLYGON_STIPPLE_PATTERN:
 	{
-		u32 pattern[32];
 		for (u32 i = 0; i < 32; i++)
 		{
-			pattern[i] = ARGS(i);
-			PolygonStipple(pattern[i]);
+			m_polygon_stipple_pattern[i] = ARGS(i);
 		}
+		break;
 	}
-	break;
 
 	// Zcull
 	case NV4097_SET_ZCULL_EN:
 	{
-		const u32 value = ARGS(0);
-		Enable(NV4097_SET_DEPTH_TEST_ENABLE, value & 0x1);
-		Enable(NV4097_SET_STENCIL_TEST_ENABLE, value & 0x2);
+		const u32 a0 = ARGS(0);
+
+		m_set_depth_test = a0 & 0x1 ? true : false;
+		m_set_stencil_test = a0 & 0x2 ? true : false;
+		break;
 	}
-	break;
 
 	case NV4097_SET_ZCULL_CONTROL0:
 	{
@@ -1808,17 +1761,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_ZCULL_CONTROL0: 0x%x", value);
 		}
+		break;
 	}
-	break;
-	
+
 	case NV4097_SET_ZCULL_CONTROL1:
 	{
 		if (u32 value = ARGS(0))
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_ZCULL_CONTROL1: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_SET_ZCULL_STATS_ENABLE:
 	{
@@ -1826,8 +1779,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_SET_ZCULL_STATS_ENABLE: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV4097_ZCULL_SYNC:
 	{
@@ -1835,8 +1788,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV4097_ZCULL_SYNC: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// Reports
 	case NV4097_GET_REPORT:
@@ -1855,12 +1808,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		case CELL_GCM_ZCULL_STATS3:
 			value = 0;
 			LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
-		break;
+			break;
 
 		default:
 			value = 0;
 			LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
-		break;
+			break;
 		}
 
 		// Get timestamp, and convert it from microseconds to nanoseconds
@@ -1870,14 +1823,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		vm::write64(m_local_mem_addr + offset + 0x0, timestamp);
 		vm::write32(m_local_mem_addr + offset + 0x8, value);
 		vm::write32(m_local_mem_addr + offset + 0xc, 0);
+		break;
 	}
-	break;
 
 	case NV4097_CLEAR_REPORT_VALUE:
 	{
 		const u32 type = ARGS(0);
 
-		switch(type)
+		switch (type)
 		{
 		case CELL_GCM_ZPASS_PIXEL_CNT:
 			LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZPASS_PIXEL_CNT");
@@ -1888,33 +1841,41 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		default:
 			LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", type);
 			break;
-		}	
+		}
+		break;
 	}
-	break;
 
 	// Clip Plane
 	case NV4097_SET_USER_CLIP_PLANE_CONTROL:
 	{
-		const u32 value = ARGS(0);
-		Enable(cmd, value);
+		const u32 a0 = ARGS(0);
+		m_set_clip_plane = true;
+		m_clip_plane_0 = (a0 & 0xf) ? true : false;
+		m_clip_plane_1 = ((a0 >> 4)) & 0xf ? true : false;
+		m_clip_plane_2 = ((a0 >> 8)) & 0xf ? true : false;
+		m_clip_plane_3 = ((a0 >> 12)) & 0xf ? true : false;
+		m_clip_plane_4 = ((a0 >> 16)) & 0xf ? true : false;
+		m_clip_plane_5 = (a0 >> 20) ? true : false;
+		break;
 	}
-	break;
 
 	// Fog
 	case NV4097_SET_FOG_MODE:
 	{
-		const u32 value = ARGS(0);
-		Fogi(value);
+		m_set_fog_mode = true;
+		m_fog_mode = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV4097_SET_FOG_PARAMS:
 	{
-		const u32 start = ARGS(0);
-		const u32 end = ARGS(1);
-		Fogf((float&)start, (float&)end);
+		m_set_fog_params = true;
+		const u32 a0 = ARGS(0);
+		const u32 a1 = ARGS(1);
+		m_fog_param0 = (float&)a0;
+		m_fog_param1 = (float&)a1;
+		break;
 	}
-	break;
 
 	// Zmin_max
 	case NV4097_SET_ZMIN_MAX_CONTROL:
@@ -1924,8 +1885,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u8 cullIgnoreW = (ARGS(0) >> 8) & 0xf;
 
 		LOG_WARNING(RSX, "TODO: NV4097_SET_ZMIN_MAX_CONTROL: cullNearFarEnable=%d, zclampEnable=%d, cullIgnoreW=%d", cullNearFarEnable, zclampEnable, cullIgnoreW);
+		break;
 	}
-	break;
 
 	case NV4097_SET_WINDOW_OFFSET:
 	{
@@ -1933,16 +1894,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u16 y = ARGS(0) >> 16;
 
 		LOG_WARNING(RSX, "TODO: NV4097_SET_WINDOW_OFFSET: x=%d, y=%d", x, y);
+		break;
 	}
-	break;
 
 	case NV4097_SET_FREQUENCY_DIVIDER_OPERATION:
 	{
 		m_set_frequency_divider_operation = ARGS(0);
-		
+
 		LOG_WARNING(RSX, "TODO: NV4097_SET_FREQUENCY_DIVIDER_OPERATION: %d", m_set_frequency_divider_operation);
+		break;
 	}
-	break;
 
 	case NV4097_SET_RENDER_ENABLE:
 	{
@@ -1950,16 +1911,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u8 mode = ARGS(0) >> 24;
 
 		LOG_WARNING(RSX, "TODO: NV4097_SET_RENDER_ENABLE: Offset=0x%06x, Mode=0x%x", offset, mode);
+		break;
 	}
-	break;
 
 	case NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE:
 	{
 		const u32 enable = ARGS(0);
 
 		LOG_WARNING(RSX, "TODO: NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE: %d", enable);
+		break;
 	}
-	break;
 
 	// NV0039
 	case NV0039_SET_CONTEXT_DMA_BUFFER_IN:
@@ -1968,8 +1929,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 dstContext = ARGS(1);
 		m_context_dma_buffer_in_src = srcContext;
 		m_context_dma_buffer_in_dst = dstContext;
+		break;
 	}
-	break;
 
 	case NV0039_OFFSET_IN:
 	{
@@ -1984,7 +1945,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 notify = ARGS(7);
 
 		// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-		if (inFormat != 0x01 || outFormat != 0x01) 
+		if (inFormat != 0x01 || outFormat != 0x01)
 		{
 			LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", inFormat, outFormat);
 		}
@@ -1998,8 +1959,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV0039_OFFSET_IN: bad offset(in=0x%x, out=0x%x), pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				inOffset, outOffset, inPitch, outPitch, lineLength, lineCount, inFormat, outFormat, notify);
 		}
+		break;
 	}
-	break;
 
 	case NV0039_OFFSET_OUT: // [E : RSXThread]: TODO: unknown/illegal method [0x00002310](0x0)
 	{
@@ -2012,8 +1973,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_ERROR(RSX, "TODO: NV0039_OFFSET_OUT: offset=0x%x", offset);
 		}
+		break;
 	}
-	break;
 
 	case NV0039_PITCH_IN:
 	{
@@ -2021,8 +1982,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV0039_PITCH_IN: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV0039_BUFFER_NOTIFY:
 	{
@@ -2030,29 +1991,29 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV0039_BUFFER_NOTIFY: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	// NV3062
 	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
 	{
 		m_context_dma_img_dst = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV3062_SET_OFFSET_DESTIN:
 	{
 		m_dst_offset = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV3062_SET_COLOR_FORMAT:
 	{
 		m_color_format = ARGS(0);
 		m_color_format_src_pitch = ARGS(1);
 		m_color_format_dst_pitch = ARGS(1) >> 16;
+		break;
 	}
-	break;
 
 	// NV309E
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
@@ -2061,8 +2022,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_WARNING(RSX, "TODO: NV309E_SET_CONTEXT_DMA_IMAGE: 0x%x", value);
 		}
+		break;
 	}
-	break;
 
 	case NV309E_SET_FORMAT:
 	{
@@ -2072,8 +2033,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 offset = ARGS(1);
 
 		LOG_WARNING(RSX, "TODO: NV309E_SET_FORMAT: Format:0x%x, Width:%d, Height:%d, Offset:0x%x", format, width, height, offset);
+		break;
 	}
-	break;
 
 	// NV308A
 	case NV308A_POINT:
@@ -2081,8 +2042,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		const u32 a0 = ARGS(0);
 		m_point_x = a0 & 0xffff;
 		m_point_y = a0 >> 16;
+		break;
 	}
-	break;
 
 	case NV308A_COLOR:
 	{
@@ -2125,15 +2086,15 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_fragment_constants.push_back(c);
 
 		//LOG_WARNING(RSX, "NV308A_COLOR: [%d]: %f, %f, %f, %f", c.id, c.x, c.y, c.z, c.w);
+		break;
 	}
-	break;
 
 	// NV3089
 	case NV3089_SET_CONTEXT_DMA_IMAGE:
 	{
 		m_context_dma_img_src = ARGS(0);
+		break;
 	}
-	break;
 
 	case NV3089_SET_CONTEXT_SURFACE:
 	{
@@ -2141,8 +2102,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			LOG_ERROR(RSX, "NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
 		}
+		break;
 	}
-	break;
 
 	case NV3089_IMAGE_IN_SIZE:
 	{
@@ -2174,8 +2135,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				//(u32&)pixels_dst[dst_offset] = (u32&)pixels_src[src_offset];
 			}
 		}
+		break;
 	}
-	break;
 
 	case NV3089_SET_COLOR_CONVERSION:
 	{
@@ -2194,8 +2155,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_color_conv_dtdy = ARGS(8);
 
 		LOG_WARNING(RSX, "TODO: NV3089_SET_COLOR_CONVERSION");
+		break;
 	}
-	break;
 
 	case GCM_SET_USER_COMMAND:
 	{
@@ -2205,8 +2166,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		{
 			cb(CPU, cause);
 		});
+		break;
 	}
-	break;
 
 	// Note: What is this? NV4097 offsets?
 	case 0x000002c8:
@@ -2216,7 +2177,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case 0x000002e8:
 	case 0x000002f0:
 	case 0x000002f8:
-	break;
+		break;
 
 	// The existing GCM commands don't use any of the following NV4097 / NV0039 / NV3062 / NV309E / NV308A / NV3089 methods
 	case NV4097_SET_WINDOW_CLIP_TYPE:
@@ -2224,8 +2185,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV4097_SET_WINDOW_CLIP_VERTICAL:
 	{
 		LOG_WARNING(RSX, "Unused NV4097 method 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	case NV0039_SET_CONTEXT_DMA_BUFFER_OUT:
 	case NV0039_PITCH_OUT:
@@ -2236,8 +2197,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV0039_SET_CONTEXT_DMA_NOTIFIES:
 	{
 		LOG_WARNING(RSX, "Unused NV0039 method 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	case NV3062_SET_OBJECT:
 	case NV3062_SET_CONTEXT_DMA_NOTIFIES:
@@ -2246,8 +2207,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV3062_SET_OFFSET_SOURCE:
 	{
 		LOG_WARNING(RSX, "Unused NV3062 method 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	case NV308A_SET_OBJECT:
 	case NV308A_SET_CONTEXT_DMA_NOTIFIES:
@@ -2265,16 +2226,16 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV308A_SIZE_IN:
 	{
 		LOG_WARNING(RSX, "Unused NV308A method 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	case NV309E_SET_OBJECT:
 	case NV309E_SET_CONTEXT_DMA_NOTIFIES:
 	case NV309E_SET_OFFSET:
 	{
 		LOG_WARNING(RSX, "Unused NV309E method 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	case NV3089_SET_OBJECT:
 	case NV3089_SET_CONTEXT_DMA_NOTIFIES:
@@ -2295,20 +2256,21 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	case NV3089_IMAGE_IN:
 	{
 		LOG_WARNING(RSX, "Unused NV3089 methods 0x%x detected!", cmd);
+		break;
 	}
-	break;
 
 	default:
 	{
 		std::string log = GetMethodName(cmd);
 		log += "(";
-		for (u32 i=0; i<count; ++i) {
+		for (u32 i = 0; i < count; ++i)
+		{
 			log += (i ? ", " : "") + fmt::Format("0x%x", ARGS(i));
 		}
 		log += ")";
 		LOG_ERROR(RSX, "TODO: %s", log.c_str());
+		break;
 	}
-	break;
 	}
 }
 
@@ -2328,7 +2290,7 @@ void RSXThread::End()
 	{
 		vdata.data.clear();
 	}
-	
+
 	m_indexed_array.Reset();
 	m_fragment_constants.clear();
 	m_transform_constants.clear();
@@ -2371,7 +2333,7 @@ void RSXThread::Task()
 				continue;
 			}
 
-			std::this_thread::sleep_for (std::chrono::milliseconds(1)); // hack
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 		}
 	});
 
@@ -2384,7 +2346,7 @@ void RSXThread::Task()
 		}
 		std::lock_guard<std::mutex> lock(m_cs_main);
 
-		inc=1;
+		inc = 1;
 
 		u32 get = m_ctrl->get.read_sync();
 		u32 put = m_ctrl->put.read_sync();
@@ -2405,12 +2367,12 @@ void RSXThread::Task()
 
 		const u32 cmd = ReadIO32(get);
 		const u32 count = (cmd >> 18) & 0x7ff;
-		
+
 		if (Ini.RSXLogging.GetValue())
 		{
 			LOG_NOTICE(Log::RSX, "%s (cmd=0x%x)", GetMethodName(cmd & 0xffff).c_str(), cmd);
 		}
-
+	
 		if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
 			u32 offs = cmd & 0x1fffffff;
@@ -2418,7 +2380,6 @@ void RSXThread::Task()
 			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
-
 		if (cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			m_call_stack.push(get + 4);
@@ -2427,7 +2388,6 @@ void RSXThread::Task()
 			m_ctrl->get.exchange(be_t<u32>::make(offs));
 			continue;
 		}
-
 		if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
 		{
 			u32 get = m_call_stack.top();
@@ -2436,7 +2396,6 @@ void RSXThread::Task()
 			m_ctrl->get.exchange(be_t<u32>::make(get));
 			continue;
 		}
-
 		if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
 		{
 			//LOG_WARNING(RSX, "rsx non increment cmd! 0x%x", cmd);
