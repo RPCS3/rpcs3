@@ -40,6 +40,7 @@ enum
 {
 	CELL_SPURS_TASK_ERROR_AGAIN        = 0x80410901,
 	CELL_SPURS_TASK_ERROR_INVAL        = 0x80410902,
+	CELL_SPURS_TASK_ERROR_NOSYS        = 0x80410903,
 	CELL_SPURS_TASK_ERROR_NOMEM        = 0x80410904,
 	CELL_SPURS_TASK_ERROR_SRCH         = 0x80410905,
 	CELL_SPURS_TASK_ERROR_NOEXEC       = 0x80410907,
@@ -213,6 +214,17 @@ enum SpursTaskConstants
 	CELL_SPURS_TASK_EXECUTION_CONTEXT_SIZE  = 1024,
 	CELL_SPURS_TASKSET_PM_ENTRY_ADDR        = 0xA00,
 	CELL_SPURS_TASKSET_PM_SYSCALL_ADDR      = 0xA70,
+
+	// Task syscall numbers
+	CELL_SPURS_TASK_SYSCALL_EXIT            = 0,
+	CELL_SPURS_TASK_SYSCALL_YIELD           = 1,
+	CELL_SPURS_TASK_SYSCALL_WAIT_SIGNAL     = 2,
+	CELL_SPURS_TASK_SYSCALL_POLL            = 3,
+	CELL_SPURS_TASK_SYSCALL_RECV_WKL_FLAG   = 4,
+
+	// Task poll status
+	CELL_SPURS_TASK_POLL_FOUND_TASK         = 1,
+	CELL_SPURS_TASK_POLL_FOUND_WORKLOAD     = 2,
 };
 
 enum CellSpursEventFlagWaitMode
@@ -627,10 +639,10 @@ struct CellSpursTaskset
 
 	struct TaskInfo
 	{
-		CellSpursTaskArgument args;
-		vm::bptr<u64, 1, u64> elf_addr;
-		be_t<u64> context_save_storage_and_alloc_ls_blocks; // This is (context_save_storage_addr | allocated_ls_blocks)
-		CellSpursTaskLsPattern ls_pattern;
+		CellSpursTaskArgument args;                         // 0x00
+		vm::bptr<u64, 1, u64> elf_addr;                     // 0x10
+		be_t<u64> context_save_storage_and_alloc_ls_blocks; // 0x18 This is (context_save_storage_addr | allocated_ls_blocks)
+		CellSpursTaskLsPattern ls_pattern;                  // 0x20
 	};
 
 	static_assert(sizeof(TaskInfo) == 0x30, "Wrong TaskInfo size");
@@ -656,7 +668,7 @@ struct CellSpursTaskset
 			u8 x72;                                      // 0x72
 			u8 last_scheduled_task;                      // 0x73
 			be_t<u32> wid;                               // 0x74
-			u8 unk1[8];                                  // 0x78
+			be_t<u64> x78;                               // 0x78
 			TaskInfo task_info[128];                     // 0x80
 			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
 			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
@@ -765,7 +777,7 @@ struct CellSpursTaskset2
 			u8 x72;                                      // 0x72
 			u8 last_scheduled_task;                      // 0x73
 			be_t<u32> wid;                               // 0x74
-			u8 unk1[8];                                  // 0x78
+			be_t<u64> x78;                               // 0x78
 			TaskInfo task_info[128];                     // 0x80
 			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
 			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
@@ -773,9 +785,9 @@ struct CellSpursTaskset2
 			u32 unk2;                                    // 0x1894
 			u32 event_flag_id1;                          // 0x1898
 			u32 event_flag_id2;                          // 0x189C
-			u8 unk3[0xE8];                               // 0x18A0
-			u64 task_exit_code[256];                     // 0x1988
-			u8 unk4[0x778];                              // 0x2188
+			u8 unk3[0x1980 - 0x18A0];                    // 0x18A0
+			be_t<u128> task_exit_code[128];              // 0x1980
+			u8 unk4[0x2900 - 0x2180];                    // 0x2180
 		} m;
 
 		static_assert(sizeof(_CellSpursTaskset2) == size, "Wrong _CellSpursTaskset2 size");
@@ -939,8 +951,8 @@ struct SpursTasksetPmMgmtData
     be_t<u32> lowestLoadSegmentAddr;                // 0x2FBC
     be_t<u64> x2FC0;                                // 0x2FC0
     be_t<u64> x2FC8;                                // 0x2FC8
-    be_t<u32> x2FD0;                                // 0x2FD0
-    be_t<u32> taskExitCode;                         // 0x2FD4
+    be_t<u32> taskExitCode;                         // 0x2FD0
+    be_t<u32> x2FD4;                                // 0x2FD4
     u8 x2FD8[0x3000 - 0x2FD8];                      // 0x2FD8
 };
 

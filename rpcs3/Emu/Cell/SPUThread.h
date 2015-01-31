@@ -248,6 +248,15 @@ public:
 	{
 		_u32[1+slice] |= exceptions;
 	}
+
+	// Write the FPSCR
+	void Write(u128 & r)
+	{
+		_u32[3] = r._u32[3] & 0x00000F07;
+		_u32[2] = r._u32[2] & 0x00003F07;
+		_u32[1] = r._u32[1] & 0x00003F07;
+		_u32[0] = r._u32[0] & 0x00000F07;
+	}
 };
 
 union SPU_SNRConfig_hdr
