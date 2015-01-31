@@ -111,6 +111,8 @@ struct ARMv7Context
 
 	} ITSTATE;
 
+	u32 TLS;
+
 	u32 R_ADDR;
 	u64 R_DATA;
 

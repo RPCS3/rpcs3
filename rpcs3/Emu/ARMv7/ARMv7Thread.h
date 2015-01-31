@@ -12,6 +12,7 @@ public:
 	//const char* m_last_instr_name;
 
 	ARMv7Thread();
+	~ARMv7Thread();
 
 	//void update_code(const u32 address)
 	//{

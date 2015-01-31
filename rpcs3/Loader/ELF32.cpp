@@ -11,6 +11,8 @@
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/System.h"
 
+extern void armv7_init_tls();
+
 namespace loader
 {
 	namespace handlers
@@ -235,9 +237,13 @@ namespace loader
 					}
 					else if (!strcmp(name.c_str(), ".tbss"))
 					{
-						LOG_NOTICE(LOADER, ".tbss analysis");
+						LOG_NOTICE(LOADER, ".tbss analysis...");
+						const u32 img_addr = shdr.data_le.sh_addr;                  // start address of TLS initialization image
+						const u32 img_size = (&shdr)[1].data_le.sh_addr - img_addr; // calculate its size as the difference between sections
+						const u32 tls_size = shdr.data_le.sh_size;                  // full size of TLS
 
-						LOG_ERROR(LOADER, "TLS: size=0x%08x", shdr.data_le.sh_size);
+						LOG_WARNING(LOADER, "TLS: img_addr=0x%08x, img_size=0x%x, tls_size=0x%x", img_addr, img_size, tls_size);
+						Emu.SetTLSData(img_addr, img_size, tls_size);
 					}
 					else if (!strcmp(name.c_str(), ".sceRefs.rodata"))
 					{
@@ -314,6 +320,7 @@ namespace loader
 					}
 				}
 
+				armv7_init_tls();
 				armv7_decoder_initialize(code_start, code_end);
 
 				arm7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();

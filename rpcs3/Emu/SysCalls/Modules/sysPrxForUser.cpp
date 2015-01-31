@@ -23,12 +23,10 @@
 
 Module *sysPrxForUser = nullptr;
 
-u32 g_tls_size; // size of every thread's storage
-u32 g_tls_start; // start of TLS memory area
-u32 g_tls_image_addr; // address of TLS initialization area
-u32 g_tls_image_size; // size of TLS initialization area
+#define TLS_MAX 128
 
-const u32 TLS_MAX = 256;
+u32 g_tls_start; // start of TLS memory area
+
 std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
 
 void sys_initialize_tls()
@@ -40,19 +38,16 @@ u32 ppu_get_tls(u32 thread)
 {
 	if (!g_tls_start)
 	{
-		g_tls_size = vm::cast(Emu.GetTLSMemsz(), "Emu.GetTLSMemsz"); // (not an address for vm::cast, but fine)
-		g_tls_start = vm::cast(Memory.Alloc(g_tls_size * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
-		g_tls_image_addr = vm::cast(Emu.GetTLSAddr(), "Emu.GetTLSAddr");
-		g_tls_image_size = vm::cast(Emu.GetTLSFilesz(), "Emu.GetTLSFilesz");
-
-		sysPrxForUser->Warning("TLS initialized (g_tls_size=0x%x, g_tls_start=0x%x, g_tls_image_addr=0x%x, g_tls_image_size=0x%x)", g_tls_size, g_tls_start, g_tls_image_addr, g_tls_image_size);
+		g_tls_start = vm::cast(Memory.MainMem.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
+		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, size = 0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
+			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}
 	
 	for (u32 i = 0; i < TLS_MAX; i++)
 	{
 		if (g_tls_owners[i] == thread)
 		{
-			return g_tls_start + i * g_tls_size; // if already initialized, return TLS address
+			return g_tls_start + i * Emu.GetTLSMemsz(); // if already initialized, return TLS address
 		}
 	}
 
@@ -61,9 +56,9 @@ u32 ppu_get_tls(u32 thread)
 		u32 old = 0;
 		if (g_tls_owners[i].compare_exchange_strong(old, thread))
 		{
-			const u32 addr = g_tls_start + i * g_tls_size; // get TLS address
-			memset(vm::get_ptr(addr), 0, g_tls_size);      // fill TLS area with zeros
-			memcpy(vm::get_ptr(addr), vm::get_ptr(g_tls_image_addr), g_tls_image_size); // initialize from TLS image
+			const u32 addr = g_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
+			memset(vm::get_ptr(addr), 0, Emu.GetTLSMemsz()); // fill TLS area with zeros
+			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
 			return addr;
 		}
 	}
@@ -420,10 +415,7 @@ void sysPrxForUser_init(Module *pxThis)
 {
 	sysPrxForUser = pxThis;
 
-	g_tls_size = 0;
 	g_tls_start = 0;
-	g_tls_image_addr = 0;
-	g_tls_image_size = 0;
 	for (auto& v : g_tls_owners)
 	{
 		v.store(0, std::memory_order_relaxed);

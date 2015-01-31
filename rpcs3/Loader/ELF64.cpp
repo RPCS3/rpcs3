@@ -422,7 +422,10 @@ namespace loader
 					break;
 
 				case 0x00000007: //TLS
-					Emu.SetTLSData(phdr.p_vaddr.addr(), phdr.p_filesz.value(), phdr.p_memsz.value());
+					Emu.SetTLSData(
+						vm::cast(phdr.p_vaddr.addr(), "TLS: phdr.p_vaddr"),
+						vm::cast(phdr.p_filesz.value(), "TLS: phdr.p_filesz"),
+						vm::cast(phdr.p_memsz.value(), "TLS: phdr.p_memsz"));
 					break;
 
 				case 0x60000001: //LOOS+1

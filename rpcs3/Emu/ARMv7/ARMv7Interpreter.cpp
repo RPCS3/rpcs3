@@ -336,15 +336,17 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		if (cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
-		{
-			LOG_ERROR(ARMv7, "TODO: TLS requested");
+		// APSR flags are written if t = 15
 
-			if (t < 15)
+		if (t < 15 && cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
+		{
+			if (!context.TLS)
 			{
-				context.GPR[t] = 0;
-				return;
+				throw "TLS not initialized";
 			}
+
+			context.GPR[t] = context.TLS;
+			return;
 		}
 
 		throw fmt::format("Bad instruction: mrc p%d,%d,r%d,c%d,c%d,%d", cp, opc1, t, cn, cm, opc2);

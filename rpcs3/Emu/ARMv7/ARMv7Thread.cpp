@@ -30,6 +30,69 @@ void ARMv7Context::fast_call(u32 addr)
 	return thread.FastCall(addr);
 }
 
+#define TLS_MAX 128
+
+u32 g_armv7_tls_start;
+
+std::array<std::atomic<u32>, TLS_MAX> g_armv7_tls_owners;
+
+void armv7_init_tls()
+{
+	g_armv7_tls_start = Emu.GetTLSMemsz() ? vm::cast(Memory.PSV.RAM.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096)) : 0;
+
+	for (auto& v : g_armv7_tls_owners)
+	{
+		v.store(0, std::memory_order_relaxed);
+	}
+}
+
+u32 armv7_get_tls(u32 thread)
+{
+	if (!Emu.GetTLSMemsz())
+	{
+		return 0;
+	}
+
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		if (g_armv7_tls_owners[i] == thread)
+		{
+			return g_armv7_tls_start + i * Emu.GetTLSMemsz(); // if already initialized, return TLS address
+		}
+	}
+
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		u32 old = 0;
+		if (g_armv7_tls_owners[i].compare_exchange_strong(old, thread))
+		{
+			const u32 addr = g_armv7_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
+			memset(vm::get_ptr(addr), 0, Emu.GetTLSMemsz()); // fill TLS area with zeros
+			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			return addr;
+		}
+	}
+
+	throw "Out of TLS memory";
+}
+
+void armv7_free_tls(u32 thread)
+{
+	if (!Emu.GetTLSMemsz())
+	{
+		return;
+	}
+
+	for (auto& v : g_armv7_tls_owners)
+	{
+		u32 old = thread;
+		if (v.compare_exchange_strong(old, 0))
+		{
+			return;
+		}
+	}
+}
+
 ARMv7Thread::ARMv7Thread()
 	: CPUThread(CPU_THREAD_ARMv7)
 	, context(*this)
@@ -37,6 +100,11 @@ ARMv7Thread::ARMv7Thread()
 	//, m_last_instr_size(0)
 	//, m_last_instr_name("UNK")
 {
+}
+
+ARMv7Thread::~ARMv7Thread()
+{
+	armv7_free_tls(GetId());
 }
 
 void ARMv7Thread::InitRegs()
@@ -47,6 +115,7 @@ void ARMv7Thread::InitRegs()
 	context.ISET = Thumb;
 	context.ITSTATE.IT = 0;
 	context.SP = m_stack_addr + m_stack_size;
+	context.TLS = armv7_get_tls(GetId());
 }
 
 void ARMv7Thread::InitStack()
