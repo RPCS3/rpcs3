@@ -119,6 +119,14 @@ struct ARMv7Context
 	u32 R_ADDR;
 	u64 R_DATA;
 
+	struct perf_counter
+	{
+		u32 event;
+		u32 value;
+	};
+
+	std::array<perf_counter, 6> counters;
+
 	void write_gpr(u32 n, u32 value)
 	{
 		assert(n < 16);

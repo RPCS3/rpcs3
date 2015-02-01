@@ -8,20 +8,17 @@ namespace sce_libstdcxx_func
 {
 	void __aeabi_unwind_cpp_pr0()
 	{
-		sceLibstdcxx.Todo(__FUNCTION__);
-		Emu.Pause();
+		throw __FUNCTION__;
 	}
 
 	void __aeabi_unwind_cpp_pr1()
 	{
-		sceLibstdcxx.Todo(__FUNCTION__);
-		Emu.Pause();
+		throw __FUNCTION__;
 	}
 
 	void __aeabi_unwind_cpp_pr2()
 	{
-		sceLibstdcxx.Todo(__FUNCTION__);
-		Emu.Pause();
+		throw __FUNCTION__;
 	}
 }
 

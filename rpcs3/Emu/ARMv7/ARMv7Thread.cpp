@@ -116,6 +116,7 @@ void ARMv7Thread::InitRegs()
 	context.ITSTATE.IT = 0;
 	context.SP = m_stack_addr + m_stack_size;
 	context.TLS = armv7_get_tls(GetId());
+	context.R_ADDR = 0;
 }
 
 void ARMv7Thread::InitStack()
