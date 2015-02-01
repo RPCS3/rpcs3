@@ -655,17 +655,17 @@ struct CellSpursTaskset
 		// Real data
 		struct _CellSpursTaskset
 		{
-			be_t<u32> running_set[4];                    // 0x00
-			be_t<u32> ready_set[4];                      // 0x10
-			be_t<u32> ready2_set[4];                     // 0x20 - TODO: Find out what this is
-			be_t<u32> enabled_set[4];                    // 0x30
-			be_t<u32> signal_received_set[4];            // 0x40
-			be_t<u32> waiting_set[4];                    // 0x50
+			be_t<u128> running;                          // 0x00
+			be_t<u128> ready;                            // 0x10
+			be_t<u128> pending_ready;                    // 0x20
+			be_t<u128> enabled;                          // 0x30
+			be_t<u128> signalled;                        // 0x40
+			be_t<u128> waiting;                          // 0x50
 			vm::bptr<CellSpurs, 1, u64> spurs;           // 0x60
 			be_t<u64> args;                              // 0x68
 			u8 enable_clear_ls;                          // 0x70
 			u8 x71;                                      // 0x71
-			u8 x72;                                      // 0x72
+			u8 wkl_flag_wait_task;                       // 0x72
 			u8 last_scheduled_task;                      // 0x73
 			be_t<u32> wid;                               // 0x74
 			be_t<u64> x78;                               // 0x78
@@ -948,7 +948,7 @@ struct SpursTasksetPmMgmtData
     be_t<u32> savedWriteTagGroupQueryMask;          // 0x2FB0
     be_t<u32> savedSpuWriteEventMask;               // 0x2FB4
     be_t<u32> tasksetMgmtAddr;                      // 0x2FB8
-    be_t<u32> lowestLoadSegmentAddr;                // 0x2FBC
+    be_t<u32> guidAddr;                             // 0x2FBC
     be_t<u64> x2FC0;                                // 0x2FC0
     be_t<u64> x2FC8;                                // 0x2FC8
     be_t<u32> taskExitCode;                         // 0x2FD0

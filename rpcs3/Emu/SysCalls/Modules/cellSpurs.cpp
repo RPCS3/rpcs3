@@ -2602,8 +2602,8 @@ s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> tasks
 	cellSpursAddWorkloadWithAttribute(spurs, vm::ptr<u32>::make(wid.addr()), vm::ptr<const CellSpursWorkloadAttribute>::make(wkl_attr.addr()));
 	// TODO: Check return code
 
-	taskset->m.x72 = 0x80;
-	taskset->m.wid = wid.value();
+	taskset->m.wkl_flag_wait_task = 0x80;
+	taskset->m.wid                = wid.value();
 	// TODO: cellSpursSetExceptionEventHandler(spurs, wid, hook, taskset);
 	// TODO: Check return code
 
@@ -2801,11 +2801,9 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 	u32 tmp_task_id;
 	for (tmp_task_id = 0; tmp_task_id < CELL_SPURS_MAX_TASK; tmp_task_id++)
 	{
-		u32 l = tmp_task_id >> 5;
-		u32 b = tmp_task_id & 0x1F;
-		if ((taskset->m.enabled_set[l] & (0x80000000 >> b)) == 0)
+		if (!taskset->m.enabled.value()._bit[tmp_task_id])
 		{
-			taskset->m.enabled_set[l] |= 0x80000000 >> b;
+			taskset->m.enabled.value()._bit[tmp_task_id] = true;
 			break;
 		}
 	}
@@ -2840,10 +2838,10 @@ s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskID, 
 #endif
 }
 
-s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID)
+s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
 #ifdef PRX_DEBUG
-	cellSpurs->Warning("_cellSpursSendSignal(taskset_addr=0x%x, taskID=%d)", taskset.addr(), taskID);
+	cellSpurs->Warning("_cellSpursSendSignal(taskset_addr=0x%x, taskId=%d)", taskset.addr(), taskId);
 	return GetCurrentPPUThread().FastCall2(libsre + 0x124CC, libsre_rtoc);
 #else
 	if (!taskset)
@@ -2856,29 +2854,23 @@ s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID)
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (taskID >= CELL_SPURS_MAX_TASK || taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD2)
+	if (taskId >= CELL_SPURS_MAX_TASK || taskset->m.wid >= CELL_SPURS_MAX_WORKLOAD2)
 	{
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	auto word      = taskID >> 5;
-	auto mask      = 0x80000000u >> (taskID & 0x1F);
-	auto disabled  = taskset->m.enabled_set[word] & mask ? false : true;
-	auto running   = taskset->m.running_set[word];
-	auto ready     = taskset->m.ready_set[word];
-	auto ready2    = taskset->m.ready2_set[word];
-	auto waiting   = taskset->m.waiting_set[word];
-	auto signalled = taskset->m.signal_received_set[word];
-	auto enabled   = taskset->m.enabled_set[word];
-	auto invalid   = (ready & ready2) || (running & waiting) || ((running | ready | ready2 | waiting | signalled) & ~enabled) || disabled;
+	auto _0       = be_t<u128>::make(u128::from32(0));
+	auto disabled = taskset->m.enabled.value()._bit[taskId] ? false : true;
+	auto invalid  = (taskset->m.ready & taskset->m.pending_ready) != _0 || (taskset->m.running & taskset->m.waiting) != _0 || disabled ||
+					((taskset->m.running | taskset->m.ready | taskset->m.pending_ready | taskset->m.waiting | taskset->m.signalled) & be_t<u128>::make(~taskset->m.enabled.value())) != _0;
 
 	if (invalid)
 	{
 		return CELL_SPURS_TASK_ERROR_SRCH;
 	}
 
-	auto shouldSignal = waiting & ~signalled & mask ? true : false;
-	taskset->m.signal_received_set[word] |= mask;
+	auto shouldSignal = (taskset->m.waiting & be_t<u128>::make(~taskset->m.signalled.value()) & be_t<u128>::make(u128::fromBit(taskId))) != _0 ? true : false;
+	((u128)taskset->m.signalled)._bit[taskId] = true;
 	if (shouldSignal)
 	{
 		cellSpursSendWorkloadSignal(vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()), taskset->m.wid);

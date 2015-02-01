@@ -257,6 +257,15 @@ public:
 		_u32[1] = r._u32[1] & 0x00003F07;
 		_u32[0] = r._u32[0] & 0x00000F07;
 	}
+
+	// Read the FPSCR
+	void Read(u128 & r)
+	{
+		r._u32[3] = _u32[3];
+		r._u32[2] = _u32[2];
+		r._u32[1] = _u32[1];
+		r._u32[0] = _u32[0];
+	}
 };
 
 union SPU_SNRConfig_hdr
