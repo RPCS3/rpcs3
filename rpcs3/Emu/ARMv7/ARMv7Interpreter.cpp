@@ -191,7 +191,7 @@ namespace ARMv7_instrs
 
 	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
 	{
-		const T sign_mask = (T)1 << (sizeof(T) - 1);
+		const T sign_mask = (T)1 << (sizeof(T) * 8 - 1);
 
 		T result = x + y;
 		carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
@@ -823,6 +823,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 
 	if (ConditionPassed(context, cond))
 	{
+		//LOG_NOTICE(ARMv7, "Branch to 0x%x (cond=0x%x)", context.thread.PC + jump, cond);
 		context.thread.SetBranch(context.thread.PC + jump);
 	}
 }
@@ -1174,6 +1175,7 @@ void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 	case T3:
 	{
+		cond = context.ITSTATE.advance();
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
@@ -1187,13 +1189,17 @@ void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (ConditionPassed(context, cond))
 	{
+		const u32 m_value = context.read_gpr(m);
+		const u32 n_value = context.read_gpr(n);
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, true);
-		const u32 res = AddWithCarry(context.read_gpr(n), ~shifted, true, carry, overflow);
+		const u32 shifted = Shift(m_value, shift_t, shift_n, true);
+		const u32 res = AddWithCarry(n_value, ~shifted, true, carry, overflow);
 		context.APSR.N = res >> 31;
 		context.APSR.Z = res == 0;
 		context.APSR.C = carry;
 		context.APSR.V = overflow;
+
+		//LOG_NOTICE(ARMv7, "CMP: r%d=0x%08x <> r%d=0x%08x, shifted=0x%08x, res=0x%08x", n, n_value, m, m_value, shifted, res);
 	}
 }
 
@@ -1619,10 +1625,59 @@ void ARMv7_instrs::LDRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, t, n, imm32;
+	bool index, add, wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xfff);
+		index = true;
+		add = true;
+		wback = false;
+
+		reject(t == 15, "PLI");
+		reject(n == 15, "LDRSB (literal)");
+		reject(t == 13, "UNPREDICTABLE");
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff);
+		index = (code.data & 0x400);
+		add = (code.data & 0x200);
+		wback = (code.data & 0x100);
+
+		reject(t == 15 && index && !add && !wback, "PLI");
+		reject(n == 15, "LDRSB (literal)");
+		reject(index && add && !wback, "LDRSBT");
+		reject(!index && !wback, "UNDEFINED");
+		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const s8 value = vm::psv::read8(addr);
+
+		context.write_gpr(t, value); // sign-extend
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 

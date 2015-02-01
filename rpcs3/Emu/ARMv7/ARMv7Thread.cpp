@@ -120,10 +120,19 @@ void ARMv7Thread::InitRegs()
 
 void ARMv7Thread::InitStack()
 {
-	if(!m_stack_addr)
+	if (!m_stack_addr)
 	{
-		m_stack_size = 0x10000;
-		m_stack_addr = (u32)Memory.Alloc(0x10000, 1);
+		assert(m_stack_size);
+		m_stack_addr = vm::cast(Memory.Alloc(m_stack_size, 4096));
+	}
+}
+
+void ARMv7Thread::CloseStack()
+{
+	if (m_stack_addr)
+	{
+		Memory.Free(m_stack_addr);
+		m_stack_addr = 0;
 	}
 }
 
@@ -218,7 +227,7 @@ void ARMv7Thread::FastStop()
 	m_status = Stopped;
 }
 
-arm7_thread::arm7_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
 	thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
 
@@ -228,4 +237,48 @@ arm7_thread::arm7_thread(u32 entry, const std::string& name, u32 stack_size, u32
 	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
 
 	argc = 0;
+}
+
+cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
+{
+	assert(argc == 0);
+
+	if (!values.size())
+	{
+		return *this;
+	}
+
+	std::vector<char> argv_data;
+	u32 argv_size = 0;
+
+	for (auto& arg : values)
+	{
+		const u32 arg_size = vm::cast(arg.size(), "arg.size()"); // get arg size
+
+		for (char c : arg)
+		{
+			argv_data.push_back(c); // append characters
+		}
+
+		argv_data.push_back('\0'); // append null terminator
+
+		argv_size += arg_size + 1;
+		argc++;
+	}
+
+	argv = vm::cast(Memory.PSV.RAM.AllocAlign(argv_size, 4096)); // allocate arg list
+	memcpy(vm::get_ptr(argv), argv_data.data(), argv_size); // copy arg list
+	
+	return *this;
+}
+
+cpu_thread& armv7_thread::run()
+{
+	thread->Run();
+
+	// set arguments
+	static_cast<ARMv7Thread*>(thread)->context.GPR[0] = argc;
+	static_cast<ARMv7Thread*>(thread)->context.GPR[1] = argv;
+
+	return *this;
 }

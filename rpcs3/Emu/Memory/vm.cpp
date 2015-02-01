@@ -2,6 +2,7 @@
 #include "Memory.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/ARMv7/ARMv7Thread.h"
 
 namespace vm
 {
@@ -167,13 +168,14 @@ namespace vm
 
 	u32 stack_push(CPUThread& CPU, u32 size, u32 align_v, u32& old_pos)
 	{
+		assert(align_v);
+
 		switch (CPU.GetType())
 		{
 		case CPU_THREAD_PPU:
 		{
 			PPUThread& PPU = static_cast<PPUThread&>(CPU);
 
-			assert(align_v);
 			old_pos = (u32)PPU.GPR[1];
 			PPU.GPR[1] -= align(size, 8); // room minimal possible size
 			PPU.GPR[1] &= ~(align_v - 1); // fix stack alignment
@@ -199,8 +201,22 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			assert(!"stack_push(): ARMv7 not supported");
-			return 0;
+			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
+
+			old_pos = context.SP;
+			context.SP -= align(size, 4); // room minimal possible size
+			context.SP &= ~(align_v - 1); // fix stack alignment
+
+			if (context.SP < CPU.GetStackAddr())
+			{
+				// stack overflow
+				context.SP = old_pos;
+				return 0;
+			}
+			else
+			{
+				return context.SP;
+			}
 		}
 
 		default:

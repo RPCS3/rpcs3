@@ -799,8 +799,10 @@ public:
 	}
 
 public:
-	virtual void InitRegs();
-	virtual void Task();
+	virtual void InitRegs() override;
+	virtual void InitStack() override;
+	virtual void CloseStack() override;
+	virtual void Task() override;
 	u64 GetStackArg(s32 i);
 	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();

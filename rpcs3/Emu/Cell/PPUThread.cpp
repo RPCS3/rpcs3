@@ -80,6 +80,24 @@ void PPUThread::InitRegs()
 	TB = 0;
 }
 
+void PPUThread::InitStack()
+{
+	if (!m_stack_addr)
+	{
+		assert(m_stack_size);
+		m_stack_addr = vm::cast(Memory.StackMem.AllocAlign(m_stack_size, 4096));
+	}
+}
+
+void PPUThread::CloseStack()
+{
+	if (m_stack_addr)
+	{
+		Memory.StackMem.Free(m_stack_addr);
+		m_stack_addr = 0;
+	}
+}
+
 void PPUThread::DoRun()
 {
 	switch(Ini.CPUDecoderMode.GetValue())

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <unordered_map>
 #include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
 #include "ARMv7Thread.h"
 #include "ARMv7Interpreter.h"
 #include "ARMv7Opcodes.h"
@@ -1262,7 +1263,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 		addr += 16;
 	}
 
-	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", g_opct.size());
+	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", (u64)g_opct.size());
 }
 
 u32 ARMv7Decoder::DecodeMemory(const u32 address)

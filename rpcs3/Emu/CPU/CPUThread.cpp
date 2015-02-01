@@ -64,17 +64,6 @@ void CPUThread::Reset()
 	DoReset();
 }
 
-void CPUThread::CloseStack()
-{
-	if(m_stack_addr)
-	{
-		Memory.StackMem.Free(m_stack_addr);
-		m_stack_addr = 0;
-	}
-
-	m_stack_size = 0;
-}
-
 void CPUThread::SetId(const u32 id)
 {
 	m_id = id;

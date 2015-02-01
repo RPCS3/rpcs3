@@ -323,7 +323,7 @@ namespace loader
 				armv7_init_tls();
 				armv7_decoder_initialize(code_start, code_end);
 
-				arm7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
+				armv7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath(), "-emu" }).run();
 				break;
 			}
 			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;

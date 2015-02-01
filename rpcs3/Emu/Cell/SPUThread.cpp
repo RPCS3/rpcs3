@@ -103,6 +103,17 @@ void SPUThread::InitRegs()
 	R_ADDR = 0;
 }
 
+void SPUThread::InitStack()
+{
+	m_stack_size = 0x1000; // this value is wrong
+	m_stack_addr = m_offset + 0x40000 - m_stack_size; // stack is the part of SPU Local Storage
+}
+
+void SPUThread::CloseStack()
+{
+	// nothing to do here
+}
+
 void SPUThread::DoRun()
 {
 	switch(Ini.SPUDecoderMode.GetValue())
