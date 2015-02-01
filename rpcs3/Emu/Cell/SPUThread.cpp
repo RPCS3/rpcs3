@@ -99,6 +99,8 @@ void SPUThread::InitRegs()
 
 	m_event_mask = 0;
 	m_events = 0;
+
+	R_ADDR = 0;
 }
 
 void SPUThread::DoRun()

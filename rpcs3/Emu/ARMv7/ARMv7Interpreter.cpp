@@ -316,10 +316,10 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	switch (type)
 	{
-	case T1:
-	case A1:
+	case T1: case A1:
+	case T2: case A2:
 	{
-		cond = context.ITSTATE.advance();
+		cond = type == A1 ? code.data >> 28 : context.ITSTATE.advance();
 		t = (code.data & 0xf000) >> 12;
 		cp = (code.data & 0xf00) >> 8;
 		opc1 = (code.data & 0xe00000) >> 21;
@@ -327,8 +327,8 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 		cn = (code.data & 0xf0000) >> 16;
 		cm = (code.data & 0xf);
 
-		reject(cp - 10 < 2, "Advanced SIMD and VFP");
-		reject(t == 13 && type == T1, "UNPREDICTABLE");
+		reject(cp - 10 < 2 && (type == T1 || type == A1), "Advanced SIMD and VFP");
+		reject(t == 13 && (type == T1 || type == T2), "UNPREDICTABLE");
 		break;
 	}
 	default: throw __FUNCTION__;
@@ -340,6 +340,8 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 		if (t < 15 && cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
 		{
+			// Read CP15 User Read-only Thread ID Register (seems used as TLS address)
+
 			if (!context.TLS)
 			{
 				throw "TLS not initialized";

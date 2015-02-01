@@ -10,6 +10,8 @@ namespace vm
 
 	public:
 		typedef T type;
+		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
 		typedef typename remove_be_t<T>::type le_type;
 		typedef typename to_be_t<T>::type be_type;
 

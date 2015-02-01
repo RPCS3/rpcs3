@@ -42,6 +42,11 @@ u32 ppu_get_tls(u32 thread)
 		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, size = 0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
 			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}
+
+	if (!thread)
+	{
+		return 0;
+	}
 	
 	for (u32 i = 0; i < TLS_MAX; i++)
 	{
@@ -57,8 +62,8 @@ u32 ppu_get_tls(u32 thread)
 		if (g_tls_owners[i].compare_exchange_strong(old, thread))
 		{
 			const u32 addr = g_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
-			memset(vm::get_ptr(addr), 0, Emu.GetTLSMemsz()); // fill TLS area with zeros
 			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;
 		}
 	}

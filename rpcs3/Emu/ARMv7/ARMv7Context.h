@@ -37,6 +37,25 @@ struct ARMv7Context
 			};
 
 			u32 LR;
+
+			union
+			{
+				struct
+				{
+					u32 reserved0 : 16;
+					u32 GE : 4;
+					u32 reserved1 : 4;
+					u32 dummy : 3;
+					u32 Q : 1; // Set to 1 if an SSAT or USAT instruction changes (saturates) the input value for the signed or unsigned range of the result
+					u32 V : 1; // Overflow condition code flag
+					u32 C : 1; // Carry condition code flag
+					u32 Z : 1; // Zero condition code flag
+					u32 N : 1; // Negative condition code flag
+				};
+
+				u32 APSR;
+
+			} APSR;
 		};
 
 		struct
@@ -44,22 +63,6 @@ struct ARMv7Context
 			u64 GPR_D[8];
 		};
 	};
-
-	union
-	{
-		struct
-		{
-			u32 N : 1; //Negative condition code flag
-			u32 Z : 1; //Zero condition code flag
-			u32 C : 1; //Carry condition code flag
-			u32 V : 1; //Overflow condition code flag
-			u32 Q : 1; //Set to 1 if an SSAT or USAT instruction changes (saturates) the input value for the signed or unsigned range of the result
-			u32 dummy : 27;
-		};
-
-		u32 APSR;
-
-	} APSR;
 
 	union
 	{

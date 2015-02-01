@@ -131,7 +131,7 @@ void MemoryBase::Init(MemoryType type)
 
 	case Memory_PSV:
 		MemoryBlocks.push_back(PSV.RAM.SetRange(0x81000000, 0x10000000));
-		MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x10000000));
+		MemoryBlocks.push_back(UserMemory = PSV.Userspace.SetRange(0x91000000, 0x2F000000));
 		break;
 
 	case Memory_PSP:

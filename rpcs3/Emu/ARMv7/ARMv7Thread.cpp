@@ -48,7 +48,7 @@ void armv7_init_tls()
 
 u32 armv7_get_tls(u32 thread)
 {
-	if (!Emu.GetTLSMemsz())
+	if (!Emu.GetTLSMemsz() || !thread)
 	{
 		return 0;
 	}
@@ -67,8 +67,8 @@ u32 armv7_get_tls(u32 thread)
 		if (g_armv7_tls_owners[i].compare_exchange_strong(old, thread))
 		{
 			const u32 addr = g_armv7_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
-			memset(vm::get_ptr(addr), 0, Emu.GetTLSMemsz()); // fill TLS area with zeros
 			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;
 		}
 	}
@@ -112,7 +112,7 @@ void ARMv7Thread::InitRegs()
 	memset(context.GPR, 0, sizeof(context.GPR[0]) * 15);
 	context.APSR.APSR = 0;
 	context.IPSR.IPSR = 0;
-	context.ISET = Thumb;
+	//context.ISET = Thumb;
 	context.ITSTATE.IT = 0;
 	context.SP = m_stack_addr + m_stack_size;
 	context.TLS = armv7_get_tls(GetId());
