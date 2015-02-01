@@ -30,10 +30,7 @@ namespace ARMv7_instrs
 {
 	void UNK(ARMv7Context& context, const ARMv7Code code);
 
-	void NULL_OP(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-
 	void HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
-
 	void MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 	void ADC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);

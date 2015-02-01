@@ -17,11 +17,6 @@
 
 MemoryBase Memory;
 
-void MemoryBase::InvalidAddress(const char* func, const u64 addr)
-{
-	LOG_ERROR(MEMORY, "%s(): invalid address (0x%llx)", func, addr);
-}
-
 void MemoryBase::RegisterPages(u64 addr, u32 size)
 {
 	LV2_LOCK(0);
@@ -31,7 +26,7 @@ void MemoryBase::RegisterPages(u64 addr, u32 size)
 	{
 		if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
 		{
-			InvalidAddress(__FUNCTION__, i * 4096);
+			LOG_ERROR(MEMORY, "%s(): invalid address 0x%llx", __FUNCTION__, i * 4096);
 			break;
 		}
 		if (m_pages[i])
@@ -52,7 +47,7 @@ void MemoryBase::UnregisterPages(u64 addr, u32 size)
 	{
 		if (i >= sizeof(m_pages) / sizeof(m_pages[0]))
 		{
-			InvalidAddress(__FUNCTION__, i * 4096);
+			LOG_ERROR(MEMORY, "%s(): invalid address 0x%llx", __FUNCTION__, i * 4096);
 			break;
 		}
 		if (!m_pages[i])

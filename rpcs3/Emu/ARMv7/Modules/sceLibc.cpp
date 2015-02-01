@@ -18,6 +18,8 @@ namespace sce_libc_func
 	{
 		sceLibc.Error("__cxa_atexit(func=0x%x, arg=0x%x, dso=0x%x)", func, arg, dso);
 		
+		LV2_LOCK(0);
+
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
 			func(context, arg);
@@ -27,6 +29,8 @@ namespace sce_libc_func
 	void __aeabi_atexit(vm::psv::ptr<void> arg, vm::psv::ptr<atexit_func_t> func, vm::psv::ptr<void> dso)
 	{
 		sceLibc.Error("__aeabi_atexit(arg=0x%x, func=0x%x, dso=0x%x)", arg, func, dso);
+
+		LV2_LOCK(0);
 
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
@@ -38,6 +42,8 @@ namespace sce_libc_func
 	{
 		sceLibc.Error("exit()");
 		
+		LV2_LOCK(0);
+
 		for (auto func : g_atexit)
 		{
 			func(context);
@@ -156,7 +162,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Error("_Assert(text=0x%x, func=0x%x)", text, func);
 
-		LOG_ERROR(TTY, "%s : %s", func.get_ptr(), text.get_ptr());
+		LOG_ERROR(TTY, "%s : %s\n", func.get_ptr(), text.get_ptr());
 		Emu.Pause();
 	}
 }

@@ -1957,7 +1957,7 @@ struct SceNpScoreClanRankData
 	CellRtcTick recordDate;
 	SceNpId npId;
 	SceNpOnlineName onlineName;
-	uint8_t reserved[32];
+	u8 reserved[32];
 };
 
 // Clan ranking information to be obtained for a specified clan ID

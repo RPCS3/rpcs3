@@ -66,6 +66,11 @@ namespace vm
 		return 0;
 	}
 
+	void error(const u64 addr, const char* func)
+	{
+		throw fmt::format("%s(): invalid address 0x%llx", func, addr);
+	}
+
 	namespace ps3
 	{
 		u32 main_alloc(u32 size)

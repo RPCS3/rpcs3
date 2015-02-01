@@ -23,9 +23,64 @@
 
 Module *sysPrxForUser = nullptr;
 
+u32 g_tls_size; // size of every thread's storage
+u32 g_tls_start; // start of TLS memory area
+u32 g_tls_image_addr; // address of TLS initialization area
+u32 g_tls_image_size; // size of TLS initialization area
+
+const u32 TLS_MAX = 256;
+std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
+
 void sys_initialize_tls()
 {
 	sysPrxForUser->Log("sys_initialize_tls()");
+}
+
+u32 ppu_get_tls(u32 thread)
+{
+	if (!g_tls_start)
+	{
+		g_tls_size = vm::cast(Emu.GetTLSMemsz(), "Emu.GetTLSMemsz"); // (not an address for vm::cast, but fine)
+		g_tls_start = vm::cast(Memory.Alloc(g_tls_size * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
+		g_tls_image_addr = vm::cast(Emu.GetTLSAddr(), "Emu.GetTLSAddr");
+		g_tls_image_size = vm::cast(Emu.GetTLSFilesz(), "Emu.GetTLSFilesz");
+
+		sysPrxForUser->Warning("TLS initialized (g_tls_size=0x%x, g_tls_start=0x%x, g_tls_image_addr=0x%x, g_tls_image_size=0x%x)", g_tls_size, g_tls_start, g_tls_image_addr, g_tls_image_size);
+	}
+	
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		if (g_tls_owners[i] == thread)
+		{
+			return g_tls_start + i * g_tls_size; // if already initialized, return TLS address
+		}
+	}
+
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		u32 old = 0;
+		if (g_tls_owners[i].compare_exchange_strong(old, thread))
+		{
+			const u32 addr = g_tls_start + i * g_tls_size; // get TLS address
+			memset(vm::get_ptr(addr), 0, g_tls_size);      // fill TLS area with zeros
+			memcpy(vm::get_ptr(addr), vm::get_ptr(g_tls_image_addr), g_tls_image_size); // initialize from TLS image
+			return addr;
+		}
+	}
+
+	throw "Out of TLS memory";
+}
+
+void ppu_free_tls(u32 thread)
+{
+	for (auto& v : g_tls_owners)
+	{
+		u32 old = thread;
+		if (v.compare_exchange_strong(old, 0))
+		{
+			return;
+		}
+	}
 }
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
@@ -364,6 +419,15 @@ s32 _unnamed_E75C40F2(u32 dest)
 void sysPrxForUser_init(Module *pxThis)
 {
 	sysPrxForUser = pxThis;
+
+	g_tls_size = 0;
+	g_tls_start = 0;
+	g_tls_image_addr = 0;
+	g_tls_image_size = 0;
+	for (auto& v : g_tls_owners)
+	{
+		v.store(0, std::memory_order_relaxed);
+	}
 
 	// Setup random number generator
 	srand(time(NULL));
