@@ -568,6 +568,8 @@ public:
 
 public:
 	virtual void InitRegs();
+	virtual void InitStack();
+	virtual void CloseStack();
 	virtual void Task();
 	void FastCall(u32 ls_addr);
 	void FastStop();

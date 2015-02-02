@@ -11,6 +11,8 @@
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/System.h"
 
+extern void armv7_init_tls();
+
 namespace loader
 {
 	namespace handlers
@@ -91,6 +93,41 @@ namespace loader
 			case MACHINE_MIPS: break;
 			case MACHINE_ARM:
 			{
+				struct psv_libc_param_t
+				{
+					u32 size; // 0x0000001c
+					u32 unk1; // 0x00000000
+
+					vm::psv::ptr<u32> sceLibcHeapSize;
+					vm::psv::ptr<u32> sceLibcHeapSizeDefault;
+					vm::psv::ptr<u32> sceLibcHeapExtendedAlloc;
+					vm::psv::ptr<u32> sceLibcHeapDelayedAlloc;
+
+					u32 unk2;
+					u32 unk3;
+					
+					vm::psv::ptr<u32> __sce_libcmallocreplace;
+					vm::psv::ptr<u32> __sce_libcnewreplace;
+				};
+
+				struct psv_process_param_t
+				{
+					u32 size; // 0x00000030
+					u32 unk1; // 'PSP2'
+					u32 unk2; // 0x00000005
+					u32 unk3;
+
+					vm::psv::ptr<const char> sceUserMainThreadName;
+					vm::psv::ptr<s32>        sceUserMainThreadPriority;
+					vm::psv::ptr<u32>        sceUserMainThreadStackSize;
+					vm::psv::ptr<u32>        sceUserMainThreadAttribute;
+					vm::psv::ptr<const char> sceProcessName;
+					vm::psv::ptr<u32>        sce_process_preload_disabled;
+					vm::psv::ptr<u32>        sceUserMainThreadCpuAffinityMask;
+
+					vm::psv::ptr<psv_libc_param_t> __sce_libcparam;
+				};
+
 				initialize_psv_modules();
 
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
@@ -102,9 +139,10 @@ namespace loader
 				u32 fnid_addr = 0;
 				u32 code_start = 0;
 				u32 code_end = 0;
-
 				u32 vnid_addr = 0;
 				std::unordered_map<u32, u32> vnid_list;
+
+				auto proc_param = vm::psv::ptr<psv_process_param_t>::make(0);
 
 				for (auto& shdr : m_shdrs)
 				{
@@ -128,23 +166,39 @@ namespace loader
 						code_start = shdr.data_le.sh_addr;
 						code_end = shdr.data_le.sh_size + code_start;
 					}
-					else if (!strcmp(name.c_str(), ".sceModuleInfo.rodata"))
+					else if (!strcmp(name.c_str(), ".sceExport.rodata"))
 					{
-						LOG_NOTICE(LOADER, ".sceModuleInfo.rodata analysis...");
+						LOG_NOTICE(LOADER, ".sceExport.rodata analysis...");
 
-						auto code = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+						auto enid = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+						auto edata = vm::psv::ptr<const u32>::make(enid.addr() + shdr.data_le.sh_size / 2);
 
-						// very rough way to find the entry point
-						while (code[0] != 0xffffffffu)
+						for (u32 j = 0; j < shdr.data_le.sh_size / 8; j++)
 						{
-							entry = code[0] + 0x81000000;
-							code++;
-
-							if (code.addr() >= shdr.data_le.sh_addr + shdr.data_le.sh_size)
+							switch (const u32 nid = enid[j])
 							{
-								LOG_ERROR(LOADER, "Unable to find entry point in .sceModuleInfo.rodata");
-								entry = 0;
+							case 0x935cd196: // set entry point
+							{
+								entry = edata[j];
 								break;
+							}
+
+							case 0x6c2224ba: // __sce_moduleinfo
+							{
+								// currently nothing, but it should theoretically be the root of analysis instead of section name comparison
+								break;
+							}
+
+							case 0x70fba1e7: // __sce_process_param
+							{
+								proc_param.set(edata[j]);
+								break;
+							}
+
+							default:
+							{
+								LOG_ERROR(LOADER, "Unknown export 0x%08x (addr=0x%08x)", nid, edata[j]);
+							}
 							}
 						}
 					}
@@ -183,18 +237,14 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
 								}
 
-								// writing Thumb code (temporarily, because it should be ARM)
-								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
-								vm::psv::write16(addr + 2, (u16)get_psv_func_index(func)); // function index
-								vm::psv::write16(addr + 4, 0x4770); // BX LR
-								vm::psv::write16(addr + 6, 0); // null
+								const u32 code = get_psv_func_index(func);
+								vm::psv::write32(addr + 0, 0xe0700090 | (code & 0xfff0) << 4 | (code & 0xf)); // HACK instruction (ARM)
 							}
 							else
 							{
 								LOG_ERROR(LOADER, "Unknown function 0x%08x (addr=0x%x)", nid, addr);
 
-								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
-								vm::psv::write16(addr + 2, 0); // index 0 (unimplemented stub)
+								vm::psv::write32(addr + 0, 0xe0700090); // HACK instruction (ARM), unimplemented stub (code 0)
 								vm::psv::write32(addr + 4, nid); // nid
 							}
 
@@ -235,9 +285,13 @@ namespace loader
 					}
 					else if (!strcmp(name.c_str(), ".tbss"))
 					{
-						LOG_NOTICE(LOADER, ".tbss analysis");
+						LOG_NOTICE(LOADER, ".tbss analysis...");
+						const u32 img_addr = shdr.data_le.sh_addr;                  // start address of TLS initialization image
+						const u32 img_size = (&shdr)[1].data_le.sh_addr - img_addr; // calculate its size as the difference between sections
+						const u32 tls_size = shdr.data_le.sh_size;                  // full size of TLS
 
-						LOG_ERROR(LOADER, "TLS: size=0x%08x", shdr.data_le.sh_size);
+						LOG_WARNING(LOADER, "TLS: img_addr=0x%08x, img_size=0x%x, tls_size=0x%x", img_addr, img_size, tls_size);
+						Emu.SetTLSData(img_addr, img_size, tls_size);
 					}
 					else if (!strcmp(name.c_str(), ".sceRefs.rodata"))
 					{
@@ -314,9 +368,43 @@ namespace loader
 					}
 				}
 
+				LOG_NOTICE(LOADER, "__sce_process_param(addr=0x%x) analysis...", proc_param);
+
+				if (proc_param->size != 0x30 || proc_param->unk1 != *(u32*)"PSP2" || proc_param->unk2 != 5)
+				{
+					LOG_ERROR(LOADER, "__sce_process_param: unexpected data found (size=0x%x, 0x%x, 0x%x, 0x%x)", proc_param->size, proc_param->unk1, proc_param->unk2, proc_param->unk3);
+				}
+
+				LOG_NOTICE(LOADER, "*** &sceUserMainThreadName            = 0x%x", proc_param->sceUserMainThreadName);
+				LOG_NOTICE(LOADER, "*** &sceUserMainThreadPriority        = 0x%x", proc_param->sceUserMainThreadPriority);
+				LOG_NOTICE(LOADER, "*** &sceUserMainThreadStackSize       = 0x%x", proc_param->sceUserMainThreadStackSize);
+				LOG_NOTICE(LOADER, "*** &sceUserMainThreadAttribute       = 0x%x", proc_param->sceUserMainThreadAttribute);
+				LOG_NOTICE(LOADER, "*** &sceProcessName                   = 0x%x", proc_param->sceProcessName);
+				LOG_NOTICE(LOADER, "*** &sce_process_preload_disabled     = 0x%x", proc_param->sce_process_preload_disabled);
+				LOG_NOTICE(LOADER, "*** &sceUserMainThreadCpuAffinityMask = 0x%x", proc_param->sceUserMainThreadCpuAffinityMask);
+
+				auto libc_param = proc_param->__sce_libcparam;
+
+				LOG_NOTICE(LOADER, "__sce_libcparam(addr=0x%x) analysis...", libc_param);
+
+				if (libc_param->size != 0x1c || libc_param->unk1)
+				{
+					LOG_ERROR(LOADER, "__sce_libcparam: unexpected data found (size=0x%x, 0x%x, 0x%x)", libc_param->size, libc_param->unk1, libc_param->unk2);
+				}
+
+				LOG_NOTICE(LOADER, "*** &sceLibcHeapSize          = 0x%x", libc_param->sceLibcHeapSize);
+				LOG_NOTICE(LOADER, "*** &sceLibcHeapSizeDefault   = 0x%x", libc_param->sceLibcHeapSizeDefault);
+				LOG_NOTICE(LOADER, "*** &sceLibcHeapExtendedAlloc = 0x%x", libc_param->sceLibcHeapExtendedAlloc);
+				LOG_NOTICE(LOADER, "*** &sceLibcHeapDelayedAlloc  = 0x%x", libc_param->sceLibcHeapDelayedAlloc);
+
+				armv7_init_tls();
 				armv7_decoder_initialize(code_start, code_end);
 
-				arm7_thread(entry & ~1 /* TODO: Thumb/ARM encoding selection */, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run();
+				const std::string& thread_name = proc_param->sceUserMainThreadName ? proc_param->sceUserMainThreadName.get_ptr() : "main_thread";
+				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? *proc_param->sceUserMainThreadStackSize : 0;
+				const u32 priority = proc_param->sceUserMainThreadPriority ? *proc_param->sceUserMainThreadPriority : 0;
+
+				armv7_thread(entry, thread_name, stack_size, priority).args({ Emu.GetPath(), "-emu" }).run();
 				break;
 			}
 			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;

@@ -850,8 +850,8 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
 	queue->m_direction = direction;
-	*queue->m_hs1 = {};
-	*queue->m_hs2 = {};
+	memset(queue->m_hs1, 0, sizeof(queue->m_hs1));
+	memset(queue->m_hs2, 0, sizeof(queue->m_hs2));
 	queue->m_eaSignal = eaSignal;
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)

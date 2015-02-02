@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include <unordered_map>
 #include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
 #include "ARMv7Thread.h"
 #include "ARMv7Interpreter.h"
 #include "ARMv7Opcodes.h"
@@ -1158,8 +1159,43 @@ struct ARMv7_op4t_table_t
 			}
 		}
 	}
+
+	const ARMv7_opcode_t* HACK()
+	{
+		for (auto& opcode : table)
+		{
+			if (opcode->func == ARMv7_instrs::HACK)
+			{
+				return opcode;
+			}
+		}
+
+		throw "HACK instruction not found";
+	}
 	
 } g_op4t;
+
+struct ARMv7_op4arm_table_t
+{
+	std::vector<const ARMv7_opcode_t*> table;
+
+	ARMv7_op4arm_table_t()
+	{
+		for (auto& opcode : ARMv7_opcode_table)
+		{
+			if (opcode.type >= A1)
+			{
+				if (opcode.code & ~opcode.mask)
+				{
+					LOG_ERROR(GENERAL, "%s: wrong opcode mask (mask=0x%08x, code=0x%08x)", opcode.name, opcode.mask, opcode.code);
+				}
+
+				table.push_back(&opcode);
+			}
+		}
+	}
+
+} g_op4arm;
 
 std::unordered_map<u32, const ARMv7_opcode_t*> g_opct;
 
@@ -1230,16 +1266,21 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
 			const u32 target = (addr + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
 
-			// possibly a call to imported function:
-			if (target >= end_addr && ((target - end_addr) % 16) == 0 && vm::psv::read16(target) == 0xf870)
-			{
-				const u32 instr = vm::psv::read32(target);
+			const u32 instr = vm::psv::read32(target);
 
-				// check if not "unimplemented"
-				if (instr >> 16)
+			// possibly a call to imported function:
+			if (target >= end_addr && ((target - end_addr) % 16) == 0 && (instr & 0xfff000f0) == 0xe0700090)
+			{
+				// check if implemented
+				if (const u32 func = (instr & 0xfff00) >> 4 | (instr & 0xf))
 				{
-					// replace BLX with "hack" instruction directly, it can help to see where it was called from
-					vm::psv::write32(addr, instr);
+					// replace BLX with "HACK" instruction directly (in Thumb form), it can help to see where it was called from
+					vm::psv::write32(addr, 0xf870 | func << 16);
+					g_opct[0xf8700000 | func] = g_op4t.HACK();
+				}
+				else
+				{
+					// leave as is if unimplemented
 				}
 			}
 			else
@@ -1256,50 +1297,60 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 		addr += found->length;
 	}
 
-	while (vm::psv::read16(addr) == 0xf870)
-	{
-		g_opct[0xf8700000 | vm::psv::read16(addr + 2)] = g_op4t.table[0];
-		addr += 16;
-	}
-
-	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", g_opct.size());
+	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", (u64)g_opct.size());
 }
 
 u32 ARMv7Decoder::DecodeMemory(const u32 address)
 {
-	if (address & 0x1)
-	{
-		throw "ARMv7Decoder::DecodeMemory() failed (something is wrong with instruction set)";
-	}
-
 	ARMv7Code code = {};
-	code.code0 = vm::psv::read16(address);
 
-	if (auto opcode = g_op2t.data[code.code0])
+	if (m_ctx.ISET == Thumb)
 	{
-		(*opcode->func)(m_ctx, code, opcode->type);
-		return 2;
+		code.code0 = vm::psv::read16(address);
+
+		if (auto opcode = g_op2t.data[code.code0])
+		{
+			(*opcode->func)(m_ctx, code, opcode->type);
+			return 2;
+		}
+
+		code.code1 = code.code0;
+		code.code0 = vm::psv::read16(address + 2);
+
+		auto op = g_opct.find(code.data);
+		if (op != g_opct.end())
+		{
+			(*op->second->func)(m_ctx, code, op->second->type);
+			return 4;
+		}
+
+		//for (auto opcode : g_op4t.table)
+		//{
+		//	if ((code.data & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(code.data)))
+		//	{
+		//		(*opcode->func)(m_ctx, code, opcode->type);
+		//		return 4;
+		//	}
+		//}
 	}
-
-	code.code1 = code.code0;
-	code.code0 = vm::psv::read16(address + 2);
-
-	auto op = g_opct.find(code.data);
-	if (op != g_opct.end())
+	else if (m_ctx.ISET == ARM)
 	{
-		(*op->second->func)(m_ctx, code, op->second->type);
-		return 4;
+		code.data = vm::psv::read32(address);
+
+		for (auto opcode : g_op4arm.table)
+		{
+			if ((code.data & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(code.data)))
+			{
+				(*opcode->func)(m_ctx, code, opcode->type);
+				return 4;
+			}
+		}
 	}
-
-	//for (auto opcode : g_op4t.table)
-	//{
-	//	if ((code.data & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(code.data)))
-	//	{
-	//		(*opcode->func)(m_ctx, code, opcode->type);
-	//		return 4;
-	//	}
-	//}
-
+	else
+	{
+		throw "ARMv7Decoder::DecodeMemory() failed (invalid instruction set set)";
+	}
+	
 	ARMv7_instrs::UNK(m_ctx, code);
 	return 4;
 

@@ -191,7 +191,7 @@ namespace ARMv7_instrs
 
 	template<typename T> T AddWithCarry(T x, T y, bool carry_in, bool& carry_out, bool& overflow)
 	{
-		const T sign_mask = (T)1 << (sizeof(T) - 1);
+		const T sign_mask = (T)1 << (sizeof(T) * 8 - 1);
 
 		T result = x + y;
 		carry_out = ((x & y) | ((x ^ y) & ~result)) & sign_mask;
@@ -280,7 +280,14 @@ namespace ARMv7_instrs
 
 void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 {
-	throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
+	if (context.ISET == Thumb)
+	{
+		throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
+	}
+	else
+	{
+		throw fmt::format("Unknown/illegal opcode: 0x%08x", code.data);
+	}
 }
 
 void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
@@ -316,10 +323,10 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	switch (type)
 	{
-	case T1:
-	case A1:
+	case T1: case A1:
+	case T2: case A2:
 	{
-		cond = context.ITSTATE.advance();
+		cond = type == A1 ? code.data >> 28 : context.ITSTATE.advance();
 		t = (code.data & 0xf000) >> 12;
 		cp = (code.data & 0xf00) >> 8;
 		opc1 = (code.data & 0xe00000) >> 21;
@@ -327,8 +334,8 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 		cn = (code.data & 0xf0000) >> 16;
 		cm = (code.data & 0xf);
 
-		reject(cp - 10 < 2, "Advanced SIMD and VFP");
-		reject(t == 13 && type == T1, "UNPREDICTABLE");
+		reject(cp - 10 < 2 && (type == T1 || type == A1), "Advanced SIMD and VFP");
+		reject(t == 13 && (type == T1 || type == T2), "UNPREDICTABLE");
 		break;
 	}
 	default: throw __FUNCTION__;
@@ -336,15 +343,19 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		if (cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
-		{
-			LOG_ERROR(ARMv7, "TODO: TLS requested");
+		// APSR flags are written if t = 15
 
-			if (t < 15)
+		if (t < 15 && cp == 15 && opc1 == 0 && cn == 13 && cm == 0 && opc2 == 3)
+		{
+			// Read CP15 User Read-only Thread ID Register (seems used as TLS address)
+
+			if (!context.TLS)
 			{
-				context.GPR[t] = 0;
-				return;
+				throw "TLS not initialized";
 			}
+
+			context.GPR[t] = context.TLS;
+			return;
 		}
 
 		throw fmt::format("Bad instruction: mrc p%d,%d,r%d,c%d,c%d,%d", cp, opc1, t, cn, cm, opc2);
@@ -819,6 +830,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 
 	if (ConditionPassed(context, cond))
 	{
+		//LOG_NOTICE(ARMv7, "Branch to 0x%x (cond=0x%x)", context.thread.PC + jump, cond);
 		context.thread.SetBranch(context.thread.PC + jump);
 	}
 }
@@ -971,16 +983,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	if (ConditionPassed(context, cond))
 	{
 		context.LR = newLR;
-		if (target & 1)
-		{
-			context.ISET = Thumb;
-			context.thread.SetBranch(target & ~1);
-		}
-		else
-		{
-			context.ISET = ARM;
-			context.thread.SetBranch(target);
-		}
+		context.write_pc(target);
 	}
 }
 
@@ -1009,16 +1012,7 @@ void ARMv7_instrs::BX(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (ConditionPassed(context, cond))
 	{
-		if (target & 1)
-		{
-			context.ISET = Thumb;
-			context.thread.SetBranch(target & ~1);
-		}
-		else
-		{
-			context.ISET = ARM;
-			context.thread.SetBranch(target);
-		}
+		context.write_pc(target);
 	}
 }
 
@@ -1170,6 +1164,7 @@ void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const AR
 	}
 	case T3:
 	{
+		cond = context.ITSTATE.advance();
 		n = (code.data & 0xf0000) >> 16;
 		m = (code.data & 0xf);
 		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
@@ -1183,13 +1178,17 @@ void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (ConditionPassed(context, cond))
 	{
+		const u32 m_value = context.read_gpr(m);
+		const u32 n_value = context.read_gpr(n);
 		bool carry, overflow;
-		const u32 shifted = Shift(context.read_gpr(m), shift_t, shift_n, true);
-		const u32 res = AddWithCarry(context.read_gpr(n), ~shifted, true, carry, overflow);
+		const u32 shifted = Shift(m_value, shift_t, shift_n, true);
+		const u32 res = AddWithCarry(n_value, ~shifted, true, carry, overflow);
 		context.APSR.N = res >> 31;
 		context.APSR.Z = res == 0;
 		context.APSR.C = carry;
 		context.APSR.V = overflow;
+
+		//LOG_NOTICE(ARMv7, "CMP: r%d=0x%08x <> r%d=0x%08x, shifted=0x%08x, res=0x%08x", n, n_value, m, m_value, shifted, res);
 	}
 }
 
@@ -1615,10 +1614,59 @@ void ARMv7_instrs::LDRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, t, n, imm32;
+	bool index, add, wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xfff);
+		index = true;
+		add = true;
+		wback = false;
+
+		reject(t == 15, "PLI");
+		reject(n == 15, "LDRSB (literal)");
+		reject(t == 13, "UNPREDICTABLE");
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		imm32 = (code.data & 0xff);
+		index = (code.data & 0x400);
+		add = (code.data & 0x200);
+		wback = (code.data & 0x100);
+
+		reject(t == 15 && index && !add && !wback, "PLI");
+		reject(n == 15, "LDRSB (literal)");
+		reject(index && add && !wback, "LDRSBT");
+		reject(!index && !wback, "UNDEFINED");
+		reject(t == 13 || t == 15 || (wback && n == t), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		const s8 value = vm::psv::read8(addr);
+
+		context.write_gpr(t, value); // sign-extend
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 

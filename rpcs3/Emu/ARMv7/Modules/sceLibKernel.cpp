@@ -42,18 +42,18 @@ s32 sceKernelCreateThread(
 	s32 cpuAffinityMask,
 	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
+	sceLibKernel.Warning("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
 	ARMv7Thread& new_thread = static_cast<ARMv7Thread&>(Emu.GetCPU().AddThread(CPU_THREAD_ARMv7));
 
 	const auto id = new_thread.GetId();
-	new_thread.SetEntry(entry.addr() ^ 1);
+	new_thread.SetEntry(entry.addr());
 	new_thread.SetPrio(initPriority);
 	new_thread.SetStackSize(stackSize);
 	new_thread.SetName(pName.get_ptr());
 
-	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x)^1: id -> 0x%x", pName.get_ptr(), entry, id);
+	sceLibKernel.Warning("*** New ARMv7 Thread [%s] (entry=0x%x): id -> 0x%x", pName.get_ptr(), entry, id);
 
 	new_thread.Run();
 	return id;
@@ -61,7 +61,7 @@ s32 sceKernelCreateThread(
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
 {
-	sceLibKernel.Error("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=0x%x)", threadId, argSize, pArgBlock);
+	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=0x%x)", threadId, argSize, pArgBlock);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
@@ -93,7 +93,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 
 s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 {
-	sceLibKernel.Error("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.thread.Stop();
@@ -103,7 +103,7 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 
 s32 sceKernelDeleteThread(s32 threadId)
 {
-	sceLibKernel.Error("sceKernelDeleteThread(threadId=0x%x)", threadId);
+	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
@@ -125,7 +125,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 
 s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 {
-	sceLibKernel.Error("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.thread.Stop();
@@ -261,7 +261,7 @@ s32 sceKernelDelayThreadCB(u32 usec)
 
 s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
-	sceLibKernel.Error("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
+	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 

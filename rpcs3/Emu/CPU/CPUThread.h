@@ -1,8 +1,7 @@
 #pragma once
-
 #include "Utilities/Thread.h"
 
-enum CPUThreadType :unsigned char
+enum CPUThreadType : unsigned char
 {
 	CPU_THREAD_PPU,
 	CPU_THREAD_SPU,
@@ -46,10 +45,10 @@ protected:
 	bool m_trace_call_stack;
 
 public:
-	virtual void InitRegs()=0;
+	virtual void InitRegs() = 0;
 
-	virtual void InitStack()=0;
-	virtual void CloseStack();
+	virtual void InitStack() = 0;
+	virtual void CloseStack() = 0;
 
 	u32 GetStackAddr() const { return m_stack_addr; }
 	u32 GetStackSize() const { return m_stack_size; }

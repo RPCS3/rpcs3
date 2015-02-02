@@ -59,7 +59,7 @@ s32 sceRtcCheckValid(vm::psv::ptr<const SceDateTime> pTime)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcSetTime_t(vm::psv::ptr<SceDateTime> pTime, time_t iTime)
+s32 sceRtcSetTime_t(vm::psv::ptr<SceDateTime> pTime, u32 iTime)
 {
 	throw __FUNCTION__;
 }
@@ -69,7 +69,7 @@ s32 sceRtcSetTime64_t(vm::psv::ptr<SceDateTime> pTime, u64 ullTime)
 	throw __FUNCTION__;
 }
 
-s32 sceRtcGetTime_t(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<time_t> piTime)
+s32 sceRtcGetTime_t(vm::psv::ptr<const SceDateTime> pTime, vm::psv::ptr<u32> piTime)
 {
 	throw __FUNCTION__;
 }
