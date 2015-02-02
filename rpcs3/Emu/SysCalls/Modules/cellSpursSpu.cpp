@@ -116,7 +116,9 @@ bool spursDma(SPUThread & spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag) {
         u128 rv;
 
         spu.ReadChannel(rv, MFC_RdAtomicStat);
-        return rv._u32[3] ? true : false;
+        auto success = rv._u32[3] ? true : false;
+        success      = cmd == MFC_PUTLLC_CMD ? !success : success;
+        return success;
     }
 
     return true;
@@ -442,11 +444,11 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
 
 /// SPURS kernel dispatch workload
 void spursKernelDispatchWorkload(SPUThread & spu, u64 widAndPollStatus) {
-    SpursKernelContext * ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
-    auto isKernel2            = ctxt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
+    auto ctxt      = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
+    auto isKernel2 = ctxt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
 
-    auto pollStatus = (u32)(spu.GPR[3]._u64[1]);
-    auto wid        = (u32)(spu.GPR[3]._u64[1] >> 32);
+    auto pollStatus = (u32)widAndPollStatus;
+    auto wid        = (u32)(widAndPollStatus >> 32);
 
     // DMA in the workload info for the selected workload
     auto wklInfoOffset =  wid < CELL_SPURS_MAX_WORKLOAD ? offsetof(CellSpurs, m.wklInfo1[wid]) :
@@ -491,8 +493,8 @@ void spursKernelDispatchWorkload(SPUThread & spu, u64 widAndPollStatus) {
 
 /// SPURS kernel workload exit
 bool spursKernelWorkloadExit(SPUThread & spu) {
-    SpursKernelContext * ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
-    auto isKernel2            = ctxt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
+    auto ctxt      = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
+    auto isKernel2 = ctxt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
 
     // Select next workload to run
     spu.GPR[3].clear();
@@ -508,15 +510,14 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
 
 /// SPURS kernel entry point
 bool spursKernelEntry(SPUThread & spu) {
-    SpursKernelContext * ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
+    auto ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
+    memset(ctxt, 0, sizeof(SpursKernelContext));
 
     // Save arguments
     ctxt->spuNum = spu.GPR[3]._u32[3];
     ctxt->spurs.set(spu.GPR[4]._u64[1]);
 
     auto isKernel2 = ctxt->spurs->m.flags1 & SF1_32_WORKLOADS ? true : false;
-
-    memset(ctxt, 0, sizeof(SpursKernelContext));
 
     // Initialise the SPURS context to its initial values
     ctxt->dmaTagId           = CELL_SPURS_KERNEL_DMA_TAG_ID;
@@ -565,7 +566,8 @@ bool spursSysServiceEntry(SPUThread & spu) {
         // TODO: If we reach here it means the current workload was preempted to start the
         // system workload. Need to implement this.
     }
-
+    
+    cellSpursModuleExit(spu);
     return false;
 }
 
@@ -599,11 +601,11 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
             if (spurs->m.flags1 & SF1_32_WORKLOADS) {
                 for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD2; i++) {
                     u32 j            = i & 0x0F;
-                    u8 runnable      = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->wklRunnable1 & (0x8000 >> j) : ctxt->wklRunnable2 & (0x8000 >> j);
+                    u16 runnable     = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->wklRunnable1 & (0x8000 >> j) : ctxt->wklRunnable2 & (0x8000 >> j);
                     u8 priority      = i < CELL_SPURS_MAX_WORKLOAD ? ctxt->priority[j] & 0x0F : ctxt->priority[j] >> 4;
                     u8 maxContention = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklMaxContention[j].read_relaxed() & 0x0F : spurs->m.wklMaxContention[j].read_relaxed() >> 4;
                     u8 contention    = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklCurrentContention[j] & 0x0F : spurs->m.wklCurrentContention[j] >> 4;
-                    u8 wklSignal     = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklSignal1.read_relaxed() & (0x8000 >> j) : spurs->m.wklSignal2.read_relaxed() & (0x8000 >> j);
+                    u16 wklSignal    = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklSignal1.read_relaxed() & (0x8000 >> j) : spurs->m.wklSignal2.read_relaxed() & (0x8000 >> j);
                     u8 wklFlag       = spurs->m.wklFlag.flag.read_relaxed() == 0 ? spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
                     u8 readyCount    = i < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklReadyCount1[j].read_relaxed() : spurs->m.wklIdleSpuCountOrReadyCount2[j].read_relaxed();
 
@@ -616,8 +618,8 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
                 }
             } else {
                 for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
-                    u8 runnable     = ctxt->wklRunnable1 & (0x8000 >> i);
-                    u8 wklSignal    = spurs->m.wklSignal1.read_relaxed() & (0x8000 >> i);
+                    u16 runnable    = ctxt->wklRunnable1 & (0x8000 >> i);
+                    u16 wklSignal   = spurs->m.wklSignal1.read_relaxed() & (0x8000 >> i);
                     u8 wklFlag      = spurs->m.wklFlag.flag.read_relaxed() == 0 ? spurs->m.wklFlagReceiver.read_relaxed() == i ? 1 : 0 : 0;
                     u8 readyCount   = spurs->m.wklReadyCount1[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->m.wklReadyCount1[i].read_relaxed();
                     u8 idleSpuCount = spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed() > CELL_SPURS_MAX_SPU ? CELL_SPURS_MAX_SPU : spurs->m.wklIdleSpuCountOrReadyCount2[i].read_relaxed();
@@ -676,7 +678,7 @@ void spursSysServiceMain(SPUThread & spu, u32 pollStatus) {
 
         do {
             spursDma(spu, MFC_GETLLAR_CMD, ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1), 0x2D80/*LSA*/, 0x80/*size*/, 0/*tag*/);
-            CellSpurs * spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
+            auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x2D80 - offsetof(CellSpurs, m.wklState1));
 
             // Halt if already initialised
             if (spurs->m.sysSrvOnSpu & (1 << ctxt->spuNum)) {
@@ -1167,7 +1169,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
             waiting._bit[ctxt->taskId] = true;
             break;
         case SPURS_TASKSET_REQUEST_WAIT_SIGNAL:
-            if (signalled._bit[ctxt->taskId]) {
+            if (signalled._bit[ctxt->taskId] == false) {
                 numNewlyReadyTasks--;
                 running._bit[ctxt->taskId]   = false;
                 waiting._bit[ctxt->taskId]   = true;
@@ -1229,8 +1231,8 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
             *isWaiting = waiting._bit[selectedTaskId < CELL_SPURS_MAX_TASK ? selectedTaskId : 0] ? 1 : 0;
             if (selectedTaskId != CELL_SPURS_MAX_TASK) {
                 taskset->m.last_scheduled_task = selectedTaskId;
-                running._bit[ctxt->taskId]     = true;
-                waiting._bit[ctxt->taskId]     = false;
+                running._bit[selectedTaskId]   = true;
+                waiting._bit[selectedTaskId]   = false;
             }
             break;
         case SPURS_TASKSET_REQUEST_RECV_WKL_FLAG:
@@ -1343,7 +1345,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
     u32 allocLsBlocks = taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F;
     u32 lsBlocks      = 0;
     for (auto i = 0; i < 128; i++) {
-        if (taskInfo->ls_pattern.u64[i < 64 ? 1 : 0] & (0x8000000000000000ull >> i)) {
+        if (taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i)) {
             lsBlocks++;
         }
     }
@@ -1354,7 +1356,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Make sure the stack is area is specified in the ls pattern
     for (auto i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++) {
-        if ((taskInfo->ls_pattern.u64[i < 64 ? 1 : 0] & (0x8000000000000000ull >> i)) == 0) {
+        if ((taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i)) == 0) {
             return CELL_SPURS_TASK_ERROR_STAT;
         }
     }
@@ -1374,7 +1376,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Save LS context
     for (auto i = 6; i < 128; i++) {
-        bool shouldStore = taskInfo->ls_pattern.u64[i < 64 ? 1 : 0] & (0x8000000000000000ull >> i) ? true : false;
+        bool shouldStore = taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i) ? true : false;
         if (shouldStore) {
             // TODO: Combine DMA requests for consecutive blocks into a single request
             spursDma(spu, MFC_PUT_CMD, contextSaveStorage + 0x400 + ((i - 6) << 11), CELL_SPURS_TASK_TOP + ((i - 6) << 11), 0x800/*size*/, ctxt->dmaTagId);
@@ -1417,6 +1419,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
     if (isWaiting == 0) {
         // If we reach here it means that the task is being started and not being resumed
+        memset(vm::get_ptr<void>(spu.ls_offset + CELL_SPURS_TASK_TOP), 0, CELL_SPURS_TASK_BOTTOM - CELL_SPURS_TASK_TOP);
         ctxt->guidAddr = CELL_SPURS_TASK_TOP;
 
         u32 entryPoint;
@@ -1428,7 +1431,7 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
 
-        ctxt->savedContextLr.value()._u32[3] = entryPoint;
+        ctxt->savedContextLr  = u128::from32r(entryPoint);
         ctxt->guidAddr        = lowestLoadAddr;
         ctxt->tasksetMgmtAddr = 0x2700;
         ctxt->x2FC0           = 0;
@@ -1512,12 +1515,11 @@ s32 spursTasksetProcessSyscall(SPUThread & spu, u32 syscallNum, u32 args) {
     // for DMA completion
     if ((syscallNum & 0x10) == 0) {
         spursDmaWaitForCompletion(spu, 0xFFFFFFFF);
-        syscallNum &= 0x0F;
     }
 
     s32 rc       = 0;
     u32 incident = 0;
-    switch (syscallNum) {
+    switch (syscallNum & 0x0F) {
     case CELL_SPURS_TASK_SYSCALL_EXIT:
         if (ctxt->x2FD4 == 4 || (ctxt->x2FC0 & 0xFFFFFFFF) != 0) { // TODO: Figure this out
             if (ctxt->x2FD4 != 4) {
@@ -1587,9 +1589,9 @@ s32 spursTasksetProcessSyscall(SPUThread & spu, u32 syscallNum, u32 args) {
 
         if (spursTasksetPollStatus(spu)) {
             spursTasksetExit(spu);
+        } else {
+            spursTasksetDispatch(spu);
         }
-
-        spursTasksetDispatch(spu);
     }
 
     return rc;

@@ -2588,7 +2588,7 @@ s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> tasks
 	taskset->m.size = size;
 
 	vm::var<CellSpursWorkloadAttribute> wkl_attr;
-	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::ptr<const void>::make(16) /*pm*/, 0x1E40 /*pm_size*/,
+	_cellSpursWorkloadAttributeInitialize(wkl_attr, 1 /*revision*/, 0x33 /*sdk_version*/, vm::ptr<const void>::make(SPURS_IMG_ADDR_TASKSET_PM), 0x1E40 /*pm_size*/,
 		taskset.addr(), priority, 8 /*min_contention*/, max_contention);
 	// TODO: Check return code
 
@@ -2768,14 +2768,16 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 		if (ls_pattern.addr() != 0)
 		{
 			u32 ls_blocks = 0;
-			for (u32 i = 0; i < 2; i++)
+			for (auto i = 0; i < 64; i++)
 			{
-				for (u32 j = 0; j < 64; j++)
+				if (ls_pattern->u64[0] & ((u64)1 << i))
 				{
-					if (ls_pattern->u64[0] & ((u64)1 << j))
-					{
-						ls_blocks++;
-					}
+					ls_blocks++;
+				}
+
+				if (ls_pattern->u64[1] & ((u64)1 << i))
+				{
+					ls_blocks++;
 				}
 			}
 
@@ -2803,7 +2805,9 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 	{
 		if (!taskset->m.enabled.value()._bit[tmp_task_id])
 		{
-			taskset->m.enabled.value()._bit[tmp_task_id] = true;
+			auto enabled              = taskset->m.enabled.value();
+			enabled._bit[tmp_task_id] = true;
+			taskset->m.enabled        = enabled;
 			break;
 		}
 	}
@@ -2818,23 +2822,73 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 	for (u32 i = 0; i < 2; i++)
 	{
 		taskset->m.task_info[tmp_task_id].args.u64[i] = arg != 0 ? arg->u64[i] : 0;
-		taskset->m.task_info[tmp_task_id].ls_pattern.u64[i] = ls_pattern != 0 ? ls_pattern->u64[i] : 0;
+		if (ls_pattern.addr())
+		{
+			taskset->m.task_info[tmp_task_id].ls_pattern.u64[i] = ls_pattern->u64[i];
+		}
 	}
 
 	*task_id = tmp_task_id;
 	return CELL_OK;
 }
 
-s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskID, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
+s64 spursTaskStart(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
+{
+	auto pendingReady         = taskset->m.pending_ready.value();
+	pendingReady._bit[taskId] = true;
+	taskset->m.pending_ready  = pendingReady;
+
+	cellSpursSendWorkloadSignal(vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()), taskset->m.wid);
+	auto rc = cellSpursWakeUp(GetCurrentPPUThread(), vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()));
+	if (rc != CELL_OK)
+	{
+		if (rc == CELL_SPURS_POLICY_MODULE_ERROR_STAT)
+		{
+			rc = CELL_SPURS_TASK_ERROR_STAT;
+		}
+		else
+		{
+			assert(0);
+		}
+	}
+
+	return rc;
+}
+
+s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
 	vm::ptr<CellSpursTaskArgument> argument)
 {
 	cellSpurs->Warning("cellSpursCreateTask(taskset_addr=0x%x, taskID_addr=0x%x, elf_addr_addr=0x%x, context_addr_addr=0x%x, context_size=%d, lsPattern_addr=0x%x, argument_addr=0x%x)",
-		taskset.addr(), taskID.addr(), elf_addr, context_addr, context_size, lsPattern.addr(), argument.addr());
+		taskset.addr(), taskId.addr(), elf_addr, context_addr, context_size, lsPattern.addr(), argument.addr());
 
 #ifdef PRX_DEBUG
 	return GetCurrentPPUThread().FastCall2(libsre + 0x12414, libsre_rtoc);
 #else
-	return spursCreateTask(taskset, taskID, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
+	if (!taskset)
+	{
+		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
+	}
+
+	if (taskset.addr() % CellSpursTaskset::align)
+	{
+		return CELL_SPURS_TASK_ERROR_ALIGN;
+	}
+
+	vm::var<u32> tmpTaskId;
+	auto rc = spursCreateTask(taskset, tmpTaskId, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
+    if (rc != CELL_OK) 
+    {
+        return rc;
+    }
+
+    rc = spursTaskStart(taskset, tmpTaskId);
+    if (rc != CELL_OK) 
+    {
+        return rc;
+    }
+
+    *taskId = tmpTaskId;
+    return CELL_OK;
 #endif
 }
 
