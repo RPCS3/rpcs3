@@ -137,7 +137,7 @@ struct ARMv7Context
 		}
 		else
 		{
-			write_pc(value & ~1);
+			write_pc(value);
 		}
 	}
 

@@ -48,12 +48,12 @@ s32 sceKernelCreateThread(
 	ARMv7Thread& new_thread = static_cast<ARMv7Thread&>(Emu.GetCPU().AddThread(CPU_THREAD_ARMv7));
 
 	const auto id = new_thread.GetId();
-	new_thread.SetEntry(entry.addr() ^ 1);
+	new_thread.SetEntry(entry.addr());
 	new_thread.SetPrio(initPriority);
 	new_thread.SetStackSize(stackSize);
 	new_thread.SetName(pName.get_ptr());
 
-	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x)^1: id -> 0x%x", pName.get_ptr(), entry, id);
+	sceLibKernel.Warning("*** New ARMv7 Thread [%s] (entry=0x%x): id -> 0x%x", pName.get_ptr(), entry, id);
 
 	new_thread.Run();
 	return id;

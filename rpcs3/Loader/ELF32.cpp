@@ -104,6 +104,10 @@ namespace loader
 					vm::psv::ptr<u32> sceLibcHeapDelayedAlloc;
 
 					u32 unk2;
+					u32 unk3;
+					
+					vm::psv::ptr<u32> __sce_libcmallocreplace;
+					vm::psv::ptr<u32> __sce_libcnewreplace;
 				};
 
 				struct psv_process_param_t
@@ -233,18 +237,14 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
 								}
 
-								// writing Thumb code (temporarily, because it should be ARM)
-								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
-								vm::psv::write16(addr + 2, (u16)get_psv_func_index(func)); // function index
-								vm::psv::write16(addr + 4, 0x4770); // BX LR
-								vm::psv::write16(addr + 6, 0); // null
+								const u32 code = get_psv_func_index(func);
+								vm::psv::write32(addr + 0, 0xe0700090 | (code & 0xfff0) << 4 | (code & 0xf)); // HACK instruction (ARM)
 							}
 							else
 							{
 								LOG_ERROR(LOADER, "Unknown function 0x%08x (addr=0x%x)", nid, addr);
 
-								vm::psv::write16(addr + 0, 0xf870); // HACK instruction (Thumb)
-								vm::psv::write16(addr + 2, 0); // index 0 (unimplemented stub)
+								vm::psv::write32(addr + 0, 0xe0700090); // HACK instruction (ARM), unimplemented stub (code 0)
 								vm::psv::write32(addr + 4, nid); // nid
 							}
 
@@ -404,8 +404,7 @@ namespace loader
 				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? *proc_param->sceUserMainThreadStackSize : 0;
 				const u32 priority = proc_param->sceUserMainThreadPriority ? *proc_param->sceUserMainThreadPriority : 0;
 
-				/* TODO: Thumb/ARM encoding selection */
-				armv7_thread(entry & ~1, thread_name, stack_size, priority).args({ Emu.GetPath(), "-emu" }).run();
+				armv7_thread(entry, thread_name, stack_size, priority).args({ Emu.GetPath(), "-emu" }).run();
 				break;
 			}
 			case MACHINE_SPU: spu_thread(m_ehdr.is_le() ? m_ehdr.data_le.e_entry : m_ehdr.data_be.e_entry, "main_thread").args({ Emu.GetPath()/*, "-emu"*/ }).run(); break;

@@ -144,8 +144,9 @@ size_t fmt::detail::get_fmt_precision(const char* fmt, size_t len)
 	return 1;
 }
 
-std::string fmt::detail::format(const char* fmt, size_t len)
+std::string fmt::detail::format(const char* fmt)
 {
+	const size_t len = strlen(fmt);
 	const size_t fmt_start = get_fmt_start(fmt, len);
 	if (fmt_start != len)
 	{

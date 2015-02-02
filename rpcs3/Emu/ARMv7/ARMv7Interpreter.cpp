@@ -280,7 +280,14 @@ namespace ARMv7_instrs
 
 void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 {
-	throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
+	if (context.ISET == Thumb)
+	{
+		throw fmt::format("Unknown/illegal opcode: 0x%04x 0x%04x", code.code1, code.code0);
+	}
+	else
+	{
+		throw fmt::format("Unknown/illegal opcode: 0x%08x", code.data);
+	}
 }
 
 void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
@@ -976,16 +983,7 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	if (ConditionPassed(context, cond))
 	{
 		context.LR = newLR;
-		if (target & 1)
-		{
-			context.ISET = Thumb;
-			context.thread.SetBranch(target & ~1);
-		}
-		else
-		{
-			context.ISET = ARM;
-			context.thread.SetBranch(target);
-		}
+		context.write_pc(target);
 	}
 }
 
@@ -1014,16 +1012,7 @@ void ARMv7_instrs::BX(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (ConditionPassed(context, cond))
 	{
-		if (target & 1)
-		{
-			context.ISET = Thumb;
-			context.thread.SetBranch(target & ~1);
-		}
-		else
-		{
-			context.ISET = ARM;
-			context.thread.SetBranch(target);
-		}
+		context.write_pc(target);
 	}
 }
 

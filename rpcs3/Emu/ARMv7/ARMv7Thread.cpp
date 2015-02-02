@@ -12,7 +12,8 @@
 
 void ARMv7Context::write_pc(u32 value)
 {
-	thread.SetBranch(value);
+	ISET = value & 1 ? Thumb : ARM;
+	thread.SetBranch(value & ~1);
 }
 
 u32 ARMv7Context::read_pc()
@@ -109,10 +110,11 @@ ARMv7Thread::~ARMv7Thread()
 
 void ARMv7Thread::InitRegs()
 {
-	memset(context.GPR, 0, sizeof(context.GPR[0]) * 15);
+	memset(context.GPR, 0, sizeof(context.GPR));
 	context.APSR.APSR = 0;
 	context.IPSR.IPSR = 0;
-	//context.ISET = Thumb;
+	context.ISET = PC & 1 ? Thumb : ARM; // select instruction set
+	context.thread.SetPc(PC & ~1); // and fix PC
 	context.ITSTATE.IT = 0;
 	context.SP = m_stack_addr + m_stack_size;
 	context.TLS = armv7_get_tls(GetId());

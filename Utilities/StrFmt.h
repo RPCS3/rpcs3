@@ -429,16 +429,17 @@ namespace fmt
 			}
 		};
 
-		std::string format(const char* fmt, size_t len); // terminator
+		std::string format(const char* fmt); // terminator
 
 		template<typename T, typename... Args>
-		std::string format(const char* fmt, size_t len, const T& arg, Args... args)
+		std::string format(const char* fmt, const T& arg, Args... args)
 		{
+			const size_t len = strlen(fmt);
 			const size_t fmt_start = get_fmt_start(fmt, len);
 			const size_t fmt_len = get_fmt_len(fmt + fmt_start, len - fmt_start);
 			const size_t fmt_end = fmt_start + fmt_len;
 
-			return std::string(fmt, fmt_start) + get_fmt<T>::text(fmt + fmt_start, fmt_len, arg) + format(fmt + fmt_end, len - fmt_end, args...);
+			return std::string(fmt, fmt_start) + get_fmt<T>::text(fmt + fmt_start, fmt_len, arg) + format(fmt + fmt_end, args...);
 		}
 	};
 
@@ -551,9 +552,9 @@ namespace fmt
 	Other features are not supported.
 	*/
 	template<typename... Args>
-	__forceinline std::string format(const char* fmt, Args... args)
+	__forceinline __safebuffers std::string format(const char* fmt, Args... args)
 	{
-		return detail::format(fmt, strlen(fmt), do_unveil(args)...);
+		return detail::format(fmt, do_unveil(args)...);
 	}
 
 	//convert a wxString to a std::string encoded in utf8

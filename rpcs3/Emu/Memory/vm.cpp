@@ -69,7 +69,7 @@ namespace vm
 
 	void error(const u64 addr, const char* func)
 	{
-		throw fmt::format("%s(): invalid address 0x%llx", func, addr);
+		throw fmt::format("%s(): failed to cast 0x%llx (too big value)", func, addr);
 	}
 
 	namespace ps3
@@ -249,7 +249,10 @@ namespace vm
 
 		case CPU_THREAD_ARMv7:
 		{
-			assert(!"stack_pop(): ARMv7 not supported");
+			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
+
+			assert(context.SP == addr);
+			context.SP = old_pos;
 			return;
 		}
 
