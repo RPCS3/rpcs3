@@ -239,7 +239,7 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 #ifdef _WIN32
 	struct _stat64 buf;
 	stat_result = _stat64(real_path.c_str(), &buf);
-#elif
+#else
 	struct stat buf;
 	stat_result = stat(real_path.c_str(), &buf);
 #endif
