@@ -166,6 +166,7 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GSManager.cpp" />
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
+    <ClCompile Include="Emu\RSX\RSXDMA.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
@@ -417,6 +418,7 @@
     <ClInclude Include="Emu\RSX\GSManager.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
+    <ClInclude Include="Emu\RSX\RSXDMA.h" />
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
     <ClInclude Include="Emu\RSX\RSXThread.h" />

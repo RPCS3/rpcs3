@@ -581,6 +581,9 @@
     <ClCompile Include="Emu\RSX\GSRender.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXDMA.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+	</ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
@@ -1345,6 +1348,9 @@
     <ClInclude Include="Emu\RSX\GSRender.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXDMA.h">
+      <Filter>Emu\GPU\RSX</Filter>
+	</ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>

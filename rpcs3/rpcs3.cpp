@@ -202,6 +202,22 @@ void compile_shader(std::string path)
 
 bool Rpcs3App::OnInit()
 {
+	static const wxCmdLineEntryDesc desc[]
+	{
+		{ wxCMD_LINE_SWITCH, "h", "help", "Command line options:\nh (help): Help and commands\nt (test): For directly executing a (S)ELF", wxCMD_LINE_VAL_NONE, wxCMD_LINE_OPTION_HELP },
+		{ wxCMD_LINE_SWITCH, "t", "test", "Run in test mode on (S)ELF", wxCMD_LINE_VAL_NONE },
+		{ wxCMD_LINE_PARAM, NULL, NULL, "(S)ELF", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL },
+		{ wxCMD_LINE_NONE }
+	};
+	
+	parser.SetDesc(desc);
+	parser.SetCmdLine(argc, argv);
+	if (parser.Parse())
+	{
+		// help was given, terminating
+		this->Exit();
+	}
+
 	SetSendDbgCommandCallback([](DbgCommand id, CPUThread* t)
 	{
 		wxGetApp().SendDbgCommand(id, t);
@@ -296,7 +312,7 @@ bool Rpcs3App::OnInit()
 	m_MainFrame->Show();
 	m_MainFrame->DoSettings(true);
 
-	OnArguments();
+	OnArguments(parser);
 
 	//compile_shader("compile_shader0.spo");
 	//compile_shader("compile_shader1.spo");
@@ -304,14 +320,26 @@ bool Rpcs3App::OnInit()
 	return true;
 }
 
-void Rpcs3App::OnArguments()
+void Rpcs3App::OnArguments(const wxCmdLineParser& parser)
 {
 	// Usage:
 	//   rpcs3-*.exe               Initializes RPCS3
 	//   rpcs3-*.exe [(S)ELF]      Initializes RPCS3, then loads and runs the specified (S)ELF file.
 
-	if (Rpcs3App::argc > 1) {
-		Emu.SetPath(fmt::ToUTF8(argv[1]));
+	if (parser.FoundSwitch("t"))
+	{
+		HLEExitOnStop = Ini.HLEExitOnStop.GetValue();
+		Ini.HLEExitOnStop.SetValue(true);
+		if (parser.GetParamCount() != 1)
+		{
+			wxLogDebug(wxT("A (S)ELF file needs to be given in test mode, exiting."));
+			this->Exit();
+		}
+	}
+	
+	if (parser.GetParamCount() > 0)
+	{
+		Emu.SetPath(fmt::ToUTF8(parser.GetParam(0)));
 		Emu.Load();
 		Emu.Run();
 	}
@@ -319,6 +347,11 @@ void Rpcs3App::OnArguments()
 
 void Rpcs3App::Exit()
 {
+	if (parser.FoundSwitch("t"))
+	{
+		Ini.HLEExitOnStop.SetValue(HLEExitOnStop);
+	}
+
 	Emu.Stop();
 	Ini.Save();
 
