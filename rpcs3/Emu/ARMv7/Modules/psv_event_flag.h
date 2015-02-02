@@ -2,6 +2,7 @@
 
 struct psv_event_flag_t
 {
+	s32 id;
 	char name[32];
 	u32 attr;
 	u32 pattern;

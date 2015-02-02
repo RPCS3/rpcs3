@@ -2,6 +2,7 @@
 
 struct psv_sema_t
 {
+	s32 id;
 	char name[32];
 	u32 attr;
 	s32 value;

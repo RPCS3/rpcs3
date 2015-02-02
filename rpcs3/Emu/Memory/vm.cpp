@@ -63,7 +63,11 @@ namespace vm
 			return res;
 		}
 		
-		assert(!real_pointer);
+		if (real_pointer)
+		{
+			throw fmt::format("vm::get_addr(0x%016llx) failed: not a part of virtual memory", (u64)real_pointer);
+		}
+
 		return 0;
 	}
 

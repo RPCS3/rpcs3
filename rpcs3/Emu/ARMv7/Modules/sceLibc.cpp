@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/ARMv7Thread.h"
 #include "Emu/ARMv7/ARMv7Callback.h"
 
 extern psv_log_base sceLibc;
@@ -11,6 +12,70 @@ vm::psv::ptr<void> g_dso;
 typedef void(atexit_func_t)(vm::psv::ptr<void>);
 
 std::vector<std::function<void(ARMv7Context&)>> g_atexit;
+
+std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
+{
+	std::string result;
+
+	for (char c = *fmt++; c; c = *fmt++)
+	{
+		switch (c)
+		{
+		case '%':
+		{
+			const auto start = fmt - 1;
+			const bool number_sign = *fmt == '#' ? fmt++, true : false;
+
+			switch (*fmt++)
+			{
+			case '%':
+			{
+				result += '%';
+				continue;
+			}
+			case 'd':
+			case 'i':
+			{
+				// signed decimal
+				const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+				result += fmt::to_sdec(value);
+				continue;
+			}
+			case 'x':
+			{
+				// hexadecimal
+				const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+				if (number_sign && value)
+				{
+					result += "0x";
+				}
+
+				result += fmt::to_hex(value);
+				continue;
+			}
+			case 's':
+			{
+				// string
+				auto string = vm::psv::ptr<const char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
+
+				result += string.get_ptr();
+				continue;
+			}
+			default:
+			{
+				throw fmt::Format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
+			}
+			}
+		}
+		}
+
+		result += c;
+	}
+
+	return result;
+}
 
 namespace sce_libc_func
 {
@@ -59,62 +124,6 @@ namespace sce_libc_func
 		});
 	}
 
-	std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
-	{
-		std::string result;
-
-		for (char c = *fmt++; c; c = *fmt++)
-		{
-			switch (c)
-			{
-			case '%':
-			{
-				const auto start = fmt - 1;
-				const bool number_sign = *fmt == '#' ? fmt++, true : false;
-
-				switch (*fmt++)
-				{
-				case '%':
-				{
-					result += '%';
-					continue;
-				}
-				case 'd':
-				case 'i':
-				{
-					// signed decimal
-					const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
-
-					result += fmt::to_sdec(value);
-					continue;
-				}
-				case 'x':
-				{
-					// hexadecimal
-					const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
-
-					if (number_sign && value)
-					{
-						result += "0x";
-					}
-
-					result += fmt::to_hex(value);
-					continue;
-				}
-				default:
-				{
-					throw fmt::Format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
-				}
-				}
-			}
-			}
-
-			result += c;
-		}
-
-		return result;
-	}
-
 	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Warning("printf(fmt=0x%x)", fmt);
@@ -158,11 +167,12 @@ namespace sce_libc_func
 		::memset(dst.get_ptr(), value, size);
 	}
 
-	void _Assert(vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
+	void _Assert(ARMv7Context& context, vm::psv::ptr<const char> text, vm::psv::ptr<const char> func)
 	{
-		sceLibc.Warning("_Assert(text=0x%x, func=0x%x)", text, func);
+		sceLibc.Error("_Assert(text=0x%x, func=0x%x)", text, func);
 
 		LOG_ERROR(TTY, "%s : %s\n", func.get_ptr(), text.get_ptr());
+		LOG_NOTICE(ARMv7, context.thread.RegsToString());
 		Emu.Pause();
 	}
 }

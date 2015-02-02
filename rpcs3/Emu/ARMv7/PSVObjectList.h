@@ -25,7 +25,17 @@ template<typename T, u32 type>
 class psv_object_list_t // Class for managing object data
 {
 	std::array<std::shared_ptr<T>, 0x8000> m_data;
+	std::atomic<u32> m_hint; // guessing next free position
 	std::mutex m_mutex; // TODO: remove it when shared_ptr atomic ops are fully available
+
+public:
+	psv_object_list_t() : m_hint(0) {}
+
+	psv_object_list_t(const psv_object_list_t&) = delete;
+	psv_object_list_t(psv_object_list_t&&) = delete;
+
+	psv_object_list_t& operator =(const psv_object_list_t&) = delete;
+	psv_object_list_t& operator =(psv_object_list_t&&) = delete;
 
 public:
 	static const u32 uid_class = type;
@@ -60,18 +70,18 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		for (auto& value : m_data)
+		for (u32 i = 0, j = m_hint % m_data.size(); i < m_data.size(); i++, j = (j + 1) % m_data.size())
 		{
-			// find an empty position and move the pointer
-			//std::shared_ptr<T> old_ptr = nullptr;
-			//if (std::atomic_compare_exchange_strong(&value, &old_ptr, data))
-			if (!value)
+			// find an empty position and copy the pointer
+			if (!m_data[j])
 			{
-				value = data;
+				m_data[j] = data;
+				m_hint = j + 1; // guess next position
 				psv_uid_t id = psv_uid_t::make(1); // odd number
 				id.type = uid_class; // set type
-				id.number = &value - m_data.data(); // set position
-				return id.uid;
+				id.number = j; // set position
+				data->id = id.uid; // save UID
+				return id.uid; // return UID
 			}
 		}
 
@@ -86,12 +96,14 @@ public:
 			return nullptr;
 		}
 
+		const u32 pos = psv_uid_t::make(uid).number;
+
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		std::shared_ptr<T> old_ptr = nullptr;
-		m_data[psv_uid_t::make(uid).number].swap(old_ptr);
+		m_data[pos].swap(old_ptr);
+		m_hint = pos;
 		return old_ptr;
-		//return std::atomic_exchange<std::shared_ptr<T>>(&m_data[psv_uid_t::make(uid).number], nullptr);
 	}
 
 	// remove all objects
@@ -103,6 +115,8 @@ public:
 		{
 			value = nullptr;
 		}
+
+		m_hint = 0;
 	}
 };
 

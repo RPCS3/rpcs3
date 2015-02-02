@@ -18,7 +18,7 @@ void ARMv7Context::write_pc(u32 value)
 
 u32 ARMv7Context::read_pc()
 {
-	return thread.PC;
+	return ISET == ARM ? thread.PC + 8 : thread.PC + 4;
 }
 
 u32 ARMv7Context::get_stack_arg(u32 pos)
@@ -230,14 +230,14 @@ void ARMv7Thread::FastStop()
 	m_status = Stopped;
 }
 
-armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
+armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
 {
 	thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
-	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
-	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+	thread->SetStackSize(stack_size);
+	thread->SetPrio(prio);
 
 	argc = 0;
 }
