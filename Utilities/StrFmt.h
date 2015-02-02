@@ -123,7 +123,7 @@ namespace fmt
 	}
 
 	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(std::string src, const std::string& from, const std::string& to);
+	std::string replace_all(const std::string &src, const std::string& from, const std::string& to);
 
 	template<size_t list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string>(&list)[list_size])

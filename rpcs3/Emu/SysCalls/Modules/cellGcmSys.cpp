@@ -1004,6 +1004,7 @@ s32 cellGcmUnmapIoAddress(u64 io)
 	{
 		u64 ea;
 		io = io >> 20;
+		size = size >> 20;
 		ea = offsetTable.eaAddress[io];
 
 		for (u32 i = 0; i<size; i++)

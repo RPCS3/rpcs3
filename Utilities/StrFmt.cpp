@@ -157,7 +157,7 @@ std::string fmt::detail::format(const char* fmt, size_t len)
 
 extern const std::string fmt::placeholder = "???";
 
-std::string replace_first(const std::string& src, const std::string& from, const std::string& to)
+std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
 {
 	auto pos = src.find(from);
 
@@ -169,11 +169,12 @@ std::string replace_first(const std::string& src, const std::string& from, const
 	return (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
 }
 
-std::string replace_all(std::string src, const std::string& from, const std::string& to)
+std::string fmt::replace_all(const std::string &src, const std::string& from, const std::string& to)
 {
-	for (auto pos = src.find(from); pos != std::string::npos; src.find(from, pos + 1))
+	std::string target = src;
+	for (auto pos = target.find(from); pos != std::string::npos; pos = target.find(from, pos + 1))
 	{
-		src = (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
+		target = (pos ? target.substr(0, pos) + to : to) + std::string(target.c_str() + pos + from.length());
 		pos += to.length();
 	}
 
