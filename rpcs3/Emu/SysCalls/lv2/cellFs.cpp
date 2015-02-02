@@ -235,11 +235,17 @@ s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 	Emu.GetVFS().GetDevice(_path, real_path);
 
+	int stat_result;
+#ifdef _WIN32
+	struct _stat64 buf;
+	stat_result = _stat64(real_path.c_str(), &buf);
+#elif
 	struct stat buf;
-
-	if (int result = stat(real_path.c_str(), &buf))
+	stat_result = stat(real_path.c_str(), &buf);
+#endif
+	if (stat_result)
 	{
-		sys_fs->Error("cellFsStat(): stat('%s') failed -> 0x%x", real_path.c_str(), result);
+		sys_fs->Error("cellFsStat(): stat('%s') failed -> 0x%x", real_path.c_str(), stat_result);
 	}
 	else
 	{
