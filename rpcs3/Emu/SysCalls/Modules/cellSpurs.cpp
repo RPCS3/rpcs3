@@ -26,7 +26,7 @@ extern u32 libsre;
 extern u32 libsre_rtoc;
 #endif
 
-bool spursKernelMain(SPUThread & spu);
+bool spursKernelEntry(SPUThread & spu);
 s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id);
 s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
 
@@ -182,7 +182,7 @@ s64 spursInit(
 	{
 		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, num, spurs.addr(), 0, 0);
 #ifndef PRX_DEBUG_XXX
-		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelMain);
+		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
 #endif
 		spurs->m.spus[num] = spu->GetId();
 	}

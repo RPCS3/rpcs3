@@ -105,8 +105,8 @@ enum SPURSKernelInterfaces
 	CELL_SPURS_KERNEL_DMA_TAG_ID = 31,
 	CELL_SPURS_KERNEL1_ENTRY_ADDR = 0x818,
 	CELL_SPURS_KERNEL2_ENTRY_ADDR = 0x848,
-	CELL_SPURS_KERNEL1_YIELD_ADDR = 0x808,
-	CELL_SPURS_KERNEL2_YIELD_ADDR = 0x838,
+	CELL_SPURS_KERNEL1_EXIT_ADDR = 0x808,
+	CELL_SPURS_KERNEL2_EXIT_ADDR = 0x838,
 	CELL_SPURS_KERNEL1_SELECT_WORKLOAD_ADDR = 0x290,
 	CELL_SPURS_KERNEL2_SELECT_WORKLOAD_ADDR = 0x290,
 };
@@ -886,8 +886,8 @@ struct CellSpursTaskBinInfo
 	CellSpursTaskLsPattern lsPattern;
 };
 
-// The SPURS kernel data store. This resides at 0x100 of the LS.
-struct SpursKernelMgmtData
+// The SPURS kernel context. This resides at 0x100 of the LS.
+struct SpursKernelContext
 {
 	u8 tempArea[0x80];                              // 0x100
 	u8 wklLocContention[0x10];                      // 0x180
@@ -900,7 +900,7 @@ struct SpursKernelMgmtData
 	vm::bptr<const void, 1, u64> wklCurrentAddr;    // 0x1D0
 	be_t<u32> wklCurrentUniqueId;                   // 0x1D8
 	be_t<u32> wklCurrentId;                         // 0x1DC
-	be_t<u32> yieldToKernelAddr;                    // 0x1E0
+	be_t<u32> exitToKernelAddr;                     // 0x1E0
 	be_t<u32> selectWorkloadAddr;                   // 0x1E4
 	u8 moduleId[2];                                 // 0x1E8
 	u8 sysSrvInitialised;                           // 0x1EA
@@ -923,10 +923,10 @@ struct SpursKernelMgmtData
 	be_t<u32> guid[4];                              // 0x280
 };
 
-static_assert(sizeof(SpursKernelMgmtData) == 0x190, "Incorrect size for SpursKernelMgmtData");
+static_assert(sizeof(SpursKernelContext) == 0x190, "Incorrect size for SpursKernelContext");
 
-// The SPURS taskset policy module data store. This resides at 0x2700 of the LS.
-struct SpursTasksetPmMgmtData
+// The SPURS taskset policy module context. This resides at 0x2700 of the LS.
+struct SpursTasksetContext
 {
     u8 tempAreaTaskset[0x80];                       // 0x2700
     u8 tempAreaTaskInfo[0x30];                      // 0x2780
@@ -956,7 +956,7 @@ struct SpursTasksetPmMgmtData
     u8 x2FD8[0x3000 - 0x2FD8];                      // 0x2FD8
 };
 
-static_assert(sizeof(SpursTasksetPmMgmtData) == 0x900, "Incorrect size for SpursTasksetPmMgmtData");
+static_assert(sizeof(SpursTasksetContext) == 0x900, "Incorrect size for SpursTasksetContext");
 
 s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
 s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs);
