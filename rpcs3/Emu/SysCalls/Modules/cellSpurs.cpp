@@ -2923,8 +2923,10 @@ s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 		return CELL_SPURS_TASK_ERROR_SRCH;
 	}
 
-	auto shouldSignal = (taskset->m.waiting & be_t<u128>::make(~taskset->m.signalled.value()) & be_t<u128>::make(u128::fromBit(taskId))) != _0 ? true : false;
-	((u128)taskset->m.signalled)._bit[taskId] = true;
+	auto shouldSignal      = (taskset->m.waiting & be_t<u128>::make(~taskset->m.signalled.value()) & be_t<u128>::make(u128::fromBit(taskId))) != _0 ? true : false;
+	auto signalled         = taskset->m.signalled.value();
+	signalled._bit[taskId] = true;
+	taskset->m.signalled   = signalled;
 	if (shouldSignal)
 	{
 		cellSpursSendWorkloadSignal(vm::ptr<CellSpurs>::make((u32)taskset->m.spurs.addr()), taskset->m.wid);

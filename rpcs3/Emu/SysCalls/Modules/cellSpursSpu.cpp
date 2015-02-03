@@ -270,6 +270,7 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
 
             for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
                 spurs->m.wklCurrentContention[i] = contention[i];
+                spurs->m.wklPendingContention[i] = spurs->m.wklPendingContention[i] - ctxt->wklLocPendingContention[i];
                 ctxt->wklLocContention[i]        = 0;
                 ctxt->wklLocPendingContention[i] = 0;
             }
@@ -293,6 +294,12 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
 
             if (wklSelectedId != CELL_SPURS_SYS_SERVICE_WORKLOAD_ID) {
                 ctxt->wklLocPendingContention[wklSelectedId] = 1;
+            }
+        } else {
+            // Not called by kernel and no context switch is required
+            for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
+                spurs->m.wklPendingContention[i] = spurs->m.wklPendingContention[i] - ctxt->wklLocPendingContention[i];
+                ctxt->wklLocPendingContention[i] = 0;
             }
         }
     } while (spursDma(spu, MFC_PUTLLC_CMD, ctxt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
@@ -414,6 +421,7 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
 
             for (auto i = 0; i < (CELL_SPURS_MAX_WORKLOAD2 >> 1); i++) {
                 spurs->m.wklCurrentContention[i] = contention[i] | (contention[i + 0x10] << 4);
+                spurs->m.wklPendingContention[i] = spurs->m.wklPendingContention[i] - ctxt->wklLocPendingContention[i];
                 ctxt->wklLocContention[i]        = 0;
                 ctxt->wklLocPendingContention[i] = 0;
             }
@@ -433,6 +441,12 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
             }
 
             ctxt->wklLocPendingContention[wklSelectedId & 0x0F] = wklSelectedId < CELL_SPURS_MAX_WORKLOAD ? 0x01 : wklSelectedId < CELL_SPURS_MAX_WORKLOAD2 ? 0x10 : 0;
+        } else {
+            // Not called by kernel and no context switch is required
+            for (auto i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
+                spurs->m.wklPendingContention[i] = spurs->m.wklPendingContention[i] - ctxt->wklLocPendingContention[i];
+                ctxt->wklLocPendingContention[i] = 0;
+            }
         }
     } while (spursDma(spu, MFC_PUTLLC_CMD, ctxt->spurs.addr(), 0x100/*LSA*/, 0x80/*size*/, 0/*tag*/) == false);
 
@@ -1461,8 +1475,8 @@ void spursTasksetDispatch(SPUThread & spu) {
         }
 
         // If the entire LS is saved then there is no need to load the ELF as it will be be saved in the context save area as well
-        if (taskInfo->ls_pattern.u64[0] != 0xFFFFFFFFFFFFFFFFull ||
-            (taskInfo->ls_pattern.u64[1] | 0xFC00000000000000ull) != 0xFFFFFFFFFFFFFFFFull) {
+        if (taskInfo->ls_pattern.u64[1] != 0xFFFFFFFFFFFFFFFFull ||
+            (taskInfo->ls_pattern.u64[0] | 0xFC00000000000000ull) != 0xFFFFFFFFFFFFFFFFull) {
             // Load the ELF
             u32 entryPoint;
             if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf_addr.addr(), true) != CELL_OK) {
@@ -1473,8 +1487,9 @@ void spursTasksetDispatch(SPUThread & spu) {
 
         // Load saved context from main memory to LS
         u64 contextSaveStorage = taskInfo->context_save_storage_and_alloc_ls_blocks & 0xFFFFFFFFFFFFFF80ull;
+        spursDma(spu, MFC_GET_CMD, contextSaveStorage, 0x2C80/*LSA*/, 0x380/*size*/, ctxt->dmaTagId);
         for (auto i = 6; i < 128; i++) {
-            bool shouldLoad = taskInfo->ls_pattern.u64[i < 64 ? 1 : 0] & (0x8000000000000000ull >> i) ? true : false;
+            bool shouldLoad = taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i) ? true : false;
             if (shouldLoad) {
                 // TODO: Combine DMA requests for consecutive blocks into a single request
                 spursDma(spu, MFC_GET_CMD, contextSaveStorage + 0x400 + ((i - 6) << 11), CELL_SPURS_TASK_TOP + ((i - 6) << 11), 0x800/*size*/, ctxt->dmaTagId);
