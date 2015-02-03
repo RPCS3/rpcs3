@@ -80,7 +80,7 @@ public:
 				psv_uid_t id = psv_uid_t::make(1); // odd number
 				id.type = uid_class; // set type
 				id.number = j; // set position
-				data->id = id.uid; // save UID
+				data->on_init(id.uid); // save UID
 				return id.uid; // return UID
 			}
 		}
@@ -111,9 +111,14 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		for (auto& value : m_data)
+		for (auto& object : m_data)
 		{
-			value = nullptr;
+			if (object)
+			{
+				object->on_stop();
+			}
+
+			object = nullptr;
 		}
 
 		m_hint = 0;

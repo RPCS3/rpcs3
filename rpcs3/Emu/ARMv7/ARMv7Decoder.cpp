@@ -1105,6 +1105,7 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 struct ARMv7_op2_table_t
 {
 	const ARMv7_opcode_t* data[0x10000];
+	u32 null_ops;
 
 	ARMv7_op2_table_t()
 	{
@@ -1123,6 +1124,8 @@ struct ARMv7_op2_table_t
 			}
 		}
 
+		null_ops = 0x10000;
+
 		for (u32 i = 0; i < 0x10000; i++)
 		{
 			data[i] = nullptr;
@@ -1132,6 +1135,7 @@ struct ARMv7_op2_table_t
 				if (((i << 16) & opcode->mask) == opcode->code && (!opcode->skip || !opcode->skip(i)))
 				{
 					data[i] = opcode;
+					null_ops--;
 					break;
 				}
 			}
@@ -1201,11 +1205,12 @@ std::unordered_map<u32, const ARMv7_opcode_t*> g_opct;
 
 void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 {
-	// 1. Find every 4-byte thumb instruction and cache it
+	// 1. Find every 4-byte Thumb instruction and cache it
 	// 2. If some instruction is not recognized, print the error
 	// 3. Possibly print disasm
 
-	g_opct.clear();
+	//g_opct.clear();
+	//g_opct.reserve(end_addr - addr);
 
 	while (addr < end_addr)
 	{
@@ -1297,7 +1302,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 		addr += found->length;
 	}
 
-	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld", (u64)g_opct.size());
+	LOG_NOTICE(ARMv7, "armv7_decoder_initialize() finished, g_opct.size() = %lld, g_op2t.null_ops=0x%x", (u64)g_opct.size(), g_op2t.null_ops);
 }
 
 u32 ARMv7Decoder::DecodeMemory(const u32 address)
