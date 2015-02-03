@@ -87,8 +87,8 @@ enum CellPngDecDecodeStatus : u32
 };
 
 // Callbacks
-typedef vm::ptr<void>(*CellPngDecCbControlMalloc)(u32 size, vm::ptr<void> cbCtrlMallocArg);
-typedef s32(*CellPngDecCbControlFree)(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
+typedef vm::ptr<void>(CellPngDecCbControlMalloc)(u32 size, vm::ptr<void> cbCtrlMallocArg);
+typedef s32(CellPngDecCbControlFree)(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellPngDecThreadInParam
@@ -283,11 +283,7 @@ struct CellPngDecStrmParam
 	be_t<u32> strmSize;
 };
 
-typedef s32(*CellPngDecCbControlStream)(
-	vm::ptr<CellPngDecStrmInfo> strmInfo,
-	vm::ptr<CellPngDecStrmParam> strmParam,
-	vm::ptr<void> cbCtrlStrmArg
-	);
+typedef s32(CellPngDecCbControlStream)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
 
 struct CellPngDecDispInfo
 {
@@ -310,7 +306,7 @@ struct CellPngDecDispParam
 };
 
 // Callback
-typedef s32(*CellPngDecCbControlDisp)(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
+typedef s32(CellPngDecCbControlDisp)(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
 
 // Structs
 struct CellPngDecOpnParam

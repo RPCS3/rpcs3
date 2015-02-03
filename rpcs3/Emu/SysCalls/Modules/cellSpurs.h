@@ -307,7 +307,7 @@ struct CellSpursWorkloadFlag
 	atomic_t<u32> flag;
 };
 
-typedef void(*CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
+typedef void(CellSpursShutdownCompletionEventHook)(vm::ptr<CellSpurs>, u32 wid, vm::ptr<void> arg);
 
 struct CellSpursTraceInfo
 {

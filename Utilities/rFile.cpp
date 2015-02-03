@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Log.h"
+#pragma warning(disable : 4996)
 #include <wx/dir.h>
 #include <wx/file.h>
 #include <wx/filename.h>

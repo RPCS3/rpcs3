@@ -1,5 +1,4 @@
 #pragma once
-#include "Emu/ARMv7/ARMv7Opcodes.h"
 #include "Emu/CPU/CPUDisAsm.h"
 
 static const char* g_arm_cond_name[16] =
@@ -8,6 +7,14 @@ static const char* g_arm_cond_name[16] =
 	"mi", "pl", "vs", "vc",
 	"hi", "ls", "ge", "lt",
 	"gt", "le", "al", "al",
+};
+
+static const char* g_arm_reg_name[16] =
+{
+	"r0", "r1", "r2", "r3",
+	"r4", "r5", "r6", "r7",
+	"r8", "r9", "r10", "r11",
+	"r12", "sp", "lr", "pc",
 };
 
 class ARMv7DisAsm
@@ -24,6 +31,7 @@ protected:
 		return (u32)dump_pc + imm;
 	}
 
+#if 0
 	std::string GetRegsListString(u16 regs_list)
 	{
 		std::string regs_str;
@@ -316,4 +324,5 @@ protected:
 	virtual void UXTB(const u32 data, const ARMv7_encoding type);
 	virtual void UXTB16(const u32 data, const ARMv7_encoding type);
 	virtual void UXTH(const u32 data, const ARMv7_encoding type);
+#endif
 };

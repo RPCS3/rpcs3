@@ -134,4 +134,4 @@ enum
 	SCE_NP_TROPHY_STATUS_CHANGES_DETECTED    = 9,
 };
 
-typedef s32 (*SceNpTrophyStatusCallback)(u32 context, u32 status, s32 completed, s32 total, u32 arg_addr);
+typedef s32 (SceNpTrophyStatusCallback)(u32 context, u32 status, s32 completed, s32 total, u32 arg_addr);

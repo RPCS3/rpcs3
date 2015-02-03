@@ -15,7 +15,7 @@ void XAudio2Thread::Init()
 {
 	HRESULT hr = S_OK;
 
-#if (_WIN32_WINNT < 0x0602)
+#if (FORCED_WINVER < 0x0602)
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
@@ -53,7 +53,7 @@ void XAudio2Thread::Quit()
 	m_xaudio2_instance->Release();
 	m_xaudio2_instance = nullptr;
 
-#if (_WIN32_WINNT < 0x0602)
+#if (FORCED_WINVER < 0x0602)
 	CoUninitialize();
 #endif
 }

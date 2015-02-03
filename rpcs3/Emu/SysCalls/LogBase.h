@@ -17,9 +17,9 @@ class LogBase
 	void LogOutput(LogType type, const std::string& text) const;
 
 	template<typename... Targs>
-	__noinline void LogPrepare(LogType type, const char* fmt, size_t len, Targs... args) const
+	__noinline void LogPrepare(LogType type, const char* fmt, Targs... args) const
 	{
-		LogOutput(type, fmt::detail::format(fmt, len, args...));
+		LogOutput(type, fmt::detail::format(fmt, args...));
 	}
 
 public:
@@ -38,7 +38,7 @@ public:
 	template<typename... Targs>
 	__forceinline void Notice(const char* fmt, Targs... args) const
 	{
-		LogPrepare(LogNotice, fmt, strlen(fmt), fmt::do_unveil(args)...);
+		LogPrepare(LogNotice, fmt, fmt::do_unveil(args)...);
 	}
 
 	template<typename... Targs>
@@ -53,25 +53,25 @@ public:
 	template<typename... Targs>
 	__forceinline void Success(const char* fmt, Targs... args) const
 	{
-		LogPrepare(LogSuccess, fmt, strlen(fmt), fmt::do_unveil(args)...);
+		LogPrepare(LogSuccess, fmt, fmt::do_unveil(args)...);
 	}
 
 	template<typename... Targs>
 	__forceinline void Warning(const char* fmt, Targs... args) const
 	{
-		LogPrepare(LogWarning, fmt, strlen(fmt), fmt::do_unveil(args)...);
+		LogPrepare(LogWarning, fmt, fmt::do_unveil(args)...);
 	}
 
 	template<typename... Targs>
 	__forceinline void Error(const char* fmt, Targs... args) const
 	{
-		LogPrepare(LogError, fmt, strlen(fmt), fmt::do_unveil(args)...);
+		LogPrepare(LogError, fmt, fmt::do_unveil(args)...);
 	}
 
 	template<typename... Targs>
 	__forceinline void Todo(const char* fmt, Targs... args) const
 	{
-		LogPrepare(LogTodo, fmt, strlen(fmt), fmt::do_unveil(args)...);
+		LogPrepare(LogTodo, fmt, fmt::do_unveil(args)...);
 	}
 };
 

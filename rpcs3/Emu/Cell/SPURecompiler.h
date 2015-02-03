@@ -45,7 +45,7 @@ public:
 
 	virtual void Decode(const u32 code);
 
-	virtual u8 DecodeMemory(const u32 address);
+	virtual u32 DecodeMemory(const u32 address);
 };
 
 #define c (*compiler)

@@ -14,6 +14,12 @@
 #define __noinline __attribute__((noinline))
 #endif
 
+#ifdef _WIN32
+#define __safebuffers __declspec(safebuffers)
+#else
+#define __safebuffers
+#endif
+
 template<size_t size>
 void strcpy_trunc(char(&dst)[size], const std::string& src)
 {

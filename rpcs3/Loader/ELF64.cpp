@@ -325,7 +325,7 @@ namespace loader
 
 							for (auto &e : m.second.exports)
 							{
-								module->RegisterLLEFunc(e.first, vm::ptr<void(*)()>::make(e.second));
+								module->RegisterLLEFunc(e.first, vm::ptr<void()>::make(e.second));
 							}
 						}
 					}
@@ -356,7 +356,7 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
+			//vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*
 			//TODO
 			static const int branch_size = 6 * 4;
@@ -422,7 +422,10 @@ namespace loader
 					break;
 
 				case 0x00000007: //TLS
-					Emu.SetTLSData(phdr.p_vaddr.addr(), phdr.p_filesz.value(), phdr.p_memsz.value());
+					Emu.SetTLSData(
+						vm::cast(phdr.p_vaddr.addr(), "TLS: phdr.p_vaddr"),
+						vm::cast(phdr.p_filesz.value(), "TLS: phdr.p_filesz"),
+						vm::cast(phdr.p_memsz.value(), "TLS: phdr.p_memsz"));
 					break;
 
 				case 0x60000001: //LOOS+1
@@ -516,7 +519,7 @@ namespace loader
 
 									if (module && !module->Load(nid))
 									{
-										LOG_WARNING(LOADER, "Unimplemented function '%s' in '%s' module (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+										LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
 									}
 									else //if (Ini.HLELogging.GetValue())
 									{

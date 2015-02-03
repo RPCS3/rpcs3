@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
 extern psv_log_base sceLibm;
@@ -12,8 +11,12 @@ namespace sce_libm_func
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibm, #name, &sce_libm_func::name)
 
-psv_log_base sceLibm = []() -> psv_log_base
+psv_log_base sceLibm("SceLibm", []()
 {
+	sceLibm.on_load = nullptr;
+	sceLibm.on_unload = nullptr;
+	sceLibm.on_stop = nullptr;
+
 	//REG_FUNC(0xC73FE76D, _Exp);
 	//REG_FUNC(0xFF4EAE04, _FExp);
 	//REG_FUNC(0xB363D7D4, _LExp);
@@ -44,10 +47,10 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x63F05BD6, ceil);
 	//REG_FUNC(0x6BBFEC89, ceilf);
 	//REG_FUNC(0x48082D81, ceill);
-	//REG_FUNC(0xB918D13, copysign);
+	//REG_FUNC(0x0B918D13, copysign);
 	//REG_FUNC(0x16EB9E63, copysignf);
 	//REG_FUNC(0x19DFC0AA, copysignl);
-	//REG_FUNC(0x61D0244, cos);
+	//REG_FUNC(0x061D0244, cos);
 	//REG_FUNC(0x127F8302, cosf);
 	//REG_FUNC(0x89B9BE1F, cosl);
 	//REG_FUNC(0x110195E7, cosh);
@@ -56,7 +59,7 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x4B84C012, _Cosh);
 	//REG_FUNC(0x15993458, erf);
 	//REG_FUNC(0x524AEBFE, erfc);
-	//REG_FUNC(0x301F113, erfcf);
+	//REG_FUNC(0x0301F113, erfcf);
 	//REG_FUNC(0xD4C92471, erfcl);
 	//REG_FUNC(0x41DD1AB8, erff);
 	//REG_FUNC(0xFD431619, erfl);
@@ -71,7 +74,7 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x8BF1866C, expm1l);
 	//REG_FUNC(0x3E672BE3, fabs);
 	//REG_FUNC(0x75348906, fabsf);
-	//REG_FUNC(0x3ECA514, fabsl);
+	//REG_FUNC(0x03ECA514, fabsl);
 	//REG_FUNC(0xA278B20D, _FCosh);
 	//REG_FUNC(0xD6FD5A2E, fdim);
 	//REG_FUNC(0x8B6CC137, fdimf);
@@ -93,19 +96,19 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x1CD8F88E, fmodf);
 	//REG_FUNC(0x986011B4, fmodl);
 	//REG_FUNC(0x59197427, frexp);
-	//REG_FUNC(0xA6879AC, frexpf);
+	//REG_FUNC(0x0A6879AC, frexpf);
 	//REG_FUNC(0x6DC8D877, frexpl);
 	//REG_FUNC(0x4A496BC0, _FSin);
 	//REG_FUNC(0x7FBB4C55, _FSinh);
 	//REG_FUNC(0x2D2CD795, hypot);
 	//REG_FUNC(0xA397B929, hypotf);
-	//REG_FUNC(0x5BFBEE8, hypotl);
+	//REG_FUNC(0x05BFBEE8, hypotl);
 	//REG_FUNC(0x667EE864, ilogb);
 	//REG_FUNC(0x80050A43, ilogbf);
 	//REG_FUNC(0x91298DCA, ilogbl);
-	//REG_FUNC(0x197C9D5, _LCosh);
-	//REG_FUNC(0x56061B, ldexp);
-	//REG_FUNC(0xE61E016, ldexpf);
+	//REG_FUNC(0x0197C9D5, _LCosh);
+	//REG_FUNC(0x0056061B, ldexp);
+	//REG_FUNC(0x0E61E016, ldexpf);
 	//REG_FUNC(0x8280A7B1, ldexpl);
 	//REG_FUNC(0x2480AA54, lgamma);
 	//REG_FUNC(0x2D9556D5, lgammaf);
@@ -115,7 +118,7 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0xC1F6135B, llrintf);
 	//REG_FUNC(0x80558247, llrintl);
 	//REG_FUNC(0xD1251A18, llround);
-	//REG_FUNC(0x4595A04, llroundf);
+	//REG_FUNC(0x04595A04, llroundf);
 	//REG_FUNC(0x9AB5C7AF, llroundl);
 	//REG_FUNC(0x6037C48F, log);
 	//REG_FUNC(0x811ED68B, logf);
@@ -131,7 +134,7 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x4095DBDB, log2f);
 	//REG_FUNC(0x720021A9, log2l);
 	//REG_FUNC(0x5EAE8AD4, logb);
-	//REG_FUNC(0x25F51CE, logbf);
+	//REG_FUNC(0x025F51CE, logbf);
 	//REG_FUNC(0x86C4B75F, logbl);
 	//REG_FUNC(0x207307D0, lrint);
 	//REG_FUNC(0xDA903135, lrintf);
@@ -197,8 +200,8 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x3A7FE686, tgamma);
 	//REG_FUNC(0xE6067AC0, tgammaf);
 	//REG_FUNC(0x2949109F, tgammal);
-	//REG_FUNC(0x212323E, trunc);
-	//REG_FUNC(0x90B899F, truncf);
+	//REG_FUNC(0x0212323E, trunc);
+	//REG_FUNC(0x090B899F, truncf);
 	//REG_FUNC(0xBC0F1B1A, truncl);
 	//REG_FUNC(0x98BBDAE0, _Dclass);
 	//REG_FUNC(0xBD8EF217, _FDclass);
@@ -212,6 +215,4 @@ psv_log_base sceLibm = []() -> psv_log_base
 	//REG_FUNC(0x5BD0F71C, _Dsign);
 	//REG_FUNC(0xC4F7E42C, _FDsign);
 	//REG_FUNC(0x1DF73D2B, _LDsign);
-
-	return psv_log_base("SceLibm");
-}();
+});

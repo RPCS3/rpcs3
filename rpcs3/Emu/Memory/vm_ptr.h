@@ -1,6 +1,7 @@
 #pragma once
 
 class CPUThread;
+struct ARMv7Context;
 
 namespace vm
 {
@@ -107,8 +108,14 @@ namespace vm
 		AT m_addr;
 		
 	public:
+		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 		typedef typename std::remove_cv<T>::type type;
-		static const u32 data_size = sizeof(T);
+
+		__forceinline static const u32 data_size()
+		{
+			return sizeof(T);
+		}
 
 		__forceinline T* const operator -> () const
 		{
@@ -118,45 +125,45 @@ namespace vm
 		_ptr_base operator++ (int)
 		{
 			AT result = m_addr;
-			m_addr += data_size;
+			m_addr += data_size();
 			return make(result);
 		}
 
 		_ptr_base& operator++ ()
 		{
-			m_addr += data_size;
+			m_addr += data_size();
 			return *this;
 		}
 
 		_ptr_base operator-- (int)
 		{
 			AT result = m_addr;
-			m_addr -= data_size;
+			m_addr -= data_size();
 			return make(result);
 		}
 
 		_ptr_base& operator-- ()
 		{
-			m_addr -= data_size;
+			m_addr -= data_size();
 			return *this;
 		}
 
 		_ptr_base& operator += (AT count)
 		{
-			m_addr += count * data_size;
+			m_addr += count * data_size();
 			return *this;
 		}
 
 		_ptr_base& operator -= (AT count)
 		{
-			m_addr -= count * data_size;
+			m_addr -= count * data_size();
 			return *this;
 		}
 
-		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * data_size); }
-		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * data_size); }
-		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size); }
-		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size); }
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
 
 		__forceinline T& operator *() const
 		{
@@ -165,12 +172,12 @@ namespace vm
 
 		__forceinline T& operator [](typename remove_be_t<AT>::type index) const
 		{
-			return vm::get_ref<T>(vm::cast(m_addr + data_size * index));
+			return vm::get_ref<T>(vm::cast(m_addr + data_size() * index));
 		}
 
 		__forceinline T& operator [](typename to_be_t<AT>::forced_type index) const
 		{
-			return vm::get_ref<T>(vm::cast(m_addr + data_size * index));
+			return vm::get_ref<T>(vm::cast(m_addr + data_size() * index));
 		}
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
@@ -325,16 +332,18 @@ namespace vm
 	};
 
 	template<typename AT, typename RT, typename ...T>
-	class _ptr_base<RT(*)(T...), 1, AT>
+	class _ptr_base<RT(T...), 1, AT>
 	{
 		AT m_addr;
 
 	public:
-		typedef RT(*type)(T...);
+		typedef RT(type)(T...);
 
-		RT operator()(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified CPU thread context
+		RT operator()(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
 
-		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current CPU thread context
+		RT operator()(ARMv7Context& context, T... args) const; // defined in ARMv7Callback.h, passing context is mandatory
+
+		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current PPU thread context
 
 		AT addr() const
 		{
@@ -357,10 +366,10 @@ namespace vm
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
-		operator const _ptr_base<RT(*)(T...), 1, AT2>() const
+		operator const _ptr_base<type, 1, AT2>() const
 		{
 			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<RT(*)(T...), 1, AT2>&>(addr);
+			return reinterpret_cast<const _ptr_base<type, 1, AT2>&>(addr);
 		}
 
 		static const _ptr_base make(const AT& addr)
@@ -368,13 +377,22 @@ namespace vm
 			return reinterpret_cast<const _ptr_base&>(addr);
 		}
 
-		operator const std::function<RT(T...)>() const
+		operator const std::function<type>() const
 		{
 			const AT addr = convert_le_be<AT>(m_addr);
 			return [addr](T... args) -> RT { return make(addr)(args...); };
 		}
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
+	};
+
+	template<typename AT, typename RT, typename ...T>
+	class _ptr_base<RT(*)(T...), 1, AT>
+	{
+		AT m_addr;
+
+	public:
+		static_assert(!sizeof(AT), "vm::_ptr_base<> error: use RT(T...) format for functions instead of RT(*)(T...)");
 	};
 
 	//BE pointer to LE data

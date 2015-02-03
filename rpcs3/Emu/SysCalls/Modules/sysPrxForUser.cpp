@@ -23,9 +23,64 @@
 
 Module *sysPrxForUser = nullptr;
 
+#define TLS_MAX 128
+
+u32 g_tls_start; // start of TLS memory area
+
+std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
+
 void sys_initialize_tls()
 {
 	sysPrxForUser->Log("sys_initialize_tls()");
+}
+
+u32 ppu_get_tls(u32 thread)
+{
+	if (!g_tls_start)
+	{
+		g_tls_start = vm::cast(Memory.MainMem.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
+		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, size = 0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
+			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
+	}
+
+	if (!thread)
+	{
+		return 0;
+	}
+	
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		if (g_tls_owners[i] == thread)
+		{
+			return g_tls_start + i * Emu.GetTLSMemsz(); // if already initialized, return TLS address
+		}
+	}
+
+	for (u32 i = 0; i < TLS_MAX; i++)
+	{
+		u32 old = 0;
+		if (g_tls_owners[i].compare_exchange_strong(old, thread))
+		{
+			const u32 addr = g_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
+			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
+			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
+			return addr;
+		}
+	}
+
+	throw "Out of TLS memory";
+}
+
+void ppu_free_tls(u32 thread)
+{
+	for (auto& v : g_tls_owners)
+	{
+		u32 old = thread;
+		if (v.compare_exchange_strong(old, 0))
+		{
+			return;
+		}
+	}
 }
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
@@ -364,6 +419,12 @@ s32 _unnamed_E75C40F2(u32 dest)
 void sysPrxForUser_init(Module *pxThis)
 {
 	sysPrxForUser = pxThis;
+
+	g_tls_start = 0;
+	for (auto& v : g_tls_owners)
+	{
+		v.store(0, std::memory_order_relaxed);
+	}
 
 	// Setup random number generator
 	srand(time(NULL));

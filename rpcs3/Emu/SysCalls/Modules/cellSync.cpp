@@ -850,8 +850,8 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 	queue->m_depth = depth;
 	queue->m_buffer = buffer;
 	queue->m_direction = direction;
-	*queue->m_hs1 = {};
-	*queue->m_hs2 = {};
+	memset(queue->m_hs1, 0, sizeof(queue->m_hs1));
+	memset(queue->m_hs2, 0, sizeof(queue->m_hs2));
 	queue->m_eaSignal = eaSignal;
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
@@ -1060,8 +1060,10 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 					res = CELL_SYNC_ERROR_AGAIN;
 					if (!push.m_h7.data() || res)
 					{
+						// TODO: This condition is always true - wrong implementation?
 						return res;
 					}
+
 					break;
 				}
 				else if (!useEventQueue)
@@ -1262,7 +1264,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 	}
 }
 
-s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	cellSync->Todo("_cellSyncLFQueueCompletePushPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
 		queue.addr(), pointer, fpSendSignal.addr());
@@ -1278,7 +1280,7 @@ s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer,
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal)
+s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync->Todo("_cellSyncLFQueueCompletePushPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
@@ -1437,8 +1439,10 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 					res = CELL_SYNC_ERROR_AGAIN;
 					if (!pop.m_h3.data() || res)
 					{
+						// TODO: This condition is always true - wrong implementation?
 						return res;
 					}
+
 					break;
 				}
 				else if (!useEventQueue)
@@ -1638,7 +1642,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 	}
 }
 
-s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer + unknown argument (noQueueFull taken from LFQueue2CompletePopPointer)
 	cellSync->Todo("_cellSyncLFQueueCompletePopPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",
@@ -1655,7 +1659,7 @@ s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(*)(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync->Todo("_cellSyncLFQueueCompletePopPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",

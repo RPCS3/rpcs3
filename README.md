@@ -2,10 +2,13 @@ RPCS3
 =====
 
 [![Build Status](https://travis-ci.org/DHrpcs3/rpcs3.svg?branch=master)](https://travis-ci.org/DHrpcs3/rpcs3)
+
 <a href="https://scan.coverity.com/projects/3960">
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/3960/badge.svg"/>
 </a>
+
+[![Coverage Status](https://coveralls.io/repos/DHrpcs3/rpcs3/badge.svg)](https://coveralls.io/r/DHrpcs3/rpcs3)
 
 An open-source PlayStation 3 emulator/debugger written in C++.
 

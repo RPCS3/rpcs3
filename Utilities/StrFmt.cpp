@@ -96,9 +96,9 @@ size_t fmt::detail::get_fmt_len(const char* fmt, size_t len)
 		fmt += 2;
 		len -= 2;
 
-		if (fmt[1] == '1')
+		if (fmt[0] == '1')
 		{
-			assert(len >= 3 && fmt[2] - '0' < 7);
+			assert(len >= 3 && fmt[1] - '0' < 7);
 			res++;
 			fmt++;
 			len--;
@@ -144,8 +144,9 @@ size_t fmt::detail::get_fmt_precision(const char* fmt, size_t len)
 	return 1;
 }
 
-std::string fmt::detail::format(const char* fmt, size_t len)
+std::string fmt::detail::format(const char* fmt)
 {
+	const size_t len = strlen(fmt);
 	const size_t fmt_start = get_fmt_start(fmt, len);
 	if (fmt_start != len)
 	{
@@ -157,7 +158,7 @@ std::string fmt::detail::format(const char* fmt, size_t len)
 
 extern const std::string fmt::placeholder = "???";
 
-std::string replace_first(const std::string& src, const std::string& from, const std::string& to)
+std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
 {
 	auto pos = src.find(from);
 
@@ -169,11 +170,12 @@ std::string replace_first(const std::string& src, const std::string& from, const
 	return (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
 }
 
-std::string replace_all(std::string src, const std::string& from, const std::string& to)
+std::string fmt::replace_all(const std::string &src, const std::string& from, const std::string& to)
 {
-	for (auto pos = src.find(from); pos != std::string::npos; src.find(from, pos + 1))
+	std::string target = src;
+	for (auto pos = target.find(from); pos != std::string::npos; pos = target.find(from, pos + 1))
 	{
-		src = (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
+		target = (pos ? target.substr(0, pos) + to : to) + std::string(target.c_str() + pos + from.length());
 		pos += to.length();
 	}
 

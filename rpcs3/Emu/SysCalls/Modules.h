@@ -9,9 +9,9 @@ struct ModuleFunc
 {
 	u32 id;
 	func_caller* func;
-	vm::ptr<void(*)()> lle_func;
+	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, func_caller* func, vm::ptr<void(*)()> lle_func = vm::ptr<void(*)()>::make(0))
+	ModuleFunc(u32 id, func_caller* func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
 		, func(func)
 		, lle_func(lle_func)
@@ -129,7 +129,7 @@ public:
 
 	bool RemoveId(u32 id);
 	
-	void RegisterLLEFunc(u32 id, vm::ptr<void(*)()> func)
+	void RegisterLLEFunc(u32 id, vm::ptr<void()> func)
 	{
 		if (auto f = GetFunc(id))
 		{

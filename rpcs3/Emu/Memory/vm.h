@@ -42,6 +42,8 @@ namespace vm
 
 	u32 get_addr(const void* real_pointer);
 
+	__noinline void error(const u64 addr, const char* func);
+
 	template<typename T>
 	struct cast_ptr
 	{
@@ -70,7 +72,7 @@ namespace vm
 			const u32 res = static_cast<u32>(addr);
 			if (res != addr)
 			{
-				throw fmt::Format("%s(): invalid address 0x%llx", func, addr);
+				vm::error(addr, func);
 			}
 
 			return res;

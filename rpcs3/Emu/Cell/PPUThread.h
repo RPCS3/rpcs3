@@ -363,6 +363,7 @@ struct PPCdouble
 		case _FPCLASS_PD:    return FPR_PD;
 		case _FPCLASS_PN:    return FPR_PN;
 		case _FPCLASS_PINF:  return FPR_PINF;
+		default: throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 		}
 #else
 		switch (fpc)
@@ -374,8 +375,6 @@ struct PPCdouble
 		default:            return std::signbit(_double) ? FPR_NN : FPR_PN;
 		}
 #endif
-
-		throw fmt::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
 	}
 
 	FPRType GetType() const
@@ -800,8 +799,10 @@ public:
 	}
 
 public:
-	virtual void InitRegs();
-	virtual void Task();
+	virtual void InitRegs() override;
+	virtual void InitStack() override;
+	virtual void CloseStack() override;
+	virtual void Task() override;
 	u64 GetStackArg(s32 i);
 	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
@@ -969,7 +970,7 @@ struct cast_ppu_gpr<bool, false>
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u64 reg)
+	__forceinline static bool from_gpr(const u64& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}

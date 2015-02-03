@@ -85,10 +85,10 @@ SPUThread* spu_thread_initialize(std::shared_ptr<SpuGroupInfo>& group, u32 spu_n
 		sys_spu.Todo("Unsupported SPU Thread options (0x%x)", option);
 	}
 
-	u32 spu_ep = (u32)img.entry_point;
+	const u32 spu_ep = img.entry_point;
 	// Copy SPU image:
 	// TODO: use segment info
-	u32 spu_offset = (u32)Memory.Alloc(256 * 1024, 4096);
+	const u32 spu_offset = vm::cast(Memory.MainMem.AllocAlign(256 * 1024, 4096));
 	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img.addr), 256 * 1024);
 
 	SPUThread& new_thread = static_cast<SPUThread&>(Emu.GetCPU().AddThread(CPU_THREAD_SPU));
@@ -218,7 +218,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 		std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(group_info->list[i]);
 		if (t)
 		{
-			Memory.Free(((SPUThread*)t.get())->GetOffset());
+			Memory.MainMem.Free(((SPUThread*)t.get())->GetOffset());
 			Emu.GetCPU().RemoveThread(group_info->list[i]);
 		}
 	}

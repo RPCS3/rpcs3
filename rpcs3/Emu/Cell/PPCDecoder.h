@@ -5,9 +5,9 @@
 class PPCDecoder : public CPUDecoder
 {
 public:
-	virtual void Decode(const u32 code)=0;
+	virtual void Decode(const u32 code) = 0;
 
-	virtual u8 DecodeMemory(const u32 address);
+	virtual u32 DecodeMemory(const u32 address);
 
 	virtual ~PPCDecoder() = default;
 };

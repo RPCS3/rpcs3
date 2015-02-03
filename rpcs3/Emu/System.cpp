@@ -5,6 +5,8 @@
 #include "Emu/System.h"
 
 #include "Emu/GameInfo.h"
+#include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/PSVObjectList.h"
 #include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
@@ -361,6 +363,8 @@ void Emulator::Stop()
 
 	LOG_NOTICE(HLE, "All threads stopped...");
 
+	finalize_psv_modules();
+	clear_all_psv_objects();
 	m_rsx_callback = 0;
 
 	// TODO: check finalization order

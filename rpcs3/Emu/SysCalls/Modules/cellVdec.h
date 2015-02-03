@@ -163,7 +163,7 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
-typedef u32(*CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
+typedef u32(CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information
 struct CellVdecCb
