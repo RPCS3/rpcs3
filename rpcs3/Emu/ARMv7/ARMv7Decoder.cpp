@@ -151,8 +151,8 @@ const ARMv7_opcode_t ARMv7_opcode_table[] =
 
 	ARMv7_OP2(0xf800, 0x6800, T1, LDR_IMM),
 	ARMv7_OP2(0xf800, 0x9800, T2, LDR_IMM),
-	ARMv7_OP4(0xfff0, 0x0000, 0xf8d0, 0x0000, T3, LDR_IMM),
-	ARMv7_OP4(0xfff0, 0x0800, 0xf850, 0x0800, T4, LDR_IMM),
+	ARMv7_OP4(0xfff0, 0x0000, 0xf8d0, 0x0000, T3, LDR_IMM, SKIP_IF( BF(16, 19) == 15 )),
+	ARMv7_OP4(0xfff0, 0x0800, 0xf850, 0x0800, T4, LDR_IMM, SKIP_IF( BF(16, 19) == 15 || BF(8, 10) == 6 || (c & 0xf07ff) == 0xd0304 || (c & 0x500) == 0 )),
 	ARMv7_OP4(0x0e50, 0x0000, 0x0410, 0x0000, A1, LDR_IMM),
 	ARMv7_OP2(0xf800, 0x4800, T1, LDR_LIT),
 	ARMv7_OP4(0xff7f, 0x0000, 0xf85f, 0x0000, T2, LDR_LIT),

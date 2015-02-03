@@ -364,10 +364,39 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 void ARMv7_instrs::ADC_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, n, imm32;
+	bool set_flags;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		set_flags = (code.data & 0x100000);
+		imm32 = ThumbExpandImm((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff));
+
+		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		bool carry, overflow;
+		const u32 result = AddWithCarry(context.read_gpr(n), imm32, context.APSR.C, carry, overflow);
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+			context.APSR.C = carry;
+			context.APSR.V = overflow;
+		}
 	}
 }
 
@@ -661,20 +690,86 @@ void ARMv7_instrs::ADD_SPR(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::ADR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, imm32;
+	bool add;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0x700) >> 8;
+		imm32 = (code.data & 0xff) << 2;
+		add = true;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
+		add = false;
+
+		reject(d == 13 || d == 15, "UNPREDICTABLE");
+		break;
+	}
+	case T3:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		imm32 = (code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff);
+		add = true;
+
+		reject(d == 13 || d == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 base = context.read_pc() & ~3;
+		const u32 result = add ? base + imm32 : base - imm32;
+		context.write_gpr(d, result);
 	}
 }
 
 
 void ARMv7_instrs::AND_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, n, imm32;
+	bool set_flags, carry = context.APSR.C;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		set_flags = (code.data & 0x100000);
+		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
+
+		reject(d == 15 && set_flags, "TST (immediate)");
+		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 result = context.read_gpr(n) & imm32;
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+			context.APSR.C = carry;
+		}
 	}
 }
 
@@ -1275,10 +1370,50 @@ void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 void ARMv7_instrs::EOR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	bool set_flags = !context.ITSTATE;
+	u32 cond, d, n, m, shift_t, shift_n;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = n = (code.data & 0x7);
+		m = (code.data & 0x38) >> 3;
+		shift_t = SRType_LSL;
+		shift_n = 0;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		m = (code.data & 0xf);
+		set_flags = (code.data & 0x100000);
+		shift_t = DecodeImmShift((code.data & 0x30) >> 4, (code.data & 0x7000) >> 10 | (code.data & 0xc0) >> 6, &shift_n);
+
+		reject(d == 15 && set_flags, "TEQ (register)");
+		reject(d == 13 || d == 15 || n == 13 || n == 15 || m == 13 || m == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		bool carry;
+		const u32 shifted = Shift_C(context.read_gpr(m), shift_t, shift_n, context.APSR.C, carry);
+		const u32 result = context.read_gpr(n) ^ shifted;
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+			context.APSR.C = carry;
+		}
 	}
 }
 
@@ -1496,8 +1631,8 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		index = true;
 		add = true;
 		wback = false;
-		shift_t = (code.data & 0x30) >> 4;
-		shift_n = 0;
+		shift_t = SRType_LSL;
+		shift_n = (code.data & 0x30) >> 4;
 
 		reject(n == 15, "LDR (literal)");
 		reject(m == 13 || m == 15, "UNPREDICTABLE");
@@ -1583,7 +1718,6 @@ void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-
 		context.write_gpr(t, vm::psv::read8(addr));
 
 		if (wback)
@@ -1604,10 +1738,56 @@ void ARMv7_instrs::LDRB_LIT(ARMv7Context& context, const ARMv7Code code, const A
 
 void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, t, n, m, shift_t, shift_n;
+	bool index, add, wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0x7);
+		n = (code.data & 0x38) >> 3;
+		m = (code.data & 0x1c0) >> 6;
+		index = true;
+		add = true;
+		wback = false;
+		shift_t = SRType_LSL;
+		shift_n = 0;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		t = (code.data & 0xf000) >> 12;
+		n = (code.data & 0xf0000) >> 16;
+		m = (code.data & 0xf);
+		index = true;
+		add = true;
+		wback = false;
+		shift_t = SRType_LSL;
+		shift_n = (code.data & 0x30) >> 4;
+
+		reject(t == 15, "PLD");
+		reject(n == 15, "LDRB (literal)");
+		reject(t == 13 || m == 13 || m == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
+		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
+		const u32 addr = index ? offset_addr : context.read_gpr(n);
+		context.write_gpr(t, vm::psv::read8(addr));
+
+		if (wback)
+		{
+			context.write_gpr(n, offset_addr);
+		}
 	}
 }
 
