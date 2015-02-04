@@ -34,9 +34,9 @@ s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8
 {
 #ifdef PRX_DEBUG_XXX
 	vm::var<be_t<u32>> queue;
-	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
+	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
 		spurs, queue, port, size, vm::read32(libsre_rtoc - 0x7E2C));
-	queue_id = queue;
+	queue_id = queue.value();
 	return res;
 #endif
 
@@ -2768,14 +2768,9 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 		if (ls_pattern.addr() != 0)
 		{
 			u32 ls_blocks = 0;
-			for (auto i = 0; i < 64; i++)
+			for (auto i = 0; i < 128; i++)
 			{
-				if (ls_pattern->u64[0] & ((u64)1 << i))
-				{
-					ls_blocks++;
-				}
-
-				if (ls_pattern->u64[1] & ((u64)1 << i))
+				if (ls_pattern->_u128.value()._bit[i])
 				{
 					ls_blocks++;
 				}
@@ -2786,7 +2781,8 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 				return CELL_SPURS_TASK_ERROR_INVAL;
 			}
 
-			if (ls_pattern->u32[0] & 0xFC000000)
+			u128 _0 = u128::from32(0);
+			if ((ls_pattern->_u128.value() & u128::from32r(0xFC000000)) != _0)
 			{
 				// Prevent save/restore to SPURS management area
 				return CELL_SPURS_TASK_ERROR_INVAL;
@@ -2819,13 +2815,10 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 
 	taskset->m.task_info[tmp_task_id].elf_addr.set(elf_addr.addr());
 	taskset->m.task_info[tmp_task_id].context_save_storage_and_alloc_ls_blocks = (context_addr.addr() | alloc_ls_blocks);
-	for (u32 i = 0; i < 2; i++)
+	taskset->m.task_info[tmp_task_id].args                                     = *arg;
+	if (ls_pattern.addr())
 	{
-		taskset->m.task_info[tmp_task_id].args.u64[i] = arg != 0 ? arg->u64[i] : 0;
-		if (ls_pattern.addr())
-		{
-			taskset->m.task_info[tmp_task_id].ls_pattern.u64[i] = ls_pattern->u64[i];
-		}
+		taskset->m.task_info[tmp_task_id].ls_pattern = *ls_pattern;
 	}
 
 	*task_id = tmp_task_id;
@@ -3162,12 +3155,7 @@ s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribut
 	
 	for (s32 c = 0; c < 4; c++)
 	{
-		attribute->lsPattern.u32[c] = 0;
-	}
-
-	for (s32 i = 0; i < 2; i++)
-	{
-		attribute->lsPattern.u64[i] = 0;
+		attribute->lsPattern._u128 = u128::from64r(0);
 	}
 
 	attribute->name_addr = 0;

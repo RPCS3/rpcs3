@@ -1120,7 +1120,7 @@ void spursTasksetStartTask(SPUThread & spu, CellSpursTaskArgument & taskArgs) {
     auto taskset = vm::get_ptr<CellSpursTaskset>(spu.ls_offset + 0x2700);
 
     spu.GPR[2].clear();
-    spu.GPR[3]         = u128::from64(taskArgs.u64[0], taskArgs.u64[1]);
+    spu.GPR[3]         = taskArgs._u128;
     spu.GPR[4]._u64[1] = taskset->m.args;
     spu.GPR[4]._u64[0] = taskset->m.spurs.addr();
     for (auto i = 5; i < 128; i++) {
@@ -1359,7 +1359,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
     u32 allocLsBlocks = taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F;
     u32 lsBlocks      = 0;
     for (auto i = 0; i < 128; i++) {
-        if (taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i)) {
+        if (taskInfo->ls_pattern._u128.value()._bit[i]) {
             lsBlocks++;
         }
     }
@@ -1370,7 +1370,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Make sure the stack is area is specified in the ls pattern
     for (auto i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++) {
-        if ((taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i)) == 0) {
+        if (taskInfo->ls_pattern._u128.value()._bit[i] == false) {
             return CELL_SPURS_TASK_ERROR_STAT;
         }
     }
@@ -1390,8 +1390,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Save LS context
     for (auto i = 6; i < 128; i++) {
-        bool shouldStore = taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i) ? true : false;
-        if (shouldStore) {
+        if (taskInfo->ls_pattern._u128.value()._bit[i]) {
             // TODO: Combine DMA requests for consecutive blocks into a single request
             spursDma(spu, MFC_PUT_CMD, contextSaveStorage + 0x400 + ((i - 6) << 11), CELL_SPURS_TASK_TOP + ((i - 6) << 11), 0x800/*size*/, ctxt->dmaTagId);
         }
@@ -1475,8 +1474,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         }
 
         // If the entire LS is saved then there is no need to load the ELF as it will be be saved in the context save area as well
-        if (taskInfo->ls_pattern.u64[1] != 0xFFFFFFFFFFFFFFFFull ||
-            (taskInfo->ls_pattern.u64[0] | 0xFC00000000000000ull) != 0xFFFFFFFFFFFFFFFFull) {
+        if (taskInfo->ls_pattern._u128.value() != u128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
             // Load the ELF
             u32 entryPoint;
             if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf_addr.addr(), true) != CELL_OK) {
@@ -1489,8 +1487,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         u64 contextSaveStorage = taskInfo->context_save_storage_and_alloc_ls_blocks & 0xFFFFFFFFFFFFFF80ull;
         spursDma(spu, MFC_GET_CMD, contextSaveStorage, 0x2C80/*LSA*/, 0x380/*size*/, ctxt->dmaTagId);
         for (auto i = 6; i < 128; i++) {
-            bool shouldLoad = taskInfo->ls_pattern.u64[i < 64 ? 0 : 1] & (0x8000000000000000ull >> i) ? true : false;
-            if (shouldLoad) {
+            if (taskInfo->ls_pattern._u128.value()._bit[i]) {
                 // TODO: Combine DMA requests for consecutive blocks into a single request
                 spursDma(spu, MFC_GET_CMD, contextSaveStorage + 0x400 + ((i - 6) << 11), CELL_SPURS_TASK_TOP + ((i - 6) << 11), 0x800/*size*/, ctxt->dmaTagId);
             }

@@ -413,6 +413,7 @@ struct CellSpurs
 		be_t<u64> arg; // spu argument
 		be_t<u32> size;
 		atomic_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
+		u8 pad[3];
 		u8 priority[8];
 	};
 
@@ -622,14 +623,12 @@ struct CellSpursEventFlag
 
 union CellSpursTaskArgument
 {
-	be_t<u32> u32[4];
-	be_t<u64> u64[2];
+	be_t<u128> _u128;
 };
 
 union CellSpursTaskLsPattern
 {
-	be_t<u32> u32[4];
-	be_t<u64> u64[2];
+	be_t<u128> _u128;
 };
 
 struct CellSpursTaskset
