@@ -579,4 +579,6 @@ namespace fmt
 	std::string merge(std::vector<std::string> source, const std::string& separator);
 	std::string merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator);
 	std::string tolower(std::string source);
+	std::string toupper(std::string source);
+	std::string escape(std::string source);
 }

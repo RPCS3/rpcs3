@@ -24,12 +24,63 @@ std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g
 		case '%':
 		{
 			const auto start = fmt - 1;
-			const bool number_sign = *fmt == '#' ? fmt++, true : false;
 
-			switch (*fmt++)
+			// read flags
+			const bool plus_sign = *fmt == '+' ? fmt++, true : false;
+			const bool minus_sign = *fmt == '-' ? fmt++, true : false;
+			const bool space_sign = *fmt == ' ' ? fmt++, true : false;
+			const bool number_sign = *fmt == '#' ? fmt++, true : false;
+			const bool zero_padding = *fmt == '0' ? fmt++, true : false;
+
+			// read width
+			const u32 width = [&]() -> u32
+			{
+				u32 width = 0;
+
+				if (*fmt == '*')
+				{
+					fmt++;
+					return context.get_next_gpr_arg(g_count, f_count, v_count);
+				}
+
+				while (*fmt - '0' < 10)
+				{
+					width = width * 10 + (*fmt++ - '0');
+				}
+
+				return width;
+			}();
+
+			// read precision
+			const u32 prec = [&]() -> u32
+			{
+				u32 prec = 0;
+
+				if (*fmt != '.')
+				{
+					return 0;
+				}
+
+				if (*++fmt == '*')
+				{
+					fmt++;
+					return context.get_next_gpr_arg(g_count, f_count, v_count);
+				}
+
+				while (*fmt - '0' < 10)
+				{
+					prec = prec * 10 + (*fmt++ - '0');
+				}
+
+				return prec;
+			}();
+
+			switch (char cf = *fmt++)
 			{
 			case '%':
 			{
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
 				result += '%';
 				continue;
 			}
@@ -39,20 +90,38 @@ std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g
 				// signed decimal
 				const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
 
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
 				result += fmt::to_sdec(value);
 				continue;
 			}
 			case 'x':
+			case 'X':
 			{
 				// hexadecimal
 				const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
 
+				if (plus_sign || minus_sign || space_sign || prec) break;
+
 				if (number_sign && value)
 				{
-					result += "0x";
+					result += cf == 'x' ? "0x" : "0X";
 				}
 
-				result += fmt::to_hex(value);
+				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::toupper(fmt::to_hex(value));
+
+				if (hex.length() >= width)
+				{
+					result += hex;
+				}
+				else if (zero_padding)
+				{
+					result += std::string(width - hex.length(), '0') + hex;
+				}
+				else
+				{
+					result += hex + std::string(width - hex.length(), ' ');
+				}
 				continue;
 			}
 			case 's':
@@ -60,14 +129,14 @@ std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g
 				// string
 				auto string = vm::psv::ptr<const char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
 
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
 				result += string.get_ptr();
 				continue;
 			}
-			default:
-			{
-				throw fmt::Format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
 			}
-			}
+
+			throw fmt::format("armv7_fmt(): unknown formatting: '%s'", start.get_ptr());
 		}
 		}
 
@@ -127,21 +196,21 @@ namespace sce_libc_func
 	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Warning("printf(fmt=0x%x)", fmt);
+		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
 
-		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+		const std::string& result = armv7_fmt(context, fmt, 1, 0, 0);
+		sceLibc.Log("***     -> '%s'", result);
 
-		LOG_NOTICE(TTY, armv7_fmt(context, fmt, 1, 0, 0));
+		LOG_NOTICE(TTY, result);
 	}
 
 	void sprintf(ARMv7Context& context, vm::psv::ptr<char> str, vm::psv::ptr<const char> fmt) // va_args...
 	{
 		sceLibc.Warning("sprintf(str=0x%x, fmt=0x%x)", str, fmt);
-
-		sceLibc.Notice("*** *fmt = '%s'", fmt.get_ptr());
+		sceLibc.Log("*** *fmt = '%s'", fmt.get_ptr());
 
 		const std::string& result = armv7_fmt(context, fmt, 2, 0, 0);
-
-		sceLibc.Notice("*** res -> '%s'", result);
+		sceLibc.Log("***     -> '%s'", result);
 
 		::memcpy(str.get_ptr(), result.c_str(), result.size() + 1);
 	}

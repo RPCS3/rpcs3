@@ -179,7 +179,7 @@ std::string fmt::replace_all(const std::string &src, const std::string& from, co
 		pos += to.length();
 	}
 
-	return src;
+	return target;
 }
 
 //TODO: move this wx Stuff somewhere else
@@ -336,6 +336,37 @@ std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, 
 std::string fmt::tolower(std::string source)
 {
 	std::transform(source.begin(), source.end(), source.begin(), ::tolower);
+
+	return source;
+}
+
+std::string fmt::toupper(std::string source)
+{
+	std::transform(source.begin(), source.end(), source.begin(), ::toupper);
+
+	return source;
+}
+
+std::string fmt::escape(std::string source)
+{
+	const std::pair<std::string, std::string> escape_list[] =
+	{
+		{ "\\", "\\\\" },
+		{ "\a", "\\a" },
+		{ "\b", "\\b" },
+		{ "\f", "\\f" },
+		{ "\n", "\\n" },
+		{ "\r", "\\r" },
+		{ "\t", "\\t" },
+		{ "\v", "\\v" },
+	};
+
+	source = fmt::replace_all(source, escape_list);
+
+	for (char c = 0; c < 32; c++)
+	{
+		source = fmt::replace_all(source, std::string(1, c), fmt::Format("\\x%02X", c));
+	}
 
 	return source;
 }

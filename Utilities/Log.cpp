@@ -109,7 +109,11 @@ struct FileListener : LogListener
 		if (mPrependChannelName)
 		{
 			text.insert(0, gTypeNameTable[static_cast<u32>(msg.mType)].mName);
-
+			
+			if (msg.mType == Log::TTY)
+			{
+				text = fmt::escape(text) + "\n";
+			}
 		}
 		mFile.Write(text);
 	}
