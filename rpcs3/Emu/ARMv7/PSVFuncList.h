@@ -492,9 +492,11 @@ template<typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* mo
 	add_psv_func(f);
 }
 // Find registered HLE function by its ID
-psv_func* get_psv_func_by_nid(u32 nid);
+const psv_func* get_psv_func_by_nid(u32 nid);
 // Get index of registered HLE function
-u32 get_psv_func_index(psv_func* func);
+u32 get_psv_func_index(const psv_func* func);
+// Find registered HLE function by its index
+const psv_func* get_psv_func_by_index(u32 index);
 // Execute registered HLE function by its index
 void execute_psv_func_by_index(ARMv7Context& context, u32 index);
 // Register all HLE functions

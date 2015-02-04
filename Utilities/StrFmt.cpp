@@ -355,7 +355,7 @@ std::string fmt::escape(std::string source)
 		{ "\a", "\\a" },
 		{ "\b", "\\b" },
 		{ "\f", "\\f" },
-		{ "\n", "\\n" },
+		{ "\n", "\\n\n" },
 		{ "\r", "\\r" },
 		{ "\t", "\\t" },
 		{ "\v", "\\v" },
@@ -365,7 +365,7 @@ std::string fmt::escape(std::string source)
 
 	for (char c = 0; c < 32; c++)
 	{
-		source = fmt::replace_all(source, std::string(1, c), fmt::Format("\\x%02X", c));
+		if (c != '\n') source = fmt::replace_all(source, std::string(1, c), fmt::Format("\\x%02X", c));
 	}
 
 	return source;

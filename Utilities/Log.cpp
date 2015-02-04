@@ -112,7 +112,11 @@ struct FileListener : LogListener
 			
 			if (msg.mType == Log::TTY)
 			{
-				text = fmt::escape(text) + "\n";
+				text = fmt::escape(text);
+				if (text[text.length() - 1] != '\n')
+				{
+					text += '\n';
+				}
 			}
 		}
 		mFile.Write(text);

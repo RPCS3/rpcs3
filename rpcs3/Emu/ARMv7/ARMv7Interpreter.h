@@ -18,12 +18,11 @@ enum ARMv7_encoding
 
 enum SRType : u32
 {
-	SRType_None,
 	SRType_LSL,
 	SRType_LSR,
 	SRType_ASR,
 	SRType_ROR,
-	SRType_RRX
+	SRType_RRX,
 };
 
 namespace ARMv7_instrs
