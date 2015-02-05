@@ -130,7 +130,7 @@ struct ARMv7Context
 	u32 debug; // debug flags
 	std::string debug_str;
 
-	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(DF_DISASM | DF_PRINT) {}
+	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(/*DF_DISASM | DF_PRINT*/ 0) {}
 
 	void write_pc(u32 value);
 	u32 read_pc();
