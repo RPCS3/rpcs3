@@ -1574,7 +1574,7 @@ void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 		d = (code.data & 0xf00) >> 8;
 		m = (code.data & 0xf);
 
-		reject((code.data & 0xf0000) >> 16 != m, "UNPREDICTABLE");
+		reject(m != (code.data & 0xf0000) >> 16, "UNPREDICTABLE");
 		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
 		break;
 	}
@@ -1772,10 +1772,44 @@ void ARMv7_instrs::DSB(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	bool set_flags, carry = context.APSR.C;
+	u32 cond, d, n, imm32;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		n = (code.data & 0xf0000) >> 16;
+		set_flags = (code.data & 0x100000);
+		imm32 = ThumbExpandImm_C((code.data & 0x4000000) >> 15 | (code.data & 0x7000) >> 4 | (code.data & 0xff), carry, carry);
+
+		reject(d == 15 && set_flags, "TEQ (immediate)");
+		reject(d == 13 || d == 15 || n == 13 || n == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (context.debug)
+	{
+		if (context.debug & DF_DISASM) context.debug_str = fmt::format("eor%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (process_debug(context)) return;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		const u32 result = context.read_gpr(n) ^ imm32;
+		context.write_gpr(d, result);
+
+		if (set_flags)
+		{
+			context.APSR.N = result >> 31;
+			context.APSR.Z = result == 0;
+			context.APSR.C = carry;
+		}
 	}
 }
 
@@ -1855,7 +1889,7 @@ void ARMv7_instrs::IT(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 		
 		reject(mask == 0, "Related encodings");
 		reject(first == 15, "UNPREDICTABLE");
-		reject(first == 14 && BitCount(mask) != 1, "UNPREDICTABLE");
+		reject(first == 14 && BitCount(mask, 4) != 1, "UNPREDICTABLE");
 		reject(context.ITSTATE, "UNPREDICTABLE");
 
 		context.ITSTATE.IT = code.data & 0xff;
@@ -1874,10 +1908,60 @@ void ARMv7_instrs::IT(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, n, reg_list;
+	bool wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		n = (code.data & 0x700) >> 8;
+		reg_list = (code.data & 0xff);
+		wback = !(reg_list & (1 << n));
+
+		reject(reg_list == 0, "UNPREDICTABLE");
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		n = (code.data & 0xf0000) >> 16;
+		reg_list = (code.data & 0xdfff);
+		wback = (code.data & 0x200000);
+
+		reject(wback && n == 13, "POP");
+		reject(n == 15 || BitCount(reg_list, 16) < 2 || reg_list >= 0xc000, "UNPREDICTABLE");
+		reject(reg_list & 0x8000 && context.ITSTATE, "UNPREDICTABLE");
+		reject(wback && reg_list & (1 << n), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (context.debug)
+	{
+		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
+		if (process_debug(context)) return;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		auto memory = vm::psv::ptr<u32>::make(context.read_gpr(n));
+
+		for (u32 i = 0; i < 16; i++)
+		{
+			if (reg_list & (1 << i))
+			{
+				context.write_gpr(i, *memory++);
+			}
+		}
+
+		if (wback)
+		{
+			context.write_gpr(n, memory.addr());
+		}
 	}
 }
 
@@ -3369,17 +3453,17 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		u32 written = 0;
-		for (u16 mask = 1, i = 0; mask; mask <<= 1, i++)
+		auto stack = vm::psv::ptr<u32>::make(context.SP);
+
+		for (u32 i = 0; i < 16; i++)
 		{
-			if (reg_list & mask)
+			if (reg_list & (1 << i))
 			{
-				context.write_gpr(i, vm::psv::read32(context.SP + written));
-				written += 4;
+				context.write_gpr(i, *stack++);
 			}
 		}
 
-		context.SP += written;
+		context.SP = stack.addr();
 	}
 }
 
@@ -3440,17 +3524,17 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		u32 read = 0;
-		for (u16 mask = 1 << 15, i = 15; mask; mask >>= 1, i--)
+		auto memory = vm::psv::ptr<u32>::make(context.SP);
+
+		for (u32 i = 15; ~i; i--)
 		{
-			if (reg_list & mask)
+			if (reg_list & (1 << i))
 			{
-				read += 4;
-				vm::psv::write32(context.SP - read, context.read_gpr(i));
+				*--memory = context.read_gpr(i);
 			}
 		}
 
-		context.SP -= read;
+		context.SP = memory.addr();
 	}
 }
 
@@ -3557,10 +3641,40 @@ void ARMv7_instrs::RBIT(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, d, m;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0x7);
+		m = (code.data & 0x38) >> 3;
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		d = (code.data & 0xf00) >> 8;
+		m = (code.data & 0xf);
+
+		reject(m != (code.data & 0xf0000) >> 16, "UNPREDICTABLE");
+		reject(d == 13 || d == 15 || m == 13 || m == 15, "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (context.debug)
+	{
+		if (context.debug & DF_DISASM) context.debug_str = fmt::format("rev%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
+		if (process_debug(context)) return;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		context.write_gpr(d, re32(context.read_gpr(m)));
 	}
 }
 
@@ -4122,10 +4236,58 @@ void ARMv7_instrs::SSUB8(ARMv7Context& context, const ARMv7Code code, const ARMv
 
 void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
+	u32 cond, n, reg_list;
+	bool wback;
+
 	switch (type)
 	{
+	case T1:
+	{
+		cond = context.ITSTATE.advance();
+		n = (code.data & 0x700) >> 8;
+		reg_list = (code.data & 0xff);
+		wback = true;
+
+		reject(reg_list == 0, "UNPREDICTABLE");
+		break;
+	}
+	case T2:
+	{
+		cond = context.ITSTATE.advance();
+		n = (code.data & 0xf0000) >> 16;
+		reg_list = (code.data & 0x5fff);
+		wback = (code.data & 0x200000);
+
+		reject(n == 15 || BitCount(reg_list, 16) < 2, "UNPREDICTABLE");
+		reject(wback && reg_list & (1 << n), "UNPREDICTABLE");
+		break;
+	}
 	case A1: throw __FUNCTION__;
 	default: throw __FUNCTION__;
+	}
+
+	if (context.debug)
+	{
+		if (context.debug & DF_DISASM) context.debug_str = fmt::format("stm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
+		if (process_debug(context)) return;
+	}
+
+	if (ConditionPassed(context, cond))
+	{
+		auto memory = vm::psv::ptr<u32>::make(context.read_gpr(n));
+
+		for (u32 i = 0; i < 16; i++)
+		{
+			if (reg_list & (1 << i))
+			{
+				*memory++ = context.read_gpr(i);
+			}
+		}
+
+		if (wback)
+		{
+			context.write_gpr(n, memory.addr());
+		}
 	}
 }
 

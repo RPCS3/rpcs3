@@ -1281,7 +1281,7 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 			const u32 i2 = (code.data >> 11) & 0x1 ^ s ^ 1;
 			const u32 target = (addr + 4 & ~3) + sign<25, u32>(s << 24 | i2 << 23 | i1 << 22 | (code.data & 0x3ff0000) >> 4 | (code.data & 0x7ff) << 1);
 
-			const u32 instr = vm::psv::read32(target);
+			const u32 instr = Memory.IsGoodAddr(target, 4) ? vm::psv::read32(target) : 0;
 
 			// possibly a call to imported function:
 			if (target >= end_addr && ((target - end_addr) % 16) == 0 && (instr & 0xfff000f0) == 0xe0700090)
