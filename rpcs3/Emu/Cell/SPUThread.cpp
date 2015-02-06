@@ -99,8 +99,6 @@ void SPUThread::InitRegs()
 
 	m_event_mask = 0;
 	m_events = 0;
-
-	R_ADDR = 0;
 }
 
 void SPUThread::InitStack()
@@ -437,103 +435,37 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 
 		if (op == MFC_GETLLAR_CMD) // get reservation
 		{
-			if (R_ADDR)
-			{
-				m_events |= SPU_EVENT_LR;
-			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-			R_ADDR = ea;
-			for (u32 i = 0; i < 16; i++)
+			vm::reservation_acquire(vm::get_ptr(ls_offset + lsa), ea, 128, [this]()
 			{
-				R_DATA[i] = vm::get_ptr<u64>((u32)R_ADDR)[i];
-				vm::get_ptr<u64>(ls_offset + lsa)[i] = R_DATA[i];
-			}
+				m_events |= SPU_EVENT_LR; // TODO: atomic op
+				Notify();
+			});
+
 			MFCArgs.AtomicStat.PushUncond(MFC_GETLLAR_SUCCESS);
 		}
 		else if (op == MFC_PUTLLC_CMD) // store conditional
 		{
-			MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
-
-			if (R_ADDR == ea)
+			if (vm::reservation_update(ea, vm::get_ptr(ls_offset + lsa), 128))
 			{
-				u32 changed = 0, mask = 0;
-				u64 buf[16];
-				for (u32 i = 0; i < 16; i++)
-				{
-					buf[i] = vm::get_ptr<u64>(ls_offset + lsa)[i];
-					if (buf[i] != R_DATA[i])
-					{
-						changed++;
-						mask |= (0x3 << (i * 2));
-						if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
-						{
-							m_events |= SPU_EVENT_LR;
-							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
-							R_ADDR = 0;
-							return;
-						}
-					}
-				}
-
-				for (u32 i = 0; i < 16; i++)
-				{
-					if (buf[i] != R_DATA[i])
-					{
-						if (InterlockedCompareExchange(&vm::get_ptr<volatile u64>((u32)R_ADDR)[i], buf[i], R_DATA[i]) != R_DATA[i])
-						{
-							m_events |= SPU_EVENT_LR;
-							MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
-
-							if (changed > 1)
-							{
-								LOG_ERROR(Log::SPU, "MFC_PUTLLC_CMD: Memory corrupted (~x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
-									changed, mask, op, cmd, lsa, ea, tag, size);
-								Emu.Pause();
-							}
-							
-							break;
-						}
-					}
-				}
-
-				if (changed > 1)
-				{
-					LOG_WARNING(Log::SPU, "MFC_PUTLLC_CMD: Reservation impossibru (~x%d (mask=0x%x)) (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
-						changed, mask, op, cmd, lsa, ea, tag, size);
-
-					SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-					for (s32 i = (s32)PC; i < (s32)PC + 4 * 7; i += 4)
-					{
-						dis_asm.dump_pc = i;
-						dis_asm.offset = vm::get_ptr<u8>(ls_offset);
-						const u32 opcode = vm::read32(i + ls_offset);
-						(*SPU_instr::rrr_list)(&dis_asm, opcode);
-						if (i >= 0 && i < 0x40000)
-						{
-							LOG_NOTICE(Log::SPU, "*** %s", dis_asm.last_opcode.c_str());
-						}
-					}
-				}
+				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 			}
 			else
 			{
 				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_FAILURE);
 			}
-			R_ADDR = 0;
 		}
-		else // store unconditional
+		else // store unconditional (may be wrong)
 		{
-			if (R_ADDR) // may be wrong
-			{
-				m_events |= SPU_EVENT_LR;
-			}
+			vm::reservation_break(ea);
 
 			ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+
 			if (op == MFC_PUTLLUC_CMD)
 			{
 				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
 			}
-			R_ADDR = 0;
 		}
 		break;
 	}
@@ -548,19 +480,6 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 bool SPUThread::CheckEvents()
 {
 	// checks events:
-	// SPU_EVENT_LR:
-	if (R_ADDR)
-	{
-		for (u32 i = 0; i < 16; i++)
-		{
-			if (vm::get_ptr<u64>((u32)R_ADDR)[i] != R_DATA[i])
-			{
-				m_events |= SPU_EVENT_LR;
-				R_ADDR = 0;
-				break;
-			}
-		}
-	}
 
 	return (m_events & m_event_mask) != 0;
 }

@@ -114,9 +114,6 @@ struct ARMv7Context
 
 	u32 TLS;
 
-	u32 R_ADDR;
-	u64 R_DATA;
-
 	struct perf_counter
 	{
 		u32 event;

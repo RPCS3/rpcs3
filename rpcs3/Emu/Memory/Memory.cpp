@@ -231,9 +231,11 @@ bool MemoryBase::Unmap(const u64 addr)
 MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	: MemInfo(_addr, PAGE_4K(_size))
 {
-	void* real_addr = (void*)((u64)Memory.GetBaseAddr() + _addr);
+	void* real_addr = vm::get_ptr(vm::cast(_addr));
 #ifdef _WIN32
-	mem = VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE);
+	void* priv_addr = vm::get_priv_ptr(vm::cast(_addr));
+	void* priv_mem = VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE);
+	mem = priv_mem == priv_addr ? VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE) : priv_mem;
 #else
 	if (::mprotect(real_addr, size, PROT_READ | PROT_WRITE))
 	{
@@ -262,7 +264,10 @@ void MemBlockInfo::Free()
 	{
 		Memory.UnregisterPages(addr, size);
 #ifdef _WIN32
-		if (!VirtualFree(mem, size, MEM_DECOMMIT))
+		DWORD old;
+
+		if (!VirtualProtect(mem, size, PAGE_NOACCESS, &old) || !VirtualProtect(vm::get_priv_ptr(vm::cast(addr)), size, PAGE_NOACCESS, &old))
+		//if (!VirtualFree(mem, size, MEM_DECOMMIT))
 #else
 		if (::mprotect(mem, size, PROT_NONE))
 #endif

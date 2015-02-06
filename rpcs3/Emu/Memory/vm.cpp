@@ -1,24 +1,194 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Memory.h"
+#include "Emu/System.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
+#include "Emu/SysCalls/lv2/sys_time.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <sys/mman.h>
+
+/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+#endif
+
 namespace vm
 {
-	#ifdef _WIN32
-	#include <Windows.h>
-		void* const g_base_addr = VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
-	#else
-	#include <sys/mman.h>
+#ifdef _WIN32
+	HANDLE g_memory_handle;
+#endif
 
-	/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
-	#ifndef MAP_ANONYMOUS
-	#define MAP_ANONYMOUS MAP_ANON
-	#endif
+	void* g_priv_addr;
 
-	void* const g_base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-	#endif
+	void* initialize()
+	{
+#ifdef _WIN32
+		g_memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
+
+		void* base_addr = MapViewOfFile(g_memory_handle, PAGE_NOACCESS, 0, 0, 0x100000000); // main memory
+		g_priv_addr = MapViewOfFile(g_memory_handle, PAGE_NOACCESS, 0, 0, 0x100000000); // memory mirror for privileged access
+
+		return base_addr;
+		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
+#else
+		return mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+#endif
+	}
+
+	void finalize()
+	{
+#ifdef _WIN32
+		UnmapViewOfFile(g_base_addr);
+		UnmapViewOfFile(g_priv_addr);
+		CloseHandle(g_memory_handle);
+#else
+		munmap(g_base_addr, 0x100000000);
+#endif
+	}
+
+	void* const g_base_addr = (atexit(finalize), initialize());
+
+	void* g_reservation_owner = nullptr;
+	u32 g_reservation_addr = 0;
+
+	std::function<void()> g_reservation_cb = nullptr;
+
+	// break the reservation, return true if it was successfully broken
+	bool reservation_break(u32 addr)
+	{
+		LV2_LOCK(0);
+
+		if (g_reservation_addr >> 12 == addr >> 12)
+		{
+			const auto stamp0 = get_time();
+
+#ifdef _WIN32
+			if (!VirtualAlloc(vm::get_ptr(addr & ~0xfff), 4096, MEM_COMMIT, PAGE_READWRITE))
+#else
+			
+#endif
+			{
+				throw fmt::format("vm::reservation_break() failed (addr=0x%x)", addr);
+			}
+
+			//LOG_NOTICE(MEMORY, "VirtualAlloc: %f us", (get_time() - stamp0) / 80.f);
+
+			if (g_reservation_cb)
+			{
+				g_reservation_cb();
+				g_reservation_cb = nullptr;
+			}
+
+			g_reservation_owner = nullptr;
+			g_reservation_addr = 0;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
+	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback)
+	{
+		const auto stamp0 = get_time();
+
+		bool broken = false;
+
+		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
+		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+
+		{
+			LV2_LOCK(0);
+
+			// break previous reservation
+			if (g_reservation_addr)
+			{
+				broken = reservation_break(g_reservation_addr);
+			}
+
+			// change memory protection to read-only
+#ifdef _WIN32
+			DWORD old;
+			if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READONLY, &old))
+#else
+
+#endif
+			{
+				throw fmt::format("vm::reservation_acquire() failed (addr=0x%x, size=%d)", addr, size);
+			}
+
+			//LOG_NOTICE(MEMORY, "VirtualProtect: %f us", (get_time() - stamp0) / 80.f);
+
+			// set the new reservation
+			g_reservation_addr = addr;
+			g_reservation_owner = GetCurrentNamedThread();
+			g_reservation_cb = callback;
+
+			// copy data
+			memcpy(data, vm::get_ptr(addr), size);
+		}
+
+		return broken;
+	}
+
+	// attempt to atomically update reserved memory
+	bool reservation_update(u32 addr, const void* data, u32 size)
+	{
+		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
+		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+
+		LV2_LOCK(0);
+
+		if (g_reservation_addr != addr || g_reservation_owner != GetCurrentNamedThread())
+		{
+			// atomic update failed
+			return false;
+		}
+
+		// update memory using privileged access
+		memcpy(vm::get_priv_ptr(addr), data, size);
+
+		// free the reservation and restore memory protection
+		reservation_break(addr);
+
+		// atomic update succeeded
+		return true;
+	}
+
+	// for internal use
+	bool reservation_query(u32 addr)
+	{
+		LV2_LOCK(0);
+
+		if (!Memory.IsGoodAddr(addr))
+		{
+			return false;
+		}
+
+		// break the reservation
+		reservation_break(addr);
+
+		return true;
+	}
+
+	// for internal use
+	void reservation_free()
+	{
+		LV2_LOCK(0);
+
+		if (g_reservation_owner == GetCurrentNamedThread())
+		{
+			reservation_break(g_reservation_addr);
+		}
+	}
 
 	bool check_addr(u32 addr)
 	{

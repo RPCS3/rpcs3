@@ -21,7 +21,19 @@ namespace vm
 	static void set_stack_size(u32 size) {}
 	static void initialize_stack() {}
 
+#ifdef _WIN32
+	extern HANDLE g_memory_handle;
+#endif
+
+	extern void* g_priv_addr;
 	extern void* const g_base_addr;
+
+	bool reservation_break(u32 addr);
+	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback = nullptr);
+	bool reservation_update(u32 addr, const void* data, u32 size);
+	bool reservation_query(u32 addr);
+	void reservation_free();
+
 	bool map(u32 addr, u32 size, u32 flags);
 	bool unmap(u32 addr, u32 size = 0, u32 flags = 0);
 	u32 alloc(u32 size, memory_location location = user_space);
@@ -38,6 +50,18 @@ namespace vm
 	T& get_ref(u32 addr)
 	{
 		return *get_ptr<T>(addr);
+	}
+
+	template<typename T = void>
+	T* const get_priv_ptr(u32 addr)
+	{
+		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
+	}
+
+	template<typename T>
+	T& get_priv_ref(u32 addr)
+	{
+		return *get_priv_ptr<T>(addr);
 	}
 
 	u32 get_addr(const void* real_pointer);

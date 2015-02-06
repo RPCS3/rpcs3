@@ -2657,10 +2657,11 @@ void ARMv7_instrs::LDREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 	if (ConditionPassed(context, cond))
 	{
 		const u32 addr = context.read_gpr(n) + imm32;
-		const u32 value = vm::psv::read32(addr);
-		context.write_gpr(t, value);		
-		context.R_ADDR = addr;
-		context.R_DATA = value;
+
+		u32 value;
+		vm::reservation_acquire(&value, addr, sizeof(value));
+
+		context.write_gpr(t, value);
 	}
 }
 
@@ -4813,10 +4814,7 @@ void ARMv7_instrs::STREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 	{
 		const u32 addr = context.read_gpr(n) + imm32;
 		const u32 value = context.read_gpr(t);
-		
-		auto& sync_obj = vm::get_ref<atomic_le_t<u32>>(addr);
-		context.write_gpr(d, addr != context.R_ADDR || sync_obj.compare_and_swap((u32)context.R_DATA, value) != context.R_DATA);
-		context.R_ADDR = 0;
+		context.write_gpr(d, !vm::reservation_update(addr, &value, sizeof(value)));
 	}
 }
 
