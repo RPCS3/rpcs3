@@ -134,6 +134,11 @@ s32 scePerfArmPmonSelectEvent(ARMv7Context& context, s32 threadId, u32 counter, 
 
 	case SCE_PERF_ARM_PMON_BRANCH_MISPREDICT: 
 	case SCE_PERF_ARM_PMON_DCACHE_MISS:
+	case SCE_PERF_ARM_PMON_DCACHE_STALL:
+	case SCE_PERF_ARM_PMON_ICACHE_STALL:
+	case SCE_PERF_ARM_PMON_DATA_EVICTION:
+	case SCE_PERF_ARM_PMON_WRITE_STALL:
+	case SCE_PERF_ARM_PMON_MAINTLB_STALL:
 	case SCE_PERF_ARM_PMON_UNALIGNED:
 	{
 		value = 1; // these events will probably never be implemented
