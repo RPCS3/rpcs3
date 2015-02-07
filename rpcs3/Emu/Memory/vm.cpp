@@ -14,6 +14,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
@@ -25,8 +27,6 @@ namespace vm
 {
 #ifdef _WIN32
 	HANDLE g_memory_handle;
-#else
-	int g_memory_handle;
 #endif
 
 	void* g_priv_addr;
@@ -43,10 +43,22 @@ namespace vm
 
 		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		g_memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
+		//shm_unlink("/rpcs3_vm");
 
-		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
-		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
+		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
+
+		if (memory_handle == -1)
+		{
+			printf("shm_open() failed\n");
+			return (void*)-1;
+		}
+
+		ftruncate(memory_handle, 0x100000000);
+
+		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
+		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
+
+		shm_unlink("/rpcs3_vm");
 
 		return base_addr;
 
@@ -63,8 +75,6 @@ namespace vm
 #else
 		munmap(g_base_addr, 0x100000000);
 		munmap(g_priv_addr, 0x100000000);
-
-		shm_unlink("/rpcs3_vm");
 #endif
 	}
 
@@ -94,7 +104,7 @@ namespace vm
 			while (!m_owner.compare_exchange_strong(old, owner))
 			{
 				std::unique_lock<std::mutex> cv_lock(m_cv_mutex);
-				
+
 				m_cv.wait_for(cv_lock, std::chrono::milliseconds(1));
 
 				if (old == owner)
@@ -146,7 +156,7 @@ namespace vm
 		DWORD old;
 		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READONLY, &old))
 #else
-		if (!::mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ))
+		if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ))
 #endif
 		{
 			throw fmt::format("vm::_reservation_set() failed (addr=0x%x)", addr);
@@ -164,7 +174,7 @@ namespace vm
 #ifdef _WIN32
 			if (!VirtualAlloc(vm::get_ptr(addr & ~0xfff), 4096, MEM_COMMIT, PAGE_READWRITE))
 #else
-			if (!::mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
+			if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
 				throw fmt::format("vm::_reservation_break() failed (addr=0x%x)", addr);
@@ -297,7 +307,7 @@ namespace vm
 
 		// change memory protection to read-only
 		_reservation_set(addr);
-		
+
 		// set additional information
 		g_reservation_addr = addr;
 		g_reservation_owner = GetCurrentNamedThread();
@@ -352,7 +362,7 @@ namespace vm
 		{
 			return res;
 		}
-		
+
 		if (real_pointer)
 		{
 			throw fmt::format("vm::get_addr(0x%016llx) failed: not a part of virtual memory", (u64)real_pointer);
