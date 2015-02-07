@@ -36,8 +36,8 @@ namespace vm
 #ifdef _WIN32
 		g_memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
 
-		void* base_addr = MapViewOfFile(g_memory_handle, PAGE_NOACCESS, 0, 0, 0x100000000); // main memory
-		g_priv_addr = MapViewOfFile(g_memory_handle, PAGE_NOACCESS, 0, 0, 0x100000000); // memory mirror for privileged access
+		void* base_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // main memory
+		g_priv_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // memory mirror for privileged access
 
 		return base_addr;
 
@@ -164,7 +164,8 @@ namespace vm
 			//const auto stamp0 = get_time();
 
 #ifdef _WIN32
-			if (!VirtualAlloc(vm::get_ptr(addr & ~0xfff), 4096, MEM_COMMIT, PAGE_READWRITE))
+			DWORD old;
+			if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READWRITE, &old))
 #else
 			if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
