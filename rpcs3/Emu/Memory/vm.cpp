@@ -23,6 +23,8 @@ namespace vm
 {
 #ifdef _WIN32
 	HANDLE g_memory_handle;
+#else
+	int g_memory_handle;
 #endif
 
 	void* g_priv_addr;
@@ -36,9 +38,17 @@ namespace vm
 		g_priv_addr = MapViewOfFile(g_memory_handle, PAGE_NOACCESS, 0, 0, 0x100000000); // memory mirror for privileged access
 
 		return base_addr;
+
 		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		return mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+		g_memory_handle = shm_open("/rpcs3_vm", O_RDWR, 0);
+
+		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
+		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
+
+		return base_addr;
+
+		//return mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 #endif
 	}
 
@@ -50,32 +60,112 @@ namespace vm
 		CloseHandle(g_memory_handle);
 #else
 		munmap(g_base_addr, 0x100000000);
+		munmap(g_priv_addr, 0x100000000);
+
+		shm_unlink("/rpcs3_vm");
 #endif
 	}
 
 	void* const g_base_addr = (atexit(finalize), initialize());
 
-	void* g_reservation_owner = nullptr;
-	u32 g_reservation_addr = 0;
+	class reservation_mutex_t
+	{
+		std::atomic<NamedThreadBase*> m_owner;
+		std::condition_variable m_cv;
+		std::atomic<u32> test;
+		std::mutex m_cv_mutex;
+
+	public:
+		reservation_mutex_t()
+			: m_owner(nullptr)
+			, test(0)
+		{
+		}
+
+		bool do_notify;
+
+		__noinline void lock()
+		{
+			NamedThreadBase* owner = GetCurrentNamedThread();
+			NamedThreadBase* old = nullptr;
+
+			while (!m_owner.compare_exchange_strong(old, owner))
+			{
+				std::unique_lock<std::mutex> cv_lock(m_cv_mutex);
+				
+				m_cv.wait_for(cv_lock, std::chrono::milliseconds(1));
+
+				if (old == owner)
+				{
+					throw __FUNCTION__;
+				}
+
+				old = nullptr;
+			}
+
+			do_notify = true;
+
+			test++;
+			assert(test == 1);
+		}
+
+		__noinline void unlock()
+		{
+			assert(test == 1);
+			test--;
+
+			NamedThreadBase* owner = GetCurrentNamedThread();
+
+			if (!m_owner.compare_exchange_strong(owner, nullptr))
+			{
+				throw __FUNCTION__;
+			}
+
+			if (do_notify)
+			{
+				m_cv.notify_one();
+			}
+		}
+
+	};
 
 	std::function<void()> g_reservation_cb = nullptr;
+	NamedThreadBase* g_reservation_owner = nullptr;
 
-	// break the reservation, return true if it was successfully broken
-	bool reservation_break(u32 addr)
+	u32 g_reservation_addr = 0;
+
+	reservation_mutex_t g_reservation_mutex;
+
+	void _reservation_set(u32 addr)
 	{
-		LV2_LOCK(0);
+		//const auto stamp0 = get_time();
 
+#ifdef _WIN32
+		DWORD old;
+		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READONLY, &old))
+#else
+		if (!::mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ))
+#endif
+		{
+			throw fmt::format("vm::_reservation_set() failed (addr=0x%x)", addr);
+		}
+
+		//LOG_NOTICE(MEMORY, "VirtualProtect: %f us", (get_time() - stamp0) / 80.f);
+	}
+
+	bool _reservation_break(u32 addr)
+	{
 		if (g_reservation_addr >> 12 == addr >> 12)
 		{
-			const auto stamp0 = get_time();
+			//const auto stamp0 = get_time();
 
 #ifdef _WIN32
 			if (!VirtualAlloc(vm::get_ptr(addr & ~0xfff), 4096, MEM_COMMIT, PAGE_READWRITE))
 #else
-			
+			if (!::mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ | PROT_WRITE))
 #endif
 			{
-				throw fmt::format("vm::reservation_break() failed (addr=0x%x)", addr);
+				throw fmt::format("vm::_reservation_break() failed (addr=0x%x)", addr);
 			}
 
 			//LOG_NOTICE(MEMORY, "VirtualAlloc: %f us", (get_time() - stamp0) / 80.f);
@@ -95,8 +185,14 @@ namespace vm
 		return false;
 	}
 
-	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
-	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback)
+	bool reservation_break(u32 addr)
+	{
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		return _reservation_break(addr);
+	}
+
+	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback)
 	{
 		const auto stamp0 = get_time();
 
@@ -106,28 +202,21 @@ namespace vm
 		assert((addr + size & ~0xfff) == (addr & ~0xfff));
 
 		{
-			LV2_LOCK(0);
+			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+			// silent unlocking to prevent priority boost for threads going to break reservation
+			g_reservation_mutex.do_notify = false;
 
 			// break previous reservation
 			if (g_reservation_addr)
 			{
-				broken = reservation_break(g_reservation_addr);
+				broken = _reservation_break(g_reservation_addr);
 			}
 
 			// change memory protection to read-only
-#ifdef _WIN32
-			DWORD old;
-			if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READONLY, &old))
-#else
+			_reservation_set(addr);
 
-#endif
-			{
-				throw fmt::format("vm::reservation_acquire() failed (addr=0x%x, size=%d)", addr, size);
-			}
-
-			//LOG_NOTICE(MEMORY, "VirtualProtect: %f us", (get_time() - stamp0) / 80.f);
-
-			// set the new reservation
+			// set additional information
 			g_reservation_addr = addr;
 			g_reservation_owner = GetCurrentNamedThread();
 			g_reservation_cb = callback;
@@ -139,13 +228,12 @@ namespace vm
 		return broken;
 	}
 
-	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
 		assert((addr + size & ~0xfff) == (addr & ~0xfff));
 
-		LV2_LOCK(0);
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		if (g_reservation_addr != addr || g_reservation_owner != GetCurrentNamedThread())
 		{
@@ -157,37 +245,67 @@ namespace vm
 		memcpy(vm::get_priv_ptr(addr), data, size);
 
 		// free the reservation and restore memory protection
-		reservation_break(addr);
+		_reservation_break(addr);
 
 		// atomic update succeeded
 		return true;
 	}
 
-	// for internal use
 	bool reservation_query(u32 addr)
 	{
-		LV2_LOCK(0);
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (!Memory.IsGoodAddr(addr))
 		{
-			return false;
+			LV2_LOCK(0);
+
+			if (!Memory.IsGoodAddr(addr))
+			{
+				return false;
+			}
 		}
 
 		// break the reservation
-		reservation_break(addr);
+		_reservation_break(addr);
 
 		return true;
 	}
 
-	// for internal use
 	void reservation_free()
 	{
-		LV2_LOCK(0);
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		if (g_reservation_owner == GetCurrentNamedThread())
 		{
-			reservation_break(g_reservation_addr);
+			_reservation_break(g_reservation_addr);
 		}
+	}
+
+	void reservation_op(u32 addr, u32 size, std::function<void()> proc)
+	{
+		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
+		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		// break previous reservation
+		if (g_reservation_addr)
+		{
+			_reservation_break(g_reservation_addr);
+		}
+
+		// change memory protection to read-only
+		_reservation_set(addr);
+		
+		// set additional information
+		g_reservation_addr = addr;
+		g_reservation_owner = GetCurrentNamedThread();
+		g_reservation_cb = nullptr;
+
+		// do the operation
+		proc();
+
+		// remove the reservation
+		_reservation_break(addr);
 	}
 
 	bool check_addr(u32 addr)

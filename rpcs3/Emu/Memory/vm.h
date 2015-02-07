@@ -28,11 +28,16 @@ namespace vm
 	extern void* g_priv_addr;
 	extern void* const g_base_addr;
 
+	// break the reservation, return true if it was successfully broken
 	bool reservation_break(u32 addr);
-	bool reservation_acquire(void* data, u32 addr, u32 size, std::function<void()> callback = nullptr);
+	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
+	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback = nullptr);
+	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
 	bool reservation_query(u32 addr);
 	void reservation_free();
+	// perform complete operation
+	void reservation_op(u32 addr, u32 size, std::function<void()> proc);
 
 	bool map(u32 addr, u32 size, u32 flags);
 	bool unmap(u32 addr, u32 size = 0, u32 flags = 0);

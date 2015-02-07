@@ -435,10 +435,20 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 
 		if (op == MFC_GETLLAR_CMD) // get reservation
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
 			vm::reservation_acquire(vm::get_ptr(ls_offset + lsa), ea, 128, [this]()
 			{
+				//std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(tid);
+
+				//if (t && (t->GetType() == CPU_THREAD_SPU || t->GetType() == CPU_THREAD_RAW_SPU))
+				//{
+				//	SPUThread& spu = static_cast<SPUThread&>(*t);
+
+				//	spu.m_events |= SPU_EVENT_LR; // TODO: atomic op
+				//	spu.Notify();
+				//}
+
 				m_events |= SPU_EVENT_LR; // TODO: atomic op
 				Notify();
 			});

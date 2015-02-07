@@ -232,21 +232,13 @@ MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	: MemInfo(_addr, PAGE_4K(_size))
 {
 	void* real_addr = vm::get_ptr(vm::cast(_addr));
-#ifdef _WIN32
 	void* priv_addr = vm::get_priv_ptr(vm::cast(_addr));
-	void* priv_mem = VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE);
-	mem = priv_mem == priv_addr ? VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE) : priv_mem;
+
+#ifdef _WIN32
+	if (!VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE))
 #else
-	if (::mprotect(real_addr, size, PROT_READ | PROT_WRITE))
-	{
-		mem = nullptr;
-	}
-	else
-	{
-		mem = real_addr;
-	}
+	if (!::mprotect(real_addr, size, PROT_READ | PROT_WRITE) || !::mprotect(priv_addr, size, PROT_READ | PROT_WRITE))
 #endif
-	if (mem != real_addr)
 	{
 		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%llx, size=0x%x)", addr, size);
 		Emu.Pause();
@@ -254,7 +246,9 @@ MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	else
 	{
 		Memory.RegisterPages(_addr, PAGE_4K(_size));
-		memset(mem, 0, size);
+
+		mem = real_addr;
+		memset(mem, 0, size); // ???
 	}
 }
 
@@ -269,7 +263,7 @@ void MemBlockInfo::Free()
 		if (!VirtualProtect(mem, size, PAGE_NOACCESS, &old) || !VirtualProtect(vm::get_priv_ptr(vm::cast(addr)), size, PAGE_NOACCESS, &old))
 		//if (!VirtualFree(mem, size, MEM_DECOMMIT))
 #else
-		if (::mprotect(mem, size, PROT_NONE))
+		if (::mprotect(mem, size, PROT_NONE) || !::mprotect(vm::get_priv_ptr(vm::cast(addr)), size, PROT_NONE))
 #endif
 		{
 			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%llx, size=0x%x)", addr, size);

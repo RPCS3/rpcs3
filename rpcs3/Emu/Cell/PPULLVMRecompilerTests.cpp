@@ -59,10 +59,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
     /// Time base register
     u64 TB;
 
-    /// Reservations
-    u64 R_ADDR;
-    u64 R_VALUE;
-
     /// Memory block
     u32 address;
     u64 mem_block[64];
@@ -85,9 +81,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         LR    = ppu.LR;
         CTR   = ppu.CTR;
         TB    = ppu.TB;
-
-        R_ADDR  = ppu.R_ADDR;
-        R_VALUE = ppu.R_VALUE;
 
         address = addr;
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
@@ -113,9 +106,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         ppu.LR    = LR;
         ppu.CTR   = CTR;
         ppu.TB    = TB;
-
-        ppu.R_ADDR  = R_ADDR;
-        ppu.R_VALUE = R_VALUE;
 
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
             vm::write64(address + (i * 8), mem_block[i]);
@@ -151,8 +141,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         LR          = rng();
         CTR         = rng();
         TB          = rng();
-        R_ADDR      = rng();
-        R_VALUE     = rng();
 
         address = addr;
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
@@ -187,7 +175,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         //                   fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
         //                   fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
         //ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT)); // TODO: Uncomment after implementing VSCR.SAT
-        ret += fmt::Format("R_ADDR  = 0x%016llx R_VALUE = 0x%016llx\n", R_ADDR, R_VALUE);
 
         for (int i = 0; i < (sizeof(mem_block) / 8); i += 2) {
             ret += fmt::Format("mem_block[%d] = 0x%016llx mem_block[%d] = 0x%016llx\n", i, mem_block[i], i + 1, mem_block[i + 1]);
@@ -724,8 +711,6 @@ void Compiler::RunAllTests() {
     input.GPR[14]      = 10;
     input.GPR[21]      = 15;
     input.GPR[23]      = 0x10000;
-    input.R_ADDR       = 0x10000;
-    input.R_VALUE      = 0x1122334455667788;
     input.mem_block[0] = 0x8877665544332211;
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LBZ, 0, input, 5, 0, 0x10000);
