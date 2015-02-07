@@ -43,7 +43,7 @@ namespace vm
 
 		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		g_memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREATE | O_EXCL, 0);
+		g_memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
 
 		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
 		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE, g_memory_handle, 0);
