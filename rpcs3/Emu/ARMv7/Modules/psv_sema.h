@@ -17,6 +17,8 @@ private:
 
 public:
 	psv_sema_t(const char* name, u32 attr, s32 init_value, s32 max_value);
+	void on_init(s32 id) {}
+	void on_stop() {}
 
 };
 

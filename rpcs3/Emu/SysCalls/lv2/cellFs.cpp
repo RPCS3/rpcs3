@@ -395,7 +395,7 @@ s32 cellFsFsync(u32 fd)
 
 s32 cellFsRmdir(vm::ptr<const char> path)
 {
-	sys_fs->Warning("cellFsRmdir(path=0x%x)", path.get_ptr());
+	sys_fs->Warning("cellFsRmdir(path=0x%x)", path);
 
 	std::string _path = path.get_ptr();
 

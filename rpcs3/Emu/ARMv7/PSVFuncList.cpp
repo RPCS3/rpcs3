@@ -10,7 +10,7 @@ void add_psv_func(psv_func& data)
 	g_psv_func_list.push_back(data);
 }
 
-psv_func* get_psv_func_by_nid(u32 nid)
+const psv_func* get_psv_func_by_nid(u32 nid)
 {
 	for (auto& f : g_psv_func_list)
 	{
@@ -23,7 +23,7 @@ psv_func* get_psv_func_by_nid(u32 nid)
 	return nullptr;
 }
 
-u32 get_psv_func_index(psv_func* func)
+u32 get_psv_func_index(const psv_func* func)
 {
 	auto res = func - g_psv_func_list.data();
 
@@ -32,14 +32,21 @@ u32 get_psv_func_index(psv_func* func)
 	return (u32)res;
 }
 
-void execute_psv_func_by_index(ARMv7Context& context, u32 index)
+const psv_func* get_psv_func_by_index(u32 index)
 {
 	assert(index < g_psv_func_list.size());
+
+	return &g_psv_func_list[index];
+}
+
+void execute_psv_func_by_index(ARMv7Context& context, u32 index)
+{
+	auto func = get_psv_func_by_index(index);
 	
 	auto old_last_syscall = context.thread.m_last_syscall;
-	context.thread.m_last_syscall = g_psv_func_list[index].nid;
+	context.thread.m_last_syscall = func->nid;
 
-	(*g_psv_func_list[index].func)(context);
+	(*func->func)(context);
 
 	context.thread.m_last_syscall = old_last_syscall;
 }
@@ -174,7 +181,7 @@ void initialize_psv_modules()
 	// setup special functions (without NIDs)
 	psv_func unimplemented;
 	unimplemented.nid = 0;
-	unimplemented.name = "Special function (unimplemented stub)";
+	unimplemented.name = "UNIMPLEMENTED";
 	unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
 	{
 		context.thread.m_last_syscall = vm::psv::read32(context.thread.PC + 4);
@@ -184,7 +191,7 @@ void initialize_psv_modules()
 
 	psv_func hle_return;
 	hle_return.nid = 1;
-	hle_return.name = "Special function (return from HLE)";
+	hle_return.name = "HLE_RETURN";
 	hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
 	{
 		context.thread.FastStop();

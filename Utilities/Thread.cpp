@@ -215,7 +215,8 @@ static const reg_table_t reg_table[17] =
 
 bool handle_access_violation(const u32 addr, x64_context* context)
 {
-	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+	// check if address is RawSPU MMIO register
+	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
 		// one x64 instruction is manually decoded and interpreted
 		x64_op_t op;
@@ -277,6 +278,12 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 		return true;
 	}
 
+	// check if fault is caused by reservation
+	if (vm::reservation_query(addr))
+	{
+		return true;
+	}
+
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 	return false;
 }
@@ -302,6 +309,24 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 
 	// else some fatal error (should crash)
 }
+
+extern LPTOP_LEVEL_EXCEPTION_FILTER filter_set;
+
+LONG __stdcall exception_filter(_EXCEPTION_POINTERS* pExp)
+{
+	_se_translator(pExp->ExceptionRecord->ExceptionCode, pExp);
+
+	if (filter_set)
+	{
+		return filter_set(pExp);
+	}
+	else
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+}
+
+LPTOP_LEVEL_EXCEPTION_FILTER filter_set = SetUnhandledExceptionFilter(exception_filter);
 
 #else
 
@@ -350,6 +375,11 @@ void SetCurrentNamedThread(NamedThreadBase* value)
 	if (old_value == value)
 	{
 		return;
+	}
+
+	if (old_value)
+	{
+		vm::reservation_free();
 	}
 
 	if (value && value->m_tls_assigned.exchange(true))

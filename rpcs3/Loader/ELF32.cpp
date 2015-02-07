@@ -401,8 +401,8 @@ namespace loader
 				armv7_decoder_initialize(code_start, code_end);
 
 				const std::string& thread_name = proc_param->sceUserMainThreadName ? proc_param->sceUserMainThreadName.get_ptr() : "main_thread";
-				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? *proc_param->sceUserMainThreadStackSize : 0;
-				const u32 priority = proc_param->sceUserMainThreadPriority ? *proc_param->sceUserMainThreadPriority : 0;
+				const u32 stack_size = proc_param->sceUserMainThreadStackSize ? *proc_param->sceUserMainThreadStackSize : 256 * 1024;
+				const u32 priority = proc_param->sceUserMainThreadPriority ? *proc_param->sceUserMainThreadPriority : 160;
 
 				armv7_thread(entry, thread_name, stack_size, priority).args({ Emu.GetPath(), "-emu" }).run();
 				break;

@@ -39,7 +39,7 @@ class armv7_thread : cpu_thread
 	u32 argc;
 
 public:
-	armv7_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
+	armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio);
 
 	cpu_thread& args(std::initializer_list<std::string> values) override;
 
