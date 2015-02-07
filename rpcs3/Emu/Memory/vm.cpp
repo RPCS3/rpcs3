@@ -84,13 +84,11 @@ namespace vm
 	{
 		std::atomic<NamedThreadBase*> m_owner;
 		std::condition_variable m_cv;
-		std::atomic<u32> test;
 		std::mutex m_cv_mutex;
 
 	public:
 		reservation_mutex_t()
 			: m_owner(nullptr)
-			, test(0)
 		{
 		}
 
@@ -116,16 +114,10 @@ namespace vm
 			}
 
 			do_notify = true;
-
-			test++;
-			assert(test == 1);
 		}
 
 		__noinline void unlock()
 		{
-			assert(test == 1);
-			test--;
-
 			NamedThreadBase* owner = GetCurrentNamedThread();
 
 			if (!m_owner.compare_exchange_strong(owner, nullptr))
@@ -206,7 +198,7 @@ namespace vm
 
 	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback)
 	{
-		const auto stamp0 = get_time();
+		//const auto stamp0 = get_time();
 
 		bool broken = false;
 
@@ -217,7 +209,7 @@ namespace vm
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 			// silent unlocking to prevent priority boost for threads going to break reservation
-			g_reservation_mutex.do_notify = false;
+			//g_reservation_mutex.do_notify = false;
 
 			// break previous reservation
 			if (g_reservation_addr)
@@ -227,6 +219,9 @@ namespace vm
 
 			// change memory protection to read-only
 			_reservation_set(addr);
+
+			// may not be necessary, just for sure:
+			_mm_mfence();
 
 			// set additional information
 			g_reservation_addr = addr;
@@ -312,6 +307,9 @@ namespace vm
 		g_reservation_addr = addr;
 		g_reservation_owner = GetCurrentNamedThread();
 		g_reservation_cb = nullptr;
+
+		// may not be necessary, just for sure:
+		_mm_mfence();
 
 		// do the operation
 		proc();
