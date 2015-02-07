@@ -12,6 +12,8 @@
 #include <Windows.h>
 #else
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
 #ifndef MAP_ANONYMOUS
