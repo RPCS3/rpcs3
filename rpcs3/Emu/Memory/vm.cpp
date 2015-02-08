@@ -137,6 +137,7 @@ namespace vm
 	NamedThreadBase* g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
+	u32 g_reservation_size = 0;
 
 	reservation_mutex_t g_reservation_mutex;
 
@@ -183,6 +184,7 @@ namespace vm
 
 			g_reservation_owner = nullptr;
 			g_reservation_addr = 0;
+			g_reservation_size = 0;
 
 			return true;
 		}
@@ -204,7 +206,7 @@ namespace vm
 		bool broken = false;
 
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
@@ -213,7 +215,7 @@ namespace vm
 			//g_reservation_mutex.do_notify = false;
 
 			// break previous reservation
-			if (g_reservation_addr)
+			if (g_reservation_owner)
 			{
 				broken = _reservation_break(g_reservation_addr);
 			}
@@ -226,6 +228,7 @@ namespace vm
 
 			// set additional information
 			g_reservation_addr = addr;
+			g_reservation_size = size;
 			g_reservation_owner = GetCurrentNamedThread();
 			g_reservation_cb = callback;
 
@@ -239,11 +242,11 @@ namespace vm
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (g_reservation_addr != addr || g_reservation_owner != GetCurrentNamedThread())
+		if (g_reservation_owner != GetCurrentNamedThread() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			// atomic update failed
 			return false;
@@ -291,12 +294,12 @@ namespace vm
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		// break previous reservation
-		if (g_reservation_addr)
+		if (g_reservation_owner)
 		{
 			_reservation_break(g_reservation_addr);
 		}
@@ -306,6 +309,7 @@ namespace vm
 
 		// set additional information
 		g_reservation_addr = addr;
+		g_reservation_size = size;
 		g_reservation_owner = GetCurrentNamedThread();
 		g_reservation_cb = nullptr;
 
