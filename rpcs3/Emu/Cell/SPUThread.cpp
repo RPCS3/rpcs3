@@ -468,9 +468,10 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		}
 		else // store unconditional (may be wrong)
 		{
-			vm::reservation_break(ea);
-
-			ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+			vm::reservation_op(ea, 128, [this, tag, lsa, ea]()
+			{
+				ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+			});
 
 			if (op == MFC_PUTLLUC_CMD)
 			{

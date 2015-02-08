@@ -213,7 +213,7 @@ static const reg_table_t reg_table[17] =
 
 #endif
 
-bool handle_access_violation(const u32 addr, x64_context* context)
+bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
 {
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
@@ -279,7 +279,7 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 	}
 
 	// check if fault is caused by reservation
-	if (vm::reservation_query(addr))
+	if (vm::reservation_query(addr, is_writing))
 	{
 		return true;
 	}
@@ -304,11 +304,12 @@ void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
 {
 	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
 		(u32)addr64 == addr64 &&
 		GetCurrentNamedThread() &&
-		handle_access_violation((u32)addr64, pExp->ContextRecord))
+		handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
 	{
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
@@ -327,7 +328,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 
 	if ((u32)addr64 == addr64 && GetCurrentNamedThread())
 	{
-		if (handle_access_violation((u32)addr64, (ucontext_t*)uct))
+		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
 		{
 			return; // proceed execution
 		}
