@@ -330,16 +330,16 @@ public:
 	u32 m_color_conv;
 	u32 m_color_conv_fmt;
 	u32 m_color_conv_op;
-	u16 m_color_conv_in_x;
-	u16 m_color_conv_in_y;
-	u16 m_color_conv_in_w;
-	u16 m_color_conv_in_h;
-	u16 m_color_conv_out_x;
-	u16 m_color_conv_out_y;
+	s16 m_color_conv_clip_x;
+	s16 m_color_conv_clip_y;
+	u16 m_color_conv_clip_w;
+	u16 m_color_conv_clip_h;
+	s16 m_color_conv_out_x;
+	s16 m_color_conv_out_y;
 	u16 m_color_conv_out_w;
 	u16 m_color_conv_out_h;
-	u32 m_color_conv_dsdx;
-	u32 m_color_conv_dtdy;
+	s32 m_color_conv_dsdx;
+	s32 m_color_conv_dtdy;
 
 	// Semaphore
 	bool m_set_semaphore_offset;
@@ -398,11 +398,18 @@ public:
 	u32 m_context_dma_color_d;
 	bool m_set_context_dma_z;
 	u32 m_context_dma_z;
+	u32 m_context_surface;
 	u32 m_context_dma_img_src;
 	u32 m_context_dma_img_dst;
 	u32 m_context_dma_buffer_in_src;
 	u32 m_context_dma_buffer_in_dst;
 	u32 m_dst_offset;
+
+	// Swizzle2D?
+	u16 m_swizzle_format;
+	u8 m_swizzle_width;
+	u8 m_swizzle_height;
+	u32 m_swizzle_offset;
 
 	// Cull face
 	bool m_set_cull_face;
