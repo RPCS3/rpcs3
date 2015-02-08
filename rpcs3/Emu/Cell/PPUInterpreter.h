@@ -2911,9 +2911,7 @@ private:
 	}
 	void ECIWX(u32 rd, u32 ra, u32 rb)
 	{
-		//HACK!
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		throw __FUNCTION__;
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2986,9 +2984,7 @@ private:
 	}
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
-		//HACK!
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		throw __FUNCTION__;
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{

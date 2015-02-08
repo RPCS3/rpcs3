@@ -34,7 +34,7 @@ namespace vm
 	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback = nullptr);
 	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
-	bool reservation_query(u32 addr);
+	bool reservation_query(u32 addr, bool is_writing);
 	void reservation_free();
 	// perform complete operation
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc);

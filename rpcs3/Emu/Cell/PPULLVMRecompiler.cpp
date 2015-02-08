@@ -3271,15 +3271,16 @@ void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECIWX(u32 rd, u32 ra, u32 rb) {
-    auto addr_i64 = GetGpr(rb);
-    if (ra) {
-        auto ra_i64 = GetGpr(ra);
-        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    }
+	throw __FUNCTION__;
+    //auto addr_i64 = GetGpr(rb);
+    //if (ra) {
+    //    auto ra_i64 = GetGpr(ra);
+    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    //}
 
-    auto mem_i32 = ReadMemory(addr_i64, 32);
-    auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
-    SetGpr(rd, mem_i64);
+    //auto mem_i32 = ReadMemory(addr_i64, 32);
+    //auto mem_i64 = m_ir_builder->CreateZExt(mem_i32, m_ir_builder->getInt64Ty());
+    //SetGpr(rd, mem_i64);
 }
 
 void Compiler::LHZUX(u32 rd, u32 ra, u32 rb) {
@@ -3430,13 +3431,14 @@ void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECOWX(u32 rs, u32 ra, u32 rb) {
-    auto addr_i64 = GetGpr(rb);
-    if (ra) {
-        auto ra_i64 = GetGpr(ra);
-        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    }
+	throw __FUNCTION__;
+    //auto addr_i64 = GetGpr(rb);
+    //if (ra) {
+    //    auto ra_i64 = GetGpr(ra);
+    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    //}
 
-    WriteMemory(addr_i64, GetGpr(rs, 32));
+    //WriteMemory(addr_i64, GetGpr(rs, 32));
 }
 
 void Compiler::STHUX(u32 rs, u32 ra, u32 rb) {

@@ -137,18 +137,19 @@ namespace vm
 	NamedThreadBase* g_reservation_owner = nullptr;
 
 	u32 g_reservation_addr = 0;
+	u32 g_reservation_size = 0;
 
 	reservation_mutex_t g_reservation_mutex;
 
-	void _reservation_set(u32 addr)
+	void _reservation_set(u32 addr, bool no_access = false)
 	{
 		//const auto stamp0 = get_time();
 
 #ifdef _WIN32
 		DWORD old;
-		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, PAGE_READONLY, &old))
+		if (!VirtualProtect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PAGE_NOACCESS : PAGE_READONLY, &old))
 #else
-		if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, PROT_READ))
+		if (mprotect(vm::get_ptr(addr & ~0xfff), 4096, no_access ? PROT_NONE : PROT_READ))
 #endif
 		{
 			throw fmt::format("vm::_reservation_set() failed (addr=0x%x)", addr);
@@ -183,6 +184,7 @@ namespace vm
 
 			g_reservation_owner = nullptr;
 			g_reservation_addr = 0;
+			g_reservation_size = 0;
 
 			return true;
 		}
@@ -204,7 +206,7 @@ namespace vm
 		bool broken = false;
 
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
@@ -213,7 +215,7 @@ namespace vm
 			//g_reservation_mutex.do_notify = false;
 
 			// break previous reservation
-			if (g_reservation_addr)
+			if (g_reservation_owner)
 			{
 				broken = _reservation_break(g_reservation_addr);
 			}
@@ -221,11 +223,12 @@ namespace vm
 			// change memory protection to read-only
 			_reservation_set(addr);
 
-			// may not be necessary, just for sure:
+			// may not be necessary
 			_mm_mfence();
 
 			// set additional information
 			g_reservation_addr = addr;
+			g_reservation_size = size;
 			g_reservation_owner = GetCurrentNamedThread();
 			g_reservation_cb = callback;
 
@@ -239,18 +242,24 @@ namespace vm
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
-		if (g_reservation_addr != addr || g_reservation_owner != GetCurrentNamedThread())
+		if (g_reservation_owner != GetCurrentNamedThread() || g_reservation_addr != addr || g_reservation_size != size)
 		{
 			// atomic update failed
 			return false;
 		}
 
+		// change memory protection to no access
+		_reservation_set(addr, true);
+
 		// update memory using privileged access
 		memcpy(vm::get_priv_ptr(addr), data, size);
+
+		// remove callback to not call it on successful update
+		g_reservation_cb = nullptr;
 
 		// free the reservation and restore memory protection
 		_reservation_break(addr);
@@ -259,7 +268,7 @@ namespace vm
 		return true;
 	}
 
-	bool reservation_query(u32 addr)
+	bool reservation_query(u32 addr, bool is_writing)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
@@ -272,9 +281,12 @@ namespace vm
 			}
 		}
 
-		// break the reservation
-		_reservation_break(addr);
-
+		if (is_writing)
+		{
+			// break the reservation
+			_reservation_break(addr);
+		}
+		
 		return true;
 	}
 
@@ -291,25 +303,29 @@ namespace vm
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
-		assert((addr + size & ~0xfff) == (addr & ~0xfff));
+		assert((addr + size - 1 & ~0xfff) == (addr & ~0xfff));
 
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
 		// break previous reservation
-		if (g_reservation_addr)
+		if (g_reservation_owner != GetCurrentNamedThread() || g_reservation_addr != addr || g_reservation_size != size)
 		{
-			_reservation_break(g_reservation_addr);
+			if (g_reservation_owner)
+			{
+				_reservation_break(g_reservation_addr);
+			}
 		}
 
-		// change memory protection to read-only
-		_reservation_set(addr);
+		// change memory protection to no access
+		_reservation_set(addr, true);
 
 		// set additional information
 		g_reservation_addr = addr;
+		g_reservation_size = size;
 		g_reservation_owner = GetCurrentNamedThread();
 		g_reservation_cb = nullptr;
 
-		// may not be necessary, just for sure:
+		// may not be necessary
 		_mm_mfence();
 
 		// do the operation
