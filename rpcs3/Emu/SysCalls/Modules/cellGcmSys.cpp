@@ -538,7 +538,7 @@ int cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: 59.94Hz"); break;
+		Emu.GetGSManager().GetRender().m_frequency_mode = freq; Emu.GetGSManager().GetRender().m_fps_limit = 59.94; break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: Scanout"); break;
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
