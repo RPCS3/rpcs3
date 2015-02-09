@@ -536,11 +536,6 @@ public:
 	//TBR : Time-Base Registers
 	u64 TB;	//TBR 0x10C - 0x10D
 
-	u64 cycle;
-
-	u64 R_ADDR; // reservation address
-	u64 R_VALUE; // reservation value (BE)
-
 	u32 owned_mutexes;
 	std::function<void(PPUThread& CPU)> custom_task;
 

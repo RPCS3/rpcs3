@@ -213,9 +213,10 @@ static const reg_table_t reg_table[17] =
 
 #endif
 
-bool handle_access_violation(const u32 addr, x64_context* context)
+bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
 {
-	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+	// check if address is RawSPU MMIO register
+	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
 		// one x64 instruction is manually decoded and interpreted
 		x64_op_t op;
@@ -277,6 +278,12 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 		return true;
 	}
 
+	// check if fault is caused by reservation
+	if (vm::reservation_query(addr, is_writing))
+	{
+		return true;
+	}
+
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
 	return false;
 }
@@ -285,38 +292,49 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+
 	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
 	{
-		if (handle_access_violation((u32)addr64, pExp->ContextRecord))
-		{
-			// restore context (further code shouldn't be reached)
-			RtlRestoreContext(pExp->ContextRecord, nullptr);
-
-			// it's dangerous because destructors won't be executed
-		}
-
 		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
-
-	// else some fatal error (should crash)
 }
+
+const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
+{
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
+		(u32)addr64 == addr64 &&
+		GetCurrentNamedThread() &&
+		handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+	{
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+}));
 
 #else
 
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
+	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
+	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
+
 	if ((u32)addr64 == addr64 && GetCurrentNamedThread())
 	{
-		if (handle_access_violation((u32)addr64, (ucontext_t*)uct))
+		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
 		{
 			return; // proceed execution
 		}
 
 		// TODO: this may be wrong
-		throw fmt::format("Access violation at location 0x%llx", addr64);
+		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error
@@ -350,6 +368,11 @@ void SetCurrentNamedThread(NamedThreadBase* value)
 	if (old_value == value)
 	{
 		return;
+	}
+
+	if (old_value)
+	{
+		vm::reservation_free();
 	}
 
 	if (value && value->m_tls_assigned.exchange(true))
@@ -421,8 +444,17 @@ void ThreadBase::Start()
 
 #ifdef _WIN32
 		auto old_se_translator = _set_se_translator(_se_translator);
+		if (!exception_handler)
+		{
+			LOG_ERROR(GENERAL, "exception_handler not set");
+			return;
+		}
 #else
-		if (sigaction_result == -1) assert(!"sigaction() failed");
+		if (sigaction_result == -1)
+		{
+			printf("sigaction() failed");
+			exit(EXIT_FAILURE);
+		}
 #endif
 
 		SetCurrentNamedThread(this);
@@ -560,8 +592,6 @@ void thread_t::start(std::function<void()> func)
 
 #ifdef _WIN32
 		auto old_se_translator = _set_se_translator(_se_translator);
-#else
-		if (sigaction_result == -1) assert(!"sigaction() failed");
 #endif
 
 		NamedThreadBase info(name);

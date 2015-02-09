@@ -213,6 +213,11 @@ namespace vm
 		{
 			return vm::get_ptr<T>(vm::cast(m_addr));
 		}
+
+		T* get_priv_ptr() const
+		{
+			return vm::get_priv_ptr<T>(vm::cast(m_addr));
+		}
 		
 		static const _ptr_base make(const AT& addr)
 		{
@@ -241,6 +246,11 @@ namespace vm
 		void* get_ptr() const
 		{
 			return vm::get_ptr<void>(vm::cast(m_addr));
+		}
+
+		void* get_priv_ptr() const
+		{
+			return vm::get_priv_ptr<void>(vm::cast(m_addr));
 		}
 
 		explicit operator void*() const
@@ -299,6 +309,11 @@ namespace vm
 		const void* get_ptr() const
 		{
 			return vm::get_ptr<const void>(vm::cast(m_addr));
+		}
+
+		const void* get_priv_ptr() const
+		{
+			return vm::get_priv_ptr<const void>(vm::cast(m_addr));
 		}
 
 		explicit operator const void*() const

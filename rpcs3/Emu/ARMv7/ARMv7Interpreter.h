@@ -18,12 +18,11 @@ enum ARMv7_encoding
 
 enum SRType : u32
 {
-	SRType_None,
 	SRType_LSL,
 	SRType_LSR,
 	SRType_ASR,
 	SRType_ROR,
-	SRType_RRX
+	SRType_RRX,
 };
 
 namespace ARMv7_instrs
@@ -78,6 +77,10 @@ namespace ARMv7_instrs
 	void CMP_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void CMP_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void CMP_RSR(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+
+	void DBG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void DMB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
+	void DSB(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 
 	void EOR_IMM(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
 	void EOR_REG(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type);
