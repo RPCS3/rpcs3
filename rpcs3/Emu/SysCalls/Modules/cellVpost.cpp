@@ -132,7 +132,7 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 
 	//u64 stamp1 = get_system_time();
 
-	SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+	std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL), sws_freeContext);
 
 	//u64 stamp2 = get_system_time();
 
@@ -141,11 +141,7 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	u8* out_data[4] = { outPicBuff.get_ptr(), NULL, NULL, NULL };
 	int out_line[4] = { static_cast<int>(ow*4), 0, 0, 0 };
 
-	sws_scale(sws, in_data, in_line, 0, h, out_data, out_line);
-
-	//u64 stamp3 = get_system_time();
-
-	sws_freeContext(sws);
+	sws_scale(sws.get(), in_data, in_line, 0, h, out_data, out_line);
 
 	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
 		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
