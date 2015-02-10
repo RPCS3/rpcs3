@@ -2049,8 +2049,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 				m_dst_offset = ARGS(3);
 			}
-
-			LOG_WARNING(RSX, "NV3062_SET_COLOR_FORMAT: format=%d, src_pitch=%d, dst_pitch=%d", m_color_format, m_color_format_src_pitch, m_color_format_dst_pitch);
 		}
 		else
 		{
@@ -2064,7 +2062,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	{
 		if (count == 1)
 		{
-			LOG_WARNING(RSX, "NV309E_SET_CONTEXT_DMA_IMAGE: m_context_dma_img_src -> 0x%x", ARGS(0));
 			m_context_dma_img_src = ARGS(0);
 		}
 		else
@@ -2134,7 +2131,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (count >= 5)
 		{
-			LOG_WARNING(RSX, "NV308A_COLOR: count = %d", count);
+			LOG_ERROR(RSX, "NV308A_COLOR: unknown arg count (%d)", count);
 		}
 
 		m_fragment_constants.push_back(c);
@@ -2195,13 +2192,17 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		const u32 offset = ARGS(2);
 
-		const u16 u = ARGS(3); // inX
-		const u16 v = ARGS(3) >> 16; // inY
+		const u16 u = ARGS(3); // inX (currently ignored)
+		const u16 v = ARGS(3) >> 16; // inY (currently ignored)
 
 		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
 		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
 
-		if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D)
+		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Swizzle2D not implemented");
+		}
+		else if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D)
 		{
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", m_context_surface);
 		}
@@ -2214,30 +2215,75 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x (src=0x%x), inX=%f, inY=%f",
 			width, height, pitch, offset, vm::get_addr(pixels_src), double(u) / 16, double(v) / 16);
 
-		//LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: m_dst_offset=0x%x, format_dst_pitch=0x%x, m_color_conv_in_w=%d, m_color_conv_in_h=%d",
-		//	m_dst_offset, m_color_format_dst_pitch, m_color_conv_in_w, m_color_conv_in_h);
+		const u32 in_bpp = m_color_format == 4 ? 2 : 4; // bytes per pixel
+		const u32 out_bpp = m_color_conv_fmt == 7 ? 2 : 4;
 
-		//for (u16 y=0; y<height; ++y)
-		//{
-		//	for (u16 x=0; x<pitch/4; ++x)
-		//	{
-		//		const u32 src_offset = (m_color_conv_in_y + y) * pitch + (m_color_conv_in_x + x) * 4;
-		//		const u32 dst_offset = (m_color_conv_out_y + y) * m_color_format_dst_pitch + (m_color_conv_out_x + x) * 4;
-		//		(u32&)pixels_dst[dst_offset] = (u32&)pixels_src[src_offset];
-		//	}
-		//}
+		const s32 out_w = (s32)((u64)m_color_conv_dsdx * width / (1 << 20));
+		const s32 out_h = (s32)((u64)m_color_conv_dtdy * height / (1 << 20));
 
-		AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565LE : AV_PIX_FMT_ARGB; // ???
-		AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565LE : AV_PIX_FMT_ARGB; // ???
+		std::unique_ptr<u8[]> temp;
+		
+		if (in_bpp != out_bpp && width != out_w && height != out_h)
+		{
+			// resize/convert if necessary
 
-		std::unique_ptr<u8[]> temp(new u8[m_color_format_dst_pitch * m_color_conv_out_h]);
+			temp.reset(new u8[out_bpp * out_w * out_h]);
 
-		SwsContext* sws = sws_getContext(width, height, in_format, m_color_conv_out_w, m_color_conv_out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL);
-		int in_line = pitch;
-		u8* out_ptr = temp.get();
-		int out_line = m_color_format_dst_pitch;
-		sws_scale(sws, &pixels_src, &in_line, 0, height, &out_ptr, &out_line);
-		sws_freeContext(sws);
+			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
+			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
+
+			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+
+			int in_line = in_bpp * width;
+			u8* out_ptr = temp.get();
+			int out_line = out_bpp * out_w;
+
+			sws_scale(sws.get(), &pixels_src, &in_line, 0, height, &out_ptr, &out_line);
+
+			pixels_src = temp.get(); // use resized image as a source
+		}
+
+		if (m_color_conv_out_w != m_color_conv_clip_w || m_color_conv_out_w != out_w ||
+			m_color_conv_out_h != m_color_conv_clip_h || m_color_conv_out_h != out_h ||
+			m_color_conv_out_x || m_color_conv_out_y || m_color_conv_clip_x || m_color_conv_clip_y)
+		{
+			// clip if necessary
+
+			for (s32 y = m_color_conv_clip_y, dst_y = m_color_conv_out_y; y < out_h; y++, dst_y++)
+			{
+				if (dst_y >= 0 && dst_y < m_color_conv_out_h)
+				{
+					// destination line
+					u8* dst_line = pixels_dst + dst_y * out_bpp * m_color_conv_out_w + std::min<s32>(std::max<s32>(m_color_conv_out_x, 0), m_color_conv_out_w);
+					size_t dst_max = std::min<s32>(std::max<s32>((s32)m_color_conv_out_w - m_color_conv_out_x, 0), m_color_conv_out_w) * out_bpp;
+
+					if (y >= 0 && y < std::min<s32>(m_color_conv_clip_h, out_h))
+					{
+						// source line
+						u8* src_line = pixels_src + y * out_bpp * out_w + std::min<s32>(std::max<s32>(m_color_conv_clip_x, 0), m_color_conv_clip_w);
+						size_t src_max = std::min<s32>(std::max<s32>((s32)m_color_conv_clip_w - m_color_conv_clip_x, 0), m_color_conv_clip_w) * out_bpp;
+
+						std::pair<u8*, size_t>
+							z0 = { src_line + 0, std::min<size_t>(dst_max, std::max<s64>(0, m_color_conv_clip_x)) },
+							d0 = { src_line + z0.second, std::min<size_t>(dst_max - z0.second, src_max) },
+							z1 = { src_line + d0.second, dst_max - z0.second - d0.second };
+
+						memset(z0.first, 0, z0.second);
+						memcpy(d0.first, src_line, d0.second);
+						memset(z1.first, 0, z1.second);
+					}
+					else
+					{
+						memset(dst_line, 0, dst_max);
+					}
+				}
+			}
+		}
+		else
+		{
+			memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
+		}
+
 		break;
 	}
 
@@ -2269,10 +2315,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_color_conv_out_y = ARGS(5) >> 16;
 		m_color_conv_out_w = ARGS(6);
 		m_color_conv_out_h = ARGS(6) >> 16;
-
-		LOG_WARNING(RSX, "NV3089_SET_COLOR_CONVERSION: clip=[x=%d,y=%d,w=%d,h=%d], out=[x=%d,y=%d,w=%d,h=%d]",
-			m_color_conv_clip_x, m_color_conv_clip_y, m_color_conv_clip_w, m_color_conv_clip_h, m_color_conv_out_x, m_color_conv_out_y, m_color_conv_out_w, m_color_conv_out_h);
-
 		m_color_conv_dsdx = ARGS(7);
 		m_color_conv_dtdy = ARGS(8);
 		break;
