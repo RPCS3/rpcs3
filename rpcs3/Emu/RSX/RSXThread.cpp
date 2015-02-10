@@ -2212,14 +2212,14 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_color_format (%d)", m_color_format);
 		}
 
-		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x (src=0x%x), inX=%f, inY=%f",
-			width, height, pitch, offset, vm::get_addr(pixels_src), double(u) / 16, double(v) / 16);
-
 		const u32 in_bpp = m_color_format == 4 ? 2 : 4; // bytes per pixel
 		const u32 out_bpp = m_color_conv_fmt == 7 ? 2 : 4;
 
-		const s32 out_w = (s32)((u64)m_color_conv_dsdx * width / (1 << 20));
-		const s32 out_h = (s32)((u64)m_color_conv_dtdy * height / (1 << 20));
+		const s32 out_w = (s32)(u64(width) * (1 << 20) / m_color_conv_dsdx);
+		const s32 out_h = (s32)(u64(height) * (1 << 20) / m_color_conv_dtdy);
+
+		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x, inX=%f, inY=%f, scaleX=%f, scaleY=%f",
+			width, height, pitch, offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
 
 		std::unique_ptr<u8[]> temp;
 		
