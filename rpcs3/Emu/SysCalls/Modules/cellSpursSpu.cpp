@@ -465,10 +465,10 @@ void spursKernelDispatchWorkload(SPUThread & spu, u64 widAndPollStatus) {
     auto wid        = (u32)(widAndPollStatus >> 32);
 
     // DMA in the workload info for the selected workload
-    auto wklInfoOffset =  wid < CELL_SPURS_MAX_WORKLOAD ? offsetof(CellSpurs, m.wklInfo1[wid]) :
-                                                          wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? offsetof(CellSpurs, m.wklInfo2[wid & 0xf]) :
-                                                                                                        offsetof(CellSpurs, m.wklInfoSysSrv);
-    spursDma(spu, MFC_GET_CMD, ctxt->spurs.addr() + wklInfoOffset, 0x3FFE0/*LSA*/, 0x20/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID);
+    auto wklInfoOffset = wid < CELL_SPURS_MAX_WORKLOAD ? &ctxt->spurs->m.wklInfo1[wid] :
+                                                          wid < CELL_SPURS_MAX_WORKLOAD2 && isKernel2 ? &ctxt->spurs->m.wklInfo2[wid & 0xf] :
+                                                                                                        &ctxt->spurs->m.wklInfoSysSrv;
+    spursDma(spu, MFC_GET_CMD, vm::get_addr(wklInfoOffset), 0x3FFE0/*LSA*/, 0x20/*size*/, CELL_SPURS_KERNEL_DMA_TAG_ID);
     spursDmaWaitForCompletion(spu, 0x80000000);
 
     // Load the workload to LS
@@ -1423,7 +1423,7 @@ void spursTasksetDispatch(SPUThread & spu) {
     ctxt->taskId = taskId;
 
     // DMA in the task info for the selected task
-    spursDma(spu, MFC_GET_CMD, ctxt->taskset.addr() + offsetof(CellSpursTaskset, m.task_info[taskId]), 0x2780/*LSA*/, sizeof(CellSpursTaskset::TaskInfo), ctxt->dmaTagId);
+    spursDma(spu, MFC_GET_CMD, vm::get_addr(&ctxt->taskset->m.task_info[taskId]), 0x2780/*LSA*/, sizeof(CellSpursTaskset::TaskInfo), ctxt->dmaTagId);
     spursDmaWaitForCompletion(spu, 1 << ctxt->dmaTagId);
     auto taskInfo = vm::get_ptr<CellSpursTaskset::TaskInfo>(spu.ls_offset + 0x2780);
     auto elfAddr  = taskInfo->elf_addr.addr().value();
@@ -1459,7 +1459,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         ctxt->x2FD4           = elfAddr & 5; // TODO: Figure this out
 
         if ((elfAddr & 5) == 1) {
-            spursDma(spu, MFC_GET_CMD, ctxt->taskset.addr() + offsetof(CellSpursTaskset2, m.task_exit_code[taskId]), 0x2FC0/*LSA*/, 0x10/*size*/, ctxt->dmaTagId);
+            spursDma(spu, MFC_GET_CMD, vm::get_addr(&((CellSpursTaskset2*)(ctxt->taskset.get_ptr()))->m.task_exit_code[taskId]), 0x2FC0/*LSA*/, 0x10/*size*/, ctxt->dmaTagId);
         }
 
         // Trace - GUID
