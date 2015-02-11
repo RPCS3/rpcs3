@@ -2229,8 +2229,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			temp.reset(new u8[out_bpp * out_w * out_h]);
 
-			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
-			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
+			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
+			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 
 			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
 

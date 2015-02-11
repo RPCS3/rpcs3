@@ -11,6 +11,7 @@ class LogBase
 		LogSuccess,
 		LogWarning,
 		LogError,
+		LogFatal,
 		LogTodo,
 	};
 
@@ -66,6 +67,12 @@ public:
 	__forceinline void Error(const char* fmt, Targs... args) const
 	{
 		LogPrepare(LogError, fmt, fmt::do_unveil(args)...);
+	}
+
+	template<typename... Targs>
+	__forceinline void Fatal(const char* fmt, Targs... args) const
+	{
+		LogPrepare(LogFatal, fmt, fmt::do_unveil(args)...);
 	}
 
 	template<typename... Targs>

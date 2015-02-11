@@ -128,7 +128,7 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	//u64 stamp0 = get_system_time();
 	std::unique_ptr<u8[]> pA(new u8[w*h]);
 
-	memset(pA.get(), (const u8)ctrlParam->outAlpha, w*h);
+	memset(pA.get(), ctrlParam->outAlpha, w*h);
 
 	//u64 stamp1 = get_system_time();
 

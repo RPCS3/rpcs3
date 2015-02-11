@@ -280,13 +280,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(vm::get_ptr<void>((u32)ea), vm::get_ptr<void>(ls_offset + lsa), size);
+		memcpy(vm::get_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(vm::get_ptr<void>(ls_offset + lsa), vm::get_ptr<void>((u32)ea), size);
+		memcpy(vm::get_ptr(ls_offset + lsa), vm::get_ptr(vm::cast(ea)), size);
 		return;
 	}
 
@@ -470,12 +470,16 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		{
 			vm::reservation_op(ea, 128, [this, tag, lsa, ea]()
 			{
-				ProcessCmd(MFC_PUT_CMD, tag, lsa, ea, 128);
+				memcpy(vm::get_priv_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), 128);
 			});
 
 			if (op == MFC_PUTLLUC_CMD)
 			{
 				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLUC_SUCCESS);
+			}
+			else
+			{
+				// tag may be used here
 			}
 		}
 		break;
