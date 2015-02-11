@@ -180,7 +180,7 @@ s64 spursInit(
 	name += "CellSpursKernel0";
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, num, spurs.addr(), 0, 0);
+		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0);
 #ifndef PRX_DEBUG_XXX
 		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
 #endif
@@ -389,10 +389,10 @@ s64 spursInit(
 	spurs->m.sub3.unk2 = 3; // unknown const
 	spurs->m.sub3.port = (u64)spurs->m.port;
 
-	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload
+	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload (disabled)
 	{
 		s32 res = CELL_OK;
-#ifdef PRX_DEBUG
+#ifdef PRX_DEBUG_XXX
 		res = cb_call<s32, vm::ptr<CellSpurs>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x10428, libsre_rtoc,
 			spurs, vm::get_addr(swlPriority), swlMaxSpu, swlIsPreem);
 #endif
