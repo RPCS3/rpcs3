@@ -615,11 +615,11 @@ struct CellSpursEventFlag
 			be_t<u32> eventQueueId;              // 0x7C
 		} m;
 
-		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursEventFlag size");
-
 		SPURSManagerEventFlag *eventFlag;
 	};
 };
+
+static_assert(sizeof(CellSpursEventFlag) == CellSpursEventFlag::size, "Wrong CellSpursEventFlag size");
 
 union CellSpursTaskArgument
 {
@@ -678,11 +678,11 @@ struct CellSpursTaskset
 			u8 unk3[0x60];                               // 0x18A0
 		} m;
 
-		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursTaskset size");
-
 		SPURSManagerTaskset *taskset;
 	};
 };
+
+static_assert(sizeof(CellSpursTaskset) == CellSpursTaskset::size, "Wrong CellSpursTaskset size");
 
 struct CellSpursInfo
 {
@@ -788,10 +788,10 @@ struct CellSpursTaskset2
 			be_t<u128> task_exit_code[128];              // 0x1980
 			u8 unk4[0x2900 - 0x2180];                    // 0x2180
 		} m;
-
-		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursTaskset2 size");
 	};
 };
+
+static_assert(sizeof(CellSpursTaskset2) == CellSpursTaskset2::size, "Wrong CellSpursTaskset2 size");
 
 struct CellSpursTasksetAttribute
 {
