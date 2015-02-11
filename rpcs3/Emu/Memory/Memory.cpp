@@ -102,19 +102,16 @@ void MemoryBase::Init(MemoryType type)
 	memset(m_pages, 0, sizeof(m_pages));
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
+	LOG_NOTICE(MEMORY, "Initializing memory: base_addr = 0x%llx, priv_addr = 0x%llx", (u64)vm::g_base_addr, (u64)vm::g_priv_addr);
+
 #ifdef _WIN32
-	if (!vm::g_base_addr)
+	if (!vm::g_base_addr || !vm::g_priv_addr)
 #else
-	if ((s64)vm::g_base_addr == (s64)-1)
+	if ((s64)vm::g_base_addr == (s64)-1 || (s64)vm::g_priv_addr == (s64)-1)
 #endif
 	{
 		LOG_ERROR(MEMORY, "Initializing memory failed");
-		assert(0);
 		return;
-	}
-	else
-	{
-		LOG_NOTICE(MEMORY, "Initializing memory: base_addr = 0x%llx", (u64)vm::g_base_addr);
 	}
 
 	switch (type)
@@ -207,7 +204,7 @@ bool MemoryBase::Map(const u64 addr, const u32 size)
 	}
 
 	MemoryBlocks.push_back((new MemoryBlock())->SetRange(addr, size));
-	
+
 	LOG_WARNING(MEMORY, "Memory mapped at 0x%llx: size=0x%x", addr, size);
 	return true;
 }
@@ -231,20 +228,14 @@ bool MemoryBase::Unmap(const u64 addr)
 MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	: MemInfo(_addr, PAGE_4K(_size))
 {
-	void* real_addr = (void*)((u64)Memory.GetBaseAddr() + _addr);
+	void* real_addr = vm::get_ptr(vm::cast(_addr));
+	void* priv_addr = vm::get_priv_ptr(vm::cast(_addr));
+
 #ifdef _WIN32
-	mem = VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE);
+	if (!VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE))
 #else
-	if (::mprotect(real_addr, size, PROT_READ | PROT_WRITE))
-	{
-		mem = nullptr;
-	}
-	else
-	{
-		mem = real_addr;
-	}
+	if (mprotect(real_addr, size, PROT_READ | PROT_WRITE) || mprotect(priv_addr, size, PROT_READ | PROT_WRITE))
 #endif
-	if (mem != real_addr)
 	{
 		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%llx, size=0x%x)", addr, size);
 		Emu.Pause();
@@ -252,7 +243,9 @@ MemBlockInfo::MemBlockInfo(u64 _addr, u32 _size)
 	else
 	{
 		Memory.RegisterPages(_addr, PAGE_4K(_size));
-		memset(mem, 0, size);
+
+		mem = real_addr;
+		memset(mem, 0, size); // ???
 	}
 }
 
@@ -262,9 +255,11 @@ void MemBlockInfo::Free()
 	{
 		Memory.UnregisterPages(addr, size);
 #ifdef _WIN32
-		if (!VirtualFree(mem, size, MEM_DECOMMIT))
+		DWORD old;
+
+		if (!VirtualProtect(mem, size, PAGE_NOACCESS, &old) || !VirtualProtect(vm::get_priv_ptr(vm::cast(addr)), size, PAGE_NOACCESS, &old))
 #else
-		if (::mprotect(mem, size, PROT_NONE))
+		if (mprotect(mem, size, PROT_NONE) || mprotect(vm::get_priv_ptr(vm::cast(addr)), size, PROT_NONE))
 #endif
 		{
 			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%llx, size=0x%x)", addr, size);
@@ -437,7 +432,7 @@ u64 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		LOG_ERROR(MEMORY, "DynamicMemoryBlockBase::AllocAlign(size=0x%x, align=0x%x): memory block not initialized", size, align);
 		return 0;
 	}
-	
+
 	size = PAGE_4K(size);
 	u32 exsize;
 

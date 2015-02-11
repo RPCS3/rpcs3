@@ -69,6 +69,13 @@ struct sceNpTrophyInternal
 
 sceNpTrophyInternal sceNpTrophyInstance;
 
+static sceNpTrophyInternalContext& getContext(u32 context) {
+	// The invalid context is 0, so remap contexts 1... to indices 0...
+	if (context == 0)
+		throw "getContext: context == 0";
+	return sceNpTrophyInstance.contexts[context - 1];
+}
+
 // Functions
 int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 {
@@ -114,6 +121,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 				ctxt.trp_stream.reset(stream);
 				ctxt.trp_name = entry->name;
 				stream = nullptr;
+				*context = sceNpTrophyInstance.contexts.size(); // contexts start from 1
 				return CELL_OK;
 			}
 		}
@@ -124,7 +132,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 
 int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
-	sceNpTrophy->Warning("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
+	sceNpTrophy->Todo("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
@@ -144,11 +152,13 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatu
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
-	if (context >= sceNpTrophyInstance.contexts.size())
+	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
+		sceNpTrophy->Warning("sceNpTrophyRegisterContext: invalid context (%d)", context);
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = getContext(context);
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -219,11 +229,13 @@ int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspa
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (context >= sceNpTrophyInstance.contexts.size())
+	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
+		sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace: invalid context (%d)", context);
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
+	const sceNpTrophyInternalContext& ctxt = getContext(context);
 	if (!ctxt.trp_stream)
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
 
@@ -260,7 +272,7 @@ int sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetai
 
 	std::string path;
 	rXmlDocument doc;
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
+	const sceNpTrophyInternalContext& ctxt = getContext(context);
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
 	doc.Load(path);
 
@@ -316,7 +328,7 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
+	sceNpTrophyInternalContext& ctxt = getContext(context);
 	if (trophyId >= (s32)ctxt.tropusr->GetTrophiesCount())
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	if (ctxt.tropusr->GetTrophyUnlockState(trophyId))
@@ -351,15 +363,20 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
+		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: invalid context (%d)", context);
+		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+	}
 	// TODO: There are other possible errors
 
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
-	*count = ctxt.tropusr->GetTrophiesCount();
-	if (*count > 128)
+	const sceNpTrophyInternalContext& ctxt = getContext(context);
+	u32 count_ = ctxt.tropusr->GetTrophiesCount();
+	*count = count_;
+	if (count_ > 128)
 		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
 
 	// Pack up to 128 bools in u32 flag_bits[4]
-	for (u32 id=0; id<*count; id++)
+	for (u32 id = 0; id < count_; id++)
 	{
 		if (ctxt.tropusr->GetTrophyUnlockState(id))
 			flags->flag_bits[id/32] |= 1<<(id%32);
@@ -387,7 +404,7 @@ int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceN
 	
 	std::string path;
 	rXmlDocument doc;
-	sceNpTrophyInternalContext& ctxt = sceNpTrophyInstance.contexts[context];
+	const sceNpTrophyInternalContext& ctxt = getContext(context);
 	Emu.GetVFS().GetDevice("/dev_hdd0/home/00000001/trophy/" + ctxt.trp_name + "/TROPCONF.SFM", path);  // TODO: Get the path of the current user
 	doc.Load(path);
 

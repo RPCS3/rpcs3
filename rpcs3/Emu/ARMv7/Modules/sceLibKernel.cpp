@@ -10,6 +10,8 @@
 #include "sceLibKernel.h"
 #include "psv_sema.h"
 #include "psv_event_flag.h"
+#include "psv_mutex.h"
+#include "psv_cond.h"
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
@@ -522,7 +524,13 @@ s32 sceKernelGetSemaInfo(s32 semaId, vm::psv::ptr<SceKernelSemaInfo> pInfo)
 
 s32 sceKernelCreateMutex(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelMutexOptParam> pOptParam)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelCreateMutex(pName=0x%x, attr=0x%x, initCount=%d, pOptParam=0x%x)", pName, attr, initCount, pOptParam);
+
+	std::shared_ptr<psv_mutex_t> mutex(new psv_mutex_t(pName.get_ptr(), attr, initCount));
+
+	const s32 id = g_psv_mutex_list.add(mutex);
+
+	return id;
 }
 
 s32 sceKernelDeleteMutex(s32 mutexId)
@@ -616,7 +624,13 @@ s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::psv::ptr<SceKernelLwMutexInfo
 
 s32 sceKernelCreateCond(vm::psv::ptr<const char> pName, u32 attr, s32 mutexId, vm::psv::ptr<const SceKernelCondOptParam> pOptParam)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelCreateCond(pName=0x%x, attr=0x%x, mutexId=0x%x, pOptParam=0x%x)", pName, attr, mutexId, pOptParam);
+
+	std::shared_ptr<psv_cond_t> cond(new psv_cond_t(pName.get_ptr(), attr, mutexId));
+
+	const s32 id = g_psv_cond_list.add(cond);
+
+	return id;
 }
 
 s32 sceKernelDeleteCond(s32 condId)

@@ -583,7 +583,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXDMA.cpp">
       <Filter>Emu\GPU\RSX</Filter>
-	</ClCompile>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
@@ -850,6 +850,12 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceSha.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\psv_mutex.cpp">
+      <Filter>Emu\CPU\ARMv7\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ARMv7\Modules\psv_cond.cpp">
+      <Filter>Emu\CPU\ARMv7\Objects</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1353,7 +1359,7 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXDMA.h">
       <Filter>Emu\GPU\RSX</Filter>
-	</ClInclude>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
@@ -1512,6 +1518,12 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\sceNpCommon.h">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\psv_mutex.h">
+      <Filter>Emu\CPU\ARMv7\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\ARMv7\Modules\psv_cond.h">
+      <Filter>Emu\CPU\ARMv7\Objects</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

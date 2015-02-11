@@ -295,9 +295,6 @@ public:
 	u32 SRR0;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
-	u64 R_ADDR; // reservation address
-	u64 R_DATA[16]; // lock line data (BE)
-
 	std::shared_ptr<EventPort> SPUPs[64]; // SPU Thread Event Ports
 	EventManager SPUQs; // SPU Queue Mapping
 	std::shared_ptr<SpuGroupInfo> group; // associated SPU Thread Group (null for raw spu)

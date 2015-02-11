@@ -2500,39 +2500,16 @@ private:
 	}
 	void MFOCRF(u32 a, u32 rd, u32 crm)
 	{
-		/*
-		if(a)
-		{
-			u32 n = 0, count = 0;
-			for(u32 i = 0; i < 8; ++i)
-			{
-				if(crm & (1 << i))
-				{
-					n = i;
-					count++;
-				}
-			}
-
-			if(count == 1)
-			{
-				//RD[32+4*n : 32+4*n+3] = CR[4*n : 4*n+3];
-				u8 offset = n * 4;
-				CPU.GPR[rd] = (CPU.GPR[rd] & ~(0xf << offset)) | ((u32)CPU.GetCR(7 - n) << offset);
-			}
-			else
-				CPU.GPR[rd] = 0;
-		}
-		else
-		{
-		*/
 		CPU.GPR[rd] = CPU.CR.CR;
-		//}
 	}
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = vm::get_ref<u32>(vm::cast(CPU.R_ADDR));
-		CPU.GPR[rd] = re32((u32)CPU.R_VALUE);
+		const u32 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+
+		be_t<u32> value;
+		vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+
+		CPU.GPR[rd] = value;
 	}
 	void LDX(u32 rd, u32 ra, u32 rb)
 	{
@@ -2682,9 +2659,12 @@ private:
 	}
 	void LDARX(u32 rd, u32 ra, u32 rb)
 	{
-		CPU.R_ADDR = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.R_VALUE = vm::get_ref<u64>(vm::cast(CPU.R_ADDR));
-		CPU.GPR[rd] = re64(CPU.R_VALUE);
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+
+		be_t<u64> value;
+		vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));
+
+		CPU.GPR[rd] = value;
 	}
 	void DCBF(u32 ra, u32 rb)
 	{
@@ -2800,15 +2780,8 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		if (CPU.R_ADDR == addr)
-		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u32>(vm::cast(CPU.R_ADDR)), re32((u32)CPU.GPR[rs]), (u32)CPU.R_VALUE) == (u32)CPU.R_VALUE);
-		}
-		else
-		{
-			CPU.SetCR_EQ(0, false);
-		}
-		CPU.R_ADDR = 0;
+		const be_t<u32> value = be_t<u32>::make((u32)CPU.GPR[rs]);
+		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 	}
 	void STWX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2859,15 +2832,8 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		if (CPU.R_ADDR == addr)
-		{
-			CPU.SetCR_EQ(0, InterlockedCompareExchange(vm::get_ptr<volatile u64>(vm::cast(CPU.R_ADDR)), re64(CPU.GPR[rs]), CPU.R_VALUE) == CPU.R_VALUE);
-		}
-		else
-		{
-			CPU.SetCR_EQ(0, false);
-		}
-		CPU.R_ADDR = 0;
+		const be_t<u64> value = be_t<u64>::make(CPU.GPR[rs]);
+		CPU.SetCR_EQ(0, vm::reservation_update(vm::cast(addr), &value, sizeof(value)));
 	}
 	void STBX(u32 rs, u32 ra, u32 rb)
 	{
@@ -2945,9 +2911,7 @@ private:
 	}
 	void ECIWX(u32 rd, u32 ra, u32 rb)
 	{
-		//HACK!
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		CPU.GPR[rd] = vm::read32(vm::cast(addr));
+		throw __FUNCTION__;
 	}
 	void LHZUX(u32 rd, u32 ra, u32 rb)
 	{
@@ -3020,9 +2984,7 @@ private:
 	}
 	void ECOWX(u32 rs, u32 ra, u32 rb)
 	{
-		//HACK!
-		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
-		vm::write32(vm::cast(addr), (u32)CPU.GPR[rs]);
+		throw __FUNCTION__;
 	}
 	void STHUX(u32 rs, u32 ra, u32 rb)
 	{

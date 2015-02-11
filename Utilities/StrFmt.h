@@ -177,6 +177,8 @@ namespace fmt
 	std::string to_udec(u64 value);
 	std::string to_sdec(s64 value);
 
+	std::string toupper(std::string source);
+
 	namespace detail
 	{
 		size_t get_fmt_start(const char* fmt, size_t len);
@@ -198,6 +200,10 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
@@ -217,6 +223,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
@@ -238,6 +248,10 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
@@ -257,6 +271,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
@@ -278,6 +296,10 @@ namespace fmt
 				{
 					return to_hex((u8)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u8)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd')
 				{
 					return to_sdec(arg);
@@ -297,6 +319,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex((u16)arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u16)arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd')
 				{
@@ -318,6 +344,10 @@ namespace fmt
 				{
 					return to_hex((u32)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u32)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd')
 				{
 					return to_sdec(arg);
@@ -337,6 +367,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex((u64)arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u64)arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd')
 				{
@@ -358,6 +392,10 @@ namespace fmt
 				{
 					return to_hex((u32&)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u32&)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'f')
 				{
 					return std::to_string(arg);
@@ -378,6 +416,10 @@ namespace fmt
 				{
 					return to_hex((u64&)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u64&)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'f')
 				{
 					return std::to_string(arg);
@@ -394,7 +436,7 @@ namespace fmt
 		{
 			static std::string text(const char* fmt, size_t len, bool arg)
 			{
-				if (fmt[len - 1] == 'x')
+				if (fmt[len - 1] == 'x' || fmt[len - 1] == 'X')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
@@ -579,4 +621,6 @@ namespace fmt
 	std::string merge(std::vector<std::string> source, const std::string& separator);
 	std::string merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator);
 	std::string tolower(std::string source);
+	std::string toupper(std::string source);
+	std::string escape(std::string source);
 }

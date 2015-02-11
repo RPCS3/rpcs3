@@ -57,7 +57,9 @@
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_cond.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\psv_event_flag.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_mutex.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\psv_sema.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceAppMgr.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceAppUtil.cpp" />
@@ -335,7 +337,9 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_cond.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_event_flag.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_mutex.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_sema.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceAppUtil.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceGxm.h" />

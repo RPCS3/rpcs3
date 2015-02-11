@@ -10,17 +10,15 @@ enum ARMv7InstructionSet
 	ThumbEE
 };
 
+enum armv7_debug_flags : u32
+{
+	DF_DISASM = 1 << 0,
+	DF_PRINT  = 1 << 1,
+	DF_NO_EXE = 1 << 2,
+};
+
 struct ARMv7Context
 {
-	ARMv7Thread& thread;
-
-	ARMv7Context(ARMv7Thread& thread) : thread(thread) {}
-
-	void write_pc(u32 value);
-	u32 read_pc();
-	u32 get_stack_arg(u32 pos);
-	void fast_call(u32 addr);
-
 	union
 	{
 		u32 GPR[15];
@@ -116,9 +114,6 @@ struct ARMv7Context
 
 	u32 TLS;
 
-	u32 R_ADDR;
-	u64 R_DATA;
-
 	struct perf_counter
 	{
 		u32 event;
@@ -126,6 +121,18 @@ struct ARMv7Context
 	};
 
 	std::array<perf_counter, 6> counters;
+
+	ARMv7Thread& thread;
+
+	u32 debug; // debug flags
+	std::string debug_str;
+
+	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(/*DF_DISASM | DF_PRINT*/ 0) {}
+
+	void write_pc(u32 value);
+	u32 read_pc();
+	u32 get_stack_arg(u32 pos);
+	void fast_call(u32 addr);
 
 	void write_gpr(u32 n, u32 value)
 	{

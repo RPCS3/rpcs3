@@ -11,6 +11,11 @@
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 
+extern "C"
+{
+#include "libswscale/swscale.h"
+}
+
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0
 
@@ -2003,42 +2008,82 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV3062
 	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
 	{
-		m_context_dma_img_dst = ARGS(0);
+		if (count == 1)
+		{
+			m_context_dma_img_dst = ARGS(0);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3062_SET_CONTEXT_DMA_IMAGE__DESTIN: unknown arg count (%d)", count);
+		}
 		break;
 	}
 
 	case NV3062_SET_OFFSET_DESTIN:
 	{
-		m_dst_offset = ARGS(0);
+		if (count == 1)
+		{
+			m_dst_offset = ARGS(0);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3062_SET_OFFSET_DESTIN: unknown arg count (%d)", count);
+		}
 		break;
 	}
 
 	case NV3062_SET_COLOR_FORMAT:
 	{
-		m_color_format = ARGS(0);
-		m_color_format_src_pitch = ARGS(1);
-		m_color_format_dst_pitch = ARGS(1) >> 16;
+		if (count == 2 || count == 4)
+		{
+			m_color_format = ARGS(0);
+			m_color_format_src_pitch = ARGS(1);
+			m_color_format_dst_pitch = ARGS(1) >> 16;
+
+			if (count == 4)
+			{
+				if (ARGS(2))
+				{
+					LOG_ERROR(RSX, "NV3062_SET_COLOR_FORMAT: unknown arg2 value (0x%x)", ARGS(2));
+				}
+
+				m_dst_offset = ARGS(3);
+			}
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3062_SET_COLOR_FORMAT: unknown arg count (%d)", count);
+		}
 		break;
 	}
 
 	// NV309E
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
 	{
-		if (u32 value = ARGS(0))
+		if (count == 1)
 		{
-			LOG_WARNING(RSX, "TODO: NV309E_SET_CONTEXT_DMA_IMAGE: 0x%x", value);
+			m_context_dma_img_src = ARGS(0);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV309E_SET_CONTEXT_DMA_IMAGE: unknown arg count (%d)", count);
 		}
 		break;
 	}
 
 	case NV309E_SET_FORMAT:
 	{
-		const u8 height = ARGS(0) >> 24;
-		const u8 width = ARGS(0) >> 16;
-		const u8 format = ARGS(0);
-		const u32 offset = ARGS(1);
-
-		LOG_WARNING(RSX, "TODO: NV309E_SET_FORMAT: Format:0x%x, Width:%d, Height:%d, Offset:0x%x", format, width, height, offset);
+		if (count == 2)
+		{
+			m_swizzle_format = ARGS(0);
+			m_swizzle_width = ARGS(0) >> 16;
+			m_swizzle_height = ARGS(0) >> 24;
+			m_swizzle_offset = ARGS(1);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV309E_SET_FORMAT: unknown arg count (%d)", count);
+		}
 		break;
 	}
 
@@ -2086,7 +2131,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 		if (count >= 5)
 		{
-			LOG_WARNING(RSX, "NV308A_COLOR: count = %d", count);
+			LOG_ERROR(RSX, "NV308A_COLOR: unknown arg count (%d)", count);
 		}
 
 		m_fragment_constants.push_back(c);
@@ -2098,69 +2143,180 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	// NV3089
 	case NV3089_SET_CONTEXT_DMA_IMAGE:
 	{
-		m_context_dma_img_src = ARGS(0);
+		if (count == 1)
+		{
+			m_context_dma_img_src = ARGS(0);
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3089_SET_CONTEXT_DMA_IMAGE: unknown arg count (%d)", count);
+		}
 		break;
 	}
 
 	case NV3089_SET_CONTEXT_SURFACE:
 	{
-		if (ARGS(0) != CELL_GCM_CONTEXT_SURFACE2D)
+		if (count == 1)
 		{
-			LOG_ERROR(RSX, "NV3089_SET_CONTEXT_SURFACE: Unsupported surface (0x%x)", ARGS(0));
+			m_context_surface = ARGS(0);
+
+			if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D && m_context_surface != CELL_GCM_CONTEXT_SWIZZLE2D)
+			{
+				LOG_ERROR(RSX, "NV3089_SET_CONTEXT_SURFACE: unknown surface (0x%x)", ARGS(0));
+			}
+		}
+		else
+		{
+			LOG_ERROR(RSX, "NV3089_SET_CONTEXT_SURFACE: unknown arg count (%d)", count);
 		}
 		break;
 	}
 
 	case NV3089_IMAGE_IN_SIZE:
 	{
-		u16 width = ARGS(0);
-		u16 height = ARGS(0) >> 16;
+		const u16 width = ARGS(0);
+		const u16 height = ARGS(0) >> 16;
+		const u16 pitch = ARGS(1);
 
-		u16 pitch = ARGS(1);
-		u8 origin = ARGS(1) >> 16;
-		u8 inter = ARGS(1) >> 24;
+		const u8 origin = ARGS(1) >> 16;
+		if (origin != 2 /* CELL_GCM_TRANSFER_ORIGIN_CORNER */)
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", origin);
+		}
 
-		u32 offset = ARGS(2);
+		const u8 inter = ARGS(1) >> 24;
+		if (inter != 0 /* CELL_GCM_TRANSFER_INTERPOLATOR_ZOH */ && inter != 1 /* CELL_GCM_TRANSFER_INTERPOLATOR_FOH */)
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", inter);
+		}
 
-		u16 u = ARGS(3);
-		u16 v = ARGS(3) >> 16;
+		const u32 offset = ARGS(2);
+
+		const u16 u = ARGS(3); // inX (currently ignored)
+		const u16 v = ARGS(3) >> 16; // inY (currently ignored)
 
 		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
 		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
 
-		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: width=%d, height=%d, pitch=%d, origin=%d, inter=%d, offset=0x%x, u=%d, v=%d", width, height, pitch, origin, inter, offset, u, v);
-		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: m_dst_offset=0x%x, m_color: conv_in_h=0x%x, format_src_pitch=0x%x, conv_in_x=0x%x, conv_in_y=0x%x, conv_out_x=0x%x, conv_out_y=0x%x",
-			m_dst_offset, m_color_conv_in_h, m_color_format_src_pitch, m_color_conv_in_x, m_color_conv_in_y, m_color_conv_out_x, m_color_conv_out_y);
-
-		for (u16 y=0; y<m_color_conv_in_h; ++y)
+		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
 		{
-			for (u16 x=0; x<m_color_format_src_pitch/4/*m_color_conv_in_w*/; ++x)
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Swizzle2D not implemented");
+		}
+		else if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D)
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", m_context_surface);
+		}
+
+		if (m_color_format != 4 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 */ && m_color_format != 10 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 */)
+		{
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_color_format (%d)", m_color_format);
+		}
+
+		const u32 in_bpp = m_color_format == 4 ? 2 : 4; // bytes per pixel
+		const u32 out_bpp = m_color_conv_fmt == 7 ? 2 : 4;
+
+		const s32 out_w = (s32)(u64(width) * (1 << 20) / m_color_conv_dsdx);
+		const s32 out_h = (s32)(u64(height) * (1 << 20) / m_color_conv_dtdy);
+
+		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x, inX=%f, inY=%f, scaleX=%f, scaleY=%f",
+			width, height, pitch, offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
+
+		std::unique_ptr<u8[]> temp;
+		
+		if (in_bpp != out_bpp && width != out_w && height != out_h)
+		{
+			// resize/convert if necessary
+
+			temp.reset(new u8[out_bpp * out_w * out_h]);
+
+			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
+			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_BGRA; // ???
+
+			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+
+			int in_line = in_bpp * width;
+			u8* out_ptr = temp.get();
+			int out_line = out_bpp * out_w;
+
+			sws_scale(sws.get(), &pixels_src, &in_line, 0, height, &out_ptr, &out_line);
+
+			pixels_src = temp.get(); // use resized image as a source
+		}
+
+		if (m_color_conv_out_w != m_color_conv_clip_w || m_color_conv_out_w != out_w ||
+			m_color_conv_out_h != m_color_conv_clip_h || m_color_conv_out_h != out_h ||
+			m_color_conv_out_x || m_color_conv_out_y || m_color_conv_clip_x || m_color_conv_clip_y)
+		{
+			// clip if necessary
+
+			for (s32 y = m_color_conv_clip_y, dst_y = m_color_conv_out_y; y < out_h; y++, dst_y++)
 			{
-				const u32 src_offset = (m_color_conv_in_y + y) * m_color_format_src_pitch + (m_color_conv_in_x + x) * 4;
-				const u32 dst_offset = (m_color_conv_out_y + y) * m_color_format_dst_pitch + (m_color_conv_out_x + x) * 4;
-				//(u32&)pixels_dst[dst_offset] = (u32&)pixels_src[src_offset];
+				if (dst_y >= 0 && dst_y < m_color_conv_out_h)
+				{
+					// destination line
+					u8* dst_line = pixels_dst + dst_y * out_bpp * m_color_conv_out_w + std::min<s32>(std::max<s32>(m_color_conv_out_x, 0), m_color_conv_out_w);
+					size_t dst_max = std::min<s32>(std::max<s32>((s32)m_color_conv_out_w - m_color_conv_out_x, 0), m_color_conv_out_w) * out_bpp;
+
+					if (y >= 0 && y < std::min<s32>(m_color_conv_clip_h, out_h))
+					{
+						// source line
+						u8* src_line = pixels_src + y * out_bpp * out_w + std::min<s32>(std::max<s32>(m_color_conv_clip_x, 0), m_color_conv_clip_w);
+						size_t src_max = std::min<s32>(std::max<s32>((s32)m_color_conv_clip_w - m_color_conv_clip_x, 0), m_color_conv_clip_w) * out_bpp;
+
+						std::pair<u8*, size_t>
+							z0 = { src_line + 0, std::min<size_t>(dst_max, std::max<s64>(0, m_color_conv_clip_x)) },
+							d0 = { src_line + z0.second, std::min<size_t>(dst_max - z0.second, src_max) },
+							z1 = { src_line + d0.second, dst_max - z0.second - d0.second };
+
+						memset(z0.first, 0, z0.second);
+						memcpy(d0.first, src_line, d0.second);
+						memset(z1.first, 0, z1.second);
+					}
+					else
+					{
+						memset(dst_line, 0, dst_max);
+					}
+				}
 			}
 		}
+		else
+		{
+			memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
+		}
+
 		break;
 	}
 
 	case NV3089_SET_COLOR_CONVERSION:
 	{
 		m_color_conv = ARGS(0);
+		if (m_color_conv != 1 /* CELL_GCM_TRANSFER_CONVERSION_TRUNCATE */)
+		{
+			LOG_ERROR(RSX, "NV3089_SET_COLOR_CONVERSION: unknown color conv (%d)", m_color_conv);
+		}
+
 		m_color_conv_fmt = ARGS(1);
+		if (m_color_conv_fmt != 3 /* CELL_GCM_TRANSFER_SCALE_FORMAT_A8R8G8B8 */ && m_color_conv_fmt != 7 /* CELL_GCM_TRANSFER_SCALE_FORMAT_R5G6B5 */)
+		{
+			LOG_ERROR(RSX, "NV3089_SET_COLOR_CONVERSION: unknown format (%d)", m_color_conv_fmt);
+		}
+
 		m_color_conv_op = ARGS(2);
-		m_color_conv_in_x = ARGS(3);
-		m_color_conv_in_y = ARGS(3) >> 16;
-		m_color_conv_in_w = ARGS(4);
-		m_color_conv_in_h = ARGS(4) >> 16;
+		if (m_color_conv_op != 3 /* CELL_GCM_TRANSFER_OPERATION_SRCCOPY */)
+		{
+			LOG_ERROR(RSX, "NV3089_SET_COLOR_CONVERSION: unknown color conv op (%d)", m_color_conv_op);
+		}
+
+		m_color_conv_clip_x = ARGS(3);
+		m_color_conv_clip_y = ARGS(3) >> 16;
+		m_color_conv_clip_w = ARGS(4);
+		m_color_conv_clip_h = ARGS(4) >> 16;
 		m_color_conv_out_x = ARGS(5);
 		m_color_conv_out_y = ARGS(5) >> 16;
 		m_color_conv_out_w = ARGS(6);
 		m_color_conv_out_h = ARGS(6) >> 16;
 		m_color_conv_dsdx = ARGS(7);
 		m_color_conv_dtdy = ARGS(8);
-
-		LOG_WARNING(RSX, "TODO: NV3089_SET_COLOR_CONVERSION");
 		break;
 	}
 
