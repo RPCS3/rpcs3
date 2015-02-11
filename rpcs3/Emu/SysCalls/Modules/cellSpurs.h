@@ -593,7 +593,7 @@ struct CellSpursEventFlag
 		u8 _u8[size];
 
 		// Real data
-		struct _CellSpursEventFlag
+		struct
 		{
 			be_t<u16> events;                    // 0x00 Event bits
 			be_t<u16> spuTaskPendingRecv;        // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
@@ -615,7 +615,7 @@ struct CellSpursEventFlag
 			be_t<u32> eventQueueId;              // 0x7C
 		} m;
 
-		static_assert(sizeof(_CellSpursEventFlag) == size, "Wrong _CellSpursEventFlag size");
+		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursEventFlag size");
 
 		SPURSManagerEventFlag *eventFlag;
 	};
@@ -652,7 +652,7 @@ struct CellSpursTaskset
 		u8 _u8[size];
 
 		// Real data
-		struct _CellSpursTaskset
+		struct
 		{
 			be_t<u128> running;                          // 0x00
 			be_t<u128> ready;                            // 0x10
@@ -678,7 +678,7 @@ struct CellSpursTaskset
 			u8 unk3[0x60];                               // 0x18A0
 		} m;
 
-		static_assert(sizeof(_CellSpursTaskset) == size, "Wrong _CellSpursTaskset size");
+		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursTaskset size");
 
 		SPURSManagerTaskset *taskset;
 	};
@@ -761,7 +761,7 @@ struct CellSpursTaskset2
 		u8 _u8[size];
 
 		// Real data
-		struct _CellSpursTaskset2
+		struct
 		{
 			be_t<u32> running_set[4];                    // 0x00
 			be_t<u32> ready_set[4];                      // 0x10
@@ -789,7 +789,7 @@ struct CellSpursTaskset2
 			u8 unk4[0x2900 - 0x2180];                    // 0x2180
 		} m;
 
-		static_assert(sizeof(_CellSpursTaskset2) == size, "Wrong _CellSpursTaskset2 size");
+		static_assert(sizeof(decltype(m)) == size, "Wrong _CellSpursTaskset2 size");
 	};
 };
 
