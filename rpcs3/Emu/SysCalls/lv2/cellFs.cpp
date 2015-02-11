@@ -41,7 +41,8 @@ struct FsRingBufferConfig
 
 s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<const void> arg, u64 size)
 {
-	sys_fs->Log("cellFsOpen(path=0x%x, flags=0x%x, fd=0x%x, arg=0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	sys_fs->Log("cellFsOpen(path_addr=0x%x, flags=0x%x, fd=0x%x, arg=0x%x, size=0x%llx)", path.addr(), flags, fd, arg, size);
+	sys_fs->Log("cellFsOpen(path='%s')", path.get_ptr());
 
 	const std::string _path = path.get_ptr();
 
@@ -171,7 +172,8 @@ s32 cellFsClose(u32 fd)
 
 s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 {
-	sys_fs->Warning("cellFsOpendir(path=0x%x, fd=0x%x)", path, fd);
+	sys_fs->Warning("cellFsOpendir(path_addr=0x%x, fd=0x%x)", path.addr(), fd);
+	sys_fs->Warning("cellFsOpendir(path='%s')", path.get_ptr());
 	
 	std::shared_ptr<vfsDirBase> dir(Emu.GetVFS().OpenDir(path.get_ptr()));
 	if (!dir || !dir->IsOpened())
@@ -219,7 +221,8 @@ s32 cellFsClosedir(u32 fd)
 
 s32 cellFsStat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 {
-	sys_fs->Warning("cellFsStat(path=0x%x, sb=0x%x)", path, sb);
+	sys_fs->Warning("cellFsStat(path_addr=0x%x, sb=0x%x)", path.addr(), sb);
+	sys_fs->Warning("cellFsStat(path='%s')", path.get_ptr());
 
 	const std::string _path = path.get_ptr();
 
@@ -327,7 +330,8 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 {
-	sys_fs->Warning("cellFsMkdir(path=0x%x, mode=0x%x)", path, mode);
+	sys_fs->Warning("cellFsMkdir(path_addr=0x%x, mode=0x%x)", path.addr(), mode);
+	sys_fs->Warning("cellFsMkdir(path='%s')", path.get_ptr());
 
 	const std::string _path = path.get_ptr();
 
@@ -343,7 +347,8 @@ s32 cellFsMkdir(vm::ptr<const char> path, u32 mode)
 
 s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to)
 {
-	sys_fs->Warning("cellFsRename(from=0x%x, to=0x%x)", from, to);
+	sys_fs->Warning("cellFsRename(from_addr=0x%x, to_addr=0x%x)", from.addr(), to.addr());
+	sys_fs->Warning("cellFsRename(from='%s', to='%s')", from.get_ptr(), to.get_ptr());
 
 	std::string _from = from.get_ptr();
 	std::string _to = to.get_ptr();
@@ -377,7 +382,8 @@ s32 cellFsRename(vm::ptr<const char> from, vm::ptr<const char> to)
 }
 s32 cellFsChmod(vm::ptr<const char> path, u32 mode)
 {
-	sys_fs->Todo("cellFsChmod(path=0x%x, mode=0x%x)", path, mode);
+	sys_fs->Todo("cellFsChmod(path_addr=0x%x, mode=0x%x)", path.addr(), mode);
+	sys_fs->Todo("cellFsChmod(path='%s')", path.get_ptr());
 
 	// TODO:
 
@@ -395,7 +401,8 @@ s32 cellFsFsync(u32 fd)
 
 s32 cellFsRmdir(vm::ptr<const char> path)
 {
-	sys_fs->Warning("cellFsRmdir(path=0x%x)", path);
+	sys_fs->Warning("cellFsRmdir(path_addr=0x%x)", path.addr());
+	sys_fs->Warning("cellFsRmdir(path='%s')", path.get_ptr());
 
 	std::string _path = path.get_ptr();
 
@@ -412,7 +419,8 @@ s32 cellFsRmdir(vm::ptr<const char> path)
 
 s32 cellFsUnlink(vm::ptr<const char> path)
 {
-	sys_fs->Warning("cellFsUnlink(path=0x%x)", path);
+	sys_fs->Warning("cellFsUnlink(path_addr=0x%x)", path.addr());
+	sys_fs->Warning("cellFsUnlink(path='%s')", path.get_ptr());
 
 	std::string _path = path.get_ptr();
 
@@ -484,7 +492,8 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 
 s32 cellFsTruncate(vm::ptr<const char> path, u64 size)
 {
-	sys_fs->Warning("cellFsTruncate(path=0x%x, size=0x%llx)", path, size);
+	sys_fs->Warning("cellFsTruncate(path_addr=0x%x, size=0x%llx)", path.addr(), size);
+	sys_fs->Warning("cellFsTruncate(path='%s')", path.get_ptr());
 
 	vfsFile f(path.get_ptr(), vfsReadWrite);
 	if (!f.IsOpened())
@@ -530,7 +539,8 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 
 s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
 {
-	sys_fs->Warning("cellFsGetBlockSize(path=0x%x, sector_size=0x%x, block_size=0x%x)", path, sector_size, block_size);
+	sys_fs->Warning("cellFsGetBlockSize(path_addr=0x%x, sector_size=0x%x, block_size=0x%x)", path.addr(), sector_size, block_size);
+	sys_fs->Warning("cellFsGetBlockSize(path='%s')", path.get_ptr());
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
@@ -540,7 +550,8 @@ s32 cellFsGetBlockSize(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::p
 
 s32 cellFsGetFreeSize(vm::ptr<const char> path, vm::ptr<u32> block_size, vm::ptr<u64> block_count)
 {
-	sys_fs->Warning("cellFsGetFreeSize(path=0x%x, block_size=0x%x, block_count=0x%x)", path, block_size, block_count);
+	sys_fs->Warning("cellFsGetFreeSize(path_addr=0x%x, block_size=0x%x, block_count=0x%x)", path.addr(), block_size, block_count);
+	sys_fs->Warning("cellFsGetFreeSize(path='%s')", path.get_ptr());
 
 	// TODO: Get real values. Currently, it always returns 40 GB of free space divided in 4 KB blocks
 	*block_size = 4096; // ?
@@ -857,7 +868,8 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 s32 cellFsSdataOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::ptr<const void> arg, u64 size)
 {
-	sys_fs->Warning("cellFsSdataOpen(path=0x%x, flags=0x%x, fd=0x%x, arg=0x%x, size=0x%llx) -> cellFsOpen()", path, flags, fd, arg, size);
+	sys_fs->Warning("cellFsSdataOpen(path_addr=0x%x, flags=0x%x, fd=0x%x, arg=0x%x, size=0x%llx) -> cellFsOpen()", path.addr(), flags, fd, arg, size);
+	sys_fs->Warning("cellFsSdataOpen(path='%s')", path.get_ptr());
 
 	/*if (flags != CELL_O_RDONLY)
 	return CELL_EINVAL;
@@ -983,7 +995,8 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, vm::ptr<void(vm::ptr
 
 s32 cellFsAioInit(vm::ptr<const char> mount_point)
 {
-	sys_fs->Warning("cellFsAioInit(mount_point=0x%x)", mount_point);
+	sys_fs->Warning("cellFsAioInit(mount_point_addr=0x%x)", mount_point.addr());
+	sys_fs->Warning("cellFsAioInit(mount_point='%s')", mount_point.get_ptr());
 
 	aio_init = true;
 	return CELL_OK;
@@ -991,7 +1004,8 @@ s32 cellFsAioInit(vm::ptr<const char> mount_point)
 
 s32 cellFsAioFinish(vm::ptr<const char> mount_point)
 {
-	sys_fs->Warning("cellFsAioFinish(mount_point=0x%x)", mount_point);
+	sys_fs->Warning("cellFsAioFinish(mount_point_addr=0x%x)", mount_point.addr());
+	sys_fs->Warning("cellFsAioFinish(mount_point='%s')", mount_point.get_ptr());
 
 	//aio_init = false;
 	return CELL_OK;

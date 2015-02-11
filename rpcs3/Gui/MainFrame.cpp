@@ -475,6 +475,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 #endif
 
 	cbox_camera->Append("Null");
+	cbox_camera->Append("Connected");
 
 	cbox_camera_type->Append("Unknown");
 	cbox_camera_type->Append("EyeToy");

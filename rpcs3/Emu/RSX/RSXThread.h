@@ -103,7 +103,6 @@ protected:
 	std::stack<u32> m_call_stack;
 	CellGcmControl* m_ctrl;
 	Timer m_timer_sync;
-	double m_fps_limit = 59.94;
 
 public:
 	GcmTileInfo m_tiles[m_tiles_count];
@@ -151,6 +150,7 @@ public:
 	float m_height_scale;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
+	double m_fps_limit = 59.94;
 
 public:
 	std::mutex m_cs_main;
