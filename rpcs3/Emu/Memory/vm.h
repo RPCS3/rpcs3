@@ -84,6 +84,21 @@ namespace vm
 		}
 	};
 
+    template<>
+    struct cast_ptr<unsigned long>
+    {
+        __forceinline static u32 cast(const unsigned long addr, const char* func)
+        {
+            const u32 res = static_cast<u32>(addr);
+            if (res != addr)
+            {
+                vm::error(addr, func);
+            }
+
+            return res;
+        }
+    };
+
 	template<>
 	struct cast_ptr<u32>
 	{

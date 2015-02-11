@@ -252,7 +252,7 @@ public:
 		else
 		{
 			assert(!"Invalid ID type");
-			return{};
+			return std::set<u32>{};
 		}
 	}
 };
