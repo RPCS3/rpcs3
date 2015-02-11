@@ -1,5 +1,7 @@
 #pragma once
 
+#define IS_LE_MACHINE
+
 union _CRT_ALIGN(16) u128
 {
 	u64 _u64[2];
@@ -136,16 +138,28 @@ union _CRT_ALIGN(16) u128
 			}
 		};
 
+		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator [] (u32 index)
 		{
 			assert(index < 128);
-			return bit_element(data[index / 64], 1ull << (index % 64));
+
+#ifdef IS_LE_MACHINE
+			return bit_element(data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+#else
+			return bit_element(data[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+#endif
 		}
 
+		// Index 0 returns the MSB and index 127 returns the LSB
 		const bool operator [] (u32 index) const
 		{
 			assert(index < 128);
-			return (data[index / 64] & (1ull << (index % 64))) != 0;
+
+#ifdef IS_LE_MACHINE
+			return (data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+#else
+			return (data[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+#endif
 		}
 
 	} _bit;
@@ -508,8 +522,6 @@ struct be_storage_t<T, 16>
 {
 	typedef u128 type;
 };
-
-#define IS_LE_MACHINE
 
 template<typename T, typename T2 = T>
 class be_t

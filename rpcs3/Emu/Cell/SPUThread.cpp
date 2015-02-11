@@ -1003,7 +1003,14 @@ void SPUThread::StopAndSignal(u32 code)
 
 	case 0x003:
 	{
-		GPR[3]._u64[1] = m_code3_func(*this);
+		auto iter = m_addr_to_hle_function_map.find(PC);
+		assert(iter != m_addr_to_hle_function_map.end());
+
+		auto return_to_caller = iter->second(*this);
+		if (return_to_caller)
+		{
+			SetBranch(GPR[0]._u32[3] & 0x3fffc);
+		}
 		break;
 	}
 

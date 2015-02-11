@@ -413,7 +413,7 @@ namespace loader
 			return ok;
 		}
 
-		handler::error_code elf32::load_data(u32 offset)
+		handler::error_code elf32::load_data(u32 offset, bool skip_writeable)
 		{
 			Elf_Machine machine = (Elf_Machine)(u16)(m_ehdr.is_le() ? m_ehdr.data_le.e_machine : m_ehdr.data_be.e_machine);
 
@@ -434,6 +434,11 @@ namespace loader
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, vaddr, memsz);
 
 							return loading_error;
+						}
+
+						if (skip_writeable == true && (phdr.data_be.p_flags & 2/*PF_W*/) != 0)
+						{
+							continue;
 						}
 
 						if (filesz)

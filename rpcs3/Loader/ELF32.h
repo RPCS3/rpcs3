@@ -132,7 +132,7 @@ namespace loader
 
 			error_code init(vfsStream& stream) override;
 			error_code load() override;
-			error_code load_data(u32 offset);
+			error_code load_data(u32 offset, bool skip_writeable = false);
 
 			virtual ~elf32() = default;
 		};

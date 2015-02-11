@@ -668,6 +668,9 @@
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Thread.cpp">
       <Filter>Emu\Audio\XAudio2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\ARMv7\ARMv7Decoder.cpp">
       <Filter>Emu\CPU\ARMv7</Filter>
     </ClCompile>
