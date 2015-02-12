@@ -2,20 +2,20 @@
 
 #define PAGE_4K(x) (x + 4095) & ~(4095)
 
-//#include <emmintrin.h>
-
 struct MemInfo
 {
-	u64 addr;
+	u32 addr;
 	u32 size;
 
-	MemInfo(u64 _addr, u32 _size)
-		: addr(_addr)
-		, size(_size)
+	MemInfo(u32 addr, u32 size)
+		: addr(addr)
+		, size(size)
 	{
 	}
 
-	MemInfo() : addr(0), size(0)
+	MemInfo()
+		: addr(0)
+		, size(0)
 	{
 	}
 };
@@ -24,7 +24,7 @@ struct MemBlockInfo : public MemInfo
 {
 	void *mem;
 
-	MemBlockInfo(u64 _addr, u32 _size);
+	MemBlockInfo(u32 addr, u32 size);
 
 	void Free();
 
@@ -58,11 +58,11 @@ struct MemBlockInfo : public MemInfo
 
 struct VirtualMemInfo : public MemInfo
 {
-	u64 realAddress;
+	u32 realAddress;
 
-	VirtualMemInfo(u64 _addr, u64 _realaddr, u32 _size)
-		: MemInfo(_addr, _size)
-		, realAddress(_realaddr)
+	VirtualMemInfo(u32 addr, u32 realaddr, u32 size)
+		: MemInfo(addr, size)
+		, realAddress(realaddr)
 	{
 	}
 
@@ -77,7 +77,7 @@ class MemoryBlock
 {
 protected:
 	u8* mem;
-	u64 range_start;
+	u32 range_start;
 	u32 range_size;
 
 public:
@@ -93,25 +93,17 @@ private:
 public:
 	virtual void Delete();
 
-	u64 FixAddr(const u64 addr) const;
+	virtual MemoryBlock* SetRange(const u32 start, const u32 size);
 
-	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
-	virtual bool IsMyAddress(const u64 addr);
-	virtual bool IsLocked(const u64 addr) { return false; }
-
-	const u64 GetStartAddr() const { return range_start; }
-	const u64 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
+	const u32 GetStartAddr() const { return range_start; }
+	const u32 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
 	virtual const u32 GetSize() const { return range_size; }
 	virtual const u32 GetUsedSize() const { return GetSize(); }
-	u8* GetMem() const { return mem; }
-	virtual u8* GetMem(u64 addr) const { return mem + addr; }
 
-	virtual bool AllocFixed(u64 addr, u32 size) { return false; }
-	virtual u64 AllocAlign(u32 size, u32 align = 1) { return 0; }
+	virtual bool AllocFixed(u32 addr, u32 size) { return false; }
+	virtual u32 AllocAlign(u32 size, u32 align = 1) { return 0; }
 	virtual bool Alloc() { return false; }
-	virtual bool Free(u64 addr) { return false; }
-	virtual bool Lock(u64 addr, u32 size) { return false; }
-	virtual bool Unlock(u64 addr, u32 size) { return false; }
+	virtual bool Free(u32 addr) { return false; }
 };
 
 class DynamicMemoryBlockBase : public MemoryBlock
@@ -125,26 +117,19 @@ public:
 	const u32 GetSize() const { return m_max_size; }
 	const u32 GetUsedSize() const;
 
-	virtual bool IsInMyRange(const u64 addr);
-	virtual bool IsInMyRange(const u64 addr, const u32 size);
-	virtual bool IsMyAddress(const u64 addr);
-	virtual bool IsLocked(const u64 addr);
+	virtual bool IsInMyRange(const u32 addr, const u32 size = 1);
 
-	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
+	virtual MemoryBlock* SetRange(const u32 start, const u32 size);
 
 	virtual void Delete();
 
-	virtual bool AllocFixed(u64 addr, u32 size);
-	virtual u64 AllocAlign(u32 size, u32 align = 1);
+	virtual bool AllocFixed(u32 addr, u32 size);
+	virtual u32 AllocAlign(u32 size, u32 align = 1);
 	virtual bool Alloc();
-	virtual bool Free(u64 addr);
-	virtual bool Lock(u64 addr, u32 size);
-	virtual bool Unlock(u64 addr, u32 size);
-
-	virtual u8* GetMem(u64 addr) const;
+	virtual bool Free(u32 addr);
 
 private:
-	void AppendMem(u64 addr, u32 size);
+	void AppendMem(u32 addr, u32 size);
 };
 
 class VirtualMemoryBlock : public MemoryBlock
@@ -155,22 +140,20 @@ class VirtualMemoryBlock : public MemoryBlock
 public:
 	VirtualMemoryBlock();
 
-	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
-	virtual bool IsInMyRange(const u64 addr);
-	virtual bool IsInMyRange(const u64 addr, const u32 size);
-	virtual bool IsMyAddress(const u64 addr);
+	virtual MemoryBlock* SetRange(const u32 start, const u32 size);
+	virtual bool IsInMyRange(const u32 addr, const u32 size = 1);
 	virtual void Delete();
 
 	// maps real address to virtual address space, returns the mapped address or 0 on failure (if no address is specified the
 	// first mappable space is used)
-	virtual bool Map(u64 realaddr, u32 size, u64 addr);
-	virtual u64 Map(u64 realaddr, u32 size);
+	virtual bool Map(u32 realaddr, u32 size, u32 addr);
+	virtual u32 Map(u32 realaddr, u32 size);
 
 	// Unmap real address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
-	virtual bool UnmapRealAddress(u64 realaddr, u32& size);
+	virtual bool UnmapRealAddress(u32 realaddr, u32& size);
 
 	// Unmap address (please specify only starting point, no midway memory will be unmapped), returns the size of the unmapped area
-	virtual bool UnmapAddress(u64 addr, u32& size);
+	virtual bool UnmapAddress(u32 addr, u32& size);
 
 	// Reserve a certain amount so no one can use it, returns true on succces, false on failure
 	virtual bool Reserve(u32 size);
@@ -181,24 +164,23 @@ public:
 	// Return the total amount of reserved memory
 	virtual u32 GetReservedAmount();
 
-	bool Read32(const u64 addr, u32* value);
+	bool Read32(const u32 addr, u32* value);
 
-	bool Write32(const u64 addr, const u32 value);
+	bool Write32(const u32 addr, const u32 value);
 
 	// try to get the real address given a mapped address
 	// return true for success
-	bool getRealAddr(u64 addr, u64& result);
+	bool getRealAddr(u32 addr, u32& result);
 
-	u64 RealAddr(u64 addr)
+	u32 RealAddr(u32 addr)
 	{
-		u64 realAddr = 0;
+		u32 realAddr = 0;
 		getRealAddr(addr, realAddr);
 		return realAddr;
 	}
 
 	// return the mapped address given a real address, if not mapped return 0
-	u64 getMappedAddress(u64 realAddress);
+	u32 getMappedAddress(u32 realAddress);
 };
 
 typedef DynamicMemoryBlockBase DynamicMemoryBlock;
-

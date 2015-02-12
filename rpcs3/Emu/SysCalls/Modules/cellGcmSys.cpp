@@ -842,16 +842,16 @@ void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table)
 	table->eaAddress = offsetTable.eaAddress;
 }
 
-s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address)
+s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 {
 	cellGcmSys->Log("cellGcmIoOffsetToAddress(ioOffset=0x%x, address=0x%llx)", ioOffset, address);
 
-	u64 realAddr;
+	u32 realAddr;
 
 	if (!Memory.RSXIOMem.getRealAddr(ioOffset, realAddr)) 
 		return CELL_GCM_ERROR_FAILURE;
 
-	vm::write64(address, realAddr);
+	*address = realAddr;
 
 	return CELL_OK;
 }

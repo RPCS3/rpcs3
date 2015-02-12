@@ -27,7 +27,6 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id);
 s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
 u32 cellGcmGetMaxIoMapSize();
 void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table);
-s32 cellGcmIoOffsetToAddress(u32 ioOffset, u64 address);
 s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size);
 s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags);
 s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset);

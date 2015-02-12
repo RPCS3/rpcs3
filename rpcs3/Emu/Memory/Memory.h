@@ -72,9 +72,9 @@ public:
 		Close();
 	}
 
-	void RegisterPages(u64 addr, u32 size);
+	void RegisterPages(u32 addr, u32 size);
 
-	void UnregisterPages(u64 addr, u32 size);
+	void UnregisterPages(u32 addr, u32 size);
 
 	u32 InitRawSPU(MemoryBlock* raw_spu);
 
@@ -119,19 +119,19 @@ public:
 		return UserMemory->GetSize() - UserMemory->GetUsedSize();
 	}
 
-	u64 Alloc(const u32 size, const u32 align)
+	u32 Alloc(const u32 size, const u32 align)
 	{
 		return UserMemory->AllocAlign(size, align);
 	}
 
-	bool Free(const u64 addr)
+	bool Free(const u32 addr)
 	{
 		return UserMemory->Free(addr);
 	}
 
-	bool Map(const u64 addr, const u32 size);
+	bool Map(const u32 addr, const u32 size);
 
-	bool Unmap(const u64 addr);
+	bool Unmap(const u32 addr);
 };
 
 extern MemoryBase Memory;
