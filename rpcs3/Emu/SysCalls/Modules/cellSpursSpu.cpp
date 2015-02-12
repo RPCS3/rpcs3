@@ -525,12 +525,12 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
 
 /// SPURS kernel entry point
 bool spursKernelEntry(SPUThread & spu) {
-    //while (true) {
-    //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //    if (Emu.IsStopped()) {
-    //        return false;
-    //    }
-    //}
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (Emu.IsStopped()) {
+            return false;
+        }
+    }
 
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
     memset(ctxt, 0, sizeof(SpursKernelContext));
@@ -598,7 +598,7 @@ void spursSysServiceIdleHandler(SPUThread & spu, SpursKernelContext * ctxt) {
     bool shouldExit;
 
     while (true) {
-		vm::reservation_acquire(vm::get_ptr(spu.ls_offset + 0x100), vm::cast(ctxt->spurs.addr()), 128/*, [&spu](){ spu.Notify(); }*/);
+		vm::reservation_acquire(vm::get_ptr(spu.ls_offset + 0x100), vm::cast(ctxt->spurs.addr()), 128, [&spu](){ spu.Notify(); });
         auto spurs = vm::get_ptr<CellSpurs>(spu.ls_offset + 0x100);
 
         // Find the number of SPUs that are idling in this SPURS instance

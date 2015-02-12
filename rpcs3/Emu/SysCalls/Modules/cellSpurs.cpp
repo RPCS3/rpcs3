@@ -2660,7 +2660,7 @@ s64 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> t
 	return CELL_OK;
 #endif
 
-	return spursCreateTaskset(spurs, taskset, args, priority, maxContention, vm::ptr<const char>::make(0), CellSpursTaskset::size, 0);
+	return spursCreateTaskset(spurs, taskset, args, priority, maxContention, vm::ptr<const char>::make(0), 6400/*CellSpursTaskset::size*/, 0);
 }
 
 s64 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
@@ -2990,7 +2990,7 @@ s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> a
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	if (size != CellSpursTaskset::size && size != CellSpursTaskset2::size)
+	if (size != 6400/*CellSpursTaskset::size*/ && size != CellSpursTaskset2::size)
 	{
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
@@ -3425,7 +3425,7 @@ s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attr
 	attribute->m.sdk_version = sdk_version;
 	attribute->m.args = args;
 	memcpy(attribute->m.priority, priority.get_ptr(), 8);
-	attribute->m.taskset_size = CellSpursTaskset::size;
+	attribute->m.taskset_size = 6400/*CellSpursTaskset::size*/;
 	attribute->m.max_contention = max_contention;
 	return CELL_OK;
 #endif
