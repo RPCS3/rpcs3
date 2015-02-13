@@ -25,35 +25,32 @@
 
 namespace vm
 {
-#ifdef _WIN32
-	HANDLE g_memory_handle;
-#endif
-
-	void* g_priv_addr;
-
 	void* initialize()
 	{
 #ifdef _WIN32
-		g_memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
+		HANDLE memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
 
-		void* base_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // main memory
-		g_priv_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // memory mirror for privileged access
+		void* base_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
+		g_priv_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
+
+		CloseHandle(memory_handle);
 
 		return base_addr;
-
-		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		//shm_unlink("/rpcs3_vm");
-
 		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
 
 		if (memory_handle == -1)
 		{
-			printf("shm_open() failed\n");
+			printf("shm_open('/rpcs3_vm') failed\n");
 			return (void*)-1;
 		}
 
-		ftruncate(memory_handle, 0x100000000);
+		if (ftruncate(memory_handle, 0x100000000) == -1)
+		{
+			printf("ftruncate(memory_handle) failed\n");
+			shm_unlink("/rpcs3_vm");
+			return (void*)-1;
+		}
 
 		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
 		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
@@ -61,8 +58,6 @@ namespace vm
 		shm_unlink("/rpcs3_vm");
 
 		return base_addr;
-
-		//return mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 #endif
 	}
 
@@ -71,14 +66,16 @@ namespace vm
 #ifdef _WIN32
 		UnmapViewOfFile(g_base_addr);
 		UnmapViewOfFile(g_priv_addr);
-		CloseHandle(g_memory_handle);
 #else
 		munmap(g_base_addr, 0x100000000);
 		munmap(g_priv_addr, 0x100000000);
 #endif
 	}
 
-	void* const g_base_addr = (atexit(finalize), initialize());
+	void* g_base_addr = (atexit(finalize), initialize());
+	void* g_priv_addr;
+
+	std::array<atomic_le_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
 
 	class reservation_mutex_t
 	{
@@ -211,6 +208,12 @@ namespace vm
 		{
 			std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
+			u8 flags = g_page_info[addr >> 12].read_relaxed();
+			if (!(flags & page_writable) || !(flags & page_allocated) || (flags & page_no_reservations))
+			{
+				throw fmt::format("vm::reservation_acquire(addr=0x%x, size=0x%x) failed (invalid page flags: 0x%x)", addr, size, flags);
+			}
+
 			// silent unlocking to prevent priority boost for threads going to break reservation
 			//g_reservation_mutex.do_notify = false;
 
@@ -272,13 +275,9 @@ namespace vm
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
+		if (!check_addr(addr))
 		{
-			LV2_LOCK(0);
-
-			if (!Memory.IsGoodAddr(addr))
-			{
-				return false;
-			}
+			return false;
 		}
 
 		if (is_writing)
@@ -335,11 +334,157 @@ namespace vm
 		_reservation_break(addr);
 	}
 
-	bool check_addr(u32 addr)
+	void page_map(u32 addr, u32 size, u8 flags)
 	{
-		// Checking address before using it is unsafe.
-		// The only safe way to check it is to protect both actions (checking and using) with mutex that is used for mapping/allocation.
-		return false;
+		assert(size && (size | addr) % 4096 == 0 && flags < page_allocated);
+
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if (g_page_info[i].read_relaxed())
+			{
+				throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (already mapped at 0x%x)", addr, size, flags, i * 4096);
+			}
+		}
+
+		void* real_addr = vm::get_ptr(addr);
+		void* priv_addr = vm::get_priv_ptr(addr);
+
+#ifdef _WIN32
+		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
+		if (!VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !VirtualAlloc(real_addr, size, MEM_COMMIT, protection))
+#else
+		auto protection = flags & page_writable ? PROT_WRITE | PROT_READ : (flags & page_readable ? PROT_READ : PROT_NONE);
+		if (mprotect(priv_addr, size, PROT_READ | PROT_WRITE) || mprotect(real_addr, size, protection))
+#endif
+		{
+			throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (API)", addr, size, flags);
+		}
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if (g_page_info[i].exchange(flags | page_allocated))
+			{
+				throw fmt::format("vm::page_map(addr=0x%x, size=0x%x, flags=0x%x) failed (concurrent access at 0x%x)", addr, size, flags, i * 4096);
+			}
+		}
+
+		memset(priv_addr, 0, size); // ???
+	}
+
+	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
+	{
+		u8 flags_inv = flags_set & flags_clear;
+
+		assert(size && (size | addr) % 4096 == 0);
+
+		flags_test |= page_allocated;
+
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if ((g_page_info[i].read_relaxed() & flags_test) != (flags_test | page_allocated))
+			{
+				return false;
+			}
+		}
+
+		if (!flags_inv && !flags_set && !flags_clear)
+		{
+			return true;
+		}
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			_reservation_break(i * 4096);
+
+			const u8 f1 = g_page_info[i]._or(flags_set & ~flags_inv) & (page_writable | page_readable);
+			g_page_info[i]._and_not(flags_clear & ~flags_inv);
+			const u8 f2 = (g_page_info[i] ^= flags_inv) & (page_writable | page_readable);
+
+			if (f1 != f2)
+			{
+				void* real_addr = vm::get_ptr(i * 4096);
+
+#ifdef _WIN32
+				DWORD old;
+
+				auto protection = f2 & page_writable ? PAGE_READWRITE : (f2 & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
+				if (!VirtualProtect(real_addr, size, protection, &old))
+#else
+				auto protection = f2 & page_writable ? PROT_WRITE | PROT_READ : (f2 & page_readable ? PROT_READ : PROT_NONE);
+				if (mprotect(real_addr, size, protection))
+#endif
+				{
+					throw fmt::format("vm::page_protect(addr=0x%x, size=0x%x, flags_test=0x%x, flags_set=0x%x, flags_clear=0x%x) failed (API)", addr, size, flags_test, flags_set, flags_clear);
+				}
+			}
+		}
+
+		return true;
+	}
+
+	void page_unmap(u32 addr, u32 size)
+	{
+		assert(size && (size | addr) % 4096 == 0);
+
+		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			if (!(g_page_info[i].read_relaxed() & page_allocated))
+			{
+				throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (not mapped at 0x%x)", addr, size, i * 4096);
+			}
+		}
+
+		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		{
+			_reservation_break(i * 4096);
+
+			if (!(g_page_info[i].exchange(0) & page_allocated))
+			{
+				throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (concurrent access at 0x%x)", addr, size, i * 4096);
+			}
+		}
+
+		void* real_addr = vm::get_ptr(addr);
+		void* priv_addr = vm::get_priv_ptr(addr);
+
+#ifdef _WIN32
+		DWORD old;
+
+		if (!VirtualProtect(real_addr, size, PAGE_NOACCESS, &old) || !VirtualProtect(priv_addr, size, PAGE_NOACCESS, &old))
+#else
+		if (mprotect(real_addr, size, PROT_NONE) || mprotect(priv_addr, size, PROT_NONE))
+#endif
+		{
+			throw fmt::format("vm::page_unmap(addr=0x%x, size=0x%x) failed (API)", addr, size);
+		}
+	}
+
+	// Not checked if address is writable/readable. Checking address before using it is unsafe.
+	// The only safe way to check it is to protect both actions (checking and using) with mutex that is used for mapping/allocation.
+	bool check_addr(u32 addr, u32 size)
+	{
+		assert(size);
+
+		if (addr + (size - 1) < addr)
+		{
+			return false;
+		}
+
+		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+		{
+			if ((g_page_info[i].read_sync() & page_allocated) != page_allocated)
+			{
+				return false;
+			}
+		}
+		
+		return true;
 	}
 
 	//TODO
@@ -406,6 +551,19 @@ namespace vm
 			Memory.MainMem.Free(addr);
 		}
 
+		u32 user_space_alloc(u32 size)
+		{
+			return Memory.Userspace.AllocAlign(size, 1);
+		}
+		u32 user_space_fixed_alloc(u32 addr, u32 size)
+		{
+			return Memory.Userspace.AllocFixed(addr, size) ? addr : 0;
+		}
+		void user_space_dealloc(u32 addr)
+		{
+			Memory.Userspace.Free(addr);
+		}
+
 		u32 g_stack_offset = 0;
 
 		u32 stack_alloc(u32 size)
@@ -419,32 +577,6 @@ namespace vm
 		void stack_dealloc(u32 addr)
 		{
 			Memory.StackMem.Free(addr);
-		}
-
-		u32 sprx_alloc(u32 size)
-		{
-			return Memory.SPRXMem.AllocAlign(size, 1);
-		}
-		u32 sprx_fixed_alloc(u32 addr, u32 size)
-		{
-			return Memory.SPRXMem.AllocFixed(Memory.SPRXMem.GetStartAddr() + addr, size) ? Memory.SPRXMem.GetStartAddr() + addr : 0;
-		}
-		void sprx_dealloc(u32 addr)
-		{
-			Memory.SPRXMem.Free(addr);
-		}
-
-		u32 user_space_alloc(u32 size)
-		{
-			return Memory.PRXMem.AllocAlign(size, 1);
-		}
-		u32 user_space_fixed_alloc(u32 addr, u32 size)
-		{
-			return Memory.PRXMem.AllocFixed(addr, size) ? addr : 0;
-		}
-		void user_space_dealloc(u32 addr)
-		{
-			Memory.PRXMem.Free(addr);
 		}
 
 		void init()
@@ -471,13 +603,9 @@ namespace vm
 
 	location_info g_locations[memory_location_count] =
 	{
-		{ 0x00010000, 0x2FFF0000, ps3::main_alloc, ps3::main_fixed_alloc, ps3::main_dealloc },
+		{ 0x00010000, 0x1FFF0000, ps3::main_alloc, ps3::main_fixed_alloc, ps3::main_dealloc },
+		{ 0x20000000, 0x10000000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
 		{ 0xD0000000, 0x10000000, ps3::stack_alloc, ps3::stack_fixed_alloc, ps3::stack_dealloc },
-
-		//remove me
-		{ 0x00010000, 0x2FFF0000, ps3::sprx_alloc, ps3::sprx_fixed_alloc, ps3::sprx_dealloc },
-
-		{ 0x30000000, 0x10000000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
 	};
 
 	void close()
@@ -495,7 +623,7 @@ namespace vm
 		{
 			PPUThread& PPU = static_cast<PPUThread&>(CPU);
 
-			old_pos = (u32)PPU.GPR[1];
+			old_pos = vm::cast(PPU.GPR[1], "SP");
 			PPU.GPR[1] -= align(size, 8); // room minimal possible size
 			PPU.GPR[1] &= ~(align_v - 1); // fix stack alignment
 

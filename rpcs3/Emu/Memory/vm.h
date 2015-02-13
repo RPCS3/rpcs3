@@ -5,28 +5,32 @@ class CPUThread;
 
 namespace vm
 {
+	extern void* g_base_addr; // base address of ps3/psv virtual memory for common access
+	extern void* g_priv_addr; // base address of ps3/psv virtual memory for privileged access
+
 	enum memory_location : uint
 	{
 		main,
-		stack,
-
-		//remove me
-		sprx,
-
 		user_space,
+		stack,
 
 		memory_location_count
 	};
 
+	enum page_info_t : u8
+	{
+		page_readable           = (1 << 0),
+		page_writable           = (1 << 1),
+		page_executable         = (1 << 2),
+
+		page_fault_notification = (1 << 3),
+		page_no_reservations    = (1 << 4),
+
+		page_allocated          = (1 << 7),
+	};
+
 	static void set_stack_size(u32 size) {}
 	static void initialize_stack() {}
-
-#ifdef _WIN32
-	extern HANDLE g_memory_handle;
-#endif
-
-	extern void* g_priv_addr;
-	extern void* const g_base_addr;
 
 	// break the reservation, return true if it was successfully broken
 	bool reservation_break(u32 addr);
@@ -34,10 +38,22 @@ namespace vm
 	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback = nullptr);
 	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
+	// for internal use
 	bool reservation_query(u32 addr, bool is_writing);
+	// for internal use
 	void reservation_free();
 	// perform complete operation
 	void reservation_op(u32 addr, u32 size, std::function<void()> proc);
+
+	// for internal use
+	void page_map(u32 addr, u32 size, u8 flags);
+	// for internal use
+	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
+	// for internal use
+	void page_unmap(u32 addr, u32 size);
+
+	// unsafe address check
+	bool check_addr(u32 addr, u32 size = 1);
 
 	bool map(u32 addr, u32 size, u32 flags);
 	bool unmap(u32 addr, u32 size = 0, u32 flags = 0);
@@ -84,20 +100,22 @@ namespace vm
 		}
 	};
 
-    template<>
-    struct cast_ptr<unsigned long>
-    {
-        __forceinline static u32 cast(const unsigned long addr, const char* func)
-        {
-            const u32 res = static_cast<u32>(addr);
-            if (res != addr)
-            {
-                vm::error(addr, func);
-            }
+#ifdef __APPLE__
+	template<>
+	struct cast_ptr<unsigned long>
+	{
+		__forceinline static u32 cast(const unsigned long addr, const char* func)
+		{
+			const u32 res = static_cast<u32>(addr);
+			if (res != addr)
+			{
+				vm::error(addr, func);
+			}
 
-            return res;
-        }
-    };
+			return res;
+		}
+	};
+#endif
 
 	template<>
 	struct cast_ptr<u32>

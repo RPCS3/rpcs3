@@ -134,6 +134,7 @@ public:
 	u32 m_gcm_current_buffer;
 	u32 m_ctxt_addr;
 	u32 m_report_main_addr;
+	u32 m_label_addr;
 
 	// DMA
 	u32 dma_report;

@@ -200,7 +200,7 @@ void MemoryViewerPanel::ShowMemory()
 		{
 			u32 addr = m_addr + row * m_colcount + col;	
 
-			if (Memory.IsGoodAddr(addr))
+			if (vm::check_addr(addr))
 			{
 				const u8 rmem = vm::read8(addr);
 				t_mem_hex_str += wxString::Format("%02x ", rmem);

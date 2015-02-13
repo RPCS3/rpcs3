@@ -24,8 +24,10 @@
 Module *sysPrxForUser = nullptr;
 
 #define TLS_MAX 128
+#define TLS_SYS 0x30
 
 u32 g_tls_start; // start of TLS memory area
+u32 g_tls_size;
 
 std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
 
@@ -38,8 +40,9 @@ u32 ppu_get_tls(u32 thread)
 {
 	if (!g_tls_start)
 	{
-		g_tls_start = vm::cast(Memory.MainMem.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
-		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, size = 0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
+		g_tls_size = Emu.GetTLSMemsz() + TLS_SYS;
+		g_tls_start = Memory.MainMem.AllocAlign(g_tls_size * TLS_MAX, 4096); // memory for up to TLS_MAX threads
+		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, user_size=0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
 			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}
 
@@ -52,7 +55,7 @@ u32 ppu_get_tls(u32 thread)
 	{
 		if (g_tls_owners[i] == thread)
 		{
-			return g_tls_start + i * Emu.GetTLSMemsz(); // if already initialized, return TLS address
+			return g_tls_start + i * g_tls_size + TLS_SYS; // if already initialized, return TLS address
 		}
 	}
 
@@ -61,7 +64,8 @@ u32 ppu_get_tls(u32 thread)
 		u32 old = 0;
 		if (g_tls_owners[i].compare_exchange_strong(old, thread))
 		{
-			const u32 addr = g_tls_start + i * Emu.GetTLSMemsz(); // get TLS address
+			const u32 addr = g_tls_start + i * g_tls_size + TLS_SYS; // get TLS address
+			memset(vm::get_ptr(addr - TLS_SYS), 0, TLS_SYS); // initialize system area with zeros
 			memcpy(vm::get_ptr(addr), vm::get_ptr(Emu.GetTLSAddr()), Emu.GetTLSFilesz()); // initialize from TLS image
 			memset(vm::get_ptr(addr + Emu.GetTLSFilesz()), 0, Emu.GetTLSMemsz() - Emu.GetTLSFilesz()); // fill the rest with zeros
 			return addr;

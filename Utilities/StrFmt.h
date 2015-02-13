@@ -263,6 +263,7 @@ namespace fmt
 			}
 		};
 
+#ifdef __APPLE__
 		template<>
 		struct get_fmt<unsigned long>
 		{
@@ -286,6 +287,7 @@ namespace fmt
 				}
 			}
 		};
+#endif
 
 		template<>
 		struct get_fmt<u64>
@@ -383,6 +385,7 @@ namespace fmt
 			}
 		};
 
+#ifdef __APPLE__
 		template<>
 		struct get_fmt<long>
 		{
@@ -406,6 +409,7 @@ namespace fmt
 				}
 			}
 		};
+#endif
 
 		template<>
 		struct get_fmt<s64>

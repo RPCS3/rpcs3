@@ -887,6 +887,7 @@ struct cast_ppu_gpr<u32, false>
 	}
 };
 
+#ifdef __APPLE__
 template<>
 struct cast_ppu_gpr<unsigned long, false>
 {
@@ -900,6 +901,7 @@ struct cast_ppu_gpr<unsigned long, false>
 		return static_cast<unsigned long>(reg);
 	}
 };
+#endif
 
 template<>
 struct cast_ppu_gpr<u64, false>

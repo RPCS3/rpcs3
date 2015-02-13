@@ -101,7 +101,7 @@ namespace loader
 						segment.size = phdr.p_memsz;
 						segment.size_file = phdr.p_filesz;
 
-						segment.begin.set(vm::alloc(segment.size, vm::sprx));
+						segment.begin.set(vm::alloc(segment.size, vm::main));
 
 						if (!segment.begin)
 						{

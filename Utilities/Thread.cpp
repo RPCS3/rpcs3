@@ -9,8 +9,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
+#endif
 #include <signal.h>
 #include <ucontext.h>
 #endif
@@ -210,49 +212,50 @@ typedef ucontext_t x64_context;
 
 uint64_t* darwin_x64reg(x64_context *context, int reg)
 {
-    auto *state = &context->uc_mcontext->__ss;
-    switch(reg)
-    {
-        case 0: // RAX
-            return &state->__rax;
-        case 1: // RCX
-            return &state->__rcx;
-        case 2: // RDX
-            return &state->__rdx;
-        case 3: // RBX
-            return &state->__rbx;
-        case 4: // RSP
-            return &state->__rsp;
-        case 5: // RBP
-            return &state->__rbp;
-        case 6: // RSI
-            return &state->__rsi;
-        case 7: // RDI
-            return &state->__rdi;
-        case 8: // R8
-            return &state->__r8;
-        case 9: // R9
-            return &state->__r9;
-        case 10: // R10
-            return &state->__r10;
-        case 11: // R11
-            return &state->__r11;
-        case 12: // R12
-            return &state->__r12;
-        case 13: // R13
-            return &state->__r13;
-        case 14: // R14
-            return &state->__r14;
-        case 15: // R15
-            return &state->__r15;
-        case 16: // RIP
-            return &state->__rip;
-        default: // FAIL
-            assert(0);
-    }
+	auto *state = &context->uc_mcontext->__ss;
+	switch(reg)
+	{
+	case 0: // RAX
+		return &state->__rax;
+	case 1: // RCX
+		return &state->__rcx;
+	case 2: // RDX
+		return &state->__rdx;
+	case 3: // RBX
+		return &state->__rbx;
+	case 4: // RSP
+		return &state->__rsp;
+	case 5: // RBP
+		return &state->__rbp;
+	case 6: // RSI
+		return &state->__rsi;
+	case 7: // RDI
+		return &state->__rdi;
+	case 8: // R8
+		return &state->__r8;
+	case 9: // R9
+		return &state->__r9;
+	case 10: // R10
+		return &state->__r10;
+	case 11: // R11
+		return &state->__r11;
+	case 12: // R12
+		return &state->__r12;
+	case 13: // R13
+		return &state->__r13;
+	case 14: // R14
+		return &state->__r14;
+	case 15: // R15
+		return &state->__r15;
+	case 16: // RIP
+		return &state->__rip;
+	default: // FAIL
+		assert(0);
+	}
 }
 
 #else
+
 typedef decltype(REG_RIP) reg_table_t;
 
 static const reg_table_t reg_table[17] =
@@ -262,6 +265,7 @@ static const reg_table_t reg_table[17] =
 };
 
 #define X64REG(context, reg) (&context->uc_mcontext.gregs[reg_table[reg]])
+
 #endif // __APPLE__
 
 #endif
@@ -379,7 +383,7 @@ void signal_handler(int sig, siginfo_t* info, void* uct)
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
 
 #ifdef __APPLE__
-    const bool is_writing = ((ucontext_t*)uct)->uc_mcontext->__es.__err & 0x2;
+	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext->__es.__err & 0x2;
 #else
 	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
