@@ -9,8 +9,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
+#endif
 #include <signal.h>
 #include <ucontext.h>
 #endif

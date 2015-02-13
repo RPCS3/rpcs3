@@ -359,7 +359,7 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 			addr = (addr + (align - 1)) & ~(align - 1);
 		}
 
-		//LOG_NOTICE(MEMORY, "AllocAlign(size=0x%x) -> 0x%llx", size, addr);
+		//LOG_NOTICE(MEMORY, "AllocAlign(size=0x%x) -> 0x%x", size, addr);
 
 		AppendMem(addr, size);
 
@@ -382,7 +382,7 @@ bool DynamicMemoryBlockBase::Free(u32 addr)
 	{
 		if (addr == m_allocated[num].addr)
 		{
-			//LOG_NOTICE(MEMORY, "Free(0x%llx)", addr);
+			//LOG_NOTICE(MEMORY, "Free(0x%x)", addr);
 
 			m_allocated.erase(m_allocated.begin() + num);
 			return true;

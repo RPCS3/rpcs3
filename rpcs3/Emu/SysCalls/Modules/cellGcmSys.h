@@ -18,22 +18,7 @@ struct CellGcmOffsetTable
 };
 
 // Auxiliary functions
-void InitOffsetTable();
-u32 gcmGetLocalMemorySize();
-
-// libgcm functions
-s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id);
-
-s32 cellGcmAddressToOffset(u64 address, vm::ptr<be_t<u32>> offset);
-u32 cellGcmGetMaxIoMapSize();
-void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table);
-s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size);
-s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags);
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset);
-s32 cellGcmReserveIoMapSize(u32 size);
-s32 cellGcmUnmapEaIoAddress(u64 ea);
-s32 cellGcmUnmapIoAddress(u64 io);
-s32 cellGcmUnreserveIoMapSize(u32 size);
+s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict);
 
 // Syscall
 s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count);

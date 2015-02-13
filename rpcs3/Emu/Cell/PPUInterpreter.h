@@ -2504,7 +2504,7 @@ private:
 	}
 	void LWARX(u32 rd, u32 ra, u32 rb)
 	{
-		const u32 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
+		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
 		be_t<u32> value;
 		vm::reservation_acquire(&value, vm::cast(addr), sizeof(value));

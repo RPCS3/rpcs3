@@ -437,7 +437,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		{
 			//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 
-			vm::reservation_acquire(vm::get_ptr(ls_offset + lsa), ea, 128, [this]()
+			vm::reservation_acquire(vm::get_ptr(ls_offset + lsa), vm::cast(ea), 128, [this]()
 			{
 				//std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(tid);
 
@@ -457,7 +457,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		}
 		else if (op == MFC_PUTLLC_CMD) // store conditional
 		{
-			if (vm::reservation_update(ea, vm::get_ptr(ls_offset + lsa), 128))
+			if (vm::reservation_update(vm::cast(ea), vm::get_ptr(ls_offset + lsa), 128))
 			{
 				MFCArgs.AtomicStat.PushUncond(MFC_PUTLLC_SUCCESS);
 			}
@@ -468,7 +468,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		}
 		else // store unconditional (may be wrong)
 		{
-			vm::reservation_op(ea, 128, [this, tag, lsa, ea]()
+			vm::reservation_op(vm::cast(ea), 128, [this, tag, lsa, ea]()
 			{
 				memcpy(vm::get_priv_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), 128);
 			});
