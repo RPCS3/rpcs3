@@ -248,6 +248,24 @@ public:
 	{
 		_u32[1+slice] |= exceptions;
 	}
+
+	// Write the FPSCR
+	void Write(const u128 & r)
+	{
+		_u32[3] = r._u32[3] & 0x00000F07;
+		_u32[2] = r._u32[2] & 0x00003F07;
+		_u32[1] = r._u32[1] & 0x00003F07;
+		_u32[0] = r._u32[0] & 0x00000F07;
+	}
+
+	// Read the FPSCR
+	void Read(u128 & r)
+	{
+		r._u32[3] = _u32[3];
+		r._u32[2] = _u32[2];
+		r._u32[1] = _u32[1];
+		r._u32[0] = _u32[0];
+	}
 };
 
 union SPU_SNRConfig_hdr
@@ -277,9 +295,6 @@ public:
 	u32 SRR0;
 	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
 
-	u64 R_ADDR; // reservation address
-	u64 R_DATA[16]; // lock line data (BE)
-
 	std::shared_ptr<EventPort> SPUPs[64]; // SPU Thread Event Ports
 	EventManager SPUQs; // SPU Queue Mapping
 	std::shared_ptr<SpuGroupInfo> group; // associated SPU Thread Group (null for raw spu)
@@ -289,6 +304,8 @@ public:
 
 	u32 m_event_mask;
 	u32 m_events;
+
+	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
 
 	struct IntrTag
 	{
@@ -509,8 +526,35 @@ public:
 	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
 	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
 
+	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
+	{
+		m_addr_to_hle_function_map[addr] = function;
+		WriteLS32(addr, 0x00000003); // STOP 3
+	}
+
+	void UnregisterHleFunction(u32 addr)
+	{
+		WriteLS32(addr, 0x00200000); // NOP
+		m_addr_to_hle_function_map.erase(addr);
+	}
+
+	void UnregisterHleFunctions(u32 start_addr, u32 end_addr)
+	{
+		for (auto iter = m_addr_to_hle_function_map.begin(); iter != m_addr_to_hle_function_map.end();)
+		{
+			if (iter->first >= start_addr && iter->first <= end_addr)
+			{
+				WriteLS32(iter->first, 0x00200000); // NOP
+				m_addr_to_hle_function_map.erase(iter++);
+			}
+			else
+			{
+				iter++;
+			}
+		}
+	}
+
 	std::function<void(SPUThread& SPU)> m_custom_task;
-	std::function<u64(SPUThread& SPU)> m_code3_func;
 
 public:
 	SPUThread(CPUThreadType type = CPU_THREAD_SPU);
@@ -568,6 +612,8 @@ public:
 
 public:
 	virtual void InitRegs();
+	virtual void InitStack();
+	virtual void CloseStack();
 	virtual void Task();
 	void FastCall(u32 ls_addr);
 	void FastStop();
@@ -607,7 +653,7 @@ public:
 		for (auto &arg : values)
 		{
 			u32 arg_size = align(u32(arg.size() + 1), stack_align);
-			u32 arg_addr = Memory.MainMem.AllocAlign(arg_size, stack_align);
+			u32 arg_addr = (u32)Memory.MainMem.AllocAlign(arg_size, stack_align);
 
 			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
 

@@ -136,7 +136,7 @@ const char *getModuleName(int id) {
 		}
 	}
 
-	return 0;
+	return "UNKNOWN MODULE";
 }
 
 int cellSysmoduleInitialize()
@@ -159,11 +159,12 @@ int cellSysmoduleSetMemcontainer(u32 ct_id)
 
 int cellSysmoduleLoadModule(u16 id)
 {
+	cellSysmodule->Warning("cellSysmoduleLoadModule(id=0x%04x: %s)", id, getModuleName(id));
+
 	if (id == 0xf054)
 	{
 		cellSysmodule->Todo("cellSysmoduleLoadModule: CELL_SYSMODULE_LIBATRAC3MULTI");
 	}
-	cellSysmodule->Warning("cellSysmoduleLoadModule(%s)", getModuleName(id));
 
 	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
 	{
@@ -180,7 +181,8 @@ int cellSysmoduleLoadModule(u16 id)
 
 int cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule->Warning("cellSysmoduleUnloadModule(%s)", getModuleName(id));
+	cellSysmodule->Warning("cellSysmoduleUnloadModule(id=0x%04x: %s)", id, getModuleName(id));
+
 	Module* m = Emu.GetModuleManager().GetModuleById(id);
 
 	if(!m)
@@ -199,7 +201,8 @@ int cellSysmoduleUnloadModule(u16 id)
 
 int cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule->Warning("cellSysmoduleIsLoaded(%s)", getModuleName(id));
+	cellSysmodule->Warning("cellSysmoduleIsLoaded(id=0x%04x: %s)", id, getModuleName(id));
+
 	Module* m = Emu.GetModuleManager().GetModuleById(id);
 
 	if(!m)

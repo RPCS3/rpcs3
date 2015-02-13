@@ -18,6 +18,7 @@ void LogBase::LogOutput(LogType type, const std::string& text) const
 	case LogWarning: LOG_WARNING(HLE, GetName() + ": " + text); break;
 	case LogError: LOG_ERROR(HLE, GetName() + " error: " + text); break;
 	case LogTodo: LOG_ERROR(HLE, GetName() + " TODO: " + text); break;
+	case LogFatal: throw GetName() + " error: " + text;
 	}
 }
 

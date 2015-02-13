@@ -28,9 +28,9 @@ struct VFS;
 struct EmuInfo
 {
 private:
-	u64 tls_addr;
-	u64 tls_filesz;
-	u64 tls_memsz;
+	u32 tls_addr;
+	u32 tls_filesz;
+	u32 tls_memsz;
 
 	sys_process_param_info proc_param;
 
@@ -50,16 +50,16 @@ public:
 		proc_param.primary_prio = be_t<s32>::make(0x50);
 	}
 
-	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
+	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
 		tls_addr = addr;
 		tls_filesz = filesz;
 		tls_memsz = memsz;
 	}
 
-	u64 GetTLSAddr() const { return tls_addr; }
-	u64 GetTLSFilesz() const { return tls_filesz; }
-	u64 GetTLSMemsz() const { return tls_memsz; }
+	u32 GetTLSAddr() const { return tls_addr; }
+	u32 GetTLSFilesz() const { return tls_filesz; }
+	u32 GetTLSMemsz() const { return tls_memsz; }
 };
 
 class ModuleInitializer
@@ -173,7 +173,7 @@ public:
 		m_modules_init.push_back(std::move(m));
 	}
 
-	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
+	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
 		m_info.SetTLSData(addr, filesz, memsz);
 	}
@@ -195,9 +195,9 @@ public:
 
 	EmuInfo& GetInfo() { return m_info; }
 
-	u64 GetTLSAddr() const { return m_info.GetTLSAddr(); }
-	u64 GetTLSFilesz() const { return m_info.GetTLSFilesz(); }
-	u64 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
+	u32 GetTLSAddr() const { return m_info.GetTLSAddr(); }
+	u32 GetTLSFilesz() const { return m_info.GetTLSFilesz(); }
+	u32 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
 
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 

@@ -123,7 +123,7 @@ namespace fmt
 	}
 
 	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(std::string src, const std::string& from, const std::string& to);
+	std::string replace_all(const std::string &src, const std::string& from, const std::string& to);
 
 	template<size_t list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string>(&list)[list_size])
@@ -177,6 +177,8 @@ namespace fmt
 	std::string to_udec(u64 value);
 	std::string to_sdec(s64 value);
 
+	std::string toupper(std::string source);
+
 	namespace detail
 	{
 		size_t get_fmt_start(const char* fmt, size_t len);
@@ -198,6 +200,10 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
@@ -217,6 +223,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
@@ -238,6 +248,10 @@ namespace fmt
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
 					return to_udec(arg);
@@ -257,6 +271,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
 				{
@@ -278,6 +296,10 @@ namespace fmt
 				{
 					return to_hex((u8)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u8)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd')
 				{
 					return to_sdec(arg);
@@ -297,6 +319,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex((u16)arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u16)arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd')
 				{
@@ -318,6 +344,10 @@ namespace fmt
 				{
 					return to_hex((u32)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u32)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'd')
 				{
 					return to_sdec(arg);
@@ -337,6 +367,10 @@ namespace fmt
 				if (fmt[len - 1] == 'x')
 				{
 					return to_hex((u64)arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u64)arg, get_fmt_precision(fmt, len)));
 				}
 				else if (fmt[len - 1] == 'd')
 				{
@@ -358,6 +392,10 @@ namespace fmt
 				{
 					return to_hex((u32&)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u32&)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'f')
 				{
 					return std::to_string(arg);
@@ -378,6 +416,10 @@ namespace fmt
 				{
 					return to_hex((u64&)arg, get_fmt_precision(fmt, len));
 				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u64&)arg, get_fmt_precision(fmt, len)));
+				}
 				else if (fmt[len - 1] == 'f')
 				{
 					return std::to_string(arg);
@@ -394,7 +436,7 @@ namespace fmt
 		{
 			static std::string text(const char* fmt, size_t len, bool arg)
 			{
-				if (fmt[len - 1] == 'x')
+				if (fmt[len - 1] == 'x' || fmt[len - 1] == 'X')
 				{
 					return to_hex(arg, get_fmt_precision(fmt, len));
 				}
@@ -429,16 +471,17 @@ namespace fmt
 			}
 		};
 
-		std::string format(const char* fmt, size_t len); // terminator
+		std::string format(const char* fmt); // terminator
 
 		template<typename T, typename... Args>
-		std::string format(const char* fmt, size_t len, const T& arg, Args... args)
+		std::string format(const char* fmt, const T& arg, Args... args)
 		{
+			const size_t len = strlen(fmt);
 			const size_t fmt_start = get_fmt_start(fmt, len);
 			const size_t fmt_len = get_fmt_len(fmt + fmt_start, len - fmt_start);
 			const size_t fmt_end = fmt_start + fmt_len;
 
-			return std::string(fmt, fmt_start) + get_fmt<T>::text(fmt + fmt_start, fmt_len, arg) + format(fmt + fmt_end, len - fmt_end, args...);
+			return std::string(fmt, fmt_start) + get_fmt<T>::text(fmt + fmt_start, fmt_len, arg) + format(fmt + fmt_end, args...);
 		}
 	};
 
@@ -551,9 +594,9 @@ namespace fmt
 	Other features are not supported.
 	*/
 	template<typename... Args>
-	__forceinline std::string format(const char* fmt, Args... args)
+	__forceinline __safebuffers std::string format(const char* fmt, Args... args)
 	{
-		return detail::format(fmt, strlen(fmt), do_unveil(args)...);
+		return detail::format(fmt, do_unveil(args)...);
 	}
 
 	//convert a wxString to a std::string encoded in utf8
@@ -578,4 +621,6 @@ namespace fmt
 	std::string merge(std::vector<std::string> source, const std::string& separator);
 	std::string merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator);
 	std::string tolower(std::string source);
+	std::string toupper(std::string source);
+	std::string escape(std::string source);
 }

@@ -536,11 +536,6 @@ public:
 	//TBR : Time-Base Registers
 	u64 TB;	//TBR 0x10C - 0x10D
 
-	u64 cycle;
-
-	u64 R_ADDR; // reservation address
-	u64 R_VALUE; // reservation value (BE)
-
 	u32 owned_mutexes;
 	std::function<void(PPUThread& CPU)> custom_task;
 
@@ -799,8 +794,10 @@ public:
 	}
 
 public:
-	virtual void InitRegs();
-	virtual void Task();
+	virtual void InitRegs() override;
+	virtual void InitStack() override;
+	virtual void CloseStack() override;
+	virtual void Task() override;
 	u64 GetStackArg(s32 i);
 	u64 FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
@@ -968,7 +965,7 @@ struct cast_ppu_gpr<bool, false>
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u64 reg)
+	__forceinline static bool from_gpr(const u64& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}

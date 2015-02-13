@@ -163,7 +163,7 @@ namespace cb_detail
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::operator()(CPUThread& CPU, T... args) const
+	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(CPUThread& CPU, T... args) const
 	{
 		auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
 		const u32 pc = data[0];
@@ -174,7 +174,7 @@ namespace vm
 	}
 
 	template<typename AT, typename RT, typename... T>
-	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::operator()(T... args) const
+	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(T... args) const
 	{
 		return operator()(GetCurrentPPUThread(), args...);
 	}
@@ -186,6 +186,7 @@ __forceinline RT cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 	return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 }
 
+// Something is wrong with it (but cb_call<void, ...>() should work anyway)
 //template<typename... T>
 //void cb_call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 //{

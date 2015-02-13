@@ -1316,10 +1316,7 @@ private:
 	
 	void FSCRRD(u32 rt)
 	{
-		CPU.GPR[rt]._u32[3] = CPU.FPSCR._u32[3];
-		CPU.GPR[rt]._u32[2] = CPU.FPSCR._u32[2];
-		CPU.GPR[rt]._u32[1] = CPU.FPSCR._u32[1];
-		CPU.GPR[rt]._u32[0] = CPU.FPSCR._u32[0];
+		CPU.FPSCR.Read(CPU.GPR[rt]);
 	}
 	void FESD(u32 rt, u32 ra)
 	{
@@ -1373,10 +1370,7 @@ private:
 	}
 	void FSCRWR(u32 rt, u32 ra)
 	{
-		CPU.FPSCR._u32[3] = CPU.GPR[ra]._u32[3] & 0x00000F07;
-		CPU.FPSCR._u32[2] = CPU.GPR[ra]._u32[2] & 0x00003F07;
-		CPU.FPSCR._u32[1] = CPU.GPR[ra]._u32[1] & 0x00003F07;
-		CPU.FPSCR._u32[0] = CPU.GPR[ra]._u32[0] & 0x00000F07;
+		CPU.FPSCR.Write(CPU.GPR[ra]);
 	}
 	void DFTSV(u32 rt, u32 ra, s32 i7)
 	{

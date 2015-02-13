@@ -42,6 +42,14 @@ class PauseCallbackRegisterer
 	CallbackManager& cb_manager;
 	u64 cb_tag;
 
+private:
+	PauseCallbackRegisterer() = delete;
+	PauseCallbackRegisterer(const PauseCallbackRegisterer& right) = delete;
+	PauseCallbackRegisterer(PauseCallbackRegisterer&& right) = delete;
+
+	PauseCallbackRegisterer& operator =(const PauseCallbackRegisterer& right) = delete;
+	PauseCallbackRegisterer& operator =(PauseCallbackRegisterer&& right) = delete;
+
 public:
 	PauseCallbackRegisterer(CallbackManager& cb_manager, const std::function<PauseResumeCB>& func)
 		: cb_manager(cb_manager)
@@ -49,16 +57,8 @@ public:
 	{
 	}
 
-	PauseCallbackRegisterer() = delete;
-	PauseCallbackRegisterer(const PauseCallbackRegisterer& right) = delete;
-	PauseCallbackRegisterer(PauseCallbackRegisterer&& right) = delete;
-
 	~PauseCallbackRegisterer()
 	{
 		cb_manager.RemovePauseCallback(cb_tag);
 	}
-
-	PauseCallbackRegisterer& operator =(const PauseCallbackRegisterer& right) = delete;
-	PauseCallbackRegisterer& operator =(PauseCallbackRegisterer&& right) = delete;
-
 };

@@ -125,12 +125,8 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 {
 	cellGcmSys->Warning("cellGcmGetNotifyDataAddress(index=%d)", index);
 
-	// Get address of 'IO table' and 'EA table'
-	vm::var<CellGcmOffsetTable> table;
-	cellGcmGetOffsetTable(table);
-
 	// If entry not in use, return NULL
-	u16 entry = table->eaAddress[241];
+	u16 entry = offsetTable.eaAddress[241];
 	if (entry == 0xFFFF) {
 		return 0;
 	}
@@ -455,7 +451,7 @@ int cellGcmSetFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 
-void cellGcmSetFlipHandler(vm::ptr<void(*)(const u32)> handler)
+void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys->Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler.addr());
 
@@ -542,7 +538,7 @@ int cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: 59.94Hz"); break;
+		Emu.GetGSManager().GetRender().m_frequency_mode = freq; Emu.GetGSManager().GetRender().m_fps_limit = 59.94; break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
 		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys->Todo("Unimplemented display frequency: Scanout"); break;
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
@@ -594,14 +590,14 @@ int cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	return CELL_OK;
 }
 
-void cellGcmSetUserHandler(vm::ptr<void(*)(const u32)> handler)
+void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys->Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler.addr());
 
 	Emu.GetGSManager().GetRender().m_user_handler = handler;
 }
 
-void cellGcmSetVBlankHandler(vm::ptr<void(*)(const u32)> handler)
+void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys->Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler.addr());
 
@@ -1008,6 +1004,7 @@ s32 cellGcmUnmapIoAddress(u64 io)
 	{
 		u64 ea;
 		io = io >> 20;
+		size = size >> 20;
 		ea = offsetTable.eaAddress[io];
 
 		for (u32 i = 0; i<size; i++)
@@ -1189,14 +1186,14 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 	//auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 
 	// preparations for changing the place (for optimized FIFO mode)
-	//auto cmd = vm::ptr<u32>::make(context->current.ToLE());
+	//auto cmd = vm::ptr<u32>::make(context->current);
 	//cmd[0] = 0x41D6C;
 	//cmd[1] = 0x20;
 	//cmd[2] = 0x41D74;
 	//cmd[3] = 0; // some incrementing by module value
 	//context->current += 0x10;
 
-	if (1)
+	if (0)
 	{
 		const u32 address = context->begin;
 		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
@@ -1205,7 +1202,7 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset); // set JUMP cmd
 
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-		ctrl.put.write_relaxed(be_t<u32>::make(offset));
+		ctrl.put.exchange(be_t<u32>::make(offset));
 	}
 	else
 	{

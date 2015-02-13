@@ -1,5 +1,7 @@
 #pragma once
 
+#define IS_LE_MACHINE
+
 union _CRT_ALIGN(16) u128
 {
 	u64 _u64[2];
@@ -136,16 +138,28 @@ union _CRT_ALIGN(16) u128
 			}
 		};
 
+		// Index 0 returns the MSB and index 127 returns the LSB
 		bit_element operator [] (u32 index)
 		{
 			assert(index < 128);
-			return bit_element(data[index / 64], 1ull << (index % 64));
+
+#ifdef IS_LE_MACHINE
+			return bit_element(data[1 - (index >> 6)], 0x8000000000000000ull >> (index & 0x3F));
+#else
+			return bit_element(data[index >> 6], 0x8000000000000000ull >> (index & 0x3F));
+#endif
 		}
 
+		// Index 0 returns the MSB and index 127 returns the LSB
 		const bool operator [] (u32 index) const
 		{
 			assert(index < 128);
-			return (data[index / 64] & (1ull << (index % 64))) != 0;
+
+#ifdef IS_LE_MACHINE
+			return (data[1 - (index >> 6)] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+#else
+			return (data[index >> 6] & (0x8000000000000000ull >> (index & 0x3F))) != 0;
+#endif
 		}
 
 	} _bit;
@@ -509,8 +523,6 @@ struct be_storage_t<T, 16>
 	typedef u128 type;
 };
 
-#define IS_LE_MACHINE
-
 template<typename T, typename T2 = T>
 class be_t
 {
@@ -708,7 +720,7 @@ class to_be_t
 
 public:
 	//true if need swap endianes for be
-	static const bool value = (sizeof(T2) > 1) && (std::is_arithmetic<T>::value || std::is_enum<T>::value);
+	static const bool value = std::is_arithmetic<T>::value || std::is_enum<T>::value;
 
 	//be_t<T, size> if need swap endianes, T otherwise
 	typedef typename _be_type_selector< T, T2, value >::type type;
@@ -716,26 +728,58 @@ public:
 	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
 };
 
+template<typename T, typename T2>
+class to_be_t<T, const T2>
+{
+public:
+	static const bool value = to_be_t<T, T2>::value;
+	typedef const typename to_be_t<T, T2>::type type;
+	typedef const typename to_be_t<T, T2>::forced_type forced_type;
+};
+
 template<typename T>
 class to_be_t<T, void>
 {
 public:
-	//true if need swap endianes for be
 	static const bool value = false;
-
-	//be_t<T, size> if need swap endianes, T otherwise
 	typedef void type;
+	typedef void forced_type;
 };
 
 template<typename T>
-class to_be_t<T, const void>
+class to_be_t<T, u8>
 {
 public:
-	//true if need swap endianes for be
 	static const bool value = false;
+	typedef u8 type;
+	typedef u8 forced_type;
+};
 
-	//be_t<T, size> if need swap endianes, T otherwise
-	typedef const void type;
+template<typename T>
+class to_be_t<T, s8>
+{
+public:
+	static const bool value = false;
+	typedef s8 type;
+	typedef s8 forced_type;
+};
+
+template<typename T>
+class to_be_t<T, char>
+{
+public:
+	static const bool value = false;
+	typedef char type;
+	typedef char forced_type;
+};
+
+template<typename T>
+class to_be_t<T, bool>
+{
+public:
+	static const bool value = false;
+	typedef bool type;
+	typedef bool forced_type;
 };
 
 template<typename T, typename T2 = T>

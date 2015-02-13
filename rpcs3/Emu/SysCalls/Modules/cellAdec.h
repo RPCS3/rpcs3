@@ -366,7 +366,7 @@ enum CellAdecMsgType
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-typedef s32(*CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
+typedef s32(CellAdecCbMsg)(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
 
 struct CellAdecCb
 {

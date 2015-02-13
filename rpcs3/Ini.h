@@ -268,7 +268,7 @@ public:
 		AudioConvertToU16.Load(false);
 
 		// Camera
-		Camera.Load(0);
+		Camera.Load(1);
 		CameraType.Load(2);
 
 		// Input/Ouput

@@ -372,7 +372,7 @@ s32 cellSaveDataListSave2(
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
-		*dirList[i].reserved = {};
+		memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	}
 
 	funcList(result, listGet, listSet);
@@ -464,7 +464,7 @@ s32 cellSaveDataListLoad2(
 	for (u32 i=0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
-		*dirList[i].reserved = {};
+		memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	}
 
 	funcList(result, listGet, listSet);
@@ -553,7 +553,7 @@ s32 cellSaveDataFixedSave2(
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
-		*dirList[i].reserved = {};
+		memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	}
 	funcFixed(result, listGet, fixedSet);
 	if (result->result < 0)	{
@@ -629,7 +629,7 @@ s32 cellSaveDataFixedLoad2(
 	for (u32 i = 0; i<saveEntries.size(); i++) {
 		strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 		strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
-		*dirList[i].reserved = {};
+		memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	}
 	funcFixed(result, listGet, fixedSet);
 	if (result->result < 0)	{
@@ -826,7 +826,7 @@ s32 cellSaveDataListAutoSave(
 	//for (u32 i = 0; i<saveEntries.size(); i++) {
 	//	strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName.c_str());
 	//	strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam.c_str());
-	//	*dirList[i].reserved = {};
+	//	memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	//}
 
 	//funcFixed(result, listGet, fixedSet);
@@ -909,7 +909,7 @@ s32 cellSaveDataListAutoLoad(
 	//for (u32 i = 0; i<saveEntries.size(); i++) {
 	//	strcpy_trunc(dirList[i].dirName, saveEntries[i].dirName);
 	//	strcpy_trunc(dirList[i].listParam, saveEntries[i].listParam);
-	//	*dirList[i].reserved = {};
+	//	memset(dirList[i].reserved, 0, sizeof(dirList[i].reserved));
 	//}
 
 	//funcFixed(result, listGet, fixedSet);

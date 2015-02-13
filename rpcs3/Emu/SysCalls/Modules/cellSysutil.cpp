@@ -19,7 +19,7 @@
 #include "cellGame.h"
 #include "cellSysutil.h"
 
-typedef void (*CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
+typedef void (CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
 Module *cellSysutil = nullptr;
 
@@ -217,6 +217,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		videoOut, config.addr(), option.addr());
 
 	if (option) *option = {};
+	*config = {};
 
 	switch(videoOut)
 	{
@@ -224,13 +225,11 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		config->resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
 		config->format = Emu.GetGSManager().GetInfo().mode.format;
 		config->aspect = Emu.GetGSManager().GetInfo().mode.aspect;
-		*config->reserved = {};
 		config->pitch = Emu.GetGSManager().GetInfo().mode.pitch;
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 
 	case CELL_VIDEO_OUT_SECONDARY:
-		*config = {}; // ???
 
 		return CELL_VIDEO_OUT_SUCCEEDED;
 	}
@@ -478,22 +477,25 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 {
 	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", audioOut, deviceIndex, state.addr());
 
+	*state = {};
+
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
 		state->state = Emu.GetAudioManager().GetState();
 		state->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		*state->reserved = {};
 		state->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
 		state->soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
 		state->soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
 		state->soundMode.fs = Emu.GetAudioManager().GetInfo().mode.fs;
 		state->soundMode.reserved = 0;
 		state->soundMode.layout = Emu.GetAudioManager().GetInfo().mode.layout;
+
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		*state = { CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED };
+		state->state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
+
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
 
@@ -534,19 +536,18 @@ int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)", audioOut, config.addr(), option.addr());
 
 	if (option) *option = {};
+	*config = {};
 
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
 		config->channel = Emu.GetAudioManager().GetInfo().mode.channel;
 		config->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		*config->reserved = {};
 		config->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		*config = {};
 
 		return CELL_AUDIO_OUT_SUCCEEDED;
 	}
@@ -835,10 +836,10 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 }
 
 extern int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
-	vm::ptr<void(*)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
+	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container);
 
 extern void cellSysutil_SaveData_init();
 

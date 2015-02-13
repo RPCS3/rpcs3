@@ -5,7 +5,7 @@
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	__forceinline RT _ptr_base<RT(*)(T...), 1, AT>::operator()(ARMv7Context& context, T... args) const
+	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(ARMv7Context& context, T... args) const
 	{
 		return psv_func_detail::func_caller<RT, T...>::call(context, vm::cast(this->addr()), args...);
 	}

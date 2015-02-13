@@ -256,11 +256,11 @@ struct CellSaveDataDoneGet
 
 
 // Callback Functions
-typedef void(*CellSaveDataFixedCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataFixedSet> set);
-typedef void(*CellSaveDataListCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataListSet> set);
-typedef void(*CellSaveDataStatCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataStatGet> get, vm::ptr<CellSaveDataStatSet> set);
-typedef void(*CellSaveDataFileCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataFileGet> get, vm::ptr<CellSaveDataFileSet> set);
-typedef void(*CellSaveDataDoneCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataDoneGet> get);
+typedef void(CellSaveDataFixedCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataFixedSet> set);
+typedef void(CellSaveDataListCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataListGet> get, vm::ptr<CellSaveDataListSet> set);
+typedef void(CellSaveDataStatCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataStatGet> get, vm::ptr<CellSaveDataStatSet> set);
+typedef void(CellSaveDataFileCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataFileGet> get, vm::ptr<CellSaveDataFileSet> set);
+typedef void(CellSaveDataDoneCallback)(vm::ptr<CellSaveDataCBResult> cbResult, vm::ptr<CellSaveDataDoneGet> get);
 
 
 // Auxiliary Structs

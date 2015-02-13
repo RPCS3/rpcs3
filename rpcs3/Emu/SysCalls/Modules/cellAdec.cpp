@@ -679,7 +679,11 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	AVFrame* frame = af.data;
+	std::unique_ptr<AVFrame, void(*)(AVFrame*)> frame(af.data, [](AVFrame* frame)
+	{
+		av_frame_unref(frame);
+		av_frame_free(&frame);
+	});
 
 	if (outBuffer)
 	{
@@ -766,13 +770,10 @@ int cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else
 		{
-			cellAdec->Error("cellAdecGetPcm(): unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
-			Emu.Pause();
+			cellAdec->Fatal("cellAdecGetPcm(): unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
 		}
 	}
 
-	av_frame_unref(af.data);
-	av_frame_free(&af.data);
 	return CELL_OK;
 }
 

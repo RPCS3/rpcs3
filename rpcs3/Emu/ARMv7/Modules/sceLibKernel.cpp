@@ -1,12 +1,17 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
+#include "Emu/ARMv7/PSVObjectList.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/ARMv7/ARMv7Thread.h"
 
 #include "sceLibKernel.h"
+#include "psv_sema.h"
+#include "psv_event_flag.h"
+#include "psv_mutex.h"
+#include "psv_cond.h"
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
@@ -39,18 +44,18 @@ s32 sceKernelCreateThread(
 	s32 cpuAffinityMask,
 	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
 {
-	sceLibKernel.Error("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
+	sceLibKernel.Warning("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
 	ARMv7Thread& new_thread = static_cast<ARMv7Thread&>(Emu.GetCPU().AddThread(CPU_THREAD_ARMv7));
 
 	const auto id = new_thread.GetId();
-	new_thread.SetEntry(entry.addr() ^ 1);
+	new_thread.SetEntry(entry.addr());
 	new_thread.SetPrio(initPriority);
 	new_thread.SetStackSize(stackSize);
 	new_thread.SetName(pName.get_ptr());
 
-	sceLibKernel.Error("*** New ARMv7 Thread [%s] (entry=0x%x)^1: id -> 0x%x", pName.get_ptr(), entry, id);
+	sceLibKernel.Warning("*** New ARMv7 Thread [%s] (entry=0x%x): id -> 0x%x", pName.get_ptr(), entry, id);
 
 	new_thread.Run();
 	return id;
@@ -58,7 +63,7 @@ s32 sceKernelCreateThread(
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
 {
-	sceLibKernel.Error("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=0x%x)", threadId, argSize, pArgBlock);
+	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=0x%x)", threadId, argSize, pArgBlock);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
@@ -90,7 +95,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 
 s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 {
-	sceLibKernel.Error("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.Warning("sceKernelExitThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.thread.Stop();
@@ -100,7 +105,7 @@ s32 sceKernelExitThread(ARMv7Context& context, s32 exitStatus)
 
 s32 sceKernelDeleteThread(s32 threadId)
 {
-	sceLibKernel.Error("sceKernelDeleteThread(threadId=0x%x)", threadId);
+	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
@@ -122,7 +127,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 
 s32 sceKernelExitDeleteThread(ARMv7Context& context, s32 exitStatus)
 {
-	sceLibKernel.Error("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
+	sceLibKernel.Warning("sceKernelExitDeleteThread(exitStatus=0x%x)", exitStatus);
 
 	// exit status is stored in r0
 	context.thread.Stop();
@@ -258,7 +263,7 @@ s32 sceKernelDelayThreadCB(u32 usec)
 
 s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
 {
-	sceLibKernel.Error("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
+	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=0x%x, pTimeout=0x%x)", threadId, pExitStatus, pTimeout);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
@@ -391,7 +396,13 @@ s32 sceKernelWaitMultipleEventsCB(vm::psv::ptr<SceKernelWaitEvent> pWaitEventLis
 
 s32 sceKernelCreateEventFlag(vm::psv::ptr<const char> pName, u32 attr, u32 initPattern, vm::psv::ptr<const SceKernelEventFlagOptParam> pOptParam)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelCreateEventFlag(pName=0x%x, attr=0x%x, initPattern=0x%x, pOptParam=0x%x)", pName, attr, initPattern, pOptParam);
+
+	std::shared_ptr<psv_event_flag_t> ef(new psv_event_flag_t(pName.get_ptr(), attr, initPattern));
+
+	const s32 id = g_psv_ef_list.add(ef);
+
+	return id;
 }
 
 s32 sceKernelDeleteEventFlag(s32 evfId)
@@ -450,12 +461,23 @@ s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount,
 {
 	sceLibKernel.Error("sceKernelCreateSema(pName=0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
-	throw __FUNCTION__;
+	std::shared_ptr<psv_sema_t> sema(new psv_sema_t(pName.get_ptr(), attr, initCount, maxCount));
+
+	const s32 id = g_psv_sema_list.add(sema);
+
+	return id;
 }
 
 s32 sceKernelDeleteSema(s32 semaId)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelDeleteSema(semaId=0x%x)", semaId);
+
+	if (!g_psv_sema_list.remove(semaId))
+	{
+		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+	}
+
+	throw SCE_OK;
 }
 
 s32 sceKernelOpenSema(vm::psv::ptr<const char> pName)
@@ -502,7 +524,13 @@ s32 sceKernelGetSemaInfo(s32 semaId, vm::psv::ptr<SceKernelSemaInfo> pInfo)
 
 s32 sceKernelCreateMutex(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelMutexOptParam> pOptParam)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelCreateMutex(pName=0x%x, attr=0x%x, initCount=%d, pOptParam=0x%x)", pName, attr, initCount, pOptParam);
+
+	std::shared_ptr<psv_mutex_t> mutex(new psv_mutex_t(pName.get_ptr(), attr, initCount));
+
+	const s32 id = g_psv_mutex_list.add(mutex);
+
+	return id;
 }
 
 s32 sceKernelDeleteMutex(s32 mutexId)
@@ -596,7 +624,13 @@ s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::psv::ptr<SceKernelLwMutexInfo
 
 s32 sceKernelCreateCond(vm::psv::ptr<const char> pName, u32 attr, s32 mutexId, vm::psv::ptr<const SceKernelCondOptParam> pOptParam)
 {
-	throw __FUNCTION__;
+	sceLibKernel.Error("sceKernelCreateCond(pName=0x%x, attr=0x%x, mutexId=0x%x, pOptParam=0x%x)", pName, attr, mutexId, pOptParam);
+
+	std::shared_ptr<psv_cond_t> cond(new psv_cond_t(pName.get_ptr(), attr, mutexId));
+
+	const s32 id = g_psv_cond_list.add(cond);
+
+	return id;
 }
 
 s32 sceKernelDeleteCond(s32 condId)
@@ -970,7 +1004,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 
 	// REG_FUNC(???, sceKernelGetEventInfo);
 
-	//REG_FUNC(0x23EAA62, sceKernelPuts);
+	//REG_FUNC(0x023EAA62, sceKernelPuts);
 	//REG_FUNC(0xB0335388, sceClibToupper);
 	//REG_FUNC(0x4C5471BC, sceClibTolower);
 	//REG_FUNC(0xD8EBBB7E, sceClibLookCtypeTable);
@@ -1027,11 +1061,11 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x4AE9C8E6, sceKernelAtomicGetAndSub64);
 	//REG_FUNC(0x99E1796E, sceKernelAtomicSubAndGet8);
 	//REG_FUNC(0xC26BBBB1, sceKernelAtomicSubAndGet16);
-	//REG_FUNC(0x1C9CD92, sceKernelAtomicSubAndGet32);
+	//REG_FUNC(0x01C9CD92, sceKernelAtomicSubAndGet32);
 	//REG_FUNC(0x9BB4A94B, sceKernelAtomicSubAndGet64);
 	//REG_FUNC(0x53DCA02B, sceKernelAtomicGetAndAnd8);
 	//REG_FUNC(0x7A0CB056, sceKernelAtomicGetAndAnd16);
-	//REG_FUNC(0x8266595, sceKernelAtomicGetAndAnd32);
+	//REG_FUNC(0x08266595, sceKernelAtomicGetAndAnd32);
 	//REG_FUNC(0x4828BC43, sceKernelAtomicGetAndAnd64);
 	//REG_FUNC(0x86B9170F, sceKernelAtomicAndAndGet8);
 	//REG_FUNC(0xF9890F7E, sceKernelAtomicAndAndGet16);
@@ -1083,9 +1117,9 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x4C7AD128, sceKernelPowerLock);
 	//REG_FUNC(0xAF8E9C11, sceKernelPowerUnlock);
 	//REG_FUNC(0xB295EB61, sceKernelGetTLSAddr);
-	REG_FUNC(0xFB972F9, sceKernelGetThreadId);
+	REG_FUNC(0x0FB972F9, sceKernelGetThreadId);
 	REG_FUNC(0xA37A6057, sceKernelGetCurrentThreadVfpException);
-	//REG_FUNC(0xCA71EA2, sceKernelSendMsgPipe);
+	//REG_FUNC(0x0CA71EA2, sceKernelSendMsgPipe);
 	//REG_FUNC(0xA5CA74AC, sceKernelSendMsgPipeCB);
 	//REG_FUNC(0xDFC670E0, sceKernelTrySendMsgPipe);
 	//REG_FUNC(0x4E81DD5C, sceKernelReceiveMsgPipe);
@@ -1143,7 +1177,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0xC08F5BC5, sceKernelDeleteSema);
 	REG_FUNC(0xB028AB78, sceKernelOpenSema);
 	REG_FUNC(0x817707AB, sceKernelCloseSema);
-	REG_FUNC(0xC7B834B, sceKernelWaitSema);
+	REG_FUNC(0x0C7B834B, sceKernelWaitSema);
 	REG_FUNC(0x174692B4, sceKernelWaitSemaCB);
 	REG_FUNC(0x66D6BF05, sceKernelCancelSema);
 	REG_FUNC(0x595D3FA6, sceKernelGetSemaInfo);
@@ -1168,8 +1202,8 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0x6864DCE2, sceKernelGetCondInfo);
 	REG_FUNC(0x10A4976F, sceKernelSignalCond);
 	REG_FUNC(0x2EB86929, sceKernelSignalCondAll);
-	REG_FUNC(0x87629E6, sceKernelSignalCondTo);
-	//REG_FUNC(0xA10C1C8, sceKernelCreateMsgPipe);
+	REG_FUNC(0x087629E6, sceKernelSignalCondTo);
+	//REG_FUNC(0x0A10C1C8, sceKernelCreateMsgPipe);
 	//REG_FUNC(0x69F6575D, sceKernelDeleteMsgPipe);
 	//REG_FUNC(0x230691DA, sceKernelOpenMsgPipe);
 	//REG_FUNC(0x7E5C0C16, sceKernelCloseMsgPipe);
@@ -1198,7 +1232,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0x2F3D35A3, sceKernelOpenTimer);
 	REG_FUNC(0x17283DE6, sceKernelCloseTimer);
 	REG_FUNC(0x1478249B, sceKernelStartTimer);
-	REG_FUNC(0x75B1329, sceKernelStopTimer);
+	REG_FUNC(0x075B1329, sceKernelStopTimer);
 	REG_FUNC(0x1F59E04D, sceKernelGetTimerBase);
 	REG_FUNC(0x3223CCD1, sceKernelGetTimerBaseWide);
 	REG_FUNC(0x381DC300, sceKernelGetTimerTime);
@@ -1221,7 +1255,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0x597D4607, sceKernelTryLockWriteRWLock);
 	REG_FUNC(0xD9369DF2, sceKernelUnlockWriteRWLock);
 	REG_FUNC(0x190CA94B, sceKernelCancelRWLock);
-	REG_FUNC(0x79A573B, sceKernelGetRWLockInfo);
+	REG_FUNC(0x079A573B, sceKernelGetRWLockInfo);
 	REG_FUNC(0x8AF15B5F, sceKernelGetSystemTime);
 	//REG_FUNC(0x99B2BF15, sceKernelPMonThreadGetCounter);
 	//REG_FUNC(0x7C21C961, sceKernelPMonCpuGetCounter);
@@ -1245,14 +1279,14 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	REG_FUNC(0xBCA5B623, sceIoGetstat);
 	REG_FUNC(0x29482F7F, sceIoChstat);
 	REG_FUNC(0x98ACED6D, sceIoSync);
-	REG_FUNC(0x4B30CB2, sceIoDevctl);
+	REG_FUNC(0x04B30CB2, sceIoDevctl);
 	REG_FUNC(0x54ABACFA, sceIoIoctl);
 	//REG_FUNC(0x6A7EA9FD, sceIoOpenAsync);
 	//REG_FUNC(0x84201C9B, sceIoCloseAsync);
 	//REG_FUNC(0x7B3BE857, sceIoReadAsync);
 	//REG_FUNC(0x21329B20, sceIoWriteAsync);
 	//REG_FUNC(0xCAC5D672, sceIoLseekAsync);
-	//REG_FUNC(0x99C54B9, sceIoIoctlAsync);
+	//REG_FUNC(0x099C54B9, sceIoIoctlAsync);
 	//REG_FUNC(0x446A60AC, sceIoRemoveAsync);
 	//REG_FUNC(0x73FC184B, sceIoDopenAsync);
 	//REG_FUNC(0x4D0597D7, sceIoDcloseAsync);
@@ -1285,7 +1319,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0xCD248267, sceKernelGetCurrentProcess);
 	//REG_FUNC(0x2252890C, sceKernelPowerTick);
 	//REG_FUNC(0x9E45DA09, sceKernelLibcClock);
-	//REG_FUNC(0x39BE45, sceKernelLibcTime);
+	//REG_FUNC(0x0039BE45, sceKernelLibcTime);
 	//REG_FUNC(0x4B879059, sceKernelLibcGettimeofday);
 	//REG_FUNC(0xC1727F59, sceKernelGetStdin);
 	//REG_FUNC(0xE5AA625C, sceKernelGetStdout);
@@ -1318,12 +1352,12 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	//REG_FUNC(0x800EDCC1, sceKernelClearDipsw);
 
 	/* SceThreadmgr */
-	REG_FUNC(0xC8A38E1, sceKernelExitThread);
+	REG_FUNC(0x0C8A38E1, sceKernelExitThread);
 	REG_FUNC(0x1D17DECF, sceKernelExitDeleteThread);
 	REG_FUNC(0x4B675D05, sceKernelDelayThread);
 	REG_FUNC(0x9C0180E1, sceKernelDelayThreadCB);
-	//REG_FUNC(0x1173F8, sceKernelChangeActiveCpuMask);
-	REG_FUNC(0x1414F0B, sceKernelGetThreadCurrentPriority);
+	//REG_FUNC(0x001173F8, sceKernelChangeActiveCpuMask);
+	REG_FUNC(0x01414F0B, sceKernelGetThreadCurrentPriority);
 	REG_FUNC(0x751C9B7A, sceKernelChangeCurrentThreadAttr);
 	REG_FUNC(0xD9BD74EB, sceKernelCheckWaitableStatus);
 	REG_FUNC(0x9DCB4B7A, sceKernelGetProcessId);

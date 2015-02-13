@@ -23,6 +23,15 @@ void ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 
 	CPU.SetExitStatus(errorcode);
 	CPU.Stop();
+
+	if (!CPU.IsJoinable())
+	{
+		const u32 id = CPU.GetId();
+		CallAfter([id]()
+		{
+			Emu.GetCPU().RemoveThread(id);
+		});
+	}
 }
 
 void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
@@ -65,6 +74,7 @@ s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 	}
 
 	*vptr = thr->GetExitStatus();
+	Emu.GetCPU().RemoveThread(thread_id);
 	return CELL_OK;
 }
 
@@ -156,7 +166,7 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	new_thread.SetEntry(entry);
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
-	//new_thread.flags = flags;
+	new_thread.SetJoinable(is_joinable);
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(name);
@@ -210,9 +220,11 @@ s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, 
 	return CELL_OK;
 }
 
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void(*)()> init)
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void()> init)
 {
 	sys_ppu_thread.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, init_addr=0x%x)", once_ctrl.addr(), init.addr());
+
+	LV2_LOCK(0);
 
 	if (once_ctrl->compare_and_swap_test(be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT), be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)))
 	{

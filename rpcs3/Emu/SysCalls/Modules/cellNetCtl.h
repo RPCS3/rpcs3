@@ -224,7 +224,7 @@ union CellNetCtlInfo
 	be_t<u32> ip_config;
 	s8 dhcp_hostname[256];
 	s8 pppoe_auth_name[128];
-	s8 ip_address[16];
+	char ip_address[16];
 	s8 netmask[16];
 	s8 default_route[16];
 	s8 primary_dns[16];
@@ -257,4 +257,4 @@ struct CellNetCtlNatInfo
 	be_t<u32> mapped_addr;
 };
 
-typedef void(*cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);
+typedef void(cellNetCtlHandler)(s32 prev_state, s32 new_state, s32 event, s32 error_code, vm::ptr<u32> arg);

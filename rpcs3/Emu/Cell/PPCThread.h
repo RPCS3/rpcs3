@@ -4,9 +4,6 @@
 class PPCThread : public CPUThread
 {
 public:
-	virtual void InitRegs()=0;
-	virtual void InitStack();
-
 	virtual std::string GetThreadName() const
 	{
 		return fmt::format("%s[0x%08x]", GetFName(), PC);

@@ -90,7 +90,7 @@ struct RSXTransformConstant
 	}
 };
 
-class RSXThread  : public ThreadBase
+class RSXThread : public ThreadBase
 {
 public:
 	static const uint m_textures_count = 16;
@@ -103,7 +103,6 @@ protected:
 	std::stack<u32> m_call_stack;
 	CellGcmControl* m_ctrl;
 	Timer m_timer_sync;
-	double m_fps_limit = 59.94;
 
 public:
 	GcmTileInfo m_tiles[m_tiles_count];
@@ -136,6 +135,9 @@ public:
 	u32 m_ctxt_addr;
 	u32 m_report_main_addr;
 
+	// DMA
+	u32 dma_report;
+
 	u32 m_local_mem_addr, m_main_mem_addr;
 	bool m_strict_ordering[0x1000];
 
@@ -148,16 +150,17 @@ public:
 	float m_height_scale;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
+	double m_fps_limit = 59.94;
 
 public:
 	std::mutex m_cs_main;
 	SSemaphore m_sem_flush;
 	SSemaphore m_sem_flip;
 	u64 m_last_flip_time;
-	vm::ptr<void(*)(const u32)> m_flip_handler;
-	vm::ptr<void(*)(const u32)> m_user_handler;
+	vm::ptr<void(u32)> m_flip_handler;
+	vm::ptr<void(u32)> m_user_handler;
 	u64 m_vblank_count;
-	vm::ptr<void(*)(const u32)> m_vblank_handler;
+	vm::ptr<void(u32)> m_vblank_handler;
 
 public:
 	// Dither
@@ -327,16 +330,16 @@ public:
 	u32 m_color_conv;
 	u32 m_color_conv_fmt;
 	u32 m_color_conv_op;
-	u16 m_color_conv_in_x;
-	u16 m_color_conv_in_y;
-	u16 m_color_conv_in_w;
-	u16 m_color_conv_in_h;
-	u16 m_color_conv_out_x;
-	u16 m_color_conv_out_y;
+	s16 m_color_conv_clip_x;
+	s16 m_color_conv_clip_y;
+	u16 m_color_conv_clip_w;
+	u16 m_color_conv_clip_h;
+	s16 m_color_conv_out_x;
+	s16 m_color_conv_out_y;
 	u16 m_color_conv_out_w;
 	u16 m_color_conv_out_h;
-	u32 m_color_conv_dsdx;
-	u32 m_color_conv_dtdy;
+	s32 m_color_conv_dsdx;
+	s32 m_color_conv_dtdy;
 
 	// Semaphore
 	bool m_set_semaphore_offset;
@@ -395,11 +398,18 @@ public:
 	u32 m_context_dma_color_d;
 	bool m_set_context_dma_z;
 	u32 m_context_dma_z;
+	u32 m_context_surface;
 	u32 m_context_dma_img_src;
 	u32 m_context_dma_img_dst;
 	u32 m_context_dma_buffer_in_src;
 	u32 m_context_dma_buffer_in_dst;
 	u32 m_dst_offset;
+
+	// Swizzle2D?
+	u16 m_swizzle_format;
+	u8 m_swizzle_width;
+	u8 m_swizzle_height;
+	u32 m_swizzle_offset;
 
 	// Cull face
 	bool m_set_cull_face;
@@ -442,6 +452,7 @@ protected:
 		, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
 		, m_debug_level(CELL_GCM_DEBUG_LEVEL0)
 		, m_frequency_mode(CELL_GCM_DISPLAY_FREQUENCY_DISABLE)
+		, m_report_main_addr(0)
 		, m_main_mem_addr(0)
 		, m_local_mem_addr(0)
 		, m_draw_mode(0)
@@ -497,7 +508,7 @@ protected:
 		m_front_face = 0x0901; // GL_CCW
 		m_cull_face = 0x0405; // GL_BACK
 		m_alpha_func = 0x0207; // GL_ALWAYS
-		m_alpha_ref = 0.0; 
+		m_alpha_ref = 0.0f;
 		m_logic_op = 0x1503; // GL_COPY
 		m_shade_mode = 0x1D01; // GL_SMOOTH
 		m_depth_mask = 1;
@@ -522,7 +533,7 @@ protected:
 		m_vertex_data_base_index = 0;
 
 		// Construct Stipple Pattern
-		for (size_t i = 0; i < 32; i++) 
+		for (size_t i = 0; i < 32; i++)
 		{
 			m_polygon_stipple_pattern[i] = 0xFFFFFFFF;
 		}
@@ -628,54 +639,20 @@ protected:
 	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
 	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
 	void NativeRescale(float width, float height);
-	
+
 	virtual void OnInit() = 0;
 	virtual void OnInitThread() = 0;
 	virtual void OnExitThread() = 0;
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
-	virtual void Enable(u32 cmd, u32 enable) = 0;
-	virtual void ClearColor(u32 a, u32 r, u32 g, u32 b) = 0;
-	virtual void ClearStencil(u32 stencil) = 0;
-	virtual void ClearDepth(u32 depth) = 0;
-	virtual void ClearSurface(u32 mask) = 0;
-	virtual void ColorMask(bool a, bool r, bool g, bool b) = 0;
-	virtual void AlphaFunc(u32 func, float ref) = 0;
-	virtual void DepthFunc(u32 func) = 0;
-	virtual void DepthMask(u32 flag) = 0;
-	virtual void PolygonMode(u32 face, u32 mode) = 0;
-	virtual void PointSize(float size) = 0;
-	virtual void LogicOp(u32 opcode) = 0;
-	virtual void LineWidth(float width) = 0;
-	virtual void LineStipple(u16 factor, u16 pattern) = 0;
-	virtual void PolygonStipple(u32 pattern) = 0;
-	virtual void PrimitiveRestartIndex(u32 index) = 0;
-	virtual void CullFace(u32 mode) = 0;
-	virtual void FrontFace(u32 mode) = 0;
-	virtual void Fogi(u32 mode) = 0;
-	virtual void Fogf(float start, float end) = 0;
-	virtual void PolygonOffset(float factor, float bias) = 0;
-	virtual void DepthRangef(float min, float max) = 0;
-	virtual void BlendEquationSeparate(u16 rgb, u16 a) = 0;
-	virtual void BlendFuncSeparate(u16 srcRGB, u16 dstRGB, u16 srcAlpha, u16 dstAlpha) = 0;
-	virtual void BlendColor(u8 r, u8 g, u8 b, u8 a) = 0;
-	virtual void LightModeli(u32 enable) = 0;
-	virtual void ShadeModel(u32 mode) = 0;
-	virtual void DepthBoundsEXT(float min, float max) = 0;
-	virtual void Scissor(u16 x, u16 y, u16 width, u16 height) = 0;
-	virtual void StencilOp(u32 fail, u32 zfail, u32 zpass) = 0;
-	virtual void StencilMask(u32 mask) = 0;
-	virtual void StencilFunc(u32 func, u32 ref, u32 mask) = 0;
-	virtual void StencilOpSeparate(u32 mode, u32 fail, u32 zfail, u32 zpass) = 0;
-	virtual void StencilMaskSeparate(u32 mode, u32 mask) = 0;
-	virtual void StencilFuncSeparate(u32 mode, u32 func, u32 ref, u32 mask) = 0;
+	virtual void ExecCMD(u32 cmd) = 0;
 	virtual void Flip() = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{
 		for (u32 i = 0; i < m_vertex_count; ++i)
 		{
-			if(!m_vertex_data[i].IsEnabled()) continue;
+			if (!m_vertex_data[i].IsEnabled()) continue;
 
 			m_vertex_data[i].Load(first, count, m_vertex_data_base_offset, m_vertex_data_base_index);
 		}

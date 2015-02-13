@@ -9,6 +9,7 @@ Module *cellGem = nullptr;
 struct cellGemInternal
 {
 	bool m_bInitialized;
+	CellGemAttribute attribute;
 
 	cellGemInternal()
 		: m_bInitialized(false)
@@ -180,12 +181,18 @@ int cellGemGetInertialState()
 	return CELL_OK;
 }
 
-int cellGemGetInfo()
+int cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem->Warning("cellGemGetInfo(info=0x%x)", info.addr());
 
 	if (!cellGemInstance.m_bInitialized)
 		return CELL_GEM_ERROR_UNINITIALIZED;
+
+	info->max_connect = cellGemInstance.attribute.max_connect;
+	// TODO: Support many controllers to be connected
+	info->now_connect = 1;
+	info->status[0] = CELL_GEM_STATUS_READY;
+	info->port[0] = 7;
 
 	return CELL_OK;
 }
@@ -264,6 +271,7 @@ int cellGemInit(vm::ptr<CellGemAttribute> attribute)
 		return CELL_GEM_ERROR_ALREADY_INITIALIZED;
 
 	cellGemInstance.m_bInitialized = true;
+	cellGemInstance.attribute = *attribute;
 
 	return CELL_OK;
 }

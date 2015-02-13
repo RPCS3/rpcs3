@@ -78,7 +78,7 @@ enum
 	CELL_SYSUTIL_SYSCHAT_VOICE_STREAMING_PAUSED  = 0x0164,
 };
 
-typedef void(*CellSysutilCallback)(u64 status, u64 param, vm::ptr<void> userdata);
+typedef void(CellSysutilCallback)(u64 status, u64 param, vm::ptr<void> userdata);
 
 void sysutilSendSystemCommand(u64 status, u64 param);
 
@@ -238,21 +238,21 @@ struct CellHddGameCBResult
 };
 
 typedef s32 CellWebBrowserId;
-typedef void* CellWebBrowserClientSession;
-typedef void(*CellWebBrowserCallback)(s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
-typedef void(*CellWebComponentCallback)(CellWebBrowserId, s32 cb_type, vm::ptr<CellWebBrowserClientSession>, vm::ptr<void> usrdata);
-typedef void(*CellWebBrowserSystemCallback)(s32 cb_type, vm::ptr<void> usrdata);
+typedef vm::ptr<void> CellWebBrowserClientSession;
+typedef void(CellWebBrowserCallback)(s32 cb_type, CellWebBrowserClientSession, vm::ptr<void> usrdata);
+typedef void(CellWebComponentCallback)(CellWebBrowserId, s32 cb_type, CellWebBrowserClientSession, vm::ptr<void> usrdata);
+typedef void(CellWebBrowserSystemCallback)(s32 cb_type, vm::ptr<void> usrdata);
 
-typedef void(*CellWebBrowserMIMETypeCallback)(vm::ptr<const char> mimetype, vm::ptr<const char> url, vm::ptr<void> usrdata);
-typedef void(*CellWebBrowserErrorCallback)(s32 err_type, vm::ptr<void> usrdata);
-typedef void(*CellWebBrowserStatusCallback)(s32 err_type, vm::ptr<void> usrdata);
-typedef void(*CellWebBrowserNotify)(vm::ptr<const char> message, vm::ptr<void> usrdata);
-typedef void(*CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
+typedef void(CellWebBrowserMIMETypeCallback)(vm::ptr<const char> mimetype, vm::ptr<const char> url, vm::ptr<void> usrdata);
+typedef void(CellWebBrowserErrorCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(CellWebBrowserStatusCallback)(s32 err_type, vm::ptr<void> usrdata);
+typedef void(CellWebBrowserNotify)(vm::ptr<const char> message, vm::ptr<void> usrdata);
+typedef void(CellWebBrowserUsrdata)(vm::ptr<void> usrdata);
 
 struct CellWebBrowserMimeSet
 {
-	vm::bptr<const char> const type;
-	vm::bptr<const char> const directory;
+	const vm::bptr<const char> type;
+	const vm::bptr<const char> directory;
 };
 
 struct CellWebBrowserPos

@@ -10,17 +10,15 @@ enum ARMv7InstructionSet
 	ThumbEE
 };
 
+enum armv7_debug_flags : u32
+{
+	DF_DISASM = 1 << 0,
+	DF_PRINT  = 1 << 1,
+	DF_NO_EXE = 1 << 2,
+};
+
 struct ARMv7Context
 {
-	ARMv7Thread& thread;
-
-	ARMv7Context(ARMv7Thread& thread) : thread(thread) {}
-
-	void write_pc(u32 value);
-	u32 read_pc();
-	u32 get_stack_arg(u32 pos);
-	void fast_call(u32 addr);
-
 	union
 	{
 		u32 GPR[15];
@@ -37,6 +35,25 @@ struct ARMv7Context
 			};
 
 			u32 LR;
+
+			union
+			{
+				struct
+				{
+					u32 reserved0 : 16;
+					u32 GE : 4;
+					u32 reserved1 : 4;
+					u32 dummy : 3;
+					u32 Q : 1; // Set to 1 if an SSAT or USAT instruction changes (saturates) the input value for the signed or unsigned range of the result
+					u32 V : 1; // Overflow condition code flag
+					u32 C : 1; // Carry condition code flag
+					u32 Z : 1; // Zero condition code flag
+					u32 N : 1; // Negative condition code flag
+				};
+
+				u32 APSR;
+
+			} APSR;
 		};
 
 		struct
@@ -44,22 +61,6 @@ struct ARMv7Context
 			u64 GPR_D[8];
 		};
 	};
-
-	union
-	{
-		struct
-		{
-			u32 N : 1; //Negative condition code flag
-			u32 Z : 1; //Zero condition code flag
-			u32 C : 1; //Carry condition code flag
-			u32 V : 1; //Overflow condition code flag
-			u32 Q : 1; //Set to 1 if an SSAT or USAT instruction changes (saturates) the input value for the signed or unsigned range of the result
-			u32 dummy : 27;
-		};
-
-		u32 APSR;
-
-	} APSR;
 
 	union
 	{
@@ -79,20 +80,26 @@ struct ARMv7Context
 	{
 		struct
 		{
-			u8 cond : 3;
-			u8 state : 5;
+			u8 shift_state : 5;
+			u8 cond_base : 3;
+		};
+
+		struct
+		{
+			u8 check_state : 4;
+			u8 condition : 4;
 		};
 
 		u8 IT;
 
 		u32 advance()
 		{
-			const u32 res = (state & 0xf) ? (cond << 1 | state >> 4) : 0xe /* true */;
+			const u32 res = check_state ? condition : 0xe /* always true */;
 
-			state <<= 1;
-			if ((state & 0xf) == 0) // if no d
+			shift_state <<= 1;
+			if (!check_state)
 			{
-				IT = 0; // clear ITSTATE
+				IT = 0; // clear
 			}
 
 			return res;
@@ -100,13 +107,32 @@ struct ARMv7Context
 
 		operator bool() const
 		{
-			return (state & 0xf) != 0;
+			return check_state;
 		}
 
 	} ITSTATE;
 
-	u32 R_ADDR;
-	u64 R_DATA;
+	u32 TLS;
+
+	struct perf_counter
+	{
+		u32 event;
+		u32 value;
+	};
+
+	std::array<perf_counter, 6> counters;
+
+	ARMv7Thread& thread;
+
+	u32 debug; // debug flags
+	std::string debug_str;
+
+	ARMv7Context(ARMv7Thread& thread) : thread(thread), debug(/*DF_DISASM | DF_PRINT*/ 0) {}
+
+	void write_pc(u32 value);
+	u32 read_pc();
+	u32 get_stack_arg(u32 pos);
+	void fast_call(u32 addr);
 
 	void write_gpr(u32 n, u32 value)
 	{
@@ -118,7 +144,7 @@ struct ARMv7Context
 		}
 		else
 		{
-			write_pc(value & ~1);
+			write_pc(value);
 		}
 	}
 
@@ -260,7 +286,7 @@ struct cast_armv7_gpr<bool, false>
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u32 reg)
+	__forceinline static bool from_gpr(const u32& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}

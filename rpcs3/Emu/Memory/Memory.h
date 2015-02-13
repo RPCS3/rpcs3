@@ -72,13 +72,6 @@ public:
 		Close();
 	}
 
-	static void* const GetBaseAddr()
-	{
-		return vm::g_base_addr;
-	}
-
-	__noinline void InvalidAddress(const char* func, const u64 addr);
-
 	void RegisterPages(u64 addr, u32 size);
 
 	void UnregisterPages(u64 addr, u32 size);
