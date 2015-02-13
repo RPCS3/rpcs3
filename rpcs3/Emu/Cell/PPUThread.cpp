@@ -85,7 +85,7 @@ void PPUThread::InitStack()
 	if (!m_stack_addr)
 	{
 		assert(m_stack_size);
-		m_stack_addr = vm::cast(Memory.StackMem.AllocAlign(m_stack_size, 4096));
+		m_stack_addr = Memory.StackMem.AllocAlign(m_stack_size, 4096);
 	}
 }
 

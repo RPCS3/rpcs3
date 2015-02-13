@@ -45,7 +45,7 @@ void MemoryStringSearcher::Search(wxCommandEvent& event)
 	u32 strIndex = 0;
 	u32 numFound = 0;
 	for (u32 addr = Memory.MainMem.GetStartAddr(); addr < Memory.MainMem.GetEndAddr(); addr++) {
-		if (!Memory.IsGoodAddr(addr)) {
+		if (!vm::check_addr(addr)) {
 			strIndex = 0;
 			continue;
 		}

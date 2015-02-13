@@ -259,14 +259,14 @@ void RSXDebugger::OnChangeToolsAddr(wxCommandEvent& event)
 
 void RSXDebugger::OnScrollMemory(wxMouseEvent& event)
 {
-	if(Memory.IsGoodAddr(m_addr))
+	if(vm::check_addr(m_addr))
 	{
 		int items = event.ControlDown() ? m_item_count : 1;
 
 		for(int i=0; i<items; ++i)
 		{
 			u32 offset;
-			if(Memory.IsGoodAddr(m_addr))
+			if(vm::check_addr(m_addr))
 			{
 				u32 cmd = vm::read32(m_addr);
 				u32 count = (cmd & (CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_CALL))
@@ -304,7 +304,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 #define SHOW_BUFFER(id) \
 	{ \
 		u32 addr = render.m_local_mem_addr + buffers[id].offset; \
-		if (Memory.IsGoodAddr(addr) && buffers[id].width && buffers[id].height) \
+		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
 			MemoryViewerPanel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
 	} \
@@ -316,7 +316,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
 		u8 location = render.m_textures[m_cur_texture].GetLocation();
-		if(location <= 1 && Memory.IsGoodAddr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), location))
+		if(location <= 1 && vm::check_addr(GetAddress(render.m_textures[m_cur_texture].GetOffset(), location))
 			&& render.m_textures[m_cur_texture].GetWidth() && render.m_textures[m_cur_texture].GetHeight())
 			MemoryViewerPanel::ShowImage(this,
 				GetAddress(render.m_textures[m_cur_texture].GetOffset(), location), 1,
@@ -380,7 +380,7 @@ void RSXDebugger::GetMemory()
 	{
 		m_list_commands->SetItem(i, 0, wxString::Format("%08x", addr));
 	
-		if (isReady && Memory.IsGoodAddr(addr))
+		if (isReady && vm::check_addr(addr))
 		{
 			u32 cmd = vm::read32(addr);
 			u32 count = (cmd >> 18) & 0x7ff;
@@ -409,13 +409,13 @@ void RSXDebugger::GetBuffers()
 	// TODO: Currently it only supports color buffers
 	for (u32 bufferId=0; bufferId < render.m_gcm_buffers_count; bufferId++)
 	{
-		if(!Memory.IsGoodAddr(render.m_gcm_buffers_addr))
+		if(!vm::check_addr(render.m_gcm_buffers_addr))
 			continue;
 
 		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
 		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
-		if(!Memory.IsGoodAddr(RSXbuffer_addr))
+		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
 		auto RSXbuffer = vm::get_ptr<unsigned char>(RSXbuffer_addr);
@@ -467,7 +467,7 @@ void RSXDebugger::GetBuffers()
 
 	u32 TexBuffer_addr = GetAddress(offset, location);
 
-	if(!Memory.IsGoodAddr(TexBuffer_addr))
+	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
 	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);

@@ -76,7 +76,7 @@ void InitOffsetTable()
 u32 cellGcmGetLabelAddress(u8 index)
 {
 	cellGcmSys->Log("cellGcmGetLabelAddress(index=%d)", index);
-	return (u32)Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
+	return gcm_info.label_addr + 0x10 * index;
 }
 
 vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 location)
@@ -360,8 +360,6 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_config.memoryFrequency = 650000000;
 	current_config.coreFrequency = 500000000;
 
-	Memory.RSXCMDMem.AllocAlign(cmdSize);
-
 	u32 ctx_begin = ioAddress/* + 0x1000*/;
 	u32 ctx_size = 0x6ffc;
 	current_context.begin = ctx_begin;
@@ -369,8 +367,10 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_context.current = current_context.begin;
 	current_context.callback.set(be_t<u32>::make(Emu.GetRSXCallback() - 4));
 
-	gcm_info.context_addr = (u32)Memory.MainMem.AllocAlign(0x1000);
+	gcm_info.context_addr = Memory.MainMem.AllocAlign(0x1000);
 	gcm_info.control_addr = gcm_info.context_addr + 0x40;
+
+	gcm_info.label_addr = Memory.MainMem.AllocAlign(0x1000); // ???
 
 	vm::get_ref<CellGcmContextData>(gcm_info.context_addr) = current_context;
 	vm::write32(context.addr(), gcm_info.context_addr);
@@ -388,6 +388,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	render.m_gcm_buffers_count = 0;
 	render.m_gcm_current_buffer = 0;
 	render.m_main_mem_addr = 0;
+	render.m_label_addr = gcm_info.label_addr;
 	render.Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
 
 	return CELL_OK;
@@ -1109,7 +1110,7 @@ int cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, 
 		ctx.addr(), id, label_index, label_value);
 
 	int res = cellGcmSetPrepareFlip(ctx, id);
-	vm::write32(Memory.RSXCMDMem.GetStartAddr() + 0x10 * label_index, label_value);
+	vm::write32(gcm_info.label_addr + 0x10 * label_index, label_value);
 	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
 }
 

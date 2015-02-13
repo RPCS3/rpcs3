@@ -41,7 +41,7 @@ u32 ppu_get_tls(u32 thread)
 	if (!g_tls_start)
 	{
 		g_tls_size = Emu.GetTLSMemsz() + TLS_SYS;
-		g_tls_start = vm::cast(Memory.MainMem.AllocAlign(g_tls_size * TLS_MAX, 4096)); // memory for up to TLS_MAX threads
+		g_tls_start = Memory.MainMem.AllocAlign(g_tls_size * TLS_MAX, 4096); // memory for up to TLS_MAX threads
 		sysPrxForUser->Notice("Thread Local Storage initialized (g_tls_start=0x%x, user_size=0x%x)\n*** TLS segment addr: 0x%08x\n*** TLS segment size: 0x%08x",
 			g_tls_start, Emu.GetTLSMemsz(), Emu.GetTLSAddr(), Emu.GetTLSFilesz());
 	}

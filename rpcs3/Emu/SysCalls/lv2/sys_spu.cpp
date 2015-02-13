@@ -88,7 +88,7 @@ SPUThread* spu_thread_initialize(std::shared_ptr<SpuGroupInfo>& group, u32 spu_n
 	const u32 spu_ep = img.entry_point;
 	// Copy SPU image:
 	// TODO: use segment info
-	const u32 spu_offset = vm::cast(Memory.MainMem.AllocAlign(256 * 1024, 4096));
+	const u32 spu_offset = Memory.MainMem.AllocAlign(256 * 1024, 4096);
 	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img.addr), 256 * 1024);
 
 	SPUThread& new_thread = static_cast<SPUThread&>(Emu.GetCPU().AddThread(CPU_THREAD_SPU));

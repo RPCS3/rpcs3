@@ -4,54 +4,7 @@
 #include "Memory.h"
 #include "Emu/Cell/RawSPUThread.h"
 
-#ifndef _WIN32
-#include <sys/mman.h>
-
-/* OS X uses MAP_ANON instead of MAP_ANONYMOUS */
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-#else
-#include <Windows.h>
-#endif
-
 MemoryBase Memory;
-
-void MemoryBase::RegisterPages(u32 addr, u32 size)
-{
-	assert(size && (size | addr) % 4096 == 0);
-
-	LV2_LOCK(0);
-
-	//LOG_NOTICE(MEMORY, "RegisterPages(addr=0x%x, size=0x%x)", addr, size);
-	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
-	{
-		if (m_pages[i])
-		{
-			LOG_ERROR(MEMORY, "Page already registered (addr=0x%x)", i * 4096);
-			Emu.Pause();
-		}
-		m_pages[i] = 1; // TODO: define page parameters
-	}
-}
-
-void MemoryBase::UnregisterPages(u32 addr, u32 size)
-{
-	assert(size && (size | addr) % 4096 == 0);
-
-	LV2_LOCK(0);
-
-	//LOG_NOTICE(MEMORY, "UnregisterPages(addr=0x%x, size=0x%x)", addr, size);
-	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
-	{
-		if (!m_pages[i])
-		{
-			LOG_ERROR(MEMORY, "Page not registered (addr=0x%x)", i * 4096);
-			Emu.Pause();
-		}
-		m_pages[i] = 0; // TODO: define page parameters
-	}
-}
 
 u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
 {
@@ -93,7 +46,6 @@ void MemoryBase::Init(MemoryType type)
 	if (m_inited) return;
 	m_inited = true;
 
-	memset(m_pages, 0, sizeof(m_pages));
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
 	LOG_NOTICE(MEMORY, "Initializing memory: base_addr = 0x%llx, priv_addr = 0x%llx", (u64)vm::g_base_addr, (u64)vm::g_priv_addr);
@@ -111,11 +63,8 @@ void MemoryBase::Init(MemoryType type)
 	switch (type)
 	{
 	case Memory_PS3:
-		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x2FFF0000));
-		MemoryBlocks.push_back(UserMemory = PRXMem.SetRange(0x30000000, 0x10000000));
-		MemoryBlocks.push_back(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		MemoryBlocks.push_back(SPRXMem.SetRange(0x50000000, 0x10000000));
-		MemoryBlocks.push_back(MmaperMem.SetRange(0xB0000000, 0x10000000));
+		MemoryBlocks.push_back(MainMem.SetRange(0x00010000, 0x1FFF0000));
+		MemoryBlocks.push_back(UserMemory = Userspace.SetRange(0x20000000, 0x10000000));
 		MemoryBlocks.push_back(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 		MemoryBlocks.push_back(StackMem.SetRange(0xD0000000, 0x10000000));
 		break;
@@ -189,7 +138,7 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 
 	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 	{
-		if (m_pages[i])
+		if (vm::check_addr(i * 4096, 4096))
 		{
 			return false;
 		}
@@ -220,45 +169,15 @@ bool MemoryBase::Unmap(const u32 addr)
 MemBlockInfo::MemBlockInfo(u32 addr, u32 size)
 	: MemInfo(addr, size)
 {
-	assert(size && (size | addr) % 4096 == 0);
-
-	void* real_addr = vm::get_ptr(addr);
-	void* priv_addr = vm::get_priv_ptr(addr);
-
-#ifdef _WIN32
-	if (!VirtualAlloc(priv_addr, size, MEM_COMMIT, PAGE_READWRITE) || !VirtualAlloc(real_addr, size, MEM_COMMIT, PAGE_READWRITE))
-#else
-	if (mprotect(real_addr, size, PROT_READ | PROT_WRITE) || mprotect(priv_addr, size, PROT_READ | PROT_WRITE))
-#endif
-	{
-		LOG_ERROR(MEMORY, "Memory allocation failed (addr=0x%x, size=0x%x)", addr, size);
-		Emu.Pause();
-	}
-	else
-	{
-		Memory.RegisterPages(addr, size);
-
-		mem = real_addr;
-		memset(mem, 0, size); // ???
-	}
+	vm::page_map(addr, size, vm::page_readable | vm::page_writable | vm::page_executable);
 }
 
 void MemBlockInfo::Free()
 {
-	if (mem)
+	if (addr && size)
 	{
-		Memory.UnregisterPages(addr, size);
-#ifdef _WIN32
-		DWORD old;
-
-		if (!VirtualProtect(mem, size, PAGE_NOACCESS, &old) || !VirtualProtect(vm::get_priv_ptr(addr), size, PAGE_NOACCESS, &old))
-#else
-		if (mprotect(mem, size, PROT_NONE) || mprotect(vm::get_priv_ptr(addr), size, PROT_NONE))
-#endif
-		{
-			LOG_ERROR(MEMORY, "Memory deallocation failed (addr=0x%x, size=0x%x)", addr, size);
-			Emu.Pause();
-		}
+		vm::page_unmap(addr, size);
+		addr = size = 0;
 	}
 }
 
@@ -277,21 +196,14 @@ void MemoryBlock::Init()
 {
 	range_start = 0;
 	range_size = 0;
-
-	mem = vm::get_ptr<u8>(0u);
 }
 
 void MemoryBlock::InitMemory()
 {
-	if (!range_size)
-	{
-		mem = vm::get_ptr<u8>(range_start);
-	}
-	else
+	if (range_size)
 	{
 		Free();
 		mem_inf = new MemBlockInfo(range_start, range_size);
-		mem = (u8*)mem_inf->mem;
 	}
 }
 

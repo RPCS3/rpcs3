@@ -39,7 +39,7 @@ std::array<std::atomic<u32>, TLS_MAX> g_armv7_tls_owners;
 
 void armv7_init_tls()
 {
-	g_armv7_tls_start = Emu.GetTLSMemsz() ? vm::cast(Memory.PSV.RAM.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096)) : 0;
+	g_armv7_tls_start = Emu.GetTLSMemsz() ? Memory.PSV.RAM.AllocAlign(Emu.GetTLSMemsz() * TLS_MAX, 4096) : 0;
 
 	for (auto& v : g_armv7_tls_owners)
 	{
@@ -126,7 +126,7 @@ void ARMv7Thread::InitStack()
 	if (!m_stack_addr)
 	{
 		assert(m_stack_size);
-		m_stack_addr = vm::cast(Memory.Alloc(m_stack_size, 4096));
+		m_stack_addr = Memory.Alloc(m_stack_size, 4096);
 	}
 }
 
@@ -269,7 +269,7 @@ cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
 		argc++;
 	}
 
-	argv = vm::cast(Memory.PSV.RAM.AllocAlign(argv_size, 4096)); // allocate arg list
+	argv = Memory.PSV.RAM.AllocAlign(argv_size, 4096); // allocate arg list
 	memcpy(vm::get_ptr(argv), argv_data.data(), argv_size); // copy arg list
 	
 	return *this;

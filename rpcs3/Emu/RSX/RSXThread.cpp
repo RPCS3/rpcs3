@@ -261,7 +261,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		if (m_set_semaphore_offset)
 		{
 			m_set_semaphore_offset = false;
-			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, ARGS(0));
+			vm::write32(m_label_addr + m_semaphore_offset, ARGS(0));
 		}
 		break;
 	}
@@ -274,7 +274,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 			u32 value = ARGS(0);
 			value = (value & 0xff00ff00) | ((value & 0xff) << 16) | ((value >> 16) & 0xff);
 
-			vm::write32(Memory.RSXCMDMem.GetStartAddr() + m_semaphore_offset, value);
+			vm::write32(m_label_addr + m_semaphore_offset, value);
 		}
 		break;
 	}

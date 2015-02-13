@@ -27,7 +27,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	}
 
 	// Use fixed address (TODO: search and use some free address instead)
-	u32 new_addr = Memory.IsGoodAddr(0x60000000) ? 0x70000000 : 0x60000000;
+	u32 new_addr = vm::check_addr(0x60000000) ? 0x70000000 : 0x60000000;
 
 	// If container ID is SYS_MEMORY_CONTAINER_ID_INVALID, allocate directly.
 	if(cid == SYS_MEMORY_CONTAINER_ID_INVALID)
@@ -45,7 +45,10 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	}
 
 	// Allocate actual memory using virtual size (physical size is ignored)
-	assert(Memory.Map(new_addr, vsize));
+	if (!Memory.Map(new_addr, vsize))
+	{
+		return CELL_ENOMEM;
+	}
 
 	// Write a pointer for the allocated memory.
 	vm::write32(addr, new_addr);

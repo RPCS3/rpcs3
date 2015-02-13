@@ -22,8 +22,6 @@ struct MemInfo
 
 struct MemBlockInfo : public MemInfo
 {
-	void *mem;
-
 	MemBlockInfo(u32 addr, u32 size);
 
 	void Free();
@@ -32,27 +30,26 @@ struct MemBlockInfo : public MemInfo
 
 	MemBlockInfo(MemBlockInfo &&other)
 		: MemInfo(other.addr,other.size)
-		, mem(other.mem)
 	{
-		other.mem = nullptr;
+		other.addr = 0;
+		other.size = 0;
 	}
 
 	MemBlockInfo& operator =(MemBlockInfo &other) = delete;
 
 	MemBlockInfo& operator =(MemBlockInfo &&other)
 	{
-		this->Free();
+		Free();
 		this->addr = other.addr;
 		this->size = other.size;
-		this->mem = other.mem;
-		other.mem = nullptr;
+		other.addr = 0;
+		other.size = 0;
 		return *this;
 	}
 
 	~MemBlockInfo()
 	{
 		Free();
-		mem = nullptr;
 	}
 };
 
@@ -76,7 +73,6 @@ struct VirtualMemInfo : public MemInfo
 class MemoryBlock
 {
 protected:
-	u8* mem;
 	u32 range_start;
 	u32 range_size;
 
