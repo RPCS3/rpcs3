@@ -888,6 +888,20 @@ struct cast_ppu_gpr<u32, false>
 };
 
 template<>
+struct cast_ppu_gpr<unsigned long, false>
+{
+	__forceinline static u64 to_gpr(const unsigned long& value)
+	{
+		return value;
+	}
+
+	__forceinline static unsigned long from_gpr(const u64 reg)
+	{
+		return static_cast<unsigned long>(reg);
+	}
+};
+
+template<>
 struct cast_ppu_gpr<u64, false>
 {
 	__forceinline static u64 to_gpr(const u64& value)

@@ -61,7 +61,7 @@ struct VFS
 
 	struct links_sorter
 	{
-		bool operator()(const std::vector<std::string>& a, const std::vector<std::string>& b)
+		bool operator()(const std::vector<std::string>& a, const std::vector<std::string>& b) const
 		{
 			return b.size() < a.size();
 		}
