@@ -48,7 +48,7 @@ void MemoryBase::Init(MemoryType type)
 
 	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
-	LOG_NOTICE(MEMORY, "Initializing memory: base_addr = 0x%llx, priv_addr = 0x%llx", (u64)vm::g_base_addr, (u64)vm::g_priv_addr);
+	LOG_NOTICE(MEMORY, "Initializing memory: g_base_addr = 0x%llx, g_priv_addr = 0x%llx", (u64)vm::g_base_addr, (u64)vm::g_priv_addr);
 
 #ifdef _WIN32
 	if (!vm::g_base_addr || !vm::g_priv_addr)

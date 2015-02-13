@@ -5,6 +5,9 @@ class CPUThread;
 
 namespace vm
 {
+	extern void* g_base_addr; // base address of ps3/psv virtual memory for common access
+	extern void* g_priv_addr; // base address of ps3/psv virtual memory for privileged access
+
 	enum memory_location : uint
 	{
 		main,
@@ -28,13 +31,6 @@ namespace vm
 
 	static void set_stack_size(u32 size) {}
 	static void initialize_stack() {}
-
-#ifdef _WIN32
-	extern HANDLE g_memory_handle;
-#endif
-
-	extern void* g_priv_addr;
-	extern void* const g_base_addr;
 
 	// break the reservation, return true if it was successfully broken
 	bool reservation_break(u32 addr);

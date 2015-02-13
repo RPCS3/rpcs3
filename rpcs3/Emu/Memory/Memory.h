@@ -22,11 +22,6 @@ enum : u32
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 };
 
-namespace vm
-{
-	extern void* const g_base_addr;
-}
-
 class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;

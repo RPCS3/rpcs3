@@ -25,35 +25,32 @@
 
 namespace vm
 {
-#ifdef _WIN32
-	HANDLE g_memory_handle;
-#endif
-
-	void* g_priv_addr;
-
 	void* initialize()
 	{
 #ifdef _WIN32
-		g_memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
+		HANDLE memory_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 0x1, 0x0, NULL);
 
-		void* base_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // main memory
-		g_priv_addr = MapViewOfFile(g_memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000); // memory mirror for privileged access
+		void* base_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
+		g_priv_addr = MapViewOfFile(memory_handle, FILE_MAP_WRITE, 0, 0, 0x100000000);
+
+		CloseHandle(memory_handle);
 
 		return base_addr;
-
-		//return VirtualAlloc(nullptr, 0x100000000, MEM_RESERVE, PAGE_NOACCESS);
 #else
-		//shm_unlink("/rpcs3_vm");
-
 		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
 
 		if (memory_handle == -1)
 		{
-			printf("shm_open() failed\n");
+			printf("shm_open('/rpcs3_vm') failed\n");
 			return (void*)-1;
 		}
 
-		ftruncate(memory_handle, 0x100000000);
+		if (ftruncate(memory_handle, 0x100000000) == -1)
+		{
+			printf("ftruncate(memory_handle) failed\n");
+			shm_unlink("/rpcs3_vm");
+			return (void*)-1;
+		}
 
 		void* base_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
 		g_priv_addr = mmap(nullptr, 0x100000000, PROT_NONE, MAP_SHARED, memory_handle, 0);
@@ -61,8 +58,6 @@ namespace vm
 		shm_unlink("/rpcs3_vm");
 
 		return base_addr;
-
-		//return mmap(nullptr, 0x100000000, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
 #endif
 	}
 
@@ -71,14 +66,14 @@ namespace vm
 #ifdef _WIN32
 		UnmapViewOfFile(g_base_addr);
 		UnmapViewOfFile(g_priv_addr);
-		CloseHandle(g_memory_handle);
 #else
 		munmap(g_base_addr, 0x100000000);
 		munmap(g_priv_addr, 0x100000000);
 #endif
 	}
 
-	void* const g_base_addr = (atexit(finalize), initialize());
+	void* g_base_addr = (atexit(finalize), initialize());
+	void* g_priv_addr;
 
 	std::array<atomic_le_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
 
@@ -628,7 +623,7 @@ namespace vm
 		{
 			PPUThread& PPU = static_cast<PPUThread&>(CPU);
 
-			old_pos = (u32)PPU.GPR[1];
+			old_pos = vm::cast(PPU.GPR[1], "SP");
 			PPU.GPR[1] -= align(size, 8); // room minimal possible size
 			PPU.GPR[1] &= ~(align_v - 1); // fix stack alignment
 
