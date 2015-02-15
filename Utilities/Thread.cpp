@@ -99,15 +99,12 @@ enum x64_reg_t : u32
 	X64_IMM16,
 	X64_IMM32,
 
-	X64R = X64R_RAX,
-	X64R_XMM = X64R_XMM0,
-	X64R_LH = X64R_AL,
 	X64R_ECX = X64R_CL,
 };
 
 enum x64_op_t : u32
 {
-	X64OP_NOP,
+	X64OP_NONE,
 	X64OP_LOAD, // obtain and put the value into x64 register (from Memory.ReadMMIO32, for example)
 	X64OP_STORE, // take the value from x64 register or an immediate and use it (pass in Memory.WriteMMIO32, for example)
 	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
@@ -118,7 +115,7 @@ enum x64_op_t : u32
 	X64OP_CMPXCHG,
 };
 
-void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32& out_size, u32& out_length)
+void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
 {
 	// simple analysis of x64 code allows to reinterpret MOV or other instructions in any desired way
 	out_length = 0;
@@ -202,7 +199,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32
 		case 0x67: // group 4
 		{
 			LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): address-size override prefix found", (size_t)code - out_length, prefix);
-			out_op = X64OP_NOP;
+			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
 			out_length = 0;
@@ -231,25 +228,25 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32
 
 	auto get_modRM_reg = [](const u8* code, const u8 rex) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R);
+		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_RAX);
 	};
 
 	auto get_modRM_reg_xmm = [](const u8* code, const u8 rex) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_XMM);
+		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_XMM0);
 	};
 
 	auto get_modRM_reg_lh = [](const u8* code) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3) + X64R_LH);
+		return (x64_reg_t)(((*code & 0x38) >> 3) + X64R_AL);
 	};
 
-	auto get_op_size = [](const u8 rex, const bool oso) -> u32
+	auto get_op_size = [](const u8 rex, const bool oso) -> size_t
 	{
 		return rex & 8 ? 8 : (oso ? 2 : 4);
 	};
 
-	auto get_modRM_size = [](const u8* code) -> u32
+	auto get_modRM_size = [](const u8* code) -> size_t
 	{
 		switch (*code >> 6) // check Mod
 		{
@@ -426,8 +423,8 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32
 	}
 	}
 
-	LOG_WARNING(GENERAL, "decode_x64_reg_op(%016llxh): unsupported opcode found (%llX%llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
-	out_op = X64OP_NOP;
+	LOG_WARNING(GENERAL, "decode_x64_reg_op(%016llxh): unsupported opcode found (%016llX%016llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
+	out_op = X64OP_NONE;
 	out_reg = X64_NOT_SET;
 	out_size = 0;
 	out_length = 0;
@@ -437,13 +434,11 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32
 
 typedef CONTEXT x64_context;
 
-#define RIP 16
 #define X64REG(context, reg) (&(&context->Rax)[reg])
 
 #else
 
 typedef ucontext_t x64_context;
-#define RIP 16
 
 #ifdef __APPLE__
 
@@ -509,58 +504,134 @@ static const reg_table_t reg_table[17] =
 
 #endif
 
+#define RAX(c) (*X64REG((c), 0))
+#define RCX(c) (*X64REG((c), 1))
+#define RDX(c) (*X64REG((c), 2))
+#define RSI(c) (*X64REG((c), 6))
+#define RDI(c) (*X64REG((c), 7))
+#define RIP(c) (*X64REG((c), 16))
+
+bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_t i_size, u64& out_value)
+{
+	// get x64 reg value (for store operations)
+	if (reg - X64R_RAX < 16)
+	{
+		// load the value from x64 register
+		const u64 reg_value = *X64REG(context, reg - X64R_RAX);
+
+		switch (d_size)
+		{
+		case 1: out_value = (u8)reg_value; return true;
+		case 2: out_value = (u16)reg_value; return true;
+		case 4: out_value = (u32)reg_value; return true;
+		case 8: out_value = reg_value; return true;
+		}
+	}
+	else if (reg - X64R_AL < 4 && d_size == 1)
+	{
+		out_value = (u8)(*X64REG(context, reg - X64R_AL));
+	}
+	else if (reg - X64R_AH < 4 && d_size == 1)
+	{
+		out_value = (u8)(*X64REG(context, reg - X64R_AH) >> 8);
+	}
+	else if (reg == X64_IMM32)
+	{
+		// load the immediate value (assuming it's at the end of the instruction)
+		const s32 imm_value = *(s32*)(RIP(context) + i_size - 4);
+		
+		switch (d_size)
+		{
+		case 4: out_value = (u32)imm_value; return true;
+		case 8: out_value = (u64)imm_value; return true; // sign-extended
+		}
+	}
+	else if (reg == X64R_ECX)
+	{
+		out_value = (u32)RCX(context);
+	}
+
+	LOG_ERROR(GENERAL, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
+	return false;
+}
+
+bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 value)
+{
+	// save x64 reg value (for load operations)
+	if (reg - X64R_RAX < 16)
+	{
+		// store the value into x64 register
+		*X64REG(context, reg - X64R_RAX) = (u32)value;
+		return true;
+	}
+
+	LOG_ERROR(GENERAL, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", reg, d_size, value);
+	return false;
+}
+
+void fix_x64_reg_op(x64_context* context, x64_op_t& op, x64_reg_t& reg, size_t& d_size, size_t& i_size)
+{
+	if (op == X64OP_MOVS && reg != X64_NOT_SET)
+	{
+		u64 counter;
+		if (!get_x64_reg_value(context, reg, 8, i_size, counter))
+		{
+			op = X64OP_NONE;
+			reg = X64_NOT_SET;
+			d_size = 0;
+			i_size = 0;
+			return;
+		}
+
+		d_size *= counter;
+	}
+}
+
 bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
 {
+	auto code = (const u8*)RIP(context);
+
 	x64_op_t op;
 	x64_reg_t reg;
-	u32 d_size;
-	u32 i_size;
+	size_t d_size;
+	size_t i_size;
 
 	// decode single x64 instruction that causes memory access
-	decode_x64_reg_op((const u8*)(*X64REG(context, RIP)), op, reg, d_size, i_size);
+	decode_x64_reg_op(code, op, reg, d_size, i_size);
+	fix_x64_reg_op(context, op, reg, d_size, i_size);
 
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
 		if (d_size != 4 || !i_size)
 		{
-			LOG_ERROR(GENERAL, "Invalid instruction (op=%d, reg=%d, d_size=0x%x, i_size=0x%x)", op, reg, d_size, i_size);
+			LOG_ERROR(GENERAL, "Invalid instruction (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
 			return false;
 		}
-
-		// get x64 reg value (for store operations)
-		u64 reg_value;
-		if (reg - X64R < 16)
-		{
-			// load the value from x64 register
-			reg_value = (u32)*X64REG(context, reg - X64R);
-		}
-		else if (reg == X64_IMM32)
-		{
-			// load the immediate value (assuming it's at the end of the instruction)
-			reg_value = *(u32*)(*X64REG(context, RIP) + i_size - 4);
-		}
-		else
-		{
-			LOG_ERROR(GENERAL, "Invalid source (reg=%d)", reg);
-			return false;
-		}
-
-		bool save_reg = false;
 
 		switch (op)
 		{
 		case X64OP_LOAD:
 		{
-			reg_value = re32(Memory.ReadMMIO32(addr));
-			save_reg = true;
+			u32 value;
+			if (is_writing || !Memory.ReadMMIO32(addr, value) || !put_x64_reg_value(context, reg, d_size, re32(value)))
+			{
+				return false;
+			}
+
 			break;
 		}
 		case X64OP_STORE:
 		{
-			Memory.WriteMMIO32(addr, re32((u32)reg_value));
+			u64 reg_value;
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !Memory.WriteMMIO32(addr, re32((u32)reg_value)))
+			{
+				return false;
+			}
+
 			break;
 		}
+		case X64OP_MOVS: // TODO
 		default:
 		{
 			LOG_ERROR(GENERAL, "Invalid operation (op=%d)", op);
@@ -568,23 +639,8 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 		}
 		}
 
-		// save x64 reg value (for load operations)
-		if (save_reg)
-		{
-			if (reg - X64R < 16)
-			{
-				// store the value into x64 register
-				*X64REG(context, reg - X64R) = (u32)reg_value;
-			}
-			else
-			{
-				LOG_ERROR(GENERAL, "Invalid destination (reg=%d, reg_value=0x%llx)", reg, reg_value);
-				return false;
-			}
-		}
-
-		// skip decoded instruction
-		*X64REG(context, RIP) += i_size;
+		// skip processed instruction
+		RIP(context) += i_size;
 		return true;
 	}
 

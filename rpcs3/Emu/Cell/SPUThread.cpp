@@ -205,74 +205,36 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 {
 	if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
 
-	if (ea >= SYS_SPU_THREAD_BASE_LOW)
+	u32 eal = vm::cast(ea, "ea");
+
+	if (eal >= SYS_SPU_THREAD_BASE_LOW && group) // SPU Thread Group MMIO (LS and SNR)
 	{
-		if (ea >= 0x100000000)
-		{
-			LOG_DMAC(LOG_ERROR, "Invalid external address");
-			Emu.Pause();
-			return;
-		}
-		else if (group)
-		{
-			// SPU Thread Group MMIO (LS and SNR)
-			u32 num = (ea & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
-			if (num >= group->list.size() || !group->list[num])
-			{
-				LOG_DMAC(LOG_ERROR, "Invalid thread (SPU Thread Group MMIO)");
-				Emu.Pause();
-				return;
-			}
+		const u32 num = (eal & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
+		const u32 offset = (eal & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
 
-			std::shared_ptr<CPUThread> spu = Emu.GetCPU().GetThread(group->list[num]);
+		std::shared_ptr<CPUThread> t;
 
-			u32 addr = (ea & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET;
-			if ((addr <= 0x3ffff) && (addr + size <= 0x40000))
+		if (num < group->list.size() && group->list[num] && (t = Emu.GetCPU().GetThread(group->list[num])) && t->GetType() == CPU_THREAD_SPU)
+		{
+			SPUThread& spu = static_cast<SPUThread&>(*t);
+
+			if (offset + size - 1 < 0x40000) // LS access
 			{
-				// LS access
-				ea = ((SPUThread*)spu.get())->ls_offset + addr;
+				eal = spu.ls_offset + offset; // redirect access
 			}
-			else if ((cmd & MFC_PUT_CMD) && size == 4 && (addr == SYS_SPU_THREAD_SNR1 || addr == SYS_SPU_THREAD_SNR2))
+			else if ((cmd & MFC_PUT_CMD) && size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				((SPUThread*)spu.get())->WriteSNR(SYS_SPU_THREAD_SNR2 == addr, vm::read32(ls_offset + lsa));
+				spu.WriteSNR(SYS_SPU_THREAD_SNR2 == offset, vm::read32(ls_offset + lsa));
 				return;
 			}
 			else
 			{
-				LOG_DMAC(LOG_ERROR, "Invalid register (SPU Thread Group MMIO)");
-				Emu.Pause();
-				return;
+				LOG_DMAC(LOG_ERROR, "Invalid offset (SPU Thread Group MMIO)");
 			}
 		}
 		else
 		{
-			LOG_DMAC(LOG_ERROR, "Thread group not set (SPU Thread Group MMIO)");
-			Emu.Pause();
-			return;
-		}
-	}
-	else if (ea >= RAW_SPU_BASE_ADDR && size == 4)
-	{
-		switch (cmd & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_LIST_MASK | MFC_RESULT_MASK))
-		{
-		case MFC_PUT_CMD:
-		{
-			vm::write32((u32)ea, ReadLS32(lsa));
-			return;
-		}
-
-		case MFC_GET_CMD:
-		{
-			WriteLS32(lsa, vm::read32((u32)ea));
-			return;
-		}
-
-		default:
-		{
-			LOG_DMAC(LOG_ERROR, "Unknown DMA command");
-			Emu.Pause();
-			return;
-		}
+			LOG_DMAC(LOG_ERROR, "Invalid thread (SPU Thread Group MMIO)");
 		}
 	}
 
@@ -280,13 +242,13 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	{
 	case MFC_PUT_CMD:
 	{
-		memcpy(vm::get_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), size);
+		memcpy(vm::get_ptr(eal), vm::get_ptr(ls_offset + lsa), size);
 		return;
 	}
 
 	case MFC_GET_CMD:
 	{
-		memcpy(vm::get_ptr(ls_offset + lsa), vm::get_ptr(vm::cast(ea)), size);
+		memcpy(vm::get_ptr(ls_offset + lsa), vm::get_ptr(eal), size);
 		return;
 	}
 
@@ -299,7 +261,7 @@ void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 	}
 }
 
-#undef LOG_CMD
+#undef LOG_DMAC
 
 void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs)
 {
