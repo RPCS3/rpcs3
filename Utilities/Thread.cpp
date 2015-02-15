@@ -51,52 +51,124 @@ void SetCurrentThreadDebugName(const char* threadName)
 
 enum x64_reg_t : u32
 {
-	X64R_EAX,
-	X64R_ECX,
-	X64R_EDX,
-	X64R_EBX,
-	X64R_ESP,
-	X64R_EBP,
-	X64R_ESI,
-	X64R_EDI,
-	X64R_R8D,
-	X64R_R9D,
-	X64R_R10D,
-	X64R_R11D,
-	X64R_R12D,
-	X64R_R13D,
-	X64R_R14D,
-	X64R_R15D,
-	X64R32 = X64R_EAX,
+	X64R_RAX,
+	X64R_RCX,
+	X64R_RDX,
+	X64R_RBX,
+	X64R_RSP,
+	X64R_RBP,
+	X64R_RSI,
+	X64R_RDI,
+	X64R_R8,
+	X64R_R9,
+	X64R_R10,
+	X64R_R11,
+	X64R_R12,
+	X64R_R13,
+	X64R_R14,
+	X64R_R15,
 
+	X64R_XMM0,
+	X64R_XMM1,
+	X64R_XMM2,
+	X64R_XMM3,
+	X64R_XMM4,
+	X64R_XMM5,
+	X64R_XMM6,
+	X64R_XMM7,
+	X64R_XMM8,
+	X64R_XMM9,
+	X64R_XMM10,
+	X64R_XMM11,
+	X64R_XMM12,
+	X64R_XMM13,
+	X64R_XMM14,
+	X64R_XMM15,
+	
+	X64R_AL,
+	X64R_CL,
+	X64R_DL,
+	X64R_BL,
+	X64R_AH,
+	X64R_CH,
+	X64R_DH,
+	X64R_BH,
+	
+	X64_NOT_SET,
+	X64_IMM8,
+	X64_IMM16,
 	X64_IMM32,
+
+	X64R = X64R_RAX,
+	X64R_XMM = X64R_XMM0,
+	X64R_LH = X64R_AL,
+	X64R_ECX = X64R_CL,
 };
 
 enum x64_op_t : u32
 {
+	X64OP_NOP,
 	X64OP_LOAD, // obtain and put the value into x64 register (from Memory.ReadMMIO32, for example)
 	X64OP_STORE, // take the value from x64 register or an immediate and use it (pass in Memory.WriteMMIO32, for example)
 	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
 	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
+
+	X64OP_MOVS,
+	X64OP_XCHG,
+	X64OP_CMPXCHG,
 };
 
-void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_reg, size_t& decoded_size)
+void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, u32& out_size, u32& out_length)
 {
 	// simple analysis of x64 code allows to reinterpret MOV or other instructions in any desired way
-	decoded_size = 0;
+	out_length = 0;
 
-	u8 rex = 0;
-	u8 reg = 0; // set to 8 by REX prefix
-	u8 pg2 = 0;
+	u8 rex = 0, pg2 = 0;
+
+	bool oso = false, lock = false, repne = false, repe = false;
+
+	enum : u8
+	{
+		LOCK  = 0xf0,
+		REPNE = 0xf2,
+		REPE  = 0xf3,
+	};
 
 	// check prefixes:
-	for (;; code++, decoded_size++)
+	for (;; code++, out_length++)
 	{
 		switch (const u8 prefix = *code)
 		{
-		case 0xf0: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (LOCK prefix) found", (size_t)code - decoded_size, prefix); // group 1
-		case 0xf2: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REPNE/REPNZ prefix) found", (size_t)code - decoded_size, prefix); // group 1
-		case 0xf3: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REP/REPE/REPZ prefix) found", (size_t)code - decoded_size, prefix); // group 1
+		case LOCK: // group 1
+		{
+			if (lock)
+			{
+				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
+			}
+			
+			lock = true;
+			continue;
+		}
+		case REPNE: // group 1
+		{
+			if (repne)
+			{
+				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
+			}
+			
+			repne = true;
+			continue;
+		}
+		case REPE: // group 1
+		{
+			if (repe)
+			{
+				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
+			}
+			
+			repe = true;
+			continue;
+		}
 
 		case 0x2e: // group 2
 		case 0x36:
@@ -105,19 +177,37 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 		case 0x64:
 		case 0x65:
 		{
-			if (!pg2)
+			if (pg2)
 			{
-				pg2 = prefix; // probably, segment register
-				continue;
+				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - out_length, prefix, pg2);
 			}
 			else
 			{
-				throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - decoded_size, prefix, pg2);
+				pg2 = prefix; // probably, segment register
 			}
+			continue;
 		}
 
-		case 0x66: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (operand-size override prefix) found", (size_t)code - decoded_size, prefix); // group 3
-		case 0x67: throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (address-size override prefix) found", (size_t)code - decoded_size, prefix); // group 4
+		case 0x66: // group 3
+		{
+			if (oso)
+			{
+				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
+			}
+			
+			oso = true;
+			continue;
+		}
+
+		case 0x67: // group 4
+		{
+			LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): address-size override prefix found", (size_t)code - out_length, prefix);
+			out_op = X64OP_NOP;
+			out_reg = X64_NOT_SET;
+			out_size = 0;
+			out_length = 0;
+			return;
+		}
 
 		default:
 		{
@@ -125,17 +215,12 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 			{
 				if (rex)
 				{
-					throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - decoded_size, prefix, rex);
+					LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - out_length, prefix, rex);
 				}
-				if (prefix & 0x80) // check REX.W bit
+				else
 				{
-					throw fmt::format("decode_x64_reg_op(%016llxh): 0x%02x (REX.W bit) found", (size_t)code - decoded_size, prefix);
+					rex = prefix;
 				}
-				if (prefix & 0x04) // check REX.R bit
-				{
-					reg = 8;
-				}
-				rex = prefix;
 				continue;
 			}
 		}
@@ -144,12 +229,27 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 		break;
 	}
 
-	auto get_modRM_r32 = [](const u8* code, const u8 reg_base) -> x64_reg_t
+	auto get_modRM_reg = [](const u8* code, const u8 rex) -> x64_reg_t
 	{
-		return (x64_reg_t)((((*code & 0x38) >> 3) | reg_base) + X64R32);
+		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R);
 	};
 
-	auto get_modRM_size = [](const u8* code) -> size_t
+	auto get_modRM_reg_xmm = [](const u8* code, const u8 rex) -> x64_reg_t
+	{
+		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_XMM);
+	};
+
+	auto get_modRM_reg_lh = [](const u8* code) -> x64_reg_t
+	{
+		return (x64_reg_t)(((*code & 0x38) >> 3) + X64R_LH);
+	};
+
+	auto get_op_size = [](const u8 rex, const bool oso) -> u32
+	{
+		return rex & 8 ? 8 : (oso ? 2 : 4);
+	};
+
+	auto get_modRM_size = [](const u8* code) -> u32
 	{
 		switch (*code >> 6) // check Mod
 		{
@@ -160,38 +260,177 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 		}
 	};
 
-	decoded_size++;
-	switch (const u8 op1 = *code++)
+	const u8 op1 = (out_length++, *code++), op2 = code[0], op3 = code[1];
+
+	switch (op1)
 	{
-	case 0x89: // MOV r/m32, r32
+	case 0x0f:
 	{
-		decoded_op = X64OP_STORE;
-		decoded_reg = get_modRM_r32(code, reg);
-		decoded_size += get_modRM_size(code);
-		return;
+		out_length++, code++;
+
+		switch (op2)
+		{
+		case 0x7f:
+		{
+			if (repe && !oso) // MOVDQU xmm/m, xmm
+			{
+				out_op = X64OP_STORE;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = 16;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		case 0xb0:
+		{
+			if (!oso) // CMPXCHG r8/m8, r8
+			{
+				out_op = X64OP_CMPXCHG;
+				out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
+				out_size = 1;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		case 0xb1:
+		{
+			if (true) // CMPXCHG r/m, r (16, 32, 64)
+			{
+				out_op = X64OP_CMPXCHG;
+				out_reg = get_modRM_reg(code, rex);
+				out_size = get_op_size(rex, oso);
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		}
+
+		break;
 	}
-	case 0x8b: // MOV r32, r/m32
+	case 0x86:
 	{
-		decoded_op = X64OP_LOAD;
-		decoded_reg = get_modRM_r32(code, reg);
-		decoded_size += get_modRM_size(code);
-		return;
+		if (!oso) // XCHG r8/m8, r8
+		{
+			out_op = X64OP_XCHG;
+			out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
+			out_size = 1;
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x87:
+	{
+		if (true) // XCHG r/m, r (16, 32, 64)
+		{
+			out_op = X64OP_XCHG;
+			out_reg = get_modRM_reg(code, rex);
+			out_size = get_op_size(rex, oso);
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x88:
+	{
+		if (!lock && !oso) // MOV r8/m8, r8
+		{
+			out_op = X64OP_STORE;
+			out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
+			out_size = 1;
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x89:
+	{
+		if (!lock) // MOV r/m, r (16, 32, 64)
+		{
+			out_op = X64OP_STORE;
+			out_reg = get_modRM_reg(code, rex);
+			out_size = get_op_size(rex, oso);
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x8a:
+	{
+		if (!lock && !oso) // MOV r8, r8/m8
+		{
+			out_op = X64OP_LOAD;
+			out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
+			out_size = 1;
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x8b:
+	{
+		if (!lock) // MOV r, r/m (16, 32, 64)
+		{
+			out_op = X64OP_LOAD;
+			out_reg = get_modRM_reg(code, rex);
+			out_size = get_op_size(rex, oso);
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0xa4:
+	{
+		if (!oso && !lock && !repe && !rex) // MOVS
+		{
+			out_op = X64OP_MOVS;
+			out_reg = X64_NOT_SET;
+			out_size = 1;
+			return;
+		}
+		if (!oso && !lock && repe) // REP MOVS
+		{
+			out_op = X64OP_MOVS;
+			out_reg = rex & 8 ? X64R_RCX : X64R_ECX;
+			out_size = 1;
+			return;
+		}
+		break;
+	}
+	case 0xc6:
+	{
+		if (!lock && !oso && get_modRM_reg(code, 0) == X64R_RAX) // MOV r8/m8, imm8
+		{
+			out_op = X64OP_STORE;
+			out_reg = X64_IMM8;
+			out_size = 1;
+			out_length += get_modRM_size(code) + 1;
+			return;
+		}
+		break;
 	}
 	case 0xc7:
 	{
-		if (get_modRM_r32(code, 0) == X64R_EAX) // MOV r/m32, imm32 (not tested)
+		if (!lock && get_modRM_reg(code, 0) == X64R_RAX) // MOV r/m, imm16/imm32 (16, 32, 64)
 		{
-			decoded_op = X64OP_STORE;
-			decoded_reg = X64_IMM32;
-			decoded_size = get_modRM_size(code) + 4;
+			out_op = X64OP_STORE;
+			out_reg = oso ? X64_IMM16 : X64_IMM32;
+			out_size = get_op_size(rex, oso);
+			out_length += get_modRM_size(code) + (oso ? 2 : 4);
 			return;
 		}
-	}
-	default:
-	{
-		throw fmt::format("decode_x64_reg_op(%016llxh): unsupported opcode found (0x%02x, 0x%02x, 0x%02x)", (size_t)code - decoded_size, op1, code[0], code[1]);
+		break;
 	}
 	}
+
+	LOG_WARNING(GENERAL, "decode_x64_reg_op(%016llxh): unsupported opcode found (%llX%llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
+	out_op = X64OP_NOP;
+	out_reg = X64_NOT_SET;
+	out_size = 0;
+	out_length = 0;
 }
 
 #ifdef _WIN32
@@ -272,30 +511,39 @@ static const reg_table_t reg_table[17] =
 
 bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
 {
+	x64_op_t op;
+	x64_reg_t reg;
+	u32 d_size;
+	u32 i_size;
+
+	// decode single x64 instruction that causes memory access
+	decode_x64_reg_op((const u8*)(*X64REG(context, RIP)), op, reg, d_size, i_size);
+
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		// one x64 instruction is manually decoded and interpreted
-		x64_op_t op;
-		x64_reg_t reg;
-		size_t size;
-		decode_x64_reg_op((const u8*)(*X64REG(context, RIP)), op, reg, size);
+		if (d_size != 4 || !i_size)
+		{
+			LOG_ERROR(GENERAL, "Invalid instruction (op=%d, reg=%d, d_size=0x%x, i_size=0x%x)", op, reg, d_size, i_size);
+			return false;
+		}
 
 		// get x64 reg value (for store operations)
 		u64 reg_value;
-		if (reg - X64R32 < 16)
+		if (reg - X64R < 16)
 		{
 			// load the value from x64 register
-			reg_value = (u32)*X64REG(context, reg - X64R32);
+			reg_value = (u32)*X64REG(context, reg - X64R);
 		}
 		else if (reg == X64_IMM32)
 		{
 			// load the immediate value (assuming it's at the end of the instruction)
-			reg_value = *(u32*)(*X64REG(context, RIP) + size - 4);
+			reg_value = *(u32*)(*X64REG(context, RIP) + i_size - 4);
 		}
 		else
 		{
-			assert(!"Invalid x64_reg_t value");
+			LOG_ERROR(GENERAL, "Invalid source (reg=%d)", reg);
+			return false;
 		}
 
 		bool save_reg = false;
@@ -313,25 +561,30 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 			Memory.WriteMMIO32(addr, re32((u32)reg_value));
 			break;
 		}
-		default: assert(!"Invalid x64_op_t value");
+		default:
+		{
+			LOG_ERROR(GENERAL, "Invalid operation (op=%d)", op);
+			return false;
+		}
 		}
 
 		// save x64 reg value (for load operations)
 		if (save_reg)
 		{
-			if (reg - X64R32 < 16)
+			if (reg - X64R < 16)
 			{
 				// store the value into x64 register
-				*X64REG(context, reg - X64R32) = (u32)reg_value;
+				*X64REG(context, reg - X64R) = (u32)reg_value;
 			}
 			else
 			{
-				assert(!"Invalid x64_reg_t value (saving)");
+				LOG_ERROR(GENERAL, "Invalid destination (reg=%d, reg_value=0x%llx)", reg, reg_value);
+				return false;
 			}
 		}
 
 		// skip decoded instruction
-		*X64REG(context, RIP) += size;
+		*X64REG(context, RIP) += i_size;
 		return true;
 	}
 
