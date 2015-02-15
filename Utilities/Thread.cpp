@@ -9,6 +9,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#ifdef __APPLE__
+#define _XOPEN_SOURCE
+#define __USE_GNU
+#endif
 #include <signal.h>
 #include <ucontext.h>
 #endif
@@ -195,13 +199,64 @@ void decode_x64_reg_op(const u8* code, x64_op_t& decoded_op, x64_reg_t& decoded_
 typedef CONTEXT x64_context;
 
 #define RIP 16
-#define X64REG(context, reg) ((&context->Rax)[reg])
+#define X64REG(context, reg) (&(&context->Rax)[reg])
 
 #else
 
 typedef ucontext_t x64_context;
-typedef decltype(REG_RIP) reg_table_t;
 #define RIP 16
+
+#ifdef __APPLE__
+
+#define X64REG(context, reg) (darwin_x64reg(context, reg))
+
+uint64_t* darwin_x64reg(x64_context *context, int reg)
+{
+	auto *state = &context->uc_mcontext->__ss;
+	switch(reg)
+	{
+	case 0: // RAX
+		return &state->__rax;
+	case 1: // RCX
+		return &state->__rcx;
+	case 2: // RDX
+		return &state->__rdx;
+	case 3: // RBX
+		return &state->__rbx;
+	case 4: // RSP
+		return &state->__rsp;
+	case 5: // RBP
+		return &state->__rbp;
+	case 6: // RSI
+		return &state->__rsi;
+	case 7: // RDI
+		return &state->__rdi;
+	case 8: // R8
+		return &state->__r8;
+	case 9: // R9
+		return &state->__r9;
+	case 10: // R10
+		return &state->__r10;
+	case 11: // R11
+		return &state->__r11;
+	case 12: // R12
+		return &state->__r12;
+	case 13: // R13
+		return &state->__r13;
+	case 14: // R14
+		return &state->__r14;
+	case 15: // R15
+		return &state->__r15;
+	case 16: // RIP
+		return &state->__rip;
+	default: // FAIL
+		assert(0);
+	}
+}
+
+#else
+
+typedef decltype(REG_RIP) reg_table_t;
 
 static const reg_table_t reg_table[17] =
 {
@@ -209,31 +264,34 @@ static const reg_table_t reg_table[17] =
 	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
 };
 
-#define X64REG(context, reg) (context->uc_mcontext.gregs[reg_table[reg]])
+#define X64REG(context, reg) (&context->uc_mcontext.gregs[reg_table[reg]])
+
+#endif // __APPLE__
 
 #endif
 
-bool handle_access_violation(const u32 addr, x64_context* context)
+bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
 {
-	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET) // RawSPU MMIO registers
+	// check if address is RawSPU MMIO register
+	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
 		// one x64 instruction is manually decoded and interpreted
 		x64_op_t op;
 		x64_reg_t reg;
 		size_t size;
-		decode_x64_reg_op((const u8*)X64REG(context, RIP), op, reg, size);
+		decode_x64_reg_op((const u8*)(*X64REG(context, RIP)), op, reg, size);
 
 		// get x64 reg value (for store operations)
 		u64 reg_value;
 		if (reg - X64R32 < 16)
 		{
 			// load the value from x64 register
-			reg_value = (u32)X64REG(context, reg - X64R32);
+			reg_value = (u32)*X64REG(context, reg - X64R32);
 		}
 		else if (reg == X64_IMM32)
 		{
 			// load the immediate value (assuming it's at the end of the instruction)
-			reg_value = *(u32*)(X64REG(context, RIP) + size - 4);
+			reg_value = *(u32*)(*X64REG(context, RIP) + size - 4);
 		}
 		else
 		{
@@ -264,7 +322,7 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 			if (reg - X64R32 < 16)
 			{
 				// store the value into x64 register
-				X64REG(context, reg - X64R32) = (u32)reg_value;
+				*X64REG(context, reg - X64R32) = (u32)reg_value;
 			}
 			else
 			{
@@ -273,7 +331,13 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 		}
 
 		// skip decoded instruction
-		X64REG(context, RIP) += size;
+		*X64REG(context, RIP) += size;
+		return true;
+	}
+
+	// check if fault is caused by reservation
+	if (vm::reservation_query(addr, is_writing))
+	{
 		return true;
 	}
 
@@ -285,38 +349,54 @@ bool handle_access_violation(const u32 addr, x64_context* context)
 
 void _se_translator(unsigned int u, EXCEPTION_POINTERS* pExp)
 {
-	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)Memory.GetBaseAddr();
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+
 	if (u == EXCEPTION_ACCESS_VIOLATION && (u32)addr64 == addr64)
 	{
-		if (handle_access_violation((u32)addr64, pExp->ContextRecord))
-		{
-			// restore context (further code shouldn't be reached)
-			RtlRestoreContext(pExp->ContextRecord, nullptr);
-
-			// it's dangerous because destructors won't be executed
-		}
-
 		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
-
-	// else some fatal error (should crash)
 }
+
+const PVOID exception_handler = (atexit([]{ RemoveVectoredExceptionHandler(exception_handler); }), AddVectoredExceptionHandler(1, [](PEXCEPTION_POINTERS pExp) -> LONG
+{
+	const u64 addr64 = (u64)pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
+	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION &&
+		(u32)addr64 == addr64 &&
+		GetCurrentNamedThread() &&
+		handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+	{
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+	else
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+}));
 
 #else
 
 void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	const u64 addr64 = (u64)info->si_addr - (u64)Memory.GetBaseAddr();
+	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
+
+#ifdef __APPLE__
+	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext->__es.__err & 0x2;
+#else
+	const bool is_writing = ((ucontext_t*)uct)->uc_mcontext.gregs[REG_ERR] & 0x2;
+#endif
+
 	if ((u32)addr64 == addr64 && GetCurrentNamedThread())
 	{
-		if (handle_access_violation((u32)addr64, (ucontext_t*)uct))
+		if (handle_access_violation((u32)addr64, is_writing, (ucontext_t*)uct))
 		{
 			return; // proceed execution
 		}
 
 		// TODO: this may be wrong
-		throw fmt::format("Access violation at location 0x%llx", addr64);
+		throw fmt::format("Access violation %s location 0x%llx", is_writing ? "writing" : "reading", addr64);
 	}
 
 	// else some fatal error
@@ -350,6 +430,11 @@ void SetCurrentNamedThread(NamedThreadBase* value)
 	if (old_value == value)
 	{
 		return;
+	}
+
+	if (old_value)
+	{
+		vm::reservation_free();
 	}
 
 	if (value && value->m_tls_assigned.exchange(true))
@@ -421,8 +506,17 @@ void ThreadBase::Start()
 
 #ifdef _WIN32
 		auto old_se_translator = _set_se_translator(_se_translator);
+		if (!exception_handler)
+		{
+			LOG_ERROR(GENERAL, "exception_handler not set");
+			return;
+		}
 #else
-		if (sigaction_result == -1) assert(!"sigaction() failed");
+		if (sigaction_result == -1)
+		{
+			printf("sigaction() failed");
+			exit(EXIT_FAILURE);
+		}
 #endif
 
 		SetCurrentNamedThread(this);
@@ -560,8 +654,6 @@ void thread_t::start(std::function<void()> func)
 
 #ifdef _WIN32
 		auto old_se_translator = _set_se_translator(_se_translator);
-#else
-		if (sigaction_result == -1) assert(!"sigaction() failed");
 #endif
 
 		NamedThreadBase info(name);

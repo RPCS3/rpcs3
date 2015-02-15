@@ -257,23 +257,23 @@ void sceGxmSetBackPolygonMode(vm::psv::ptr<SceGxmContext> context, SceGxmPolygon
 	throw __FUNCTION__;
 }
 
-void sceGxmSetFrontStencilFunc(vm::psv::ptr<SceGxmContext> context, SceGxmStencilFunc func, SceGxmStencilOp stencilFail, SceGxmStencilOp depthFail, SceGxmStencilOp depthPass, uint8_t compareMask, uint8_t writeMask)
+void sceGxmSetFrontStencilFunc(vm::psv::ptr<SceGxmContext> context, SceGxmStencilFunc func, SceGxmStencilOp stencilFail, SceGxmStencilOp depthFail, SceGxmStencilOp depthPass, u8 compareMask, u8 writeMask)
 {
 	throw __FUNCTION__;
 }
 
 
-void sceGxmSetBackStencilFunc(vm::psv::ptr<SceGxmContext> context, SceGxmStencilFunc func, SceGxmStencilOp stencilFail, SceGxmStencilOp depthFail, SceGxmStencilOp depthPass, uint8_t compareMask, uint8_t writeMask)
+void sceGxmSetBackStencilFunc(vm::psv::ptr<SceGxmContext> context, SceGxmStencilFunc func, SceGxmStencilOp stencilFail, SceGxmStencilOp depthFail, SceGxmStencilOp depthPass, u8 compareMask, u8 writeMask)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmSetFrontDepthBias(vm::psv::ptr<SceGxmContext> context, int32_t factor, int32_t units)
+void sceGxmSetFrontDepthBias(vm::psv::ptr<SceGxmContext> context, s32 factor, s32 units)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmSetBackDepthBias(vm::psv::ptr<SceGxmContext> context, int32_t factor, int32_t units)
+void sceGxmSetBackDepthBias(vm::psv::ptr<SceGxmContext> context, s32 factor, s32 units)
 {
 	throw __FUNCTION__;
 }
@@ -463,12 +463,12 @@ s32 sceGxmDepthStencilSurfaceInitDisabled(vm::psv::ptr<SceGxmDepthStencilSurface
 //	throw __FUNCTION__;
 //}
 
-uint8_t sceGxmDepthStencilSurfaceGetBackgroundStencil(vm::psv::ptr<const SceGxmDepthStencilSurface> surface)
+u8 sceGxmDepthStencilSurfaceGetBackgroundStencil(vm::psv::ptr<const SceGxmDepthStencilSurface> surface)
 {
 	throw __FUNCTION__;
 }
 
-void sceGxmDepthStencilSurfaceSetBackgroundStencil(vm::psv::ptr<SceGxmDepthStencilSurface> surface, uint8_t backgroundStencil)
+void sceGxmDepthStencilSurfaceSetBackgroundStencil(vm::psv::ptr<SceGxmDepthStencilSurface> surface, u8 backgroundStencil)
 {
 	throw __FUNCTION__;
 }

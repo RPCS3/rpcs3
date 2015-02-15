@@ -14,6 +14,7 @@ Module *cellGame = nullptr;
 
 std::string contentInfo = "";
 std::string usrdir = "";
+bool path_set = false;
 
 int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
@@ -52,6 +53,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else if (category.substr(0, 2) == "HG")
 	{
@@ -61,6 +63,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
+		path_set = true;
 	}
 	else if (category.substr(0, 2) == "GD")
 	{
@@ -70,6 +73,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else
 	{
@@ -124,6 +128,7 @@ int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 	std::string titleId = psf.GetString("TITLE_ID");
 	contentInfo = "/dev_hdd0/game/" + titleId;
 	usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
+	path_set = true;
 	
 	return CELL_GAME_RET_OK;
 }
@@ -155,10 +160,15 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 		if (!Emu.GetVFS().ExistsDir("/dev_bdvd/PS3_GAME"))
 		{
 			cellGame->Warning("cellGameDataCheck(): /dev_bdvd/PS3_GAME not found");
+			contentInfo = "";
+			usrdir = "";
+			path_set = true;
 			return CELL_GAME_RET_NONE;
 		}
+
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else
 	{
@@ -167,10 +177,15 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 		if (!Emu.GetVFS().ExistsDir(dir))
 		{
 			cellGame->Warning("cellGameDataCheck(): '%s' directory not found", dir.c_str());
+			contentInfo = "";
+			usrdir = "";
+			path_set = true;
 			return CELL_GAME_RET_NONE;
 		}
+
 		contentInfo = dir;
 		usrdir = dir + "/USRDIR";
+		path_set = true;
 	}
 
 	return CELL_GAME_RET_OK;
@@ -186,9 +201,8 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 		return CELL_GAME_ERROR_PARAM;
 	}
 	
-	if (contentInfo == "" && usrdir == "")
+	if (!path_set)
 	{
-		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_FAILURE (no permission given)");
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
@@ -197,6 +211,7 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 
 	contentInfo = "";
 	usrdir = "";
+	path_set = false;
 	
 	return CELL_GAME_RET_OK;
 }
@@ -475,6 +490,10 @@ int cellGameThemeInstallFromBuffer()
 void cellGame_init(Module *pxThis)
 {
 	cellGame = pxThis;
+
+	contentInfo = "";
+	usrdir = "";
+	path_set = false;
 
 	// (TODO: Disc Exchange functions missing)
 

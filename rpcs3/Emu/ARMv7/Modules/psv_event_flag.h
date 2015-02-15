@@ -16,6 +16,9 @@ private:
 
 public:
 	psv_event_flag_t(const char* name, u32 attr, u32 pattern);
+	void on_init(s32 id) {}
+	void on_stop() {}
+
 };
 
 extern psv_object_list_t<psv_event_flag_t, SCE_KERNEL_THREADMGR_UID_CLASS_EVENT_FLAG> g_psv_ef_list;

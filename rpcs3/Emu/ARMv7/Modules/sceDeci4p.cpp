@@ -4,7 +4,7 @@
 
 extern psv_log_base sceDeci4p;
 
-typedef s32(*SceKernelDeci4pCallback)(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon);
+typedef vm::psv::ptr<s32(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon)> SceKernelDeci4pCallback;
 
 s32 sceKernelDeci4pOpen(vm::psv::ptr<const char> protoname, u32 protonum, u32 bufsize)
 {

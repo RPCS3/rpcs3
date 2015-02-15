@@ -23,6 +23,15 @@ void ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 
 	CPU.SetExitStatus(errorcode);
 	CPU.Stop();
+
+	if (!CPU.IsJoinable())
+	{
+		const u32 id = CPU.GetId();
+		CallAfter([id]()
+		{
+			Emu.GetCPU().RemoveThread(id);
+		});
+	}
 }
 
 void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
@@ -65,6 +74,7 @@ s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 	}
 
 	*vptr = thr->GetExitStatus();
+	Emu.GetCPU().RemoveThread(thread_id);
 	return CELL_OK;
 }
 
@@ -156,7 +166,7 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	new_thread.SetEntry(entry);
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
-	//new_thread.flags = flags;
+	new_thread.SetJoinable(is_joinable);
 	new_thread.m_has_interrupt = false;
 	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(name);

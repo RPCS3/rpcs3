@@ -693,36 +693,35 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 		return CELL_OK;
 	}
 
+	std::unique_ptr<AVFrame, void(*)(AVFrame*)> frame(vf.data, [](AVFrame* frame)
+	{
+		av_frame_unref(frame);
+		av_frame_free(&frame);
+	});
+
 	if (outBuff)
 	{
-		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
-
 		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
 		{
-			cellVdec->Todo("cellVdecGetPicture: unknown formatType(%d)", (u32)format->formatType);
-			return CELL_OK;
+			cellVdec->Fatal("cellVdecGetPicture: unknown formatType(%d)", format->formatType);
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
 		{
-			cellVdec->Todo("cellVdecGetPicture: unknown colorMatrixType(%d)", (u32)format->colorMatrixType);
-			return CELL_OK;
+			cellVdec->Fatal("cellVdecGetPicture: unknown colorMatrixType(%d)", format->colorMatrixType);
 		}
 
-		AVFrame& frame = *vf.data;
+		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
 		// TODO: zero padding bytes
 
-		int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame.data, frame.linesize, vdec->ctx->pix_fmt, frame.width, frame.height, 1);
+		int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
 		if (err < 0)
 		{
-			cellVdec->Error("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
-			Emu.Pause();
+			cellVdec->Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
 		}
 	}
 
-	av_frame_unref(vf.data);
-	av_frame_free(&vf.data);
 	return CELL_OK;
 }
 
@@ -863,8 +862,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 	{
 		auto mp2 = vm::ptr<CellVdecMpeg2Info>::make(info.addr() + sizeof(CellVdecPicItem));
 
-		cellVdec->Todo("cellVdecGetPicItem(MPEG2)");
-		Emu.Pause();
+		cellVdec->Fatal("cellVdecGetPicItem(MPEG2)");
 	}
 
 	*picItem_ptr = info.addr();

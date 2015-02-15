@@ -204,3 +204,9 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat);
 s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value);
 s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value);
 s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value);
+
+// SPU Calls
+void sys_spu_thread_exit(SPUThread & spu, s32 status);
+void sys_spu_thread_group_exit(SPUThread & spu, s32 status);
+s32 sys_spu_thread_send_event(SPUThread & spu, u8 spup, u32 data0, u32 data1);
+s32 sys_spu_thread_switch_system_module(SPUThread & spu, u32 status);

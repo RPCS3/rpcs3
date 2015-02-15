@@ -85,10 +85,10 @@ SPUThread* spu_thread_initialize(std::shared_ptr<SpuGroupInfo>& group, u32 spu_n
 		sys_spu.Todo("Unsupported SPU Thread options (0x%x)", option);
 	}
 
-	u32 spu_ep = (u32)img.entry_point;
+	const u32 spu_ep = img.entry_point;
 	// Copy SPU image:
 	// TODO: use segment info
-	u32 spu_offset = (u32)Memory.Alloc(256 * 1024, 4096);
+	const u32 spu_offset = Memory.MainMem.AllocAlign(256 * 1024, 4096);
 	memcpy(vm::get_ptr<void>(spu_offset), vm::get_ptr<void>(img.addr), 256 * 1024);
 
 	SPUThread& new_thread = static_cast<SPUThread&>(Emu.GetCPU().AddThread(CPU_THREAD_SPU));
@@ -218,7 +218,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 		std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(group_info->list[i]);
 		if (t)
 		{
-			Memory.Free(((SPUThread*)t.get())->GetOffset());
+			Memory.MainMem.Free(((SPUThread*)t.get())->GetOffset());
 			Emu.GetCPU().RemoveThread(group_info->list[i]);
 		}
 	}
@@ -1098,4 +1098,87 @@ s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 
 	*value = (u32)t->cfg.value;
 	return CELL_OK;
+}
+
+void sys_spu_thread_exit(SPUThread & spu, s32 status)
+{
+	// Cancel any pending status update requests
+	u128 r;
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(0));
+	while (spu.GetChannelCount(MFC_RdTagStat) != 1);
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	// Wait for all pending DMA operations to complete
+	spu.WriteChannel(MFC_WrTagMask, u128::from32r(0xFFFFFFFF));
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(MFC_TAG_UPDATE_ALL));
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	spu.WriteChannel(SPU_WrOutMbox, u128::from32r(status));
+	spu.StopAndSignal(0x102);
+}
+
+void sys_spu_thread_group_exit(SPUThread & spu, s32 status)
+{
+	// Cancel any pending status update requests
+	u128 r;
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(0));
+	while (spu.GetChannelCount(MFC_RdTagStat) != 1);
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	// Wait for all pending DMA operations to complete
+	spu.WriteChannel(MFC_WrTagMask, u128::from32r(0xFFFFFFFF));
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(MFC_TAG_UPDATE_ALL));
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	spu.WriteChannel(SPU_WrOutMbox, u128::from32r(status));
+	spu.StopAndSignal(0x101);
+}
+
+s32 sys_spu_thread_send_event(SPUThread & spu, u8 spup, u32 data0, u32 data1)
+{
+	if (spup > 0x3F)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (spu.GetChannelCount(SPU_RdInMbox))
+	{
+		return CELL_EBUSY;
+	}
+
+	spu.WriteChannel(SPU_WrOutMbox, u128::from32r(data1));
+	spu.WriteChannel(SPU_WrOutIntrMbox, u128::from32r((spup << 24) | (data0 & 0x00FFFFFF)));
+
+	u128 r;
+	spu.ReadChannel(r, SPU_RdInMbox);
+	return r._u32[3];
+}
+
+s32 sys_spu_thread_switch_system_module(SPUThread & spu, u32 status)
+{
+	if (spu.GetChannelCount(SPU_RdInMbox))
+	{
+		return CELL_EBUSY;
+	}
+
+	// Cancel any pending status update requests
+	u128 r;
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(0));
+	while (spu.GetChannelCount(MFC_RdTagStat) != 1);
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	// Wait for all pending DMA operations to complete
+	spu.WriteChannel(MFC_WrTagMask, u128::from32r(0xFFFFFFFF));
+	spu.WriteChannel(MFC_WrTagUpdate, u128::from32r(MFC_TAG_UPDATE_ALL));
+	spu.ReadChannel(r, MFC_RdTagStat);
+
+	do
+	{
+		spu.WriteChannel(SPU_WrOutMbox, u128::from32r(status));
+		spu.StopAndSignal(0x120);
+		spu.ReadChannel(r, SPU_RdInMbox);
+	}
+	while (r._u32[3] == CELL_EBUSY);
+
+	return r._u32[3];
 }

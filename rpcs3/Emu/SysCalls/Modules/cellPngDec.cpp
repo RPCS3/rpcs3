@@ -376,7 +376,7 @@ s64 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInPa
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr());
 
 	// create decoder
-	if (s32 res = pngDecCreate(mainHandle, threadInParam)) return res;
+	if (auto res = pngDecCreate(mainHandle, threadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;
@@ -400,7 +400,7 @@ s64 cellPngDecExtCreate(
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr(), extThreadInParam.addr(), extThreadOutParam.addr());
 
 	// create decoder
-	if (s32 res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
+	if (auto res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;

@@ -59,10 +59,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
     /// Time base register
     u64 TB;
 
-    /// Reservations
-    u64 R_ADDR;
-    u64 R_VALUE;
-
     /// Memory block
     u32 address;
     u64 mem_block[64];
@@ -85,9 +81,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         LR    = ppu.LR;
         CTR   = ppu.CTR;
         TB    = ppu.TB;
-
-        R_ADDR  = ppu.R_ADDR;
-        R_VALUE = ppu.R_VALUE;
 
         address = addr;
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
@@ -113,9 +106,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         ppu.LR    = LR;
         ppu.CTR   = CTR;
         ppu.TB    = TB;
-
-        ppu.R_ADDR  = R_ADDR;
-        ppu.R_VALUE = R_VALUE;
 
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
             vm::write64(address + (i * 8), mem_block[i]);
@@ -151,8 +141,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         LR          = rng();
         CTR         = rng();
         TB          = rng();
-        R_ADDR      = rng();
-        R_VALUE     = rng();
 
         address = addr;
         for (int i = 0; i < (sizeof(mem_block) / 8); i++) {
@@ -187,7 +175,6 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         //                   fmt::by_value(FPSCR.VXZDZ), fmt::by_value(FPSCR.VXIDI), fmt::by_value(FPSCR.VXISI), fmt::by_value(FPSCR.VXSNAN),
         //                   fmt::by_value(FPSCR.XX), fmt::by_value(FPSCR.ZX), fmt::by_value(FPSCR.UX), fmt::by_value(FPSCR.OX), fmt::by_value(FPSCR.VX), fmt::by_value(FPSCR.FEX), fmt::by_value(FPSCR.FX));
         //ret += fmt::Format("VSCR    = 0x%08x [NJ=%d | SAT=%d]\n", VSCR.VSCR, fmt::by_value(VSCR.NJ), fmt::by_value(VSCR.SAT)); // TODO: Uncomment after implementing VSCR.SAT
-        ret += fmt::Format("R_ADDR  = 0x%016llx R_VALUE = 0x%016llx\n", R_ADDR, R_VALUE);
 
         for (int i = 0; i < (sizeof(mem_block) / 8); i += 2) {
             ret += fmt::Format("mem_block[%d] = 0x%016llx mem_block[%d] = 0x%016llx\n", i, mem_block[i], i + 1, mem_block[i + 1]);
@@ -724,8 +711,6 @@ void Compiler::RunAllTests() {
     input.GPR[14]      = 10;
     input.GPR[21]      = 15;
     input.GPR[23]      = 0x10000;
-    input.R_ADDR       = 0x10000;
-    input.R_VALUE      = 0x1122334455667788;
     input.mem_block[0] = 0x8877665544332211;
 
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LBZ, 0, input, 5, 0, 0x10000);
@@ -739,8 +724,8 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHZU, 0, input, 5, 14, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHZX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHZX, 1, input, 5, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECIWX, 0, input, 5, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECIWX, 1, input, 5, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECIWX, 0, input, 5, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECIWX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHZUX, 0, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHA, 0, input, 5, 0, 0x100F0);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LHA, 1, input, 5, 14, 0x100F0);
@@ -780,10 +765,10 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDX, 0, input, 5, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LFDUX, 0, input, 5, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 0, input, 5, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 1, input, 5, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 0, input, 5, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 1, input, 5, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 0, input, 5, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LWARX, 1, input, 5, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 0, input, 5, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LDARX, 1, input, 5, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 0, input, 5, 23, 0);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 1, input, 5, 23, 2);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(LSWI, 2, input, 5, 23, 7);
@@ -819,8 +804,8 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 0, input, 3, 0, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STB, 1, input, 3, 14, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STBU, 0, input, 3, 14, 0x10000);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDCX_, 0, input, 3, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDCX_, 1, input, 3, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDCX_, 0, input, 3, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDCX_, 1, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STBX, 0, input, 3, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STBX, 1, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STBUX, 0, input, 3, 14, 23);
@@ -829,8 +814,8 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STHU, 0, input, 3, 14, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STHX, 0, input, 3, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STHX, 1, input, 3, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECOWX, 0, input, 3, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECOWX, 1, input, 3, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECOWX, 0, input, 3, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(ECOWX, 1, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STHUX, 0, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STHBRX, 0, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STW, 0, input, 3, 0, 0x10000);
@@ -848,8 +833,8 @@ void Compiler::RunAllTests() {
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDU, 0, input, 3, 14, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDX, 0, input, 3, 0, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDX, 1, input, 3, 14, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STWCX_, 0, input, 3, 0, 23);
-    VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STWCX_, 1, input, 3, 14, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STWCX_, 0, input, 3, 0, 23);
+    //VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STWCX_, 1, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STDUX, 0, input, 3, 14, 23);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STFS, 0, input, 3, 0, 0x10000);
     VERIFY_INSTRUCTION_AGAINST_INTERPRETER(STFS, 1, input, 3, 14, 0x10000);

@@ -22,24 +22,15 @@ enum : u32
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 };
 
-namespace vm
-{
-	extern void* const g_base_addr;
-}
-
 class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;
-	u32 m_pages[0x100000000 / 4096]; // information about every page
 
 public:
 	MemoryBlock* UserMemory;
 
 	DynamicMemoryBlock MainMem;
-	DynamicMemoryBlock SPRXMem;
-	DynamicMemoryBlock PRXMem;
-	DynamicMemoryBlock RSXCMDMem;
-	DynamicMemoryBlock MmaperMem;
+	DynamicMemoryBlock Userspace;
 	DynamicMemoryBlock RSXFBMem;
 	DynamicMemoryBlock StackMem;
 	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
@@ -72,43 +63,15 @@ public:
 		Close();
 	}
 
-	static void* const GetBaseAddr()
-	{
-		return vm::g_base_addr;
-	}
+	void RegisterPages(u32 addr, u32 size);
 
-	__noinline void InvalidAddress(const char* func, const u64 addr);
-
-	void RegisterPages(u64 addr, u32 size);
-
-	void UnregisterPages(u64 addr, u32 size);
+	void UnregisterPages(u32 addr, u32 size);
 
 	u32 InitRawSPU(MemoryBlock* raw_spu);
 
 	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num);
 
 	void Init(MemoryType type);
-
-	bool IsGoodAddr(const u32 addr)
-	{
-		return m_pages[addr / 4096] != 0; // TODO: define page parameters
-	}
-
-	bool IsGoodAddr(const u32 addr, const u32 size)
-	{
-		if (!size || addr + size - 1 < addr)
-		{
-			return false;
-		}
-		else
-		{
-			for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
-			{
-				if (!m_pages[i]) return false; // TODO: define page parameters
-			}
-			return true;
-		}
-	}
 
 	void Close();
 
@@ -126,19 +89,19 @@ public:
 		return UserMemory->GetSize() - UserMemory->GetUsedSize();
 	}
 
-	u64 Alloc(const u32 size, const u32 align)
+	u32 Alloc(const u32 size, const u32 align)
 	{
 		return UserMemory->AllocAlign(size, align);
 	}
 
-	bool Free(const u64 addr)
+	bool Free(const u32 addr)
 	{
 		return UserMemory->Free(addr);
 	}
 
-	bool Map(const u64 addr, const u32 size);
+	bool Map(const u32 addr, const u32 size);
 
-	bool Unmap(const u64 addr);
+	bool Unmap(const u32 addr);
 };
 
 extern MemoryBase Memory;

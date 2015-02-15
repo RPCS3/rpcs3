@@ -15,6 +15,9 @@
 
 u64 rotate_mask[64][64];
 
+extern u32 ppu_get_tls(u32 thread);
+extern void ppu_free_tls(u32 thread);
+
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
@@ -32,6 +35,7 @@ PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
 
 PPUThread::~PPUThread()
 {
+	ppu_free_tls(GetId());
 }
 
 void PPUThread::DoReset()
@@ -51,7 +55,7 @@ void PPUThread::DoReset()
 	XER.XER     = 0;
 	FPSCR.FPSCR = 0;
 	VSCR.VSCR   = 0;
-        VRSAVE      = 0;
+	VRSAVE      = 0;
 
 	cycle = 0;
 }
@@ -61,44 +65,37 @@ void PPUThread::InitRegs()
 	const u32 pc = entry ? vm::read32(entry) : 0;
 	const u32 rtoc = entry ? vm::read32(entry + 4) : 0;
 
-	//ConLog.Write("entry = 0x%x", entry);
-	//ConLog.Write("rtoc = 0x%x", rtoc);
-
 	SetPc(pc);
-
-	/*
-	const s32 thread_num = Emu.GetCPU().GetThreadNumById(GetType(), GetId());
-
-	if(thread_num < 0)
-	{
-		LOG_ERROR(PPU, "GetThreadNumById failed.");
-		Emu.Pause();
-		return;
-	}
-	*/
-
-	/*
-	const s32 tls_size = Emu.GetTLSFilesz() * thread_num;
-
-	if(tls_size >= Emu.GetTLSMemsz())
-	{
-		LOG_ERROR(PPU, "Out of TLS memory.");
-		Emu.Pause();
-		return;
-	}
-	*/
 
 	GPR[1] = align(m_stack_addr + m_stack_size, 0x200) - 0x200;
 	GPR[2] = rtoc;
 	//GPR[11] = entry;
 	//GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = Memory.PRXMem.GetStartAddr() + 0x7060;
+	GPR[13] = ppu_get_tls(GetId()) + 0x7000; // 0x7000 is usually subtracted from r13 to access first TLS element (details are not clear)
 
 	LR = Emu.GetCPUThreadExit();
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
 	TB = 0;
+}
+
+void PPUThread::InitStack()
+{
+	if (!m_stack_addr)
+	{
+		assert(m_stack_size);
+		m_stack_addr = Memory.StackMem.AllocAlign(m_stack_size, 4096);
+	}
+}
+
+void PPUThread::CloseStack()
+{
+	if (m_stack_addr)
+	{
+		Memory.StackMem.Free(m_stack_addr);
+		m_stack_addr = 0;
+	}
 }
 
 void PPUThread::DoRun()

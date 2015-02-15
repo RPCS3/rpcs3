@@ -132,5 +132,5 @@ void log_message(Log::LogType type, Log::LogSeverity sev, std::string text);
 template<typename... Targs> 
 __noinline void log_message(Log::LogType type, Log::LogSeverity sev, const char* fmt, Targs... args)
 {
-	log_message(type, sev, fmt::detail::format(fmt, strlen(fmt), fmt::do_unveil(args)...));
+	log_message(type, sev, fmt::detail::format(fmt, fmt::do_unveil(args)...));
 }

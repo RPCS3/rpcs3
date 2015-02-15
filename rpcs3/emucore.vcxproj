@@ -37,6 +37,7 @@
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\ec.cpp" />
     <ClCompile Include="Crypto\key_vault.cpp" />
@@ -56,18 +57,70 @@
     <ClCompile Include="Emu\ARMv7\ARMv7DisAsm.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Interpreter.cpp" />
     <ClCompile Include="Emu\ARMv7\ARMv7Thread.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_cond.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\psv_event_flag.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\psv_mutex.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\psv_sema.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAppMgr.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAppUtil.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudio.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudiodec.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudioenc.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceAudioIn.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceCamera.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceCodecEngine.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceCommonDialog.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceCtrl.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceDbg.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceDeci4p.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceDeflt.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceDisplay.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceFiber.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceFios.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceFpu.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceGxm.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceHttp.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceIme.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceJpeg.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceJpegEnc.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibKernel.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibc.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceLibstdcxx.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLiveArea.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceLocation.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceMd5.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceMotion.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceMt19937.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNet.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNetCtl.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNgs.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpBasic.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpCommon.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpManager.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpMatching.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpScore.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceNpUtility.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\scePerf.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\scePgf.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\scePhotoExport.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceRazorCapture.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceRtc.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSas.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceScreenShot.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSfmt.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSha.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSqlite.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSsl.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSulpha.cpp" />
     <ClCompile Include="Emu\ARMv7\Modules\sceSysmodule.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceSystemGesture.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceTouch.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceUlt.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceVideodec.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceVoice.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceVoiceQoS.cpp" />
+    <ClCompile Include="Emu\ARMv7\Modules\sceXml.cpp" />
     <ClCompile Include="Emu\ARMv7\PSVFuncList.cpp" />
     <ClCompile Include="Emu\ARMv7\PSVObjectList.cpp" />
     <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
@@ -116,6 +169,7 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GSManager.cpp" />
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
+    <ClCompile Include="Emu\RSX\RSXDMA.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
@@ -283,10 +337,18 @@
     <ClInclude Include="Emu\ARMv7\ARMv7Interpreter.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Opcodes.h" />
     <ClInclude Include="Emu\ARMv7\ARMv7Thread.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_cond.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_event_flag.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\psv_mutex.h" />
     <ClInclude Include="Emu\ARMv7\Modules\psv_sema.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceAppUtil.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceGxm.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceIme.h" />
     <ClInclude Include="Emu\ARMv7\Modules\sceLibKernel.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceNet.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceNpCommon.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceSsl.h" />
+    <ClInclude Include="Emu\ARMv7\Modules\sceTouch.h" />
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h" />
     <ClInclude Include="Emu\ARMv7\PSVObjectList.h" />
     <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />
@@ -361,6 +423,7 @@
     <ClInclude Include="Emu\RSX\GSManager.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
+    <ClInclude Include="Emu\RSX\RSXDMA.h" />
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
     <ClInclude Include="Emu\RSX\RSXThread.h" />
@@ -559,6 +622,7 @@
       <PreprocessorDefinitions>_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
       <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
@@ -576,6 +640,7 @@
       <PreprocessorDefinitions>_UNICODE;UNICODE;LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
     </ClCompile>
@@ -596,6 +661,7 @@
       <PreprocessorDefinitions>_UNICODE;UNICODE;MSVC_CRT_MEMLEAK_DETECTION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
     </ClCompile>
@@ -613,6 +679,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
     </ClCompile>
@@ -633,6 +700,7 @@
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <ExceptionHandling>Async</ExceptionHandling>
       <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
     </ClCompile>
