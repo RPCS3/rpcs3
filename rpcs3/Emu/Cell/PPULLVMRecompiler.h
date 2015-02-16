@@ -923,8 +923,8 @@ namespace ppu_recompiler_llvm {
         llvm::Value * IndirectCall(u32 address, llvm::Value * context_i64, bool is_function);
 
         /// Test an instruction against the interpreter
-        template <class PPULLVMRecompilerFn, class PPUInterpreterFn, class... Args>
-        void VerifyInstructionAgainstInterpreter(const char * name, PPULLVMRecompilerFn recomp_fn, PPUInterpreterFn interp_fn, PPUState & input_state, Args... args);
+        template <class... Args>
+        void VerifyInstructionAgainstInterpreter(const char * name, void (Compiler::*recomp_fn)(Args...), void (PPUInterpreter::*interp_fn)(Args...), PPUState & input_state, Args... args);
 
         /// Excute a test
         void RunTest(const char * name, std::function<void()> test_case, std::function<void()> input, std::function<bool(std::string & msg)> check_result);
