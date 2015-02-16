@@ -242,6 +242,11 @@ namespace vm
 		return broken;
 	}
 
+	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size)
+	{
+		return reservation_acquire(data, addr, size);
+	}
+
 	bool reservation_update(u32 addr, const void* data, u32 size)
 	{
 		assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 128);
