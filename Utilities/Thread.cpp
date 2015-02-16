@@ -530,10 +530,12 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	else if (reg - X64R_AL < 4 && d_size == 1)
 	{
 		out_value = (u8)(*X64REG(context, reg - X64R_AL));
+		return true;
 	}
 	else if (reg - X64R_AH < 4 && d_size == 1)
 	{
 		out_value = (u8)(*X64REG(context, reg - X64R_AH) >> 8);
+		return true;
 	}
 	else if (reg == X64_IMM32)
 	{
@@ -549,6 +551,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	else if (reg == X64R_ECX)
 	{
 		out_value = (u32)RCX(context);
+		return true;
 	}
 
 	LOG_ERROR(GENERAL, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
@@ -571,7 +574,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 
 void fix_x64_reg_op(x64_context* context, x64_op_t& op, x64_reg_t& reg, size_t& d_size, size_t& i_size)
 {
-	if (op == X64OP_MOVS && reg != X64_NOT_SET)
+	if (op == X64OP_MOVS && reg != X64_NOT_SET) // get "full" access size from RCX register
 	{
 		u64 counter;
 		if (!get_x64_reg_value(context, reg, 8, i_size, counter))
@@ -584,6 +587,8 @@ void fix_x64_reg_op(x64_context* context, x64_op_t& op, x64_reg_t& reg, size_t& 
 		}
 
 		d_size *= counter;
+		reg = X64_NOT_SET;
+		return;
 	}
 }
 
@@ -599,6 +604,29 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
 	fix_x64_reg_op(context, op, reg, d_size, i_size);
+
+	if (d_size + addr >= 0x100000000ull)
+	{
+		LOG_ERROR(GENERAL, "Invalid d_size (0x%llx)", d_size);
+		return false;
+	}
+
+	if (op == X64OP_CMPXCHG)
+	{
+		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
+		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
+		u64 cmp, exch;
+		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
+		{
+			return false;
+		}
+
+		if (cmp == exch)
+		{
+			// could also be emulated without attempt to write memory
+			is_writing = false;
+		}
+	}
 
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
@@ -645,7 +673,7 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 	}
 
 	// check if fault is caused by reservation
-	if (vm::reservation_query(addr, is_writing))
+	if (vm::reservation_query(addr, (u32)d_size, is_writing))
 	{
 		return true;
 	}

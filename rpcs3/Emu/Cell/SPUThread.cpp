@@ -203,7 +203,10 @@ void SPUThread::WriteSNR(bool number, u32 value)
 
 void SPUThread::ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size)
 {
-	if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK)) _mm_mfence();
+	if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK))
+	{
+		_mm_mfence();
+	}
 
 	u32 eal = vm::cast(ea, "ea");
 
@@ -298,7 +301,7 @@ void SPUThread::ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFC
 
 		if (Ini.HLELogging.GetValue() || rec->s.data())
 		{
-			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s = 0x%x, ts = 0x%x, low ea = 0x%x (lsa = 0x%x)", i, list_size, rec->s, rec->ts, rec->ea, lsa | (addr & 0xf));
+			LOG_NOTICE(Log::SPU, "*** list element(%d/%d): s=0x%x, ts=0x%x, eal=0x%x (lsa=0x%x)", i, list_size, rec->s, rec->ts, rec->ea, lsa | (addr & 0xf));
 		}
 
 		if (size)
@@ -346,7 +349,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 	case MFC_PUTR_CMD: // ???
 	case MFC_GET_CMD:
 	{
-		if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+		if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x, cmd=0x%x",
 			(op & MFC_PUT_CMD ? "PUT" : "GET"),
 			(op & MFC_RESULT_MASK ? "R" : ""),
 			(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -362,7 +365,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 	case MFC_PUTRL_CMD: // ???
 	case MFC_GETL_CMD:
 	{
-		if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa = 0x%x, list = 0x%llx, tag = 0x%x, size = 0x%x, cmd = 0x%x",
+		if (Ini.HLELogging.GetValue()) LOG_NOTICE(Log::SPU, "DMA %s%s%s%s: lsa=0x%x, list=0x%llx, tag=0x%x, size=0x%x, cmd=0x%x",
 			(op & MFC_PUT_CMD ? "PUT" : "GET"),
 			(op & MFC_RESULT_MASK ? "RL" : "L"),
 			(op & MFC_BARRIER_MASK ? "B" : ""),
@@ -378,39 +381,16 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 	case MFC_PUTLLUC_CMD:
 	case MFC_PUTQLLUC_CMD:
 	{
-		if (Ini.HLELogging.GetValue() || size != 128) LOG_NOTICE(Log::SPU, "DMA %s: lsa=0x%x, ea = 0x%llx, (tag) = 0x%x, (size) = 0x%x, cmd = 0x%x",
+		if (Ini.HLELogging.GetValue() || size != 128) LOG_NOTICE(Log::SPU, "DMA %s: lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x, cmd=0x%x",
 			(op == MFC_GETLLAR_CMD ? "GETLLAR" :
 			op == MFC_PUTLLC_CMD ? "PUTLLC" :
 			op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
 			lsa, ea, tag, size, cmd);
 
-		if ((u32)ea != ea)
-		{
-			LOG_ERROR(Log::SPU, "DMA %s: Invalid external address (0x%llx)",
-				(op == MFC_GETLLAR_CMD ? "GETLLAR" :
-				op == MFC_PUTLLC_CMD ? "PUTLLC" :
-				op == MFC_PUTLLUC_CMD ? "PUTLLUC" : "PUTQLLUC"),
-				ea);
-			Emu.Pause();
-			return;
-		}
-
 		if (op == MFC_GETLLAR_CMD) // get reservation
 		{
-			//std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
 			vm::reservation_acquire(vm::get_ptr(ls_offset + lsa), vm::cast(ea), 128, [this]()
 			{
-				//std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(tid);
-
-				//if (t && (t->GetType() == CPU_THREAD_SPU || t->GetType() == CPU_THREAD_RAW_SPU))
-				//{
-				//	SPUThread& spu = static_cast<SPUThread&>(*t);
-
-				//	spu.m_events |= SPU_EVENT_LR; // TODO: atomic op
-				//	spu.Notify();
-				//}
-
 				m_events |= SPU_EVENT_LR; // TODO: atomic op
 				Notify();
 			});
@@ -448,16 +428,16 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 	}
 
 	default:
-		LOG_ERROR(Log::SPU, "Unknown MFC cmd. (opcode=0x%x, cmd=0x%x, lsa = 0x%x, ea = 0x%llx, tag = 0x%x, size = 0x%x)",
-			op, cmd, lsa, ea, tag, size);
+	{
+		LOG_ERROR(Log::SPU, "Unknown MFC cmd (opcode=0x%x, cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)", op, cmd, lsa, ea, tag, size);
+		Emu.Pause();
 		break;
+	}
 	}
 }
 
 bool SPUThread::CheckEvents()
 {
-	// checks events:
-
 	return (m_events & m_event_mask) != 0;
 }
 

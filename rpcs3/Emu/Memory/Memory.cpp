@@ -297,7 +297,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u32 addr, u32 size)
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
-		if (addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) return false;
+		if (addr >= m_allocated[i].addr && addr <= m_allocated[i].addr + m_allocated[i].size - 1) return false;
 	}
 
 	AppendMem(addr, size);
@@ -342,8 +342,8 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 
 		for (u32 i = 0; i<m_allocated.size(); ++i)
 		{
-			if ((addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) ||
-				(m_allocated[i].addr >= addr && m_allocated[i].addr < addr + exsize))
+			if ((addr >= m_allocated[i].addr && addr <= m_allocated[i].addr + m_allocated[i].size - 1) ||
+				(m_allocated[i].addr >= addr && m_allocated[i].addr <= addr + exsize - 1))
 			{
 				is_good_addr = false;
 				addr = m_allocated[i].addr + m_allocated[i].size;

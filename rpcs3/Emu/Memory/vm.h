@@ -39,7 +39,7 @@ namespace vm
 	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
 	// for internal use
-	bool reservation_query(u32 addr, bool is_writing);
+	bool reservation_query(u32 addr, u32 size, bool is_writing);
 	// for internal use
 	void reservation_free();
 	// perform complete operation
