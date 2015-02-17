@@ -51,7 +51,7 @@ void SetCurrentThreadDebugName(const char* threadName)
 
 enum x64_reg_t : u32
 {
-	X64R_RAX,
+	X64R_RAX = 0,
 	X64R_RCX,
 	X64R_RDX,
 	X64R_RBX,
@@ -68,7 +68,7 @@ enum x64_reg_t : u32
 	X64R_R14,
 	X64R_R15,
 
-	X64R_XMM0,
+	X64R_XMM0 = 0,
 	X64R_XMM1,
 	X64R_XMM2,
 	X64R_XMM3,
@@ -140,7 +140,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (lock)
 			{
-				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
 			}
 			
 			lock = true;
@@ -150,7 +150,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (repne)
 			{
-				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
 			}
 			
 			repne = true;
@@ -160,7 +160,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (repe)
 			{
-				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
 			}
 			
 			repe = true;
@@ -176,7 +176,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (pg2)
 			{
-				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - out_length, prefix, pg2);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - out_length, prefix, pg2);
 			}
 			else
 			{
@@ -189,7 +189,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (oso)
 			{
-				LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
 			}
 			
 			oso = true;
@@ -198,7 +198,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 		case 0x67: // group 4
 		{
-			LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): address-size override prefix found", (size_t)code - out_length, prefix);
+			LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): address-size override prefix found", (size_t)code - out_length, prefix);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
@@ -212,7 +212,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				if (rex)
 				{
-					LOG_ERROR(GENERAL, "decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - out_length, prefix, rex);
+					LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - out_length, prefix, rex);
 				}
 				else
 				{
@@ -423,7 +423,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 	}
 	}
 
-	LOG_WARNING(GENERAL, "decode_x64_reg_op(%016llxh): unsupported opcode found (%016llX%016llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
+	LOG_WARNING(MEMORY, "decode_x64_reg_op(%016llxh): unsupported opcode found (%016llX%016llX)", (size_t)code - out_length, *(be_t<u64>*)(code - out_length), *(be_t<u64>*)(code - out_length + 8));
 	out_op = X64OP_NONE;
 	out_reg = X64_NOT_SET;
 	out_size = 0;
@@ -434,7 +434,9 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 typedef CONTEXT x64_context;
 
-#define X64REG(context, reg) (&(&context->Rax)[reg])
+#define X64REG(context, reg) (&(&(context)->Rax)[reg])
+#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(&(context)->Xmm0)[reg]))
+#define EFLAGS(context) ((context)->EFlags)
 
 #else
 
@@ -443,6 +445,8 @@ typedef ucontext_t x64_context;
 #ifdef __APPLE__
 
 #define X64REG(context, reg) (darwin_x64reg(context, reg))
+#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0[reg]))
+#define EFLAGS(context) ((context)->uc_mcontext->__ss.__eflags)
 
 uint64_t* darwin_x64reg(x64_context *context, int reg)
 {
@@ -498,7 +502,9 @@ static const reg_table_t reg_table[17] =
 	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
 };
 
-#define X64REG(context, reg) (&context->uc_mcontext.gregs[reg_table[reg]])
+#define X64REG(context, reg) (&(context)->uc_mcontext.gregs[reg_table[reg]])
+#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext.fpregs->_xmm[reg]))
+#define EFLAGS(context) ((context)->uc_mcontext.eflags)
 
 #endif // __APPLE__
 
@@ -554,7 +560,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		return true;
 	}
 
-	LOG_ERROR(GENERAL, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
+	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", reg, d_size, i_size);
 	return false;
 }
 
@@ -563,36 +569,113 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 	// save x64 reg value (for load operations)
 	if (reg - X64R_RAX < 16)
 	{
-		// store the value into x64 register
-		*X64REG(context, reg - X64R_RAX) = (u32)value;
-		return true;
+		// save the value into x64 register
+		switch (d_size)
+		{
+		case 1: *X64REG(context, reg - X64R_RAX) = value & 0xff | *X64REG(context, reg - X64R_RAX) & 0xffffff00; return true;
+		case 2: *X64REG(context, reg - X64R_RAX) = value & 0xffff | *X64REG(context, reg - X64R_RAX) & 0xffff0000; return true;
+		case 4: *X64REG(context, reg - X64R_RAX) = value & 0xffffffff; return true;
+		case 8: *X64REG(context, reg - X64R_RAX) = value; return true;
+		}
 	}
 
-	LOG_ERROR(GENERAL, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", reg, d_size, value);
+	LOG_ERROR(MEMORY, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", reg, d_size, value);
 	return false;
 }
 
-void fix_x64_reg_op(x64_context* context, x64_op_t& op, x64_reg_t& reg, size_t& d_size, size_t& i_size)
+bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y)
+{
+	switch (d_size)
+	{
+	case 1: break;
+	case 2: break;
+	case 4: break;
+	case 8: break;
+	default: LOG_ERROR(MEMORY, "set_x64_cmp_flags(): invalid d_size (%lld)", d_size); return false;
+	}
+
+	const u64 sign = 1ull << (d_size * 8 - 1); // sign mask
+	const u64 diff = x - y;
+	const u64 summ = x + y;
+
+	if (((x & y) | ((x ^ y) & ~summ)) & sign)
+	{
+		EFLAGS(context) |= 0x1; // set CF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x1; // clear CF
+	}
+
+	if (x == y)
+	{
+		EFLAGS(context) |= 0x40; // set ZF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x40; // clear ZF
+	}
+
+	if (diff & sign)
+	{
+		EFLAGS(context) |= 0x80; // set SF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x80; // clear SF
+	}
+
+	if ((x ^ summ) & (y ^ summ) & sign)
+	{
+		EFLAGS(context) |= 0x800; // set OF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x800; // clear OF
+	}
+
+	const u8 p1 = (u8)diff ^ ((u8)diff >> 4);
+	const u8 p2 = p1 ^ (p1 >> 2);
+	const u8 p3 = p2 ^ (p2 >> 1);
+
+	if ((p3 & 1) == 0)
+	{
+		EFLAGS(context) |= 0x4; // set PF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x4; // clear PF
+	}
+
+	if (((x & y) | ((x ^ y) & ~summ)) & 0x8)
+	{
+		EFLAGS(context) |= 0x10; // set AF
+	}
+	else
+	{
+		EFLAGS(context) &= ~0x10; // clear AF
+	}
+
+	return true;
+}
+
+size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, size_t d_size, size_t i_size)
 {
 	if (op == X64OP_MOVS && reg != X64_NOT_SET) // get "full" access size from RCX register
 	{
 		u64 counter;
 		if (!get_x64_reg_value(context, reg, 8, i_size, counter))
 		{
-			op = X64OP_NONE;
-			reg = X64_NOT_SET;
-			d_size = 0;
-			i_size = 0;
-			return;
+			return ~0ull;
 		}
 
-		d_size *= counter;
-		reg = X64_NOT_SET;
-		return;
+		return d_size * counter;
 	}
+
+	return d_size;
 }
 
-bool handle_access_violation(const u32 addr, bool is_writing, x64_context* context)
+bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 {
 	auto code = (const u8*)RIP(context);
 
@@ -603,37 +686,28 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
-	fix_x64_reg_op(context, op, reg, d_size, i_size);
 
-	if (d_size + addr >= 0x100000000ull)
+	if ((d_size | d_size + addr) >= 0x100000000ull)
 	{
-		LOG_ERROR(GENERAL, "Invalid d_size (0x%llx)", d_size);
+		LOG_ERROR(MEMORY, "Invalid d_size (0x%llx)", d_size);
 		return false;
 	}
 
-	if (op == X64OP_CMPXCHG)
-	{
-		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
-		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
-		u64 cmp, exch;
-		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
-		{
-			return false;
-		}
+	// get length of data being accessed
+	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
-		if (cmp == exch)
-		{
-			// could also be emulated without attempt to write memory
-			is_writing = false;
-		}
+	if ((a_size | a_size + addr) >= 0x100000000ull)
+	{
+		LOG_ERROR(MEMORY, "Invalid a_size (0x%llx)", a_size);
+		return false;
 	}
 
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		if (d_size != 4 || !i_size)
+		if (a_size != 4 || !d_size || !i_size)
 		{
-			LOG_ERROR(GENERAL, "Invalid instruction (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
 			return false;
 		}
 
@@ -662,7 +736,7 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 		case X64OP_MOVS: // TODO
 		default:
 		{
-			LOG_ERROR(GENERAL, "Invalid operation (op=%d)", op);
+			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
 			return false;
 		}
 		}
@@ -672,14 +746,189 @@ bool handle_access_violation(const u32 addr, bool is_writing, x64_context* conte
 		return true;
 	}
 
-	// check if fault is caused by reservation
-	if (vm::reservation_query(addr, (u32)d_size, is_writing))
+	if (op == X64OP_CMPXCHG)
 	{
-		return true;
+		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
+		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
+		u64 cmp, exch;
+		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
+		{
+			return false;
+		}
+
+		if (cmp == exch)
+		{
+			// this will skip reservation bound check
+			a_size = 0;
+		}
 	}
 
+	// check if fault is caused by the reservation
+	return vm::reservation_query(addr, (u32)a_size, is_writing, [&]() -> bool
+	{
+		// write memory using "privileged" access to avoid breaking reservation
+		if (!d_size || !i_size)
+		{
+			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			return false;
+		}
+
+		switch (op)
+		{
+		case X64OP_STORE:
+		{
+			if (d_size == 16)
+			{
+				if (reg - X64R_XMM0 >= 16)
+				{
+					LOG_ERROR(MEMORY, "X64OP_STORE: d_size=16, reg=%d", reg);
+					return false;
+				}
+
+				memcpy(vm::get_priv_ptr(addr), XMMREG(context, reg - X64R_XMM0), 16);
+				break;
+			}
+
+			if (d_size > 8)
+			{
+				LOG_ERROR(MEMORY, "X64OP_STORE: d_size=%lld", d_size);
+				return false;
+			}
+
+			u64 reg_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
+			{
+				return false;
+			}
+
+			memcpy(vm::get_priv_ptr(addr), &reg_value, d_size);
+			break;
+		}
+		case X64OP_MOVS:
+		{
+			if (d_size > 8)
+			{
+				LOG_ERROR(MEMORY, "X64OP_MOVS: d_size=%lld", d_size);
+				return false;
+			}
+
+			if (vm::get_ptr(addr) != (void*)RDI(context))
+			{
+				LOG_ERROR(MEMORY, "X64OP_MOVS error: rdi=0x%llx, addr=0x%x", RDI(context), addr);
+				return false;
+			}
+
+			u32 a_addr = addr;
+
+			while (a_addr >> 12 == addr >> 12)
+			{
+				u64 value;
+
+				// copy data
+				memcpy(&value, (void*)RSI(context), d_size);
+				memcpy(vm::get_priv_ptr(a_addr), &value, d_size);
+
+				// shift pointers
+				if (EFLAGS(context) & 0x400 /* direction flag */)
+				{
+					// for reversed direction, addr argument should be calculated in different way
+					LOG_ERROR(MEMORY, "X64OP_MOVS TODO: reversed direction");
+					return false;
+					//RSI(context) -= d_size;
+					//RDI(context) -= d_size;
+					//a_addr -= (u32)d_size;
+				}
+				else
+				{
+					RSI(context) += d_size;
+					RDI(context) += d_size;
+					a_addr += (u32)d_size;
+				}
+
+				// decrement counter
+				if (reg == X64_NOT_SET || !--RCX(context))
+				{
+					break;
+				}
+			}
+
+			if (reg == X64_NOT_SET || !RCX(context))
+			{
+				break;
+			}
+
+			// don't skip partially processed instruction
+			return true;
+		}
+		case X64OP_XCHG:
+		{
+			if (d_size != 1 && d_size != 2 && d_size != 4 && d_size != 8)
+			{
+				LOG_ERROR(MEMORY, "X64OP_XCHG: d_size=%lld", d_size);
+				return false;
+			}
+
+			u64 reg_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: reg_value = vm::get_priv_ref<atomic_le_t<u8>>(addr).exchange((u8)reg_value); break;
+			case 2: reg_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).exchange((u16)reg_value); break;
+			case 4: reg_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).exchange((u32)reg_value); break;
+			case 8: reg_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).exchange((u64)reg_value); break;
+			}
+
+			if (!put_x64_reg_value(context, reg, d_size, reg_value))
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_CMPXCHG:
+		{
+			if (d_size != 1 && d_size != 2 && d_size != 4 && d_size != 8)
+			{
+				LOG_ERROR(MEMORY, "X64OP_CMPXCHG: d_size=%lld", d_size);
+				return false;
+			}
+
+			u64 reg_value, old_value, cmp_value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, cmp_value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: old_value = vm::get_priv_ref<atomic_le_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			}
+
+			if (!put_x64_reg_value(context, X64R_RAX, d_size, old_value) || !set_x64_cmp_flags(context, d_size, cmp_value, old_value))
+			{
+				return false;
+			}
+			break;
+		}
+		default:
+		{
+			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
+			return false;
+		}
+		}
+
+		// skip processed instruction
+		RIP(context) += i_size;
+		return true;
+	});
+
 	// TODO: allow recovering from a page fault as a feature of PS3 virtual memory
-	return false;
 }
 
 #ifdef _WIN32

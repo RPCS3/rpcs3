@@ -271,7 +271,7 @@ namespace vm
 		return true;
 	}
 
-	bool reservation_query(u32 addr, u32 size, bool is_writing)
+	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback)
 	{
 		std::lock_guard<reservation_mutex_t> lock(g_reservation_mutex);
 
@@ -280,31 +280,17 @@ namespace vm
 			return false;
 		}
 
-		if (is_writing)
+		// check if current reservation and address may overlap
+		if (g_reservation_addr >> 12 == addr >> 12 && is_writing)
 		{
-			assert(size);
-
-			if (addr + size - 1 >= g_reservation_addr && g_reservation_addr + g_reservation_size - 1 >= addr)
+			if (size && addr + size - 1 >= g_reservation_addr && g_reservation_addr + g_reservation_size - 1 >= addr)
 			{
-				// break the reservation if writing access and reservation overlap
+				// break the reservation if overlap
 				_reservation_break(addr);
 			}
 			else
 			{
-				// full-size check (isn't accurate enough)
-				if (!check_addr(addr, size))
-				{
-					return false;
-				}
-
-				// assume that the same memory page is accessed (isn't accurate enough)
-				if (g_reservation_addr >> 12 != addr >> 12)
-				{
-					return false;
-				}
-
-				// write memory using "privileged" access to avoid breaking reservation
-				return false;
+				return callback(); //? true : _reservation_break(addr), true;
 			}
 		}
 		
