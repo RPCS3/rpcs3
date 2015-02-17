@@ -111,6 +111,7 @@ enum x64_op_t : u32
 	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
 
 	X64OP_MOVS,
+	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
 };
@@ -397,6 +398,24 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		}
 		break;
 	}
+	case 0xaa:
+	{
+		if (!oso && !lock && !repe && !rex) // STOS
+		{
+			out_op = X64OP_STOS;
+			out_reg = X64_NOT_SET;
+			out_size = 1;
+			return;
+		}
+		if (!oso && !lock && repe) // REP STOS
+		{
+			out_op = X64OP_STOS;
+			out_reg = rex & 8 ? X64R_RCX : X64R_ECX;
+			out_size = 1;
+			return;
+		}
+		break;
+	}
 	case 0xc6:
 	{
 		if (!lock && !oso && get_modRM_reg(code, 0) == X64R_RAX) // MOV r8/m8, imm8
@@ -661,7 +680,7 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y)
 
 size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, size_t d_size, size_t i_size)
 {
-	if (op == X64OP_MOVS && reg != X64_NOT_SET) // get "full" access size from RCX register
+	if ((op == X64OP_MOVS || op == X64OP_STOS) && reg != X64_NOT_SET) // get "full" access size from RCX register
 	{
 		u64 counter;
 		if (!get_x64_reg_value(context, reg, 8, i_size, counter))
@@ -733,7 +752,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			break;
 		}
-		case X64OP_MOVS: // TODO
+		case X64OP_MOVS: // possibly, TODO
+		case X64OP_STOS:
 		default:
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", op, reg, d_size, i_size);
@@ -841,6 +861,63 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				else
 				{
 					RSI(context) += d_size;
+					RDI(context) += d_size;
+					a_addr += (u32)d_size;
+				}
+
+				// decrement counter
+				if (reg == X64_NOT_SET || !--RCX(context))
+				{
+					break;
+				}
+			}
+
+			if (reg == X64_NOT_SET || !RCX(context))
+			{
+				break;
+			}
+
+			// don't skip partially processed instruction
+			return true;
+		}
+		case X64OP_STOS:
+		{
+			if (d_size > 8)
+			{
+				LOG_ERROR(MEMORY, "X64OP_STOS: d_size=%lld", d_size);
+				return false;
+			}
+
+			if (vm::get_ptr(addr) != (void*)RDI(context))
+			{
+				LOG_ERROR(MEMORY, "X64OP_STOS error: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
+				return false;
+			}
+
+			u64 value;
+			if (!get_x64_reg_value(context, X64R_RAX, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			u32 a_addr = addr;
+
+			while (a_addr >> 12 == addr >> 12)
+			{
+				// fill data with value
+				memcpy(vm::get_priv_ptr(a_addr), &value, d_size);
+
+				// shift pointers
+				if (EFLAGS(context) & 0x400 /* direction flag */)
+				{
+					// for reversed direction, addr argument should be calculated in different way
+					LOG_ERROR(MEMORY, "X64OP_STOS TODO: reversed direction");
+					return false;
+					//RDI(context) -= d_size;
+					//a_addr -= (u32)d_size;
+				}
+				else
+				{
 					RDI(context) += d_size;
 					a_addr += (u32)d_size;
 				}
