@@ -504,7 +504,7 @@ static const reg_table_t reg_table[17] =
 
 #define X64REG(context, reg) (&(context)->uc_mcontext.gregs[reg_table[reg]])
 #define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext.fpregs->_xmm[reg]))
-#define EFLAGS(context) ((context)->uc_mcontext.eflags)
+#define EFLAGS(context) ((context)->uc_mcontext.gregs[REG_EFL])
 
 #endif // __APPLE__
 
@@ -814,7 +814,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			if (vm::get_ptr(addr) != (void*)RDI(context))
 			{
-				LOG_ERROR(MEMORY, "X64OP_MOVS error: rdi=0x%llx, addr=0x%x", RDI(context), addr);
+				LOG_ERROR(MEMORY, "X64OP_MOVS error: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
 				return false;
 			}
 
