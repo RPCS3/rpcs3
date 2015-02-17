@@ -680,15 +680,41 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y)
 
 size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, size_t d_size, size_t i_size)
 {
-	if ((op == X64OP_MOVS || op == X64OP_STOS) && reg != X64_NOT_SET) // get "full" access size from RCX register
+	if (op == X64OP_MOVS || op == X64OP_STOS)
 	{
-		u64 counter;
-		if (!get_x64_reg_value(context, reg, 8, i_size, counter))
+		if (EFLAGS(context) & 0x400 /* direction flag */)
 		{
-			return ~0ull;
+			// skip reservation bound check (TODO)
+			return 0;
 		}
 
-		return d_size * counter;
+		if (reg != X64_NOT_SET) // get "full" access size from RCX register
+		{
+			u64 counter;
+			if (!get_x64_reg_value(context, reg, 8, i_size, counter))
+			{
+				return -1;
+			}
+
+			return d_size * counter;
+		}
+	}
+
+	if (op == X64OP_CMPXCHG)
+	{
+		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
+		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
+		u64 cmp, exch;
+		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
+		{
+			return -1;
+		}
+
+		if (cmp == exch)
+		{
+			// skip reservation bound check
+			return 0;
+		}
 	}
 
 	return d_size;
@@ -766,23 +792,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (op == X64OP_CMPXCHG)
-	{
-		// detect whether this instruction can't actually modify memory to avoid breaking reservation;
-		// this may theoretically cause endless loop, but it shouldn't be a problem if only read_sync() generates such instruction
-		u64 cmp, exch;
-		if (!get_x64_reg_value(context, reg, d_size, i_size, cmp) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, exch))
-		{
-			return false;
-		}
-
-		if (cmp == exch)
-		{
-			// this will skip reservation bound check
-			a_size = 0;
-		}
-	}
-
 	// check if fault is caused by the reservation
 	return vm::reservation_query(addr, (u32)a_size, is_writing, [&]() -> bool
 	{
@@ -809,12 +818,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				break;
 			}
 
-			if (d_size > 8)
-			{
-				LOG_ERROR(MEMORY, "X64OP_STORE: d_size=%lld", d_size);
-				return false;
-			}
-
 			u64 reg_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
 			{
@@ -834,7 +837,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			if (vm::get_ptr(addr) != (void*)RDI(context))
 			{
-				LOG_ERROR(MEMORY, "X64OP_MOVS error: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
+				LOG_ERROR(MEMORY, "X64OP_MOVS: rdi=0x%llx, rsi=0x%llx, addr=0x%x", (u64)RDI(context), (u64)RSI(context), addr);
 				return false;
 			}
 
@@ -851,7 +854,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
 				{
-					// for reversed direction, addr argument should be calculated in different way
 					LOG_ERROR(MEMORY, "X64OP_MOVS TODO: reversed direction");
 					return false;
 					//RSI(context) -= d_size;
@@ -890,7 +892,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			if (vm::get_ptr(addr) != (void*)RDI(context))
 			{
-				LOG_ERROR(MEMORY, "X64OP_STOS error: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
+				LOG_ERROR(MEMORY, "X64OP_STOS: rdi=0x%llx, addr=0x%x", (u64)RDI(context), addr);
 				return false;
 			}
 
@@ -910,7 +912,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
 				{
-					// for reversed direction, addr argument should be calculated in different way
 					LOG_ERROR(MEMORY, "X64OP_STOS TODO: reversed direction");
 					return false;
 					//RDI(context) -= d_size;
@@ -939,12 +940,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		case X64OP_XCHG:
 		{
-			if (d_size != 1 && d_size != 2 && d_size != 4 && d_size != 8)
-			{
-				LOG_ERROR(MEMORY, "X64OP_XCHG: d_size=%lld", d_size);
-				return false;
-			}
-
 			u64 reg_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value))
 			{
@@ -957,6 +952,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			case 2: reg_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).exchange((u16)reg_value); break;
 			case 4: reg_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).exchange((u32)reg_value); break;
 			case 8: reg_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).exchange((u64)reg_value); break;
+			default: return false;
 			}
 
 			if (!put_x64_reg_value(context, reg, d_size, reg_value))
@@ -967,12 +963,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 		case X64OP_CMPXCHG:
 		{
-			if (d_size != 1 && d_size != 2 && d_size != 4 && d_size != 8)
-			{
-				LOG_ERROR(MEMORY, "X64OP_CMPXCHG: d_size=%lld", d_size);
-				return false;
-			}
-
 			u64 reg_value, old_value, cmp_value;
 			if (!get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !get_x64_reg_value(context, X64R_RAX, d_size, i_size, cmp_value))
 			{
@@ -985,6 +975,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			case 2: old_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
 			case 4: old_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
 			case 8: old_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			default: return false;
 			}
 
 			if (!put_x64_reg_value(context, X64R_RAX, d_size, old_value) || !set_x64_cmp_flags(context, d_size, cmp_value, old_value))

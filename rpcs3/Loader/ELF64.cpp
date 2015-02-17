@@ -23,10 +23,23 @@ namespace loader
 	{
 		handler::error_code elf64::init(vfsStream& stream)
 		{
+			m_ehdr = {};
+			m_sprx_module_info = {};
+			m_sprx_function_info = {};
+
+			m_phdrs.clear();
+			m_shdrs.clear();
+
+			m_sprx_segments_info.clear();
+			m_sprx_import_info.clear();
+			m_sprx_export_info.clear();
+
 			error_code res = handler::init(stream);
 
 			if (res != ok)
+			{
 				return res;
+			}
 
 			m_stream->Read(&m_ehdr, sizeof(ehdr));
 
@@ -58,8 +71,6 @@ namespace loader
 				if (m_stream->Read(m_phdrs.data(), m_ehdr.e_phnum * sizeof(phdr)) != m_ehdr.e_phnum * sizeof(phdr))
 					return broken_file;
 			}
-			else
-				m_phdrs.clear();
 
 			if (m_ehdr.e_shnum)
 			{
@@ -68,8 +79,6 @@ namespace loader
 				if (m_stream->Read(m_shdrs.data(), m_ehdr.e_shnum * sizeof(shdr)) != m_ehdr.e_shnum * sizeof(shdr))
 					return broken_file;
 			}
-			else
-				m_shdrs.clear();
 
 			if (is_sprx())
 			{
@@ -78,11 +87,6 @@ namespace loader
 
 				//m_stream->Seek(handler::get_stream_offset() + m_phdrs[1].p_vaddr.addr());
 				//m_stream->Read(&m_sprx_function_info, sizeof(sprx_function_info));
-			}
-			else
-			{
-				m_sprx_import_info.clear();
-				m_sprx_export_info.clear();
 			}
 
 			return ok;
@@ -95,6 +99,7 @@ namespace loader
 				switch ((u32)phdr.p_type)
 				{
 				case 0x1: //load
+				{
 					if (phdr.p_memsz)
 					{
 						sprx_segment_info segment;
@@ -186,8 +191,10 @@ namespace loader
 					}
 
 					break;
+				}
 
 				case 0x700000a4: //relocation
+				{
 					m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 
 					for (uint i = 0; i < phdr.p_filesz; i += sizeof(sys_prx_relocation_info_t))
@@ -227,6 +234,7 @@ namespace loader
 
 					break;
 				}
+				}
 			}
 
 			for (auto &m : info.modules)
@@ -264,6 +272,12 @@ namespace loader
 			//store elf to memory
 			vm::ps3::init();
 
+			error_code res = alloc_memory(0);
+			if (res != ok)
+			{
+				return res;
+			}
+
 			std::vector<u32> start_funcs;
 			std::vector<u32> stop_funcs;
 
@@ -273,6 +287,7 @@ namespace loader
 			for (const auto module : lle_dir)
 			{
 				elf64 sprx_handler;
+
 				vfsFile fsprx(lle_dir.GetPath() + "/" + module->name);
 
 				if (fsprx.IsOpened())
@@ -286,12 +301,12 @@ namespace loader
 
 						if (!load_lib.LoadValue(false))
 						{
-							LOG_ERROR(LOADER, "skipped lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+							LOG_WARNING(LOADER, "Skipped LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
 							continue;
 						}
 						else
 						{
-							LOG_WARNING(LOADER, "loading lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+							LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
 						}
 
 						sprx_info info;
@@ -332,7 +347,7 @@ namespace loader
 				}
 			}
 
-			error_code res = load_data(0);
+			res = load_data(0);
 			if (res != ok)
 				return res;
 
@@ -345,18 +360,11 @@ namespace loader
 			rsx_callback_data[1] = SC(0);
 			rsx_callback_data[2] = BLR();
 
-			auto ppu_thr_exit_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(3 * 4));
-			ppu_thr_exit_data[0] = ADDI(r11, 0, 41);
-			ppu_thr_exit_data[1] = SC(0);
-			ppu_thr_exit_data[2] = BLR();
-			Emu.SetCPUThreadExit(ppu_thr_exit_data.addr());
-
 			auto ppu_thr_stop_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(2 * 4));
 			ppu_thr_stop_data[0] = SC(3);
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			//vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*
 			//TODO
 			static const int branch_size = 6 * 4;
@@ -395,6 +403,31 @@ namespace loader
 			return ok;
 		}
 
+		handler::error_code elf64::alloc_memory(u64 offset)
+		{
+			for (auto &phdr : m_phdrs)
+			{
+				switch (phdr.p_type.value())
+				{
+				case 0x00000001: //LOAD
+				{
+					if (phdr.p_memsz)
+					{
+						if (!vm::alloc(vm::cast(phdr.p_vaddr.addr()), vm::cast(phdr.p_memsz, "phdr.p_memsz"), vm::main))
+						{
+							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, phdr.p_vaddr.addr(), phdr.p_memsz);
+
+							return loading_error;
+						}
+					}
+					break;
+				}
+				}
+			}
+
+			return ok;
+		}
+
 		handler::error_code elf64::load_data(u64 offset)
 		{
 			for (auto &phdr : m_phdrs)
@@ -402,16 +435,9 @@ namespace loader
 				switch (phdr.p_type.value())
 				{
 				case 0x00000001: //LOAD
+				{
 					if (phdr.p_memsz)
 					{
-						if (!vm::alloc(phdr.p_vaddr.addr(), (u32)phdr.p_memsz, vm::main))
-						{
-							// addr() has be_t<> type (test)
-							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr.addr(), (u32)phdr.p_memsz);
-
-							return loading_error;
-						}
-
 						if (phdr.p_filesz)
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
@@ -420,15 +446,19 @@ namespace loader
 						}
 					}
 					break;
+				}
 
 				case 0x00000007: //TLS
+				{
 					Emu.SetTLSData(
 						vm::cast(phdr.p_vaddr.addr(), "TLS: phdr.p_vaddr"),
 						vm::cast(phdr.p_filesz.value(), "TLS: phdr.p_filesz"),
 						vm::cast(phdr.p_memsz.value(), "TLS: phdr.p_memsz"));
 					break;
+				}
 
 				case 0x60000001: //LOOS+1
+				{
 					if (phdr.p_filesz)
 					{
 						const sys_process_param& proc_param = *(sys_process_param*)phdr.p_vaddr.get_ptr();
@@ -458,8 +488,10 @@ namespace loader
 						}
 					}
 					break;
+				}
 
 				case 0x60000002: //LOOS+2
+				{
 					if (phdr.p_filesz)
 					{
 						const sys_proc_prx_param& proc_prx_param = *(sys_proc_prx_param*)phdr.p_vaddr.get_ptr();
@@ -492,7 +524,7 @@ namespace loader
 							struct stub_data_t
 							{
 								be_t<u32> data[3];
-							} 
+							}
 							static const stub_data =
 							{
 								be_t<u32>::make(MR(11, 2)),
@@ -536,6 +568,7 @@ namespace loader
 						}
 					}
 					break;
+				}
 				}
 			}
 
