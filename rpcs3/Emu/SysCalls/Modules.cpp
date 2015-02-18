@@ -9,7 +9,7 @@
 
 std::vector<ModuleFunc> g_ps3_func_list;
 
-u32 add_ps3_func(ModuleFunc& func)
+u32 add_ps3_func(ModuleFunc func)
 {
 	for (auto& f : g_ps3_func_list)
 	{

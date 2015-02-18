@@ -122,7 +122,7 @@ public:
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
-u32 add_ps3_func(ModuleFunc& func);
+u32 add_ps3_func(ModuleFunc func);
 ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index = nullptr);
 ModuleFunc* get_ps3_func_by_index(u32 index);
 void execute_ps3_func_by_index(PPUThread& CPU, u32 id);
@@ -138,7 +138,7 @@ __forceinline void Module::AddFunc(u32 id, T func)
 template<typename T>
 __forceinline void Module::AddFunc(const char* name, T func)
 {
-	AddFunc(getFunctionId(name), func);
+	AddFunc(get_function_id(name), func);
 }
 
 template<typename T>
@@ -169,7 +169,7 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 
 void fix_import(Module* module, u32 nid, u32 addr);
 
-#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
+#define FIX_IMPORT(module, func, addr) fix_import(module, get_function_id(#func), addr)
 
 void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
 
