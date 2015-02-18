@@ -957,5 +957,5 @@ struct SpursTasksetContext
 
 static_assert(sizeof(SpursTasksetContext) == 0x900, "Incorrect size for SpursTasksetContext");
 
-s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
-s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs);
+s32 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
+s32 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs);
