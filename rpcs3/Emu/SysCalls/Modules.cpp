@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "Crypto/sha1.h"
 #include "ModuleManager.h"
 #include "Emu/Cell/PPUInstrTable.h"
