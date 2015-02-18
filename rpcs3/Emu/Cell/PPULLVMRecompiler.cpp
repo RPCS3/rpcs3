@@ -26,8 +26,10 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block)
-    : m_recompilation_engine(recompilation_engine) {
+Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function,
+                   const Executable execute_unknown_block, bool (*poll_status_function)(PPUThread * ppu_state))
+    : m_recompilation_engine(recompilation_engine)
+    , m_poll_status_function(poll_status_function) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
@@ -157,20 +159,21 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
 
         // Found an empty block
+        m_state.current_instruction_address = GetAddressFromBasicBlockName(block_i->getName());
+
         m_ir_builder->SetInsertPoint(block_i);
         auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
         exit_instr_list.push_back(exit_instr_i32);
 
-        auto instr_address = GetAddressFromBasicBlockName(block_i->getName());
-        SetPc(m_ir_builder->getInt32(instr_address));
+        SetPc(m_ir_builder->getInt32(m_state.current_instruction_address));
 
         if (generate_linkable_exits) {
             auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
             context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
-            auto ret_i32     = IndirectCall(instr_address, context_i64, false);
+            auto ret_i32     = IndirectCall(m_state.current_instruction_address, context_i64, false);
             auto cmp_i1      = m_ir_builder->CreateICmpNE(ret_i32, m_ir_builder->getInt32(0));
-            auto then_bb     = GetBasicBlockFromAddress(instr_address, "then");
-            auto merge_bb    = GetBasicBlockFromAddress(instr_address, "merge");
+            auto then_bb     = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_0");
+            auto merge_bb    = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_0");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
@@ -195,8 +198,8 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
 
         if (generate_linkable_exits) {
             auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_instr_i32, m_ir_builder->getInt32(0));
-            auto then_bb  = GetBasicBlockFromAddress(0xFFFFFFFF, "then");
-            auto merge_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "merge");
+            auto then_bb  = GetBasicBlockFromAddress(0xFFFFFFFF, "then_0");
+            auto merge_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "merge_0");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
@@ -1996,7 +1999,7 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 }
 
 void Compiler::HACK(u32 index) {
-	Call<void>("execute_ps3_func_by_index", &execute_ps3_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index));
+    Call<void>("execute_ps3_func_by_index", &execute_ps3_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index));
 }
 
 void Compiler::SC(u32 lev) {
@@ -2015,6 +2018,15 @@ void Compiler::SC(u32 lev) {
         CompilationError(fmt::Format("SC %u", lev));
         break;
     }
+
+    auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
+    auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
+    auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
+    auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
+    m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+    m_ir_builder->SetInsertPoint(then_bb);
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
+    m_ir_builder->SetInsertPoint(merge_bb);
 }
 
 void Compiler::B(s32 ll, u32 aa, u32 lk) {
@@ -2467,27 +2479,20 @@ void Compiler::MFOCRF(u32 a, u32 rd, u32 crm) {
 }
 
 void Compiler::LWARX(u32 rd, u32 ra, u32 rb) {
-	throw __FUNCTION__;
-	
-    //auto addr_i64 = GetGpr(rb);
-    //if (ra) {
-    //    auto ra_i64 = GetGpr(ra);
-    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    //}
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
 
-    //auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
-    //auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //m_ir_builder->CreateAlignedStore(addr_i64, resv_addr_i64_ptr, 8);
-
-    //auto resv_val_i32     = ReadMemory(addr_i64, 32, 4, false, false);
-    //auto resv_val_i64     = m_ir_builder->CreateZExt(resv_val_i32, m_ir_builder->getInt64Ty());
-    //auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
-    //auto resv_val_i64_ptr = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //m_ir_builder->CreateAlignedStore(resv_val_i64, resv_val_i64_ptr, 8);
-
-    //resv_val_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), resv_val_i32);
-    //resv_val_i64 = m_ir_builder->CreateZExt(resv_val_i32, m_ir_builder->getInt64Ty());
-    //SetGpr(rd, resv_val_i64);
+    auto addr_i32    = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
+    auto val_i32_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt32Ty());
+    val_i32_ptr->setAlignment(4);
+    Call<bool>("vm.reservation_acquire_no_cb", vm::reservation_acquire_no_cb, m_ir_builder->CreateBitCast(val_i32_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(4));
+    auto val_i32 = (Value *)m_ir_builder->CreateLoad(val_i32_ptr);
+    val_i32      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_i32);
+    auto val_i64 = m_ir_builder->CreateZExt(val_i32, m_ir_builder->getInt64Ty());
+    SetGpr(rd, val_i64);
 }
 
 void Compiler::LDX(u32 rd, u32 ra, u32 rb) {
@@ -2745,25 +2750,19 @@ void Compiler::MULHW(u32 rd, u32 ra, u32 rb, bool rc) {
 }
 
 void Compiler::LDARX(u32 rd, u32 ra, u32 rb) {
-	throw __FUNCTION__;
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
 
-    //auto addr_i64 = GetGpr(rb);
-    //if (ra) {
-    //    auto ra_i64 = GetGpr(ra);
-    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    //}
-
-    //auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
-    //auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //m_ir_builder->CreateAlignedStore(addr_i64, resv_addr_i64_ptr, 8);
-
-    //auto resv_val_i64     = ReadMemory(addr_i64, 64, 8, false);
-    //auto resv_val_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
-    //auto resv_val_i64_ptr = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //m_ir_builder->CreateAlignedStore(resv_val_i64, resv_val_i64_ptr, 8);
-
-    //resv_val_i64      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), resv_val_i64);
-    //SetGpr(rd, resv_val_i64);
+    auto addr_i32    = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
+    auto val_i64_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt64Ty());
+    val_i64_ptr->setAlignment(8);
+    Call<bool>("vm.reservation_acquire_no_cb", vm::reservation_acquire_no_cb, m_ir_builder->CreateBitCast(val_i64_ptr, m_ir_builder->getInt8PtrTy()), addr_i32, m_ir_builder->getInt32(8));
+    auto val_i64 = (Value *)m_ir_builder->CreateLoad(val_i64_ptr);
+    val_i64      = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), val_i64);
+    SetGpr(rd, val_i64);
 }
 
 void Compiler::DCBF(u32 ra, u32 rb) {
@@ -2927,47 +2926,23 @@ void Compiler::STDX(u32 rs, u32 ra, u32 rb) {
 }
 
 void Compiler::STWCX_(u32 rs, u32 ra, u32 rb) {
-	throw __FUNCTION__;
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
 
-    //auto addr_i64 = GetGpr(rb);
-    //if (ra) {
-    //    auto ra_i64 = GetGpr(ra);
-    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    //}
+    auto addr_i32   = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
+    auto rs_i32     = GetGpr(rs, 32);
+    rs_i32          = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), rs_i32);
+    auto rs_i32_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt32Ty());
+    rs_i32_ptr->setAlignment(4);
+    m_ir_builder->CreateStore(rs_i32, rs_i32_ptr);
+    auto success_i1 = Call<bool>("vm.reservation_update", vm::reservation_update, addr_i32, m_ir_builder->CreateBitCast(rs_i32_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(4));
 
-    //auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
-    //auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //auto resv_addr_i64     = (Value *)m_ir_builder->CreateAlignedLoad(resv_addr_i64_ptr, 8);
-    //auto cmp_i1            = m_ir_builder->CreateICmpEQ(addr_i64, resv_addr_i64);
-
-    //auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
-    //auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
-    //auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
-    //m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
-
-    //m_ir_builder->SetInsertPoint(then_bb);
-    //auto rs_i32                = GetGpr(rs, 32);
-    //rs_i32                     = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, rs_i32->getType()), rs_i32);
-    //resv_addr_i64              = m_ir_builder->CreateAdd(resv_addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-    //auto resv_addr_val_i32_ptr = m_ir_builder->CreateIntToPtr(resv_addr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
-    //auto resv_val_i8_ptr       = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
-    //auto resv_val_i32_ptr      = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt32Ty()->getPointerTo());
-    //auto resv_val_i32          = m_ir_builder->CreateAlignedLoad(resv_val_i32_ptr, 8);
-
-    //auto res_s      = m_ir_builder->CreateAtomicCmpXchg(resv_addr_val_i32_ptr, resv_val_i32, rs_i32, AtomicOrdering::AcquireRelease, AtomicOrdering::Monotonic);
-    //auto success_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
-    //auto cr_i32     = GetCr();
-    //cr_i32          = SetBit(cr_i32, 2, success_i1);
-    //SetCr(cr_i32);
-    //m_ir_builder->CreateAlignedStore(m_ir_builder->getInt64(0), resv_addr_i64_ptr, 8);
-    //m_ir_builder->CreateBr(merge_bb);
-
-    //m_ir_builder->SetInsertPoint(else_bb);
-    //cr_i32 = GetCr();
-    //cr_i32 = ClrBit(cr_i32, 2);
-    //SetCr(cr_i32);
-    //m_ir_builder->CreateBr(merge_bb);
-    //m_ir_builder->SetInsertPoint(merge_bb);
+    auto cr_i32 = GetCr();
+    cr_i32      = SetBit(cr_i32, 2, success_i1);
+    SetCr(cr_i32);
 }
 
 void Compiler::STWX(u32 rs, u32 ra, u32 rb) {
@@ -3070,47 +3045,23 @@ void Compiler::SUBFZE(u32 rd, u32 ra, u32 oe, bool rc) {
 }
 
 void Compiler::STDCX_(u32 rs, u32 ra, u32 rb) {
-	throw __FUNCTION__;
+    auto addr_i64 = GetGpr(rb);
+    if (ra) {
+        auto ra_i64 = GetGpr(ra);
+        addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
+    }
 
-    //auto addr_i64 = GetGpr(rb);
-    //if (ra) {
-    //    auto ra_i64 = GetGpr(ra);
-    //    addr_i64    = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-    //}
+    auto addr_i32   = m_ir_builder->CreateTrunc(addr_i64, m_ir_builder->getInt32Ty());
+    auto rs_i64     = GetGpr(rs);
+    rs_i64          = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt64Ty()), rs_i64);
+    auto rs_i64_ptr = m_ir_builder->CreateAlloca(m_ir_builder->getInt64Ty());
+    rs_i64_ptr->setAlignment(8);
+    m_ir_builder->CreateStore(rs_i64, rs_i64_ptr);
+    auto success_i1 = Call<bool>("vm.reservation_update", vm::reservation_update, addr_i32, m_ir_builder->CreateBitCast(rs_i64_ptr, m_ir_builder->getInt8PtrTy()), m_ir_builder->getInt32(8));
 
-    //auto resv_addr_i8_ptr  = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_ADDR));
-    //auto resv_addr_i64_ptr = m_ir_builder->CreateBitCast(resv_addr_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //auto resv_addr_i64     = (Value *)m_ir_builder->CreateAlignedLoad(resv_addr_i64_ptr, 8);
-    //auto cmp_i1            = m_ir_builder->CreateICmpEQ(addr_i64, resv_addr_i64);
-
-    //auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then");
-    //auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "else");
-    //auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge");
-    //m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
-
-    //m_ir_builder->SetInsertPoint(then_bb);
-    //auto rs_i64                = GetGpr(rs, 64);
-    //rs_i64                     = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, rs_i64->getType()), rs_i64);
-    //resv_addr_i64              = m_ir_builder->CreateAdd(resv_addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-    //auto resv_addr_val_i64_ptr = m_ir_builder->CreateIntToPtr(resv_addr_i64, m_ir_builder->getInt64Ty()->getPointerTo());
-    //auto resv_val_i8_ptr       = m_ir_builder->CreateConstGEP1_32(m_state.args[CompileTaskState::Args::State], (unsigned int)offsetof(PPUThread, R_VALUE));
-    //auto resv_val_i64_ptr      = m_ir_builder->CreateBitCast(resv_val_i8_ptr, m_ir_builder->getInt64Ty()->getPointerTo());
-    //auto resv_val_i64          = m_ir_builder->CreateAlignedLoad(resv_val_i64_ptr, 8);
-
-    //auto res_s      = m_ir_builder->CreateAtomicCmpXchg(resv_addr_val_i64_ptr, resv_val_i64, rs_i64, AtomicOrdering::AcquireRelease, AtomicOrdering::Monotonic);
-    //auto success_i1 = m_ir_builder->CreateExtractValue(res_s, {1});
-    //auto cr_i32     = GetCr();
-    //cr_i32          = SetBit(cr_i32, 2, success_i1);
-    //SetCr(cr_i32);
-    //m_ir_builder->CreateAlignedStore(m_ir_builder->getInt64(0), resv_addr_i64_ptr, 8);
-    //m_ir_builder->CreateBr(merge_bb);
-
-    //m_ir_builder->SetInsertPoint(else_bb);
-    //cr_i32 = GetCr();
-    //cr_i32 = ClrBit(cr_i32, 2);
-    //SetCr(cr_i32);
-    //m_ir_builder->CreateBr(merge_bb);
-    //m_ir_builder->SetInsertPoint(merge_bb);
+    auto cr_i32 = GetCr();
+    cr_i32      = SetBit(cr_i32, 2, success_i1);
+    SetCr(cr_i32);
 }
 
 void Compiler::STBX(u32 rs, u32 ra, u32 rb) {
@@ -3275,7 +3226,7 @@ void Compiler::EQV(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECIWX(u32 rd, u32 ra, u32 rb) {
-	throw __FUNCTION__;
+    CompilationError("ECIWX");
     //auto addr_i64 = GetGpr(rb);
     //if (ra) {
     //    auto ra_i64 = GetGpr(ra);
@@ -3435,7 +3386,7 @@ void Compiler::ORC(u32 ra, u32 rs, u32 rb, bool rc) {
 }
 
 void Compiler::ECOWX(u32 rs, u32 ra, u32 rb) {
-	throw __FUNCTION__;
+    CompilationError("ECOWX");
     //auto addr_i64 = GetGpr(rb);
     //if (ra) {
     //    auto ra_i64 = GetGpr(ra);
@@ -5530,92 +5481,26 @@ void Compiler::CreateBranch(llvm::Value * cmp_i1, llvm::Value * target_i32, bool
 }
 
 Value * Compiler::ReadMemory(Value * addr_i64, u32 bits, u32 alignment, bool bswap, bool could_be_mmio) {
-    if (bits != 32 || could_be_mmio == false) {
-        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-        auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getIntNTy(bits)->getPointerTo());
-        auto val_ix       = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr, alignment);
-        if (bits > 8 && bswap) {
-            val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getIntNTy(bits)), val_ix);
-        }
-
-        return val_ix;
-    } else {
-        static u32 next_basic_block_id = 0;
-
-        next_basic_block_id++;
-        auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("then_%u", next_basic_block_id));
-        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("else_%u", next_basic_block_id));
-        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("merge_%u", next_basic_block_id));
-        m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
-
-        m_ir_builder->SetInsertPoint(then_bb);
-        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-        auto eaddr_i32_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
-        auto val_then_i32  = (Value *)m_ir_builder->CreateAlignedLoad(eaddr_i32_ptr, alignment);
-        if (bswap) {
-            val_then_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_then_i32);
-        }
-
-        m_ir_builder->CreateBr(merge_bb);
-
-        m_ir_builder->SetInsertPoint(else_bb);
-        auto val_else_i32 = Call<u32>("vm.read32", (u32(*)(u64))vm::read32, addr_i64);
-        if (!bswap) {
-            val_else_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_else_i32);
-        }
-        m_ir_builder->CreateBr(merge_bb);
-
-        m_ir_builder->SetInsertPoint(merge_bb);
-        auto phi = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 2);
-        phi->addIncoming(val_then_i32, then_bb);
-        phi->addIncoming(val_else_i32, else_bb);
-        return phi;
+    addr_i64          = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
+    auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+    auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getIntNTy(bits)->getPointerTo());
+    auto val_ix       = (Value *)m_ir_builder->CreateLoad(eaddr_ix_ptr, alignment);
+    if (bits > 8 && bswap) {
+        val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getIntNTy(bits)), val_ix);
     }
+
+    return val_ix;
 }
 
 void Compiler::WriteMemory(Value * addr_i64, Value * val_ix, u32 alignment, bool bswap, bool could_be_mmio) {
-    addr_i64 = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
-    if (val_ix->getType()->getIntegerBitWidth() != 32 || could_be_mmio == false) {
-        if (val_ix->getType()->getIntegerBitWidth() > 8 && bswap) {
-            val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, val_ix->getType()), val_ix);
-        }
-
-        auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-        auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
-        m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
-    } else {
-        static u32 next_basic_block_id;
-
-        next_basic_block_id++;
-        auto cmp_i1   = m_ir_builder->CreateICmpULT(addr_i64, m_ir_builder->getInt64(RAW_SPU_BASE_ADDR));
-        auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("then_%u", next_basic_block_id));
-        auto else_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("else_%u", next_basic_block_id));
-        auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, fmt::Format("merge_%u", next_basic_block_id));
-        m_ir_builder->CreateCondBr(cmp_i1, then_bb, else_bb);
-
-        m_ir_builder->SetInsertPoint(then_bb);
-        Value * val_then_i32 = val_ix;
-        if (bswap) {
-            val_then_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_then_i32);
-        }
-
-        auto eaddr_i64     = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
-        auto eaddr_i32_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, m_ir_builder->getInt32Ty()->getPointerTo());
-        m_ir_builder->CreateAlignedStore(val_then_i32, eaddr_i32_ptr, alignment);
-        m_ir_builder->CreateBr(merge_bb);
-
-        m_ir_builder->SetInsertPoint(else_bb);
-        Value * val_else_i32 = val_ix;
-        if (!bswap) {
-            val_else_i32 = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, m_ir_builder->getInt32Ty()), val_else_i32);
-        }
-
-        Call<void>("vm.write32", (void(*)(u32, u32))vm::write32, addr_i64, val_else_i32);
-        m_ir_builder->CreateBr(merge_bb);
-
-        m_ir_builder->SetInsertPoint(merge_bb);
+    if (val_ix->getType()->getIntegerBitWidth() > 8 && bswap) {
+        val_ix = m_ir_builder->CreateCall(Intrinsic::getDeclaration(m_module, Intrinsic::bswap, val_ix->getType()), val_ix);
     }
+
+    addr_i64          = m_ir_builder->CreateAnd(addr_i64, 0xFFFFFFFF);
+    auto eaddr_i64    = m_ir_builder->CreateAdd(addr_i64, m_ir_builder->getInt64((u64)vm::get_ptr<u8>(0)));
+    auto eaddr_ix_ptr = m_ir_builder->CreateIntToPtr(eaddr_i64, val_ix->getType()->getPointerTo());
+    m_ir_builder->CreateAlignedStore(val_ix, eaddr_ix_ptr, alignment);
 }
 
 template<class T>
@@ -5634,6 +5519,8 @@ Type * Compiler::CppToLlvmType() {
         return m_ir_builder->getFloatTy();
     } else if (std::is_same<T, double>::value) {
         return m_ir_builder->getDoubleTy();
+    } else if (std::is_same<T, bool>::value) {
+        return m_ir_builder->getInt1Ty();
     } else if (std::is_pointer<T>::value) {
         return m_ir_builder->getInt8PtrTy();
     } else {
@@ -5664,7 +5551,17 @@ llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_f
     auto location_i64_ptr = m_ir_builder->CreateIntToPtr(location_i64, m_ir_builder->getInt64Ty()->getPointerTo());
     auto executable_i64   = m_ir_builder->CreateLoad(location_i64_ptr);
     auto executable_ptr   = m_ir_builder->CreateIntToPtr(executable_i64, m_compiled_function_type->getPointerTo());
-    return m_ir_builder->CreateCall2(executable_ptr, m_state.args[CompileTaskState::Args::State], context_i64);
+    auto ret_i32          = m_ir_builder->CreateCall2(executable_ptr, m_state.args[CompileTaskState::Args::State], context_i64);
+
+    auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i32, m_ir_builder->getInt32(0xFFFFFFFF));
+    auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_all_fs");
+    auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_all_fs");
+    m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+
+    m_ir_builder->SetInsertPoint(then_bb);
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
+    m_ir_builder->SetInsertPoint(merge_bb);
+    return ret_i32;
 }
 
 void Compiler::CompilationError(const std::string & error) {
@@ -5688,7 +5585,7 @@ RecompilationEngine::RecompilationEngine()
     : ThreadBase("PPU Recompilation Engine")
     , m_log(nullptr)
     , m_next_ordinal(0)
-    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn) {
+    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn, ExecutionEngine::PollStatus) {
     m_compiler.RunAllTests();
 }
 
@@ -6101,12 +5998,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
         execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledFunction, context >> 32, context & 0xFFFFFFFF);
     }
 
-    while (!terminate && !Emu.IsStopped()) {
-        if (Emu.IsPaused()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            continue;
-        }
-
+    while (terminate == false && PollStatus(ppu_state) == false) {
         auto executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteTillReturn);
         if (executable != ExecuteTillReturn && executable != ExecuteFunction) {
             auto entry = ppu_state->PC;
@@ -6144,6 +6036,18 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
     }
 
     return 0;
+}
+
+bool ppu_recompiler_llvm::ExecutionEngine::PollStatus(PPUThread * ppu_state) {
+    while (Emu.IsPaused() || ppu_state->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    if (Emu.IsStopped() || ppu_state->IsStopped()) {
+        return true;
+    }
+
+    return false;
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
