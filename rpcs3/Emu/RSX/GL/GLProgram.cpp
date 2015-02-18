@@ -51,7 +51,7 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 
 		if (bufLength)
 		{
-			char* buf = new char[bufLength+1]();
+			char* buf = new char[bufLength + 1]();
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			LOG_ERROR(RSX, "Could not link program: %s", buf);
 			delete[] buf;
