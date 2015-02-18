@@ -28,22 +28,22 @@ public:
 
 	double GetElapsedTimeInSec() const
 	{
-		return GetElapsedTimeInMicroSec() / 1000000.0;
+		return double(GetElapsedTimeInMicroSec()) / 1000000.0;
 	}
 
 	double GetElapsedTimeInMilliSec() const
 	{
-		return GetElapsedTimeInMicroSec() / 1000.0;
+		return double(GetElapsedTimeInMicroSec()) / 1000.0;
 	}
 
-	double GetElapsedTimeInMicroSec() const
+	u64 GetElapsedTimeInMicroSec() const
 	{
 		std::chrono::high_resolution_clock::time_point now = m_stopped ? m_end : std::chrono::high_resolution_clock::now();
 
 		return std::chrono::duration_cast<std::chrono::microseconds>(now - m_start).count();
 	}
 
-	double GetElapsedTimeInNanoSec() const
+	u64 GetElapsedTimeInNanoSec() const
 	{
 		std::chrono::high_resolution_clock::time_point now = m_stopped ? m_end : std::chrono::high_resolution_clock::now();
 
