@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-Module *cellSysutilAp = nullptr;
+extern Module cellSysutilAp;
 
 // Return Codes
 enum
@@ -19,7 +19,7 @@ enum
 
 s32 cellSysutilApGetRequiredMemSize()
 {
-	cellSysutilAp->Log("cellSysutilApGetRequiredMemSize()");
+	cellSysutilAp.Log("cellSysutilApGetRequiredMemSize()");
 	return 1024*1024; // Return 1 MB as required size
 }
 
@@ -35,11 +35,9 @@ int cellSysutilApOff()
 	return CELL_OK;
 }
 
-void cellSysutilAp_init(Module *pxThis)
+Module cellSysutilAp("cellSysutilAp", []()
 {
-	cellSysutilAp = pxThis;
-
-	cellSysutilAp->AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
-	cellSysutilAp->AddFunc(0x3343824c, cellSysutilApOn);
-	cellSysutilAp->AddFunc(0x90c2bb19, cellSysutilApOff);
-}
+	cellSysutilAp.AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
+	cellSysutilAp.AddFunc(0x3343824c, cellSysutilApOn);
+	cellSysutilAp.AddFunc(0x90c2bb19, cellSysutilApOff);
+});

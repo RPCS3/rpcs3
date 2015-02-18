@@ -5,7 +5,7 @@
 
 #include "cellSync2.h"
 
-Module* cellSync2 = nullptr;
+extern Module cellSync2;
 
 #ifdef PRX_DEBUG
 #include "prx_libsync2.h"
@@ -16,10 +16,10 @@ u32 libsync2_rtoc;
 s64 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x16A0, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2MutexAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2MutexAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -36,10 +36,10 @@ s64 _cellSync2MutexAttributeInitialize(vm::ptr<CellSync2MutexAttribute> attr, u3
 s64 cellSync2MutexEstimateBufferSize(vm::ptr<const CellSync2MutexAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0xC3C, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2MutexEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -51,7 +51,7 @@ s64 cellSync2MutexEstimateBufferSize(vm::ptr<const CellSync2MutexAttribute> attr
 s64 cellSync2MutexInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1584, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -62,7 +62,7 @@ s64 cellSync2MutexInitialize()
 s64 cellSync2MutexFinalize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x142C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -73,7 +73,7 @@ s64 cellSync2MutexFinalize()
 s64 cellSync2MutexLock()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1734, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -84,7 +84,7 @@ s64 cellSync2MutexLock()
 s64 cellSync2MutexTryLock()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1A2C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -95,7 +95,7 @@ s64 cellSync2MutexTryLock()
 s64 cellSync2MutexUnlock()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x186C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -106,10 +106,10 @@ s64 cellSync2MutexUnlock()
 s64 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x26DC, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2CondAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2CondAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->maxWaiters = 15;
@@ -122,10 +122,10 @@ s64 _cellSync2CondAttributeInitialize(vm::ptr<CellSync2CondAttribute> attr, u32 
 s64 cellSync2CondEstimateBufferSize(vm::ptr<const CellSync2CondAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x1B90, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2CondEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2CondEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -137,7 +137,7 @@ s64 cellSync2CondEstimateBufferSize(vm::ptr<const CellSync2CondAttribute> attr, 
 s64 cellSync2CondInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x25DC, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -148,7 +148,7 @@ s64 cellSync2CondInitialize()
 s64 cellSync2CondFinalize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x23E0, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -159,7 +159,7 @@ s64 cellSync2CondFinalize()
 s64 cellSync2CondWait()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x283C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -170,7 +170,7 @@ s64 cellSync2CondWait()
 s64 cellSync2CondSignal()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2768, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -181,7 +181,7 @@ s64 cellSync2CondSignal()
 s64 cellSync2CondSignalAll()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2910, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -192,10 +192,10 @@ s64 cellSync2CondSignalAll()
 s64 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x5644, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2SemaphoreAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2SemaphoreAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -211,10 +211,10 @@ s64 _cellSync2SemaphoreAttributeInitialize(vm::ptr<CellSync2SemaphoreAttribute> 
 s64 cellSync2SemaphoreEstimateBufferSize(vm::ptr<const CellSync2SemaphoreAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4AC4, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2SemaphoreEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2SemaphoreEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->maxWaiters == 0 || attr->maxWaiters > 32768)
 		return CELL_SYNC2_ERROR_INVAL;
@@ -226,7 +226,7 @@ s64 cellSync2SemaphoreEstimateBufferSize(vm::ptr<const CellSync2SemaphoreAttribu
 s64 cellSync2SemaphoreInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x54E0, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -237,7 +237,7 @@ s64 cellSync2SemaphoreInitialize()
 s64 cellSync2SemaphoreFinalize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x52F0, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -248,7 +248,7 @@ s64 cellSync2SemaphoreFinalize()
 s64 cellSync2SemaphoreAcquire()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x57A4, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -259,7 +259,7 @@ s64 cellSync2SemaphoreAcquire()
 s64 cellSync2SemaphoreTryAcquire()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x56D8, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -270,7 +270,7 @@ s64 cellSync2SemaphoreTryAcquire()
 s64 cellSync2SemaphoreRelease()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x5870, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -281,7 +281,7 @@ s64 cellSync2SemaphoreRelease()
 s64 cellSync2SemaphoreGetCount()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4B4C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -292,10 +292,10 @@ s64 cellSync2SemaphoreGetCount()
 s64 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u32 sdkVersion)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3C5C, libsync2_rtoc);
 #else
-	cellSync2->Warning("_cellSync2QueueAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
+	cellSync2.Warning("_cellSync2QueueAttributeInitialize(attr_addr=0x%x, sdkVersion=0x%x)", attr.addr(), sdkVersion);
 
 	attr->sdkVersion = sdkVersion;
 	attr->threadTypes = CELL_SYNC2_THREAD_TYPE_PPU_THREAD | CELL_SYNC2_THREAD_TYPE_PPU_FIBER |
@@ -314,10 +314,10 @@ s64 _cellSync2QueueAttributeInitialize(vm::ptr<CellSync2QueueAttribute> attr, u3
 s64 cellSync2QueueEstimateBufferSize(vm::ptr<const CellSync2QueueAttribute> attr, vm::ptr<u32> bufferSize)
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2A98, libsync2_rtoc);
 #else
-	cellSync2->Todo("cellSync2QueueEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
+	cellSync2.Todo("cellSync2QueueEstimateBufferSize(attr_addr=0x%x, bufferSize_addr=0x%x)", attr.addr(), bufferSize.addr());
 
 	if (attr->elementSize == 0 || attr->elementSize > 16384 || attr->elementSize % 16 || attr->depth == 0 || attr->depth > 4294967292 ||
 		attr->maxPushWaiters > 32768 || attr->maxPopWaiters > 32768)
@@ -330,7 +330,7 @@ s64 cellSync2QueueEstimateBufferSize(vm::ptr<const CellSync2QueueAttribute> attr
 s64 cellSync2QueueInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3F98, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -341,7 +341,7 @@ s64 cellSync2QueueInitialize()
 s64 cellSync2QueueFinalize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x3C28, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -352,7 +352,7 @@ s64 cellSync2QueueFinalize()
 s64 cellSync2QueuePush()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x478C, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -363,7 +363,7 @@ s64 cellSync2QueuePush()
 s64 cellSync2QueueTryPush()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4680, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -374,7 +374,7 @@ s64 cellSync2QueueTryPush()
 s64 cellSync2QueuePop()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4974, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -385,7 +385,7 @@ s64 cellSync2QueuePop()
 s64 cellSync2QueueTryPop()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x4880, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -396,7 +396,7 @@ s64 cellSync2QueueTryPop()
 s64 cellSync2QueueGetSize()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2C00, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -407,7 +407,7 @@ s64 cellSync2QueueGetSize()
 s64 cellSync2QueueGetDepth()
 {
 #ifdef PRX_DEBUG
-	cellSync2->Warning("%s()", __FUNCTION__);
+	cellSync2.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libsync2 + 0x2B90, libsync2_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSync2);
@@ -415,45 +415,43 @@ s64 cellSync2QueueGetDepth()
 #endif
 }
 
-void cellSync2_init(Module *pxThis)
+Module cellSync2("cellSync2", []()
 {
-	cellSync2 = pxThis;
+	cellSync2.AddFunc(0x55836e73, _cellSync2MutexAttributeInitialize);
+	cellSync2.AddFunc(0xd51bfae7, cellSync2MutexEstimateBufferSize);
+	cellSync2.AddFunc(0xeb81a467, cellSync2MutexInitialize);
+	cellSync2.AddFunc(0x27f2d61c, cellSync2MutexFinalize);
+	cellSync2.AddFunc(0xa400d82e, cellSync2MutexLock);
+	cellSync2.AddFunc(0xa69c749c, cellSync2MutexTryLock);
+	cellSync2.AddFunc(0x0080fe88, cellSync2MutexUnlock);
 
-	cellSync2->AddFunc(0x55836e73, _cellSync2MutexAttributeInitialize);
-	cellSync2->AddFunc(0xd51bfae7, cellSync2MutexEstimateBufferSize);
-	cellSync2->AddFunc(0xeb81a467, cellSync2MutexInitialize);
-	cellSync2->AddFunc(0x27f2d61c, cellSync2MutexFinalize);
-	cellSync2->AddFunc(0xa400d82e, cellSync2MutexLock);
-	cellSync2->AddFunc(0xa69c749c, cellSync2MutexTryLock);
-	cellSync2->AddFunc(0x0080fe88, cellSync2MutexUnlock);
+	cellSync2.AddFunc(0xdf3c532a, _cellSync2CondAttributeInitialize);
+	cellSync2.AddFunc(0x5b1e4d7a, cellSync2CondEstimateBufferSize);
+	cellSync2.AddFunc(0x58be9a0f, cellSync2CondInitialize);
+	cellSync2.AddFunc(0x63062249, cellSync2CondFinalize);
+	cellSync2.AddFunc(0xbc96d751, cellSync2CondWait);
+	cellSync2.AddFunc(0x871af804, cellSync2CondSignal);
+	cellSync2.AddFunc(0x8aae07c2, cellSync2CondSignalAll);
 
-	cellSync2->AddFunc(0xdf3c532a, _cellSync2CondAttributeInitialize);
-	cellSync2->AddFunc(0x5b1e4d7a, cellSync2CondEstimateBufferSize);
-	cellSync2->AddFunc(0x58be9a0f, cellSync2CondInitialize);
-	cellSync2->AddFunc(0x63062249, cellSync2CondFinalize);
-	cellSync2->AddFunc(0xbc96d751, cellSync2CondWait);
-	cellSync2->AddFunc(0x871af804, cellSync2CondSignal);
-	cellSync2->AddFunc(0x8aae07c2, cellSync2CondSignalAll);
+	cellSync2.AddFunc(0x2d77fe17, _cellSync2SemaphoreAttributeInitialize);
+	cellSync2.AddFunc(0x74c2780f, cellSync2SemaphoreEstimateBufferSize);
+	cellSync2.AddFunc(0xc5dee254, cellSync2SemaphoreInitialize);
+	cellSync2.AddFunc(0x164843a7, cellSync2SemaphoreFinalize);
+	cellSync2.AddFunc(0xd1b0d146, cellSync2SemaphoreAcquire);
+	cellSync2.AddFunc(0x5e4b0f87, cellSync2SemaphoreTryAcquire);
+	cellSync2.AddFunc(0x0c2983ac, cellSync2SemaphoreRelease);
+	cellSync2.AddFunc(0x4e2ee031, cellSync2SemaphoreGetCount);
 
-	cellSync2->AddFunc(0x2d77fe17, _cellSync2SemaphoreAttributeInitialize);
-	cellSync2->AddFunc(0x74c2780f, cellSync2SemaphoreEstimateBufferSize);
-	cellSync2->AddFunc(0xc5dee254, cellSync2SemaphoreInitialize);
-	cellSync2->AddFunc(0x164843a7, cellSync2SemaphoreFinalize);
-	cellSync2->AddFunc(0xd1b0d146, cellSync2SemaphoreAcquire);
-	cellSync2->AddFunc(0x5e4b0f87, cellSync2SemaphoreTryAcquire);
-	cellSync2->AddFunc(0x0c2983ac, cellSync2SemaphoreRelease);
-	cellSync2->AddFunc(0x4e2ee031, cellSync2SemaphoreGetCount);
-
-	cellSync2->AddFunc(0x5e00d433, _cellSync2QueueAttributeInitialize);
-	cellSync2->AddFunc(0xc08cc0f9, cellSync2QueueEstimateBufferSize);
-	cellSync2->AddFunc(0xf125e044, cellSync2QueueInitialize);
-	cellSync2->AddFunc(0x6af85cdf, cellSync2QueueFinalize);
-	cellSync2->AddFunc(0x7d967d91, cellSync2QueuePush);
-	cellSync2->AddFunc(0x7fd479fe, cellSync2QueueTryPush);
-	cellSync2->AddFunc(0xd83ab0c9, cellSync2QueuePop);
-	cellSync2->AddFunc(0x0c9a0ea9, cellSync2QueueTryPop);
-	cellSync2->AddFunc(0x12f0a27d, cellSync2QueueGetSize);
-	cellSync2->AddFunc(0xf0e1471c, cellSync2QueueGetDepth);
+	cellSync2.AddFunc(0x5e00d433, _cellSync2QueueAttributeInitialize);
+	cellSync2.AddFunc(0xc08cc0f9, cellSync2QueueEstimateBufferSize);
+	cellSync2.AddFunc(0xf125e044, cellSync2QueueInitialize);
+	cellSync2.AddFunc(0x6af85cdf, cellSync2QueueFinalize);
+	cellSync2.AddFunc(0x7d967d91, cellSync2QueuePush);
+	cellSync2.AddFunc(0x7fd479fe, cellSync2QueueTryPush);
+	cellSync2.AddFunc(0xd83ab0c9, cellSync2QueuePop);
+	cellSync2.AddFunc(0x0c9a0ea9, cellSync2QueueTryPop);
+	cellSync2.AddFunc(0x12f0a27d, cellSync2QueueGetSize);
+	cellSync2.AddFunc(0xf0e1471c, cellSync2QueueGetDepth);
 
 #ifdef PRX_DEBUG
 	CallAfter([]()
@@ -487,4 +485,4 @@ void cellSync2_init(Module *pxThis)
 		fix_relocs(cellSync2, libsync2, 0x73A0, 0x95A0, 0x6B90);
 	});
 #endif
-}
+});

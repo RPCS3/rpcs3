@@ -469,6 +469,7 @@ namespace ppu_recompiler_llvm {
         void ADDI(u32 rd, u32 ra, s32 simm16) override;
         void ADDIS(u32 rd, u32 ra, s32 simm16) override;
         void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) override;
+		void HACK(u32 id) override;
         void SC(u32 sc_code) override;
         void B(s32 ll, u32 aa, u32 lk) override;
         void MCRF(u32 crfd, u32 crfs) override;

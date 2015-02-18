@@ -44,6 +44,8 @@ protected:
 
 	bool m_trace_call_stack;
 
+	virtual void DumpInformation() override;
+
 public:
 	virtual void InitRegs() = 0;
 

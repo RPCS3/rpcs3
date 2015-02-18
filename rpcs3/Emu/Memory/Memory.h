@@ -75,9 +75,9 @@ public:
 
 	void Close();
 
-	__noinline void WriteMMIO32(u32 addr, const u32 data);
+	bool WriteMMIO32(u32 addr, const u32 data);
 
-	__noinline u32 ReadMMIO32(u32 addr);
+	bool ReadMMIO32(u32 addr, u32& result);
 
 	u32 GetUserMemTotalSize()
 	{

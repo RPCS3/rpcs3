@@ -11,7 +11,7 @@
 #include "cellSpurs.h"
 #include "cellSpursJq.h"
 
-Module* cellSpursJq = nullptr;
+extern Module cellSpursJq;
 
 #ifdef PRX_DEBUG
 #include "prx_libspurs_jq.h"
@@ -22,7 +22,7 @@ u32 libspurs_jq_rtoc;
 s64 cellSpursJobQueueAttributeInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000010, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -33,7 +33,7 @@ s64 cellSpursJobQueueAttributeInitialize()
 s64 cellSpursJobQueueAttributeSetMaxGrab()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000058, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -44,7 +44,7 @@ s64 cellSpursJobQueueAttributeSetMaxGrab()
 s64 cellSpursJobQueueAttributeSetSubmitWithEntryLock()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000098, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -55,7 +55,7 @@ s64 cellSpursJobQueueAttributeSetSubmitWithEntryLock()
 s64 cellSpursJobQueueAttributeSetDoBusyWaiting()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0000BC, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -66,7 +66,7 @@ s64 cellSpursJobQueueAttributeSetDoBusyWaiting()
 s64 cellSpursJobQueueAttributeSetIsHaltOnError()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0000E0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -77,7 +77,7 @@ s64 cellSpursJobQueueAttributeSetIsHaltOnError()
 s64 cellSpursJobQueueAttributeSetIsJobTypeMemoryCheck()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000104, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -88,7 +88,7 @@ s64 cellSpursJobQueueAttributeSetIsJobTypeMemoryCheck()
 s64 cellSpursJobQueueAttributeSetMaxSizeJobDescriptor()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000128, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -99,7 +99,7 @@ s64 cellSpursJobQueueAttributeSetMaxSizeJobDescriptor()
 s64 cellSpursJobQueueAttributeSetGrabParameters()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000178, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -110,7 +110,7 @@ s64 cellSpursJobQueueAttributeSetGrabParameters()
 s64 cellSpursJobQueueSetWaitingMode()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0001C8, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -121,7 +121,7 @@ s64 cellSpursJobQueueSetWaitingMode()
 s64 cellSpursShutdownJobQueue()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0002F0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -132,7 +132,7 @@ s64 cellSpursShutdownJobQueue()
 s64 _cellSpursCreateJobQueueWithJobDescriptorPool()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0003CC, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -143,7 +143,7 @@ s64 _cellSpursCreateJobQueueWithJobDescriptorPool()
 s64 _cellSpursCreateJobQueue()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000CA8, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -154,7 +154,7 @@ s64 _cellSpursCreateJobQueue()
 s64 cellSpursJoinJobQueue()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x000CF0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -165,7 +165,7 @@ s64 cellSpursJoinJobQueue()
 s64 _cellSpursJobQueuePushJobListBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001B24, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -176,7 +176,7 @@ s64 _cellSpursJobQueuePushJobListBody()
 s64 _cellSpursJobQueuePushJobBody2()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001BF0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -187,7 +187,7 @@ s64 _cellSpursJobQueuePushJobBody2()
 s64 _cellSpursJobQueuePushJob2Body()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001CD0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -198,7 +198,7 @@ s64 _cellSpursJobQueuePushJob2Body()
 s64 _cellSpursJobQueuePushAndReleaseJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001DC8, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -209,7 +209,7 @@ s64 _cellSpursJobQueuePushAndReleaseJobBody()
 s64 _cellSpursJobQueuePushJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001EC8, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -220,7 +220,7 @@ s64 _cellSpursJobQueuePushJobBody()
 s64 _cellSpursJobQueuePushBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x001F90, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -231,7 +231,7 @@ s64 _cellSpursJobQueuePushBody()
 s64 _cellSpursJobQueueAllocateJobDescriptorBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002434, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -242,7 +242,7 @@ s64 _cellSpursJobQueueAllocateJobDescriptorBody()
 s64 _cellSpursJobQueuePushSync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002498, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -253,7 +253,7 @@ s64 _cellSpursJobQueuePushSync()
 s64 _cellSpursJobQueuePushFlush()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002528, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -264,7 +264,7 @@ s64 _cellSpursJobQueuePushFlush()
 s64 cellSpursJobQueueGetSpurs()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002598, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -275,7 +275,7 @@ s64 cellSpursJobQueueGetSpurs()
 s64 cellSpursJobQueueGetHandleCount()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0025C4, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -286,7 +286,7 @@ s64 cellSpursJobQueueGetHandleCount()
 s64 cellSpursJobQueueGetError()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002600, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -297,7 +297,7 @@ s64 cellSpursJobQueueGetError()
 s64 cellSpursJobQueueGetMaxSizeJobDescriptor()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002668, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -308,7 +308,7 @@ s64 cellSpursJobQueueGetMaxSizeJobDescriptor()
 s64 cellSpursGetJobQueueId()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0026A4, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -319,7 +319,7 @@ s64 cellSpursGetJobQueueId()
 s64 cellSpursJobQueueGetSuspendedJobSize()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002700, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -330,7 +330,7 @@ s64 cellSpursJobQueueGetSuspendedJobSize()
 s64 cellSpursJobQueueClose()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002D70, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -341,7 +341,7 @@ s64 cellSpursJobQueueClose()
 s64 cellSpursJobQueueOpen()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x002E50, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -352,7 +352,7 @@ s64 cellSpursJobQueueOpen()
 s64 cellSpursJobQueueSemaphoreTryAcquire()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003370, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -363,7 +363,7 @@ s64 cellSpursJobQueueSemaphoreTryAcquire()
 s64 cellSpursJobQueueSemaphoreAcquire()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003378, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -374,7 +374,7 @@ s64 cellSpursJobQueueSemaphoreAcquire()
 s64 cellSpursJobQueueSemaphoreInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003380, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -385,7 +385,7 @@ s64 cellSpursJobQueueSemaphoreInitialize()
 s64 cellSpursJobQueueSendSignal()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0033E0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -396,7 +396,7 @@ s64 cellSpursJobQueueSendSignal()
 s64 cellSpursJobQueuePortGetJobQueue()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x00354C, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -407,7 +407,7 @@ s64 cellSpursJobQueuePortGetJobQueue()
 s64 _cellSpursJobQueuePortPushSync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003554, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -418,7 +418,7 @@ s64 _cellSpursJobQueuePortPushSync()
 s64 _cellSpursJobQueuePortPushFlush()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0035C0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -429,7 +429,7 @@ s64 _cellSpursJobQueuePortPushFlush()
 s64 _cellSpursJobQueuePortPushJobListBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003624, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -440,7 +440,7 @@ s64 _cellSpursJobQueuePortPushJobListBody()
 s64 _cellSpursJobQueuePortPushJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003A88, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -451,7 +451,7 @@ s64 _cellSpursJobQueuePortPushJobBody()
 s64 _cellSpursJobQueuePortPushJobBody2()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003A94, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -462,7 +462,7 @@ s64 _cellSpursJobQueuePortPushJobBody2()
 s64 _cellSpursJobQueuePortPushBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003A98, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -473,7 +473,7 @@ s64 _cellSpursJobQueuePortPushBody()
 s64 cellSpursJobQueuePortTrySync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003C38, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -484,7 +484,7 @@ s64 cellSpursJobQueuePortTrySync()
 s64 cellSpursJobQueuePortSync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003C40, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -495,7 +495,7 @@ s64 cellSpursJobQueuePortSync()
 s64 cellSpursJobQueuePortInitialize()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003C48, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -506,7 +506,7 @@ s64 cellSpursJobQueuePortInitialize()
 s64 cellSpursJobQueuePortInitializeWithDescriptorBuffer()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003D78, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -517,7 +517,7 @@ s64 cellSpursJobQueuePortInitializeWithDescriptorBuffer()
 s64 cellSpursJobQueuePortFinalize()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x003E40, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -528,7 +528,7 @@ s64 cellSpursJobQueuePortFinalize()
 s64 _cellSpursJobQueuePortCopyPushJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004280, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -539,7 +539,7 @@ s64 _cellSpursJobQueuePortCopyPushJobBody()
 s64 _cellSpursJobQueuePortCopyPushJobBody2()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x00428C, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -550,7 +550,7 @@ s64 _cellSpursJobQueuePortCopyPushJobBody2()
 s64 _cellSpursJobQueuePortCopyPushBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004290, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -561,7 +561,7 @@ s64 _cellSpursJobQueuePortCopyPushBody()
 s64 cellSpursJobQueuePort2GetJobQueue()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0042A4, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -572,7 +572,7 @@ s64 cellSpursJobQueuePort2GetJobQueue()
 s64 cellSpursJobQueuePort2PushSync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0042AC, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -583,7 +583,7 @@ s64 cellSpursJobQueuePort2PushSync()
 s64 cellSpursJobQueuePort2PushFlush()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004330, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -594,7 +594,7 @@ s64 cellSpursJobQueuePort2PushFlush()
 s64 _cellSpursJobQueuePort2PushJobListBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0043B0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -605,7 +605,7 @@ s64 _cellSpursJobQueuePort2PushJobListBody()
 s64 cellSpursJobQueuePort2Sync()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0045AC, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -616,7 +616,7 @@ s64 cellSpursJobQueuePort2Sync()
 s64 cellSpursJobQueuePort2Create()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0046C4, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -627,7 +627,7 @@ s64 cellSpursJobQueuePort2Create()
 s64 cellSpursJobQueuePort2Destroy()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x0047E4, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -638,7 +638,7 @@ s64 cellSpursJobQueuePort2Destroy()
 s64 cellSpursJobQueuePort2AllocateJobDescriptor()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004928, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -649,7 +649,7 @@ s64 cellSpursJobQueuePort2AllocateJobDescriptor()
 s64 _cellSpursJobQueuePort2PushAndReleaseJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004D94, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -660,7 +660,7 @@ s64 _cellSpursJobQueuePort2PushAndReleaseJobBody()
 s64 _cellSpursJobQueuePort2CopyPushJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004DD0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -671,7 +671,7 @@ s64 _cellSpursJobQueuePort2CopyPushJobBody()
 s64 _cellSpursJobQueuePort2PushJobBody()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004E0C, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -682,7 +682,7 @@ s64 _cellSpursJobQueuePort2PushJobBody()
 s64 cellSpursJobQueueSetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004E48, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -693,7 +693,7 @@ s64 cellSpursJobQueueSetExceptionEventHandler()
 s64 cellSpursJobQueueUnsetExceptionEventHandler()
 {
 #ifdef PRX_DEBUG
-	cellSpursJq->Warning("%s()", __FUNCTION__);
+	cellSpursJq.Warning("%s()", __FUNCTION__);
 	return GetCurrentPPUThread().FastCall2(libspurs_jq + 0x004EC0, libspurs_jq_rtoc);
 #else
 	UNIMPLEMENTED_FUNC(cellSpursJq);
@@ -701,10 +701,8 @@ s64 cellSpursJobQueueUnsetExceptionEventHandler()
 #endif
 }
 
-void cellSpursJq_init(Module *pxThis)
+Module cellSpursJq("cellSpursJq", []()
 {
-	cellSpursJq = pxThis;
-
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeInitialize);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeSetMaxGrab);
 	REG_FUNC(cellSpursJq, cellSpursJobQueueAttributeSetSubmitWithEntryLock);
@@ -806,4 +804,4 @@ void cellSpursJq_init(Module *pxThis)
 		fix_relocs(cellSpursJq, libspurs_jq, 0xFF70, 0x12370, 0xED00);
 	});
 #endif
-}
+});

@@ -2253,6 +2253,10 @@ private:
 			if(lk) CPU.LR = nextLR;
 		}
 	}
+	void HACK(u32 index)
+	{
+		execute_ps3_func_by_index(CPU, index);
+	}
 	void SC(u32 lev)
 	{
 		switch (lev)

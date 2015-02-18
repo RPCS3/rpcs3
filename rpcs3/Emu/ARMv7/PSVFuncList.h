@@ -472,7 +472,7 @@ namespace psv_func_detail
 // Basic information about the HLE function
 struct psv_func
 {
-	u32 nid; // Unique function ID only for old PSV executables (should be generated individually for each elf loaded)
+	u32 nid; // Unique function ID (should be generated individually for each elf loaded)
 	const char* name; // Function name for information
 	std::shared_ptr<psv_func_caller> func; // Function caller instance
 	psv_log_base* module; // Module for information
