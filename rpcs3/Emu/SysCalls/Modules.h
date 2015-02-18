@@ -4,23 +4,21 @@
 #include "ErrorCodes.h"
 #include "LogBase.h"
 
-//TODO
+class Module;
+
 struct ModuleFunc
 {
 	u32 id;
-	func_caller* func;
+	Module* module;
+	std::shared_ptr<func_caller> func;
 	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, func_caller* func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc(u32 id, Module* module, func_caller* func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
+		, module(module)
 		, func(func)
 		, lle_func(lle_func)
 	{
-	}
-
-	~ModuleFunc()
-	{
-		delete func;
 	}
 };
 
@@ -50,46 +48,36 @@ class StaticFuncManager;
 class Module : public LogBase
 {
 	std::string m_name;
-	u16 m_id;
 	bool m_is_loaded;
-	void (*m_load_func)();
-	void (*m_unload_func)();
+	void(*m_init)();
 
 	IdManager& GetIdManager() const;
 	void PushNewFuncSub(SFunc* func);
 
-public:
-	std::unordered_map<u32, ModuleFunc*> m_funcs_list;
+	Module() = delete;
 
-	Module(u16 id, const char* name, void(*load)() = nullptr, void(*unload)() = nullptr);
+public:
+	Module(const char* name, void(*init)());
 
 	Module(Module &other) = delete;
-	Module(Module &&other);
+	Module(Module &&other) = delete;
 
 	Module &operator =(Module &other) = delete;
-	Module &operator =(Module &&other);
-	
-	ModuleFunc* GetFunc(u32 id)
-	{
-		auto res = m_funcs_list.find(id);
-
-		if (res == m_funcs_list.end())
-			return nullptr;
-
-		return res->second;
-	}
+	Module &operator =(Module &&other) = delete;
 
 	~Module();
 
+	std::function<void()> on_load;
+	std::function<void()> on_unload;
+	std::function<void()> on_stop;
+
+	void Init();
 	void Load();
-	void UnLoad();
-	bool Load(u32 id);
-	bool UnLoad(u32 id);
+	void Unload();
 
 	void SetLoaded(bool loaded = true);
 	bool IsLoaded() const;
 
-	u16 GetID() const;
 	virtual const std::string& GetName() const override;
 	void SetName(const std::string& name);
 
@@ -128,29 +116,23 @@ public:
 	}
 
 	bool RemoveId(u32 id);
-	
-	void RegisterLLEFunc(u32 id, vm::ptr<void()> func)
-	{
-		if (auto f = GetFunc(id))
-		{
-			f->lle_func = func;
-			return;
-		}
-		
-		m_funcs_list[id] = new ModuleFunc(id, nullptr, func);
-	}
 
 	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const char* name, T func);	
+	template<typename T> __forceinline void AddFunc(const char* name, T func);
 	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
-u32 getFunctionId(const char* name);
+u32 add_ps3_func(ModuleFunc& func);
+ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index = nullptr);
+ModuleFunc* get_ps3_func_by_index(u32 index);
+void execute_ps3_func_by_index(PPUThread& CPU, u32 id);
+void clear_ps3_functions();
+u32 get_function_id(const char* name);
 
 template<typename T>
 __forceinline void Module::AddFunc(u32 id, T func)
 {
-	m_funcs_list[id] = new ModuleFunc(id, bind_func(func));
+	add_ps3_func(ModuleFunc(id, this, bind_func(func)));
 }
 
 template<typename T>
@@ -185,7 +167,7 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	PushNewFuncSub(sf);
 }
 
-void fix_import(Module* module, u32 func, u32 addr);
+void fix_import(Module* module, u32 nid, u32 addr);
 
 #define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
 
@@ -193,8 +175,8 @@ void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	module->AddFuncSub(group, name ## _table, #name, name)
+	module.AddFuncSub(group, name ## _table, #name, name)
 
-#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)
+#define REG_FUNC(module, name) module.AddFunc(get_function_id(#name), name)
 
-#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Fatal("%s", __FUNCTION__)

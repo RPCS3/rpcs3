@@ -177,6 +177,8 @@ namespace PPU_instr
 		//This immediate field is used to specify a 16-bit unsigned integer
 		static CodeField<16, 31> uimm16;
 
+		static CodeField<6, 31> uimm26;
+
 		/*
 		Record bit.
 		0		Does not update the condition register (CR).
@@ -241,6 +243,7 @@ namespace PPU_instr
 		bind_instr(main_list, ADDI, RD, RA, simm16);
 		bind_instr(main_list, ADDIS, RD, RA, simm16);
 		bind_instr(main_list, BC, BO, BI, BD, AA, LK);
+		bind_instr(main_list, HACK, uimm26);
 		bind_instr(main_list, SC, LEV);
 		bind_instr(main_list, B, LI, AA, LK);
 		bind_instr(main_list, RLWIMI, RA, RS, SH, MB, ME, RC);

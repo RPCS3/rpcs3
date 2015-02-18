@@ -4,6 +4,7 @@ namespace PPU_opcodes
 {
 	enum PPU_MainOpcodes
 	{
+		HACK   = 0x01, //HLE Call
 		TDI    = 0x02, //Trap Doubleword Immediate 
 		TWI    = 0x03, //Trap Word Immediate
 		G_04   = 0x04,
@@ -648,6 +649,7 @@ public:
 	virtual void ADDI(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void ADDIS(u32 rd, u32 ra, s32 simm16) = 0;
 	virtual void BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) = 0;
+	virtual void HACK(u32 index) = 0;
 	virtual void SC(u32 lev) = 0;
 	virtual void B(s32 ll, u32 aa, u32 lk) = 0;
 	virtual void MCRF(u32 crfd, u32 crfs) = 0;

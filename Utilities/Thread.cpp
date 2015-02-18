@@ -1182,11 +1182,15 @@ void ThreadBase::Start()
 		}
 		catch (const char* e)
 		{
-			LOG_ERROR(GENERAL, "%s: %s", GetThreadName().c_str(), e);
+			LOG_ERROR(GENERAL, "Exception: %s", e);
+			DumpInformation();
+			Emu.Pause();
 		}
 		catch (const std::string& e)
 		{
-			LOG_ERROR(GENERAL, "%s: %s", GetThreadName().c_str(), e.c_str());
+			LOG_ERROR(GENERAL, "Exception: %s", e);
+			DumpInformation();
+			Emu.Pause();
 		}
 
 		m_alive = false;
@@ -1325,11 +1329,13 @@ void thread_t::start(std::function<void()> func)
 		}
 		catch (const char* e)
 		{
-			LOG_ERROR(GENERAL, "%s: %s", name.c_str(), e);
+			LOG_ERROR(GENERAL, "Exception: %s", e);
+			Emu.Pause();
 		}
 		catch (const std::string& e)
 		{
-			LOG_ERROR(GENERAL, "%s: %s", name.c_str(), e.c_str());
+			LOG_ERROR(GENERAL, "Exception: %s", e.c_str());
+			Emu.Pause();
 		}
 
 		if (Emu.IsStopped())

@@ -8,7 +8,7 @@
 #include "cellAudio.h"
 #include "libmixer.h"
 
-Module *libmixer = nullptr;
+extern Module libmixer;
 
 SurMixerConfig g_surmx;
 vm::ptr<CellSurMixerNotifyCallbackFunction> surMixerCb;
@@ -21,7 +21,7 @@ std::vector<SSPlayer> ssp;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
-	libmixer->Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
+	libmixer.Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
 
 	u32 type = aan_port >> 16;
 	u32 port = aan_port & 0xffff;
@@ -42,7 +42,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 
 	if (aan_handle != 0x11111111 || samples != 256 || !type || offset != 0)
 	{
-		libmixer->Error("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d): invalid parameters", aan_handle, aan_port, offset, addr.addr(), samples);
+		libmixer.Error("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d): invalid parameters", aan_handle, aan_port, offset, addr.addr(), samples);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -102,14 +102,14 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 
 int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer->Warning("cellAANConnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
+	libmixer.Warning("cellAANConnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
 		receive, receivePortNo, source, sourcePortNo);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (source >= ssp.size() || !ssp[source].m_created)
 	{
-		libmixer->Error("cellAANConnect(): invalid source (%d)", source);
+		libmixer.Error("cellAANConnect(): invalid source (%d)", source);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -120,14 +120,14 @@ int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 
 int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer->Warning("cellAANDisconnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
+	libmixer.Warning("cellAANDisconnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
 		receive, receivePortNo, source, sourcePortNo);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (source >= ssp.size() || !ssp[source].m_created)
 	{
-		libmixer->Error("cellAANDisconnect(): invalid source (%d)", source);
+		libmixer.Error("cellAANDisconnect(): invalid source (%d)", source);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -138,12 +138,12 @@ int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePort
  
 int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 {
-	libmixer->Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
+	libmixer.Warning("cellSSPlayerCreate(handle_addr=0x%x, config_addr=0x%x)",
 		handle.addr(), config.addr());
 
 	if (config->outputMode != 0 || config->channels - 1 >= 2)
 	{
-		libmixer->Error("cellSSPlayerCreate(config.outputMode=%d, config.channels=%d): invalid parameters",
+		libmixer.Error("cellSSPlayerCreate(config.outputMode=%d, config.channels=%d): invalid parameters",
 			(u32)config->outputMode, (u32)config->channels);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
@@ -163,13 +163,13 @@ int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 
 int cellSSPlayerRemove(u32 handle)
 {
-	libmixer->Warning("cellSSPlayerRemove(handle=%d)", handle);
+	libmixer.Warning("cellSSPlayerRemove(handle=%d)", handle);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Error("cellSSPlayerRemove(): SSPlayer not found (%d)", handle);
+		libmixer.Error("cellSSPlayerRemove(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -182,14 +182,14 @@ int cellSSPlayerRemove(u32 handle)
 
 int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm::ptr<CellSSPlayerCommonParam> commonInfo)
 {
-	libmixer->Warning("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
+	libmixer.Warning("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
 		handle, waveInfo.addr(), commonInfo.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Error("cellSSPlayerSetWave(): SSPlayer not found (%d)", handle);
+		libmixer.Error("cellSSPlayerSetWave(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -206,13 +206,13 @@ int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm:
 
 int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer->Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.addr());
+	libmixer.Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Error("cellSSPlayerPlay(): SSPlayer not found (%d)", handle);
+		libmixer.Error("cellSSPlayerPlay(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -230,13 +230,13 @@ int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 
 int cellSSPlayerStop(u32 handle, u32 mode)
 {
-	libmixer->Warning("cellSSPlayerStop(handle=%d, mode=0x%x)", handle, mode);
+	libmixer.Warning("cellSSPlayerStop(handle=%d, mode=0x%x)", handle, mode);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Error("cellSSPlayerStop(): SSPlayer not found (%d)", handle);
+		libmixer.Error("cellSSPlayerStop(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -249,13 +249,13 @@ int cellSSPlayerStop(u32 handle, u32 mode)
 
 int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer->Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.addr());
+	libmixer.Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Error("cellSSPlayerSetParam(): SSPlayer not found (%d)", handle);
+		libmixer.Error("cellSSPlayerSetParam(): SSPlayer not found (%d)", handle);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -272,13 +272,13 @@ int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
  
 int cellSSPlayerGetState(u32 handle)
 {
-	libmixer->Warning("cellSSPlayerGetState(handle=%d)", handle);
+	libmixer.Warning("cellSSPlayerGetState(handle=%d)", handle);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
 	if (handle >= ssp.size() || !ssp[handle].m_created)
 	{
-		libmixer->Warning("cellSSPlayerGetState(): SSPlayer not found (%d)", handle);
+		libmixer.Warning("cellSSPlayerGetState(): SSPlayer not found (%d)", handle);
 		return CELL_SSPLAYER_STATE_ERROR;
 	}
 
@@ -292,7 +292,7 @@ int cellSSPlayerGetState(u32 handle)
 
 int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 {
-	libmixer->Warning("cellSurMixerCreate(config_addr=0x%x)", config.addr());
+	libmixer.Warning("cellSurMixerCreate(config_addr=0x%x)", config.addr());
 
 	g_surmx.audio_port = g_audio.open_port();
 
@@ -315,12 +315,12 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	port.level = 1.0f;
 	port.tag = 0;
 
-	libmixer->Warning("*** audio port opened(default)");
+	libmixer.Warning("*** audio port opened(default)");
 
 	mixcount = 0;
 	surMixerCb.set(0);
 
-	libmixer->Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
+	libmixer.Warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
 	thread_t t("Surmixer Thread", []()
 	{
@@ -464,25 +464,25 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 
 int cellSurMixerGetAANHandle(vm::ptr<u32> handle)
 {
-	libmixer->Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.addr(), 0x11111111);
+	libmixer.Warning("cellSurMixerGetAANHandle(handle_addr=0x%x) -> %d", handle.addr(), 0x11111111);
 	*handle = 0x11111111;
 	return CELL_OK;
 }
 
 int cellSurMixerChStripGetAANPortNo(vm::ptr<u32> port, u32 type, u32 index)
 {
-	libmixer->Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.addr(), type, index, (type << 16) | index);
+	libmixer.Warning("cellSurMixerChStripGetAANPortNo(port_addr=0x%x, type=0x%x, index=0x%x) -> 0x%x", port.addr(), type, index, (type << 16) | index);
 	*port = (type << 16) | index;
 	return CELL_OK;
 }
 
 int cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func, vm::ptr<void> arg)
 {
-	libmixer->Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x)", func.addr(), arg.addr());
+	libmixer.Warning("cellSurMixerSetNotifyCallback(func_addr=0x%x, arg=0x%x)", func.addr(), arg.addr());
 
 	if (surMixerCb)
 	{
-		libmixer->Error("cellSurMixerSetNotifyCallback: surMixerCb already set (addr=0x%x)", surMixerCb.addr());
+		libmixer.Error("cellSurMixerSetNotifyCallback: surMixerCb already set (addr=0x%x)", surMixerCb.addr());
 	}
 	surMixerCb = func;
 	surMixerCbArg = arg;
@@ -491,11 +491,11 @@ int cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 
 int cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> func)
 {
-	libmixer->Warning("cellSurMixerRemoveNotifyCallback(func_addr=0x%x)", func.addr());
+	libmixer.Warning("cellSurMixerRemoveNotifyCallback(func_addr=0x%x)", func.addr());
 
 	if (surMixerCb.addr() != func.addr())
 	{
-		libmixer->Error("cellSurMixerRemoveNotifyCallback: surMixerCb had different value (addr=0x%x)", surMixerCb.addr());
+		libmixer.Error("cellSurMixerRemoveNotifyCallback: surMixerCb had different value (addr=0x%x)", surMixerCb.addr());
 	}
 	else
 	{
@@ -506,7 +506,7 @@ int cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 
 int cellSurMixerStart()
 {
-	libmixer->Warning("cellSurMixerStart()");
+	libmixer.Warning("cellSurMixerStart()");
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -520,13 +520,13 @@ int cellSurMixerStart()
 
 int cellSurMixerSetParameter(u32 param, float value)
 {
-	libmixer->Todo("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
+	libmixer.Todo("cellSurMixerSetParameter(param=0x%x, value=%f)", param, value);
 	return CELL_OK;
 }
 
 int cellSurMixerFinalize()
 {
-	libmixer->Warning("cellSurMixerFinalize()");
+	libmixer.Warning("cellSurMixerFinalize()");
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -542,11 +542,11 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 sa
 {
 	if (busNo < 8 && samples == 256 && offset == 0)
 	{
-		libmixer->Log("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
+		libmixer.Log("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
 	}
 	else
 	{
-		libmixer->Todo("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
+		libmixer.Todo("cellSurMixerSurBusAddData(busNo=%d, offset=0x%x, addr=0x%x, samples=%d)", busNo, offset, addr, samples);
 		return CELL_OK;
 	}
 
@@ -563,13 +563,13 @@ int cellSurMixerSurBusAddData(u32 busNo, u32 offset, vm::ptr<float> addr, u32 sa
 
 int cellSurMixerChStripSetParameter(u32 type, u32 index, vm::ptr<CellSurMixerChStripParam> param)
 {
-	libmixer->Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.addr());
+	libmixer.Todo("cellSurMixerChStripSetParameter(type=%d, index=%d, param_addr=0x%x)", type, index, param.addr());
 	return CELL_OK;
 }
 
 int cellSurMixerPause(u32 type)
 {
-	libmixer->Warning("cellSurMixerPause(type=%d)", type);
+	libmixer.Warning("cellSurMixerPause(type=%d)", type);
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -583,7 +583,7 @@ int cellSurMixerPause(u32 type)
 
 int cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 {
-	libmixer->Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.addr());
+	libmixer.Log("cellSurMixerGetCurrentBlockTag(tag_addr=0x%x)", tag.addr());
 
 	*tag = mixcount;
 	return CELL_OK;
@@ -591,7 +591,7 @@ int cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 
 int cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
-	libmixer->Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
+	libmixer.Log("cellSurMixerGetTimestamp(tag=0x%llx, stamp_addr=0x%x)", tag, stamp.addr());
 
 	*stamp = g_audio.start_time + (tag) * 256000000 / 48000; // ???
 	return CELL_OK;
@@ -599,35 +599,33 @@ int cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 
 void cellSurMixerBeep(u32 arg)
 {
-	libmixer->Todo("cellSurMixerBeep(arg=%d)", arg);
+	libmixer.Todo("cellSurMixerBeep(arg=%d)", arg);
 	return;
 }
 
 float cellSurMixerUtilGetLevelFromDB(float dB)
 {
 	// not hooked, probably unnecessary
-	libmixer->Todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
+	libmixer.Todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
 	return 0.0f;
 }
 
 float cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
 	// not hooked, probably unnecessary
-	libmixer->Todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
+	libmixer.Todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
 	return 0.0f;
 }
 
 float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
 	// not hooked, probably unnecessary
-	libmixer->Todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
+	libmixer.Todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
 	return 0.0f;
 }
 
-void libmixer_init(Module *pxThis)
+Module libmixer("libmixer", []()
 {
-	libmixer = pxThis;
-
 	g_surmx.audio_port = ~0;
 
 	REG_SUB(libmixer, "surmxAAN", cellAANAddData,
@@ -1195,4 +1193,4 @@ void libmixer_init(Module *pxThis)
 	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDB, 0);
 	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilGetLevelFromDBIndex, 0);
 	REG_SUB(libmixer, "surmxUti", cellSurMixerUtilNoteToRatio, 0);
-}
+});
