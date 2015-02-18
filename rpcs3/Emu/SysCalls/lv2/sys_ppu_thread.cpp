@@ -162,6 +162,15 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 {
 	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
+	// Note: I haven't figured out the minimum stack size of PPU Thread.
+	//       Maybe it can be done with pthread_attr_getstacksize function.
+	//       And i toke 4096 (PTHREAD_STACK_MIN, and the smallest allocation unit) for this.
+	if ((stacksize % 4096) || (stacksize == 0)) {
+		// If not times of smallest allocation unit, round it up to the nearest one.
+		// And regard zero as a same condition.
+		stacksize = 4096 * ((u32)(stacksize / 4096) + 1);
+	}
+
 	u32 id = new_thread.GetId();
 	new_thread.SetEntry(entry);
 	new_thread.SetPrio(prio);
