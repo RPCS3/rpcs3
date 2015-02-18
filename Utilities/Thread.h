@@ -24,8 +24,9 @@ public:
 	virtual void SetThreadName(const std::string& name);
 
 	void WaitForAnySignal(u64 time = 1);
-
 	void Notify();
+
+	virtual void DumpInformation() {}
 };
 
 NamedThreadBase* GetCurrentNamedThread();

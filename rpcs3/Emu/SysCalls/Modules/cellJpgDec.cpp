@@ -6,7 +6,7 @@
 #include "Emu/SysCalls/lv2/cellFs.h"
 #include "cellJpgDec.h"
 
-Module *cellJpgDec = nullptr;
+extern Module cellJpgDec;
 
 int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
@@ -28,7 +28,7 @@ int cellJpgDecDestroy(u32 mainHandle)
 
 int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
 {
-	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
 
 	std::shared_ptr<CellJpgDecSubHandle> current_subHandle(new CellJpgDecSubHandle);
@@ -58,32 +58,32 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
-	*subHandle = cellJpgDec->GetNewId(current_subHandle);
+	*subHandle = cellJpgDec.GetNewId(current_subHandle);
 
 	return CELL_OK;
 }
 
 int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
-	cellJpgDec->Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)",
+	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)",
 		mainHandle, subHandle);
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	cellJpgDec->RemoveId(subHandle);
+	cellJpgDec.RemoveId(subHandle);
 
 	return CELL_OK;
 }
 
 int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
 {
-	cellJpgDec->Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
+	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -147,12 +147,12 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
 {
-	cellJpgDec->Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+	cellJpgDec.Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -261,7 +261,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	case CELL_JPG_UPSAMPLE_ONLY:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_RGBA:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB:
-		cellJpgDec->Error("cellJpgDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
+		cellJpgDec.Error("cellJpgDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 	break;
 
 	default:
@@ -278,11 +278,11 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
-	cellJpgDec->Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+	cellJpgDec.Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec->CheckId(subHandle, subHandle_data))
+	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	CellJpgDecInfo& current_info = subHandle_data->info;
@@ -320,21 +320,19 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgD
 }
 
 
-void cellJpgDec_init(Module *pxThis)
+Module cellJpgDec("cellJpgDec", []()
 {
-	cellJpgDec = pxThis;
+	cellJpgDec.AddFunc(0xa7978f59, cellJpgDecCreate);
+	cellJpgDec.AddFunc(0x8b300f66, cellJpgDecExtCreate);
+	cellJpgDec.AddFunc(0x976ca5c2, cellJpgDecOpen);
+	cellJpgDec.AddFunc(0x6d9ebccf, cellJpgDecReadHeader);
+	cellJpgDec.AddFunc(0xe08f3910, cellJpgDecSetParameter);
+	cellJpgDec.AddFunc(0xaf8bb012, cellJpgDecDecodeData);
+	cellJpgDec.AddFunc(0x9338a07a, cellJpgDecClose);
+	cellJpgDec.AddFunc(0xd8ea91f8, cellJpgDecDestroy);
 
-	cellJpgDec->AddFunc(0xa7978f59, cellJpgDecCreate);
-	cellJpgDec->AddFunc(0x8b300f66, cellJpgDecExtCreate);
-	cellJpgDec->AddFunc(0x976ca5c2, cellJpgDecOpen);
-	cellJpgDec->AddFunc(0x6d9ebccf, cellJpgDecReadHeader);
-	cellJpgDec->AddFunc(0xe08f3910, cellJpgDecSetParameter);
-	cellJpgDec->AddFunc(0xaf8bb012, cellJpgDecDecodeData);
-	cellJpgDec->AddFunc(0x9338a07a, cellJpgDecClose);
-	cellJpgDec->AddFunc(0xd8ea91f8, cellJpgDecDestroy);
-
-	/*cellJpgDec->AddFunc(0xa9f703e3, cellJpgDecExtOpen);
-	cellJpgDec->AddFunc(0xb91eb3d2, cellJpgDecExtReadHeader);
-	cellJpgDec->AddFunc(0x65cbbb16, cellJpgDecExtSetParameter);
-	cellJpgDec->AddFunc(0x716f8792, cellJpgDecExtDecodeData);*/
-}
+	/*cellJpgDec.AddFunc(0xa9f703e3, cellJpgDecExtOpen);
+	cellJpgDec.AddFunc(0xb91eb3d2, cellJpgDecExtReadHeader);
+	cellJpgDec.AddFunc(0x65cbbb16, cellJpgDecExtSetParameter);
+	cellJpgDec.AddFunc(0x716f8792, cellJpgDecExtDecodeData);*/
+});

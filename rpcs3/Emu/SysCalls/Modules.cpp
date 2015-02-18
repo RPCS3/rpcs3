@@ -3,11 +3,104 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Static.h"
+#include "Emu/SysCalls/CB_FUNC.h"
 #include "Crypto/sha1.h"
 #include "ModuleManager.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
-u32 getFunctionId(const char* name)
+std::vector<ModuleFunc> g_ps3_func_list;
+
+u32 add_ps3_func(ModuleFunc func)
+{
+	for (auto& f : g_ps3_func_list)
+	{
+		if (f.id == func.id)
+		{
+			// partial update
+
+			if (func.func)
+			{
+				f.func = func.func;
+			}
+
+			if (func.lle_func)
+			{
+				f.lle_func = func.lle_func;
+			}
+
+			return (u32)(&f - g_ps3_func_list.data());
+		}
+	}
+
+	g_ps3_func_list.push_back(func);
+	return (u32)g_ps3_func_list.size() - 1;
+}
+
+ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index)
+{
+	for (auto& f : g_ps3_func_list)
+	{
+		if (f.id == nid)
+		{
+			if (out_index)
+			{
+				*out_index = (u32)(&f - g_ps3_func_list.data());
+			}
+
+			return &f;
+		}
+	}
+
+	return nullptr;
+}
+
+ModuleFunc* get_ps3_func_by_index(u32 index)
+{
+	if (index >= g_ps3_func_list.size())
+	{
+		return nullptr;
+	}
+
+	return &g_ps3_func_list[index];
+}
+
+void execute_ps3_func_by_index(PPUThread& CPU, u32 index)
+{
+	if (auto func = get_ps3_func_by_index(index))
+	{
+		// save RTOC
+		vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+
+		auto old_last_syscall = CPU.m_last_syscall;
+		CPU.m_last_syscall = func->id;
+
+		if (func->lle_func)
+		{
+			func->lle_func(CPU);
+		}
+		else if (func->func)
+		{
+			(*func->func)(CPU);
+		}
+		else
+		{
+			throw "Unimplemented function";
+		}
+
+		CPU.m_last_syscall = old_last_syscall;
+	}
+	else
+	{
+		throw "Invalid function index";
+	}
+}
+
+void clear_ps3_functions()
+{
+	g_ps3_func_list.clear();
+}
+
+u32 get_function_id(const char* name)
 {
 	const char* suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"; // Symbol name suffix
 	u8 output[20];
@@ -23,109 +116,50 @@ u32 getFunctionId(const char* name)
 	return (u32&)output[0];
 }
 
-Module::Module(u16 id, const char* name, void(*load)(), void(*unload)())
+Module::Module(const char* name, void(*init)())
 	: m_is_loaded(false)
 	, m_name(name)
-	, m_id(id)
-	, m_load_func(load)
-	, m_unload_func(unload)
+	, m_init(init)
 {
-	Emu.GetModuleManager().SetModule(m_id, this);
-}
-
-Module::Module(Module &&other)
-	: m_is_loaded(false)
-	, m_id(0)
-	, m_load_func(nullptr)
-	, m_unload_func(nullptr)
-{
-	std::swap(this->m_name,other.m_name);
-	std::swap(this->m_id, other.m_id);
-	std::swap(this->m_is_loaded, other.m_is_loaded);
-	std::swap(this->m_load_func, other.m_load_func);
-	std::swap(this->m_unload_func, other.m_unload_func);
-	std::swap(this->m_funcs_list, other.m_funcs_list);
-}
-
-Module &Module::operator =(Module &&other)
-{
-	std::swap(this->m_name, other.m_name);
-	std::swap(this->m_id, other.m_id);
-	std::swap(this->m_is_loaded, other.m_is_loaded);
-	std::swap(this->m_load_func, other.m_load_func);
-	std::swap(this->m_unload_func, other.m_unload_func);
-	std::swap(this->m_funcs_list, other.m_funcs_list);
-	return *this;
 }
 
 Module::~Module()
 {
-	UnLoad();
+}
 
-	for (auto &i : m_funcs_list)
-	{
-		delete i.second;
-	}
-	
-	m_funcs_list.clear();
+void Module::Init()
+{
+	m_init();
 }
 
 void Module::Load()
 {
-	if(IsLoaded())
-		return;
-
-	if(m_load_func) m_load_func();
-
-	for (auto &i : m_funcs_list)
+	if (IsLoaded())
 	{
-		Emu.GetModuleManager().AddFunc(i.second);
+		return;
+	}
+
+	if (on_load)
+	{
+		on_load();
 	}
 
 	SetLoaded(true);
 }
 
-void Module::UnLoad()
+void Module::Unload()
 {
-	if(!IsLoaded())
-		return;
-
-	if(m_unload_func) m_unload_func();
-
-	for (auto &i : m_funcs_list)
+	if (!IsLoaded())
 	{
-		i.second->lle_func.set(0);
+		return;
 	}
 
-	// TODO: Re-enable this when needed
-	// This was disabled because some functions would get unloaded and
-	// some games tried to use them, thus only printing a TODO message
-	//for(u32 i=0; i<m_funcs_list.size(); ++i)
-	//{
-	//	Emu.GetModuleManager().UnloadFunc(m_funcs_list[i]->id);
-	//}
+	if (on_unload)
+	{
+		on_unload();
+	}
 
 	SetLoaded(false);
-}
-
-bool Module::Load(u32 id)
-{
-	if(Emu.GetModuleManager().IsLoadedFunc(id)) 
-		return false;
-
-	auto res = m_funcs_list.find(id);
-
-	if (res == m_funcs_list.end())
-		return false;
-
-	Emu.GetModuleManager().AddFunc(res->second);
-
-	return true;
-}
-
-bool Module::UnLoad(u32 id)
-{
-	return Emu.GetModuleManager().UnloadFunc(id);
 }
 
 void Module::SetLoaded(bool loaded)
@@ -136,11 +170,6 @@ void Module::SetLoaded(bool loaded)
 bool Module::IsLoaded() const
 {
 	return m_is_loaded;
-}
-
-u16 Module::GetID() const
-{
-	return m_id;
 }
 
 const std::string& Module::GetName() const
@@ -178,22 +207,32 @@ void Module::PushNewFuncSub(SFunc* func)
 	Emu.GetSFuncManager().push_back(func);
 }
 
-void fix_import(Module* module, u32 func, u32 addr)
+void fix_import(Module* module, u32 nid, u32 addr)
 {
 	using namespace PPU_instr;
 	
 	vm::ptr<u32> ptr = vm::ptr<u32>::make(addr);
 
-	*ptr++ = ADDIS(11, 0, func >> 16);
-	*ptr++ = ORI(11, 11, func & 0xffff);
-	*ptr++ = NOP();
-	++ptr;
-	*ptr++ = SC(0);
-	*ptr++ = BLR();
-	*ptr++ = NOP();
-	*ptr++ = NOP();
+	u32 index;
 
-	module->Load(func);
+	if (auto func = get_ps3_func_by_nid(nid, &index))
+	{
+		*ptr++ = HACK(index);
+		*ptr++ = BLR();
+	}
+	else
+	{
+		module->Error("Unimplemented function 0x%x (0x%x)", nid, addr);
+	}
+
+	//*ptr++ = ADDIS(11, 0, func >> 16);
+	//*ptr++ = ORI(11, 11, func & 0xffff);
+	//*ptr++ = NOP();
+	//++ptr;
+	//*ptr++ = SC(0);
+	//*ptr++ = BLR();
+	//*ptr++ = NOP();
+	//*ptr++ = NOP();
 }
 
 void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2)

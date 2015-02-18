@@ -6,7 +6,7 @@
 #include "cellSysutil.h"
 #include "cellNetCtl.h"
 
-Module *cellNetCtl;
+extern Module cellNetCtl;
 
 struct cellNetCtlInternal
 {
@@ -22,7 +22,7 @@ cellNetCtlInternal cellNetCtlInstance;
 
 int cellNetCtlInit()
 {
-	cellNetCtl->Warning("cellNetCtlInit()");
+	cellNetCtl.Warning("cellNetCtlInit()");
 
 	if (cellNetCtlInstance.m_bInitialized)
 		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
@@ -34,7 +34,7 @@ int cellNetCtlInit()
 
 int cellNetCtlTerm()
 {
-	cellNetCtl->Warning("cellNetCtlTerm()");
+	cellNetCtl.Warning("cellNetCtlTerm()");
 
 	if (!cellNetCtlInstance.m_bInitialized)
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
@@ -46,7 +46,7 @@ int cellNetCtlTerm()
 
 int cellNetCtlGetState(vm::ptr<u32> state)
 {
-	cellNetCtl->Warning("cellNetCtlGetState(state_addr=0x%x)", state.addr());
+	cellNetCtl.Warning("cellNetCtlGetState(state_addr=0x%x)", state.addr());
 
 	*state = CELL_NET_CTL_STATE_Disconnected; // TODO: Allow other states
 
@@ -55,28 +55,33 @@ int cellNetCtlGetState(vm::ptr<u32> state)
 
 int cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void> arg, vm::ptr<s32> hid)
 {
-	cellNetCtl->Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid_addr=0x%x)", handler.addr(), arg.addr(), hid.addr());
+	cellNetCtl.Todo("cellNetCtlAddHandler(handler_addr=0x%x, arg_addr=0x%x, hid_addr=0x%x)", handler.addr(), arg.addr(), hid.addr());
 
 	return CELL_OK;
 }
 
 int cellNetCtlDelHandler(s32 hid)
 {
-	cellNetCtl->Todo("cellNetCtlDelHandler(hid=0x%x)", hid);
+	cellNetCtl.Todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
 	return CELL_OK;
 }
 
 int cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl->Todo("cellNetCtlGetInfo(code=0x%x, info_addr=0x%x)", code, info.addr());
+	cellNetCtl.Todo("cellNetCtlGetInfo(code=0x%x, info_addr=0x%x)", code, info.addr());
+
+	if (code == CELL_NET_CTL_INFO_IP_ADDRESS)
+	{
+		strcpy_trunc(info->ip_address, "192.168.1.1");
+	}
 
 	return CELL_OK;
 }
 
 int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl->Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
+	cellNetCtl.Warning("cellNetCtlNetStartDialogLoadAsync(param_addr=0x%x)", param.addr());
 
 	// TODO: Actually sign into PSN
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
@@ -85,14 +90,14 @@ int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 
 int cellNetCtlNetStartDialogAbortAsync()
 {
-	cellNetCtl->Todo("cellNetCtlNetStartDialogAbortAsync()");
+	cellNetCtl.Todo("cellNetCtlNetStartDialogAbortAsync()");
 
 	return CELL_OK;
 }
 
 int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
-	cellNetCtl->Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
+	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
 
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 	return CELL_OK;
@@ -100,11 +105,11 @@ int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 
 int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
-	cellNetCtl->Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.addr());
+	cellNetCtl.Todo("cellNetCtlGetNatInfo(natInfo_addr=0x%x)", natInfo.addr());
 
 	if (natInfo->size == 0)
 	{
-		cellNetCtl->Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
+		cellNetCtl.Error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 	
@@ -116,22 +121,20 @@ void cellNetCtl_unload()
 	cellNetCtlInstance.m_bInitialized = false;
 }
 
-void cellNetCtl_init(Module *pxThis)
+Module cellNetCtl("cellNetCtl", []()
 {
-	cellNetCtl = pxThis;
+	cellNetCtl.AddFunc(0xbd5a59fc, cellNetCtlInit);
+	cellNetCtl.AddFunc(0x105ee2cb, cellNetCtlTerm);
 
-	cellNetCtl->AddFunc(0xbd5a59fc, cellNetCtlInit);
-	cellNetCtl->AddFunc(0x105ee2cb, cellNetCtlTerm);
+	cellNetCtl.AddFunc(0x8b3eba69, cellNetCtlGetState);
+	cellNetCtl.AddFunc(0x0ce13c6b, cellNetCtlAddHandler);
+	cellNetCtl.AddFunc(0x901815c3, cellNetCtlDelHandler);
 
-	cellNetCtl->AddFunc(0x8b3eba69, cellNetCtlGetState);
-	cellNetCtl->AddFunc(0x0ce13c6b, cellNetCtlAddHandler);
-	cellNetCtl->AddFunc(0x901815c3, cellNetCtlDelHandler);
+	cellNetCtl.AddFunc(0x1e585b5d, cellNetCtlGetInfo);
 
-	cellNetCtl->AddFunc(0x1e585b5d, cellNetCtlGetInfo);
+	cellNetCtl.AddFunc(0x04459230, cellNetCtlNetStartDialogLoadAsync);
+	cellNetCtl.AddFunc(0x71d53210, cellNetCtlNetStartDialogAbortAsync);
+	cellNetCtl.AddFunc(0x0f1f13d3, cellNetCtlNetStartDialogUnloadAsync);
 
-	cellNetCtl->AddFunc(0x04459230, cellNetCtlNetStartDialogLoadAsync);
-	cellNetCtl->AddFunc(0x71d53210, cellNetCtlNetStartDialogAbortAsync);
-	cellNetCtl->AddFunc(0x0f1f13d3, cellNetCtlNetStartDialogUnloadAsync);
-
-	cellNetCtl->AddFunc(0x3a12865f, cellNetCtlGetNatInfo);
-}
+	cellNetCtl.AddFunc(0x3a12865f, cellNetCtlGetNatInfo);
+});

@@ -955,15 +955,8 @@ void SysCalls::DoSyscall(PPUThread& CPU, u32 code)
 		(*sc_table[code])(CPU);
 		return;
 	}
-	
-	if(Emu.GetModuleManager().CallFunc(CPU, code))
-	{
-		return;
-	}
 
-
-	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
-	CPU.GPR[3] = 0;
+	throw "Invalid syscall number";
 }
 
 IdManager& SysCallBase::GetIdManager() const

@@ -37,6 +37,76 @@ CPUThread::~CPUThread()
 	safe_delete(m_dec);
 }
 
+void CPUThread::DumpInformation()
+{
+	auto get_syscall_name = [this](u64 syscall) -> std::string
+	{
+		switch (GetType())
+		{
+		case CPU_THREAD_ARMv7:
+		{
+			if ((u32)syscall == syscall)
+			{
+				if (syscall)
+				{
+					if (auto func = get_psv_func_by_nid((u32)syscall))
+					{
+						return func->name;
+					}
+				}
+				else
+				{
+					return{};
+				}
+			}
+
+			return "unknown function";
+		}
+
+		case CPU_THREAD_PPU:
+		{
+			if ((u32)syscall == syscall)
+			{
+				if (syscall)
+				{
+					if (syscall < 1024)
+					{
+						// TODO:
+						//return SysCalls::GetSyscallName((u32)syscall);
+						return "unknown syscall";
+					}
+					else
+					{
+						return SysCalls::GetHLEFuncName((u32)syscall);
+					}
+				}
+				else
+				{
+					return{};
+				}
+			}
+
+			return "unknown function";
+		}
+
+		case CPU_THREAD_SPU:
+		case CPU_THREAD_RAW_SPU:
+		default:
+		{
+			if (!syscall)
+			{
+				return{};
+			}
+
+			return "unknown function";
+		}
+		}
+	};
+
+	LOG_ERROR(GENERAL, "Information: is_alive=%d, m_last_syscall=0x%llx (%s)", IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
+	LOG_WARNING(GENERAL, RegsToString());
+}
+
 bool CPUThread::IsRunning() const { return m_status == Running; }
 bool CPUThread::IsPaused() const { return m_status == Paused; }
 bool CPUThread::IsStopped() const { return m_status == Stopped; }
@@ -246,70 +316,6 @@ void CPUThread::ExecOnce()
 
 void CPUThread::Task()
 {
-	auto get_syscall_name = [this](u64 syscall) -> std::string
-	{
-		switch (GetType())
-		{
-		case CPU_THREAD_ARMv7:
-		{
-			if ((u32)syscall == syscall)
-			{
-				if (syscall)
-				{
-					if (auto func = get_psv_func_by_nid((u32)syscall))
-					{
-						return func->name;
-					}
-				}
-				else
-				{
-					return{};
-				}
-			}
-
-			return "unknown function";
-		}
-
-		case CPU_THREAD_PPU:
-		{
-			if ((u32)syscall == syscall)
-			{
-				if (syscall)
-				{
-					if (syscall < 1024)
-					{
-						// TODO:
-						//return SysCalls::GetSyscallName((u32)syscall);
-						return "unknown syscall";
-					}
-					else
-					{
-						return SysCalls::GetHLEFuncName((u32)syscall);
-					}
-				}
-				else
-				{
-					return{};
-				}
-			}
-
-			return "unknown function";
-		}
-
-		case CPU_THREAD_SPU:
-		case CPU_THREAD_RAW_SPU:
-		default:
-		{
-			if (!syscall)
-			{
-				return{};
-			}
-
-			return "unknown function";
-		}
-		}
-	};
-
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s enter", CPUThread::GetFName().c_str());
 
 	const std::vector<u64>& bp = Emu.GetBreakPoints();
@@ -325,54 +331,40 @@ void CPUThread::Task()
 
 	std::vector<u32> trace;
 
-	try
+	while (true)
 	{
-		while (true)
+		int status = ThreadStatus();
+
+		if (status == CPUThread_Stopped || status == CPUThread_Break)
 		{
-			int status = ThreadStatus();
+			break;
+		}
 
-			if (status == CPUThread_Stopped || status == CPUThread_Break)
+		if (status == CPUThread_Sleeping)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			continue;
+		}
+
+		Step();
+		//if (m_trace_enabled)
+		//trace.push_back(PC);
+		NextPc(m_dec->DecodeMemory(PC + m_offset));
+
+		if (status == CPUThread_Step)
+		{
+			m_is_step = false;
+			break;
+		}
+
+		for (uint i = 0; i < bp.size(); ++i)
+		{
+			if (bp[i] == PC)
 			{
+				Emu.Pause();
 				break;
-			}
-
-			if (status == CPUThread_Sleeping)
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-				continue;
-			}
-
-			Step();
-			//if (m_trace_enabled) trace.push_back(PC);
-			NextPc(m_dec->DecodeMemory(PC + m_offset));
-
-			if (status == CPUThread_Step)
-			{
-				m_is_step = false;
-				break;
-			}
-
-			for (uint i = 0; i < bp.size(); ++i)
-			{
-				if (bp[i] == PC)
-				{
-					Emu.Pause();
-					break;
-				}
 			}
 		}
-	}
-	catch (const std::string& e)
-	{
-		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
-		LOG_NOTICE(GENERAL, RegsToString());
-		Emu.Pause();
-	}
-	catch (const char* e)
-	{
-		LOG_ERROR(GENERAL, "Exception: %s (is_alive=%d, m_last_syscall=0x%llx (%s))", e, IsAlive(), m_last_syscall, get_syscall_name(m_last_syscall));
-		LOG_NOTICE(GENERAL, RegsToString());
-		Emu.Pause();
 	}
 
 	if (trace.size())
@@ -383,7 +375,7 @@ void CPUThread::Task()
 
 		for (auto& v : trace) //LOG_NOTICE(GENERAL, "PC = 0x%x", v);
 		{
-			if (v - prev != 4)
+			if (v - prev != 4 && v - prev != 2)
 			{
 				LOG_NOTICE(GENERAL, "Trace: 0x%08x .. 0x%08x", start, prev);
 				start = v;
@@ -393,7 +385,6 @@ void CPUThread::Task()
 
 		LOG_NOTICE(GENERAL, "Trace end: 0x%08x .. 0x%08x", start, prev);
 	}
-
 
 	if (Ini.HLELogging.GetValue()) LOG_NOTICE(GENERAL, "%s leave", CPUThread::GetFName().c_str());
 }

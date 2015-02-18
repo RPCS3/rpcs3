@@ -10,11 +10,11 @@ extern "C"
 
 #include "cellVpost.h"
 
-Module *cellVpost = nullptr;
+extern Module cellVpost;
 
 int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVpostAttr> attr)
 {
-	cellVpost->Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.addr(), attr.addr());
+	cellVpost.Warning("cellVpostQueryAttr(cfgParam_addr=0x%x, attr_addr=0x%x)", cfgParam.addr(), attr.addr());
 
 	// TODO: check cfgParam and output values
 
@@ -29,16 +29,16 @@ int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVp
 u32 vpostOpen(VpostInstance* data)
 {
 	std::shared_ptr<VpostInstance> data_ptr(data);
-	u32 id = cellVpost->GetNewId(data_ptr);
+	u32 id = cellVpost.GetNewId(data_ptr);
 
-	cellVpost->Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
+	cellVpost.Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
 
 	return id;
 }
 
 int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResource> resource, vm::ptr<u32> handle)
 {
-	cellVpost->Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+	cellVpost.Warning("cellVpostOpen(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());
 
 	// TODO: check values
@@ -48,7 +48,7 @@ int cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellV
 
 int cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResourceEx> resource, vm::ptr<u32> handle)
 {
-	cellVpost->Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
+	cellVpost.Warning("cellVpostOpenEx(cfgParam_addr=0x%x, resource_addr=0x%x, handle_addr=0x%x)",
 		cfgParam.addr(), resource.addr(), handle.addr());
 
 	// TODO: check values
@@ -58,7 +58,7 @@ int cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const Cel
 
 int cellVpostClose(u32 handle)
 {
-	cellVpost->Warning("cellVpostClose(handle=0x%x)", handle);
+	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
 
 	std::shared_ptr<VpostInstance> vpost;
 	if (!Emu.GetIdManager().GetIDData(handle, vpost))
@@ -73,7 +73,7 @@ int cellVpostClose(u32 handle)
 int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpostCtrlParam> ctrlParam,
 				  vm::ptr<u8> outPicBuff, vm::ptr<CellVpostPictureInfo> picInfo)
 {
-	cellVpost->Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
+	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff_addr=0x%x, ctrlParam_addr=0x%x, outPicBuff_addr=0x%x, picInfo_addr=0x%x)",
 		handle, inPicBuff.addr(), ctrlParam.addr(), outPicBuff.addr(), picInfo.addr());
 
 	std::shared_ptr<VpostInstance> vpost;
@@ -88,15 +88,15 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	u32 oh = ctrlParam->outHeight;
 
 	ctrlParam->inWindow; // ignored
-	if (ctrlParam->inWindow.x) cellVpost->Notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
-	if (ctrlParam->inWindow.y) cellVpost->Notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
-	if (ctrlParam->inWindow.width != w) cellVpost->Notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
-	if (ctrlParam->inWindow.height != h) cellVpost->Notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
+	if (ctrlParam->inWindow.x) cellVpost.Notice("*** inWindow.x = %d", (u32)ctrlParam->inWindow.x);
+	if (ctrlParam->inWindow.y) cellVpost.Notice("*** inWindow.y = %d", (u32)ctrlParam->inWindow.y);
+	if (ctrlParam->inWindow.width != w) cellVpost.Notice("*** inWindow.width = %d", (u32)ctrlParam->inWindow.width);
+	if (ctrlParam->inWindow.height != h) cellVpost.Notice("*** inWindow.height = %d", (u32)ctrlParam->inWindow.height);
 	ctrlParam->outWindow; // ignored
-	if (ctrlParam->outWindow.x) cellVpost->Notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
-	if (ctrlParam->outWindow.y) cellVpost->Notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
-	if (ctrlParam->outWindow.width != ow) cellVpost->Notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
-	if (ctrlParam->outWindow.height != oh) cellVpost->Notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
+	if (ctrlParam->outWindow.x) cellVpost.Notice("*** outWindow.x = %d", (u32)ctrlParam->outWindow.x);
+	if (ctrlParam->outWindow.y) cellVpost.Notice("*** outWindow.y = %d", (u32)ctrlParam->outWindow.y);
+	if (ctrlParam->outWindow.width != ow) cellVpost.Notice("*** outWindow.width = %d", (u32)ctrlParam->outWindow.width);
+	if (ctrlParam->outWindow.height != oh) cellVpost.Notice("*** outWindow.height = %d", (u32)ctrlParam->outWindow.height);
 	ctrlParam->execType; // ignored
 	ctrlParam->scalerType; // ignored
 	ctrlParam->ipcType; // ignored
@@ -148,13 +148,11 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 	return CELL_OK;
 }
 
-void cellVpost_init(Module *pxThis)
+Module cellVpost("cellVpost", []()
 {
-	cellVpost = pxThis;
-
-	cellVpost->AddFunc(0x95e788c3, cellVpostQueryAttr);
-	cellVpost->AddFunc(0xcd33f3e2, cellVpostOpen);
-	cellVpost->AddFunc(0x40524325, cellVpostOpenEx);
-	cellVpost->AddFunc(0x10ef39f6, cellVpostClose);
-	cellVpost->AddFunc(0xabb8cc3d, cellVpostExec);
-}
+	cellVpost.AddFunc(0x95e788c3, cellVpostQueryAttr);
+	cellVpost.AddFunc(0xcd33f3e2, cellVpostOpen);
+	cellVpost.AddFunc(0x40524325, cellVpostOpenEx);
+	cellVpost.AddFunc(0x10ef39f6, cellVpostClose);
+	cellVpost.AddFunc(0xabb8cc3d, cellVpostExec);
+});

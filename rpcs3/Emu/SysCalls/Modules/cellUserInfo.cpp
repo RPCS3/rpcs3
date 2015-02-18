@@ -7,11 +7,11 @@
 #include "Emu/FS/vfsFileBase.h"
 #include "cellUserInfo.h"
 
-Module *cellUserInfo = nullptr;
+extern Module cellUserInfo;
 
 int cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 {
-	cellUserInfo->Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.addr());
+	cellUserInfo.Warning("cellUserInfoGetStat(id=%d, stat_addr=0x%x)", id, stat.addr());
 
 	if (id > CELL_USERINFO_USER_MAX)
 		return CELL_USERINFO_ERROR_NOUSER;
@@ -57,7 +57,7 @@ int cellUserInfoEnableOverlay()
 
 int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> listBuf, vm::ptr<u32> currentUserId)
 {
-	cellUserInfo->Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
+	cellUserInfo.Warning("cellUserInfoGetList(listNum_addr=0x%x, listBuf_addr=0x%x, currentUserId_addr=0x%x)",
 		listNum.addr(), listBuf.addr(), currentUserId.addr());
 
 	// If only listNum is NULL, an error will be returned
@@ -74,13 +74,11 @@ int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> list
 	return CELL_OK;
 }
 
-void cellUserInfo_init(Module *pxThis)
+Module cellUserInfo("cellUserInfo", []()
 {
-	cellUserInfo = pxThis;
-
-	cellUserInfo->AddFunc(0x2b761140, cellUserInfoGetStat);
-	cellUserInfo->AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
-	cellUserInfo->AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);
-	cellUserInfo->AddFunc(0xb3516536, cellUserInfoEnableOverlay);
-	cellUserInfo->AddFunc(0xc55e338b, cellUserInfoGetList);
-}
+	cellUserInfo.AddFunc(0x2b761140, cellUserInfoGetStat);
+	cellUserInfo.AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
+	cellUserInfo.AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);
+	cellUserInfo.AddFunc(0xb3516536, cellUserInfoEnableOverlay);
+	cellUserInfo.AddFunc(0xc55e338b, cellUserInfoGetList);
+});

@@ -170,4 +170,3 @@ public:
 		return encode(data, value);
 	}
 };
-

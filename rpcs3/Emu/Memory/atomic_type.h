@@ -1,5 +1,11 @@
 #pragma once
 
+#undef InterlockedExchange
+#undef InterlockedCompareExchange
+#undef InterlockedOr
+#undef InterlockedAnd
+#undef InterlockedXor
+
 template<typename T, size_t size = sizeof(T)>
 struct _to_atomic
 {

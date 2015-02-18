@@ -73,7 +73,7 @@ void PPUThread::InitRegs()
 	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = ppu_get_tls(GetId()) + 0x7000; // 0x7000 is usually subtracted from r13 to access first TLS element (details are not clear)
 
-	LR = Emu.GetCPUThreadExit();
+	LR = 0;
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;

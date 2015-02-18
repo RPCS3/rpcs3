@@ -105,29 +105,28 @@ void MemoryBase::Close()
 	MemoryBlocks.clear();
 }
 
-void MemoryBase::WriteMMIO32(u32 addr, const u32 data)
+bool MemoryBase::WriteMMIO32(u32 addr, const u32 data)
 {
 	LV2_LOCK(0);
 
 	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
 	{
-		return;
+		return true;
 	}
 
-	throw fmt::Format("%s(addr=0x%x, data=0x%x) failed", __FUNCTION__, addr, data);
+	return false;
 }
 
-u32 MemoryBase::ReadMMIO32(u32 addr)
+bool MemoryBase::ReadMMIO32(u32 addr, u32& result)
 {
 	LV2_LOCK(0);
 
-	u32 res;
-	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &res))
+	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &result))
 	{
-		return res;
+		return true;
 	}
 
-	throw fmt::Format("%s(addr=0x%x) failed", __FUNCTION__, addr);
+	return false;
 }
 
 bool MemoryBase::Map(const u32 addr, const u32 size)
@@ -298,7 +297,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u32 addr, u32 size)
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
-		if (addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) return false;
+		if (addr >= m_allocated[i].addr && addr <= m_allocated[i].addr + m_allocated[i].size - 1) return false;
 	}
 
 	AppendMem(addr, size);
@@ -343,8 +342,8 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 
 		for (u32 i = 0; i<m_allocated.size(); ++i)
 		{
-			if ((addr >= m_allocated[i].addr && addr < m_allocated[i].addr + m_allocated[i].size) ||
-				(m_allocated[i].addr >= addr && m_allocated[i].addr < addr + exsize))
+			if ((addr >= m_allocated[i].addr && addr <= m_allocated[i].addr + m_allocated[i].size - 1) ||
+				(m_allocated[i].addr >= addr && m_allocated[i].addr <= addr + exsize - 1))
 			{
 				is_good_addr = false;
 				addr = m_allocated[i].addr + m_allocated[i].size;

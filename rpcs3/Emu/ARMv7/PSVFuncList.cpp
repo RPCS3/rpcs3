@@ -7,6 +7,19 @@ std::vector<psv_log_base*> g_psv_modules;
 
 void add_psv_func(psv_func& data)
 {
+	for (auto& f : g_psv_func_list)
+	{
+		if (f.nid == data.nid && &f - g_psv_func_list.data() >= 2 /* special functions count */)
+		{
+			if (data.func)
+			{
+				f.func = data.func;
+			}
+		
+			return;
+		}
+	}
+
 	g_psv_func_list.push_back(data);
 }
 
@@ -27,28 +40,46 @@ u32 get_psv_func_index(const psv_func* func)
 {
 	auto res = func - g_psv_func_list.data();
 
-	assert((size_t)res < g_psv_func_list.size());
+	if ((size_t)res >= g_psv_func_list.size())
+	{
+		throw __FUNCTION__;
+	}
 
 	return (u32)res;
 }
 
 const psv_func* get_psv_func_by_index(u32 index)
 {
-	assert(index < g_psv_func_list.size());
+	if (index >= g_psv_func_list.size())
+	{
+		return nullptr;
+	}
 
 	return &g_psv_func_list[index];
 }
 
 void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 {
-	auto func = get_psv_func_by_index(index);
-	
-	auto old_last_syscall = context.thread.m_last_syscall;
-	context.thread.m_last_syscall = func->nid;
+	if (auto func = get_psv_func_by_index(index))
+	{
+		auto old_last_syscall = context.thread.m_last_syscall;
+		context.thread.m_last_syscall = func->nid;
 
-	(*func->func)(context);
+		if (func->func)
+		{
+			(*func->func)(context);
+		}
+		else
+		{
+			throw "Unimplemented function";
+		}
 
-	context.thread.m_last_syscall = old_last_syscall;
+		context.thread.m_last_syscall = old_last_syscall;
+	}
+	else
+	{
+		throw "Invalid function index";
+	}
 }
 
 extern psv_log_base sceAppMgr;

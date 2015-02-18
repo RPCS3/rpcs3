@@ -11,7 +11,7 @@
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
 
-extern Module *cellSysutil;
+extern Module cellSysutil;
 
 enum MsgDialogState
 {
@@ -49,7 +49,7 @@ void MsgDialogClose()
 
 s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
-	cellSysutil->Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
+	cellSysutil.Warning("cellMsgDialogOpen2(type=0x%x, msgString_addr=0x%x, callback_addr=0x%x, userData=0x%x, extParam=0x%x)",
 		type, msgString.addr(), callback.addr(), userData, extParam);
 
 	if (!msgString || strlen(msgString.get_ptr()) >= 0x200 || type & -0x33f8)
@@ -153,7 +153,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		{
 			if (Emu.IsStopped())
 			{
-				cellSysutil->Warning("MsgDialog thread aborted");
+				cellSysutil.Warning("MsgDialog thread aborted");
 				return;
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
@@ -192,7 +192,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 
 s32 cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> callback, u32 userData, u32 extParam)
 {
-	cellSysutil->Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=0x%x, extParam=%d)",
+	cellSysutil.Warning("cellMsgDialogOpenErrorCode(errorCode=0x%x, callback_addr=0x%x, userData=0x%x, extParam=%d)",
 		errorCode, callback.addr(), userData, extParam);
 
 	std::string errorMessage;
@@ -295,7 +295,7 @@ s32 cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallback> cal
 
 s32 cellMsgDialogClose(float delay)
 {
-	cellSysutil->Warning("cellMsgDialogClose(delay=%f)", delay);
+	cellSysutil.Warning("cellMsgDialogClose(delay=%f)", delay);
 
 	MsgDialogState old = msgDialogOpen;
 	if (!g_msg_dialog_state.compare_exchange_strong(old, msgDialogClose))
@@ -317,7 +317,7 @@ s32 cellMsgDialogClose(float delay)
 
 s32 cellMsgDialogAbort()
 {
-	cellSysutil->Warning("cellMsgDialogAbort()");
+	cellSysutil.Warning("cellMsgDialogAbort()");
 
 	MsgDialogState old = msgDialogOpen;
 	if (!g_msg_dialog_state.compare_exchange_strong(old, msgDialogAbort))
@@ -338,7 +338,7 @@ s32 cellMsgDialogAbort()
 
 s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msgString)
 {
-	cellSysutil->Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x ['%s'])",
+	cellSysutil.Warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString_addr=0x%x ['%s'])",
 		progressBarIndex, msgString.addr(), msgString.get_ptr());
 
 	if (g_msg_dialog_state != msgDialogOpen)
@@ -362,7 +362,7 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msg
 
 s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
-	cellSysutil->Warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
+	cellSysutil.Warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
 	if (g_msg_dialog_state != msgDialogOpen)
 	{
@@ -383,7 +383,7 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 
 s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
-	cellSysutil->Warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
+	cellSysutil.Warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 
 	if (g_msg_dialog_state != msgDialogOpen)
 	{

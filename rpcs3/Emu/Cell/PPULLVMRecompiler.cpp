@@ -1998,6 +1998,10 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
     CreateBranch(CheckBranchCondition(bo, bi), target_i32, lk ? true : false);
 }
 
+void Compiler::HACK(u32 index) {
+	Call<void>("execute_ps3_func_by_index", &execute_ps3_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index));
+}
+
 void Compiler::SC(u32 lev) {
     switch (lev) {
     case 0:

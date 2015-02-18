@@ -19,10 +19,16 @@ namespace loader
 	{
 		handler::error_code elf32::init(vfsStream& stream)
 		{
+			m_ehdr = {};
+			m_phdrs.clear();
+			m_shdrs.clear();
+
 			error_code res = handler::init(stream);
 
 			if (res != ok)
+			{
 				return res;
+			}
 
 			m_stream->Read(&m_ehdr, sizeof(ehdr));
 
@@ -52,8 +58,6 @@ namespace loader
 				if (m_stream->Read(m_phdrs.data(), size) != size)
 					return broken_file;
 			}
-			else
-				m_phdrs.clear();
 
 			if (m_ehdr.data_le.e_shnum)
 			{
@@ -64,8 +68,6 @@ namespace loader
 				if (m_stream->Read(m_shdrs.data(), size) != size)
 					return broken_file;
 			}
-			else
-				m_shdrs.clear();
 
 			return ok;
 		}
@@ -133,7 +135,7 @@ namespace loader
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
 				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
 				armv7_thr_stop_data[1] = 0x0001; // index 1
-				Emu.SetCPUThreadExit(armv7_thr_stop_data.addr());
+				Emu.SetCPUThreadStop(armv7_thr_stop_data.addr());
 
 				u32 entry = 0; // actual entry point (ELFs entry point is ignored)
 				u32 fnid_addr = 0;
