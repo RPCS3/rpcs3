@@ -26,8 +26,10 @@ using namespace ppu_recompiler_llvm;
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;
 
-Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function, const Executable execute_unknown_block)
-    : m_recompilation_engine(recompilation_engine) {
+Compiler::Compiler(RecompilationEngine & recompilation_engine, const Executable execute_unknown_function,
+                   const Executable execute_unknown_block, bool (*poll_status_function)(PPUThread * ppu_state))
+    : m_recompilation_engine(recompilation_engine)
+    , m_poll_status_function(poll_status_function) {
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
     InitializeNativeTargetDisassembler();
@@ -157,20 +159,21 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
         }
 
         // Found an empty block
+        m_state.current_instruction_address = GetAddressFromBasicBlockName(block_i->getName());
+
         m_ir_builder->SetInsertPoint(block_i);
         auto exit_instr_i32 = m_ir_builder->CreatePHI(m_ir_builder->getInt32Ty(), 0);
         exit_instr_list.push_back(exit_instr_i32);
 
-        auto instr_address = GetAddressFromBasicBlockName(block_i->getName());
-        SetPc(m_ir_builder->getInt32(instr_address));
+        SetPc(m_ir_builder->getInt32(m_state.current_instruction_address));
 
         if (generate_linkable_exits) {
             auto context_i64 = m_ir_builder->CreateZExt(exit_instr_i32, m_ir_builder->getInt64Ty());
             context_i64      = m_ir_builder->CreateOr(context_i64, (u64)cfg.function_address << 32);
-            auto ret_i32     = IndirectCall(instr_address, context_i64, false);
+            auto ret_i32     = IndirectCall(m_state.current_instruction_address, context_i64, false);
             auto cmp_i1      = m_ir_builder->CreateICmpNE(ret_i32, m_ir_builder->getInt32(0));
-            auto then_bb     = GetBasicBlockFromAddress(instr_address, "then");
-            auto merge_bb    = GetBasicBlockFromAddress(instr_address, "merge");
+            auto then_bb     = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_0");
+            auto merge_bb    = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_0");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
@@ -195,8 +198,8 @@ Executable Compiler::Compile(const std::string & name, const ControlFlowGraph & 
 
         if (generate_linkable_exits) {
             auto cmp_i1   = m_ir_builder->CreateICmpNE(exit_instr_i32, m_ir_builder->getInt32(0));
-            auto then_bb  = GetBasicBlockFromAddress(0xFFFFFFFF, "then");
-            auto merge_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "merge");
+            auto then_bb  = GetBasicBlockFromAddress(0xFFFFFFFF, "then_0");
+            auto merge_bb = GetBasicBlockFromAddress(0xFFFFFFFF, "merge_0");
             m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
 
             m_ir_builder->SetInsertPoint(then_bb);
@@ -2011,6 +2014,15 @@ void Compiler::SC(u32 lev) {
         CompilationError(fmt::Format("SC %u", lev));
         break;
     }
+
+    auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
+    auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
+    auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
+    auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
+    m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+    m_ir_builder->SetInsertPoint(then_bb);
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
+    m_ir_builder->SetInsertPoint(merge_bb);
 }
 
 void Compiler::B(s32 ll, u32 aa, u32 lk) {
@@ -5535,7 +5547,17 @@ llvm::Value * Compiler::IndirectCall(u32 address, Value * context_i64, bool is_f
     auto location_i64_ptr = m_ir_builder->CreateIntToPtr(location_i64, m_ir_builder->getInt64Ty()->getPointerTo());
     auto executable_i64   = m_ir_builder->CreateLoad(location_i64_ptr);
     auto executable_ptr   = m_ir_builder->CreateIntToPtr(executable_i64, m_compiled_function_type->getPointerTo());
-    return m_ir_builder->CreateCall2(executable_ptr, m_state.args[CompileTaskState::Args::State], context_i64);
+    auto ret_i32          = m_ir_builder->CreateCall2(executable_ptr, m_state.args[CompileTaskState::Args::State], context_i64);
+
+    auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i32, m_ir_builder->getInt32(0xFFFFFFFF));
+    auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_all_fs");
+    auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_all_fs");
+    m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+
+    m_ir_builder->SetInsertPoint(then_bb);
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
+    m_ir_builder->SetInsertPoint(merge_bb);
+    return ret_i32;
 }
 
 void Compiler::CompilationError(const std::string & error) {
@@ -5559,7 +5581,7 @@ RecompilationEngine::RecompilationEngine()
     : ThreadBase("PPU Recompilation Engine")
     , m_log(nullptr)
     , m_next_ordinal(0)
-    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn) {
+    , m_compiler(*this, ExecutionEngine::ExecuteFunction, ExecutionEngine::ExecuteTillReturn, ExecutionEngine::PollStatus) {
     m_compiler.RunAllTests();
 }
 
@@ -5972,12 +5994,7 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
         execution_engine->m_tracer.Trace(Tracer::TraceType::ExitFromCompiledFunction, context >> 32, context & 0xFFFFFFFF);
     }
 
-    while (!terminate && !Emu.IsStopped()) {
-        if (Emu.IsPaused()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            continue;
-        }
-
+    while (terminate == false && PollStatus(ppu_state) == false) {
         auto executable = execution_engine->GetExecutable(ppu_state->PC, ExecuteTillReturn);
         if (executable != ExecuteTillReturn && executable != ExecuteFunction) {
             auto entry = ppu_state->PC;
@@ -6015,6 +6032,18 @@ u32 ppu_recompiler_llvm::ExecutionEngine::ExecuteTillReturn(PPUThread * ppu_stat
     }
 
     return 0;
+}
+
+bool ppu_recompiler_llvm::ExecutionEngine::PollStatus(PPUThread * ppu_state) {
+    while (Emu.IsPaused() || ppu_state->IsPaused()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    if (Emu.IsStopped() || ppu_state->IsStopped()) {
+        return true;
+    }
+
+    return false;
 }
 
 BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
