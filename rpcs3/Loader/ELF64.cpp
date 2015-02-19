@@ -303,6 +303,7 @@ namespace loader
 
 			std::vector<u32> start_funcs;
 			std::vector<u32> stop_funcs;
+			std::vector<u32> exit_funcs;
 
 			//load modules
 			vfsDir lle_dir("/dev_flash/sys/external");
@@ -341,12 +342,48 @@ namespace loader
 							{
 								for (auto &e : m.second.exports)
 								{
+									auto code = vm::ptr<const u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second) : 0);
+
+									bool is_empty = !code || (code[0] == 0x38600000 && code[1] == BLR());
+
+									if (!code)
+									{
+										LOG_ERROR(LOADER, "bad OPD of special function 0x%08x in '%s' library (0x%x)", e.first, info.name.c_str(), code);
+									}
+
 									switch (e.first)
 									{
-									case 0xbc9a0086: start_funcs.push_back(e.second); break;
-									case 0xab779874: stop_funcs.push_back(e.second); break;
+									case 0xbc9a0086:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "start func found in '%s' library (0x%x)", info.name.c_str(), code);
+											start_funcs.push_back(e.second);
+										}
+										break;
+									}
 
-									default: LOG_ERROR(LOADER, "unknown special func 0x%08x in '%s' library", e.first, info.name.c_str()); break;
+									case 0xab779874:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "stop func found in '%s' library (0x%x)", info.name.c_str(), code);
+											stop_funcs.push_back(e.second);
+										}
+										break;
+									}
+
+									case 0x3ab9a95e:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "exit func found in '%s' library (0x%x)", info.name.c_str(), code);
+											exit_funcs.push_back(e.second);
+										}
+										break;
+									}
+
+									default: LOG_ERROR(LOADER, "unknown special func 0x%08x in '%s' library (0x%x)", e.first, info.name.c_str(), code); break;
 									}
 								}
 
@@ -385,8 +422,15 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 
-								vm::write32(addr + 0, HACK(index));
-								vm::write32(addr + 4, BLR());
+								if (!vm::check_addr(addr, 8))
+								{
+									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
+								}
+								else
+								{
+									vm::write32(addr + 0, HACK(index));
+									vm::write32(addr + 4, BLR());
+								}
 							}
 						}
 					}

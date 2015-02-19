@@ -189,7 +189,7 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(vm::cast(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
-u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
+void PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
@@ -212,8 +212,6 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
-
-	return GPR[3];
 }
 
 void PPUThread::FastStop()

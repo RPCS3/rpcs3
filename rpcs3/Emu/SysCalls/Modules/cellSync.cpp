@@ -13,12 +13,6 @@
 
 extern Module cellSync;
 
-#ifdef PRX_DEBUG
-#include "prx_libsre.h"
-u32 libsre;
-u32 libsre_rtoc;
-#endif
-
 waiter_map_t g_sync_mutex_wm("sync_mutex_wm");
 waiter_map_t g_sync_barrier_wait_wm("sync_barrier_wait_wm");
 waiter_map_t g_sync_barrier_notify_wm("sync_barrier_notify_wm");
@@ -835,15 +829,6 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 
 // LFQueue functions
 
-void syncLFQueueDump(vm::ptr<CellSyncLFQueue> queue)
-{
-	cellSync.Notice("CellSyncLFQueue dump: addr = 0x%x", queue.addr());
-	for (u32 i = 0; i < sizeof(CellSyncLFQueue) / 16; i++)
-	{
-		cellSync.Notice("*** 0x%.16llx 0x%.16llx", vm::read64(queue.addr() + i * 16), vm::read64(queue.addr() + i * 16 + 8));
-	}
-}
-
 void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
 	queue->m_size = size;
@@ -886,11 +871,6 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 
 s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
-#ifdef PRX_DEBUG_XXX
-	return cb_caller<s32, vm::ptr<CellSyncLFQueue>, vm::ptr<u8>, u32, u32, CellSyncQueueDirection, vm::ptr<void>>::call(GetCurrentPPUThread(), libsre + 0x205C, libsre_rtoc,
-		queue, buffer, size, depth, direction, eaSignal);
-#endif
-
 	if (!queue)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
@@ -1112,10 +1092,7 @@ s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> 
 
 s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
-	// TODO
-	//pointer = 0;
-	assert(!"syncLFQueueGetPushPointer2()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
@@ -1274,10 +1251,7 @@ s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 poin
 
 s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal)
 {
-	// TODO
-	//if (fpSendSignal) return fpSendSignal(0, 0);
-	assert(!"syncLFQueueCompletePushPointer2()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
@@ -1304,32 +1278,18 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 	}
 
 	s32 position;
-#ifdef PRX_DEBUG
-	vm::stackvar<be_t<s32>> position_v(CPU);
-#endif
+
 	while (true)
 	{
 		s32 res;
 
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-#ifdef PRX_DEBUG_XXX
-			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x24B0, libsre_rtoc,
-				queue, position_v.addr(), isBlocking, 0);
-			position = position_v.value();
-#else
 			res = syncLFQueueGetPushPointer(queue, position, isBlocking, 0);
-#endif
 		}
 		else
 		{
-#ifdef PRX_DEBUG
-			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x3050, libsre_rtoc,
-				queue, position_v.addr(), isBlocking, 0);
-			position = position_v.value();
-#else
 			res = syncLFQueueGetPushPointer2(queue, position, isBlocking, 0);
-#endif
 		}
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
@@ -1342,6 +1302,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+
 		if (Emu.IsStopped())
 		{
 			cellSync.Warning("_cellSyncLFQueuePushBody(queue_addr=0x%x) aborted", queue.addr());
@@ -1355,23 +1316,14 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 	memcpy(vm::get_ptr<void>(addr), buffer.get_ptr(), size);
 
 	s32 res;
+
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
-#ifdef PRX_DEBUG_XXX
-		res = cb_call<s32, vm::ptr<CellSyncLFQueue>, s32, u64>(CPU, libsre + 0x26C0, libsre_rtoc,
-			queue, position, 0);
-#else
 		res = syncLFQueueCompletePushPointer(queue, position, nullptr);
-#endif
 	}
 	else
 	{
-#ifdef PRX_DEBUG
-		res = cb_call<s32, vm::ptr<CellSyncLFQueue>, s32, u64>(CPU, libsre + 0x355C, libsre_rtoc,
-			queue, position, 0);
-#else
 		res = syncLFQueueCompletePushPointer2(queue, position, nullptr);
-#endif
 	}
 
 	return res;
@@ -1491,10 +1443,7 @@ s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> p
 
 s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 isBlocking, u32 useEventQueue)
 {
-	// TODO
-	//pointer = 0;
-	assert(!"syncLFQueueGetPopPointer2()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
@@ -1653,10 +1602,7 @@ s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 point
 
 s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, const std::function<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
-	// TODO
-	//if (fpSendSignal) fpSendSignal(0, 0);
-	assert(!"syncLFQueueCompletePopPointer2()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1683,31 +1629,17 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 	}
 
 	s32 position;
-#ifdef PRX_DEBUG
-	vm::stackvar<be_t<s32>> position_v(CPU);
-#endif
+
 	while (true)
 	{
 		s32 res;
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-#ifdef PRX_DEBUG_XXX
-			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64, u64>(CPU, libsre + 0x2A90, libsre_rtoc,
-				queue, position_v.addr(), isBlocking, 0, 0);
-			position = position_v.value();
-#else
 			res = syncLFQueueGetPopPointer(queue, position, isBlocking, 0, 0);
-#endif
 		}
 		else
 		{
-#ifdef PRX_DEBUG
-			res = cb_call<s32, vm::ptr<CellSyncLFQueue>, u32, u32, u64>(CPU, libsre + 0x39AC, libsre_rtoc,
-				queue, position_v.addr(), isBlocking, 0);
-			position = position_v.value();
-#else
 			res = syncLFQueueGetPopPointer2(queue, position, isBlocking, 0);
-#endif
 		}
 
 		if (!isBlocking || res != CELL_SYNC_ERROR_AGAIN)
@@ -1720,6 +1652,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+
 		if (Emu.IsStopped())
 		{
 			cellSync.Warning("_cellSyncLFQueuePopBody(queue_addr=0x%x) aborted", queue.addr());
@@ -1733,23 +1666,14 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 	memcpy(buffer.get_ptr(), vm::get_ptr<void>(addr), size);
 
 	s32 res;
+
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 	{
-#ifdef PRX_DEBUG_XXX
-		res = cb_call<s32, vm::ptr<CellSyncLFQueue>, s32, u64, u64>(CPU, libsre + 0x2CA8, libsre_rtoc,
-			queue, position, 0, 0);
-#else
 		res = syncLFQueueCompletePopPointer(queue, position, nullptr, 0);
-#endif
 	}
 	else
 	{
-#ifdef PRX_DEBUG
-		res = cb_call<s32, vm::ptr<CellSyncLFQueue>, s32, u64, u64>(CPU, libsre + 0x3EB8, libsre_rtoc,
-			queue, position, 0, 0);
-#else
 		res = syncLFQueueCompletePopPointer2(queue, position, nullptr, 0);
-#endif
 	}
 
 	return res;
@@ -1910,13 +1834,7 @@ s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u3
 
 s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-#ifdef PRX_DEBUG
-	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x19A8, libsre_rtoc,
-		spus, num, queue);
-#endif
-
-	assert(!"syncLFQueueAttachLv2EventQueue()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
@@ -1928,13 +1846,7 @@ s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<Cell
 
 s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-#ifdef PRX_DEBUG
-	return cb_call<s32, vm::ptr<u32>, u32, vm::ptr<CellSyncLFQueue>>(GetCurrentPPUThread(), libsre + 0x1DA0, libsre_rtoc,
-		spus, num, queue);
-#endif
-
-	assert(!"syncLFQueueDetachLv2EventQueue()");
-	return CELL_OK;
+	throw __FUNCTION__;
 }
 
 s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
@@ -1992,53 +1904,4 @@ Module cellSync("cellSync", []()
 	cellSync.AddFunc(0xe1bc7add, _cellSyncLFQueuePopBody);
 	cellSync.AddFunc(0xe9bf2110, _cellSyncLFQueueGetPushPointer);
 	cellSync.AddFunc(0xfe74e8e7, _cellSyncLFQueueCompletePopPointer);
-
-#ifdef PRX_DEBUG
-	CallAfter([]()
-	{
-		if (!Memory.MainMem.GetStartAddr()) return;
-
-		libsre = (u32)Memory.MainMem.AllocAlign(sizeof(libsre_data), 0x100000);
-		memcpy(vm::get_ptr<void>(libsre), libsre_data, sizeof(libsre_data));
-		libsre_rtoc = libsre + 0x399B0;
-
-		extern Module* sysPrxForUser;
-
-		FIX_IMPORT(sysPrxForUser, cellUserTraceRegister         , libsre + 0x1D5BC); // ???
-		FIX_IMPORT(sysPrxForUser, cellUserTraceUnregister       , libsre + 0x1D5DC); // ???
-
-		FIX_IMPORT(sysPrxForUser, _sys_strncmp                  , libsre + 0x1D5FC);
-		FIX_IMPORT(sysPrxForUser, _sys_strcat                   , libsre + 0x1D61C);
-		FIX_IMPORT(sysPrxForUser, _sys_vsnprintf                , libsre + 0x1D63C);
-		FIX_IMPORT(sysPrxForUser, _sys_snprintf                 , libsre + 0x1D65C);
-		FIX_IMPORT(sysPrxForUser, sys_lwmutex_lock              , libsre + 0x1D67C);
-		FIX_IMPORT(sysPrxForUser, sys_lwmutex_unlock            , libsre + 0x1D69C);
-		FIX_IMPORT(sysPrxForUser, sys_lwcond_destroy            , libsre + 0x1D6BC);
-		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_create         , libsre + 0x1D6DC);
-		FIX_IMPORT(sysPrxForUser, sys_lwcond_wait               , libsre + 0x1D6FC);
-		FIX_IMPORT(sysPrxForUser, _sys_strlen                   , libsre + 0x1D71C);
-		FIX_IMPORT(sysPrxForUser, sys_lwmutex_create            , libsre + 0x1D73C);
-		FIX_IMPORT(sysPrxForUser, _sys_spu_printf_detach_group  , libsre + 0x1D75C);
-		FIX_IMPORT(sysPrxForUser, _sys_memset                   , libsre + 0x1D77C);
-		FIX_IMPORT(sysPrxForUser, _sys_memcpy                   , libsre + 0x1D79C);
-		FIX_IMPORT(sysPrxForUser, _sys_strncat                  , libsre + 0x1D7BC);
-		FIX_IMPORT(sysPrxForUser, _sys_strcpy                   , libsre + 0x1D7DC);
-		FIX_IMPORT(sysPrxForUser, _sys_printf                   , libsre + 0x1D7FC);
-		fix_import(sysPrxForUser, 0x9FB6228E                    , libsre + 0x1D81C);
-		FIX_IMPORT(sysPrxForUser, sys_ppu_thread_exit           , libsre + 0x1D83C);
-		FIX_IMPORT(sysPrxForUser, sys_lwmutex_destroy           , libsre + 0x1D85C);
-		FIX_IMPORT(sysPrxForUser, _sys_strncpy                  , libsre + 0x1D87C);
-		FIX_IMPORT(sysPrxForUser, sys_lwcond_create             , libsre + 0x1D89C);
-		FIX_IMPORT(sysPrxForUser, _sys_spu_printf_attach_group  , libsre + 0x1D8BC);
-		FIX_IMPORT(sysPrxForUser, sys_prx_get_module_id_by_name , libsre + 0x1D8DC);
-		FIX_IMPORT(sysPrxForUser, sys_spu_image_close           , libsre + 0x1D8FC);
-		fix_import(sysPrxForUser, 0xE75C40F2                    , libsre + 0x1D91C);
-		FIX_IMPORT(sysPrxForUser, sys_spu_image_import          , libsre + 0x1D93C);
-		FIX_IMPORT(sysPrxForUser, sys_lwcond_signal             , libsre + 0x1D95C);
-		FIX_IMPORT(sysPrxForUser, _sys_vprintf                  , libsre + 0x1D97C);
-		FIX_IMPORT(sysPrxForUser, _sys_memcmp                   , libsre + 0x1D99C);
-
-		fix_relocs(cellSync, libsre, 0x31EE0, 0x3A4F0, 0x2DF00);
-	});
-#endif
 });
