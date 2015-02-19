@@ -503,20 +503,20 @@ void ARMv7_instrs::UNK(ARMv7Context& context, const ARMv7Code code)
 
 void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7_encoding type)
 {
-	u32 cond, func;
+	u32 cond, index;
 
 	switch (type)
 	{
 	case T1:
 	{
 		cond = context.ITSTATE.advance();
-		func = code.data & 0xffff;
+		index = code.data & 0xffff;
 		break;
 	}
 	case A1:
 	{
 		cond = code.data >> 28;
-		func = (code.data & 0xfff00) >> 4 | (code.data & 0xf);
+		index = (code.data & 0xfff00) >> 4 | (code.data & 0xf);
 		break;
 	}
 	default: throw __FUNCTION__;
@@ -524,13 +524,30 @@ void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("hack%s %s", fmt_cond(cond), get_psv_func_by_index(func)->name);
+		if (context.debug & DF_DISASM)
+		{
+			if (auto func = get_psv_func_by_index(index))
+			{
+				if (func->func)
+				{
+					context.debug_str = fmt::format("hack%s %s", fmt_cond(cond), func->name);
+				}
+				else
+				{
+					context.debug_str = fmt::format("hack%s UNIMPLEMENTED:0x%08X (%s)", fmt_cond(cond), func->nid, func->name);
+				}
+			}
+			else
+			{
+				context.debug_str = fmt::format("hack%s %d", fmt_cond(cond), index);
+			}
+		}
 		if (process_debug(context)) return;
 	}
 
 	if (ConditionPassed(context, cond))
 	{
-		execute_psv_func_by_index(context, func);
+		execute_psv_func_by_index(context, index);
 	}
 }
 

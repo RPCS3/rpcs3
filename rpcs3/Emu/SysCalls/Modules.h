@@ -179,4 +179,4 @@ void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
 
 #define REG_FUNC(module, name) module.AddFunc(get_function_id(#name), name)
 
-#define UNIMPLEMENTED_FUNC(module) module.Fatal("%s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)

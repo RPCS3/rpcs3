@@ -1286,17 +1286,10 @@ void armv7_decoder_initialize(u32 addr, u32 end_addr, bool dump)
 			// possibly a call to imported function:
 			if (target >= end_addr && ((target - end_addr) % 16) == 0 && (instr & 0xfff000f0) == 0xe0700090)
 			{
-				// check if implemented
-				if (const u32 func = (instr & 0xfff00) >> 4 | (instr & 0xf))
-				{
-					// replace BLX with "HACK" instruction directly (in Thumb form), it can help to see where it was called from
-					vm::psv::write32(addr, 0xf870 | func << 16);
-					g_opct[0xf8700000 | func] = g_op4t.HACK();
-				}
-				else
-				{
-					// leave as is if unimplemented
-				}
+				// replace BLX with "HACK" instruction directly (in Thumb form), it can help to see where it was called from
+				const u32 index = (instr & 0xfff00) >> 4 | (instr & 0xf);
+				vm::psv::write32(addr, 0xf870 | index << 16);
+				g_opct[0xf8700000 | index] = g_op4t.HACK();
 			}
 			else
 			{

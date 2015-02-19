@@ -10,9 +10,9 @@ GLProgram::GLProgram() : id(0)
 
 int GLProgram::GetLocation(const std::string& name)
 {
-	for(u32 i=0; i<m_locations.size(); ++i)
+	for (u32 i=0; i < m_locations.size(); ++i)
 	{
-		if(!m_locations[i].name.compare(name))
+		if (!m_locations[i].name.compare(name))
 		{
 			return m_locations[i].loc;
 		}
@@ -34,7 +34,9 @@ bool GLProgram::IsCreated() const
 
 void GLProgram::Create(const u32 vp, const u32 fp)
 {
-	if(IsCreated()) Delete();
+	if (IsCreated())
+		Delete();
+
 	id = glCreateProgram();
 
 	glAttachShader(id, vp);
@@ -44,14 +46,14 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 
 	GLint linkStatus = GL_FALSE;
 	glGetProgramiv(id, GL_LINK_STATUS, &linkStatus);
-	if(linkStatus != GL_TRUE)
+	if (linkStatus != GL_TRUE)
 	{
 		GLint bufLength = 0;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &bufLength);
 
 		if (bufLength)
 		{
-			char* buf = new char[bufLength+1]();
+			char* buf = new char[bufLength + 1]();
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			LOG_ERROR(RSX, "Could not link program: %s", buf);
 			delete[] buf;
@@ -59,10 +61,10 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 			return;
 		}
 	}
-	//else LOG_NOTICE(HLE, "program linked!");
+	//else LOG_NOTICE(HLE, "Program linked!");
 
 	glGetProgramiv(id, GL_VALIDATE_STATUS, &linkStatus);
-	if(linkStatus != GL_TRUE)
+	if (linkStatus != GL_TRUE)
 	{
 		GLint bufLength = 0;
 		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &bufLength);
@@ -87,7 +89,8 @@ void GLProgram::UnUse()
 
 void GLProgram::Use()
 {
-	glUseProgram(id);
+	if (id != 0)
+		glUseProgram(id);
 	checkForGlError("glUseProgram");
 }
 
@@ -107,7 +110,9 @@ void GLProgram::SetVTex(u32 index)
 
 void GLProgram::Delete()
 {
-	if(!IsCreated()) return;
+	if (!IsCreated())
+		return;
+
 	glDeleteProgram(id);
 	id = 0;
 	m_locations.clear();

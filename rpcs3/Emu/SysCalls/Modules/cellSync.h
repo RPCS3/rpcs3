@@ -135,16 +135,18 @@ struct CellSyncLFQueue
 		be_t<u16> m_h6;
 	};
 
-	union
+	union // 0x0
 	{
-		atomic_t<pop1_t> pop1;   // 0x0
+		atomic_t<pop1_t> pop1;
 		atomic_t<pop3_t> pop3;
 	};
-	union
+
+	union // 0x8
 	{
-		atomic_t<push1_t> push1; // 0x8
+		atomic_t<push1_t> push1;
 		atomic_t<push3_t> push3;
 	};
+
 	be_t<u32> m_size;              // 0x10
 	be_t<u32> m_depth;             // 0x14
 	vm::bptr<u8, 1, u64> m_buffer; // 0x18
@@ -159,6 +161,23 @@ struct CellSyncLFQueue
 	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;                // 0x78
 	be_t<u32> m_eq_id;             // 0x7C
+
+	std::string dump()
+	{
+		std::string res = "CellSyncLFQueue dump:";
+
+		auto data = (be_t<u64>*)this;
+
+		for (u32 i = 0; i < sizeof(CellSyncLFQueue) / sizeof(u64); i += 2)
+		{
+			res += "\n*** 0x";
+			res += fmt::to_hex(data[i + 0], 16);
+			res += " 0x";
+			res += fmt::to_hex(data[i + 1], 16);
+		}
+
+		return res;
+	}
 };
 
 static_assert(sizeof(CellSyncLFQueue) == 128, "CellSyncLFQueue: wrong size");

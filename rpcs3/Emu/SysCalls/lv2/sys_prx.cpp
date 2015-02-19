@@ -126,7 +126,7 @@ s32 sys_prx_get_module_id_by_address()
 s32 sys_prx_get_module_id_by_name()
 {
 	sys_prx.Todo("sys_prx_get_module_id_by_name()");
-	return CELL_OK;
+	return CELL_PRX_ERROR_UNKNOWN_MODULE;
 }
 
 s32 sys_prx_get_module_info()
