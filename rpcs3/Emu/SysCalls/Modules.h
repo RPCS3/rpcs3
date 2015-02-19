@@ -30,17 +30,11 @@ struct SFuncOp
 
 struct SFunc
 {
-	func_caller* func;
-	void* ptr;
+	u32 index;
 	const char* name;
 	std::vector<SFuncOp> ops;
 	u64 group;
 	u32 found;
-
-	~SFunc()
-	{
-		delete func;
-	}
 };
 
 class StaticFuncManager;
@@ -147,8 +141,7 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	if (!ops[0]) return;
 
 	SFunc* sf = new SFunc;
-	sf->ptr = (void *)func;
-	sf->func = bind_func(func);
+	sf->index = add_ps3_func(ModuleFunc(get_function_id(name), this, bind_func(func)));
 	sf->name = name;
 	sf->group = *(u64*)group;
 	sf->found = 0;
@@ -166,12 +159,6 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 	}
 	PushNewFuncSub(sf);
 }
-
-void fix_import(Module* module, u32 nid, u32 addr);
-
-#define FIX_IMPORT(module, func, addr) fix_import(module, get_function_id(#func), addr)
-
-void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \

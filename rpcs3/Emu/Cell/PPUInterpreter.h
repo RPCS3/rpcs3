@@ -2263,14 +2263,6 @@ private:
 		{
 		case 0x0: SysCall(); break;
 		case 0x1: throw "SC(): HyperCall LV1";
-		case 0x2:
-			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
-			if (Ini.HLELogging.GetValue())
-			{
-				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
-					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
-			}
-			break;
 		case 0x3: CPU.FastStop(); break;
 		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
 		}

@@ -29,7 +29,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					}
 
 					// skip NOP
-					if (data[k] == se32(0x60000000)) 
+					if (data[k] == se32(0x60000000))
 					{
 						x--;
 						continue;
@@ -84,10 +84,9 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				{
 					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
 					m_static_funcs_list[j]->found++;
-					data[i+0] = re32(0x39600000 | j); // li r11, j
-					data[i+1] = se32(0x44000042); // sc 2
+					data[i+0] = re32(0x04000000 | m_static_funcs_list[j]->index); // hack
 					data[i+2] = se32(0x4e800020); // blr
-					i += 2; // skip modified code
+					i += 1; // skip modified code
 				}
 			}
 		}
@@ -118,7 +117,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					// check if this function has been found with different pattern
 					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
 					{
-						if (k != j && m_static_funcs_list[k]->ptr == m_static_funcs_list[j]->ptr)
+						if (k != j && m_static_funcs_list[k]->index == m_static_funcs_list[j]->index)
 						{
 							count += m_static_funcs_list[k]->found;
 						}
@@ -138,7 +137,7 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					// ensure that this function has NOT been found with different pattern
 					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
 					{
-						if (k != j && m_static_funcs_list[k]->ptr == m_static_funcs_list[j]->ptr)
+						if (k != j && m_static_funcs_list[k]->index == m_static_funcs_list[j]->index)
 						{
 							if (m_static_funcs_list[k]->found)
 							{
@@ -176,18 +175,6 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 					(res & GSR_EXCESS ? " excess;" : ""));
 			}
 		}
-	}
-}
-
-void StaticFuncManager::StaticExecute(PPUThread& CPU, u32 code)
-{
-	if (code < m_static_funcs_list.size())
-	{
-		(*m_static_funcs_list[code]->func)(CPU);
-	}
-	else
-	{
-		LOG_ERROR(LOADER, "StaticExecute(%d): unknown function or illegal opcode", code);
 	}
 }
 
