@@ -562,6 +562,24 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		out_value = (u8)(*X64REG(context, reg - X64R_AH) >> 8);
 		return true;
 	}
+	else if (reg == X64_IMM8)
+	{
+		const s8 imm_value = *(s8*)(RIP(context) + i_size - 1);
+
+		switch (d_size)
+		{
+		case 1: out_value = (u8)imm_value; return true;
+		}
+	}
+	else if (reg == X64_IMM16)
+	{
+		const s16 imm_value = *(s16*)(RIP(context) + i_size - 2);
+
+		switch (d_size)
+		{
+		case 2: out_value = (u16)imm_value; return true;
+		}
+	}
 	else if (reg == X64_IMM32)
 	{
 		// load the immediate value (assuming it's at the end of the instruction)
