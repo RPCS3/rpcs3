@@ -829,15 +829,6 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 
 // LFQueue functions
 
-void syncLFQueueDump(vm::ptr<CellSyncLFQueue> queue)
-{
-	cellSync.Notice("CellSyncLFQueue dump: addr = 0x%x", queue.addr());
-	for (u32 i = 0; i < sizeof(CellSyncLFQueue) / 16; i++)
-	{
-		cellSync.Notice("*** 0x%.16llx 0x%.16llx", vm::read64(queue.addr() + i * 16), vm::read64(queue.addr() + i * 16 + 8));
-	}
-}
-
 void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
 	queue->m_size = size;

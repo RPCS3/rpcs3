@@ -1,7 +1,9 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 #include "Crypto/sha1.h"
@@ -84,7 +86,8 @@ void execute_ps3_func_by_index(PPUThread& CPU, u32 index)
 		}
 		else
 		{
-			throw "Unimplemented function";
+			LOG_ERROR(HLE, "Unimplemented function %s", SysCalls::GetHLEFuncName(func->id));
+			CPU.GPR[3] = 0;
 		}
 
 		CPU.m_last_syscall = old_last_syscall;
