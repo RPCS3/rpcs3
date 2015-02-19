@@ -525,12 +525,12 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
 
 /// SPURS kernel entry point
 bool spursKernelEntry(SPUThread & spu) {
-    //while (true) {
-    //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //    if (Emu.IsStopped()) {
-    //        return false;
-    //    }
-    //}
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (Emu.IsStopped()) {
+            return false;
+        }
+    }
 
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
     memset(ctxt, 0, sizeof(SpursKernelContext));

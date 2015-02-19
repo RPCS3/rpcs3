@@ -2284,14 +2284,18 @@ s32 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
 
 u32 _cellSpursGetSdkVersion()
 {
-	s32 sdk_version;
+	// Commenting this out for now since process_get_sdk_version does not return
+	// the correct SDK version and instead returns a version too high for the game
+	// and causes SPURS to fail.
+	//s32 sdk_version;
 
-	if (process_get_sdk_version(process_getpid(), sdk_version) != CELL_OK)
-	{
-		throw __FUNCTION__;
-	}
+	//if (process_get_sdk_version(process_getpid(), sdk_version) != CELL_OK)
+	//{
+	//	throw __FUNCTION__;
+	//}
 
-	return sdk_version;
+	//return sdk_version;
+	return 1;
 }
 
 s32 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::ptr<u32> elf_addr, vm::ptr<u32> context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg)
