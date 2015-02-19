@@ -42,6 +42,17 @@ if (APPLE)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/opt/X11/include")
 endif()
 
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	#on some Linux distros shm_unlink and similar functions are in librt only
+	set(ADDITIONAL_LIBS "rt")
+elseif(UNIX)
+	#it seems like glibc includes the iconv functions we use but other libc
+	#implementations like the one on OSX don't seem implement them
+	set(ADDITIONAL_LIBS "iconv")
+else()
+	set(ADDITIONAL_LIBS "")
+endif()
+
 If( NOT RPCS3_SRC_DIR)
   SET(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
   Message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
@@ -120,7 +131,7 @@ set_source_files_properties(${RPCS3_SRC_DIR}/Emu/Cell/PPULLVMRecompiler.cpp PROP
 add_executable(rpcs3 ${RPCS3_SRC})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_CURRENT_BINARY_DIR}/../asmjit/") #hack because the asmjit cmake file force fno exceptions
-target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${LLVM_LIBS} rt)
+target_link_libraries(rpcs3  asmjit.a  ${wxWidgets_LIBRARIES} ${OPENAL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARIES} libavformat.a libavcodec.a libavutil.a libswresample.a libswscale.a ${ZLIB_LIBRARIES} ${LLVM_LIBS} ${ADDITIONAL_LIBS} )
 
 set_target_properties(rpcs3 PROPERTIES COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h")
 cotire(rpcs3)
