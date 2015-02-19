@@ -85,6 +85,7 @@ int cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> par
 
 	// TODO: Actually sign into PSN
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+
 	return CELL_OK;
 }
 
@@ -100,6 +101,7 @@ int cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> 
 	cellNetCtl.Warning("cellNetCtlNetStartDialogUnloadAsync(result_addr=0x%x)", result.addr());
 
 	sysutilSendSystemCommand(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
+
 	return CELL_OK;
 }
 
