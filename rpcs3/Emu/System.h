@@ -83,7 +83,6 @@ class Emulator
 	uint m_mode;
 
 	u32 m_rsx_callback;
-	u32 m_cpu_thr_exit;
 	u32 m_cpu_thr_stop;
 	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
@@ -183,11 +182,6 @@ public:
 		m_rsx_callback = addr;
 	}
 
-	void SetCPUThreadExit(u32 addr)
-	{
-		m_cpu_thr_exit = addr;
-	}
-
 	void SetCPUThreadStop(u32 addr)
 	{
 		m_cpu_thr_stop = addr;
@@ -202,7 +196,6 @@ public:
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
-	u32 GetCPUThreadExit() const { return m_cpu_thr_exit; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	void CheckStatus();

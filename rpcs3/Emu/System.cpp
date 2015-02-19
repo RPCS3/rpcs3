@@ -189,7 +189,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 void Emulator::Load()
 {
-	GetModuleManager().init();
+	GetModuleManager().Init();
 
 	if (!rExists(m_path)) return;
 
@@ -379,6 +379,8 @@ void Emulator::Stop()
 
 	// TODO: check finalization order
 
+	clear_ps3_functions();
+
 	SavePoints(BreakPointsDBName);
 	m_break_points.clear();
 	m_marked_points.clear();
@@ -394,7 +396,7 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	GetModuleManager().UnloadModules();
+	GetModuleManager().Close();
 	GetSFuncManager().StaticFinalize();
 	GetSyncPrimManager().Close();
 

@@ -73,7 +73,7 @@ void PPUThread::InitRegs()
 	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = ppu_get_tls(GetId()) + 0x7000; // 0x7000 is usually subtracted from r13 to access first TLS element (details are not clear)
 
-	LR = Emu.GetCPUThreadExit();
+	LR = 0;
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
@@ -85,7 +85,7 @@ void PPUThread::InitStack()
 	if (!m_stack_addr)
 	{
 		assert(m_stack_size);
-		m_stack_addr = vm::cast(Memory.StackMem.AllocAlign(m_stack_size, 4096));
+		m_stack_addr = Memory.StackMem.AllocAlign(m_stack_size, 4096);
 	}
 }
 
@@ -189,7 +189,7 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(vm::cast(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
-u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
+void PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
@@ -212,8 +212,6 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
-
-	return GPR[3];
 }
 
 void PPUThread::FastStop()

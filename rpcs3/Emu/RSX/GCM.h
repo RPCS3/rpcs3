@@ -235,6 +235,7 @@ struct gcmInfo
 	u32 config_addr;
 	u32 context_addr;
 	u32 control_addr;
+	u32 label_addr;
 };
 
 struct CellGcmSurface

@@ -8,17 +8,9 @@
 #include "cellPngDec.h"
 #include <map>
 
-Module *cellPngDec = nullptr;
+extern Module cellPngDec;
 
-#undef PRX_DEBUG
-
-#ifdef PRX_DEBUG
-#include "prx_libpngdec.h"
-u32 libpngdec;
-u32 libpngdec_rtoc;
-#endif
-
-s64 pngDecCreate(
+s32 pngDecCreate(
 	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> param,
 	vm::ptr<const CellPngDecExtThreadInParam> ext = vm::ptr<const CellPngDecExtThreadInParam>::make(0))
@@ -47,7 +39,7 @@ s64 pngDecCreate(
 	return CELL_OK;
 }
 
-s64 pngDecDestroy(CellPngDecMainHandle dec)
+s32 pngDecDestroy(CellPngDecMainHandle dec)
 {
 	if (!Memory.Free(dec.addr()))
 	{
@@ -57,7 +49,7 @@ s64 pngDecDestroy(CellPngDecMainHandle dec)
 	return CELL_OK;
 }
 
-s64 pngDecOpen(
+s32 pngDecOpen(
 	CellPngDecMainHandle dec,
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
@@ -117,7 +109,7 @@ s64 pngDecOpen(
 	return CELL_OK;
 }
 
-s64 pngDecClose(CellPngDecSubHandle stream)
+s32 pngDecClose(CellPngDecSubHandle stream)
 {
 	cellFsClose(stream->fd);
 	if (!Memory.Free(stream.addr()))
@@ -128,7 +120,7 @@ s64 pngDecClose(CellPngDecSubHandle stream)
 	return CELL_OK;
 }
 
-s64 pngReadHeader(
+s32 pngReadHeader(
 	CellPngDecSubHandle stream,
 	vm::ptr<CellPngDecInfo> info,
 	vm::ptr<CellPngDecExtInfo> extInfo = vm::ptr<CellPngDecExtInfo>::make(0))
@@ -171,7 +163,7 @@ s64 pngReadHeader(
 	case 4: current_info.colorSpace = CELL_PNGDEC_GRAYSCALE_ALPHA; current_info.numComponents = 2; break;
 	case 6: current_info.colorSpace = CELL_PNGDEC_RGBA;            current_info.numComponents = 4; break;
 	default:
-		cellPngDec->Error("cellPngDecDecodeData: Unsupported color space (%d)", (u32)buffer[25]);
+		cellPngDec.Error("cellPngDecDecodeData: Unsupported color space (%d)", (u32)buffer[25]);
 		return CELL_PNGDEC_ERROR_HEADER;
 	}
 
@@ -191,7 +183,7 @@ s64 pngReadHeader(
 	return CELL_OK;
 }
 
-s64 pngDecSetParameter(
+s32 pngDecSetParameter(
 	CellPngDecSubHandle stream,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam,
@@ -223,7 +215,7 @@ s64 pngDecSetParameter(
 		current_outParam.outputComponents = 4; break;
 
 	default:
-		cellPngDec->Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace);
+		cellPngDec.Error("pngDecSetParameter: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 
@@ -236,7 +228,7 @@ s64 pngDecSetParameter(
 	return CELL_OK;
 }
 
-s64 pngDecodeData(
+s32 pngDecodeData(
 	CellPngDecSubHandle stream,
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
@@ -275,7 +267,7 @@ s64 pngDecodeData(
 		);
 	if (!image)
 	{
-		cellPngDec->Error("pngDecodeData: stbi_load_from_memory failed");
+		cellPngDec.Error("pngDecodeData: stbi_load_from_memory failed");
 		return CELL_PNGDEC_ERROR_STREAM_FORMAT;
 	}
 
@@ -352,11 +344,11 @@ s64 pngDecodeData(
 	case se32(CELL_PNGDEC_GRAYSCALE):
 	case se32(CELL_PNGDEC_PALETTE):
 	case se32(CELL_PNGDEC_GRAYSCALE_ALPHA):
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
+		cellPngDec.Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		break;
 
 	default:
-		cellPngDec->Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
+		cellPngDec.Error("pngDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
 		return CELL_PNGDEC_ERROR_ARG;
 	}
 
@@ -365,42 +357,32 @@ s64 pngDecodeData(
 	return CELL_OK;
 }
 
-s64 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam)
+s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	const_cast<CellPngDecThreadInParam&>(*threadInParam).spuThreadEnable = CELL_PNGDEC_SPU_THREAD_DISABLE; // hack
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x295C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x)",
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr());
 
 	// create decoder
-	if (s32 res = pngDecCreate(mainHandle, threadInParam)) return res;
+	if (auto res = pngDecCreate(mainHandle, threadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecExtCreate(
+s32 cellPngDecExtCreate(
 	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> threadInParam,
 	vm::ptr<CellPngDecThreadOutParam> threadOutParam,
 	vm::ptr<const CellPngDecExtThreadInParam> extThreadInParam,
 	vm::ptr<CellPngDecExtThreadOutParam> extThreadOutParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x296C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x, extThreadInParam_addr=0x%x, extThreadOutParam_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x, extThreadInParam_addr=0x%x, extThreadOutParam_addr=0x%x)",
 		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr(), extThreadInParam.addr(), extThreadOutParam.addr());
 
 	// create decoder
-	if (s32 res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
+	if (auto res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
 
 	// set codec version
 	threadOutParam->pngCodecVersion = PNGDEC_CODEC_VERSION;
@@ -408,41 +390,30 @@ s64 cellPngDecExtCreate(
 	extThreadOutParam->reserved = 0;
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecDestroy(CellPngDecMainHandle mainHandle)
+s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x1E6C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle.addr());
+	cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle.addr());
 
 	// destroy decoder
 	return pngDecDestroy(mainHandle);
-#endif
 }
 
-s64 cellPngDecOpen(
+s32 cellPngDecOpen(
 	CellPngDecMainHandle mainHandle,
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x3F3C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr());
 
 	// create stream handle
 	return pngDecOpen(mainHandle, subHandle, src, openInfo);
-#endif
 }
 
-s64 cellPngDecExtOpen(
+s32 cellPngDecExtOpen(
 	CellPngDecMainHandle mainHandle,
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
@@ -450,78 +421,53 @@ s64 cellPngDecExtOpen(
 	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
 	vm::ptr<const CellPngDecOpnParam> opnParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x3F34, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x, cbCtrlStrm_addr=0x%x, opnParam_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x, cbCtrlStrm_addr=0x%x, opnParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr(), cbCtrlStrm.addr(), opnParam.addr());
 
 	// create stream handle
 	return pngDecOpen(mainHandle, subHandle, src, openInfo, cbCtrlStrm, opnParam);
-#endif
 }
 
-s64 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle)
+s32 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x066C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle.addr(), subHandle.addr());
+	cellPngDec.Warning("cellPngDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle.addr(), subHandle.addr());
 
 	return pngDecClose(subHandle);
-#endif
 }
 
-s64 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info)
+s32 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x3A3C, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), info.addr());
 
 	return pngReadHeader(subHandle, info);
-#endif
 }
 
-s64 cellPngDecExtReadHeader(
+s32 cellPngDecExtReadHeader(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<CellPngDecInfo> info,
 	vm::ptr<CellPngDecExtInfo> extInfo)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x3A34, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecExtReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x, extInfo_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecExtReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x, extInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), info.addr(), extInfo.addr());
 
 	return pngReadHeader(subHandle, info, extInfo);
-#endif
 }
 
-s64 cellPngDecSetParameter(
+s32 cellPngDecSetParameter(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x33F4, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr());
 
 	return pngDecSetParameter(subHandle, inParam, outParam);
-#endif
 }
 
-s64 cellPngDecExtSetParameter(
+s32 cellPngDecExtSetParameter(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<const CellPngDecInParam> inParam,
@@ -529,36 +475,26 @@ s64 cellPngDecExtSetParameter(
 	vm::ptr<const CellPngDecExtInParam> extInParam,
 	vm::ptr<CellPngDecExtOutParam> extOutParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x33EC, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",
+	cellPngDec.Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",
 		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr(), extInParam.addr(), extOutParam.addr());
 
 	return pngDecSetParameter(subHandle, inParam, outParam, extInParam, extOutParam);
-#endif
 }
 
-s64 cellPngDecDecodeData(
+s32 cellPngDecDecodeData(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x5D40, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
 
 	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo);
-#endif
 }
 
-s64 cellPngDecExtDecodeData(
+s32 cellPngDecExtDecodeData(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u8> data,
@@ -567,216 +503,124 @@ s64 cellPngDecExtDecodeData(
 	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp,
 	vm::ptr<CellPngDecDispParam> dispParam)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x5D38, libpngdec_rtoc);
-#else
-	cellPngDec->Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam_addr=0x%x)",
+	cellPngDec.Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam_addr=0x%x)",
 		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr(), cbCtrlDisp.addr(), dispParam.addr());
 
 	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
-#endif
 }
 
-s64 cellPngDecGetUnknownChunks(
+s32 cellPngDecGetUnknownChunks(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
 	vm::ptr<u32> unknownChunkNumber)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x03EC, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPCAL> pcal)
+s32 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPCAL> pcal)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0730, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetcHRM(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngCHRM> chrm)
+s32 cellPngDecGetcHRM(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngCHRM> chrm)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0894, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetsCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSCAL> scal)
+s32 cellPngDecGetsCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSCAL> scal)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x09EC, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetpHYs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPHYS> phys)
+s32 cellPngDecGetpHYs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPHYS> phys)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0B14, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetoFFs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngOFFS> offs)
+s32 cellPngDecGetoFFs(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngOFFS> offs)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0C58, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetsPLT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSPLT> splt)
+s32 cellPngDecGetsPLT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSPLT> splt)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0D9C, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetbKGD(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngBKGD> bkgd)
+s32 cellPngDecGetbKGD(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngBKGD> bkgd)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x0ED0, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGettIME(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTIME> time)
+s32 cellPngDecGettIME(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTIME> time)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x1024, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGethIST(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngHIST> hist)
+s32 cellPngDecGethIST(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngHIST> hist)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x116C, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGettRNS(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTRNS> trns)
+s32 cellPngDecGettRNS(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngTRNS> trns)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x12A4, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetsBIT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSBIT> sbit)
+s32 cellPngDecGetsBIT(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSBIT> sbit)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x1420, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetiCCP(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngICCP> iccp)
+s32 cellPngDecGetiCCP(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngICCP> iccp)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x1574, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetsRGB(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSRGB> srgb)
+s32 cellPngDecGetsRGB(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngSRGB> srgb)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x16B4, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetgAMA(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngGAMA> gama)
+s32 cellPngDecGetgAMA(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngGAMA> gama)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x17CC, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte)
+s32 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x18E4, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-s64 cellPngDecGetTextChunk(
+s32 cellPngDecGetTextChunk(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u32> textInfoNum,
 	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo)
 {
-#ifdef PRX_DEBUG
-	cellPngDec->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libpngdec + 0x19FC, libpngdec_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;
-#endif
 }
 
-void cellPngDec_init(Module *pxThis)
+Module cellPngDec("cellPngDec", []()
 {
-	cellPngDec = pxThis;
-
 	REG_FUNC(cellPngDec, cellPngDecGetUnknownChunks);
 	REG_FUNC(cellPngDec, cellPngDecClose);
 	REG_FUNC(cellPngDec, cellPngDecGetpCAL);
@@ -806,51 +650,4 @@ void cellPngDec_init(Module *pxThis)
 	REG_FUNC(cellPngDec, cellPngDecOpen);
 	REG_FUNC(cellPngDec, cellPngDecExtDecodeData);
 	REG_FUNC(cellPngDec, cellPngDecDecodeData);
-
-#ifdef PRX_DEBUG
-	CallAfter([]()
-	{
-		if (!Memory.MainMem.GetStartAddr()) return;
-
-		libpngdec = (u32)Memory.MainMem.AllocAlign(sizeof(libpngdec_data), 0x100000);
-		memcpy(vm::get_ptr<void>(libpngdec), libpngdec_data, sizeof(libpngdec_data));
-		libpngdec_rtoc = libpngdec + 0x49710;
-
-		extern Module* sysPrxForUser;
-		extern Module* cellSpurs;
-		extern Module* sys_fs;
-		
-		FIX_IMPORT(sysPrxForUser, _sys_snprintf                   , libpngdec + 0x1E6D0);
-		FIX_IMPORT(sysPrxForUser, _sys_strlen                     , libpngdec + 0x1E6F0);
-		fix_import(sysPrxForUser, 0x3EF17F8C                      , libpngdec + 0x1E710);
-		FIX_IMPORT(sysPrxForUser, _sys_memset                     , libpngdec + 0x1E730);
-		FIX_IMPORT(sysPrxForUser, _sys_memcpy                     , libpngdec + 0x1E750);
-		FIX_IMPORT(sysPrxForUser, _sys_strcpy                     , libpngdec + 0x1E770);
-		FIX_IMPORT(sysPrxForUser, _sys_strncpy                    , libpngdec + 0x1E790);
-		FIX_IMPORT(sysPrxForUser, _sys_memcmp                     , libpngdec + 0x1E7B0);
-		FIX_IMPORT(cellSpurs, cellSpursQueueDetachLv2EventQueue   , libpngdec + 0x1E7D0);
-		FIX_IMPORT(cellSpurs, cellSpursAttributeSetNamePrefix     , libpngdec + 0x1E7F0);
-		FIX_IMPORT(cellSpurs, _cellSpursQueueInitialize           , libpngdec + 0x1E810);
-		FIX_IMPORT(cellSpurs, _cellSpursTasksetAttributeInitialize, libpngdec + 0x1E830);
-		FIX_IMPORT(cellSpurs, cellSpursTasksetAttributeSetName    , libpngdec + 0x1E850);
-		FIX_IMPORT(cellSpurs, cellSpursTaskGetReadOnlyAreaPattern , libpngdec + 0x1E870);
-		FIX_IMPORT(cellSpurs, cellSpursTaskGetContextSaveAreaSize , libpngdec + 0x1E890);
-		FIX_IMPORT(cellSpurs, cellSpursQueuePopBody               , libpngdec + 0x1E8B0);
-		FIX_IMPORT(cellSpurs, cellSpursQueuePushBody              , libpngdec + 0x1E8D0);
-		FIX_IMPORT(cellSpurs, _cellSpursAttributeInitialize       , libpngdec + 0x1E8F0);
-		FIX_IMPORT(cellSpurs, cellSpursJoinTaskset                , libpngdec + 0x1E910);
-		FIX_IMPORT(cellSpurs, cellSpursShutdownTaskset            , libpngdec + 0x1E930);
-		FIX_IMPORT(cellSpurs, cellSpursInitializeWithAttribute    , libpngdec + 0x1E950);
-		FIX_IMPORT(cellSpurs, cellSpursCreateTask                 , libpngdec + 0x1E970);
-		FIX_IMPORT(cellSpurs, cellSpursCreateTasksetWithAttribute , libpngdec + 0x1E990);
-		FIX_IMPORT(cellSpurs, cellSpursFinalize                   , libpngdec + 0x1E9B0);
-		FIX_IMPORT(cellSpurs, cellSpursQueueAttachLv2EventQueue   , libpngdec + 0x1E9D0);
-		FIX_IMPORT(sys_fs, cellFsClose                            , libpngdec + 0x1E9F0);
-		FIX_IMPORT(sys_fs, cellFsRead                             , libpngdec + 0x1EA10);
-		FIX_IMPORT(sys_fs, cellFsOpen                             , libpngdec + 0x1EA30);
-		FIX_IMPORT(sys_fs, cellFsLseek                            , libpngdec + 0x1EA50);
-
-		fix_relocs(cellPngDec, libpngdec, 0x41C30, 0x47AB0, 0x40A00);
-	});
-#endif
-}
+});

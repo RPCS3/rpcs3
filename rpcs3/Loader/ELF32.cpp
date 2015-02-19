@@ -19,10 +19,16 @@ namespace loader
 	{
 		handler::error_code elf32::init(vfsStream& stream)
 		{
+			m_ehdr = {};
+			m_phdrs.clear();
+			m_shdrs.clear();
+
 			error_code res = handler::init(stream);
 
 			if (res != ok)
+			{
 				return res;
+			}
 
 			m_stream->Read(&m_ehdr, sizeof(ehdr));
 
@@ -52,8 +58,6 @@ namespace loader
 				if (m_stream->Read(m_phdrs.data(), size) != size)
 					return broken_file;
 			}
-			else
-				m_phdrs.clear();
 
 			if (m_ehdr.data_le.e_shnum)
 			{
@@ -64,8 +68,6 @@ namespace loader
 				if (m_stream->Read(m_shdrs.data(), size) != size)
 					return broken_file;
 			}
-			else
-				m_shdrs.clear();
 
 			return ok;
 		}
@@ -132,8 +134,8 @@ namespace loader
 
 				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
 				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
-				armv7_thr_stop_data[1] = 0x0001; // index 1
-				Emu.SetCPUThreadExit(armv7_thr_stop_data.addr());
+				armv7_thr_stop_data[1] = SFI_HLE_RETURN;
+				Emu.SetCPUThreadStop(armv7_thr_stop_data.addr());
 
 				u32 entry = 0; // actual entry point (ELFs entry point is ignored)
 				u32 fnid_addr = 0;
@@ -226,27 +228,33 @@ namespace loader
 							const u32 nid = fnid[j];
 							const u32 addr = fstub[j];
 
-							if (auto func = get_psv_func_by_nid(nid))
+							u32 index;
+
+							if (auto func = get_psv_func_by_nid(nid, &index))
 							{
 								if (func->module)
 								{
-									func->module->Notice("Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+									LOG_NOTICE(LOADER, "Imported function '%s' in module '%s' (nid=0x%08x, addr=0x%x)", func->name, func->module->GetName(), nid, addr);
 								}
 								else
 								{
-									LOG_NOTICE(LOADER, "Imported function %s (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
+									LOG_NOTICE(LOADER, "Imported function '%s' (nid=0x%08x, addr=0x%x)", func->name, nid, addr);
 								}
-
-								const u32 code = get_psv_func_index(func);
-								vm::psv::write32(addr + 0, 0xe0700090 | (code & 0xfff0) << 4 | (code & 0xf)); // HACK instruction (ARM)
 							}
 							else
 							{
 								LOG_ERROR(LOADER, "Unknown function 0x%08x (addr=0x%x)", nid, addr);
 
-								vm::psv::write32(addr + 0, 0xe0700090); // HACK instruction (ARM), unimplemented stub (code 0)
-								vm::psv::write32(addr + 4, nid); // nid
+								psv_func unimplemented;
+								unimplemented.nid = nid;
+								unimplemented.module = nullptr;
+								unimplemented.name = "UNKNOWN"; // TODO: set correct name if possible
+								unimplemented.func = nullptr;
+
+								index = add_psv_func(unimplemented);
 							}
+
+							vm::psv::write32(addr + 0, 0xe0700090 | (index & 0xfff0) << 4 | (index & 0xf)); // HACK instruction (ARM)
 
 							code_end = std::min<u32>(addr, code_end);
 						}

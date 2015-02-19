@@ -66,7 +66,7 @@ s32 spursTasksetProcessSyscall(SPUThread & spu, u32 syscallNum, u32 args);
 void spursTasksetInit(SPUThread & spu, u32 pollStatus);
 s32 spursTasksetLoadElf(SPUThread & spu, u32 * entryPoint, u32 * lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments);
 
-extern Module *cellSpurs;
+extern Module cellSpurs;
 
 //////////////////////////////////////////////////////////////////////////////
 // SPURS utility functions

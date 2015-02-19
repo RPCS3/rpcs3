@@ -472,14 +472,21 @@ namespace psv_func_detail
 // Basic information about the HLE function
 struct psv_func
 {
-	u32 nid; // Unique function ID only for old PSV executables (should be generated individually for each elf loaded)
+	u32 nid; // Unique function ID (should be generated individually for each elf loaded)
 	const char* name; // Function name for information
 	std::shared_ptr<psv_func_caller> func; // Function caller instance
 	psv_log_base* module; // Module for information
 };
 
+enum psv_special_function_index : u16
+{
+	SFI_HLE_RETURN,
+
+	SFI_MAX
+};
+
 // Do not call directly
-void add_psv_func(psv_func& data);
+u32 add_psv_func(psv_func data);
 // Do not call directly
 template<typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*func)(T...))
 {
@@ -491,12 +498,10 @@ template<typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* mo
 
 	add_psv_func(f);
 }
-// Find registered HLE function by its ID
-const psv_func* get_psv_func_by_nid(u32 nid);
-// Get index of registered HLE function
-u32 get_psv_func_index(const psv_func* func);
+// Find registered HLE function by NID
+psv_func* get_psv_func_by_nid(u32 nid, u32* out_index = nullptr);
 // Find registered HLE function by its index
-const psv_func* get_psv_func_by_index(u32 index);
+psv_func* get_psv_func_by_index(u32 index);
 // Execute registered HLE function by its index
 void execute_psv_func_by_index(ARMv7Context& context, u32 index);
 // Register all HLE functions

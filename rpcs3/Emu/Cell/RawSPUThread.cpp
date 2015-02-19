@@ -19,9 +19,9 @@ RawSPUThread::~RawSPUThread()
 	Memory.CloseRawSPU(this, m_index);
 }
 
-bool RawSPUThread::Read32(const u64 addr, u32* value)
+bool RawSPUThread::Read32(const u32 addr, u32* value)
 {
-	const u64 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
@@ -68,9 +68,9 @@ bool RawSPUThread::Read32(const u64 addr, u32* value)
 	return true;
 }
 
-bool RawSPUThread::Write32(const u64 addr, const u32 value)
+bool RawSPUThread::Write32(const u32 addr, const u32 value)
 {
-	const u64 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
@@ -198,7 +198,7 @@ bool RawSPUThread::Write32(const u64 addr, const u32 value)
 
 void RawSPUThread::InitRegs()
 {
-	ls_offset = m_offset = (u32)GetStartAddr() + RAW_SPU_LS_OFFSET;
+	ls_offset = m_offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
 	SPUThread::InitRegs();
 }
 
@@ -213,5 +213,5 @@ void RawSPUThread::Task()
 
 	SPUThread::Task();
 
-	SPU.NPC.SetValue((u32)PC);
+	SPU.NPC.SetValue(PC);
 }

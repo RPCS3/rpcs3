@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/RSX/sysutil_video.h"
 
-Module *cellAvconfExt = nullptr;
+extern Module cellAvconfExt;
 
 int cellVideoOutConvertCursorColor()
 {
@@ -14,7 +14,7 @@ int cellVideoOutConvertCursorColor()
 
 int cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<float> screenSize)
 {
-	cellAvconfExt->Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize_addr=0x%x)", videoOut, screenSize.addr());
+	cellAvconfExt.Warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize_addr=0x%x)", videoOut, screenSize.addr());
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
@@ -53,12 +53,10 @@ int cellVideoOutSetGamma()
 	return CELL_OK;
 }
 
-void cellAvconfExt_init(Module *pxThis)
+Module cellAvconfExt("cellAvconfExt", []()
 {
-	cellAvconfExt = pxThis;
-
 	REG_FUNC(cellAvconfExt, cellVideoOutConvertCursorColor);
 	REG_FUNC(cellAvconfExt, cellVideoOutGetScreenSize);
 	REG_FUNC(cellAvconfExt, cellVideoOutGetGamma);
 	REG_FUNC(cellAvconfExt, cellVideoOutSetGamma);
-}
+});

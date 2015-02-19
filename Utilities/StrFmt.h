@@ -263,6 +263,32 @@ namespace fmt
 			}
 		};
 
+#ifdef __APPLE__
+		template<>
+		struct get_fmt<unsigned long>
+		{
+			static std::string text(const char* fmt, size_t len, unsigned long arg)
+			{
+				if (fmt[len - 1] == 'x')
+				{
+					return to_hex(arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex(arg, get_fmt_precision(fmt, len)));
+				}
+				else if (fmt[len - 1] == 'd' || fmt[len - 1] == 'u')
+				{
+					return to_udec(arg);
+				}
+				else
+				{
+					throw "Invalid formatting (unsigned long): " + std::string(fmt, len);
+				}
+			}
+		};
+#endif
+
 		template<>
 		struct get_fmt<u64>
 		{
@@ -358,6 +384,32 @@ namespace fmt
 				}
 			}
 		};
+
+#ifdef __APPLE__
+		template<>
+		struct get_fmt<long>
+		{
+			static std::string text(const char* fmt, size_t len, long arg)
+			{
+				if (fmt[len - 1] == 'x')
+				{
+					return to_hex((u64)arg, get_fmt_precision(fmt, len));
+				}
+				else if (fmt[len - 1] == 'X')
+				{
+					return fmt::toupper(to_hex((u64)arg, get_fmt_precision(fmt, len)));
+				}
+				else if (fmt[len - 1] == 'd')
+				{
+					return to_sdec(arg);
+				}
+				else
+				{
+					throw "Invalid formatting (long): " + std::string(fmt, len);
+				}
+			}
+		};
+#endif
 
 		template<>
 		struct get_fmt<s64>

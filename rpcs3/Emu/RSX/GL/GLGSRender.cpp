@@ -104,12 +104,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	Bind();
 
-	const u64 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
-	if (!Memory.IsGoodAddr(texaddr))
-	{
-		LOG_ERROR(RSX, "Bad texture address=0x%x", texaddr);
-		return;
-	}
+	const u32 texaddr = GetAddress(tex.GetOffset(), tex.GetLocation());
 	//LOG_WARNING(RSX, "texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
 	//	m_offset, m_width, m_height, m_maxaniso, m_mipmap, m_remap, m_zfunc, m_wraps, m_wrapt, m_wrapr, m_minlod, m_maxlod);
 	
@@ -1242,11 +1237,6 @@ void GLGSRender::WriteDepthBuffer()
 	}
 
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
-	if (!Memory.IsGoodAddr(address))
-	{
-		LOG_WARNING(RSX, "Bad depth buffer address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_z, m_context_dma_z);
-		return;
-	}
 
 	auto ptr = vm::get_ptr<void>(address);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
@@ -1279,11 +1269,6 @@ void GLGSRender::WriteColorBufferA()
 	}
 
 	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-	if (!Memory.IsGoodAddr(address))
-	{
-		LOG_ERROR(RSX, "Bad color buffer A address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_a, m_context_dma_color_a);
-		return;
-	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("WriteColorBufferA(): glReadBuffer");
@@ -1310,11 +1295,6 @@ void GLGSRender::WriteColorBufferB()
 	}
 
 	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-	if (!Memory.IsGoodAddr(address))
-	{
-		LOG_ERROR(RSX, "Bad color buffer B address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_b, m_context_dma_color_b);
-		return;
-	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT1);
 	checkForGlError("WriteColorBufferB(): glReadBuffer");
@@ -1341,11 +1321,6 @@ void GLGSRender::WriteColorBufferC()
 	}
 
 	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-	if (!Memory.IsGoodAddr(address))
-	{
-		LOG_ERROR(RSX, "Bad color buffer C address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_c, m_context_dma_color_c);
-		return;
-	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT2);
 	checkForGlError("WriteColorBufferC(): glReadBuffer");
@@ -1372,11 +1347,6 @@ void GLGSRender::WriteColorBufferD()
 	}
 
 	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-	if (!Memory.IsGoodAddr(address))
-	{
-		LOG_ERROR(RSX, "Bad color buffer D address: address=0x%x, offset=0x%x, dma=0x%x", address, m_surface_offset_d, m_context_dma_color_d);
-		return;
-	}
 
 	glReadBuffer(GL_COLOR_ATTACHMENT3);
 	checkForGlError("WriteColorBufferD(): glReadBuffer");
@@ -1682,14 +1652,9 @@ void GLGSRender::InitDrawBuffers()
 		u32 format = GL_BGRA;
 		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 		u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
-		if (Memory.IsGoodAddr(addr))
-		{
-			u32 width = buffers[m_gcm_current_buffer].width;
-			u32 height = buffers[m_gcm_current_buffer].height;
-
-			glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
-		}
+		u32 width = buffers[m_gcm_current_buffer].width;
+		u32 height = buffers[m_gcm_current_buffer].height;
+		glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
 	}
 }
 
@@ -2139,17 +2104,9 @@ void GLGSRender::Flip()
 			format = GL_BGRA;
 			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-
-			if (Memory.IsGoodAddr(addr))
-			{
-				width = buffers[m_gcm_current_buffer].width;
-				height = buffers[m_gcm_current_buffer].height;
-				src_buffer = vm::get_ptr<u8>(addr);
-			}
-			else
-			{
-				src_buffer = nullptr;
-			}
+			width = buffers[m_gcm_current_buffer].width;
+			height = buffers[m_gcm_current_buffer].height;
+			src_buffer = vm::get_ptr<u8>(addr);
 		}
 		else if (m_fbo.IsCreated())
 		{

@@ -10,7 +10,7 @@
 #include "Crypto/unedat.h"
 #include "sceNp.h"
 
-Module *sceNp = nullptr;
+extern Module sceNp;
 
 struct sceNpInternal
 {
@@ -34,7 +34,7 @@ sceNpInternal sceNpInstance;
 
 int sceNpInit(u32 mem_size, u32 mem_addr)
 {
-	sceNp->Warning("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+	sceNp.Warning("sceNpInit(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
 
 	if (sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
@@ -46,7 +46,7 @@ int sceNpInit(u32 mem_size, u32 mem_addr)
 
 int sceNp2Init(u32 mem_size, u32 mem_addr)
 {
-	sceNp->Warning("sceNp2Init(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
+	sceNp.Warning("sceNp2Init(mem_size=0x%x, mem_addr=0x%x)", mem_size, mem_addr);
 
 	if (sceNpInstance.m_bSceNp2Initialized)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
@@ -58,7 +58,7 @@ int sceNp2Init(u32 mem_size, u32 mem_addr)
 
 int sceNpTerm()
 {
-	sceNp->Warning("sceNpTerm()");
+	sceNp.Warning("sceNpTerm()");
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
@@ -70,7 +70,7 @@ int sceNpTerm()
 
 int sceNp2Term()
 {
-	sceNp->Warning("sceNp2Term()");
+	sceNp.Warning("sceNp2Term()");
 
 	if (!sceNpInstance.m_bSceNp2Initialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
@@ -84,7 +84,7 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 {
 	if (!Emu.GetVFS().ExistsFile(drm_path.get_ptr()))
 	{
-		sceNp->Warning("npDrmIsAvailable(): '%s' not found", drm_path.get_ptr());
+		sceNp.Warning("npDrmIsAvailable(): '%s' not found", drm_path.get_ptr());
 		return CELL_ENOENT;
 	}
 
@@ -100,8 +100,8 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 		}
 	}
 
-	sceNp->Warning("npDrmIsAvailable: Found DRM license file at %s", drm_path.get_ptr());
-	sceNp->Warning("npDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str.c_str());
+	sceNp.Warning("npDrmIsAvailable: Found DRM license file at %s", drm_path.get_ptr());
+	sceNp.Warning("npDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str.c_str());
 
 	// Set the necessary file paths.
 	std::string drm_file_name = fmt::AfterLast(drm_path.get_ptr(), '/');
@@ -118,7 +118,7 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	// Search dev_usb000 for a compatible RAP file. 
 	vfsDir raps_dir(rap_path);
 	if (!raps_dir.IsOpened())
-		sceNp->Warning("npDrmIsAvailable: Can't find RAP file for DRM!");
+		sceNp.Warning("npDrmIsAvailable: Can't find RAP file for DRM!");
 	else
 	{
 		for (const DirEntryInfo *entry : raps_dir)
@@ -149,28 +149,28 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 
 int sceNpDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 {
-	sceNp->Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
+	sceNp.Warning("sceNpDrmIsAvailable(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 int sceNpDrmIsAvailable2(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 {
-	sceNp->Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
+	sceNp.Warning("sceNpDrmIsAvailable2(k_licensee_addr=0x%x, drm_path_addr=0x%x('%s'))", k_licensee_addr, drm_path.addr(), drm_path.get_ptr());
 
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
 int sceNpDrmVerifyUpgradeLicense(vm::ptr<const char> content_id)
 {
-	sceNp->Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
+	sceNp.Todo("sceNpDrmVerifyUpgradeLicense(content_id_addr=0x%x)", content_id.addr());
 
 	return CELL_OK;
 }
 
 int sceNpDrmVerifyUpgradeLicense2(vm::ptr<const char> content_id)
 {
-	sceNp->Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
+	sceNp.Todo("sceNpDrmVerifyUpgradeLicense2(content_id_addr=0x%x)", content_id.addr());
 
 	return CELL_OK;
 }
@@ -189,14 +189,14 @@ int sceNpDrmGetTimelimit(u32 drm_path_addr, vm::ptr<u64> time_remain_usec)
 
 int sceNpDrmProcessExitSpawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp->Warning("sceNpDrmProcessExitSpawn()");
-	sceNp->Warning("path: %s", path.get_ptr());
-	sceNp->Warning("argv: 0x%x", argv_addr);
-	sceNp->Warning("envp: 0x%x", envp_addr);
-	sceNp->Warning("data: 0x%x", data_addr);
-	sceNp->Warning("data_size: 0x%x", data_size);
-	sceNp->Warning("prio: %d", prio);
-	sceNp->Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn()");
+	sceNp.Warning("path: %s", path.get_ptr());
+	sceNp.Warning("argv: 0x%x", argv_addr);
+	sceNp.Warning("envp: 0x%x", envp_addr);
+	sceNp.Warning("data: 0x%x", data_addr);
+	sceNp.Warning("data_size: 0x%x", data_size);
+	sceNp.Warning("prio: %d", prio);
+	sceNp.Warning("flags: %d", flags);
 
 	sys_game_process_exitspawn(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
@@ -205,14 +205,14 @@ int sceNpDrmProcessExitSpawn(vm::ptr<const char> path, u32 argv_addr, u32 envp_a
 
 int sceNpDrmProcessExitSpawn2(vm::ptr<const char> path, u32 argv_addr, u32 envp_addr, u32 data_addr, u32 data_size, u32 prio, u64 flags)
 {
-	sceNp->Warning("sceNpDrmProcessExitSpawn2()");
-	sceNp->Warning("path: %s", path.get_ptr());
-	sceNp->Warning("argv: 0x%x", argv_addr);
-	sceNp->Warning("envp: 0x%x", envp_addr);
-	sceNp->Warning("data: 0x%x", data_addr);
-	sceNp->Warning("data_size: 0x%x", data_size);
-	sceNp->Warning("prio: %d", prio);
-	sceNp->Warning("flags: %d", flags);
+	sceNp.Warning("sceNpDrmProcessExitSpawn2()");
+	sceNp.Warning("path: %s", path.get_ptr());
+	sceNp.Warning("argv: 0x%x", argv_addr);
+	sceNp.Warning("envp: 0x%x", envp_addr);
+	sceNp.Warning("data: 0x%x", data_addr);
+	sceNp.Warning("data_size: 0x%x", data_size);
+	sceNp.Warning("prio: %d", prio);
+	sceNp.Warning("flags: %d", flags);
 
 	sys_game_process_exitspawn2(path, argv_addr, envp_addr, data_addr, data_size, prio, flags);
 
@@ -311,7 +311,7 @@ int sceNpBasicAddFriend()
 
 int sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	sceNp->Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Warning("sceNpBasicGetFriendListEntryCount(count_addr=0x%x)", count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -366,7 +366,7 @@ int sceNpBasicAddPlayersHistoryAsync()
 
 int sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
-	sceNp->Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
+	sceNp.Todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count_addr=0x%x)", options, count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -388,7 +388,7 @@ int sceNpBasicAddBlockListEntry()
 
 int sceNpBasicGetBlockListEntryCount(u32 count)
 {
-	sceNp->Todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
+	sceNp.Todo("sceNpBasicGetBlockListEntryCount(count=%d)", count);
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -404,7 +404,7 @@ int sceNpBasicGetBlockListEntry()
 
 int sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
-	sceNp->Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetMessageAttachmentEntryCount(count_addr=0x%x)", count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -414,7 +414,7 @@ int sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 
 int sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp->Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -436,7 +436,7 @@ int sceNpBasicGetCustomInvitationEntry()
 
 int sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
-	sceNp->Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetMatchingInvitationEntryCount(count_addr=0x%x)", count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -446,7 +446,7 @@ int sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 
 int sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp->Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -456,7 +456,7 @@ int sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 int sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
-	sceNp->Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
+	sceNp.Todo("sceNpBasicGetClanMessageEntryCount(count_addr=0x%x)", count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -466,7 +466,7 @@ int sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 
 int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp->Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
+	sceNp.Todo("sceNpBasicGetClanMessageEntry(index=%d, from_addr=0x%x)", index, from.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -476,7 +476,7 @@ int sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 
 int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
-	sceNp->Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
+	sceNp.Warning("sceNpBasicGetMessageEntryCount(type=%d, count_addr=0x%x)", type, count.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -489,7 +489,7 @@ int sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 
 int sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
-	sceNp->Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
+	sceNp.Todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from_addr=0x%x)", type, index, from.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -499,7 +499,7 @@ int sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 
 int sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	sceNp->Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
+	sceNp.Warning("sceNpBasicGetEvent(event_addr=0x%x, from_addr=0x%x, data_addr=0x%x, size_addr=0x%x)", event.addr(), from.addr(), data.addr(), size.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -764,7 +764,7 @@ int sceNpFriendlistAbortGui()
 
 int sceNpLookupInit()
 {
-	sceNp->Warning("sceNpLookupInit()");
+	sceNp.Warning("sceNpLookupInit()");
 
 	// TODO: Make sure the error code returned is right,
 	//       since there are no error codes for Lookup utility.
@@ -778,7 +778,7 @@ int sceNpLookupInit()
 
 int sceNpLookupTerm()
 {
-	sceNp->Warning("sceNpLookupTerm()");
+	sceNp.Warning("sceNpLookupTerm()");
 
 	if (!sceNpInstance.m_bLookupInitialized)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
@@ -923,7 +923,7 @@ int sceNpManagerUnregisterCallback()
 
 int sceNpManagerGetStatus(vm::ptr<u32> status)
 {
-	sceNp->Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
+	sceNp.Log("sceNpManagerGetStatus(status_addr=0x%x)", status.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
@@ -984,7 +984,7 @@ int sceNpManagerGetAccountAge()
 
 int sceNpManagerGetContentRatingFlag(vm::ptr<u32> isRestricted, vm::ptr<u32> age)
 {
-	sceNp->Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
+	sceNp.Warning("sceNpManagerGetContentRatingFlag(isRestricted_addr=0x%x, age_addr=0x%x)", isRestricted.addr(), age.addr());
 
 	if (!sceNpInstance.m_bSceNpInitialized)
 		return SCE_NP_ERROR_NOT_INITIALIZED;
@@ -1214,7 +1214,7 @@ int sceNpProfileAbortGui()
 
 int sceNpScoreInit()
 {
-	sceNp->Warning("sceNpScoreInit()");
+	sceNp.Warning("sceNpScoreInit()");
 
 	if (sceNpInstance.m_bScoreInitialized)
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
@@ -1226,7 +1226,7 @@ int sceNpScoreInit()
 
 int sceNpScoreTerm()
 {
-	sceNp->Warning("sceNpScoreTerm()");
+	sceNp.Warning("sceNpScoreTerm()");
 
 	if (!sceNpInstance.m_bScoreInitialized)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
@@ -1643,236 +1643,234 @@ void sceNp_unload()
 	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
 }
 
-void sceNp_init(Module *pxThis)
+Module sceNp("sceNp", []()
 {
-	sceNp = pxThis;
-
-	sceNp->AddFunc(0xbd28fdbf, sceNpInit);
-	sceNp->AddFunc(0x41251f74, sceNp2Init);
-	sceNp->AddFunc(0xc2ced2b7, sceNpUtilBandwidthTestInitStart);
-	sceNp->AddFunc(0x4885aa18, sceNpTerm);
-	sceNp->AddFunc(0xaadb7c12, sceNp2Term);
-	sceNp->AddFunc(0x432b3cbf, sceNpUtilBandwidthTestShutdown);
-	sceNp->AddFunc(0xad218faf, sceNpDrmIsAvailable);
-	sceNp->AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
-	sceNp->AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
-	sceNp->AddFunc(0xbe0e3ee2, sceNpDrmVerifyUpgradeLicense2);
-	sceNp->AddFunc(0xf283c143, sceNpDrmExecuteGamePurchase);
-	sceNp->AddFunc(0xcf51864b, sceNpDrmGetTimelimit);
-	sceNp->AddFunc(0xaa16695f, sceNpDrmProcessExitSpawn);
-	sceNp->AddFunc(0xe6c8f3f9, sceNpDrmProcessExitSpawn2);
-	sceNp->AddFunc(0xbcc09fe7, sceNpBasicRegisterHandler);
-	sceNp->AddFunc(0x4026eac5, sceNpBasicRegisterContextSensitiveHandler);
-	sceNp->AddFunc(0xacb9ee8e, sceNpBasicUnregisterHandler);
-	sceNp->AddFunc(0x3f0808aa, sceNpBasicSetPresence);
-	sceNp->AddFunc(0xbe81c71c, sceNpBasicSetPresenceDetails);
-	sceNp->AddFunc(0x5e849303, sceNpBasicSetPresenceDetails2);
-	sceNp->AddFunc(0xec0a1fbf, sceNpBasicSendMessage);
-	sceNp->AddFunc(0x01fbbc9b, sceNpBasicSendMessageGui);
-	sceNp->AddFunc(0x43b989f5, sceNpBasicSendMessageAttachment);
-	sceNp->AddFunc(0xb5cb2d56, sceNpBasicRecvMessageAttachment);
-	sceNp->AddFunc(0x64a704cc, sceNpBasicRecvMessageAttachmentLoad);
-	sceNp->AddFunc(0x806960ab, sceNpBasicRecvMessageCustom);
-	sceNp->AddFunc(0xe1c9f675, sceNpBasicMarkMessageAsUsed);
-	sceNp->AddFunc(0x481ce0e8, sceNpBasicAbortGui);
-	sceNp->AddFunc(0x27c69eba, sceNpBasicAddFriend);
-	sceNp->AddFunc(0xafef640d, sceNpBasicGetFriendListEntryCount);
-	sceNp->AddFunc(0x04372385, sceNpBasicGetFriendListEntry);
-	sceNp->AddFunc(0x32c78a6a, sceNpBasicGetFriendPresenceByIndex);
-	sceNp->AddFunc(0x6453b27b, sceNpBasicGetFriendPresenceByIndex2);
-	sceNp->AddFunc(0xfd39ae13, sceNpBasicGetFriendPresenceByNpId);
-	sceNp->AddFunc(0x260caedd, sceNpBasicGetFriendPresenceByNpId2);
-	sceNp->AddFunc(0x168a3117, sceNpBasicAddPlayersHistory);
-	sceNp->AddFunc(0xbcdbb2ab, sceNpBasicAddPlayersHistoryAsync);
-	sceNp->AddFunc(0xa15f35fe, sceNpBasicGetPlayersHistoryEntryCount);
-	sceNp->AddFunc(0xbab91fc9, sceNpBasicGetPlayersHistoryEntry);
-	sceNp->AddFunc(0x1ae8a549, sceNpBasicAddBlockListEntry);
-	sceNp->AddFunc(0x73931bd0, sceNpBasicGetBlockListEntryCount);
-	sceNp->AddFunc(0xf2b3338a, sceNpBasicGetBlockListEntry);
-	sceNp->AddFunc(0x9153bdf4, sceNpBasicGetMessageAttachmentEntryCount);
-	sceNp->AddFunc(0x5d543bbe, sceNpBasicGetMessageAttachmentEntry);
-	sceNp->AddFunc(0xa8afa7d4, sceNpBasicGetCustomInvitationEntryCount);
-	sceNp->AddFunc(0xd053f113, sceNpBasicGetCustomInvitationEntry);
-	sceNp->AddFunc(0xaf505def, sceNpBasicGetMatchingInvitationEntryCount);
-	sceNp->AddFunc(0x05af1cb8, sceNpBasicGetMatchingInvitationEntry);
-	sceNp->AddFunc(0xbf607ec6, sceNpBasicGetClanMessageEntryCount);
-	sceNp->AddFunc(0x4d9c615d, sceNpBasicGetClanMessageEntry);
-	sceNp->AddFunc(0xecd503de, sceNpBasicGetMessageEntryCount);
-	sceNp->AddFunc(0x30d1cbde, sceNpBasicGetMessageEntry);
-	sceNp->AddFunc(0xe035f7d6, sceNpBasicGetEvent);
-	sceNp->AddFunc(0xfcac355a, sceNpCommerceCreateCtx);
-	sceNp->AddFunc(0xe2877bea, sceNpCommerceDestroyCtx);
-	sceNp->AddFunc(0x8d1d096c, sceNpCommerceInitProductCategory);
-	sceNp->AddFunc(0x6cb81eb2, sceNpCommerceDestroyProductCategory);
-	sceNp->AddFunc(0x26f33146, sceNpCommerceGetProductCategoryStart);
-	sceNp->AddFunc(0xcfd469e4, sceNpCommerceGetProductCategoryFinish);
-	sceNp->AddFunc(0x3f195b3a, sceNpCommerceGetProductCategoryResult);
-	sceNp->AddFunc(0x674bb9ff, sceNpCommerceGetProductCategoryAbort);
-	sceNp->AddFunc(0x936df4aa, sceNpCommerceGetProductId);
-	sceNp->AddFunc(0xeb5f2544, sceNpCommerceGetProductName);
-	sceNp->AddFunc(0x359642a6, sceNpCommerceGetCategoryDescription);
-	sceNp->AddFunc(0xaee8cf71, sceNpCommerceGetCategoryId);
-	sceNp->AddFunc(0x9452f4f8, sceNpCommerceGetCategoryImageURL);
-	sceNp->AddFunc(0xeb9df054, sceNpCommerceGetCategoryInfo);
-	sceNp->AddFunc(0x6e2ab18b, sceNpCommerceGetCategoryName);
-	sceNp->AddFunc(0x79225aa3, sceNpCommerceGetCurrencyCode);
-	sceNp->AddFunc(0xaf57d9c9, sceNpCommerceGetCurrencyDecimals);
-	sceNp->AddFunc(0xb1c02d66, sceNpCommerceGetCurrencyInfo);
-	sceNp->AddFunc(0x2be41ece, sceNpCommerceGetNumOfChildCategory);
-	sceNp->AddFunc(0x7208dc08, sceNpCommerceGetNumOfChildProductSku);
-	sceNp->AddFunc(0xa85a4951, sceNpCommerceGetSkuDescription);
-	sceNp->AddFunc(0x39a69619, sceNpCommerceGetSkuId);
-	sceNp->AddFunc(0xccbe2e69, sceNpCommerceGetSkuImageURL);
-	sceNp->AddFunc(0xee530059, sceNpCommerceGetSkuName);
-	sceNp->AddFunc(0x78d7f9ad, sceNpCommerceGetSkuPrice);
-	sceNp->AddFunc(0x1a3fcb69, sceNpCommerceGetSkuUserData);
-	sceNp->AddFunc(0x99ac9952, sceNpCommerceSetDataFlagStart);
-	sceNp->AddFunc(0xdbdb909f, sceNpCommerceGetDataFlagStart);
-	sceNp->AddFunc(0x8d4518a0, sceNpCommerceSetDataFlagFinish);
-	sceNp->AddFunc(0x9281e87a, sceNpCommerceGetDataFlagFinish);
-	sceNp->AddFunc(0xd03cea35, sceNpCommerceGetDataFlagState);
-	sceNp->AddFunc(0x0561448b, sceNpCommerceGetDataFlagAbort);
-	sceNp->AddFunc(0xba65de6d, sceNpCommerceGetChildCategoryInfo);
-	sceNp->AddFunc(0x01cd9cfd, sceNpCommerceGetChildProductSkuInfo);
-	sceNp->AddFunc(0xe36c660e, sceNpCommerceDoCheckoutStartAsync);
-	sceNp->AddFunc(0xaf3eba5a, sceNpCommerceDoCheckoutFinishAsync);
-	sceNp->AddFunc(0x45f8f3aa, sceNpCustomMenuRegisterActions);
-	sceNp->AddFunc(0xf9732ac8, sceNpCustomMenuActionSetActivation);
-	sceNp->AddFunc(0x9458f464, sceNpCustomMenuRegisterExceptionList);
-	sceNp->AddFunc(0xf0a9182b, sceNpFriendlist);
-	sceNp->AddFunc(0xd7fb1fa6, sceNpFriendlistCustom);
-	sceNp->AddFunc(0xf59e1da8, sceNpFriendlistAbortGui);
-	sceNp->AddFunc(0x5f2d9257, sceNpLookupInit);
-	sceNp->AddFunc(0x8440537c, sceNpLookupTerm);
-	sceNp->AddFunc(0xce81c7f0, sceNpLookupCreateTitleCtx);
-	sceNp->AddFunc(0x5de61626, sceNpLookupDestroyTitleCtx);
-	sceNp->AddFunc(0xea2e9ffc, sceNpLookupCreateTransactionCtx);
-	sceNp->AddFunc(0xfb87cf5e, sceNpLookupDestroyTransactionCtx);
-	sceNp->AddFunc(0x71e5af7e, sceNpLookupSetTimeout);
-	sceNp->AddFunc(0x3d1760dc, sceNpLookupAbortTransaction);
-	sceNp->AddFunc(0xd737fd2d, sceNpLookupWaitAsync);
-	sceNp->AddFunc(0x7508112e, sceNpLookupPollAsync);
-	sceNp->AddFunc(0x166dcc11, sceNpLookupNpId);
-	sceNp->AddFunc(0xd12e40ae, sceNpLookupNpIdAsync);
-	sceNp->AddFunc(0xdfd63b62, sceNpLookupUserProfile);
-	sceNp->AddFunc(0xff0a2378, sceNpLookupUserProfileAsync);
-	sceNp->AddFunc(0x2fccbfe0, sceNpLookupUserProfileWithAvatarSize);
-	sceNp->AddFunc(0x1fdb3ec2, sceNpLookupUserProfileWithAvatarSizeAsync);
-	sceNp->AddFunc(0xb6017827, sceNpLookupAvatarImage);
-	sceNp->AddFunc(0xbf9eea93, sceNpLookupAvatarImageAsync);
-	sceNp->AddFunc(0x9ee9f97e, sceNpLookupTitleStorage);
-	sceNp->AddFunc(0x5e117ed5, sceNpLookupTitleStorageAsync);
-	sceNp->AddFunc(0xca39c4b2, sceNpLookupTitleSmallStorage);
-	sceNp->AddFunc(0x860b1756, sceNpLookupTitleSmallStorageAsync);
-	sceNp->AddFunc(0xe7dcd3b4, sceNpManagerRegisterCallback);
-	sceNp->AddFunc(0x52a6b523, sceNpManagerUnregisterCallback);
-	sceNp->AddFunc(0xa7bff757, sceNpManagerGetStatus);
-	sceNp->AddFunc(0xbdc07fd5, sceNpManagerGetNetworkTime);
-	sceNp->AddFunc(0xbe07c708, sceNpManagerGetOnlineId);
-	sceNp->AddFunc(0xfe37a7f4, sceNpManagerGetNpId);
-	sceNp->AddFunc(0xf42c0df8, sceNpManagerGetOnlineName);
-	sceNp->AddFunc(0x36d0c2c5, sceNpManagerGetAvatarUrl);
-	sceNp->AddFunc(0x32200389, sceNpManagerGetMyLanguages);
-	sceNp->AddFunc(0xb1e0718b, sceNpManagerGetAccountRegion);
-	sceNp->AddFunc(0x168fcece, sceNpManagerGetAccountAge);
-	sceNp->AddFunc(0x6ee62ed2, sceNpManagerGetContentRatingFlag);
-	sceNp->AddFunc(0xeb7a3d84, sceNpManagerGetChatRestrictionFlag);
-	sceNp->AddFunc(0x4b9efb7a, sceNpManagerGetCachedInfo);
-	sceNp->AddFunc(0x16f88a6f, sceNpManagerGetPsHandle);
-	sceNp->AddFunc(0x7e2fef28, sceNpManagerRequestTicket);
-	sceNp->AddFunc(0x8297f1ec, sceNpManagerRequestTicket2);
-	sceNp->AddFunc(0x0968aa36, sceNpManagerGetTicket);
-	sceNp->AddFunc(0x58fa4fcd, sceNpManagerGetTicketParam);
-	sceNp->AddFunc(0xb66d1c46, sceNpManagerGetEntitlementIdList);
-	sceNp->AddFunc(0xa1709abd, sceNpManagerGetEntitlementById);
-	sceNp->AddFunc(0x442381f7, sceNpManagerSubSignin);
-	sceNp->AddFunc(0x60440c73, sceNpManagerSubSigninAbortGui);
-	sceNp->AddFunc(0x000e53cc, sceNpManagerSubSignout);
-	sceNp->AddFunc(0xac66568c, sceNpMatchingCreateCtx);
-	sceNp->AddFunc(0x2e1c5068, sceNpMatchingDestroyCtx);
-	sceNp->AddFunc(0x03c741a7, sceNpMatchingGetResult);
-	sceNp->AddFunc(0x26b3bc94, sceNpMatchingGetResultGUI);
-	sceNp->AddFunc(0x6f8fd267, sceNpMatchingSetRoomInfo);
-	sceNp->AddFunc(0x4a18a89e, sceNpMatchingSetRoomInfoNoLimit);
-	sceNp->AddFunc(0x691f429d, sceNpMatchingGetRoomInfo);
-	sceNp->AddFunc(0xb020684e, sceNpMatchingGetRoomInfoNoLimit);
-	sceNp->AddFunc(0xa284bd1d, sceNpMatchingSetRoomSearchFlag);
-	sceNp->AddFunc(0xee64cf8e, sceNpMatchingGetRoomSearchFlag);
-	sceNp->AddFunc(0x73a2e36b, sceNpMatchingGetRoomMemberListLocal);
-	sceNp->AddFunc(0xe24eea19, sceNpMatchingGetRoomListLimitGUI);
-	sceNp->AddFunc(0x34cc0ca4, sceNpMatchingKickRoomMember);
-	sceNp->AddFunc(0xd20d7798, sceNpMatchingKickRoomMemberWithOpt);
-	sceNp->AddFunc(0x14497465, sceNpMatchingQuickMatchGUI);
-	sceNp->AddFunc(0x8b7bbd73, sceNpMatchingSendInvitationGUI);
-	sceNp->AddFunc(0x2ad7837d, sceNpMatchingAcceptInvitationGUI);
-	sceNp->AddFunc(0x3cc8588a, sceNpMatchingCreateRoomGUI);
-	sceNp->AddFunc(0x474b7b13, sceNpMatchingJoinRoomGUI);
-	sceNp->AddFunc(0xf806c54c, sceNpMatchingLeaveRoom);
-	sceNp->AddFunc(0x32febb4c, sceNpMatchingSearchJoinRoomGUI);
-	sceNp->AddFunc(0xdae2d351, sceNpMatchingGrantOwnership);
-	sceNp->AddFunc(0xceeebc7a, sceNpProfileCallGui);
-	sceNp->AddFunc(0x2f2c6b3e, sceNpProfileAbortGui);
-	sceNp->AddFunc(0x32cf311f, sceNpScoreInit);
-	sceNp->AddFunc(0x9851f805, sceNpScoreTerm);
-	sceNp->AddFunc(0xb9f93bbb, sceNpScoreCreateTitleCtx);
-	sceNp->AddFunc(0x259113b8, sceNpScoreDestroyTitleCtx);
-	sceNp->AddFunc(0x6f5e8143, sceNpScoreCreateTransactionCtx);
-	sceNp->AddFunc(0xc5f4cf82, sceNpScoreDestroyTransactionCtx);
-	sceNp->AddFunc(0x29dd45dc, sceNpScoreSetTimeout);
-	sceNp->AddFunc(0x2706eaa1, sceNpScoreSetPlayerCharacterId);
-	sceNp->AddFunc(0x1a2704f7, sceNpScoreWaitAsync);
-	sceNp->AddFunc(0xa7a090e5, sceNpScorePollAsync);
-	sceNp->AddFunc(0xf4e0f607, sceNpScoreGetBoardInfo);
-	sceNp->AddFunc(0xddce7d15, sceNpScoreGetBoardInfoAsync);
-	sceNp->AddFunc(0x1672170e, sceNpScoreRecordScore);
-	sceNp->AddFunc(0xf0b1e399, sceNpScoreRecordScoreAsync);
-	sceNp->AddFunc(0x04ca5e6a, sceNpScoreRecordGameData);
-	sceNp->AddFunc(0xf76847c2, sceNpScoreRecordGameDataAsync);
-	sceNp->AddFunc(0x3b02418d, sceNpScoreGetGameData);
-	sceNp->AddFunc(0xdb2e4dc2, sceNpScoreGetGameDataAsync);
-	sceNp->AddFunc(0x05d65dff, sceNpScoreGetRankingByNpId);
-	sceNp->AddFunc(0x3db7914d, sceNpScoreGetRankingByNpIdAsync);
-	sceNp->AddFunc(0xfbc82301, sceNpScoreGetRankingByRange);
-	sceNp->AddFunc(0x21206642, sceNpScoreGetRankingByRangeAsync);
-	sceNp->AddFunc(0x7deb244c, sceNpScoreCensorComment);
-	sceNp->AddFunc(0x7be47e61, sceNpScoreCensorCommentAsync);
-	sceNp->AddFunc(0xf1b77918, sceNpScoreSanitizeComment);
-	sceNp->AddFunc(0x2cd2a1af, sceNpScoreSanitizeCommentAsync);
-	sceNp->AddFunc(0xc3a991ee, sceNpScoreGetRankingByNpIdPcId);
-	sceNp->AddFunc(0xc4b6cd8f, sceNpScoreGetRankingByNpIdPcIdAsync);
-	sceNp->AddFunc(0xee5b20d9, sceNpScoreAbortTransaction);
-	sceNp->AddFunc(0xded17c26, sceNpScoreGetClansMembersRankingByNpId);
-	sceNp->AddFunc(0xe8a67160, sceNpScoreGetClansMembersRankingByNpIdAsync);
-	sceNp->AddFunc(0x41ffd4f2, sceNpScoreGetClansMembersRankingByNpIdPcId);
-	sceNp->AddFunc(0x433fcb30, sceNpScoreGetClansMembersRankingByNpIdPcIdAsync);
-	sceNp->AddFunc(0x6d4adc3b, sceNpScoreGetClansMembersRankingByRange);
-	sceNp->AddFunc(0x4d5e0670, sceNpScoreGetClansMembersRankingByRangeAsync);
-	sceNp->AddFunc(0x741fbf24, sceNpScoreGetClanMemberGameData);
-	sceNp->AddFunc(0xbef887e5, sceNpScoreGetClanMemberGameDataAsync);
-	sceNp->AddFunc(0x2a76895a, sceNpScoreGetClansRankingByClanId);
-	sceNp->AddFunc(0x227f8763, sceNpScoreGetClansRankingByClanIdAsync);
-	sceNp->AddFunc(0xb082003b, sceNpScoreGetClansRankingByRange);
-	sceNp->AddFunc(0x7b7e9137, sceNpScoreGetClansRankingByRangeAsync);
-	sceNp->AddFunc(0x6356082e, sceNpSignalingCreateCtx);
-	sceNp->AddFunc(0xa8cf8451, sceNpSignalingDestroyCtx);
-	sceNp->AddFunc(0x50b86d94, sceNpSignalingAddExtendedHandler);
-	sceNp->AddFunc(0x276c72b2, sceNpSignalingSetCtxOpt);
-	sceNp->AddFunc(0x2687a127, sceNpSignalingGetCtxOpt);
-	sceNp->AddFunc(0x60897c38, sceNpSignalingActivateConnection);
-	sceNp->AddFunc(0xfd0eb5ae, sceNpSignalingDeactivateConnection);
-	sceNp->AddFunc(0x95c7bba3, sceNpSignalingTerminateConnection);
-	sceNp->AddFunc(0xca0a2d04, sceNpSignalingGetConnectionStatus);
-	sceNp->AddFunc(0x155de760, sceNpSignalingGetConnectionInfo);
-	sceNp->AddFunc(0xe853d388, sceNpSignalingGetConnectionFromNpId);
-	sceNp->AddFunc(0x34ce82a0, sceNpSignalingGetConnectionFromPeerAddress);
-	sceNp->AddFunc(0x9ad7fbd1, sceNpSignalingGetLocalNetInfo);
-	sceNp->AddFunc(0x75eb50cb, sceNpSignalingGetPeerNetInfo);
-	sceNp->AddFunc(0x64dbb89d, sceNpSignalingCancelPeerNetInfo);
-	sceNp->AddFunc(0xd0958814, sceNpSignalingGetPeerNetInfoResult);
-	sceNp->AddFunc(0xd208f91d, sceNpUtilCmpNpId);
-	sceNp->AddFunc(0xf5ff5f31, sceNpUtilCmpNpIdInOrder);
-	sceNp->AddFunc(0xc880f37d, sceNpUtilBandwidthTestGetStatus);
-	sceNp->AddFunc(0xc99ee313, sceNpUtilBandwidthTestAbort);
-	sceNp->AddFunc(0xee0cc40c, _sceNpSysutilClientMalloc);
-	sceNp->AddFunc(0x816c6a5f, _sceNpSysutilClientFree);
-}
+	sceNp.AddFunc(0xbd28fdbf, sceNpInit);
+	sceNp.AddFunc(0x41251f74, sceNp2Init);
+	sceNp.AddFunc(0xc2ced2b7, sceNpUtilBandwidthTestInitStart);
+	sceNp.AddFunc(0x4885aa18, sceNpTerm);
+	sceNp.AddFunc(0xaadb7c12, sceNp2Term);
+	sceNp.AddFunc(0x432b3cbf, sceNpUtilBandwidthTestShutdown);
+	sceNp.AddFunc(0xad218faf, sceNpDrmIsAvailable);
+	sceNp.AddFunc(0xf042b14f, sceNpDrmIsAvailable2);
+	sceNp.AddFunc(0x2ecd48ed, sceNpDrmVerifyUpgradeLicense);
+	sceNp.AddFunc(0xbe0e3ee2, sceNpDrmVerifyUpgradeLicense2);
+	sceNp.AddFunc(0xf283c143, sceNpDrmExecuteGamePurchase);
+	sceNp.AddFunc(0xcf51864b, sceNpDrmGetTimelimit);
+	sceNp.AddFunc(0xaa16695f, sceNpDrmProcessExitSpawn);
+	sceNp.AddFunc(0xe6c8f3f9, sceNpDrmProcessExitSpawn2);
+	sceNp.AddFunc(0xbcc09fe7, sceNpBasicRegisterHandler);
+	sceNp.AddFunc(0x4026eac5, sceNpBasicRegisterContextSensitiveHandler);
+	sceNp.AddFunc(0xacb9ee8e, sceNpBasicUnregisterHandler);
+	sceNp.AddFunc(0x3f0808aa, sceNpBasicSetPresence);
+	sceNp.AddFunc(0xbe81c71c, sceNpBasicSetPresenceDetails);
+	sceNp.AddFunc(0x5e849303, sceNpBasicSetPresenceDetails2);
+	sceNp.AddFunc(0xec0a1fbf, sceNpBasicSendMessage);
+	sceNp.AddFunc(0x01fbbc9b, sceNpBasicSendMessageGui);
+	sceNp.AddFunc(0x43b989f5, sceNpBasicSendMessageAttachment);
+	sceNp.AddFunc(0xb5cb2d56, sceNpBasicRecvMessageAttachment);
+	sceNp.AddFunc(0x64a704cc, sceNpBasicRecvMessageAttachmentLoad);
+	sceNp.AddFunc(0x806960ab, sceNpBasicRecvMessageCustom);
+	sceNp.AddFunc(0xe1c9f675, sceNpBasicMarkMessageAsUsed);
+	sceNp.AddFunc(0x481ce0e8, sceNpBasicAbortGui);
+	sceNp.AddFunc(0x27c69eba, sceNpBasicAddFriend);
+	sceNp.AddFunc(0xafef640d, sceNpBasicGetFriendListEntryCount);
+	sceNp.AddFunc(0x04372385, sceNpBasicGetFriendListEntry);
+	sceNp.AddFunc(0x32c78a6a, sceNpBasicGetFriendPresenceByIndex);
+	sceNp.AddFunc(0x6453b27b, sceNpBasicGetFriendPresenceByIndex2);
+	sceNp.AddFunc(0xfd39ae13, sceNpBasicGetFriendPresenceByNpId);
+	sceNp.AddFunc(0x260caedd, sceNpBasicGetFriendPresenceByNpId2);
+	sceNp.AddFunc(0x168a3117, sceNpBasicAddPlayersHistory);
+	sceNp.AddFunc(0xbcdbb2ab, sceNpBasicAddPlayersHistoryAsync);
+	sceNp.AddFunc(0xa15f35fe, sceNpBasicGetPlayersHistoryEntryCount);
+	sceNp.AddFunc(0xbab91fc9, sceNpBasicGetPlayersHistoryEntry);
+	sceNp.AddFunc(0x1ae8a549, sceNpBasicAddBlockListEntry);
+	sceNp.AddFunc(0x73931bd0, sceNpBasicGetBlockListEntryCount);
+	sceNp.AddFunc(0xf2b3338a, sceNpBasicGetBlockListEntry);
+	sceNp.AddFunc(0x9153bdf4, sceNpBasicGetMessageAttachmentEntryCount);
+	sceNp.AddFunc(0x5d543bbe, sceNpBasicGetMessageAttachmentEntry);
+	sceNp.AddFunc(0xa8afa7d4, sceNpBasicGetCustomInvitationEntryCount);
+	sceNp.AddFunc(0xd053f113, sceNpBasicGetCustomInvitationEntry);
+	sceNp.AddFunc(0xaf505def, sceNpBasicGetMatchingInvitationEntryCount);
+	sceNp.AddFunc(0x05af1cb8, sceNpBasicGetMatchingInvitationEntry);
+	sceNp.AddFunc(0xbf607ec6, sceNpBasicGetClanMessageEntryCount);
+	sceNp.AddFunc(0x4d9c615d, sceNpBasicGetClanMessageEntry);
+	sceNp.AddFunc(0xecd503de, sceNpBasicGetMessageEntryCount);
+	sceNp.AddFunc(0x30d1cbde, sceNpBasicGetMessageEntry);
+	sceNp.AddFunc(0xe035f7d6, sceNpBasicGetEvent);
+	sceNp.AddFunc(0xfcac355a, sceNpCommerceCreateCtx);
+	sceNp.AddFunc(0xe2877bea, sceNpCommerceDestroyCtx);
+	sceNp.AddFunc(0x8d1d096c, sceNpCommerceInitProductCategory);
+	sceNp.AddFunc(0x6cb81eb2, sceNpCommerceDestroyProductCategory);
+	sceNp.AddFunc(0x26f33146, sceNpCommerceGetProductCategoryStart);
+	sceNp.AddFunc(0xcfd469e4, sceNpCommerceGetProductCategoryFinish);
+	sceNp.AddFunc(0x3f195b3a, sceNpCommerceGetProductCategoryResult);
+	sceNp.AddFunc(0x674bb9ff, sceNpCommerceGetProductCategoryAbort);
+	sceNp.AddFunc(0x936df4aa, sceNpCommerceGetProductId);
+	sceNp.AddFunc(0xeb5f2544, sceNpCommerceGetProductName);
+	sceNp.AddFunc(0x359642a6, sceNpCommerceGetCategoryDescription);
+	sceNp.AddFunc(0xaee8cf71, sceNpCommerceGetCategoryId);
+	sceNp.AddFunc(0x9452f4f8, sceNpCommerceGetCategoryImageURL);
+	sceNp.AddFunc(0xeb9df054, sceNpCommerceGetCategoryInfo);
+	sceNp.AddFunc(0x6e2ab18b, sceNpCommerceGetCategoryName);
+	sceNp.AddFunc(0x79225aa3, sceNpCommerceGetCurrencyCode);
+	sceNp.AddFunc(0xaf57d9c9, sceNpCommerceGetCurrencyDecimals);
+	sceNp.AddFunc(0xb1c02d66, sceNpCommerceGetCurrencyInfo);
+	sceNp.AddFunc(0x2be41ece, sceNpCommerceGetNumOfChildCategory);
+	sceNp.AddFunc(0x7208dc08, sceNpCommerceGetNumOfChildProductSku);
+	sceNp.AddFunc(0xa85a4951, sceNpCommerceGetSkuDescription);
+	sceNp.AddFunc(0x39a69619, sceNpCommerceGetSkuId);
+	sceNp.AddFunc(0xccbe2e69, sceNpCommerceGetSkuImageURL);
+	sceNp.AddFunc(0xee530059, sceNpCommerceGetSkuName);
+	sceNp.AddFunc(0x78d7f9ad, sceNpCommerceGetSkuPrice);
+	sceNp.AddFunc(0x1a3fcb69, sceNpCommerceGetSkuUserData);
+	sceNp.AddFunc(0x99ac9952, sceNpCommerceSetDataFlagStart);
+	sceNp.AddFunc(0xdbdb909f, sceNpCommerceGetDataFlagStart);
+	sceNp.AddFunc(0x8d4518a0, sceNpCommerceSetDataFlagFinish);
+	sceNp.AddFunc(0x9281e87a, sceNpCommerceGetDataFlagFinish);
+	sceNp.AddFunc(0xd03cea35, sceNpCommerceGetDataFlagState);
+	sceNp.AddFunc(0x0561448b, sceNpCommerceGetDataFlagAbort);
+	sceNp.AddFunc(0xba65de6d, sceNpCommerceGetChildCategoryInfo);
+	sceNp.AddFunc(0x01cd9cfd, sceNpCommerceGetChildProductSkuInfo);
+	sceNp.AddFunc(0xe36c660e, sceNpCommerceDoCheckoutStartAsync);
+	sceNp.AddFunc(0xaf3eba5a, sceNpCommerceDoCheckoutFinishAsync);
+	sceNp.AddFunc(0x45f8f3aa, sceNpCustomMenuRegisterActions);
+	sceNp.AddFunc(0xf9732ac8, sceNpCustomMenuActionSetActivation);
+	sceNp.AddFunc(0x9458f464, sceNpCustomMenuRegisterExceptionList);
+	sceNp.AddFunc(0xf0a9182b, sceNpFriendlist);
+	sceNp.AddFunc(0xd7fb1fa6, sceNpFriendlistCustom);
+	sceNp.AddFunc(0xf59e1da8, sceNpFriendlistAbortGui);
+	sceNp.AddFunc(0x5f2d9257, sceNpLookupInit);
+	sceNp.AddFunc(0x8440537c, sceNpLookupTerm);
+	sceNp.AddFunc(0xce81c7f0, sceNpLookupCreateTitleCtx);
+	sceNp.AddFunc(0x5de61626, sceNpLookupDestroyTitleCtx);
+	sceNp.AddFunc(0xea2e9ffc, sceNpLookupCreateTransactionCtx);
+	sceNp.AddFunc(0xfb87cf5e, sceNpLookupDestroyTransactionCtx);
+	sceNp.AddFunc(0x71e5af7e, sceNpLookupSetTimeout);
+	sceNp.AddFunc(0x3d1760dc, sceNpLookupAbortTransaction);
+	sceNp.AddFunc(0xd737fd2d, sceNpLookupWaitAsync);
+	sceNp.AddFunc(0x7508112e, sceNpLookupPollAsync);
+	sceNp.AddFunc(0x166dcc11, sceNpLookupNpId);
+	sceNp.AddFunc(0xd12e40ae, sceNpLookupNpIdAsync);
+	sceNp.AddFunc(0xdfd63b62, sceNpLookupUserProfile);
+	sceNp.AddFunc(0xff0a2378, sceNpLookupUserProfileAsync);
+	sceNp.AddFunc(0x2fccbfe0, sceNpLookupUserProfileWithAvatarSize);
+	sceNp.AddFunc(0x1fdb3ec2, sceNpLookupUserProfileWithAvatarSizeAsync);
+	sceNp.AddFunc(0xb6017827, sceNpLookupAvatarImage);
+	sceNp.AddFunc(0xbf9eea93, sceNpLookupAvatarImageAsync);
+	sceNp.AddFunc(0x9ee9f97e, sceNpLookupTitleStorage);
+	sceNp.AddFunc(0x5e117ed5, sceNpLookupTitleStorageAsync);
+	sceNp.AddFunc(0xca39c4b2, sceNpLookupTitleSmallStorage);
+	sceNp.AddFunc(0x860b1756, sceNpLookupTitleSmallStorageAsync);
+	sceNp.AddFunc(0xe7dcd3b4, sceNpManagerRegisterCallback);
+	sceNp.AddFunc(0x52a6b523, sceNpManagerUnregisterCallback);
+	sceNp.AddFunc(0xa7bff757, sceNpManagerGetStatus);
+	sceNp.AddFunc(0xbdc07fd5, sceNpManagerGetNetworkTime);
+	sceNp.AddFunc(0xbe07c708, sceNpManagerGetOnlineId);
+	sceNp.AddFunc(0xfe37a7f4, sceNpManagerGetNpId);
+	sceNp.AddFunc(0xf42c0df8, sceNpManagerGetOnlineName);
+	sceNp.AddFunc(0x36d0c2c5, sceNpManagerGetAvatarUrl);
+	sceNp.AddFunc(0x32200389, sceNpManagerGetMyLanguages);
+	sceNp.AddFunc(0xb1e0718b, sceNpManagerGetAccountRegion);
+	sceNp.AddFunc(0x168fcece, sceNpManagerGetAccountAge);
+	sceNp.AddFunc(0x6ee62ed2, sceNpManagerGetContentRatingFlag);
+	sceNp.AddFunc(0xeb7a3d84, sceNpManagerGetChatRestrictionFlag);
+	sceNp.AddFunc(0x4b9efb7a, sceNpManagerGetCachedInfo);
+	sceNp.AddFunc(0x16f88a6f, sceNpManagerGetPsHandle);
+	sceNp.AddFunc(0x7e2fef28, sceNpManagerRequestTicket);
+	sceNp.AddFunc(0x8297f1ec, sceNpManagerRequestTicket2);
+	sceNp.AddFunc(0x0968aa36, sceNpManagerGetTicket);
+	sceNp.AddFunc(0x58fa4fcd, sceNpManagerGetTicketParam);
+	sceNp.AddFunc(0xb66d1c46, sceNpManagerGetEntitlementIdList);
+	sceNp.AddFunc(0xa1709abd, sceNpManagerGetEntitlementById);
+	sceNp.AddFunc(0x442381f7, sceNpManagerSubSignin);
+	sceNp.AddFunc(0x60440c73, sceNpManagerSubSigninAbortGui);
+	sceNp.AddFunc(0x000e53cc, sceNpManagerSubSignout);
+	sceNp.AddFunc(0xac66568c, sceNpMatchingCreateCtx);
+	sceNp.AddFunc(0x2e1c5068, sceNpMatchingDestroyCtx);
+	sceNp.AddFunc(0x03c741a7, sceNpMatchingGetResult);
+	sceNp.AddFunc(0x26b3bc94, sceNpMatchingGetResultGUI);
+	sceNp.AddFunc(0x6f8fd267, sceNpMatchingSetRoomInfo);
+	sceNp.AddFunc(0x4a18a89e, sceNpMatchingSetRoomInfoNoLimit);
+	sceNp.AddFunc(0x691f429d, sceNpMatchingGetRoomInfo);
+	sceNp.AddFunc(0xb020684e, sceNpMatchingGetRoomInfoNoLimit);
+	sceNp.AddFunc(0xa284bd1d, sceNpMatchingSetRoomSearchFlag);
+	sceNp.AddFunc(0xee64cf8e, sceNpMatchingGetRoomSearchFlag);
+	sceNp.AddFunc(0x73a2e36b, sceNpMatchingGetRoomMemberListLocal);
+	sceNp.AddFunc(0xe24eea19, sceNpMatchingGetRoomListLimitGUI);
+	sceNp.AddFunc(0x34cc0ca4, sceNpMatchingKickRoomMember);
+	sceNp.AddFunc(0xd20d7798, sceNpMatchingKickRoomMemberWithOpt);
+	sceNp.AddFunc(0x14497465, sceNpMatchingQuickMatchGUI);
+	sceNp.AddFunc(0x8b7bbd73, sceNpMatchingSendInvitationGUI);
+	sceNp.AddFunc(0x2ad7837d, sceNpMatchingAcceptInvitationGUI);
+	sceNp.AddFunc(0x3cc8588a, sceNpMatchingCreateRoomGUI);
+	sceNp.AddFunc(0x474b7b13, sceNpMatchingJoinRoomGUI);
+	sceNp.AddFunc(0xf806c54c, sceNpMatchingLeaveRoom);
+	sceNp.AddFunc(0x32febb4c, sceNpMatchingSearchJoinRoomGUI);
+	sceNp.AddFunc(0xdae2d351, sceNpMatchingGrantOwnership);
+	sceNp.AddFunc(0xceeebc7a, sceNpProfileCallGui);
+	sceNp.AddFunc(0x2f2c6b3e, sceNpProfileAbortGui);
+	sceNp.AddFunc(0x32cf311f, sceNpScoreInit);
+	sceNp.AddFunc(0x9851f805, sceNpScoreTerm);
+	sceNp.AddFunc(0xb9f93bbb, sceNpScoreCreateTitleCtx);
+	sceNp.AddFunc(0x259113b8, sceNpScoreDestroyTitleCtx);
+	sceNp.AddFunc(0x6f5e8143, sceNpScoreCreateTransactionCtx);
+	sceNp.AddFunc(0xc5f4cf82, sceNpScoreDestroyTransactionCtx);
+	sceNp.AddFunc(0x29dd45dc, sceNpScoreSetTimeout);
+	sceNp.AddFunc(0x2706eaa1, sceNpScoreSetPlayerCharacterId);
+	sceNp.AddFunc(0x1a2704f7, sceNpScoreWaitAsync);
+	sceNp.AddFunc(0xa7a090e5, sceNpScorePollAsync);
+	sceNp.AddFunc(0xf4e0f607, sceNpScoreGetBoardInfo);
+	sceNp.AddFunc(0xddce7d15, sceNpScoreGetBoardInfoAsync);
+	sceNp.AddFunc(0x1672170e, sceNpScoreRecordScore);
+	sceNp.AddFunc(0xf0b1e399, sceNpScoreRecordScoreAsync);
+	sceNp.AddFunc(0x04ca5e6a, sceNpScoreRecordGameData);
+	sceNp.AddFunc(0xf76847c2, sceNpScoreRecordGameDataAsync);
+	sceNp.AddFunc(0x3b02418d, sceNpScoreGetGameData);
+	sceNp.AddFunc(0xdb2e4dc2, sceNpScoreGetGameDataAsync);
+	sceNp.AddFunc(0x05d65dff, sceNpScoreGetRankingByNpId);
+	sceNp.AddFunc(0x3db7914d, sceNpScoreGetRankingByNpIdAsync);
+	sceNp.AddFunc(0xfbc82301, sceNpScoreGetRankingByRange);
+	sceNp.AddFunc(0x21206642, sceNpScoreGetRankingByRangeAsync);
+	sceNp.AddFunc(0x7deb244c, sceNpScoreCensorComment);
+	sceNp.AddFunc(0x7be47e61, sceNpScoreCensorCommentAsync);
+	sceNp.AddFunc(0xf1b77918, sceNpScoreSanitizeComment);
+	sceNp.AddFunc(0x2cd2a1af, sceNpScoreSanitizeCommentAsync);
+	sceNp.AddFunc(0xc3a991ee, sceNpScoreGetRankingByNpIdPcId);
+	sceNp.AddFunc(0xc4b6cd8f, sceNpScoreGetRankingByNpIdPcIdAsync);
+	sceNp.AddFunc(0xee5b20d9, sceNpScoreAbortTransaction);
+	sceNp.AddFunc(0xded17c26, sceNpScoreGetClansMembersRankingByNpId);
+	sceNp.AddFunc(0xe8a67160, sceNpScoreGetClansMembersRankingByNpIdAsync);
+	sceNp.AddFunc(0x41ffd4f2, sceNpScoreGetClansMembersRankingByNpIdPcId);
+	sceNp.AddFunc(0x433fcb30, sceNpScoreGetClansMembersRankingByNpIdPcIdAsync);
+	sceNp.AddFunc(0x6d4adc3b, sceNpScoreGetClansMembersRankingByRange);
+	sceNp.AddFunc(0x4d5e0670, sceNpScoreGetClansMembersRankingByRangeAsync);
+	sceNp.AddFunc(0x741fbf24, sceNpScoreGetClanMemberGameData);
+	sceNp.AddFunc(0xbef887e5, sceNpScoreGetClanMemberGameDataAsync);
+	sceNp.AddFunc(0x2a76895a, sceNpScoreGetClansRankingByClanId);
+	sceNp.AddFunc(0x227f8763, sceNpScoreGetClansRankingByClanIdAsync);
+	sceNp.AddFunc(0xb082003b, sceNpScoreGetClansRankingByRange);
+	sceNp.AddFunc(0x7b7e9137, sceNpScoreGetClansRankingByRangeAsync);
+	sceNp.AddFunc(0x6356082e, sceNpSignalingCreateCtx);
+	sceNp.AddFunc(0xa8cf8451, sceNpSignalingDestroyCtx);
+	sceNp.AddFunc(0x50b86d94, sceNpSignalingAddExtendedHandler);
+	sceNp.AddFunc(0x276c72b2, sceNpSignalingSetCtxOpt);
+	sceNp.AddFunc(0x2687a127, sceNpSignalingGetCtxOpt);
+	sceNp.AddFunc(0x60897c38, sceNpSignalingActivateConnection);
+	sceNp.AddFunc(0xfd0eb5ae, sceNpSignalingDeactivateConnection);
+	sceNp.AddFunc(0x95c7bba3, sceNpSignalingTerminateConnection);
+	sceNp.AddFunc(0xca0a2d04, sceNpSignalingGetConnectionStatus);
+	sceNp.AddFunc(0x155de760, sceNpSignalingGetConnectionInfo);
+	sceNp.AddFunc(0xe853d388, sceNpSignalingGetConnectionFromNpId);
+	sceNp.AddFunc(0x34ce82a0, sceNpSignalingGetConnectionFromPeerAddress);
+	sceNp.AddFunc(0x9ad7fbd1, sceNpSignalingGetLocalNetInfo);
+	sceNp.AddFunc(0x75eb50cb, sceNpSignalingGetPeerNetInfo);
+	sceNp.AddFunc(0x64dbb89d, sceNpSignalingCancelPeerNetInfo);
+	sceNp.AddFunc(0xd0958814, sceNpSignalingGetPeerNetInfoResult);
+	sceNp.AddFunc(0xd208f91d, sceNpUtilCmpNpId);
+	sceNp.AddFunc(0xf5ff5f31, sceNpUtilCmpNpIdInOrder);
+	sceNp.AddFunc(0xc880f37d, sceNpUtilBandwidthTestGetStatus);
+	sceNp.AddFunc(0xc99ee313, sceNpUtilBandwidthTestAbort);
+	sceNp.AddFunc(0xee0cc40c, _sceNpSysutilClientMalloc);
+	sceNp.AddFunc(0x816c6a5f, _sceNpSysutilClientFree);
+});

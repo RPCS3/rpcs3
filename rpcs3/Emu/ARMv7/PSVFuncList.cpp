@@ -5,17 +5,50 @@
 std::vector<psv_func> g_psv_func_list;
 std::vector<psv_log_base*> g_psv_modules;
 
-void add_psv_func(psv_func& data)
-{
-	g_psv_func_list.push_back(data);
-}
-
-const psv_func* get_psv_func_by_nid(u32 nid)
+u32 add_psv_func(psv_func data)
 {
 	for (auto& f : g_psv_func_list)
 	{
-		if (f.nid == nid && &f - g_psv_func_list.data() >= 2 /* special functions count */)
+		if (f.nid == data.nid)
 		{
+			const u32 index = (u32)(&f - g_psv_func_list.data());
+
+			if (index < SFI_MAX)
+			{
+				continue;
+			}
+
+			if (data.func)
+			{
+				f.func = data.func;
+			}
+		
+			return index;
+		}
+	}
+
+	g_psv_func_list.push_back(data);
+	return (u32)(g_psv_func_list.size() - 1);
+}
+
+psv_func* get_psv_func_by_nid(u32 nid, u32* out_index)
+{
+	for (auto& f : g_psv_func_list)
+	{
+		if (f.nid == nid && &f - g_psv_func_list.data())
+		{
+			const u32 index = (u32)(&f - g_psv_func_list.data());
+
+			if (index < SFI_MAX)
+			{
+				continue;
+			}
+
+			if (out_index)
+			{
+				*out_index = index;
+			}
+
 			return &f;
 		}
 	}
@@ -23,32 +56,38 @@ const psv_func* get_psv_func_by_nid(u32 nid)
 	return nullptr;
 }
 
-u32 get_psv_func_index(const psv_func* func)
+psv_func* get_psv_func_by_index(u32 index)
 {
-	auto res = func - g_psv_func_list.data();
-
-	assert((size_t)res < g_psv_func_list.size());
-
-	return (u32)res;
-}
-
-const psv_func* get_psv_func_by_index(u32 index)
-{
-	assert(index < g_psv_func_list.size());
+	if (index >= g_psv_func_list.size())
+	{
+		return nullptr;
+	}
 
 	return &g_psv_func_list[index];
 }
 
 void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 {
-	auto func = get_psv_func_by_index(index);
-	
-	auto old_last_syscall = context.thread.m_last_syscall;
-	context.thread.m_last_syscall = func->nid;
+	if (auto func = get_psv_func_by_index(index))
+	{
+		auto old_last_syscall = context.thread.m_last_syscall;
+		context.thread.m_last_syscall = func->nid;
 
-	(*func->func)(context);
+		if (func->func)
+		{
+			(*func->func)(context);
+		}
+		else
+		{
+			throw "Unimplemented function";
+		}
 
-	context.thread.m_last_syscall = old_last_syscall;
+		context.thread.m_last_syscall = old_last_syscall;
+	}
+	else
+	{
+		throw "Invalid function index";
+	}
 }
 
 extern psv_log_base sceAppMgr;
@@ -179,24 +218,15 @@ void initialize_psv_modules()
 	g_psv_modules.push_back(&sceXml);
 
 	// setup special functions (without NIDs)
-	psv_func unimplemented;
-	unimplemented.nid = 0;
-	unimplemented.name = "UNIMPLEMENTED";
-	unimplemented.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
-	{
-		context.thread.m_last_syscall = vm::psv::read32(context.thread.PC + 4);
-		throw "Unimplemented function";
-	}));
-	g_psv_func_list.push_back(unimplemented);
+	g_psv_func_list.resize(SFI_MAX);
 
-	psv_func hle_return;
-	hle_return.nid = 1;
+	psv_func& hle_return = g_psv_func_list[SFI_HLE_RETURN];
+	hle_return.nid = 0;
 	hle_return.name = "HLE_RETURN";
 	hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
 	{
 		context.thread.FastStop();
 	}));
-	g_psv_func_list.push_back(hle_return);
 
 	// load functions
 	for (auto module : g_psv_modules)

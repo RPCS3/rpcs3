@@ -19,41 +19,28 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
-Module *cellSpurs = nullptr;
-
-#ifdef PRX_DEBUG
-extern u32 libsre;
-extern u32 libsre_rtoc;
-#endif
+extern Module cellSpurs;
 
 bool spursKernelEntry(SPUThread & spu);
-s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id);
-s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
+s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id);
+s32 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
 
-s64 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8> port, s32 size, u64 name_u64)
+s32 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8> port, s32 size, u64 name_u64)
 {
-#ifdef PRX_DEBUG_XXX
-	vm::var<be_t<u32>> queue;
-	s32 res = cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<be_t<u32>>, vm::ptr<u8>, s32, u32>(GetCurrentPPUThread(), libsre + 0xB14C, libsre_rtoc,
-		spurs, queue, port, size, vm::read32(libsre_rtoc - 0x7E2C));
-	queue_id = queue.value();
-	return res;
-#endif
-
 	queue_id = event_queue_create(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
 	if (!queue_id)
 	{
 		return CELL_EAGAIN; // rough
 	}
 
-	if (s32 res = (s32)spursAttachLv2EventQueue(spurs, queue_id, port, 1, true))
+	if (s32 res = spursAttachLv2EventQueue(spurs, queue_id, port, 1, true))
 	{
 		assert(!"spursAttachLv2EventQueue() failed");
 	}
 	return CELL_OK;
 }
 
-s64 spursInit(
+s32 spursInit(
 	vm::ptr<CellSpurs> spurs,
 	const u32 revision,
 	const u32 sdkVersion,
@@ -68,11 +55,6 @@ s64 spursInit(
 	const u32 swlMaxSpu,
 	const u32 swlIsPreem)
 {
-#ifdef PRX_DEBUG_XXX
-	return cb_call<s32, vm::ptr<CellSpurs>, u32, u32, s32, s32, s32, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x74E4, libsre_rtoc,
-		spurs, revision, sdkVersion, nSpus, spuPriority, ppuPriority, flags, vm::get_addr(prefix), prefixSize, container, vm::get_addr(swlPriority), swlMaxSpu, swlIsPreem);
-#endif
-
 	// SPURS initialization (asserts should actually rollback and return the error instead)
 
 	if (!spurs)
@@ -117,12 +99,7 @@ s64 spursInit(
 	}
 
 	// default or system workload:
-#ifdef PRX_DEBUG
-	spurs->m.wklInfoSysSrv.addr.set(be_t<u64>::make(vm::read32(libsre_rtoc - 0x7EA4)));
-	spurs->m.wklInfoSysSrv.size = 0x2200;
-#else
 	spurs->m.wklInfoSysSrv.addr.set(be_t<u64>::make(SPURS_IMG_ADDR_SYS_SRV_WORKLOAD));
-#endif
 	spurs->m.wklInfoSysSrv.arg = 0;
 	spurs->m.wklInfoSysSrv.uniqueId.write_relaxed(0xff);
 	u32 sem;
@@ -149,15 +126,9 @@ s64 spursInit(
 	spurs->m.unk13 = 0;
 	spurs->m.nSpus = nSpus;
 	spurs->m.spuPriority = spuPriority;
-#ifdef PRX_DEBUG
-	if (s32 res = spu_image_import(spurs->m.spuImg, vm::read32(libsre_rtoc - (isSecond ? 0x7E94 : 0x7E98)), 1))
-	{
-		assert(!"spu_image_import() failed");
-	}
-#else
-	spurs->m.spuImg.addr        = (u32)Memory.Alloc(0x40000, 4096);
+
+	spurs->m.spuImg.addr        = Memory.MainMem.AllocAlign(0x40000, 4096);
 	spurs->m.spuImg.entry_point = isSecond ? CELL_SPURS_KERNEL2_ENTRY_ADDR : CELL_SPURS_KERNEL1_ENTRY_ADDR;
-#endif
 
 	s32 tgt = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
 	if (flags & SAF_SPU_TGT_EXCLUSIVE_NON_CONTEXT)
@@ -181,9 +152,9 @@ s64 spursInit(
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
 		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0);
-#ifndef PRX_DEBUG_XXX
+
 		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
-#endif
+
 		spurs->m.spus[num] = spu->GetId();
 	}
 
@@ -215,7 +186,7 @@ s64 spursInit(
 	spurs->m.ppuPriority = ppuPriority;
 
 	u32 queue;
-	if (s32 res = (s32)spursCreateLv2EventQueue(spurs, queue, vm::ptr<u8>::make(spurs.addr() + 0xc9), 0x2a, *(u64*)"_spuPrv"))
+	if (s32 res = spursCreateLv2EventQueue(spurs, queue, vm::ptr<u8>::make(spurs.addr() + 0xc9), 0x2a, *(u64*)"_spuPrv"))
 	{
 		assert(!"spursCreateLv2EventQueue() failed");
 	}
@@ -234,10 +205,6 @@ s64 spursInit(
 
 	spurs->m.ppu0 = ppu_thread_create(0, 0, ppuPriority, 0x4000, true, false, name + "SpursHdlr0", [spurs](PPUThread& CPU)
 	{
-#ifdef PRX_DEBUG_XXX
-		return cb_call<void, vm::ptr<CellSpurs>>(CPU, libsre + 0x9214, libsre_rtoc, spurs);
-#endif
-
 		if (spurs->m.flags & SAF_UNKNOWN_FLAG_30)
 		{
 			return;
@@ -247,7 +214,7 @@ s64 spursInit(
 		{
 			if (Emu.IsStopped())
 			{
-				cellSpurs->Warning("SPURS Handler Thread 0 aborted");
+				cellSpurs.Warning("SPURS Handler Thread 0 aborted");
 				return;
 			}
 
@@ -366,9 +333,7 @@ s64 spursInit(
 
 	spurs->m.ppu1 = ppu_thread_create(0, 0, ppuPriority, 0x8000, true, false, name + "SpursHdlr1", [spurs](PPUThread& CPU)
 	{
-#ifdef PRX_DEBUG
-		return cb_call<void, vm::ptr<CellSpurs>>(CPU, libsre + 0xB40C, libsre_rtoc, spurs);
-#endif
+		// TODO
 
 	})->GetId();
 
@@ -392,10 +357,7 @@ s64 spursInit(
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) // initialize system workload (disabled)
 	{
 		s32 res = CELL_OK;
-#ifdef PRX_DEBUG_XXX
-		res = cb_call<s32, vm::ptr<CellSpurs>, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x10428, libsre_rtoc,
-			spurs, vm::get_addr(swlPriority), swlMaxSpu, swlIsPreem);
-#endif
+		// TODO
 		assert(res == CELL_OK);
 	}
 	else if (flags & SAF_EXIT_IF_NO_WORK) // wakeup
@@ -406,13 +368,10 @@ s64 spursInit(
 	return CELL_OK;
 }
 
-s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s32 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
 {
-	cellSpurs->Warning("cellSpursInitialize(spurs_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
+	cellSpurs.Warning("cellSpursInitialize(spurs_addr=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		spurs.addr(), nSpus, spuPriority, ppuPriority, exitIfNoWork ? 1 : 0);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8480, libsre_rtoc);
-#endif
 
 	return spursInit(
 		spurs,
@@ -430,12 +389,9 @@ s64 cellSpursInitialize(vm::ptr<CellSpurs> spurs, s32 nSpus, s32 spuPriority, s3
 		0);
 }
 
-s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
+s32 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
 {
-	cellSpurs->Warning("cellSpursInitializeWithAttribute(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x839C, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursInitializeWithAttribute(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
 
 	if (!attr)
 	{
@@ -466,12 +422,9 @@ s64 cellSpursInitializeWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<const Cel
 		attr->m.swlIsPreem);
 }
 
-s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
+s32 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const CellSpursAttribute> attr)
 {
-	cellSpurs->Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x82B4, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursInitializeWithAttribute2(spurs_addr=0x%x, attr_addr=0x%x)", spurs.addr(), attr.addr());
 
 	if (!attr)
 	{
@@ -502,13 +455,10 @@ s64 cellSpursInitializeWithAttribute2(vm::ptr<CellSpurs> spurs, vm::ptr<const Ce
 		attr->m.swlIsPreem);
 }
 
-s64 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
+s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, bool exitIfNoWork)
 {
-	cellSpurs->Warning("_cellSpursAttributeInitialize(attr_addr=0x%x, revision=%d, sdkVersion=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
+	cellSpurs.Warning("_cellSpursAttributeInitialize(attr_addr=0x%x, revision=%d, sdkVersion=0x%x, nSpus=%d, spuPriority=%d, ppuPriority=%d, exitIfNoWork=%d)",
 		attr.addr(), revision, sdkVersion, nSpus, spuPriority, ppuPriority, exitIfNoWork ? 1 : 0);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x72CC, libsre_rtoc);
-#endif
 
 	if (!attr)
 	{
@@ -529,12 +479,9 @@ s64 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision
 	return CELL_OK;
 }
 
-s64 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute> attr, u32 container)
+s32 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute> attr, u32 container)
 {
-	cellSpurs->Warning("cellSpursAttributeSetMemoryContainerForSpuThread(attr_addr=0x%x, container=%d)", attr.addr(), container);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x6FF8, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursAttributeSetMemoryContainerForSpuThread(attr_addr=0x%x, container=%d)", attr.addr(), container);
 
 	if (!attr)
 	{
@@ -555,12 +502,9 @@ s64 cellSpursAttributeSetMemoryContainerForSpuThread(vm::ptr<CellSpursAttribute>
 	return CELL_OK;
 }
 
-s64 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::ptr<const char> prefix, u32 size)
+s32 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::ptr<const char> prefix, u32 size)
 {
-	cellSpurs->Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=%d)", attr.addr(), prefix.addr(), size);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x7234, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursAttributeSetNamePrefix(attr_addr=0x%x, prefix_addr=0x%x, size=%d)", attr.addr(), prefix.addr(), size);
 
 	if (!attr || !prefix)
 	{
@@ -581,12 +525,9 @@ s64 cellSpursAttributeSetNamePrefix(vm::ptr<CellSpursAttribute> attr, vm::ptr<co
 	return CELL_OK;
 }
 
-s64 cellSpursAttributeEnableSpuPrintfIfAvailable(vm::ptr<CellSpursAttribute> attr)
+s32 cellSpursAttributeEnableSpuPrintfIfAvailable(vm::ptr<CellSpursAttribute> attr)
 {
-	cellSpurs->Warning("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x7150, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursAttributeEnableSpuPrintfIfAvailable(attr_addr=0x%x)", attr.addr());
 
 	if (!attr)
 	{
@@ -601,12 +542,9 @@ s64 cellSpursAttributeEnableSpuPrintfIfAvailable(vm::ptr<CellSpursAttribute> att
 	return CELL_OK;
 }
 
-s64 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s32 type)
+s32 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s32 type)
 {
-	cellSpurs->Warning("cellSpursAttributeSetSpuThreadGroupType(attr_addr=0x%x, type=%d)", attr.addr(), type);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x70C8, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursAttributeSetSpuThreadGroupType(attr_addr=0x%x, type=%d)", attr.addr(), type);
 
 	if (!attr)
 	{
@@ -636,13 +574,10 @@ s64 cellSpursAttributeSetSpuThreadGroupType(vm::ptr<CellSpursAttribute> attr, s3
 	return CELL_OK;
 }
 
-s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::ptr<const u8[8]> priority, u32 maxSpu, vm::ptr<const bool[8]> isPreemptible)
+s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm::ptr<const u8[8]> priority, u32 maxSpu, vm::ptr<const bool[8]> isPreemptible)
 {
-	cellSpurs->Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
+	cellSpurs.Warning("cellSpursAttributeEnableSystemWorkload(attr_addr=0x%x, priority_addr=0x%x, maxSpu=%d, isPreemptible_addr=0x%x)",
 		attr.addr(), priority.addr(), maxSpu, isPreemptible.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0xF410, libsre_rtoc);
-#endif
 
 	if (!attr)
 	{
@@ -694,12 +629,9 @@ s64 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 	return CELL_SPURS_CORE_ERROR_INVAL;
 }
 
-s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
+s32 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 {
-	cellSpurs->Todo("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8568, libsre_rtoc);
-#endif
+	cellSpurs.Todo("cellSpursFinalize(spurs_addr=0x%x)", spurs.addr());
 
 	if (!spurs)
 	{
@@ -714,18 +646,13 @@ s64 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-
+	// TODO
 
 	return CELL_OK;
 }
 
-s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated)
+s32 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated)
 {
-#ifdef PRX_DEBUG_XXX
-	return cb_call<s32, vm::ptr<CellSpurs>, u32, vm::ptr<u8>, s32, bool>(GetCurrentPPUThread(), libsre + 0xAE34, libsre_rtoc,
-		spurs, queue, port, isDynamic, wasCreated);
-#endif
-
 	if (!spurs || !port)
 	{
 		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
@@ -784,45 +711,29 @@ s64 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> po
 	return CELL_OK;
 }
 
-s64 cellSpursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic)
+s32 cellSpursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic)
 {
-	cellSpurs->Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=%d, port_addr=0x%x, isDynamic=%d)",
+	cellSpurs.Warning("cellSpursAttachLv2EventQueue(spurs_addr=0x%x, queue=%d, port_addr=0x%x, isDynamic=%d)",
 		spurs.addr(), queue, port.addr(), isDynamic);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0xAFE0, libsre_rtoc);
-#endif
 
 	return spursAttachLv2EventQueue(spurs, queue, port, isDynamic, false);
 }
 
-s64 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port)
+s32 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursDetachLv2EventQueue(spurs_addr=0x%x, port=%d)", spurs.addr(), port);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xB144, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetSpuGuid()
+s32 cellSpursGetSpuGuid()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xEFB0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> group)
+s32 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> group)
 {
-	cellSpurs->Warning("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.addr(), group.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8B30, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursGetSpuThreadGroupId(spurs_addr=0x%x, group_addr=0x%x)", spurs.addr(), group.addr());
 
 	if (!spurs || !group)
 	{
@@ -837,12 +748,9 @@ s64 cellSpursGetSpuThreadGroupId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> group)
 	return CELL_OK;
 }
 
-s64 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<u32> nThreads)
+s32 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<u32> nThreads)
 {
-	cellSpurs->Warning("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), nThreads.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8B78, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursGetNumSpuThread(spurs_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), nThreads.addr());
 
 	if (!spurs || !nThreads)
 	{
@@ -857,12 +765,9 @@ s64 cellSpursGetNumSpuThread(vm::ptr<CellSpurs> spurs, vm::ptr<u32> nThreads)
 	return CELL_OK;
 }
 
-s64 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> thread, vm::ptr<u32> nThreads)
+s32 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> thread, vm::ptr<u32> nThreads)
 {
-	cellSpurs->Warning("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), thread.addr(), nThreads.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8A98, libsre_rtoc);
-#endif
+	cellSpurs.Warning("cellSpursGetSpuThreadId(spurs_addr=0x%x, thread_addr=0x%x, nThreads_addr=0x%x)", spurs.addr(), thread.addr(), nThreads.addr());
 
 	if (!spurs || !thread || !nThreads)
 	{
@@ -882,90 +787,50 @@ s64 cellSpursGetSpuThreadId(vm::ptr<CellSpurs> spurs, vm::ptr<u32> thread, vm::p
 	return CELL_OK;
 }
 
-s64 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 workloadId, u32 maxContention)
+s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 workloadId, u32 maxContention)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetMaxContention(spurs_addr=0x%x, workloadId=%d, maxContention=%d)", spurs.addr(), workloadId, maxContention);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8E90, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 workloadId, vm::ptr<const u8> priorities)
+s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 workloadId, vm::ptr<const u8> priorities)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetPriorities(spurs_addr=0x%x, workloadId=%d, priorities_addr=0x%x)", spurs.addr(), workloadId, priorities.addr());
-	return GetCurrentPPUThread().FastCall2(libsre + 0x8BC0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::ptr<const bool> isPreemptible)
+s32 cellSpursSetPreemptionVictimHints(vm::ptr<CellSpurs> spurs, vm::ptr<const bool> isPreemptible)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetPreemptionVictimHints(spurs_addr=0x%x, isPreemptible_addr=0x%x)", spurs.addr(), isPreemptible.addr());
-	return GetCurrentPPUThread().FastCall2(libsre + 0xF5A4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, bool flag)
+s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, bool flag)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursEnableExceptionEventHandler(spurs_addr=0x%x, flag=%d)", spurs.addr(), flag);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xDCC0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, u32 eaHandler_addr, u32 arg_addr)
+s32 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, u32 eaHandler_addr, u32 arg_addr)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursSetGlobalExceptionEventHandler(spurs_addr=0x%x, eaHandler_addr=0x%x, arg_addr=0x%x)",
-		spurs.addr(), eaHandler_addr, arg_addr);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xD6D0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursUnsetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs)
+s32 cellSpursUnsetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursUnsetGlobalExceptionEventHandler(spurs_addr=0x%x)", spurs.addr());
-	return GetCurrentPPUThread().FastCall2(libsre + 0xD674, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
+s32 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("cellSpursGetInfo(spurs_addr=0x%x, info_addr=0x%x)", spurs.addr(), info.addr());
-	return GetCurrentPPUThread().FastCall2(libsre + 0xE540, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
+s32 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
-#ifdef PRX_DEBUG_XXX
-	return cb_call<s32, vm::ptr<CellSpurs>>(GetCurrentPPUThread(), libsre + 0x84D8, libsre_rtoc, spurs);
-#endif
-
 	if (!spurs)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
@@ -998,9 +863,9 @@ s64 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 	return CELL_OK;
 }
 
-s64 cellSpursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
+s32 cellSpursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x)", __FUNCTION__, spurs.addr());
+	cellSpurs.Warning("%s(spurs_addr=0x%x)", __FUNCTION__, spurs.addr());
 
 	return spursWakeUp(CPU, spurs);
 }
@@ -1019,12 +884,6 @@ s32 spursAddWorkload(
 	vm::ptr<CellSpursShutdownCompletionEventHook> hook,
 	vm::ptr<void> hookArg)
 {
-#ifdef PRX_DEBUG_XXX
-	return cb_call<s32, vm::ptr<CellSpurs>, vm::ptr<u32>, vm::ptr<const void>, u32, u64, u32, u32, u32, u32, u32, u32, u32>(GetCurrentPPUThread(), libsre + 0x96EC, libsre_rtoc,
-		spurs, wid, pm, size, data, vm::get_addr(priorityTable), minContention, maxContention,
-		nameClass.addr(), nameInstance.addr(), hook.addr(), hookArg.addr());
-#endif
-
 	if (!spurs || !wid || !pm)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
@@ -1176,7 +1035,7 @@ s32 spursAddWorkload(
 	return CELL_OK;
 }
 
-s64 cellSpursAddWorkload(
+s32 cellSpursAddWorkload(
 	vm::ptr<CellSpurs> spurs,
 	vm::ptr<u32> wid,
 	vm::ptr<const void> pm,
@@ -1186,11 +1045,8 @@ s64 cellSpursAddWorkload(
 	u32 minContention,
 	u32 maxContention)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, wid_addr=0x%x, pm_addr=0x%x, size=0x%x, data=0x%llx, priorityTable_addr=0x%x, minContention=0x%x, maxContention=0x%x)",
+	cellSpurs.Warning("%s(spurs_addr=0x%x, wid_addr=0x%x, pm_addr=0x%x, size=0x%x, data=0x%llx, priorityTable_addr=0x%x, minContention=0x%x, maxContention=0x%x)",
 		__FUNCTION__, spurs.addr(), wid.addr(), pm.addr(), size, data, priorityTable.addr(), minContention, maxContention);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x9ED0, libsre_rtoc);
-#endif
 
 	return spursAddWorkload(
 		spurs,
@@ -1207,7 +1063,7 @@ s64 cellSpursAddWorkload(
 		vm::ptr<void>::make(0));
 }
 
-s64 _cellSpursWorkloadAttributeInitialize(
+s32 _cellSpursWorkloadAttributeInitialize(
 	vm::ptr<CellSpursWorkloadAttribute> attr,
 	u32 revision,
 	u32 sdkVersion,
@@ -1218,11 +1074,8 @@ s64 _cellSpursWorkloadAttributeInitialize(
 	u32 minContention,
 	u32 maxContention)
 {
-	cellSpurs->Warning("%s(attr_addr=0x%x, revision=%d, sdkVersion=0x%x, pm_addr=0x%x, size=0x%x, data=0x%llx, priorityTable_addr=0x%x, minContention=0x%x, maxContention=0x%x)",
+	cellSpurs.Warning("%s(attr_addr=0x%x, revision=%d, sdkVersion=0x%x, pm_addr=0x%x, size=0x%x, data=0x%llx, priorityTable_addr=0x%x, minContention=0x%x, maxContention=0x%x)",
 		__FUNCTION__, attr.addr(), revision, sdkVersion, pm.addr(), size, data, priorityTable.addr(), minContention, maxContention);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x9F08, libsre_rtoc);
-#endif
 
 	if (!attr)
 	{
@@ -1257,12 +1110,9 @@ s64 _cellSpursWorkloadAttributeInitialize(
 	return CELL_OK;
 }
 
-s64 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, vm::ptr<const char> nameClass, vm::ptr<const char> nameInstance)
+s32 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, vm::ptr<const char> nameClass, vm::ptr<const char> nameInstance)
 {
-	cellSpurs->Warning("%s(attr_addr=0x%x, nameClass_addr=0x%x, nameInstance_addr=0x%x)", __FUNCTION__, attr.addr(), nameClass.addr(), nameInstance.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x9664, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(attr_addr=0x%x, nameClass_addr=0x%x, nameInstance_addr=0x%x)", __FUNCTION__, attr.addr(), nameClass.addr(), nameInstance.addr());
 
 	if (!attr)
 	{
@@ -1278,12 +1128,9 @@ s64 cellSpursWorkloadAttributeSetName(vm::ptr<CellSpursWorkloadAttribute> attr, 
 	return CELL_OK;
 }
 
-s64 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWorkloadAttribute> attr, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> arg)
+s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWorkloadAttribute> attr, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> arg)
 {
-	cellSpurs->Warning("%s(attr_addr=0x%x, hook_addr=0x%x, arg=0x%x)", __FUNCTION__, attr.addr(), hook.addr(), arg.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x96A4, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(attr_addr=0x%x, hook_addr=0x%x, arg=0x%x)", __FUNCTION__, attr.addr(), hook.addr(), arg.addr());
 
 	if (!attr || !hook)
 	{
@@ -1299,12 +1146,9 @@ s64 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWo
 	return CELL_OK;
 }
 
-s64 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<u32> wid, vm::ptr<const CellSpursWorkloadAttribute> attr)
+s32 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<u32> wid, vm::ptr<const CellSpursWorkloadAttribute> attr)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, wid_addr=0x%x, attr_addr=0x%x)", __FUNCTION__, spurs.addr(), wid.addr(), attr.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0x9E14, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(spurs_addr=0x%x, wid_addr=0x%x, attr_addr=0x%x)", __FUNCTION__, spurs.addr(), wid.addr(), attr.addr());
 
 	if (!attr)
 	{
@@ -1334,45 +1178,27 @@ s64 cellSpursAddWorkloadWithAttribute(vm::ptr<CellSpurs> spurs, const vm::ptr<u3
 		vm::ptr<void>::make(attr->m.hookArg.addr()));
 }
 
-s64 cellSpursRemoveWorkload()
+s32 cellSpursRemoveWorkload()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA414, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursWaitForWorkloadShutdown()
+s32 cellSpursWaitForWorkloadShutdown()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA20C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursShutdownWorkload()
+s32 cellSpursShutdownWorkload()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA060, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set)
+s32 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, wid=%d, is_set=%d)", __FUNCTION__, spurs.addr(), wid, is_set);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0xF158, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(spurs_addr=0x%x, wid=%d, is_set=%d)", __FUNCTION__, spurs.addr(), wid, is_set);
 
 	if (!spurs)
 	{
@@ -1437,12 +1263,9 @@ s64 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 	return CELL_OK;
 }
 
-s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpursWorkloadFlag>> flag)
+s32 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpursWorkloadFlag>> flag)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, flag_addr=0x%x)", __FUNCTION__, spurs.addr(), flag.addr());
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0xEC00, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(spurs_addr=0x%x, flag_addr=0x%x)", __FUNCTION__, spurs.addr(), flag.addr());
 
 	if (!spurs || !flag)
 	{
@@ -1457,13 +1280,10 @@ s64 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpur
 	return CELL_OK;
 }
 
-s64 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
+s32 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
 {
-	cellSpurs->Warning("%s(spurs=0x%x, workloadId=0x%x)", __FUNCTION__, spurs.addr(), workloadId);
+	cellSpurs.Warning("%s(spurs=0x%x, workloadId=0x%x)", __FUNCTION__, spurs.addr(), workloadId);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA658, libsre_rtoc);
-#else
 	if (spurs.addr() == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
@@ -1514,16 +1334,12 @@ s64 cellSpursSendWorkloadSignal(vm::ptr<CellSpurs> spurs, u32 workloadId)
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetWorkloadData(vm::ptr<CellSpurs> spurs, vm::ptr<u64> data, u32 workloadId)
+s32 cellSpursGetWorkloadData(vm::ptr<CellSpurs> spurs, vm::ptr<u64> data, u32 workloadId)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, data=0x%x, workloadId=%d)", __FUNCTION__, spurs.addr(), data.addr(), workloadId);
+	cellSpurs.Warning("%s(spurs_addr=0x%x, data=0x%x, workloadId=%d)", __FUNCTION__, spurs.addr(), data.addr(), workloadId);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA78C, libsre_rtoc);
-#else
 	if (spurs.addr() == 0 || data.addr() == 0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_NULL_POINTER;
@@ -1559,15 +1375,11 @@ s64 cellSpursGetWorkloadData(vm::ptr<CellSpurs> spurs, vm::ptr<u64> data, u32 wo
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
+s32 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 {
-	cellSpurs->Warning("%s(spurs_addr=0x%x, wid=%d, value=0x%x)", __FUNCTION__, spurs.addr(), wid, value);
-#ifdef PRX_DEBUG_XXX
-	return GetCurrentPPUThread().FastCall2(libsre + 0xAB2C, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(spurs_addr=0x%x, wid=%d, value=0x%x)", __FUNCTION__, spurs.addr(), wid, value);
 
 	if (!spurs)
 	{
@@ -1601,102 +1413,59 @@ s64 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 	return CELL_OK;
 }
 
-s64 cellSpursReadyCountAdd()
+s32 cellSpursReadyCountAdd()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA868, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursReadyCountCompareAndSwap()
+s32 cellSpursReadyCountCompareAndSwap()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xA9CC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursReadyCountSwap()
+s32 cellSpursReadyCountSwap()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xAC34, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursRequestIdleSpu()
+s32 cellSpursRequestIdleSpu()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xAD88, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetWorkloadInfo()
+s32 cellSpursGetWorkloadInfo()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xE70C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursWorkloadFlagReceiver2()
+s32 _cellSpursWorkloadFlagReceiver2()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xF298, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursSetExceptionEventHandler()
+s32 cellSpursSetExceptionEventHandler()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xDB54, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursUnsetExceptionEventHandler()
+s32 cellSpursUnsetExceptionEventHandler()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0xD77C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
+s32 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursEventFlag> eventFlag, u32 flagClearMode, u32 flagDirection)
 {
-	cellSpurs->Warning("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%d, flagDirection=%d)",
+	cellSpurs.Warning("_cellSpursEventFlagInitialize(spurs_addr=0x%x, taskset_addr=0x%x, eventFlag_addr=0x%x, flagClearMode=%d, flagDirection=%d)",
 		spurs.addr(), taskset.addr(), eventFlag.addr(), flagClearMode, flagDirection);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1564C, libsre_rtoc);
-#else
 	if (taskset.addr() == 0 && spurs.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -1738,16 +1507,12 @@ s64 _cellSpursEventFlagInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
+s32 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 {
-	cellSpurs->Warning("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
+	cellSpurs.Warning("cellSpursEventFlagAttachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x157B8, libsre_rtoc);
-#else
 	if (!eventFlag)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -1818,16 +1583,12 @@ success:
 	eventFlag->m.eventQueueId = eventQueueId;
 	eventFlag->m.spuPort      = port;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
+s32 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 {
-	cellSpurs->Warning("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
+	cellSpurs.Warning("cellSpursEventFlagDetachLv2EventQueue(eventFlag_addr=0x%x)", eventFlag.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15998, libsre_rtoc);
-#else
 	if (!eventFlag)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -1873,7 +1634,7 @@ s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 		sys_event_port_destroy(eventFlag->m.eventPortId);
 	}
 
-	s64 rc = CELL_OK;
+	s32 rc = CELL_OK;
 	// TODO: Implement the following
 	// auto rc = spursDetachLv2EventQueue(spurs, port, 1);
 	// if (rc == CELL_OK)
@@ -1888,10 +1649,9 @@ s64 cellSpursEventFlagDetachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode, u32 block)
+s32 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode, u32 block)
 {
 	if (eventFlag.addr() == 0 || mask.addr() == 0)
 	{
@@ -2032,24 +1792,17 @@ s64 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> 
 	return CELL_OK;
 }
 
-s64 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
+s32 cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
 {
-	cellSpurs->Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.addr(), mask.addr(), mode);
+	cellSpurs.Warning("cellSpursEventFlagWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=%d)", eventFlag.addr(), mask.addr(), mode);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15E68, libsre_rtoc);
-#else
 	return _cellSpursEventFlagWait(eventFlag, mask, mode, 1/*block*/);
-#endif
 }
 
-s64 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
+s32 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 {
-	cellSpurs->Warning("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
+	cellSpurs.Warning("cellSpursEventFlagClear(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15E9C, libsre_rtoc);
-#else
 	if (eventFlag.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2062,16 +1815,12 @@ s64 cellSpursEventFlagClear(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 
 	eventFlag->m.events &= ~bits;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
+s32 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 {
-	cellSpurs->Warning("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
+	cellSpurs.Warning("cellSpursEventFlagSet(eventFlag_addr=0x%x, bits=0x%x)", eventFlag.addr(), bits);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15F04, libsre_rtoc);
-#else
 	if (eventFlag.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2190,27 +1939,19 @@ s64 cellSpursEventFlagSet(vm::ptr<CellSpursEventFlag> eventFlag, u16 bits)
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
+s32 cellSpursEventFlagTryWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> mask, u32 mode)
 {
-	cellSpurs->Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.addr(), mask.addr(), mode);
+	cellSpurs.Warning("cellSpursEventFlagTryWait(eventFlag_addr=0x%x, mask_addr=0x%x, mode=0x%x)", eventFlag.addr(), mask.addr(), mode);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15E70, libsre_rtoc);
-#else
 	return _cellSpursEventFlagWait(eventFlag, mask, mode, 0/*block*/);
-#endif
 }
 
-s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> direction)
+s32 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> direction)
 {
-	cellSpurs->Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=0x%x)", eventFlag.addr(), direction.addr());
+	cellSpurs.Warning("cellSpursEventFlagGetDirection(eventFlag_addr=0x%x, direction_addr=0x%x)", eventFlag.addr(), direction.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x162C4, libsre_rtoc);
-#else
 	if (eventFlag.addr() == 0 || direction.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2223,16 +1964,12 @@ s64 cellSpursEventFlagGetDirection(vm::ptr<CellSpursEventFlag> eventFlag, vm::pt
 
 	*direction = eventFlag->m.direction;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> clear_mode)
+s32 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u32> clear_mode)
 {
-	cellSpurs->Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=0x%x)", eventFlag.addr(), clear_mode.addr());
+	cellSpurs.Warning("cellSpursEventFlagGetClearMode(eventFlag_addr=0x%x, clear_mode_addr=0x%x)", eventFlag.addr(), clear_mode.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16310, libsre_rtoc);
-#else
 	if (eventFlag.addr() == 0 || clear_mode.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2245,16 +1982,12 @@ s64 cellSpursEventFlagGetClearMode(vm::ptr<CellSpursEventFlag> eventFlag, vm::pt
 
 	*clear_mode = eventFlag->m.clearMode;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<CellSpursTaskset> taskset)
+s32 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<CellSpursTaskset> taskset)
 {
-	cellSpurs->Warning("cellSpursEventFlagGetTasksetAddress(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.addr(), taskset.addr());
+	cellSpurs.Warning("cellSpursEventFlagGetTasksetAddress(eventFlag_addr=0x%x, taskset_addr=0x%x)", eventFlag.addr(), taskset.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1635C, libsre_rtoc);
-#else
 	if (eventFlag.addr() == 0 || taskset.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2267,307 +2000,171 @@ s64 cellSpursEventFlagGetTasksetAddress(vm::ptr<CellSpursEventFlag> eventFlag, v
 
 	taskset.set(eventFlag->m.isIwl ? 0 : eventFlag->m.addr);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursLFQueueInitialize()
+s32 _cellSpursLFQueueInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17028, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursLFQueuePushBody()
+s32 _cellSpursLFQueuePushBody()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x170AC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursLFQueueDetachLv2EventQueue()
+s32 cellSpursLFQueueDetachLv2EventQueue()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x177CC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursLFQueueAttachLv2EventQueue()
+s32 cellSpursLFQueueAttachLv2EventQueue()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x173EC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursLFQueuePopBody()
+s32 _cellSpursLFQueuePopBody()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17238, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursLFQueueGetTasksetAddress()
+s32 cellSpursLFQueueGetTasksetAddress()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17C34, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursQueueInitialize()
+s32 _cellSpursQueueInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x163B4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueuePopBody()
+s32 cellSpursQueuePopBody()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16BF0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueuePushBody()
+s32 cellSpursQueuePushBody()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x168C4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueAttachLv2EventQueue()
+s32 cellSpursQueueAttachLv2EventQueue()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1666C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueDetachLv2EventQueue()
+s32 cellSpursQueueDetachLv2EventQueue()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16524, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueGetTasksetAddress()
+s32 cellSpursQueueGetTasksetAddress()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16F50, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueClear()
+s32 cellSpursQueueClear()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1675C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueDepth()
+s32 cellSpursQueueDepth()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1687C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueGetEntrySize()
+s32 cellSpursQueueGetEntrySize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16FE0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueSize()
+s32 cellSpursQueueSize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x167F0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursQueueGetDirection()
+s32 cellSpursQueueGetDirection()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x16F98, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateJobChainWithAttribute()
+s32 cellSpursCreateJobChainWithAttribute()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1898C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateJobChain()
+s32 cellSpursCreateJobChain()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18B84, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJoinJobChain()
+s32 cellSpursJoinJobChain()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18DB0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursKickJobChain()
+s32 cellSpursKickJobChain()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18E8C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursJobChainAttributeInitialize()
+s32 _cellSpursJobChainAttributeInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1845C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetJobChainId()
+s32 cellSpursGetJobChainId()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x19064, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainSetExceptionEventHandler()
+s32 cellSpursJobChainSetExceptionEventHandler()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1A5A0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainUnsetExceptionEventHandler()
+s32 cellSpursJobChainUnsetExceptionEventHandler()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1A614, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetJobChainInfo()
+s32 cellSpursGetJobChainInfo()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1A7A0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainGetSpursAddress()
+s32 cellSpursJobChainGetSpursAddress()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1A900, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority,
+s32 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority,
 	u32 max_contention, vm::ptr<const char> name, u32 size, s32 enable_clear_ls)
 {
 	if (!spurs || !taskset)
@@ -2610,13 +2207,9 @@ s64 spursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> tasks
 	return CELL_OK;
 }
 
-s64 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetAttribute> attr)
+s32 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, vm::ptr<CellSpursTasksetAttribute> attr)
 {
-	cellSpurs->Warning("%s(spurs=0x%x, taskset=0x%x, attr=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), attr.addr());
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14BEC, libsre_rtoc);
-#endif
+	cellSpurs.Warning("%s(spurs=0x%x, taskset=0x%x, attr=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), attr.addr());
 
 	if (!attr)
 	{
@@ -2644,44 +2237,26 @@ s64 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSp
 	return rc;
 }
 
-s64 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority, u32 maxContention)
+s32 cellSpursCreateTaskset(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u64 args, vm::ptr<const u8[8]> priority, u32 maxContention)
 {
-	cellSpurs->Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
+	cellSpurs.Warning("cellSpursCreateTaskset(spurs_addr=0x%x, taskset_addr=0x%x, args=0x%llx, priority_addr=0x%x, maxContention=%d)",
 		spurs.addr(), taskset.addr(), args, priority.addr(), maxContention);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14CB8, libsre_rtoc);
-#endif
-
-#if 0
-	SPURSManagerTasksetAttribute *tattr = new SPURSManagerTasksetAttribute(args, priority, maxContention);
-	taskset->taskset = new SPURSManagerTaskset(taskset.addr(), tattr);
-
-	return CELL_OK;
-#endif
 
 	return spursCreateTaskset(spurs, taskset, args, priority, maxContention, vm::ptr<const char>::make(0), 6400/*CellSpursTaskset::size*/, 0);
 }
 
-s64 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
+s32 cellSpursJoinTaskset(vm::ptr<CellSpursTaskset> taskset)
 {
-	cellSpurs->Warning("cellSpursJoinTaskset(taskset_addr=0x%x)", taskset.addr());
+	cellSpurs.Warning("cellSpursJoinTaskset(taskset_addr=0x%x)", taskset.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x152F8, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
+s32 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
 {
-	cellSpurs->Warning("cellSpursGetTasksetId(taskset_addr=0x%x, wid=0x%x)", taskset.addr(), wid.addr());
+	cellSpurs.Warning("cellSpursGetTasksetId(taskset_addr=0x%x, wid=0x%x)", taskset.addr(), wid.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14EA0, libsre_rtoc);
-#else
 	if (!taskset || !wid)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2699,36 +2274,27 @@ s64 cellSpursGetTasksetId(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> wid)
 
 	*wid = taskset->m.wid;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
+s32 cellSpursShutdownTaskset(vm::ptr<CellSpursTaskset> taskset)
 {
-	cellSpurs->Warning("cellSpursShutdownTaskset(taskset_addr=0x%x)", taskset.addr());
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14868, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
 u32 _cellSpursGetSdkVersion()
 {
-	static s32 sdk_version = -2;
+	s32 sdk_version;
 
-	if (sdk_version == -2)
+	if (process_get_sdk_version(process_getpid(), sdk_version) != CELL_OK)
 	{
-		vm::var<be_t<s32>> version;
-		sys_process_get_sdk_version(sys_process_getpid(), vm::ptr<s32>::make(version.addr()));
-		sdk_version = version.value();
+		throw __FUNCTION__;
 	}
 
 	return sdk_version;
 }
 
-s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::ptr<u32> elf_addr, vm::ptr<u32> context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg)
+s32 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm::ptr<u32> elf_addr, vm::ptr<u32> context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> ls_pattern, vm::ptr<CellSpursTaskArgument> arg)
 {
 	if (!taskset || !elf_addr)
 	{
@@ -2825,7 +2391,7 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 	return CELL_OK;
 }
 
-s64 spursTaskStart(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
+s32 spursTaskStart(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
 	auto pendingReady         = taskset->m.pending_ready.value();
 	pendingReady._bit[taskId] = true;
@@ -2848,15 +2414,12 @@ s64 spursTaskStart(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 	return rc;
 }
 
-s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
+s32 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, u32 elf_addr, u32 context_addr, u32 context_size, vm::ptr<CellSpursTaskLsPattern> lsPattern,
 	vm::ptr<CellSpursTaskArgument> argument)
 {
-	cellSpurs->Warning("cellSpursCreateTask(taskset_addr=0x%x, taskID_addr=0x%x, elf_addr_addr=0x%x, context_addr_addr=0x%x, context_size=%d, lsPattern_addr=0x%x, argument_addr=0x%x)",
+	cellSpurs.Warning("cellSpursCreateTask(taskset_addr=0x%x, taskID_addr=0x%x, elf_addr_addr=0x%x, context_addr_addr=0x%x, context_size=%d, lsPattern_addr=0x%x, argument_addr=0x%x)",
 		taskset.addr(), taskId.addr(), elf_addr, context_addr, context_size, lsPattern.addr(), argument.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x12414, libsre_rtoc);
-#else
 	if (!taskset)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2882,15 +2445,10 @@ s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, 
 
     *taskId = tmpTaskId;
     return CELL_OK;
-#endif
 }
 
-s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
+s32 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("_cellSpursSendSignal(taskset_addr=0x%x, taskId=%d)", taskset.addr(), taskId);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x124CC, libsre_rtoc);
-#else
 	if (!taskset)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2936,28 +2494,18 @@ s64 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskId)
 	}
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateTaskWithAttribute()
+s32 cellSpursCreateTaskWithAttribute()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x12204, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm::ptr<const char> name)
+s32 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm::ptr<const char> name)
 {
-	cellSpurs->Warning("%s(attr=0x%x, name=0x%x)", __FUNCTION__, attr.addr(), name.addr());
+	cellSpurs.Warning("%s(attr=0x%x, name=0x%x)", __FUNCTION__, attr.addr(), name.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14210, libsre_rtoc);
-#else
 	if (!attr || !name)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2970,16 +2518,12 @@ s64 cellSpursTasksetAttributeSetName(vm::ptr<CellSpursTasksetAttribute> attr, vm
 
 	attr->m.name = name;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> attr, u32 size)
+s32 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> attr, u32 size)
 {
-	cellSpurs->Warning("%s(attr=0x%x, size=0x%x)", __FUNCTION__, attr.addr(), size);
+	cellSpurs.Warning("%s(attr=0x%x, size=0x%x)", __FUNCTION__, attr.addr(), size);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14254, libsre_rtoc);
-#else
 	if (!attr)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -2997,16 +2541,12 @@ s64 cellSpursTasksetAttributeSetTasksetSize(vm::ptr<CellSpursTasksetAttribute> a
 
 	attr->m.taskset_size = size;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetAttributeEnableClearLS(vm::ptr<CellSpursTasksetAttribute> attr, s32 enable)
+s32 cellSpursTasksetAttributeEnableClearLS(vm::ptr<CellSpursTasksetAttribute> attr, s32 enable)
 {
-	cellSpurs->Warning("%s(attr=0x%x, enable=%d)", __FUNCTION__, attr.addr(), enable);
+	cellSpurs.Warning("%s(attr=0x%x, enable=%d)", __FUNCTION__, attr.addr(), enable);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x142AC, libsre_rtoc);
-#else
 	if (!attr)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3019,16 +2559,12 @@ s64 cellSpursTasksetAttributeEnableClearLS(vm::ptr<CellSpursTasksetAttribute> at
 
 	attr->m.enable_clear_ls = enable ? 1 : 0;
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> attribute, u32 revision)
+s32 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> attribute, u32 revision)
 {
-	cellSpurs->Warning("_cellSpursTasksetAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.addr(), revision);
-	
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1474C, libsre_rtoc);
-#else
+	cellSpurs.Warning("_cellSpursTasksetAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.addr(), revision);
+
 	memset(attribute.get_ptr(), 0, CellSpursTasksetAttribute2::size);
 	attribute->m.revision = revision;
 	attribute->m.name.set(0);
@@ -3043,112 +2579,60 @@ s64 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> at
 	attribute->m.enable_clear_ls = 0;
 	attribute->m.task_name_buffer.set(0);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskExitCodeGet()
+s32 cellSpursTaskExitCodeGet()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1397C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskExitCodeInitialize()
+s32 cellSpursTaskExitCodeInitialize()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1352C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskExitCodeTryGet()
+s32 cellSpursTaskExitCodeTryGet()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13974, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskGetLoadableSegmentPattern()
+s32 cellSpursTaskGetLoadableSegmentPattern()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13ED4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskGetReadOnlyAreaPattern()
+s32 cellSpursTaskGetReadOnlyAreaPattern()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13CFC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskGenerateLsPattern()
+s32 cellSpursTaskGenerateLsPattern()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13B78, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursTaskAttributeInitialize()
+s32 _cellSpursTaskAttributeInitialize()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x10C30, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskAttributeSetExitCodeContainer()
+s32 cellSpursTaskAttributeSetExitCodeContainer()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x10A98, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribute, u32 revision)
+s32 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribute, u32 revision)
 {
-	cellSpurs->Warning("_cellSpursTaskAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.addr(), revision);
+	cellSpurs.Warning("_cellSpursTaskAttribute2Initialize(attribute_addr=0x%x, revision=%d)", attribute.addr(), revision);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x10B00, libsre_rtoc);
-#else
 	attribute->revision = revision;
 	attribute->sizeContext = 0;
 	attribute->eaContext = 0;
@@ -3161,28 +2645,18 @@ s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribut
 	attribute->name_addr = 0;
 
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTaskGetContextSaveAreaSize()
+s32 cellSpursTaskGetContextSaveAreaSize()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1409C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateTaskset2(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2> taskset, vm::ptr<CellSpursTasksetAttribute2> attr)
+s32 cellSpursCreateTaskset2(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2> taskset, vm::ptr<CellSpursTasksetAttribute2> attr)
 {
-	cellSpurs->Warning("%s(spurs=0x%x, taskset=0x%x, attr=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), attr.addr());
+	cellSpurs.Warning("%s(spurs=0x%x, taskset=0x%x, attr=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), attr.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x15108, libsre_rtoc);
-#else
 	vm::ptr<CellSpursTasksetAttribute2> tmp_attr;
 
 	if (!attr)
@@ -3206,76 +2680,42 @@ s64 cellSpursCreateTaskset2(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset2>
 
 	// TODO: Implement rest of the function
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateTask2()
+s32 cellSpursCreateTask2()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x11E54, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJoinTask2()
+s32 cellSpursJoinTask2()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x11378, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTryJoinTask2()
+s32 cellSpursTryJoinTask2()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x11748, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursDestroyTaskset2()
+s32 cellSpursDestroyTaskset2()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14EE8, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursCreateTask2WithBinInfo()
+s32 cellSpursCreateTask2WithBinInfo()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x120E0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u64> handler, vm::ptr<u64> arg)
+s32 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u64> handler, vm::ptr<u64> arg)
 {
-	cellSpurs->Warning("%s(taskset=0x5x, handler=0x%x, arg=0x%x)", __FUNCTION__, taskset.addr(), handler.addr(), arg.addr());
+	cellSpurs.Warning("%s(taskset=0x5x, handler=0x%x, arg=0x%x)", __FUNCTION__, taskset.addr(), handler.addr(), arg.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13124, libsre_rtoc);
-#else
 	if (!taskset || !handler)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3299,16 +2739,12 @@ s64 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, 
 	taskset->m.exception_handler = handler;
 	taskset->m.exception_handler_arg = arg;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset)
+s32 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset)
 {
-	cellSpurs->Warning("%s(taskset=0x%x)", __FUNCTION__, taskset.addr());
+	cellSpurs.Warning("%s(taskset=0x%x)", __FUNCTION__, taskset.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x13194, libsre_rtoc);
-#else
 	if (!taskset)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3327,16 +2763,12 @@ s64 cellSpursTasksetUnsetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset
 	taskset->m.exception_handler.set(0);
 	taskset->m.exception_handler_arg.set(0);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id)
+s32 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTaskset> taskset, u32 id)
 {
-	cellSpurs->Warning("%s(spurs=0x%x, taskset=0x%x, id=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), id);
+	cellSpurs.Warning("%s(spurs=0x%x, taskset=0x%x, id=0x%x)", __FUNCTION__, spurs.addr(), taskset.addr(), id);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x133AC, libsre_rtoc);
-#else
 	if (taskset.addr() == 0)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3352,16 +2784,12 @@ s64 cellSpursLookUpTasksetAddress(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTas
 
 	taskset.set((u32)data.value());
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<u32> spurs)
+s32 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm::ptr<u32> spurs)
 {
-	cellSpurs->Warning("%s(taskset=0x%x, spurs=0x%x)", __FUNCTION__, taskset.addr(), spurs.addr());
+	cellSpurs.Warning("%s(taskset=0x%x, spurs=0x%x)", __FUNCTION__, taskset.addr(), spurs.addr());
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x14408, libsre_rtoc);
-#else
 	if (!taskset || !spurs)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3379,29 +2807,19 @@ s64 cellSpursTasksetGetSpursAddress(vm::ptr<const CellSpursTaskset> taskset, vm:
 
 	*spurs = (u32)taskset->m.spurs.addr();
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetTasksetInfo()
+s32 cellSpursGetTasksetInfo()
 {
-	cellSpurs->Warning("%s()", __FUNCTION__);
-
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1445C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::ptr<const u8> priority, u32 max_contention)
+s32 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attribute, u32 revision, u32 sdk_version, u64 args, vm::ptr<const u8> priority, u32 max_contention)
 {
-	cellSpurs->Warning("%s(attribute=0x%x, revision=%d, skd_version=%d, args=0x%llx, priority=0x%x, max_contention=%d)",
+	cellSpurs.Warning("%s(attribute=0x%x, revision=%d, skd_version=%d, args=0x%llx, priority=0x%x, max_contention=%d)",
 		__FUNCTION__, attribute.addr(), revision, sdk_version, args, priority.addr(), max_contention);
 
-#ifdef PRX_DEBUG
-	return GetCurrentPPUThread().FastCall2(libsre + 0x142FC, libsre_rtoc);
-#else
 	if (!attribute)
 	{
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
@@ -3428,205 +2846,114 @@ s64 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attr
 	attribute->m.taskset_size = 6400/*CellSpursTaskset::size*/;
 	attribute->m.max_contention = max_contention;
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobGuardInitialize()
+s32 cellSpursJobGuardInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1807C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainAttributeSetName()
+s32 cellSpursJobChainAttributeSetName()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1861C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursShutdownJobChain()
+s32 cellSpursShutdownJobChain()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18D2C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainAttributeSetHaltOnError()
+s32 cellSpursJobChainAttributeSetHaltOnError()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18660, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainAttributeSetJobTypeMemoryCheck()
+s32 cellSpursJobChainAttributeSetJobTypeMemoryCheck()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x186A4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobGuardNotify()
+s32 cellSpursJobGuardNotify()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17FA4, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobGuardReset()
+s32 cellSpursJobGuardReset()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17F60, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursRunJobChain()
+s32 cellSpursRunJobChain()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18F94, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobChainGetError()
+s32 cellSpursJobChainGetError()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x190AC, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursGetJobPipelineInfo()
+s32 cellSpursGetJobPipelineInfo()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1A954, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobSetMaxGrab()
+s32 cellSpursJobSetMaxGrab()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1AC88, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursJobHeaderSetJobbin2Param()
+s32 cellSpursJobHeaderSetJobbin2Param()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1AD58, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursAddUrgentCommand()
+s32 cellSpursAddUrgentCommand()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x18160, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursAddUrgentCall()
+s32 cellSpursAddUrgentCall()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x1823C, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursBarrierInitialize()
+s32 cellSpursBarrierInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17CD8, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursBarrierGetTasksetAddress()
+s32 cellSpursBarrierGetTasksetAddress()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17DB0, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 _cellSpursSemaphoreInitialize()
+s32 _cellSpursSemaphoreInitialize()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17DF8, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
-s64 cellSpursSemaphoreGetTasksetAddress()
+s32 cellSpursSemaphoreGetTasksetAddress()
 {
-#ifdef PRX_DEBUG
-	cellSpurs->Warning("%s()", __FUNCTION__);
-	return GetCurrentPPUThread().FastCall2(libsre + 0x17F18, libsre_rtoc);
-#else
 	UNIMPLEMENTED_FUNC(cellSpurs);
 	return CELL_OK;
-#endif
 }
 
 bool spursIsLibProfLoaded()
@@ -3647,7 +2974,7 @@ void spursTraceStatusUpdate(vm::ptr<CellSpurs> spurs)
 	}
 }
 
-s64 spursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> buffer, u32 size, u32 mode, u32 updateStatus)
+s32 spursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> buffer, u32 size, u32 mode, u32 updateStatus)
 {
 	if (!spurs || !buffer)
 	{
@@ -3697,7 +3024,7 @@ s64 spursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> b
 	return CELL_OK;
 }
 
-s64 cellSpursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> buffer, u32 size, u32 mode)
+s32 cellSpursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> buffer, u32 size, u32 mode)
 {
 	if (spursIsLibProfLoaded())
 	{
@@ -3707,7 +3034,7 @@ s64 cellSpursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInf
 	return spursTraceInitialize(spurs, buffer, size, mode, 1);
 }
 
-s64 spursTraceStart(vm::ptr<CellSpurs> spurs, u32 updateStatus)
+s32 spursTraceStart(vm::ptr<CellSpurs> spurs, u32 updateStatus)
 {
 	if (!spurs)
 	{
@@ -3733,7 +3060,7 @@ s64 spursTraceStart(vm::ptr<CellSpurs> spurs, u32 updateStatus)
 	return CELL_OK;
 }
 
-s64 cellSpursTraceStart(vm::ptr<CellSpurs> spurs)
+s32 cellSpursTraceStart(vm::ptr<CellSpurs> spurs)
 {
 	if (!spurs)
 	{
@@ -3748,7 +3075,7 @@ s64 cellSpursTraceStart(vm::ptr<CellSpurs> spurs)
 	return spursTraceStart(spurs, spurs->m.traceMode & CELL_SPURS_TRACE_MODE_FLAG_SYNCHRONOUS_START_STOP);
 }
 
-s64 spursTraceStop(vm::ptr<CellSpurs> spurs, u32 updateStatus)
+s32 spursTraceStop(vm::ptr<CellSpurs> spurs, u32 updateStatus)
 {
 	if (!spurs)
 	{
@@ -3774,7 +3101,7 @@ s64 spursTraceStop(vm::ptr<CellSpurs> spurs, u32 updateStatus)
 	return CELL_OK;
 }
 
-s64 cellSpursTraceStop(vm::ptr<CellSpurs> spurs)
+s32 cellSpursTraceStop(vm::ptr<CellSpurs> spurs)
 {
 	if (!spurs)
 	{
@@ -3789,7 +3116,7 @@ s64 cellSpursTraceStop(vm::ptr<CellSpurs> spurs)
 	return spursTraceStop(spurs, spurs->m.traceMode & CELL_SPURS_TRACE_MODE_FLAG_SYNCHRONOUS_START_STOP);
 }
 
-s64 cellSpursTraceFinalize(vm::ptr<CellSpurs> spurs)
+s32 cellSpursTraceFinalize(vm::ptr<CellSpurs> spurs)
 {
 	if (!spurs)
 	{
@@ -3813,10 +3140,8 @@ s64 cellSpursTraceFinalize(vm::ptr<CellSpurs> spurs)
 	return CELL_OK;
 }
 
-void cellSpurs_init(Module *pxThis)
+Module cellSpurs("cellSpurs", []()
 {
-	cellSpurs = pxThis;
-
 	// Core 
 	REG_FUNC(cellSpurs, cellSpursInitialize);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute);
@@ -3975,4 +3300,4 @@ void cellSpurs_init(Module *pxThis)
 	REG_FUNC(cellSpurs, cellSpursTraceStart);
 	REG_FUNC(cellSpurs, cellSpursTraceStop);
 	REG_FUNC(cellSpurs, cellSpursTraceFinalize);
-}
+});

@@ -10,14 +10,15 @@
 #include "Loader/PSF.h"
 #include "cellGame.h"
 
-Module *cellGame = nullptr;
+extern Module cellGame;
 
 std::string contentInfo = "";
 std::string usrdir = "";
+bool path_set = false;
 
 int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
 {
-	cellGame->Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
+	cellGame.Warning("cellGameBootCheck(type_addr=0x%x, attributes_addr=0x%x, size_addr=0x%x, dirName_addr=0x%x)",
 		type.addr(), attributes.addr(), size.addr(), dirName.addr());
 
 	if (size)
@@ -33,14 +34,14 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 	vfsFile f("/app_home/../PARAM.SFO");
 	if (!f.IsOpened())
 	{
-		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
+		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
 	}
 
 	PSFLoader psf(f);
 	if (!psf.Load(false))
 	{
-		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
+		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
 	}
 
@@ -52,6 +53,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, ""); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else if (category.substr(0, 2) == "HG")
 	{
@@ -61,6 +63,7 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, titleId);
 		contentInfo = "/dev_hdd0/game/" + titleId;
 		usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
+		path_set = true;
 	}
 	else if (category.substr(0, 2) == "GD")
 	{
@@ -70,10 +73,11 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		if (dirName) strcpy_trunc(*dirName, titleId); // ???
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else
 	{
-		cellGame->Error("cellGameBootCheck(): CELL_GAME_ERROR_FAILURE (unknown CATEGORY)");
+		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_FAILURE (unknown CATEGORY)");
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
@@ -82,11 +86,11 @@ int cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 
 int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 {
-	cellGame->Warning("cellGamePatchCheck(size_addr=0x%x, reserved_addr=0x%x)", size.addr(), reserved_addr);
+	cellGame.Warning("cellGamePatchCheck(size_addr=0x%x, reserved_addr=0x%x)", size.addr(), reserved_addr);
 
 	if (reserved_addr != 0)
 	{
-		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_PARAM");
+		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
 	}
 
@@ -103,38 +107,39 @@ int cellGamePatchCheck(vm::ptr<CellGameContentSize> size, u32 reserved_addr)
 	vfsFile f("/app_home/../PARAM.SFO");
 	if (!f.IsOpened())
 	{
-		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
+		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
 	}
 
 	PSFLoader psf(f);
 	if (!psf.Load(false))
 	{
-		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
+		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
 	}
 
 	std::string category = psf.GetString("CATEGORY");
 	if (category.substr(0, 2) != "GD")
 	{
-		cellGame->Error("cellGamePatchCheck(): CELL_GAME_ERROR_NOTPATCH");
+		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_NOTPATCH");
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
 	std::string titleId = psf.GetString("TITLE_ID");
 	contentInfo = "/dev_hdd0/game/" + titleId;
 	usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
+	path_set = true;
 	
 	return CELL_GAME_RET_OK;
 }
 
 int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameContentSize> size)
 {
-	cellGame->Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.addr(), size.addr());
+	cellGame.Warning("cellGameDataCheck(type=0x%x, dirName_addr=0x%x, size_addr=0x%x)", type, dirName.addr(), size.addr());
 
 	if ((type - 1) >= 3)
 	{
-		cellGame->Error("cellGameDataCheck(): CELL_GAME_ERROR_PARAM");
+		cellGame.Error("cellGameDataCheck(): CELL_GAME_ERROR_PARAM");
 		return CELL_GAME_ERROR_PARAM;
 	}
 
@@ -154,11 +159,16 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 
 		if (!Emu.GetVFS().ExistsDir("/dev_bdvd/PS3_GAME"))
 		{
-			cellGame->Warning("cellGameDataCheck(): /dev_bdvd/PS3_GAME not found");
+			cellGame.Warning("cellGameDataCheck(): /dev_bdvd/PS3_GAME not found");
+			contentInfo = "";
+			usrdir = "";
+			path_set = true;
 			return CELL_GAME_RET_NONE;
 		}
+
 		contentInfo = "/dev_bdvd/PS3_GAME";
 		usrdir = "/dev_bdvd/PS3_GAME/USRDIR";
+		path_set = true;
 	}
 	else
 	{
@@ -166,11 +176,16 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 
 		if (!Emu.GetVFS().ExistsDir(dir))
 		{
-			cellGame->Warning("cellGameDataCheck(): '%s' directory not found", dir.c_str());
+			cellGame.Warning("cellGameDataCheck(): '%s' directory not found", dir.c_str());
+			contentInfo = "";
+			usrdir = "";
+			path_set = true;
 			return CELL_GAME_RET_NONE;
 		}
+
 		contentInfo = dir;
 		usrdir = dir + "/USRDIR";
+		path_set = true;
 	}
 
 	return CELL_GAME_RET_OK;
@@ -178,7 +193,7 @@ int cellGameDataCheck(u32 type, vm::ptr<const char> dirName, vm::ptr<CellGameCon
 
 int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> usrdirPath)
 {
-	cellGame->Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
+	cellGame.Warning("cellGameContentPermit(contentInfoPath_addr=0x%x, usrdirPath_addr=0x%x)",
 		contentInfoPath.addr(), usrdirPath.addr());
 
 	if (!contentInfoPath || !usrdirPath)
@@ -186,9 +201,8 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 		return CELL_GAME_ERROR_PARAM;
 	}
 	
-	if (contentInfo == "" && usrdir == "")
+	if (!path_set)
 	{
-		cellGame->Warning("cellGameContentPermit(): CELL_GAME_ERROR_FAILURE (no permission given)");
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
@@ -197,6 +211,7 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 
 	contentInfo = "";
 	usrdir = "";
+	path_set = false;
 	
 	return CELL_GAME_RET_OK;
 }
@@ -204,12 +219,12 @@ int cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog,
 	vm::ptr<void(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set)> funcStat, u32 container)
 {
-	cellGame->Warning("cellGameDataCheckCreate(2)(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
+	cellGame.Warning("cellGameDataCheckCreate(2)(version=0x%x, dirName_addr=0x%x, errDialog=0x%x, funcStat_addr=0x%x, container=%d)",
 		version, dirName.addr(), errDialog, funcStat.addr(), container);
 
 	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1)
 	{
-		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_PARAM");
+		cellGame.Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_PARAM");
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
@@ -219,7 +234,7 @@ int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 
 	if (!Emu.GetVFS().ExistsDir(dir))
 	{
-		cellGame->Todo("cellGameDataCheckCreate(2)(): creating directory '%s'", dir.c_str());
+		cellGame.Todo("cellGameDataCheckCreate(2)(): creating directory '%s'", dir.c_str());
 		// TODO: create data
 		return CELL_GAMEDATA_RET_OK;
 	}
@@ -227,14 +242,14 @@ int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 	vfsFile f(dir + "/PARAM.SFO");
 	if (!f.IsOpened())
 	{
-		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot open PARAM.SFO)");
+		cellGame.Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot open PARAM.SFO)");
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
 	PSFLoader psf(f);
 	if (!psf.Load(false))
 	{
-		cellGame->Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
+		cellGame.Error("cellGameDataCheckCreate(2)(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
 		return CELL_GAMEDATA_ERROR_BROKEN;
 	}
 
@@ -272,36 +287,36 @@ int cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 	if (cbSet->setParam)
 	{
 		// TODO: write PARAM.SFO from cbSet
-		cellGame->Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam);
+		cellGame.Todo("cellGameDataCheckCreate(2)(): writing PARAM.SFO parameters (addr=0x%x)", cbSet->setParam);
 	}
 
 	switch ((s32)cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 		// TODO: do not process game data
-		cellGame->Warning("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
+		cellGame.Warning("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_OK_CANCEL");
 
 	case CELL_GAMEDATA_CBRESULT_OK:
 		return CELL_GAMEDATA_RET_OK;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE: // TODO: process errors, error message and needSizeKB result
-		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
+		cellGame.Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
-		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
+		cellGame.Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_BROKEN");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_NODATA:
-		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
+		cellGame.Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NODATA");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
-		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
+		cellGame.Error("cellGameDataCheckCreate(2)(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 
 	default:
-		cellGame->Error("cellGameDataCheckCreate(2)(): callback returned unknown error (code=0x%x)");
+		cellGame.Error("cellGameDataCheckCreate(2)(): callback returned unknown error (code=0x%x)");
 		return CELL_GAMEDATA_ERROR_CBRESULT;
 	}
 }
@@ -315,7 +330,7 @@ int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const char> dir
 
 int cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char> tmp_contentInfoPath, vm::ptr<char> tmp_usrdirPath)
 {
-	cellGame->Todo("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
+	cellGame.Todo("cellGameCreateGameData(init_addr=0x%x, tmp_contentInfoPath_addr=0x%x, tmp_usrdirPath_addr=0x%x)",
 		init.addr(), tmp_contentInfoPath.addr(), tmp_usrdirPath.addr());
 
 	// TODO: create temporary game directory, set initial PARAM.SFO parameters
@@ -331,7 +346,7 @@ int cellGameDeleteGameData()
 
 int cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 {
-	cellGame->Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
+	cellGame.Warning("cellGameGetParamInt(id=%d, value_addr=0x%x)", id, value.addr());
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/../PARAM.SFO");
@@ -354,7 +369,7 @@ int cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 
 int cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellGame->Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
+	cellGame.Warning("cellGameGetParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
 	// TODO: Access through cellGame***Check functions
 	vfsFile f("/app_home/../PARAM.SFO");
@@ -426,7 +441,7 @@ int cellGameGetLocalWebContentPath()
 
 int cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::ptr<const char> dirName)
 {
-	cellGame->Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName.addr());
+	cellGame.Warning("cellGameContentErrorDialog(type=%d, errNeedSizeKB=%d, dirName_addr=0x%x)", type, errNeedSizeKB, dirName.addr());
 
 	std::string errorName;
 	switch (type)
@@ -472,31 +487,33 @@ int cellGameThemeInstallFromBuffer()
 	return CELL_OK;
 }
 
-void cellGame_init(Module *pxThis)
+Module cellGame("cellGame", []()
 {
-	cellGame = pxThis;
+	contentInfo = "";
+	usrdir = "";
+	path_set = false;
 
 	// (TODO: Disc Exchange functions missing)
 
-	cellGame->AddFunc(0xf52639ea, cellGameBootCheck);
-	cellGame->AddFunc(0xce4374f6, cellGamePatchCheck);
-	cellGame->AddFunc(0xdb9819f3, cellGameDataCheck);
-	cellGame->AddFunc(0x70acec67, cellGameContentPermit);
+	cellGame.AddFunc(0xf52639ea, cellGameBootCheck);
+	cellGame.AddFunc(0xce4374f6, cellGamePatchCheck);
+	cellGame.AddFunc(0xdb9819f3, cellGameDataCheck);
+	cellGame.AddFunc(0x70acec67, cellGameContentPermit);
 
-	cellGame->AddFunc(0x42a2e133, cellGameCreateGameData);
-	cellGame->AddFunc(0xb367c6e3, cellGameDeleteGameData);
+	cellGame.AddFunc(0x42a2e133, cellGameCreateGameData);
+	cellGame.AddFunc(0xb367c6e3, cellGameDeleteGameData);
 
-	cellGame->AddFunc(0xb7a45caf, cellGameGetParamInt);
-	//cellGame->AddFunc(, cellGameSetParamInt);
-	cellGame->AddFunc(0x3a5d726a, cellGameGetParamString);
-	cellGame->AddFunc(0xdaa5cd20, cellGameSetParamString);
-	cellGame->AddFunc(0xef9d42d5, cellGameGetSizeKB);
-	cellGame->AddFunc(0x2a8e6b92, cellGameGetDiscContentInfoUpdatePath);
-	cellGame->AddFunc(0xa80bf223, cellGameGetLocalWebContentPath);
+	cellGame.AddFunc(0xb7a45caf, cellGameGetParamInt);
+	//cellGame.AddFunc(, cellGameSetParamInt);
+	cellGame.AddFunc(0x3a5d726a, cellGameGetParamString);
+	cellGame.AddFunc(0xdaa5cd20, cellGameSetParamString);
+	cellGame.AddFunc(0xef9d42d5, cellGameGetSizeKB);
+	cellGame.AddFunc(0x2a8e6b92, cellGameGetDiscContentInfoUpdatePath);
+	cellGame.AddFunc(0xa80bf223, cellGameGetLocalWebContentPath);
 
-	cellGame->AddFunc(0xb0a1f8c6, cellGameContentErrorDialog);
+	cellGame.AddFunc(0xb0a1f8c6, cellGameContentErrorDialog);
 
-	cellGame->AddFunc(0xd24e3928, cellGameThemeInstall);
-	cellGame->AddFunc(0x87406734, cellGameThemeInstallFromBuffer);
-	//cellGame->AddFunc(, CellGameThemeInstallCallback);
-}
+	cellGame.AddFunc(0xd24e3928, cellGameThemeInstall);
+	cellGame.AddFunc(0x87406734, cellGameThemeInstallFromBuffer);
+	//cellGame.AddFunc(, CellGameThemeInstallCallback);
+});

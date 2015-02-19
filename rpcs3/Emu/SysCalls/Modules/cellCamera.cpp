@@ -5,7 +5,7 @@
 
 #include "cellCamera.h"
 
-Module *cellCamera = nullptr;
+extern Module cellCamera;
 const char* attributes[] = {"GAIN", "REDBLUEGAIN", "SATURATION", "EXPOSURE", "BRIGHTNESS", "AEC", "AGC", "AWB", "ABC", "LED", "AUDIOGAIN", "QS", "NONZEROCOEFFS", "YUVFLAG",
                             "JPEGFLAG", "BACKLIGHTCOMP", "MIRRORFLAG", "MEASUREDQS", "422FLAG", "USBLOAD", "GAMMA", "GREENGAIN", "AGCLIMIT", "DENOISE", "FRAMERATEADJUST",
                             "PIXELOUTLIERFILTER", "AGCLOW", "AGCHIGH", "DEVICELOCATION", "FORMATCAP", "FORMATINDEX", "NUMFRAME", "FRAMEINDEX", "FRAMESIZE", "INTERVALTYPE",
@@ -27,7 +27,7 @@ cellCameraInternal cellCameraInstance;
 
 int cellCameraInit()
 {
-	cellCamera->Warning("cellCameraInit()");
+	cellCamera.Warning("cellCameraInit()");
 
 	if (cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
@@ -84,7 +84,7 @@ int cellCameraInit()
 
 int cellCameraEnd()
 {
-	cellCamera->Warning("cellCameraEnd()");
+	cellCamera.Warning("cellCameraEnd()");
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -132,7 +132,7 @@ int cellCameraGetDeviceGUID()
 
 int cellCameraGetType(s32 dev_num, vm::ptr<CellCameraType> type)
 {
-	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type.addr());
+	cellCamera.Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type.addr());
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -174,7 +174,7 @@ int cellCameraIsStarted()
 
 int cellCameraGetAttribute(s32 dev_num, CellCameraAttribute attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
-	cellCamera->Warning("cellCameraGetAttribute(dev_num=%d, attrib=%s(%d), arg1=0x%x, arg2=0x%x)", dev_num, attributes[attrib], arg1.addr(), arg2.addr());
+	cellCamera.Warning("cellCameraGetAttribute(dev_num=%d, attrib=%s(%d), arg1=0x%x, arg2=0x%x)", dev_num, attributes[attrib], arg1.addr(), arg2.addr());
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -286,7 +286,7 @@ int cellCameraGetAttribute(s32 dev_num, CellCameraAttribute attrib, vm::ptr<u32>
 	case 49:
 		*arg1 = cellCameraInstance.m_camera.attributes.ATTRIBUTE_UNKNOWN; break;
 	default:
-		cellCamera->Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
+		cellCamera.Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
 	}
 
 	return CELL_OK;
@@ -294,7 +294,7 @@ int cellCameraGetAttribute(s32 dev_num, CellCameraAttribute attrib, vm::ptr<u32>
 
 int cellCameraSetAttribute(s32 dev_num, CellCameraAttribute attrib, u32 arg1, u32 arg2)
 {
-	cellCamera->Warning("cellCameraSetAttribute(dev_num=%d, attrib=%s(%d), arg1=%d, arg2=%d)", dev_num, attributes[attrib], attrib, arg1, arg2);
+	cellCamera.Warning("cellCameraSetAttribute(dev_num=%d, attrib=%s(%d), arg1=%d, arg2=%d)", dev_num, attributes[attrib], attrib, arg1, arg2);
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -364,7 +364,7 @@ int cellCameraSetAttribute(s32 dev_num, CellCameraAttribute attrib, u32 arg1, u3
 	case 28:
 		cellCameraInstance.m_camera.attributes.DEVICELOCATION = arg1; break;
 	case 29:
-		cellCamera->Error("Tried to write to read-only (?) value: FORMATCAP"); break;
+		cellCamera.Error("Tried to write to read-only (?) value: FORMATCAP"); break;
 	case 30:
 		cellCameraInstance.m_camera.attributes.FORMATINDEX = arg1; break;
 	case 31:
@@ -396,7 +396,7 @@ int cellCameraSetAttribute(s32 dev_num, CellCameraAttribute attrib, u32 arg1, u3
 	case 44:
 		return CELL_CAMERA_ERROR_PARAM; break;
 	case 45:
-		cellCamera->Error("Tried to write to read-only (?) value: READMODE"); break;
+		cellCamera.Error("Tried to write to read-only (?) value: READMODE"); break;
 	case 46:
 		cellCameraInstance.m_camera.attributes.GAMEPID = arg1; break;
 	case 47:
@@ -404,9 +404,9 @@ int cellCameraSetAttribute(s32 dev_num, CellCameraAttribute attrib, u32 arg1, u3
 	case 48:
 		cellCameraInstance.m_camera.attributes.READFINISH = arg1; break;
 	case 49:
-		cellCamera->Error("Tried to write to read-only (?) value: ATTRIBUTE_UNKNOWN"); break;
+		cellCamera.Error("Tried to write to read-only (?) value: ATTRIBUTE_UNKNOWN"); break;
 	default:
-		cellCamera->Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
+		cellCamera.Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
 	}
 
 	return CELL_OK;
@@ -567,42 +567,40 @@ void cellCamera_unload()
 	cellCameraInstance.m_bInitialized = false;
 }
 
-void cellCamera_init(Module* pxThis)
+Module cellCamera("cellCamera", []()
 {
-	cellCamera = pxThis;
+	cellCamera.AddFunc(0xbf47c5dd, cellCameraInit);
+	cellCamera.AddFunc(0x5ad46570, cellCameraEnd);
+	cellCamera.AddFunc(0x85e1b8da, cellCameraOpen);
+	cellCamera.AddFunc(0x5d25f866, cellCameraOpenEx);
+	cellCamera.AddFunc(0x379c5dd6, cellCameraClose);
 
-	cellCamera->AddFunc(0xbf47c5dd, cellCameraInit);
-	cellCamera->AddFunc(0x5ad46570, cellCameraEnd);
-	cellCamera->AddFunc(0x85e1b8da, cellCameraOpen);
-	cellCamera->AddFunc(0x5d25f866, cellCameraOpenEx);
-	cellCamera->AddFunc(0x379c5dd6, cellCameraClose);
+	cellCamera.AddFunc(0x602e2052, cellCameraGetDeviceGUID);
+	cellCamera.AddFunc(0x58bc5870, cellCameraGetType);
+	cellCamera.AddFunc(0x8ca53dde, cellCameraIsAvailable);
+	cellCamera.AddFunc(0x7e063bbc, cellCameraIsAttached);
+	cellCamera.AddFunc(0xfa160f24, cellCameraIsOpen);
+	cellCamera.AddFunc(0x5eebf24e, cellCameraIsStarted);
+	cellCamera.AddFunc(0x532b8aaa, cellCameraGetAttribute);
+	cellCamera.AddFunc(0x8cd56eee, cellCameraSetAttribute);
+	cellCamera.AddFunc(0x7dac520c, cellCameraGetBufferSize);
+	cellCamera.AddFunc(0x10697d7f, cellCameraGetBufferInfo);
+	cellCamera.AddFunc(0x0e63c444, cellCameraGetBufferInfoEx);
 
-	cellCamera->AddFunc(0x602e2052, cellCameraGetDeviceGUID);
-	cellCamera->AddFunc(0x58bc5870, cellCameraGetType);
-	cellCamera->AddFunc(0x8ca53dde, cellCameraIsAvailable);
-	cellCamera->AddFunc(0x7e063bbc, cellCameraIsAttached);
-	cellCamera->AddFunc(0xfa160f24, cellCameraIsOpen);
-	cellCamera->AddFunc(0x5eebf24e, cellCameraIsStarted);
-	cellCamera->AddFunc(0x532b8aaa, cellCameraGetAttribute);
-	cellCamera->AddFunc(0x8cd56eee, cellCameraSetAttribute);
-	cellCamera->AddFunc(0x7dac520c, cellCameraGetBufferSize);
-	cellCamera->AddFunc(0x10697d7f, cellCameraGetBufferInfo);
-	cellCamera->AddFunc(0x0e63c444, cellCameraGetBufferInfoEx);
+	cellCamera.AddFunc(0x61dfbe83, cellCameraPrepExtensionUnit);
+	cellCamera.AddFunc(0xeb6f95fb, cellCameraCtrlExtensionUnit);
+	cellCamera.AddFunc(0xb602e328, cellCameraGetExtensionUnit);
+	cellCamera.AddFunc(0x2dea3e9b, cellCameraSetExtensionUnit);
 
-	cellCamera->AddFunc(0x61dfbe83, cellCameraPrepExtensionUnit);
-	cellCamera->AddFunc(0xeb6f95fb, cellCameraCtrlExtensionUnit);
-	cellCamera->AddFunc(0xb602e328, cellCameraGetExtensionUnit);
-	cellCamera->AddFunc(0x2dea3e9b, cellCameraSetExtensionUnit);
+	cellCamera.AddFunc(0x81f83db9, cellCameraReset);
+	cellCamera.AddFunc(0x456dc4aa, cellCameraStart);
+	cellCamera.AddFunc(0x3845d39b, cellCameraRead);
+	cellCamera.AddFunc(0x21fc151f, cellCameraReadEx);
+	cellCamera.AddFunc(0xe28b206b, cellCameraReadComplete);
+	cellCamera.AddFunc(0x02f5ced0, cellCameraStop);
 
-	cellCamera->AddFunc(0x81f83db9, cellCameraReset);
-	cellCamera->AddFunc(0x456dc4aa, cellCameraStart);
-	cellCamera->AddFunc(0x3845d39b, cellCameraRead);
-	cellCamera->AddFunc(0x21fc151f, cellCameraReadEx);
-	cellCamera->AddFunc(0xe28b206b, cellCameraReadComplete);
-	cellCamera->AddFunc(0x02f5ced0, cellCameraStop);
-
-	cellCamera->AddFunc(0xb0647e5a, cellCameraSetNotifyEventQueue);
-	cellCamera->AddFunc(0x9b98d258, cellCameraRemoveNotifyEventQueue);
-	cellCamera->AddFunc(0xa7fd2f5b, cellCameraSetNotifyEventQueue2);
-	cellCamera->AddFunc(0x44673f07, cellCameraRemoveNotifyEventQueue2);
-}
+	cellCamera.AddFunc(0xb0647e5a, cellCameraSetNotifyEventQueue);
+	cellCamera.AddFunc(0x9b98d258, cellCameraRemoveNotifyEventQueue);
+	cellCamera.AddFunc(0xa7fd2f5b, cellCameraSetNotifyEventQueue2);
+	cellCamera.AddFunc(0x44673f07, cellCameraRemoveNotifyEventQueue2);
+});

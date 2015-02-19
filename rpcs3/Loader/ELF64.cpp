@@ -23,10 +23,23 @@ namespace loader
 	{
 		handler::error_code elf64::init(vfsStream& stream)
 		{
+			m_ehdr = {};
+			m_sprx_module_info = {};
+			m_sprx_function_info = {};
+
+			m_phdrs.clear();
+			m_shdrs.clear();
+
+			m_sprx_segments_info.clear();
+			m_sprx_import_info.clear();
+			m_sprx_export_info.clear();
+
 			error_code res = handler::init(stream);
 
 			if (res != ok)
+			{
 				return res;
+			}
 
 			m_stream->Read(&m_ehdr, sizeof(ehdr));
 
@@ -58,8 +71,6 @@ namespace loader
 				if (m_stream->Read(m_phdrs.data(), m_ehdr.e_phnum * sizeof(phdr)) != m_ehdr.e_phnum * sizeof(phdr))
 					return broken_file;
 			}
-			else
-				m_phdrs.clear();
 
 			if (m_ehdr.e_shnum)
 			{
@@ -68,8 +79,6 @@ namespace loader
 				if (m_stream->Read(m_shdrs.data(), m_ehdr.e_shnum * sizeof(shdr)) != m_ehdr.e_shnum * sizeof(shdr))
 					return broken_file;
 			}
-			else
-				m_shdrs.clear();
 
 			if (is_sprx())
 			{
@@ -78,11 +87,6 @@ namespace loader
 
 				//m_stream->Seek(handler::get_stream_offset() + m_phdrs[1].p_vaddr.addr());
 				//m_stream->Read(&m_sprx_function_info, sizeof(sprx_function_info));
-			}
-			else
-			{
-				m_sprx_import_info.clear();
-				m_sprx_export_info.clear();
 			}
 
 			return ok;
@@ -95,23 +99,24 @@ namespace loader
 				switch ((u32)phdr.p_type)
 				{
 				case 0x1: //load
+				{
 					if (phdr.p_memsz)
 					{
 						sprx_segment_info segment;
 						segment.size = phdr.p_memsz;
 						segment.size_file = phdr.p_filesz;
 
-						segment.begin.set(vm::alloc(segment.size, vm::sprx));
+						segment.begin.set(vm::alloc(segment.size, vm::main));
 
 						if (!segment.begin)
 						{
-							LOG_ERROR(LOADER, "%s() sprx: AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr.addr(), (u32)phdr.p_memsz);
+							LOG_ERROR(LOADER, "%s() sprx: vm::alloc(0x%x) failed", __FUNCTION__, segment.size);
 
 							return loading_error;
 						}
 
 						segment.initial_addr.set(phdr.p_vaddr.addr());
-						LOG_ERROR(LOADER, "segment addr=0x%x, initial addr = 0x%x", segment.begin.addr(), segment.initial_addr.addr());
+						LOG_WARNING(LOADER, "segment addr=0x%x, initial addr = 0x%x", segment.begin.addr(), segment.initial_addr.addr());
 
 						if (phdr.p_filesz)
 						{
@@ -124,16 +129,11 @@ namespace loader
 							sys_prx_module_info_t module_info;
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_paddr.addr());
 							m_stream->Read(&module_info, sizeof(module_info));
-							LOG_ERROR(LOADER, "%s (%x):", module_info.name, (u32)module_info.toc);
+
 							info.name = std::string(module_info.name, 28);
-							info.rtoc = module_info.toc;
+							info.rtoc = module_info.toc + segment.begin.addr();
 
-							int import_count = (module_info.imports_end - module_info.imports_start) / sizeof(sys_prx_library_info_t);
-
-							if (import_count)
-							{
-								LOG_ERROR(LOADER, "**** Lib '%s' has %d imports!", module_info.name, import_count);
-							}
+							LOG_WARNING(LOADER, "%s (rtoc=%x):", info.name, info.rtoc);
 
 							sys_prx_library_info_t lib;
 							for (u32 e = module_info.exports_start.addr();
@@ -150,12 +150,12 @@ namespace loader
 									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.name_addr);
 									m_stream->Read(name, sizeof(name));
 									modulename = std::string(name);
-									LOG_ERROR(LOADER, "**** %s", name);
+									LOG_WARNING(LOADER, "**** Exported: %s", name);
 								}
 
 								auto &module = info.modules[modulename];
 
-								LOG_ERROR(LOADER, "**** 0x%x - 0x%x - 0x%x", (u32)lib.unk4, (u32)lib.unk5, (u32)lib.unk6);
+								LOG_WARNING(LOADER, "**** 0x%x - 0x%x - 0x%x", (u32)lib.unk4, (u32)lib.unk5, (u32)lib.unk6);
 
 								for (u16 i = 0, end = lib.num_func; i < end; ++i)
 								{
@@ -169,7 +169,7 @@ namespace loader
 									module.exports[fnid] = fstub;
 
 									//LOG_NOTICE(LOADER, "Exported function '%s' in '%s' module  (LLE)", SysCalls::GetHLEFuncName(fnid).c_str(), module_name.c_str());
-									LOG_ERROR(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetHLEFuncName(fnid).c_str(), (u32)fstub);
+									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetHLEFuncName(fnid).c_str(), (u32)fstub);
 								}
 							}
 
@@ -179,6 +179,34 @@ namespace loader
 							{
 								m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + i);
 								m_stream->Read(&lib, sizeof(lib));
+
+								std::string modulename;
+								if (lib.name_addr)
+								{
+									char name[27];
+									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.name_addr);
+									m_stream->Read(name, sizeof(name));
+									modulename = std::string(name);
+									LOG_WARNING(LOADER, "**** Imported: %s", name);
+								}
+
+								auto &module = info.modules[modulename];
+
+								LOG_WARNING(LOADER, "**** 0x%x - 0x%x - 0x%x", (u32)lib.unk4, (u32)lib.unk5, (u32)lib.unk6);
+
+								for (u16 i = 0, end = lib.num_func; i < end; ++i)
+								{
+									be_t<u32> fnid, fstub;
+									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.fnid_addr + i * sizeof(fnid));
+									m_stream->Read(&fnid, sizeof(fnid));
+
+									m_stream->Seek(handler::get_stream_offset() + phdr.p_offset + lib.fstub_addr + i * sizeof(fstub));
+									m_stream->Read(&fstub, sizeof(fstub));
+
+									module.imports[fnid] = fstub;
+
+									LOG_WARNING(LOADER, "**** %s: [%s] -> 0x%x", modulename.c_str(), SysCalls::GetHLEFuncName(fnid).c_str(), (u32)fstub);
+								}
 							}
 						}
 
@@ -186,8 +214,10 @@ namespace loader
 					}
 
 					break;
+				}
 
 				case 0x700000a4: //relocation
+				{
 					m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 
 					for (uint i = 0; i < phdr.p_filesz; i += sizeof(sys_prx_relocation_info_t))
@@ -200,22 +230,22 @@ namespace loader
 						switch ((u32)rel.type)
 						{
 						case 1:
-							LOG_WARNING(LOADER, "**** RELOCATION(1): 0x%x <- 0x%x", ADDR, (u32)(info.segments[rel.index_value].begin.addr() + rel.ptr.addr()));
+							LOG_NOTICE(LOADER, "**** RELOCATION(1): 0x%x <- 0x%x", ADDR, (u32)(info.segments[rel.index_value].begin.addr() + rel.ptr.addr()));
 							*vm::ptr<u32>::make(ADDR) = info.segments[rel.index_value].begin.addr() + rel.ptr.addr();
 							break;
 
 						case 4:
-							LOG_WARNING(LOADER, "**** RELOCATION(4): 0x%x <- 0x%x", ADDR, (u16)(rel.ptr.addr()));
+							LOG_NOTICE(LOADER, "**** RELOCATION(4): 0x%x <- 0x%x", ADDR, (u16)(rel.ptr.addr()));
 							*vm::ptr<u16>::make(ADDR) = (u16)(u64)rel.ptr.addr();
 							break;
 
 						case 5:
-							LOG_WARNING(LOADER, "**** RELOCATION(5): 0x%x <- 0x%x", ADDR, (u16)(info.segments[rel.index_value].begin.addr() >> 16));
+							LOG_NOTICE(LOADER, "**** RELOCATION(5): 0x%x <- 0x%x", ADDR, (u16)(info.segments[rel.index_value].begin.addr() >> 16));
 							*vm::ptr<u16>::make(ADDR) = info.segments[rel.index_value].begin.addr() >> 16;
 							break;
 
 						case 6:
-							LOG_ERROR(LOADER, "**** RELOCATION(6): 0x%x <- 0x%x", ADDR, (u16)(info.segments[1].begin.addr() >> 16));
+							LOG_WARNING(LOADER, "**** RELOCATION(6): 0x%x <- 0x%x", ADDR, (u16)(info.segments[1].begin.addr() >> 16));
 							*vm::ptr<u16>::make(ADDR) = info.segments[1].begin.addr() >> 16;
 							break;
 
@@ -226,6 +256,7 @@ namespace loader
 					}
 
 					break;
+				}
 				}
 			}
 
@@ -264,8 +295,15 @@ namespace loader
 			//store elf to memory
 			vm::ps3::init();
 
+			error_code res = alloc_memory(0);
+			if (res != ok)
+			{
+				return res;
+			}
+
 			std::vector<u32> start_funcs;
 			std::vector<u32> stop_funcs;
+			std::vector<u32> exit_funcs;
 
 			//load modules
 			vfsDir lle_dir("/dev_flash/sys/external");
@@ -273,6 +311,7 @@ namespace loader
 			for (const auto module : lle_dir)
 			{
 				elf64 sprx_handler;
+
 				vfsFile fsprx(lle_dir.GetPath() + "/" + module->name);
 
 				if (fsprx.IsOpened())
@@ -286,12 +325,12 @@ namespace loader
 
 						if (!load_lib.LoadValue(false))
 						{
-							LOG_ERROR(LOADER, "skipped lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+							LOG_WARNING(LOADER, "Skipped LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
 							continue;
 						}
 						else
 						{
-							LOG_WARNING(LOADER, "loading lle library '%s'", sprx_handler.sprx_get_module_name().c_str());
+							LOG_WARNING(LOADER, "Loading LLE library '%s'", sprx_handler.sprx_get_module_name().c_str());
 						}
 
 						sprx_info info;
@@ -303,36 +342,102 @@ namespace loader
 							{
 								for (auto &e : m.second.exports)
 								{
+									auto code = vm::ptr<const u32>::make(vm::check_addr(e.second, 8) ? vm::read32(e.second) : 0);
+
+									bool is_empty = !code || (code[0] == 0x38600000 && code[1] == BLR());
+
+									if (!code)
+									{
+										LOG_ERROR(LOADER, "bad OPD of special function 0x%08x in '%s' library (0x%x)", e.first, info.name.c_str(), code);
+									}
+
 									switch (e.first)
 									{
-									case 0xbc9a0086: start_funcs.push_back(e.second); break;
-									case 0xab779874: stop_funcs.push_back(e.second); break;
+									case 0xbc9a0086:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "start func found in '%s' library (0x%x)", info.name.c_str(), code);
+											start_funcs.push_back(e.second);
+										}
+										break;
+									}
 
-									default: LOG_ERROR(LOADER, "unknown special func 0x%08x in '%s' library", e.first, info.name.c_str()); break;
+									case 0xab779874:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "stop func found in '%s' library (0x%x)", info.name.c_str(), code);
+											stop_funcs.push_back(e.second);
+										}
+										break;
+									}
+
+									case 0x3ab9a95e:
+									{
+										if (!is_empty)
+										{
+											LOG_ERROR(LOADER, "exit func found in '%s' library (0x%x)", info.name.c_str(), code);
+											exit_funcs.push_back(e.second);
+										}
+										break;
+									}
+
+									default: LOG_ERROR(LOADER, "unknown special func 0x%08x in '%s' library (0x%x)", e.first, info.name.c_str(), code); break;
 									}
 								}
 
 								continue;
 							}
 
-							Module* module = Emu.GetModuleManager().GetModuleByName(m.first);
+							Module* module = Emu.GetModuleManager().GetModuleByName(m.first.c_str());
 
 							if (!module)
 							{
-								LOG_ERROR(LOADER, "unknown module '%s' in '%s' library", m.first.c_str(), info.name.c_str());
-								module = new Module(-1, m.first.c_str());
+								LOG_WARNING(LOADER, "Unknown module '%s' in '%s' library", m.first.c_str(), info.name.c_str());
 							}
 
-							for (auto &e : m.second.exports)
+							for (auto& f : m.second.exports)
 							{
-								module->RegisterLLEFunc(e.first, vm::ptr<void()>::make(e.second));
+								add_ps3_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
+							}
+
+							for (auto& f : m.second.imports)
+							{
+								const u32 nid = f.first;
+								const u32 addr = f.second + info.segments[0].begin.addr();
+
+								u32 index;
+
+								auto func = get_ps3_func_by_nid(nid, &index);
+
+								if (!func)
+								{
+									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
+
+									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
+								}
+								else
+								{
+									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
+								}
+
+								if (!vm::check_addr(addr, 8))
+								{
+									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
+								}
+								else
+								{
+									vm::write32(addr + 0, HACK(index));
+									vm::write32(addr + 4, BLR());
+								}
 							}
 						}
 					}
 				}
 			}
 
-			error_code res = load_data(0);
+			res = load_data(0);
 			if (res != ok)
 				return res;
 
@@ -345,18 +450,11 @@ namespace loader
 			rsx_callback_data[1] = SC(0);
 			rsx_callback_data[2] = BLR();
 
-			auto ppu_thr_exit_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(3 * 4));
-			ppu_thr_exit_data[0] = ADDI(r11, 0, 41);
-			ppu_thr_exit_data[1] = SC(0);
-			ppu_thr_exit_data[2] = BLR();
-			Emu.SetCPUThreadExit(ppu_thr_exit_data.addr());
-
 			auto ppu_thr_stop_data = vm::ptr<u32>::make(Memory.MainMem.AllocAlign(2 * 4));
 			ppu_thr_stop_data[0] = SC(3);
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			//vm::write64(Memory.PRXMem.AllocAlign(0x10000), 0xDEADBEEFABADCAFE);
 			/*
 			//TODO
 			static const int branch_size = 6 * 4;
@@ -395,6 +493,31 @@ namespace loader
 			return ok;
 		}
 
+		handler::error_code elf64::alloc_memory(u64 offset)
+		{
+			for (auto &phdr : m_phdrs)
+			{
+				switch (phdr.p_type.value())
+				{
+				case 0x00000001: //LOAD
+				{
+					if (phdr.p_memsz)
+					{
+						if (!vm::alloc(vm::cast(phdr.p_vaddr.addr()), vm::cast(phdr.p_memsz, "phdr.p_memsz"), vm::main))
+						{
+							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, phdr.p_vaddr.addr(), phdr.p_memsz);
+
+							return loading_error;
+						}
+					}
+					break;
+				}
+				}
+			}
+
+			return ok;
+		}
+
 		handler::error_code elf64::load_data(u64 offset)
 		{
 			for (auto &phdr : m_phdrs)
@@ -402,16 +525,9 @@ namespace loader
 				switch (phdr.p_type.value())
 				{
 				case 0x00000001: //LOAD
+				{
 					if (phdr.p_memsz)
 					{
-						if (!vm::alloc(phdr.p_vaddr.addr(), (u32)phdr.p_memsz, vm::main))
-						{
-							// addr() has be_t<> type (test)
-							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%x) failed", __FUNCTION__, phdr.p_vaddr.addr(), (u32)phdr.p_memsz);
-
-							return loading_error;
-						}
-
 						if (phdr.p_filesz)
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
@@ -420,15 +536,19 @@ namespace loader
 						}
 					}
 					break;
+				}
 
 				case 0x00000007: //TLS
+				{
 					Emu.SetTLSData(
 						vm::cast(phdr.p_vaddr.addr(), "TLS: phdr.p_vaddr"),
 						vm::cast(phdr.p_filesz.value(), "TLS: phdr.p_filesz"),
 						vm::cast(phdr.p_memsz.value(), "TLS: phdr.p_memsz"));
 					break;
+				}
 
 				case 0x60000001: //LOOS+1
+				{
 					if (phdr.p_filesz)
 					{
 						const sys_process_param& proc_param = *(sys_process_param*)phdr.p_vaddr.get_ptr();
@@ -458,8 +578,10 @@ namespace loader
 						}
 					}
 					break;
+				}
 
 				case 0x60000002: //LOOS+2
+				{
 					if (phdr.p_filesz)
 					{
 						const sys_proc_prx_param& proc_prx_param = *(sys_proc_prx_param*)phdr.p_vaddr.get_ptr();
@@ -473,69 +595,86 @@ namespace loader
 						for (auto stub = proc_prx_param.libstubstart; stub < proc_prx_param.libstubend; ++stub)
 						{
 							const std::string module_name = stub->s_modulename.get_ptr();
-							Module* module = Emu.GetModuleManager().GetModuleByName(module_name);
-							if (module)
-							{
-								//module->SetLoaded();
-							}
-							else
+
+							Module* module = Emu.GetModuleManager().GetModuleByName(module_name.c_str());
+
+							if (!module)
 							{
 								LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 							}
 
-							struct tbl_item
-							{
-								be_t<u32> stub;
-								be_t<u32> rtoc;
-							};
+							//struct tbl_item
+							//{
+							//	be_t<u32> stub;
+							//	be_t<u32> rtoc;
+							//};
 
-							struct stub_data_t
-							{
-								be_t<u32> data[3];
-							} 
-							static const stub_data =
-							{
-								be_t<u32>::make(MR(11, 2)),
-								be_t<u32>::make(SC(0)),
-								be_t<u32>::make(BLR())
-							};
+							//struct stub_data_t
+							//{
+							//	be_t<u32> data[3];
+							//}
+							//static const stub_data =
+							//{
+							//	be_t<u32>::make(MR(11, 2)),
+							//	be_t<u32>::make(SC(0)),
+							//	be_t<u32>::make(BLR())
+							//};
 
-							const auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
-							const auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
+							//const auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
+							//const auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
 
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
 								const u32 nid = stub->s_nid[i];
-								auto func = module ? module->GetFunc(nid) : nullptr;
+								const u32 addr = stub->s_text[i];
 
-								if (!func || !func->lle_func)
+								u32 index;
+
+								auto func = get_ps3_func_by_nid(nid, &index);
+
+								if (!func)
 								{
-									dst[i] = stub_data;
+									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetHLEFuncName(nid), module_name, addr);
 
-									tbl[i].stub = (dst + i).addr();
-									tbl[i].rtoc = stub->s_nid[i];
-
-									stub->s_text[i] = (tbl + i).addr();
-
-									if (module && !module->Load(nid))
-									{
-										LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
-									}
-									else //if (Ini.HLELogging.GetValue())
-									{
-										LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
-									}
+									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
 								}
 								else
 								{
-									stub->s_text[i] = func->lle_func.addr();
-									//Is function auto exported, than we can use it
-									LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (LLE: 0x%x)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str(), (u32)stub->s_text[i]);
+									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", func->lle_func ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
+
+								vm::write32(addr + 0, HACK(index));
+								vm::write32(addr + 4, BLR());
+
+								//if (!func || !func->lle_func)
+								//{
+								//	dst[i] = stub_data;
+
+								//	tbl[i].stub = (dst + i).addr();
+								//	tbl[i].rtoc = stub->s_nid[i];
+
+								//	stub->s_text[i] = (tbl + i).addr();
+
+								//	if (!func)
+								//	{
+								//		
+								//	}
+								//	else //if (Ini.HLELogging.GetValue())
+								//	{
+								//		LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
+								//	}
+								//}
+								//else
+								//{
+								//	stub->s_text[i] = func->lle_func.addr();
+								//	//Is function auto exported, than we can use it
+								//	LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (LLE: 0x%x)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str(), (u32)stub->s_text[i]);
+								//}
 							}
 						}
 					}
 					break;
+				}
 				}
 			}
 
