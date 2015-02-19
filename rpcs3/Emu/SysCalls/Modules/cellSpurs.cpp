@@ -2767,7 +2767,7 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 		alloc_ls_blocks = context_size > 0x3D400 ? 0x7A : ((context_size - 0x400) >> 11);
 		if (ls_pattern.addr() != 0)
 		{
-			u128 ls_pattern_128 = u128::from64r(ls_pattern->_u64[1], ls_pattern->_u64[0]);
+			u128 ls_pattern_128 = u128::from64r(ls_pattern->_u64[0], ls_pattern->_u64[1]);
 			u32 ls_blocks       = 0;
 			for (auto i = 0; i < 128; i++)
 			{
@@ -2870,19 +2870,19 @@ s64 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, 
 
 	vm::var<u32> tmpTaskId;
 	auto rc = spursCreateTask(taskset, tmpTaskId, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
-    if (rc != CELL_OK) 
-    {
-        return rc;
-    }
+	if (rc != CELL_OK) 
+	{
+		return rc;
+	}
 
-    rc = spursTaskStart(taskset, tmpTaskId);
-    if (rc != CELL_OK) 
-    {
-        return rc;
-    }
+	rc = spursTaskStart(taskset, tmpTaskId);
+	if (rc != CELL_OK) 
+	{
+		return rc;
+	}
 
-    *taskId = tmpTaskId;
-    return CELL_OK;
+	*taskId = tmpTaskId;
+	return CELL_OK;
 #endif
 }
 
