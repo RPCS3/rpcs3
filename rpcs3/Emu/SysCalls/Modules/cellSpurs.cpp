@@ -2767,10 +2767,11 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 		alloc_ls_blocks = context_size > 0x3D400 ? 0x7A : ((context_size - 0x400) >> 11);
 		if (ls_pattern.addr() != 0)
 		{
-			u32 ls_blocks = 0;
+			u128 ls_pattern_128 = u128::from64r(ls_pattern->_u64[1], ls_pattern->_u64[0]);
+			u32 ls_blocks       = 0;
 			for (auto i = 0; i < 128; i++)
 			{
-				if (ls_pattern->_u128.value()._bit[i])
+				if (ls_pattern_128._bit[i])
 				{
 					ls_blocks++;
 				}
@@ -2782,7 +2783,7 @@ s64 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 			}
 
 			u128 _0 = u128::from32(0);
-			if ((ls_pattern->_u128.value() & u128::from32r(0xFC000000)) != _0)
+			if ((ls_pattern_128 & u128::from32r(0xFC000000)) != _0)
 			{
 				// Prevent save/restore to SPURS management area
 				return CELL_SPURS_TASK_ERROR_INVAL;
@@ -3152,10 +3153,10 @@ s64 _cellSpursTaskAttribute2Initialize(vm::ptr<CellSpursTaskAttribute2> attribut
 	attribute->revision = revision;
 	attribute->sizeContext = 0;
 	attribute->eaContext = 0;
-	
+
 	for (s32 c = 0; c < 4; c++)
 	{
-		attribute->lsPattern._u128 = u128::from64r(0);
+		attribute->lsPattern._u32[c] = 0;
 	}
 
 	attribute->name_addr = 0;

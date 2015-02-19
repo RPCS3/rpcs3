@@ -525,12 +525,12 @@ bool spursKernelWorkloadExit(SPUThread & spu) {
 
 /// SPURS kernel entry point
 bool spursKernelEntry(SPUThread & spu) {
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        if (Emu.IsStopped()) {
-            return false;
-        }
-    }
+    //while (true) {
+    //    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //    if (Emu.IsStopped()) {
+    //        return false;
+    //    }
+    //}
 
     auto ctxt = vm::get_ptr<SpursKernelContext>(spu.ls_offset + 0x100);
     memset(ctxt, 0, sizeof(SpursKernelContext));
@@ -1140,7 +1140,7 @@ void spursTasksetStartTask(SPUThread & spu, CellSpursTaskArgument & taskArgs) {
     auto taskset = vm::get_ptr<CellSpursTaskset>(spu.ls_offset + 0x2700);
 
     spu.GPR[2].clear();
-    spu.GPR[3]         = taskArgs._u128;
+    spu.GPR[3]         = u128::from64r(taskArgs._u64[1], taskArgs._u64[0]);
     spu.GPR[4]._u64[1] = taskset->m.args;
     spu.GPR[4]._u64[0] = taskset->m.spurs.addr();
     for (auto i = 5; i < 128; i++) {
@@ -1382,8 +1382,9 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     u32 allocLsBlocks = taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F;
     u32 lsBlocks      = 0;
+    u128 ls_pattern   = u128::from64r(taskInfo->ls_pattern._u64[1], taskInfo->ls_pattern._u64[0]);
     for (auto i = 0; i < 128; i++) {
-        if (taskInfo->ls_pattern._u128.value()._bit[i]) {
+        if (ls_pattern._bit[i]) {
             lsBlocks++;
         }
     }
@@ -1394,7 +1395,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Make sure the stack is area is specified in the ls pattern
     for (auto i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++) {
-        if (taskInfo->ls_pattern._u128.value()._bit[i] == false) {
+        if (ls_pattern._bit[i] == false) {
             return CELL_SPURS_TASK_ERROR_STAT;
         }
     }
@@ -1414,7 +1415,7 @@ s32 spursTasketSaveTaskContext(SPUThread & spu) {
 
     // Save LS context
     for (auto i = 6; i < 128; i++) {
-        if (taskInfo->ls_pattern._u128.value()._bit[i]) {
+        if (ls_pattern._bit[i]) {
             // TODO: Combine DMA requests for consecutive blocks into a single request
 			memcpy(vm::get_ptr(contextSaveStorage + 0x400 + ((i - 6) << 11)), vm::get_ptr(spu.ls_offset + CELL_SPURS_TASK_TOP + ((i - 6) << 11)), 0x800);
         }
@@ -1498,7 +1499,8 @@ void spursTasksetDispatch(SPUThread & spu) {
         }
 
         // If the entire LS is saved then there is no need to load the ELF as it will be be saved in the context save area as well
-        if (taskInfo->ls_pattern._u128.value() != u128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
+        u128 ls_pattern = u128::from64r(taskInfo->ls_pattern._u64[1], taskInfo->ls_pattern._u64[0]);
+        if (ls_pattern != u128::from64r(0x03FFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull)) {
             // Load the ELF
             u32 entryPoint;
             if (spursTasksetLoadElf(spu, &entryPoint, nullptr, taskInfo->elf_addr.addr(), true) != CELL_OK) {
@@ -1512,7 +1514,7 @@ void spursTasksetDispatch(SPUThread & spu) {
         const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80);
 		memcpy(vm::get_ptr(spu.ls_offset + 0x2C80), vm::get_ptr(contextSaveStorage), 0x380);
         for (auto i = 6; i < 128; i++) {
-            if (taskInfo->ls_pattern._u128.value()._bit[i]) {
+            if (ls_pattern._bit[i]) {
                 // TODO: Combine DMA requests for consecutive blocks into a single request
 				memcpy(vm::get_ptr(spu.ls_offset + CELL_SPURS_TASK_TOP + ((i - 6) << 11)), vm::get_ptr(contextSaveStorage + 0x400 + ((i - 6) << 11)), 0x800);
             }

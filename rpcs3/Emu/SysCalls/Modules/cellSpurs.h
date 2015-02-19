@@ -623,12 +623,14 @@ static_assert(sizeof(CellSpursEventFlag) == CellSpursEventFlag::size, "Wrong Cel
 
 union CellSpursTaskArgument
 {
-	be_t<u128> _u128;
+	be_t<u32> _u32[4];
+	be_t<u64> _u64[2];
 };
 
 union CellSpursTaskLsPattern
 {
-	be_t<u128> _u128;
+	be_t<u32> _u32[4];
+	be_t<u64> _u64[2];
 };
 
 struct CellSpursTaskset
