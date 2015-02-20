@@ -166,22 +166,6 @@ namespace ppu_func_detail
 	struct func_binder;
 
 	template<void* func, typename... T>
-	struct func_binder<func, void, T...>
-	{
-		typedef void(*func_t)(T...);
-
-		static void do_call(PPUThread& CPU, func_t _func)
-		{
-			call<void>(_func, iterate<0, 0, 0, T...>(CPU));
-		}
-
-		static void do_call(PPUThread& CPU)
-		{
-			do_call(CPU, (func_t)func);
-		}
-	};
-
-	template<void* func, typename... T>
 	struct func_binder<func, void, PPUThread&, T...>
 	{
 		typedef void(*func_t)(PPUThread&, T...);
@@ -197,14 +181,14 @@ namespace ppu_func_detail
 		}
 	};
 
-	template<void* func, typename RT, typename... T>
-	struct func_binder
+	template<void* func, typename... T>
+	struct func_binder<func, void, T...>
 	{
-		typedef RT(*func_t)(T...);
+		typedef void(*func_t)(T...);
 
 		static void do_call(PPUThread& CPU, func_t _func)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, iterate<0, 0, 0, T...>(CPU)));
+			call<void>(_func, iterate<0, 0, 0, T...>(CPU));
 		}
 
 		static void do_call(PPUThread& CPU)
@@ -221,6 +205,22 @@ namespace ppu_func_detail
 		static void do_call(PPUThread& CPU, func_t _func)
 		{
 			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+		}
+
+		static void do_call(PPUThread& CPU)
+		{
+			do_call(CPU, (func_t)func);
+		}
+	};
+
+	template<void* func, typename RT, typename... T>
+	struct func_binder
+	{
+		typedef RT(*func_t)(T...);
+
+		static void do_call(PPUThread& CPU, func_t _func)
+		{
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, iterate<0, 0, 0, T...>(CPU)));
 		}
 
 		static void do_call(PPUThread& CPU)
