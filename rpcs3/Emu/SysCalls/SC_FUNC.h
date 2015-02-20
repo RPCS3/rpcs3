@@ -156,10 +156,10 @@ namespace ppu_func_detail
 		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder;
 
-	template<void(*func)(), typename... T>
+	template<void(func)(), typename... T>
 	struct func_binder<func, void, T...>
 	{
 		typedef void(*func_t)(T...);
@@ -170,7 +170,7 @@ namespace ppu_func_detail
 		}
 	};
 
-	template<void(*func)(), typename... T>
+	template<void(func)(), typename... T>
 	struct func_binder<func, void, PPUThread&, T...>
 	{
 		typedef void(*func_t)(PPUThread&, T...);
@@ -181,7 +181,7 @@ namespace ppu_func_detail
 		}
 	};
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
@@ -192,7 +192,7 @@ namespace ppu_func_detail
 		}
 	};
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder<func, RT, PPUThread&, T...>
 	{
 		typedef RT(*func_t)(PPUThread&, T...);
@@ -205,11 +205,11 @@ namespace ppu_func_detail
 
 	using bound_func_t = void(*)(PPUThread&);
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	bound_func_t _bind_func(RT(*_func)(T...))
 	{
 		return ppu_func_detail::func_binder<func, RT, T...>::do_call;
 	}
 }
 
-#define bind_func(func) (ppu_func_detail::_bind_func<(void(*)())func>(func))
+#define bind_func(func) (ppu_func_detail::_bind_func<(void())func>(func))

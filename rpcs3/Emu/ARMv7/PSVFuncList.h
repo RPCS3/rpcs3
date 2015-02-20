@@ -352,10 +352,10 @@ namespace psv_func_detail
 		return put_func_args<g1, f, v>(context, args...) || (t == ARG_STACK);
 	}
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder;
 
-	template<void(*func)(), typename... T>
+	template<void(func)(), typename... T>
 	struct func_binder<func, void, T...>
 	{
 		typedef void(*func_t)(T...);
@@ -366,7 +366,7 @@ namespace psv_func_detail
 		}
 	};
 
-	template<void(*func)(), typename... T>
+	template<void(func)(), typename... T>
 	struct func_binder<func, void, ARMv7Context&, T...>
 	{
 		typedef void(*func_t)(ARMv7Context&, T...);
@@ -377,7 +377,7 @@ namespace psv_func_detail
 		}
 	};
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
@@ -388,7 +388,7 @@ namespace psv_func_detail
 		}
 	};
 
-	template<void(*func)(), typename RT, typename... T>
+	template<void(func)(), typename RT, typename... T>
 	struct func_binder<func, RT, ARMv7Context&, T...>
 	{
 		typedef RT(*func_t)(ARMv7Context&, T...);
@@ -448,7 +448,7 @@ enum psv_special_function_index : u16
 // Do not call directly
 u32 add_psv_func(psv_func data);
 // Do not call directly
-template<void(*func)(), typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*_func)(T...))
+template<void(func)(), typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*_func)(T...))
 {
 	psv_func f;
 	f.nid = nid;
@@ -459,7 +459,7 @@ template<void(*func)(), typename RT, typename... T> void reg_psv_func(u32 nid, p
 	add_psv_func(f);
 }
 
-typedef void(*func_ptr)();
+typedef void(func_ptr)();
 
 // Find registered HLE function by NID
 psv_func* get_psv_func_by_nid(u32 nid, u32* out_index = nullptr);

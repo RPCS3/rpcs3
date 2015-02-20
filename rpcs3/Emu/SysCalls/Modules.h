@@ -111,9 +111,9 @@ public:
 
 	bool RemoveId(u32 id);
 
-	template<void(*func)(), typename T> __forceinline u32 AddFunc(const u32 nid, T _func);
-	template<void(*func)(), typename T> __forceinline u32 AddFunc(const char* name, T _func);
-	template<void(*func)(), typename T> __forceinline u32 AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func);
+	template<void(func)(), typename T> __forceinline u32 AddFunc(const u32 nid, T _func);
+	template<void(func)(), typename T> __forceinline u32 AddFunc(const char* name, T _func);
+	template<void(func)(), typename T> __forceinline u32 AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func);
 };
 
 u32 add_ps3_func(ModuleFunc func);
@@ -123,19 +123,19 @@ void execute_ps3_func_by_index(PPUThread& CPU, u32 id);
 void clear_ps3_functions();
 u32 get_function_id(const char* name);
 
-template<void(*func)(), typename T>
+template<void(func)(), typename T>
 __forceinline u32 Module::AddFunc(const u32 nid, T _func)
 {
 	return add_ps3_func(ModuleFunc(nid, this, ppu_func_detail::_bind_func<func>(_func)));
 }
 
-template<void(*func)(), typename T>
+template<void(func)(), typename T>
 __forceinline u32 Module::AddFunc(const char* name, T _func)
 {
 	return AddFunc<func>(get_function_id(name), _func);
 }
 
-template<void(*func)(), typename T>
+template<void(func)(), typename T>
 __forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func)
 {
 	SFunc* sf = new SFunc;
@@ -163,8 +163,8 @@ __forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	if (name ## _table[0]) module.AddFuncSub<(void(*)())name>(group, name ## _table, #name, name)
+	if (name ## _table[0]) module.AddFuncSub<(void())name>(group, name ## _table, #name, name)
 
-#define REG_FUNC(module, name) module.AddFunc<(void(*)())name>(#name, name)
+#define REG_FUNC(module, name) module.AddFunc<(void())name>(#name, name)
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
