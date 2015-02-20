@@ -167,4 +167,6 @@ __forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const
 
 #define REG_FUNC(module, name) module.AddFunc<_targ(name)>(#name, name)
 
+#define REG_FUNC2(module, nid, name) module.AddFunc<_targ(name)>(nid, name)
+
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
