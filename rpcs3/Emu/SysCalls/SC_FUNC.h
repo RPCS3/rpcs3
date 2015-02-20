@@ -212,4 +212,4 @@ namespace ppu_func_detail
 	}
 }
 
-#define bind_func(func) (ppu_func_detail::_bind_func<func>(func))
+#define bind_func(func) (ppu_func_detail::_bind_func<&func>(func))

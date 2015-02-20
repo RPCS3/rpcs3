@@ -163,8 +163,8 @@ __forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	if (name ## _table[0]) module.AddFuncSub<name>(group, name ## _table, #name, name)
+	if (name ## _table[0]) module.AddFuncSub<&name>(group, name ## _table, #name, name)
 
-#define REG_FUNC(module, name) module.AddFunc<name>(#name, name)
+#define REG_FUNC(module, name) module.AddFunc<&name>(#name, name)
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
