@@ -45,7 +45,7 @@ s32 sceAudioOutGetAdopt(s32 portType)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceAudio, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudio, #name, name)
 
 psv_log_base sceAudio("SceAudio", []()
 {

@@ -429,7 +429,7 @@ s32 sceSulphaNgsTrace(vm::psv::ptr<const char> message)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceNgs, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNgs, #name, name)
 
 psv_log_base sceNgs("SceNgs", []()
 {

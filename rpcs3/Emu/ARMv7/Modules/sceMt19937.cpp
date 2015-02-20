@@ -21,7 +21,7 @@ u32 sceMt19937UInt(vm::psv::ptr<SceMt19937Context> pCtx)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceMt19937, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceMt19937, #name, name)
 
 psv_log_base sceMt19937("SceMt19937", []()
 {

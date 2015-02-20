@@ -25,7 +25,7 @@ s32 sceSysmoduleIsLoaded(u16 id)
 	return SCE_OK; // module is loaded
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceSysmodule, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSysmodule, #name, name)
 
 psv_log_base sceSysmodule("SceSysmodule", []()
 {

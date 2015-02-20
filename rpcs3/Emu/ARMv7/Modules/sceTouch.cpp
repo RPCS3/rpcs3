@@ -30,7 +30,7 @@ s32 sceTouchGetSamplingState(u32 port, vm::psv::ptr<u32> pState)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceTouch, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceTouch, #name, name)
 
 psv_log_base sceTouch("SceTouch", []()
 {

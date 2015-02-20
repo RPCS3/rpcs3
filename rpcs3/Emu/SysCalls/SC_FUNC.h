@@ -1,6 +1,12 @@
 #pragma once
 #include "Emu/Cell/PPUThread.h"
 
+#if defined(_MSC_VER)
+typedef void(*ps3_func_caller)(PPUThread&);
+#else
+typedef ps3_func_caller std::function<void(PPUThread&)>;
+#endif
+
 namespace ppu_func_detail
 {
 	enum bind_arg_type
@@ -156,60 +162,88 @@ namespace ppu_func_detail
 		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder;
 
-	template<void(func)(), typename... T>
+	template<void* func, typename... T>
 	struct func_binder<func, void, T...>
 	{
 		typedef void(*func_t)(T...);
 
+		static void do_call(PPUThread& CPU, func_t _func)
+		{
+			call<void>(_func, iterate<0, 0, 0, T...>(CPU));
+		}
+
 		static void do_call(PPUThread& CPU)
 		{
-			call<void>((func_t)func, iterate<0, 0, 0, T...>(CPU));
+			do_call(CPU, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename... T>
+	template<void* func, typename... T>
 	struct func_binder<func, void, PPUThread&, T...>
 	{
 		typedef void(*func_t)(PPUThread&, T...);
 
+		static void do_call(PPUThread& CPU, func_t _func)
+		{
+			call<void>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
+		}
+
 		static void do_call(PPUThread& CPU)
 		{
-			call<void>((func_t)func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
+			do_call(CPU, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
 
+		static void do_call(PPUThread& CPU, func_t _func)
+		{
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, iterate<0, 0, 0, T...>(CPU)));
+		}
+
 		static void do_call(PPUThread& CPU)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>((func_t)func, iterate<0, 0, 0, T...>(CPU)));
+			do_call(CPU, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder<func, RT, PPUThread&, T...>
 	{
 		typedef RT(*func_t)(PPUThread&, T...);
 
+		static void do_call(PPUThread& CPU, func_t _func)
+		{
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+		}
+
 		static void do_call(PPUThread& CPU)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>((func_t)func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+			do_call(CPU, (func_t)func);
 		}
 	};
 
-	using bound_func_t = void(*)(PPUThread&);
-
-	template<void(func)(), typename RT, typename... T>
-	bound_func_t _bind_func(RT(*_func)(T...))
+	template<void* func, typename RT, typename... T>
+	ps3_func_caller _bind_func(RT(*_func)(T...))
 	{
+#if defined(_MSC_VER)
 		return ppu_func_detail::func_binder<func, RT, T...>::do_call;
+#else
+		return [_func](PPUThread& CPU){ ppu_func_detail::func_binder<func, RT, T...>::do_call(CPU, _func); };
+#endif
 	}
 }
 
-#define bind_func(func) (ppu_func_detail::_bind_func<(void())func>(func))
+#if defined(_MSC_VER)
+#define _targ(name) name
+#else
+#define _targ(name) nullptr
+#endif
+
+#define bind_func(func) ppu_func_detail::_bind_func<_targ(func)>(func)

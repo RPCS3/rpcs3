@@ -111,7 +111,7 @@ s32 sceMotionStopSampling()
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceMotion, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceMotion, #name, name)
 
 psv_log_base sceMotion("SceMotion", []()
 {

@@ -33,6 +33,12 @@ public:
 
 };
 
+#if defined(_MSC_VER)
+typedef void(*psv_func_caller)(ARMv7Context&);
+#else
+typedef psv_func_caller std::function<void(ARMv7Context&)>;
+#endif
+
 // Utilities for binding ARMv7Context to C++ function arguments received by HLE functions or sent to callbacks
 namespace psv_func_detail
 {
@@ -352,50 +358,70 @@ namespace psv_func_detail
 		return put_func_args<g1, f, v>(context, args...) || (t == ARG_STACK);
 	}
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder;
 
-	template<void(func)(), typename... T>
+	template<void* func, typename... T>
 	struct func_binder<func, void, T...>
 	{
 		typedef void(*func_t)(T...);
 
+		static void do_call(ARMv7Context& context, func_t _func)
+		{
+			call<void>(_func, get_func_args<0, 0, 0, T...>(context));
+		}
+
 		static void do_call(ARMv7Context& context)
 		{
-			call<void>((func_t)func, get_func_args<0, 0, 0, T...>(context));
+			do_call(context, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename... T>
+	template<void* func, typename... T>
 	struct func_binder<func, void, ARMv7Context&, T...>
 	{
 		typedef void(*func_t)(ARMv7Context&, T...);
 
+		static void do_call(ARMv7Context& context, func_t _func)
+		{
+			call<void>(_func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
+		}
+
 		static void do_call(ARMv7Context& context)
 		{
-			call<void>((func_t)func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
+			do_call(context, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
 
+		static void do_call(ARMv7Context& context, func_t _func)
+		{
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(_func, get_func_args<0, 0, 0, T...>(context)));
+		}
+
 		static void do_call(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>((func_t)func, get_func_args<0, 0, 0, T...>(context)));
+			do_call(context, (func_t)func);
 		}
 	};
 
-	template<void(func)(), typename RT, typename... T>
+	template<void* func, typename RT, typename... T>
 	struct func_binder<func, RT, ARMv7Context&, T...>
 	{
 		typedef RT(*func_t)(ARMv7Context&, T...);
 
+		static void do_call(ARMv7Context& context, func_t _func)
+		{
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(_func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
+		}
+
 		static void do_call(ARMv7Context& context)
 		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>((func_t)func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
+			do_call(context, (func_t)func);
 		}
 	};
 
@@ -434,7 +460,7 @@ struct psv_func
 {
 	u32 nid; // Unique function ID (should be generated individually for each elf loaded)
 	const char* name; // Function name for information
-	void(*func)(ARMv7Context& context); // Function caller
+	psv_func_caller func; // Function caller
 	psv_log_base* module; // Module for information
 };
 
@@ -448,18 +474,26 @@ enum psv_special_function_index : u16
 // Do not call directly
 u32 add_psv_func(psv_func data);
 // Do not call directly
-template<void(func)(), typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*_func)(T...))
+template<void* func, typename RT, typename... T> u32 add_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*_func)(T...))
 {
 	psv_func f;
 	f.nid = nid;
 	f.name = name;
+#if defined(_MSC_VER)
 	f.func = psv_func_detail::func_binder<func, RT, T...>::do_call;
+#else
+	f.func = [_func](ARMv7Context& context){ psv_func_detail::func_binder<func, RT, T...>::do_call(context, _func); };
+#endif
 	f.module = module;
 
-	add_psv_func(f);
+	return add_psv_func(f);
 }
 
-typedef void(func_ptr)();
+#if defined(_MSC_VER)
+#define reg_psv_func(nid, module, name, func) add_psv_func<func>(nid, module, name, func)
+#else
+#define reg_psv_func(nid, module, name, func) add_psv_func<nullptr>(nid, module, name, func)
+#endif
 
 // Find registered HLE function by NID
 psv_func* get_psv_func_by_nid(u32 nid, u32* out_index = nullptr);

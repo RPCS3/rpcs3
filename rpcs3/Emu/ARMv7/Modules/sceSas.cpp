@@ -150,7 +150,7 @@ s32 sceSasSetEffectParam(u32 delayTime, u32 feedback)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceSas, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSas, #name, name)
 
 psv_log_base sceSas("SceSas", []()
 {

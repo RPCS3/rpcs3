@@ -4,7 +4,7 @@
 
 extern psv_log_base sceXml;
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceXml, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceXml, #name, name)
 
 psv_log_base sceXml("SceXml", []()
 {

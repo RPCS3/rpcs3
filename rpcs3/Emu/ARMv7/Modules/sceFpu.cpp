@@ -4,7 +4,7 @@
 
 extern psv_log_base sceFpu;
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceFpu, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFpu, #name, name)
 
 psv_log_base sceFpu("SceFpu", []()
 {

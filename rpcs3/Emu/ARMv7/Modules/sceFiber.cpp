@@ -81,7 +81,7 @@ s32 sceFiberGetInfo(vm::psv::ptr<SceFiber> fiber, vm::psv::ptr<SceFiberInfo> fib
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceFiber, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFiber, #name, name)
 
 psv_log_base sceFiber("SceFiber", []()
 {

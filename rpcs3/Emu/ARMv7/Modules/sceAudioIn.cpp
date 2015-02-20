@@ -20,7 +20,7 @@ s32 sceAudioInInput(s32 port, vm::psv::ptr<void> destPtr)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceAudioIn, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudioIn, #name, name)
 
 psv_log_base sceAudioIn("SceAudioIn", []()
 {

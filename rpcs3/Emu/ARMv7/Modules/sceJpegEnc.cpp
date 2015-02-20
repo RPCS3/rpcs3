@@ -75,7 +75,7 @@ s32 sceJpegEncoderCsc(
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceJpegEnc, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceJpegEnc, #name, name)
 
 psv_log_base sceJpegEnc("SceJpegEnc", []()
 {

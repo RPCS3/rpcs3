@@ -106,7 +106,7 @@ s32 sceJpegSplitDecodeMJpeg(vm::psv::ptr<SceJpegSplitDecodeCtrl> pCtrl)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceJpeg, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceJpeg, #name, name)
 
 psv_log_base sceJpeg("SceJpeg", []()
 {

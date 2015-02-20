@@ -120,7 +120,7 @@ s32 sceAudiodecGetInternalError(vm::psv::ptr<SceAudiodecCtrl> pCtrl, vm::psv::pt
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceAudiodec, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAudiodec, #name, name)
 
 psv_log_base sceAudiodec("SceAudiodec", []()
 {

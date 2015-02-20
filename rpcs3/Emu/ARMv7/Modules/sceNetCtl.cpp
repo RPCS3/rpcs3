@@ -128,7 +128,7 @@ s32 sceNetCtlAdhocGetInAddr(vm::psv::ptr<SceNetInAddr> inaddr)
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceNetCtl, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNetCtl, #name, name)
 
 psv_log_base sceNetCtl("SceNetCtl", []()
 {

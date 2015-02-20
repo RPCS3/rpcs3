@@ -59,7 +59,7 @@ s32 sceNpCmpNpIdInOrder(vm::psv::ptr<const SceNpId> npid1, vm::psv::ptr<const Sc
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceNpCommon, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpCommon, #name, name)
 
 psv_log_base sceNpCommon("SceNpCommon", []()
 {
