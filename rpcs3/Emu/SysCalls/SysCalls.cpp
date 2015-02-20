@@ -51,7 +51,7 @@ const int kSyscallTableLength = 1024;
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-void(*const sc_table[1024])(PPUThread&) =
+const ps3_func_caller sc_table[1024] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
@@ -933,7 +933,7 @@ void SysCalls::DoSyscall(PPUThread& CPU, u32 code)
 
 	if(code < 1024)
 	{
-		(*sc_table[code])(CPU);
+		sc_table[code](CPU);
 		return;
 	}
 
