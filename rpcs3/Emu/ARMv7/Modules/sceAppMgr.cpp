@@ -32,7 +32,7 @@ s32 sceAppMgrReleaseBgmPort()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceAppMgr, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)(func_ptr)name>(nid, &sceAppMgr, #name, name)
 
 psv_log_base sceAppMgr("SceAppMgr", []()
 {

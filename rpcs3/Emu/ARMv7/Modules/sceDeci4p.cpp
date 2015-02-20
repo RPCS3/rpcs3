@@ -32,7 +32,7 @@ s32 sceKernelDeci4pRegisterCallback(s32 socketid, s32 cbid)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceDeci4p, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceDeci4p, #name, name)
 
 psv_log_base sceDeci4p("SceDeci4pUserp", []()
 {

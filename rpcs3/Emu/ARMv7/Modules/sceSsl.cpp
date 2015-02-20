@@ -60,7 +60,7 @@ s32 sceSslFreeSslCertName(vm::psv::ptr<SceSslCertName> certName)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceSsl, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceSsl, #name, name)
 
 psv_log_base sceSsl("SceSsl", []()
 {

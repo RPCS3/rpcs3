@@ -505,7 +505,7 @@ s32 scePhotoReviewDialogAbort()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceCommonDialog, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceCommonDialog, #name, name)
 
 psv_log_base sceCommonDialog("SceCommonDialog", []()
 {

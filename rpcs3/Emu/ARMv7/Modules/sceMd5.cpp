@@ -35,7 +35,7 @@ s32 sceMd5BlockResult(vm::psv::ptr<SceMd5Context> pContext, vm::psv::ptr<u8> dig
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceMd5, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceMd5, #name, name)
 
 psv_log_base sceMd5("SceMd5", []()
 {

@@ -674,5 +674,5 @@ Module sysPrxForUser("sysPrxForUser", []()
 
 	REG_FUNC(sysPrxForUser, _sys_printf);
 
-	sysPrxForUser.AddFunc<_nid_E75C40F2>(0xE75C40F2, _nid_E75C40F2);
+	sysPrxForUser.AddFunc<(void(*)())_nid_E75C40F2>(0xE75C40F2, _nid_E75C40F2);
 });

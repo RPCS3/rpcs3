@@ -250,7 +250,7 @@ s32 sceVoiceGetResourceInfo(vm::psv::ptr<SceVoiceResourceInfo> pInfo)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceVoice, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceVoice, #name, name)
 
 psv_log_base sceVoice("SceVoice", []()
 {

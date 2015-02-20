@@ -353,7 +353,7 @@ s32 sceHttpsFreeCaList(vm::psv::ptr<SceHttpsCaList> caList)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceHttp, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceHttp, #name, name)
 
 psv_log_base sceHttp("SceHttp", []()
 {

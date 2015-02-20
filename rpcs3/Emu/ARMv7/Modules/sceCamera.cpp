@@ -247,7 +247,7 @@ void sceCameraUseCacheMemoryForTrial(s32 isCache)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceCamera, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceCamera, #name, name)
 
 psv_log_base sceCamera("SceCamera", []()
 {

@@ -30,7 +30,7 @@ s32 sceImeClose()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceIme, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceIme, #name, name)
 
 psv_log_base sceIme("SceIme", []()
 {

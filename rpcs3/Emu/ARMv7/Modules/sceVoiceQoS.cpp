@@ -112,7 +112,7 @@ s32 sceVoiceQoSReadPacket(SceVoiceQoSConnectionId connectionId, vm::psv::ptr<voi
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceVoiceQoS, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceVoiceQoS, #name, name)
 
 psv_log_base sceVoiceQoS("SceVoiceQos", []()
 {

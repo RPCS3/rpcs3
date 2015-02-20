@@ -1067,7 +1067,7 @@ s32 sceGxmSetUniformDataF(vm::psv::ptr<void> uniformBuffer, vm::psv::ptr<const S
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceGxm, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceGxm, #name, name)
 
 psv_log_base sceGxm("SceGxm", []()
 {

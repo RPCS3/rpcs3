@@ -541,7 +541,7 @@ s32 sceUltUlthreadGetSelf(vm::psv::ptr<vm::psv::ptr<SceUltUlthread>> ulthread)
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceUlt, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceUlt, #name, name)
 
 psv_log_base sceUlt("SceUlt", []()
 {

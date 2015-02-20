@@ -1302,7 +1302,7 @@ s32 sceNpMatching2SignalingGetPeerNetInfoResult(
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNpMatching, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceNpMatching, #name, name)
 
 psv_log_base sceNpMatching("SceNpMatching2", []()
 {

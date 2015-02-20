@@ -33,7 +33,7 @@ s32 sceScreenShotEnable()
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceScreenShot, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<(func_ptr)name>(nid, &sceScreenShot, #name, name)
 
 psv_log_base sceScreenShot("SceScreenShot", []()
 {
