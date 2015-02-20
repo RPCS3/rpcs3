@@ -1192,7 +1192,7 @@ void SPUThread::halt()
 {
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(SPU, "halt(code=0x%x)");
+		LOG_NOTICE(SPU, "halt()");
 	}
 
 	if (m_type == CPU_THREAD_RAW_SPU)
