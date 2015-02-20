@@ -75,7 +75,7 @@ void execute_psv_func_by_index(ARMv7Context& context, u32 index)
 
 		if (func->func)
 		{
-			(*func->func)(context);
+			func->func(context);
 		}
 		else
 		{

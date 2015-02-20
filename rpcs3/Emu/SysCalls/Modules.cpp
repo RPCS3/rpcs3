@@ -82,7 +82,7 @@ void execute_ps3_func_by_index(PPUThread& CPU, u32 index)
 		}
 		else if (func->func)
 		{
-			(*func->func)(CPU);
+			func->func(CPU);
 		}
 		else
 		{
