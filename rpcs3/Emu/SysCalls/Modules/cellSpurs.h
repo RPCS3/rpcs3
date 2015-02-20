@@ -623,12 +623,14 @@ static_assert(sizeof(CellSpursEventFlag) == CellSpursEventFlag::size, "Wrong Cel
 
 union CellSpursTaskArgument
 {
-	be_t<u128> _u128;
+	be_t<u32> _u32[4];
+	be_t<u64> _u64[2];
 };
 
 union CellSpursTaskLsPattern
 {
-	be_t<u128> _u128;
+	be_t<u32> _u32[4];
+	be_t<u64> _u64[2];
 };
 
 struct CellSpursTaskset
@@ -927,32 +929,32 @@ static_assert(sizeof(SpursKernelContext) == 0x190, "Incorrect size for SpursKern
 // The SPURS taskset policy module context. This resides at 0x2700 of the LS.
 struct SpursTasksetContext
 {
-    u8 tempAreaTaskset[0x80];                       // 0x2700
-    u8 tempAreaTaskInfo[0x30];                      // 0x2780
-    be_t<u64> x27B0;                                // 0x27B0
-    vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
-    be_t<u32> kernelMgmtAddr;                       // 0x27C0
-    be_t<u32> syscallAddr;                          // 0x27C4
-    be_t<u32> x27C8;                                // 0x27C8
-    be_t<u32> spuNum;                               // 0x27CC
-    be_t<u32> dmaTagId;                             // 0x27D0
-    be_t<u32> taskId;                               // 0x27D4
-    u8 x27D8[0x2840 - 0x27D8];                      // 0x27D8
-    u8 moduleId[16];                                // 0x2840
-    u8 stackArea[0x2C80 - 0x2850];                  // 0x2850
-    be_t<u128> savedContextLr;                      // 0x2C80
-    be_t<u128> savedContextSp;                      // 0x2C90
-    be_t<u128> savedContextR80ToR127[48];           // 0x2CA0
-    be_t<u128> savedContextFpscr;                   // 0x2FA0
-    be_t<u32> savedWriteTagGroupQueryMask;          // 0x2FB0
-    be_t<u32> savedSpuWriteEventMask;               // 0x2FB4
-    be_t<u32> tasksetMgmtAddr;                      // 0x2FB8
-    be_t<u32> guidAddr;                             // 0x2FBC
-    be_t<u64> x2FC0;                                // 0x2FC0
-    be_t<u64> x2FC8;                                // 0x2FC8
-    be_t<u32> taskExitCode;                         // 0x2FD0
-    be_t<u32> x2FD4;                                // 0x2FD4
-    u8 x2FD8[0x3000 - 0x2FD8];                      // 0x2FD8
+	u8 tempAreaTaskset[0x80];                       // 0x2700
+	u8 tempAreaTaskInfo[0x30];                      // 0x2780
+	be_t<u64> x27B0;                                // 0x27B0
+	vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
+	be_t<u32> kernelMgmtAddr;                       // 0x27C0
+	be_t<u32> syscallAddr;                          // 0x27C4
+	be_t<u32> x27C8;                                // 0x27C8
+	be_t<u32> spuNum;                               // 0x27CC
+	be_t<u32> dmaTagId;                             // 0x27D0
+	be_t<u32> taskId;                               // 0x27D4
+	u8 x27D8[0x2840 - 0x27D8];                      // 0x27D8
+	u8 moduleId[16];                                // 0x2840
+	u8 stackArea[0x2C80 - 0x2850];                  // 0x2850
+	be_t<u128> savedContextLr;                      // 0x2C80
+	be_t<u128> savedContextSp;                      // 0x2C90
+	be_t<u128> savedContextR80ToR127[48];           // 0x2CA0
+	be_t<u128> savedContextFpscr;                   // 0x2FA0
+	be_t<u32> savedWriteTagGroupQueryMask;          // 0x2FB0
+	be_t<u32> savedSpuWriteEventMask;               // 0x2FB4
+	be_t<u32> tasksetMgmtAddr;                      // 0x2FB8
+	be_t<u32> guidAddr;                             // 0x2FBC
+	be_t<u64> x2FC0;                                // 0x2FC0
+	be_t<u64> x2FC8;                                // 0x2FC8
+	be_t<u32> taskExitCode;                         // 0x2FD0
+	be_t<u32> x2FD4;                                // 0x2FD4
+	u8 x2FD8[0x3000 - 0x2FD8];                      // 0x2FD8
 };
 
 static_assert(sizeof(SpursTasksetContext) == 0x900, "Incorrect size for SpursTasksetContext");
