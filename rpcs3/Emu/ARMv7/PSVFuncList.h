@@ -36,7 +36,7 @@ public:
 #if defined(_MSC_VER)
 typedef void(*psv_func_caller)(ARMv7Context&);
 #else
-typedef psv_func_caller std::function<void(ARMv7Context&)>;
+typedef std::function<void(ARMv7Context&)> psv_func_caller;
 #endif
 
 // Utilities for binding ARMv7Context to C++ function arguments received by HLE functions or sent to callbacks

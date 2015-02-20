@@ -4,7 +4,7 @@
 #if defined(_MSC_VER)
 typedef void(*ps3_func_caller)(PPUThread&);
 #else
-typedef ps3_func_caller std::function<void(PPUThread&)>;
+typedef std::function<void(PPUThread&)> ps3_func_caller;
 #endif
 
 namespace ppu_func_detail
