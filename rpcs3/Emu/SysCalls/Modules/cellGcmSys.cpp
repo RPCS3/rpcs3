@@ -1090,14 +1090,14 @@ void cellGcmSetDefaultCommandBuffer()
 // Other
 //------------------------------------------------------------------------
 
-s32 cellGcmSetFlipCommand(vm::ptr<CellGcmContextData> ctx, u32 id)
+s32 _cellGcmSetFlipCommand(vm::ptr<CellGcmContextData> ctx, u32 id)
 {
 	cellGcmSys.Log("cellGcmSetFlipCommand(ctx_addr=0x%x, id=0x%x)", ctx.addr(), id);
 
 	return cellGcmSetPrepareFlip(ctx, id);
 }
 
-s32 cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
+s32 _cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
 {
 	cellGcmSys.Log("cellGcmSetFlipCommandWithWaitLabel(ctx_addr=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)",
 		ctx.addr(), id, label_index, label_value);
@@ -1316,7 +1316,7 @@ Module cellGcmSys("cellGcmSys", []()
 	//cellGcmSys.AddFunc(, cellGcmSetUserCallback);
 
 	// Other
-	REG_FUNC(cellGcmSys, cellGcmSetFlipCommand);
-	REG_FUNC(cellGcmSys, cellGcmSetFlipCommandWithWaitLabel);
+	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
+	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
 	REG_FUNC(cellGcmSys, cellGcmSetTile);
 });
