@@ -41,9 +41,9 @@ int cellBGDLGetMode()
 
 void cellBgdl_init()
 {
-	cellBgdl.AddFunc(0x4e9bb95b, cellBGDLGetInfo);
-	cellBgdl.AddFunc(0x2ab0d183, cellBGDLGetInfo2);
-	cellBgdl.AddFunc(0x7e134a90, cellBGDLSetMode);
-	cellBgdl.AddFunc(0x74e57bdf, cellBGDLGetMode);
+	REG_FUNC(cellBgdl, cellBGDLGetInfo);
+	REG_FUNC(cellBgdl, cellBGDLGetInfo2);
+	REG_FUNC(cellBgdl, cellBGDLSetMode);
+	REG_FUNC(cellBgdl, cellBGDLGetMode);
 }
 #endif

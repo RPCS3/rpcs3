@@ -70,7 +70,7 @@ s32 sceZipGetInfo(vm::psv::ptr<const void> pSrc, vm::psv::ptr<vm::psv::ptr<const
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDeflt, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceDeflt, #name, name)
 
 psv_log_base sceDeflt("SceDeflt", []()
 {

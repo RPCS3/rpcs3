@@ -14,7 +14,7 @@ s32 sceLiveAreaResourceGetStatus()
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLiveArea, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceLiveArea, #name, name)
 
 psv_log_base sceLiveArea("SceLiveArea", []()
 {

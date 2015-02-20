@@ -190,7 +190,7 @@ s32 sceRtcParseRFC3339(vm::psv::ptr<u64> pUtc, vm::psv::ptr<const char> pszDateT
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceRtc, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceRtc, #name, name)
 
 psv_log_base sceRtc("SceRtc", []()
 {

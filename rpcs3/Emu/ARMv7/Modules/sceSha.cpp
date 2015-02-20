@@ -4,7 +4,7 @@
 
 extern psv_log_base sceSha;
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSha, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceSha, #name, name)
 
 psv_log_base sceSha("SceSha", []()
 {

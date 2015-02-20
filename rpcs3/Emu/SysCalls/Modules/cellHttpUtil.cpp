@@ -126,28 +126,28 @@ int cellHttpUtilBase64Decoder()
 
 void cellHttpUtil_init()
 {
-	cellHttpUtil.AddFunc(0x32faaf58, cellHttpUtilParseUri);
-	cellHttpUtil.AddFunc(0x8bb608e4, cellHttpUtilParseUriPath);
-	cellHttpUtil.AddFunc(0xa3457869, cellHttpUtilParseProxy);
-	cellHttpUtil.AddFunc(0x2bcbced4, cellHttpUtilParseStatusLine);
-	cellHttpUtil.AddFunc(0xe1fb0ebd, cellHttpUtilParseHeader);
+	REG_FUNC(cellHttpUtil, cellHttpUtilParseUri);
+	REG_FUNC(cellHttpUtil, cellHttpUtilParseUriPath);
+	REG_FUNC(cellHttpUtil, cellHttpUtilParseProxy);
+	REG_FUNC(cellHttpUtil, cellHttpUtilParseStatusLine);
+	REG_FUNC(cellHttpUtil, cellHttpUtilParseHeader);
 
-	cellHttpUtil.AddFunc(0x1c6e4dbb, cellHttpUtilBuildRequestLine);
-	cellHttpUtil.AddFunc(0x04accebf, cellHttpUtilBuildHeader);
-	cellHttpUtil.AddFunc(0x6f0f7667, cellHttpUtilBuildUri);
+	REG_FUNC(cellHttpUtil, cellHttpUtilBuildRequestLine);
+	REG_FUNC(cellHttpUtil, cellHttpUtilBuildHeader);
+	REG_FUNC(cellHttpUtil, cellHttpUtilBuildUri);
 
-	cellHttpUtil.AddFunc(0xf05df789, cellHttpUtilCopyUri);
-	cellHttpUtil.AddFunc(0x8ea23deb, cellHttpUtilMergeUriPath);
-	cellHttpUtil.AddFunc(0xaabeb869, cellHttpUtilSweepPath);
-	cellHttpUtil.AddFunc(0x50ea75bc, cellHttpUtilCopyStatusLine);
-	cellHttpUtil.AddFunc(0x97f9fbe5, cellHttpUtilCopyHeader);
-	cellHttpUtil.AddFunc(0x37bb53a2, cellHttpUtilAppendHeaderValue);
+	REG_FUNC(cellHttpUtil, cellHttpUtilCopyUri);
+	REG_FUNC(cellHttpUtil, cellHttpUtilMergeUriPath);
+	REG_FUNC(cellHttpUtil, cellHttpUtilSweepPath);
+	REG_FUNC(cellHttpUtil, cellHttpUtilCopyStatusLine);
+	REG_FUNC(cellHttpUtil, cellHttpUtilCopyHeader);
+	REG_FUNC(cellHttpUtil, cellHttpUtilAppendHeaderValue);
 
-	cellHttpUtil.AddFunc(0x9003b1f2, cellHttpUtilEscapeUri);
-	cellHttpUtil.AddFunc(0x2763fd66, cellHttpUtilUnescapeUri);
-	cellHttpUtil.AddFunc(0x44d756d6, cellHttpUtilFormUrlEncode);
-	cellHttpUtil.AddFunc(0x8e6c5bb9, cellHttpUtilFormUrlDecode);
-	cellHttpUtil.AddFunc(0x83faa354, cellHttpUtilBase64Encoder);
-	cellHttpUtil.AddFunc(0x8e52ee08, cellHttpUtilBase64Decoder);
+	REG_FUNC(cellHttpUtil, cellHttpUtilEscapeUri);
+	REG_FUNC(cellHttpUtil, cellHttpUtilUnescapeUri);
+	REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlEncode);
+	REG_FUNC(cellHttpUtil, cellHttpUtilFormUrlDecode);
+	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Encoder);
+	REG_FUNC(cellHttpUtil, cellHttpUtilBase64Decoder);
 }
 #endif

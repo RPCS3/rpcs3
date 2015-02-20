@@ -218,40 +218,40 @@ int cellRudpProcessEvents()
 
 void cellRudp_init()
 {
-	cellRudp.AddFunc(0x63f63545, cellRudpInit);
-	cellRudp.AddFunc(0xb6bcb4a1, cellRudpEnd);
-	cellRudp.AddFunc(0x6c0cff03, cellRudpEnableInternalIOThread);
-	cellRudp.AddFunc(0x7ed95e60, cellRudpSetEventHandler);
-	cellRudp.AddFunc(0x54f81789, cellRudpSetMaxSegmentSize);
-	cellRudp.AddFunc(0xfbf7e9e4, cellRudpGetMaxSegmentSize);
+	REG_FUNC(cellRudp, cellRudpInit);
+	REG_FUNC(cellRudp, cellRudpEnd);
+	REG_FUNC(cellRudp, cellRudpEnableInternalIOThread);
+	REG_FUNC(cellRudp, cellRudpSetEventHandler);
+	REG_FUNC(cellRudp, cellRudpSetMaxSegmentSize);
+	REG_FUNC(cellRudp, cellRudpGetMaxSegmentSize);
 
-	cellRudp.AddFunc(0x7dadc739, cellRudpCreateContext);
-	cellRudp.AddFunc(0x384ba777, cellRudpSetOption);
-	cellRudp.AddFunc(0xff9d259c, cellRudpGetOption);
+	REG_FUNC(cellRudp, cellRudpCreateContext);
+	REG_FUNC(cellRudp, cellRudpSetOption);
+	REG_FUNC(cellRudp, cellRudpGetOption);
 
-	cellRudp.AddFunc(0x74bfad12, cellRudpGetContextStatus);
-	cellRudp.AddFunc(0xcd1a3f23, cellRudpGetStatus);
-	cellRudp.AddFunc(0xd666931f, cellRudpGetLocalInfo);
-	cellRudp.AddFunc(0x576831ae, cellRudpGetRemoteInfo);
+	REG_FUNC(cellRudp, cellRudpGetContextStatus);
+	REG_FUNC(cellRudp, cellRudpGetStatus);
+	REG_FUNC(cellRudp, cellRudpGetLocalInfo);
+	REG_FUNC(cellRudp, cellRudpGetRemoteInfo);
 
-	cellRudp.AddFunc(0xee41e16a, cellRudpBind);
-	cellRudp.AddFunc(0xc407844f, cellRudpInitiate);
-	cellRudp.AddFunc(0xc1ad7ced, cellRudpActivate);
-	cellRudp.AddFunc(0x48d3eeac, cellRudpTerminate);
+	REG_FUNC(cellRudp, cellRudpBind);
+	REG_FUNC(cellRudp, cellRudpInitiate);
+	REG_FUNC(cellRudp, cellRudpActivate);
+	REG_FUNC(cellRudp, cellRudpTerminate);
 
-	cellRudp.AddFunc(0x92e4d899, cellRudpRead);
-	cellRudp.AddFunc(0x48c001b0, cellRudpWrite);
-	cellRudp.AddFunc(0x2cde989f, cellRudpGetSizeReadable);
-	cellRudp.AddFunc(0xa86b28e3, cellRudpGetSizeWritable);
-	cellRudp.AddFunc(0xa70737da, cellRudpFlush);
+	REG_FUNC(cellRudp, cellRudpRead);
+	REG_FUNC(cellRudp, cellRudpWrite);
+	REG_FUNC(cellRudp, cellRudpGetSizeReadable);
+	REG_FUNC(cellRudp, cellRudpGetSizeWritable);
+	REG_FUNC(cellRudp, cellRudpFlush);
 
-	cellRudp.AddFunc(0x6bc587e9, cellRudpPollCreate);
-	cellRudp.AddFunc(0x8ac398f1, cellRudpPollDestroy);
-	cellRudp.AddFunc(0xa3db855c, cellRudpPollControl);
-	cellRudp.AddFunc(0xd8310700, cellRudpPollWait);
+	REG_FUNC(cellRudp, cellRudpPollCreate);
+	REG_FUNC(cellRudp, cellRudpPollDestroy);
+	REG_FUNC(cellRudp, cellRudpPollControl);
+	REG_FUNC(cellRudp, cellRudpPollWait);
 	//cellRudp.AddFunc(, cellRudpPollCancel);
 
-	cellRudp.AddFunc(0x6ee04954, cellRudpNetReceived);
-	cellRudp.AddFunc(0xfade48b2, cellRudpProcessEvents);
+	REG_FUNC(cellRudp, cellRudpNetReceived);
+	REG_FUNC(cellRudp, cellRudpProcessEvents);
 }
 #endif

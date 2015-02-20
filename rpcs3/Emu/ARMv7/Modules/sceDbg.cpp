@@ -31,7 +31,7 @@ s32 sceDbgLoggingHandler(vm::psv::ptr<const char> pFile, s32 line, s32 severity,
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDbg, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceDbg, #name, name)
 
 psv_log_base sceDbg("SceDbg", []()
 {

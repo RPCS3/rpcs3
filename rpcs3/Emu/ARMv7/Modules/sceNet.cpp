@@ -295,7 +295,7 @@ s32 sceNetGetStatisticsInfo(vm::psv::ptr<SceNetStatisticsInfo> info, s32 flags)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNet, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNet, #name, name)
 
 psv_log_base sceNet("SceNet", []()
 {

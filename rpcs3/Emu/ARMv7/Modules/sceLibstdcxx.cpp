@@ -23,7 +23,7 @@ namespace sce_libstdcxx_func
 }
 
 // Attention: find and set correct original mangled name in third parameter, for example: REG_FUNC(0xAE71DC3, operator_new_nothrow, "_ZnwjRKSt9nothrow_t");
-#define REG_FUNC(nid, name, orig_name) reg_psv_func(nid, &sceLibstdcxx, orig_name, &sce_libstdcxx_func::name)
+#define REG_FUNC(nid, name, orig_name) reg_psv_func<&sce_libstdcxx_func::name>(nid, &sceLibstdcxx, orig_name, &sce_libstdcxx_func::name)
 
 psv_log_base sceLibstdcxx("SceLibstdcxx", []()
 {

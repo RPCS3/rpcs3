@@ -333,7 +333,7 @@ s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::psv::ptr<const char> comment, 
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpScore, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNpScore, #name, name)
 
 psv_log_base sceNpScore("SceNpScore", []()
 {

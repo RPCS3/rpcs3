@@ -10,10 +10,10 @@ struct ModuleFunc
 {
 	u32 id;
 	Module* module;
-	std::shared_ptr<func_caller> func;
+	void(*func)(PPUThread&);
 	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, Module* module, func_caller* func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc(u32 id, Module* module, void(*func)(PPUThread&), vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
 		, module(module)
 		, func(func)
@@ -111,9 +111,9 @@ public:
 
 	bool RemoveId(u32 id);
 
-	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const char* name, T func);
-	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
+	template<void* func, typename T> __forceinline u32 AddFunc(const u32 nid, T _func);
+	template<void* func, typename T> __forceinline u32 AddFunc(const char* name, T _func);
+	template<void* func, typename T> __forceinline u32 AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func);
 };
 
 u32 add_ps3_func(ModuleFunc func);
@@ -123,25 +123,23 @@ void execute_ps3_func_by_index(PPUThread& CPU, u32 id);
 void clear_ps3_functions();
 u32 get_function_id(const char* name);
 
-template<typename T>
-__forceinline void Module::AddFunc(u32 id, T func)
+template<void* func, typename T>
+__forceinline u32 Module::AddFunc(const u32 nid, T _func)
 {
-	add_ps3_func(ModuleFunc(id, this, bind_func(func)));
+	return add_ps3_func(ModuleFunc(nid, this, ppu_func_detail::_bind_func<func>(_func)));
 }
 
-template<typename T>
-__forceinline void Module::AddFunc(const char* name, T func)
+template<void* func, typename T>
+__forceinline u32 Module::AddFunc(const char* name, T _func)
 {
-	AddFunc(get_function_id(name), func);
+	return AddFunc<func>(get_function_id(name), _func);
 }
 
-template<typename T>
-__forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T func)
+template<void* func, typename T>
+__forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func)
 {
-	if (!ops[0]) return;
-
 	SFunc* sf = new SFunc;
-	sf->index = add_ps3_func(ModuleFunc(get_function_id(name), this, bind_func(func)));
+	sf->index = AddFunc<func>(name, _func);
 	sf->name = name;
 	sf->group = *(u64*)group;
 	sf->found = 0;
@@ -157,13 +155,16 @@ __forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], cons
 		op.crc = re32(op.crc);
 		sf->ops.push_back(op);
 	}
+
 	PushNewFuncSub(sf);
+
+	return sf->index;
 }
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	module.AddFuncSub(group, name ## _table, #name, name)
+	if (name ## _table[0]) module.AddFuncSub<name>(group, name ## _table, #name, name)
 
-#define REG_FUNC(module, name) module.AddFunc(get_function_id(#name), name)
+#define REG_FUNC(module, name) module.AddFunc<name>(#name, name)
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)

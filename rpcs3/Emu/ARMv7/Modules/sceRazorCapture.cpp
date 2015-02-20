@@ -19,7 +19,7 @@ bool sceRazorCaptureIsInProgress()
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceRazorCapture, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceRazorCapture, #name, name)
 
 psv_log_base sceRazorCapture("SceRazorCapture", []()
 {

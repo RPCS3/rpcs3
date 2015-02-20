@@ -223,10 +223,10 @@ void initialize_psv_modules()
 	psv_func& hle_return = g_psv_func_list[SFI_HLE_RETURN];
 	hle_return.nid = 0;
 	hle_return.name = "HLE_RETURN";
-	hle_return.func.reset(new psv_func_detail::func_binder<void, ARMv7Context&>([](ARMv7Context& context)
+	hle_return.func = [](ARMv7Context& context)
 	{
 		context.thread.FastStop();
-	}));
+	};
 
 	// load functions
 	for (auto module : g_psv_modules)

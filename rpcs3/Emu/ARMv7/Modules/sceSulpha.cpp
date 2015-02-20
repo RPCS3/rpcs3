@@ -82,7 +82,7 @@ s32 sceSulphaAgentsUnregister(vm::psv::ptr<const SceSulphaHandle> handles, u32 a
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSulpha, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceSulpha, #name, name)
 
 psv_log_base sceSulpha("SceSulpha", []()
 {

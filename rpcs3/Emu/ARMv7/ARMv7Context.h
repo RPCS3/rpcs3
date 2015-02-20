@@ -174,6 +174,12 @@ struct ARMv7Context
 			return get_stack_arg(g_count++);
 		}
 	}
+
+	template<typename... T>
+	__noinline void fmt_debug_str(const char* fmt, T... args)
+	{
+		debug_str = fmt::format(fmt, args...);
+	}
 };
 
 template<typename T, bool is_enum = std::is_enum<T>::value>

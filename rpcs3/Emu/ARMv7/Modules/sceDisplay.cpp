@@ -85,7 +85,7 @@ s32 sceDisplayUnregisterVblankStartCallback(s32 uid)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceDisplay, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceDisplay, #name, name)
 
 psv_log_base sceDisplay("SceDisplay", []()
 {

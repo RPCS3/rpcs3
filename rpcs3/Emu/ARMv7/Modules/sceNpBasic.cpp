@@ -208,7 +208,7 @@ s32 sceNpBasicGetPlaySessionLog(SceNpBasicPlaySessionLogType type, u32 index, vm
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpBasic, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNpBasic, #name, name)
 
 psv_log_base sceNpBasic("SceNpBasic", []()
 {

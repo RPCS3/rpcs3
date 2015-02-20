@@ -76,9 +76,9 @@ int cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserList> list
 
 Module cellUserInfo("cellUserInfo", []()
 {
-	cellUserInfo.AddFunc(0x2b761140, cellUserInfoGetStat);
-	cellUserInfo.AddFunc(0x3097cc1c, cellUserInfoSelectUser_ListType);
-	cellUserInfo.AddFunc(0x55123a25, cellUserInfoSelectUser_SetList);
-	cellUserInfo.AddFunc(0xb3516536, cellUserInfoEnableOverlay);
-	cellUserInfo.AddFunc(0xc55e338b, cellUserInfoGetList);
+	REG_FUNC(cellUserInfo, cellUserInfoGetStat);
+	REG_FUNC(cellUserInfo, cellUserInfoSelectUser_ListType);
+	REG_FUNC(cellUserInfo, cellUserInfoSelectUser_SetList);
+	REG_FUNC(cellUserInfo, cellUserInfoEnableOverlay);
+	REG_FUNC(cellUserInfo, cellUserInfoGetList);
 });

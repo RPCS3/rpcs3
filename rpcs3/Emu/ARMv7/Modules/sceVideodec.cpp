@@ -176,7 +176,7 @@ s32 sceAvcdecDecodeFlush(vm::psv::ptr<SceAvcdecCtrl> pCtrl)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceVideodec, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceVideodec, #name, name)
 
 psv_log_base sceVideodec("SceVideodec", []()
 {

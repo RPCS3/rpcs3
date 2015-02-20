@@ -239,50 +239,50 @@ int cellSailRecorderDumpImage()
 
 void cellSailRec_init()
 {
-	cellSailRec.AddFunc(0xe14cae97, cellSailProfileSetEsAudioParameter);
-	cellSailRec.AddFunc(0x1422a425, cellSailProfileSetEsVideoParameter);
-	cellSailRec.AddFunc(0xe8d86c43, cellSailProfileSetStreamParameter);
+	REG_FUNC(cellSailRec, cellSailProfileSetEsAudioParameter);
+	REG_FUNC(cellSailRec, cellSailProfileSetEsVideoParameter);
+	REG_FUNC(cellSailRec, cellSailProfileSetStreamParameter);
 
-	cellSailRec.AddFunc(0xb3d30b0d, cellSailVideoConverterCanProcess);
-	cellSailRec.AddFunc(0x855da8c6, cellSailVideoConverterProcess);
-	cellSailRec.AddFunc(0xe16de678, cellSailVideoConverterCanGetResult);
-	cellSailRec.AddFunc(0xe15679fe, cellSailVideoConverterGetResult);
+	REG_FUNC(cellSailRec, cellSailVideoConverterCanProcess);
+	REG_FUNC(cellSailRec, cellSailVideoConverterProcess);
+	REG_FUNC(cellSailRec, cellSailVideoConverterCanGetResult);
+	REG_FUNC(cellSailRec, cellSailVideoConverterGetResult);
 	//cellSailRec.AddFunc(, CellSailVideoConverterFuncProcessDone);
 
-	cellSailRec.AddFunc(0xbd591197, cellSailFeederAudioInitialize);
-	cellSailRec.AddFunc(0x899d1587, cellSailFeederAudioFinalize);
-	cellSailRec.AddFunc(0xc2e2f30d, cellSailFeederAudioNotifyCallCompleted);
-	cellSailRec.AddFunc(0x3c775cea, cellSailFeederAudioNotifyFrameOut);
-	cellSailRec.AddFunc(0x999c0dc5, cellSailFeederAudioNotifySessionEnd);
-	cellSailRec.AddFunc(0xaf310ae6, cellSailFeederAudioNotifySessionError);
+	REG_FUNC(cellSailRec, cellSailFeederAudioInitialize);
+	REG_FUNC(cellSailRec, cellSailFeederAudioFinalize);
+	REG_FUNC(cellSailRec, cellSailFeederAudioNotifyCallCompleted);
+	REG_FUNC(cellSailRec, cellSailFeederAudioNotifyFrameOut);
+	REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionEnd);
+	REG_FUNC(cellSailRec, cellSailFeederAudioNotifySessionError);
 
-	cellSailRec.AddFunc(0x57415dd3, cellSailFeederVideoInitialize);
-	cellSailRec.AddFunc(0x81bfeae8, cellSailFeederVideoFinalize);
-	cellSailRec.AddFunc(0xd84daeb9, cellSailFeederVideoNotifyCallCompleted);
-	cellSailRec.AddFunc(0xe5e0572a, cellSailFeederVideoNotifyFrameOut);
-	cellSailRec.AddFunc(0xbff6e8d3, cellSailFeederVideoNotifySessionEnd);
-	cellSailRec.AddFunc(0x86cae679, cellSailFeederVideoNotifySessionError);
+	REG_FUNC(cellSailRec, cellSailFeederVideoInitialize);
+	REG_FUNC(cellSailRec, cellSailFeederVideoFinalize);
+	REG_FUNC(cellSailRec, cellSailFeederVideoNotifyCallCompleted);
+	REG_FUNC(cellSailRec, cellSailFeederVideoNotifyFrameOut);
+	REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionEnd);
+	REG_FUNC(cellSailRec, cellSailFeederVideoNotifySessionError);
 
-	cellSailRec.AddFunc(0x7a52bf69, cellSailRecorderInitialize);
-	cellSailRec.AddFunc(0xf57d74e3, cellSailRecorderFinalize);
-	cellSailRec.AddFunc(0x3deae857, cellSailRecorderSetFeederAudio);
-	cellSailRec.AddFunc(0x4fec43a9, cellSailRecorderSetFeederVideo);
-	cellSailRec.AddFunc(0x0a3ea2a9, cellSailRecorderSetParameter);
-	cellSailRec.AddFunc(0xff20157b, cellSailRecorderGetParameter);
+	REG_FUNC(cellSailRec, cellSailRecorderInitialize);
+	REG_FUNC(cellSailRec, cellSailRecorderFinalize);
+	REG_FUNC(cellSailRec, cellSailRecorderSetFeederAudio);
+	REG_FUNC(cellSailRec, cellSailRecorderSetFeederVideo);
+	REG_FUNC(cellSailRec, cellSailRecorderSetParameter);
+	REG_FUNC(cellSailRec, cellSailRecorderGetParameter);
 	//cellSailRec.AddFunc(, cellSailRecorderSubscribeEvent);
 	//cellSailRec.AddFunc(, cellSailRecorderUnsubscribeEvent);
 	//cellSailRec.AddFunc(, cellSailRecorderReplaceEventHandler);
-	cellSailRec.AddFunc(0xc4617ddc, cellSailRecorderBoot);
-	cellSailRec.AddFunc(0x50affdc1, cellSailRecorderCreateProfile);
-	cellSailRec.AddFunc(0x376c3926, cellSailRecorderDestroyProfile);
-	cellSailRec.AddFunc(0x49476a3d, cellSailRecorderCreateVideoConverter);
-	cellSailRec.AddFunc(0x455c4709, cellSailRecorderDestroyVideoConverter);
-	cellSailRec.AddFunc(0x10c81457, cellSailRecorderOpenStream);
-	cellSailRec.AddFunc(0xe3f56f62, cellSailRecorderCloseStream);
-	cellSailRec.AddFunc(0x4830faf8, cellSailRecorderStart);
-	cellSailRec.AddFunc(0x18ecc741, cellSailRecorderStop);
-	cellSailRec.AddFunc(0xd37fb694, cellSailRecorderCancel);
+	REG_FUNC(cellSailRec, cellSailRecorderBoot);
+	REG_FUNC(cellSailRec, cellSailRecorderCreateProfile);
+	REG_FUNC(cellSailRec, cellSailRecorderDestroyProfile);
+	REG_FUNC(cellSailRec, cellSailRecorderCreateVideoConverter);
+	REG_FUNC(cellSailRec, cellSailRecorderDestroyVideoConverter);
+	REG_FUNC(cellSailRec, cellSailRecorderOpenStream);
+	REG_FUNC(cellSailRec, cellSailRecorderCloseStream);
+	REG_FUNC(cellSailRec, cellSailRecorderStart);
+	REG_FUNC(cellSailRec, cellSailRecorderStop);
+	REG_FUNC(cellSailRec, cellSailRecorderCancel);
 
-	cellSailRec.AddFunc(0x37aad85f, cellSailRecorderDumpImage);
+	REG_FUNC(cellSailRec, cellSailRecorderDumpImage);
 }
 #endif

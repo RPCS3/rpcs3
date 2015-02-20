@@ -172,7 +172,7 @@ s32 sceLocationSetGpsEmulationFile(vm::psv::ptr<char> filename)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLocation, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceLocation, #name, name)
 
 psv_log_base sceLocation("SceLibLocation", []()
 {

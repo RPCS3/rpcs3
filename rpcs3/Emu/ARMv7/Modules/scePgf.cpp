@@ -4,7 +4,7 @@
 
 extern psv_log_base scePgf;
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &scePgf, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &scePgf, #name, name)
 
 psv_log_base scePgf("ScePgf", []()
 {

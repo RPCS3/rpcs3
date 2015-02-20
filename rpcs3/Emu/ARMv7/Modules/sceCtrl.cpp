@@ -66,7 +66,7 @@ s32 sceCtrlClearRapidFire(s32 port, s32 idx)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceCtrl, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceCtrl, #name, name)
 
 psv_log_base sceCtrl("SceCtrl", []()
 {

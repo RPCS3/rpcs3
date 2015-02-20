@@ -63,7 +63,7 @@ s32 sceNpManagerGetChatRestrictionFlag(vm::psv::ptr<s32> isRestricted)
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpManager, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNpManager, #name, name)
 
 psv_log_base sceNpManager("SceNpManager", []()
 {

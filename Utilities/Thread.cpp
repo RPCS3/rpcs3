@@ -564,6 +564,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	}
 	else if (reg == X64_IMM8)
 	{
+		// load the immediate value (assuming it's at the end of the instruction)
 		const s8 imm_value = *(s8*)(RIP(context) + i_size - 1);
 
 		switch (d_size)
@@ -582,7 +583,6 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	}
 	else if (reg == X64_IMM32)
 	{
-		// load the immediate value (assuming it's at the end of the instruction)
 		const s32 imm_value = *(s32*)(RIP(context) + i_size - 4);
 		
 		switch (d_size)
@@ -590,18 +590,6 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		case 4: out_value = (u32)imm_value; return true;
 		case 8: out_value = (u64)imm_value; return true; // sign-extended
 		}
-	}
-	else if (reg == X64_IMM16)
-	{
-		// load the immediate value (assuming it's at the end of the instruction)
-		out_value = *(s16*)(RIP(context) + i_size - 2);
-		return true;
-	}
-	else if (reg == X64_IMM8)
-	{
-		// load the immediate value (assuming it's at the end of the instruction)
-		out_value = *(s8*)(RIP(context) + i_size - 1);
-		return true;
 	}
 	else if (reg == X64R_ECX)
 	{

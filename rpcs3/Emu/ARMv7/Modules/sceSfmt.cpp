@@ -4,7 +4,7 @@
 
 extern psv_log_base sceSfmt;
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceSfmt, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceSfmt, #name, name)
 
 psv_log_base sceSfmt("SceSfmt", []()
 {

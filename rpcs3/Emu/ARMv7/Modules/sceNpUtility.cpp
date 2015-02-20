@@ -136,7 +136,7 @@ s32 sceNpBandwidthTestAbort()
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceNpUtility, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceNpUtility, #name, name)
 
 psv_log_base sceNpUtility("SceNpUtility", []()
 {

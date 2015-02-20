@@ -48,10 +48,10 @@ int cellKey2CharSetArrangement()
 
 void cellKey2char_init()
 {
-	cellKey2char.AddFunc(0xabf629c1, cellKey2CharOpen);
-	cellKey2char.AddFunc(0x14bf2dc1, cellKey2CharClose);
-	cellKey2char.AddFunc(0x56776c0d, cellKey2CharGetChar);
-	cellKey2char.AddFunc(0xbfc03768, cellKey2CharSetMode);
-	cellKey2char.AddFunc(0x0dfbadfa, cellKey2CharSetArrangement);
+	REG_FUNC(cellKey2char, cellKey2CharOpen);
+	REG_FUNC(cellKey2char, cellKey2CharClose);
+	REG_FUNC(cellKey2char, cellKey2CharGetChar);
+	REG_FUNC(cellKey2char, cellKey2CharSetMode);
+	REG_FUNC(cellKey2char, cellKey2CharSetArrangement);
 }
 #endif

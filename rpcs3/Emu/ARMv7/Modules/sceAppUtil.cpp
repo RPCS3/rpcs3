@@ -70,7 +70,7 @@ s32 sceAppUtilLoadSafeMemory(vm::psv::ptr<void> buf, u32 bufSize, s64 offset)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceAppUtil, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceAppUtil, #name, name)
 
 psv_log_base sceAppUtil("SceAppUtil", []()
 {

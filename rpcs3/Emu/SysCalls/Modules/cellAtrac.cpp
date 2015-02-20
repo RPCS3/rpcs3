@@ -212,34 +212,34 @@ s32 cellAtracGetInternalErrorInfo(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u32>
 
 Module cellAtrac("cellAtrac", []()
 {
-	cellAtrac.AddFunc(0x66afc68e, cellAtracSetDataAndGetMemSize);
+	REG_FUNC(cellAtrac, cellAtracSetDataAndGetMemSize);
 
-	cellAtrac.AddFunc(0xfa293e88, cellAtracCreateDecoder);
-	cellAtrac.AddFunc(0x2642d4cc, cellAtracCreateDecoderExt);
-	cellAtrac.AddFunc(0x761cb9be, cellAtracDeleteDecoder);
+	REG_FUNC(cellAtrac, cellAtracCreateDecoder);
+	REG_FUNC(cellAtrac, cellAtracCreateDecoderExt);
+	REG_FUNC(cellAtrac, cellAtracDeleteDecoder);
 
-	cellAtrac.AddFunc(0x8eb0e65f, cellAtracDecode);
+	REG_FUNC(cellAtrac, cellAtracDecode);
 
-	cellAtrac.AddFunc(0x2bfff084, cellAtracGetStreamDataInfo);
-	cellAtrac.AddFunc(0x46cfc013, cellAtracAddStreamData);
-	cellAtrac.AddFunc(0xdfab73aa, cellAtracGetRemainFrame);
-	cellAtrac.AddFunc(0xc9a95fcb, cellAtracGetVacantSize);
-	cellAtrac.AddFunc(0x99efe171, cellAtracIsSecondBufferNeeded);
-	cellAtrac.AddFunc(0xbe07f05e, cellAtracGetSecondBufferInfo);
-	cellAtrac.AddFunc(0x06ddb53e, cellAtracSetSecondBuffer);
+	REG_FUNC(cellAtrac, cellAtracGetStreamDataInfo);
+	REG_FUNC(cellAtrac, cellAtracAddStreamData);
+	REG_FUNC(cellAtrac, cellAtracGetRemainFrame);
+	REG_FUNC(cellAtrac, cellAtracGetVacantSize);
+	REG_FUNC(cellAtrac, cellAtracIsSecondBufferNeeded);
+	REG_FUNC(cellAtrac, cellAtracGetSecondBufferInfo);
+	REG_FUNC(cellAtrac, cellAtracSetSecondBuffer);
 
-	cellAtrac.AddFunc(0x0f9667b6, cellAtracGetChannel);
-	cellAtrac.AddFunc(0x5f62d546, cellAtracGetMaxSample);
-	cellAtrac.AddFunc(0x4797d1ff, cellAtracGetNextSample);
-	cellAtrac.AddFunc(0xcf01d5d4, cellAtracGetSoundInfo);
-	cellAtrac.AddFunc(0x7b22e672, cellAtracGetNextDecodePosition);
-	cellAtrac.AddFunc(0x006016da, cellAtracGetBitrate);
+	REG_FUNC(cellAtrac, cellAtracGetChannel);
+	REG_FUNC(cellAtrac, cellAtracGetMaxSample);
+	REG_FUNC(cellAtrac, cellAtracGetNextSample);
+	REG_FUNC(cellAtrac, cellAtracGetSoundInfo);
+	REG_FUNC(cellAtrac, cellAtracGetNextDecodePosition);
+	REG_FUNC(cellAtrac, cellAtracGetBitrate);
 
-	cellAtrac.AddFunc(0xab6b6dbf, cellAtracGetLoopInfo);
-	cellAtrac.AddFunc(0x78ba5c41, cellAtracSetLoopNum);
+	REG_FUNC(cellAtrac, cellAtracGetLoopInfo);
+	REG_FUNC(cellAtrac, cellAtracSetLoopNum);
 
-	cellAtrac.AddFunc(0x99fb73d1, cellAtracGetBufferInfoForResetting);
-	cellAtrac.AddFunc(0x7772eb2b, cellAtracResetPlayPosition);
+	REG_FUNC(cellAtrac, cellAtracGetBufferInfoForResetting);
+	REG_FUNC(cellAtrac, cellAtracResetPlayPosition);
 
-	cellAtrac.AddFunc(0xb5c11938, cellAtracGetInternalErrorInfo);
+	REG_FUNC(cellAtrac, cellAtracGetInternalErrorInfo);
 });

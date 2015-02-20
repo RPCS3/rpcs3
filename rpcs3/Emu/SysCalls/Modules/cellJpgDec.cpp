@@ -322,17 +322,17 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgD
 
 Module cellJpgDec("cellJpgDec", []()
 {
-	cellJpgDec.AddFunc(0xa7978f59, cellJpgDecCreate);
-	cellJpgDec.AddFunc(0x8b300f66, cellJpgDecExtCreate);
-	cellJpgDec.AddFunc(0x976ca5c2, cellJpgDecOpen);
-	cellJpgDec.AddFunc(0x6d9ebccf, cellJpgDecReadHeader);
-	cellJpgDec.AddFunc(0xe08f3910, cellJpgDecSetParameter);
-	cellJpgDec.AddFunc(0xaf8bb012, cellJpgDecDecodeData);
-	cellJpgDec.AddFunc(0x9338a07a, cellJpgDecClose);
-	cellJpgDec.AddFunc(0xd8ea91f8, cellJpgDecDestroy);
+	REG_FUNC(cellJpgDec, cellJpgDecCreate);
+	REG_FUNC(cellJpgDec, cellJpgDecExtCreate);
+	REG_FUNC(cellJpgDec, cellJpgDecOpen);
+	REG_FUNC(cellJpgDec, cellJpgDecReadHeader);
+	REG_FUNC(cellJpgDec, cellJpgDecSetParameter);
+	REG_FUNC(cellJpgDec, cellJpgDecDecodeData);
+	REG_FUNC(cellJpgDec, cellJpgDecClose);
+	REG_FUNC(cellJpgDec, cellJpgDecDestroy);
 
-	/*cellJpgDec.AddFunc(0xa9f703e3, cellJpgDecExtOpen);
-	cellJpgDec.AddFunc(0xb91eb3d2, cellJpgDecExtReadHeader);
-	cellJpgDec.AddFunc(0x65cbbb16, cellJpgDecExtSetParameter);
-	cellJpgDec.AddFunc(0x716f8792, cellJpgDecExtDecodeData);*/
+	/*REG_FUNC(cellJpgDec, cellJpgDecExtOpen);
+	REG_FUNC(cellJpgDec, cellJpgDecExtReadHeader);
+	REG_FUNC(cellJpgDec, cellJpgDecExtSetParameter);
+	REG_FUNC(cellJpgDec, cellJpgDecExtDecodeData);*/
 });

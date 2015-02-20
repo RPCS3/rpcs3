@@ -188,14 +188,14 @@ int cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 void cellKb_init()
 {
-	sys_io.AddFunc(0x433f6ec0, cellKbInit);
-	sys_io.AddFunc(0xbfce3285, cellKbEnd);
-	sys_io.AddFunc(0x2073b7f6, cellKbClearBuf);
-	sys_io.AddFunc(0x4ab1fa77, cellKbCnvRawCode);
-	sys_io.AddFunc(0x2f1774d5, cellKbGetInfo);
-	sys_io.AddFunc(0xff0a21b7, cellKbRead);
-	sys_io.AddFunc(0xa5f85e4d, cellKbSetCodeType);
-	sys_io.AddFunc(0x3f72c56e, cellKbSetLEDStatus);
-	sys_io.AddFunc(0xdeefdfa7, cellKbSetReadMode);
-	sys_io.AddFunc(0x1f71ecbe, cellKbGetConfiguration);
+	REG_FUNC(sys_io, cellKbInit);
+	REG_FUNC(sys_io, cellKbEnd);
+	REG_FUNC(sys_io, cellKbClearBuf);
+	REG_FUNC(sys_io, cellKbCnvRawCode);
+	REG_FUNC(sys_io, cellKbGetInfo);
+	REG_FUNC(sys_io, cellKbRead);
+	REG_FUNC(sys_io, cellKbSetCodeType);
+	REG_FUNC(sys_io, cellKbSetLEDStatus);
+	REG_FUNC(sys_io, cellKbSetReadMode);
+	REG_FUNC(sys_io, cellKbGetConfiguration);
 }

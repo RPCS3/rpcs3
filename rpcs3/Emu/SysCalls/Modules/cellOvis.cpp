@@ -38,8 +38,8 @@ int cellOvisInvalidateOverlappedSegments()
 
 Module cellOvis("cellOvis", []()
 {
-	cellOvis.AddFunc(0x82f294b2, cellOvisGetOverlayTableSize);
-	cellOvis.AddFunc(0xa876c911, cellOvisInitializeOverlayTable);
-	cellOvis.AddFunc(0xce6cb776, cellOvisFixSpuSegments);
-	cellOvis.AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
+	REG_FUNC(cellOvis, cellOvisGetOverlayTableSize);
+	REG_FUNC(cellOvis, cellOvisInitializeOverlayTable);
+	REG_FUNC(cellOvis, cellOvisFixSpuSegments);
+	REG_FUNC(cellOvis, cellOvisInvalidateOverlappedSegments);
 });

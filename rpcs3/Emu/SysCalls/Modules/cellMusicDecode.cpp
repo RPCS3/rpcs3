@@ -86,15 +86,15 @@ int cellMusicDecodeGetContentsId()
 
 void cellMusicDecode_init()
 {
-	cellMusicDecode.AddFunc(0xd55dbc11, cellMusicDecodeInitialize);
-	cellMusicDecode.AddFunc(0x84f154b2, cellMusicDecodeInitializeSystemWorkload);
-	cellMusicDecode.AddFunc(0xa8615dc8, cellMusicDecodeFinalize);
-	cellMusicDecode.AddFunc(0xf24cb963, cellMusicDecodeSelectContents);
-	cellMusicDecode.AddFunc(0x066bb1cf, cellMusicDecodeSetDecodeCommand);
-	cellMusicDecode.AddFunc(0x5af74c50, cellMusicDecodeGetDecodeStatus);
-	cellMusicDecode.AddFunc(0xa881b744, cellMusicDecodeRead);
-	cellMusicDecode.AddFunc(0xdbf70550, cellMusicDecodeGetSelectionContext);
-	cellMusicDecode.AddFunc(0xb84f5c81, cellMusicDecodeSetSelectionContext);
-	cellMusicDecode.AddFunc(0x58ab1999, cellMusicDecodeGetContentsId);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeInitialize);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeInitializeSystemWorkload);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeFinalize);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSelectContents);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSetDecodeCommand);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetDecodeStatus);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeRead);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetSelectionContext);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeSetSelectionContext);
+	REG_FUNC(cellMusicDecode, cellMusicDecodeGetContentsId);
 }
 #endif

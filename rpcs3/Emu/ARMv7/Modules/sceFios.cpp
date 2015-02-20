@@ -802,7 +802,7 @@ void sceFiosIOFilterPsarcDearchiver()
 	throw __FUNCTION__;
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceFios, #name, name)
+#define REG_FUNC(nid, name) reg_psv_func<name>(nid, &sceFios, #name, name)
 
 psv_log_base sceFios("SceFios2", []()
 {
