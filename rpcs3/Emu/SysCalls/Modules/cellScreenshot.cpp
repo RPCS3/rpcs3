@@ -50,9 +50,9 @@ int cellScreenShotDisable()
 
 void cellScreenshot_init()
 {
-	cellScreenshot.AddFunc(0xd3ad63e4, cellScreenShotSetParameter);
-	cellScreenshot.AddFunc(0x7a9c2243, cellScreenShotSetOverlayImage);
-	cellScreenshot.AddFunc(0x9e33ab8f, cellScreenShotEnable);
-	cellScreenshot.AddFunc(0xfc6f4e74, cellScreenShotDisable);
+	REG_FUNC(cellScreenshot, cellScreenShotSetParameter);
+	REG_FUNC(cellScreenshot, cellScreenShotSetOverlayImage);
+	REG_FUNC(cellScreenshot, cellScreenShotEnable);
+	REG_FUNC(cellScreenshot, cellScreenShotDisable);
 }
 #endif

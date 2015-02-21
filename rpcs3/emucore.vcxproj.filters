@@ -131,9 +131,6 @@
     <ClCompile Include="Emu\SysCalls\Modules.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Static.cpp">
-      <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
@@ -1226,9 +1223,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\ModuleManager.h">
-      <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Static.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h">

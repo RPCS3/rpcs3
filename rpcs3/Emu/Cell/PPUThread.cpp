@@ -6,7 +6,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"

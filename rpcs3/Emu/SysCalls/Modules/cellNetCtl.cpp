@@ -125,18 +125,18 @@ void cellNetCtl_unload()
 
 Module cellNetCtl("cellNetCtl", []()
 {
-	cellNetCtl.AddFunc(0xbd5a59fc, cellNetCtlInit);
-	cellNetCtl.AddFunc(0x105ee2cb, cellNetCtlTerm);
+	REG_FUNC(cellNetCtl, cellNetCtlInit);
+	REG_FUNC(cellNetCtl, cellNetCtlTerm);
 
-	cellNetCtl.AddFunc(0x8b3eba69, cellNetCtlGetState);
-	cellNetCtl.AddFunc(0x0ce13c6b, cellNetCtlAddHandler);
-	cellNetCtl.AddFunc(0x901815c3, cellNetCtlDelHandler);
+	REG_FUNC(cellNetCtl, cellNetCtlGetState);
+	REG_FUNC(cellNetCtl, cellNetCtlAddHandler);
+	REG_FUNC(cellNetCtl, cellNetCtlDelHandler);
 
-	cellNetCtl.AddFunc(0x1e585b5d, cellNetCtlGetInfo);
+	REG_FUNC(cellNetCtl, cellNetCtlGetInfo);
 
-	cellNetCtl.AddFunc(0x04459230, cellNetCtlNetStartDialogLoadAsync);
-	cellNetCtl.AddFunc(0x71d53210, cellNetCtlNetStartDialogAbortAsync);
-	cellNetCtl.AddFunc(0x0f1f13d3, cellNetCtlNetStartDialogUnloadAsync);
+	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogLoadAsync);
+	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogAbortAsync);
+	REG_FUNC(cellNetCtl, cellNetCtlNetStartDialogUnloadAsync);
 
-	cellNetCtl.AddFunc(0x3a12865f, cellNetCtlGetNatInfo);
+	REG_FUNC(cellNetCtl, cellNetCtlGetNatInfo);
 });

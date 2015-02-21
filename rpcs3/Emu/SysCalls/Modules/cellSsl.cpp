@@ -90,21 +90,21 @@ int cellSslCertGetMd5Fingerprint()
 
 void cellSsl_init()
 {
-	cellSsl.AddFunc(0xfb02c9d2, cellSslInit);
-	cellSsl.AddFunc(0x1650aea4, cellSslEnd);
+	REG_FUNC(cellSsl, cellSslInit);
+	REG_FUNC(cellSsl, cellSslEnd);
 
-	cellSsl.AddFunc(0x571afaca, cellSslCertificateLoader);
+	REG_FUNC(cellSsl, cellSslCertificateLoader);
 
-	cellSsl.AddFunc(0x7b689ebc, cellSslCertGetSerialNumber);
-	cellSsl.AddFunc(0xf8206492, cellSslCertGetPublicKey);
-	cellSsl.AddFunc(0x8e505175, cellSslCertGetRsaPublicKeyModulus);
-	cellSsl.AddFunc(0x033c4905, cellSslCertGetRsaPublicKeyExponent);
-	cellSsl.AddFunc(0x31d9ba8d, cellSslCertGetNotBefore);
-	cellSsl.AddFunc(0x218b64da, cellSslCertGetNotAfter);
-	cellSsl.AddFunc(0x32c61bdf, cellSslCertGetSubjectName);
-	cellSsl.AddFunc(0xae6eb491, cellSslCertGetIssuerName);
-	cellSsl.AddFunc(0x766d3ca1, cellSslCertGetNameEntryCount);
-	cellSsl.AddFunc(0x006c4900, cellSslCertGetNameEntryInfo);
-	cellSsl.AddFunc(0x5e9253ca, cellSslCertGetMd5Fingerprint);
+	REG_FUNC(cellSsl, cellSslCertGetSerialNumber);
+	REG_FUNC(cellSsl, cellSslCertGetPublicKey);
+	REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyModulus);
+	REG_FUNC(cellSsl, cellSslCertGetRsaPublicKeyExponent);
+	REG_FUNC(cellSsl, cellSslCertGetNotBefore);
+	REG_FUNC(cellSsl, cellSslCertGetNotAfter);
+	REG_FUNC(cellSsl, cellSslCertGetSubjectName);
+	REG_FUNC(cellSsl, cellSslCertGetIssuerName);
+	REG_FUNC(cellSsl, cellSslCertGetNameEntryCount);
+	REG_FUNC(cellSsl, cellSslCertGetNameEntryInfo);
+	REG_FUNC(cellSsl, cellSslCertGetMd5Fingerprint);
 }
 #endif

@@ -455,21 +455,21 @@ void sceNpTrophy_unload()
 
 Module sceNpTrophy("sceNpTrophy", []()
 {
-	sceNpTrophy.AddFunc(0x079f0e87, sceNpTrophyGetGameProgress);
-	sceNpTrophy.AddFunc(0x1197b52c, sceNpTrophyRegisterContext);
-	sceNpTrophy.AddFunc(0x1c25470d, sceNpTrophyCreateHandle);
-	sceNpTrophy.AddFunc(0x27deda93, sceNpTrophySetSoundLevel);
-	sceNpTrophy.AddFunc(0x370136fe, sceNpTrophyGetRequiredDiskSpace);
-	sceNpTrophy.AddFunc(0x3741ecc7, sceNpTrophyDestroyContext);
-	sceNpTrophy.AddFunc(0x39567781, sceNpTrophyInit);
-	sceNpTrophy.AddFunc(0x48bd97c7, sceNpTrophyAbortHandle);
-	sceNpTrophy.AddFunc(0x49d18217, sceNpTrophyGetGameInfo);
-	sceNpTrophy.AddFunc(0x623cd2dc, sceNpTrophyDestroyHandle);
-	sceNpTrophy.AddFunc(0x8ceedd21, sceNpTrophyUnlockTrophy);
-	sceNpTrophy.AddFunc(0xa7fabf4d, sceNpTrophyTerm);
-	sceNpTrophy.AddFunc(0xb3ac3478, sceNpTrophyGetTrophyUnlockState);
-	sceNpTrophy.AddFunc(0xbaedf689, sceNpTrophyGetTrophyIcon);
-	sceNpTrophy.AddFunc(0xe3bf9a28, sceNpTrophyCreateContext);
-	sceNpTrophy.AddFunc(0xfce6d30a, sceNpTrophyGetTrophyInfo);
-	sceNpTrophy.AddFunc(0xff299e03, sceNpTrophyGetGameIcon);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
+	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophySetSoundLevel);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetRequiredDiskSpace);
+	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyInit);
+	REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
+	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
+	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
+	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
 });

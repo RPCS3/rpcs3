@@ -889,15 +889,15 @@ int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 Module cellVdec("cellVdec", []()
 {
-	cellVdec.AddFunc(0xff6f6ebe, cellVdecQueryAttr);
-	cellVdec.AddFunc(0xc982a84a, cellVdecQueryAttrEx);
-	cellVdec.AddFunc(0xb6bbcd5d, cellVdecOpen);
-	cellVdec.AddFunc(0x0053e2d8, cellVdecOpenEx);
-	cellVdec.AddFunc(0x16698e83, cellVdecClose);
-	cellVdec.AddFunc(0xc757c2aa, cellVdecStartSeq);
-	cellVdec.AddFunc(0x824433f0, cellVdecEndSeq);
-	cellVdec.AddFunc(0x2bf4ddd2, cellVdecDecodeAu);
-	cellVdec.AddFunc(0x807c861a, cellVdecGetPicture);
-	cellVdec.AddFunc(0x17c702b9, cellVdecGetPicItem);
-	cellVdec.AddFunc(0xe13ef6fc, cellVdecSetFrameRate);
+	REG_FUNC(cellVdec, cellVdecQueryAttr);
+	REG_FUNC(cellVdec, cellVdecQueryAttrEx);
+	REG_FUNC(cellVdec, cellVdecOpen);
+	REG_FUNC(cellVdec, cellVdecOpenEx);
+	REG_FUNC(cellVdec, cellVdecClose);
+	REG_FUNC(cellVdec, cellVdecStartSeq);
+	REG_FUNC(cellVdec, cellVdecEndSeq);
+	REG_FUNC(cellVdec, cellVdecDecodeAu);
+	REG_FUNC(cellVdec, cellVdecGetPicture);
+	REG_FUNC(cellVdec, cellVdecGetPicItem);
+	REG_FUNC(cellVdec, cellVdecSetFrameRate);
 });

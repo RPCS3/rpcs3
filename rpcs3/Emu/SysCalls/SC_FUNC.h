@@ -1,12 +1,7 @@
 #pragma once
 #include "Emu/Cell/PPUThread.h"
 
-class func_caller
-{
-public:
-	virtual void operator()(PPUThread& CPU) = 0;
-	virtual ~func_caller(){};
-};
+typedef void(*ppu_func_caller)(PPUThread&);
 
 namespace ppu_func_detail
 {
@@ -164,87 +159,56 @@ namespace ppu_func_detail
 	};
 
 	template<typename RT, typename... T>
-	class func_binder;
+	struct func_binder;
 
 	template<typename... T>
-	class func_binder<void, T...> : public func_caller
-	{
-		typedef void(*func_t)(T...);
-		const func_t m_call;
-
-	public:
-		func_binder(func_t call)
-			: func_caller()
-			, m_call(call)
-		{
-		}
-
-		virtual void operator()(PPUThread& CPU)
-		{
-			call<void>(m_call, iterate<0, 0, 0, T...>(CPU));
-		}
-	};
-
-	template<typename... T>
-	class func_binder<void, PPUThread&, T...> : public func_caller
+	struct func_binder<void, PPUThread&, T...>
 	{
 		typedef void(*func_t)(PPUThread&, T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: func_caller()
-			, m_call(call)
+		static void do_call(PPUThread& CPU, func_t _func)
 		{
-		}
-
-		virtual void operator()(PPUThread& CPU)
-		{
-			call<void>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
+			call<void>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
 		}
 	};
 
-	template<typename RT, typename... T>
-	class func_binder : public func_caller
+	template<typename... T>
+	struct func_binder<void, T...>
 	{
-		typedef RT(*func_t)(T...);
-		const func_t m_call;
+		typedef void(*func_t)(T...);
 
-	public:
-		func_binder(func_t call)
-			: func_caller()
-			, m_call(call)
+		static void do_call(PPUThread& CPU, func_t _func)
 		{
-		}
-
-		virtual void operator()(PPUThread& CPU)
-		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, iterate<0, 0, 0, T...>(CPU)));
+			call<void>(_func, iterate<0, 0, 0, T...>(CPU));
 		}
 	};
 
 	template<typename RT, typename... T>
-	class func_binder<RT, PPUThread&, T...> : public func_caller
+	struct func_binder<RT, PPUThread&, T...>
 	{
 		typedef RT(*func_t)(PPUThread&, T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: func_caller()
-			, m_call(call)
+		static void do_call(PPUThread& CPU, func_t _func)
 		{
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
 		}
+	};
 
-		virtual void operator()(PPUThread& CPU)
+	template<typename RT, typename... T>
+	struct func_binder
+	{
+		typedef RT(*func_t)(T...);
+
+		static void do_call(PPUThread& CPU, func_t _func)
 		{
-			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(m_call, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
+			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, iterate<0, 0, 0, T...>(CPU)));
 		}
 	};
 }
 
-template<typename RT, typename... T>
-func_caller* bind_func(RT(*call)(T...))
+template<typename RT, typename... T> __forceinline void call_ppu_func(PPUThread& CPU, RT(*func)(T...))
 {
-	return new ppu_func_detail::func_binder<RT, T...>(call);
+	ppu_func_detail::func_binder<RT, T...>::do_call(CPU, func);
 }
+
+#define bind_func(func) [](PPUThread& CPU){ call_ppu_func(CPU, func); }

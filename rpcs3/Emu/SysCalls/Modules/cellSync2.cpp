@@ -251,39 +251,39 @@ s32 cellSync2QueueGetDepth()
 
 Module cellSync2("cellSync2", []()
 {
-	cellSync2.AddFunc(0x55836e73, _cellSync2MutexAttributeInitialize);
-	cellSync2.AddFunc(0xd51bfae7, cellSync2MutexEstimateBufferSize);
-	cellSync2.AddFunc(0xeb81a467, cellSync2MutexInitialize);
-	cellSync2.AddFunc(0x27f2d61c, cellSync2MutexFinalize);
-	cellSync2.AddFunc(0xa400d82e, cellSync2MutexLock);
-	cellSync2.AddFunc(0xa69c749c, cellSync2MutexTryLock);
-	cellSync2.AddFunc(0x0080fe88, cellSync2MutexUnlock);
+	REG_FUNC(cellSync2, _cellSync2MutexAttributeInitialize);
+	REG_FUNC(cellSync2, cellSync2MutexEstimateBufferSize);
+	REG_FUNC(cellSync2, cellSync2MutexInitialize);
+	REG_FUNC(cellSync2, cellSync2MutexFinalize);
+	REG_FUNC(cellSync2, cellSync2MutexLock);
+	REG_FUNC(cellSync2, cellSync2MutexTryLock);
+	REG_FUNC(cellSync2, cellSync2MutexUnlock);
 
-	cellSync2.AddFunc(0xdf3c532a, _cellSync2CondAttributeInitialize);
-	cellSync2.AddFunc(0x5b1e4d7a, cellSync2CondEstimateBufferSize);
-	cellSync2.AddFunc(0x58be9a0f, cellSync2CondInitialize);
-	cellSync2.AddFunc(0x63062249, cellSync2CondFinalize);
-	cellSync2.AddFunc(0xbc96d751, cellSync2CondWait);
-	cellSync2.AddFunc(0x871af804, cellSync2CondSignal);
-	cellSync2.AddFunc(0x8aae07c2, cellSync2CondSignalAll);
+	REG_FUNC(cellSync2, _cellSync2CondAttributeInitialize);
+	REG_FUNC(cellSync2, cellSync2CondEstimateBufferSize);
+	REG_FUNC(cellSync2, cellSync2CondInitialize);
+	REG_FUNC(cellSync2, cellSync2CondFinalize);
+	REG_FUNC(cellSync2, cellSync2CondWait);
+	REG_FUNC(cellSync2, cellSync2CondSignal);
+	REG_FUNC(cellSync2, cellSync2CondSignalAll);
 
-	cellSync2.AddFunc(0x2d77fe17, _cellSync2SemaphoreAttributeInitialize);
-	cellSync2.AddFunc(0x74c2780f, cellSync2SemaphoreEstimateBufferSize);
-	cellSync2.AddFunc(0xc5dee254, cellSync2SemaphoreInitialize);
-	cellSync2.AddFunc(0x164843a7, cellSync2SemaphoreFinalize);
-	cellSync2.AddFunc(0xd1b0d146, cellSync2SemaphoreAcquire);
-	cellSync2.AddFunc(0x5e4b0f87, cellSync2SemaphoreTryAcquire);
-	cellSync2.AddFunc(0x0c2983ac, cellSync2SemaphoreRelease);
-	cellSync2.AddFunc(0x4e2ee031, cellSync2SemaphoreGetCount);
+	REG_FUNC(cellSync2, _cellSync2SemaphoreAttributeInitialize);
+	REG_FUNC(cellSync2, cellSync2SemaphoreEstimateBufferSize);
+	REG_FUNC(cellSync2, cellSync2SemaphoreInitialize);
+	REG_FUNC(cellSync2, cellSync2SemaphoreFinalize);
+	REG_FUNC(cellSync2, cellSync2SemaphoreAcquire);
+	REG_FUNC(cellSync2, cellSync2SemaphoreTryAcquire);
+	REG_FUNC(cellSync2, cellSync2SemaphoreRelease);
+	REG_FUNC(cellSync2, cellSync2SemaphoreGetCount);
 
-	cellSync2.AddFunc(0x5e00d433, _cellSync2QueueAttributeInitialize);
-	cellSync2.AddFunc(0xc08cc0f9, cellSync2QueueEstimateBufferSize);
-	cellSync2.AddFunc(0xf125e044, cellSync2QueueInitialize);
-	cellSync2.AddFunc(0x6af85cdf, cellSync2QueueFinalize);
-	cellSync2.AddFunc(0x7d967d91, cellSync2QueuePush);
-	cellSync2.AddFunc(0x7fd479fe, cellSync2QueueTryPush);
-	cellSync2.AddFunc(0xd83ab0c9, cellSync2QueuePop);
-	cellSync2.AddFunc(0x0c9a0ea9, cellSync2QueueTryPop);
-	cellSync2.AddFunc(0x12f0a27d, cellSync2QueueGetSize);
-	cellSync2.AddFunc(0xf0e1471c, cellSync2QueueGetDepth);
+	REG_FUNC(cellSync2, _cellSync2QueueAttributeInitialize);
+	REG_FUNC(cellSync2, cellSync2QueueEstimateBufferSize);
+	REG_FUNC(cellSync2, cellSync2QueueInitialize);
+	REG_FUNC(cellSync2, cellSync2QueueFinalize);
+	REG_FUNC(cellSync2, cellSync2QueuePush);
+	REG_FUNC(cellSync2, cellSync2QueueTryPush);
+	REG_FUNC(cellSync2, cellSync2QueuePop);
+	REG_FUNC(cellSync2, cellSync2QueueTryPop);
+	REG_FUNC(cellSync2, cellSync2QueueGetSize);
+	REG_FUNC(cellSync2, cellSync2QueueGetDepth);
 });

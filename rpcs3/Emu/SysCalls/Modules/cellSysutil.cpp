@@ -851,64 +851,64 @@ Module cellSysutil("cellSysutil", []()
 		v.arg.set(0);
 	}
 
-	cellSysutil.AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
-	cellSysutil.AddFunc(0x938013a0, cellSysutilGetSystemParamString);
+	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
+	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
 
-	cellSysutil.AddFunc(0x887572d5, cellVideoOutGetState);
-	cellSysutil.AddFunc(0xe558748d, cellVideoOutGetResolution);
-	cellSysutil.AddFunc(0x0bae8772, cellVideoOutConfigure);
-	cellSysutil.AddFunc(0x15b0b0cd, cellVideoOutGetConfiguration);
-	cellSysutil.AddFunc(0x1e930eef, cellVideoOutGetDeviceInfo);
-	cellSysutil.AddFunc(0x75bbb672, cellVideoOutGetNumberOfDevice);
-	cellSysutil.AddFunc(0xa322db75, cellVideoOutGetResolutionAvailability);
+	REG_FUNC(cellSysutil, cellVideoOutGetState);
+	REG_FUNC(cellSysutil, cellVideoOutGetResolution);
+	REG_FUNC(cellSysutil, cellVideoOutConfigure);
+	REG_FUNC(cellSysutil, cellVideoOutGetConfiguration);
+	REG_FUNC(cellSysutil, cellVideoOutGetDeviceInfo);
+	REG_FUNC(cellSysutil, cellVideoOutGetNumberOfDevice);
+	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability);
 
-	cellSysutil.AddFunc(0x189a74da, cellSysutilCheckCallback);
-	cellSysutil.AddFunc(0x9d98afa0, cellSysutilRegisterCallback);
-	cellSysutil.AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
+	REG_FUNC(cellSysutil, cellSysutilCheckCallback);
+	REG_FUNC(cellSysutil, cellSysutilRegisterCallback);
+	REG_FUNC(cellSysutil, cellSysutilUnregisterCallback);
 
-	cellSysutil.AddFunc(0x7603d3db, cellMsgDialogOpen2);
-	cellSysutil.AddFunc(0x3e22cb4b, cellMsgDialogOpenErrorCode);
-	cellSysutil.AddFunc(0x9d6af72a, cellMsgDialogProgressBarSetMsg);
-	cellSysutil.AddFunc(0x7bc2c8a8, cellMsgDialogProgressBarReset);
-	cellSysutil.AddFunc(0x94862702, cellMsgDialogProgressBarInc);
-	cellSysutil.AddFunc(0x20543730, cellMsgDialogClose);
-	cellSysutil.AddFunc(0x62b0f803, cellMsgDialogAbort);
+	REG_FUNC(cellSysutil, cellMsgDialogOpen2);
+	REG_FUNC(cellSysutil, cellMsgDialogOpenErrorCode);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarSetMsg);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarReset);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarInc);
+	REG_FUNC(cellSysutil, cellMsgDialogClose);
+	REG_FUNC(cellSysutil, cellMsgDialogAbort);
 
-	cellSysutil.AddFunc(0xf4e3caa0, cellAudioOutGetState);
-	cellSysutil.AddFunc(0x4692ab35, cellAudioOutConfigure);
-	cellSysutil.AddFunc(0xc01b4e7c, cellAudioOutGetSoundAvailability);
-	cellSysutil.AddFunc(0x2beac488, cellAudioOutGetSoundAvailability2);
-	cellSysutil.AddFunc(0x7663e368, cellAudioOutGetDeviceInfo);
-	cellSysutil.AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
-	cellSysutil.AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
-	cellSysutil.AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
+	REG_FUNC(cellSysutil, cellAudioOutGetState);
+	REG_FUNC(cellSysutil, cellAudioOutConfigure);
+	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability);
+	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability2);
+	REG_FUNC(cellSysutil, cellAudioOutGetDeviceInfo);
+	REG_FUNC(cellSysutil, cellAudioOutGetNumberOfDevice);
+	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration);
+	REG_FUNC(cellSysutil, cellAudioOutSetCopyControl);
 
-	cellSysutil.AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
-	cellSysutil.AddFunc(0x6cfd856f, cellSysutilGetBgmPlaybackStatus2);
-	cellSysutil.AddFunc(0x220894e3, cellSysutilEnableBgmPlayback);
-	cellSysutil.AddFunc(0xac58ad2b, cellSysutilEnableBgmPlaybackEx);
-	cellSysutil.AddFunc(0xcfdd8e87, cellSysutilDisableBgmPlayback);
-	cellSysutil.AddFunc(0xa36335a5, cellSysutilDisableBgmPlaybackEx);
+	REG_FUNC(cellSysutil, cellSysutilGetBgmPlaybackStatus);
+	REG_FUNC(cellSysutil, cellSysutilGetBgmPlaybackStatus2);
+	REG_FUNC(cellSysutil, cellSysutilEnableBgmPlayback);
+	REG_FUNC(cellSysutil, cellSysutilEnableBgmPlaybackEx);
+	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlayback);
+	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlaybackEx);
 
-	cellSysutil.AddFunc(0x1e7bff94, cellSysCacheMount);
-	cellSysutil.AddFunc(0x744c1544, cellSysCacheClear);
+	REG_FUNC(cellSysutil, cellSysCacheMount);
+	REG_FUNC(cellSysutil, cellSysCacheClear);
 
-	cellSysutil.AddFunc(0x9117df20, cellHddGameCheck);
-	//cellSysutil.AddFunc(0x4bdec82a, cellHddGameCheck2);
-	//cellSysutil.AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
-	//cellSysutil.AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
-	//cellSysutil.AddFunc(0xafd605b3, cellHddGameExitBroken);
+	REG_FUNC(cellSysutil, cellHddGameCheck);
+	//REG_FUNC(cellSysutil, cellHddGameCheck2);
+	//REG_FUNC(cellSysutil, cellHddGameGetSizeKB);
+	//REG_FUNC(cellSysutil, cellHddGameSetSystemVer);
+	//REG_FUNC(cellSysutil, cellHddGameExitBroken);
 
-	//cellSysutil.AddFunc(0x886D0747, cellSysutilRegisterCallbackDispatcher);
-	//cellSysutil.AddFunc(0xA2720DF2, cellSysutilPacketWrite);
-	//cellSysutil.AddFunc(0x75AA7373, doc.write);
-	//cellSysutil.AddFunc(0x2D96313F, packet_read);
+	//REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
+	//REG_FUNC(cellSysutil, cellSysutilPacketWrite);
+	//REG_FUNC(cellSysutil, doc.write);
+	//REG_FUNC(cellSysutil, packet_read);
 
 	// cellSaveData functions
 	cellSysutil_SaveData_init();
 
-	cellSysutil.AddFunc(0x6d087930, cellWebBrowserEstimate2);
+	REG_FUNC(cellSysutil, cellWebBrowserEstimate2);
 
-	cellSysutil.AddFunc(0xe7951dee, cellGameDataCheckCreate);
-	cellSysutil.AddFunc(0xc9645c41, cellGameDataCheckCreate2);
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate);
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate2);
 });

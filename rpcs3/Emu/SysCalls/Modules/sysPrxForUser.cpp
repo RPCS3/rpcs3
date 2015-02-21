@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
@@ -85,6 +86,139 @@ void ppu_free_tls(u32 thread)
 			return;
 		}
 	}
+}
+
+std::string ps3_fmt(PPUThread& context, vm::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
+{
+	std::string result;
+
+	for (char c = *fmt++; c; c = *fmt++)
+	{
+		switch (c)
+		{
+		case '%':
+		{
+			const auto start = fmt - 1;
+
+			// read flags
+			const bool plus_sign = *fmt == '+' ? fmt++, true : false;
+			const bool minus_sign = *fmt == '-' ? fmt++, true : false;
+			const bool space_sign = *fmt == ' ' ? fmt++, true : false;
+			const bool number_sign = *fmt == '#' ? fmt++, true : false;
+			const bool zero_padding = *fmt == '0' ? fmt++, true : false;
+
+			// read width
+			const u32 width = [&]() -> u32
+			{
+				u32 width = 0;
+
+				if (*fmt == '*')
+				{
+					fmt++;
+					return context.get_next_gpr_arg(g_count, f_count, v_count);
+				}
+
+				while (*fmt - '0' < 10)
+				{
+					width = width * 10 + (*fmt++ - '0');
+				}
+
+				return width;
+			}();
+
+			// read precision
+			const u32 prec = [&]() -> u32
+			{
+				u32 prec = 0;
+
+				if (*fmt != '.')
+				{
+					return 0;
+				}
+
+				if (*++fmt == '*')
+				{
+					fmt++;
+					return context.get_next_gpr_arg(g_count, f_count, v_count);
+				}
+
+				while (*fmt - '0' < 10)
+				{
+					prec = prec * 10 + (*fmt++ - '0');
+				}
+
+				return prec;
+			}();
+
+			switch (char cf = *fmt++)
+			{
+			case '%':
+			{
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
+				result += '%';
+				continue;
+			}
+			case 'd':
+			case 'i':
+			{
+				// signed decimal
+				const s64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
+				result += fmt::to_sdec(value);
+				continue;
+			}
+			case 'x':
+			case 'X':
+			{
+				// hexadecimal
+				const u64 value = context.get_next_gpr_arg(g_count, f_count, v_count);
+
+				if (plus_sign || minus_sign || space_sign || prec) break;
+
+				if (number_sign && value)
+				{
+					result += cf == 'x' ? "0x" : "0X";
+				}
+
+				const std::string& hex = cf == 'x' ? fmt::to_hex(value) : fmt::toupper(fmt::to_hex(value));
+
+				if (hex.length() >= width)
+				{
+					result += hex;
+				}
+				else if (zero_padding)
+				{
+					result += std::string(width - hex.length(), '0') + hex;
+				}
+				else
+				{
+					result += hex + std::string(width - hex.length(), ' ');
+				}
+				continue;
+			}
+			case 's':
+			{
+				// string
+				auto string = vm::ptr<const char>::make(context.get_next_gpr_arg(g_count, f_count, v_count));
+
+				if (plus_sign || minus_sign || space_sign || number_sign || zero_padding || width || prec) break;
+
+				result += string.get_ptr();
+				continue;
+			}
+			}
+
+			throw fmt::format("ps3_fmt(): unknown formatting: '%s'", start.get_ptr());
+		}
+		}
+
+		result += c;
+	}
+
+	return result;
 }
 
 int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
@@ -393,12 +527,26 @@ s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 	return spu_printf_dtcb(CPU, thread);
 }
 
-s32 _sys_snprintf(vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...
+s32 _sys_snprintf(PPUThread& CPU, vm::ptr<char> dst, u32 count, vm::ptr<const char> fmt) // va_args...
 {
-	sysPrxForUser.Todo("_sys_snprintf(dst_addr=0x%x, count=%d, fmt_addr=0x%x['%s'], ...)", dst.addr(), count, fmt.addr(), fmt.get_ptr());
+	sysPrxForUser.Warning("_sys_snprintf(dst=0x%x, count=%d, fmt=0x%x, ...)", dst, count, fmt);
 
-	Emu.Pause();
-	return 0;
+	std::string result = ps3_fmt(CPU, fmt, 3, 0, 0);
+
+	sysPrxForUser.Warning("*** '%s' -> '%s'", fmt.get_ptr(), result);
+
+	if (!count)
+	{
+		return 0; // ???
+	}
+	else
+	{
+		count = (u32)std::min<size_t>(count - 1, result.size());
+
+		memcpy(dst.get_ptr(), result.c_str(), count);
+		dst[count] = 0;
+		return count;
+	}
 }
 
 s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
@@ -411,7 +559,7 @@ s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 	return CELL_OK;
 }
 
-s32 _unnamed_E75C40F2(u32 dest)
+s32 _nid_E75C40F2(u32 dest)
 {
 	sysPrxForUser.Todo("Unnamed function 0xE75C40F2 (dest=0x%x) -> CELL_ENOENT", dest);
 
@@ -444,66 +592,66 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
 	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
 
-	sysPrxForUser.AddFunc(0x8461e528, sys_time_get_system_time);
+	REG_FUNC(sysPrxForUser, sys_time_get_system_time);
 
-	sysPrxForUser.AddFunc(0xe6f2c1e7, sys_process_exit);
-	sysPrxForUser.AddFunc(0x2c847572, _sys_process_atexitspawn);
-	sysPrxForUser.AddFunc(0x96328741, _sys_process_at_Exitspawn);
-	sysPrxForUser.AddFunc(0x4f7172c9, sys_process_is_stack);
+	REG_FUNC(sysPrxForUser, sys_process_exit);
+	REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
+	REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
+	REG_FUNC(sysPrxForUser, sys_process_is_stack);
 
-	sysPrxForUser.AddFunc(0x24a1ea07, sys_ppu_thread_create);
-	sysPrxForUser.AddFunc(0x350d454e, sys_ppu_thread_get_id);
-	sysPrxForUser.AddFunc(0xaff080a4, sys_ppu_thread_exit);
-	sysPrxForUser.AddFunc(0xa3e3be68, sys_ppu_thread_once);
+	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);
+	REG_FUNC(sysPrxForUser, sys_ppu_thread_get_id);
+	REG_FUNC(sysPrxForUser, sys_ppu_thread_exit);
+	REG_FUNC(sysPrxForUser, sys_ppu_thread_once);
 
-	sysPrxForUser.AddFunc(0x26090058, sys_prx_load_module);
-	sysPrxForUser.AddFunc(0x9f18429d, sys_prx_start_module);
-	sysPrxForUser.AddFunc(0x80fb0c19, sys_prx_stop_module);
-	sysPrxForUser.AddFunc(0xf0aece0d, sys_prx_unload_module);
-	sysPrxForUser.AddFunc(0x42b23552, sys_prx_register_library);
-	sysPrxForUser.AddFunc(0xd0ea47a7, sys_prx_unregister_library);
-	sysPrxForUser.AddFunc(0xa5d06bf0, sys_prx_get_module_list);
-	sysPrxForUser.AddFunc(0x84bb6774, sys_prx_get_module_info);
-	sysPrxForUser.AddFunc(0xe0998dbf, sys_prx_get_module_id_by_name);
-	sysPrxForUser.AddFunc(0xaa6d9bff, sys_prx_load_module_on_memcontainer);
-	sysPrxForUser.AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
+	REG_FUNC(sysPrxForUser, sys_prx_load_module);
+	REG_FUNC(sysPrxForUser, sys_prx_start_module);
+	REG_FUNC(sysPrxForUser, sys_prx_stop_module);
+	REG_FUNC(sysPrxForUser, sys_prx_unload_module);
+	REG_FUNC(sysPrxForUser, sys_prx_register_library);
+	REG_FUNC(sysPrxForUser, sys_prx_unregister_library);
+	REG_FUNC(sysPrxForUser, sys_prx_get_module_list);
+	REG_FUNC(sysPrxForUser, sys_prx_get_module_info);
+	REG_FUNC(sysPrxForUser, sys_prx_get_module_id_by_name);
+	REG_FUNC(sysPrxForUser, sys_prx_load_module_on_memcontainer);
+	REG_FUNC(sysPrxForUser, sys_prx_exitspawn_with_level);
 
-	sysPrxForUser.AddFunc(0x35168520, _sys_heap_malloc);
-	//sysPrxForUser.AddFunc(0xaede4b03, _sys_heap_free);
-	//sysPrxForUser.AddFunc(0x8a561d92, _sys_heap_delete_heap);
-	sysPrxForUser.AddFunc(0xb2fcf2c8, _sys_heap_create_heap);
-	sysPrxForUser.AddFunc(0x44265c08, _sys_heap_memalign);
+	REG_FUNC(sysPrxForUser, _sys_heap_malloc);
+	//REG_FUNC(sysPrxForUser, _sys_heap_free);
+	//REG_FUNC(sysPrxForUser, _sys_heap_delete_heap);
+	REG_FUNC(sysPrxForUser, _sys_heap_create_heap);
+	REG_FUNC(sysPrxForUser, _sys_heap_memalign);
 
-	sysPrxForUser.AddFunc(0xb257540b, sys_mmapper_allocate_memory);
-	sysPrxForUser.AddFunc(0x70258515, sys_mmapper_allocate_memory_from_container);
-	sysPrxForUser.AddFunc(0xdc578057, sys_mmapper_map_memory);
-	sysPrxForUser.AddFunc(0x4643ba6e, sys_mmapper_unmap_memory);
-	sysPrxForUser.AddFunc(0x409ad939, sys_mmapper_free_memory);
+	REG_FUNC(sysPrxForUser, sys_mmapper_allocate_memory);
+	REG_FUNC(sysPrxForUser, sys_mmapper_allocate_memory_from_container);
+	REG_FUNC(sysPrxForUser, sys_mmapper_map_memory);
+	REG_FUNC(sysPrxForUser, sys_mmapper_unmap_memory);
+	REG_FUNC(sysPrxForUser, sys_mmapper_free_memory);
 
-	sysPrxForUser.AddFunc(0x1ed454ce, sys_spu_elf_get_information);
-	sysPrxForUser.AddFunc(0xdb6b3250, sys_spu_elf_get_segments);
-	sysPrxForUser.AddFunc(0xebe5f72f, sys_spu_image_import);
-	sysPrxForUser.AddFunc(0xe0da8efd, sys_spu_image_close);
+	REG_FUNC(sysPrxForUser, sys_spu_elf_get_information);
+	REG_FUNC(sysPrxForUser, sys_spu_elf_get_segments);
+	REG_FUNC(sysPrxForUser, sys_spu_image_import);
+	REG_FUNC(sysPrxForUser, sys_spu_image_close);
 
-	sysPrxForUser.AddFunc(0x893305fa, sys_raw_spu_load);
-	sysPrxForUser.AddFunc(0xb995662e, sys_raw_spu_image_load);
+	REG_FUNC(sysPrxForUser, sys_raw_spu_load);
+	REG_FUNC(sysPrxForUser, sys_raw_spu_image_load);
 
-	sysPrxForUser.AddFunc(0xda0eb71a, sys_lwcond_create);
-	sysPrxForUser.AddFunc(0x1c9a942c, sys_lwcond_destroy);
-	sysPrxForUser.AddFunc(0xef87a695, sys_lwcond_signal);
-	sysPrxForUser.AddFunc(0xe9a1bd84, sys_lwcond_signal_all);
-	sysPrxForUser.AddFunc(0x52aadadf, sys_lwcond_signal_to);
-	sysPrxForUser.AddFunc(0x2a6d9d51, sys_lwcond_wait);
+	REG_FUNC(sysPrxForUser, sys_lwcond_create);
+	REG_FUNC(sysPrxForUser, sys_lwcond_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_all);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_to);
+	REG_FUNC(sysPrxForUser, sys_lwcond_wait);
 
-	sysPrxForUser.AddFunc(0x71a8472a, sys_get_random_number);
+	REG_FUNC(sysPrxForUser, sys_get_random_number);
 
-	sysPrxForUser.AddFunc(0x8c2bb498, sys_spinlock_initialize);
-	sysPrxForUser.AddFunc(0xa285139d, sys_spinlock_lock);
-	sysPrxForUser.AddFunc(0x722a0254, sys_spinlock_trylock);
-	sysPrxForUser.AddFunc(0x5267cb35, sys_spinlock_unlock);
+	REG_FUNC(sysPrxForUser, sys_spinlock_initialize);
+	REG_FUNC(sysPrxForUser, sys_spinlock_lock);
+	REG_FUNC(sysPrxForUser, sys_spinlock_trylock);
+	REG_FUNC(sysPrxForUser, sys_spinlock_unlock);
 
-	sysPrxForUser.AddFunc(0x67f9fedb, sys_game_process_exitspawn2);
-	sysPrxForUser.AddFunc(0xfc52a7a9, sys_game_process_exitspawn);
+	REG_FUNC(sysPrxForUser, sys_game_process_exitspawn2);
+	REG_FUNC(sysPrxForUser, sys_game_process_exitspawn);
 
 	REG_FUNC(sysPrxForUser, _sys_memset);
 	REG_FUNC(sysPrxForUser, _sys_memcpy);
@@ -525,5 +673,6 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, _sys_snprintf);
 
 	REG_FUNC(sysPrxForUser, _sys_printf);
-	sysPrxForUser.AddFunc(0xe75c40f2, _unnamed_E75C40F2); // real name is unknown
+
+	REG_UNNAMED(sysPrxForUser, E75C40F2);
 });

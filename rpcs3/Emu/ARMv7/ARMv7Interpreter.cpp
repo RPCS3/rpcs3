@@ -294,7 +294,7 @@ namespace ARMv7_instrs
 				context.debug_str.insert(pos, 8 - pos, ' ');
 			}
 
-			context.debug_str = fmt::format("0x%08x: %s", context.thread.PC, context.debug_str);
+			context.fmt_debug_str("0x%08x: %s", context.thread.PC, context.debug_str);
 
 			LV2_LOCK(0);
 
@@ -530,16 +530,16 @@ void ARMv7_instrs::HACK(ARMv7Context& context, const ARMv7Code code, const ARMv7
 			{
 				if (func->func)
 				{
-					context.debug_str = fmt::format("hack%s %s", fmt_cond(cond), func->name);
+					context.fmt_debug_str("hack%s %s", fmt_cond(cond), func->name);
 				}
 				else
 				{
-					context.debug_str = fmt::format("hack%s UNIMPLEMENTED:0x%08X (%s)", fmt_cond(cond), func->nid, func->name);
+					context.fmt_debug_str("hack%s UNIMPLEMENTED:0x%08X (%s)", fmt_cond(cond), func->nid, func->name);
 				}
 			}
 			else
 			{
-				context.debug_str = fmt::format("hack%s %d", fmt_cond(cond), index);
+				context.fmt_debug_str("hack%s %d", fmt_cond(cond), index);
 			}
 		}
 		if (process_debug(context)) return;
@@ -575,9 +575,14 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 	default: throw __FUNCTION__;
 	}
 
+	auto disasm = [&]()
+	{
+		context.fmt_debug_str("mrc%s p%d,%d,r%d,c%d,c%d,%d", fmt_cond(cond), cp, opc1, t, cn, cm, opc2);
+	};
+
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("mrc%s p%d,%d,r%d,c%d,c%d,%d", fmt_cond(cond), cp, opc1, t, cn, cm, opc2);
+		if (context.debug & DF_DISASM) disasm();
 		if (process_debug(context)) return;
 	}
 
@@ -598,7 +603,7 @@ void ARMv7_instrs::MRC_(ARMv7Context& context, const ARMv7Code code, const ARMv7
 			return;
 		}
 
-		throw fmt::format("Bad instruction: mrc%s p%d,%d,r%d,c%d,c%d,%d", fmt_cond(cond), cp, opc1, t, cn, cm, opc2);
+		Error(__FUNCTION__, code, type, (disasm(), context.debug_str.c_str()), "Bad instruction");
 	}
 }
 
@@ -626,7 +631,7 @@ void ARMv7_instrs::ADC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("adc%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("adc%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -680,7 +685,7 @@ void ARMv7_instrs::ADC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("adc%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("adc%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -765,7 +770,7 @@ void ARMv7_instrs::ADD_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("add%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -836,7 +841,7 @@ void ARMv7_instrs::ADD_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("add%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -916,7 +921,7 @@ void ARMv7_instrs::ADD_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("add%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -982,7 +987,7 @@ void ARMv7_instrs::ADD_SPR(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("add%s%s %s,sp,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("add%s%s %s,sp,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -1048,7 +1053,7 @@ void ARMv7_instrs::ADR(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("adr%s r%d, 0x%08X", fmt_cond(cond), d, result);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("adr%s r%d, 0x%08X", fmt_cond(cond), d, result);
 		if (process_debug(context)) return;
 	}
 
@@ -1084,7 +1089,7 @@ void ARMv7_instrs::AND_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("and%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("and%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1137,7 +1142,7 @@ void ARMv7_instrs::AND_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("and%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("and%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -1248,7 +1253,7 @@ void ARMv7_instrs::B(ARMv7Context& context, const ARMv7Code code, const ARMv7_en
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("b%s 0x%08X", fmt_cond(cond), context.read_pc() + imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("b%s 0x%08X", fmt_cond(cond), context.read_pc() + imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1302,7 +1307,7 @@ void ARMv7_instrs::BIC_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("bic%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("bic%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1354,7 +1359,7 @@ void ARMv7_instrs::BIC_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("bic%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("bic%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -1427,7 +1432,7 @@ void ARMv7_instrs::BL(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("bl%s 0x%08X", fmt_cond(cond), pc);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("bl%s 0x%08X", fmt_cond(cond), pc);
 		if (process_debug(context)) return;
 	}
 
@@ -1492,13 +1497,12 @@ void ARMv7_instrs::BLX(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 	{
 		if (context.debug & DF_DISASM)
 		{
-			context.debug_str = fmt::format("blx%s ", fmt_cond(cond));
 			switch (type)
 			{
-			case T1: context.debug_str += fmt_reg((code.data >> 3) & 0xf); break;
-			case T2: context.debug_str += fmt::format("0x%08X", target); break;
-			case A1: context.debug_str += fmt_reg(code.data & 0xf); break;
-			default: context.debug_str += "???";
+			case T1: context.fmt_debug_str("blx%s %s", fmt_cond(cond), fmt_reg((code.data >> 3) & 0xf)); break;
+			case T2: context.fmt_debug_str("blx%s 0x%08X", fmt_cond(cond), target); break;
+			case A1: context.fmt_debug_str("blx%s %s", fmt_cond(cond), fmt_reg(code.data & 0xf)); break;
+			default: context.fmt_debug_str("blx%s ???", fmt_cond(cond));
 			}
 		}
 		if (process_debug(context)) return;
@@ -1536,7 +1540,7 @@ void ARMv7_instrs::BX(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("bx%s %s", fmt_cond(cond), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("bx%s %s", fmt_cond(cond), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -1568,7 +1572,7 @@ void ARMv7_instrs::CB_Z(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("cb%sz 0x%08X", nonzero ? "n" : "", context.read_pc() + imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("cb%sz 0x%08X", nonzero ? "n" : "", context.read_pc() + imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1601,7 +1605,7 @@ void ARMv7_instrs::CLZ(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("clz%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("clz%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -1668,7 +1672,7 @@ void ARMv7_instrs::CMP_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("cmp%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("cmp%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1729,7 +1733,7 @@ void ARMv7_instrs::CMP_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("cmp%s %s,%s%s", fmt_cond(cond), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("cmp%s %s,%s%s", fmt_cond(cond), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -1812,7 +1816,7 @@ void ARMv7_instrs::EOR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("eor%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("eor%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -1865,7 +1869,7 @@ void ARMv7_instrs::EOR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("eor%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("eor%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -1917,7 +1921,7 @@ void ARMv7_instrs::IT(ARMv7Context& context, const ARMv7Code code, const ARMv7_e
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("IT%s %s", fmt_it(context.ITSTATE.shift_state), fmt_cond(context.ITSTATE.condition));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("IT%s %s", fmt_it(context.ITSTATE.shift_state), fmt_cond(context.ITSTATE.condition));
 		if (process_debug(context)) return;
 	}
 }
@@ -1959,7 +1963,7 @@ void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
 		if (process_debug(context)) return;
 	}
 
@@ -2076,7 +2080,7 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -2127,7 +2131,7 @@ void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldr%s %s,0x%08X", fmt_cond(cond), fmt_reg(t), addr);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,0x%08X", fmt_cond(cond), fmt_reg(t), addr);
 		if (process_debug(context)) return;
 	}
 
@@ -2181,7 +2185,7 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldr%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -2256,7 +2260,7 @@ void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -2325,7 +2329,7 @@ void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -2374,7 +2378,7 @@ void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -2421,7 +2425,7 @@ void ARMv7_instrs::LDRD_LIT(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrd%s %s,%s,0x%08X", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), addr);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrd%s %s,%s,0x%08X", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), addr);
 		if (process_debug(context)) return;
 	}
 
@@ -2499,7 +2503,7 @@ void ARMv7_instrs::LDRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -2580,7 +2584,7 @@ void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const 
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrsb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrsb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -2667,7 +2671,7 @@ void ARMv7_instrs::LDREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ldrex%s %s,[%s,#0x%X]", fmt_cond(cond), fmt_reg(t), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ldrex%s %s,[%s,#0x%X]", fmt_cond(cond), fmt_reg(t), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -2745,7 +2749,7 @@ void ARMv7_instrs::LSL_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("lsl%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("lsl%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
 		if (process_debug(context)) return;
 	}
 
@@ -2795,7 +2799,7 @@ void ARMv7_instrs::LSL_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("lsl%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("lsl%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -2847,7 +2851,7 @@ void ARMv7_instrs::LSR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("lsr%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("lsr%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
 		if (process_debug(context)) return;
 	}
 
@@ -2939,8 +2943,8 @@ void ARMv7_instrs::MOV_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 		{
 			switch (type)
 			{
-			case T3: case A2: context.debug_str = fmt::format("movw%s%s %s,#0x%04X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32); break; 
-			default: context.debug_str = fmt::format("mov%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
+			case T3: case A2: context.fmt_debug_str("movw%s%s %s,#0x%04X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32); break; 
+			default: context.fmt_debug_str("mov%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
 			}
 		}
 		if (process_debug(context)) return;
@@ -3004,7 +3008,7 @@ void ARMv7_instrs::MOV_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("mov%s%s %s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("mov%s%s %s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -3043,7 +3047,7 @@ void ARMv7_instrs::MOVT(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("movt%s %s,#0x%04X", fmt_cond(cond), fmt_reg(d), imm16);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("movt%s %s,#0x%04X", fmt_cond(cond), fmt_reg(d), imm16);
 		if (process_debug(context)) return;
 	}
 
@@ -3115,7 +3119,7 @@ void ARMv7_instrs::MUL(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("mul%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("mul%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -3158,7 +3162,7 @@ void ARMv7_instrs::MVN_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("mvn%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("mvn%s%s %s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -3209,7 +3213,7 @@ void ARMv7_instrs::MVN_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("mvn%s%s %s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("mvn%s%s %s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -3265,7 +3269,7 @@ void ARMv7_instrs::NOP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("nop%s", fmt_cond(cond));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("nop%s", fmt_cond(cond));
 		if (process_debug(context)) return;
 	}
 
@@ -3319,7 +3323,7 @@ void ARMv7_instrs::ORR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("orr%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("orr%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -3372,7 +3376,7 @@ void ARMv7_instrs::ORR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("orr%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("orr%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -3465,7 +3469,7 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("pop%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("pop%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
 		if (process_debug(context)) return;
 	}
 
@@ -3536,7 +3540,7 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("push%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("push%s {%s}", fmt_cond(cond), fmt_reg_list(reg_list));
 		if (process_debug(context)) return;
 	}
 
@@ -3686,7 +3690,7 @@ void ARMv7_instrs::REV(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("rev%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("rev%s %s,%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -3740,7 +3744,7 @@ void ARMv7_instrs::ROR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ror%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ror%s%s %s,%s,#%d", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(m), shift_n);
 		if (process_debug(context)) return;
 	}
 
@@ -3790,7 +3794,7 @@ void ARMv7_instrs::ROR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("ror%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("ror%s%s %s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -3853,7 +3857,7 @@ void ARMv7_instrs::RSB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("rsb%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("rsb%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -4286,7 +4290,7 @@ void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("stm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("stm%s %s%s,{%s}", fmt_cond(cond), fmt_reg(n), wback ? "!" : "", fmt_reg_list(reg_list));
 		if (process_debug(context)) return;
 	}
 
@@ -4402,7 +4406,7 @@ void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -4461,7 +4465,7 @@ void ARMv7_instrs::STR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("str%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -4533,7 +4537,7 @@ void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -4592,7 +4596,7 @@ void ARMv7_instrs::STRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strb%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -4640,7 +4644,7 @@ void ARMv7_instrs::STRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strd%s %s,%s,%s", fmt_cond(cond), fmt_reg(t), fmt_reg(t2), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -4721,7 +4725,7 @@ void ARMv7_instrs::STRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_imm(n, imm32, index, add, wback));
 		if (process_debug(context)) return;
 	}
 
@@ -4780,7 +4784,7 @@ void ARMv7_instrs::STRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strh%s %s,%s", fmt_cond(cond), fmt_reg(t), fmt_mem_reg(n, m, index, add, wback, shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -4823,7 +4827,7 @@ void ARMv7_instrs::STREX(ARMv7Context& context, const ARMv7Code code, const ARMv
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("strex%s %s,%s,[%s,#0x%x]", fmt_cond(cond), fmt_reg(d), fmt_reg(t), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("strex%s %s,%s,[%s,#0x%x]", fmt_cond(cond), fmt_reg(d), fmt_reg(t), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -4917,7 +4921,7 @@ void ARMv7_instrs::SUB_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("sub%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,%s,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -4974,7 +4978,7 @@ void ARMv7_instrs::SUB_REG(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("sub%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,%s,%s%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), fmt_reg(n), fmt_reg(m), fmt_shift(shift_t, shift_n));
 		if (process_debug(context)) return;
 	}
 
@@ -5046,7 +5050,7 @@ void ARMv7_instrs::SUB_SPI(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("sub%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("sub%s%s %s,sp,#0x%X", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -5201,7 +5205,7 @@ void ARMv7_instrs::TST_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("tst%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
+		if (context.debug & DF_DISASM) context.fmt_debug_str("tst%s %s,#0x%X", fmt_cond(cond), fmt_reg(n), imm32);
 		if (process_debug(context)) return;
 	}
 
@@ -5376,7 +5380,7 @@ void ARMv7_instrs::UMULL(ARMv7Context& context, const ARMv7Code code, const ARMv
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("umull%s%s %s,%s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d0), fmt_reg(d1), fmt_reg(n), fmt_reg(m));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("umull%s%s %s,%s,%s,%s", set_flags ? "s" : "", fmt_cond(cond), fmt_reg(d0), fmt_reg(d1), fmt_reg(n), fmt_reg(m));
 		if (process_debug(context)) return;
 	}
 
@@ -5568,7 +5572,7 @@ void ARMv7_instrs::UXTB(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (context.debug)
 	{
-		if (context.debug & DF_DISASM) context.debug_str = fmt::format("uxtb%s %s,%s%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(SRType_ROR, rot));
+		if (context.debug & DF_DISASM) context.fmt_debug_str("uxtb%s %s,%s%s", fmt_cond(cond), fmt_reg(d), fmt_reg(m), fmt_shift(SRType_ROR, rot));
 		if (process_debug(context)) return;
 	}
 

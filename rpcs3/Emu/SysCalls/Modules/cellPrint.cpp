@@ -91,17 +91,17 @@ int cellPrintSendBand()
 
 void cellPrint_init()
 {
-	cellPrint.AddFunc(0xc9c3ef14, cellPrintLoadAsync);
-	cellPrint.AddFunc(0xf0865182, cellPrintLoadAsync2);
-	cellPrint.AddFunc(0xeb51aa38, cellPrintUnloadAsync);
-	cellPrint.AddFunc(0x6802dfb5, cellPrintGetStatus);
-	cellPrint.AddFunc(0xf9a53f35, cellPrintOpenConfig);
-	cellPrint.AddFunc(0x6e952645, cellPrintGetPrintableArea);
-	cellPrint.AddFunc(0x795b12b3, cellPrintStartJob);
-	cellPrint.AddFunc(0xc04a7d42, cellPrintEndJob);
-	cellPrint.AddFunc(0x293d9e9c, cellPrintCancelJob);
-	cellPrint.AddFunc(0x865acf74, cellPrintStartPage);
-	cellPrint.AddFunc(0x0d44f661, cellPrintEndPage);
-	cellPrint.AddFunc(0x0a373522, cellPrintSendBand);
+	REG_FUNC(cellPrint, cellPrintLoadAsync);
+	REG_FUNC(cellPrint, cellPrintLoadAsync2);
+	REG_FUNC(cellPrint, cellPrintUnloadAsync);
+	REG_FUNC(cellPrint, cellPrintGetStatus);
+	REG_FUNC(cellPrint, cellPrintOpenConfig);
+	REG_FUNC(cellPrint, cellPrintGetPrintableArea);
+	REG_FUNC(cellPrint, cellPrintStartJob);
+	REG_FUNC(cellPrint, cellPrintEndJob);
+	REG_FUNC(cellPrint, cellPrintCancelJob);
+	REG_FUNC(cellPrint, cellPrintStartPage);
+	REG_FUNC(cellPrint, cellPrintEndPage);
+	REG_FUNC(cellPrint, cellPrintSendBand);
 }
 #endif

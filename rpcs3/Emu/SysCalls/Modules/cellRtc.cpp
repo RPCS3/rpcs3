@@ -447,44 +447,44 @@ int cellRtcCompareTick(vm::ptr<CellRtcTick> pTick0, vm::ptr<CellRtcTick> pTick1)
 
 Module cellRtc("cellRtc", []()
 {
-	cellRtc.AddFunc(0x9dafc0d9, cellRtcGetCurrentTick);
-	cellRtc.AddFunc(0x32c941cf, cellRtcGetCurrentClock);
-	cellRtc.AddFunc(0x2cce9cf5, cellRtcGetCurrentClockLocalTime);
+	REG_FUNC(cellRtc, cellRtcGetCurrentTick);
+	REG_FUNC(cellRtc, cellRtcGetCurrentClock);
+	REG_FUNC(cellRtc, cellRtcGetCurrentClockLocalTime);
 
-	cellRtc.AddFunc(0x5491b9d5, cellRtcFormatRfc2822);
-	cellRtc.AddFunc(0xa07c3d2f, cellRtcFormatRfc2822LocalTime);
-	cellRtc.AddFunc(0xd9c0b463, cellRtcFormatRfc3339);
-	cellRtc.AddFunc(0x1324948a, cellRtcFormatRfc3339LocalTime);
-	cellRtc.AddFunc(0xc5bc0fac, cellRtcParseDateTime);
-	cellRtc.AddFunc(0xcf11c3d6, cellRtcParseRfc3339);
+	REG_FUNC(cellRtc, cellRtcFormatRfc2822);
+	REG_FUNC(cellRtc, cellRtcFormatRfc2822LocalTime);
+	REG_FUNC(cellRtc, cellRtcFormatRfc3339);
+	REG_FUNC(cellRtc, cellRtcFormatRfc3339LocalTime);
+	REG_FUNC(cellRtc, cellRtcParseDateTime);
+	REG_FUNC(cellRtc, cellRtcParseRfc3339);
 
-	cellRtc.AddFunc(0xc7bdb7eb, cellRtcGetTick);
-	cellRtc.AddFunc(0x99b13034, cellRtcSetTick);
-	cellRtc.AddFunc(0x269a1882, cellRtcTickAddTicks);
-	cellRtc.AddFunc(0xf8509925, cellRtcTickAddMicroseconds);
-	cellRtc.AddFunc(0xccce71bd, cellRtcTickAddSeconds);
-	cellRtc.AddFunc(0x2f010bfa, cellRtcTickAddMinutes);
-	cellRtc.AddFunc(0xd41d3bd2, cellRtcTickAddHours);
-	cellRtc.AddFunc(0x75744e2a, cellRtcTickAddDays);
-	cellRtc.AddFunc(0x64c63fd5, cellRtcTickAddWeeks);
-	cellRtc.AddFunc(0xe0ecbb45, cellRtcTickAddMonths);
-	cellRtc.AddFunc(0x332a74dd, cellRtcTickAddYears);
-	cellRtc.AddFunc(0xc48d5002, cellRtcConvertUtcToLocalTime);
-	cellRtc.AddFunc(0x46ca7fe0, cellRtcConvertLocalTimeToUtc);
+	REG_FUNC(cellRtc, cellRtcGetTick);
+	REG_FUNC(cellRtc, cellRtcSetTick);
+	REG_FUNC(cellRtc, cellRtcTickAddTicks);
+	REG_FUNC(cellRtc, cellRtcTickAddMicroseconds);
+	REG_FUNC(cellRtc, cellRtcTickAddSeconds);
+	REG_FUNC(cellRtc, cellRtcTickAddMinutes);
+	REG_FUNC(cellRtc, cellRtcTickAddHours);
+	REG_FUNC(cellRtc, cellRtcTickAddDays);
+	REG_FUNC(cellRtc, cellRtcTickAddWeeks);
+	REG_FUNC(cellRtc, cellRtcTickAddMonths);
+	REG_FUNC(cellRtc, cellRtcTickAddYears);
+	REG_FUNC(cellRtc, cellRtcConvertUtcToLocalTime);
+	REG_FUNC(cellRtc, cellRtcConvertLocalTimeToUtc);
 
 	// (TODO: Time Information Manipulation Functions missing)
 
-	cellRtc.AddFunc(0xdfff32cf, cellRtcGetDosTime);
-	cellRtc.AddFunc(0xcb90c761, cellRtcGetTime_t);
-	cellRtc.AddFunc(0xe7086f05, cellRtcGetWin32FileTime);
-	cellRtc.AddFunc(0x9598d4b3, cellRtcSetDosTime);
-	cellRtc.AddFunc(0xbb543189, cellRtcSetTime_t);
-	cellRtc.AddFunc(0x5f68c268, cellRtcSetWin32FileTime);
+	REG_FUNC(cellRtc, cellRtcGetDosTime);
+	REG_FUNC(cellRtc, cellRtcGetTime_t);
+	REG_FUNC(cellRtc, cellRtcGetWin32FileTime);
+	REG_FUNC(cellRtc, cellRtcSetDosTime);
+	REG_FUNC(cellRtc, cellRtcSetTime_t);
+	REG_FUNC(cellRtc, cellRtcSetWin32FileTime);
 
-	cellRtc.AddFunc(0x5316b4a8, cellRtcIsLeapYear);
-	cellRtc.AddFunc(0x5b6a0a1d, cellRtcGetDaysInMonth);
-	cellRtc.AddFunc(0xc2d8cf95, cellRtcGetDayOfWeek);
-	cellRtc.AddFunc(0x7f1086e6, cellRtcCheckValid);
+	REG_FUNC(cellRtc, cellRtcIsLeapYear);
+	REG_FUNC(cellRtc, cellRtcGetDaysInMonth);
+	REG_FUNC(cellRtc, cellRtcGetDayOfWeek);
+	REG_FUNC(cellRtc, cellRtcCheckValid);
 
-	cellRtc.AddFunc(0xfb51fc61, cellRtcCompareTick);
+	REG_FUNC(cellRtc, cellRtcCompareTick);
 });

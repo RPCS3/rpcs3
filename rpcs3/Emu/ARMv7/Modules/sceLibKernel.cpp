@@ -994,7 +994,7 @@ s32 sceIoGetstat(vm::psv::ptr<const char> name, vm::psv::ptr<SceIoStat> buf)
 }
 
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, &name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibKernel, #name, name)
 
 psv_log_base sceLibKernel("sceLibKernel", []()
 {

@@ -150,9 +150,9 @@ int cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 
 Module cellVpost("cellVpost", []()
 {
-	cellVpost.AddFunc(0x95e788c3, cellVpostQueryAttr);
-	cellVpost.AddFunc(0xcd33f3e2, cellVpostOpen);
-	cellVpost.AddFunc(0x40524325, cellVpostOpenEx);
-	cellVpost.AddFunc(0x10ef39f6, cellVpostClose);
-	cellVpost.AddFunc(0xabb8cc3d, cellVpostExec);
+	REG_FUNC(cellVpost, cellVpostQueryAttr);
+	REG_FUNC(cellVpost, cellVpostOpen);
+	REG_FUNC(cellVpost, cellVpostOpenEx);
+	REG_FUNC(cellVpost, cellVpostClose);
+	REG_FUNC(cellVpost, cellVpostExec);
 });

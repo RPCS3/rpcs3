@@ -58,9 +58,9 @@ int cellPhotoDecodeFromFile()
 
 void cellPhotoDecode_init()
 {
-	cellPhotoDecode.AddFunc(0x596f0a56, cellPhotoDecodeInitialize);
-	cellPhotoDecode.AddFunc(0x0f424ecb, cellPhotoDecodeInitialize2);
-	cellPhotoDecode.AddFunc(0xad7d8f38, cellPhotoDecodeFinalize);
-	cellPhotoDecode.AddFunc(0x28b22e44, cellPhotoDecodeFromFile);
+	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize);
+	REG_FUNC(cellPhotoDecode, cellPhotoDecodeInitialize2);
+	REG_FUNC(cellPhotoDecode, cellPhotoDecodeFinalize);
+	REG_FUNC(cellPhotoDecode, cellPhotoDecodeFromFile);
 }
 #endif 

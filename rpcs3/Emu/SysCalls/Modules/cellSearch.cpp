@@ -152,25 +152,25 @@ int cellSearchEnd()
 
 void cellSearch_init()
 {
-	cellSearch.AddFunc(0xc81ccf8a, cellSearchInitialize);
-	cellSearch.AddFunc(0xbfab7616, cellSearchFinalize);
-	cellSearch.AddFunc(0x0a4c8295, cellSearchStartListSearch);
-	cellSearch.AddFunc(0x64fb0b76, cellSearchStartContentSearchInList);
-	cellSearch.AddFunc(0x0591826f, cellSearchStartContentSearch);
-	cellSearch.AddFunc(0xc0ed0522, cellSearchStartSceneSearchInVideo);
-	cellSearch.AddFunc(0x13524faa, cellSearchStartSceneSearch);
-	cellSearch.AddFunc(0x3b210319, cellSearchGetContentInfoByOffset);
-	cellSearch.AddFunc(0x9663a44b, cellSearchGetContentInfoByContentId);
-	cellSearch.AddFunc(0x540d9068, cellSearchGetOffsetByContentId);
-	cellSearch.AddFunc(0x94e21701, cellSearchGetContentIdByOffset);
-	cellSearch.AddFunc(0xd7a7a433, cellSearchGetContentInfoGameComment);
-	cellSearch.AddFunc(0x025ce169, cellSearchGetMusicSelectionContext);
-	cellSearch.AddFunc(0xed20e079, cellSearchGetMusicSelectionContextOfSingleTrack);
-	cellSearch.AddFunc(0xffb28491, cellSearchGetContentInfoPath);
-	cellSearch.AddFunc(0x37b5ba0c, cellSearchGetContentInfoPathMovieThumb);
-	cellSearch.AddFunc(0xe73cb0d2, cellSearchPrepareFile);
-	cellSearch.AddFunc(0x35cda406, cellSearchGetContentInfoDeveloperData);
-	cellSearch.AddFunc(0x8fe376a6, cellSearchCancel);
-	cellSearch.AddFunc(0x774033d6, cellSearchEnd);
+	REG_FUNC(cellSearch, cellSearchInitialize);
+	REG_FUNC(cellSearch, cellSearchFinalize);
+	REG_FUNC(cellSearch, cellSearchStartListSearch);
+	REG_FUNC(cellSearch, cellSearchStartContentSearchInList);
+	REG_FUNC(cellSearch, cellSearchStartContentSearch);
+	REG_FUNC(cellSearch, cellSearchStartSceneSearchInVideo);
+	REG_FUNC(cellSearch, cellSearchStartSceneSearch);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoByOffset);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoByContentId);
+	REG_FUNC(cellSearch, cellSearchGetOffsetByContentId);
+	REG_FUNC(cellSearch, cellSearchGetContentIdByOffset);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoGameComment);
+	REG_FUNC(cellSearch, cellSearchGetMusicSelectionContext);
+	REG_FUNC(cellSearch, cellSearchGetMusicSelectionContextOfSingleTrack);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoPath);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoPathMovieThumb);
+	REG_FUNC(cellSearch, cellSearchPrepareFile);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoDeveloperData);
+	REG_FUNC(cellSearch, cellSearchCancel);
+	REG_FUNC(cellSearch, cellSearchEnd);
 }
 #endif

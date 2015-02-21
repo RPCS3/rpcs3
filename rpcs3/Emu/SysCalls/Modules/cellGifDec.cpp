@@ -277,17 +277,17 @@ int cellGifDecDestroy(u32 mainHandle)
 
 Module cellGifDec("cellGifDec", []()
 {
-	cellGifDec.AddFunc(0xb60d42a5, cellGifDecCreate);
-	cellGifDec.AddFunc(0x4711cb7f, cellGifDecExtCreate);
-	cellGifDec.AddFunc(0x75745079, cellGifDecOpen);
-	cellGifDec.AddFunc(0xf0da95de, cellGifDecReadHeader);
-	cellGifDec.AddFunc(0x41a90dc4, cellGifDecSetParameter);
-	cellGifDec.AddFunc(0x44b1bc61, cellGifDecDecodeData);
-	cellGifDec.AddFunc(0x116a7da9, cellGifDecClose);
-	cellGifDec.AddFunc(0xe74b2cb1, cellGifDecDestroy);
+	REG_FUNC(cellGifDec, cellGifDecCreate);
+	REG_FUNC(cellGifDec, cellGifDecExtCreate);
+	REG_FUNC(cellGifDec, cellGifDecOpen);
+	REG_FUNC(cellGifDec, cellGifDecReadHeader);
+	REG_FUNC(cellGifDec, cellGifDecSetParameter);
+	REG_FUNC(cellGifDec, cellGifDecDecodeData);
+	REG_FUNC(cellGifDec, cellGifDecClose);
+	REG_FUNC(cellGifDec, cellGifDecDestroy);
 	
-	/*cellGifDec.AddFunc(0x17fb83c1, cellGifDecExtOpen);
-	cellGifDec.AddFunc(0xe53f91f2, cellGifDecExtReadHeader);
-	cellGifDec.AddFunc(0x95cae771, cellGifDecExtSetParameter);
-	cellGifDec.AddFunc(0x02e7e03e, cellGifDecExtDecodeData);*/
+	/*REG_FUNC(cellGifDec, cellGifDecExtOpen);
+	REG_FUNC(cellGifDec, cellGifDecExtReadHeader);
+	REG_FUNC(cellGifDec, cellGifDecExtSetParameter);
+	REG_FUNC(cellGifDec, cellGifDecExtDecodeData);*/
 });

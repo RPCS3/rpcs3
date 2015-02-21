@@ -1999,17 +1999,13 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 }
 
 void Compiler::HACK(u32 index) {
-    Call<void>("execute_ps3_func_by_index", &execute_ps3_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index));
+    Call<void>("execute_ppu_func_by_index", &execute_ppu_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index));
 }
 
 void Compiler::SC(u32 lev) {
     switch (lev) {
     case 0:
         Call<void>("SysCalls.DoSyscall", SysCalls::DoSyscall, m_state.args[CompileTaskState::Args::State], GetGpr(11));
-        break;
-    case 2:
-        Call<void>("StaticFuncManager.StaticExecute", &StaticFuncManager::StaticExecute,
-                   m_ir_builder->getInt64((u64)&Emu.GetSFuncManager()), m_state.args[CompileTaskState::Args::State], GetGpr(11, 32));
         break;
     case 3:
         Call<void>("PPUThread.FastStop", &PPUThread::FastStop, m_state.args[CompileTaskState::Args::State]);

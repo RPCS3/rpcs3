@@ -76,16 +76,16 @@ int cellSubDisplayGetPeerList()
 
 Module cellSubdisplay("cellSubdisplay", []()
 {
-	cellSubdisplay.AddFunc(0xf9a7e8a5, cellSubDisplayInit);
-	cellSubdisplay.AddFunc(0x551d80a5, cellSubDisplayEnd);
-	cellSubdisplay.AddFunc(0x6595ce22, cellSubDisplayGetRequiredMemory);
-	cellSubdisplay.AddFunc(0xa5bccb47, cellSubDisplayStart);
-	cellSubdisplay.AddFunc(0x6d85ddb3, cellSubDisplayStop);
+	REG_FUNC(cellSubdisplay, cellSubDisplayInit);
+	REG_FUNC(cellSubdisplay, cellSubDisplayEnd);
+	REG_FUNC(cellSubdisplay, cellSubDisplayGetRequiredMemory);
+	REG_FUNC(cellSubdisplay, cellSubDisplayStart);
+	REG_FUNC(cellSubdisplay, cellSubDisplayStop);
 
-	cellSubdisplay.AddFunc(0x938ac642, cellSubDisplayGetVideoBuffer);
-	cellSubdisplay.AddFunc(0xaee1e0c2, cellSubDisplayAudioOutBlocking);
-	cellSubdisplay.AddFunc(0x5468d6b0, cellSubDisplayAudioOutNonBlocking);
+	REG_FUNC(cellSubdisplay, cellSubDisplayGetVideoBuffer);
+	REG_FUNC(cellSubdisplay, cellSubDisplayAudioOutBlocking);
+	REG_FUNC(cellSubdisplay, cellSubDisplayAudioOutNonBlocking);
 
-	cellSubdisplay.AddFunc(0x8a264d71, cellSubDisplayGetPeerNum);
-	cellSubdisplay.AddFunc(0xe2485f79, cellSubDisplayGetPeerList);
+	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerNum);
+	REG_FUNC(cellSubdisplay, cellSubDisplayGetPeerList);
 });

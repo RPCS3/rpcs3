@@ -258,49 +258,49 @@ int cellImeJpConfirmPrediction()
 
 void cellImejp_init()
 {
-	cellImejp.AddFunc(0x44608862, cellImeJpOpen);
-	cellImejp.AddFunc(0x47b43dd4, cellImeJpOpen2);
-	cellImejp.AddFunc(0x1b119958, cellImeJpOpen3);
-	cellImejp.AddFunc(0x46d1234a, cellImeJpClose);
+	REG_FUNC(cellImejp, cellImeJpOpen);
+	REG_FUNC(cellImejp, cellImeJpOpen2);
+	REG_FUNC(cellImejp, cellImeJpOpen3);
+	REG_FUNC(cellImejp, cellImeJpClose);
 
-	cellImejp.AddFunc(0x24e9d8fc, cellImeJpSetKanaInputMode);
-	cellImejp.AddFunc(0xf5992ec8, cellImeJpSetInputCharType);
-	cellImejp.AddFunc(0xc1786c81, cellImeJpSetFixInputMode);
+	REG_FUNC(cellImejp, cellImeJpSetKanaInputMode);
+	REG_FUNC(cellImejp, cellImeJpSetInputCharType);
+	REG_FUNC(cellImejp, cellImeJpSetFixInputMode);
 	//cellImejp.AddFunc(, cellImeJpAllowExtensionCharacters);
-	cellImejp.AddFunc(0x36d38701, cellImeJpReset);
+	REG_FUNC(cellImejp, cellImeJpReset);
 
-	cellImejp.AddFunc(0x66c6cc78, cellImeJpGetStatus);
+	REG_FUNC(cellImejp, cellImeJpGetStatus);
 
-	cellImejp.AddFunc(0x6ccbe3d6, cellImeJpEnterChar);
-	cellImejp.AddFunc(0x5b6ada55, cellImeJpEnterCharExt);
-	cellImejp.AddFunc(0x441a1c2b, cellImeJpEnterString);
-	cellImejp.AddFunc(0x6298b55a, cellImeJpEnterStringExt);
-	cellImejp.AddFunc(0xac6693d8, cellImeJpModeCaretRight);
-	cellImejp.AddFunc(0xe76c9700, cellImeJpModeCaretLeft);
-	cellImejp.AddFunc(0xaa1d1f57, cellImeJpBackspaceWord);
-	cellImejp.AddFunc(0x72257652, cellImeJpDeleteWord);
-	cellImejp.AddFunc(0x6319eda3, cellImeJpAllDeleteConvertString);
-	cellImejp.AddFunc(0x1e29103b, cellImeJpConvertForward);
-	cellImejp.AddFunc(0xc2bb48bc, cellImeJpConvertBackward);
-	cellImejp.AddFunc(0x7a18c2b9, cellImeJpCurrentPartConfirm);
-	cellImejp.AddFunc(0x7189430b, cellImeJpAllConfirm);
-	cellImejp.AddFunc(0xeae879dc, cellImeJpConvertCancel);
-	cellImejp.AddFunc(0xcbbc20b7, cellImeJpAllConvertCancel);
-	cellImejp.AddFunc(0x37961cc1, cellImeJpExtendConvertArea);
-	cellImejp.AddFunc(0xaa2a3287, cellImeJpShortenConvertArea);
-	cellImejp.AddFunc(0xbd679cc1, cellImeJpTemporalConfirm);
-	cellImejp.AddFunc(0x8bb41f47, cellImeJpPostConvert);
-	cellImejp.AddFunc(0x1e411261, cellImeJpMoveFocusClause);
-	cellImejp.AddFunc(0x0e363ae7, cellImeJpGetFocusTop);
-	cellImejp.AddFunc(0x5f5b3227, cellImeJpGetFocusLength);
-	cellImejp.AddFunc(0x89f8a567, cellImeJpGetConfirmYomiString);
-	cellImejp.AddFunc(0xd3fc3606, cellImeJpGetConfirmString);
-	cellImejp.AddFunc(0xea2d4881, cellImeJpGetConvertYomiString);
-	cellImejp.AddFunc(0xf91abda3, cellImeJpGetConvertString);
-	cellImejp.AddFunc(0xc4796a45, cellImeJpGetCandidateListSize);
-	cellImejp.AddFunc(0xe4cc15ba, cellImeJpGetCandidateList);
-	cellImejp.AddFunc(0x177bd218, cellImeJpGetCandidateSelect);
-	cellImejp.AddFunc(0x1986f2cd, cellImeJpGetPredictList);
-	cellImejp.AddFunc(0xeede898c, cellImeJpConfirmPrediction);
+	REG_FUNC(cellImejp, cellImeJpEnterChar);
+	REG_FUNC(cellImejp, cellImeJpEnterCharExt);
+	REG_FUNC(cellImejp, cellImeJpEnterString);
+	REG_FUNC(cellImejp, cellImeJpEnterStringExt);
+	REG_FUNC(cellImejp, cellImeJpModeCaretRight);
+	REG_FUNC(cellImejp, cellImeJpModeCaretLeft);
+	REG_FUNC(cellImejp, cellImeJpBackspaceWord);
+	REG_FUNC(cellImejp, cellImeJpDeleteWord);
+	REG_FUNC(cellImejp, cellImeJpAllDeleteConvertString);
+	REG_FUNC(cellImejp, cellImeJpConvertForward);
+	REG_FUNC(cellImejp, cellImeJpConvertBackward);
+	REG_FUNC(cellImejp, cellImeJpCurrentPartConfirm);
+	REG_FUNC(cellImejp, cellImeJpAllConfirm);
+	REG_FUNC(cellImejp, cellImeJpConvertCancel);
+	REG_FUNC(cellImejp, cellImeJpAllConvertCancel);
+	REG_FUNC(cellImejp, cellImeJpExtendConvertArea);
+	REG_FUNC(cellImejp, cellImeJpShortenConvertArea);
+	REG_FUNC(cellImejp, cellImeJpTemporalConfirm);
+	REG_FUNC(cellImejp, cellImeJpPostConvert);
+	REG_FUNC(cellImejp, cellImeJpMoveFocusClause);
+	REG_FUNC(cellImejp, cellImeJpGetFocusTop);
+	REG_FUNC(cellImejp, cellImeJpGetFocusLength);
+	REG_FUNC(cellImejp, cellImeJpGetConfirmYomiString);
+	REG_FUNC(cellImejp, cellImeJpGetConfirmString);
+	REG_FUNC(cellImejp, cellImeJpGetConvertYomiString);
+	REG_FUNC(cellImejp, cellImeJpGetConvertString);
+	REG_FUNC(cellImejp, cellImeJpGetCandidateListSize);
+	REG_FUNC(cellImejp, cellImeJpGetCandidateList);
+	REG_FUNC(cellImejp, cellImeJpGetCandidateSelect);
+	REG_FUNC(cellImejp, cellImeJpGetPredictList);
+	REG_FUNC(cellImejp, cellImeJpConfirmPrediction);
 }
 #endif

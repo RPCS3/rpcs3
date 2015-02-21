@@ -43,7 +43,7 @@ Module cellFontFT("cellFontFT", []()
 		delete s_fontFtInternalInstance;
 	};
 
-	cellFontFT.AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
-	cellFontFT.AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
-	cellFontFT.AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);
+	REG_FUNC(cellFontFT, cellFontInitLibraryFreeTypeWithRevision);
+	REG_FUNC(cellFontFT, cellFontFTGetRevisionFlags);
+	REG_FUNC(cellFontFT, cellFontFTGetInitializedRevisionFlags);
 });

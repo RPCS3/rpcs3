@@ -424,19 +424,19 @@ int cellPadSetSensorMode(u32 port_no, u32 mode)
 
 void cellPad_init()
 {
-	sys_io.AddFunc(0x1cf98800, cellPadInit);
-	sys_io.AddFunc(0x4d9b75d5, cellPadEnd);
-	sys_io.AddFunc(0x0d5f2c14, cellPadClearBuf);
-	sys_io.AddFunc(0x8b72cda1, cellPadGetData);
-	sys_io.AddFunc(0x6bc09c61, cellPadGetDataExtra);
-	sys_io.AddFunc(0xf65544ee, cellPadSetActDirect);
-	sys_io.AddFunc(0x3aaad464, cellPadGetInfo);
-	sys_io.AddFunc(0xa703a51d, cellPadGetInfo2);
-	sys_io.AddFunc(0x4cc9b68d, cellPadPeriphGetInfo);
-	sys_io.AddFunc(0x578e3c98, cellPadSetPortSetting);
-	sys_io.AddFunc(0x0e2dfaad, cellPadInfoPressMode);
-	sys_io.AddFunc(0x78200559, cellPadInfoSensorMode);
-	sys_io.AddFunc(0xf83f8182, cellPadSetPressMode);
-	sys_io.AddFunc(0xbe5be3ba, cellPadSetSensorMode);
-	sys_io.AddFunc(0xdbf4c59c, cellPadGetCapabilityInfo);
+	REG_FUNC(sys_io, cellPadInit);
+	REG_FUNC(sys_io, cellPadEnd);
+	REG_FUNC(sys_io, cellPadClearBuf);
+	REG_FUNC(sys_io, cellPadGetData);
+	REG_FUNC(sys_io, cellPadGetDataExtra);
+	REG_FUNC(sys_io, cellPadSetActDirect);
+	REG_FUNC(sys_io, cellPadGetInfo);
+	REG_FUNC(sys_io, cellPadGetInfo2);
+	REG_FUNC(sys_io, cellPadPeriphGetInfo);
+	REG_FUNC(sys_io, cellPadSetPortSetting);
+	REG_FUNC(sys_io, cellPadInfoPressMode);
+	REG_FUNC(sys_io, cellPadInfoSensorMode);
+	REG_FUNC(sys_io, cellPadSetPressMode);
+	REG_FUNC(sys_io, cellPadSetSensorMode);
+	REG_FUNC(sys_io, cellPadGetCapabilityInfo);
 }

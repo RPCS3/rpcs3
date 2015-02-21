@@ -4,7 +4,6 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3/Ini.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
@@ -2255,7 +2254,7 @@ private:
 	}
 	void HACK(u32 index)
 	{
-		execute_ps3_func_by_index(CPU, index);
+		execute_ppu_func_by_index(CPU, index);
 	}
 	void SC(u32 lev)
 	{
@@ -2263,14 +2262,6 @@ private:
 		{
 		case 0x0: SysCall(); break;
 		case 0x1: throw "SC(): HyperCall LV1";
-		case 0x2:
-			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
-			if (Ini.HLELogging.GetValue())
-			{
-				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
-					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
-			}
-			break;
 		case 0x3: CPU.FastStop(); break;
 		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
 		}

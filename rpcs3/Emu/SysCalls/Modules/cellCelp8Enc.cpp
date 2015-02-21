@@ -71,14 +71,14 @@ int cellCelp8EncGetAu()
 
 void cellCelp8Enc_init()
 {
-	cellCelp8Enc.AddFunc(0x2d677e0c, cellCelp8EncQueryAttr);
-	cellCelp8Enc.AddFunc(0x2eb6efee, cellCelp8EncOpen);
-	cellCelp8Enc.AddFunc(0xcd48ad62, cellCelp8EncOpenEx);
-	cellCelp8Enc.AddFunc(0xfd2566b4, cellCelp8EncClose);
-	cellCelp8Enc.AddFunc(0x0f6ab57b, cellCelp8EncStart);
-	cellCelp8Enc.AddFunc(0xbbbc2c1c, cellCelp8EncEnd);
-	cellCelp8Enc.AddFunc(0x2099f86e, cellCelp8EncEncodeFrame);
-	cellCelp8Enc.AddFunc(0x29da1ea6, cellCelp8EncWaitForOutput);
-	cellCelp8Enc.AddFunc(0x48c5020d, cellCelp8EncGetAu);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncQueryAttr);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncOpen);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncOpenEx);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncClose);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncStart);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncEnd);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncEncodeFrame);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncWaitForOutput);
+	REG_FUNC(cellCelp8Enc, cellCelp8EncGetAu);
 }
 #endif

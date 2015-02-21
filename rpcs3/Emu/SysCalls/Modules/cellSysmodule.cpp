@@ -224,10 +224,10 @@ s32 cellSysmoduleIsLoaded(u16 id)
 
 Module cellSysmodule("cellSysmodule", []()
 {
-	cellSysmodule.AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
-	cellSysmodule.AddFunc(0x96c07adf, cellSysmoduleFinalize);
-	cellSysmodule.AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);
-	cellSysmodule.AddFunc(0x32267a31, cellSysmoduleLoadModule);
-	cellSysmodule.AddFunc(0x112a5ee9, cellSysmoduleUnloadModule);
-	cellSysmodule.AddFunc(0x5a59e258, cellSysmoduleIsLoaded);
+	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
+	REG_FUNC(cellSysmodule, cellSysmoduleFinalize);
+	REG_FUNC(cellSysmodule, cellSysmoduleSetMemcontainer);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModule);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModule);
+	REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
 });

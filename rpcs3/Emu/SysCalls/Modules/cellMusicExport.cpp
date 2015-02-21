@@ -53,10 +53,10 @@ int cellMusicExportProgress()
 
 void cellMusicExport_init()
 {
-	cellMusicExport.AddFunc(0xb4c9b4f9, cellMusicExportInitialize);
-	cellMusicExport.AddFunc(0xe0443a44, cellMusicExportInitialize2);
-	cellMusicExport.AddFunc(0xe90effea, cellMusicExportFinalize);
-	cellMusicExport.AddFunc(0xb202f0e8, cellMusicExportFromFile);
-	cellMusicExport.AddFunc(0x92b50ebc, cellMusicExportProgress);
+	REG_FUNC(cellMusicExport, cellMusicExportInitialize);
+	REG_FUNC(cellMusicExport, cellMusicExportInitialize2);
+	REG_FUNC(cellMusicExport, cellMusicExportFinalize);
+	REG_FUNC(cellMusicExport, cellMusicExportFromFile);
+	REG_FUNC(cellMusicExport, cellMusicExportProgress);
 }
 #endif
