@@ -376,8 +376,6 @@ void Emulator::Stop()
 
 	// TODO: check finalization order
 
-	clear_ppu_functions();
-
 	SavePoints(BreakPointsDBName);
 	m_break_points.clear();
 	m_marked_points.clear();

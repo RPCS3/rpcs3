@@ -171,6 +171,8 @@ void ModuleManager::Init()
 {
 	if (!initialized)
 	{
+		clear_ppu_functions();
+
 		for (auto& m : g_module_list)
 		{
 			if (m.module)
