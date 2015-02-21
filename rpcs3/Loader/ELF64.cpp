@@ -399,7 +399,7 @@ namespace loader
 
 							for (auto& f : m.second.exports)
 							{
-								add_ps3_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
+								add_ppu_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
 							}
 
 							for (auto& f : m.second.imports)
@@ -409,13 +409,13 @@ namespace loader
 
 								u32 index;
 
-								auto func = get_ps3_func_by_nid(nid, &index);
+								auto func = get_ppu_func_by_nid(nid, &index);
 
 								if (!func)
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 
-									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
 								}
 								else
 								{
@@ -630,13 +630,13 @@ namespace loader
 
 								u32 index;
 
-								auto func = get_ps3_func_by_nid(nid, &index);
+								auto func = get_ppu_func_by_nid(nid, &index);
 
 								if (!func)
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetHLEFuncName(nid), module_name, addr);
 
-									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
 								}
 								else
 								{

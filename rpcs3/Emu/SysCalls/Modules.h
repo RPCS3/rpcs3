@@ -10,10 +10,10 @@ struct ModuleFunc
 {
 	u32 id;
 	Module* module;
-	ps3_func_caller func;
+	ppu_func_caller func;
 	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, Module* module, ps3_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc(u32 id, Module* module, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
 		, module(module)
 		, func(func)
@@ -46,7 +46,6 @@ class Module : public LogBase
 	void(*m_init)();
 
 	IdManager& GetIdManager() const;
-	void PushNewFuncSub(SFunc* func);
 
 	Module() = delete;
 
@@ -110,39 +109,24 @@ public:
 	}
 
 	bool RemoveId(u32 id);
-
-	template<void* func, typename T> __forceinline u32 AddFunc(const u32 nid, T _func);
-	template<void* func, typename T> __forceinline u32 AddFunc(const char* name, T _func);
-	template<void* func, typename T> __forceinline u32 AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func);
 };
 
-u32 add_ps3_func(ModuleFunc func);
-ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index = nullptr);
-ModuleFunc* get_ps3_func_by_index(u32 index);
-void execute_ps3_func_by_index(PPUThread& CPU, u32 id);
-void clear_ps3_functions();
+u32 add_ppu_func(ModuleFunc func);
+ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index = nullptr);
+ModuleFunc* get_ppu_func_by_index(u32 index);
+void execute_ppu_func_by_index(PPUThread& CPU, u32 id);
+void clear_ppu_functions();
 u32 get_function_id(const char* name);
 
-template<void* func, typename T>
-__forceinline u32 Module::AddFunc(const u32 nid, T _func)
-{
-	return add_ps3_func(ModuleFunc(nid, this, ppu_func_detail::_bind_func<func>(_func)));
-}
+u32 add_ppu_func_sub(SFunc sf);
 
-template<void* func, typename T>
-__forceinline u32 Module::AddFunc(const char* name, T _func)
+__forceinline static u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
 {
-	return AddFunc<func>(get_function_id(name), _func);
-}
-
-template<void* func, typename T>
-__forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T _func)
-{
-	SFunc* sf = new SFunc;
-	sf->index = AddFunc<func>(name, _func);
-	sf->name = name;
-	sf->group = *(u64*)group;
-	sf->found = 0;
+	SFunc sf;
+	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), module, func));
+	sf.name = name;
+	sf.group = *(u64*)group;
+	sf.found = 0;
 
 	// TODO: check for self-inclusions, use CRC
 	for (u32 i = 0; ops[i]; i++)
@@ -153,20 +137,18 @@ __forceinline u32 Module::AddFuncSub(const char group[8], const u64 ops[], const
 		if (op.mask) op.crc &= op.mask;
 		op.mask = re32(op.mask);
 		op.crc = re32(op.crc);
-		sf->ops.push_back(op);
+		sf.ops.push_back(op);
 	}
 
-	PushNewFuncSub(sf);
-
-	return sf->index;
+	return add_ppu_func_sub(sf);
 }
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	if (name ## _table[0]) module.AddFuncSub<_targ(name)>(group, name ## _table, #name, name)
+	if (name ## _table[0]) add_ppu_func_sub(group, name ## _table, #name, &module, bind_func(name))
 
-#define REG_FUNC(module, name) module.AddFunc<_targ(name)>(#name, name)
+#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), &module, bind_func(name)))
 
-#define REG_FUNC2(module, nid, name) module.AddFunc<_targ(name)>(nid, name)
+#define REG_FUNC2(module, nid, name) add_ppu_func(ModuleFunc(nid, &module, bind_func(name)))
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)

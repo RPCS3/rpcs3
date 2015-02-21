@@ -1,11 +1,7 @@
 #pragma once
 #include "Emu/Cell/PPUThread.h"
 
-#if defined(_MSC_VER)
-typedef void(*ps3_func_caller)(PPUThread&);
-#else
-typedef std::function<void(PPUThread&)> ps3_func_caller;
-#endif
+typedef void(*ppu_func_caller)(PPUThread&);
 
 namespace ppu_func_detail
 {
@@ -162,11 +158,11 @@ namespace ppu_func_detail
 		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
-	template<void* func, typename RT, typename... T>
+	template<typename RT, typename... T>
 	struct func_binder;
 
-	template<void* func, typename... T>
-	struct func_binder<func, void, PPUThread&, T...>
+	template<typename... T>
+	struct func_binder<void, PPUThread&, T...>
 	{
 		typedef void(*func_t)(PPUThread&, T...);
 
@@ -174,15 +170,10 @@ namespace ppu_func_detail
 		{
 			call<void>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU)));
 		}
-
-		static void do_call(PPUThread& CPU)
-		{
-			do_call(CPU, (func_t)func);
-		}
 	};
 
-	template<void* func, typename... T>
-	struct func_binder<func, void, T...>
+	template<typename... T>
+	struct func_binder<void, T...>
 	{
 		typedef void(*func_t)(T...);
 
@@ -190,15 +181,10 @@ namespace ppu_func_detail
 		{
 			call<void>(_func, iterate<0, 0, 0, T...>(CPU));
 		}
-
-		static void do_call(PPUThread& CPU)
-		{
-			do_call(CPU, (func_t)func);
-		}
 	};
 
-	template<void* func, typename RT, typename... T>
-	struct func_binder<func, RT, PPUThread&, T...>
+	template<typename RT, typename... T>
+	struct func_binder<RT, PPUThread&, T...>
 	{
 		typedef RT(*func_t)(PPUThread&, T...);
 
@@ -206,14 +192,9 @@ namespace ppu_func_detail
 		{
 			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, std::tuple_cat(std::tuple<PPUThread&>(CPU), iterate<0, 0, 0, T...>(CPU))));
 		}
-
-		static void do_call(PPUThread& CPU)
-		{
-			do_call(CPU, (func_t)func);
-		}
 	};
 
-	template<void* func, typename RT, typename... T>
+	template<typename RT, typename... T>
 	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
@@ -222,28 +203,12 @@ namespace ppu_func_detail
 		{
 			bind_result<RT, result_type<RT>::value>::func(CPU, call<RT>(_func, iterate<0, 0, 0, T...>(CPU)));
 		}
-
-		static void do_call(PPUThread& CPU)
-		{
-			do_call(CPU, (func_t)func);
-		}
 	};
-
-	template<void* func, typename RT, typename... T>
-	ps3_func_caller _bind_func(RT(*_func)(T...))
-	{
-#if defined(_MSC_VER)
-		return ppu_func_detail::func_binder<func, RT, T...>::do_call;
-#else
-		return [_func](PPUThread& CPU){ ppu_func_detail::func_binder<func, RT, T...>::do_call(CPU, _func); };
-#endif
-	}
 }
 
-#if defined(_MSC_VER)
-#define _targ(name) name
-#else
-#define _targ(name) nullptr
-#endif
+template<typename RT, typename... T> __forceinline void call_ppu_func(PPUThread& CPU, RT(*func)(T...))
+{
+	ppu_func_detail::func_binder<RT, T...>::do_call(CPU, func);
+}
 
-#define bind_func(func) ppu_func_detail::_bind_func<_targ(func)>(func)
+#define bind_func(func) [](PPUThread& CPU){ call_ppu_func(CPU, func); }

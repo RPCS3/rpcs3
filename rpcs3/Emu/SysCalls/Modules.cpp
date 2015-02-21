@@ -10,11 +10,11 @@
 #include "ModuleManager.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
-std::vector<ModuleFunc> g_ps3_func_list;
+std::vector<ModuleFunc> g_ppu_func_list;
 
-u32 add_ps3_func(ModuleFunc func)
+u32 add_ppu_func(ModuleFunc func)
 {
-	for (auto& f : g_ps3_func_list)
+	for (auto& f : g_ppu_func_list)
 	{
 		if (f.id == func.id)
 		{
@@ -30,23 +30,23 @@ u32 add_ps3_func(ModuleFunc func)
 				f.lle_func = func.lle_func;
 			}
 
-			return (u32)(&f - g_ps3_func_list.data());
+			return (u32)(&f - g_ppu_func_list.data());
 		}
 	}
 
-	g_ps3_func_list.push_back(func);
-	return (u32)g_ps3_func_list.size() - 1;
+	g_ppu_func_list.push_back(func);
+	return (u32)g_ppu_func_list.size() - 1;
 }
 
-ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index)
+ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index)
 {
-	for (auto& f : g_ps3_func_list)
+	for (auto& f : g_ppu_func_list)
 	{
 		if (f.id == nid)
 		{
 			if (out_index)
 			{
-				*out_index = (u32)(&f - g_ps3_func_list.data());
+				*out_index = (u32)(&f - g_ppu_func_list.data());
 			}
 
 			return &f;
@@ -56,19 +56,19 @@ ModuleFunc* get_ps3_func_by_nid(u32 nid, u32* out_index)
 	return nullptr;
 }
 
-ModuleFunc* get_ps3_func_by_index(u32 index)
+ModuleFunc* get_ppu_func_by_index(u32 index)
 {
-	if (index >= g_ps3_func_list.size())
+	if (index >= g_ppu_func_list.size())
 	{
 		return nullptr;
 	}
 
-	return &g_ps3_func_list[index];
+	return &g_ppu_func_list[index];
 }
 
-void execute_ps3_func_by_index(PPUThread& CPU, u32 index)
+void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 {
-	if (auto func = get_ps3_func_by_index(index))
+	if (auto func = get_ppu_func_by_index(index))
 	{
 		// save RTOC
 		vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
@@ -98,9 +98,9 @@ void execute_ps3_func_by_index(PPUThread& CPU, u32 index)
 	}
 }
 
-void clear_ps3_functions()
+void clear_ppu_functions()
 {
-	g_ps3_func_list.clear();
+	g_ppu_func_list.clear();
 }
 
 u32 get_function_id(const char* name)
@@ -203,9 +203,4 @@ bool Module::RemoveId(u32 id)
 IdManager& Module::GetIdManager() const
 {
 	return Emu.GetIdManager();
-}
-
-void Module::PushNewFuncSub(SFunc* func)
-{
-	Emu.GetSFuncManager().push_back(func);
 }

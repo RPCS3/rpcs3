@@ -379,7 +379,7 @@ void Emulator::Stop()
 
 	// TODO: check finalization order
 
-	clear_ps3_functions();
+	clear_ppu_functions();
 
 	SavePoints(BreakPointsDBName);
 	m_break_points.clear();

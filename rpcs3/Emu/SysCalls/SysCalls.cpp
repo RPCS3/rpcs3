@@ -51,7 +51,7 @@ const int kSyscallTableLength = 1024;
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-const ps3_func_caller sc_table[1024] =
+const ppu_func_caller sc_table[1024] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)

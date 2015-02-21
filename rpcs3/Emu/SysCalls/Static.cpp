@@ -4,6 +4,14 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Static.h"
 
+std::vector<SFunc> g_ppu_func_subs;
+
+u32 add_ppu_func_sub(SFunc func)
+{
+	g_ppu_func_subs.push_back(func);
+	return func.index;
+}
+
 void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 {
 	u32* data = (u32*)ptr; size /= 4;
@@ -14,13 +22,13 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
-		for (u32 j = 0; j < m_static_funcs_list.size(); j++)
+		for (u32 j = 0; j < g_ppu_func_subs.size(); j++)
 		{
-			if ((data[i] & m_static_funcs_list[j]->ops[0].mask) == m_static_funcs_list[j]->ops[0].crc)
+			if ((data[i] & g_ppu_func_subs[j].ops[0].mask) == g_ppu_func_subs[j].ops[0].crc)
 			{
 				bool found = true;
 				u32 can_skip = 0;
-				for (u32 k = i, x = 0; x + 1 <= m_static_funcs_list[j]->ops.size(); k++, x++)
+				for (u32 k = i, x = 0; x + 1 <= g_ppu_func_subs[j].ops.size(); k++, x++)
 				{
 					if (k >= size)
 					{
@@ -35,8 +43,8 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 						continue;
 					}
 
-					const u32 mask = m_static_funcs_list[j]->ops[x].mask;
-					const u32 crc = m_static_funcs_list[j]->ops[x].crc;
+					const u32 mask = g_ppu_func_subs[j].ops[x].mask;
+					const u32 crc = g_ppu_func_subs[j].ops[x].crc;
 
 					if (!mask)
 					{
@@ -82,10 +90,10 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				}
 				if (found)
 				{
-					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", m_static_funcs_list[j]->name, i * 4 + base);
-					m_static_funcs_list[j]->found++;
-					data[i+0] = re32(0x04000000 | m_static_funcs_list[j]->index); // hack
-					data[i+2] = se32(0x4e800020); // blr
+					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", g_ppu_func_subs[j].name, i * 4 + base);
+					g_ppu_func_subs[j].found++;
+					data[i + 0] = re32(0x04000000 | g_ppu_func_subs[j].index); // hack
+					data[i + 1] = se32(0x4e800020); // blr
 					i += 1; // skip modified code
 				}
 			}
@@ -93,11 +101,11 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 	}
 
 	// check function groups
-	for (u32 i = 0; i < m_static_funcs_list.size(); i++)
+	for (u32 i = 0; i < g_ppu_func_subs.size(); i++)
 	{
-		if (m_static_funcs_list[i]->found) // start from some group
+		if (g_ppu_func_subs[i].found) // start from some group
 		{
-			const u64 group = m_static_funcs_list[i]->group;
+			const u64 group = g_ppu_func_subs[i].group;
 
 			enum GroupSearchResult : u32
 			{
@@ -108,24 +116,24 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 			u32 res = GSR_SUCCESS;
 
 			// analyse
-			for (u32 j = 0; j < m_static_funcs_list.size(); j++) if (m_static_funcs_list[j]->group == group)
+			for (u32 j = 0; j < g_ppu_func_subs.size(); j++) if (g_ppu_func_subs[j].group == group)
 			{
-				u32 count = m_static_funcs_list[j]->found;
+				u32 count = g_ppu_func_subs[j].found;
 
 				if (count == 0) // not found
 				{
 					// check if this function has been found with different pattern
-					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
+					for (u32 k = 0; k < g_ppu_func_subs.size(); k++) if (g_ppu_func_subs[k].group == group)
 					{
-						if (k != j && m_static_funcs_list[k]->index == m_static_funcs_list[j]->index)
+						if (k != j && g_ppu_func_subs[k].index == g_ppu_func_subs[j].index)
 						{
-							count += m_static_funcs_list[k]->found;
+							count += g_ppu_func_subs[k].found;
 						}
 					}
 					if (count == 0)
 					{
 						res |= GSR_MISSING;
-						LOG_ERROR(LOADER, "Function '%s' not found", m_static_funcs_list[j]->name);
+						LOG_ERROR(LOADER, "Function '%s' not found", g_ppu_func_subs[j].name);
 					}
 					else if (count > 1)
 					{
@@ -135,14 +143,14 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				else if (count == 1) // found
 				{
 					// ensure that this function has NOT been found with different pattern
-					for (u32 k = 0; k < m_static_funcs_list.size(); k++) if (m_static_funcs_list[k]->group == group)
+					for (u32 k = 0; k < g_ppu_func_subs.size(); k++) if (g_ppu_func_subs[k].group == group)
 					{
-						if (k != j && m_static_funcs_list[k]->index == m_static_funcs_list[j]->index)
+						if (k != j && g_ppu_func_subs[k].index == g_ppu_func_subs[j].index)
 						{
-							if (m_static_funcs_list[k]->found)
+							if (g_ppu_func_subs[k].found)
 							{
 								res |= GSR_EXCESS;
-								LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
+								LOG_ERROR(LOADER, "Function '%s' hooked twice", g_ppu_func_subs[j].name);
 							}
 						}
 					}
@@ -150,14 +158,14 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 				else
 				{
 					res |= GSR_EXCESS;
-					LOG_ERROR(LOADER, "Function '%s' hooked twice", m_static_funcs_list[j]->name);
+					LOG_ERROR(LOADER, "Function '%s' hooked twice", g_ppu_func_subs[j].name);
 				}
 			}
 
 			// clear data
-			for (u32 j = 0; j < m_static_funcs_list.size(); j++)
+			for (u32 j = 0; j < g_ppu_func_subs.size(); j++)
 			{
-				if (m_static_funcs_list[j]->group == group) m_static_funcs_list[j]->found = 0;
+				if (g_ppu_func_subs[j].group == group) g_ppu_func_subs[j].found = 0;
 			}
 
 			char name[9] = "????????";
@@ -180,25 +188,5 @@ void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 
 void StaticFuncManager::StaticFinalize()
 {
-	for (SFunc *s : m_static_funcs_list)
-	{
-		delete s;
-	}
-	m_static_funcs_list.clear();
+	g_ppu_func_subs.clear();
 }
-
-void StaticFuncManager::push_back(SFunc *ele)
-{
-	m_static_funcs_list.push_back(ele);
-}
-
-SFunc *StaticFuncManager::operator[](size_t i)
-{
-	return m_static_funcs_list[i];
-}
-
-StaticFuncManager::~StaticFuncManager()
-{
-	StaticFinalize();
-}
-

@@ -2255,7 +2255,7 @@ private:
 	}
 	void HACK(u32 index)
 	{
-		execute_ps3_func_by_index(CPU, index);
+		execute_ppu_func_by_index(CPU, index);
 	}
 	void SC(u32 lev)
 	{
