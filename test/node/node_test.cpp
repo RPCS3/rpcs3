@@ -6,7 +6,11 @@
 #include "yaml-cpp/node/iterator.h"
 #include "yaml-cpp/node/detail/impl.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+using ::testing::AnyOf;
+using ::testing::Eq;
 
 namespace YAML {
 namespace {
@@ -285,6 +289,14 @@ class NodeEmitterTest : public ::testing::Test {
     ASSERT_TRUE(emitter.good());
     EXPECT_EQ(output, emitter.c_str());
   }
+
+  void ExpectAnyOutput(const Node& node, const std::string& output1,
+                       const std::string& output2) {
+    Emitter emitter;
+    emitter << node;
+    ASSERT_TRUE(emitter.good());
+    EXPECT_THAT(emitter.c_str(), AnyOf(Eq(output1), Eq(output2)));
+  }
 };
 
 TEST_F(NodeEmitterTest, SimpleFlowSeqNode) {
@@ -363,8 +375,9 @@ TEST_F(NodeEmitterTest, NestBlockMixMapListNode) {
   blockNode["scalar"] = 1.01;
   blockNode["object"] = mapNode;
 
-  ExpectOutput("scalar: 1.01\nobject: {position: [1.01, 2.01, 3.01]}",
-               blockNode);
+  ExpectAnyOutput(blockNode,
+                  "scalar: 1.01\nobject: {position: [1.01, 2.01, 3.01]}",
+                  "object: {position: [1.01, 2.01, 3.01]}\nscalar: 1.01");
 }
 
 TEST_F(NodeEmitterTest, NestBlockMapListNode) {
