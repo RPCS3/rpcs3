@@ -21,7 +21,6 @@ class CallbackManager;
 class CPUThread;
 class EventManager;
 class ModuleManager;
-class StaticFuncManager;
 class SyncPrimManager;
 struct VFS;
 
@@ -100,7 +99,6 @@ class Emulator
 	AudioManager* m_audio_manager;
 	CallbackManager* m_callback_manager;
 	EventManager* m_event_manager;
-	StaticFuncManager* m_sfunc_manager;
 	ModuleManager* m_module_manager;
 	SyncPrimManager* m_sync_prim_manager;
 	VFS* m_vfs;
@@ -163,7 +161,6 @@ public:
 	std::vector<u64>& GetBreakPoints()     { return m_break_points; }
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
-	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
 	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
 

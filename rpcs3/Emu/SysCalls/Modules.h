@@ -28,7 +28,7 @@ struct SFuncOp
 	u32 mask;
 };
 
-struct SFunc
+struct StaticFunc
 {
 	u32 index;
 	const char* name;
@@ -36,8 +36,6 @@ struct SFunc
 	u64 group;
 	u32 found;
 };
-
-class StaticFuncManager;
 
 class Module : public LogBase
 {
@@ -118,8 +116,10 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 id);
 void clear_ppu_functions();
 u32 get_function_id(const char* name);
 
-u32 add_ppu_func_sub(SFunc sf);
+u32 add_ppu_func_sub(StaticFunc sf);
 u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func);
+
+void hook_ppu_funcs(u32* base, u32 size);
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), &module, bind_func(name)))
 

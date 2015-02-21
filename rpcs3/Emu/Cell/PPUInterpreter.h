@@ -4,7 +4,6 @@
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3/Ini.h"
 #include "Emu/System.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
