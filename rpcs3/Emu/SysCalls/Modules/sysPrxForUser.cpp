@@ -674,5 +674,5 @@ Module sysPrxForUser("sysPrxForUser", []()
 
 	REG_FUNC(sysPrxForUser, _sys_printf);
 
-	REG_FUNC2(sysPrxForUser, 0xE75C40F2, _nid_E75C40F2);
+	REG_UNNAMED(sysPrxForUser, E75C40F2);
 });

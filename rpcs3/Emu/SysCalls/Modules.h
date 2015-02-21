@@ -123,7 +123,7 @@ u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Mod
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), &module, bind_func(name)))
 
-#define REG_FUNC2(module, nid, name) add_ppu_func(ModuleFunc(nid, &module, bind_func(name)))
+#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, &module, bind_func(_nid_##nid)))
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \

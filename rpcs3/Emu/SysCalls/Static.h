@@ -1,9 +1,5 @@
 #pragma once
 
-struct SFunc;
-
-class PPUThread;
-
 class StaticFuncManager
 {
 public:
