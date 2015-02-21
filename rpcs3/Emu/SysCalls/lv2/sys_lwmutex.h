@@ -90,9 +90,7 @@ struct lv2_lwmutex_t
 REG_ID_TYPE(lv2_lwmutex_t, 0x95); // SYS_LWMUTEX_OBJECT
 
 // Aux
-void lwmutex_create(sys_lwmutex_t& lwmutex, bool recursive, u32 protocol, u64 name);
-
-class PPUThread;
+void sys_lwmutex_attribute_initialize(vm::ptr<sys_lwmutex_attribute_t> attr);
 
 // SysCalls
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);

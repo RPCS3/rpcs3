@@ -15,10 +15,22 @@ enum : s32
 	SYS_EVENT_QUEUE_DESTROY_FORCE = 1,
 };
 
+// Event Queue Ipc Key
+enum : u64
+{
+	SYS_EVENT_QUEUE_LOCAL = 0x00,
+};
+
 // Event Port Type
 enum : s32
 {
 	SYS_EVENT_PORT_LOCAL = 1,
+};
+
+// Event Port Name
+enum : u64
+{
+	SYS_EVENT_PORT_NO_NAME = 0,
 };
 
 // Event Source Type
@@ -31,8 +43,9 @@ enum : u32
 // Event Source Key
 enum : u64
 {
-	SYS_SPU_THREAD_EVENT_USER_KEY = 0xFFFFFFFF53505501,
-	SYS_SPU_THREAD_EVENT_DMA_KEY  = 0xFFFFFFFF53505502, // ???
+	SYS_SPU_THREAD_EVENT_USER_KEY      = 0xFFFFFFFF53505501ull,
+	SYS_SPU_THREAD_EVENT_DMA_KEY       = 0xFFFFFFFF53505502ull,
+	SYS_SPU_THREAD_EVENT_EXCEPTION_KEY = 0xFFFFFFFF53505503ull,
 };
 
 struct sys_event_queue_attr
@@ -128,6 +141,8 @@ struct lv2_event_port_t
 REG_ID_TYPE(lv2_event_port_t, 0x0E); // SYS_EVENT_PORT_OBJECT
 
 class PPUThread;
+
+void sys_event_queue_attribute_initialize(vm::ptr<sys_event_queue_attr> attr);
 
 // SysCalls
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size);

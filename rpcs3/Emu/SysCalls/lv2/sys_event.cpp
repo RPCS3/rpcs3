@@ -13,6 +13,13 @@
 
 SysCallBase sys_event("sys_event");
 
+void sys_event_queue_attribute_initialize(vm::ptr<sys_event_queue_attr> attr)
+{
+	attr->protocol = SYS_SYNC_PRIORITY;
+	attr->type     = SYS_PPU_QUEUE;
+	attr->name[0]  = '\0';
+}
+
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);

@@ -41,6 +41,9 @@ struct lv2_sema_t
 
 REG_ID_TYPE(lv2_sema_t, 0x96); // SYS_SEMAPHORE_OBJECT
 
+// Aux
+void sys_semaphore_attribute_initialize(vm::ptr<sys_semaphore_attribute_t> attr);
+
 // SysCalls
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
 s32 sys_semaphore_destroy(u32 sem);

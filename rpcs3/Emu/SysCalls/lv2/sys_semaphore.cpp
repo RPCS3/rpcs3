@@ -12,6 +12,15 @@
 
 SysCallBase sys_semaphore("sys_semaphore");
 
+void sys_semaphore_attribute_initialize(vm::ptr<sys_semaphore_attribute_t> attr)
+{
+	attr->protocol = SYS_SYNC_PRIORITY;
+	attr->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
+	attr->ipc_key  = 0;
+	attr->flags    = 0;
+	attr->name[0]  = '\0';
+}
+
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem, attr, initial_val, max_val);

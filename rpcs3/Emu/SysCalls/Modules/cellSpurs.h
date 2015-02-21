@@ -94,43 +94,38 @@ enum
 // SPURS defines.
 enum SPURSKernelInterfaces
 {
-	CELL_SPURS_MAX_SPU = 8,
-	CELL_SPURS_MAX_WORKLOAD = 16,
-	CELL_SPURS_MAX_WORKLOAD2 = 32,
-	CELL_SPURS_SYS_SERVICE_WORKLOAD_ID = 32,
-	CELL_SPURS_MAX_PRIORITY = 16,
-	CELL_SPURS_NAME_MAX_LENGTH = 15,
-	CELL_SPURS_SIZE = 4096,
-	CELL_SPURS_SIZE2 = 8192,
-	CELL_SPURS_ALIGN = 128,
-	CELL_SPURS_ATTRIBUTE_SIZE = 512,
-	CELL_SPURS_ATTRIBUTE_ALIGN = 8,
-	CELL_SPURS_INTERRUPT_VECTOR = 0x0,
-	CELL_SPURS_LOCK_LINE = 0x80,
-	CELL_SPURS_KERNEL_DMA_TAG_ID = 31,
-	CELL_SPURS_KERNEL1_ENTRY_ADDR = 0x818,
-	CELL_SPURS_KERNEL2_ENTRY_ADDR = 0x848,
-	CELL_SPURS_KERNEL1_EXIT_ADDR = 0x808,
-	CELL_SPURS_KERNEL2_EXIT_ADDR = 0x838,
+	CELL_SPURS_MAX_SPU                      = 8,
+	CELL_SPURS_MAX_WORKLOAD                 = 16,
+	CELL_SPURS_MAX_WORKLOAD2                = 32,
+	CELL_SPURS_SYS_SERVICE_WORKLOAD_ID      = 32,
+	CELL_SPURS_MAX_PRIORITY                 = 16,
+	CELL_SPURS_NAME_MAX_LENGTH              = 15,
+	CELL_SPURS_SIZE                         = 4096,
+	CELL_SPURS_SIZE2                        = 8192,
+	CELL_SPURS_INTERRUPT_VECTOR             = 0x0,
+	CELL_SPURS_LOCK_LINE                    = 0x80,
+	CELL_SPURS_KERNEL_DMA_TAG_ID            = 31,
+	CELL_SPURS_KERNEL1_ENTRY_ADDR           = 0x818,
+	CELL_SPURS_KERNEL2_ENTRY_ADDR           = 0x848,
+	CELL_SPURS_KERNEL1_EXIT_ADDR            = 0x808,
+	CELL_SPURS_KERNEL2_EXIT_ADDR            = 0x838,
 	CELL_SPURS_KERNEL1_SELECT_WORKLOAD_ADDR = 0x290,
 	CELL_SPURS_KERNEL2_SELECT_WORKLOAD_ADDR = 0x290,
 };
 
 enum RangeofEventQueuePortNumbers
 {
-	CELL_SPURS_STATIC_PORT_RANGE_BOTTOM = 15,
-	CELL_SPURS_DYNAMIC_PORT_RANGE_TOP = 16,
+	CELL_SPURS_STATIC_PORT_RANGE_BOTTOM  = 15,
+	CELL_SPURS_DYNAMIC_PORT_RANGE_TOP    = 16,
 	CELL_SPURS_DYNAMIC_PORT_RANGE_BOTTOM = 63,
 };
 
 enum SpursAttrFlags : u32
 {
-	SAF_NONE = 0x0,
-
-	SAF_EXIT_IF_NO_WORK = 0x1,
-	SAF_UNKNOWN_FLAG_30 = 0x2,
-	SAF_SECOND_VERSION  = 0x4,
-
+	SAF_NONE                          = 0x00000000,
+	SAF_EXIT_IF_NO_WORK               = 0x00000001,
+	SAF_UNKNOWN_FLAG_30               = 0x00000002,
+	SAF_SECOND_VERSION                = 0x00000004,
 	SAF_UNKNOWN_FLAG_9                = 0x00400000,
 	SAF_UNKNOWN_FLAG_8                = 0x00800000,
 	SAF_UNKNOWN_FLAG_7                = 0x01000000,
@@ -143,8 +138,7 @@ enum SpursAttrFlags : u32
 
 enum SpursFlags1 : u8
 {
-	SF1_NONE = 0x0,
-
+	SF1_NONE            = 0x00,
 	SF1_32_WORKLOADS    = 0x40,
 	SF1_EXIT_IF_NO_WORK = 0x80,
 };
@@ -416,9 +410,10 @@ struct set_alignment(128) CellSpurs
 {
 	struct _sub_str1
 	{
-		u8 unk0[0x20]; // 0x00 - SPU exceptionh handler 0x08 - SPU exception handler args
+		u8 unk0[0x20]; // 0x00 - SPU exception handler 0x08 - SPU exception handler args
 		be_t<u64> sem; // 0x20
-		u8 unk1[0x8];
+		be_t<u32> x28; // 0x28
+		be_t<u32> x2C; // 0x2C
 		vm::bptr<CellSpursShutdownCompletionEventHook, u64> hook; // 0x30
 		vm::bptr<void, u64> hookArg; // 0x38
 		u8 unk2[0x40];
@@ -426,26 +421,38 @@ struct set_alignment(128) CellSpurs
 
 	CHECK_SIZE(_sub_str1, 128);
 
-	struct _sub_str2 // Event port multiplexer
+	struct EventPortMux;
+
+	using EventHandlerCallback = func_def<void(vm::ptr<EventPortMux>, u64 data)>;
+
+	struct EventHandlerListNode
 	{
-		be_t<u32> unk0; // 0x00 Outstanding requests
-		be_t<u32> unk1; // 0x04
-		be_t<u32> unk2; // 0x08
-		be_t<u32> unk3; // 0x0C
-		be_t<u64> port; // 0x10
-		u8 unk_[0x68];  // 0x18 - The first u64 seems to be the start of a linked list. The linked list struct seems to be {u64 next; u64 data; u64 handler}
+		vm::bptr<EventHandlerListNode, u64> next;
+		be_t<u64> data;
+		vm::bptr<EventHandlerCallback, u64> handler;
 	};
 
-	CHECK_SIZE(_sub_str2, 128);
+	struct EventPortMux
+	{
+		atomic_be_t<u32> reqPending;  // 0x00
+		be_t<u32> spuPort;            // 0x04
+		be_t<u32> x08;                // 0x08
+		be_t<u32> x0C;                // 0x0C
+		be_t<u64> eventPort;          // 0x10
+		atomic_be_t<vm::ptr<EventHandlerListNode, u64>> handlerList; // 0x18
+		u8 x20[0x80 - 0x20];          // 0x20
+	};
+
+	CHECK_SIZE(EventPortMux, 128);
 
 	struct WorkloadInfo
 	{
-		vm::bcptr<void, u64> addr; // Address of the executable
-		be_t<u64> arg; // spu argument
-		be_t<u32> size;
-		atomic_be_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
+		vm::bcptr<void, u64> addr;         // 0x00 Address of the executable
+		be_t<u64> arg;                     // 0x08 Argument
+		be_t<u32> size;                    // 0x10 Size of the executable
+		atomic_be_t<u8> uniqueId;          // 0x14 Unique id of the workload. It is the same for all workloads with the same addr.
 		u8 pad[3];
-		u8 priority[8];
+		u8 priority[8];                    // 0x18 Priority of the workload on each SPU
 	};
 
 	CHECK_SIZE(WorkloadInfo, 32);
@@ -463,26 +470,26 @@ struct set_alignment(128) CellSpurs
 	u8 wklMinContention[0x10];                          // 0x40 Min SPUs required for each workload. SPURS1: index = wid. SPURS2: Unused.
 	atomic_be_t<u8> wklMaxContention[0x10];             // 0x50 Max SPUs that may be allocated to each workload. SPURS1: index = wid. SPURS2: packed 4-bit data, index = wid % 16, internal index = wid / 16.
 	CellSpursWorkloadFlag wklFlag;                      // 0x60
-	atomic_be_t<u16> wklSignal1;                        // 0x70 (bitset for 0..15 wids)
+	atomic_be_t<u16> wklSignal1;                        // 0x70 Bitset for 0..15 wids
 	atomic_be_t<u8> sysSrvMessage;                      // 0x72
 	u8 spuIdling;                                       // 0x73
 	u8 flags1;                                          // 0x74 Type is SpursFlags1
 	u8 sysSrvTraceControl;                              // 0x75
 	u8 nSpus;                                           // 0x76
 	atomic_be_t<u8> wklFlagReceiver;                    // 0x77
-	atomic_be_t<u16> wklSignal2;                        // 0x78 (bitset for 16..32 wids)
+	atomic_be_t<u16> wklSignal2;                        // 0x78 Bitset for 16..32 wids
 	u8 x7A[6];                                          // 0x7A
 	atomic_be_t<u8> wklState1[0x10];                    // 0x80 SPURS_WKL_STATE_*
 	u8 wklStatus1[0x10];                                // 0x90
-	u8 wklEvent1[0x10];                                 // 0xA0
-	atomic_be_t<u32> wklMskA;                           // 0xB0 - System service - Available workloads (32*u1)
+	atomic_be_t<u8> wklEvent1[0x10];                    // 0xA0
+	atomic_be_t<u32> wklEnabled;                        // 0xB0
 	atomic_be_t<u32> wklMskB;                           // 0xB4 - System service - Available module id
 	u32 xB8;                                            // 0xB8
 	u8 sysSrvExitBarrier;                               // 0xBC
 	atomic_be_t<u8> sysSrvMsgUpdateWorkload;            // 0xBD
 	u8 xBE;                                             // 0xBE
 	u8 sysSrvMsgTerminate;                              // 0xBF
-	u8 sysSrvWorkload[8];                               // 0xC0
+	u8 sysSrvPreemptWklId[8];                           // 0xC0 Id of the workload that was preempted by the system workload on each SPU
 	u8 sysSrvOnSpu;                                     // 0xC8
 	u8 spuPort;                                         // 0xC9
 	u8 xCA;                                             // 0xCA
@@ -493,7 +500,7 @@ struct set_alignment(128) CellSpurs
 	u8 xCF;                                             // 0xCF
 	atomic_be_t<u8> wklState2[0x10];                    // 0xD0 SPURS_WKL_STATE_*
 	u8 wklStatus2[0x10];                                // 0xE0
-	u8 wklEvent2[0x10];                                 // 0xF0
+	atomic_be_t<u8> wklEvent2[0x10];                    // 0xF0
 	_sub_str1 wklF1[0x10];                              // 0x100
 	vm::bptr<CellSpursTraceInfo, u64> traceBuffer;      // 0x900
 	be_t<u32> traceStartIndex[6];                       // 0x908
@@ -508,16 +515,16 @@ struct set_alignment(128) CellSpurs
 	u8 unknown4[0xB00 - 0x998];
 	WorkloadInfo wklInfo1[0x10];                        // 0xB00
 	WorkloadInfo wklInfoSysSrv;                         // 0xD00
-	be_t<u64> ppu0;                                     // 0xD20
+	be_t<u64> ppu0;                                     // 0xD20 Handler thread
 	be_t<u64> ppu1;                                     // 0xD28
-	be_t<u32> spuTG;                                    // 0xD30 - SPU thread group
+	be_t<u32> spuTG;                                    // 0xD30 SPU thread group
 	be_t<u32> spus[8];                                  // 0xD34
 	u8 unknown3[0xD5C - 0xD54];
-	be_t<u32> queue;                                    // 0xD5C - Event queue
-	be_t<u32> port;                                     // 0xD60 - Event port
-	atomic_be_t<u8> xD64;                               // 0xD64 - SPURS handler dirty
-	atomic_be_t<u8> xD65;                               // 0xD65 - SPURS handler waiting
-	atomic_be_t<u8> xD66;                               // 0xD66 - SPURS handler exiting
+	be_t<u32> eventQueue;                               // 0xD5C
+	be_t<u32> eventPort;                                // 0xD60
+	atomic_be_t<u8> handlerDirty;                       // 0xD64
+	atomic_be_t<u8> handlerWaiting;                     // 0xD65
+	atomic_be_t<u8> handlerExiting;                     // 0xD66
 	atomic_be_t<u32> enableEH;                          // 0xD68
 	be_t<u32> exception;                                // 0xD6C
 	sys_spu_image spuImg;                               // 0xD70
@@ -529,12 +536,12 @@ struct set_alignment(128) CellSpurs
 	be_t<u32> unk5;                                     // 0xD9C
 	be_t<u32> revision;                                 // 0xDA0
 	be_t<u32> sdkVersion;                               // 0xDA4
-	atomic_be_t<u64> spups;                             // 0xDA8 - SPU port bits
+	atomic_be_t<u64> spuPortBits;                       // 0xDA8
 	sys_lwmutex_t mutex;                                // 0xDB0
 	sys_lwcond_t cond;                                  // 0xDC8
 	u8 unknown9[0xE00 - 0xDD0];
 	_sub_str4 wklH1[0x10];                              // 0xE00
-	_sub_str2 sub3;                                     // 0xF00
+	EventPortMux eventPortMux;                          // 0xF00
 	u8 unknown6[0x1000 - 0xF80];                        // 0xF80 - Gloabl SPU exception handler 0xF88 - Gloabl SPU exception handlers args
 	WorkloadInfo wklInfo2[0x10];                        // 0x1000
 	_sub_str1 wklF2[0x10];                              // 0x1200
@@ -551,16 +558,6 @@ struct set_alignment(128) CellSpurs
 		{
 			return wklState1[wid & 0xf];
 		}
-	}
-
-	force_inline vm::ptr<sys_lwmutex_t> get_lwmutex()
-	{
-		return vm::ptr<sys_lwmutex_t>::make(vm::get_addr(&mutex));
-	}
-
-	force_inline vm::ptr<sys_lwcond_t> get_lwcond()
-	{
-		return vm::ptr<sys_lwcond_t>::make(vm::get_addr(&cond));
 	}
 };
 
@@ -888,5 +885,6 @@ struct SpursTasksetContext
 
 CHECK_SIZE(SpursTasksetContext, 0x900);
 
-s32 spursAttachLv2EventQueue(vm::ptr<CellSpurs> spurs, u32 queue, vm::ptr<u8> port, s32 isDynamic, bool wasCreated);
-s32 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs);
+class SpursModuleExit
+{
+};

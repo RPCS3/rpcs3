@@ -465,6 +465,13 @@ s32 sys_spu_thread_group_yield(u32 id)
 	return CELL_OK;
 }
 
+void sys_spu_thread_group_attribute_initialize(vm::ptr<sys_spu_thread_group_attribute> attr)
+{
+	attr->name  = vm::null;
+	attr->nsize = 0;
+	attr->type  = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
+}
+
 s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 {
 	sys_spu.Warning("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
