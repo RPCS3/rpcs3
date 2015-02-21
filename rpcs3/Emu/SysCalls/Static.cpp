@@ -12,6 +12,29 @@ u32 add_ppu_func_sub(SFunc func)
 	return func.index;
 }
 
+u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
+{
+	SFunc sf;
+	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), module, func));
+	sf.name = name;
+	sf.group = *(u64*)group;
+	sf.found = 0;
+
+	// TODO: check for self-inclusions, use CRC
+	for (u32 i = 0; ops[i]; i++)
+	{
+		SFuncOp op;
+		op.mask = ops[i] >> 32;
+		op.crc = (u32)ops[i];
+		if (op.mask) op.crc &= op.mask;
+		op.mask = re32(op.mask);
+		op.crc = re32(op.crc);
+		sf.ops.push_back(op);
+	}
+
+	return add_ppu_func_sub(sf);
+}
+
 void StaticFuncManager::StaticAnalyse(void* ptr, u32 size, u32 base)
 {
 	u32* data = (u32*)ptr; size /= 4;

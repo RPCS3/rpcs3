@@ -119,36 +119,14 @@ void clear_ppu_functions();
 u32 get_function_id(const char* name);
 
 u32 add_ppu_func_sub(SFunc sf);
-
-__forceinline static u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
-{
-	SFunc sf;
-	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), module, func));
-	sf.name = name;
-	sf.group = *(u64*)group;
-	sf.found = 0;
-
-	// TODO: check for self-inclusions, use CRC
-	for (u32 i = 0; ops[i]; i++)
-	{
-		SFuncOp op;
-		op.mask = ops[i] >> 32;
-		op.crc = (u32)ops[i];
-		if (op.mask) op.crc &= op.mask;
-		op.mask = re32(op.mask);
-		op.crc = re32(op.crc);
-		sf.ops.push_back(op);
-	}
-
-	return add_ppu_func_sub(sf);
-}
-
-#define REG_SUB(module, group, name, ...) \
-	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	if (name ## _table[0]) add_ppu_func_sub(group, name ## _table, #name, &module, bind_func(name))
+u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func);
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), &module, bind_func(name)))
 
 #define REG_FUNC2(module, nid, name) add_ppu_func(ModuleFunc(nid, &module, bind_func(name)))
+
+#define REG_SUB(module, group, name, ...) \
+	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
+	if (name ## _table[0]) add_ppu_func_sub(group, name ## _table, #name, &module, bind_func(name))
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
