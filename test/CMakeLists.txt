@@ -29,6 +29,6 @@ add_executable(run-tests
 set_target_properties(run-tests PROPERTIES
   COMPILE_FLAGS "${yaml_c_flags} ${yaml_cxx_flags} ${yaml_test_flags}"
 )
-target_link_libraries(run-tests yaml-cpp gtest gmock)
+target_link_libraries(run-tests yaml-cpp gmock)
 
 add_test(yaml-test ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/run-tests)
