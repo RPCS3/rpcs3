@@ -73,10 +73,7 @@ std::string CgBinaryDisasm::AddConstDisAsm()
 	const u32 z = GetData(data[2]);
 	const u32 w = GetData(data[3]);
 
-	char buf[1024];
-	sprintf(buf, "{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, (float&)x, y, (float&)y, z, (float&)z, w, (float&)w);
-
-	return fmt::format(buf);
+	return fmt::Format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, (float&)x, y, (float&)y, z, (float&)z, w, (float&)w);
 }
 
 std::string CgBinaryDisasm::AddTexDisAsm()
