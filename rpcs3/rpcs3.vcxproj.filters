@@ -96,6 +96,9 @@
     <ClCompile Include="Gui\MemoryStringSearcher.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\CgDisasm.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -194,8 +197,8 @@
     <ClInclude Include="Gui\LLEModulesManager.h">
       <Filter>Gui</Filter>
     </ClInclude>
-    <ClCompile Include="git-version.h">
+    <ClInclude Include="Gui\CgDisasm.h">
       <Filter>Gui</Filter>
-    </ClCompile>
+    </ClInclude>
   </ItemGroup>
 </Project>

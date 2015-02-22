@@ -854,6 +854,9 @@
     <ClCompile Include="Emu\ARMv7\Modules\psv_cond.cpp">
       <Filter>Emu\CPU\ARMv7\Objects</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1518,6 +1521,9 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\psv_cond.h">
       <Filter>Emu\CPU\ARMv7\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\CgBinaryProgram.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
