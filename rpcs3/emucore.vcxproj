@@ -487,6 +487,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellScreenshot.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h" />
@@ -494,6 +495,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSync2.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSysutil.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSaveData.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellUserInfo.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellVpost.h" />

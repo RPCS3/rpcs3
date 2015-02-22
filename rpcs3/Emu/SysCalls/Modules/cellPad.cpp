@@ -8,30 +8,46 @@
 
 extern Module sys_io;
 
-int cellPadInit(u32 max_connect)
+s32 cellPadInit(u32 max_connect)
 {
 	sys_io.Warning("cellPadInit(max_connect=%d)", max_connect);
-	if(Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_ALREADY_INITIALIZED;
-	if (max_connect > CELL_PAD_MAX_PORT_NUM) return CELL_PAD_ERROR_INVALID_PARAMETER;
+
+	if (Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_ALREADY_INITIALIZED;
+
+	if (max_connect > CELL_PAD_MAX_PORT_NUM)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
 	Emu.GetPadManager().Init(max_connect);
+
 	return CELL_OK;
 }
 
-int cellPadEnd()
+s32 cellPadEnd()
 {
 	sys_io.Log("cellPadEnd()");
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	Emu.GetPadManager().Close();
+
 	return CELL_OK;
 }
 
-int cellPadClearBuf(u32 port_no)
+s32 cellPadClearBuf(u32 port_no)
 {
 	sys_io.Log("cellPadClearBuf(port_no=%d)", port_no);
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	//Set 'm_buffer_cleared' to force a resend of everything
 	//might as well also reset everything in our pad 'buffer' to nothing as well
@@ -54,7 +70,7 @@ int cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-int cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
+s32 cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
 	sys_io.Warning("cellPadPeriphGetInfo(info_addr=0x%x)", info.addr());
 
@@ -67,26 +83,23 @@ int cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 	return CELL_OK;
 }
 
-int cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
+s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.Log("cellPadGetData(port_no=%d, data_addr=0x%x)", port_no, data.addr());
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
-	if (!Emu.GetPadManager().IsInited()) {
+	if (!Emu.GetPadManager().IsInited())
 		return CELL_PAD_ERROR_UNINITIALIZED;
-	}
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 
-	if (port_no >= rinfo.max_connect) {
+	if (port_no >= rinfo.max_connect)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
-	}
 
 	//We have a choice here of NO_DEVICE or READ_FAILED...lets try no device for now
-	if (port_no >= rinfo.now_connect) {
+	if (port_no >= rinfo.now_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
-	}
 
 	Pad& pad = pads[port_no];
 
@@ -249,33 +262,46 @@ int cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	return CELL_OK;
 }
 
-int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr)
+s32 cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr)
 {
 	sys_io.Log("cellPadGetDataExtra(port_no=%d, device_type_addr=0x%x, device_type_addr=0x%x)", port_no, device_type_addr, data_addr);
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	return CELL_OK;
 }
 
-int cellPadSetActDirect(u32 port_no, u32 param_addr)
+s32 cellPadSetActDirect(u32 port_no, u32 param_addr)
 {
 	sys_io.Log("cellPadSetActDirect(port_no=%d, param_addr=0x%x)", port_no, param_addr);
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	return CELL_OK;
 }
 
-int cellPadGetInfo(vm::ptr<CellPadInfo> info)
+s32 cellPadGetInfo(vm::ptr<CellPadInfo> info)
 {
 	sys_io.Log("cellPadGetInfo(info_addr=0x%x)", info.addr());
 
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	info->max_connect = rinfo.max_connect;
@@ -285,9 +311,9 @@ int cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	//Can't have this as const, we need to reset Assign Changes Flag here
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
-	for(u32 i=0; i<CELL_MAX_PADS; ++i)
+	for (u32 i=0; i<CELL_MAX_PADS; ++i)
 	{
-		if(i >= pads.size())
+		if (i >= pads.size())
 			break;
 
 		info->status[i] = pads[i].m_port_status;
@@ -299,11 +325,12 @@ int cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	return CELL_OK;
 }
 
-int cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
+s32 cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 {
 	sys_io.Log("cellPadGetInfo2(info_addr=0x%x)", info.addr());
 
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
 	info->max_connect = rinfo.max_connect;
@@ -312,9 +339,9 @@ int cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
-	for(u32 i=0; i<CELL_PAD_MAX_PORT_NUM; ++i)
+	for (u32 i=0; i<CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if(i >= pads.size())
+		if (i >= pads.size())
 			break;
 
 		info->port_status[i] = pads[i].m_port_status;
@@ -327,14 +354,19 @@ int cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 	return CELL_OK;
 }
 
-int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info)
+s32 cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info)
 {
 	sys_io.Log("cellPadGetCapabilityInfo(port_no=%d, data_addr:=0x%x)", port_no, info.addr());
 
-	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
@@ -344,13 +376,19 @@ int cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellCapabilityInfo> info)
 	return CELL_OK;
 }
 
-int cellPadSetPortSetting(u32 port_no, u32 port_setting)
+s32 cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
 	sys_io.Log("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
-	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 	pads[port_no].m_port_setting = port_setting;
@@ -358,40 +396,59 @@ int cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	return CELL_OK;
 }
 
-int cellPadInfoPressMode(u32 port_no)
+s32 cellPadInfoPressMode(u32 port_no)
 {
 	sys_io.Log("cellPadInfoPressMode(port_no=%d)", port_no);
-	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	return (pads[port_no].m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) > 0;
 }
 
-int cellPadInfoSensorMode(u32 port_no)
+s32 cellPadInfoSensorMode(u32 port_no)
 {
 	sys_io.Log("cellPadInfoSensorMode(port_no=%d)", port_no);
-	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
 	return (pads[port_no].m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) > 0;
 }
 
-int cellPadSetPressMode(u32 port_no, u32 mode)
+s32 cellPadSetPressMode(u32 port_no, u32 mode)
 {
 	sys_io.Log("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
-	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+	if (mode != 0 && mode != 1)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
@@ -403,14 +460,21 @@ int cellPadSetPressMode(u32 port_no, u32 mode)
 	return CELL_OK;
 }
 
-int cellPadSetSensorMode(u32 port_no, u32 mode)
+s32 cellPadSetSensorMode(u32 port_no, u32 mode)
 {
 	sys_io.Log("cellPadSetSensorMode(port_no=%d, mode=%d)", port_no, mode);
-	if (!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
-	if (mode != 0 && mode != 1) return CELL_PAD_ERROR_INVALID_PARAMETER;
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+	if (mode != 0 && mode != 1)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+
 	const PadInfo& rinfo = Emu.GetPadManager().GetInfo();
-	if (port_no >= rinfo.max_connect) return CELL_PAD_ERROR_INVALID_PARAMETER;
-	if (port_no >= rinfo.now_connect) return CELL_PAD_ERROR_NO_DEVICE;
+
+	if (port_no >= rinfo.max_connect)
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
+	if (port_no >= rinfo.now_connect)
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	std::vector<Pad>& pads = Emu.GetPadManager().GetPads();
 
@@ -418,6 +482,46 @@ int cellPadSetSensorMode(u32 port_no, u32 mode)
 		pads[port_no].m_port_setting |= CELL_PAD_SETTING_SENSOR_ON;
 	else
 		pads[port_no].m_port_setting &= ~CELL_PAD_SETTING_SENSOR_ON;
+
+	return CELL_OK;
+}
+
+s32 cellPadLddRegisterController()
+{
+	sys_io.Todo("cellPadLddRegisterController()");
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	return CELL_OK;
+}
+
+s32 cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
+{
+	sys_io.Todo("cellPadLddDataInsert(handle=%d, data_addr=0x%x)", handle, data.addr());
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	return CELL_OK;
+}
+
+s32 cellPadLddGetPortNo(s32 handle)
+{
+	sys_io.Todo("cellPadLddGetPortNo(handle=%d)", handle);
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
+
+	return CELL_OK;
+}
+
+s32 cellPadLddUnregisterController(s32 handle)
+{
+	sys_io.Todo("cellPadLddUnregisterController(handle=%d)", handle);
+
+	if (!Emu.GetPadManager().IsInited())
+		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	return CELL_OK;
 }
@@ -439,4 +543,8 @@ void cellPad_init()
 	sys_io.AddFunc(0xf83f8182, cellPadSetPressMode);
 	sys_io.AddFunc(0xbe5be3ba, cellPadSetSensorMode);
 	sys_io.AddFunc(0xdbf4c59c, cellPadGetCapabilityInfo);
+	sys_io.AddFunc(0x20a97ba2, cellPadLddRegisterController);
+	sys_io.AddFunc(0xbafd6409, cellPadLddDataInsert);
+	sys_io.AddFunc(0x8b8231e5, cellPadLddGetPortNo);
+	sys_io.AddFunc(0xe442faa8, cellPadLddUnregisterController);
 }

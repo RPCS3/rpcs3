@@ -1,177 +1,157 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellUsbd_init();
-Module cellUsbd(0x001c, cellUsbd_init);
+#include "cellUsbd.h"
 
-// Return Codes
-enum
-{
-	CELL_USBD_ERROR_NOT_INITIALIZED        = 0x80110001,
-	CELL_USBD_ERROR_ALREADY_INITIALIZED    = 0x80110002,
-	CELL_USBD_ERROR_NO_MEMORY              = 0x80110003,
-	CELL_USBD_ERROR_INVALID_PARAM          = 0x80110004,
-	CELL_USBD_ERROR_INVALID_TRANSFER_TYPE  = 0x80110005,
-	CELL_USBD_ERROR_LDD_ALREADY_REGISTERED = 0x80110006,
-	CELL_USBD_ERROR_LDD_NOT_ALLOCATED      = 0x80110007,
-	CELL_USBD_ERROR_LDD_NOT_RELEASED       = 0x80110008,
-	CELL_USBD_ERROR_LDD_NOT_FOUND          = 0x80110009,
-	CELL_USBD_ERROR_DEVICE_NOT_FOUND       = 0x8011000a,
-	CELL_USBD_ERROR_PIPE_NOT_ALLOCATED     = 0x8011000b,
-	CELL_USBD_ERROR_PIPE_NOT_RELEASED      = 0x8011000c,
-	CELL_USBD_ERROR_PIPE_NOT_FOUND         = 0x8011000d,
-	CELL_USBD_ERROR_IOREQ_NOT_ALLOCATED    = 0x8011000e,
-	CELL_USBD_ERROR_IOREQ_NOT_RELEASED     = 0x8011000f,
-	CELL_USBD_ERROR_IOREQ_NOT_FOUND        = 0x80110010,
-	CELL_USBD_ERROR_CANNOT_GET_DESCRIPTOR  = 0x80110011,
-	CELL_USBD_ERROR_FATAL                  = 0x801100ff,
-};
+extern Module cellUsbd;
 
-int cellUsbdInit()
+s32 cellUsbdInit()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdEnd()
+s32 cellUsbdEnd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdSetThreadPriority()
+s32 cellUsbdSetThreadPriority()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdSetThreadPriority2()
+s32 cellUsbdSetThreadPriority2()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdGetThreadPriority()
+s32 cellUsbdGetThreadPriority()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdRegisterLdd()
+s32 cellUsbdRegisterLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdRegisterExtraLdd()
+s32 cellUsbdRegisterExtraLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdRegisterExtraLdd2()
+s32 cellUsbdRegisterExtraLdd2()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdUnregisterLdd()
+s32 cellUsbdUnregisterLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdUnregisterExtraLdd()
+s32 cellUsbdUnregisterExtraLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdOpenPipe()
+s32 cellUsbdOpenPipe()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdClosePipe()
+s32 cellUsbdClosePipe()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdControlTransfer()
+s32 cellUsbdControlTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdBulkTransfer()
+s32 cellUsbdBulkTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdInterruptTransfer()
+s32 cellUsbdInterruptTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdIsochronousTransfer()
+s32 cellUsbdIsochronousTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdHSIsochronousTransfer()
+s32 cellUsbdHSIsochronousTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdScanStaticDescriptor()
+s32 cellUsbdScanStaticDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdGetDeviceSpeed()
+s32 cellUsbdGetDeviceSpeed()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdGetDeviceLocation()
+s32 cellUsbdGetDeviceLocation()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdSetPrivateData()
+s32 cellUsbdSetPrivateData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdGetPrivateData()
+s32 cellUsbdGetPrivateData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdAllocateMemory()
+s32 cellUsbdAllocateMemory()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-int cellUsbdFreeMemory()
+s32 cellUsbdFreeMemory()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-void cellUsbd_init()
+Module cellUsbd("cellUsbd", []()
 {
 	cellUsbd.AddFunc(0xd0e766fe, cellUsbdInit);
 	cellUsbd.AddFunc(0x35f22ac3, cellUsbdEnd);
@@ -204,5 +184,4 @@ void cellUsbd_init()
 
 	cellUsbd.AddFunc(0x074dbb39, cellUsbdAllocateMemory);
 	cellUsbd.AddFunc(0x4e456e81, cellUsbdFreeMemory);
-}
-#endif
+});
