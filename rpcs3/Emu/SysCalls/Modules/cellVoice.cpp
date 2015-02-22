@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellVoice_init();
-Module cellVoice(0x0046, cellVoice_init);
+extern Module cellVoice;
 
 // Error Codes
 enum
@@ -27,211 +28,211 @@ enum
 	CELL_VOICE_ERROR_TOPOLOGY              = 0x80310807,
 };
 
-int cellVoiceConnectIPortToOPort()
+s32 cellVoiceConnectIPortToOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceCreateNotifyEventQueue()
+s32 cellVoiceCreateNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceCreatePort()
+s32 cellVoiceCreatePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDeletePort()
+s32 cellVoiceDeletePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDisconnectIPortFromOPort()
+s32 cellVoiceDisconnectIPortFromOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceEnd()
+s32 cellVoiceEnd()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetBitRate()
+s32 cellVoiceGetBitRate()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetMuteFlag()
+s32 cellVoiceGetMuteFlag()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetPortAttr()
+s32 cellVoiceGetPortAttr()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetPortInfo()
+s32 cellVoiceGetPortInfo()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetSignalState()
+s32 cellVoiceGetSignalState()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetVolume()
+s32 cellVoiceGetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceInit()
+s32 cellVoiceInit()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceInitEx()
+s32 cellVoiceInitEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoicePausePort()
+s32 cellVoicePausePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoicePausePortAll()
+s32 cellVoicePausePortAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceRemoveNotifyEventQueue()
+s32 cellVoiceRemoveNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResetPort()
+s32 cellVoiceResetPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResumePort()
+s32 cellVoiceResumePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResumePortAll()
+s32 cellVoiceResumePortAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetBitRate()
+s32 cellVoiceSetBitRate()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetMuteFlag()
+s32 cellVoiceSetMuteFlag()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetMuteFlagAll()
+s32 cellVoiceSetMuteFlagAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetNotifyEventQueue()
+s32 cellVoiceSetNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetPortAttr()
+s32 cellVoiceSetPortAttr()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetVolume()
+s32 cellVoiceSetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStart()
+s32 cellVoiceStart()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStartEx()
+s32 cellVoiceStartEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStop()
+s32 cellVoiceStop()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceUpdatePort()
+s32 cellVoiceUpdatePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceWriteToIPort()
+s32 cellVoiceWriteToIPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceWriteToIPortEx()
+s32 cellVoiceWriteToIPortEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceReadFromOPort()
+s32 cellVoiceReadFromOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDebugTopology()
+s32 cellVoiceDebugTopology()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-void cellVoice_init()
+Module cellVoice("cellVoice", []()
 {
 	REG_FUNC(cellVoice, cellVoiceConnectIPortToOPort);
 	REG_FUNC(cellVoice, cellVoiceCreateNotifyEventQueue);
@@ -267,5 +268,4 @@ void cellVoice_init()
 	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx);
 	REG_FUNC(cellVoice, cellVoiceReadFromOPort);
 	REG_FUNC(cellVoice, cellVoiceDebugTopology);
-}
-#endif
+});

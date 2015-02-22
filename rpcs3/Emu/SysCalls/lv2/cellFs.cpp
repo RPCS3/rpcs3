@@ -1029,6 +1029,24 @@ s32 cellFsReadWithOffset(PPUThread& CPU, u32 fd, u64 offset, vm::ptr<void> buf, 
 	return CELL_OK;
 }
 
+s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
+{
+	sys_fs.Todo("cellFsSetDefaultContainer(id=%d, total_limit=%d)", id, total_limit);
+
+	return CELL_OK;
+}
+
+s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type)
+{
+	sys_fs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
+
+	std::shared_ptr<vfsStream> file;
+	if (!sys_fs.CheckId(fd, file))
+		return CELL_ESRCH;
+
+	return CELL_OK;
+}
+
 Module sys_fs("sys_fs", []()
 {
 	g_FsAioReadID = 0;
@@ -1076,4 +1094,6 @@ Module sys_fs("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsStReadPutCurrentAddr);
 	REG_FUNC(sys_fs, cellFsStReadWait);
 	REG_FUNC(sys_fs, cellFsStReadWaitCallback);
+	REG_FUNC(sys_fs, cellFsSetDefaultContainer);
+	REG_FUNC(sys_fs, cellFsSetIoBufferFromDefaultContainer);
 });
