@@ -35,4 +35,4 @@ Module cellScreenshot("cellScreenshot", []()
 	REG_FUNC(cellScreenshot, cellScreenShotSetOverlayImage);
 	REG_FUNC(cellScreenshot, cellScreenShotEnable);
 	REG_FUNC(cellScreenshot, cellScreenShotDisable);
-}
+});

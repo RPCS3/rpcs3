@@ -184,4 +184,4 @@ Module cellUsbd("cellUsbd", []()
 
 	REG_FUNC(cellUsbd, cellUsbdAllocateMemory);
 	REG_FUNC(cellUsbd, cellUsbdFreeMemory);
-}
+});

@@ -173,4 +173,4 @@ Module cellSearch("cellSearch", []()
 	REG_FUNC(cellSearch, cellSearchGetContentInfoDeveloperData);
 	REG_FUNC(cellSearch, cellSearchCancel);
 	REG_FUNC(cellSearch, cellSearchEnd);
-}
+});
