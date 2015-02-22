@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "cellScreenshot.h"
 
 extern Module cellScreenshot;
 

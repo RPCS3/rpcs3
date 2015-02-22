@@ -2,44 +2,49 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
+#include "cellSearch.h"
 
 extern Module cellSearch;
 
-// Error Codes
-enum
+struct cellSearchInternal
 {
-	CELL_SEARCH_OK                          = 0,
-	CELL_SEARCH_CANCELED                    = 1,
-	CELL_SEARCH_ERROR_PARAM                 = 0x8002C801,
-	CELL_SEARCH_ERROR_BUSY                  = 0x8002C802,
-	CELL_SEARCH_ERROR_NO_MEMORY             = 0x8002C803,
-	CELL_SEARCH_ERROR_UNKNOWN_MODE          = 0x8002C804,
-	CELL_SEARCH_ERROR_ALREADY_INITIALIZED   = 0x8002C805,
-	CELL_SEARCH_ERROR_NOT_INITIALIZED       = 0x8002C806,
-	CELL_SEARCH_ERROR_FINALIZING            = 0x8002C807,
-	CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH  = 0x8002C808,
-	CELL_SEARCH_ERROR_CONTENT_OBSOLETE      = 0x8002C809,
-	CELL_SEARCH_ERROR_CONTENT_NOT_FOUND     = 0x8002C80A,
-	CELL_SEARCH_ERROR_NOT_LIST              = 0x8002C80B,
-	CELL_SEARCH_ERROR_OUT_OF_RANGE          = 0x8002C80C,
-	CELL_SEARCH_ERROR_INVALID_SEARCHID      = 0x8002C80D,
-	CELL_SEARCH_ERROR_ALREADY_GOT_RESULT    = 0x8002C80E,
-	CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT = 0x8002C80F,
-	CELL_SEARCH_ERROR_INVALID_CONTENTTYPE   = 0x8002C810,
-	CELL_SEARCH_ERROR_DRM                   = 0x8002C811,
-	CELL_SEARCH_ERROR_TAG                   = 0x8002C812,
-	CELL_SEARCH_ERROR_GENERIC               = 0x8002C8FF,
+	bool m_bInitialized;
+
+	cellSearchInternal()
+		: m_bInitialized(false)
+	{
+	}
 };
 
-s32 cellSearchInitialize()
+cellSearchInternal cellSearchInstance;
+
+s32 cellSearchInitialize(CellSearchMode mode, u32 container, CellSearchSystemCallback func, vm::ptr<u32> userData)
 {
-	UNIMPLEMENTED_FUNC(cellSearch);
+	cellSearch.Todo("cellSearchInitialize()");
+
+	if (cellSearchInstance.m_bInitialized)
+		return CELL_SEARCH_ERROR_ALREADY_INITIALIZED;
+	if (mode != 0)
+		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
+	if (!func)
+		return CELL_SEARCH_ERROR_PARAM;
+
+	cellSearchInstance.m_bInitialized = true;
+
+	// TODO: Store the arguments somewhere so we can use them later.
+
 	return CELL_OK;
 }
 
 s32 cellSearchFinalize()
 {
-	UNIMPLEMENTED_FUNC(cellSearch);
+	cellSearch.Log("cellSearchFinalize()");
+
+	if (!cellSearchInstance.m_bInitialized)
+		return CELL_SEARCH_ERROR_NOT_INITIALIZED;
+
+	cellSearchInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
