@@ -18,7 +18,7 @@ struct cellSearchInternal
 
 cellSearchInternal cellSearchInstance;
 
-s32 cellSearchInitialize(CellSearchMode mode, u32 container, CellSearchSystemCallback func, vm::ptr<u32> userData)
+s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
 {
 	cellSearch.Todo("cellSearchInitialize()");
 
