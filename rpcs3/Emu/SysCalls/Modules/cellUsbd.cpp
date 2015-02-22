@@ -153,35 +153,35 @@ s32 cellUsbdFreeMemory()
 
 Module cellUsbd("cellUsbd", []()
 {
-	cellUsbd.AddFunc(0xd0e766fe, cellUsbdInit);
-	cellUsbd.AddFunc(0x35f22ac3, cellUsbdEnd);
+	REG_FUNC(cellUsbd, cellUsbdInit);
+	REG_FUNC(cellUsbd, cellUsbdEnd);
 
-	cellUsbd.AddFunc(0xc24af1d7, cellUsbdSetThreadPriority);
-	cellUsbd.AddFunc(0x5c832bd7, cellUsbdSetThreadPriority2);
-	cellUsbd.AddFunc(0xd5263dea, cellUsbdGetThreadPriority);
+	REG_FUNC(cellUsbd, cellUsbdSetThreadPriority);
+	REG_FUNC(cellUsbd, cellUsbdSetThreadPriority2);
+	REG_FUNC(cellUsbd, cellUsbdGetThreadPriority);
 
-	cellUsbd.AddFunc(0x359befba, cellUsbdRegisterLdd);
-	cellUsbd.AddFunc(0x7fe92c54, cellUsbdRegisterExtraLdd);
-	cellUsbd.AddFunc(0xbd554bcb, cellUsbdRegisterExtraLdd2);
-	cellUsbd.AddFunc(0x64951ac7, cellUsbdUnregisterLdd);
-	cellUsbd.AddFunc(0x90460081, cellUsbdUnregisterExtraLdd);
+	REG_FUNC(cellUsbd, cellUsbdRegisterLdd);
+	REG_FUNC(cellUsbd, cellUsbdRegisterExtraLdd);
+	REG_FUNC(cellUsbd, cellUsbdRegisterExtraLdd2);
+	REG_FUNC(cellUsbd, cellUsbdUnregisterLdd);
+	REG_FUNC(cellUsbd, cellUsbdUnregisterExtraLdd);
 
-	cellUsbd.AddFunc(0x254289ac, cellUsbdOpenPipe);
-	cellUsbd.AddFunc(0x9763e962, cellUsbdClosePipe);
+	REG_FUNC(cellUsbd, cellUsbdOpenPipe);
+	REG_FUNC(cellUsbd, cellUsbdClosePipe);
 
-	cellUsbd.AddFunc(0x97cf128e, cellUsbdControlTransfer);
-	cellUsbd.AddFunc(0xac77eb78, cellUsbdBulkTransfer);
-	cellUsbd.AddFunc(0x0f411262, cellUsbdInterruptTransfer);
-	cellUsbd.AddFunc(0xde58c4c2, cellUsbdIsochronousTransfer);
-	cellUsbd.AddFunc(0x7a1b6eab, cellUsbdHSIsochronousTransfer);
+	REG_FUNC(cellUsbd, cellUsbdControlTransfer);
+	REG_FUNC(cellUsbd, cellUsbdBulkTransfer);
+	REG_FUNC(cellUsbd, cellUsbdInterruptTransfer);
+	REG_FUNC(cellUsbd, cellUsbdIsochronousTransfer);
+	REG_FUNC(cellUsbd, cellUsbdHSIsochronousTransfer);
 
-	cellUsbd.AddFunc(0x2fb08e1e, cellUsbdScanStaticDescriptor);
-	cellUsbd.AddFunc(0xbdbd2428, cellUsbdGetDeviceSpeed);
-	cellUsbd.AddFunc(0xdb819e03, cellUsbdGetDeviceLocation);
+	REG_FUNC(cellUsbd, cellUsbdScanStaticDescriptor);
+	REG_FUNC(cellUsbd, cellUsbdGetDeviceSpeed);
+	REG_FUNC(cellUsbd, cellUsbdGetDeviceLocation);
 
-	cellUsbd.AddFunc(0x63bfdb97, cellUsbdSetPrivateData);
-	cellUsbd.AddFunc(0x5de3af36, cellUsbdGetPrivateData);
+	REG_FUNC(cellUsbd, cellUsbdSetPrivateData);
+	REG_FUNC(cellUsbd, cellUsbdGetPrivateData);
 
-	cellUsbd.AddFunc(0x074dbb39, cellUsbdAllocateMemory);
-	cellUsbd.AddFunc(0x4e456e81, cellUsbdFreeMemory);
-});
+	REG_FUNC(cellUsbd, cellUsbdAllocateMemory);
+	REG_FUNC(cellUsbd, cellUsbdFreeMemory);
+}

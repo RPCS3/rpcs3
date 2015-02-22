@@ -37,7 +37,7 @@ int cellSysutilApOff()
 
 Module cellSysutilAp("cellSysutilAp", []()
 {
-	cellSysutilAp.AddFunc(0x9e67e0dd, cellSysutilApGetRequiredMemSize);
-	cellSysutilAp.AddFunc(0x3343824c, cellSysutilApOn);
-	cellSysutilAp.AddFunc(0x90c2bb19, cellSysutilApOff);
+	REG_FUNC(cellSysutilAp, cellSysutilApGetRequiredMemSize);
+	REG_FUNC(cellSysutilAp, cellSysutilApOn);
+	REG_FUNC(cellSysutilAp, cellSysutilApOff);
 });

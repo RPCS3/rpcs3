@@ -55,7 +55,7 @@ int _cellPhotoImport2()
 
 void cellPhotoImport_init()
 {
-	cellPhotoImport.AddFunc(0x0783bce0, _cellPhotoImport);
-	cellPhotoImport.AddFunc(0x1ab8df55, _cellPhotoImport2);
+	REG_FUNC(cellPhotoImport, _cellPhotoImport);
+	REG_FUNC(cellPhotoImport, _cellPhotoImport2);
 }
 #endif

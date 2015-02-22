@@ -71,14 +71,14 @@ int cellPngEncReset()
 
 void cellPngEnc_init()
 {
-	cellPngEnc.AddFunc(0x496cfcd0, cellPngEncQueryAttr);
-	cellPngEnc.AddFunc(0x19256dc5, cellPngEncOpen);
-	cellPngEnc.AddFunc(0xc82558ce, cellPngEncOpenEx);
-	cellPngEnc.AddFunc(0x117cd726, cellPngEncClose);
-	cellPngEnc.AddFunc(0x662bd637, cellPngEncWaitForInput);
-	cellPngEnc.AddFunc(0x5b546ca4, cellPngEncEncodePicture);
-	cellPngEnc.AddFunc(0x90ef2963, cellPngEncWaitForOutput);
-	cellPngEnc.AddFunc(0x585269bc, cellPngEncGetStreamInfo);
-	cellPngEnc.AddFunc(0x6ac91de3, cellPngEncReset);
+	REG_FUNC(cellPngEnc, cellPngEncQueryAttr);
+	REG_FUNC(cellPngEnc, cellPngEncOpen);
+	REG_FUNC(cellPngEnc, cellPngEncOpenEx);
+	REG_FUNC(cellPngEnc, cellPngEncClose);
+	REG_FUNC(cellPngEnc, cellPngEncWaitForInput);
+	REG_FUNC(cellPngEnc, cellPngEncEncodePicture);
+	REG_FUNC(cellPngEnc, cellPngEncWaitForOutput);
+	REG_FUNC(cellPngEnc, cellPngEncGetStreamInfo);
+	REG_FUNC(cellPngEnc, cellPngEncReset);
 }
 #endif

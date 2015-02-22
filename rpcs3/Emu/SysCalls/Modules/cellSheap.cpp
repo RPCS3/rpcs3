@@ -123,26 +123,26 @@ int cellKeySheapQueueDelete()
 
 void cellSheap_init()
 {
-	cellSheap.AddFunc(0xbbb47cd8, cellSheapInitialize);
-	cellSheap.AddFunc(0x4b1383fb, cellSheapAllocate);
-	cellSheap.AddFunc(0x5c5994bd, cellSheapFree);
-	cellSheap.AddFunc(0x37968718, cellSheapQueryMax);
-	cellSheap.AddFunc(0x7fa23275, cellSheapQueryFree);
+	REG_FUNC(cellSheap, cellSheapInitialize);
+	REG_FUNC(cellSheap, cellSheapAllocate);
+	REG_FUNC(cellSheap, cellSheapFree);
+	REG_FUNC(cellSheap, cellSheapQueryMax);
+	REG_FUNC(cellSheap, cellSheapQueryFree);
 
 	// (TODO: Some cellKeySheap* functions are missing)
-	cellSheap.AddFunc(0xa1b25841, cellKeySheapInitialize);
-	cellSheap.AddFunc(0x4a5b9659, cellKeySheapBufferNew);
-	cellSheap.AddFunc(0xe6b37362, cellKeySheapBufferDelete);
+	REG_FUNC(cellSheap, cellKeySheapInitialize);
+	REG_FUNC(cellSheap, cellKeySheapBufferNew);
+	REG_FUNC(cellSheap, cellKeySheapBufferDelete);
 
-	cellSheap.AddFunc(0x3478e1e6, cellKeySheapMutexNew);
-	cellSheap.AddFunc(0x2452679f, cellKeySheapMutexDelete);
-	cellSheap.AddFunc(0xe897c835, cellKeySheapBarrierNew);
-	cellSheap.AddFunc(0xf6f5fbca, cellKeySheapBarrierDelete);
-	cellSheap.AddFunc(0x69a5861d, cellKeySheapSemaphoreNew);
-	cellSheap.AddFunc(0x73a45cf8, cellKeySheapSemaphoreDelete);
-	cellSheap.AddFunc(0xf01ac471, cellKeySheapRwmNew);
-	cellSheap.AddFunc(0xed136702, cellKeySheapRwmDelete);
-	cellSheap.AddFunc(0x987e260e, cellKeySheapQueueNew);
-	cellSheap.AddFunc(0x79a6abd0, cellKeySheapQueueDelete);
+	REG_FUNC(cellSheap, cellKeySheapMutexNew);
+	REG_FUNC(cellSheap, cellKeySheapMutexDelete);
+	REG_FUNC(cellSheap, cellKeySheapBarrierNew);
+	REG_FUNC(cellSheap, cellKeySheapBarrierDelete);
+	REG_FUNC(cellSheap, cellKeySheapSemaphoreNew);
+	REG_FUNC(cellSheap, cellKeySheapSemaphoreDelete);
+	REG_FUNC(cellSheap, cellKeySheapRwmNew);
+	REG_FUNC(cellSheap, cellKeySheapRwmDelete);
+	REG_FUNC(cellSheap, cellKeySheapQueueNew);
+	REG_FUNC(cellSheap, cellKeySheapQueueDelete);
 }
 #endif

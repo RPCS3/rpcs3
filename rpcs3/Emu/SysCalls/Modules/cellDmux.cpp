@@ -1170,24 +1170,24 @@ int cellDmuxFlushEs(u32 esHandle)
 
 Module cellDmux("cellDmux", []()
 {
-	cellDmux.AddFunc(0xa2d4189b, cellDmuxQueryAttr);
-	cellDmux.AddFunc(0x3f76e3cd, cellDmuxQueryAttr2);
-	cellDmux.AddFunc(0x68492de9, cellDmuxOpen);
-	cellDmux.AddFunc(0xf6c23560, cellDmuxOpenEx);
-	cellDmux.AddFunc(0x11bc3a6c, cellDmuxOpen2);
-	cellDmux.AddFunc(0x8c692521, cellDmuxClose);
-	cellDmux.AddFunc(0x04e7499f, cellDmuxSetStream);
-	cellDmux.AddFunc(0x5d345de9, cellDmuxResetStream);
-	cellDmux.AddFunc(0xccff1284, cellDmuxResetStreamAndWaitDone);
-	cellDmux.AddFunc(0x02170d1a, cellDmuxQueryEsAttr);
-	cellDmux.AddFunc(0x52911bcf, cellDmuxQueryEsAttr2);
-	cellDmux.AddFunc(0x7b56dc3f, cellDmuxEnableEs);
-	cellDmux.AddFunc(0x05371c8d, cellDmuxDisableEs);
-	cellDmux.AddFunc(0x21d424f0, cellDmuxResetEs);
-	cellDmux.AddFunc(0x42c716b5, cellDmuxGetAu);
-	cellDmux.AddFunc(0x2750c5e0, cellDmuxPeekAu);
-	cellDmux.AddFunc(0x2c9a5857, cellDmuxGetAuEx);
-	cellDmux.AddFunc(0x002e8da2, cellDmuxPeekAuEx);
-	cellDmux.AddFunc(0x24ea6474, cellDmuxReleaseAu);
-	cellDmux.AddFunc(0xebb3b2bd, cellDmuxFlushEs);
+	REG_FUNC(cellDmux, cellDmuxQueryAttr);
+	REG_FUNC(cellDmux, cellDmuxQueryAttr2);
+	REG_FUNC(cellDmux, cellDmuxOpen);
+	REG_FUNC(cellDmux, cellDmuxOpenEx);
+	REG_FUNC(cellDmux, cellDmuxOpen2);
+	REG_FUNC(cellDmux, cellDmuxClose);
+	REG_FUNC(cellDmux, cellDmuxSetStream);
+	REG_FUNC(cellDmux, cellDmuxResetStream);
+	REG_FUNC(cellDmux, cellDmuxResetStreamAndWaitDone);
+	REG_FUNC(cellDmux, cellDmuxQueryEsAttr);
+	REG_FUNC(cellDmux, cellDmuxQueryEsAttr2);
+	REG_FUNC(cellDmux, cellDmuxEnableEs);
+	REG_FUNC(cellDmux, cellDmuxDisableEs);
+	REG_FUNC(cellDmux, cellDmuxResetEs);
+	REG_FUNC(cellDmux, cellDmuxGetAu);
+	REG_FUNC(cellDmux, cellDmuxPeekAu);
+	REG_FUNC(cellDmux, cellDmuxGetAuEx);
+	REG_FUNC(cellDmux, cellDmuxPeekAuEx);
+	REG_FUNC(cellDmux, cellDmuxReleaseAu);
+	REG_FUNC(cellDmux, cellDmuxFlushEs);
 });

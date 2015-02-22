@@ -278,7 +278,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
-    <ClCompile Include="Emu\SysCalls\Static.cpp" />
     <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
@@ -513,7 +512,6 @@
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
-    <ClInclude Include="Emu\SysCalls\Static.h" />
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />

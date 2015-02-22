@@ -9,7 +9,7 @@ namespace sce_libm_func
 
 }
 
-#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibm, #name, &sce_libm_func::name)
+#define REG_FUNC(nid, name) reg_psv_func(nid, &sceLibm, #name, sce_libm_func::name)
 
 psv_log_base sceLibm("SceLibm", []()
 {

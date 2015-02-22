@@ -77,15 +77,15 @@ int cellJpgEncReset()
 
 void cellJpgEnc_init()
 {
-	cellJpgEnc.AddFunc(0x12d9b6c5, cellJpgEncQueryAttr);
-	cellJpgEnc.AddFunc(0xa4bfae51, cellJpgEncOpen);
-	cellJpgEnc.AddFunc(0x6f2d371c, cellJpgEncOpenEx);
-	cellJpgEnc.AddFunc(0x969fc5f7, cellJpgEncClose);
-	cellJpgEnc.AddFunc(0x2ae79be8, cellJpgEncWaitForInput);
-	cellJpgEnc.AddFunc(0xa9e81214, cellJpgEncEncodePicture);
-	cellJpgEnc.AddFunc(0x636dc89e, cellJpgEncEncodePicture2);
-	cellJpgEnc.AddFunc(0x9b4e3a74, cellJpgEncWaitForOutput);
-	cellJpgEnc.AddFunc(0x4262e880, cellJpgEncGetStreamInfo);
-	cellJpgEnc.AddFunc(0x0cf2b78b, cellJpgEncReset);
+	REG_FUNC(cellJpgEnc, cellJpgEncQueryAttr);
+	REG_FUNC(cellJpgEnc, cellJpgEncOpen);
+	REG_FUNC(cellJpgEnc, cellJpgEncOpenEx);
+	REG_FUNC(cellJpgEnc, cellJpgEncClose);
+	REG_FUNC(cellJpgEnc, cellJpgEncWaitForInput);
+	REG_FUNC(cellJpgEnc, cellJpgEncEncodePicture);
+	REG_FUNC(cellJpgEnc, cellJpgEncEncodePicture2);
+	REG_FUNC(cellJpgEnc, cellJpgEncWaitForOutput);
+	REG_FUNC(cellJpgEnc, cellJpgEncGetStreamInfo);
+	REG_FUNC(cellJpgEnc, cellJpgEncReset);
 }
 #endif

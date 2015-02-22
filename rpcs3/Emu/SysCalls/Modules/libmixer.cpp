@@ -312,10 +312,15 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	port.channel = 8;
 	port.block = 16;
 	port.attr = 0;
-	port.level = 1.0f;
+	port.addr = g_audio.buffer + AUDIO_PORT_OFFSET * g_surmx.audio_port;
+	port.read_index_addr = g_audio.indexes + sizeof(u64) * g_surmx.audio_port;
+	port.size = port.channel * port.block * AUDIO_SAMPLES * sizeof(float);
 	port.tag = 0;
+	port.level = 1.0f;
+	port.level_set = 1.0f;
+	port.level_inc = 0.0f;
 
-	libmixer.Warning("*** audio port opened(default)");
+	libmixer.Warning("*** audio port opened (port=%d)", g_surmx.audio_port);
 
 	mixcount = 0;
 	surMixerCb.set(0);
@@ -627,6 +632,11 @@ float cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 Module libmixer("libmixer", []()
 {
 	g_surmx.audio_port = ~0;
+
+	libmixer.on_stop = []()
+	{
+		ssp.clear();
+	};
 
 	REG_SUB(libmixer, "surmxAAN", cellAANAddData,
 		0xffffffff7c691b78,

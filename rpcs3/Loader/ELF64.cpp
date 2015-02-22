@@ -7,7 +7,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -399,7 +398,7 @@ namespace loader
 
 							for (auto& f : m.second.exports)
 							{
-								add_ps3_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
+								add_ppu_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
 							}
 
 							for (auto& f : m.second.imports)
@@ -409,13 +408,13 @@ namespace loader
 
 								u32 index;
 
-								auto func = get_ps3_func_by_nid(nid, &index);
+								auto func = get_ppu_func_by_nid(nid, &index);
 
 								if (!func)
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 
-									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
 								}
 								else
 								{
@@ -532,7 +531,7 @@ namespace loader
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 							m_stream->Read(phdr.p_vaddr.get_ptr(), phdr.p_filesz);
-							Emu.GetSFuncManager().StaticAnalyse(phdr.p_vaddr.get_ptr(), (u32)phdr.p_filesz, phdr.p_vaddr.addr());
+							hook_ppu_funcs((u32*)phdr.p_vaddr.get_ptr(), vm::cast(phdr.p_filesz));
 						}
 					}
 					break;
@@ -630,13 +629,13 @@ namespace loader
 
 								u32 index;
 
-								auto func = get_ps3_func_by_nid(nid, &index);
+								auto func = get_ppu_func_by_nid(nid, &index);
 
 								if (!func)
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetHLEFuncName(nid), module_name, addr);
 
-									index = add_ps3_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
 								}
 								else
 								{

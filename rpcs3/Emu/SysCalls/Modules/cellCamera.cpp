@@ -569,38 +569,38 @@ void cellCamera_unload()
 
 Module cellCamera("cellCamera", []()
 {
-	cellCamera.AddFunc(0xbf47c5dd, cellCameraInit);
-	cellCamera.AddFunc(0x5ad46570, cellCameraEnd);
-	cellCamera.AddFunc(0x85e1b8da, cellCameraOpen);
-	cellCamera.AddFunc(0x5d25f866, cellCameraOpenEx);
-	cellCamera.AddFunc(0x379c5dd6, cellCameraClose);
+	REG_FUNC(cellCamera, cellCameraInit);
+	REG_FUNC(cellCamera, cellCameraEnd);
+	REG_FUNC(cellCamera, cellCameraOpen);
+	REG_FUNC(cellCamera, cellCameraOpenEx);
+	REG_FUNC(cellCamera, cellCameraClose);
 
-	cellCamera.AddFunc(0x602e2052, cellCameraGetDeviceGUID);
-	cellCamera.AddFunc(0x58bc5870, cellCameraGetType);
-	cellCamera.AddFunc(0x8ca53dde, cellCameraIsAvailable);
-	cellCamera.AddFunc(0x7e063bbc, cellCameraIsAttached);
-	cellCamera.AddFunc(0xfa160f24, cellCameraIsOpen);
-	cellCamera.AddFunc(0x5eebf24e, cellCameraIsStarted);
-	cellCamera.AddFunc(0x532b8aaa, cellCameraGetAttribute);
-	cellCamera.AddFunc(0x8cd56eee, cellCameraSetAttribute);
-	cellCamera.AddFunc(0x7dac520c, cellCameraGetBufferSize);
-	cellCamera.AddFunc(0x10697d7f, cellCameraGetBufferInfo);
-	cellCamera.AddFunc(0x0e63c444, cellCameraGetBufferInfoEx);
+	REG_FUNC(cellCamera, cellCameraGetDeviceGUID);
+	REG_FUNC(cellCamera, cellCameraGetType);
+	REG_FUNC(cellCamera, cellCameraIsAvailable);
+	REG_FUNC(cellCamera, cellCameraIsAttached);
+	REG_FUNC(cellCamera, cellCameraIsOpen);
+	REG_FUNC(cellCamera, cellCameraIsStarted);
+	REG_FUNC(cellCamera, cellCameraGetAttribute);
+	REG_FUNC(cellCamera, cellCameraSetAttribute);
+	REG_FUNC(cellCamera, cellCameraGetBufferSize);
+	REG_FUNC(cellCamera, cellCameraGetBufferInfo);
+	REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
 
-	cellCamera.AddFunc(0x61dfbe83, cellCameraPrepExtensionUnit);
-	cellCamera.AddFunc(0xeb6f95fb, cellCameraCtrlExtensionUnit);
-	cellCamera.AddFunc(0xb602e328, cellCameraGetExtensionUnit);
-	cellCamera.AddFunc(0x2dea3e9b, cellCameraSetExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraCtrlExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraGetExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraSetExtensionUnit);
 
-	cellCamera.AddFunc(0x81f83db9, cellCameraReset);
-	cellCamera.AddFunc(0x456dc4aa, cellCameraStart);
-	cellCamera.AddFunc(0x3845d39b, cellCameraRead);
-	cellCamera.AddFunc(0x21fc151f, cellCameraReadEx);
-	cellCamera.AddFunc(0xe28b206b, cellCameraReadComplete);
-	cellCamera.AddFunc(0x02f5ced0, cellCameraStop);
+	REG_FUNC(cellCamera, cellCameraReset);
+	REG_FUNC(cellCamera, cellCameraStart);
+	REG_FUNC(cellCamera, cellCameraRead);
+	REG_FUNC(cellCamera, cellCameraReadEx);
+	REG_FUNC(cellCamera, cellCameraReadComplete);
+	REG_FUNC(cellCamera, cellCameraStop);
 
-	cellCamera.AddFunc(0xb0647e5a, cellCameraSetNotifyEventQueue);
-	cellCamera.AddFunc(0x9b98d258, cellCameraRemoveNotifyEventQueue);
-	cellCamera.AddFunc(0xa7fd2f5b, cellCameraSetNotifyEventQueue2);
-	cellCamera.AddFunc(0x44673f07, cellCameraRemoveNotifyEventQueue2);
+	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue);
+	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue);
+	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue2);
+	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue2);
 });

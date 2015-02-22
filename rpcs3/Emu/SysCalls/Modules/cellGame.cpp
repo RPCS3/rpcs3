@@ -495,25 +495,25 @@ Module cellGame("cellGame", []()
 
 	// (TODO: Disc Exchange functions missing)
 
-	cellGame.AddFunc(0xf52639ea, cellGameBootCheck);
-	cellGame.AddFunc(0xce4374f6, cellGamePatchCheck);
-	cellGame.AddFunc(0xdb9819f3, cellGameDataCheck);
-	cellGame.AddFunc(0x70acec67, cellGameContentPermit);
+	REG_FUNC(cellGame, cellGameBootCheck);
+	REG_FUNC(cellGame, cellGamePatchCheck);
+	REG_FUNC(cellGame, cellGameDataCheck);
+	REG_FUNC(cellGame, cellGameContentPermit);
 
-	cellGame.AddFunc(0x42a2e133, cellGameCreateGameData);
-	cellGame.AddFunc(0xb367c6e3, cellGameDeleteGameData);
+	REG_FUNC(cellGame, cellGameCreateGameData);
+	REG_FUNC(cellGame, cellGameDeleteGameData);
 
-	cellGame.AddFunc(0xb7a45caf, cellGameGetParamInt);
+	REG_FUNC(cellGame, cellGameGetParamInt);
 	//cellGame.AddFunc(, cellGameSetParamInt);
-	cellGame.AddFunc(0x3a5d726a, cellGameGetParamString);
-	cellGame.AddFunc(0xdaa5cd20, cellGameSetParamString);
-	cellGame.AddFunc(0xef9d42d5, cellGameGetSizeKB);
-	cellGame.AddFunc(0x2a8e6b92, cellGameGetDiscContentInfoUpdatePath);
-	cellGame.AddFunc(0xa80bf223, cellGameGetLocalWebContentPath);
+	REG_FUNC(cellGame, cellGameGetParamString);
+	REG_FUNC(cellGame, cellGameSetParamString);
+	REG_FUNC(cellGame, cellGameGetSizeKB);
+	REG_FUNC(cellGame, cellGameGetDiscContentInfoUpdatePath);
+	REG_FUNC(cellGame, cellGameGetLocalWebContentPath);
 
-	cellGame.AddFunc(0xb0a1f8c6, cellGameContentErrorDialog);
+	REG_FUNC(cellGame, cellGameContentErrorDialog);
 
-	cellGame.AddFunc(0xd24e3928, cellGameThemeInstall);
-	cellGame.AddFunc(0x87406734, cellGameThemeInstallFromBuffer);
+	REG_FUNC(cellGame, cellGameThemeInstall);
+	REG_FUNC(cellGame, cellGameThemeInstallFromBuffer);
 	//cellGame.AddFunc(, CellGameThemeInstallCallback);
 });

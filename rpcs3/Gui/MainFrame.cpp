@@ -542,13 +542,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
-	// Enable/Disable parameters
-	chbox_audio_dump->Enable(Emu.IsStopped());
-	chbox_audio_conv->Enable(Emu.IsStopped());
-	chbox_hle_logging->Enable(Emu.IsStopped());
-	chbox_rsx_logging->Enable(Emu.IsStopped());
-	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
-
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
