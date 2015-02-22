@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "ModuleManager.h"
 
-extern Module sys_fs;
 extern Module cellAdec;
 extern Module cellAtrac;
 extern Module cellAudio;
@@ -16,19 +15,19 @@ extern Module cellGcmSys;
 extern Module cellGem;
 extern Module cellGifDec;
 extern Module cellJpgDec;
-extern Module sys_io;
 extern Module cellL10n;
 extern Module cellMic;
-extern Module sys_io;
 extern Module cellSysutil;
 extern Module cellNetCtl;
 extern Module cellOvis;
-extern Module sys_io;
 extern Module cellPamf;
 extern Module cellPngDec;
 extern Module cellResc;
 extern Module cellRtc;
+extern Module cellRudp;
 extern Module cellSail;
+extern Module cellScreenshot;
+extern Module cellSearch;
 extern Module cellSysutil;
 extern Module cellSpurs;
 extern Module cellSpursJq;
@@ -38,8 +37,10 @@ extern Module cellSync2;
 extern Module cellSysmodule;
 extern Module cellSysutil;
 extern Module cellSysutilAp;
+extern Module cellUsbd;
 extern Module cellUserInfo;
 extern Module cellVdec;
+extern Module cellVoice;
 extern Module cellVpost;
 extern Module libmixer;
 extern Module sceNp;
@@ -48,6 +49,7 @@ extern Module sceNpCommerce2;
 extern Module sceNpSns;
 extern Module sceNpTrophy;
 extern Module sceNpTus;
+extern Module sys_fs;
 extern Module sys_io;
 extern Module sys_net;
 extern Module sysPrxForUser;
@@ -88,7 +90,7 @@ static const g_module_list[] =
 	{ 0x0019, "cellFont", &cellFont },
 	{ 0x001a, "cellFontFT", &cellFontFT },
 	{ 0x001b, "cellFreetype", nullptr },
-	{ 0x001c, "cellUsbd", nullptr },
+	{ 0x001c, "cellUsbd", &cellUsbd },
 	{ 0x001d, "cellSail", &cellSail },
 	{ 0x001e, "cellL10n", &cellL10n },
 	{ 0x001f, "cellResc", &cellResc },
@@ -126,12 +128,12 @@ static const g_module_list[] =
 	{ 0x0043, "cellFiber", &cellFiber },
 	{ 0x0044, "sceNpCommerce2", &sceNpCommerce2 },
 	{ 0x0045, "sceNpTus", &sceNpTus },
-	{ 0x0046, "cellVoice", nullptr },
+	{ 0x0046, "cellVoice", &cellVoice },
 	{ 0x0047, "cellAdecCelp8", nullptr },
 	{ 0x0048, "cellCelp8Enc", nullptr },
 	{ 0x0049, "cellLicenseArea", nullptr },
 	{ 0x004a, "cellMusic2", nullptr },
-	{ 0x004e, "cellScreenshot", nullptr },
+	{ 0x004e, "cellScreenShotUtility", &cellScreenshot },
 	{ 0x004f, "cellMusicDecode", nullptr },
 	{ 0x0050, "cellSpursJq", &cellSpursJq },
 	{ 0x0052, "cellPngEnc", nullptr },
@@ -154,7 +156,7 @@ static const g_module_list[] =
 	{ 0xf02b, "cellPhotoImport", nullptr },
 	{ 0xf02c, "cellMusicExport", nullptr },
 	{ 0xf02e, "cellPhotoDecode", nullptr },
-	{ 0xf02f, "cellSearch", nullptr },
+	{ 0xf02f, "cellSearch", &cellSearch },
 	{ 0xf030, "cellAvchat2", nullptr },
 	{ 0xf034, "cellSailRec", nullptr },
 	{ 0xf035, "sceNpTrophy", &sceNpTrophy },

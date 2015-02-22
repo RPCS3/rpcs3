@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellRudp_init();
-Module cellRudp(0x0057, cellRudp_init);
+extern Module cellRudp;
 
 // Return Codes
 enum
@@ -48,175 +49,175 @@ enum
 	CELL_RUDP_ERROR_KEEP_ALIVE_FAILURE           = 0x80770026,
 };
 
-int cellRudpInit()
+s32 cellRudpInit()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpEnd()
+s32 cellRudpEnd()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpEnableInternalIOThread()
+s32 cellRudpEnableInternalIOThread()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpSetEventHandler()
+s32 cellRudpSetEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpSetMaxSegmentSize()
+s32 cellRudpSetMaxSegmentSize()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetMaxSegmentSize()
+s32 cellRudpGetMaxSegmentSize()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpCreateContext()
+s32 cellRudpCreateContext()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpSetOption()
+s32 cellRudpSetOption()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetOption()
+s32 cellRudpGetOption()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetContextStatus()
+s32 cellRudpGetContextStatus()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetStatus()
+s32 cellRudpGetStatus()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetLocalInfo()
+s32 cellRudpGetLocalInfo()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetRemoteInfo()
+s32 cellRudpGetRemoteInfo()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpBind()
+s32 cellRudpBind()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpInitiate()
+s32 cellRudpInitiate()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpActivate()
+s32 cellRudpActivate()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpTerminate()
+s32 cellRudpTerminate()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpRead()
+s32 cellRudpRead()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpWrite()
+s32 cellRudpWrite()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetSizeReadable()
+s32 cellRudpGetSizeReadable()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpGetSizeWritable()
+s32 cellRudpGetSizeWritable()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpFlush()
+s32 cellRudpFlush()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpPollCreate()
+s32 cellRudpPollCreate()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpPollDestroy()
+s32 cellRudpPollDestroy()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpPollControl()
+s32 cellRudpPollControl()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpPollWait()
+s32 cellRudpPollWait()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpNetReceived()
+s32 cellRudpNetReceived()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-int cellRudpProcessEvents()
+s32 cellRudpProcessEvents()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
 }
 
-void cellRudp_init()
+Module cellRudp("cellRudp", []()
 {
 	REG_FUNC(cellRudp, cellRudpInit);
 	REG_FUNC(cellRudp, cellRudpEnd);
@@ -249,9 +250,8 @@ void cellRudp_init()
 	REG_FUNC(cellRudp, cellRudpPollDestroy);
 	REG_FUNC(cellRudp, cellRudpPollControl);
 	REG_FUNC(cellRudp, cellRudpPollWait);
-	//cellRudp.AddFunc(, cellRudpPollCancel);
+	//REG_FUNC(cellRudp, cellRudpPollCancel);
 
 	REG_FUNC(cellRudp, cellRudpNetReceived);
 	REG_FUNC(cellRudp, cellRudpProcessEvents);
-}
-#endif
+});

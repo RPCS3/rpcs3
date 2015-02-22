@@ -61,7 +61,8 @@ s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr)
 	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%lld, vptr_addr=0x%x)", thread_id, vptr.addr());
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if(!thr) return CELL_ESRCH;
+	if (!thr) return
+		CELL_ESRCH;
 
 	while (thr->IsAlive())
 	{
@@ -83,9 +84,10 @@ s32 sys_ppu_thread_detach(u64 thread_id)
 	sys_ppu_thread.Todo("sys_ppu_thread_detach(thread_id=%lld)", thread_id);
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if(!thr) return CELL_ESRCH;
+	if (!thr)
+		return CELL_ESRCH;
 
-	if(!thr->IsJoinable())
+	if (!thr->IsJoinable())
 		return CELL_EINVAL;
 	thr->SetJoinable(false);
 
@@ -104,7 +106,8 @@ s32 sys_ppu_thread_set_priority(u64 thread_id, s32 prio)
 	sys_ppu_thread.Log("sys_ppu_thread_set_priority(thread_id=%lld, prio=%d)", thread_id, prio);
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if(!thr) return CELL_ESRCH;
+	if (!thr)
+		return CELL_ESRCH;
 
 	thr->SetPrio(prio);
 
@@ -138,7 +141,8 @@ s32 sys_ppu_thread_stop(u64 thread_id)
 	sys_ppu_thread.Warning("sys_ppu_thread_stop(thread_id=%lld)", thread_id);
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if(!thr) return CELL_ESRCH;
+	if (!thr)
+		return CELL_ESRCH;
 
 	thr->Stop();
 
@@ -150,7 +154,8 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	sys_ppu_thread.Warning("sys_ppu_thread_restart(thread_id=%lld)", thread_id);
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if(!thr) return CELL_ESRCH;
+	if (!thr)
+		return CELL_ESRCH;
 
 	thr->Stop();
 	thr->Run();
@@ -169,8 +174,8 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 		// If not times of smallest allocation unit, round it up to the nearest one.
 		// And regard zero as a same condition.
 		sys_ppu_thread.Warning("sys_ppu_thread_create: stacksize increased from 0x%x to 0x%x.",
-			stacksize, 4096 * ((u32)(stacksize / 4096) + 1));
-		stacksize = 4096 * ((u32)(stacksize / 4096) + 1);
+			stacksize, SYS_PPU_THREAD_STACK_MIN * ((u32)(stacksize / SYS_PPU_THREAD_STACK_MIN) + 1));
+		stacksize = SYS_PPU_THREAD_STACK_MIN * ((u32)(stacksize / SYS_PPU_THREAD_STACK_MIN) + 1);
 	}
 
 	u32 id = new_thread.GetId();
@@ -256,9 +261,8 @@ s32 sys_ppu_thread_rename(u64 thread_id, vm::ptr<const char> name)
 	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x('%s'))", thread_id, name.addr(), name.get_ptr());
 
 	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if (!thr) {
+	if (!thr)
 		return CELL_ESRCH;
-	}
 
 	thr->SetThreadName(name.get_ptr());
 	return CELL_OK;
