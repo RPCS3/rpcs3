@@ -130,12 +130,13 @@ private:
 	std::vector<u32> m_loop_end_offsets;
 
 	// VP members
+	u32 m_sca_opcode;
+	u32 m_vec_opcode;
 	static const size_t m_max_instr_count = 512;
 	size_t m_instr_count;
 	std::vector<u32> m_data;
 
 public:
-
 	std::string GetArbShader() const { return m_arb_shader; }
 	std::string GetGlslShader() const { return m_glsl_shader; }
 
@@ -148,6 +149,27 @@ public:
 	std::string FormatDisAsm(const std::string& code);
 	std::string GetCondDisAsm();
 	template<typename T> std::string GetSrcDisAsm(T src);
+
+	// VP functions
+	std::string GetMaskDisasm(bool is_sca);
+	std::string GetVecMaskDisasm();
+	std::string GetScaMaskDisasm();
+	std::string GetDSTDisasm(bool is_sca = false);
+	std::string GetSRCDisasm(const u32 n);
+	std::string GetTexDisasm();
+	std::string GetCondDisasm();
+	std::string AddAddrMaskDisasm();
+	std::string AddAddrRegDisasm();
+	u32 GetAddrDisasm();
+	std::string FormatDisasm(const std::string& code);
+	void AddScaCodeDisasm(const std::string& code = "");
+	void AddVecCodeDisasm(const std::string& code = "");
+	void AddCodeCondDisasm(const std::string& dst, const std::string& src);
+	void AddCodeDisasm(const std::string& code);
+	void SetDSTDisasm(bool is_sca, std::string value);
+	void SetDSTVecDisasm(const std::string& code);
+	void SetDSTScaDisasm(const std::string& code);
+
 
 	CgBinaryDisasm(const std::string& path)
 		: m_path(path)
@@ -187,6 +209,7 @@ public:
 		case 1064: return "float4x4";
 		case 1066: return "sampler2D";
 		case 1069: return "samplerCUBE";
+		case 1091: return "float1";
 
 		default: return fmt::format("!UnkCgType(%d)", type);
 		}
@@ -356,12 +379,12 @@ public:
 				m_data.push_back(vdata[i]);
 			}
 
-			//TaskVP();
+			TaskVP();
 			GLVertexDecompilerThread(m_data, m_glsl_shader, param_array).Task();
 		}
 	}
 
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
 	void TaskFP();
-	//void TaskVP(); // TODO
+	void TaskVP();
 };

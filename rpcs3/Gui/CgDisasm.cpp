@@ -29,7 +29,11 @@ CgDisasm::CgDisasm(wxWindow* parent)
 
 	SetMenuBar(menubar);
 
+	m_disasm_text->Bind(wxEVT_RIGHT_DOWN, &CgDisasm::OnRightClick, this);
+	m_glsl_text->Bind(wxEVT_RIGHT_DOWN, &CgDisasm::OnRightClick, this);
+
 	Bind(wxEVT_MENU, &CgDisasm::OpenCg, this, id_open_file);
+	Bind(wxEVT_MENU, &CgDisasm::OnContextMenu, this, id_clear);
 }
 
 void CgDisasm::OpenCg(wxCommandEvent& event)
@@ -55,4 +59,24 @@ void CgDisasm::OnSize(wxSizeEvent& event)
 	m_disasm_text->SetSize(GetSize().x - 20, GetSize().y - 85);
 	m_glsl_text->SetSize(GetSize().x - 20, GetSize().y - 85);
 	event.Skip();
+}
+
+void CgDisasm::OnRightClick(wxMouseEvent& event)
+{
+	wxMenu* menu = new wxMenu();
+	menu->Append(id_clear, "&Clear");
+	PopupMenu(menu);
+}
+
+void CgDisasm::OnContextMenu(wxCommandEvent& event)
+{
+	switch (event.GetId())
+	{
+	case id_clear:
+		m_disasm_text->Clear();
+		m_glsl_text->Clear();
+		break;
+	default:
+		event.Skip();
+	}
 }

@@ -1,13 +1,13 @@
 #include "stdafx.h"
 
-#include "Utilities/Log.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Utilities/Log.h"
 #include "CgBinaryProgram.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
+	assert(m_opcode < 70);
 	std::string op_name = "";
 
 	if (dst.dest_reg == 63)
@@ -33,7 +33,10 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 	case RSX_FP_OPCODE_LOOP:
 	case RSX_FP_OPCODE_NOP:
 	case RSX_FP_OPCODE_REP:
-	case RSX_FP_OPCODE_RET: m_dst_reg_name = ""; break;
+	case RSX_FP_OPCODE_RET: 
+		m_dst_reg_name = "";
+		op_name = rsx_fp_op_names[m_opcode] + std::string(dst.fp16 ? "H" : "R");
+		break;
 
 	default: break;
 	}
@@ -212,6 +215,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
 	if (src.neg) ret = "-" + ret;
+	if (src.abs) ret = "|" + ret + "|";
 
 	return ret;
 }
