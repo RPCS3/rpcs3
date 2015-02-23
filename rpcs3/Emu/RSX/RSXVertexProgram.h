@@ -50,7 +50,7 @@ enum vec_opcode
 	RSX_VEC_OPCODE_SNE = 0x14,
 	RSX_VEC_OPCODE_STR = 0x15,
 	RSX_VEC_OPCODE_SSG = 0x16,
-	RSX_VEC_OPCODE_TEX = 0x19
+	RSX_VEC_OPCODE_TXL = 0x19
 };
 
 static union D0
@@ -187,7 +187,7 @@ static const std::string rsx_vp_vec_op_names[] =
 {
 	"NOP", "MOV", "MUL", "ADD", "MAD", "DP3", "DPH", "DP4",
 	"DST", "MIN", "MAX", "SLT", "SGE", "ARL", "FRC", "FLR",
-	"SEQ", "SFL", "SGT", "SLE", "SNE", "STR", "SSG", "TEX"
+	"SEQ", "SFL", "SGT", "SLE", "SNE", "STR", "SSG", "NULL", "NULL", "TXL"
 };
 
 struct RSXVertexProgram

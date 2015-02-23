@@ -4,7 +4,8 @@
 
 enum CgDisasmIds
 {
-	id_open_file
+	id_open_file,
+	id_clear
 };
 
 class CgDisasm : public wxFrame
@@ -19,4 +20,6 @@ public:
 
 	void OpenCg(wxCommandEvent& event);
 	virtual void OnSize(wxSizeEvent& event);
+	void OnRightClick(wxMouseEvent& event);
+	void OnContextMenu(wxCommandEvent& event);
 };

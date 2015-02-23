@@ -38,6 +38,7 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\ec.cpp" />

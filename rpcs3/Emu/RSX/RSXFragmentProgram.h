@@ -68,7 +68,7 @@ enum
 	RSX_FP_OPCODE_IFE        = 0x42, // If
 	RSX_FP_OPCODE_LOOP       = 0x43, // Loop
 	RSX_FP_OPCODE_REP        = 0x44, // Repeat
-	RSX_FP_OPCODE_RET        = 0x45, // Return
+	RSX_FP_OPCODE_RET        = 0x45  // Return
 };
 
 static union OPDEST
