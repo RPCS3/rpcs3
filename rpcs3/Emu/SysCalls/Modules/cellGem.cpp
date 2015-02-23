@@ -382,14 +382,11 @@ int cellGemWriteExternalPort()
 	return CELL_OK;
 }
 
-void cellGem_unload()
-{
-	cellGemInstance.m_bInitialized = false;
-}
-
 Module cellGem("cellGem", []()
 {
-	//cellGem.AddFunc(, cellGemAttributeInit);
+	cellGemInstance.m_bInitialized = false;
+
+	//REG_FUNC(cellGem, cellGemAttributeInit);
 	REG_FUNC(cellGem, cellGemCalibrate);
 	REG_FUNC(cellGem, cellGemClearStatusFlags);
 	REG_FUNC(cellGem, cellGemConvertVideoFinish);
@@ -413,21 +410,21 @@ Module cellGem("cellGem", []()
 	REG_FUNC(cellGem, cellGemGetState);
 	REG_FUNC(cellGem, cellGemGetStatusFlags);
 	REG_FUNC(cellGem, cellGemGetTrackerHue);
-	//cellGem.AddFunc(, cellGemGetVideoConvertSize);
+	//REG_FUNC(cellGem, cellGemGetVideoConvertSize);
 	REG_FUNC(cellGem, cellGemHSVtoRGB);
 	REG_FUNC(cellGem, cellGemInit);
 	REG_FUNC(cellGem, cellGemInvalidateCalibration);
 	REG_FUNC(cellGem, cellGemIsTrackableHue);
 	REG_FUNC(cellGem, cellGemPrepareCamera);
 	REG_FUNC(cellGem, cellGemPrepareVideoConvert);
-	//cellGem.AddFunc(, cellGemReadExternalPortDeviceInfo);
+	//REG_FUNC(cellGem, cellGemReadExternalPortDeviceInfo);
 	REG_FUNC(cellGem, cellGemReset);
 	REG_FUNC(cellGem, cellGemSetRumble);
 	REG_FUNC(cellGem, cellGemSetYaw);
 	REG_FUNC(cellGem, cellGemTrackHues);
 	REG_FUNC(cellGem, cellGemUpdateFinish);
 	REG_FUNC(cellGem, cellGemUpdateStart);
-	//cellGem.AddFunc(, cellGemVideoConvertAttributeInit);
-	//cellGem.AddFunc(, cellGemVideoConvertAttributeInitRgba);
+	//REG_FUNC(cellGem, cellGemVideoConvertAttributeInit);
+	//REG_FUNC(cellGem, cellGemVideoConvertAttributeInitRgba);
 	REG_FUNC(cellGem, cellGemWriteExternalPort);
 });

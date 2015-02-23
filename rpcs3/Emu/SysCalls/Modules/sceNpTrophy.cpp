@@ -448,13 +448,10 @@ int sceNpTrophyGetGameIcon()
 	return CELL_OK;
 }
 
-void sceNpTrophy_unload()
-{
-	sceNpTrophyInstance.m_bInitialized = false;
-}
-
 Module sceNpTrophy("sceNpTrophy", []()
 {
+	sceNpTrophyInstance.m_bInitialized = false;
+
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
 	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
 	REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);

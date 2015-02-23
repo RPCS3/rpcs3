@@ -562,13 +562,10 @@ int cellCameraRemoveNotifyEventQueue2()
 	return CELL_OK;
 }
 
-void cellCamera_unload()
-{
-	cellCameraInstance.m_bInitialized = false;
-}
-
 Module cellCamera("cellCamera", []()
 {
+	cellCameraInstance.m_bInitialized = false;
+
 	REG_FUNC(cellCamera, cellCameraInit);
 	REG_FUNC(cellCamera, cellCameraEnd);
 	REG_FUNC(cellCamera, cellCameraOpen);

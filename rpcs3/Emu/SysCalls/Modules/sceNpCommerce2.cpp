@@ -312,13 +312,10 @@ int sceNpCommerce2DestroyReq()
 	return CELL_OK;
 }
 
-void sceNpCommerce2_unload()
-{
-	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
-}
-
 Module sceNpCommerce2("sceNpCommerce2", []()
 {
+	sceNpCommerce2Instance.m_bSceNpCommerce2Initialized = false;
+
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2ExecuteStoreBrowse);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2GetStoreBrowseUserdata);
 	REG_FUNC(sceNpCommerce2, sceNpCommerce2Init);

@@ -173,13 +173,13 @@ struct CellSearchContentId
 
 struct CellSearchResultParam
 {
-	CellSearchId searchId;
+	be_t<CellSearchId> searchId;
 	be_t<u32> resultNum;
 };
 
 struct CellSearchMusicListInfo
 {
-	CellSearchListType listType;
+	be_t<CellSearchListType> listType;
 	be_t<u32> numOfItems;
 	be_t<s64> duration;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -190,7 +190,7 @@ struct CellSearchMusicListInfo
 
 struct CellSearchPhotoListInfo
 {
-	CellSearchListType listType;
+	be_t<CellSearchListType> listType;
 	be_t<u32> numOfItems;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
@@ -198,7 +198,7 @@ struct CellSearchPhotoListInfo
 
 struct CellSearchVideoListInfo
 {
-	CellSearchListType listType;
+	be_t<CellSearchListType> listType;
 	be_t<u32> numOfItems;
 	be_t<s64> duration;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -218,8 +218,8 @@ struct CellSearchMusicInfo
 	be_t<s32> quantizationBitrate;
 	be_t<s32> playCount;
 	be_t<s32> drmEncrypted;
-	CellSearchCodec codec;
-	CellSearchContentStatus status;
+	be_t<CellSearchCodec> codec;
+	be_t<CellSearchContentStatus> status;
 	char diskNumber[8];
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
@@ -238,9 +238,9 @@ struct CellSearchPhotoInfo
 	be_t<s64> takenDate;
 	be_t<s32> width;
 	be_t<s32> height;
-	CellSearchOrientation orientation;
-	CellSearchCodec codec;
-	CellSearchContentStatus status;
+	be_t<CellSearchOrientation> orientation;
+	be_t<CellSearchCodec> codec;
+	be_t<CellSearchContentStatus> status;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char albumTitle[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -257,9 +257,9 @@ struct CellSearchVideoInfo
 	be_t<s32> audioBitrate;
 	be_t<s32> playCount;
 	be_t<s32> drmEncrypted;
-	CellSearchCodec videoCodec;
-	CellSearchCodec audioCodec;
-	CellSearchContentStatus status;
+	be_t<CellSearchCodec> videoCodec;
+	be_t<CellSearchCodec> audioCodec;
+	be_t<CellSearchContentStatus> status;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char albumTitle[CELL_SEARCH_TITLE_LEN_MAX + 1];
@@ -268,10 +268,10 @@ struct CellSearchVideoInfo
 
 struct CellSearchVideoSceneInfo
 {
-	CellSearchSceneType sceneType;
+	be_t<CellSearchSceneType> sceneType;
 	be_t<s64> startTime_ms;
 	be_t<s64> endTime_ms;
-	CellSearchContentId videoId;
+	be_t<CellSearchContentId> videoId;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char tags[CELL_SEARCH_TAG_NUM_MAX][CELL_SEARCH_TAG_LEN_MAX];

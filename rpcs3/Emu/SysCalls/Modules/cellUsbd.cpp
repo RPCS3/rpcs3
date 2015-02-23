@@ -176,6 +176,8 @@ s32 cellUsbdFreeMemory()
 
 Module cellUsbd("cellUsbd", []()
 {
+	cellUsbdInstance.m_bInitialized = false;
+
 	REG_FUNC(cellUsbd, cellUsbdInit);
 	REG_FUNC(cellUsbd, cellUsbdEnd);
 

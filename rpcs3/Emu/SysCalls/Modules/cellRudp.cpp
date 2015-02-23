@@ -200,6 +200,8 @@ s32 cellRudpProcessEvents()
 
 Module cellRudp("cellRudp", []()
 {
+	cellRudpInstance.m_bInitialized = false;
+
 	REG_FUNC(cellRudp, cellRudpInit);
 	REG_FUNC(cellRudp, cellRudpEnd);
 	REG_FUNC(cellRudp, cellRudpEnableInternalIOThread);

@@ -1634,17 +1634,14 @@ int	_sceNpSysutilClientFree()
 	return CELL_OK;
 }
 
-void sceNp_unload()
+Module sceNp("sceNp", []()
 {
 	sceNpInstance.m_bSceNpInitialized = false;
 	sceNpInstance.m_bSceNp2Initialized = false;
 	sceNpInstance.m_bScoreInitialized = false;
 	sceNpInstance.m_bLookupInitialized = false;
 	sceNpInstance.m_bSceNpUtilBandwidthTestInitialized = false;
-}
 
-Module sceNp("sceNp", []()
-{
 	REG_FUNC(sceNp, sceNpInit);
 	REG_FUNC(sceNp, sceNp2Init);
 	REG_FUNC(sceNp, sceNpUtilBandwidthTestInitStart);

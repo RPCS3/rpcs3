@@ -158,6 +158,8 @@ s32 cellSearchEnd()
 
 Module cellSearch("cellSearch", []()
 {
+	cellSearchInstance.m_bInitialized = false;
+
 	REG_FUNC(cellSearch, cellSearchInitialize);
 	REG_FUNC(cellSearch, cellSearchFinalize);
 	REG_FUNC(cellSearch, cellSearchStartListSearch);

@@ -427,13 +427,10 @@ int sceNpClansRemoveChallenge()
 	return CELL_OK;
 }
 
-void sceNpClans_unload()
-{
-	sceNpClansInstance.m_bSceNpClansInitialized = false;
-}
-
 Module sceNpClans("sceNpClans", []()
 {
+	sceNpClansInstance.m_bSceNpClansInitialized = false;
+
 	REG_FUNC(sceNpClans, sceNpClansInit);
 	REG_FUNC(sceNpClans, sceNpClansTerm);
 	REG_FUNC(sceNpClans, sceNpClansCreateRequest);
