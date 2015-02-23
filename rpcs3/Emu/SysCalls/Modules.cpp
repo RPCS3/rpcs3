@@ -17,22 +17,7 @@ u32 add_ppu_func(ModuleFunc func)
 {
 	for (auto& f : g_ppu_func_list)
 	{
-		if (f.id == func.id)
-		{
-			// partial update
-
-			if (func.func)
-			{
-				f.func = func.func;
-			}
-
-			if (func.lle_func)
-			{
-				f.lle_func = func.lle_func;
-			}
-
-			return (u32)(&f - g_ppu_func_list.data());
-		}
+		assert(f.id != func.id);
 	}
 
 	g_ppu_func_list.push_back(func);
@@ -48,7 +33,7 @@ u32 add_ppu_func_sub(StaticFunc func)
 u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
 {
 	StaticFunc sf;
-	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), module, func));
+	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), MFF_DONT_SAVE_RTOC, module, func));
 	sf.name = name;
 	sf.group = *(u64*)group;
 	sf.found = 0;
@@ -98,14 +83,18 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 {
 	if (auto func = get_ppu_func_by_index(index))
 	{
-		// save RTOC
-		vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+		if ((!func->lle_func || CPU.PC != vm::read32(func->lle_func.addr())) && !(func->flags & MFF_DONT_SAVE_RTOC))
+		{
+			// save RTOC if necessary
+			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
+		}
 
 		auto old_last_syscall = CPU.m_last_syscall;
 		CPU.m_last_syscall = func->id;
 
-		if (func->lle_func)
+		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
+			// call LLE function if possible
 			func->lle_func(CPU);
 		}
 		else if (func->func)

@@ -38,7 +38,7 @@ typedef void(*psv_func_caller)(ARMv7Context&);
 // Utilities for binding ARMv7Context to C++ function arguments received by HLE functions or sent to callbacks
 namespace psv_func_detail
 {
-	enum bind_arg_type
+	enum arg_class
 	{
 		ARG_GENERAL,
 		ARG_FLOAT,
@@ -48,7 +48,7 @@ namespace psv_func_detail
 
 	static const auto FIXED_STACK_FRAME_SIZE = 0x100; // described in CB_FUNC.h
 
-	template<typename T, bind_arg_type type, int g_count, int f_count, int v_count>
+	template<typename T, arg_class type, int g_count, int f_count, int v_count>
 	struct bind_arg;
 
 	template<typename T, int g_count, int f_count, int v_count>
@@ -191,7 +191,7 @@ namespace psv_func_detail
 		}
 	};
 
-	template<typename T, bind_arg_type type>
+	template<typename T, arg_class type>
 	struct bind_result
 	{
 		static_assert(type != ARG_FLOAT, "TODO: Unsupported funcion result type (float)");
@@ -265,7 +265,7 @@ namespace psv_func_detail
 		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 		static const bool is_float = std::is_floating_point<RT>::value;
 		static const bool is_vector = std::is_same<RT, u128>::value;
-		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
 	template<typename T, int g_count, int f_count, int v_count>
@@ -281,7 +281,7 @@ namespace psv_func_detail
 		static const int g_next = g_pos + g_align - 1;
 		static const int f_value = !is_float ? f_count : f_count + 1;
 		static const int v_value = !is_vector ? v_count : v_count + 1;
-		static const bind_arg_type value = is_float
+		static const arg_class value = is_float
 			? ((f_value > 9000) ? ARG_STACK : ARG_FLOAT)
 			: (is_vector ? ((v_value > 9000) ? ARG_STACK : ARG_VECTOR) : ((g_pos > 4) ? ARG_STACK : ARG_GENERAL));
 	};
@@ -322,7 +322,7 @@ namespace psv_func_detail
 	__forceinline std::tuple<T, A...> get_func_args(ARMv7Context& context)
 	{
 		typedef arg_type<T, g_count, f_count, v_count> type;
-		const bind_arg_type t = type::value;
+		const arg_class t = type::value;
 		const int g0 = type::g_pos;
 		const int g1 = type::g_next;
 		const int f = type::f_value;
@@ -342,7 +342,7 @@ namespace psv_func_detail
 	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
 	{
 		typedef arg_type<T1, g_count, f_count, v_count> type;
-		const bind_arg_type t = type::value;
+		const arg_class t = type::value;
 		const int g0 = type::g_pos;
 		const int g1 = type::g_next;
 		const int f = type::f_value;
@@ -435,9 +435,23 @@ namespace psv_func_detail
 struct psv_func
 {
 	u32 nid; // Unique function ID (should be generated individually for each elf loaded)
+	u32 flags;
 	const char* name; // Function name for information
 	psv_func_caller func; // Function caller
 	psv_log_base* module; // Module for information
+
+	psv_func()
+	{
+	}
+
+	psv_func(u32 nid, u32 flags, psv_log_base* module, const char* name, psv_func_caller func)
+		: nid(nid)
+		, flags(flags)
+		, name(name)
+		, func(func)
+		, module(module)
+	{
+	}
 };
 
 enum psv_special_function_index : u16
@@ -450,23 +464,12 @@ enum psv_special_function_index : u16
 // Do not call directly
 u32 add_psv_func(psv_func data);
 // Do not call directly
-__forceinline static u32 add_psv_func(u32 nid, psv_log_base* module, const char* name, psv_func_caller func)
-{
-	psv_func f;
-	f.nid = nid;
-	f.name = name;
-	f.func = func;
-	f.module = module;
-
-	return add_psv_func(f);
-}
-// Do not call directly
 template<typename RT, typename... T> __forceinline void call_psv_func(ARMv7Context& context, RT(*func)(T...))
 {
 	psv_func_detail::func_binder<RT, T...>::do_call(context, func);
 }
 
-#define reg_psv_func(nid, module, name, func) add_psv_func(nid, module, name, [](ARMv7Context& context){ call_psv_func(context, func); })
+#define reg_psv_func(nid, module, name, func) add_psv_func(psv_func(nid, 0, module, name, [](ARMv7Context& context){ call_psv_func(context, func); }))
 
 // Find registered HLE function by NID
 psv_func* get_psv_func_by_nid(u32 nid, u32* out_index = nullptr);

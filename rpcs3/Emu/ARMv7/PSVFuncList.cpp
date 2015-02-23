@@ -9,22 +9,7 @@ u32 add_psv_func(psv_func data)
 {
 	for (auto& f : g_psv_func_list)
 	{
-		if (f.nid == data.nid)
-		{
-			const u32 index = (u32)(&f - g_psv_func_list.data());
-
-			if (index < SFI_MAX)
-			{
-				continue;
-			}
-
-			if (data.func)
-			{
-				f.func = data.func;
-			}
-		
-			return index;
-		}
+		assert(f.nid != data.nid || (&f - g_psv_func_list.data()) < SFI_MAX);
 	}
 
 	g_psv_func_list.push_back(data);

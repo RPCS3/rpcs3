@@ -398,7 +398,36 @@ namespace loader
 
 							for (auto& f : m.second.exports)
 							{
-								add_ppu_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
+								const u32 nid = f.first;
+								const u32 addr = f.second;
+
+								u32 index;
+
+								auto func = get_ppu_func_by_nid(nid, &index);
+
+								if (!func)
+								{
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, vm::ptr<void()>::make(addr)));
+								}
+								else
+								{
+									func->lle_func.set(addr);
+
+									if (func->flags & MFF_FORCED_HLE)
+									{
+										u32 i_addr = 0;
+
+										if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 8))
+										{
+											LOG_ERROR(LOADER, "Failed to inject code for function '%s' (opd=0x%x, 0x%x)", SysCalls::GetHLEFuncName(nid), addr, i_addr);
+										}
+										else
+										{
+											vm::write32(i_addr + 0, HACK(index));
+											vm::write32(i_addr + 4, BLR());
+										}
+									}
+								}
 							}
 
 							for (auto& f : m.second.imports)
@@ -414,7 +443,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 
-									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr));
 								}
 								else
 								{
@@ -635,7 +664,7 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetHLEFuncName(nid), module_name, addr);
 
-									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr));
 								}
 								else
 								{
