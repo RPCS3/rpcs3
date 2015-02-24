@@ -111,7 +111,7 @@ namespace ppu_func_detail
 	{
 		static __forceinline T get_arg(PPUThread& CPU)
 		{
-			return bind_arg<T, type_pack, type_pack >> 8, type_pack >> 16, type_pack >> 24>::get_arg(CPU);
+			return bind_arg<T, type_pack, (type_pack >> 8), (type_pack >> 16), (type_pack >> 24)>::get_arg(CPU);
 		}
 	};
 
