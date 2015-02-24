@@ -33,7 +33,7 @@ u32 add_ppu_func_sub(StaticFunc func)
 u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
 {
 	StaticFunc sf;
-	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), MFF_DONT_SAVE_RTOC, module, func));
+	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, func));
 	sf.name = name;
 	sf.group = *(u64*)group;
 	sf.found = 0;
@@ -71,6 +71,8 @@ ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index)
 
 ModuleFunc* get_ppu_func_by_index(u32 index)
 {
+	index &= ~EIF_FLAGS;
+
 	if (index >= g_ppu_func_list.size())
 	{
 		return nullptr;
@@ -83,18 +85,18 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 {
 	if (auto func = get_ppu_func_by_index(index))
 	{
-		if ((!func->lle_func || CPU.PC != vm::read32(func->lle_func.addr())) && !(func->flags & MFF_DONT_SAVE_RTOC))
+		auto old_last_syscall = CPU.m_last_syscall;
+		CPU.m_last_syscall = func->id;
+
+		if (!(index & EIF_DONT_SAVE_RTOC))
 		{
 			// save RTOC if necessary
 			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
 		}
 
-		auto old_last_syscall = CPU.m_last_syscall;
-		CPU.m_last_syscall = func->id;
-
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
-			// call LLE function if possible
+			// call LLE function if available
 			func->lle_func(CPU);
 		}
 		else if (func->func)
@@ -103,7 +105,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Unimplemented function %s", SysCalls::GetHLEFuncName(func->id));
+			LOG_ERROR(HLE, "Unimplemented function: %s", SysCalls::GetHLEFuncName(func->id));
 			CPU.GPR[3] = 0;
 		}
 
@@ -217,7 +219,7 @@ void hook_ppu_funcs(u32* base, u32 size)
 				{
 					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", g_ppu_func_subs[j].name, vm::get_addr(base + i * 4));
 					g_ppu_func_subs[j].found++;
-					base[i + 0] = re32(0x04000000 | g_ppu_func_subs[j].index); // hack
+					base[i + 0] = re32(0x04000000 | g_ppu_func_subs[j].index | EIF_DONT_SAVE_RTOC); // hack
 					base[i + 1] = se32(0x4e800020); // blr
 					i += 1; // skip modified code
 				}

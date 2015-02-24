@@ -423,7 +423,7 @@ namespace loader
 										}
 										else
 										{
-											vm::write32(i_addr + 0, HACK(index));
+											vm::write32(i_addr + 0, HACK(index | EIF_DONT_SAVE_RTOC));
 											vm::write32(i_addr + 4, BLR());
 										}
 									}

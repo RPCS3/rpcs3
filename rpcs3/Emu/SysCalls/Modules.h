@@ -6,10 +6,18 @@
 
 class Module;
 
+// flags set in ModuleFunc
 enum : u32
 {
-	MFF_DONT_SAVE_RTOC = (1 << 0), // don't save RTOC before calling
-	MFF_FORCED_HLE     = (1 << 1), // always call HLE function
+	MFF_FORCED_HLE = (1 << 0), // always call HLE function
+};
+
+// flags passed with index
+enum : u32
+{
+	EIF_DONT_SAVE_RTOC = (1 << 25), // don't save RTOC before calling
+
+	EIF_FLAGS = 0x2000000, // all flags
 };
 
 struct ModuleFunc
