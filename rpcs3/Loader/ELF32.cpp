@@ -249,7 +249,7 @@ namespace loader
 								index = add_psv_func(psv_func(nid, 0, nullptr, "UNKNOWN", nullptr));
 							}
 
-							vm::psv::write32(addr + 0, 0xe0700090 | (index & 0xfff0) << 4 | (index & 0xf)); // HACK instruction (ARM)
+							vm::psv::write32(addr, 0xe0700090 | (index & 0xfff0) << 4 | (index & 0xf)); // HACK instruction (ARM)
 
 							code_end = std::min<u32>(addr, code_end);
 						}

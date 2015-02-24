@@ -15,9 +15,10 @@ enum : u32
 // flags passed with index
 enum : u32
 {
-	EIF_DONT_SAVE_RTOC = (1 << 25), // don't save RTOC before calling
+	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
+	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
 
-	EIF_FLAGS = 0x2000000, // all flags
+	EIF_FLAGS = 0x3000000, // all flags
 };
 
 struct ModuleFunc

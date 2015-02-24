@@ -417,14 +417,13 @@ namespace loader
 									{
 										u32 i_addr = 0;
 
-										if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 8))
+										if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 4))
 										{
-											LOG_ERROR(LOADER, "Failed to inject code for function '%s' (opd=0x%x, 0x%x)", SysCalls::GetHLEFuncName(nid), addr, i_addr);
+											LOG_ERROR(LOADER, "Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", SysCalls::GetHLEFuncName(nid), addr, i_addr);
 										}
 										else
 										{
-											vm::write32(i_addr + 0, HACK(index | EIF_DONT_SAVE_RTOC));
-											vm::write32(i_addr + 4, BLR());
+											vm::write32(i_addr, HACK(index | EIF_PERFORM_BLR));
 										}
 									}
 								}
@@ -450,14 +449,13 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 
-								if (!vm::check_addr(addr, 8))
+								if (!vm::check_addr(addr, 4))
 								{
 									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 								else
 								{
-									vm::write32(addr + 0, HACK(index));
-									vm::write32(addr + 4, BLR());
+									vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 								}
 							}
 						}
@@ -671,8 +669,7 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", func->lle_func ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
 
-								vm::write32(addr + 0, HACK(index));
-								vm::write32(addr + 4, BLR());
+								vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 
 								//if (!func || !func->lle_func)
 								//{

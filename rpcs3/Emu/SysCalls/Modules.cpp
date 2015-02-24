@@ -88,7 +88,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		auto old_last_syscall = CPU.m_last_syscall;
 		CPU.m_last_syscall = func->id;
 
-		if (!(index & EIF_DONT_SAVE_RTOC))
+		if (index & EIF_SAVE_RTOC)
 		{
 			// save RTOC if necessary
 			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
@@ -107,6 +107,12 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		{
 			LOG_ERROR(HLE, "Unimplemented function: %s", SysCalls::GetHLEFuncName(func->id));
 			CPU.GPR[3] = 0;
+		}
+
+		if (index & EIF_PERFORM_BLR)
+		{
+			// return if necessary
+			CPU.SetBranch(vm::cast(CPU.LR & ~3), true);
 		}
 
 		CPU.m_last_syscall = old_last_syscall;
@@ -219,9 +225,7 @@ void hook_ppu_funcs(u32* base, u32 size)
 				{
 					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", g_ppu_func_subs[j].name, vm::get_addr(base + i * 4));
 					g_ppu_func_subs[j].found++;
-					base[i + 0] = re32(0x04000000 | g_ppu_func_subs[j].index | EIF_DONT_SAVE_RTOC); // hack
-					base[i + 1] = se32(0x4e800020); // blr
-					i += 1; // skip modified code
+					base[i] = re32(0x04000000 | g_ppu_func_subs[j].index | EIF_PERFORM_BLR); // hack
 				}
 			}
 		}
