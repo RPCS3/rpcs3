@@ -2,20 +2,43 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
-
 #include "cellUsbd.h"
 
 extern Module cellUsbd;
 
+struct cellUsbdInternal
+{
+	bool m_bInitialized;
+
+	cellUsbdInternal()
+		: m_bInitialized(false)
+	{
+	}
+};
+
+cellUsbdInternal cellUsbdInstance;
+
 s32 cellUsbdInit()
 {
-	UNIMPLEMENTED_FUNC(cellUsbd);
+	cellUsbd.Log("cellUsbdInit()");
+
+	if (cellUsbdInstance.m_bInitialized)
+		return CELL_USBD_ERROR_ALREADY_INITIALIZED;
+
+	cellUsbdInstance.m_bInitialized = true;
+
 	return CELL_OK;
 }
 
 s32 cellUsbdEnd()
 {
-	UNIMPLEMENTED_FUNC(cellUsbd);
+	cellUsbd.Log("cellUsbdEnd()");
+
+	if (!cellUsbdInstance.m_bInitialized)
+		return CELL_USBD_ERROR_NOT_INITIALIZED;
+
+	cellUsbdInstance.m_bInitialized = false;
+
 	return CELL_OK;
 }
 
@@ -153,6 +176,8 @@ s32 cellUsbdFreeMemory()
 
 Module cellUsbd("cellUsbd", []()
 {
+	cellUsbdInstance.m_bInitialized = false;
+
 	REG_FUNC(cellUsbd, cellUsbdInit);
 	REG_FUNC(cellUsbd, cellUsbdEnd);
 

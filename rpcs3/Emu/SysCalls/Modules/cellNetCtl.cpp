@@ -118,13 +118,10 @@ int cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 	return CELL_OK;
 }
 
-void cellNetCtl_unload()
-{
-	cellNetCtlInstance.m_bInitialized = false;
-}
-
 Module cellNetCtl("cellNetCtl", []()
 {
+	cellNetCtlInstance.m_bInitialized = false;
+
 	REG_FUNC(cellNetCtl, cellNetCtlInit);
 	REG_FUNC(cellNetCtl, cellNetCtlTerm);
 

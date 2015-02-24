@@ -563,13 +563,10 @@ int sceNpTusDeleteMultiSlotDataVUserAsync()
 	return CELL_OK;
 }
 
-void sceNpTus_unload()
-{
-	sceNpTusInstance.m_bSceNpTusInitialized = false;
-}
-
 Module sceNpTus("sceNpTus", []()
 {
+	sceNpTusInstance.m_bSceNpTusInitialized = false;
+
 	REG_FUNC(sceNpTus, sceNpTusInit);
 	REG_FUNC(sceNpTus, sceNpTusTerm);
 	REG_FUNC(sceNpTus, sceNpTusCreateTitleCtx);

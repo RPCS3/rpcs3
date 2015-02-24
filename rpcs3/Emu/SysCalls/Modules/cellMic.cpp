@@ -17,16 +17,16 @@ struct cellMicInternal
 	}
 };
 
-cellMicInternal CellMicInstance;
+cellMicInternal cellMicInstance;
 
 int cellMicInit()
 {
 	cellMic.Warning("cellMicInit()");
 
-	if (CellMicInstance.m_bCellMicInitialized)
+	if (cellMicInstance.m_bCellMicInitialized)
 		return CELL_MICIN_ERROR_ALREADY_INIT;
 
-	CellMicInstance.m_bCellMicInitialized = true;
+	cellMicInstance.m_bCellMicInitialized = true;
 
 	return CELL_OK;
 }
@@ -35,10 +35,10 @@ int cellMicEnd()
 {
 	cellMic.Warning("cellMicEnd()");
 
-	if (!CellMicInstance.m_bCellMicInitialized)
+	if (!cellMicInstance.m_bCellMicInitialized)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	CellMicInstance.m_bCellMicInitialized = false;
+	cellMicInstance.m_bCellMicInitialized = false;
 
 	return CELL_OK;
 }
@@ -283,13 +283,10 @@ int cellMicGetDeviceIdentifier()
 	return CELL_OK;
 }
 
-void cellMic_unload()
-{
-	CellMicInstance.m_bCellMicInitialized = false;
-}
-
 Module cellMic("cellMic", []()
 {
+	cellMicInstance.m_bCellMicInitialized = false;
+
 	REG_FUNC(cellMic, cellMicInit);
 	REG_FUNC(cellMic, cellMicEnd);
 	REG_FUNC(cellMic, cellMicOpen);

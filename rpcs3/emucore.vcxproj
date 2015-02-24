@@ -488,8 +488,10 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellPngDec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellResc.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellRtc.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellRudp.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSail.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellScreenshot.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellSearch.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpurs.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSpursJq.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellSubdisplay.h" />

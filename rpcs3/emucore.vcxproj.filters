@@ -1534,5 +1534,11 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellScreenshot.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellRudp.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSearch.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
