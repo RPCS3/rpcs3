@@ -91,10 +91,6 @@ public:
 	}
 
 private:
-	void SysCall()
-	{
-	}
-
 	//0 - 10
 	void STOP(u32 code)
 	{
@@ -1096,7 +1092,7 @@ private:
 				}
 				else if (result == 0.0f)
 				{
-					if (a != 0.0f & b != 0.0f)
+					if (a != 0.0f && b != 0.0f)
 						CPU.FPSCR.setSinglePrecisionExceptionFlags(w, FPSCR_SUNF | FPSCR_SDIFF);
 					result = +0.0f;
 				}

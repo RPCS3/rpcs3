@@ -106,11 +106,16 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		}
 		else if (func->func)
 		{
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(HLE, "HLE function called: %s", SysCalls::GetHLEFuncName(func->id));
+			}
+
 			func->func(CPU);
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Unimplemented function: %s", SysCalls::GetHLEFuncName(func->id));
+			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", SysCalls::GetHLEFuncName(func->id));
 			CPU.GPR[3] = 0;
 		}
 
