@@ -274,7 +274,25 @@ namespace loader
 						}
 					}
 
+					assert(e.second != stub);
 					e.second = stub;
+				}
+
+				for (auto &i : m.second.imports)
+				{
+					u32 stub = i.second;
+
+					for (auto &s : info.segments)
+					{
+						if (stub >= s.initial_addr.addr() && stub < s.initial_addr.addr() + s.size_file)
+						{
+							stub += s.begin.addr() - s.initial_addr.addr();
+							break;
+						}
+					}
+
+					assert(i.second != stub);
+					i.second = stub;
 				}
 			}
 
@@ -432,7 +450,7 @@ namespace loader
 							for (auto& f : m.second.imports)
 							{
 								const u32 nid = f.first;
-								const u32 addr = f.second + info.segments[0].begin.addr();
+								const u32 addr = f.second;
 
 								u32 index;
 
