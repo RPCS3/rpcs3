@@ -921,23 +921,37 @@ void null_func(PPUThread& CPU)
 		return;
 	}
 
-	LOG_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
+	LOG_ERROR(HLE, "Unknown syscall: %d - %08x -> CELL_OK", code, code);
 	CPU.GPR[3] = 0;
 	return;
 }
 
-void SysCalls::DoSyscall(PPUThread& CPU, u32 code)
+void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
+	auto old_last_syscall = CPU.m_last_syscall;
+	CPU.m_last_syscall = code;
+
+	if (code >= 1024)
+	{
+		throw "Invalid syscall number";
+	}
+
 	//Auto Pause using simple singleton.
 	Debug::AutoPause::getInstance().TryPause(code);
 
-	if(code < 1024)
+	if (Ini.HLELogging.GetValue())
 	{
-		sc_table[code](CPU);
-		return;
+		LOG_NOTICE(PPU, "SysCall called: %s [0x%llx]", "unknown", code);
 	}
 
-	throw "Invalid syscall number";
+	sc_table[code](CPU);
+
+	if (Ini.HLELogging.GetValue())
+	{
+		LOG_NOTICE(PPU, "SysCall finished: %s [0x%llx] -> 0x%llx", "unknown", code, CPU.GPR[3]);
+	}
+
+	CPU.m_last_syscall = old_last_syscall;
 }
 
 IdManager& SysCallBase::GetIdManager() const

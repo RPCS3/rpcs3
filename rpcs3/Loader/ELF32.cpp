@@ -245,16 +245,11 @@ namespace loader
 							{
 								LOG_ERROR(LOADER, "Unknown function 0x%08x (addr=0x%x)", nid, addr);
 
-								psv_func unimplemented;
-								unimplemented.nid = nid;
-								unimplemented.module = nullptr;
-								unimplemented.name = "UNKNOWN"; // TODO: set correct name if possible
-								unimplemented.func = nullptr;
-
-								index = add_psv_func(unimplemented);
+								// TODO: set correct name if possible
+								index = add_psv_func(psv_func(nid, 0, nullptr, "UNKNOWN", nullptr));
 							}
 
-							vm::psv::write32(addr + 0, 0xe0700090 | (index & 0xfff0) << 4 | (index & 0xf)); // HACK instruction (ARM)
+							vm::psv::write32(addr, 0xe0700090 | (index & 0xfff0) << 4 | (index & 0xf)); // HACK instruction (ARM)
 
 							code_end = std::min<u32>(addr, code_end);
 						}

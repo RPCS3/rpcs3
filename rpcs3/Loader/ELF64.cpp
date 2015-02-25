@@ -274,7 +274,25 @@ namespace loader
 						}
 					}
 
+					assert(e.second != stub);
 					e.second = stub;
+				}
+
+				for (auto &i : m.second.imports)
+				{
+					u32 stub = i.second;
+
+					for (auto &s : info.segments)
+					{
+						if (stub >= s.initial_addr.addr() && stub < s.initial_addr.addr() + s.size_file)
+						{
+							stub += s.begin.addr() - s.initial_addr.addr();
+							break;
+						}
+					}
+
+					assert(i.second != stub);
+					i.second = stub;
 				}
 			}
 
@@ -398,13 +416,41 @@ namespace loader
 
 							for (auto& f : m.second.exports)
 							{
-								add_ppu_func(ModuleFunc(f.first, module, nullptr, vm::ptr<void()>::make(f.second)));
+								const u32 nid = f.first;
+								const u32 addr = f.second;
+
+								u32 index;
+
+								auto func = get_ppu_func_by_nid(nid, &index);
+
+								if (!func)
+								{
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr, vm::ptr<void()>::make(addr)));
+								}
+								else
+								{
+									func->lle_func.set(addr);
+
+									if (func->flags & MFF_FORCED_HLE)
+									{
+										u32 i_addr = 0;
+
+										if (!vm::check_addr(addr, 8) || !vm::check_addr(i_addr = vm::read32(addr), 4))
+										{
+											LOG_ERROR(LOADER, "Failed to inject code for exported function '%s' (opd=0x%x, 0x%x)", SysCalls::GetHLEFuncName(nid), addr, i_addr);
+										}
+										else
+										{
+											vm::write32(i_addr, HACK(index | EIF_PERFORM_BLR));
+										}
+									}
+								}
 							}
 
 							for (auto& f : m.second.imports)
 							{
 								const u32 nid = f.first;
-								const u32 addr = f.second + info.segments[0].begin.addr();
+								const u32 addr = f.second;
 
 								u32 index;
 
@@ -414,21 +460,20 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 
-									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr));
 								}
 								else
 								{
 									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 
-								if (!vm::check_addr(addr, 8))
+								if (!vm::check_addr(addr, 4))
 								{
 									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 								else
 								{
-									vm::write32(addr + 0, HACK(index));
-									vm::write32(addr + 4, BLR());
+									vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 								}
 							}
 						}
@@ -635,15 +680,16 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Unimplemented function '%s' in '%s' module (0x%x)", SysCalls::GetHLEFuncName(nid), module_name, addr);
 
-									index = add_ppu_func(ModuleFunc(nid, module, nullptr));
+									index = add_ppu_func(ModuleFunc(nid, 0, module, nullptr));
 								}
 								else
 								{
-									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", func->lle_func ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
+									const bool is_lle = func->lle_func && !(func->flags & MFF_FORCED_HLE);
+
+									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
 
-								vm::write32(addr + 0, HACK(index));
-								vm::write32(addr + 4, BLR());
+								vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 
 								//if (!func || !func->lle_func)
 								//{

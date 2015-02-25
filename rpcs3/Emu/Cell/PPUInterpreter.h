@@ -18,10 +18,6 @@
 
 #include <fenv.h>
 
-#if 0//def _DEBUG
-#define HLE_CALL_DEBUG
-#endif
-
 extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
 inline void InitRotateMask()
 {
@@ -105,28 +101,6 @@ private:
 		CPU.SetFPSCR_FI(fetestexcept(FE_INEXACT) != 0);
 		if (fetestexcept(FE_UNDERFLOW)) CPU.SetFPSCRException(FPSCR_UX);
 		if (fetestexcept(FE_OVERFLOW)) CPU.SetFPSCRException(FPSCR_OX);
-	}
-
-	void Exit() {}
-
-	void SysCall()
-	{
-		const u64 sc = CPU.GPR[11];
-		const u64 old_sc = CPU.m_last_syscall;
-
-		CPU.m_last_syscall = sc;
-		SysCalls::DoSyscall(CPU, (u32)sc);
-
-		if(Ini.HLELogging.GetValue())
-		{
-			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%x",
-				sc, SysCalls::GetHLEFuncName((u32)sc).c_str(), CPU.GPR[3], CPU.PC);
-		}
-#ifdef HLE_CALL_DEBUG
-		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%x", sc, CPU.GPR[3], CPU.PC);
-#endif
-
-		CPU.m_last_syscall = old_sc;
 	}
 
 	void NULL_OP()
@@ -2260,7 +2234,7 @@ private:
 	{
 		switch (lev)
 		{
-		case 0x0: SysCall(); break;
+		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
 		case 0x1: throw "SC(): HyperCall LV1";
 		case 0x3: CPU.FastStop(); break;
 		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);

@@ -504,7 +504,7 @@ s32 sys_net_free_thread_context()
 }
 
 // define additional macro for specific namespace
-#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), &sys_net, bind_func(sys_net_func::name)))
+#define REG_FUNC_(name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &sys_net, bind_func(sys_net_func::name)))
 
 Module sys_net("sys_net", []()
 {

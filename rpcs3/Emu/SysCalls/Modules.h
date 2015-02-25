@@ -6,15 +6,36 @@
 
 class Module;
 
+// flags set in ModuleFunc
+enum : u32
+{
+	MFF_FORCED_HLE = (1 << 0), // always call HLE function
+};
+
+// flags passed with index
+enum : u32
+{
+	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
+	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
+
+	EIF_FLAGS = 0x3000000, // all flags
+};
+
 struct ModuleFunc
 {
 	u32 id;
+	u32 flags;
 	Module* module;
 	ppu_func_caller func;
 	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, Module* module, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc()
+	{
+	}
+
+	ModuleFunc(u32 id, u32 flags, Module* module, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
+		, flags(flags)
 		, module(module)
 		, func(func)
 		, lle_func(lle_func)
@@ -121,9 +142,10 @@ u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Mod
 
 void hook_ppu_funcs(u32* base, u32 size);
 
-#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), &module, bind_func(name)))
+#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, bind_func(name)))
+#define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, bind_func(name)))
 
-#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, &module, bind_func(_nid_##nid)))
+#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, bind_func(_nid_##nid)))
 
 #define REG_SUB(module, group, name, ...) \
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \

@@ -163,7 +163,6 @@ static const g_module_list[] =
 	{ 0xf053, "cellAdecAt3multi", nullptr },
 	{ 0xf054, "cellLibatrac3multi", nullptr },
 
-	{ -1, "cellSync", &cellSync },
 	{ -1, "cellSysmodule", &cellSysmodule },
 	{ -1, "libmixer", &libmixer },
 	{ -1, "sysPrxForUser", &sysPrxForUser },
