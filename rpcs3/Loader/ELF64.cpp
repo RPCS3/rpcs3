@@ -684,7 +684,9 @@ namespace loader
 								}
 								else
 								{
-									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", func->lle_func ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
+									const bool is_lle = func->lle_func && !(func->flags & MFF_FORCED_HLE);
+
+									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
 
 								vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
