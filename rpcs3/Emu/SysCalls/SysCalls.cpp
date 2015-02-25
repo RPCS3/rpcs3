@@ -946,6 +946,11 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 
 	sc_table[code](CPU);
 
+	if (Ini.HLELogging.GetValue())
+	{
+		LOG_NOTICE(PPU, "SysCall finished: %s [0x%llx] -> 0x%llx", "unknown", code, CPU.GPR[3]);
+	}
+
 	CPU.m_last_syscall = old_last_syscall;
 }
 

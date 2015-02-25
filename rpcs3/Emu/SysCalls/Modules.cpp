@@ -97,12 +97,18 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
 			// call LLE function if available
+
 			if (Ini.HLELogging.GetValue())
 			{
 				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetHLEFuncName(func->id));
 			}
 
 			func->lle_func(CPU);
+
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", SysCalls::GetHLEFuncName(func->id), CPU.GPR[3]);
+			}
 		}
 		else if (func->func)
 		{
@@ -112,6 +118,11 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 			}
 
 			func->func(CPU);
+
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", SysCalls::GetHLEFuncName(func->id), CPU.GPR[3]);
+			}
 		}
 		else
 		{
