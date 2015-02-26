@@ -159,9 +159,9 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 #define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, bind_func(_nid_##nid)))
 
-#define REG_SUB(module, group, name, ...) \
+#define REG_SUB(module, group, ns, name, ...) \
 	const SearchPatternEntry name##_table[] = {__VA_ARGS__}; \
-	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(name))
+	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(ns##name))
 
 #define se_op(op) []() { SearchPatternEntry res = { SPET_MASKED_OPCODE }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
 #define se_opt(op) []() { SearchPatternEntry res = { SPET_OPTIONAL_MASKED_OPCODE }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()

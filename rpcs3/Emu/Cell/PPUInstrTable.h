@@ -667,8 +667,17 @@ namespace PPU_instr
 		static auto BCTRL = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 1);
 		static auto MTCTR = std::bind(MTSPR, (0x1 << 5) | 0x8, std::placeholders::_1);
 
-		static inline u32 BNE(s32 imm) { return BC(4, 30, imm, 0, 0); }
-		static inline u32 BEQ(s32 imm) { return BC(12, 30, imm, 0, 0); }
+		enum
+		{
+			cr0, cr1, cr2, cr3, cr4, cr5, cr6, cr7
+		};
+
+		inline u32 BNE(u32 cr, s32 imm) { return BC(4, 2 | cr << 2, imm, 0, 0); }
+		inline u32 BEQ(u32 cr, s32 imm) { return BC(12, 2 | cr << 2, imm, 0, 0); }
+
+		inline u32 BNE(s32 imm) { return BNE(0, imm); }
+		inline u32 BEQ(s32 imm) { return BEQ(0, imm); }
+
 	}
 
 

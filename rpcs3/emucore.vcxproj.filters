@@ -857,6 +857,9 @@
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
