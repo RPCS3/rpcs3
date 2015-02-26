@@ -30,7 +30,7 @@ u32 add_ppu_func_sub(StaticFunc func)
 	return func.index;
 }
 
-u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
+u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const size_t count, const char* name, Module* module, ppu_func_caller func)
 {
 	char group_name[9] = {};
 
@@ -45,13 +45,14 @@ u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Mod
 	sf.group = *(u64*)group_name;
 	sf.found = 0;
 
-	// TODO: check for self-inclusions, use CRC
-	for (u32 i = 0; ops[i]; i++)
+	for (u32 i = 0; i < count; i++)
 	{
-		SFuncOp op;
-		op.mask = re32((u32)(ops[i] >> 32));
-		op.crc = re32((u32)(ops[i]));
-		if (op.mask) op.crc &= op.mask;
+		SearchPatternEntry op;
+		op.type = ops[i].type;
+		op.data = re32(ops[i].data);
+		op.mask = re32(ops[i].mask);
+		op.num = ops[i].num;
+		assert(!op.mask || (op.data & ~op.mask) == 0);
 		sf.ops.push_back(op);
 	}
 
@@ -173,90 +174,155 @@ u32 get_function_id(const char* name)
 	return (u32&)output[0];
 }
 
-void hook_ppu_funcs(u32* base, u32 size)
+void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 {
-	size /= 4;
+	using namespace PPU_instr;
+
+	for (auto& sub : g_ppu_func_subs)
+	{
+		bool found = true;
+
+		for (u32 k = pos, x = 0; x + 1 <= sub.ops.size(); k++, x++)
+		{
+			if (k >= size)
+			{
+				found = false;
+				break;
+			}
+
+			// skip NOP
+			if (base[k].data() == se32(0x60000000))
+			{
+				x--;
+				continue;
+			}
+
+			const u32 data = sub.ops[x].data;
+			const u32 mask = sub.ops[x].mask;
+
+			const bool match = (base[k].data() & mask) == data;
+
+			switch (sub.ops[x].type)
+			{
+			case SPET_MASKED_OPCODE:
+			{
+				// masked pattern
+				if (!match)
+				{
+					found = false;
+				}
+
+				break;
+			}
+			case SPET_OPTIONAL_MASKED_OPCODE:
+			{
+				// optional masked pattern
+				if (!match)
+				{
+					k--;
+				}
+
+				break;
+			}
+			case SPET_LABEL:
+			{
+				const auto addr = (base + k--).addr();
+				const auto lnum = data;
+				const auto label = sub.labels.find(lnum);
+
+				if (label == sub.labels.end()) // register the label
+				{
+					sub.labels[lnum] = addr;
+				}
+				else if (label->second != addr) // or check registered label
+				{
+					found = false;
+				}
+
+				break;
+			}
+			case SPET_BRANCH_TO_LABEL:
+			{
+				if (!match)
+				{
+					found = false;
+					break;
+				}
+
+				const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+				const auto lnum = sub.ops[x].num;
+				const auto label = sub.labels.find(lnum);
+
+				if (label == sub.labels.end()) // register the label
+				{
+					sub.labels[lnum] = addr;
+				}
+				else if (label->second != addr) // or check registered label
+				{
+					found = false;
+				}
+
+				break;
+			}
+			//case SPET_BRANCH_TO_FUNC:
+			//{
+			//	if (!match)
+			//	{
+			//		found = false;
+			//		break;
+			//	}
+
+			//	const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+			//	const auto nid = sub.ops[x].num;
+			//	// TODO: recursive call
+			//}
+			default:
+			{
+				LOG_ERROR(LOADER, "Unknown search pattern type (%d)", sub.ops[x].type);
+				assert(0);
+				return;
+			}
+			}
+
+			if (!found)
+			{
+				break;
+			}
+		}
+
+		if (found)
+		{
+			LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", sub.name, (base + pos).addr());
+			sub.found++;
+			base[pos] = HACK(sub.index | EIF_PERFORM_BLR);
+		}
+
+		if (sub.labels.size())
+		{
+			sub.labels.clear();
+		}
+	}
+}
+
+void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
+{
+	using namespace PPU_instr;
 
 	if (!Ini.HLEHookStFunc.GetValue())
+	{
 		return;
+	}
 
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
-		for (u32 j = 0; j < g_ppu_func_subs.size(); j++)
+		// skip NOP
+		if (base[i].data() == se32(0x60000000))
 		{
-			if ((base[i] & g_ppu_func_subs[j].ops[0].mask) == g_ppu_func_subs[j].ops[0].crc)
-			{
-				bool found = true;
-				u32 can_skip = 0;
-				for (u32 k = i, x = 0; x + 1 <= g_ppu_func_subs[j].ops.size(); k++, x++)
-				{
-					if (k >= size)
-					{
-						found = false;
-						break;
-					}
-
-					// skip NOP
-					if (base[k] == se32(0x60000000))
-					{
-						x--;
-						continue;
-					}
-
-					const u32 mask = g_ppu_func_subs[j].ops[x].mask;
-					const u32 crc = g_ppu_func_subs[j].ops[x].crc;
-
-					if (!mask)
-					{
-						// TODO: define syntax
-						if (crc < 4) // skip various number of instructions that don't match next pattern entry
-						{
-							can_skip += crc;
-							k--; // process this position again
-						}
-						else if (base[k] != crc) // skippable pattern ("optional" instruction), no mask allowed
-						{
-							k--;
-							if (can_skip) // cannot define this behaviour properly
-							{
-								LOG_WARNING(LOADER, "hook_ppu_funcs(): can_skip = %d (unchanged)", can_skip);
-							}
-						}
-						else
-						{
-							if (can_skip) // cannot define this behaviour properly
-							{
-								LOG_WARNING(LOADER, "hook_ppu_funcs(): can_skip = %d (set to 0)", can_skip);
-								can_skip = 0;
-							}
-						}
-					}
-					else if ((base[k] & mask) != crc) // masked pattern
-					{
-						if (can_skip)
-						{
-							can_skip--;
-						}
-						else
-						{
-							found = false;
-							break;
-						}
-					}
-					else
-					{
-						can_skip = 0;
-					}
-				}
-				if (found)
-				{
-					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", g_ppu_func_subs[j].name, vm::get_addr(base + i * 4));
-					g_ppu_func_subs[j].found++;
-					base[i] = re32(0x04000000 | g_ppu_func_subs[j].index | EIF_PERFORM_BLR); // hack
-				}
-			}
+			continue;
 		}
+
+		hook_ppu_func(base, i, size);
 	}
 
 	// check function groups

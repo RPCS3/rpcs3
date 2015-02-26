@@ -666,6 +666,9 @@ namespace PPU_instr
 		static auto BCTR = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 0);
 		static auto BCTRL = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 1);
 		static auto MTCTR = std::bind(MTSPR, (0x1 << 5) | 0x8, std::placeholders::_1);
+
+		static inline u32 BNE(s32 imm) { return BC(4, 30, imm, 0, 0); }
+		static inline u32 BEQ(s32 imm) { return BC(12, 30, imm, 0, 0); }
 	}
 
 

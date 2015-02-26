@@ -43,19 +43,31 @@ struct ModuleFunc
 	}
 };
 
-struct SFuncOp
+enum : u32
 {
-	u32 crc;
+	SPET_MASKED_OPCODE,
+	SPET_OPTIONAL_MASKED_OPCODE,
+	SPET_LABEL,
+	SPET_BRANCH_TO_LABEL,
+	SPET_BRANCH_TO_FUNC,
+};
+
+struct SearchPatternEntry
+{
+	u32 type;
+	u32 data;
 	u32 mask;
+	u32 num; // supplement info
 };
 
 struct StaticFunc
 {
 	u32 index;
 	const char* name;
-	std::vector<SFuncOp> ops;
+	std::vector<SearchPatternEntry> ops;
 	u64 group;
 	u32 found;
+	std::unordered_map<u32, u32> labels;
 };
 
 class Module : public LogBase
@@ -138,9 +150,9 @@ void clear_ppu_functions();
 u32 get_function_id(const char* name);
 
 u32 add_ppu_func_sub(StaticFunc sf);
-u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func);
+u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], size_t count, const char* name, Module* module, ppu_func_caller func);
 
-void hook_ppu_funcs(u32* base, u32 size);
+void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, bind_func(name)))
 #define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, bind_func(name)))
@@ -148,9 +160,13 @@ void hook_ppu_funcs(u32* base, u32 size);
 #define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, bind_func(_nid_##nid)))
 
 #define REG_SUB(module, group, name, ...) \
-	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	if (name ## _table[0]) add_ppu_func_sub(group, name ## _table, #name, &module, bind_func(name))
+	const SearchPatternEntry name##_table[] = {__VA_ARGS__}; \
+	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(name))
 
-#define op_mask(op) []() -> u64 { s32 XXX = 0; u64 _op = (op); XXX = -1; return ((op) ^ ~_op) << 32 | _op; }()
+#define se_op(op) []() { SearchPatternEntry res = { SPET_MASKED_OPCODE }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
+#define se_opt(op) []() { SearchPatternEntry res = { SPET_OPTIONAL_MASKED_OPCODE }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
+#define se_label(label) { SPET_LABEL, (label) }
+#define se_lbr(op, label) []() { SearchPatternEntry res = { SPET_BRANCH_TO_LABEL, 0, 0, (label) }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
+#define se_call(op, name) []() { SearchPatternEntry res = { SPET_BRANCH_TO_FUNC, 0, 0, get_function_id(#name) }; s32 XXX = 0; res.data = (op); XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
