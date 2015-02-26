@@ -19,14 +19,14 @@ extern void ppu_free_tls(u32 thread);
 
 PPUThread& GetCurrentPPUThread()
 {
-	PPCThread* thread = GetCurrentPPCThread();
+	CPUThread* thread = GetCurrentCPUThread();
 
 	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw std::string("GetCurrentPPUThread: bad thread");
 
 	return *(PPUThread*)thread;
 }
 
-PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
+PPUThread::PPUThread() : CPUThread(CPU_THREAD_PPU)
 {
 	owned_mutexes = 0;
 	Reset();
@@ -39,8 +39,6 @@ PPUThread::~PPUThread()
 
 void PPUThread::DoReset()
 {
-	PPCThread::DoReset();
-
 	//reset regs
 	memset(VPR,  0, sizeof(VPR));
 	memset(FPR,  0, sizeof(FPR));

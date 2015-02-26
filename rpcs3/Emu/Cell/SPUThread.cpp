@@ -23,7 +23,7 @@
 
 SPUThread& GetCurrentSPUThread()
 {
-	PPCThread* thread = GetCurrentPPCThread();
+	CPUThread* thread = GetCurrentCPUThread();
 
 	if(!thread || (thread->GetType() != CPU_THREAD_SPU && thread->GetType() != CPU_THREAD_RAW_SPU))
 	{
@@ -33,7 +33,7 @@ SPUThread& GetCurrentSPUThread()
 	return *(SPUThread*)thread;
 }
 
-SPUThread::SPUThread(CPUThreadType type) : PPCThread(type)
+SPUThread::SPUThread(CPUThreadType type) : CPUThread(type)
 {
 	assert(type == CPU_THREAD_SPU || type == CPU_THREAD_RAW_SPU);
 
@@ -73,10 +73,8 @@ void SPUThread::Task()
 
 void SPUThread::DoReset()
 {
-	PPCThread::DoReset();
-
 	//reset regs
-	memset(GPR, 0, sizeof(u128) * 128);
+	memset(GPR, 0, sizeof(GPR));
 }
 
 void SPUThread::InitRegs()
@@ -568,7 +566,7 @@ void SPUThread::WriteChannel(u32 ch, const u128& r)
 					return;
 				}
 
-				//if (Ini.HLELogging.GetValue())
+				if (Ini.HLELogging.GetValue())
 				{
 					LOG_WARNING(Log::SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, v & 0x00ffffff, data);
 				}

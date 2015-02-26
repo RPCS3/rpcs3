@@ -32,10 +32,17 @@ u32 add_ppu_func_sub(StaticFunc func)
 
 u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
 {
+	char group_name[9] = {};
+
+	if (group)
+	{
+		strcpy_trunc(group_name, group);
+	}
+
 	StaticFunc sf;
 	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, func));
 	sf.name = name;
-	sf.group = *(u64*)group;
+	sf.group = *(u64*)group_name;
 	sf.found = 0;
 
 	// TODO: check for self-inclusions, use CRC
@@ -259,6 +266,12 @@ void hook_ppu_funcs(u32* base, u32 size)
 		{
 			const u64 group = g_ppu_func_subs[i].group;
 
+			if (!group)
+			{
+				// skip if group not set
+				continue;
+			}
+
 			enum GroupSearchResult : u32
 			{
 				GSR_SUCCESS = 0, // every function from this group has been found once
@@ -320,17 +333,17 @@ void hook_ppu_funcs(u32* base, u32 size)
 				if (g_ppu_func_subs[j].group == group) g_ppu_func_subs[j].found = 0;
 			}
 
-			char name[9] = "????????";
+			char group_name[9] = {};
 
-			*(u64*)name = group;
+			*(u64*)group_name = group;
 
 			if (res == GSR_SUCCESS)
 			{
-				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", std::string(name, 9).c_str());
+				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", group_name);
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
+				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", group_name,
 					(res & GSR_MISSING ? " missing;" : ""),
 					(res & GSR_EXCESS ? " excess;" : ""));
 			}

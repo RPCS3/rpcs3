@@ -151,4 +151,6 @@ void hook_ppu_funcs(u32* base, u32 size);
 	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
 	if (name ## _table[0]) add_ppu_func_sub(group, name ## _table, #name, &module, bind_func(name))
 
+#define op_mask(op) []() -> u64 { s32 XXX = 0; u64 _op = (op); XXX = -1; return ((op) ^ ~_op) << 32 | _op; }()
+
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)

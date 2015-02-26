@@ -1,8 +1,10 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/Cell/PPUInstrTable.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "cellAudio.h"
@@ -638,6 +640,8 @@ Module libmixer("libmixer", []()
 		ssp.clear();
 	};
 
+	using namespace PPU_instr;
+
 	REG_SUB(libmixer, "surmxAAN", cellAANAddData,
 		0xffffffff7c691b78,
 		0xffffffff7c0802a6,
@@ -776,7 +780,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetAANHandle,
-		0xff00000081428250, // lwz
+		op_mask(LWZ(10, 2, XXX)),
 		0xffffffff3d607fce,
 		0xffffffff616bfffe,
 		0xffffffff812a0018,
@@ -793,7 +797,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerChStripGetAANPortNo,
-		0xff00000081228250, // lwz
+		op_mask(LWZ(9, 2, XXX)),
 		0xffffffff7c661b78,
 		0xffffffff3c608031,
 		0xffffffff78c60020,
@@ -808,7 +812,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerSetNotifyCallback,
-		0xff00000081428250, // lwz
+		op_mask(LWZ(10, 2, XXX)),
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -828,7 +832,7 @@ Module libmixer("libmixer", []()
 		0xffffffff7c0803a6,
 		0xffffffff4e800020,
 		0xffffff00419affec, // beq
-		0xf0000000800a001c, // lwz
+		op_mask(LWZ(0, 10, XXX)),
 		0xffffffff79290020,
 		0xffffffff38810070,
 		0xffffffff2f800000,
@@ -836,7 +840,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerRemoveNotifyCallback,
-		0xff00000081628250, // lwz
+		op_mask(LWZ(11, 2, XXX)),
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -857,7 +861,7 @@ Module libmixer("libmixer", []()
 		0xfffffffff821ff71,
 		0xffffffff7c0802a6,
 		0xfffffffffbc10080,
-		0xf000000083c20000, // lwz
+		op_mask(LWZ(30, 2, XXX)),
 		0xfffffffff80100a0,
 		0xfffffffffba10078,
 		0xfffffffffbe10088,
@@ -881,7 +885,7 @@ Module libmixer("libmixer", []()
 		0xffffffff7c0802a6,
 		0xfffffffffbc10070,
 		0xfffffffffc000890,
-		0xf000000083c28250, // lwz
+		op_mask(LWZ(30, 2, XXX)),
 		0xffffffff3d208031,
 		0xfffffffff8010090,
 		0xfffffffffbe10078,
@@ -933,7 +937,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerSurBusAddData,
-		0xff00000081428250, // lwz
+		op_mask(LWZ(10, 2, XXX)),
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
 		0xfffffffff8010080,
@@ -962,7 +966,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerChStripSetParameter,
-		0xff00000081028250, // lwz
+		op_mask(LWZ(8, 2, XXX)),
 		0xffffffff7c6b1b78,
 		0xffffffff3c608031,
 		0xffffffff7c8a2378,
@@ -982,7 +986,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerPause,
-		0xff00000081428250, // lwz
+		op_mask(LWZ(10, 2, XXX)),
 		0xffffffff7c0802a6,
 		0xfffffffff821ff81,
 		0xfffffffff8010090,
@@ -1007,7 +1011,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetCurrentBlockTag,
-		0xff00000081628250, // lwz
+		op_mask(LWZ(11, 2, XXX)),
 		0xffffffff3d208031,
 		0xffffffff61290002,
 		0xffffffff880b0020,
@@ -1021,7 +1025,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerGetTimestamp,
-		0xff00000081628250, // lwz
+		op_mask(LWZ(11, 2, XXX)),
 		0xffffffff7c0802a6,
 		0xfffffffff821ff91,
 		0xfffffffff8010080,
@@ -1043,7 +1047,7 @@ Module libmixer("libmixer", []()
 	);
 
 	REG_SUB(libmixer, "surmixer", cellSurMixerBeep,
-		0xff00000081228250, // lwz
+		op_mask(LWZ(9, 2, XXX)),
 		0xffffffff7c641b78,
 		0xffffffff80690018,
 		0xffffffff2f830000,

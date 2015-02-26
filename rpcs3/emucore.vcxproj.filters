@@ -341,9 +341,6 @@
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPCThread.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
@@ -1103,9 +1100,6 @@
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCInstrTable.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\PPCThread.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPUDecoder.h">

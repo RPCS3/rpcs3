@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/Cell/Common.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/atomic_type.h"
-#include "PPCThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
@@ -287,7 +287,7 @@ union SPU_SNRConfig_hdr
 
 struct SpuGroupInfo;
 
-class SPUThread : public PPCThread
+class SPUThread : public CPUThread
 {
 public:
 	u128 GPR[128]; // General-Purpose Registers

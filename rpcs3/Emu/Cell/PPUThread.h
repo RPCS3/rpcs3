@@ -1,6 +1,6 @@
 #pragma once
 #include "Emu/Cell/Common.h"
-#include "Emu/Cell/PPCThread.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/vm.h"
 
 enum
@@ -467,7 +467,7 @@ struct FPRdouble
 	static int Cmp(PPCdouble a, PPCdouble b);
 };
 
-class PPUThread : public PPCThread
+class PPUThread : public CPUThread
 {
 public:
 	PPCdouble FPR[32]; //Floating Point Register
