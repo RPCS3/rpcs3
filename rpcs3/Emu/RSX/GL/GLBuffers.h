@@ -66,26 +66,63 @@ public:
 	u32 GetId(u32 num = 0) const;
 };
 
-class GLfbo
+namespace gl
 {
-protected:
-	GLuint m_id;
-	GLuint m_type;
+	enum class filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR
+	};
 
-public:
-	GLfbo();
-	~GLfbo();
+	enum class buffers
+	{
+		color = GL_COLOR_BUFFER_BIT,
+		depth = GL_DEPTH_BUFFER_BIT,
+		stencil = GL_STENCIL_BUFFER_BIT,
 
-	void Create();
-	static void Bind(u32 type, int id);
-	void Bind(u32 type = GL_FRAMEBUFFER);
-	void Texture1D(u32 attachment, u32 texture, int level = 0);
-	void Texture2D(u32 attachment, u32 texture, int level = 0);
-	void Texture3D(u32 attachment, u32 texture, int zoffset = 0, int level = 0);
-	void Renderbuffer(u32 attachment, u32 renderbuffer);
-	static void Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter);
-	void Unbind();
-	static void Unbind(u32 type);
-	void Delete();
-	bool IsCreated() const;
-};
+		color_depth = color | depth,
+		color_depth_stencil = color | depth | stencil,
+		color_stencil = color | stencil,
+
+		depth_stencil = depth | stencil
+	};
+
+	class fbo
+	{
+		GLuint m_id = GL_NONE;
+
+	public:
+		enum class target
+		{
+			read_frame_buffer = GL_READ_FRAMEBUFFER,
+			draw_frame_buffer = GL_DRAW_FRAMEBUFFER
+		};
+		void create();
+		void bind() const;
+		void texture1D(u32 attachment, u32 texture, int level = 0) const;
+		void texture2D(u32 attachment, u32 texture, int level = 0) const;
+		void texture3D(u32 attachment, u32 texture, int zoffset = 0, int level = 0) const;
+		void renderbuffer(u32 attachment, u32 renderbuffer) const;
+		void blit(const fbo& dst, area src_area, area dst_area, buffers buffers_ = buffers::color, filter filter_ = filter::nearest) const;
+		void bind_as(target target_) const;
+		void clear();
+		bool is_created() const;
+
+		GLuint id() const
+		{
+			return m_id;
+		}
+
+		void set_id(GLuint id)
+		{
+			m_id = id;
+		}
+
+		operator bool() const
+		{
+			return is_created();
+		}
+	};
+
+	static const fbo screen;
+}

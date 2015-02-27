@@ -670,11 +670,11 @@ void DrawCursorObj::Draw()
 	PostDrawObj::Draw();
 	checkForGlError("PostDrawObj::Draw");
 
-	if (!m_fbo.IsCreated())
+	if (!m_fbo)
 	{
-		m_fbo.Create();
+		m_fbo.create();
 		checkForGlError("DrawCursorObj : m_fbo.Create");
-		m_fbo.Bind();
+		m_fbo.bind();
 		checkForGlError("DrawCursorObj : m_fbo.Bind");
 
 		m_rbo.Create();
@@ -684,11 +684,11 @@ void DrawCursorObj::Draw()
 		m_rbo.Storage(GL_RGBA, m_width, m_height);
 		checkForGlError("DrawCursorObj : m_rbo.Storage");
 
-		m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId());
+		m_fbo.renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId());
 		checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
 	}
 
-	m_fbo.Bind();
+	m_fbo.bind();
 	checkForGlError("DrawCursorObj : m_fbo.Bind");
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	checkForGlError("DrawCursorObj : glDrawBuffer");
@@ -723,7 +723,10 @@ void DrawCursorObj::Draw()
 
 	glDrawArrays(GL_QUADS, 0, 4);
 	checkForGlError("DrawCursorObj : glDrawArrays");
+	coordi screen_coords = { {}, { (int)m_width, (int)m_height } };
+	m_fbo.blit(gl::screen, screen_coords, screen_coords);
 
+	/*
 	m_fbo.Bind(GL_READ_FRAMEBUFFER);
 	checkForGlError("DrawCursorObj : m_fbo.Bind(GL_READ_FRAMEBUFFER)");
 	GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
@@ -732,6 +735,7 @@ void DrawCursorObj::Draw()
 	checkForGlError("DrawCursorObj : GLfbo::Blit");
 	m_fbo.Bind();
 	checkForGlError("DrawCursorObj : m_fbo.Bind");
+	*/
 }
 
 void DrawCursorObj::InitializeShaders()
@@ -1476,7 +1480,7 @@ void GLGSRender::OnExitThread()
 
 	m_program.Delete();
 	m_rbo.Delete();
-	m_fbo.Delete();
+	m_fbo.clear();
 	m_vbo.Delete();
 	m_vao.Delete();
 	m_prog_buffer.Clear();
@@ -1497,16 +1501,16 @@ void GLGSRender::OnReset()
 
 void GLGSRender::InitDrawBuffers()
 {
-	if (!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
+	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
 
-		m_fbo.Create();
+		m_fbo.create();
 		checkForGlError("m_fbo.Create");
-		m_fbo.Bind();
+		m_fbo.bind();
 
 		m_rbo.Create(4 + 1);
 		checkForGlError("m_rbo.Create");
@@ -1538,7 +1542,7 @@ void GLGSRender::InitDrawBuffers()
 			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
 
-			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			m_fbo.renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
 			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
 			break;
 		}
@@ -1549,16 +1553,15 @@ void GLGSRender::InitDrawBuffers()
 			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 
-			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
+			m_fbo.renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
 			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
 
-			m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
+			m_fbo.renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
 			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
 
 			break;
 
 		}
-			
 
 		default:
 		{
@@ -1570,7 +1573,7 @@ void GLGSRender::InitDrawBuffers()
 
 		for (int i = 0; i < 4; ++i)
 		{
-			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
+			m_fbo.renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
 			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 
@@ -1596,7 +1599,7 @@ void GLGSRender::InitDrawBuffers()
 		m_surface_clip_h = RSXThread::m_height;
 	}
 
-	m_fbo.Bind();
+	m_fbo.bind();
 
 	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
@@ -2084,10 +2087,16 @@ void GLGSRender::Flip()
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
+		/*
 		// Fast path for non-MRT using glBlitFramebuffer.
 		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
 		// Renderbuffer is upside turn , swapped srcY0 and srcY1
 		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		*/
+
+		area screen_area = coordi{ {}, { (int)RSXThread::m_width, (int)RSXThread::m_height } };
+		area flipped_screen_area = { 0, (int)RSXThread::m_height, (int)RSXThread::m_width, 0 };
+		m_fbo.blit(gl::screen, screen_area, flipped_screen_area);
 	}
 		break;
 
@@ -2108,12 +2117,12 @@ void GLGSRender::Flip()
 			height = buffers[m_gcm_current_buffer].height;
 			src_buffer = vm::get_ptr<u8>(addr);
 		}
-		else if (m_fbo.IsCreated())
+		else if (m_fbo)
 		{
 			format = GL_RGBA;
 			static std::vector<u8> pixels;
 			pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
-			m_fbo.Bind(GL_READ_FRAMEBUFFER);
+			m_fbo.bind_as(gl::fbo::target::read_frame_buffer);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[5]);
 			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
 			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
@@ -2159,9 +2168,7 @@ void GLGSRender::Flip()
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 
-			GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-
-			m_program.UnUse();
+			gl::screen.bind_as(gl::fbo::target::draw_frame_buffer);
 			m_program.Use();
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
 

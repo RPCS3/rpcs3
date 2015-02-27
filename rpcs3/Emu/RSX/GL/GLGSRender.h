@@ -70,7 +70,7 @@ protected:
 	GLFragmentProgram m_fp;
 	GLVertexProgram m_vp;
 	GLProgram m_program;
-	GLfbo m_fbo;
+	gl::fbo m_fbo;
 	GLrbo m_rbo;
 
 public:
@@ -153,7 +153,7 @@ private:
 	GLvao m_vao;
 	GLvbo m_vbo;
 	GLrbo m_rbo;
-	GLfbo m_fbo;
+	gl::fbo m_fbo;
 
 	void* m_context;
 
