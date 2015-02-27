@@ -27,7 +27,7 @@ Module sys_libc("sys_libc", []()
 		se_op(MR(r11, r3)),
 		se_op(BGT(cr7, XXX & 0xff)),
 		se_op(CMPDI(r5, 0)),
-		se_opt(MR(r9, r3)),
+		se_opt_op(MR(r9, r3)),
 		{ SPET_MASKED_OPCODE, 0x4d820020, 0xffffffff },
 	);
 });

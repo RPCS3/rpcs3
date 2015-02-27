@@ -165,9 +165,9 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 #define se_op_all(type, op, sup) []() { s32 XXX = 0; SearchPatternEntry res = { (type), (op), 0, (sup) }; XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
 #define se_op(op) se_op_all(SPET_MASKED_OPCODE, op, 0)
-#define se_opt(op) se_op_all(SPET_OPTIONAL_MASKED_OPCODE, op, 0)
+#define se_opt_op(op) se_op_all(SPET_OPTIONAL_MASKED_OPCODE, op, 0)
 #define se_label(label) { SPET_LABEL, (label) }
-#define se_lbr(op, label) se_op_all(SPET_BRANCH_TO_LABEL, op, label)
-#define se_call(op, name) se_op_all(SPET_BRANCH_TO_FUNC, op, get_function_id(#name))
+#define se_br_label(op, label) se_op_all(SPET_BRANCH_TO_LABEL, op, label)
+#define se_func_call(op, name) se_op_all(SPET_BRANCH_TO_FUNC, op, get_function_id(#name))
 
 #define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)
