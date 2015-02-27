@@ -41,3 +41,6 @@ struct OpenGL
 	void Init();
 	void Close();
 };
+
+
+#include "Emu/RSX/types.h"
