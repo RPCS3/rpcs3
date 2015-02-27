@@ -652,6 +652,11 @@ namespace PPU_instr
 			r12, r13, r14, r15, r16, r17, r18, r19, r20, r21,
 			r22, r23, r24, r25, r26, r27, r28, r29, r30, r31
 		};
+
+		enum
+		{
+			cr0, cr1, cr2, cr3, cr4, cr5, cr6, cr7
+		};
 	}
 
 	namespace implicts
@@ -667,19 +672,30 @@ namespace PPU_instr
 		static auto BCTRL = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 1);
 		static auto MTCTR = std::bind(MTSPR, (0x1 << 5) | 0x8, std::placeholders::_1);
 
-		enum
-		{
-			cr0, cr1, cr2, cr3, cr4, cr5, cr6, cr7
-		};
-
 		inline u32 BNE(u32 cr, s32 imm) { return BC(4, 2 | cr << 2, imm, 0, 0); }
 		inline u32 BEQ(u32 cr, s32 imm) { return BC(12, 2 | cr << 2, imm, 0, 0); }
+		inline u32 BGT(u32 cr, s32 imm) { return BC(12, 1 | cr << 2, imm, 0, 0); }
 
-		inline u32 BNE(s32 imm) { return BNE(0, imm); }
-		inline u32 BEQ(s32 imm) { return BEQ(0, imm); }
+		inline u32 BNE(s32 imm) { return BNE(cr0, imm); }
+		inline u32 BEQ(s32 imm) { return BEQ(cr0, imm); }
+		inline u32 BGT(s32 imm) { return BGT(cr0, imm); }
 
+		inline u32 CMPDI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 1, reg, imm); }
+		inline u32 CMPDI(u32 reg, u32 imm) { return CMPDI(cr0, reg, imm); }
+
+		inline u32 CMPWI(u32 cr, u32 reg, u32 imm) { return CMPI(cr, 0, reg, imm); }
+		inline u32 CMPWI(u32 reg, u32 imm) { return CMPWI(cr0, reg, imm); }
+
+		inline u32 CMPLDI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 1, reg, imm); }
+		inline u32 CMPLDI(u32 reg, u32 imm) { return CMPLDI(cr0, reg, imm); }
+
+		inline u32 CMPLWI(u32 cr, u32 reg, u32 imm) { return CMPLI(cr, 0, reg, imm); }
+		inline u32 CMPLWI(u32 reg, u32 imm) { return CMPLWI(cr0, reg, imm); }
+
+		inline u32 EXTRDI(u32 x, u32 y, u32 n, u32 b) { return RLDICL(x, y, b + n, 64 - b, false); }
+		inline u32 SRDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 64 - n, n, false); }
+		inline u32 CLRLDI(u32 x, u32 y, u32 n) { return RLDICL(x, y, 0, n, false); }
 	}
-
 
 	using namespace lists;
 	using namespace implicts;

@@ -292,7 +292,7 @@ void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 
 		if (found)
 		{
-			LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", sub.name, (base + pos).addr());
+			LOG_SUCCESS(LOADER, "Function '%s' hooked (addr=0x%x)", sub.name, (base + pos).addr());
 			sub.found++;
 			base[pos] = HACK(sub.index | EIF_PERFORM_BLR);
 		}

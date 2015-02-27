@@ -50,9 +50,9 @@ namespace Log
 
 	enum LogSeverity : u32
 	{
-		Success = 0,
-		Notice,
+		Notice = 0,
 		Warning,
+		Success,
 		Error,
 	};
 
