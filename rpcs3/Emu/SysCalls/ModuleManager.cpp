@@ -172,20 +172,22 @@ static const g_module_list[] =
 
 void ModuleManager::Init()
 {
-	if (!initialized)
+	if (initialized)
 	{
-		clear_ppu_functions();
-
-		for (auto& m : g_module_list)
-		{
-			if (m.module)
-			{
-				m.module->Init();
-			}
-		}
-
-		initialized = true;
+		Close();
 	}
+
+	clear_ppu_functions();
+
+	for (auto& m : g_module_list)
+	{
+		if (m.module)
+		{
+			m.module->Init();
+		}
+	}
+
+	initialized = true;
 }
 
 ModuleManager::ModuleManager()
