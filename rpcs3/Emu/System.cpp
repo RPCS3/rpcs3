@@ -38,11 +38,6 @@ static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
-ModuleInitializer::ModuleInitializer()
-{
-	Emu.AddModuleInit(std::move(std::unique_ptr<ModuleInitializer>(this)));
-}
-
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
@@ -82,11 +77,6 @@ Emulator::~Emulator()
 
 void Emulator::Init()
 {
-	while(m_modules_init.size())
-	{
-		m_modules_init[0]->Init();
-		m_modules_init.erase(m_modules_init.begin());
-	}
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)

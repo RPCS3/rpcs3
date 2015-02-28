@@ -61,14 +61,6 @@ public:
 	u32 GetTLSMemsz() const { return tls_memsz; }
 };
 
-class ModuleInitializer
-{
-public:
-	ModuleInitializer();
-
-	virtual void Init() = 0;
-};
-
 class Emulator
 {
 	enum Mode
@@ -83,7 +75,6 @@ class Emulator
 
 	u32 m_rsx_callback;
 	u32 m_cpu_thr_stop;
-	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
@@ -163,11 +154,6 @@ public:
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
 	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
-
-	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
-	{
-		m_modules_init.push_back(std::move(m));
-	}
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
