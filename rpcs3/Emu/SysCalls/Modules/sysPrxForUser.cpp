@@ -559,7 +559,7 @@ s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 	return CELL_OK;
 }
 
-s32 sys_process_get_paramsfo(vm::ptr<u8[0x40]> buffer)
+s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sysPrxForUser.Warning("sys_process_get_paramsfo(buffer=0x%x)", buffer);
 

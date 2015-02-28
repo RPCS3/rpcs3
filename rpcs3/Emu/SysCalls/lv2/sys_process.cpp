@@ -288,7 +288,7 @@ s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	return process_is_spu_lock_line_reservation_address(addr, flags);
 }
 
-s32 _sys_process_get_paramsfo(vm::ptr<u8[0x40]> buffer)
+s32 _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.Warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
@@ -298,7 +298,7 @@ s32 _sys_process_get_paramsfo(vm::ptr<u8[0x40]> buffer)
 	}
 
 	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr(), Emu.GetTitleID().c_str(), Emu.GetTitleID().length());
+	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<size_t>(Emu.GetTitleID().length(), 9));
 
 	return CELL_OK;
 }
