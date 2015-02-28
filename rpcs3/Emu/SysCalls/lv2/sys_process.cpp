@@ -292,10 +292,15 @@ s32 _sys_process_get_paramsfo(vm::ptr<u8[0x40]> buffer)
 {
 	sys_process.Warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
+	if (!Emu.GetTitleID().length())
+	{
+		return CELL_ENOENT;
+	}
+
 	memset(buffer.get_ptr(), 0, 0x40);
 	memcpy(buffer.get_ptr(), Emu.GetTitleID().c_str(), Emu.GetTitleID().length());
 
-	return CELL_ENOENT;
+	return CELL_OK;
 }
 
 s32 process_get_sdk_version(u32 pid, s32& ver)
