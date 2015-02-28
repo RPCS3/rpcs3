@@ -80,7 +80,7 @@ const ppu_func_caller sc_table[1024] =
 	null_func,//bind_func(),                                //27  (0x01B)  DBG
 	null_func,//bind_func(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
 	bind_func(sys_process_get_id),                          //29  (0x01D)  ROOT
-	bind_func(sys_process_get_paramsfo),                    //30  (0x01E)
+	bind_func(_sys_process_get_paramsfo),                    //30  (0x01E)
 	null_func,//bind_func(sys_process_get_ppu_guid),        //31  (0x01F)
 	
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS

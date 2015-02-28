@@ -255,24 +255,7 @@ void Emulator::Load()
 		vm::close();
 		return;
 	}
-
-	// trying to load some info from PARAM.SFO
-	vfsFile f2("/app_home/../PARAM.SFO");
-	if (f2.IsOpened())
-	{
-		PSFLoader psf(f2);
-		if (psf.Load(false))
-		{
-			std::string version = psf.GetString("PS3_SYSTEM_VER");
-
-			const size_t dot = version.find('.');
-			if (dot != std::string::npos)
-			{
-				Emu.m_sdk_version = (std::stoi(version, nullptr, 16) << 20) | ((std::stoi(version.substr(dot + 1), nullptr, 16) & 0xffff) << 4) | 1;
-			}
-		}
-	}
-
+	
 	LoadPoints(BreakPointsDBName);
 
 	m_status = Ready;

@@ -103,7 +103,6 @@ public:
 	std::string m_emu_path;
 	std::string m_title_id;
 	std::string m_title;
-	s32 m_sdk_version;
 
 	Emulator();
 	~Emulator();
@@ -123,12 +122,12 @@ public:
 		return m_emu_path;
 	}
 
-	std::string GetTitleID() const
+	const std::string& GetTitleID() const
 	{
 		return m_title_id;
 	}
 
-	std::string GetTitle() const
+	const std::string& GetTitle() const
 	{
 		return m_title;
 	}
@@ -177,6 +176,7 @@ public:
 	u32 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
 
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
+	u32 GetSDKVersion() { return m_info.GetProcParam().sdk_version; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }

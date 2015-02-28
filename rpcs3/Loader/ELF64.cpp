@@ -307,8 +307,6 @@ namespace loader
 				return load_sprx(info);
 			}
 
-			Emu.m_sdk_version = -1;
-
 			//store elf to memory
 			vm::ps3::init();
 
@@ -618,7 +616,6 @@ namespace loader
 							*/
 
 							info = proc_param.info;
-							Emu.m_sdk_version = info.sdk_version;
 						}
 					}
 					break;

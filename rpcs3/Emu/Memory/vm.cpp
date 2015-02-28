@@ -264,7 +264,7 @@ namespace vm
 		_reservation_set(addr, true);
 
 		// update memory using privileged access
-		memcpy(vm::get_priv_ptr(addr), data, size);
+		memcpy(vm::priv_ptr(addr), data, size);
 
 		// remove callback to not call it on successful update
 		g_reservation_cb = nullptr;
@@ -362,7 +362,7 @@ namespace vm
 		}
 
 		void* real_addr = vm::get_ptr(addr);
-		void* priv_addr = vm::get_priv_ptr(addr);
+		void* priv_addr = vm::priv_ptr(addr);
 
 #ifdef _WIN32
 		auto protection = flags & page_writable ? PAGE_READWRITE : (flags & page_readable ? PAGE_READONLY : PAGE_NOACCESS);
@@ -464,7 +464,7 @@ namespace vm
 		}
 
 		void* real_addr = vm::get_ptr(addr);
-		void* priv_addr = vm::get_priv_ptr(addr);
+		void* priv_addr = vm::priv_ptr(addr);
 
 #ifdef _WIN32
 		DWORD old;

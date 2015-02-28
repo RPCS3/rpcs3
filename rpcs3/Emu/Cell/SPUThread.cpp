@@ -410,7 +410,7 @@ void SPUThread::EnqMfcCmd(MFCReg& MFCArgs)
 		{
 			vm::reservation_op(vm::cast(ea), 128, [this, tag, lsa, ea]()
 			{
-				memcpy(vm::get_priv_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), 128);
+				memcpy(vm::priv_ptr(vm::cast(ea)), vm::get_ptr(ls_offset + lsa), 128);
 			});
 
 			if (op == MFC_PUTLLUC_CMD)

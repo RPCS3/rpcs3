@@ -4,6 +4,8 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/FS/vfsFile.h"
+#include "Loader/PSF.h"
 #include "sys_memory.h"
 #include "sys_process.h"
 
@@ -286,29 +288,20 @@ s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	return process_is_spu_lock_line_reservation_address(addr, flags);
 }
 
-s32 sys_process_get_paramsfo(vm::ptr<u8> buffer)
+s32 _sys_process_get_paramsfo(vm::ptr<u8[0x40]> buffer)
 {
-	sys_process.Todo("sys_process_get_paramsfo(buffer_addr=0x%x) -> CELL_ENOENT", buffer.addr());
+	sys_process.Warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
+
+	memset(buffer.get_ptr(), 0, 0x40);
+	memcpy(buffer.get_ptr(), Emu.GetTitleID().c_str(), Emu.GetTitleID().length());
+
 	return CELL_ENOENT;
-
-	/*//Before uncommenting this code, we should check if it is actually working.
-	MemoryAllocator<be_t<u32>> fd;
-	char filePath [] = "/app_home/../PARAM.SFO";
-	if (!cellFsOpen(Memory.RealToVirtualAddr(filePath), 0, fd, NULL, 0))
-		return CELL_ENOENT;
-
-	MemoryAllocator<be_t<u64>> pos, nread;
-	cellFsLseek(fd, 0, CELL_SEEK_SET, pos); //TODO: Move to the appropriate offset (probably 0x3F7)
-	cellFsRead(fd, buffer.addr(), 40, nread); //WARNING: If offset==0x3F7: The file will end before the buffer (40 bytes) is filled!
-	cellFsClose(fd);
-
-	return CELL_OK;*/
 }
 
 s32 process_get_sdk_version(u32 pid, s32& ver)
 {
-	// TODO: get correct SDK version for selected pid
-	ver = Emu.m_sdk_version;
+	// get correct SDK version for selected pid
+	ver = Emu.GetSDKVersion();
 
 	return CELL_OK;
 }
