@@ -642,7 +642,7 @@ Module libmixer("libmixer", []()
 
 	using namespace PPU_instr;
 
-	REG_SUB(libmixer, "surmxAAN", ::, cellAANAddData,
+	REG_SUB(libmixer, "surmxAAN", , cellAANAddData,
 		{ SPET_MASKED_OPCODE, 0x7c691b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
@@ -668,7 +668,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmxAAN", ::, cellAANConnect,
+	REG_SUB(libmixer, "surmxAAN", , cellAANConnect,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -711,7 +711,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmxAAN", ::, cellAANDisconnect,
+	REG_SUB(libmixer, "surmxAAN", , cellAANDisconnect,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -754,7 +754,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerCreate,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerCreate,
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff51, 0xffffffff },
@@ -785,7 +785,7 @@ Module libmixer("libmixer", []()
 		se_label(0x6c),
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerGetAANHandle,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerGetAANHandle,
 		se_op(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x3d607fce, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x616bfffe, 0xffffffff },
@@ -802,7 +802,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff },
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerChStripGetAANPortNo,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerChStripGetAANPortNo,
 		se_op(LWZ(r9, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c661b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
@@ -817,7 +817,7 @@ Module libmixer("libmixer", []()
 		se_op(B(XXX, 0, 0)),
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerSetNotifyCallback,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerSetNotifyCallback,
 		se_op(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
@@ -845,7 +845,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x7d234b78, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerRemoveNotifyCallback,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerRemoveNotifyCallback,
 		se_op(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
@@ -863,7 +863,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerStart,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerStart,
 		{ SPET_MASKED_OPCODE, 0xf821ff71, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbc10080, 0xffffffff },
@@ -886,7 +886,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerSetParameter,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerSetParameter,
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xfbc10070, 0xffffffff },
@@ -916,7 +916,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x409d0000, 0xffff0000 }, // ble
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerFinalize,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerFinalize,
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf8010080, 0xffffffff },
@@ -942,7 +942,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800421, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerSurBusAddData,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerSurBusAddData,
 		se_op(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
@@ -971,7 +971,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x419c0000, 0xffff0000 } // blt
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerChStripSetParameter,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerChStripSetParameter,
 		se_op(LWZ(r8, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c6b1b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
@@ -991,7 +991,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // b
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerPause,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerPause,
 		se_op(LWZ(r10, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff81, 0xffffffff },
@@ -1016,7 +1016,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerGetCurrentBlockTag,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerGetCurrentBlockTag,
 		se_op(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x3d208031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x61290002, 0xffffffff },
@@ -1030,7 +1030,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerGetTimestamp,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerGetTimestamp,
 		se_op(LWZ(r11, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
@@ -1052,7 +1052,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // bl
 	);
 
-	REG_SUB(libmixer, "surmixer", ::, cellSurMixerBeep,
+	REG_SUB(libmixer, "surmixer", , cellSurMixerBeep,
 		se_op(LWZ(r9, r2, XXX)),
 		{ SPET_MASKED_OPCODE, 0x7c641b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x80690018, 0xffffffff },
@@ -1066,7 +1066,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // b
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerCreate,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerCreate,
 		{ SPET_MASKED_OPCODE, 0xf821ff51, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f840000, 0xffffffff },
@@ -1100,7 +1100,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x40000000, 0xf0000000 } // bl
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerRemove,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerRemove,
 		{ SPET_MASKED_OPCODE, 0x7c641b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
@@ -1130,7 +1130,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800421, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerSetWave,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerSetWave,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x78840020, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1143,7 +1143,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerPlay,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerPlay,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1162,7 +1162,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x38630010, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerStop,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerStop,
 		{ SPET_MASKED_OPCODE, 0xf821ff91, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x7c0802a6, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f830000, 0xffffffff },
@@ -1181,7 +1181,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x4e800020, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerSetParam,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerSetParam,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },
@@ -1200,7 +1200,7 @@ Module libmixer("libmixer", []()
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff }
 	);
 
-	REG_SUB(libmixer, "surmxSSP", ::, cellSSPlayerGetState,
+	REG_SUB(libmixer, "surmxSSP", , cellSSPlayerGetState,
 		{ SPET_MASKED_OPCODE, 0x7c601b78, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x3c608031, 0xffffffff },
 		{ SPET_MASKED_OPCODE, 0x2f800000, 0xffffffff },

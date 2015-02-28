@@ -20,7 +20,7 @@ Module sys_libc("sys_libc", []()
 {
 	using namespace PPU_instr;
 
-	REG_SUB(sys_libc, "", sys_libc_func::, memcpy,
+	REG_SUB(sys_libc, "", sys_libc_func, memcpy,
 		se_op(CMPLDI(cr7, r5, 7)),
 		se_op(CLRLDI(r3, r3, 32)),
 		se_op(CLRLDI(r4, r4, 32)),

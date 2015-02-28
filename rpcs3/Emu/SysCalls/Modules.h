@@ -161,7 +161,7 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 #define REG_SUB(module, group, ns, name, ...) \
 	const SearchPatternEntry name##_table[] = {__VA_ARGS__}; \
-	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(ns##name))
+	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(ns::name))
 
 #define se_op_all(type, op, sup) []() { s32 XXX = 0; SearchPatternEntry res = { (type), (op), 0, (sup) }; XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
 #define se_op(op) se_op_all(SPET_MASKED_OPCODE, op, 0)
