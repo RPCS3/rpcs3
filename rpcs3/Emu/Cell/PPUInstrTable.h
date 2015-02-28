@@ -663,14 +663,17 @@ namespace PPU_instr
 	{
 		using namespace lists;
 
-		//static auto LIS = std::bind(ADDIS, std::placeholders::_1, r0, std::placeholders::_2);
-		//static auto LI = std::bind(ADDI, std::placeholders::_1, r0, std::placeholders::_2);
-		static auto NOP = std::bind(ORI, r0, r0, 0);
-		static auto MR = std::bind(OR, std::placeholders::_1, std::placeholders::_2, std::placeholders::_2, false);
-		static auto BLR = std::bind(BCLR, 0x10 | 0x04, 0, 0, 0);
-		static auto BCTR = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 0);
-		static auto BCTRL = std::bind(BCCTR, 0x10 | 0x04, 0, 0, 1);
-		static auto MTCTR = std::bind(MTSPR, (0x1 << 5) | 0x8, std::placeholders::_1);
+		inline u32 LIS(u32 reg, u32 imm) { return ADDIS(reg, r0, imm); }
+		inline u32 LI_(u32 reg, u32 imm) { return ADDI(reg, r0, imm); }
+		inline u32 NOP() { return ORI(r0, r0, 0); }
+		inline u32 MR(u32 x, u32 y) { return OR(x, y, y, false); }
+		inline u32 BLR() { return BCLR(0x10 | 0x04, 0, 0, 0); }
+		inline u32 BCTR() { return BCCTR(0x10 | 0x04, 0, 0, 0); }
+		inline u32 BCTRL() { return BCCTR(0x10 | 0x04, 0, 0, 1); }
+		inline u32 MFCTR(u32 reg) { return MFSPR(reg, 9 << 5); }
+		inline u32 MTCTR(u32 reg) { return MTSPR(9 << 5, reg); }
+		inline u32 MFLR(u32 reg) { return MFSPR(reg, 8 << 5); }
+		inline u32 MTLR(u32 reg) { return MTSPR(8 << 5, reg); }
 
 		inline u32 BNE(u32 cr, s32 imm) { return BC(4, 2 | cr << 2, imm, 0, 0); }
 		inline u32 BEQ(u32 cr, s32 imm) { return BC(12, 2 | cr << 2, imm, 0, 0); }

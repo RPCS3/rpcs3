@@ -465,13 +465,9 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 
-								if (!vm::check_addr(addr, 4))
+								if (!patch_ppu_import(addr, index))
 								{
 									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
-								}
-								else
-								{
-									vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 								}
 							}
 						}
@@ -686,7 +682,10 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
 
-								vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
+								if (!patch_ppu_import(addr, index))
+								{
+									LOG_ERROR(LOADER, "Failed to inject code at address 0x%x", addr);
+								}
 
 								//if (!func || !func->lle_func)
 								//{

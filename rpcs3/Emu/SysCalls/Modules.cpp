@@ -417,6 +417,102 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
 	}
 }
 
+bool patch_ppu_import(u32 addr, u32 index)
+{
+	const auto data = vm::ptr<const u32>::make(addr);
+
+	using namespace PPU_instr;
+
+	// check different patterns:
+
+	if (vm::check_addr(addr, 32) &&
+		(data[0] & 0xffff0000) == LI_(r12, 0) &&
+		(data[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+		(data[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+		data[3] == STD(r2, r1, 0x28) &&
+		data[4] == LWZ(r0, r12, 0) &&
+		data[5] == LWZ(r2, r12, 4) &&
+		data[6] == MTCTR(r0) &&
+		data[7] == BCTR())
+	{
+		vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	if (vm::check_addr(addr, 12) &&
+		(data[0] & 0xffff0000) == LI_(r0, 0) &&
+		(data[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
+		(data[2] & 0xfc000003) == B(0, 0, 0))
+	{
+		const auto sub = vm::ptr<const u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
+
+		if (vm::check_addr(sub.addr(), 60) &&
+			sub[0x0] == STDU(r1, r1, -0x80) &&
+			sub[0x1] == STD(r2, r1, 0x70) &&
+			sub[0x2] == MR(r2, r0) &&
+			sub[0x3] == MFLR(r0) &&
+			sub[0x4] == STD(r0, r1, 0x90) &&
+			sub[0x5] == LWZ(r2, r2, 0) &&
+			sub[0x6] == LWZ(r0, r2, 0) &&
+			sub[0x7] == LWZ(r2, r2, 4) &&
+			sub[0x8] == MTCTR(r0) &&
+			sub[0x9] == BCTRL() &&
+			sub[0xa] == LD(r2, r1, 0x70) &&
+			sub[0xb] == ADDI(r1, r1, 0x80) &&
+			sub[0xc] == LD(r0, r1, 0x10) &&
+			sub[0xd] == MTLR(r0) &&
+			sub[0xe] == BLR())
+		{
+			vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+			return true;
+		}
+	}
+
+	if (vm::check_addr(addr, 64) &&
+		data[0x0] == MFLR(r0) &&
+		data[0x1] == STD(r0, r1, 0x10) &&
+		data[0x2] == STDU(r1, r1, -0x80) &&
+		data[0x3] == STD(r2, r1, 0x70) &&
+		(data[0x4] & 0xffff0000) == LI_(r2, 0) &&
+		(data[0x5] & 0xffff0000) == ORIS(r2, r2, 0) &&
+		data[0x6] == LWZ(r2, r2, 0) &&
+		data[0x7] == LWZ(r0, r2, 0) &&
+		data[0x8] == LWZ(r2, r2, 4) &&
+		data[0x9] == MTCTR(r0) &&
+		data[0xa] == BCTRL() &&
+		data[0xb] == LD(r2, r1, 0x70) &&
+		data[0xc] == ADDI(r1, r1, 0x80) &&
+		data[0xd] == LD(r0, r1, 0x10) &&
+		data[0xe] == MTLR(r0) &&
+		data[0xf] == BLR())
+	{
+		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	if (vm::check_addr(addr, 56) &&
+		(data[0x0] & 0xffff0000) == LI_(r12, 0) &&
+		(data[0x1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+		(data[0x2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+		data[0x3] == STD(r2, r1, 0x28) &&
+		data[0x4] == MFLR(r0) &&
+		data[0x5] == STD(r0, r1, 0x20) &&
+		data[0x6] == LWZ(r0, r12, 0) &&
+		data[0x7] == LWZ(r2, r12, 4) &&
+		data[0x8] == MTCTR(r0) &&
+		data[0x9] == BCTRL() &&
+		data[0xa] == LD(r0, r1, 0x20) &&
+		data[0xb] == MTLR(r0) &&
+		data[0xc] == LD(r2, r1, 0x28) &&
+		data[0xd] == BLR())
+	{
+		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	return false;
+}
+
 Module::Module(const char* name, void(*init)())
 	: m_is_loaded(false)
 	, m_name(name)

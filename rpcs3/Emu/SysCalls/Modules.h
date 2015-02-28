@@ -154,6 +154,8 @@ u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], size_t
 
 void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
+bool patch_ppu_import(u32 addr, u32 index);
+
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, bind_func(name)))
 #define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, bind_func(name)))
 
