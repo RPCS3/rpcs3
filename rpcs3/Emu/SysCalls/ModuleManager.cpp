@@ -53,6 +53,7 @@ extern Module sys_fs;
 extern Module sys_io;
 extern Module sys_net;
 extern Module sysPrxForUser;
+extern Module sys_libc;
 
 struct ModuleInfo
 {
@@ -166,24 +167,27 @@ static const g_module_list[] =
 	{ -1, "cellSysmodule", &cellSysmodule },
 	{ -1, "libmixer", &libmixer },
 	{ -1, "sysPrxForUser", &sysPrxForUser },
+	{ -1, "sys_libc", &sys_libc },
 };
 
 void ModuleManager::Init()
 {
-	if (!initialized)
+	if (initialized)
 	{
-		clear_ppu_functions();
-
-		for (auto& m : g_module_list)
-		{
-			if (m.module)
-			{
-				m.module->Init();
-			}
-		}
-
-		initialized = true;
+		Close();
 	}
+
+	clear_ppu_functions();
+
+	for (auto& m : g_module_list)
+	{
+		if (m.module)
+		{
+			m.module->Init();
+		}
+	}
+
+	initialized = true;
 }
 
 ModuleManager::ModuleManager()

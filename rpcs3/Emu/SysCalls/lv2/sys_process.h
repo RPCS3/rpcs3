@@ -33,7 +33,7 @@ s32 sys_process_getpid();
 s32 sys_process_getppid();
 s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump);
 s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size);
-s32 sys_process_get_paramsfo(vm::ptr<u8> buffer);
+s32 _sys_process_get_paramsfo(vm::ptr<char> buffer);
 s32 sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version);
 s32 sys_process_get_status(u64 unk);
 s32 sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);

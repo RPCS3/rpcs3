@@ -7,7 +7,7 @@
 #include "Debugger.h"
 #include "InterpreterDisAsm.h"
 #include "Emu/CPU/CPUThreadManager.h"
-#include "Emu/Cell/PPCThread.h"
+#include "Emu/CPU/CPUThread.h"
 
 
 class DbgEmuPanel : public wxPanel
@@ -95,7 +95,7 @@ public:
 		break;
 
 		case DID_EXIT_THR_SYSCALL:
-			Emu.GetCPU().RemoveThread(((PPCThread*)event.GetClientData())->GetId());
+			Emu.GetCPU().RemoveThread(((CPUThread*)event.GetClientData())->GetId());
 		break;
 		}
 

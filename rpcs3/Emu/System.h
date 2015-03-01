@@ -61,14 +61,6 @@ public:
 	u32 GetTLSMemsz() const { return tls_memsz; }
 };
 
-class ModuleInitializer
-{
-public:
-	ModuleInitializer();
-
-	virtual void Init() = 0;
-};
-
 class Emulator
 {
 	enum Mode
@@ -83,7 +75,6 @@ class Emulator
 
 	u32 m_rsx_callback;
 	u32 m_cpu_thr_stop;
-	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
@@ -112,7 +103,6 @@ public:
 	std::string m_emu_path;
 	std::string m_title_id;
 	std::string m_title;
-	s32 m_sdk_version;
 
 	Emulator();
 	~Emulator();
@@ -132,12 +122,12 @@ public:
 		return m_emu_path;
 	}
 
-	std::string GetTitleID() const
+	const std::string& GetTitleID() const
 	{
 		return m_title_id;
 	}
 
-	std::string GetTitle() const
+	const std::string& GetTitle() const
 	{
 		return m_title;
 	}
@@ -164,11 +154,6 @@ public:
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
 	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
 
-	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
-	{
-		m_modules_init.push_back(std::move(m));
-	}
-
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
 		m_info.SetTLSData(addr, filesz, memsz);
@@ -191,6 +176,7 @@ public:
 	u32 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
 
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
+	u32 GetSDKVersion() { return m_info.GetProcParam().sdk_version; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }

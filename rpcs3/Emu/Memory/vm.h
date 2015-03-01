@@ -77,15 +77,15 @@ namespace vm
 	}
 
 	template<typename T = void>
-	T* const get_priv_ptr(u32 addr)
+	T* const priv_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
 	}
 
 	template<typename T>
-	T& get_priv_ref(u32 addr)
+	T& priv_ref(u32 addr)
 	{
-		return *get_priv_ptr<T>(addr);
+		return *priv_ptr<T>(addr);
 	}
 
 	u32 get_addr(const void* real_pointer);

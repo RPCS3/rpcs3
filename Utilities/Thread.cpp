@@ -465,7 +465,7 @@ typedef ucontext_t x64_context;
 
 #define X64REG(context, reg) (darwin_x64reg(context, reg))
 #define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0[reg]))
-#define EFLAGS(context) ((context)->uc_mcontext->__ss.__eflags)
+#define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
 uint64_t* darwin_x64reg(x64_context *context, int reg)
 {
@@ -832,7 +832,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 					return false;
 				}
 
-				memcpy(vm::get_priv_ptr(addr), XMMREG(context, reg - X64R_XMM0), 16);
+				memcpy(vm::priv_ptr(addr), XMMREG(context, reg - X64R_XMM0), 16);
 				break;
 			}
 
@@ -842,7 +842,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			memcpy(vm::get_priv_ptr(addr), &reg_value, d_size);
+			memcpy(vm::priv_ptr(addr), &reg_value, d_size);
 			break;
 		}
 		case X64OP_MOVS:
@@ -867,7 +867,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 				// copy data
 				memcpy(&value, (void*)RSI(context), d_size);
-				memcpy(vm::get_priv_ptr(a_addr), &value, d_size);
+				memcpy(vm::priv_ptr(a_addr), &value, d_size);
 
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
@@ -925,7 +925,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			while (a_addr >> 12 == addr >> 12)
 			{
 				// fill data with value
-				memcpy(vm::get_priv_ptr(a_addr), &value, d_size);
+				memcpy(vm::priv_ptr(a_addr), &value, d_size);
 
 				// shift pointers
 				if (EFLAGS(context) & 0x400 /* direction flag */)
@@ -966,10 +966,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: reg_value = vm::get_priv_ref<atomic_le_t<u8>>(addr).exchange((u8)reg_value); break;
-			case 2: reg_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).exchange((u16)reg_value); break;
-			case 4: reg_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).exchange((u32)reg_value); break;
-			case 8: reg_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).exchange((u64)reg_value); break;
+			case 1: reg_value = vm::priv_ref<atomic_le_t<u8>>(addr).exchange((u8)reg_value); break;
+			case 2: reg_value = vm::priv_ref<atomic_le_t<u16>>(addr).exchange((u16)reg_value); break;
+			case 4: reg_value = vm::priv_ref<atomic_le_t<u32>>(addr).exchange((u32)reg_value); break;
+			case 8: reg_value = vm::priv_ref<atomic_le_t<u64>>(addr).exchange((u64)reg_value); break;
 			default: return false;
 			}
 
@@ -989,10 +989,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			switch (d_size)
 			{
-			case 1: old_value = vm::get_priv_ref<atomic_le_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
-			case 2: old_value = vm::get_priv_ref<atomic_le_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
-			case 4: old_value = vm::get_priv_ref<atomic_le_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
-			case 8: old_value = vm::get_priv_ref<atomic_le_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
+			case 1: old_value = vm::priv_ref<atomic_le_t<u8>>(addr).compare_and_swap((u8)cmp_value, (u8)reg_value); break;
+			case 2: old_value = vm::priv_ref<atomic_le_t<u16>>(addr).compare_and_swap((u16)cmp_value, (u16)reg_value); break;
+			case 4: old_value = vm::priv_ref<atomic_le_t<u32>>(addr).compare_and_swap((u32)cmp_value, (u32)reg_value); break;
+			case 8: old_value = vm::priv_ref<atomic_le_t<u64>>(addr).compare_and_swap((u64)cmp_value, (u64)reg_value); break;
 			default: return false;
 			}
 

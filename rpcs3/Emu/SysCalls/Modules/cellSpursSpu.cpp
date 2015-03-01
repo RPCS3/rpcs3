@@ -168,7 +168,7 @@ bool spursKernel1SelectWorkload(SPUThread & spu) {
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]() {
         // lock the first 0x80 bytes of spurs
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         // Calculate the contention (number of SPUs used) for each workload
         u8 contention[CELL_SPURS_MAX_WORKLOAD];
@@ -325,7 +325,7 @@ bool spursKernel2SelectWorkload(SPUThread & spu) {
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]() {
         // lock the first 0x80 bytes of spurs
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         // Calculate the contention (number of SPUs used) for each workload
         u8 contention[CELL_SPURS_MAX_WORKLOAD2];
@@ -696,7 +696,7 @@ void spursSysServiceMain(SPUThread & spu, u32 pollStatus) {
         vm::reservation_acquire(vm::get_ptr(spu.ls_offset + 0x100), vm::cast(ctxt->spurs.addr()), 128);
 
         vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-            auto spurs = ctxt->spurs.get_priv_ptr();
+            auto spurs = ctxt->spurs.priv_ptr();
 
             // Halt if already initialised
             if (spurs->m.sysSrvOnSpu & (1 << ctxt->spuNum)) {
@@ -786,7 +786,7 @@ void spursSysServiceProcessRequests(SPUThread & spu, SpursKernelContext * ctxt) 
     bool terminate      = false;
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         // Terminate request
         if (spurs->m.sysSrvMsgTerminate & (1 << ctxt->spuNum)) {
@@ -853,7 +853,7 @@ void spursSysServiceActivateWorkload(SPUThread & spu, SpursKernelContext * ctxt)
     }
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++) {
             // Update workload status and runnable flag based on the workload state
@@ -910,7 +910,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(SPUThread & spu, SpursKernelC
     u32 wklNotifyBitSet;
     u8  spuPort;
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         wklNotifyBitSet = 0;
         spuPort         = spurs->m.spuPort;;
@@ -952,7 +952,7 @@ void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 
 
     u8 sysSrvMsgUpdateTrace;
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         sysSrvMsgUpdateTrace           = spurs->m.sysSrvMsgUpdateTrace;
         spurs->m.sysSrvMsgUpdateTrace &= ~(1 << ctxt->spuNum);
@@ -1006,7 +1006,7 @@ void spursSysServiceCleanupAfterSystemWorkload(SPUThread & spu, SpursKernelConte
     bool do_return = false;
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, m.wklState1)), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         if (spurs->m.sysSrvWorkload[ctxt->spuNum] == 0xFF) {
             do_return = true;
@@ -1024,7 +1024,7 @@ void spursSysServiceCleanupAfterSystemWorkload(SPUThread & spu, SpursKernelConte
     spursSysServiceActivateWorkload(spu, ctxt);
 
     vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]() {
-        auto spurs = ctxt->spurs.get_priv_ptr();
+        auto spurs = ctxt->spurs.priv_ptr();
 
         if (wklId >= CELL_SPURS_MAX_WORKLOAD) {
             spurs->m.wklCurrentContention[wklId & 0x0F] -= 0x10;
@@ -1158,7 +1158,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
     s32 rc = CELL_OK;
     s32 numNewlyReadyTasks;
     vm::reservation_op(vm::cast(ctxt->taskset.addr()), 128, [&]() {
-        auto taskset = ctxt->taskset.get_priv_ptr();
+        auto taskset = ctxt->taskset.priv_ptr();
 
         // Verify taskset state is valid
         auto _0 = be_t<u128>::make(u128::from32(0));
@@ -1299,7 +1299,7 @@ s32 spursTasksetProcessRequest(SPUThread & spu, s32 request, u32 * taskId, u32 *
 
     // Increment the ready count of the workload by the number of tasks that have become ready
     vm::reservation_op(vm::cast(kernelCtxt->spurs.addr()), 128, [&]() {
-        auto spurs = kernelCtxt->spurs.get_priv_ptr();
+        auto spurs = kernelCtxt->spurs.priv_ptr();
 
         s32 readyCount  = kernelCtxt->wklCurrentId < CELL_SPURS_MAX_WORKLOAD ? spurs->m.wklReadyCount1[kernelCtxt->wklCurrentId].read_relaxed() : spurs->m.wklIdleSpuCountOrReadyCount2[kernelCtxt->wklCurrentId & 0x0F].read_relaxed();
         readyCount     += numNewlyReadyTasks;

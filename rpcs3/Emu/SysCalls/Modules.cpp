@@ -30,21 +30,29 @@ u32 add_ppu_func_sub(StaticFunc func)
 	return func.index;
 }
 
-u32 add_ppu_func_sub(const char group[8], const u64 ops[], const char* name, Module* module, ppu_func_caller func)
+u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const size_t count, const char* name, Module* module, ppu_func_caller func)
 {
+	char group_name[9] = {};
+
+	if (group)
+	{
+		strcpy_trunc(group_name, group);
+	}
+
 	StaticFunc sf;
 	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, func));
 	sf.name = name;
-	sf.group = *(u64*)group;
+	sf.group = *(u64*)group_name;
 	sf.found = 0;
 
-	// TODO: check for self-inclusions, use CRC
-	for (u32 i = 0; ops[i]; i++)
+	for (u32 i = 0; i < count; i++)
 	{
-		SFuncOp op;
-		op.mask = re32((u32)(ops[i] >> 32));
-		op.crc = re32((u32)(ops[i]));
-		if (op.mask) op.crc &= op.mask;
+		SearchPatternEntry op;
+		op.type = ops[i].type;
+		op.data = re32(ops[i].data);
+		op.mask = re32(ops[i].mask);
+		op.num = ops[i].num;
+		assert(!op.mask || (op.data & ~op.mask) == 0);
 		sf.ops.push_back(op);
 	}
 
@@ -166,90 +174,155 @@ u32 get_function_id(const char* name)
 	return (u32&)output[0];
 }
 
-void hook_ppu_funcs(u32* base, u32 size)
+void hook_ppu_func(vm::ptr<u32> base, u32 pos, u32 size)
 {
-	size /= 4;
+	using namespace PPU_instr;
+
+	for (auto& sub : g_ppu_func_subs)
+	{
+		bool found = true;
+
+		for (u32 k = pos, x = 0; x + 1 <= sub.ops.size(); k++, x++)
+		{
+			if (k >= size)
+			{
+				found = false;
+				break;
+			}
+
+			// skip NOP
+			if (base[k].data() == se32(0x60000000))
+			{
+				x--;
+				continue;
+			}
+
+			const u32 data = sub.ops[x].data;
+			const u32 mask = sub.ops[x].mask;
+
+			const bool match = (base[k].data() & mask) == data;
+
+			switch (sub.ops[x].type)
+			{
+			case SPET_MASKED_OPCODE:
+			{
+				// masked pattern
+				if (!match)
+				{
+					found = false;
+				}
+
+				break;
+			}
+			case SPET_OPTIONAL_MASKED_OPCODE:
+			{
+				// optional masked pattern
+				if (!match)
+				{
+					k--;
+				}
+
+				break;
+			}
+			case SPET_LABEL:
+			{
+				const auto addr = (base + k--).addr();
+				const auto lnum = data;
+				const auto label = sub.labels.find(lnum);
+
+				if (label == sub.labels.end()) // register the label
+				{
+					sub.labels[lnum] = addr;
+				}
+				else if (label->second != addr) // or check registered label
+				{
+					found = false;
+				}
+
+				break;
+			}
+			case SPET_BRANCH_TO_LABEL:
+			{
+				if (!match)
+				{
+					found = false;
+					break;
+				}
+
+				const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+				const auto lnum = sub.ops[x].num;
+				const auto label = sub.labels.find(lnum);
+
+				if (label == sub.labels.end()) // register the label
+				{
+					sub.labels[lnum] = addr;
+				}
+				else if (label->second != addr) // or check registered label
+				{
+					found = false;
+				}
+
+				break;
+			}
+			//case SPET_BRANCH_TO_FUNC:
+			//{
+			//	if (!match)
+			//	{
+			//		found = false;
+			//		break;
+			//	}
+
+			//	const auto addr = (base[k].data() & se32(2) ? 0 : (base + k).addr()) + ((s32)base[k] << cntlz32(mask) >> (cntlz32(mask) + 2));
+			//	const auto nid = sub.ops[x].num;
+			//	// TODO: recursive call
+			//}
+			default:
+			{
+				LOG_ERROR(LOADER, "Unknown search pattern type (%d)", sub.ops[x].type);
+				assert(0);
+				return;
+			}
+			}
+
+			if (!found)
+			{
+				break;
+			}
+		}
+
+		if (found)
+		{
+			LOG_SUCCESS(LOADER, "Function '%s' hooked (addr=0x%x)", sub.name, (base + pos).addr());
+			sub.found++;
+			base[pos] = HACK(sub.index | EIF_PERFORM_BLR);
+		}
+
+		if (sub.labels.size())
+		{
+			sub.labels.clear();
+		}
+	}
+}
+
+void hook_ppu_funcs(vm::ptr<u32> base, u32 size)
+{
+	using namespace PPU_instr;
 
 	if (!Ini.HLEHookStFunc.GetValue())
+	{
 		return;
+	}
 
 	// TODO: optimize search
 	for (u32 i = 0; i < size; i++)
 	{
-		for (u32 j = 0; j < g_ppu_func_subs.size(); j++)
+		// skip NOP
+		if (base[i].data() == se32(0x60000000))
 		{
-			if ((base[i] & g_ppu_func_subs[j].ops[0].mask) == g_ppu_func_subs[j].ops[0].crc)
-			{
-				bool found = true;
-				u32 can_skip = 0;
-				for (u32 k = i, x = 0; x + 1 <= g_ppu_func_subs[j].ops.size(); k++, x++)
-				{
-					if (k >= size)
-					{
-						found = false;
-						break;
-					}
-
-					// skip NOP
-					if (base[k] == se32(0x60000000))
-					{
-						x--;
-						continue;
-					}
-
-					const u32 mask = g_ppu_func_subs[j].ops[x].mask;
-					const u32 crc = g_ppu_func_subs[j].ops[x].crc;
-
-					if (!mask)
-					{
-						// TODO: define syntax
-						if (crc < 4) // skip various number of instructions that don't match next pattern entry
-						{
-							can_skip += crc;
-							k--; // process this position again
-						}
-						else if (base[k] != crc) // skippable pattern ("optional" instruction), no mask allowed
-						{
-							k--;
-							if (can_skip) // cannot define this behaviour properly
-							{
-								LOG_WARNING(LOADER, "hook_ppu_funcs(): can_skip = %d (unchanged)", can_skip);
-							}
-						}
-						else
-						{
-							if (can_skip) // cannot define this behaviour properly
-							{
-								LOG_WARNING(LOADER, "hook_ppu_funcs(): can_skip = %d (set to 0)", can_skip);
-								can_skip = 0;
-							}
-						}
-					}
-					else if ((base[k] & mask) != crc) // masked pattern
-					{
-						if (can_skip)
-						{
-							can_skip--;
-						}
-						else
-						{
-							found = false;
-							break;
-						}
-					}
-					else
-					{
-						can_skip = 0;
-					}
-				}
-				if (found)
-				{
-					LOG_NOTICE(LOADER, "Function '%s' hooked (addr=0x%x)", g_ppu_func_subs[j].name, vm::get_addr(base + i * 4));
-					g_ppu_func_subs[j].found++;
-					base[i] = re32(0x04000000 | g_ppu_func_subs[j].index | EIF_PERFORM_BLR); // hack
-				}
-			}
+			continue;
 		}
+
+		hook_ppu_func(base, i, size);
 	}
 
 	// check function groups
@@ -258,6 +331,12 @@ void hook_ppu_funcs(u32* base, u32 size)
 		if (g_ppu_func_subs[i].found) // start from some group
 		{
 			const u64 group = g_ppu_func_subs[i].group;
+
+			if (!group)
+			{
+				// skip if group not set
+				continue;
+			}
 
 			enum GroupSearchResult : u32
 			{
@@ -320,22 +399,118 @@ void hook_ppu_funcs(u32* base, u32 size)
 				if (g_ppu_func_subs[j].group == group) g_ppu_func_subs[j].found = 0;
 			}
 
-			char name[9] = "????????";
+			char group_name[9] = {};
 
-			*(u64*)name = group;
+			*(u64*)group_name = group;
 
 			if (res == GSR_SUCCESS)
 			{
-				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", std::string(name, 9).c_str());
+				LOG_SUCCESS(LOADER, "Function group [%s] successfully hooked", group_name);
 			}
 			else
 			{
-				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", std::string(name, 9).c_str(),
+				LOG_ERROR(LOADER, "Function group [%s] failed:%s%s", group_name,
 					(res & GSR_MISSING ? " missing;" : ""),
 					(res & GSR_EXCESS ? " excess;" : ""));
 			}
 		}
 	}
+}
+
+bool patch_ppu_import(u32 addr, u32 index)
+{
+	const auto data = vm::ptr<const u32>::make(addr);
+
+	using namespace PPU_instr;
+
+	// check different patterns:
+
+	if (vm::check_addr(addr, 32) &&
+		(data[0] & 0xffff0000) == LI_(r12, 0) &&
+		(data[1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+		(data[2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+		data[3] == STD(r2, r1, 0x28) &&
+		data[4] == LWZ(r0, r12, 0) &&
+		data[5] == LWZ(r2, r12, 4) &&
+		data[6] == MTCTR(r0) &&
+		data[7] == BCTR())
+	{
+		vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	if (vm::check_addr(addr, 12) &&
+		(data[0] & 0xffff0000) == LI_(r0, 0) &&
+		(data[1] & 0xffff0000) == ORIS(r0, r0, 0) &&
+		(data[2] & 0xfc000003) == B(0, 0, 0))
+	{
+		const auto sub = vm::ptr<const u32>::make(addr + 8 + ((s32)data[2] << 6 >> 8 << 2));
+
+		if (vm::check_addr(sub.addr(), 60) &&
+			sub[0x0] == STDU(r1, r1, -0x80) &&
+			sub[0x1] == STD(r2, r1, 0x70) &&
+			sub[0x2] == MR(r2, r0) &&
+			sub[0x3] == MFLR(r0) &&
+			sub[0x4] == STD(r0, r1, 0x90) &&
+			sub[0x5] == LWZ(r2, r2, 0) &&
+			sub[0x6] == LWZ(r0, r2, 0) &&
+			sub[0x7] == LWZ(r2, r2, 4) &&
+			sub[0x8] == MTCTR(r0) &&
+			sub[0x9] == BCTRL() &&
+			sub[0xa] == LD(r2, r1, 0x70) &&
+			sub[0xb] == ADDI(r1, r1, 0x80) &&
+			sub[0xc] == LD(r0, r1, 0x10) &&
+			sub[0xd] == MTLR(r0) &&
+			sub[0xe] == BLR())
+		{
+			vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+			return true;
+		}
+	}
+
+	if (vm::check_addr(addr, 64) &&
+		data[0x0] == MFLR(r0) &&
+		data[0x1] == STD(r0, r1, 0x10) &&
+		data[0x2] == STDU(r1, r1, -0x80) &&
+		data[0x3] == STD(r2, r1, 0x70) &&
+		(data[0x4] & 0xffff0000) == LI_(r2, 0) &&
+		(data[0x5] & 0xffff0000) == ORIS(r2, r2, 0) &&
+		data[0x6] == LWZ(r2, r2, 0) &&
+		data[0x7] == LWZ(r0, r2, 0) &&
+		data[0x8] == LWZ(r2, r2, 4) &&
+		data[0x9] == MTCTR(r0) &&
+		data[0xa] == BCTRL() &&
+		data[0xb] == LD(r2, r1, 0x70) &&
+		data[0xc] == ADDI(r1, r1, 0x80) &&
+		data[0xd] == LD(r0, r1, 0x10) &&
+		data[0xe] == MTLR(r0) &&
+		data[0xf] == BLR())
+	{
+		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	if (vm::check_addr(addr, 56) &&
+		(data[0x0] & 0xffff0000) == LI_(r12, 0) &&
+		(data[0x1] & 0xffff0000) == ORIS(r12, r12, 0) &&
+		(data[0x2] & 0xffff0000) == LWZ(r12, r12, 0) &&
+		data[0x3] == STD(r2, r1, 0x28) &&
+		data[0x4] == MFLR(r0) &&
+		data[0x5] == STD(r0, r1, 0x20) &&
+		data[0x6] == LWZ(r0, r12, 0) &&
+		data[0x7] == LWZ(r2, r12, 4) &&
+		data[0x8] == MTCTR(r0) &&
+		data[0x9] == BCTRL() &&
+		data[0xa] == LD(r0, r1, 0x20) &&
+		data[0xb] == MTLR(r0) &&
+		data[0xc] == LD(r2, r1, 0x28) &&
+		data[0xd] == BLR())
+	{
+		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		return true;
+	}
+
+	return false;
 }
 
 Module::Module(const char* name, void(*init)())

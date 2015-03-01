@@ -38,11 +38,6 @@ static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
-ModuleInitializer::ModuleInitializer()
-{
-	Emu.AddModuleInit(std::move(std::unique_ptr<ModuleInitializer>(this)));
-}
-
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
@@ -82,11 +77,6 @@ Emulator::~Emulator()
 
 void Emulator::Init()
 {
-	while(m_modules_init.size())
-	{
-		m_modules_init[0]->Init();
-		m_modules_init.erase(m_modules_init.begin());
-	}
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -265,24 +255,7 @@ void Emulator::Load()
 		vm::close();
 		return;
 	}
-
-	// trying to load some info from PARAM.SFO
-	vfsFile f2("/app_home/../PARAM.SFO");
-	if (f2.IsOpened())
-	{
-		PSFLoader psf(f2);
-		if (psf.Load(false))
-		{
-			std::string version = psf.GetString("PS3_SYSTEM_VER");
-
-			const size_t dot = version.find('.');
-			if (dot != std::string::npos)
-			{
-				Emu.m_sdk_version = (std::stoi(version, nullptr, 16) << 20) | ((std::stoi(version.substr(dot + 1), nullptr, 16) & 0xffff) << 4) | 1;
-			}
-		}
-	}
-
+	
 	LoadPoints(BreakPointsDBName);
 
 	m_status = Ready;

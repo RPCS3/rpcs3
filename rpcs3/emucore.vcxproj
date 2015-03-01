@@ -131,7 +131,6 @@
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Thread.cpp" />
     <ClCompile Include="Emu\Cell\MFC.cpp" />
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp" />
-    <ClCompile Include="Emu\Cell\PPCThread.cpp" />
     <ClCompile Include="Emu\Cell\PPULLVMRecompilerTests.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
@@ -279,6 +278,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_http.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
     <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
@@ -362,7 +362,6 @@
     <ClInclude Include="Emu\Cell\PPCDecoder.h" />
     <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPCInstrTable.h" />
-    <ClInclude Include="Emu\Cell\PPCThread.h" />
     <ClInclude Include="Emu\Cell\PPUDecoder.h" />
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPUInstrTable.h" />

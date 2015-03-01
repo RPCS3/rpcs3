@@ -307,8 +307,6 @@ namespace loader
 				return load_sprx(info);
 			}
 
-			Emu.m_sdk_version = -1;
-
 			//store elf to memory
 			vm::ps3::init();
 
@@ -467,13 +465,9 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
 								}
 
-								if (!vm::check_addr(addr, 4))
+								if (!patch_ppu_import(addr, index))
 								{
 									LOG_ERROR(LOADER, "Failed to inject code for function '%s' (0x%x)", SysCalls::GetHLEFuncName(nid), addr);
-								}
-								else
-								{
-									vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
 								}
 							}
 						}
@@ -576,7 +570,7 @@ namespace loader
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 							m_stream->Read(phdr.p_vaddr.get_ptr(), phdr.p_filesz);
-							hook_ppu_funcs((u32*)phdr.p_vaddr.get_ptr(), vm::cast(phdr.p_filesz));
+							hook_ppu_funcs(vm::ptr<u32>::make(phdr.p_vaddr.addr()), vm::cast(phdr.p_filesz) / 4);
 						}
 					}
 					break;
@@ -618,7 +612,6 @@ namespace loader
 							*/
 
 							info = proc_param.info;
-							Emu.m_sdk_version = info.sdk_version;
 						}
 					}
 					break;
@@ -689,7 +682,10 @@ namespace loader
 									LOG_NOTICE(LOADER, "Imported %sfunction '%s' in '%s' module (0x%x)", is_lle ? "LLE " : "", SysCalls::GetHLEFuncName(nid), module_name, addr);
 								}
 
-								vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
+								if (!patch_ppu_import(addr, index))
+								{
+									LOG_ERROR(LOADER, "Failed to inject code at address 0x%x", addr);
+								}
 
 								//if (!func || !func->lle_func)
 								//{

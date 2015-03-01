@@ -62,7 +62,7 @@ void GLGSFrame::Flip(void* context)
 	canvas->SwapBuffers();
 	m_frames++;
 
-	const std::string sub_title = Emu.GetTitle() += Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ";
+	const std::string sub_title = Emu.GetTitle() + (Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ");
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{

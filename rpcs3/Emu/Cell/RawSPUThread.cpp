@@ -47,7 +47,7 @@ bool RawSPUThread::Read32(const u32 addr, u32* value)
 
 	case SPU_MBox_Status_offs:
 	{
-		*value = (SPU.Out_MBox.GetCount() & 0xff) | (SPU.In_MBox.GetFreeCount() << 8);
+		*value = (SPU.Out_MBox.GetCount() & 0xff) | (SPU.In_MBox.GetFreeCount() << 8) | (SPU.Out_IntrMBox.GetCount() << 16);
 		break;
 	}
 		

@@ -559,13 +559,12 @@ s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 	return CELL_OK;
 }
 
-s32 _nid_E75C40F2(u32 dest)
+s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
-	sysPrxForUser.Todo("Unnamed function 0xE75C40F2 (dest=0x%x) -> CELL_ENOENT", dest);
+	sysPrxForUser.Warning("sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
-	// prx: load some data (0x40 bytes) previously set by sys_process_get_paramsfo
-	//memset(Memory + dest, 0, 0x40);
-	return CELL_ENOENT;
+	// prx: load some data (0x40 bytes) previously set by _sys_process_get_paramsfo syscall
+	return _sys_process_get_paramsfo(buffer);
 }
 
 Module sysPrxForUser("sysPrxForUser", []()
@@ -674,5 +673,5 @@ Module sysPrxForUser("sysPrxForUser", []()
 
 	REG_FUNC(sysPrxForUser, _sys_printf);
 
-	REG_UNNAMED(sysPrxForUser, E75C40F2);
+	REG_FUNC(sysPrxForUser, sys_process_get_paramsfo);
 });

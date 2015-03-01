@@ -1,8 +1,9 @@
 #include "stdafx_gui.h"
 #include "Utilities/rMsgBox.h"
 
-#include "Emu/Cell/PPUProgramCompiler.h"
-using namespace PPU_opcodes;
+//#include "Emu/Cell/PPUProgramCompiler.h"
+//using namespace PPU_opcodes;
+
 #include "CompilerELF.h"
 
 enum CompilerIDs
@@ -392,8 +393,8 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 	LoadElf(fmt::ToUTF8(ctrl.GetPath()));
 }
 
-#include "Emu/Cell/PPUDisAsm.h"
-#include "Emu/Cell/PPUDecoder.h"
+//#include "Emu/Cell/PPUDisAsm.h"
+//#include "Emu/Cell/PPUDecoder.h"
 
 void CompilerELF::LoadElf(const std::string& path)
 {

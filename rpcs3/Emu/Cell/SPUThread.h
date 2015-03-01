@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/Cell/Common.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/atomic_type.h"
-#include "PPCThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
@@ -115,8 +115,6 @@ enum
 
 struct g_imm_table_struct
 {
-	//u16 cntb_table[65536];
-
 	__m128i fsmb_table[65536];
 	__m128i fsmh_table[256];
 	__m128i fsm_table[16];
@@ -127,20 +125,8 @@ struct g_imm_table_struct
 
 	g_imm_table_struct()
 	{
-		/*static_assert(offsetof(g_imm_table_struct, cntb_table) == 0, "offsetof(cntb_table) != 0");
-		for (u32 i = 0; i < sizeof(cntb_table) / sizeof(cntb_table[0]); i++)
-		{
-		u32 cnt_low = 0, cnt_high = 0;
-		for (u32 j = 0; j < 8; j++)
-		{
-		cnt_low += (i >> j) & 1;
-		cnt_high += (i >> (j + 8)) & 1;
-		}
-		cntb_table[i] = (cnt_high << 8) | cnt_low;
-		}*/
 		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
 		{
-
 			for (u32 j = 0; j < 4; j++) mmToU32Ptr(fsm_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
 		}
 		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
@@ -287,7 +273,7 @@ union SPU_SNRConfig_hdr
 
 struct SpuGroupInfo;
 
-class SPUThread : public PPCThread
+class SPUThread : public CPUThread
 {
 public:
 	u128 GPR[128]; // General-Purpose Registers

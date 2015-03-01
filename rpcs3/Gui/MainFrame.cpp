@@ -487,8 +487,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_camera_type->Append("USB Video Class 1.1");
 
 	cbox_hle_loglvl->Append("All");
-	cbox_hle_loglvl->Append("Success");
 	cbox_hle_loglvl->Append("Warnings");
+	cbox_hle_loglvl->Append("Success");
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
