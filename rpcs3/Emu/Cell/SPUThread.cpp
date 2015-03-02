@@ -210,13 +210,13 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 			else
 			{
 				LOG_ERROR(SPU, "do_dma_transfer(cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x): invalid MMIO offset", cmd, args.lsa, args.ea, args.tag, args.size);
-				throw "";
+				throw __FUNCTION__;
 			}
 		}
 		else
 		{
 			LOG_ERROR(SPU, "do_dma_transfer(cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x): invalid thread type", cmd, args.lsa, args.ea, args.tag, args.size);
-			throw "";
+			throw __FUNCTION__;
 		}
 	}
 
@@ -237,7 +237,7 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 	}
 
 	LOG_ERROR(SPU, "do_dma_transfer(cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x): invalid cmd (%s)", cmd, args.lsa, args.ea, args.tag, args.size, get_mfc_cmd_name(cmd));
-	throw "";
+	throw __FUNCTION__;
 }
 
 void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
@@ -245,7 +245,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 	if (!(cmd & MFC_LIST_MASK))
 	{
 		LOG_ERROR(SPU, "do_dma_list_cmd(cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x): invalid cmd (%s)", cmd, args.lsa, args.ea, args.tag, args.size, get_mfc_cmd_name(cmd));
-		throw "";
+		throw __FUNCTION__;
 	}
 
 	const u32 list_addr = args.ea & 0x3ffff;
@@ -395,7 +395,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 	}
 
 	LOG_ERROR(SPU, "Unknown DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size, cmd);
-	throw "";
+	throw __FUNCTION__;
 }
 
 u32 SPUThread::get_ch_count(u32 ch)
@@ -422,7 +422,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 	}
 
 	LOG_ERROR(SPU, "get_ch_count(ch=%d [%s]): unknown/illegal channel", ch, ch < 128 ? spu_ch_name[ch] : "???");
-	throw "";
+	throw __FUNCTION__;
 }
 
 u32 SPUThread::get_ch_value(u32 ch)
@@ -439,10 +439,15 @@ u32 SPUThread::get_ch_value(u32 ch)
 	//	break;
 	case SPU_RdInMbox:
 	{
-		u32 result;
-		while (!ch_in_mbox.pop(result) && !Emu.IsStopped())
+		u32 result, count;
+		while (!ch_in_mbox.pop(result, count) && !Emu.IsStopped())
 		{
 			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+		}
+		
+		if (count + 1 == 4 /* SPU_IN_MBOX_THRESHOLD */) // TODO: check this
+		{
+			int2.set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
 		}
 		
 		return result;
@@ -536,7 +541,7 @@ u32 SPUThread::get_ch_value(u32 ch)
 	}
 
 	LOG_ERROR(SPU, "get_ch_value(ch=%d [%s]): unknown/illegal channel", ch, ch < 128 ? spu_ch_name[ch] : "???");
-	throw "";
+	throw __FUNCTION__;
 }
 
 void SPUThread::set_ch_value(u32 ch, u32 value)
@@ -576,7 +581,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.pop(data))
 				{
 					LOG_ERROR(SPU, "sys_spu_thread_send_event(value=0x%x, spup=%d): Out_MBox is empty", value, spup);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (Ini.HLELogging.GetValue())
@@ -614,7 +619,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.pop(data))
 				{
 					LOG_ERROR(SPU, "sys_spu_thread_throw_event(value=0x%x, spup=%d): Out_MBox is empty", value, spup);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (Ini.HLELogging.GetValue())
@@ -650,13 +655,13 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.pop(data))
 				{
 					LOG_ERROR(SPU, "sys_event_flag_set_bit(value=0x%x (flag=%d)): Out_MBox is empty", value, flag);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (flag > 63)
 				{
 					LOG_ERROR(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x): flag > 63", data, value, flag);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (Ini.HLELogging.GetValue())
@@ -692,13 +697,13 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!ch_out_mbox.pop(data))
 				{
 					LOG_ERROR(SPU, "sys_event_flag_set_bit_impatient(value=0x%x (flag=%d)): Out_MBox is empty", value, flag);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (flag > 63)
 				{
 					LOG_ERROR(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x): flag > 63", data, value, flag);
-					throw "";
+					throw __FUNCTION__;
 				}
 
 				if (Ini.HLELogging.GetValue())
@@ -734,7 +739,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_ERROR(SPU, "SPU_WrOutIntrMbox: unknown data (value=0x%x)", value);
 				}
 
-				throw "";
+				throw __FUNCTION__;
 			}
 		}
 	}
@@ -874,7 +879,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 	}
 
 	LOG_ERROR(SPU, "set_ch_value(ch=%d [%s], value=0x%x): unknown/illegal channel", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
-	throw "";
+	throw __FUNCTION__;
 }
 
 void SPUThread::stop_and_signal(u32 code)
@@ -934,7 +939,7 @@ void SPUThread::stop_and_signal(u32 code)
 		if (!ch_out_mbox.pop(spuq))
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_receive_event(): cannot read Out_MBox");
-			throw "";
+			throw __FUNCTION__;
 		}
 
 		if (ch_in_mbox.get_count())
@@ -1028,14 +1033,14 @@ void SPUThread::stop_and_signal(u32 code)
 		if (!ch_out_mbox.pop(value))
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_group_exit(): cannot read Out_MBox");
-			throw "";
+			throw __FUNCTION__;
 		}
 
 		std::shared_ptr<SpuGroupInfo> tg;
 		if (!Emu.GetIdManager().GetIDData(tg_id, tg))
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_group_exit(status=0x%x): invalid group (%d)", value, tg_id);
-			throw "";
+			throw __FUNCTION__;
 		}
 
 		if (Ini.HLELogging.GetValue())
@@ -1064,7 +1069,7 @@ void SPUThread::stop_and_signal(u32 code)
 		if (!ch_out_mbox.get_count())
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_exit(): Out_MBox is empty");
-			throw "";
+			throw __FUNCTION__;
 		}
 
 		if (Ini.HLELogging.GetValue())
@@ -1087,7 +1092,7 @@ void SPUThread::stop_and_signal(u32 code)
 		LOG_ERROR(SPU, "Unknown STOP code: 0x%x; Out_MBox=0x%x", code, ch_out_mbox.get_value());
 	}
 	
-	throw "";
+	throw __FUNCTION__;
 }
 
 void SPUThread::halt()

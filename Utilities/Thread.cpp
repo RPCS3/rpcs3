@@ -464,7 +464,7 @@ typedef ucontext_t x64_context;
 #ifdef __APPLE__
 
 #define X64REG(context, reg) (darwin_x64reg(context, reg))
-#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0[reg]))
+#define XMMREG(context, reg) (reinterpret_cast<u128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
 uint64_t* darwin_x64reg(x64_context *context, int reg)

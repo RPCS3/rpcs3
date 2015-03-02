@@ -79,7 +79,7 @@ enum : u64
 	SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT      = (1ull << 1),
 	SPU_INT2_STAT_SPU_HALT_OR_STEP_INT         = (1ull << 2),
 	SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT = (1ull << 3),
-	SPU_INT2_STAT_SPU_MAILBOX_THESHOLD_INT     = (1ull << 4),
+	SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT    = (1ull << 4),
 };
 
 enum
@@ -253,19 +253,20 @@ public:
 		});
 	}
 
-	bool pop(u32& out_value)
+	// out_count: count after removing first element
+	bool pop(u32& out_value, u32& out_count)
 	{
 		bool out_result;
 
 		const u32 last_value = value3.read_sync();
 
-		sync_var.atomic_op([&out_result, &out_value, last_value](sync_var_t& data)
+		sync_var.atomic_op([&out_result, &out_value, &out_count, last_value](sync_var_t& data)
 		{
 			if ((out_result = data.count != 0))
 			{
 				out_value = data.value0;
+				out_count = --data.count;
 
-				data.count--;
 				data.value0 = data.value1;
 				data.value1 = data.value2;
 				data.value2 = last_value;
