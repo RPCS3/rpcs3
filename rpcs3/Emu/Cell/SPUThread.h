@@ -1,13 +1,15 @@
 #pragma once
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/SPUContext.h"
 #include "Emu/Memory/atomic_type.h"
 #include "Emu/SysCalls/lv2/sleep_queue_type.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "MFC.h"
 
-enum SPUchannels
+// SPU Channels
+enum : u32
 {
 	SPU_RdEventStat     = 0,  //Read event status with mask applied
 	SPU_WrEventMask     = 1,  //Write event mask
@@ -25,7 +27,8 @@ enum SPUchannels
 	SPU_WrOutIntrMbox   = 30, //Write outbound interrupt mailbox contents (interrupting PPU)
 };
 
-enum MFCchannels
+// MFC Channels
+enum : u32
 {
 	MFC_WrMSSyncReq     = 9,  //Write multisource synchronization request
 	MFC_RdTagMask       = 12, //Read tag mask
@@ -43,7 +46,8 @@ enum MFCchannels
 	MFC_RdAtomicStat    = 27, //Read completion status of last completed immediate MFC atomic update command
 };
 
-enum SPUEvents
+// SPU Events
+enum : u32
 {
 	SPU_EVENT_MS = 0x1000, // multisource synchronization event
 	SPU_EVENT_A  = 0x800, // privileged attention event
@@ -61,12 +65,31 @@ enum SPUEvents
 	SPU_EVENT_IMPLEMENTED = SPU_EVENT_LR,
 };
 
-enum
+// SPU Class 0 Interrupts
+enum : u64
 {
-	SPU_RUNCNTL_STOP     = 0,
-	SPU_RUNCNTL_RUNNABLE = 1,
+	SPU_INT0_STAT_DMA_ALIGNMENT_INT   = (1ull << 0),
+	SPU_INT0_STAT_INVALID_DMA_CMD_INT = (1ull << 1),
+	SPU_INT0_STAT_SPU_ERROR_INT       = (1ull << 2),
 };
 
+// SPU Class 2 Interrupts
+enum : u64
+{
+	SPU_INT2_STAT_MAILBOX_INT                  = (1ull << 0),
+	SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT      = (1ull << 1),
+	SPU_INT2_STAT_SPU_HALT_OR_STEP_INT         = (1ull << 2),
+	SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT = (1ull << 3),
+	SPU_INT2_STAT_SPU_MAILBOX_THESHOLD_INT     = (1ull << 4),
+};
+
+enum
+{
+	SPU_RUNCNTL_STOP_REQUEST = 0,
+	SPU_RUNCNTL_RUN_REQUEST  = 1,
+};
+
+// SPU Status Register bits (not accurate)
 enum
 {
 	SPU_STATUS_STOPPED             = 0x0,
@@ -106,6 +129,180 @@ enum
 	SPU_NPC_offs = 0x4034,
 	SPU_RdSigNotify1_offs = 0x1400C,
 	SPU_RdSigNotify2_offs = 0x1C00C,
+};
+
+union spu_channel_t
+{
+	struct sync_var_t
+	{
+		u32 count;
+		u32 value;
+	};
+
+	atomic_t<sync_var_t> sync_var; // atomic variable
+
+	sync_var_t data; // unsafe direct access
+
+public:
+
+	bool push(u32 value)
+	{
+		bool out_result;
+
+		sync_var.atomic_op([&out_result, value](sync_var_t& data)
+		{
+			if ((out_result = data.count == 0))
+			{
+				data.count = 1;
+				data.value = value;
+			}
+		});
+
+		return out_result;
+	}
+
+	void push_logical_or(u32 value)
+	{
+		sync_var._or({ 1, value });
+	}
+
+	void push_uncond(u32 value)
+	{
+		sync_var.exchange({ 1, value });
+	}
+
+	bool pop(u32& out_value)
+	{
+		bool out_result;
+
+		sync_var.atomic_op([&out_result, &out_value](sync_var_t& data)
+		{
+			if ((out_result = data.count != 0))
+			{
+				out_value = data.value;
+				data.count = 0;
+				data.value = 0;
+			}
+		});
+
+		return out_result;
+	}
+
+	u32 pop_uncond()
+	{
+		u32 out_value;
+
+		sync_var.atomic_op([&out_value](sync_var_t& data)
+		{
+			out_value = data.value;
+			data.count = 0;
+			// value is not cleared and may be read again
+		});
+
+		return out_value;
+	}
+
+	void set_value(u32 value, u32 count = 1)
+	{
+		sync_var.write_relaxed({ count, value });
+	}
+
+	u32 get_value()
+	{
+		return sync_var.read_relaxed().value;
+	}
+
+	u32 get_count()
+	{
+		return sync_var.read_relaxed().count;
+	}
+};
+
+struct spu_channel_4_t
+{
+	struct sync_var_t
+	{
+		u32 count;
+		u32 value0;
+		u32 value1;
+		u32 value2;
+	};
+
+	atomic_le_t<sync_var_t> sync_var;
+	atomic_le_t<u32> value3;
+
+public:
+	void clear()
+	{
+		sync_var.write_relaxed({});
+		value3.write_relaxed({});
+	}
+
+	void push_uncond(u32 value)
+	{
+		value3.exchange(value);
+
+		sync_var.atomic_op([value](sync_var_t& data)
+		{
+			switch (data.count++)
+			{
+			case 0: data.value0 = value; break;
+			case 1: data.value1 = value; break;
+			case 2: data.value2 = value; break;
+			default: data.count = 4;
+			}
+		});
+	}
+
+	bool pop(u32& out_value)
+	{
+		bool out_result;
+
+		const u32 last_value = value3.read_sync();
+
+		sync_var.atomic_op([&out_result, &out_value, last_value](sync_var_t& data)
+		{
+			if ((out_result = data.count != 0))
+			{
+				out_value = data.value0;
+
+				data.count--;
+				data.value0 = data.value1;
+				data.value1 = data.value2;
+				data.value2 = last_value;
+			}
+		});
+
+		return out_result;
+	}
+
+	u32 get_count()
+	{
+		return sync_var.read_relaxed().count;
+	}
+};
+
+struct spu_interrupt_t
+{
+	atomic_le_t<u64> mask;
+	atomic_le_t<u64> stat;
+
+public:
+	void set(u64 ints)
+	{
+		stat |= mask.read_relaxed() & ints;
+	}
+
+	void clear(u64 ints)
+	{
+		stat &= ~ints;
+	}
+
+	void clear()
+	{
+		mask.write_relaxed({});
+		stat.write_relaxed({});
+	}
 };
 
 #define mmToU64Ptr(x) ((u64*)(&x))
@@ -254,273 +451,110 @@ public:
 	}
 };
 
-union SPU_SNRConfig_hdr
-{
-	u64 value;
-
-	SPU_SNRConfig_hdr() {}
-
-	std::string ToString() const
-	{
-		return fmt::Format("%01x", value);
-	}
-
-	void Reset()
-	{
-		memset(this, 0, sizeof(*this));
-	}
-};
-
-struct SpuGroupInfo;
-
 class SPUThread : public CPUThread
 {
 public:
 	u128 GPR[128]; // General-Purpose Registers
 	SPU_FPSCR FPSCR;
-	u32 SRR0;
-	SPU_SNRConfig_hdr cfg; // Signal Notification Registers Configuration (OR-mode enabled: 0x1 for SNR1, 0x2 for SNR2)
-
-	std::shared_ptr<EventPort> SPUPs[64]; // SPU Thread Event Ports
-	EventManager SPUQs; // SPU Queue Mapping
-	std::shared_ptr<SpuGroupInfo> group; // associated SPU Thread Group (null for raw spu)
-
-	u64 m_dec_start; // timestamp of writing decrementer value
-	u32 m_dec_value; // written decrementer value
-
-	u32 m_event_mask;
-	u32 m_events;
 
 	std::unordered_map<u32, std::function<bool(SPUThread& SPU)>> m_addr_to_hle_function_map;
 
-	struct IntrTag
+	spu_mfc_arg_t ch_mfc_args;
+
+	std::vector<std::pair<u32, spu_mfc_arg_t>> mfc_queue; // Only used for stalled list transfers
+
+	u32 ch_tag_mask;
+	spu_channel_t ch_tag_stat;
+	spu_channel_t ch_stall_stat;
+	spu_channel_t ch_atomic_stat;
+
+	spu_channel_4_t ch_in_mbox;
+
+	spu_channel_t ch_out_mbox;
+	spu_channel_t ch_out_intr_mbox;
+
+	u64 snr_config; // SPU SNR Config Register
+
+	spu_channel_t ch_snr1; // SPU Signal Notification Register 1
+	spu_channel_t ch_snr2; // SPU Signal Notification Register 2
+
+	u32 ch_event_mask;
+	atomic_le_t<u32> ch_event_stat;
+
+	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
+	u32 ch_dec_value; // written decrementer value
+
+	atomic_le_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	atomic_le_t<u32> status; // SPU Status register
+	atomic_le_t<u32> npc; // SPU Next Program Counter register
+
+	spu_interrupt_t int0; // SPU Class 0 Interrupt Management
+	spu_interrupt_t int2; // SPU Class 2 Interrupt Management
+
+	u32 tg_id; // SPU Thread Group Id
+
+	void write_snr(bool number, u32 value)
 	{
-		u32 enabled; // 1 == true
-		u32 thread; // established interrupt PPU thread
-		u64 mask;
-		u64 stat;
-
-		IntrTag()
-			: enabled(0)
-			, thread(0)
-			, mask(0)
-			, stat(0)
+		if (!number)
 		{
-		}
-	} m_intrtag[3];
-
-	// limited lock-free queue, most functions are barrier-free
-	template<size_t max_count>
-	class Channel
-	{
-		static_assert(max_count >= 1, "Invalid channel count");
-
-		struct ChannelData
-		{
-			u32 value;
-			u32 is_set;
-		};
-
-		atomic_t<ChannelData> m_data[max_count];
-		size_t m_push;
-		size_t m_pop;
-
-	public:
-		__noinline Channel()
-		{
-			for (size_t i = 0; i < max_count; i++)
+			if (snr_config & 1)
 			{
-				m_data[i].write_relaxed({});
-			}
-			m_push = 0;
-			m_pop = 0;
-		}
-
-		__forceinline void PopUncond(u32& res)
-		{
-			res = m_data[m_pop].read_relaxed().value;
-			m_data[m_pop].write_relaxed({});
-			m_pop = (m_pop + 1) % max_count;
-		}
-
-		__forceinline bool Pop(u32& res)
-		{
-			const auto data = m_data[m_pop].read_relaxed();
-			if (data.is_set)
-			{
-				res = data.value;
-				m_data[m_pop].write_relaxed({});
-				m_pop = (m_pop + 1) % max_count;
-				return true;
+				ch_snr1.push_logical_or(value);
 			}
 			else
 			{
-				return false;
+				ch_snr1.push_uncond(value);
 			}
 		}
-
-		__forceinline bool Pop_XCHG(u32& res) // not barrier-free, not tested
+		else
 		{
-			const auto data = m_data[m_pop].exchange({});
-			if (data.is_set)
+			if (snr_config & 2)
 			{
-				res = data.value;
-				m_pop = (m_pop + 1) % max_count;
-				return true;
+				ch_snr2.push_logical_or(value);
 			}
 			else
 			{
-				return false;
+				ch_snr2.push_uncond(value);
 			}
 		}
+	}
 
-		__forceinline void PushUncond_OR(const u32 value) // not barrier-free, not tested
-		{
-			m_data[m_push]._or({ value, 1 });
-			m_push = (m_push + 1) % max_count;
-		}
+	void do_dma_transfer(u32 cmd, spu_mfc_arg_t args);
+	void do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args);
+	void process_mfc_cmd(u32 cmd);
 
-		__forceinline void PushUncond(const u32 value)
-		{
-			m_data[m_push].write_relaxed({ value, 1 });
-			m_push = (m_push + 1) % max_count;
-		}
+	u32 get_ch_count(u32 ch);
+	u32 get_ch_value(u32 ch);
+	void set_ch_value(u32 ch, u32 value);
 
-		__forceinline bool Push(const u32 value)
-		{
-			if (m_data[m_push].read_relaxed().is_set)
-			{
-				return false;
-			}
-			else
-			{
-				PushUncond(value);
-				return true;
-			}
-		}
+	void stop_and_signal(u32 code);
+	void halt();
 
-		__forceinline u32 GetCount() const
-		{
-			u32 res = 0;
-			for (size_t i = 0; i < max_count; i++)
-			{
-				res += m_data[i].read_relaxed().is_set ? 1 : 0;
-			}
-			return res;
-		}
+	u8 read8(u32 lsa) const { return vm::read8(lsa + offset); }
+	u16 read16(u32 lsa) const { return vm::read16(lsa + offset); }
+	u32 read32(u32 lsa) const { return vm::read32(lsa + offset); }
+	u64 read64(u32 lsa) const { return vm::read64(lsa + offset); }
+	u128 read128(u32 lsa) const { return vm::read128(lsa + offset); }
 
-		__forceinline u32 GetFreeCount() const
-		{
-			u32 res = 0;
-			for (size_t i = 0; i < max_count; i++)
-			{
-				res += m_data[i].read_relaxed().is_set ? 0 : 1;
-			}
-			return res;
-		}
+	void write8(u32 lsa, u8 data) const { vm::write8(lsa + offset, data); }
+	void write16(u32 lsa, u16 data) const { vm::write16(lsa + offset, data); }
+	void write32(u32 lsa, u32 data) const { vm::write32(lsa + offset, data); }
+	void write64(u32 lsa, u64 data) const { vm::write64(lsa + offset, data); }
+	void write128(u32 lsa, u128 data) const { vm::write128(lsa + offset, data); }
 
-		__forceinline void SetValue(const u32 value)
-		{
-			m_data[m_push].direct_op([value](ChannelData& v)
-			{
-				v.value = value;
-			});
-		}
-
-		__forceinline u32 GetValue() const
-		{
-			return m_data[m_pop].read_relaxed().value;
-		}
-	};
-
-	struct MFCReg
-	{
-		Channel<1> LSA;
-		Channel<1> EAH;
-		Channel<1> EAL;
-		Channel<1> Size_Tag;
-		Channel<1> CMDStatus;
-		Channel<1> QueryType; // only for prxy
-		Channel<1> QueryMask;
-		Channel<1> TagStatus;
-		Channel<1> AtomicStat;
-	} MFC1, MFC2;
-
-	struct StalledList
-	{
-		u32 lsa;
-		u64 ea;
-		u16 tag;
-		u16 size;
-		u32 cmd;
-		MFCReg* MFCArgs;
-
-		StalledList()
-			: MFCArgs(nullptr)
-		{
-		}
-	} StallList[32];
-	Channel<1> StallStat;
-
-	struct
-	{
-		Channel<1> Out_MBox;
-		Channel<1> Out_IntrMBox;
-		Channel<4> In_MBox;
-		Channel<1> Status;
-		Channel<1> NPC;
-		Channel<1> SNR[2];
-	} SPU;
-
-	void WriteSNR(bool number, u32 value);
-
-	u32 LSA;
-
-	union
-	{
-		u64 EA;
-		struct { u32 EAH, EAL; };
-	};
-
-	u32 ls_offset;
-
-	void ProcessCmd(u32 cmd, u32 tag, u32 lsa, u64 ea, u32 size);
-
-	void ListCmd(u32 lsa, u64 ea, u16 tag, u16 size, u32 cmd, MFCReg& MFCArgs);
-
-	void EnqMfcCmd(MFCReg& MFCArgs);
-
-	bool CheckEvents();
-
-	u32 GetChannelCount(u32 ch);
-
-	void WriteChannel(u32 ch, const u128& r);
-
-	void ReadChannel(u128& r, u32 ch);
-
-	void StopAndSignal(u32 code);
-
-	u8   ReadLS8  (const u32 lsa) const { return vm::read8  (lsa + m_offset); }
-	u16  ReadLS16 (const u32 lsa) const { return vm::read16 (lsa + m_offset); }
-	u32  ReadLS32 (const u32 lsa) const { return vm::read32 (lsa + m_offset); }
-	u64  ReadLS64 (const u32 lsa) const { return vm::read64 (lsa + m_offset); }
-	u128 ReadLS128(const u32 lsa) const { return vm::read128(lsa + m_offset); }
-
-	void WriteLS8  (const u32 lsa, const u8&   data) const { vm::write8  (lsa + m_offset, data); }
-	void WriteLS16 (const u32 lsa, const u16&  data) const { vm::write16 (lsa + m_offset, data); }
-	void WriteLS32 (const u32 lsa, const u32&  data) const { vm::write32 (lsa + m_offset, data); }
-	void WriteLS64 (const u32 lsa, const u64&  data) const { vm::write64 (lsa + m_offset, data); }
-	void WriteLS128(const u32 lsa, const u128& data) const { vm::write128(lsa + m_offset, data); }
+	void write16(u32 lsa, be_t<u16> data) const { vm::write16(lsa + offset, data); }
+	void write32(u32 lsa, be_t<u32> data) const { vm::write32(lsa + offset, data); }
+	void write64(u32 lsa, be_t<u64> data) const { vm::write64(lsa + offset, data); }
+	void write128(u32 lsa, be_t<u128> data) const { vm::write128(lsa + offset, data); }
 
 	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{
 		m_addr_to_hle_function_map[addr] = function;
-		WriteLS32(addr, 0x00000003); // STOP 3
+		write32(addr, 0x00000003); // STOP 3
 	}
 
 	void UnregisterHleFunction(u32 addr)
 	{
-		WriteLS32(addr, 0x00200000); // NOP
 		m_addr_to_hle_function_map.erase(addr);
 	}
 
@@ -530,7 +564,6 @@ public:
 		{
 			if (iter->first >= start_addr && iter->first <= end_addr)
 			{
-				WriteLS32(iter->first, 0x00200000); // NOP
 				m_addr_to_hle_function_map.erase(iter++);
 			}
 			else

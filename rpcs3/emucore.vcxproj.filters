@@ -1537,5 +1537,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellSearch.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUContext.h">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

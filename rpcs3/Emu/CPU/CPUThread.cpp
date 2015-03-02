@@ -20,7 +20,6 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_type(type)
 	, m_stack_size(0)
 	, m_stack_addr(0)
-	, m_offset(0)
 	, m_prio(0)
 	, m_dec(nullptr)
 	, m_is_step(false)
@@ -30,6 +29,7 @@ CPUThread::CPUThread(CPUThreadType type)
 	, m_trace_enabled(false)
 	, m_trace_call_stack(true)
 {
+	offset = 0;
 }
 
 CPUThread::~CPUThread()
@@ -125,11 +125,9 @@ void CPUThread::Reset()
 	CloseStack();
 
 	SetPc(0);
-	cycle = 0;
 	m_is_branch = false;
 
 	m_status = Stopped;
-	m_error = 0;
 	
 	DoReset();
 }
@@ -200,29 +198,6 @@ void CPUThread::SetBranch(const u32 pc, bool record_branch)
 void CPUThread::SetPc(const u32 pc)
 {
 	PC = pc;
-}
-
-void CPUThread::SetError(const u32 error)
-{
-	if(error == 0)
-	{
-		m_error = 0;
-	}
-	else
-	{
-		m_error |= error;
-	}
-}
-
-std::vector<std::string> CPUThread::ErrorToString(const u32 error)
-{
-	std::vector<std::string> earr;
-
-	if(error == 0) return earr;
-
-	earr.push_back("Unknown error");
-
-	return earr;
 }
 
 void CPUThread::Run()
@@ -322,7 +297,7 @@ void CPUThread::Task()
 
 	for (uint i = 0; i<bp.size(); ++i)
 	{
-		if (bp[i] == m_offset + PC)
+		if (bp[i] == offset + PC)
 		{
 			Emu.Pause();
 			break;
@@ -349,7 +324,7 @@ void CPUThread::Task()
 		Step();
 		//if (m_trace_enabled)
 		//trace.push_back(PC);
-		NextPc(m_dec->DecodeMemory(PC + m_offset));
+		NextPc(m_dec->DecodeMemory(PC + offset));
 
 		if (status == CPUThread_Step)
 		{

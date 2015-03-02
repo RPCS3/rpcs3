@@ -94,7 +94,7 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		CPU.StopAndSignal(code);
+		CPU.stop_and_signal(code);
 		LOG2_OPCODE();
 	}
 	void LNOP()
@@ -116,12 +116,11 @@ private:
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
-		CPU.ReadChannel(CPU.GPR[rt], ra);
+		CPU.GPR[rt]._u32[3] = CPU.get_ch_value(ra);
 	}
 	void RCHCNT(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt].clear();
-		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
+		CPU.GPR[rt]._u32[3] = CPU.get_ch_count(ra);
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
@@ -312,7 +311,7 @@ private:
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
-		CPU.WriteChannel(ra, CPU.GPR[rt]);
+		CPU.set_ch_value(ra, CPU.GPR[rt]._u32[3]);
 	}
 	void BIZ(u32 intr, u32 rt, u32 ra)
 	{
@@ -406,7 +405,7 @@ private:
 	{
 		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 
-		CPU.WriteLS128(lsa, CPU.GPR[rt]);
+		CPU.write128(lsa, CPU.GPR[rt]);
 	}
 	void BI(u32 intr, u32 ra)
 	{
@@ -536,7 +535,7 @@ private:
 	{
 		u32 lsa = (CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3]) & 0x3fff0;
 
-		CPU.GPR[rt] = CPU.ReadLS128(lsa);
+		CPU.GPR[rt] = CPU.read128(lsa);
 	}
 	void ROTQBYBI(u32 rt, u32 ra, u32 rb)
 	{
@@ -864,8 +863,7 @@ private:
 	{
 		if (CPU.GPR[ra]._s32[3] > CPU.GPR[rb]._s32[3])
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 	void CLZ(u32 rt, u32 ra)
@@ -1199,8 +1197,7 @@ private:
 	{
 		if (CPU.GPR[ra]._u32[3] > CPU.GPR[rb]._u32[3])
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 	void DFMA(u32 rt, u32 ra, u32 rb, bool neg, bool sub)
@@ -1453,8 +1450,7 @@ private:
 	{
 		if (CPU.GPR[ra]._s32[3] == CPU.GPR[rb]._s32[3])
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 
@@ -1564,7 +1560,7 @@ private:
 	{
 		u32 lsa = (i16 << 2) & 0x3fff0;
 
-		CPU.WriteLS128(lsa, CPU.GPR[rt]);
+		CPU.write128(lsa, CPU.GPR[rt]);
 	}
 	void BRNZ(u32 rt, s32 i16)
 	{
@@ -1609,7 +1605,7 @@ private:
 	{
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0; 
 
-		CPU.WriteLS128(lsa, CPU.GPR[rt]);
+		CPU.write128(lsa, CPU.GPR[rt]);
 	}
 	void BRA(s32 i16)
 	{
@@ -1621,7 +1617,7 @@ private:
 	{
 		u32 lsa = (i16 << 2) & 0x3fff0;
 
-		CPU.GPR[rt] = CPU.ReadLS128(lsa);
+		CPU.GPR[rt] = CPU.read128(lsa);
 	}
 	void BRASL(u32 rt, s32 i16)
 	{
@@ -1665,7 +1661,7 @@ private:
 	{
 		u32 lsa = branchTarget(CPU.PC, i16) & 0x3fff0;
 
-		CPU.GPR[rt] = CPU.ReadLS128(lsa);
+		CPU.GPR[rt] = CPU.read128(lsa);
 	}
 	void IL(u32 rt, s32 i16)
 	{
@@ -1748,13 +1744,13 @@ private:
 	{
 		const u32 lsa = (CPU.GPR[ra]._s32[3] + i10) & 0x3fff0;
 
-		CPU.WriteLS128(lsa, CPU.GPR[rt]);
+		CPU.write128(lsa, CPU.GPR[rt]);
 	}
 	void LQD(u32 rt, s32 i10, u32 ra) //i10 is shifted left by 4 while decoding
 	{
 		const u32 lsa = (CPU.GPR[ra]._s32[3] + i10) & 0x3fff0;
 
-		CPU.GPR[rt] = CPU.ReadLS128(lsa);
+		CPU.GPR[rt] = CPU.read128(lsa);
 	}
 	void XORI(u32 rt, u32 ra, s32 i10)
 	{
@@ -1790,8 +1786,7 @@ private:
 	{
 		if (CPU.GPR[ra]._s32[3] > i10)
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
@@ -1817,8 +1812,7 @@ private:
 	{
 		if (CPU.GPR[ra]._u32[3] > (u32)i10)
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 	void MPYI(u32 rt, u32 ra, s32 i10)
@@ -1850,8 +1844,7 @@ private:
 	{
 		if (CPU.GPR[ra]._s32[3] == i10)
 		{
-			CPU.SPU.Status.SetValue(SPU_STATUS_STOPPED_BY_HALT);
-			CPU.Stop();
+			CPU.halt();
 		}
 	}
 

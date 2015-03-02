@@ -26,10 +26,8 @@ class CPUThread : public ThreadBase
 {
 protected:
 	u32 m_status;
-	u32 m_error;
 	u32 m_id;
 	u64 m_prio;
-	u32 m_offset;
 	CPUThreadType m_type;
 	bool m_joinable;
 	bool m_joining;
@@ -61,12 +59,10 @@ public:
 	void SetId(const u32 id);
 	void SetName(const std::string& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
-	void SetOffset(const u32 offset) { m_offset = offset; }
 	void SetExitStatus(const u64 status) { m_exit_status = status; }
 
-	u32 GetOffset() const { return m_offset; }
-	u64 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
+	u64 GetExitStatus() const { return m_exit_status; }
 
 	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
 	std::string GetFName() const
@@ -116,7 +112,7 @@ public:
 	u32 entry;
 	u32 PC;
 	u32 nPC;
-	u64 cycle;
+	u32 offset;
 	bool m_is_branch;
 	bool m_trace_enabled;
 
@@ -138,12 +134,6 @@ public:
 	void SetPc(const u32 pc);
 	void SetEntry(const u32 entry);
 
-	void SetError(const u32 error);
-
-	static std::vector<std::string> ErrorToString(const u32 error);
-	std::vector<std::string> ErrorToString() { return ErrorToString(m_error); }
-
-	bool IsOk()	const { return m_error == 0; }
 	bool IsRunning() const;
 	bool IsPaused() const;
 	bool IsStopped() const;
@@ -153,7 +143,6 @@ public:
 	void SetJoinable(bool joinable) { m_joinable = joinable; }
 	void SetJoining(bool joining) { m_joining = joining; }
 
-	u32 GetError() const { return m_error; }
 	u32 GetId() const { return m_id; }
 	CPUThreadType GetType()	const { return m_type; }
 

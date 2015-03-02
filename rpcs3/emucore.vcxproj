@@ -369,6 +369,7 @@
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />
+    <ClInclude Include="Emu\Cell\SPUContext.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInstrTable.h" />

@@ -340,7 +340,7 @@ int sys_raw_spu_image_load(int id, vm::ptr<sys_spu_image> img)
 
 	// TODO: use segment info
 	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->addr), 256 * 1024);
-	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, (u32)img->entry_point);
+	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | be_t<u32>::make(1));
 
 	return CELL_OK;
 }

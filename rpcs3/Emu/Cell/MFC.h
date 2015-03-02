@@ -1,10 +1,14 @@
 #pragma once
 
-enum
+const char* get_mfc_cmd_name(u32 cmd);
+
+enum : u32
 {
 	MFC_PUT_CMD      = 0x20, MFC_PUTB_CMD     = 0x21, MFC_PUTF_CMD     = 0x22,
+	MFC_PUTS_CMD     = 0x28, MFC_PUTBS_CMD    = 0x29, MFC_PUTFS_CMD    = 0x2a,
 	MFC_PUTR_CMD     = 0x30, MFC_PUTRB_CMD    = 0x31, MFC_PUTRF_CMD    = 0x32,
 	MFC_GET_CMD      = 0x40, MFC_GETB_CMD     = 0x41, MFC_GETF_CMD     = 0x42,
+	MFC_GETS_CMD     = 0x48, MFC_GETBS_CMD    = 0x49, MFC_GETFS_CMD    = 0x4a,
 	MFC_PUTL_CMD     = 0x24, MFC_PUTLB_CMD    = 0x25, MFC_PUTLF_CMD    = 0x26,
 	MFC_PUTRL_CMD    = 0x34, MFC_PUTRLB_CMD   = 0x35, MFC_PUTRLF_CMD   = 0x36,
 	MFC_GETL_CMD     = 0x44, MFC_GETLB_CMD    = 0x45, MFC_GETLF_CMD    = 0x46,
@@ -21,52 +25,68 @@ enum
 	MFC_BARRIER_MASK = 0x01,
 	MFC_FENCE_MASK   = 0x02,
 	MFC_LIST_MASK    = 0x04,
-	MFC_START_MASK   = 0x08, // ???
+	MFC_START_MASK   = 0x08,
 	MFC_RESULT_MASK  = 0x10, // ???
-	MFC_MASK_CMD     = 0xffff,
 };
 
 // Atomic Status Update
-enum
+enum : u32
 {
 	MFC_PUTLLC_SUCCESS = 0,
-	MFC_PUTLLC_FAILURE = 1, //reservation was lost
+	MFC_PUTLLC_FAILURE = 1, // reservation was lost
 	MFC_PUTLLUC_SUCCESS = 2,
 	MFC_GETLLAR_SUCCESS = 4,
 };
 
 // MFC Write Tag Status Update Request Channel (ch23) operations
-enum 
+enum : u32
 {
 	MFC_TAG_UPDATE_IMMEDIATE = 0,
 	MFC_TAG_UPDATE_ANY       = 1,
 	MFC_TAG_UPDATE_ALL       = 2,
 };
 
-enum
-{
-	MFC_SPU_TO_PPU_MAILBOX_STATUS_MASK      = 0x000000FF,
-	MFC_SPU_TO_PPU_MAILBOX_STATUS_SHIFT     = 0x0,
-	MFC_PPU_TO_SPU_MAILBOX_STATUS_MASK      = 0x0000FF00,
-	MFC_PPU_TO_SPU_MAILBOX_STATUS_SHIFT     = 0x8,
-	MFC_PPU_TO_SPU_MAILBOX_MAX              = 0x4,
-	MFC_SPU_TO_PPU_INT_MAILBOX_STATUS_MASK  = 0x00FF0000,
-	MFC_SPU_TO_PPU_INT_MAILBOX_STATUS_SHIFT = 0x10,
-};
-
-enum
+enum : u32
 {
 	MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL      = 0x00,
 	MFC_PPU_DMA_CMD_SEQUENCE_ERROR          = 0x01,
 	MFC_PPU_DMA_QUEUE_FULL                  = 0x02,
 };
 
-enum
+enum : u32
+{
+	MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG      = 0x80000000,
+};
+
+enum : u32
 {
 	MFC_PPU_MAX_QUEUE_SPACE                 = 0x08,
 	MFC_SPU_MAX_QUEUE_SPACE                 = 0x10,
 };
 
-struct DMAC
+struct spu_mfc_arg_t
 {
+	union
+	{
+		u64 ea;
+
+		struct
+		{
+			u32 eal;
+			u32 eah;
+		};
+	};
+
+	u32 lsa;
+
+	union
+	{
+		struct
+		{
+			u16 tag;
+			u16 size;
+		};
+
+		u32 size_tag;
+	};
 };

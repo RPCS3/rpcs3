@@ -16,6 +16,8 @@ public:
 	RawSPUThread(CPUThreadType type = CPU_THREAD_RAW_SPU);
 	virtual ~RawSPUThread();
 
+	void start();
+
 	bool Read32(const u32 addr, u32* value);
 	bool Write32(const u32 addr, const u32 value);
 
