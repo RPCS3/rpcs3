@@ -116,11 +116,11 @@ private:
 	}
 	void RDCH(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt]._u32[3] = CPU.get_ch_value(ra);
+		CPU.GPR[rt] = u128::from32r(CPU.get_ch_value(ra));
 	}
 	void RCHCNT(u32 rt, u32 ra)
 	{
-		CPU.GPR[rt]._u32[3] = CPU.get_ch_count(ra);
+		CPU.GPR[rt] = u128::from32r(CPU.get_ch_count(ra));
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
@@ -432,8 +432,7 @@ private:
 		}
 
 		u32 target = branchTarget(CPU.GPR[ra]._u32[3], 0);
-		CPU.GPR[rt].clear();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;		
+		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.SetBranch(target);
 	}
@@ -1622,8 +1621,7 @@ private:
 	void BRASL(u32 rt, s32 i16)
 	{
 		u32 target = branchTarget(0, i16);
-		CPU.GPR[rt].clear();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.SetBranch(target);
 	}
@@ -1652,8 +1650,7 @@ private:
 	void BRSL(u32 rt, s32 i16)
 	{
 		u32 target = branchTarget(CPU.PC, i16);
-		CPU.GPR[rt].clear();
-		CPU.GPR[rt]._u32[3] = CPU.PC + 4;
+		CPU.GPR[rt] = u128::from32r(CPU.PC + 4);
 		LOG5_OPCODE("branch (0x%x)", target);
 		CPU.SetBranch(target);
 	}

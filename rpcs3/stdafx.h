@@ -62,5 +62,7 @@ template<typename T> __forceinline T align(const T addr, int align)
 #include "Utilities/BEType.h"
 #include "Utilities/StrFmt.h"
 
+#include "Emu/Memory/atomic.h"
+
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

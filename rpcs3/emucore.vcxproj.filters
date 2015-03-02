@@ -650,9 +650,6 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
@@ -859,6 +856,9 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1447,9 +1447,6 @@
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\atomic_type.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
     </ClInclude>
@@ -1458,9 +1455,6 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
       <Filter>Emu\CPU\ARMv7</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\cellFs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1539,6 +1533,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUContext.h">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\atomic.h">
+      <Filter>Emu\Memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

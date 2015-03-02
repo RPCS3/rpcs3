@@ -4,10 +4,10 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/FS/vfsFile.h"
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
+#include "Emu/SysCalls/lv2/sys_interrupt.h"
 #include "Emu/SysCalls/lv2/sys_spu.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
 #include "Emu/SysCalls/lv2/sys_spinlock.h"
@@ -263,6 +263,15 @@ s64 _sys_process_at_Exitspawn()
 	return CELL_OK;
 }
 
+s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
+{
+	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
+
+	vm::stackvar<u64> r13(CPU);
+
+	return _sys_interrupt_thread_disestablish(ih, r13);
+}
+
 int sys_process_is_stack(u32 p)
 {
 	sysPrxForUser.Log("sys_process_is_stack(p=0x%x)", p);
@@ -329,7 +338,7 @@ int sys_raw_spu_load(s32 id, vm::ptr<const char> path, vm::ptr<u32> entry)
 	u32 _entry;
 	LoadSpuImage(f, _entry, RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id);
 
-	*entry = _entry;
+	*entry = _entry | 1;
 
 	return CELL_OK;
 }
@@ -597,6 +606,8 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, _sys_process_atexitspawn);
 	REG_FUNC(sysPrxForUser, _sys_process_at_Exitspawn);
 	REG_FUNC(sysPrxForUser, sys_process_is_stack);
+
+	REG_FUNC(sysPrxForUser, sys_interrupt_thread_disestablish);
 
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_create);
 	REG_FUNC(sysPrxForUser, sys_ppu_thread_get_id);

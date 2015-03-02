@@ -3,10 +3,9 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "rpcs3/Ini.h"
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"

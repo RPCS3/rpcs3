@@ -490,6 +490,27 @@ bool patch_ppu_import(u32 addr, u32 index)
 		return true;
 	}
 
+	if (vm::check_addr(addr, 64) &&
+		data[0x0] == MFLR(r0) &&
+		data[0x1] == STD(r0, r1, 0x10) &&
+		data[0x2] == STDU(r1, r1, -0x80) &&
+		data[0x3] == STD(r2, r1, 0x70) &&
+		(data[0x4] & 0xffff0000) == LIS(r12, 0) &&
+		(data[0x5] & 0xffff0000) == LWZ(r12, r12, 0) &&
+		data[0x6] == LWZ(r0, r12, 0) &&
+		data[0x7] == LWZ(r2, r12, 4) &&
+		data[0x8] == MTCTR(r0) &&
+		data[0x9] == BCTRL() &&
+		data[0xa] == LD(r2, r1, 0x70) &&
+		data[0xb] == ADDI(r1, r1, 0x80) &&
+		data[0xc] == LD(r0, r1, 0x10) &&
+		data[0xd] == MTLR(r0) &&
+		data[0xe] == BLR())
+	{
+		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		return true;
+	}
+
 	if (vm::check_addr(addr, 56) &&
 		(data[0x0] & 0xffff0000) == LI_(r12, 0) &&
 		(data[0x1] & 0xffff0000) == ORIS(r12, r12, 0) &&

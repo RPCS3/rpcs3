@@ -22,7 +22,7 @@ public:
 	s32 GetThreadNumById(CPUThreadType type, u32 id);
 	std::shared_ptr<CPUThread> GetThread(u32 id);
 	std::shared_ptr<CPUThread> GetThread(u32 id, CPUThreadType type);
-	RawSPUThread* GetRawSPUThread(u32 num);
+	std::shared_ptr<CPUThread> GetRawSPUThread(u32 num);
 
 	void Exec();
 	void Task();

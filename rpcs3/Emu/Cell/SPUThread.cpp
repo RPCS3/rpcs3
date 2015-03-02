@@ -3,7 +3,6 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThreadManager.h"
@@ -562,24 +561,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 			}
 
 			int2.set(SPU_INT2_STAT_MAILBOX_INT);
-			throw "";
-
-			//if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(m_intrtag[2].thread))
-			//{
-			//	if (t->GetType() == CPU_THREAD_PPU)
-			//	{
-			//		if (t->IsAlive())
-			//		{
-			//			LOG_ERROR(SPU, "%s(%s): interrupt thread was alive", __FUNCTION__, spu_ch_name[ch]);
-			//			Emu.Pause();
-			//			return;
-			//		}
-			//		PPUThread& ppu = *(PPUThread*)t.get();
-			//		ppu.GPR[3] = ppu.m_interrupt_arg;
-			//		ppu.FastCall2(vm::read32(ppu.entry), vm::read32(ppu.entry + 4));
-			//	}
-			//}
-			//return;
+			return;
 		}
 		else
 		{
@@ -914,8 +896,7 @@ void SPUThread::stop_and_signal(u32 code)
 		Stop();
 
 		int2.set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
-
-		throw "STOP"; // TODO
+		return;
 	}
 
 	switch (code)
@@ -1093,7 +1074,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		status |= SPU_STATUS_STOPPED_BY_STOP;
 		Stop();
-		break;
+		return;
 	}
 	}
 
@@ -1127,8 +1108,7 @@ void SPUThread::halt()
 		Stop();
 
 		int2.set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
-
-		throw "HALT"; // TODO
+		return;
 	}
 
 	status |= SPU_STATUS_STOPPED_BY_HALT;

@@ -85,7 +85,7 @@ public:
 	}
 
 	// write data without memory barrier
-	__forceinline void write_relaxed(const T& value) volatile
+	__forceinline void write_relaxed(const T& value)
 	{
 		data = (atomic_type&)(value);
 	}

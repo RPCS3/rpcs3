@@ -130,11 +130,11 @@ std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id, CPUThreadType typ
 	return res;
 }
 
-RawSPUThread* CPUThreadManager::GetRawSPUThread(u32 num)
+std::shared_ptr<CPUThread> CPUThreadManager::GetRawSPUThread(u32 num)
 {
 	if (num < sizeof(Memory.RawSPUMem) / sizeof(Memory.RawSPUMem[0]))
 	{
-		return (RawSPUThread*)Memory.RawSPUMem[num];
+		return GetThread(((RawSPUThread*)Memory.RawSPUMem[num])->GetId());
 	}
 	else
 	{

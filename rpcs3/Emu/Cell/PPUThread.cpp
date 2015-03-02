@@ -53,8 +53,6 @@ void PPUThread::DoReset()
 	FPSCR.FPSCR = 0;
 	VSCR.VSCR   = 0;
 	VRSAVE      = 0;
-
-	cycle = 0;
 }
 
 void PPUThread::InitRegs()

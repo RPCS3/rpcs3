@@ -115,10 +115,6 @@ public:
 	u32 offset;
 	bool m_is_branch;
 	bool m_trace_enabled;
-
-	bool m_is_interrupt;
-	bool m_has_interrupt;
-	u64 m_interrupt_arg;
 	u64 m_last_syscall;
 
 protected:

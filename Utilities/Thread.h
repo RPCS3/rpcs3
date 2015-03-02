@@ -1,5 +1,4 @@
 #pragma once
-#include "Emu/Memory/atomic_type.h"
 
 static std::thread::id main_thread;
 

@@ -2,8 +2,7 @@
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUContext.h"
-#include "Emu/Memory/atomic_type.h"
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
 #include "MFC.h"
@@ -282,15 +281,27 @@ public:
 	}
 };
 
-struct spu_interrupt_t
+struct spu_interrupt_tag_t
 {
 	atomic_le_t<u64> mask;
 	atomic_le_t<u64> stat;
 
+	atomic_le_t<s32> assigned;
+
+	std::mutex handler_mutex;
+	std::condition_variable cond;
+
 public:
 	void set(u64 ints)
 	{
-		stat |= mask.read_relaxed() & ints;
+		// leave only enabled interrupts
+		ints &= mask.read_relaxed();
+
+		if (ints && ~stat._or(ints) & ints)
+		{
+			// notify if at least 1 bit was set
+			cond.notify_all();
+		}
 	}
 
 	void clear(u64 ints)
@@ -300,8 +311,10 @@ public:
 
 	void clear()
 	{
-		mask.write_relaxed({});
-		stat.write_relaxed({});
+		mask.write_relaxed(0);
+		stat.write_relaxed(0);
+
+		assigned.write_relaxed(-1);
 	}
 };
 
@@ -488,8 +501,8 @@ public:
 	atomic_le_t<u32> status; // SPU Status register
 	atomic_le_t<u32> npc; // SPU Next Program Counter register
 
-	spu_interrupt_t int0; // SPU Class 0 Interrupt Management
-	spu_interrupt_t int2; // SPU Class 2 Interrupt Management
+	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
+	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
 
 	u32 tg_id; // SPU Thread Group Id
 

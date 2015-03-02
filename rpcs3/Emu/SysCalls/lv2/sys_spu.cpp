@@ -11,7 +11,7 @@
 #include "Crypto/unself.h"
 #include "sys_spu.h"
 
-static SysCallBase sys_spu("sys_spu");
+SysCallBase sys_spu("sys_spu");
 
 void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr)
 {
@@ -498,7 +498,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		{
 			if (!t->IsAlive())
 			{
-				if (((SPUThread*)t.get())->status.read_sync() != SPU_STATUS_STOPPED_BY_STOP)
+				if ((((SPUThread*)t.get())->status.read_sync() & SPU_STATUS_STOPPED_BY_STOP) != SPU_STATUS_STOPPED_BY_STOP)
 				{
 					all_threads_exit = false;
 				}
@@ -946,12 +946,14 @@ s32 sys_raw_spu_destroy(u32 id)
 {
 	sys_spu.Warning("sys_raw_spu_destroy(id=%d)", id);
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
+
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
 	// TODO: check if busy
 
@@ -968,21 +970,23 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 		return CELL_EINVAL;
 	}
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (t->m_intrtag[class_id].enabled)
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
+
+	auto& tag = class_id ? spu.int2 : spu.int0;
+
+	if (!tag.assigned.compare_and_swap_test(-1, 0))
 	{
 		return CELL_EAGAIN;
 	}
 
-	t->m_intrtag[class_id].enabled = 1;
 	*intrtag = (id & 0xff) | (class_id << 8);
-
 	return CELL_OK;
 }
 
@@ -990,94 +994,109 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 {
 	sys_spu.Log("sys_raw_spu_set_int_mask(id=%d, class_id=%d, mask=0x%llx)", id, class_id, mask);
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	switch (class_id)
-	{
-	case 0: t->int0.mask.write_relaxed(mask); return CELL_OK;
-	case 2: t->int2.mask.write_relaxed(mask); return CELL_OK;
-	}
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
-	return CELL_EINVAL;
+	(class_id ? spu.int2 : spu.int0).mask.exchange(mask);
+
+	return CELL_OK;
 }
 
 s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 {
 	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.addr());
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	switch (class_id)
-	{
-	case 0: *mask = t->int0.mask.read_relaxed(); return CELL_OK;
-	case 2: *mask = t->int2.mask.read_relaxed(); return CELL_OK;
-	}
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
-	return CELL_EINVAL;
+	*mask = (class_id ? spu.int2 : spu.int0).mask.read_sync();
+
+	return CELL_OK;
 }
 
 s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 {
 	sys_spu.Log("sys_raw_spu_set_int_stat(id=%d, class_id=%d, stat=0x%llx)", id, class_id, stat);
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	switch (class_id)
-	{
-	case 0: t->int0.clear(stat); return CELL_OK;
-	case 2: t->int2.clear(stat); return CELL_OK;
-	}
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
-	return CELL_EINVAL;
+	(class_id ? spu.int2 : spu.int0).clear(stat);
+
+	return CELL_OK;
 }
 
 s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 {
 	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.addr());
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (class_id != 0 && class_id != 2)
+	{
+		return CELL_EINVAL;
+	}
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	switch (class_id)
-	{
-	case 0: *stat = t->int0.stat.read_relaxed(); return CELL_OK;
-	case 2: *stat = t->int2.stat.read_relaxed(); return CELL_OK;
-	}
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
-	return CELL_EINVAL;
+	*stat = (class_id ? spu.int2 : spu.int0).stat.read_sync();
+
+	return CELL_OK;
 }
 
 s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value_addr=0x%x)", id, value.addr());
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	*value = t->ch_out_intr_mbox.pop_uncond();
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
+
+	*value = spu.ch_out_intr_mbox.pop_uncond();
+
 	return CELL_OK;
 }
 
@@ -1085,19 +1104,22 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 {
 	sys_spu.Log("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	if (value > 3)
+	{
+		sys_spu.Fatal("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
+	}
+
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (value > 3)
-	{
-		sys_spu.Fatal("sys_raw_spu_set_spu_cfg(id=%d, value=0x%x)", id, value);
-	}
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
 
-	t->snr_config = value;
+	spu.snr_config = value;
+
 	return CELL_OK;
 }
 
@@ -1105,14 +1127,17 @@ s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 {
 	sys_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value_addr=0x%x)", id, value.addr());
 
-	RawSPUThread* t = Emu.GetCPU().GetRawSPUThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
 	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	*value = (u32)t->snr_config;
+	RawSPUThread& spu = static_cast<RawSPUThread&>(*t);
+
+	*value = (u32)spu.snr_config;
+
 	return CELL_OK;
 }
 

@@ -3,13 +3,12 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/CB_FUNC.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sys_ppu_thread.h"
 
-static SysCallBase sys_ppu_thread("sys_ppu_thread");
+SysCallBase sys_ppu_thread("sys_ppu_thread");
 
 static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU/*UUUUUUUUUUuuuuuuuuuu~~~~~~~~*/;
 
@@ -183,10 +182,9 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 	new_thread.SetPrio(prio);
 	new_thread.SetStackSize(stacksize);
 	new_thread.SetJoinable(is_joinable);
-	new_thread.m_has_interrupt = false;
-	new_thread.m_is_interrupt = is_interrupt;
 	new_thread.SetName(name);
 	new_thread.custom_task = task;
+	new_thread.Run();
 
 	sys_ppu_thread.Notice("*** New PPU Thread [%s] (%s, entry=0x%x): id = %d", name.c_str(),
 		is_interrupt ? "interrupt" :
@@ -194,15 +192,8 @@ PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool i
 
 	if (!is_interrupt)
 	{
-		new_thread.Run();
 		new_thread.GPR[3] = arg;
 		new_thread.Exec();
-	}
-	else
-	{
-		new_thread.InitStack();
-		new_thread.InitRegs();
-		new_thread.DoRun();
 	}
 
 	return &new_thread;
