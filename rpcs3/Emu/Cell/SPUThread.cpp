@@ -832,7 +832,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 			if (mfc_queue[i].second.tag == value)
 			{
 				do_dma_list_cmd(mfc_queue[i].first, mfc_queue[i].second);
-				mfc_queue[i].second.tag = ~0;
+				mfc_queue[i].second.tag = 0xdead;
 				processed++;
 			}
 		}
@@ -841,7 +841,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 		{
 			for (size_t i = 0; i < mfc_queue.size(); i++)
 			{
-				if (mfc_queue[i].second.tag == ~0)
+				if (mfc_queue[i].second.tag == 0xdead)
 				{
 					mfc_queue.erase(mfc_queue.begin() + i);
 					processed--;

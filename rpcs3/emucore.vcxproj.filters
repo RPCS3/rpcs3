@@ -1540,5 +1540,8 @@
     <ClInclude Include="Emu\Memory\atomic.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Memory\refcnt.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

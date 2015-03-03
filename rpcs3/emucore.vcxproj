@@ -411,6 +411,7 @@
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
     <ClInclude Include="Emu\Memory\atomic.h" />
+    <ClInclude Include="Emu\Memory\refcnt.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
