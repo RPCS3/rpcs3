@@ -184,84 +184,51 @@ u32 GLrbo::GetId(u32 num) const
 	return m_id[num];
 }
 
-GLfbo::GLfbo() : m_id(0)
+namespace gl
 {
-}
-
-GLfbo::~GLfbo()
-{
-}
-
-void GLfbo::Create()
-{
-	if(IsCreated())
+	void fbo::create()
 	{
-		return;
+		if (created())
+		{
+			clear();
+		}
+
+		glGenFramebuffers(1, &m_id);
 	}
 
-	glGenFramebuffers(1, &m_id);
-}
-
-void GLfbo::Bind(u32 type, int id)
-{
-	glBindFramebuffer(type, id);
-}
-
-void GLfbo::Bind(u32 type)
-{
-	assert(IsCreated());
-
-	m_type = type;
-	Bind(type, m_id);
-}
-
-void GLfbo::Texture1D(u32 attachment, u32 texture, int level)
-{
-	glFramebufferTexture1D(m_type, attachment, GL_TEXTURE_1D, texture, level);
-}
-
-void GLfbo::Texture2D(u32 attachment, u32 texture, int level)
-{
-	glFramebufferTexture2D(m_type, attachment, GL_TEXTURE_2D, texture, level);
-}
-
-void GLfbo::Texture3D(u32 attachment, u32 texture, int zoffset, int level)
-{
-	glFramebufferTexture3D(m_type, attachment, GL_TEXTURE_3D, texture, level, zoffset);
-}
-
-void GLfbo::Renderbuffer(u32 attachment, u32 renderbuffer)
-{
-	glFramebufferRenderbuffer(m_type, attachment, GL_RENDERBUFFER, renderbuffer);
-}
-
-void GLfbo::Blit(int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, u32 mask, u32 filter)
-{
-	glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
-}
-
-void GLfbo::Unbind()
-{
-	Unbind(m_type);
-}
-
-void GLfbo::Unbind(u32 type)
-{
-	glBindFramebuffer(type, 0);
-}
-
-void GLfbo::Delete()
-{
-	if(!IsCreated())
+	void fbo::bind() const
 	{
-		return;
+		glBindFramebuffer(GL_FRAMEBUFFER, m_id);
 	}
 
-	glDeleteFramebuffers(1, &m_id);
-	m_id = 0;
-}
+	void fbo::blit(const fbo& dst, area src_area, area dst_area, buffers buffers_, filter filter_) const
+	{
+		bind_as(target::read_frame_buffer);
+		dst.bind_as(target::draw_frame_buffer);
+		glBlitFramebuffer(
+			src_area.x1, src_area.y1, src_area.x2, src_area.y2,
+			dst_area.x1, dst_area.y1, dst_area.x2, dst_area.y2,
+			(GLbitfield)buffers_, (GLenum)filter_);
+	}
 
-bool GLfbo::IsCreated() const
-{
-	return m_id != 0;
+	void fbo::bind_as(target target_) const
+	{
+		glBindFramebuffer((int)target_, id());
+	}
+
+	void fbo::clear()
+	{
+		if (!created())
+		{
+			return;
+		}
+
+		glDeleteFramebuffers(1, &m_id);
+		m_id = 0;
+	}
+
+	bool fbo::created() const
+	{
+		return m_id != 0;
+	}
 }
