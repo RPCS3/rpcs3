@@ -71,7 +71,7 @@ protected:
 	GLVertexProgram m_vp;
 	GLProgram m_program;
 	gl::fbo m_fbo;
-	GLrbo m_rbo;
+	gl::rbo m_rbo;
 
 public:
 	virtual void Draw();
@@ -152,7 +152,7 @@ private:
 
 	GLvao m_vao;
 	GLvbo m_vbo;
-	GLrbo m_rbo;
+	std::vector<gl::rbo> m_rbo;
 	gl::fbo m_fbo;
 
 	void* m_context;

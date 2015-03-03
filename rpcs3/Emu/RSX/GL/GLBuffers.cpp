@@ -188,9 +188,9 @@ namespace gl
 {
 	void fbo::create()
 	{
-		if (is_created())
+		if (created())
 		{
-			return;
+			clear();
 		}
 
 		glGenFramebuffers(1, &m_id);
@@ -199,26 +199,6 @@ namespace gl
 	void fbo::bind() const
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, m_id);
-	}
-
-	void fbo::texture1D(u32 attachment, u32 texture, int level) const
-	{
-		glFramebufferTexture1D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_1D, texture, level);
-	}
-
-	void fbo::texture2D(u32 attachment, u32 texture, int level) const
-	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, texture, level);
-	}
-
-	void fbo::texture3D(u32 attachment, u32 texture, int zoffset, int level) const
-	{
-		glFramebufferTexture3D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_3D, texture, level, zoffset);
-	}
-
-	void fbo::renderbuffer(u32 attachment, u32 renderbuffer) const
-	{
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, renderbuffer);
 	}
 
 	void fbo::blit(const fbo& dst, area src_area, area dst_area, buffers buffers_, filter filter_) const
@@ -238,7 +218,7 @@ namespace gl
 
 	void fbo::clear()
 	{
-		if (!is_created())
+		if (!created())
 		{
 			return;
 		}
@@ -247,7 +227,7 @@ namespace gl
 		m_id = 0;
 	}
 
-	bool fbo::is_created() const
+	bool fbo::created() const
 	{
 		return m_id != 0;
 	}

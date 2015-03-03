@@ -68,7 +68,7 @@ int GLTexture::GetGlWrap(int wrap)
 	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
 	case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
 	case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
 	}
@@ -677,14 +677,12 @@ void DrawCursorObj::Draw()
 		m_fbo.bind();
 		checkForGlError("DrawCursorObj : m_fbo.Bind");
 
-		m_rbo.Create();
+		m_rbo.create();
 		checkForGlError("DrawCursorObj : m_rbo.Create");
-		m_rbo.Bind();
-		checkForGlError("DrawCursorObj : m_rbo.Bind");
-		m_rbo.Storage(GL_RGBA, m_width, m_height);
+		m_rbo.storage(GL_RGBA, m_width, m_height);
 		checkForGlError("DrawCursorObj : m_rbo.Storage");
 
-		m_fbo.renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId());
+		m_fbo.color = m_rbo;
 		checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
 	}
 
@@ -1479,7 +1477,7 @@ void GLGSRender::OnExitThread()
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
 	m_program.Delete();
-	m_rbo.Delete();
+	m_rbo.clear();
 	m_fbo.clear();
 	m_vbo.Delete();
 	m_vao.Delete();
@@ -1510,19 +1508,16 @@ void GLGSRender::InitDrawBuffers()
 
 		m_fbo.create();
 		checkForGlError("m_fbo.Create");
-		m_fbo.bind();
 
-		m_rbo.Create(4 + 1);
+		m_rbo.assign(5, gl::rbo());
+
 		checkForGlError("m_rbo.Create");
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < m_rbo.size() - 1; ++i)
 		{
-			m_rbo.Bind(i);
-			m_rbo.Storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
+			m_rbo[i].storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_RGBA)");
 		}
-
-		m_rbo.Bind(4);
 
 		switch (m_surface_depth_format)
 		{
@@ -1532,35 +1527,29 @@ void GLGSRender::InitDrawBuffers()
 			// [E : RSXThread]: Bad depth format! (0)
 			// [E : RSXThread]: glEnable: opengl error 0x0506
 			// [E : RSXThread]: glDrawArrays: opengl error 0x0506
-			m_rbo.Storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
+			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
 			break;
 		}
 
 		case CELL_GCM_SURFACE_Z16:
 		{
-			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
+			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
 
-			m_fbo.renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
+			m_fbo.depth = m_rbo[m_rbo.size() - 1];
 			break;
 		}
 			
 
 		case CELL_GCM_SURFACE_Z24S8:
 		{
-			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
+			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
 			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
 
-			m_fbo.renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-			m_fbo.renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
-
+			m_fbo.depth = m_rbo[m_rbo.size() - 1];
+			m_fbo.stencil = m_rbo[m_rbo.size() - 1];
 			break;
-
 		}
 
 		default:
@@ -1573,18 +1562,9 @@ void GLGSRender::InitDrawBuffers()
 
 		for (int i = 0; i < 4; ++i)
 		{
-			m_fbo.renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
+			m_fbo.color[i] = m_rbo[i];
 			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
-
-		//m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-		//checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-		//if (m_surface_depth_format == 2)
-		//{
-		//	m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
-		//	checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
-		//}
 	}
 
 	if (!m_set_surface_clip_horizontal)
