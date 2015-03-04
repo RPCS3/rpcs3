@@ -166,9 +166,8 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
-
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -193,8 +192,9 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -208,6 +208,7 @@ s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 	}
 
 	*status = res;
+
 	return CELL_OK;
 }
 
@@ -256,7 +257,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	}
 
 	// clear threads
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -295,7 +296,7 @@ s32 sys_spu_thread_group_start(u32 id)
 	group->state = SPU_THREAD_GROUP_STATUS_RUNNING;
 	group->join_state = 0;
 
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -319,7 +320,7 @@ s32 sys_spu_thread_group_start(u32 id)
 		}
 	}
 
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -371,7 +372,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 		return CELL_ESTAT;
 	}
 
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -417,7 +418,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 		return CELL_ESTAT;
 	}
 
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -471,7 +472,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		return CELL_EINVAL;
 	}
 
-	for (auto t : group->threads)
+	for (auto& t : group->threads)
 	{
 		if (t)
 		{
@@ -508,6 +509,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 	if (group->join_state.fetch_or(STGJSF_IS_JOINING) & STGJSF_IS_JOINING)
 	{
+		// another PPU thread is joining this thread group
 		return CELL_EBUSY;
 	}
 
@@ -515,7 +517,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 	{
 		bool stopped = true;
 
-		for (auto t : group->threads)
+		for (auto& t : group->threads)
 		{
 			if (t)
 			{
@@ -575,12 +577,11 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_write_ls(id=%d, address=0x%x, value=0x%llx, type=0x%x)",
-		id, address, value, type);
+	sys_spu.Log("sys_spu_thread_write_ls(id=%d, address=0x%x, value=0x%llx, type=%d)", id, address, value, type);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -611,12 +612,11 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value_addr=0x%x, type=0x%x)",
-		id, address, value.addr(), type);
+	sys_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value=*0x%x, type=%d)", id, address, value, type);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -649,14 +649,16 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
 	sys_spu.Warning("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
 
-	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if(!thr || thr->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	(*(SPUThread*)thr.get()).ch_in_mbox.push_uncond(value);
+	auto& spu = static_cast<SPUThread&>(*t);
+
+	spu.ch_in_mbox.push_uncond(value);
 
 	return CELL_OK;
 }
@@ -665,9 +667,9 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 {
 	sys_spu.Warning("sys_spu_thread_set_spu_cfg(id=%d, value=0x%x)", id, value);
 
-	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if(!thr || thr->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -677,23 +679,27 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 		return CELL_EINVAL;
 	}
 
-	(*(SPUThread*)thr.get()).snr_config = value;
+	auto& spu = static_cast<SPUThread&>(*t);
+
+	spu.snr_config = value;
 
 	return CELL_OK;
 }
 
 s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 {
-	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value_addr=0x%x)", id, value.addr());
+	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value=*0x%x)", id, value);
 
-	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if(!thr || thr->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
 
-	*value = (*(SPUThread*)thr.get()).snr_config;
+	auto& spu = static_cast<SPUThread&>(*t);
+
+	*value = spu.snr_config;
 
 	return CELL_OK;
 }
@@ -702,9 +708,9 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
 	sys_spu.Log("sys_spu_thread_write_snr(id=%d, number=%d, value=0x%x)", id, number, value);
 
-	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if(!thr || thr->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -714,7 +720,9 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 		return CELL_EINVAL;
 	}
 
-	(*(SPUThread*)thr.get()).write_snr(number ? true : false, value);
+	auto& spu = static_cast<SPUThread&>(*t);
+
+	spu.write_snr(number ? true : false, value);
 
 	return CELL_OK;
 }
@@ -747,11 +755,11 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
 	std::shared_ptr<event_queue_t> queue;
 
-	if (!t || t->GetType() != CPU_THREAD_SPU || !Emu.GetIdManager().GetIDData(eq, queue))
+	if (!t || !Emu.GetIdManager().GetIDData(eq, queue))
 	{
 		return CELL_ESRCH;
 	}
@@ -772,6 +780,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 	}
 
 	port = queue;
+
 	return CELL_OK;
 }
 
@@ -781,9 +790,9 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -804,6 +813,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 	}
 
 	port.reset();
+
 	return CELL_OK;
 }
 
@@ -813,11 +823,11 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
 	std::shared_ptr<event_queue_t> queue;
 
-	if (!t || t->GetType() != CPU_THREAD_SPU || !Emu.GetIdManager().GetIDData(spuq, queue))
+	if (!t || !Emu.GetIdManager().GetIDData(spuq, queue))
 	{
 		return CELL_ESRCH;
 	}
@@ -841,6 +851,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 	}
 
 	spu.spuq[spuq_num] = queue;
+
 	return CELL_OK;
 }
 
@@ -850,9 +861,9 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 	LV2_LOCK;
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id);
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
-	if (!t || t->GetType() != CPU_THREAD_SPU)
+	if (!t)
 	{
 		return CELL_ESRCH;
 	}
@@ -866,6 +877,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 	}
 
 	spu.spuq.erase(found);
+
 	return CELL_OK;
 }
 
@@ -893,54 +905,83 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::
 		return CELL_ESTAT;
 	}
 
-	for (u8 port = 0; port < 64; port++) // port number
+	u8 port = 0; // SPU Port number
+
+	for (; port < 64; port++)
 	{
-		bool found = true;
-
-		if (req & (1ull << port))
-		{
-			for (auto t : group->threads)
-			{
-				if (t)
-				{
-					auto& spu = static_cast<SPUThread&>(*t);
-
-					if (!spu.spup[port].expired())
-					{
-						found = false;
-						break;
-					}
-				}
-			}
-		}
-		else
+		if (!(req & (1ull << port)))
 		{
 			continue;
 		}
 
-		if (found)
-		{
-			for (auto t : group->threads)
-			{
-				if (t)
-				{
-					auto& spu = static_cast<SPUThread&>(*t);
+		bool found = true;
 
-					spu.spup[port] = queue;
+		for (auto& t : group->threads)
+		{
+			if (t)
+			{
+				auto& spu = static_cast<SPUThread&>(*t);
+
+				if (!spu.spup[port].expired())
+				{
+					found = false;
+					break;
 				}
 			}
+		}
 
-			*spup = port;
-			return CELL_OK;
+		if (found)
+		{
+			break;
 		}
 	}
 
-	return CELL_EISCONN;
+	if (port == 64)
+	{
+		return CELL_EISCONN;
+	}
+
+	for (auto& t : group->threads)
+	{
+		if (t)
+		{
+			auto& spu = static_cast<SPUThread&>(*t);
+
+			spu.spup[port] = queue;
+		}
+	}
+
+	*spup = port;
+
+	return CELL_OK;
 }
 
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
-	sys_spu.Todo("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
+	sys_spu.Warning("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
+
+	LV2_LOCK;
+
+	std::shared_ptr<spu_group_t> group;
+	if (!Emu.GetIdManager().GetIDData(id, group))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (spup > 63)
+	{
+		return CELL_EINVAL;
+	}
+
+	for (auto& t : group->threads)
+	{
+		if (t)
+		{
+			auto& spu = static_cast<SPUThread&>(*t);
+			
+			spu.spup[spup].reset();
+		}
+	}
 
 	return CELL_OK;
 }

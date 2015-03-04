@@ -212,7 +212,7 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 			}
 			else if ((cmd & MFC_PUT_CMD) && args.size == 4 && (offset == SYS_SPU_THREAD_SNR1 || offset == SYS_SPU_THREAD_SNR2))
 			{
-				spu.write_snr(SYS_SPU_THREAD_SNR2 == offset, vm::read32(offset + args.lsa));
+				spu.write_snr(SYS_SPU_THREAD_SNR2 == offset, read32(args.lsa));
 				return;
 			}
 			else

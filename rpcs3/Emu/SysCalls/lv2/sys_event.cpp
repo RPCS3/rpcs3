@@ -112,7 +112,12 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 		return CELL_ESRCH;
 	}
 
-	if (queue->type != SYS_PPU_QUEUE || size < 0) // ???
+	if (size < 0)
+	{
+		throw __FUNCTION__;
+	}
+
+	if (queue->type != SYS_PPU_QUEUE)
 	{
 		return CELL_EINVAL;
 	}
