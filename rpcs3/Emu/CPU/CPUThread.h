@@ -112,6 +112,7 @@ public:
 	u32 entry;
 	u32 PC;
 	u32 nPC;
+	u32 index;
 	u32 offset;
 	bool m_is_branch;
 	bool m_trace_enabled;
@@ -223,7 +224,7 @@ CPUThread* GetCurrentCPUThread();
 class cpu_thread
 {
 protected:
-	CPUThread* thread;
+	std::shared_ptr<CPUThread> thread;
 
 public:
 	u32 get_entry() const

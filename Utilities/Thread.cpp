@@ -2,7 +2,9 @@
 #include "Log.h"
 #include "rpcs3/Ini.h"
 #include "Emu/System.h"
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Thread.h"
 
@@ -105,8 +107,8 @@ enum x64_reg_t : u32
 enum x64_op_t : u32
 {
 	X64OP_NONE,
-	X64OP_LOAD, // obtain and put the value into x64 register (from Memory.ReadMMIO32, for example)
-	X64OP_STORE, // take the value from x64 register or an immediate and use it (pass in Memory.WriteMMIO32, for example)
+	X64OP_LOAD, // obtain and put the value into x64 register
+	X64OP_STORE, // take the value from x64 register or an immediate and use it
 	// example: add eax,[rax] -> X64OP_LOAD_ADD (add the value to x64 register)
 	// example: add [rax],eax -> X64OP_LOAD_ADD_STORE (this will probably never happen for MMIO registers)
 
@@ -768,18 +770,27 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// check if address is RawSPU MMIO register
 	if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
+		auto t = Emu.GetCPU().GetRawSPUThread((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET);
+
+		if (!t)
+		{
+			return false;
+		}
+
 		if (a_size != 4 || !d_size || !i_size)
 		{
 			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", op, reg, d_size, a_size, i_size);
 			return false;
 		}
 
+		auto& spu = static_cast<RawSPUThread&>(*t);
+
 		switch (op)
 		{
 		case X64OP_LOAD:
 		{
 			u32 value;
-			if (is_writing || !Memory.ReadMMIO32(addr, value) || !put_x64_reg_value(context, reg, d_size, re32(value)))
+			if (is_writing || !spu.ReadReg(addr, value) || !put_x64_reg_value(context, reg, d_size, re32(value)))
 			{
 				return false;
 			}
@@ -789,7 +800,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STORE:
 		{
 			u64 reg_value;
-			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !Memory.WriteMMIO32(addr, re32((u32)reg_value)))
+			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value) || !spu.WriteReg(addr, re32((u32)reg_value)))
 			{
 				return false;
 			}

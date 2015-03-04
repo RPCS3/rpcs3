@@ -5,7 +5,7 @@
 #include "MFC.h"
 
 struct event_queue_t;
-struct event_port_t;
+struct spu_group_t;
 
 // SPU Channels
 enum : u32
@@ -102,10 +102,9 @@ enum
 enum : u32
 {
 	SYS_SPU_THREAD_BASE_LOW  = 0xf0000000,
-	SYS_SPU_THREAD_BASE_MASK = 0xfffffff,
-	SYS_SPU_THREAD_OFFSET    = 0x00100000,
-	SYS_SPU_THREAD_SNR1      = 0x05400c,
-	SYS_SPU_THREAD_SNR2      = 0x05C00c,
+	SYS_SPU_THREAD_OFFSET    = 0x100000,
+	SYS_SPU_THREAD_SNR1      = 0x5400c,
+	SYS_SPU_THREAD_SNR2      = 0x5C00c,
 };
 
 enum
@@ -505,7 +504,7 @@ public:
 	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
 
-	u32 tg_id; // SPU Thread Group Id
+	std::weak_ptr<spu_group_t> tg; // SPU Thread Group Id
 
 	std::unordered_map<u32, std::shared_ptr<event_queue_t>> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<event_queue_t> spup[64]; // SPU Ports
@@ -653,6 +652,7 @@ public:
 	virtual void Task();
 	void FastCall(u32 ls_addr);
 	void FastStop();
+	void FastRun();
 
 protected:
 	virtual void DoReset();
@@ -701,11 +701,13 @@ public:
 
 	cpu_thread& run() override
 	{
-		thread->Run();
+		auto& spu = static_cast<SPUThread&>(*thread);
 
-		static_cast<SPUThread*>(thread)->GPR[3].from64(argc);
-		static_cast<SPUThread*>(thread)->GPR[4].from64(argv.addr());
-		static_cast<SPUThread*>(thread)->GPR[5].from64(envp.addr());
+		spu.Run();
+
+		spu.GPR[3].from64(argc);
+		spu.GPR[4].from64(argv.addr());
+		spu.GPR[5].from64(envp.addr());
 
 		return *this;
 	}

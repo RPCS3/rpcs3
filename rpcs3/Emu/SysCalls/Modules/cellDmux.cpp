@@ -305,7 +305,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 
 	dmux.id = dmux_id;
 
-	dmux.dmuxCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	dmux.dmuxCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
 	dmux.dmuxCb->SetName(fmt::format("Demuxer[%d] Callback", dmux_id));
 	dmux.dmuxCb->SetEntry(0);
 	dmux.dmuxCb->SetPrio(1001);

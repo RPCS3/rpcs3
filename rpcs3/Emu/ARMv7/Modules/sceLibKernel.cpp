@@ -47,18 +47,17 @@ s32 sceKernelCreateThread(
 	sceLibKernel.Warning("sceKernelCreateThread(pName=0x%x, entry=0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
 
-	ARMv7Thread& new_thread = static_cast<ARMv7Thread&>(Emu.GetCPU().AddThread(CPU_THREAD_ARMv7));
+	auto t = Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
 
-	const auto id = new_thread.GetId();
-	new_thread.SetEntry(entry.addr());
-	new_thread.SetPrio(initPriority);
-	new_thread.SetStackSize(stackSize);
-	new_thread.SetName(pName.get_ptr());
+	auto& armv7 = static_cast<ARMv7Thread&>(*t);
 
-	sceLibKernel.Warning("*** New ARMv7 Thread [%s] (entry=0x%x): id -> 0x%x", pName.get_ptr(), entry, id);
+	armv7.SetEntry(entry.addr());
+	armv7.SetPrio(initPriority);
+	armv7.SetStackSize(stackSize);
+	armv7.SetName(pName.get_ptr());
+	armv7.Run();
 
-	new_thread.Run();
-	return id;
+	return armv7.GetId();
 }
 
 s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)

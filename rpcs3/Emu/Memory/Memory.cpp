@@ -1,50 +1,15 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Emu/System.h"
 #include "Memory.h"
-#include "Emu/Cell/RawSPUThread.h"
 
 MemoryBase Memory;
 
-u32 MemoryBase::InitRawSPU(MemoryBlock* raw_spu)
-{
-	LV2_LOCK;
-
-	u32 index;
-	for (index = 0; index < sizeof(RawSPUMem) / sizeof(RawSPUMem[0]); index++)
-	{
-		if (!RawSPUMem[index])
-		{
-			RawSPUMem[index] = raw_spu;
-			break;
-		}
-	}
-
-	MemoryBlocks.push_back(raw_spu->SetRange(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, RAW_SPU_PROB_OFFSET));
-	return index;
-}
-
-void MemoryBase::CloseRawSPU(MemoryBlock* raw_spu, const u32 num)
-{
-	LV2_LOCK;
-
-	for (int i = 0; i < MemoryBlocks.size(); ++i)
-	{
-		if (MemoryBlocks[i] == raw_spu)
-		{
-			MemoryBlocks.erase(MemoryBlocks.begin() + i);
-			break;
-		}
-	}
-	if (num < sizeof(RawSPUMem) / sizeof(RawSPUMem[0])) RawSPUMem[num] = nullptr;
-}
+std::mutex g_memory_mutex;
 
 void MemoryBase::Init(MemoryType type)
 {
 	if (m_inited) return;
 	m_inited = true;
-
-	memset(RawSPUMem, 0, sizeof(RawSPUMem));
 
 	LOG_NOTICE(MEMORY, "Initializing memory: g_base_addr = 0x%llx, g_priv_addr = 0x%llx", (u64)vm::g_base_addr, (u64)vm::g_priv_addr);
 
@@ -101,35 +66,11 @@ void MemoryBase::Close()
 	MemoryBlocks.clear();
 }
 
-bool MemoryBase::WriteMMIO32(u32 addr, const u32 data)
-{
-	LV2_LOCK;
-
-	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Write32(addr, data))
-	{
-		return true;
-	}
-
-	return false;
-}
-
-bool MemoryBase::ReadMMIO32(u32 addr, u32& result)
-{
-	LV2_LOCK;
-
-	if (RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET] && ((RawSPUThread*)RawSPUMem[(addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET])->Read32(addr, &result))
-	{
-		return true;
-	}
-
-	return false;
-}
-
 bool MemoryBase::Map(const u32 addr, const u32 size)
 {
 	assert(size && (size | addr) % 4096 == 0);
 
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 	{
@@ -147,7 +88,7 @@ bool MemoryBase::Map(const u32 addr, const u32 size)
 
 bool MemoryBase::Unmap(const u32 addr)
 {
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = 0; i < MemoryBlocks.size(); i++)
 	{
@@ -234,7 +175,7 @@ DynamicMemoryBlockBase::DynamicMemoryBlockBase()
 
 const u32 DynamicMemoryBlockBase::GetUsedSize() const
 {
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	u32 size = 0;
 
@@ -253,7 +194,7 @@ bool DynamicMemoryBlockBase::IsInMyRange(const u32 addr, const u32 size)
 
 MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 {
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	m_max_size = PAGE_4K(size);
 	if (!MemoryBlock::SetRange(start, 0))
@@ -267,7 +208,7 @@ MemoryBlock* DynamicMemoryBlockBase::SetRange(const u32 start, const u32 size)
 
 void DynamicMemoryBlockBase::Delete()
 {
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	m_allocated.clear();
 	m_max_size = 0;
@@ -289,7 +230,7 @@ bool DynamicMemoryBlockBase::AllocFixed(u32 addr, u32 size)
 		return false;
 	}
 
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 i = 0; i<m_allocated.size(); ++i)
 	{
@@ -330,7 +271,7 @@ u32 DynamicMemoryBlockBase::AllocAlign(u32 size, u32 align)
 		exsize = size + align - 1;
 	}
 
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 addr = MemoryBlock::GetStartAddr(); addr <= MemoryBlock::GetEndAddr() - exsize;)
 	{
@@ -371,7 +312,7 @@ bool DynamicMemoryBlockBase::Alloc()
 
 bool DynamicMemoryBlockBase::Free(u32 addr)
 {
-	LV2_LOCK;
+	std::lock_guard<std::mutex> lock(g_memory_mutex);
 
 	for (u32 num = 0; num < m_allocated.size(); num++)
 	{

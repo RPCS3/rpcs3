@@ -10,15 +10,11 @@ thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
 
 RawSPUThread::RawSPUThread(CPUThreadType type)
 	: SPUThread(type)
-	, MemoryBlock()
 {
-	m_index = Memory.InitRawSPU(this);
-	Reset();
 }
 
 RawSPUThread::~RawSPUThread()
 {
-	Memory.CloseRawSPU(this, m_index);
 }
 
 void RawSPUThread::start()
@@ -29,54 +25,54 @@ void RawSPUThread::start()
 	// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
 	Emu.GetCallbackManager().Async([this](PPUThread& PPU)
 	{
-		Exec();
+		FastRun();
 	});
 }
 
-bool RawSPUThread::Read32(const u32 addr, u32* value)
+bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 {
-	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
 	case MFC_CMDStatus_offs:
 	{
-		*value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+		value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
 		return true;
 	}
 
 	case MFC_QStatus_offs:
 	{
-		*value = MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG | MFC_PPU_MAX_QUEUE_SPACE;
+		value = MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG | MFC_PPU_MAX_QUEUE_SPACE;
 		return true;
 	}
 
 	case SPU_Out_MBox_offs:
 	{
-		*value = ch_out_mbox.pop_uncond();
+		value = ch_out_mbox.pop_uncond();
 		return true;
 	}
 
 	case SPU_MBox_Status_offs:
 	{
-		*value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff) | (ch_out_intr_mbox.get_count() << 16 & 0xff);
+		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff) | (ch_out_intr_mbox.get_count() << 16 & 0xff);
 		return true;
 	}
 		
 	case SPU_Status_offs:
 	{
-		*value = status.read_relaxed();
+		value = status.read_relaxed();
 		return true;
 	}
 	}
 
-	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(): unknown/illegal offset (0x%x)", m_index, offset);
+	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
-bool RawSPUThread::Write32(const u32 addr, const u32 value)
+bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
@@ -87,19 +83,19 @@ bool RawSPUThread::Write32(const u32 addr, const u32 value)
 			break;
 		}
 
-		raw_spu_mfc[m_index].lsa = value;
+		raw_spu_mfc[index].lsa = value;
 		return true;
 	}
 
 	case MFC_EAH_offs:
 	{
-		raw_spu_mfc[m_index].eah = value;
+		raw_spu_mfc[index].eah = value;
 		return true;
 	}
 
 	case MFC_EAL_offs:
 	{
-		raw_spu_mfc[m_index].eal = value;
+		raw_spu_mfc[index].eal = value;
 		return true;
 	}
 
@@ -110,14 +106,14 @@ bool RawSPUThread::Write32(const u32 addr, const u32 value)
 			break;
 		}
 
-		raw_spu_mfc[m_index].size_tag = value;
+		raw_spu_mfc[index].size_tag = value;
 		return true;
 	}
 
 	case MFC_Class_CMD_offs:
 	{
-		do_dma_transfer(value & ~MFC_START_MASK, raw_spu_mfc[m_index]);
-		raw_spu_mfc[m_index] = {}; // clear non-persistent data
+		do_dma_transfer(value & ~MFC_START_MASK, raw_spu_mfc[index]);
+		raw_spu_mfc[index] = {}; // clear non-persistent data
 
 		if (value & MFC_START_MASK)
 		{
@@ -167,7 +163,7 @@ bool RawSPUThread::Write32(const u32 addr, const u32 value)
 		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
 			status &= ~SPU_STATUS_RUNNING;
-			Stop();
+			FastStop();
 		}
 		else
 		{
@@ -180,8 +176,7 @@ bool RawSPUThread::Write32(const u32 addr, const u32 value)
 
 	case SPU_NPC_offs:
 	{
-		// check if interrupts are enabled
-		if ((value & 3) != 1 || value >= 0x40000)
+		if ((value & 2) || value >= 0x40000)
 		{
 			break;
 		}
@@ -203,19 +198,8 @@ bool RawSPUThread::Write32(const u32 addr, const u32 value)
 	}
 	}
 
-	LOG_ERROR(SPU, "RawSPUThread[%d]: Write32(value=0x%x): unknown/illegal offset (0x%x)", m_index, value, offset);
+	LOG_ERROR(SPU, "RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
-}
-
-void RawSPUThread::InitRegs()
-{
-	offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
-	SPUThread::InitRegs();
-}
-
-u32 RawSPUThread::GetIndex() const
-{
-	return m_index;
 }
 
 void RawSPUThread::Task()

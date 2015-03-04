@@ -6,8 +6,10 @@ enum CPUThreadType : unsigned char;
 
 class CPUThreadManager
 {
+	std::mutex m_mutex;
+
 	std::vector<std::shared_ptr<CPUThread>> m_threads;
-	std::mutex m_mtx_thread;
+	std::array<std::shared_ptr<CPUThread>, 5> m_raw_spu;
 
 public:
 	CPUThreadManager();
@@ -15,14 +17,15 @@ public:
 
 	void Close();
 
-	CPUThread& AddThread(CPUThreadType type);
-	void RemoveThread(const u32 id);
+	std::shared_ptr<CPUThread> AddThread(CPUThreadType type);
 
-	std::vector<std::shared_ptr<CPUThread>> GetThreads() { std::lock_guard<std::mutex> lock(m_mtx_thread); return m_threads; }
-	s32 GetThreadNumById(CPUThreadType type, u32 id);
+	void RemoveThread(u32 id);
+
+	std::vector<std::shared_ptr<CPUThread>> GetThreads() { std::lock_guard<std::mutex> lock(m_mutex); return m_threads; }
+
 	std::shared_ptr<CPUThread> GetThread(u32 id);
 	std::shared_ptr<CPUThread> GetThread(u32 id, CPUThreadType type);
-	std::shared_ptr<CPUThread> GetRawSPUThread(u32 num);
+	std::shared_ptr<CPUThread> GetRawSPUThread(u32 index);
 
 	void Exec();
 	void Task();

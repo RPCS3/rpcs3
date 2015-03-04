@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 
+#include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_lwmutex.h"
@@ -143,24 +144,23 @@ s32 spursInit(
 	if (flags & SAF_UNKNOWN_FLAG_7) tgt |= 0x102;
 	if (flags & SAF_UNKNOWN_FLAG_8) tgt |= 0xC02;
 	if (flags & SAF_UNKNOWN_FLAG_9) tgt |= 0x800;
-	auto tg = spu_thread_group_create(name + "CellSpursKernelGroup", nSpus, spuPriority, tgt, container);
-	assert(tg);
-	spurs->m.spuTG = tg->m_id;
+	spurs->m.spuTG = spu_thread_group_create(name + "CellSpursKernelGroup", nSpus, spuPriority, tgt, container);
+	assert(spurs->m.spuTG.data());
 
 	name += "CellSpursKernel0";
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		auto spu = spu_thread_initialize(tg, num, spurs->m.spuImg, name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0);
+		const u32 id = spu_thread_initialize(spurs->m.spuTG, num, vm::ptr<sys_spu_image>::make(spurs.addr() + offsetof(CellSpurs, m.spuImg)), name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0);
 
-		spu->RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
+		static_cast<SPUThread&>(*Emu.GetCPU().GetThread(id).get()).RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
 
-		spurs->m.spus[num] = spu->GetId();
+		spurs->m.spus[num] = id;
 	}
 
 	if (flags & SAF_SPU_PRINTF_ENABLED)
 	{
 		// spu_printf: attach group
-		if (!spu_printf_agcb || spu_printf_agcb(tg->m_id) != CELL_OK)
+		if (!spu_printf_agcb || spu_printf_agcb(spurs->m.spuTG) != CELL_OK)
 		{
 			// remove flag if failed
 			spurs->m.flags &= ~SAF_SPU_PRINTF_ENABLED;
@@ -328,13 +328,13 @@ s32 spursInit(
 				return;
 			}
 		}
-	})->GetId();
+	});
 
 	spurs->m.ppu1 = ppu_thread_create(0, 0, ppuPriority, 0x8000, true, false, name + "SpursHdlr1", [spurs](PPUThread& CPU)
 	{
 		// TODO
 
-	})->GetId();
+	});
 
 	// enable exception event handler
 	if (spurs->m.enableEH.compare_and_swap_test(be_t<u32>::make(0), be_t<u32>::make(1)))

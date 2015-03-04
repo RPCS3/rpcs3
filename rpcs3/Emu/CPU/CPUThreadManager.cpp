@@ -24,9 +24,9 @@ void CPUThreadManager::Close()
 	while(m_threads.size()) RemoveThread(m_threads[0]->GetId());
 }
 
-CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
+std::shared_ptr<CPUThread> CPUThreadManager::AddThread(CPUThreadType type)
 {
-	std::lock_guard<std::mutex> lock(m_mtx_thread);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	std::shared_ptr<CPUThread> new_thread;
 
@@ -44,7 +44,17 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	}
 	case CPU_THREAD_RAW_SPU:
 	{
-		new_thread.reset(new RawSPUThread());
+		for (u32 i = 0; i < m_raw_spu.size(); i++)
+		{
+			if (!m_raw_spu[i])
+			{
+				new_thread.reset(new RawSPUThread());
+				new_thread->index = i;
+				
+				m_raw_spu[i] = new_thread;
+				break;
+			}
+		}
 		break;
 	}
 	case CPU_THREAD_ARMv7:
@@ -54,18 +64,21 @@ CPUThread& CPUThreadManager::AddThread(CPUThreadType type)
 	}
 	default: assert(0);
 	}
-	
-	new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread->GetTypeString() + " Thread", new_thread));
 
-	m_threads.push_back(new_thread);
-	SendDbgCommand(DID_CREATE_THREAD, new_thread.get());
+	if (new_thread)
+	{
+		new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread->GetTypeString() + " Thread", new_thread));
 
-	return *new_thread;
+		m_threads.push_back(new_thread);
+		SendDbgCommand(DID_CREATE_THREAD, new_thread.get());
+	}
+
+	return new_thread;
 }
 
-void CPUThreadManager::RemoveThread(const u32 id)
+void CPUThreadManager::RemoveThread(u32 id)
 {
-	std::lock_guard<std::mutex> lock(m_mtx_thread);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	std::shared_ptr<CPUThread> thr;
 	u32 thread_index = 0;
@@ -84,26 +97,17 @@ void CPUThreadManager::RemoveThread(const u32 id)
 		thr->Close();
 
 		m_threads.erase(m_threads.begin() + thread_index);
+
+		if (thr->GetType() == CPU_THREAD_RAW_SPU)
+		{
+			assert(thr->index < m_raw_spu.size());
+			m_raw_spu[thr->index] = nullptr;
+		}
 	}
 
 	// Removing the ID should trigger the actual deletion of the thread
 	Emu.GetIdManager().RemoveID(id);
 	Emu.CheckStatus();
-}
-
-s32 CPUThreadManager::GetThreadNumById(CPUThreadType type, u32 id)
-{
-	std::lock_guard<std::mutex> lock(m_mtx_thread);
-
-	s32 num = 0;
-
-	for(u32 i=0; i<m_threads.size(); ++i)
-	{
-		if(m_threads[i]->GetId() == id) return num;
-		if(m_threads[i]->GetType() == type) num++;
-	}
-
-	return -1;
 }
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id)
@@ -130,21 +134,19 @@ std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id, CPUThreadType typ
 	return res;
 }
 
-std::shared_ptr<CPUThread> CPUThreadManager::GetRawSPUThread(u32 num)
+std::shared_ptr<CPUThread> CPUThreadManager::GetRawSPUThread(u32 index)
 {
-	if (num < sizeof(Memory.RawSPUMem) / sizeof(Memory.RawSPUMem[0]))
-	{
-		return GetThread(((RawSPUThread*)Memory.RawSPUMem[num])->GetId());
-	}
-	else
+	if (index >= m_raw_spu.size())
 	{
 		return nullptr;
 	}
+
+	return m_raw_spu[index];
 }
 
 void CPUThreadManager::Exec()
 {
-	std::lock_guard<std::mutex> lock(m_mtx_thread);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	for(u32 i = 0; i < m_threads.size(); ++i)
 	{

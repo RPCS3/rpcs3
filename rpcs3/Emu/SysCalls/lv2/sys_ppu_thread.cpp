@@ -162,68 +162,47 @@ s32 sys_ppu_thread_restart(u64 thread_id)
 	return CELL_OK;
 }
 
-PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name, std::function<void(PPUThread&)> task)
+u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task)
 {
-	PPUThread& new_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	auto new_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
-	// Note: (Syphurith) I haven't figured out the minimum stack size of PPU Thread.
-	//       Maybe it can be done with pthread_attr_getstacksize function.
-	//       And i toke 4096 (PTHREAD_STACK_MIN, and the smallest allocation unit) for this.
-	if ((stacksize % 4096) || (stacksize == 0)) {
-		// If not times of smallest allocation unit, round it up to the nearest one.
-		// And regard zero as a same condition.
-		sys_ppu_thread.Warning("sys_ppu_thread_create: stacksize increased from 0x%x to 0x%x.",
-			stacksize, SYS_PPU_THREAD_STACK_MIN * ((u32)(stacksize / SYS_PPU_THREAD_STACK_MIN) + 1));
-		stacksize = SYS_PPU_THREAD_STACK_MIN * ((u32)(stacksize / SYS_PPU_THREAD_STACK_MIN) + 1);
-	}
+	auto& ppu = static_cast<PPUThread&>(*new_thread);
 
-	u32 id = new_thread.GetId();
-	new_thread.SetEntry(entry);
-	new_thread.SetPrio(prio);
-	new_thread.SetStackSize(stacksize);
-	new_thread.SetJoinable(is_joinable);
-	new_thread.SetName(name);
-	new_thread.custom_task = task;
-	new_thread.Run();
-
-	sys_ppu_thread.Notice("*** New PPU Thread [%s] (%s, entry=0x%x): id = %d", name.c_str(),
-		is_interrupt ? "interrupt" :
-		(is_joinable ? "joinable" : "detached"), entry, id);
+	ppu.SetEntry(entry);
+	ppu.SetPrio(prio);
+	ppu.SetStackSize(stacksize < 0x4000 ? 0x4000 : stacksize); // (hack) adjust minimal stack size
+	ppu.SetJoinable(is_joinable);
+	ppu.SetName(name);
+	ppu.custom_task = task;
+	ppu.Run();
 
 	if (!is_interrupt)
 	{
-		new_thread.GPR[3] = arg;
-		new_thread.Exec();
+		ppu.GPR[3] = arg;
+		ppu.Exec();
 	}
 
-	return &new_thread;
+	return ppu.GetId();
 }
 
 s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
-		thread_id.addr(), entry, arg, prio, stacksize, flags, threadname.addr(), threadname ? threadname.get_ptr() : "");
+	sys_ppu_thread.Warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)", thread_id, entry, arg, prio, stacksize, flags, threadname);
 
-	bool is_joinable = false;
-	bool is_interrupt = false;
-
-	switch (flags)
+	if (prio < 0 || prio > 3071)
 	{
-	case 0: break;
-	case SYS_PPU_THREAD_CREATE_JOINABLE:
-		is_joinable = true;
-		break;
-
-	case SYS_PPU_THREAD_CREATE_INTERRUPT:
-		is_interrupt = true;
-		break;
-
-	default: sys_ppu_thread.Error("sys_ppu_thread_create(): unknown flags value (0x%llx)", flags); return CELL_EPERM;
+		return CELL_EINVAL;
 	}
 
-	std::string name = threadname ? threadname.get_ptr() : "";
+	bool is_joinable = flags & SYS_PPU_THREAD_CREATE_JOINABLE;
+	bool is_interrupt = flags & SYS_PPU_THREAD_CREATE_INTERRUPT;
 
-	*thread_id = ppu_thread_create(entry, arg, prio, stacksize, is_joinable, is_interrupt, name)->GetId();
+	if (is_joinable && is_interrupt)
+	{
+		return CELL_EPERM;
+	}
+
+	*thread_id = ppu_thread_create(entry, arg, prio, stacksize, is_joinable, is_interrupt, threadname ? threadname.get_ptr() : "");
 	return CELL_OK;
 }
 
@@ -249,12 +228,15 @@ s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id)
 
 s32 sys_ppu_thread_rename(u64 thread_id, vm::ptr<const char> name)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=%d, name_addr=0x%x('%s'))", thread_id, name.addr(), name.get_ptr());
+	sys_ppu_thread.Log("sys_ppu_thread_rename(thread_id=0x%llx, name=*0x%x)", thread_id, name);
 
-	std::shared_ptr<CPUThread> thr = Emu.GetCPU().GetThread(thread_id);
-	if (!thr)
+	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(thread_id, CPU_THREAD_PPU);
+
+	if (!t)
+	{
 		return CELL_ESRCH;
-
-	thr->SetThreadName(name.get_ptr());
+	}
+		
+	t->SetThreadName(name.get_ptr());
 	return CELL_OK;
 }

@@ -176,7 +176,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 		queue->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	// event data is returned in registers, second arg is not used
+	// event data is returned in registers (second arg is not used)
 	auto& event = queue->events.front();
 	CPU.GPR[4] = event.source;
 	CPU.GPR[5] = event.data1;
@@ -206,10 +206,9 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 u32 event_port_create(u64 name)
 {
-	std::shared_ptr<event_port_t> eport(new event_port_t());
-	const u32 id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
-	eport->name = name ? name : ((u64)process_getpid() << 32) | (u64)id;
-	return id;
+	std::shared_ptr<event_port_t> eport(new event_port_t(SYS_EVENT_PORT_LOCAL, name));
+	
+	return sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 }
 
 s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
@@ -224,7 +223,9 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 	LV2_LOCK;
 
-	*eport_id = event_port_create(name);
+	std::shared_ptr<event_port_t> eport(new event_port_t(port_type, name));
+
+	*eport_id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
 	return CELL_OK;
 }
 
@@ -262,7 +263,10 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 		return CELL_ESRCH;
 	}
 
-	// CELL_EINVAL is never returned (I have no idea if SYS_EVENT_PORT_LOCAL is the only possible type)
+	if (port->type != SYS_EVENT_PORT_LOCAL)
+	{
+		return CELL_EINVAL;
+	}
 
 	if (!port->queue.expired())
 	{
@@ -292,11 +296,15 @@ s32 sys_event_port_disconnect(u32 eport_id)
 		return CELL_ENOTCONN;
 	}
 
+	// CELL_EBUSY is not returned
+
+	//const u64 source = port->name ? port->name : ((u64)process_getpid() << 32) | (u64)eport_id;
+
 	//for (auto& event : queue->events)
 	//{
-	//	if (event.source == port->name)
+	//	if (event.source == source)
 	//	{
-	//		return CELL_EBUSY; // not sure about it
+	//		return CELL_EBUSY; // ???
 	//	}
 	//}
 
@@ -328,7 +336,9 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		return CELL_EBUSY;
 	}
 
-	queue->events.emplace_back(port->name, data1, data2, data3);
+	const u64 source = port->name ? port->name : ((u64)process_getpid() << 32) | (u64)eport_id;
+
+	queue->events.emplace_back(source, data1, data2, data3);
 	queue->cv.notify_one();
 	return CELL_OK;
 }

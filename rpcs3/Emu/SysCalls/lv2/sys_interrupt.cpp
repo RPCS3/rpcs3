@@ -68,7 +68,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 	auto& tag = class_id ? spu.int2 : spu.int0;
 
-	// CELL_ESTAT is never returned (can't detect exact condition)
+	// CELL_ESTAT is not returned (can't detect exact condition)
 
 	std::shared_ptr<CPUThread> it = Emu.GetCPU().GetThread((u32)intrthread);
 

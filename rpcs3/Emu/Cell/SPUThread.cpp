@@ -67,6 +67,7 @@ void SPUThread::Task()
 
 void SPUThread::DoReset()
 {
+	InitRegs();
 }
 
 void SPUThread::InitRegs()
@@ -178,6 +179,12 @@ void SPUThread::FastStop()
 	m_status = Stopped;
 }
 
+void SPUThread::FastRun()
+{
+	m_status = Running;
+	Exec();
+}
+
 void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 {
 	if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK))
@@ -187,17 +194,17 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 
 	u32 eal = vm::cast(args.ea, "ea");
 
-	if (eal >= SYS_SPU_THREAD_BASE_LOW && tg_id && m_type == CPU_THREAD_SPU) // SPU Thread Group MMIO (LS and SNR)
+	if (eal >= SYS_SPU_THREAD_BASE_LOW && m_type == CPU_THREAD_SPU) // SPU Thread Group MMIO (LS and SNR)
 	{
-		const u32 num = (eal & SYS_SPU_THREAD_BASE_MASK) / SYS_SPU_THREAD_OFFSET; // thread number in group
-		const u32 offset = (eal & SYS_SPU_THREAD_BASE_MASK) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
+		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
+		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
 
+		std::shared_ptr<spu_group_t> group = tg.lock();
 		std::shared_ptr<CPUThread> t;
-		std::shared_ptr<SpuGroupInfo> tg;
 
-		if (Emu.GetIdManager().GetIDData(tg_id, tg) && num < tg->list.size() && tg->list[num] && (t = Emu.GetCPU().GetThread(tg->list[num])) && t->GetType() == CPU_THREAD_SPU)
+		if (group && index < group->num && (t = group->threads[index]))
 		{
-			SPUThread& spu = static_cast<SPUThread&>(*t);
+			auto& spu = static_cast<SPUThread&>(*t);
 
 			if (offset + args.size - 1 < 0x40000) // LS access
 			{
@@ -903,7 +910,7 @@ void SPUThread::stop_and_signal(u32 code)
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		Stop();
+		FastStop();
 
 		int2.set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		return;
@@ -1013,29 +1020,34 @@ void SPUThread::stop_and_signal(u32 code)
 			throw __FUNCTION__;
 		}
 
-		std::shared_ptr<SpuGroupInfo> tg;
-		if (!Emu.GetIdManager().GetIDData(tg_id, tg))
-		{
-			LOG_ERROR(SPU, "sys_spu_thread_group_exit(status=0x%x): invalid group (%d)", value, tg_id);
-			throw __FUNCTION__;
-		}
-
 		if (Ini.HLELogging.GetValue())
 		{
 			LOG_NOTICE(SPU, "sys_spu_thread_group_exit(status=0x%x)", value);
 		}
-		
-		tg->m_group_exit = true;
-		tg->m_exit_status = value;
 
-		for (auto& v : tg->list)
+		LV2_LOCK;
+
+		std::shared_ptr<spu_group_t> group = tg.lock();
+		if (group)
 		{
-			if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(v))
+			LOG_ERROR(SPU, "sys_spu_thread_group_exit(status=0x%x): invalid group", value);
+			throw __FUNCTION__;
+		}
+
+		for (auto t : group->threads)
+		{
+			if (t)
 			{
-				t->Stop();
+				auto& spu = static_cast<SPUThread&>(*t);
+
+				spu.FastStop();
 			}
 		}
 
+		group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+		group->exit_status = value;
+		group->join_state |= STGJSF_GROUP_EXIT;
+		group->join_cv.notify_one();
 		return;
 	}
 
@@ -1054,8 +1066,10 @@ void SPUThread::stop_and_signal(u32 code)
 			LOG_NOTICE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 		}
 
+		LV2_LOCK;
+
 		status |= SPU_STATUS_STOPPED_BY_STOP;
-		Stop();
+		FastStop();
 		return;
 	}
 	}
@@ -1087,7 +1101,7 @@ void SPUThread::halt()
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
-		Stop();
+		FastStop();
 
 		int2.set(SPU_INT2_STAT_SPU_HALT_OR_STEP_INT);
 		return;
@@ -1099,7 +1113,7 @@ void SPUThread::halt()
 
 spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
-	thread = &Emu.GetCPU().AddThread(CPU_THREAD_SPU);
+	thread = Emu.GetCPU().AddThread(CPU_THREAD_SPU);
 
 	thread->SetName(name);
 	thread->SetEntry(entry);

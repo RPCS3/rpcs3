@@ -333,14 +333,16 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	{
 		AudioPortConfig& port = g_audio.ports[g_surmx.audio_port];
 
-		PPUThread& cb_thread = *(PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
-		cb_thread.SetName("Surmixer Callback Thread");
-		cb_thread.SetEntry(0);
-		cb_thread.SetPrio(1001);
-		cb_thread.SetStackSize(0x10000);
-		cb_thread.InitStack();
-		cb_thread.InitRegs();
-		cb_thread.DoRun();
+		auto cb_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+
+		auto& ppu = static_cast<PPUThread&>(*cb_thread);
+		ppu.SetName("Surmixer Callback Thread");
+		ppu.SetEntry(0);
+		ppu.SetPrio(1001);
+		ppu.SetStackSize(0x10000);
+		ppu.InitStack();
+		ppu.InitRegs();
+		ppu.DoRun();
 
 		while (port.state.read_relaxed() != AUDIO_PORT_STATE_CLOSED && !Emu.IsStopped())
 		{
@@ -357,7 +359,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 				memset(mixdata, 0, sizeof(mixdata));
 				if (surMixerCb)
 				{
-					surMixerCb(cb_thread, surMixerCbArg, (u32)mixcount, 256);
+					surMixerCb(ppu, surMixerCbArg, (u32)mixcount, 256);
 				}
 
 				//u64 stamp1 = get_system_time();
@@ -462,7 +464,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 			ssp.clear();
 		}
 		
-		Emu.GetCPU().RemoveThread(cb_thread.GetId());
+		Emu.GetCPU().RemoveThread(ppu.GetId());
 		surMixerCb.set(0);
 	});
 

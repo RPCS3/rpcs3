@@ -79,6 +79,7 @@ struct event_queue_t
 
 	std::deque<event_t> events;
 
+	// TODO: use sleep queue, remove condition variable (use thread's one instead)
 	std::condition_variable cv;
 	std::atomic<s32> waiters;
 
@@ -95,11 +96,13 @@ struct event_queue_t
 
 struct event_port_t
 {
-	u64 name; // generated or user-specified code that is passed as event source
+	const s32 type; // port type, must be SYS_EVENT_PORT_LOCAL
+	const u64 name; // passed as event source (generated from id and process id if not set)
 	std::weak_ptr<event_queue_t> queue; // event queue this port is connected to
 
-	event_port_t(u64 name = 0)
-		: name(name)
+	event_port_t(s32 type, u64 name)
+		: type(type)
+		, name(name)
 	{
 	}
 };
