@@ -68,7 +68,7 @@ int GLTexture::GetGlWrap(int wrap)
 	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
 	case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
 	case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP_TO_EDGE;
-	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
 	}
@@ -528,7 +528,8 @@ void GLTexture::Init(RSXTexture& tex)
 		GL_NEAREST, // CELL_GCM_TEXTURE_CONVOLUTION_MIN
 	};
 
-	static const int gl_tex_mag_filter[] = {
+	static const int gl_tex_mag_filter[] = 
+	{
 		GL_NEAREST, // unused
 		GL_NEAREST,
 		GL_LINEAR,
@@ -537,14 +538,12 @@ void GLTexture::Init(RSXTexture& tex)
 	};
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_tex_min_filter[tex.GetMinFilter()]);
-
 	checkForGlError("GLTexture::Init() -> min filters");
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.GetMagFilter()]);
-
 	checkForGlError("GLTexture::Init() -> mag filters");
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.GetMaxAniso()));
 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.GetMaxAniso()));
 	checkForGlError("GLTexture::Init() -> max anisotropy");
 
 	//Unbind();
@@ -677,10 +676,8 @@ void DrawCursorObj::Draw()
 		m_fbo.bind();
 		checkForGlError("DrawCursorObj : m_fbo.Bind");
 
-		m_rbo.create();
-		checkForGlError("DrawCursorObj : m_rbo.Create");
-		m_rbo.storage(GL_RGBA, m_width, m_height);
-		checkForGlError("DrawCursorObj : m_rbo.Storage");
+		m_rbo.create(GL_RGBA, m_width, m_height);
+		checkForGlError("DrawCursorObj : m_rbo.create");
 
 		m_fbo.color = m_rbo;
 		checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
@@ -723,17 +720,6 @@ void DrawCursorObj::Draw()
 	checkForGlError("DrawCursorObj : glDrawArrays");
 	coordi screen_coords = { {}, { (int)m_width, (int)m_height } };
 	m_fbo.blit(gl::screen, screen_coords, screen_coords);
-
-	/*
-	m_fbo.Bind(GL_READ_FRAMEBUFFER);
-	checkForGlError("DrawCursorObj : m_fbo.Bind(GL_READ_FRAMEBUFFER)");
-	GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-	checkForGlError("DrawCursorObj : GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0)");
-	GLfbo::Blit(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	checkForGlError("DrawCursorObj : GLfbo::Blit");
-	m_fbo.Bind();
-	checkForGlError("DrawCursorObj : m_fbo.Bind");
-	*/
 }
 
 void DrawCursorObj::InitializeShaders()
@@ -1379,10 +1365,10 @@ void GLGSRender::WriteColorBuffers()
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
-		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
+		//glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
+		//glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
+		//glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		//WriteColorBufferA();
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
@@ -1478,7 +1464,7 @@ void GLGSRender::OnExitThread()
 
 	m_program.Delete();
 	m_rbo.clear();
-	m_fbo.clear();
+	m_fbo.remove();
 	m_vbo.Delete();
 	m_vao.Delete();
 	m_prog_buffer.Clear();
@@ -1499,24 +1485,42 @@ void GLGSRender::OnReset()
 
 void GLGSRender::InitDrawBuffers()
 {
-	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
+	u32 color_a_address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+	static u32 last_color_a_address = 0;
+
+	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format || color_a_address != last_color_a_address)
 	{
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
+		last_color_a_address = color_a_address;
 
 		m_fbo.create();
+
 		checkForGlError("m_fbo.Create");
 
 		m_rbo.assign(5, gl::rbo());
 
 		checkForGlError("m_rbo.Create");
 
-		for (int i = 0; i < m_rbo.size() - 1; ++i)
+		m_rto[0].create();
+		checkForGlError("m_rto[0].create()");
+		m_rto[0].config()
+			.size(RSXThread::m_width, RSXThread::m_height)
+			.type(gl::texture::type::uint_8_8_8_8)
+			.format(gl::texture::format::bgra)
+			.pixels(vm::get_ptr(color_a_address));
+		checkForGlError("m_rto[0].config()");
+		m_fbo.color[0] = m_rto[0];
+		checkForGlError("m_fbo.color[0] = m_rto[0]");
+
+		for (int i = 1; i < m_rbo.size() - 1; ++i)
 		{
-			m_rbo[i].storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_RGBA)");
+			m_rbo[i].create(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.create(GL_RGBA)");
+			m_fbo.color[i] = m_rbo[i];
+			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 
 		switch (m_surface_depth_format)
@@ -1527,25 +1531,26 @@ void GLGSRender::InitDrawBuffers()
 			// [E : RSXThread]: Bad depth format! (0)
 			// [E : RSXThread]: glEnable: opengl error 0x0506
 			// [E : RSXThread]: glDrawArrays: opengl error 0x0506
-			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
+			m_rbo[m_rbo.size() - 1].create(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
+			
+			checkForGlError("m_rbo.create(GL_DEPTH_COMPONENT)");
+			m_fbo.depth = m_rbo[m_rbo.size() - 1];
 			break;
 		}
 
 		case CELL_GCM_SURFACE_Z16:
 		{
-			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
+			m_rbo[m_rbo.size() - 1].create(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.create(GL_DEPTH_COMPONENT16)");
 
 			m_fbo.depth = m_rbo[m_rbo.size() - 1];
 			break;
 		}
-			
 
 		case CELL_GCM_SURFACE_Z24S8:
 		{
-			m_rbo[m_rbo.size() - 1].storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
+			m_rbo[m_rbo.size() - 1].create(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
+			checkForGlError("m_rbo.create(GL_DEPTH24_STENCIL8)");
 
 			m_fbo.depth = m_rbo[m_rbo.size() - 1];
 			m_fbo.stencil = m_rbo[m_rbo.size() - 1];
@@ -1558,12 +1563,6 @@ void GLGSRender::InitDrawBuffers()
 			assert(0);
 			break;
 		}
-		}
-
-		for (int i = 0; i < 4; ++i)
-		{
-			m_fbo.color[i] = m_rbo[i];
-			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
 		}
 	}
 
@@ -1581,43 +1580,41 @@ void GLGSRender::InitDrawBuffers()
 
 	m_fbo.bind();
 
-	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
 	{
-		glDrawBuffer(draw_buffers[0]);
+		m_fbo.draw(m_fbo.color[0]);
 		checkForGlError("glDrawBuffer(0)");
 		break;
 	}
 		
 	case CELL_GCM_SURFACE_TARGET_1:
 	{
-		glDrawBuffer(draw_buffers[1]);
+		m_fbo.draw(m_fbo.color[1]);
 		checkForGlError("glDrawBuffer(1)");
 		break;
 	}
 		
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	{
-		glDrawBuffers(2, draw_buffers);
+		m_fbo.draw(m_fbo.color.range(0, 2));
 		checkForGlError("glDrawBuffers(2)");
 		break;
 	}
 		
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	{
-		glDrawBuffers(3, draw_buffers);
+		m_fbo.draw(m_fbo.color.range(0, 3));
 		checkForGlError("glDrawBuffers(3)");
 		break;
 	}
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
-		glDrawBuffers(4, draw_buffers);
+		m_fbo.draw(m_fbo.color.range(0, 4));
 		checkForGlError("glDrawBuffers(4)");
 		break;
 	}
@@ -1627,7 +1624,6 @@ void GLGSRender::InitDrawBuffers()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 		break;
 	}
-		
 	}
 
 	if (m_read_buffer)
@@ -1666,7 +1662,7 @@ void GLGSRender::ExecCMD(u32 cmd)
 		glClearDepth(m_clear_surface_z / (float)0xffffff);
 		checkForGlError("glClearDepth");
 
-		f |= GL_DEPTH_BUFFER_BIT;
+		f |= (int)gl::buffers::depth;
 	}
 
 	if (m_clear_surface_mask & 0x2)
@@ -1674,7 +1670,7 @@ void GLGSRender::ExecCMD(u32 cmd)
 		glClearStencil(m_clear_surface_s);
 		checkForGlError("glClearStencil");
 
-		f |= GL_STENCIL_BUFFER_BIT;
+		f |= (int)gl::buffers::stencil;
 	}
 
 	if (m_clear_surface_mask & 0xF0)
@@ -1686,11 +1682,10 @@ void GLGSRender::ExecCMD(u32 cmd)
 			m_clear_surface_color_a / 255.0f);
 		checkForGlError("glClearColor");
 
-		f |= GL_COLOR_BUFFER_BIT;
+		f |= (int)gl::buffers::color;
 	}
 
-	glClear(f);
-	checkForGlError("glClear");
+	m_fbo.clear((gl::buffers)f);
 
 	WriteBuffers();
 }
@@ -2150,7 +2145,7 @@ void GLGSRender::Flip()
 
 			gl::screen.bind_as(gl::fbo::target::draw_frame_buffer);
 			m_program.Use();
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_ACCUM_BUFFER_BIT);
+			gl::screen.clear(gl::buffers::color_depth_stencil);
 
 			glColor3f(1, 1, 1);
 			glBegin(GL_QUADS);

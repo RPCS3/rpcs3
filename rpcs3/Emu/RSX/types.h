@@ -11,27 +11,6 @@ struct ignore
 
 class any
 {
-	template<typename T>
-	struct alloc_array
-	{
-		alloc_array(void*& dst, int& size, const T& data)
-		{
-			dst = new char[sizeof(T)];
-			memcpy(dst, &data, sizeof(T));
-			size = sizeof(T);
-		}
-	};
-
-	template<>
-	struct alloc_array<void>
-	{
-		alloc_array(void*& dst, int& size, ignore)
-		{
-			dst = nullptr;
-			size = 0;
-		}
-	};
-
 	void *m_data = nullptr;
 	int m_size = 0;
 	size_t m_type_hash = 0;
@@ -60,13 +39,16 @@ public:
 	{
 		delete m_data;
 
-		alloc_array<T>(m_data, m_size, data);
-		type_hash = typeid(T).hash_code();
+		m_data = new char[sizeof(T)];
+		memcpy(m_data, &data, sizeof(T));
+		m_size = sizeof(T);
+		m_type_hash = typeid(T).hash_code();
 	}
 	
 	void clear()
 	{
 		delete m_data;
+		m_data = nullptr;
 		m_type_hash = 0;
 		m_size = 0;
 	}
@@ -101,7 +83,7 @@ public:
 	template<typename T=void>
 	T* data() const
 	{
-		return (T*)data;
+		return (T*)m_data;
 	}
 
 	size_t hash_code() const
@@ -276,6 +258,102 @@ struct coord3_base
 	}
 };
 
+template<typename T>
+struct color4_base
+{
+	union
+	{
+		struct
+		{
+			T r, g, b, a;
+		};
+
+		struct
+		{
+			T x, y, z, w;
+		};
+
+		T rgba[4];
+		T xyzw[4];
+	};
+
+	color4_base(T x = {}, T y = {}, T z = {}, T w = {})
+		: x(x)
+		, y(y)
+		, z(z)
+		, w(w)
+	{
+	}
+};
+
+template<typename T>
+struct color3_base
+{
+	union
+	{
+		struct
+		{
+			T r, g, b;
+		};
+
+		struct
+		{
+			T x, y, z;
+		};
+
+		T rgb[3];
+		T xyz[3];
+	};
+
+	color3_base(T x = {}, T y = {}, T z = {})
+		: x(x)
+		, y(y)
+		, z(z)
+	{
+	}
+};
+
+template<typename T>
+struct color2_base
+{
+	union
+	{
+		struct
+		{
+			T r, g;
+		};
+
+		struct
+		{
+			T x, y;
+		};
+
+		T rg[2];
+		T xy[2];
+	};
+
+	color2_base(T x = {}, T y = {})
+		: x(x)
+		, y(y)
+	{
+	}
+};
+
+template<typename T>
+struct color1_base
+{
+	union
+	{
+		T r;
+		T x;
+	};
+
+	color1_base(T x = {})
+		: x(x)
+	{
+	}
+};
+
 //specializations
 typedef position_base<int> positioni;
 typedef position_base<float> positionf;
@@ -305,6 +383,22 @@ typedef coord3_base<int> coord3i;
 typedef coord3_base<float> coord3f;
 typedef coord3_base<double> coord3d;
 
+typedef color4_base<int> color4i;
+typedef color4_base<float> color4f;
+typedef color4_base<double> color4d;
+
+typedef color3_base<int> color3i;
+typedef color3_base<float> color3f;
+typedef color3_base<double> color3d;
+
+typedef color2_base<int> color2i;
+typedef color2_base<float> color2f;
+typedef color2_base<double> color2d;
+
+typedef color1_base<int> color1i;
+typedef color1_base<float> color1f;
+typedef color1_base<double> color1d;
+
 //defaults
 typedef positionf position;
 typedef sizef size;
@@ -314,3 +408,14 @@ typedef areai area;
 typedef position3f position3;
 typedef size3f size3;
 typedef coord3f coord3;
+
+typedef color4f color4;
+typedef color3f color3;
+typedef color2f color2;
+typedef color1f color1;
+
+typedef color4i colori;
+typedef color4f colorf;
+typedef color4d colord;
+
+typedef colorf color;

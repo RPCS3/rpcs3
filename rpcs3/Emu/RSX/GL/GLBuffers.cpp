@@ -190,7 +190,7 @@ namespace gl
 	{
 		if (created())
 		{
-			clear();
+			remove();
 		}
 
 		glGenFramebuffers(1, &m_id);
@@ -216,7 +216,7 @@ namespace gl
 		glBindFramebuffer((int)target_, id());
 	}
 
-	void fbo::clear()
+	void fbo::remove()
 	{
 		if (!created())
 		{
