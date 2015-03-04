@@ -1,6 +1,13 @@
 #pragma once
 #include "OpenGL.h"
 
+void printGlError(GLenum err, const char* situation);
+void printGlError(GLenum err, const std::string& situation);
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
+extern GLenum g_last_gl_error;
+#define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
+
+
 struct GLBufferObject
 {
 protected:
@@ -68,10 +75,32 @@ public:
 
 namespace gl
 {
+	class exception : public std::exception
+	{
+	protected:
+		std::string m_what;
+
+	public:
+		const char* what() const override
+		{
+			return m_what.c_str();
+		}
+	};
+
 	enum class filter
 	{
 		nearest = GL_NEAREST,
 		linear = GL_LINEAR
+	};
+
+	enum class min_filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR,
+		nearest_mipmap_nearest = GL_NEAREST_MIPMAP_NEAREST,
+		nearest_mipmap_linear = GL_NEAREST_MIPMAP_LINEAR,
+		linear_mipmap_nearest = GL_LINEAR_MIPMAP_NEAREST,
+		linear_mipmap_linear = GL_LINEAR_MIPMAP_LINEAR
 	};
 
 	enum class buffers
@@ -87,11 +116,191 @@ namespace gl
 		depth_stencil = depth | stencil
 	};
 
+	namespace glsl
+	{
+		class link_exception : public exception
+		{
+		public:
+			explicit link_exception(const std::string& what_arg)
+			{
+				m_what = "linkage failed: '" + what_arg + "'";
+			}
+		};
+
+		class compile_exception : public exception
+		{
+		public:
+			explicit compile_exception(const std::string& what_arg)
+			{
+				m_what = "compilation failed: '" + what_arg + "'";
+			}
+		};
+
+		class shader
+		{
+			GLuint m_id = 0;
+
+		public:
+			enum class type
+			{
+				fragment = GL_FRAGMENT_SHADER,
+				vertext = GL_VERTEX_SHADER,
+				geometry = GL_GEOMETRY_SHADER
+			};
+
+			shader() = default;
+
+			shader(type type_)
+			{
+				create(type_);
+			}
+
+			shader(type type_, const std::string& src)
+			{
+				create(type_);
+				source(src);
+			}
+
+			void create(type type_)
+			{
+				m_id = glCreateShader((GLenum)type_);
+			}
+
+			void source(const std::string& src) const
+			{
+				const char* str = src.c_str();
+				const GLint length = src.length();
+
+				glShaderSource(m_id, 1, &str, &length);
+			}
+
+			void clear()
+			{
+				glDeleteShader(m_id);
+				m_id = 0;
+			}
+
+			uint id() const
+			{
+				return m_id;
+			}
+
+			void set_id(uint id)
+			{
+				m_id = id;
+			}
+
+			bool created() const
+			{
+				return m_id != 0;
+			}
+
+			explicit operator bool() const
+			{
+				return created();
+			}
+		};
+
+		class program
+		{
+			GLuint m_id = 0;
+
+		public:
+			program() = default;
+
+			program(GLuint id)
+			{
+				set_id(id);
+			}
+
+			~program()
+			{
+				remove();
+			}
+
+			void create()
+			{
+				m_id = glCreateProgram();
+			}
+
+			void remove()
+			{
+				glDeleteProgram(m_id);
+				m_id = 0;
+			}
+
+			static program get_current_program()
+			{
+				GLint id;
+				glGetIntegerv(GL_CURRENT_PROGRAM, &id);
+				return{ (GLuint)id };
+			}
+
+			void use()
+			{
+				glUseProgram(m_id);
+			}
+
+			void compile()
+			{
+				glCompileShader(m_id);
+			}
+
+			void link()
+			{
+				glLinkProgram(m_id);
+			}
+
+			void make()
+			{
+				compile();
+				link();
+			}
+
+			uint id() const
+			{
+				return m_id;
+			}
+
+			void set_id(uint id)
+			{
+				m_id = id;
+			}
+
+			bool created() const
+			{
+				return m_id != 0;
+			}
+
+			explicit operator bool() const
+			{
+				return created();
+			}
+
+			void operator += (const shader& rhs)
+			{
+				glAttachShader(m_id, rhs.id());
+			}
+		};
+	};
+
 	class rbo
 	{
 		GLuint m_id = 0;
 
 	public:
+		rbo() = default;
+
+		rbo(GLuint id)
+		{
+			set_id(id);
+		}
+
+		~rbo()
+		{
+			remove();
+		}
+
 		class save_binding_state
 		{
 			GLint m_old_value;
@@ -113,10 +322,16 @@ namespace gl
 		{
 			if (created())
 			{
-				clear();
+				remove();
 			}
 
 			glGenRenderbuffers(1, &m_id);
+		}
+
+		void create(u32 format, u32 width, u32 height)
+		{
+			create();
+			storage(format, width, height);
 		}
 
 		void bind() const
@@ -126,23 +341,24 @@ namespace gl
 
 		void storage(u32 format, u32 width, u32 height)
 		{
-			if (!created())
-			{
-				create();
-			}
-
 			save_binding_state save(*this);
 			glRenderbufferStorage(GL_RENDERBUFFER, format, width, height);
 		}
 
-		void clear()
+		void remove()
 		{
 			glDeleteRenderbuffers(1, &m_id);
+			m_id = 0;
 		}
 
 		uint id() const
 		{
 			return m_id;
+		}
+
+		void set_id(uint id)
+		{
+			m_id = id;
 		}
 
 		bool created() const
@@ -232,6 +448,24 @@ namespace gl
 			mirror_clamp_to_border = GL_MIRROR_CLAMP_TO_BORDER_EXT
 		};
 
+		enum class compare_mode
+		{
+			none = GL_NONE,
+			ref_to_texture = GL_COMPARE_REF_TO_TEXTURE
+		};
+
+		enum class compare_func
+		{
+			never = GL_NEVER,
+			less = GL_LESS,
+			equal = GL_EQUAL,
+			lequal = GL_LEQUAL,
+			greater = GL_GREATER,
+			notequal = GL_NOTEQUAL,
+			gequal = GL_GEQUAL,
+			always = GL_ALWAYS
+		};
+
 		static bool compressed_format(format format_)
 		{
 			switch (format_)
@@ -259,7 +493,7 @@ namespace gl
 		void create()
 		{
 			if (created())
-				clear();
+				remove();
 
 			glGenTextures(1, &m_id);
 		}
@@ -269,9 +503,10 @@ namespace gl
 			return m_id != 0;
 		}
 
-		void clear()
+		void remove()
 		{
 			glDeleteTextures(1, &m_id);
+			m_id = 0;
 		}
 
 		void set_id(GLuint id)
@@ -302,6 +537,13 @@ namespace gl
 	class texture1d : public texture
 	{
 	public:
+		texture1d() = default;
+
+		texture1d(GLuint id)
+		{
+			set_id(id);
+		}
+
 		class save_binding_state
 		{
 			GLint m_last_binding;
@@ -323,16 +565,22 @@ namespace gl
 		{
 			glBindTexture(GL_TEXTURE_1D, id());
 		}
-
 	};
 
 	//TODO
 	class texture2d : public texture
 	{
 	public:
-		class configure
+		texture2d() = default;
+
+		texture2d(GLuint id)
 		{
-			texture2d &m_parent;
+			set_id(id);
+		}
+
+		class settings
+		{
+			texture2d *m_parent;
 
 			texture::channel m_swizzle_r = texture::channel::r;
 			texture::channel m_swizzle_g = texture::channel::g;
@@ -343,60 +591,150 @@ namespace gl
 			texture::format m_internal_format = texture::format::rgba;
 			texture::type m_type = texture::type::ubyte;
 
+			min_filter m_min_filter = min_filter::nearest;
+			filter m_mag_filter = filter::nearest;
+
 			uint m_width = 0;
 			uint m_height = 0;
-			int m_border = 0;
 			int m_level = 0;
 
 			int m_compressed_image_size = 0;
 
 			const void* m_pixels = nullptr;
 
-			bool m_unpack_swap_bypes = false;
 			bool m_pack_swap_bypes = false;
+			bool m_pack_lsb_first = false;
+			int m_pack_row_length = 0;
+			int m_pack_image_height = 0;
+			int m_pack_skip_rows = 0;
+			int m_pack_skip_pixels = 0;
+			int m_pack_skip_images = 0;
+			int m_pack_aligment = 4;
+			bool m_unpack_swap_bypes = false;
+			bool m_unpack_lsb_first = false;
+			int m_unpack_row_length = 0;
+			int m_unpack_image_height = 0;
+			int m_unpack_skip_rows = 0;
+			int m_unpack_skip_pixels = 0;
+			int m_unpack_skip_images = 0;
+			int m_unpack_aligment = 4;
+
+			float m_aniso = 1.f;
+			texture::compare_mode m_compare_mode = texture::compare_mode::none;
+			texture::compare_func m_compare_func = texture::compare_func::greater;
+
+			texture::wrap m_wrap_s = texture::wrap::repeat;
+			texture::wrap m_wrap_t = texture::wrap::repeat;
+			texture::wrap m_wrap_r = texture::wrap::repeat;
+
+			float m_max_lod = 1000.f;
+			float m_min_lod = -1000.f;
+			float m_lod = 0.f;
+			int m_max_level = 1000;
+			bool m_generate_mipmap = false;
+
+			color m_border_color;
 
 		public:
-			configure(texture2d &parent) : m_parent(parent)
+			settings(texture2d *parent = nullptr) : m_parent(parent)
 			{
 			}
 
-			~configure()
+			~settings()
 			{
-				save_binding_state save(m_parent);
+				apply();
+			}
+
+			void apply(const texture2d &texture) const
+			{
+				save_binding_state save(texture);
+
+				glPixelStorei(GL_PACK_SWAP_BYTES, m_pack_swap_bypes ? GL_TRUE : GL_FALSE);
+				glPixelStorei(GL_PACK_LSB_FIRST, m_pack_lsb_first ? GL_TRUE : GL_FALSE);
+				glPixelStorei(GL_PACK_ROW_LENGTH, m_pack_row_length);
+				glPixelStorei(GL_PACK_IMAGE_HEIGHT, m_pack_image_height);
+				glPixelStorei(GL_PACK_SKIP_ROWS, m_pack_skip_rows);
+				glPixelStorei(GL_PACK_SKIP_PIXELS, m_pack_skip_pixels);
+				glPixelStorei(GL_PACK_SKIP_IMAGES, m_pack_skip_images);
+				glPixelStorei(GL_PACK_ALIGNMENT, m_pack_aligment);
 
 				glPixelStorei(GL_UNPACK_SWAP_BYTES, m_unpack_swap_bypes ? GL_TRUE : GL_FALSE);
-				glPixelStorei(GL_PACK_SWAP_BYTES, m_pack_swap_bypes ? GL_TRUE : GL_FALSE);
+				glPixelStorei(GL_UNPACK_LSB_FIRST, m_unpack_lsb_first ? GL_TRUE : GL_FALSE);
+				glPixelStorei(GL_UNPACK_ROW_LENGTH, m_unpack_row_length);
+				glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, m_unpack_image_height);
+				glPixelStorei(GL_UNPACK_SKIP_ROWS, m_unpack_skip_rows);
+				glPixelStorei(GL_UNPACK_SKIP_PIXELS, m_unpack_skip_pixels);
+				glPixelStorei(GL_UNPACK_SKIP_IMAGES, m_unpack_skip_images);
+				glPixelStorei(GL_UNPACK_ALIGNMENT, m_unpack_aligment);
 
 				if (compressed_format(m_internal_format))
 				{
-					if (!m_compressed_image_size)
+					int compressed_image_size = m_compressed_image_size;
+					if (!compressed_image_size)
 					{
 						switch (m_internal_format)
 						{
 						case format::compressed_rgb_s3tc_dxt1:
-							m_compressed_image_size = ((m_width + 2) / 3) * ((m_height + 2) / 3) * 6;
+							compressed_image_size = ((m_width + 2) / 3) * ((m_height + 2) / 3) * 6;
 							break;
 
 						case format::compressed_rgba_s3tc_dxt1:
-							m_compressed_image_size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 8;
+							compressed_image_size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 8;
 							break;
 
 						case format::compressed_rgba_s3tc_dxt3:
 						case format::compressed_rgba_s3tc_dxt5:
-							m_compressed_image_size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 16;
+							compressed_image_size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 16;
 							break;
 						}
 					}
 
-					glCompressedTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, m_border, m_compressed_image_size, m_pixels);
+					glCompressedTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
+					checkForGlError("glCompressedTexImage2D");
 				}
 				else
 				{
 					glTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+					checkForGlError("glTexImage2D");
+				}
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_max_level);
+				glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
+
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, m_max_lod);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, m_min_lod);
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, m_lod);
+
+				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
+
+				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
+			}
+
+			void apply()
+			{
+				if (m_parent)
+				{
+					apply(*m_parent);
+					m_parent = nullptr;
 				}
 			}
 
-			configure& swizzle(
+			settings& swizzle(
 				texture::channel r = texture::channel::r,
 				texture::channel g = texture::channel::g,
 				texture::channel b = texture::channel::b,
@@ -410,62 +748,220 @@ namespace gl
 				return *this;
 			}
 
-			configure& format(texture::format format)
+			settings& format(texture::format format)
 			{
 				m_format = format;
-
 				return *this;
 			}
 
-			configure& internal_format(texture::format format)
+			settings& type(texture::type type)
+			{
+				m_type = type;
+				return *this;
+			}
+
+			settings& internal_format(texture::format format)
 			{
 				m_internal_format = format;
-
 				return *this;
 			}
 
-			configure& pixels(const void* pixels)
+			settings& filter(min_filter min_filter, filter mag_filter)
 			{
-				m_pixels = pixels;
-
-				return *this;
+				m_min_filter = min_filter;
+				m_mag_filter = mag_filter;
 			}
 
-			configure& compressed_image_size(int size)
-			{
-				m_compressed_image_size = size;
-
-				return *this;
-			}
-
-			configure& width(uint width)
+			settings& width(uint width)
 			{
 				m_width = width;
-
 				return *this;
 			}
 
-			configure& height(uint height)
+			settings& height(uint height)
 			{
 				m_height = height;
-
 				return *this;
 			}
 
-			configure& size(uint width_, uint height_)
+			settings& size(uint width_, uint height_)
 			{
 				return width(width_).height(height_);
 			}
 
-			configure& border(int size)
+			settings& level(int value)
 			{
-				m_border = size;
+				m_level = value;
 				return *this;
 			}
 
-			configure& level(int value)
+			settings& compressed_image_size(int size)
 			{
-				m_level = value;
+				m_compressed_image_size = size;
+				return *this;
+			}
+
+			settings& pixels(const void* pixels)
+			{
+				m_pixels = pixels;
+				return *this;
+			}
+
+			settings& pack_swap_bypes(bool value)
+			{
+				m_pack_swap_bypes = value;
+				return *this;
+			}
+			settings& pack_lsb_first(bool value)
+			{
+				m_pack_lsb_first = value;
+				return *this;
+			}
+			settings& pack_row_length(int value)
+			{
+				m_pack_row_length = value;
+				return *this;
+			}
+			settings& pack_image_height(int value)
+			{
+				m_pack_image_height = value;
+				return *this;
+			}
+			settings& pack_skip_rows(int value)
+			{
+				m_pack_skip_rows = value;
+				return *this;
+			}
+			settings& pack_skip_pixels(int value)
+			{
+				m_pack_skip_pixels = value;
+				return *this;
+			}
+			settings& pack_skip_images(int value)
+			{
+				m_pack_skip_images = value;
+				return *this;
+			}
+			settings& pack_aligment(int value)
+			{
+				m_pack_aligment = value;
+				return *this;
+			}
+			settings& unpack_swap_bypes(bool value)
+			{
+				m_unpack_swap_bypes = value;
+				return *this;
+			}
+			settings& unpack_lsb_first(bool value)
+			{
+				m_unpack_lsb_first = value;
+				return *this;
+			}
+			settings& unpack_row_length(int value)
+			{
+				m_unpack_row_length = value;
+				return *this;
+			}
+			settings& unpack_image_height(int value)
+			{
+				m_unpack_image_height = value;
+				return *this;
+			}
+			settings& unpack_skip_rows(int value)
+			{
+				m_unpack_skip_rows = value;
+				return *this;
+			}
+			settings& unpack_skip_pixels(int value)
+			{
+				m_unpack_skip_pixels = value;
+				return *this;
+			}
+			settings& unpack_skip_images(int value)
+			{
+				m_unpack_skip_images = value;
+				return *this;
+			}
+			settings& unpack_aligment(int value)
+			{
+				m_unpack_aligment = value;
+				return *this;
+			}
+
+			settings& aniso(float value)
+			{
+				m_aniso = value;
+				return *this;
+			}
+
+			settings& compare_mode(texture::compare_mode value)
+			{
+				m_compare_mode = value;
+				return *this;
+			}
+			settings& compare_func(texture::compare_func value)
+			{
+				m_compare_func = value;
+				return *this;
+			}
+			settings& compare(texture::compare_func func, texture::compare_mode mode)
+			{
+				return compare_func(func).compare_mode(mode);
+			}
+
+			settings& wrap_s(texture::wrap value)
+			{
+				m_wrap_s = value;
+				return *this;
+			}
+			settings& wrap_t(texture::wrap value)
+			{
+				m_wrap_t = value;
+				return *this;
+			}
+			settings& wrap_r(texture::wrap value)
+			{
+				m_wrap_r = value;
+				return *this;
+			}
+			settings& wrap(texture::wrap s, texture::wrap t, texture::wrap r)
+			{
+				return wrap_s(s).wrap_t(t).wrap_r(r);
+			}
+
+			settings& max_lod(float value)
+			{
+				m_max_lod = value;
+				return *this;
+			}
+			settings& min_lod(float value)
+			{
+				m_min_lod = value;
+				return *this;
+			}
+			settings& lod(float value)
+			{
+				m_lod = value;
+				return *this;
+			}
+			settings& max_level(int value)
+			{
+				m_max_level = value;
+				return *this;
+			}
+			settings& generate_mipmap(bool value)
+			{
+				m_generate_mipmap = value;
+				return *this;
+			}
+			settings& mipmap(int level, int max_level, int lod, int min_lod, int max_lod, bool generate)
+			{
+				return this->level(level).max_level(max_level).lod(lod).min_lod(min_lod).max_lod(max_lod).generate_mipmap(generate);
+			}
+
+			settings& border_color(color value)
+			{
+				m_border_color = value;
 				return *this;
 			}
 		};
@@ -478,18 +974,30 @@ namespace gl
 			save_binding_state(const texture2d& new_binding)
 			{
 				glGetIntegerv(GL_TEXTURE_2D_BINDING_EXT, &m_last_binding);
+				checkForGlError("glGetIntegerv(GL_TEXTURE_2D_BINDING_EXT, &m_last_binding);");
 				new_binding.bind();
 			}
 
 			~save_binding_state()
 			{
 				glBindTexture(GL_TEXTURE_2D, m_last_binding);
+				checkForGlError(fmt::format("glBindTexture(GL_TEXTURE_2D, m_last_binding=0x%x)", m_last_binding));
 			}
 		};
 
 		void bind() const
 		{
 			glBindTexture(GL_TEXTURE_2D, id());
+		}
+
+		settings config()
+		{
+			return{ this };
+		}
+
+		void config(const settings& settings_)
+		{
+			settings_.apply(*this);
 		}
 	};
 
@@ -525,6 +1033,18 @@ namespace gl
 		GLuint m_id = GL_NONE;
 
 	public:
+		fbo() = default;
+
+		fbo(GLuint id)
+		{
+			set_id(id);
+		}
+
+		~fbo()
+		{
+			remove();
+		}
+
 		class save_binding_state
 		{
 			GLint m_last_binding;
@@ -611,6 +1131,16 @@ namespace gl
 				return{ m_parent, type(id() + index) };
 			}
 
+			std::vector<attachment> range(int from, int count) const
+			{
+				std::vector<attachment> result;
+
+				for (int i = from; i < from + count; ++i)
+					result.push_back((*this)[from]);
+
+				return result;
+			}
+
 			using attachment::operator = ;
 		};
 
@@ -628,14 +1158,30 @@ namespace gl
 		void bind() const;
 		void blit(const fbo& dst, area src_area, area dst_area, buffers buffers_ = buffers::color, filter filter_ = filter::nearest) const;
 		void bind_as(target target_) const;
-		void clear();
+		void remove();
 		bool created() const;
 
-		fbo() = default;
-
-		fbo(GLuint id)
+		void draw(const attachment& buffer)
 		{
-			set_id(id);
+			save_binding_state save(*this);
+			glDrawBuffer(buffer.id());
+		}
+
+		void draw(const std::vector<attachment>& indexes)
+		{
+			save_binding_state save(*this);
+			std::vector<GLenum> ids;
+
+			for (auto &index : indexes)
+				ids.push_back(index.id());
+
+			glDrawBuffers(ids.size(), ids.data());
+		}
+
+		void clear(buffers buffers_) const
+		{
+			save_binding_state save(*this);
+			glClear((GLbitfield)buffers_);
 		}
 
 		static fbo get_binded_draw_buffer()
@@ -678,5 +1224,5 @@ namespace gl
 		}
 	};
 
-	static const fbo screen;
+	static const fbo screen{};
 }

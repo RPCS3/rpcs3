@@ -152,6 +152,7 @@ private:
 
 	GLvao m_vao;
 	GLvbo m_vbo;
+	gl::texture2d m_rto[4];
 	std::vector<gl::rbo> m_rbo;
 	gl::fbo m_fbo;
 
