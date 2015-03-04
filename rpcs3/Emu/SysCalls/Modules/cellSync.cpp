@@ -1070,7 +1070,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}
@@ -1421,7 +1421,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}

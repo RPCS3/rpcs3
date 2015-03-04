@@ -152,7 +152,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("__cxa_atexit(func=0x%x, arg=0x%x, dso=0x%x)", func, arg, dso);
 		
-		LV2_LOCK(0);
+		LV2_LOCK;
 
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
@@ -164,7 +164,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("__aeabi_atexit(arg=0x%x, func=0x%x, dso=0x%x)", arg, func, dso);
 
-		LV2_LOCK(0);
+		LV2_LOCK;
 
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
@@ -176,7 +176,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("exit()");
 		
-		LV2_LOCK(0);
+		LV2_LOCK;
 
 		for (auto func : g_atexit)
 		{

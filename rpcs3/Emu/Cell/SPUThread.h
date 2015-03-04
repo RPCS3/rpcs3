@@ -2,10 +2,10 @@
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUContext.h"
-#include "Emu/SysCalls/lv2/sleep_queue.h"
-#include "Emu/SysCalls/lv2/sys_event.h"
-#include "Emu/Event.h"
 #include "MFC.h"
+
+struct event_queue_t;
+struct event_port_t;
 
 // SPU Channels
 enum : u32
@@ -506,6 +506,9 @@ public:
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
 
 	u32 tg_id; // SPU Thread Group Id
+
+	std::unordered_map<u32, std::shared_ptr<event_queue_t>> spuq; // Event Queue Keys for SPU Thread
+	std::weak_ptr<event_queue_t> spup[64]; // SPU Ports
 
 	void write_snr(bool number, u32 value)
 	{

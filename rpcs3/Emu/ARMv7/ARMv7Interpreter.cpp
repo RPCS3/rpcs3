@@ -296,7 +296,7 @@ namespace ARMv7_instrs
 
 			context.fmt_debug_str("0x%08x: %s", context.thread.PC, context.debug_str);
 
-			LV2_LOCK(0);
+			LV2_LOCK;
 
 			auto found = g_armv7_dump.find(context.thread.PC);
 			if (found != g_armv7_dump.end())

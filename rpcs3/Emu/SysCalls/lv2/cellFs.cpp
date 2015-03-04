@@ -525,8 +525,6 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 {
 	sys_fs.Warning("cellFsFGetBlockSize(fd=0x%x, sector_size=0x%x, block_size=0x%x)", fd, sector_size, block_size);
 
-	LV2_LOCK(0);
-
 	std::shared_ptr<vfsStream> file;
 	if (!sys_fs.CheckId(fd, file))
 		return CELL_ESRCH;

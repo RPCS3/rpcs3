@@ -27,6 +27,7 @@
 #include <condition_variable>
 #include <memory>
 #include <vector>
+#include <queue>
 #include <set>
 #include <array>
 #include <string>

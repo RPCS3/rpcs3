@@ -1770,8 +1770,8 @@ s32 _cellSpursEventFlagWait(vm::ptr<CellSpursEventFlag> eventFlag, vm::ptr<u16> 
 	u16 receivedEventFlag;
 	if (recv) {
 		// Block till something happens
-		vm::var<sys_event_data> data;
-		auto rc = sys_event_queue_receive(eventFlag->m.eventQueueId, data, 0);
+		vm::var<sys_event_t> data;
+		auto rc = sys_event_queue_receive(GetCurrentPPUThread(), eventFlag->m.eventQueueId, data, 0);
 		if (rc != CELL_OK)
 		{
 			assert(0);
@@ -2967,7 +2967,7 @@ bool spursIsLibProfLoaded()
 
 void spursTraceStatusUpdate(vm::ptr<CellSpurs> spurs)
 {
-	LV2_LOCK(0);
+	LV2_LOCK;
 
 	if (spurs->m.xCC != 0)
 	{

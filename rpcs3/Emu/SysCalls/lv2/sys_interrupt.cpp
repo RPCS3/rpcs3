@@ -82,7 +82,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 	PPUThread& ppu = static_cast<PPUThread&>(*it);
 
 	{
-		LV2_LOCK(0);
+		LV2_LOCK;
 
 		if (ppu.custom_task)
 		{
