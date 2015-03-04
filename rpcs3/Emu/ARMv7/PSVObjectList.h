@@ -76,7 +76,7 @@ public:
 
 	ref_type operator [](s32 uid)
 	{
-		return find(uid);
+		return get(uid);
 	}
 
 	// generate UID for newly created object (will return zero if the limit exceeded)
