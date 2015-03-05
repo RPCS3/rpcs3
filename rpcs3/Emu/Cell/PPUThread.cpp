@@ -53,8 +53,6 @@ void PPUThread::DoReset()
 	FPSCR.FPSCR = 0;
 	VSCR.VSCR   = 0;
 	VRSAVE      = 0;
-
-	cycle = 0;
 }
 
 void PPUThread::InitRegs()
@@ -230,7 +228,7 @@ void PPUThread::Task()
 
 ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
-	thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
@@ -279,7 +277,7 @@ ppu_thread& ppu_thread::gpr(uint index, u64 value)
 {
 	assert(index < 32);
 
-	static_cast<PPUThread*>(thread)->GPR[index] = value;
+	static_cast<PPUThread&>(*thread).GPR[index] = value;
 
 	return *this;
 }

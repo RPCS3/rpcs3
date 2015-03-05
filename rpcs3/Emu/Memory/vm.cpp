@@ -37,7 +37,7 @@ namespace vm
 
 		return base_addr;
 #else
-		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, 0);
+		int memory_handle = shm_open("/rpcs3_vm", O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 
 		if (memory_handle == -1)
 		{

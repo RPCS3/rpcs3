@@ -2,11 +2,10 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue_type.h"
+#include "sleep_queue.h"
 #include "sys_time.h"
 #include "sys_mutex.h"
 

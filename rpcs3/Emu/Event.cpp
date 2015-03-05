@@ -1,8 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Memory/atomic_type.h"
 
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Event.h"
 
@@ -12,74 +11,77 @@ void EventManager::Init()
 
 void EventManager::Clear()
 {
-	key_map.clear();
+	eq_map.clear();
 }
 
 bool EventManager::CheckKey(u64 key)
 {
-	if (!key) return true;
-	std::lock_guard<std::mutex> lock(m_lock);
-
-	return key_map.find(key) != key_map.end();
-}
-
-bool EventManager::RegisterKey(std::shared_ptr<EventQueue>& data, u64 key)
-{
-	if (!key) return true;
-	std::lock_guard<std::mutex> lock(m_lock);
-
-	if (key_map.find(key) != key_map.end()) return false;
-
-	for (auto& v : key_map)
+	if (!key)
 	{
-		if (v.second == data) return false;
+		// never exists
+		return false;
 	}
 
-	key_map[key] = data;
-
-	return true;
-}
-
-bool EventManager::GetEventQueue(u64 key, std::shared_ptr<EventQueue>& data)
-{
-	data = nullptr;
-	if (!key) return false;
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	auto f = key_map.find(key);
-	if (f != key_map.end())
+	return eq_map.find(key) != eq_map.end();
+}
+
+bool EventManager::RegisterKey(std::shared_ptr<event_queue_t>& data, u64 key)
+{
+	if (!key)
 	{
-		data = f->second;
+		// always ok
 		return true;
 	}
-	return false;
+
+	std::lock_guard<std::mutex> lock(m_lock);
+
+	if (eq_map.find(key) != eq_map.end())
+	{
+		return false;
+	}
+
+	eq_map[key] = data;
+
+	return true;
 }
 
 bool EventManager::UnregisterKey(u64 key)
 {
-	if (!key) return false;
-	std::lock_guard<std::mutex> lock(m_lock);
-
-	auto f = key_map.find(key);
-	if (f != key_map.end())
+	if (!key)
 	{
-		key_map.erase(f);
+		// always ok
 		return true;
 	}
+
+	std::lock_guard<std::mutex> lock(m_lock);
+
+	auto f = eq_map.find(key);
+	if (f != eq_map.end())
+	{
+		eq_map.erase(f);
+		return true;
+	}
+
 	return false;
 }
 
-bool EventManager::SendEvent(u64 key, u64 source, u64 d1, u64 d2, u64 d3)
+std::shared_ptr<event_queue_t> EventManager::GetEventQueue(u64 key)
 {
-	if (!key) return false;
+	if (!key)
+	{
+		// never exists
+		return nullptr;
+	}
+
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	auto f = key_map.find(key);
-	if (f == key_map.end())
+	auto f = eq_map.find(key);
+	if (f != eq_map.end())
 	{
-		return false;
+		return f->second;
 	}
-	
-	f->second->events.push(source, d1, d2, d3);
-	return true;
+
+	return nullptr;
 }

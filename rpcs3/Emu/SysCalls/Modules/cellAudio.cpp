@@ -3,10 +3,9 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "rpcs3/Ini.h"
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/Event.h"
@@ -396,8 +395,16 @@ s32 cellAudioInit()
 			}
 			for (u32 i = 0; i < keys.size(); i++)
 			{
-				// TODO: check event source
-				Emu.GetEventManager().SendEvent(keys[i], 0x10103000e010e07, 0, 0, 0);
+				auto eq = Emu.GetEventManager().GetEventQueue(keys[i]);
+
+				if (eq)
+				{
+					LV2_LOCK;
+
+					// TODO: check event source
+					eq->events.emplace_back(0x10103000e010e07, 0, 0, 0);
+					eq->cv.notify_one();
+				}
 			}
 
 			//const u64 stamp3 = get_system_time();
@@ -777,7 +784,7 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	}
 	event_key = (event_key << 48) | 0x80004d494f323221; // left part: 0x8000, 0x8001, 0x8002 ...
 
-	std::shared_ptr<EventQueue> eq(new EventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
+	std::shared_ptr<event_queue_t> eq(new event_queue_t(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
 
 	if (!Emu.GetEventManager().RegisterKey(eq, event_key))
 	{

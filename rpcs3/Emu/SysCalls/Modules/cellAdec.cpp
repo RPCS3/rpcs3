@@ -223,7 +223,7 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 
 	adec.id = adec_id;
 
-	adec.adecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	adec.adecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
 	adec.adecCb->SetName(fmt::format("AudioDecoder[%d] Callback", adec_id));
 	adec.adecCb->SetEntry(0);
 	adec.adecCb->SetPrio(1001);

@@ -4,7 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
 
-#include "lv2/sleep_queue_type.h"
+#include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
 #include "lv2/sys_lwcond.h"
 #include "lv2/sys_mutex.h"

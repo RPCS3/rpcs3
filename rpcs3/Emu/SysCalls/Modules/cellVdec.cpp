@@ -213,7 +213,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 
 	vdec.id = vdec_id;
 
-	vdec.vdecCb = (PPUThread*)&Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	vdec.vdecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
 	vdec.vdecCb->SetName(fmt::format("VideoDecoder[%d] Callback", vdec_id));
 	vdec.vdecCb->SetEntry(0);
 	vdec.vdecCb->SetPrio(1001);

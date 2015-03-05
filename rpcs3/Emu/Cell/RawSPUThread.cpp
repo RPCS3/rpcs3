@@ -6,212 +6,207 @@
 
 #include "Emu/Cell/RawSPUThread.h"
 
+thread_local spu_mfc_arg_t raw_spu_mfc[8] = {};
+
 RawSPUThread::RawSPUThread(CPUThreadType type)
 	: SPUThread(type)
-	, MemoryBlock()
 {
-	m_index = Memory.InitRawSPU(this);
-	Reset();
 }
 
 RawSPUThread::~RawSPUThread()
 {
-	Memory.CloseRawSPU(this, m_index);
 }
 
-bool RawSPUThread::Read32(const u32 addr, u32* value)
+void RawSPUThread::start()
 {
-	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	status.write_relaxed(SPU_STATUS_RUNNING);
+
+	// calling Exec() directly in SIGSEGV handler may cause problems
+	// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
+	Emu.GetCallbackManager().Async([this](PPUThread& PPU)
+	{
+		FastRun();
+	});
+}
+
+bool RawSPUThread::ReadReg(const u32 addr, u32& value)
+{
+	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
 	case MFC_CMDStatus_offs:
 	{
-		*value = MFC2.CMDStatus.GetValue();
-		break;
+		value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
+		return true;
 	}
 
 	case MFC_QStatus_offs:
 	{
-		// TagStatus is not used: mask is written directly
-		*value = MFC2.QueryMask.GetValue();
-		break;
+		value = MFC_PROXY_COMMAND_QUEUE_EMPTY_FLAG | MFC_PPU_MAX_QUEUE_SPACE;
+		return true;
 	}
 
 	case SPU_Out_MBox_offs:
 	{
-		// if Out_MBox is empty, the result is undefined
-		SPU.Out_MBox.PopUncond(*value);
-		break;
+		value = ch_out_mbox.pop_uncond();
+		return true;
 	}
 
 	case SPU_MBox_Status_offs:
 	{
-		*value = (SPU.Out_MBox.GetCount() & 0xff) | (SPU.In_MBox.GetFreeCount() << 8) | (SPU.Out_IntrMBox.GetCount() << 16);
-		break;
+		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff) | (ch_out_intr_mbox.get_count() << 16 & 0xff);
+		return true;
 	}
 		
 	case SPU_Status_offs:
 	{
-		*value = SPU.Status.GetValue();
-		break;
-	}
-
-	default:
-	{
-		// TODO: read value from LS if necessary (not important)
-		LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(0x%llx)", m_index, offset);
-		return false;
+		value = status.read_relaxed();
+		return true;
 	}
 	}
 
-	return true;
+	LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	return false;
 }
 
-bool RawSPUThread::Write32(const u32 addr, const u32 value)
+bool RawSPUThread::WriteReg(const u32 addr, const u32 value)
 {
-	const u32 offset = addr - GetStartAddr() - RAW_SPU_PROB_OFFSET;
+	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
 	switch (offset)
 	{
 	case MFC_LSA_offs:
 	{
-		MFC2.LSA.SetValue(value);
-		break;
+		if (value >= 0x40000)
+		{
+			break;
+		}
+
+		raw_spu_mfc[index].lsa = value;
+		return true;
 	}
 
 	case MFC_EAH_offs:
 	{
-		MFC2.EAH.SetValue(value);
-		break;
+		raw_spu_mfc[index].eah = value;
+		return true;
 	}
 
 	case MFC_EAL_offs:
 	{
-		MFC2.EAL.SetValue(value);
-		break;
+		raw_spu_mfc[index].eal = value;
+		return true;
 	}
 
 	case MFC_Size_Tag_offs:
 	{
-		MFC2.Size_Tag.SetValue(value);
-		break;
+		if (value >> 16 > 16 * 1024 || (u16)value >= 32)
+		{
+			break;
+		}
+
+		raw_spu_mfc[index].size_tag = value;
+		return true;
 	}
 
-	case MFC_CMDStatus_offs:
+	case MFC_Class_CMD_offs:
 	{
-		MFC2.CMDStatus.SetValue(value);
-		EnqMfcCmd(MFC2);
-		break;
+		do_dma_transfer(value & ~MFC_START_MASK, raw_spu_mfc[index]);
+		raw_spu_mfc[index] = {}; // clear non-persistent data
+
+		if (value & MFC_START_MASK)
+		{
+			start();
+		}
+
+		return true;
 	}
 		
 	case Prxy_QueryType_offs:
 	{
-		switch(value)
-		{
-		case 2: break;
+		// 0 - no query requested; cancel previous request
+		// 1 - set (interrupt) status upon completion of any enabled tag groups
+		// 2 - set (interrupt) status upon completion of all enabled tag groups
 
-		default:
+		if (value > 2)
 		{
-			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Unknown Prxy Query Type. (prxy_query=0x%x)", m_index, value);
-			return false;
-		}
+			break;
 		}
 
-		MFC2.QueryType.SetValue(value); // not used
-		break;
+		if (value)
+		{
+			int2.set(SPU_INT2_STAT_DMA_TAG_GROUP_COMPLETION_INT); // TODO
+		}
+
+		return true;
 	}
 
 	case Prxy_QueryMask_offs:
 	{
-		MFC2.QueryMask.SetValue(value); // TagStatus is not used
-		break;
+		//proxy_tag_mask = value;
+		return true;
 	}
 
 	case SPU_In_MBox_offs:
 	{
-		// if In_MBox is already full, the last message is overwritten  
-		SPU.In_MBox.PushUncond(value); 
-		break;
+		ch_in_mbox.push_uncond(value); 
+		return true;
 	}
 
 	case SPU_RunCntl_offs:
 	{
-		if (value == SPU_RUNCNTL_RUNNABLE)
+		if (value == SPU_RUNCNTL_RUN_REQUEST)
 		{
-			// calling Exec() directly in SIGSEGV handler may cause problems
-			// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
-			Emu.GetCallbackManager().Async([this](PPUThread& PPU)
-			{
-				SPU.Status.SetValue(SPU_STATUS_RUNNING);
-				Exec();
-			});
-			
+			start();
 		}
-		else if (value == SPU_RUNCNTL_STOP)
+		else if (value == SPU_RUNCNTL_STOP_REQUEST)
 		{
-			SPU.Status.SetValue(SPU_STATUS_STOPPED);
-			Stop();
+			status &= ~SPU_STATUS_RUNNING;
+			FastStop();
 		}
 		else
 		{
-			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(SPU_RunCtrl, 0x%x): unknown value", m_index, value);
-			return false;
+			break;
 		}
-		break;
+
+		run_ctrl.write_relaxed(value);
+		return true;
 	}
 
 	case SPU_NPC_offs:
 	{
-		if (value & 3)
+		if ((value & 2) || value >= 0x40000)
 		{
-			// least significant bit contains some interrupt flag
-			LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(SPU_NPC_offs, 0x%x): lowest bits set", m_index, value);
-			return false;
+			break;
 		}
-		SPU.NPC.SetValue(value);
-		break;
+
+		npc.write_relaxed(value);
+		return true;
 	}
 
 	case SPU_RdSigNotify1_offs:
 	{
-		WriteSNR(0, value);
-		break;
+		write_snr(0, value);
+		return true;
 	}
 
 	case SPU_RdSigNotify2_offs:
 	{
-		WriteSNR(1, value);
-		break;
-	}
-
-	default:
-	{
-		// TODO: write value to LS if necessary (not important)
-		LOG_ERROR(Log::SPU, "RawSPUThread[%d]: Write32(0x%llx, 0x%x)", m_index, offset, value);
-		return false;
+		write_snr(1, value);
+		return true;
 	}
 	}
 
-	return true;
-}
-
-void RawSPUThread::InitRegs()
-{
-	ls_offset = m_offset = GetStartAddr() + RAW_SPU_LS_OFFSET;
-	SPUThread::InitRegs();
-}
-
-u32 RawSPUThread::GetIndex() const
-{
-	return m_index;
+	LOG_ERROR(SPU, "RawSPUThread[%d]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	return false;
 }
 
 void RawSPUThread::Task()
 {
-	PC = SPU.NPC.GetValue();
+	PC = npc.exchange(0) & ~3;
 
 	SPUThread::Task();
 
-	SPU.NPC.SetValue(PC);
+	npc.write_relaxed(PC | 1);
 }

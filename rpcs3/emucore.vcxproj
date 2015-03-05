@@ -178,7 +178,7 @@
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\cellFs.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp" />
@@ -369,6 +369,7 @@
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />
+    <ClInclude Include="Emu\Cell\SPUContext.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\SPUInstrTable.h" />
@@ -409,7 +410,8 @@
     <ClInclude Include="Emu\Io\PadHandler.h" />
     <ClInclude Include="Emu\Memory\Memory.h" />
     <ClInclude Include="Emu\Memory\MemoryBlock.h" />
-    <ClInclude Include="Emu\Memory\atomic_type.h" />
+    <ClInclude Include="Emu\Memory\atomic.h" />
+    <ClInclude Include="Emu\Memory\refcnt.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
@@ -439,7 +441,7 @@
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
     <ClInclude Include="Emu\SysCalls\lv2\cellFs.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />

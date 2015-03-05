@@ -2,11 +2,10 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue_type.h"
+#include "sleep_queue.h"
 #include "sys_time.h"
 #include "sys_lwmutex.h"
 
@@ -55,8 +54,6 @@ s32 sys_lwmutex_create(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<s
 s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sys_lwmutex.Warning("sys_lwmutex_destroy(lwmutex_addr=0x%x)", lwmutex.addr());
-
-	LV2_LOCK(0);
 
 	u32 sq_id = lwmutex->sleep_queue;
 	if (!Emu.GetIdManager().CheckID(sq_id)) return CELL_ESRCH;

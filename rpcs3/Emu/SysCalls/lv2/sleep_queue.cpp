@@ -3,11 +3,10 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue_type.h"
+#include "sleep_queue.h"
 
 sleep_queue_t::~sleep_queue_t()
 {

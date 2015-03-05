@@ -2,7 +2,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/Event.h"
 #include "sys_timer.h"
@@ -80,7 +79,7 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 		timer_id, queue_id, name, data1, data2);
 
 	std::shared_ptr<timer> timer_data = nullptr;
-	std::shared_ptr<EventQueue> equeue = nullptr;
+	std::shared_ptr<event_queue_t> equeue = nullptr;
 	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
 	if(!sys_timer.CheckId(queue_id, equeue)) return CELL_ESRCH;
 

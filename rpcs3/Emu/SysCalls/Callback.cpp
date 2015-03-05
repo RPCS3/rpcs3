@@ -61,30 +61,30 @@ void CallbackManager::Init()
 
 	if (Memory.PSV.RAM.GetStartAddr())
 	{
-		m_cb_thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+		m_cb_thread = Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
 		m_cb_thread->SetName("Callback Thread");
 		m_cb_thread->SetEntry(0);
 		m_cb_thread->SetPrio(1001);
 		m_cb_thread->SetStackSize(0x10000);
 		m_cb_thread->InitStack();
 		m_cb_thread->InitRegs();
-		static_cast<ARMv7Thread*>(m_cb_thread)->DoRun();
+		static_cast<ARMv7Thread&>(*m_cb_thread).DoRun();
 	}
 	else
 	{
-		m_cb_thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+		m_cb_thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 		m_cb_thread->SetName("Callback Thread");
 		m_cb_thread->SetEntry(0);
 		m_cb_thread->SetPrio(1001);
 		m_cb_thread->SetStackSize(0x10000);
 		m_cb_thread->InitStack();
 		m_cb_thread->InitRegs();
-		static_cast<PPUThread*>(m_cb_thread)->DoRun();
+		static_cast<PPUThread&>(*m_cb_thread).DoRun();
 	}
 
 	thread_t cb_async_thread("CallbackManager thread", [this]()
 	{
-		SetCurrentNamedThread(m_cb_thread);
+		SetCurrentNamedThread(&*m_cb_thread);
 
 		while (!Emu.IsStopped())
 		{

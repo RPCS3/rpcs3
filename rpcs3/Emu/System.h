@@ -79,7 +79,7 @@ class Emulator
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
 
-	std::recursive_mutex m_core_mutex;
+	std::mutex m_core_mutex;
 
 	CPUThreadManager* m_thread_manager;
 	PadManager* m_pad_manager;
@@ -137,7 +137,7 @@ public:
 		m_emu_path = path;
 	}
 
-	std::recursive_mutex& GetCoreMutex()   { return m_core_mutex; }
+	std::mutex&       GetCoreMutex()       { return m_core_mutex; }
 
 	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
@@ -199,7 +199,7 @@ public:
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
-#define LV2_LOCK(x) std::lock_guard<std::recursive_mutex> core_lock##x(Emu.GetCoreMutex())
+#define LV2_LOCK std::unique_lock<std::mutex> lv2_lock(Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

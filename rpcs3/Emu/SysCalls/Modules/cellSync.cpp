@@ -3,9 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
-#include "Emu/Memory/atomic_type.h"
 
-#include "Emu/SysCalls/lv2/sleep_queue_type.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "Emu/Event.h"
@@ -1071,7 +1070,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}
@@ -1422,7 +1421,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(queue->m_eq_id, vm::ptr<sys_event_data>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}

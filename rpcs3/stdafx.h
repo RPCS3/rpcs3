@@ -27,6 +27,7 @@
 #include <condition_variable>
 #include <memory>
 #include <vector>
+#include <queue>
 #include <set>
 #include <array>
 #include <string>
@@ -61,6 +62,9 @@ template<typename T> __forceinline T align(const T addr, int align)
 
 #include "Utilities/BEType.h"
 #include "Utilities/StrFmt.h"
+
+#include "Emu/Memory/atomic.h"
+#include "Emu/Memory/refcnt.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"
