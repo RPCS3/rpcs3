@@ -92,7 +92,7 @@ enum
 };
 
 // SPURS defines.
-enum SPURSKernelInterfaces
+enum SPURSKernelInterfaces : u32
 {
 	CELL_SPURS_MAX_SPU                      = 8,
 	CELL_SPURS_MAX_WORKLOAD                 = 16,
@@ -314,16 +314,16 @@ CHECK_SIZE_ALIGN(CellSpursAttribute, 512, 8);
 
 using CellSpursShutdownCompletionEventHook = func_def<void(vm::ptr<CellSpurs> spurs, u32 wid, vm::ptr<void> arg)>;
 
-struct CellSpursTraceInfo
+struct set_alignment(16) CellSpursTraceInfo
 {
-	be_t<u32> spu_thread[8];    // 0x00
+	be_t<u32> spuThread[8];     // 0x00
 	be_t<u32> count[8];         // 0x20
-	be_t<u32> spu_thread_grp;   // 0x40
-	be_t<u32> nspu;             // 0x44
+	be_t<u32> spuThreadGroup;   // 0x40
+	be_t<u32> numSpus;          // 0x44
 	u8 padding[56];
 };
 
-CHECK_SIZE(CellSpursTraceInfo, 128);
+CHECK_SIZE_ALIGN(CellSpursTraceInfo, 128, 16);
 
 struct CellSpursTraceHeader
 {
@@ -542,7 +542,9 @@ struct set_alignment(128) CellSpurs
 	u8 unknown9[0xE00 - 0xDD0];
 	_sub_str4 wklH1[0x10];                              // 0xE00
 	EventPortMux eventPortMux;                          // 0xF00
-	u8 unknown6[0x1000 - 0xF80];                        // 0xF80 - Gloabl SPU exception handler 0xF88 - Gloabl SPU exception handlers args
+	atomic_be_t<u64> globalSpuExceptionHandler;         // 0xF80
+	be_t<u64> globalSpuExceptionHandlerArgs;            // 0xF88
+	u8 unknown6[0x1000 - 0xF90];
 	WorkloadInfo wklInfo2[0x10];                        // 0x1000
 	_sub_str1 wklF2[0x10];                              // 0x1200
 	_sub_str4 wklH2[0x10];                              // 0x1A00
@@ -735,7 +737,7 @@ struct set_alignment(128) CellSpursTaskset
 	be_t<u32> wid;                               // 0x74
 	be_t<u64> x78;                               // 0x78
 	TaskInfo task_info[128];                     // 0x80
-	vm::bptr<u64, u64> exception_handler;        // 0x1880
+	vm::bptr<CellSpursTasksetExceptionEventHandler, u64> exception_handler; // 0x1880
 	vm::bptr<u64, u64> exception_handler_arg;    // 0x1888
 	be_t<u32> size;                              // 0x1890
 	u32 unk2;                                    // 0x1894
