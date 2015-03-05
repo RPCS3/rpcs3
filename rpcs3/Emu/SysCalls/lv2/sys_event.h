@@ -79,7 +79,7 @@ struct event_queue_t
 
 	std::deque<event_t> events;
 
-	// TODO: use sleep queue, remove condition variable (use thread's one instead)
+	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
 	std::atomic<s32> waiters;
 
@@ -91,6 +91,12 @@ struct event_queue_t
 		, size(size)
 		, waiters(0)
 	{
+	}
+
+	void push(u64 source, u64 data1, u64 data2, u64 data3)
+	{
+		events.emplace_back(source, data1, data2, data3);
+		cv.notify_one();
 	}
 };
 

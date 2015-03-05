@@ -19,6 +19,7 @@ struct sys_event_flag_attr
 	be_t<u64> ipc_key;
 	be_t<s32> flags;
 	be_t<s32> type;
+
 	union
 	{
 		char name[8];
@@ -26,40 +27,33 @@ struct sys_event_flag_attr
 	};
 };
 
-struct EventFlagWaiter
+struct event_flag_t
 {
-	u32 tid;
-	u32 mode;
-	u64 bitptn;
-};
-
-struct EventFlag
-{
-	atomic_le_t<u64> flags;
-	squeue_t<u32, 32> signal;
-	std::mutex mutex; // protects waiters
-	std::vector<EventFlagWaiter> waiters;
+	std::atomic<u64> flags;
 
 	const u32 protocol;
 	const s32 type;
 	const u64 name;
 
-	EventFlag(u64 pattern, u32 protocol, s32 type, u64 name)
-		: protocol(protocol)
+	// TODO: use sleep queue, possibly remove condition variable
+	std::condition_variable cv;
+	std::atomic<s32> waiters;
+
+	event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
+		: flags(pattern)
+		, protocol(protocol)
 		, type(type)
 		, name(name)
+		, waiters(0)
 	{
-		flags.write_relaxed(pattern);
 	}
-
-	u32 check();
 };
 
-s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init);
-s32 sys_event_flag_destroy(u32 eflag_id);
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result);
-s32 sys_event_flag_set(u32 eflag_id, u64 bitptn);
-s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn);
-s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num);
-s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags);
+s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init);
+s32 sys_event_flag_destroy(u32 id);
+s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
+s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
+s32 sys_event_flag_set(u32 id, u64 bitptn);
+s32 sys_event_flag_clear(u32 id, u64 bitptn);
+s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num);
+s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags);

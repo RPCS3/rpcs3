@@ -19,14 +19,29 @@ RawSPUThread::~RawSPUThread()
 
 void RawSPUThread::start()
 {
-	status.write_relaxed(SPU_STATUS_RUNNING);
+	bool do_start;
 
-	// calling Exec() directly in SIGSEGV handler may cause problems
-	// (probably because Exec() creates new thread, faults of this thread aren't handled by this handler anymore)
-	Emu.GetCallbackManager().Async([this](PPUThread& PPU)
+	status.atomic_op([&do_start](u32& status)
 	{
-		FastRun();
+		if (status & SPU_STATUS_RUNNING)
+		{
+			do_start = false;
+		}
+		else
+		{
+			status = SPU_STATUS_RUNNING;
+			do_start = true;
+		}
 	});
+
+	if (do_start)
+	{
+		// starting thread directly in SIGSEGV handler may cause problems
+		Emu.GetCallbackManager().Async([this](PPUThread& PPU)
+		{
+			FastRun();
+		});
+	}
 }
 
 bool RawSPUThread::ReadReg(const u32 addr, u32& value)
@@ -55,7 +70,7 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 
 	case SPU_MBox_Status_offs:
 	{
-		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff) | (ch_out_intr_mbox.get_count() << 16 & 0xff);
+		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16 & 0xff0000);
 		return true;
 	}
 		

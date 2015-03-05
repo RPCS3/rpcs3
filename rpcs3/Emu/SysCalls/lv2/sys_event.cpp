@@ -65,6 +65,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	}
 
 	*equeue_id = sys_event.GetNewId(queue, TYPE_EVENT_QUEUE);
+	
 	return CELL_OK;
 }
 
@@ -75,6 +76,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	LV2_LOCK;
 
 	std::shared_ptr<event_queue_t> queue;
+
 	if (!Emu.GetIdManager().GetIDData(equeue_id, queue))
 	{
 		return CELL_ESRCH;
@@ -85,6 +87,8 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		return CELL_EINVAL;
 	}
 
+	assert(queue->waiters >= 0);
+
 	if (!mode && queue->waiters)
 	{
 		return CELL_EBUSY;
@@ -93,10 +97,12 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	{
 		// set special value for waiters
 		queue->waiters.exchange(-1);
+		queue->cv.notify_all();
 	}
 
 	Emu.GetEventManager().UnregisterKey(queue->key);
 	Emu.GetIdManager().RemoveID(equeue_id);
+
 	return CELL_OK;
 }
 
@@ -107,6 +113,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 	LV2_LOCK;
 
 	std::shared_ptr<event_queue_t> queue;
+
 	if (!Emu.GetIdManager().GetIDData(equeue_id, queue))
 	{
 		return CELL_ESRCH;
@@ -133,6 +140,12 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 	}
 
 	*number = count;
+
+	if (queue->events.size())
+	{
+		queue->cv.notify_one();
+	}
+
 	return CELL_OK;
 }
 
@@ -145,6 +158,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	LV2_LOCK;
 
 	std::shared_ptr<event_queue_t> queue;
+
 	if (!Emu.GetIdManager().GetIDData(equeue_id, queue))
 	{
 		return CELL_ESRCH;
@@ -157,18 +171,21 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	// protocol is ignored in current implementation
 	queue->waiters++;
+	assert(queue->waiters > 0);
 
 	while (queue->events.empty())
 	{
 		if (queue->waiters < 0)
 		{
 			queue->waiters--;
+			assert(queue->waiters < 0);
 			return CELL_ECANCELED;
 		}
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			queue->waiters--;
+			assert(queue->waiters >= 0);
 			return CELL_ETIMEDOUT;
 		}
 
@@ -190,6 +207,13 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	queue->events.pop_front();
 	queue->waiters--;
+	assert(queue->waiters >= 0);
+
+	if (queue->events.size())
+	{
+		queue->cv.notify_one();
+	}
+
 	return CELL_OK;
 }
 
@@ -200,12 +224,14 @@ s32 sys_event_queue_drain(u32 equeue_id)
 	LV2_LOCK;
 
 	std::shared_ptr<event_queue_t> queue;
+
 	if (!Emu.GetIdManager().GetIDData(equeue_id, queue))
 	{
 		return CELL_ESRCH;
 	}
 
 	queue->events = {};
+
 	return CELL_OK;
 }
 
@@ -231,6 +257,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 	std::shared_ptr<event_port_t> eport(new event_port_t(port_type, name));
 
 	*eport_id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
+
 	return CELL_OK;
 }
 
@@ -241,6 +268,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 	LV2_LOCK;
 
 	std::shared_ptr<event_port_t> port;
+
 	if (!Emu.GetIdManager().GetIDData(eport_id, port))
 	{
 		return CELL_ESRCH;
@@ -252,6 +280,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 	}
 
 	Emu.GetIdManager().RemoveID(eport_id);
+
 	return CELL_OK;
 }
 
@@ -263,6 +292,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 	std::shared_ptr<event_port_t> port;
 	std::shared_ptr<event_queue_t> queue;
+
 	if (!Emu.GetIdManager().GetIDData(eport_id, port) || !Emu.GetIdManager().GetIDData(equeue_id, queue))
 	{
 		return CELL_ESRCH;
@@ -279,6 +309,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 	}
 
 	port->queue = queue;
+
 	return CELL_OK;
 }
 
@@ -289,6 +320,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 	LV2_LOCK;
 
 	std::shared_ptr<event_port_t> port;
+
 	if (!Emu.GetIdManager().GetIDData(eport_id, port))
 	{
 		return CELL_ESRCH;
@@ -314,6 +346,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 	//}
 
 	port->queue.reset();
+
 	return CELL_OK;
 }
 
@@ -324,6 +357,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	LV2_LOCK;
 
 	std::shared_ptr<event_port_t> port;
+
 	if (!Emu.GetIdManager().GetIDData(eport_id, port))
 	{
 		return CELL_ESRCH;
@@ -343,7 +377,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	const u64 source = port->name ? port->name : ((u64)process_getpid() << 32) | (u64)eport_id;
 
-	queue->events.emplace_back(source, data1, data2, data3);
-	queue->cv.notify_one();
+	queue->push(source, data1, data2, data3);
+
 	return CELL_OK;
 }

@@ -393,19 +393,18 @@ s32 cellAudioInit()
 				keys.resize(g_audio.keys.size());
 				memcpy(keys.data(), g_audio.keys.data(), sizeof(u64) * keys.size());
 			}
-			for (u32 i = 0; i < keys.size(); i++)
 			{
-				auto eq = Emu.GetEventManager().GetEventQueue(keys[i]);
+				LV2_LOCK;
 
-				if (eq)
+				for (u32 i = 0; i < keys.size(); i++)
 				{
-					LV2_LOCK;
-
-					// TODO: check event source
-					eq->events.emplace_back(0x10103000e010e07, 0, 0, 0);
-					eq->cv.notify_one();
+					if (std::shared_ptr<event_queue_t> queue = Emu.GetEventManager().GetEventQueue(keys[i]))
+					{
+						queue->push(0, 0, 0, 0); // TODO: check arguments
+					}
 				}
 			}
+			
 
 			//const u64 stamp3 = get_system_time();
 

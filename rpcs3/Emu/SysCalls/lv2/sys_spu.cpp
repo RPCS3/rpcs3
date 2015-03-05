@@ -320,6 +320,13 @@ s32 sys_spu_thread_group_start(u32 id)
 		}
 	}
 
+	// because SPU_THREAD_GROUP_STATUS_READY is not possible, run event is delivered immediately
+
+	if (std::shared_ptr<event_queue_t> queue = group->ep_run.lock())
+	{
+		queue->push(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, id, 0, 0); // TODO: check data2 and data3
+	}
+
 	for (auto& t : group->threads)
 	{
 		if (t)
@@ -485,7 +492,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
-	group->join_state |= STGJSF_TERMINATED;
+	group->join_state |= SPU_TGJSF_TERMINATED;
 	group->join_cv.notify_one();
 	return CELL_OK;
 }
@@ -507,13 +514,13 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		return CELL_ESTAT;
 	}
 
-	if (group->join_state.fetch_or(STGJSF_IS_JOINING) & STGJSF_IS_JOINING)
+	if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
 	{
 		// another PPU thread is joining this thread group
 		return CELL_EBUSY;
 	}
 
-	while ((group->join_state & ~STGJSF_IS_JOINING) == 0)
+	while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
 	{
 		bool stopped = true;
 
@@ -545,19 +552,19 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		group->join_cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	switch (group->join_state & ~STGJSF_IS_JOINING)
+	switch (group->join_state & ~SPU_TGJSF_IS_JOINING)
 	{
 	case 0:
 	{
 		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
 		break;
 	}
-	case STGJSF_GROUP_EXIT:
+	case SPU_TGJSF_GROUP_EXIT:
 	{
 		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
 		break;
 	}
-	case STGJSF_TERMINATED:
+	case SPU_TGJSF_TERMINATED:
 	{
 		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 		break;
@@ -570,7 +577,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 		*status = group->exit_status;
 	}
 
-	group->join_state &= ~STGJSF_IS_JOINING;
+	group->join_state &= ~SPU_TGJSF_IS_JOINING;
 	group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	return CELL_OK;
 }
@@ -729,14 +736,111 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 {
-	sys_spu.Todo("sys_spu_thread_group_connect_event(id=%d, eq=%d, et=0x%x)", id, eq, et);
+	sys_spu.Warning("sys_spu_thread_group_connect_event(id=%d, eq=%d, et=%d)", id, eq, et);
+
+	LV2_LOCK;
+
+	std::shared_ptr<spu_group_t> group;
+	std::shared_ptr<event_queue_t> queue;
+
+	if (!Emu.GetIdManager().GetIDData(id, group) || !Emu.GetIdManager().GetIDData(eq, queue))
+	{
+		return CELL_ESRCH;
+	}
+
+	switch (et)
+	{
+	case SYS_SPU_THREAD_GROUP_EVENT_RUN:
+	{
+		if (!group->ep_run.expired())
+		{
+			return CELL_EBUSY;
+		}
+		
+		group->ep_run = queue;
+		break;
+	}
+	case SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION:
+	{
+		if (!group->ep_exception.expired())
+		{
+			return CELL_EBUSY;
+		}
+
+		group->ep_exception = queue;
+		break;
+	}
+	case SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE:
+	{
+		if (!group->ep_sysmodule.expired())
+		{
+			return CELL_EBUSY;
+		}
+
+		group->ep_sysmodule = queue;
+		break;
+	}
+	default:
+	{
+		sys_spu.Error("sys_spu_thread_group_connect_event(): unknown event type (%d)", et);
+		return CELL_EINVAL;
+	}
+	}
 
 	return CELL_OK;
 }
 
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 {
-	sys_spu.Todo("sys_spu_thread_group_disconnect_event(id=%d, et=0x%x)", id, et);
+	sys_spu.Warning("sys_spu_thread_group_disconnect_event(id=%d, et=%d)", id, et);
+
+	LV2_LOCK;
+
+	std::shared_ptr<spu_group_t> group;
+
+	if (!Emu.GetIdManager().GetIDData(id, group))
+	{
+		return CELL_ESRCH;
+	}
+
+	switch (et)
+	{
+	case SYS_SPU_THREAD_GROUP_EVENT_RUN:
+	{
+		if (group->ep_run.expired())
+		{
+			return CELL_ENOTCONN;
+		}
+
+		group->ep_run.reset();
+		break;
+	}
+	case SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION:
+	{
+		if (group->ep_exception.expired())
+		{
+			return CELL_ENOTCONN;
+		}
+
+		group->ep_exception.reset();
+		break;
+	}
+	case SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE:
+	{
+		if (group->ep_sysmodule.expired())
+		{
+			return CELL_ENOTCONN;
+		}
+
+		group->ep_sysmodule.reset();
+		break;
+	}
+	default:
+	{
+		sys_spu.Error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
+		return CELL_EINVAL;
+	}
+	}
 
 	return CELL_OK;
 }
@@ -839,20 +943,29 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 		return CELL_EINVAL;
 	}
 
-	if (spu.spuq.size() >= 32)
+	for (auto& v : spu.spuq)
 	{
-		return CELL_EAGAIN;
+		if (auto q = v.second.lock())
+		{
+			if (v.first == spuq_num || q == queue)
+			{
+				return CELL_EBUSY;
+			}
+		}
 	}
 
-	auto found = spu.spuq.find(spuq_num);
-	if (found != spu.spuq.end())
+	for (auto& v : spu.spuq)
 	{
-		return CELL_EBUSY;
+		if (v.second.expired())
+		{
+			v.first = spuq_num;
+			v.second = queue;
+
+			return CELL_OK;
+		}
 	}
 
-	spu.spuq[spuq_num] = queue;
-
-	return CELL_OK;
+	return CELL_EAGAIN;
 }
 
 s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
@@ -870,15 +983,17 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 	auto& spu = static_cast<SPUThread&>(*t);
 
-	auto found = spu.spuq.find(spuq_num);
-	if (found == spu.spuq.end())
+	for (auto& v : spu.spuq)
 	{
-		return CELL_ESRCH;
+		if (v.first == spuq_num && !v.second.expired())
+		{
+			v.second.reset();
+
+			return CELL_OK;
+		}
 	}
 
-	spu.spuq.erase(found);
-
-	return CELL_OK;
+	return CELL_ESRCH;
 }
 
 s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::ptr<u8> spup)
