@@ -1,5 +1,7 @@
 #pragma once
 
+struct event_queue_t;
+
 enum : s32
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
@@ -132,9 +134,9 @@ struct spu_arg_t
 // SPU Thread Group Join State Flag
 enum : u32
 {
-	STGJSF_IS_JOINING = (1 << 0),
-	STGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
-	STGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
+	SPU_TGJSF_IS_JOINING = (1 << 0),
+	SPU_TGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
+	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
 };
 
 struct spu_group_t
@@ -144,9 +146,9 @@ struct spu_group_t
 	const s32 type; // SPU Thread Group Type
 	const u32 ct; // Memory Container Id
 
-	std::array<std::shared_ptr<CPUThread>, 256> threads;
+	std::array<std::shared_ptr<CPUThread>, 256> threads; // SPU Threads
+	std::array<vm::ptr<sys_spu_image>, 256> images; // SPU Images
 	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
-	std::array<vm::ptr<sys_spu_image>, 256> images; // SPU Thread Images
 
 	s32 prio; // SPU Thread Group Priority
 	u32 state; // SPU Thread Group State
@@ -154,6 +156,10 @@ struct spu_group_t
 
 	std::atomic<u32> join_state; // flags used to detect exit cause
 	std::condition_variable join_cv; // used to signal waiting PPU thread
+
+	std::weak_ptr<event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::weak_ptr<event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::weak_ptr<event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)

@@ -307,7 +307,7 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 {
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(SPU, "DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size, cmd);
+		LOG_NOTICE(SPU, "DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 	}
 
 	switch (cmd)
@@ -398,11 +398,11 @@ void SPUThread::process_mfc_cmd(u32 cmd)
 			// tag may be used here
 		}
 
-		break;
+		return;
 	}
 	}
 
-	LOG_ERROR(SPU, "Unknown DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size, cmd);
+	LOG_ERROR(SPU, "Unknown DMA %s: cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", get_mfc_cmd_name(cmd), cmd, ch_mfc_args.lsa, ch_mfc_args.ea, ch_mfc_args.tag, ch_mfc_args.size);
 	throw __FUNCTION__;
 }
 
@@ -614,9 +614,8 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					return;
 				}
 
-				queue->events.emplace_back(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
+				queue->push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
 				ch_in_mbox.push_uncond(CELL_OK);
-				queue->cv.notify_one();
 				return;
 			}
 			else if (code < 128)
@@ -654,8 +653,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					return;
 				}
 
-				queue->events.emplace_back(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
-				queue->cv.notify_one();
+				queue->push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
 				return;
 			}
 			else if (code == 128)
@@ -968,14 +966,26 @@ void SPUThread::stop_and_signal(u32 code)
 
 		LV2_LOCK;
 
-		auto found = this->spuq.find(spuq);
-		if (found == this->spuq.end())
+		std::shared_ptr<event_queue_t> queue;
+
+		for (auto& v : this->spuq)
+		{
+			if (spuq == v.first)
+			{
+				queue = v.second.lock();
+
+				if (queue)
+				{
+					break;
+				}
+			}
+		}
+
+		if (!queue)
 		{
 			ch_in_mbox.push_uncond(CELL_EINVAL); // TODO: check error value
 			return;
 		}
-		
-		std::shared_ptr<event_queue_t> queue = found->second;
 
 		// protocol is ignored in current implementation
 		queue->waiters++;
@@ -1046,7 +1056,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		group->state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
-		group->join_state |= STGJSF_GROUP_EXIT;
+		group->join_state |= SPU_TGJSF_GROUP_EXIT;
 		group->join_cv.notify_one();
 		return;
 	}

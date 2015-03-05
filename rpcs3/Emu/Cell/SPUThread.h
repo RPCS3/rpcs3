@@ -504,9 +504,9 @@ public:
 	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
 
-	std::weak_ptr<spu_group_t> tg; // SPU Thread Group Id
+	std::weak_ptr<spu_group_t> tg; // SPU Thread Group
 
-	std::unordered_map<u32, std::shared_ptr<event_queue_t>> spuq; // Event Queue Keys for SPU Thread
+	std::array<std::pair<u32, std::weak_ptr<event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
 	std::weak_ptr<event_queue_t> spup[64]; // SPU Ports
 
 	void write_snr(bool number, u32 value)

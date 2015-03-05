@@ -92,6 +92,12 @@ struct event_queue_t
 		, waiters(0)
 	{
 	}
+
+	void push(u64 source, u64 data1, u64 data2, u64 data3)
+	{
+		events.emplace_back(source, data1, data2, data3);
+		cv.notify_one();
+	}
 };
 
 struct event_port_t

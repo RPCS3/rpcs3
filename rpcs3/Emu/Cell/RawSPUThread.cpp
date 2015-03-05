@@ -55,7 +55,7 @@ bool RawSPUThread::ReadReg(const u32 addr, u32& value)
 
 	case SPU_MBox_Status_offs:
 	{
-		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff) | (ch_out_intr_mbox.get_count() << 16 & 0xff);
+		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16 & 0xff0000);
 		return true;
 	}
 		

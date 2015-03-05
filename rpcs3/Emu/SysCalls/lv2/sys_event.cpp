@@ -314,6 +314,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 	//}
 
 	port->queue.reset();
+
 	return CELL_OK;
 }
 
@@ -343,7 +344,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	const u64 source = port->name ? port->name : ((u64)process_getpid() << 32) | (u64)eport_id;
 
-	queue->events.emplace_back(source, data1, data2, data3);
-	queue->cv.notify_one();
+	queue->push(source, data1, data2, data3);
+
 	return CELL_OK;
 }
