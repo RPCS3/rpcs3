@@ -1000,9 +1000,11 @@ s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr)
 	}
 
 	Memory.Map(t->offset = RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * t->index, 0x40000);
+
 	t->Run();
 
 	*id = t->index;
+
 	return CELL_OK;
 }
 
@@ -1024,13 +1026,15 @@ s32 sys_raw_spu_destroy(u32 id)
 	// TODO: check if busy
 
 	Memory.Unmap(spu.offset);
+
 	Emu.GetCPU().RemoveThread(t->GetId());
+
 	return CELL_OK;
 }
 
 s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
 {
-	sys_spu.Warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag_addr=0x%x)", id, class_id, hwthread, intrtag.addr());
+	sys_spu.Warning("sys_raw_spu_create_interrupt_tag(id=%d, class_id=%d, hwthread=0x%x, intrtag=*0x%x)", id, class_id, hwthread, intrtag);
 
 	if (class_id != 0 && class_id != 2)
 	{
@@ -1054,6 +1058,7 @@ s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr
 	}
 
 	*intrtag = (id & 0xff) | (class_id << 8);
+
 	return CELL_OK;
 }
 
@@ -1082,7 +1087,7 @@ s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask)
 
 s32 sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask)
 {
-	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask_addr=0x%x)", id, class_id, mask.addr());
+	sys_spu.Log("sys_raw_spu_get_int_mask(id=%d, class_id=%d, mask=*0x%x)", id, class_id, mask);
 
 	if (class_id != 0 && class_id != 2)
 	{
@@ -1128,7 +1133,7 @@ s32 sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat)
 
 s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 {
-	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat_addr=0xx)", id, class_id, stat.addr());
+	sys_spu.Log("sys_raw_spu_get_int_stat(id=%d, class_id=%d, stat=*0x%x)", id, class_id, stat);
 
 	if (class_id != 0 && class_id != 2)
 	{
@@ -1151,7 +1156,7 @@ s32 sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat)
 
 s32 sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value)
 {
-	sys_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value_addr=0x%x)", id, value.addr());
+	sys_spu.Log("sys_raw_spu_read_puint_mb(id=%d, value=*0x%x)", id, value);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
@@ -1192,7 +1197,7 @@ s32 sys_raw_spu_set_spu_cfg(u32 id, u32 value)
 
 s32 sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value)
 {
-	sys_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value_addr=0x%x)", id, value.addr());
+	sys_spu.Log("sys_raw_spu_get_spu_afg(id=%d, value=*0x%x)", id, value);
 
 	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(id);
 
