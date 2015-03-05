@@ -79,7 +79,7 @@ struct event_queue_t
 
 	std::deque<event_t> events;
 
-	// TODO: use sleep queue, remove condition variable (use thread's one instead)
+	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
 	std::atomic<s32> waiters;
 

@@ -679,21 +679,23 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				std::shared_ptr<EventFlag> ef;
+				LV2_LOCK;
+
+				std::shared_ptr<event_flag_t> ef;
+
 				if (!Emu.GetIdManager().GetIDData(data, ef))
 				{
-					LOG_ERROR(SPU, "sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d)): EventFlag not found", data, value, flag);
 					ch_in_mbox.push_uncond(CELL_ESRCH);
 					return;
 				}
 
-				std::lock_guard<std::mutex> lock(ef->mutex);
-
-				ef->flags |= (u64)1 << flag;
-				if (u32 target = ef->check())
+				while (ef->waiters < 0)
 				{
-					ef->signal.push(target);
+					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 				}
+
+				ef->flags |= 1ull << flag;
+				ef->cv.notify_all();
 
 				ch_in_mbox.push_uncond(CELL_OK);
 				return;
@@ -721,21 +723,22 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d))", data, value, flag);
 				}
 
-				std::shared_ptr<EventFlag> ef;
+				LV2_LOCK;
+
+				std::shared_ptr<event_flag_t> ef;
+
 				if (!Emu.GetIdManager().GetIDData(data, ef))
 				{
-					LOG_WARNING(SPU, "sys_event_flag_set_bit_impatient(id=%d, value=0x%x (flag=%d)): EventFlag not found", data, value, flag);
 					return;
 				}
 
-				std::lock_guard<std::mutex> lock(ef->mutex);
-
-				ef->flags |= (u64)1 << flag;
-				if (u32 target = ef->check())
+				while (ef->waiters < 0)
 				{
-					ef->signal.push(target);
+					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 				}
 
+				ef->flags |= 1ull << flag;
+				ef->cv.notify_all();
 				return;
 			}
 			else
@@ -989,13 +992,15 @@ void SPUThread::stop_and_signal(u32 code)
 
 		// protocol is ignored in current implementation
 		queue->waiters++;
+		assert(queue->waiters > 0);
 
 		while (queue->events.empty())
 		{
 			if (queue->waiters < 0)
 			{
-				ch_in_mbox.push_uncond(CELL_ECANCELED);
 				queue->waiters--;
+				assert(queue->waiters < 0);
+				ch_in_mbox.push_uncond(CELL_ECANCELED);
 				return;
 			}
 
@@ -1016,6 +1021,13 @@ void SPUThread::stop_and_signal(u32 code)
 		
 		queue->events.pop_front();
 		queue->waiters--;
+		assert(queue->waiters >= 0);
+
+		if (queue->events.size())
+		{
+			queue->cv.notify_one();
+		}
+
 		return;
 	}
 
