@@ -4,6 +4,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Event.h"
+#include "sys_event.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
