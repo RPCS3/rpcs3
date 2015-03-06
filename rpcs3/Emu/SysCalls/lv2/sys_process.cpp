@@ -1,9 +1,10 @@
 #include "stdafx.h"
-#include "Emu/FS/VFS.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+#include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/PSF.h"
 #include "sys_memory.h"

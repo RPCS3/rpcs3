@@ -1,6 +1,5 @@
 #pragma once
 #include "OpenGL.h"
-#include <unordered_map>
 
 enum GLParamFlag
 {

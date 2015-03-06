@@ -1,6 +1,5 @@
 #pragma once
 #include "Loader.h"
-#include <unordered_map>
 
 struct vfsStream;
 class rFile;

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <unordered_map>
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "ARMv7Thread.h"

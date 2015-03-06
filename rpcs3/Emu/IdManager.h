@@ -1,5 +1,6 @@
 #pragma once
-#include <unordered_map>
+
+#define ID_MANAGER_INCLUDED
 
 #define rID_ANY -1 // was wxID_ANY
 
