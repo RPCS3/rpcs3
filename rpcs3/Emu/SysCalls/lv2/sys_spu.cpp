@@ -221,7 +221,7 @@ u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type
 
 	std::shared_ptr<spu_group_t> group(new spu_group_t(name, num, prio, type, container));
 
-	return sys_spu.GetNewId(group);
+	return Emu.GetIdManager().GetNewID(group);
 }
 
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)

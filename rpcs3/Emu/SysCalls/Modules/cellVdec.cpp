@@ -209,7 +209,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	std::shared_ptr<VideoDecoder> sptr(vdec_ptr);
 	VideoDecoder& vdec = *vdec_ptr;
 
-	u32 vdec_id = cellVdec.GetNewId(sptr);
+	u32 vdec_id = Emu.GetIdManager().GetNewID(sptr);
 
 	vdec.id = vdec_id;
 

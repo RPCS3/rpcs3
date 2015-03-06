@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -52,7 +53,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	*subHandle = cellGifDec.GetNewId(current_subHandle);
+	*subHandle = Emu.GetIdManager().GetNewID(current_subHandle);
 
 	return CELL_OK;
 }
@@ -63,7 +64,7 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 		mainHandle, subHandle, info.addr());
 
 	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -113,7 +114,7 @@ int cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifD
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	CellGifDecInfo& current_info = subHandle_data->info;
@@ -145,7 +146,7 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
 	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -260,11 +261,11 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 		mainHandle, subHandle);
 
 	std::shared_ptr<CellGifDecSubHandle> subHandle_data;
-	if(!cellGifDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	cellGifDec.RemoveId(subHandle);
+	Emu.GetIdManager().RemoveID(subHandle);
 
 	return CELL_OK;
 }

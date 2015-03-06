@@ -19,7 +19,7 @@ s32 lwmutex_create(sys_lwmutex_t& lwmutex, u32 protocol, u32 recursive, u64 name
 	lwmutex.waiter.write_relaxed(be_t<u32>::make(~0));
 	lwmutex.attribute = protocol | recursive;
 	lwmutex.recursive_count.write_relaxed(be_t<u32>::make(0));
-	u32 sq_id = sys_lwmutex.GetNewId(sq, TYPE_LWMUTEX);
+	u32 sq_id = Emu.GetIdManager().GetNewID(sq, TYPE_LWMUTEX);
 	lwmutex.sleep_queue = sq_id;
 	sq->set_full_name(fmt::Format("Lwmutex(%d, addr=0x%x)", sq_id, vm::get_addr(&lwmutex)));
 

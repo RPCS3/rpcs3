@@ -790,7 +790,7 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
-	*id = cellAudio.GetNewId(eq);
+	*id = Emu.GetIdManager().GetNewID(eq);
 	*key = event_key;
 
 	return CELL_OK;

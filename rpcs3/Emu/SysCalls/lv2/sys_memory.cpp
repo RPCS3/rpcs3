@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/SysCalls.h"
 
@@ -44,7 +45,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 
 	// Check if this container ID is valid.
 	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!sys_memory.CheckId(cid, ct))
+	if (!Emu.GetIdManager().GetIDData(cid, ct))
 		return CELL_ESRCH;
 	
 	// Check page size.
@@ -120,7 +121,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 
 	// Wrap the allocated memory in a memory container.
 	std::shared_ptr<MemoryContainerInfo> ct(new MemoryContainerInfo(addr, yield_size));
-	u32 id = sys_memory.GetNewId(ct, TYPE_MEM);
+	u32 id = Emu.GetIdManager().GetNewID(ct, TYPE_MEM);
 	*cid = id;
 
 	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, id);
@@ -134,12 +135,12 @@ s32 sys_memory_container_destroy(u32 cid)
 
 	// Check if this container ID is valid.
 	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!sys_memory.CheckId(cid, ct))
+	if (!Emu.GetIdManager().GetIDData(cid, ct))
 		return CELL_ESRCH;
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(ct->addr);
-	sys_memory.RemoveId(cid);
+	Emu.GetIdManager().RemoveID(cid);
 
 	return CELL_OK;
 }
@@ -150,7 +151,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 
 	// Check if this container ID is valid.
 	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!sys_memory.CheckId(cid, ct))
+	if (!Emu.GetIdManager().GetIDData(cid, ct))
 		return CELL_ESRCH;
 
 	// HACK: Return all memory.

@@ -15,7 +15,7 @@ u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u6
 {
 	std::shared_ptr<Semaphore> sem(new Semaphore(initial_count, max_count, protocol, name_u64));
 
-	const u32 id = sys_semaphore.GetNewId(sem, TYPE_SEMAPHORE);
+	const u32 id = Emu.GetIdManager().GetNewID(sem, TYPE_SEMAPHORE);
 	sem->queue.set_full_name(fmt::Format("Semaphore(%d)", id));
 
 	sys_semaphore.Notice("*** semaphore created [%s] (protocol=0x%x): id = %d", std::string((const char*)&name_u64, 8).c_str(), protocol, id);

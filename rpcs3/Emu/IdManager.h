@@ -48,60 +48,56 @@ public:
 		m_destr(m_ptr);
 	}
 
-	template<typename T> std::shared_ptr<T> get()
+	template<typename T> std::shared_ptr<T> get() const
 	{
 		return *(std::shared_ptr<T>*)m_ptr;
-	}
-
-	template<typename T> std::shared_ptr<const T> get() const
-	{
-		return *(std::shared_ptr<const T>*)m_ptr;
 	}
 };
 
 class ID
 {
-	std::string m_name;
+	const std::type_info& m_info;
 	IDData* m_data;
 	IDType m_type;
 
 public:
 	template<typename T>
-	ID(const std::string& name, std::shared_ptr<T>& data, const IDType type)
-		: m_name(name)
+	ID(std::shared_ptr<T>& data, const IDType type)
+		: m_info(typeid(T))
 		, m_type(type)
 	{
 		m_data = new IDData(new std::shared_ptr<T>(data), [](void *ptr) -> void { delete (std::shared_ptr<T>*)ptr; });
 	}
 
-	ID() : m_data(nullptr)
+	ID()
+		: m_info(typeid(nullptr_t))
+		, m_data(nullptr)
 	{
 	}
 
-	ID(ID&& other)
+	ID(const ID& right) = delete;
+
+	ID(ID&& right)
+		: m_info(right.m_info)
+		, m_data(right.m_data)
+		, m_type(right.m_type)
 	{
-		m_name = other.m_name;
-		m_type = other.m_type;
-		m_data = other.m_data;
-		other.m_data = nullptr;
+		right.m_data = nullptr;
 	}
 
-	ID& operator=(ID&& other)
+	ID& operator=(ID&& other) = delete;
+
+	~ID()
 	{
-		std::swap(m_name,other.m_name);
-		std::swap(m_type,other.m_type);
-		std::swap(m_data,other.m_data);
-		return *this;
+		if (m_data)
+		{
+			delete m_data;
+		}
 	}
 
-	void Kill()
+	const std::type_info& GetInfo() const
 	{
-		delete m_data;
-	}
-
-	const std::string& GetName() const
-	{
-		return m_name;
+		return m_info;
 	}
 
 	IDData* GetData() const
@@ -147,10 +143,6 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		for(auto& i : m_id_map) {
-			i.second.Kill();
-		}
-
 		m_id_map.clear();
 		m_cur_id = s_first_id;
 	}
@@ -160,11 +152,11 @@ public:
 		= char
 #endif
 	>
-	u32 GetNewID(const std::string& name = "", std::shared_ptr<T>& data = nullptr, const IDType type = TYPE_OTHER)
+	u32 GetNewID(std::shared_ptr<T>& data = nullptr, const IDType type = TYPE_OTHER)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		m_id_map[m_cur_id] = ID(name, data, type);
+		m_id_map.emplace(m_cur_id, ID(data, type));
 		if (type < TYPE_OTHER) {
 			m_types[type].insert(m_cur_id);
 		}
@@ -185,7 +177,7 @@ public:
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		auto f = m_id_map.find(id);
-		if (f == m_id_map.end()) {
+		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T)) {
 			return false;
 		}
 
@@ -219,7 +211,6 @@ public:
 			m_types[item->second.GetType()].erase(id);
 		}
 
-		item->second.Kill();
 		m_id_map.erase(item);
 
 		return true;

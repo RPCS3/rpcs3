@@ -39,7 +39,7 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	// Load the PRX into memory
 	f.Read(vm::get_ptr(prx->address), prx->size);
 
-	u32 id = sys_prx.GetNewId(prx, TYPE_PRX);
+	u32 id = Emu.GetIdManager().GetNewID(prx, TYPE_PRX);
 	return id;
 }
 

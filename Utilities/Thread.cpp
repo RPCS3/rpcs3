@@ -116,6 +116,7 @@ enum x64_op_t : u32
 	X64OP_STOS,
 	X64OP_XCHG,
 	X64OP_CMPXCHG,
+	X64OP_LOAD_AND_STORE,
 };
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
@@ -308,6 +309,30 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		}
 		}
 
+		break;
+	}
+	case 0x20:
+	{
+		if (!oso)
+		{
+			out_op = X64OP_LOAD_AND_STORE;
+			out_reg = rex & 8 ? get_modRM_reg(code, rex) : get_modRM_reg_lh(code);
+			out_size = 1;
+			out_length += get_modRM_size(code);
+			return;
+		}
+		break;
+	}
+	case 0x21:
+	{
+		if (true)
+		{
+			out_op = X64OP_LOAD_AND_STORE;
+			out_reg = get_modRM_reg(code, rex);
+			out_size = get_op_size(rex, oso);
+			out_length += get_modRM_size(code);
+			return;
+		}
 		break;
 	}
 	case 0x86:
@@ -1008,6 +1033,29 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 
 			if (!put_x64_reg_value(context, X64R_RAX, d_size, old_value) || !set_x64_cmp_flags(context, d_size, cmp_value, old_value))
+			{
+				return false;
+			}
+			break;
+		}
+		case X64OP_LOAD_AND_STORE:
+		{
+			u64 value;
+			if (!get_x64_reg_value(context, reg, d_size, i_size, value))
+			{
+				return false;
+			}
+
+			switch (d_size)
+			{
+			case 1: value = vm::priv_ref<atomic_le_t<u8>>(addr) &= value; break;
+			case 2: value = vm::priv_ref<atomic_le_t<u16>>(addr) &= value; break;
+			case 4: value = vm::priv_ref<atomic_le_t<u32>>(addr) &= value; break;
+			case 8: value = vm::priv_ref<atomic_le_t<u64>>(addr) &= value; break;
+			default: return false;
+			}
+
+			if (!set_x64_cmp_flags(context, d_size, value, 0))
 			{
 				return false;
 			}

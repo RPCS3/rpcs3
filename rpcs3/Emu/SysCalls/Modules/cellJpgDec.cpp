@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
@@ -58,7 +59,7 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
-	*subHandle = cellJpgDec.GetNewId(current_subHandle);
+	*subHandle = Emu.GetIdManager().GetNewID(current_subHandle);
 
 	return CELL_OK;
 }
@@ -69,11 +70,11 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		mainHandle, subHandle);
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	cellJpgDec.RemoveId(subHandle);
+	Emu.GetIdManager().RemoveID(subHandle);
 
 	return CELL_OK;
 }
@@ -83,7 +84,7 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -152,7 +153,7 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	const u32& fd = subHandle_data->fd;
@@ -282,7 +283,7 @@ int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgD
 		mainHandle, subHandle, inParam.addr(), outParam.addr());
 
 	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!cellJpgDec.CheckId(subHandle, subHandle_data))
+	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	CellJpgDecInfo& current_info = subHandle_data->info;

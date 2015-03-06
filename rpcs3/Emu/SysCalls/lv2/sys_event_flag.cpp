@@ -27,15 +27,15 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 	switch (protocol)
 	{
 	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: sys_event_flag.Todo("SYS_SYNC_RETRY"); break;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_event_flag.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
+	case SYS_SYNC_RETRY: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_RETRY"); break;
+	case SYS_SYNC_PRIORITY_INHERIT: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
 	case SYS_SYNC_FIFO: break;
-	default: sys_event_flag.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
+	default: sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
 	{
-		sys_event_flag.Error("Unknown pshared attribute (0x%x)", attr->pshared);
+		sys_event_flag.Error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
@@ -45,12 +45,12 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 	{
 	case SYS_SYNC_WAITER_SINGLE: break;
 	case SYS_SYNC_WAITER_MULTIPLE: break;
-	default: sys_event_flag.Error("Unknown event flag type (0x%x)", attr->type); return CELL_EINVAL;
+	default: sys_event_flag.Error("sys_event_flag_create(): unknown type (0x%x)", attr->type); return CELL_EINVAL;
 	}
 
 	std::shared_ptr<event_flag_t> ef(new event_flag_t(init, protocol, type, attr->name_u64));
 
-	*id = sys_event_flag.GetNewId(ef, TYPE_EVENT_FLAG);
+	*id = Emu.GetIdManager().GetNewID(ef, TYPE_EVENT_FLAG);
 
 	return CELL_OK;
 }
@@ -151,15 +151,19 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 
 		if (ef->waiters <= 0)
 		{
-			ef->waiters++;
-			assert(ef->waiters <= 0);
+			ef->waiters++; assert(ef->waiters <= 0);
+
+			if (!ef->waiters)
+			{
+				ef->cv.notify_all();
+			}
+
 			return CELL_ECANCELED;
 		}
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			ef->waiters--;
-			assert(ef->waiters >= 0);
+			ef->waiters--; assert(ef->waiters >= 0);
 			return CELL_ETIMEDOUT;
 		}
 
@@ -182,8 +186,7 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 		ef->flags = 0;
 	}
 
-	ef->waiters--;
-	assert(ef->waiters >= 0);
+	ef->waiters--; assert(ef->waiters >= 0);
 
 	if (ef->flags)
 	{

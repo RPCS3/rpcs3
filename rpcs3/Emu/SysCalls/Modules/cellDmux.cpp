@@ -301,7 +301,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 	std::shared_ptr<Demuxer> sptr(dmux_ptr);
 	Demuxer& dmux = *dmux_ptr;
 
-	u32 dmux_id = cellDmux.GetNewId(sptr);
+	u32 dmux_id = Emu.GetIdManager().GetNewID(sptr);
 
 	dmux.id = dmux_id;
 
@@ -990,7 +990,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
 		esCb->cbEsMsgFunc.to_le(), esCb->cbArg, esSpecificInfo_addr));
 
-	u32 id = cellDmux.GetNewId(es);
+	u32 id = Emu.GetIdManager().GetNewID(es);
 	es->id = id;
 	*esHandle = id;
 

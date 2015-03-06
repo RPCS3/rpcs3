@@ -121,7 +121,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 		};
 	}
 
-	*ih = sys_interrupt.GetNewId(handler, TYPE_INTR_SERVICE_HANDLE);
+	*ih = Emu.GetIdManager().GetNewID(handler, TYPE_INTR_SERVICE_HANDLE);
 	ppu.Exec();
 
 	return CELL_OK;
@@ -132,7 +132,7 @@ s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 	sys_interrupt.Todo("_sys_interrupt_thread_disestablish(ih=%d)", ih);
 
 	std::shared_ptr<interrupt_handler_t> handler;
-	if (!sys_interrupt.CheckId(ih, handler))
+	if (!Emu.GetIdManager().GetIDData(ih, handler))
 	{
 		return CELL_ESRCH;
 	}

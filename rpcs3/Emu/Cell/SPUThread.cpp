@@ -991,15 +991,13 @@ void SPUThread::stop_and_signal(u32 code)
 		}
 
 		// protocol is ignored in current implementation
-		queue->waiters++;
-		assert(queue->waiters > 0);
+		queue->waiters++; assert(queue->waiters > 0);
 
 		while (queue->events.empty())
 		{
 			if (queue->waiters < 0)
 			{
-				queue->waiters--;
-				assert(queue->waiters < 0);
+				queue->waiters--; assert(queue->waiters < 0);
 				ch_in_mbox.push_uncond(CELL_ECANCELED);
 				return;
 			}
@@ -1020,8 +1018,7 @@ void SPUThread::stop_and_signal(u32 code)
 		ch_in_mbox.push_uncond((u32)event.data3);
 		
 		queue->events.pop_front();
-		queue->waiters--;
-		assert(queue->waiters >= 0);
+		queue->waiters--; assert(queue->waiters >= 0);
 
 		if (queue->events.size())
 		{
@@ -1050,7 +1047,8 @@ void SPUThread::stop_and_signal(u32 code)
 		LV2_LOCK;
 
 		std::shared_ptr<spu_group_t> group = tg.lock();
-		if (group)
+
+		if (!group)
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_group_exit(status=0x%x): invalid group", value);
 			throw __FUNCTION__;

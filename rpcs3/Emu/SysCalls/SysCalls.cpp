@@ -33,14 +33,6 @@
 
 #include "SysCalls.h"
 
-namespace detail
-{
-	bool CheckIdID(u32 id, ID*& _id, const std::string &name)
-	{
-		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == name;
-	}
-}
-
 void null_func(PPUThread& CPU);
 
 const int kSyscallTableLength = 1024;
@@ -951,14 +943,4 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 	}
 
 	CPU.m_last_syscall = old_last_syscall;
-}
-
-IdManager& SysCallBase::GetIdManager() const
-{
-	return Emu.GetIdManager();
-}
-
-bool SysCallBase::RemoveId(u32 id)
-{
-	return Emu.GetIdManager().RemoveID(id);
 }
