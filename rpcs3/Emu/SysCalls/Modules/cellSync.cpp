@@ -32,19 +32,20 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 
 	// prx: set zero and sync
 	mutex->data.exchange({});
+
 	return CELL_OK;
 }
 
 s32 cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexInitialize(mutex_addr=0x%x)", mutex.addr());
+	cellSync.Log("cellSyncMutexInitialize(mutex=*0x%x)", mutex);
 
 	return syncMutexInitialize(mutex);
 }
 
 s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexLock(mutex_addr=0x%x)", mutex.addr());
+	cellSync.Log("cellSyncMutexLock(mutex=*0x%x)", mutex);
 
 	if (!mutex)
 	{
@@ -70,12 +71,13 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 
 	// prx: sync
 	mutex->data.read_sync();
+
 	return CELL_OK;
 }
 
 s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexTryLock(mutex_addr=0x%x)", mutex.addr());
+	cellSync.Log("cellSyncMutexTryLock(mutex=*0x%x)", mutex);
 
 	if (!mutex)
 	{
@@ -99,7 +101,7 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 
 s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 {
-	cellSync.Log("cellSyncMutexUnlock(mutex_addr=0x%x)", mutex.addr());
+	cellSync.Log("cellSyncMutexUnlock(mutex=*0x%x)", mutex);
 
 	if (!mutex)
 	{
@@ -116,6 +118,7 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 	});
 
 	g_sync_mutex_wm.notify(mutex.addr());
+
 	return CELL_OK;
 }
 
@@ -136,12 +139,13 @@ s32 syncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 
 	// prx: zeroize first u16, write total_count in second u16 and sync
 	barrier->data.exchange({ be_t<s16>::make(0), be_t<s16>::make(total_count) });
+
 	return CELL_OK;
 }
 
 s32 cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 {
-	cellSync.Log("cellSyncBarrierInitialize(barrier_addr=0x%x, total_count=%d)", barrier.addr(), total_count);
+	cellSync.Log("cellSyncBarrierInitialize(barrier=*0x%x, total_count=%d)", barrier, total_count);
 
 	return syncBarrierInitialize(barrier, total_count);
 }
@@ -149,24 +153,26 @@ s32 cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
 s32 syncBarrierTryNotifyOp(CellSyncBarrier::data_t& barrier)
 {
 	// prx: extract m_value (repeat if < 0), increase, compare with second s16, set sign bit if equal, insert it back
-	s16 value = (s16)barrier.m_value;
+	s16 value = barrier.m_value;
+
 	if (value < 0)
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
 
-	value++;
-	if (value == (s16)barrier.m_count)
+	if (++value == barrier.m_count)
 	{
 		value |= 0x8000;
 	}
+
 	barrier.m_value = value;
+
 	return CELL_OK;
 };
 
 s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 {
-	cellSync.Log("cellSyncBarrierNotify(barrier_addr=0x%x)", barrier.addr());
+	cellSync.Log("cellSyncBarrierNotify(barrier=*0x%x)", barrier);
 
 	if (!barrier)
 	{
@@ -183,12 +189,13 @@ s32 cellSyncBarrierNotify(vm::ptr<CellSyncBarrier> barrier)
 	});
 
 	g_sync_barrier_wait_wm.notify(barrier.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 {
-	cellSync.Log("cellSyncBarrierTryNotify(barrier_addr=0x%x)", barrier.addr());
+	cellSync.Log("cellSyncBarrierTryNotify(barrier=*0x%x)", barrier);
 
 	if (!barrier)
 	{
@@ -205,30 +212,33 @@ s32 cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	g_sync_barrier_wait_wm.notify(barrier.addr());
+
 	return CELL_OK;
 }
 
 s32 syncBarrierTryWaitOp(CellSyncBarrier::data_t& barrier)
 {
 	// prx: extract m_value (repeat if >= 0), decrease it, set 0 if == 0x8000, insert it back
-	s16 value = (s16)barrier.m_value;
+	s16 value = barrier.m_value;
+
 	if (value >= 0)
 	{
 		return CELL_SYNC_ERROR_BUSY;
 	}
 
-	value--;
-	if (value == (s16)0x8000)
+	if (--value == -0x8000)
 	{
 		value = 0;
 	}
+
 	barrier.m_value = value;
+
 	return CELL_OK;
 }
 
 s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 {
-	cellSync.Log("cellSyncBarrierWait(barrier_addr=0x%x)", barrier.addr());
+	cellSync.Log("cellSyncBarrierWait(barrier=*0x%x)", barrier);
 
 	if (!barrier)
 	{
@@ -245,12 +255,13 @@ s32 cellSyncBarrierWait(vm::ptr<CellSyncBarrier> barrier)
 	});
 
 	g_sync_barrier_notify_wm.notify(barrier.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 {
-	cellSync.Log("cellSyncBarrierTryWait(barrier_addr=0x%x)", barrier.addr());
+	cellSync.Log("cellSyncBarrierTryWait(barrier=*0x%x)", barrier);
 
 	if (!barrier)
 	{
@@ -267,6 +278,7 @@ s32 cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 	}
 
 	g_sync_barrier_notify_wm.notify(barrier.addr());
+
 	return CELL_OK;
 }
 
@@ -289,12 +301,13 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	rwm->m_size = be_t<u32>::make(buffer_size);
 	rwm->m_buffer = buffer;
 	rwm->data.exchange({});
+
 	return CELL_OK;
 }
 
 s32 cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer_size)
 {
-	cellSync.Log("cellSyncRwmInitialize(rwm_addr=0x%x, buffer_addr=0x%x, buffer_size=0x%x)", rwm.addr(), buffer.addr(), buffer_size);
+	cellSync.Log("cellSyncRwmInitialize(rwm=*0x%x, buffer=*0x%x, buffer_size=0x%x)", rwm, buffer, buffer_size);
 
 	return syncRwmInitialize(rwm, buffer, buffer_size);
 }
@@ -307,6 +320,7 @@ s32 syncRwmTryReadBeginOp(CellSyncRwm::data_t& rwm)
 	}
 
 	rwm.m_readers++;
+
 	return CELL_OK;
 }
 
@@ -318,12 +332,13 @@ s32 syncRwmReadEndOp(CellSyncRwm::data_t& rwm)
 	}
 
 	rwm.m_readers--;
+
 	return CELL_OK;
 }
 
 s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncRwmRead(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.addr(), buffer.addr());
+	cellSync.Log("cellSyncRwmRead(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
 	if (!rwm || !buffer)
 	{
@@ -341,7 +356,7 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	});
 
 	// copy data to buffer_addr
-	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
+	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), rwm->m_size);
 
 	// prx: decrease m_readers (return 0x8041010C if already zero)
 	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
@@ -351,12 +366,13 @@ s32 cellSyncRwmRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	}
 
 	g_sync_rwm_write_wm.notify(rwm.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncRwmTryRead(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.addr(), buffer.addr());
+	cellSync.Log("cellSyncRwmTryRead(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
 	if (!rwm || !buffer)
 	{
@@ -372,7 +388,7 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 		return res;
 	}
 
-	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), (u32)rwm->m_size);
+	memcpy(buffer.get_ptr(), rwm->m_buffer.get_ptr(), rwm->m_size);
 
 	if (s32 res = rwm->data.atomic_op(CELL_OK, syncRwmReadEndOp))
 	{
@@ -380,6 +396,7 @@ s32 cellSyncRwmTryRead(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer)
 	}
 
 	g_sync_rwm_write_wm.notify(rwm.addr());
+
 	return CELL_OK;
 }
 
@@ -391,12 +408,13 @@ s32 syncRwmTryWriteBeginOp(CellSyncRwm::data_t& rwm)
 	}
 
 	rwm.m_writers = 1;
+
 	return CELL_OK;
 }
 
 s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 {
-	cellSync.Log("cellSyncRwmWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.addr(), buffer.addr());
+	cellSync.Log("cellSyncRwmWrite(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
 	if (!rwm || !buffer)
 	{
@@ -419,17 +437,19 @@ s32 cellSyncRwmWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	});
 
 	// prx: copy data from buffer_addr
-	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
+	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
 	rwm->data.exchange({});
+
 	g_sync_rwm_read_wm.notify(rwm.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 {
-	cellSync.Log("cellSyncRwmTryWrite(rwm_addr=0x%x, buffer_addr=0x%x)", rwm.addr(), buffer.addr());
+	cellSync.Log("cellSyncRwmTryWrite(rwm=*0x%x, buffer=*0x%x)", rwm, buffer);
 
 	if (!rwm || !buffer)
 	{
@@ -447,11 +467,13 @@ s32 cellSyncRwmTryWrite(vm::ptr<CellSyncRwm> rwm, vm::ptr<const void> buffer)
 	}
 
 	// prx: copy data from buffer_addr
-	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), (u32)rwm->m_size);
+	memcpy(rwm->m_buffer.get_ptr(), buffer.get_ptr(), rwm->m_size);
 
 	// prx: sync and zeroize m_readers and m_writers
 	rwm->data.exchange({});
+
 	g_sync_rwm_read_wm.notify(rwm.addr());
+
 	return CELL_OK;
 }
 
@@ -479,20 +501,22 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	queue->m_depth = be_t<u32>::make(depth);
 	queue->m_buffer.set(buffer.addr());
 	queue->data.exchange({});
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth)
 {
-	cellSync.Log("cellSyncQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x)", queue.addr(), buffer.addr(), size, depth);
+	cellSync.Log("cellSyncQueueInitialize(queue=*0x%x, buffer=*0x%x, size=0x%x, depth=0x%x)", queue, buffer, size, depth);
 
 	return syncQueueInitialize(queue, buffer, size, depth);
 }
 
 s32 syncQueueTryPushOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 {
-	const u32 v1 = (u32)queue.m_v1;
-	const u32 v2 = (u32)queue.m_v2;
+	const u32 v1 = queue.m_v1;
+	const u32 v2 = queue.m_v2;
+
 	// prx: compare 5th u8 with zero (break if not zero)
 	// prx: compare (second u32 (u24) + first u8) with depth (break if greater or equal)
 	if ((v2 >> 24) || ((v2 & 0xffffff) + (v1 >> 24)) >= depth)
@@ -506,12 +530,13 @@ s32 syncQueueTryPushOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 	position = (v1 & 0xffffff);
 	queue.m_v1 = (v1 & 0xff000000) | ((position + 1) % depth);
 	queue.m_v2 = (1 << 24) | ((v2 & 0xffffff) + 1);
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 {
-	cellSync.Log("cellSyncQueuePush(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueuePush(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -522,10 +547,10 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
@@ -541,13 +566,15 @@ s32 cellSyncQueuePush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 
 	// prx: atomically insert 0 in 5th u8
 	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffer)
 {
-	cellSync.Log("cellSyncQueueTryPush(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueueTryPush(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -558,10 +585,10 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -574,15 +601,19 @@ s32 cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::ptr<const void> buffe
 	}
 
 	memcpy(&queue->m_buffer[position * size], buffer.get_ptr(), size);
+
 	queue->data &= { be_t<u32>::make(~0), be_t<u32>::make(0xffffff) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 syncQueueTryPopOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 {
-	const u32 v1 = (u32)queue.m_v1;
-	const u32 v2 = (u32)queue.m_v2;
+	const u32 v1 = queue.m_v1;
+	const u32 v2 = queue.m_v2;
+
 	// prx: extract first u8, repeat if not zero
 	// prx: extract second u32 (u24), subtract 5th u8, compare with zero, repeat if less or equal
 	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
@@ -596,12 +627,13 @@ s32 syncQueueTryPopOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 	queue.m_v1 = 0x1000000 | v1;
 	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
 	queue.m_v2 = (v2 & 0xff000000) | ((v2 & 0xffffff) - 1);
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncQueuePop(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueuePop(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -612,10 +644,10 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 	
 	u32 position;
 	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
@@ -631,13 +663,15 @@ s32 cellSyncQueuePop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 
 	// prx: atomically insert 0 in first u8
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncQueueTryPop(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueueTryPop(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -648,10 +682,10 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -664,15 +698,19 @@ s32 cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
+
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 syncQueueTryPeekOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 {
-	const u32 v1 = (u32)queue.m_v1;
-	const u32 v2 = (u32)queue.m_v2;
+	const u32 v1 = queue.m_v1;
+	const u32 v2 = queue.m_v2;
+
 	if ((v1 >> 24) || ((v2 & 0xffffff) <= (v2 >> 24)))
 	{
 		return CELL_SYNC_ERROR_BUSY;
@@ -680,12 +718,13 @@ s32 syncQueueTryPeekOp(CellSyncQueue::data_t& queue, u32 depth, u32& position)
 
 	queue.m_v1 = 0x1000000 | v1;
 	position = ((v1 & 0xffffff) + depth - (v2 & 0xffffff)) % depth;
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncQueuePeek(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueuePeek(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -696,10 +735,10 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth, &position]()
@@ -711,14 +750,17 @@ s32 cellSyncQueuePeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	});
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
+
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 {
-	cellSync.Log("cellSyncQueueTryPeek(queue_addr=0x%x, buffer_addr=0x%x)", queue.addr(), buffer.addr());
+	cellSync.Log("cellSyncQueueTryPeek(queue=*0x%x, buffer=*0x%x)", queue, buffer);
 
 	if (!queue || !buffer)
 	{
@@ -729,10 +771,10 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 size = (u32)queue->m_size;
-	const u32 depth = (u32)queue->m_depth;
+	const u32 size = queue->m_size;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	u32 position;
 	s32 res = queue->data.atomic_op(CELL_OK, [depth, &position](CellSyncQueue::data_t& queue) -> s32
@@ -745,14 +787,17 @@ s32 cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffer)
 	}
 
 	memcpy(buffer.get_ptr(), &queue->m_buffer[position * size], size);
+
 	queue->data &= { be_t<u32>::make(0xffffff), be_t<u32>::make(~0) };
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
 s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 {
-	cellSync.Log("cellSyncQueueSize(queue_addr=0x%x)", queue.addr());
+	cellSync.Log("cellSyncQueueSize(queue=*0x%x)", queue);
 
 	if (!queue)
 	{
@@ -764,16 +809,16 @@ s32 cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 	}
 
 	const auto data = queue->data.read_relaxed();
-	const u32 count = (u32)data.m_v2 & 0xffffff;
-	const u32 depth = (u32)queue->m_depth;
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && count <= depth);
+	const u32 count = data.m_v2 & 0xffffff;
+	const u32 depth = queue->m_depth;
+	assert((data.m_v1 & 0xffffff) <= depth && count <= depth);
 
 	return count;
 }
 
 s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 {
-	cellSync.Log("cellSyncQueueClear(queue_addr=0x%x)", queue.addr());
+	cellSync.Log("cellSyncQueueClear(queue=*0x%x)", queue);
 
 	if (!queue)
 	{
@@ -784,16 +829,17 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 depth = (u32)queue->m_depth;
+	const u32 depth = queue->m_depth;
 	const auto data = queue->data.read_relaxed();
-	assert(((u32)data.m_v1 & 0xffffff) <= depth && ((u32)data.m_v2 & 0xffffff) <= depth);
+	assert((data.m_v1 & 0xffffff) <= depth && (data.m_v2 & 0xffffff) <= depth);
 
 	// TODO: optimize if possible
 	g_sync_queue_wm.wait_op(queue.addr(), [queue, depth]()
 	{
 		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 		{
-			const u32 v1 = (u32)queue.m_v1;
+			const u32 v1 = queue.m_v1;
+
 			// prx: extract first u8, repeat if not zero, insert 1
 			if (v1 >> 24)
 			{
@@ -801,6 +847,7 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 			}
 
 			queue.m_v1 = v1 | 0x1000000;
+
 			return CELL_OK;
 		});
 	});
@@ -809,7 +856,8 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 	{
 		return CELL_OK == queue->data.atomic_op(CELL_OK, [depth](CellSyncQueue::data_t& queue) -> s32
 		{
-			const u32 v2 = (u32)queue.m_v2;
+			const u32 v2 = queue.m_v2;
+
 			// prx: extract 5th u8, repeat if not zero, insert 1
 			if (v2 >> 24)
 			{
@@ -817,12 +865,15 @@ s32 cellSyncQueueClear(vm::ptr<CellSyncQueue> queue)
 			}
 
 			queue.m_v2 = v2 | 0x1000000;
+
 			return CELL_OK;
 		});
 	});
 
 	queue->data.exchange({});
+
 	g_sync_queue_wm.notify(queue.addr());
+
 	return CELL_OK;
 }
 
@@ -943,13 +994,13 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 
 	if (old_value == 2)
 	{
-		if ((u32)queue->m_size != size || (u32)queue->m_depth != depth || queue->m_buffer.addr() != buffer.addr())
+		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer.addr().value() != buffer.addr())
 		{
 			return CELL_SYNC_ERROR_INVAL;
 		}
 		if (sdk_ver > 0x17ffff)
 		{
-			if (queue->m_eaSignal.addr() != eaSignal.addr() || (u32)queue->m_direction != direction)
+			if (queue->m_eaSignal.addr() != eaSignal.addr() || queue->m_direction != direction)
 			{
 				return CELL_SYNC_ERROR_INVAL;
 			}
@@ -971,8 +1022,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 
 s32 cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 size, u32 depth, CellSyncQueueDirection direction, vm::ptr<void> eaSignal)
 {
-	cellSync.Warning("cellSyncLFQueueInitialize(queue_addr=0x%x, buffer_addr=0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal_addr=0x%x)",
-		queue.addr(), buffer.addr(), size, depth, direction, eaSignal.addr());
+	cellSync.Warning("cellSyncLFQueueInitialize(queue=*0x%x, buffer=*0x%x, size=0x%x, depth=0x%x, direction=%d, eaSignal=*0x%x)", queue, buffer, size, depth, direction, eaSignal);
 
 	return syncLFQueueInitialize(queue, buffer, size, depth, direction, eaSignal);
 }
@@ -985,7 +1035,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 	}
 
 	u32 var1 = 0;
-	s32 depth = (u32)queue->m_depth;
+	s32 depth = queue->m_depth;
 	while (true)
 	{
 		while (true)
@@ -1007,7 +1057,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s32)(s16)push.m_h8;
+			s32 var2 = (s16)push.m_h8;
 			s32 res;
 			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7.data() != 0))
 			{
@@ -1036,14 +1086,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 				}
 				else if (!isBlocking)
 				{
-					res = CELL_SYNC_ERROR_AGAIN;
-					if (!push.m_h7.data() || res)
-					{
-						// TODO: This condition is always true - wrong implementation?
-						return res;
-					}
-
-					break;
+					return CELL_SYNC_ERROR_AGAIN;
 				}
 				else if (!useEventQueue)
 				{
@@ -1080,12 +1123,13 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 
 s32 _cellSyncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
-	cellSync.Warning("_cellSyncLFQueueGetPushPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
-		queue.addr(), pointer.addr(), isBlocking, useEventQueue);
+	cellSync.Warning("_cellSyncLFQueueGetPushPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
 	s32 result = syncLFQueueGetPushPointer(queue, pointer_value, isBlocking, useEventQueue);
+
 	*pointer = pointer_value;
+
 	return result;
 }
 
@@ -1097,12 +1141,13 @@ s32 syncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32
 s32 _cellSyncLFQueueGetPushPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer
-	cellSync.Todo("_cellSyncLFQueueGetPushPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
-		queue.addr(), pointer.addr(), isBlocking, useEventQueue);
+	cellSync.Todo("_cellSyncLFQueueGetPushPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
 	s32 result = syncLFQueueGetPushPointer2(queue, pointer_value, isBlocking, useEventQueue);
+
 	*pointer = pointer_value;
+
 	return result;
 }
 
@@ -1242,8 +1287,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 
 s32 _cellSyncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
-	cellSync.Warning("_cellSyncLFQueueCompletePushPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
-		queue.addr(), pointer, fpSendSignal.addr());
+	cellSync.Warning("_cellSyncLFQueueCompletePushPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
 	return syncLFQueueCompletePushPointer(queue, pointer, fpSendSignal);
 }
@@ -1256,8 +1300,7 @@ s32 syncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer,
 s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
-	cellSync.Todo("_cellSyncLFQueueCompletePushPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x)",
-		queue.addr(), pointer, fpSendSignal.addr());
+	cellSync.Todo("_cellSyncLFQueueCompletePushPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
 	return syncLFQueueCompletePushPointer2(queue, pointer, fpSendSignal);
 }
@@ -1265,7 +1308,7 @@ s32 _cellSyncLFQueueCompletePushPointer2(vm::ptr<CellSyncLFQueue> queue, s32 poi
 s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<const void> buffer, u32 isBlocking)
 {
 	// cellSyncLFQueuePush has 1 in isBlocking param, cellSyncLFQueueTryPush has 0
-	cellSync.Warning("_cellSyncLFQueuePushBody(queue_addr=0x%x, buffer_addr=0x%x, isBlocking=%d)", queue.addr(), buffer.addr(), isBlocking);
+	cellSync.Warning("_cellSyncLFQueuePushBody(queue=*0x%x, buffer=*0x%x, isBlocking=%d)", queue, buffer, isBlocking);
 
 	if (!queue || !buffer)
 	{
@@ -1304,7 +1347,7 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 
 		if (Emu.IsStopped())
 		{
-			cellSync.Warning("_cellSyncLFQueuePushBody(queue_addr=0x%x) aborted", queue.addr());
+			cellSync.Warning("_cellSyncLFQueuePushBody(queue=*0x%x) aborted", queue);
 			return CELL_OK;
 		}
 	}
@@ -1387,14 +1430,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 				}
 				else if (!isBlocking)
 				{
-					res = CELL_SYNC_ERROR_AGAIN;
-					if (!pop.m_h3.data() || res)
-					{
-						// TODO: This condition is always true - wrong implementation?
-						return res;
-					}
-
-					break;
+					return CELL_SYNC_ERROR_AGAIN;
 				}
 				else if (!useEventQueue)
 				{
@@ -1431,12 +1467,13 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 
 s32 _cellSyncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 arg4, u32 useEventQueue)
 {
-	cellSync.Warning("_cellSyncLFQueueGetPopPointer(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, arg4=%d, useEventQueue=%d)",
-		queue.addr(), pointer.addr(), isBlocking, arg4, useEventQueue);
+	cellSync.Warning("_cellSyncLFQueueGetPopPointer(queue=*0x%x, pointer=*0x%x, isBlocking=%d, arg4=%d, useEventQueue=%d)", queue, pointer, isBlocking, arg4, useEventQueue);
 
 	s32 pointer_value;
 	s32 result = syncLFQueueGetPopPointer(queue, pointer_value, isBlocking, arg4, useEventQueue);
+
 	*pointer = pointer_value;
+
 	return result;
 }
 
@@ -1448,12 +1485,13 @@ s32 syncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 s32 _cellSyncLFQueueGetPopPointer2(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPopPointer
-	cellSync.Todo("_cellSyncLFQueueGetPopPointer2(queue_addr=0x%x, pointer_addr=0x%x, isBlocking=%d, useEventQueue=%d)",
-		queue.addr(), pointer.addr(), isBlocking, useEventQueue);
+	cellSync.Todo("_cellSyncLFQueueGetPopPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
 	s32 pointer_value;
 	s32 result = syncLFQueueGetPopPointer2(queue, pointer_value, isBlocking, useEventQueue);
+
 	*pointer = pointer_value;
+
 	return result;
 }
 
@@ -1593,8 +1631,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 s32 _cellSyncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer + unknown argument (noQueueFull taken from LFQueue2CompletePopPointer)
-	cellSync.Warning("_cellSyncLFQueueCompletePopPointer(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",
-		queue.addr(), pointer, fpSendSignal.addr(), noQueueFull);
+	cellSync.Warning("_cellSyncLFQueueCompletePopPointer(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
 	return syncLFQueueCompletePopPointer(queue, pointer, fpSendSignal, noQueueFull);
 }
@@ -1607,8 +1644,7 @@ s32 syncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
-	cellSync.Todo("_cellSyncLFQueueCompletePopPointer2(queue_addr=0x%x, pointer=%d, fpSendSignal_addr=0x%x, noQueueFull=%d)",
-		queue.addr(), pointer, fpSendSignal.addr(), noQueueFull);
+	cellSync.Todo("_cellSyncLFQueueCompletePopPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
 	return syncLFQueueCompletePopPointer2(queue, pointer, fpSendSignal, noQueueFull);
 }
@@ -1616,7 +1652,7 @@ s32 _cellSyncLFQueueCompletePopPointer2(vm::ptr<CellSyncLFQueue> queue, s32 poin
 s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer, u32 isBlocking)
 {
 	// cellSyncLFQueuePop has 1 in isBlocking param, cellSyncLFQueueTryPop has 0
-	cellSync.Warning("_cellSyncLFQueuePopBody(queue_addr=0x%x, buffer_addr=0x%x, isBlocking=%d)", queue.addr(), buffer.addr(), isBlocking);
+	cellSync.Warning("_cellSyncLFQueuePopBody(queue=*0x%x, buffer=*0x%x, isBlocking=%d)", queue, buffer, isBlocking);
 
 	if (!queue || !buffer)
 	{
@@ -1654,7 +1690,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 
 		if (Emu.IsStopped())
 		{
-			cellSync.Warning("_cellSyncLFQueuePopBody(queue_addr=0x%x) aborted", queue.addr());
+			cellSync.Warning("_cellSyncLFQueuePopBody(queue=*0x%x) aborted", queue);
 			return CELL_OK;
 		}
 	}
@@ -1680,7 +1716,7 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 
 s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 {
-	cellSync.Warning("cellSyncLFQueueClear(queue_addr=0x%x)", queue.addr());
+	cellSync.Warning("cellSyncLFQueueClear(queue=*0x%x)", queue);
 
 	if (!queue)
 	{
@@ -1730,7 +1766,7 @@ s32 cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 
 s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size)
 {
-	cellSync.Warning("cellSyncLFQueueSize(queue_addr=0x%x, size_addr=0x%x)", queue.addr(), size.addr());
+	cellSync.Warning("cellSyncLFQueueSize(queue=*0x%x, size=*0x%x)", queue, size);
 
 	if (!queue || !size)
 	{
@@ -1765,7 +1801,7 @@ s32 cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size)
 
 s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 {
-	cellSync.Log("cellSyncLFQueueDepth(queue_addr=0x%x, depth_addr=0x%x)", queue.addr(), depth.addr());
+	cellSync.Log("cellSyncLFQueueDepth(queue=*0x%x, depth=*0x%x)", queue, depth);
 
 	if (!queue || !depth)
 	{
@@ -1782,7 +1818,7 @@ s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 
 s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u32> ppSignal)
 {
-	cellSync.Log("_cellSyncLFQueueGetSignalAddress(queue_addr=0x%x, ppSignal_addr=0x%x)", queue.addr(), ppSignal.addr());
+	cellSync.Log("_cellSyncLFQueueGetSignalAddress(queue=*0x%x, ppSignal=*0x%x)", queue, ppSignal);
 
 	if (!queue || !ppSignal)
 	{
@@ -1799,7 +1835,7 @@ s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::p
 
 s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<CellSyncQueueDirection> direction)
 {
-	cellSync.Log("cellSyncLFQueueGetDirection(queue_addr=0x%x, direction_addr=0x%x)", queue.addr(), direction.addr());
+	cellSync.Log("cellSyncLFQueueGetDirection(queue=*0x%x, direction=*0x%x)", queue, direction);
 
 	if (!queue || !direction)
 	{
@@ -1816,7 +1852,7 @@ s32 cellSyncLFQueueGetDirection(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<Ce
 
 s32 cellSyncLFQueueGetEntrySize(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u32> entry_size)
 {
-	cellSync.Log("cellSyncLFQueueGetEntrySize(queue_addr=0x%x, entry_size_addr=0x%x)", queue.addr(), entry_size.addr());
+	cellSync.Log("cellSyncLFQueueGetEntrySize(queue=*0x%x, entry_size=*0x%x)", queue, entry_size);
 
 	if (!queue || !entry_size)
 	{
@@ -1838,7 +1874,7 @@ s32 syncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 
 s32 _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	cellSync.Todo("_cellSyncLFQueueAttachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
+	cellSync.Todo("_cellSyncLFQueueAttachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
 	return syncLFQueueAttachLv2EventQueue(spus, num, queue);
 }
@@ -1850,7 +1886,7 @@ s32 syncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncL
 
 s32 _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
-	cellSync.Todo("_cellSyncLFQueueDetachLv2EventQueue(spus_addr=0x%x, num=%d, queue_addr=0x%x)", spus.addr(), num, queue.addr());
+	cellSync.Todo("_cellSyncLFQueueDetachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
 	return syncLFQueueDetachLv2EventQueue(spus, num, queue);
 }
