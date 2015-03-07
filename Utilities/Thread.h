@@ -103,65 +103,54 @@ class slw_shared_mutex_t
 
 };
 
-class waiter_map_t
+struct waiter_map_t
 {
-	// TODO: optimize (use custom lightweight readers-writer lock)
-	std::mutex m_mutex;
+	static const size_t size = 32;
 
-	struct waiter_t
-	{
-		u64 signal_id;
-		NamedThreadBase* thread;
-	};
+	std::array<std::mutex, size> mutex;
+	std::array<std::condition_variable, size> cv;
 
-	std::vector<waiter_t> m_waiters;
+	const std::string name;
 
-	std::string m_name;
-
-	struct waiter_reg_t
-	{
-		NamedThreadBase* thread;
-		const u64 signal_id;
-		waiter_map_t& map;
-
-		waiter_reg_t(waiter_map_t& map, u64 signal_id)
-			: thread(nullptr)
-			, signal_id(signal_id)
-			, map(map)
-		{
-		}
-
-		~waiter_reg_t();
-
-		void init();
-	};
-
-	bool is_stopped(u64 signal_id);
-
-public:
 	waiter_map_t(const char* name)
-		: m_name(name)
+		: name(name)
 	{
 	}
 
+	bool is_stopped(u64 signal_id);
+
 	// wait until waiter_func() returns true, signal_id is an arbitrary number
-	template<typename WT> __forceinline void wait_op(u64 signal_id, const WT waiter_func)
+	template<typename S, typename WT> __forceinline __safebuffers void wait_op(const S& signal_id, const WT waiter_func)
 	{
-		// register waiter
-		waiter_reg_t waiter(*this, signal_id);
+		// generate hash
+		const auto hash = std::hash<S>()(signal_id) % size;
+
+		// set mutex locker
+		std::unique_lock<std::mutex> locker(mutex[hash], std::defer_lock);
 
 		// check the condition or if the emulator is stopped
 		while (!waiter_func() && !is_stopped(signal_id))
 		{
-			// initialize waiter (only once)
-			waiter.init();
-			// wait for 1 ms or until signal arrived
-			waiter.thread->WaitForAnySignal(1);
+			// lock the mutex and initialize waiter (only once)
+			if (!locker.owns_lock())
+			{
+				locker.lock();
+			}
+			
+			// wait on appropriate condition variable for 1 ms or until signal arrived
+			cv[hash].wait_for(locker, std::chrono::milliseconds(1));
 		}
 	}
 
 	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
-	void notify(u64 signal_id);
+	template<typename S> __forceinline void notify(const S& signal_id)
+	{
+		// generate hash
+		const auto hash = std::hash<S>()(signal_id) % size;
+
+		// signal appropriate condition variable
+		cv[hash].notify_all();
+	}
 };
 
 extern const std::function<bool()> SQUEUE_ALWAYS_EXIT;

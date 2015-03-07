@@ -1472,61 +1472,10 @@ bool waiter_map_t::is_stopped(u64 signal_id)
 {
 	if (Emu.IsStopped())
 	{
-		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (signal_id=0x%llx)", m_name.c_str(), signal_id);
+		LOG_WARNING(Log::HLE, "%s: waiter_op() aborted (signal_id=0x%llx)", name.c_str(), signal_id);
 		return true;
 	}
 	return false;
-}
-
-void waiter_map_t::waiter_reg_t::init()
-{
-	if (!thread)
-	{
-		thread = GetCurrentNamedThread();
-
-		std::lock_guard<std::mutex> lock(map.m_mutex);
-
-		// add waiter
-		map.m_waiters.push_back({ signal_id, thread });
-	}
-}
-
-waiter_map_t::waiter_reg_t::~waiter_reg_t()
-{
-	if (thread)
-	{
-		std::lock_guard<std::mutex> lock(map.m_mutex);
-
-		// remove waiter
-		for (s64 i = map.m_waiters.size() - 1; i >= 0; i--)
-		{
-			if (map.m_waiters[i].signal_id == signal_id && map.m_waiters[i].thread == thread)
-			{
-				map.m_waiters.erase(map.m_waiters.begin() + i);
-				return;
-			}
-		}
-
-		LOG_ERROR(HLE, "%s(): waiter not found (signal_id=0x%llx, map='%s')", __FUNCTION__, signal_id, map.m_name.c_str());
-		Emu.Pause();
-	}
-}
-
-void waiter_map_t::notify(u64 signal_id)
-{
-	if (m_waiters.size())
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		// find waiter and signal
-		for (auto& v : m_waiters)
-		{
-			if (v.signal_id == signal_id)
-			{
-				v.thread->Notify();
-			}
-		}
-	}
 }
 
 const std::function<bool()> SQUEUE_ALWAYS_EXIT = [](){ return true; };
