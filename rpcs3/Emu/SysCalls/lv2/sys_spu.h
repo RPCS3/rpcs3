@@ -1,5 +1,7 @@
 #pragma once
 
+struct event_queue_t;
+
 enum : s32
 {
 	SYS_SPU_THREAD_GROUP_TYPE_NORMAL = 0x00,
@@ -32,7 +34,7 @@ enum : u64
 	SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY = 0xFFFFFFFF53505504ull,
 };
 
-enum
+enum : u32
 {
 	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
 	SPU_THREAD_GROUP_STATUS_INITIALIZED,
@@ -54,7 +56,7 @@ enum : s32
 
 struct sys_spu_thread_group_attribute
 {
-	be_t<u32> nsize;
+	be_t<u32> nsize; // name length including NULL terminator
 	vm::bptr<const char> name;
 	be_t<s32> type;
 	be_t<u32> ct; // memory container id
@@ -121,35 +123,54 @@ enum : u32
 	SYS_SPU_IMAGE_DIRECT  = 1,
 };
 
-struct SpuGroupInfo
+struct spu_arg_t
 {
-	std::vector<u32> list;
-	std::atomic<u32> lock;
-	std::string m_name;
-	u32 m_id;
-	s32 m_prio;
-	s32 m_type;
-	u32 m_ct;
-	u32 m_count;
-	s32 m_state;	//SPU Thread Group State.
-	u32 m_exit_status;
-	bool m_group_exit;
+	u64 arg1;
+	u64 arg2;
+	u64 arg3;
+	u64 arg4;
+};
 
-	SpuGroupInfo(const std::string& name, u32 num, s32 prio, s32 type, u32 ct)
-		: m_name(name)
-		, m_prio(prio)
-		, m_type(type)
-		, m_ct(ct)
-		, lock(0)
-		, m_count(num)
-		, m_state(0)
-		, m_exit_status(0)
-		, m_group_exit(false)
+// SPU Thread Group Join State Flag
+enum : u32
+{
+	SPU_TGJSF_IS_JOINING = (1 << 0),
+	SPU_TGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
+	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
+};
+
+struct spu_group_t
+{
+	const std::string name;
+	const u32 num; // SPU Number
+	const s32 type; // SPU Thread Group Type
+	const u32 ct; // Memory Container Id
+
+	std::array<std::shared_ptr<CPUThread>, 256> threads; // SPU Threads
+	std::array<vm::ptr<sys_spu_image>, 256> images; // SPU Images
+	std::array<spu_arg_t, 256> args; // SPU Thread Arguments
+
+	s32 prio; // SPU Thread Group Priority
+	u32 state; // SPU Thread Group State
+	s32 exit_status; // SPU Thread Group Exit Status
+
+	std::atomic<u32> join_state; // flags used to detect exit cause
+	std::condition_variable join_cv; // used to signal waiting PPU thread
+
+	std::weak_ptr<event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::weak_ptr<event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::weak_ptr<event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+
+	spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
+		: name(name)
+		, num(num)
+		, prio(prio)
+		, type(type)
+		, ct(ct)
+		, state(SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+		, exit_status(0)
+		, join_state(0)
 	{
-		m_state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED;	//Before all the nums done, it is not initialized.
-		list.resize(256);
-		for (auto& v : list) v = 0;
-		m_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;	//Then Ready to Start. Cause Reference use New i can only place this here.
 	}
 };
 
@@ -161,22 +182,21 @@ u32 LoadSpuImage(vfsStream& stream, u32& spu_ep);
 
 // Aux
 s32 spu_image_import(sys_spu_image& img, u32 src, u32 type);
-std::shared_ptr<SpuGroupInfo> spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container);
-SPUThread* spu_thread_initialize(std::shared_ptr<SpuGroupInfo>& group, u32 spu_num, sys_spu_image& img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task = nullptr);
+u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type, u32 container);
+u32 spu_thread_initialize(u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, const std::string& name, u32 option, u64 a1, u64 a2, u64 a3, u64 a4, std::function<void(SPUThread&)> task = nullptr);
 
 // SysCalls
 s32 sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 s32 sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::ptr<const char> path);
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg);
 s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg);
+s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr);
 s32 sys_spu_thread_group_destroy(u32 id);
 s32 sys_spu_thread_group_start(u32 id);
 s32 sys_spu_thread_group_suspend(u32 id);
 s32 sys_spu_thread_group_resume(u32 id);
 s32 sys_spu_thread_group_yield(u32 id);	
-s32 sys_spu_thread_group_terminate(u32 id, int value);
-s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, int prio, vm::ptr<sys_spu_thread_group_attribute> attr);
-s32 sys_spu_thread_create(vm::ptr<u32> thread_id, vm::ptr<u32> entry, u64 arg, int prio, u32 stacksize, u64 flags, u32 threadname_addr);
+s32 sys_spu_thread_group_terminate(u32 id, s32 value);
 s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status);
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et);
@@ -194,7 +214,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
 s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status);
 
-s32 sys_raw_spu_create(vm::ptr<u32> id, u32 attr_addr);
+s32 sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr);
 s32 sys_raw_spu_destroy(u32 id);
 s32 sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
 s32 sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);

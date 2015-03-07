@@ -6,11 +6,11 @@
 #include "Emu/Io/Keyboard.h"
 #include "cellKb.h"
 
-extern Module *sys_io;
+extern Module sys_io;
 
 int cellKbInit(u32 max_connect)
 {
-	sys_io->Warning("cellKbInit(max_connect=%d)", max_connect);
+	sys_io.Warning("cellKbInit(max_connect=%d)", max_connect);
 
 	if (Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;
@@ -24,7 +24,7 @@ int cellKbInit(u32 max_connect)
 
 int cellKbEnd()
 {
-	sys_io->Log("cellKbEnd()");
+	sys_io.Log("cellKbEnd()");
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -35,7 +35,7 @@ int cellKbEnd()
 
 int cellKbClearBuf(u32 port_no)
 {
-	sys_io->Log("cellKbClearBuf(port_no=%d)", port_no);
+	sys_io.Log("cellKbClearBuf(port_no=%d)", port_no);
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -50,7 +50,7 @@ int cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io->Log("cellKbCnvRawCode(arrange=%d,mkey=%d,led=%d,rawcode=%d)", arrange, mkey, led, rawcode);
+	sys_io.Log("cellKbCnvRawCode(arrange=%d,mkey=%d,led=%d,rawcode=%d)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if (rawcode <= 0x03 || rawcode == 0x29 || rawcode == 0x35 || (rawcode >= 0x39 && rawcode <= 0x53) || rawcode == 0x65 || rawcode == 0x88 || rawcode == 0x8A || rawcode == 0x8B)
@@ -96,7 +96,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 int cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
-	sys_io->Log("cellKbGetInfo(info_addr=0x%x)", info.addr());
+	sys_io.Log("cellKbGetInfo(info_addr=0x%x)", info.addr());
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -116,7 +116,7 @@ int cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 int cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
-	sys_io->Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.addr());
+	sys_io.Log("cellKbRead(port_no=%d,info_addr=0x%x)", port_no, data.addr());
 
 	const std::vector<Keyboard>& keyboards = Emu.GetKeyboardManager().GetKeyboards();
 	if (!Emu.GetKeyboardManager().IsInited())
@@ -142,7 +142,7 @@ int cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 int cellKbSetCodeType(u32 port_no, u32 type)
 {
-	sys_io->Log("cellKbSetCodeType(port_no=%d,type=%d)", port_no, type);
+	sys_io.Log("cellKbSetCodeType(port_no=%d,type=%d)", port_no, type);
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -160,7 +160,7 @@ int cellKbSetLEDStatus(u32 port_no, u8 led)
 
 int cellKbSetReadMode(u32 port_no, u32 rmode)
 {
-	sys_io->Log("cellKbSetReadMode(port_no=%d,rmode=%d)", port_no, rmode);
+	sys_io.Log("cellKbSetReadMode(port_no=%d,rmode=%d)", port_no, rmode);
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -173,7 +173,7 @@ int cellKbSetReadMode(u32 port_no, u32 rmode)
 
 int cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
-	sys_io->Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config.addr());
+	sys_io.Log("cellKbGetConfiguration(port_no=%d,config_addr=0x%x)", port_no, config.addr());
 
 	if (!Emu.GetKeyboardManager().IsInited())
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -188,14 +188,14 @@ int cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 void cellKb_init()
 {
-	sys_io->AddFunc(0x433f6ec0, cellKbInit);
-	sys_io->AddFunc(0xbfce3285, cellKbEnd);
-	sys_io->AddFunc(0x2073b7f6, cellKbClearBuf);
-	sys_io->AddFunc(0x4ab1fa77, cellKbCnvRawCode);
-	sys_io->AddFunc(0x2f1774d5, cellKbGetInfo);
-	sys_io->AddFunc(0xff0a21b7, cellKbRead);
-	sys_io->AddFunc(0xa5f85e4d, cellKbSetCodeType);
-	sys_io->AddFunc(0x3f72c56e, cellKbSetLEDStatus);
-	sys_io->AddFunc(0xdeefdfa7, cellKbSetReadMode);
-	sys_io->AddFunc(0x1f71ecbe, cellKbGetConfiguration);
+	REG_FUNC(sys_io, cellKbInit);
+	REG_FUNC(sys_io, cellKbEnd);
+	REG_FUNC(sys_io, cellKbClearBuf);
+	REG_FUNC(sys_io, cellKbCnvRawCode);
+	REG_FUNC(sys_io, cellKbGetInfo);
+	REG_FUNC(sys_io, cellKbRead);
+	REG_FUNC(sys_io, cellKbSetCodeType);
+	REG_FUNC(sys_io, cellKbSetLEDStatus);
+	REG_FUNC(sys_io, cellKbSetReadMode);
+	REG_FUNC(sys_io, cellKbGetConfiguration);
 }

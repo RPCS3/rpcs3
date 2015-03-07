@@ -1030,6 +1030,10 @@ private:
 		
 		Write(fmt::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
+	void HACK(u32 index)
+	{
+		Write(fmt::Format("hack %d", index));
+	}
 	void SC(u32 lev)
 	{
 		switch (lev)

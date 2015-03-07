@@ -6,7 +6,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "Emu/SysCalls/Modules.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
@@ -20,14 +19,14 @@ extern void ppu_free_tls(u32 thread);
 
 PPUThread& GetCurrentPPUThread()
 {
-	PPCThread* thread = GetCurrentPPCThread();
+	CPUThread* thread = GetCurrentCPUThread();
 
 	if(!thread || thread->GetType() != CPU_THREAD_PPU) throw std::string("GetCurrentPPUThread: bad thread");
 
 	return *(PPUThread*)thread;
 }
 
-PPUThread::PPUThread() : PPCThread(CPU_THREAD_PPU)
+PPUThread::PPUThread() : CPUThread(CPU_THREAD_PPU)
 {
 	owned_mutexes = 0;
 	Reset();
@@ -40,8 +39,6 @@ PPUThread::~PPUThread()
 
 void PPUThread::DoReset()
 {
-	PPCThread::DoReset();
-
 	//reset regs
 	memset(VPR,  0, sizeof(VPR));
 	memset(FPR,  0, sizeof(FPR));
@@ -56,8 +53,6 @@ void PPUThread::DoReset()
 	FPSCR.FPSCR = 0;
 	VSCR.VSCR   = 0;
 	VRSAVE      = 0;
-
-	cycle = 0;
 }
 
 void PPUThread::InitRegs()
@@ -73,7 +68,7 @@ void PPUThread::InitRegs()
 	//GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = ppu_get_tls(GetId()) + 0x7000; // 0x7000 is usually subtracted from r13 to access first TLS element (details are not clear)
 
-	LR = Emu.GetCPUThreadExit();
+	LR = 0;
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
@@ -189,7 +184,7 @@ u64 PPUThread::GetStackArg(s32 i)
 	return vm::read64(vm::cast(GPR[1] + 0x70 + 0x8 * (i - 9)));
 }
 
-u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
+void PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
@@ -212,8 +207,6 @@ u64 PPUThread::FastCall2(u32 addr, u32 rtoc)
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
-
-	return GPR[3];
 }
 
 void PPUThread::FastStop()
@@ -235,7 +228,7 @@ void PPUThread::Task()
 
 ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 prio)
 {
-	thread = &Emu.GetCPU().AddThread(CPU_THREAD_PPU);
+	thread = Emu.GetCPU().AddThread(CPU_THREAD_PPU);
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
@@ -284,7 +277,7 @@ ppu_thread& ppu_thread::gpr(uint index, u64 value)
 {
 	assert(index < 32);
 
-	static_cast<PPUThread*>(thread)->GPR[index] = value;
+	static_cast<PPUThread&>(*thread).GPR[index] = value;
 
 	return *this;
 }

@@ -21,7 +21,6 @@ class CallbackManager;
 class CPUThread;
 class EventManager;
 class ModuleManager;
-class StaticFuncManager;
 class SyncPrimManager;
 struct VFS;
 
@@ -62,14 +61,6 @@ public:
 	u32 GetTLSMemsz() const { return tls_memsz; }
 };
 
-class ModuleInitializer
-{
-public:
-	ModuleInitializer();
-
-	virtual void Init() = 0;
-};
-
 class Emulator
 {
 	enum Mode
@@ -83,14 +74,12 @@ class Emulator
 	uint m_mode;
 
 	u32 m_rsx_callback;
-	u32 m_cpu_thr_exit;
 	u32 m_cpu_thr_stop;
-	std::vector<std::unique_ptr<ModuleInitializer>> m_modules_init;
 
 	std::vector<u64> m_break_points;
 	std::vector<u64> m_marked_points;
 
-	std::recursive_mutex m_core_mutex;
+	std::mutex m_core_mutex;
 
 	CPUThreadManager* m_thread_manager;
 	PadManager* m_pad_manager;
@@ -101,7 +90,6 @@ class Emulator
 	AudioManager* m_audio_manager;
 	CallbackManager* m_callback_manager;
 	EventManager* m_event_manager;
-	StaticFuncManager* m_sfunc_manager;
 	ModuleManager* m_module_manager;
 	SyncPrimManager* m_sync_prim_manager;
 	VFS* m_vfs;
@@ -115,7 +103,6 @@ public:
 	std::string m_emu_path;
 	std::string m_title_id;
 	std::string m_title;
-	s32 m_sdk_version;
 
 	Emulator();
 	~Emulator();
@@ -135,12 +122,12 @@ public:
 		return m_emu_path;
 	}
 
-	std::string GetTitleID() const
+	const std::string& GetTitleID() const
 	{
 		return m_title_id;
 	}
 
-	std::string GetTitle() const
+	const std::string& GetTitle() const
 	{
 		return m_title;
 	}
@@ -150,7 +137,7 @@ public:
 		m_emu_path = path;
 	}
 
-	std::recursive_mutex& GetCoreMutex()   { return m_core_mutex; }
+	std::mutex&       GetCoreMutex()       { return m_core_mutex; }
 
 	CPUThreadManager& GetCPU()             { return *m_thread_manager; }
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
@@ -164,14 +151,8 @@ public:
 	std::vector<u64>& GetBreakPoints()     { return m_break_points; }
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
-	StaticFuncManager& GetSFuncManager()   { return *m_sfunc_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
 	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
-
-	void AddModuleInit(std::unique_ptr<ModuleInitializer> m)
-	{
-		m_modules_init.push_back(std::move(m));
-	}
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
@@ -181,11 +162,6 @@ public:
 	void SetRSXCallback(u32 addr)
 	{
 		m_rsx_callback = addr;
-	}
-
-	void SetCPUThreadExit(u32 addr)
-	{
-		m_cpu_thr_exit = addr;
 	}
 
 	void SetCPUThreadStop(u32 addr)
@@ -200,9 +176,9 @@ public:
 	u32 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
 
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
+	u32 GetSDKVersion() { return m_info.GetProcParam().sdk_version; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
-	u32 GetCPUThreadExit() const { return m_cpu_thr_exit; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }
 
 	void CheckStatus();
@@ -223,7 +199,7 @@ public:
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
-#define LV2_LOCK(x) std::lock_guard<std::recursive_mutex> core_lock##x(Emu.GetCoreMutex())
+#define LV2_LOCK std::unique_lock<std::mutex> lv2_lock(Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

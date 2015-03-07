@@ -4,7 +4,7 @@
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/Modules.h"
 
-Module *cellSysmodule = nullptr;
+extern Module cellSysmodule;
 
 enum
 {
@@ -139,88 +139,95 @@ const char *getModuleName(int id) {
 	return "UNKNOWN MODULE";
 }
 
-int cellSysmoduleInitialize()
+s32 cellSysmoduleInitialize()
 {
-	cellSysmodule->Log("cellSysmoduleInitialize()");
+	cellSysmodule.Warning("cellSysmoduleInitialize()");
 	return CELL_OK;
 }
 
-int cellSysmoduleFinalize()
+s32 cellSysmoduleFinalize()
 {
-	cellSysmodule->Log("cellSysmoduleFinalize()");
+	cellSysmodule.Warning("cellSysmoduleFinalize()");
 	return CELL_OK;
 }
 
-int cellSysmoduleSetMemcontainer(u32 ct_id)
+s32 cellSysmoduleSetMemcontainer(u32 ct_id)
 {
-	cellSysmodule->Todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
+	cellSysmodule.Todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
-int cellSysmoduleLoadModule(u16 id)
+s32 cellSysmoduleLoadModule(u16 id)
 {
-	cellSysmodule->Warning("cellSysmoduleLoadModule(id=0x%04x: %s)", id, getModuleName(id));
+	cellSysmodule.Warning("cellSysmoduleLoadModule(id=0x%04x: %s)", id, getModuleName(id));
 
-	if (id == 0xf054)
+	if (!Emu.GetModuleManager().CheckModuleId(id))
 	{
-		cellSysmodule->Todo("cellSysmoduleLoadModule: CELL_SYSMODULE_LIBATRAC3MULTI");
+		cellSysmodule.Error("cellSysmoduleLoadModule() failed: unknown module (id=0x%04x)", id);
+		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
 	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
 	{
-		// CELL_SYSMODULE_ERROR_DUPLICATED shouldn't be returned (it breaks some games)
-		// If some game requires it yet, there probably should be a configurable hack or something.
+		// CELL_SYSMODULE_ERROR_DUPLICATED shouldn't be returned
 		m->Load();
-		return CELL_OK;
-	}
-	else
-	{
-		return CELL_SYSMODULE_ERROR_UNKNOWN;
-	}
-}
-
-int cellSysmoduleUnloadModule(u16 id)
-{
-	cellSysmodule->Warning("cellSysmoduleUnloadModule(id=0x%04x: %s)", id, getModuleName(id));
-
-	Module* m = Emu.GetModuleManager().GetModuleById(id);
-
-	if(!m)
-	{
-		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	if(!m->IsLoaded())
-	{
-		return CELL_SYSMODULE_ERROR_UNLOADED;
-	}
-
-	m->UnLoad();
 	return CELL_OK;
 }
 
-int cellSysmoduleIsLoaded(u16 id)
+s32 cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule->Warning("cellSysmoduleIsLoaded(id=0x%04x: %s)", id, getModuleName(id));
+	cellSysmodule.Warning("cellSysmoduleUnloadModule(id=0x%04x: %s)", id, getModuleName(id));
 
-	Module* m = Emu.GetModuleManager().GetModuleById(id);
-
-	if(!m)
+	if (!Emu.GetModuleManager().CheckModuleId(id))
 	{
+		cellSysmodule.Error("cellSysmoduleUnloadModule() failed: unknown module (id=0x%04x)", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
-	return m->IsLoaded() ? CELL_SYSMODULE_LOADED : CELL_SYSMODULE_ERROR_UNLOADED;
+	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
+	{
+		if (!m->IsLoaded())
+		{
+			cellSysmodule.Error("cellSysmoduleUnloadModule() failed: module not loaded (id=0x%04x)", id);
+			return CELL_SYSMODULE_ERROR_FATAL;
+		}
+
+		m->Unload();
+	}
+	
+	return CELL_OK;
 }
 
-void cellSysmodule_init(Module *pxThis)
+s32 cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule = pxThis;
+	cellSysmodule.Warning("cellSysmoduleIsLoaded(id=0x%04x: %s)", id, getModuleName(id));
 
-	cellSysmodule->AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
-	cellSysmodule->AddFunc(0x96c07adf, cellSysmoduleFinalize);
-	cellSysmodule->AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);
-	cellSysmodule->AddFunc(0x32267a31, cellSysmoduleLoadModule);
-	cellSysmodule->AddFunc(0x112a5ee9, cellSysmoduleUnloadModule);
-	cellSysmodule->AddFunc(0x5a59e258, cellSysmoduleIsLoaded);
+	if (!Emu.GetModuleManager().CheckModuleId(id))
+	{
+		cellSysmodule.Error("cellSysmoduleIsLoaded() failed: unknown module (id=0x%04x)", id);
+		return CELL_SYSMODULE_ERROR_UNKNOWN;
+	}
+
+	if (Module* m = Emu.GetModuleManager().GetModuleById(id))
+	{
+		if (!m->IsLoaded())
+		{
+			cellSysmodule.Error("cellSysmoduleIsLoaded() failed: module not loaded (id=0x%04x)", id);
+			return CELL_SYSMODULE_ERROR_UNLOADED;
+		}
+	}
+
+	return CELL_SYSMODULE_LOADED;
 }
+
+Module cellSysmodule("cellSysmodule", []()
+{
+	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
+	REG_FUNC(cellSysmodule, cellSysmoduleFinalize);
+	REG_FUNC(cellSysmodule, cellSysmoduleSetMemcontainer);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModule);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModule);
+	REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
+});

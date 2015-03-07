@@ -2,16 +2,9 @@
 #include "Emu/SysCalls/Modules.h"
 #include "sceNpSns.h"
 
-Module *sceNpSns = nullptr;
+extern Module sceNpSns;
 
-void sceNpSns_unload()
+Module sceNpSns("sceNpSns", []()
 {
-	// TODO: Unload SNS module
-}
-
-void sceNpSns_init(Module *pxThis)
-{
-	sceNpSns = pxThis;
-
 	// TODO: Register SNS module functions here
-}
+});

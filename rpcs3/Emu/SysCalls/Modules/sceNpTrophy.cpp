@@ -15,7 +15,7 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 
-Module *sceNpTrophy = nullptr;
+extern Module sceNpTrophy;
 
 // Internal Structs
 struct sceNpTrophyInternalContext
@@ -79,7 +79,7 @@ static sceNpTrophyInternalContext& getContext(u32 context) {
 // Functions
 int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 {
-	sceNpTrophy->Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=%d, options=0x%llx)", pool_addr, poolSize, containerId, options);
+	sceNpTrophy.Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=%d, options=0x%llx)", pool_addr, poolSize, containerId, options);
 
 	if (sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
@@ -93,7 +93,7 @@ int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 
 int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId> commID, vm::ptr<SceNpCommunicationSignature> commSign, u64 options)
 {
-	sceNpTrophy->Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
+	sceNpTrophy.Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
 		context.addr(), commID.addr(), commSign.addr(), options);
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -132,7 +132,7 @@ int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId>
 
 int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
-	sceNpTrophy->Todo("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
+	sceNpTrophy.Todo("sceNpTrophyCreateHandle(handle_addr=0x%x)", handle.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
@@ -145,7 +145,7 @@ int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 
 int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
 {
-	sceNpTrophy->Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
+	sceNpTrophy.Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
 		context, handle, statusCb.addr(), arg_addr, options);
 
 	if (!(sceNpTrophyInstance.m_bInitialized))
@@ -153,7 +153,7 @@ int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatu
 	if (options & (~(u64)1))
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
-		sceNpTrophy->Warning("sceNpTrophyRegisterContext: invalid context (%d)", context);
+		sceNpTrophy.Warning("sceNpTrophyRegisterContext: invalid context (%d)", context);
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 	// TODO: There are other possible errors
@@ -224,13 +224,13 @@ int sceNpTrophySetSoundLevel()
 
 int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
+	sceNpTrophy.Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
 		context, handle, reqspace.addr(), options);
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
-		sceNpTrophy->Warning("sceNpTrophyGetRequiredDiskSpace: invalid context (%d)", context);
+		sceNpTrophy.Warning("sceNpTrophyGetRequiredDiskSpace: invalid context (%d)", context);
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 	// TODO: There are other possible errors
@@ -251,7 +251,7 @@ int sceNpTrophyDestroyContext()
 
 int sceNpTrophyAbortHandle(u32 handle)
 {
-	sceNpTrophy->Todo("sceNpTrophyAbortHandle(handle=%d)", handle);
+	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=%d)", handle);
 
 	// TODO: ?
 
@@ -263,7 +263,7 @@ int sceNpTrophyAbortHandle(u32 handle)
 
 int sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
 {
-	sceNpTrophy->Warning("sceNpTrophyGetGameInfo(context=%d, handle=%d, details_addr=0x%x, data_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetGameInfo(context=%d, handle=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, details.addr(), data.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -321,7 +321,7 @@ int sceNpTrophyDestroyHandle()
 
 int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
-	sceNpTrophy->Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
 		context, handle, trophyId, platinumId.addr());
 	
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -346,7 +346,7 @@ int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> 
 
 int sceNpTrophyTerm()
 {
-	sceNpTrophy->Warning("sceNpTrophyTerm()");
+	sceNpTrophy.Warning("sceNpTrophyTerm()");
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
@@ -358,13 +358,13 @@ int sceNpTrophyTerm()
 
 int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
-	sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
 		context, handle, flags.addr(), count.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	if (context == 0 || context > sceNpTrophyInstance.contexts.size()) {
-		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: invalid context (%d)", context);
+		sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState: invalid context (%d)", context);
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 	// TODO: There are other possible errors
@@ -373,7 +373,7 @@ int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophy
 	u32 count_ = ctxt.tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
-		sceNpTrophy->Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+		sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
 
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id = 0; id < count_; id++)
@@ -395,7 +395,7 @@ int sceNpTrophyGetTrophyIcon()
 
 int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
-	sceNpTrophy->Warning("sceNpTrophyGetTrophyInfo(context=%d, handle=%d, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=%d, handle=%d, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, trophyId, details.addr(), data.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -448,30 +448,25 @@ int sceNpTrophyGetGameIcon()
 	return CELL_OK;
 }
 
-void sceNpTrophy_unload()
+Module sceNpTrophy("sceNpTrophy", []()
 {
 	sceNpTrophyInstance.m_bInitialized = false;
-}
 
-void sceNpTrophy_init(Module *pxThis)
-{
-	sceNpTrophy = pxThis;
-
-	sceNpTrophy->AddFunc(0x079f0e87, sceNpTrophyGetGameProgress);
-	sceNpTrophy->AddFunc(0x1197b52c, sceNpTrophyRegisterContext);
-	sceNpTrophy->AddFunc(0x1c25470d, sceNpTrophyCreateHandle);
-	sceNpTrophy->AddFunc(0x27deda93, sceNpTrophySetSoundLevel);
-	sceNpTrophy->AddFunc(0x370136fe, sceNpTrophyGetRequiredDiskSpace);
-	sceNpTrophy->AddFunc(0x3741ecc7, sceNpTrophyDestroyContext);
-	sceNpTrophy->AddFunc(0x39567781, sceNpTrophyInit);
-	sceNpTrophy->AddFunc(0x48bd97c7, sceNpTrophyAbortHandle);
-	sceNpTrophy->AddFunc(0x49d18217, sceNpTrophyGetGameInfo);
-	sceNpTrophy->AddFunc(0x623cd2dc, sceNpTrophyDestroyHandle);
-	sceNpTrophy->AddFunc(0x8ceedd21, sceNpTrophyUnlockTrophy);
-	sceNpTrophy->AddFunc(0xa7fabf4d, sceNpTrophyTerm);
-	sceNpTrophy->AddFunc(0xb3ac3478, sceNpTrophyGetTrophyUnlockState);
-	sceNpTrophy->AddFunc(0xbaedf689, sceNpTrophyGetTrophyIcon);
-	sceNpTrophy->AddFunc(0xe3bf9a28, sceNpTrophyCreateContext);
-	sceNpTrophy->AddFunc(0xfce6d30a, sceNpTrophyGetTrophyInfo);
-	sceNpTrophy->AddFunc(0xff299e03, sceNpTrophyGetGameIcon);
-}
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameProgress);
+	REG_FUNC(sceNpTrophy, sceNpTrophyRegisterContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyCreateHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophySetSoundLevel);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetRequiredDiskSpace);
+	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyInit);
+	REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
+	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
+	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
+	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
+});

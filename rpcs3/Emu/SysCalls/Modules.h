@@ -1,200 +1,136 @@
 #pragma once
 #include "Emu/SysCalls/SC_FUNC.h"
-#include "Emu/IdManager.h"
 #include "ErrorCodes.h"
 #include "LogBase.h"
 
-//TODO
+class Module;
+
+// flags set in ModuleFunc
+enum : u32
+{
+	MFF_FORCED_HLE = (1 << 0), // always call HLE function
+};
+
+// flags passed with index
+enum : u32
+{
+	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
+	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
+
+	EIF_FLAGS = 0x3000000, // all flags
+};
+
 struct ModuleFunc
 {
 	u32 id;
-	func_caller* func;
+	u32 flags;
+	Module* module;
+	ppu_func_caller func;
 	vm::ptr<void()> lle_func;
 
-	ModuleFunc(u32 id, func_caller* func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc()
+	{
+	}
+
+	ModuleFunc(u32 id, u32 flags, Module* module, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
+		, flags(flags)
+		, module(module)
 		, func(func)
 		, lle_func(lle_func)
 	{
 	}
-
-	~ModuleFunc()
-	{
-		delete func;
-	}
 };
 
-struct SFuncOp
+enum : u32
 {
-	u32 crc;
+	SPET_MASKED_OPCODE,
+	SPET_OPTIONAL_MASKED_OPCODE,
+	SPET_LABEL,
+	SPET_BRANCH_TO_LABEL,
+	SPET_BRANCH_TO_FUNC,
+};
+
+struct SearchPatternEntry
+{
+	u32 type;
+	u32 data;
 	u32 mask;
+	u32 num; // supplement info
 };
 
-struct SFunc
+struct StaticFunc
 {
-	func_caller* func;
-	void* ptr;
+	u32 index;
 	const char* name;
-	std::vector<SFuncOp> ops;
+	std::vector<SearchPatternEntry> ops;
 	u64 group;
 	u32 found;
-
-	~SFunc()
-	{
-		delete func;
-	}
+	std::unordered_map<u32, u32> labels;
 };
-
-class StaticFuncManager;
 
 class Module : public LogBase
 {
 	std::string m_name;
-	u16 m_id;
 	bool m_is_loaded;
-	void (*m_load_func)();
-	void (*m_unload_func)();
+	void(*m_init)();
 
-	IdManager& GetIdManager() const;
-	void PushNewFuncSub(SFunc* func);
+	Module() = delete;
 
 public:
-	std::unordered_map<u32, ModuleFunc*> m_funcs_list;
-
-	Module(u16 id, const char* name, void(*load)() = nullptr, void(*unload)() = nullptr);
+	Module(const char* name, void(*init)());
 
 	Module(Module &other) = delete;
-	Module(Module &&other);
+	Module(Module &&other) = delete;
 
 	Module &operator =(Module &other) = delete;
-	Module &operator =(Module &&other);
-	
-	ModuleFunc* GetFunc(u32 id)
-	{
-		auto res = m_funcs_list.find(id);
-
-		if (res == m_funcs_list.end())
-			return nullptr;
-
-		return res->second;
-	}
+	Module &operator =(Module &&other) = delete;
 
 	~Module();
 
+	std::function<void()> on_load;
+	std::function<void()> on_unload;
+	std::function<void()> on_stop;
+
+	void Init();
 	void Load();
-	void UnLoad();
-	bool Load(u32 id);
-	bool UnLoad(u32 id);
+	void Unload();
 
 	void SetLoaded(bool loaded = true);
 	bool IsLoaded() const;
 
-	u16 GetID() const;
 	virtual const std::string& GetName() const override;
 	void SetName(const std::string& name);
-
-public:
-	bool CheckID(u32 id) const;
-
-	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data)
-	{
-		ID* id_data;
-
-		if(!CheckID(id, id_data)) return false;
-
-		data = id_data->GetData()->get<T>();
-
-		return true;
-	}
-
-	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data, IDType& type)
-	{
-		ID* id_data;
-
-		if(!CheckID(id, id_data)) return false;
-
-		data = id_data->GetData()->get<T>();
-		type = id_data->GetType();
-
-		return true;
-	}
-
-	bool CheckID(u32 id, ID*& _id) const;
-
-	template<typename T>
-	u32 GetNewId(std::shared_ptr<T>& data, IDType type = TYPE_OTHER)
-	{
-		return GetIdManager().GetNewID<T>(GetName(), data, type);
-	}
-
-	bool RemoveId(u32 id);
-	
-	void RegisterLLEFunc(u32 id, vm::ptr<void()> func)
-	{
-		if (auto f = GetFunc(id))
-		{
-			f->lle_func = func;
-			return;
-		}
-		
-		m_funcs_list[id] = new ModuleFunc(id, nullptr, func);
-	}
-
-	template<typename T> __forceinline void AddFunc(u32 id, T func);
-	template<typename T> __forceinline void AddFunc(const char* name, T func);	
-	template<typename T> __forceinline void AddFuncSub(const char group[8], const u64 ops[], const char* name, T func);
 };
 
-u32 getFunctionId(const char* name);
+u32 add_ppu_func(ModuleFunc func);
+ModuleFunc* get_ppu_func_by_nid(u32 nid, u32* out_index = nullptr);
+ModuleFunc* get_ppu_func_by_index(u32 index);
+void execute_ppu_func_by_index(PPUThread& CPU, u32 id);
+void clear_ppu_functions();
+u32 get_function_id(const char* name);
 
-template<typename T>
-__forceinline void Module::AddFunc(u32 id, T func)
-{
-	m_funcs_list[id] = new ModuleFunc(id, bind_func(func));
-}
+u32 add_ppu_func_sub(StaticFunc sf);
+u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], size_t count, const char* name, Module* module, ppu_func_caller func);
 
-template<typename T>
-__forceinline void Module::AddFunc(const char* name, T func)
-{
-	AddFunc(getFunctionId(name), func);
-}
+void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
-template<typename T>
-__forceinline void Module::AddFuncSub(const char group[8], const u64 ops[], const char* name, T func)
-{
-	if (!ops[0]) return;
+bool patch_ppu_import(u32 addr, u32 index);
 
-	SFunc* sf = new SFunc;
-	sf->ptr = (void *)func;
-	sf->func = bind_func(func);
-	sf->name = name;
-	sf->group = *(u64*)group;
-	sf->found = 0;
+#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, bind_func(name)))
+#define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, bind_func(name)))
 
-	// TODO: check for self-inclusions, use CRC
-	for (u32 i = 0; ops[i]; i++)
-	{
-		SFuncOp op;
-		op.mask = ops[i] >> 32;
-		op.crc = (u32)ops[i];
-		if (op.mask) op.crc &= op.mask;
-		op.mask = re32(op.mask);
-		op.crc = re32(op.crc);
-		sf->ops.push_back(op);
-	}
-	PushNewFuncSub(sf);
-}
+#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, bind_func(_nid_##nid)))
 
-void fix_import(Module* module, u32 func, u32 addr);
+#define REG_SUB(module, group, ns, name, ...) \
+	const SearchPatternEntry name##_table[] = {__VA_ARGS__}; \
+	add_ppu_func_sub(group, name##_table, sizeof(name##_table) / sizeof(SearchPatternEntry), #name, &module, bind_func(ns::name))
 
-#define FIX_IMPORT(module, func, addr) fix_import(module, getFunctionId(#func), addr)
+#define se_op_all(type, op, sup) []() { s32 XXX = 0; SearchPatternEntry res = { (type), (op), 0, (sup) }; XXX = -1; res.mask = (op) ^ ~res.data; return res; }()
+#define se_op(op) se_op_all(SPET_MASKED_OPCODE, op, 0)
+#define se_opt_op(op) se_op_all(SPET_OPTIONAL_MASKED_OPCODE, op, 0)
+#define se_label(label) { SPET_LABEL, (label) }
+#define se_br_label(op, label) se_op_all(SPET_BRANCH_TO_LABEL, op, label)
+#define se_func_call(op, name) se_op_all(SPET_BRANCH_TO_FUNC, op, get_function_id(#name))
 
-void fix_relocs(Module* module, u32 lib, u32 start, u32 end, u32 seg2);
-
-#define REG_SUB(module, group, name, ...) \
-	static const u64 name ## _table[] = {__VA_ARGS__ , 0}; \
-	module->AddFuncSub(group, name ## _table, #name, name)
-
-#define REG_FUNC(module, name) module->AddFunc(getFunctionId(#name), name)
-
-#define UNIMPLEMENTED_FUNC(module) module->Todo("%s", __FUNCTION__)
+#define UNIMPLEMENTED_FUNC(module) module.Error("%s", __FUNCTION__)

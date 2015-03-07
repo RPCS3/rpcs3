@@ -5,13 +5,13 @@
 #include "cellFont.h"
 #include "cellFontFT.h"
 
-Module *cellFontFT = nullptr;
+extern Module cellFontFT;
 
 CCellFontFTInternal* s_fontFtInternalInstance = nullptr;
 
 int cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, u32 lib_addr_addr)
 {
-	cellFontFT->Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
+	cellFontFT.Warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config_addr=0x%x, lib_addr_addr=0x%x",
 		revisionFlags, config.addr(), lib_addr_addr);
 
 	//if (s_fontInternalInstance->m_bInitialized)
@@ -34,21 +34,16 @@ int cellFontFTGetInitializedRevisionFlags()
 	return CELL_OK;
 }
 
-void cellFontFT_init(Module *pxThis)
-{
-	cellFontFT = pxThis;
-
-	cellFontFT->AddFunc(0x7a0a83c4, cellFontInitLibraryFreeTypeWithRevision);
-	cellFontFT->AddFunc(0xec89a187, cellFontFTGetRevisionFlags);
-	cellFontFT->AddFunc(0xfa0c2de0, cellFontFTGetInitializedRevisionFlags);
-}
-
-void cellFontFT_load()
+Module cellFontFT("cellFontFT", []()
 {
 	s_fontFtInternalInstance = new CCellFontFTInternal();
-}
 
-void cellFontFT_unload()
-{
-	delete s_fontFtInternalInstance;
-}
+	cellFontFT.on_stop = []()
+	{
+		delete s_fontFtInternalInstance;
+	};
+
+	REG_FUNC(cellFontFT, cellFontInitLibraryFreeTypeWithRevision);
+	REG_FUNC(cellFontFT, cellFontFTGetRevisionFlags);
+	REG_FUNC(cellFontFT, cellFontFTGetInitializedRevisionFlags);
+});

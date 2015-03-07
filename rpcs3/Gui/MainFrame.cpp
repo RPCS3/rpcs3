@@ -22,6 +22,7 @@
 #include "Gui/RSXDebugger.h"
 #include "Gui/MemoryStringSearcher.h"
 #include "Gui/LLEModulesManager.h"
+#include "Gui/CgDisasm.h"
 
 #include <wx/dynlib.h>
 
@@ -53,8 +54,9 @@ enum IDs
 	id_tools_memory_viewer,
 	id_tools_rsx_debugger,
 	id_tools_string_search,
+	id_tools_cg_disasm,
 	id_help_about,
-	id_update_dbg,
+	id_update_dbg
 };
 
 wxString GetPaneName()
@@ -111,6 +113,7 @@ MainFrame::MainFrame()
 	menu_tools->Append(id_tools_memory_viewer, "&Memory Viewer")->Enable(false);
 	menu_tools->Append(id_tools_rsx_debugger, "&RSX Debugger")->Enable(false);
 	menu_tools->Append(id_tools_string_search, "&String Search")->Enable(false);
+	menu_tools->Append(id_tools_cg_disasm, "&Cg Disasm")->Enable();
 
 	wxMenu* menu_help = new wxMenu();
 	menubar->Append(menu_help, "&Help");
@@ -151,6 +154,7 @@ MainFrame::MainFrame()
 	Bind(wxEVT_MENU, &MainFrame::OpenMemoryViewer, this, id_tools_memory_viewer);
 	Bind(wxEVT_MENU, &MainFrame::OpenRSXDebugger, this, id_tools_rsx_debugger);
 	Bind(wxEVT_MENU, &MainFrame::OpenStringSearch, this, id_tools_string_search);
+	Bind(wxEVT_MENU, &MainFrame::OpenCgDisasm, this, id_tools_cg_disasm);
 
 	Bind(wxEVT_MENU, &MainFrame::AboutDialogHandler, this, id_help_about);
 
@@ -483,8 +487,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_camera_type->Append("USB Video Class 1.1");
 
 	cbox_hle_loglvl->Append("All");
-	cbox_hle_loglvl->Append("Success");
 	cbox_hle_loglvl->Append("Warnings");
+	cbox_hle_loglvl->Append("Success");
 	cbox_hle_loglvl->Append("Errors");
 	cbox_hle_loglvl->Append("Nothing");
 
@@ -542,13 +546,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_hle_loglvl      ->SetSelection(Ini.HLELogLvl.GetValue());
 	cbox_sys_lang        ->SetSelection(Ini.SysLanguage.GetValue());
 	
-	// Enable/Disable parameters
-	chbox_audio_dump->Enable(Emu.IsStopped());
-	chbox_audio_conv->Enable(Emu.IsStopped());
-	chbox_hle_logging->Enable(Emu.IsStopped());
-	chbox_rsx_logging->Enable(Emu.IsStopped());
-	chbox_hle_hook_stfunc->Enable(Emu.IsStopped());
-
 	s_round_cpu_decoder->Add(cbox_cpu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_spu_decoder->Add(cbox_spu_decoder, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -727,6 +724,11 @@ void MainFrame::OpenRSXDebugger(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OpenStringSearch(wxCommandEvent& WXUNUSED(event))
 {
 	(new MemoryStringSearcher(this)) -> Show();
+}
+
+void MainFrame::OpenCgDisasm(wxCommandEvent& WXUNUSED(event))
+{
+	(new CgDisasm(this))->Show();
 }
 
 void MainFrame::AboutDialogHandler(wxCommandEvent& WXUNUSED(event))

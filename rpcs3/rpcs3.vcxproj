@@ -166,6 +166,7 @@
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Io\XInput\XInputPadHandler.cpp" />
     <ClCompile Include="Gui\AutoPauseManager.cpp" />
+    <ClCompile Include="Gui\CgDisasm.cpp" />
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLogFrame.cpp" />
     <ClCompile Include="Gui\Debugger.cpp" />
@@ -205,6 +206,7 @@
     <ClInclude Include="Emu\Io\XInput\XInputPadHandler.h" />
     <ClInclude Include="Gui\AboutDialog.h" />
     <ClInclude Include="Gui\AutoPauseManager.h" />
+    <ClInclude Include="Gui\CgDisasm.h" />
     <ClInclude Include="Gui\CompilerELF.h" />
     <ClInclude Include="Gui\ConLogFrame.h" />
     <ClInclude Include="Gui\Debugger.h" />

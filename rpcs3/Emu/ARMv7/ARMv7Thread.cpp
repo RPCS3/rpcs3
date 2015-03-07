@@ -232,7 +232,7 @@ void ARMv7Thread::FastStop()
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)
 {
-	thread = &Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
+	thread = Emu.GetCPU().AddThread(CPU_THREAD_ARMv7);
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
@@ -277,11 +277,13 @@ cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
 
 cpu_thread& armv7_thread::run()
 {
-	thread->Run();
+	auto& armv7 = static_cast<ARMv7Thread&>(*thread);
+
+	armv7.Run();
 
 	// set arguments
-	static_cast<ARMv7Thread*>(thread)->context.GPR[0] = argc;
-	static_cast<ARMv7Thread*>(thread)->context.GPR[1] = argv;
+	armv7.context.GPR[0] = argc;
+	armv7.context.GPR[1] = argv;
 
 	return *this;
 }

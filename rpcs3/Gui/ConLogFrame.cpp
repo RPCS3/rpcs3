@@ -29,20 +29,22 @@ struct wxWriter : Log::LogListener
 	wxTextAttr m_color_white;
 	wxTextAttr m_color_yellow;
 	wxTextAttr m_color_red;
+	wxTextAttr m_color_green;
 	MTRingbuffer<char, BUFFER_MAX_SIZE> messages;
 	std::atomic<bool> newLog;
 	bool inited;
 
-	wxWriter(wxTextCtrl* p_log, wxTextCtrl* p_tty) :
-		m_color_white(wxColour(255, 255, 255)) ,
-		m_color_yellow(wxColour(255, 255, 0)) ,
-		m_color_red(wxColour(255, 0, 0)) ,
-		m_log(p_log),
-		m_tty(p_tty),
-		newLog(false),
-		inited(false)
+	wxWriter(wxTextCtrl* p_log, wxTextCtrl* p_tty)
+		: m_color_white(wxColour(255, 255, 255))
+		, m_color_yellow(wxColour(255, 255, 0))
+		, m_color_red(wxColour(255, 0, 0))
+		, m_color_green(wxColour(0, 255, 0))
+		, m_log(p_log)
+		, m_tty(p_tty)
+		, newLog(false)
+		, inited(false)
 	{
-			m_log->Bind(EVT_LOG_COMMAND, [this](wxCommandEvent &evt){this->write(evt);});
+		m_log->Bind(EVT_LOG_COMMAND, [this](wxCommandEvent &evt){ this->write(evt); });
 	}
 
 	wxWriter(wxWriter &other) = delete;
@@ -82,6 +84,9 @@ struct wxWriter : Log::LogListener
 						break;
 					case Log::Error:
 						llogcon->SetDefaultStyle(m_color_red);
+						break;
+					case Log::Success:
+						llogcon->SetDefaultStyle(m_color_green);
 						break;
 					default:
 						break;

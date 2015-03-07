@@ -7,7 +7,6 @@
 #include "Emu/GameInfo.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 #include "Emu/ARMv7/PSVObjectList.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -26,6 +25,7 @@
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
+#include "Emu/Event.h"
 #include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
@@ -38,11 +38,6 @@ using namespace PPU_instr;
 static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
-
-ModuleInitializer::ModuleInitializer()
-{
-	Emu.AddModuleInit(std::move(std::unique_ptr<ModuleInitializer>(this)));
-}
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -57,7 +52,6 @@ Emulator::Emulator()
 	, m_audio_manager(new AudioManager())
 	, m_callback_manager(new CallbackManager())
 	, m_event_manager(new EventManager())
-	, m_sfunc_manager(new StaticFuncManager())
 	, m_module_manager(new ModuleManager())
 	, m_sync_prim_manager(new SyncPrimManager())
 	, m_vfs(new VFS())
@@ -77,7 +71,6 @@ Emulator::~Emulator()
 	delete m_audio_manager;
 	delete m_callback_manager;
 	delete m_event_manager;
-	delete m_sfunc_manager;
 	delete m_module_manager;
 	delete m_sync_prim_manager;
 	delete m_vfs;
@@ -85,11 +78,6 @@ Emulator::~Emulator()
 
 void Emulator::Init()
 {
-	while(m_modules_init.size())
-	{
-		m_modules_init[0]->Init();
-		m_modules_init.erase(m_modules_init.begin());
-	}
 }
 
 void Emulator::SetPath(const std::string& path, const std::string& elf_path)
@@ -189,7 +177,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 void Emulator::Load()
 {
-	GetModuleManager().init();
+	GetModuleManager().Init();
 
 	if (!rExists(m_path)) return;
 
@@ -268,24 +256,7 @@ void Emulator::Load()
 		vm::close();
 		return;
 	}
-
-	// trying to load some info from PARAM.SFO
-	vfsFile f2("/app_home/../PARAM.SFO");
-	if (f2.IsOpened())
-	{
-		PSFLoader psf(f2);
-		if (psf.Load(false))
-		{
-			std::string version = psf.GetString("PS3_SYSTEM_VER");
-
-			const size_t dot = version.find('.');
-			if (dot != std::string::npos)
-			{
-				Emu.m_sdk_version = (std::stoi(version, nullptr, 16) << 20) | ((std::stoi(version.substr(dot + 1), nullptr, 16) & 0xffff) << 4) | 1;
-			}
-		}
-	}
-
+	
 	LoadPoints(BreakPointsDBName);
 
 	m_status = Ready;
@@ -394,8 +365,7 @@ void Emulator::Stop()
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
-	GetModuleManager().UnloadModules();
-	GetSFuncManager().StaticFinalize();
+	GetModuleManager().Close();
 	GetSyncPrimManager().Close();
 
 	CurGameInfo.Reset();

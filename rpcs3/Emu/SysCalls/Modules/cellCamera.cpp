@@ -5,7 +5,7 @@
 
 #include "cellCamera.h"
 
-Module *cellCamera = nullptr;
+extern Module cellCamera;
 const char* attributes[] = {"GAIN", "REDBLUEGAIN", "SATURATION", "EXPOSURE", "BRIGHTNESS", "AEC", "AGC", "AWB", "ABC", "LED", "AUDIOGAIN", "QS", "NONZEROCOEFFS", "YUVFLAG",
                             "JPEGFLAG", "BACKLIGHTCOMP", "MIRRORFLAG", "MEASUREDQS", "422FLAG", "USBLOAD", "GAMMA", "GREENGAIN", "AGCLIMIT", "DENOISE", "FRAMERATEADJUST",
                             "PIXELOUTLIERFILTER", "AGCLOW", "AGCHIGH", "DEVICELOCATION", "FORMATCAP", "FORMATINDEX", "NUMFRAME", "FRAMEINDEX", "FRAMESIZE", "INTERVALTYPE",
@@ -27,7 +27,7 @@ cellCameraInternal cellCameraInstance;
 
 int cellCameraInit()
 {
-	cellCamera->Warning("cellCameraInit()");
+	cellCamera.Warning("cellCameraInit()");
 
 	if (cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_ALREADY_INIT;
@@ -84,7 +84,7 @@ int cellCameraInit()
 
 int cellCameraEnd()
 {
-	cellCamera->Warning("cellCameraEnd()");
+	cellCamera.Warning("cellCameraEnd()");
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -132,7 +132,7 @@ int cellCameraGetDeviceGUID()
 
 int cellCameraGetType(s32 dev_num, vm::ptr<CellCameraType> type)
 {
-	cellCamera->Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type.addr());
+	cellCamera.Warning("cellCameraGetType(dev_num=%d, type_addr=0x%x)", dev_num, type.addr());
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
@@ -174,228 +174,240 @@ int cellCameraIsStarted()
 
 int cellCameraGetAttribute(s32 dev_num, CellCameraAttribute attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
-	cellCamera->Warning("cellCameraGetAttribute(dev_num=%d, attrib=%s(%d), arg1=0x%x, arg2=0x%x)", dev_num, attributes[attrib], arg1.addr(), arg2.addr());
+	cellCamera.Warning("cellCameraGetAttribute(dev_num=%d, attrib=%s(%d), arg1=0x%x, arg2=0x%x)", dev_num, attributes[attrib], arg1.addr(), arg2.addr());
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 
-	if (attrib == 0)
-		*arg1 = cellCameraInstance.m_camera.attributes.GAIN;
-	else if (attrib == 1)
-		*arg1 = cellCameraInstance.m_camera.attributes.REDBLUEGAIN;
-	else if (attrib == 2)
-		*arg1 = cellCameraInstance.m_camera.attributes.SATURATION;
-	else if (attrib == 3)
-		*arg1 = cellCameraInstance.m_camera.attributes.EXPOSURE;
-	else if (attrib == 4)
-		*arg1 = cellCameraInstance.m_camera.attributes.BRIGHTNESS;
-	else if (attrib == 5)
-		*arg1 = cellCameraInstance.m_camera.attributes.AEC;
-	else if (attrib == 6)
-		*arg1 = cellCameraInstance.m_camera.attributes.AGC;
-	else if (attrib == 7)
-		*arg1 = cellCameraInstance.m_camera.attributes.AWB;
-	else if (attrib == 8)
-		*arg1 = cellCameraInstance.m_camera.attributes.ABC;
-	else if (attrib == 9)
-		*arg1 = cellCameraInstance.m_camera.attributes.LED;
-	else if (attrib == 10)
-		*arg1 = cellCameraInstance.m_camera.attributes.AUDIOGAIN;
-	else if (attrib == 11)
-		*arg1 = cellCameraInstance.m_camera.attributes.QS;
-	else if (attrib == 12)
+	switch (attrib)
+	{
+	case 0:
+		*arg1 = cellCameraInstance.m_camera.attributes.GAIN; break;
+	case 1:
+		*arg1 = cellCameraInstance.m_camera.attributes.REDBLUEGAIN; break;
+	case 2:
+		*arg1 = cellCameraInstance.m_camera.attributes.SATURATION; break;
+	case 3:
+		*arg1 = cellCameraInstance.m_camera.attributes.EXPOSURE; break;
+	case 4:
+		*arg1 = cellCameraInstance.m_camera.attributes.BRIGHTNESS; break;
+	case 5:
+		*arg1 = cellCameraInstance.m_camera.attributes.AEC; break;
+	case 6:
+		*arg1 = cellCameraInstance.m_camera.attributes.AGC; break;
+	case 7:
+		*arg1 = cellCameraInstance.m_camera.attributes.AWB; break;
+	case 8:
+		*arg1 = cellCameraInstance.m_camera.attributes.ABC; break;
+	case 9:
+		*arg1 = cellCameraInstance.m_camera.attributes.LED; break;
+	case 10:
+		*arg1 = cellCameraInstance.m_camera.attributes.AUDIOGAIN; break;
+	case 11:
+		*arg1 = cellCameraInstance.m_camera.attributes.QS; break;
+	case 12:
 	{
 		*arg1 = cellCameraInstance.m_camera.attributes.NONZEROCOEFFS[0];
 		*arg2 = cellCameraInstance.m_camera.attributes.NONZEROCOEFFS[1];
+		break;
 	}
-	else if (attrib == 13)
-		*arg1 = cellCameraInstance.m_camera.attributes.YUVFLAG;
-	else if (attrib == 14)
-		*arg1 = cellCameraInstance.m_camera.attributes.JPEGFLAG;
-	else if (attrib == 15)
-		*arg1 = cellCameraInstance.m_camera.attributes.BACKLIGHTCOMP;
-	else if (attrib == 16)
-		*arg1 = cellCameraInstance.m_camera.attributes.MIRRORFLAG;
-	else if (attrib == 17)
-		*arg1 = cellCameraInstance.m_camera.attributes.MEASUREDQS;
-	else if (attrib == 18)
-		*arg1 = cellCameraInstance.m_camera.attributes._422FLAG;
-	else if (attrib == 19)
-		*arg1 = cellCameraInstance.m_camera.attributes.USBLOAD;
-	else if (attrib == 20)
-		*arg1 = cellCameraInstance.m_camera.attributes.GAMMA;
-	else if (attrib == 21)
-		*arg1 = cellCameraInstance.m_camera.attributes.GREENGAIN;
-	else if (attrib == 22)
-		*arg1 = cellCameraInstance.m_camera.attributes.AGCLIMIT;
-	else if (attrib == 23)
-		*arg1 = cellCameraInstance.m_camera.attributes.DENOISE;
-	else if (attrib == 24)
-		*arg1 = cellCameraInstance.m_camera.attributes.FRAMERATEADJUST;
-	else if (attrib == 25)
-		*arg1 = cellCameraInstance.m_camera.attributes.PIXELOUTLIERFILTER;
-	else if (attrib == 26)
-		*arg1 = cellCameraInstance.m_camera.attributes.AGCLOW;
-	else if (attrib == 27)
-		*arg1 = cellCameraInstance.m_camera.attributes.AGCHIGH;
-	else if (attrib == 28)
-		*arg1 = cellCameraInstance.m_camera.attributes.DEVICELOCATION;
-	else if (attrib == 29)
-		*arg1 = cellCameraInstance.m_camera.attributes.FORMATCAP;
-	else if (attrib == 30)
-		*arg1 = cellCameraInstance.m_camera.attributes.FORMATINDEX;
-	else if (attrib == 31)
-		*arg1 = cellCameraInstance.m_camera.attributes.NUMFRAME;
-	else if (attrib == 32)
-		*arg1 = cellCameraInstance.m_camera.attributes.FRAMEINDEX;
-	else if (attrib == 33)
-		*arg1 = cellCameraInstance.m_camera.attributes.FRAMESIZE;
-	else if (attrib == 34)
-		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALTYPE;
-	else if (attrib == 35)
-		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALINDEX;
-	else if (attrib == 36)
-		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALVALUE;
-	else if (attrib == 37)
-		*arg1 = cellCameraInstance.m_camera.attributes.COLORMATCHING;
-	else if (attrib == 38)
-		*arg1 = cellCameraInstance.m_camera.attributes.PLFREQ;
-	else if (attrib == 39)
-		*arg1 = cellCameraInstance.m_camera.attributes.DEVICEID;
-	else if (attrib == 40)
-		*arg1 = cellCameraInstance.m_camera.attributes.DEVICECAP;
-	else if (attrib == 41)
-		*arg1 = cellCameraInstance.m_camera.attributes.DEVICESPEED;
-	else if (attrib == 42)
-		*arg1 = cellCameraInstance.m_camera.attributes.UVCREQCODE;
-	else if (attrib == 43)
-		*arg1 = cellCameraInstance.m_camera.attributes.UVCREQDATA;
-	else if (attrib == 44)
-		*arg1 = cellCameraInstance.m_camera.attributes.DEVICEID2;
-	else if (attrib == 45)
-		*arg1 = cellCameraInstance.m_camera.attributes.READMODE;
-	else if (attrib == 46)
-		*arg1 = cellCameraInstance.m_camera.attributes.GAMEPID;
-	else if (attrib == 47)
-		*arg1 = cellCameraInstance.m_camera.attributes.PBUFFER;
-	else if (attrib == 48)
-		*arg1 = cellCameraInstance.m_camera.attributes.READFINISH;
-	else if (attrib == 49)
-		*arg1 = cellCameraInstance.m_camera.attributes.ATTRIBUTE_UNKNOWN;
+	case 13:
+		*arg1 = cellCameraInstance.m_camera.attributes.YUVFLAG; break;
+	case 14:
+		*arg1 = cellCameraInstance.m_camera.attributes.JPEGFLAG; break;
+	case 15:
+		*arg1 = cellCameraInstance.m_camera.attributes.BACKLIGHTCOMP; break;
+	case 16:
+		*arg1 = cellCameraInstance.m_camera.attributes.MIRRORFLAG; break;
+	case 17:
+		*arg1 = cellCameraInstance.m_camera.attributes.MEASUREDQS; break;
+	case 18:
+		*arg1 = cellCameraInstance.m_camera.attributes._422FLAG; break;
+	case 19:
+		*arg1 = cellCameraInstance.m_camera.attributes.USBLOAD; break;
+	case 20:
+		*arg1 = cellCameraInstance.m_camera.attributes.GAMMA; break;
+	case 21:
+		*arg1 = cellCameraInstance.m_camera.attributes.GREENGAIN; break;
+	case 22:
+		*arg1 = cellCameraInstance.m_camera.attributes.AGCLIMIT; break;
+	case 23:
+		*arg1 = cellCameraInstance.m_camera.attributes.DENOISE; break;
+	case 24:
+		*arg1 = cellCameraInstance.m_camera.attributes.FRAMERATEADJUST; break;
+	case 25:
+		*arg1 = cellCameraInstance.m_camera.attributes.PIXELOUTLIERFILTER; break;
+	case 26:
+		*arg1 = cellCameraInstance.m_camera.attributes.AGCLOW; break;
+	case 27:
+		*arg1 = cellCameraInstance.m_camera.attributes.AGCHIGH; break;
+	case 28:
+		*arg1 = cellCameraInstance.m_camera.attributes.DEVICELOCATION; break;
+	case 29:
+		*arg1 = cellCameraInstance.m_camera.attributes.FORMATCAP; break;
+	case 30:
+		*arg1 = cellCameraInstance.m_camera.attributes.FORMATINDEX; break;
+	case 31:
+		*arg1 = cellCameraInstance.m_camera.attributes.NUMFRAME; break;
+	case 32:
+		*arg1 = cellCameraInstance.m_camera.attributes.FRAMEINDEX; break;
+	case 33:
+		*arg1 = cellCameraInstance.m_camera.attributes.FRAMESIZE; break;
+	case 34:
+		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALTYPE; break;
+	case 35:
+		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALINDEX; break;
+	case 36:
+		*arg1 = cellCameraInstance.m_camera.attributes.INTERVALVALUE; break;
+	case 37:
+		*arg1 = cellCameraInstance.m_camera.attributes.COLORMATCHING; break;
+	case 38:
+		*arg1 = cellCameraInstance.m_camera.attributes.PLFREQ; break;
+	case 39:
+		*arg1 = cellCameraInstance.m_camera.attributes.DEVICEID; break;
+	case 40:
+		*arg1 = cellCameraInstance.m_camera.attributes.DEVICECAP; break;
+	case 41:
+		*arg1 = cellCameraInstance.m_camera.attributes.DEVICESPEED; break;
+	case 42:
+		*arg1 = cellCameraInstance.m_camera.attributes.UVCREQCODE; break;
+	case 43:
+		*arg1 = cellCameraInstance.m_camera.attributes.UVCREQDATA; break;
+	case 44:
+		*arg1 = cellCameraInstance.m_camera.attributes.DEVICEID2; break;
+	case 45:
+		*arg1 = cellCameraInstance.m_camera.attributes.READMODE; break;
+	case 46:
+		*arg1 = cellCameraInstance.m_camera.attributes.GAMEPID; break;
+	case 47:
+		*arg1 = cellCameraInstance.m_camera.attributes.PBUFFER; break;
+	case 48:
+		*arg1 = cellCameraInstance.m_camera.attributes.READFINISH; break;
+	case 49:
+		*arg1 = cellCameraInstance.m_camera.attributes.ATTRIBUTE_UNKNOWN; break;
+	default:
+		cellCamera.Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
+	}
 
 	return CELL_OK;
 }
 
 int cellCameraSetAttribute(s32 dev_num, CellCameraAttribute attrib, u32 arg1, u32 arg2)
 {
-	cellCamera->Warning("cellCameraSetAttribute(dev_num=%d, attrib=%s(%d), arg1=%d, arg2=%d)", dev_num, attributes[attrib], attrib, arg1, arg2);
+	cellCamera.Warning("cellCameraSetAttribute(dev_num=%d, attrib=%s(%d), arg1=%d, arg2=%d)", dev_num, attributes[attrib], attrib, arg1, arg2);
 
 	if (!cellCameraInstance.m_bInitialized)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 
-	if (attrib == 0)
-		cellCameraInstance.m_camera.attributes.GAIN = arg1;
-	else if (attrib == 1)
-		cellCameraInstance.m_camera.attributes.REDBLUEGAIN = arg1;
-	else if (attrib == 2)
-		cellCameraInstance.m_camera.attributes.SATURATION = arg1;
-	else if (attrib == 3)
-		cellCameraInstance.m_camera.attributes.EXPOSURE = arg1;
-	else if (attrib == 4)
-		cellCameraInstance.m_camera.attributes.BRIGHTNESS = arg1;
-	else if (attrib == 5)
-		cellCameraInstance.m_camera.attributes.AEC = arg1;
-	else if (attrib == 6)
-		cellCameraInstance.m_camera.attributes.AGC = arg1;
-	else if (attrib == 7)
-		cellCameraInstance.m_camera.attributes.AWB = arg1;
-	else if (attrib == 8)
-		cellCameraInstance.m_camera.attributes.ABC = arg1;
-	else if (attrib == 9)
-		cellCameraInstance.m_camera.attributes.LED = arg1;
-	else if (attrib == 10)
-		cellCameraInstance.m_camera.attributes.AUDIOGAIN = arg1;
-	else if (attrib == 11)
-		cellCameraInstance.m_camera.attributes.QS = arg1;
-	else if (attrib == 12)
+	switch (attrib)
+	{
+	case 0:
+		cellCameraInstance.m_camera.attributes.GAIN = arg1; break;
+	case 1:
+		cellCameraInstance.m_camera.attributes.REDBLUEGAIN = arg1; break;
+	case 2:
+		cellCameraInstance.m_camera.attributes.SATURATION = arg1; break;
+	case 3:
+		cellCameraInstance.m_camera.attributes.EXPOSURE = arg1; break;
+	case 4:
+		cellCameraInstance.m_camera.attributes.BRIGHTNESS = arg1; break;
+	case 5:
+		cellCameraInstance.m_camera.attributes.AEC = arg1; break;
+	case 6:
+		cellCameraInstance.m_camera.attributes.AGC = arg1; break;
+	case 7:
+		cellCameraInstance.m_camera.attributes.AWB = arg1; break;
+	case 8:
+		cellCameraInstance.m_camera.attributes.ABC = arg1; break;
+	case 9:
+		cellCameraInstance.m_camera.attributes.LED = arg1; break;
+	case 10:
+		cellCameraInstance.m_camera.attributes.AUDIOGAIN = arg1; break;
+	case 11:
+		cellCameraInstance.m_camera.attributes.QS = arg1; break;
+	case 12:
 	{
 		cellCameraInstance.m_camera.attributes.NONZEROCOEFFS[0] = arg1;
 		cellCameraInstance.m_camera.attributes.NONZEROCOEFFS[1] = arg2;
+		break;
 	}
-	else if (attrib == 13)
-		cellCameraInstance.m_camera.attributes.YUVFLAG = arg1;
-	else if (attrib == 14)
-		cellCameraInstance.m_camera.attributes.JPEGFLAG = arg1;
-	else if (attrib == 15)
-		cellCameraInstance.m_camera.attributes.BACKLIGHTCOMP = arg1;
-	else if (attrib == 16)
-		cellCameraInstance.m_camera.attributes.MIRRORFLAG = arg1;
-	else if (attrib == 17)
-		return CELL_CAMERA_ERROR_PARAM;
-	else if (attrib == 18)
-		cellCameraInstance.m_camera.attributes._422FLAG = arg1;
-	else if (attrib == 19)
-		cellCameraInstance.m_camera.attributes.USBLOAD = arg1;
-	else if (attrib == 20)
-		cellCameraInstance.m_camera.attributes.GAMMA = arg1;
-	else if (attrib == 21)
-		cellCameraInstance.m_camera.attributes.GREENGAIN = arg1;
-	else if (attrib == 22)
-		cellCameraInstance.m_camera.attributes.AGCLIMIT = arg1;
-	else if (attrib == 23)
-		cellCameraInstance.m_camera.attributes.DENOISE = arg1;
-	else if (attrib == 24)
-		cellCameraInstance.m_camera.attributes.FRAMERATEADJUST = arg1;
-	else if (attrib == 25)
-		cellCameraInstance.m_camera.attributes.PIXELOUTLIERFILTER = arg1;
-	else if (attrib == 26)
-		cellCameraInstance.m_camera.attributes.AGCLOW = arg1;
-	else if (attrib == 27)
-		cellCameraInstance.m_camera.attributes.AGCHIGH = arg1;
-	else if (attrib == 28)
-		cellCameraInstance.m_camera.attributes.DEVICELOCATION = arg1;
-	else if (attrib == 29)
-		cellCamera->Error("Tried to write to read-only (?) value: FORMATCAP");
-	else if (attrib == 30)
-		cellCameraInstance.m_camera.attributes.FORMATINDEX = arg1;
-	else if (attrib == 31)
-		cellCameraInstance.m_camera.attributes.NUMFRAME = arg1;
-	else if (attrib == 32)
-		cellCameraInstance.m_camera.attributes.FRAMEINDEX = arg1;
-	else if (attrib == 33)
-		cellCameraInstance.m_camera.attributes.FRAMESIZE = arg1;
-	else if (attrib == 34)
-		cellCameraInstance.m_camera.attributes.INTERVALTYPE = arg1;
-	else if (attrib == 35)
-		cellCameraInstance.m_camera.attributes.INTERVALINDEX = arg1;
-	else if (attrib == 36)
-		cellCameraInstance.m_camera.attributes.INTERVALVALUE = arg1;
-	else if (attrib == 37)
-		cellCameraInstance.m_camera.attributes.COLORMATCHING = arg1;
-	else if (attrib == 38)
-		cellCameraInstance.m_camera.attributes.PLFREQ = arg1;
-	else if (attrib == 39)
-		return CELL_CAMERA_ERROR_PARAM;
-	else if (attrib == 40)
-		cellCameraInstance.m_camera.attributes.DEVICECAP = arg1;
-	else if (attrib == 41)
-		cellCameraInstance.m_camera.attributes.DEVICESPEED = arg1;
-	else if (attrib == 42)
-		cellCameraInstance.m_camera.attributes.UVCREQCODE = arg1;
-	else if (attrib == 43)
-		cellCameraInstance.m_camera.attributes.UVCREQDATA = arg1;
-	else if (attrib == 44)
-		return CELL_CAMERA_ERROR_PARAM;
-	else if (attrib == 45)
-		cellCamera->Error("Tried to write to read-only (?) value: READMODE");
-	else if (attrib == 46)
-		cellCameraInstance.m_camera.attributes.GAMEPID = arg1;
-	else if (attrib == 47)
-		cellCameraInstance.m_camera.attributes.PBUFFER = arg1;
-	else if (attrib == 48)
-		cellCameraInstance.m_camera.attributes.READFINISH = arg1;
-	else if (attrib == 49)
-		cellCamera->Error("Tried to write to read-only (?) value: ATTRIBUTE_UNKNOWN");
+	case 13:
+		cellCameraInstance.m_camera.attributes.YUVFLAG = arg1; break;
+	case 14:
+		cellCameraInstance.m_camera.attributes.JPEGFLAG = arg1; break;
+	case 15:
+		cellCameraInstance.m_camera.attributes.BACKLIGHTCOMP = arg1; break;
+	case 16:
+		cellCameraInstance.m_camera.attributes.MIRRORFLAG = arg1; break;
+	case 17:
+		return CELL_CAMERA_ERROR_PARAM; break;
+	case 18:
+		cellCameraInstance.m_camera.attributes._422FLAG = arg1; break;
+	case 19:
+		cellCameraInstance.m_camera.attributes.USBLOAD = arg1; break;
+	case 20:
+		cellCameraInstance.m_camera.attributes.GAMMA = arg1; break;
+	case 21:
+		cellCameraInstance.m_camera.attributes.GREENGAIN = arg1; break;
+	case 22:
+		cellCameraInstance.m_camera.attributes.AGCLIMIT = arg1; break;
+	case 23:
+		cellCameraInstance.m_camera.attributes.DENOISE = arg1; break;
+	case 24:
+		cellCameraInstance.m_camera.attributes.FRAMERATEADJUST = arg1; break;
+	case 25:
+		cellCameraInstance.m_camera.attributes.PIXELOUTLIERFILTER = arg1; break;
+	case 26:
+		cellCameraInstance.m_camera.attributes.AGCLOW = arg1; break;
+	case 27:
+		cellCameraInstance.m_camera.attributes.AGCHIGH = arg1; break;
+	case 28:
+		cellCameraInstance.m_camera.attributes.DEVICELOCATION = arg1; break;
+	case 29:
+		cellCamera.Error("Tried to write to read-only (?) value: FORMATCAP"); break;
+	case 30:
+		cellCameraInstance.m_camera.attributes.FORMATINDEX = arg1; break;
+	case 31:
+		cellCameraInstance.m_camera.attributes.NUMFRAME = arg1; break;
+	case 32:
+		cellCameraInstance.m_camera.attributes.FRAMEINDEX = arg1; break;
+	case 33:
+		cellCameraInstance.m_camera.attributes.FRAMESIZE = arg1; break;
+	case 34:
+		cellCameraInstance.m_camera.attributes.INTERVALTYPE = arg1; break;
+	case 35:
+		cellCameraInstance.m_camera.attributes.INTERVALINDEX = arg1; break;
+	case 36:
+		cellCameraInstance.m_camera.attributes.INTERVALVALUE = arg1; break;
+	case 37:
+		cellCameraInstance.m_camera.attributes.COLORMATCHING = arg1; break;
+	case 38:
+		cellCameraInstance.m_camera.attributes.PLFREQ = arg1; break;
+	case 39:
+		return CELL_CAMERA_ERROR_PARAM; break;
+	case 40:
+		cellCameraInstance.m_camera.attributes.DEVICECAP = arg1; break;
+	case 41:
+		cellCameraInstance.m_camera.attributes.DEVICESPEED = arg1; break;
+	case 42:
+		cellCameraInstance.m_camera.attributes.UVCREQCODE = arg1; break;
+	case 43:
+		cellCameraInstance.m_camera.attributes.UVCREQDATA = arg1; break;
+	case 44:
+		return CELL_CAMERA_ERROR_PARAM; break;
+	case 45:
+		cellCamera.Error("Tried to write to read-only (?) value: READMODE"); break;
+	case 46:
+		cellCameraInstance.m_camera.attributes.GAMEPID = arg1; break;
+	case 47:
+		cellCameraInstance.m_camera.attributes.PBUFFER = arg1; break;
+	case 48:
+		cellCameraInstance.m_camera.attributes.READFINISH = arg1; break;
+	case 49:
+		cellCamera.Error("Tried to write to read-only (?) value: ATTRIBUTE_UNKNOWN"); break;
+	default:
+		cellCamera.Error("Unexpected cellCameraGetAttribute attribute: %d", attrib); break;
+	}
 
 	return CELL_OK;
 }
@@ -550,47 +562,42 @@ int cellCameraRemoveNotifyEventQueue2()
 	return CELL_OK;
 }
 
-void cellCamera_unload()
+Module cellCamera("cellCamera", []()
 {
 	cellCameraInstance.m_bInitialized = false;
-}
 
-void cellCamera_init(Module* pxThis)
-{
-	cellCamera = pxThis;
+	REG_FUNC(cellCamera, cellCameraInit);
+	REG_FUNC(cellCamera, cellCameraEnd);
+	REG_FUNC(cellCamera, cellCameraOpen);
+	REG_FUNC(cellCamera, cellCameraOpenEx);
+	REG_FUNC(cellCamera, cellCameraClose);
 
-	cellCamera->AddFunc(0xbf47c5dd, cellCameraInit);
-	cellCamera->AddFunc(0x5ad46570, cellCameraEnd);
-	cellCamera->AddFunc(0x85e1b8da, cellCameraOpen);
-	cellCamera->AddFunc(0x5d25f866, cellCameraOpenEx);
-	cellCamera->AddFunc(0x379c5dd6, cellCameraClose);
+	REG_FUNC(cellCamera, cellCameraGetDeviceGUID);
+	REG_FUNC(cellCamera, cellCameraGetType);
+	REG_FUNC(cellCamera, cellCameraIsAvailable);
+	REG_FUNC(cellCamera, cellCameraIsAttached);
+	REG_FUNC(cellCamera, cellCameraIsOpen);
+	REG_FUNC(cellCamera, cellCameraIsStarted);
+	REG_FUNC(cellCamera, cellCameraGetAttribute);
+	REG_FUNC(cellCamera, cellCameraSetAttribute);
+	REG_FUNC(cellCamera, cellCameraGetBufferSize);
+	REG_FUNC(cellCamera, cellCameraGetBufferInfo);
+	REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
 
-	cellCamera->AddFunc(0x602e2052, cellCameraGetDeviceGUID);
-	cellCamera->AddFunc(0x58bc5870, cellCameraGetType);
-	cellCamera->AddFunc(0x8ca53dde, cellCameraIsAvailable);
-	cellCamera->AddFunc(0x7e063bbc, cellCameraIsAttached);
-	cellCamera->AddFunc(0xfa160f24, cellCameraIsOpen);
-	cellCamera->AddFunc(0x5eebf24e, cellCameraIsStarted);
-	cellCamera->AddFunc(0x532b8aaa, cellCameraGetAttribute);
-	cellCamera->AddFunc(0x8cd56eee, cellCameraSetAttribute);
-	cellCamera->AddFunc(0x7dac520c, cellCameraGetBufferSize);
-	cellCamera->AddFunc(0x10697d7f, cellCameraGetBufferInfo);
-	cellCamera->AddFunc(0x0e63c444, cellCameraGetBufferInfoEx);
+	REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraCtrlExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraGetExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraSetExtensionUnit);
 
-	cellCamera->AddFunc(0x61dfbe83, cellCameraPrepExtensionUnit);
-	cellCamera->AddFunc(0xeb6f95fb, cellCameraCtrlExtensionUnit);
-	cellCamera->AddFunc(0xb602e328, cellCameraGetExtensionUnit);
-	cellCamera->AddFunc(0x2dea3e9b, cellCameraSetExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraReset);
+	REG_FUNC(cellCamera, cellCameraStart);
+	REG_FUNC(cellCamera, cellCameraRead);
+	REG_FUNC(cellCamera, cellCameraReadEx);
+	REG_FUNC(cellCamera, cellCameraReadComplete);
+	REG_FUNC(cellCamera, cellCameraStop);
 
-	cellCamera->AddFunc(0x81f83db9, cellCameraReset);
-	cellCamera->AddFunc(0x456dc4aa, cellCameraStart);
-	cellCamera->AddFunc(0x3845d39b, cellCameraRead);
-	cellCamera->AddFunc(0x21fc151f, cellCameraReadEx);
-	cellCamera->AddFunc(0xe28b206b, cellCameraReadComplete);
-	cellCamera->AddFunc(0x02f5ced0, cellCameraStop);
-
-	cellCamera->AddFunc(0xb0647e5a, cellCameraSetNotifyEventQueue);
-	cellCamera->AddFunc(0x9b98d258, cellCameraRemoveNotifyEventQueue);
-	cellCamera->AddFunc(0xa7fd2f5b, cellCameraSetNotifyEventQueue2);
-	cellCamera->AddFunc(0x44673f07, cellCameraRemoveNotifyEventQueue2);
-}
+	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue);
+	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue);
+	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue2);
+	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue2);
+});

@@ -6,7 +6,7 @@
 #include "sceNp.h"
 #include "sceNpClans.h"
 
-Module *sceNpClans = nullptr;
+extern Module sceNpClans;
 
 struct sceNpClansInternal
 {
@@ -22,7 +22,7 @@ sceNpClansInternal sceNpClansInstance;
 
 int sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
-	sceNpClans->Warning("sceNpClansInit(commId_addr=0x%x, passphrase_addr=0x%x, pool_addr=0x%x,poolSize_addr=0x%x, flags=%d)", commId.addr(), passphrase.addr(), pool.addr(), poolSize.addr(), flags);
+	sceNpClans.Warning("sceNpClansInit(commId_addr=0x%x, passphrase_addr=0x%x, pool_addr=0x%x,poolSize_addr=0x%x, flags=%d)", commId.addr(), passphrase.addr(), pool.addr(), poolSize.addr(), flags);
 
 	if (sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED;
@@ -37,7 +37,7 @@ int sceNpClansInit(vm::ptr<SceNpCommunicationId> commId, vm::ptr<SceNpCommunicat
 
 int sceNpClansTerm()
 {
-	sceNpClans->Warning("sceNpClansTerm()");
+	sceNpClans.Warning("sceNpClansTerm()");
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -49,7 +49,7 @@ int sceNpClansTerm()
 
 int sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle,u64 flags)
 {
-	sceNpClans->Todo("sceNpClansCreateRequest(handle_addr=0x%x, flags=0x%llx)", handle.addr(), flags);
+	sceNpClans.Todo("sceNpClansCreateRequest(handle_addr=0x%x, flags=0x%llx)", handle.addr(), flags);
 
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -427,52 +427,47 @@ int sceNpClansRemoveChallenge()
 	return CELL_OK;
 }
 
-void sceNpClans_unload()
+Module sceNpClans("sceNpClans", []()
 {
 	sceNpClansInstance.m_bSceNpClansInitialized = false;
-}
 
-void sceNpClans_init(Module *pxThis)
-{
-	sceNpClans = pxThis;
-
-	sceNpClans->AddFunc(0x9b820047, sceNpClansInit);
-	sceNpClans->AddFunc(0x42332cb7, sceNpClansTerm);
-	sceNpClans->AddFunc(0x9a72232d, sceNpClansCreateRequest);
-	sceNpClans->AddFunc(0xd6551cd1, sceNpClansDestroyRequest);
-	sceNpClans->AddFunc(0xe82969e2, sceNpClansAbortRequest);
-	sceNpClans->AddFunc(0xa6a31a38, sceNpClansCreateClan);
-	sceNpClans->AddFunc(0x4826f6d5, sceNpClansDisbandClan);
-	sceNpClans->AddFunc(0xca4181b4, sceNpClansGetClanList);
-	sceNpClans->AddFunc(0x672399a8, sceNpClansGetClanListByNpId);
-	sceNpClans->AddFunc(0x1221a1bf, sceNpClansSearchByProfile);
-	sceNpClans->AddFunc(0xace0cfba, sceNpClansSearchByName);
-	sceNpClans->AddFunc(0x487de998, sceNpClansGetClanInfo);
-	sceNpClans->AddFunc(0x09f9e1a9, sceNpClansUpdateClanInfo);
-	sceNpClans->AddFunc(0x856ff5c0, sceNpClansGetMemberList);
-	sceNpClans->AddFunc(0x20472da0, sceNpClansGetMemberInfo);
-	sceNpClans->AddFunc(0xf4a2d52b, sceNpClansUpdateMemberInfo);
-	sceNpClans->AddFunc(0x9cac2085, sceNpClansChangeMemberRole);
-	sceNpClans->AddFunc(0x38dadf1f, sceNpClansGetAutoAcceptStatus);
-	sceNpClans->AddFunc(0x5da94854, sceNpClansUpdateAutoAcceptStatus);
-	sceNpClans->AddFunc(0xdbf300ca, sceNpClansJoinClan);
-	sceNpClans->AddFunc(0x560f717b, sceNpClansLeaveClan);
-	sceNpClans->AddFunc(0xaa7912b5, sceNpClansKickMember);
-	sceNpClans->AddFunc(0xbc05ef31, sceNpClansSendInvitation);
-	sceNpClans->AddFunc(0x726dffd5, sceNpClansCancelInvitation);
-	sceNpClans->AddFunc(0x095e12c6, sceNpClansSendInvitationResponse);
-	sceNpClans->AddFunc(0x59743b2b, sceNpClansSendMembershipRequest);
-	sceNpClans->AddFunc(0x299ccc9b, sceNpClansCancelMembershipRequest);
-	sceNpClans->AddFunc(0x942dbdc4, sceNpClansSendMembershipResponse);
-	sceNpClans->AddFunc(0x56bc5a7c, sceNpClansGetBlacklist);
-	sceNpClans->AddFunc(0x4d06aef7, sceNpClansAddBlacklistEntry);
-	sceNpClans->AddFunc(0x5bff9da1, sceNpClansRemoveBlacklistEntry);
-	sceNpClans->AddFunc(0x727aa7f8, sceNpClansRetrieveAnnouncements);
-	sceNpClans->AddFunc(0xada45b84, sceNpClansPostAnnouncement);
-	sceNpClans->AddFunc(0xe2590f60, sceNpClansRemoveAnnouncement);
-	sceNpClans->AddFunc(0x83d65529, sceNpClansPostChallenge);
-	sceNpClans->AddFunc(0x8e785b97, sceNpClansRetrievePostedChallenges);
-	sceNpClans->AddFunc(0xd3346dc4, sceNpClansRemovePostedChallenge);
-	sceNpClans->AddFunc(0x0df25834, sceNpClansRetrieveChallenges);
-	sceNpClans->AddFunc(0xce6dc0f0, sceNpClansRemoveChallenge);
-}
+	REG_FUNC(sceNpClans, sceNpClansInit);
+	REG_FUNC(sceNpClans, sceNpClansTerm);
+	REG_FUNC(sceNpClans, sceNpClansCreateRequest);
+	REG_FUNC(sceNpClans, sceNpClansDestroyRequest);
+	REG_FUNC(sceNpClans, sceNpClansAbortRequest);
+	REG_FUNC(sceNpClans, sceNpClansCreateClan);
+	REG_FUNC(sceNpClans, sceNpClansDisbandClan);
+	REG_FUNC(sceNpClans, sceNpClansGetClanList);
+	REG_FUNC(sceNpClans, sceNpClansGetClanListByNpId);
+	REG_FUNC(sceNpClans, sceNpClansSearchByProfile);
+	REG_FUNC(sceNpClans, sceNpClansSearchByName);
+	REG_FUNC(sceNpClans, sceNpClansGetClanInfo);
+	REG_FUNC(sceNpClans, sceNpClansUpdateClanInfo);
+	REG_FUNC(sceNpClans, sceNpClansGetMemberList);
+	REG_FUNC(sceNpClans, sceNpClansGetMemberInfo);
+	REG_FUNC(sceNpClans, sceNpClansUpdateMemberInfo);
+	REG_FUNC(sceNpClans, sceNpClansChangeMemberRole);
+	REG_FUNC(sceNpClans, sceNpClansGetAutoAcceptStatus);
+	REG_FUNC(sceNpClans, sceNpClansUpdateAutoAcceptStatus);
+	REG_FUNC(sceNpClans, sceNpClansJoinClan);
+	REG_FUNC(sceNpClans, sceNpClansLeaveClan);
+	REG_FUNC(sceNpClans, sceNpClansKickMember);
+	REG_FUNC(sceNpClans, sceNpClansSendInvitation);
+	REG_FUNC(sceNpClans, sceNpClansCancelInvitation);
+	REG_FUNC(sceNpClans, sceNpClansSendInvitationResponse);
+	REG_FUNC(sceNpClans, sceNpClansSendMembershipRequest);
+	REG_FUNC(sceNpClans, sceNpClansCancelMembershipRequest);
+	REG_FUNC(sceNpClans, sceNpClansSendMembershipResponse);
+	REG_FUNC(sceNpClans, sceNpClansGetBlacklist);
+	REG_FUNC(sceNpClans, sceNpClansAddBlacklistEntry);
+	REG_FUNC(sceNpClans, sceNpClansRemoveBlacklistEntry);
+	REG_FUNC(sceNpClans, sceNpClansRetrieveAnnouncements);
+	REG_FUNC(sceNpClans, sceNpClansPostAnnouncement);
+	REG_FUNC(sceNpClans, sceNpClansRemoveAnnouncement);
+	REG_FUNC(sceNpClans, sceNpClansPostChallenge);
+	REG_FUNC(sceNpClans, sceNpClansRetrievePostedChallenges);
+	REG_FUNC(sceNpClans, sceNpClansRemovePostedChallenge);
+	REG_FUNC(sceNpClans, sceNpClansRetrieveChallenges);
+	REG_FUNC(sceNpClans, sceNpClansRemoveChallenge);
+});

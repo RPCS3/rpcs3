@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue_type.h"
+#include "sleep_queue.h"
 #include "sys_time.h"
 #include "sys_rwlock.h"
 
@@ -37,7 +37,7 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 	}
 
 	std::shared_ptr<RWLock> rw(new RWLock(attr->protocol, attr->name_u64));
-	const u32 id = sys_rwlock.GetNewId(rw, TYPE_RWLOCK);
+	const u32 id = Emu.GetIdManager().GetNewID(rw, TYPE_RWLOCK);
 	*rw_lock_id = id;
 	rw->wqueue.set_full_name(fmt::Format("Rwlock(%d)", id));
 
@@ -50,7 +50,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=%d)", rw_lock_id);
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -71,7 +71,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 	const u64 start_time = get_system_time();
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -115,7 +115,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -143,7 +143,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -173,7 +173,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 	const u64 start_time = get_system_time();
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -230,7 +230,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}
@@ -255,7 +255,7 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
 
 	std::shared_ptr<RWLock> rw;
-	if (!sys_rwlock.CheckId(rw_lock_id, rw))
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
 	{
 		return CELL_ESRCH;
 	}

@@ -53,11 +53,11 @@ int cellPhotoExportProgress()
 
 void cellPhotoExport_init()
 {
-	cellPhotoExport.AddFunc(0x4357c77f, cellPhotoExportInitialize);
-	cellPhotoExport.AddFunc(0x08cbd8e1, cellPhotoExportInitialize2);
-	cellPhotoExport.AddFunc(0xed4a0148, cellPhotoExportFinalize);
-	cellPhotoExport.AddFunc(0x09ce84ac, cellPhotoExportFromFile);
+	REG_FUNC(cellPhotoExport, cellPhotoExportInitialize);
+	REG_FUNC(cellPhotoExport, cellPhotoExportInitialize2);
+	REG_FUNC(cellPhotoExport, cellPhotoExportFinalize);
+	REG_FUNC(cellPhotoExport, cellPhotoExportFromFile);
 	//cellPhotoExport.AddFunc(, cellPhotoExportFromFileWithCopy);
-	cellPhotoExport.AddFunc(0xde509ead, cellPhotoExportProgress);
+	REG_FUNC(cellPhotoExport, cellPhotoExportProgress);
 }
 #endif

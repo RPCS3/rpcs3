@@ -33,7 +33,6 @@ public:
 	DynamicMemoryBlock Userspace;
 	DynamicMemoryBlock RSXFBMem;
 	DynamicMemoryBlock StackMem;
-	MemoryBlock* RawSPUMem[(0x100000000 - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET];
 	VirtualMemoryBlock RSXIOMem;
 
 	struct
@@ -67,17 +66,9 @@ public:
 
 	void UnregisterPages(u32 addr, u32 size);
 
-	u32 InitRawSPU(MemoryBlock* raw_spu);
-
-	void CloseRawSPU(MemoryBlock* raw_spu, const u32 num);
-
 	void Init(MemoryType type);
 
 	void Close();
-
-	__noinline void WriteMMIO32(u32 addr, const u32 data);
-
-	__noinline u32 ReadMMIO32(u32 addr);
 
 	u32 GetUserMemTotalSize()
 	{

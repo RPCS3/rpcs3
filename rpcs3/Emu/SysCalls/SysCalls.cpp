@@ -5,10 +5,9 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "ModuleManager.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "lv2/cellFs.h"
-#include "lv2/sleep_queue_type.h"
+#include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
 #include "lv2/sys_mutex.h"
 #include "lv2/sys_cond.h"
@@ -34,25 +33,16 @@
 
 #include "SysCalls.h"
 
-namespace detail
-{
-	bool CheckIdID(u32 id, ID*& _id, const std::string &name)
-	{
-		return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == name;
-	}
-}
+void null_func(PPUThread& CPU);
 
-void default_syscall(PPUThread& CPU);
-static func_caller *null_func = bind_func(default_syscall);
-
-static const int kSyscallTableLength = 1024;
+const int kSyscallTableLength = 1024;
 
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
 // PM = Product Mode
 // AuthID = Authentication ID
-static func_caller* sc_table[kSyscallTableLength] =
+const ppu_func_caller sc_table[1024] =
 {
 	null_func,
 	bind_func(sys_process_getpid),                          //1   (0x001)
@@ -81,7 +71,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func,//bind_func(),                                //27  (0x01B)  DBG
 	null_func,//bind_func(_sys_process_get_number_of_object)//28  (0x01C)  ROOT
 	bind_func(sys_process_get_id),                          //29  (0x01D)  ROOT
-	bind_func(sys_process_get_paramsfo),                    //30  (0x01E)
+	bind_func(_sys_process_get_paramsfo),                    //30  (0x01E)
 	null_func,//bind_func(sys_process_get_ppu_guid),        //31  (0x01F)
 	
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
@@ -134,7 +124,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	bind_func(sys_event_flag_trywait),                      //86  (0x056)
 	bind_func(sys_event_flag_set),                          //87  (0x057)
 	bind_func(sys_interrupt_thread_eoi),                    //88  (0x058)
-	bind_func(sys_interrupt_thread_disestablish),           //89  (0x059)
+	bind_func(_sys_interrupt_thread_disestablish),           //89  (0x059)
 	bind_func(sys_semaphore_create),                        //90  (0x05A)
 	bind_func(sys_semaphore_destroy),                       //91  (0x05B)
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
@@ -897,25 +887,7 @@ static func_caller* sc_table[kSyscallTableLength] =
 	null_func, null_func, null_func, bind_func(cellGcmCallback), //1023  UNS
 };
 
-/** HACK: Used to delete func_caller objects that get allocated and stored in sc_table (above).
-* The destructor of this static object gets called when the program shuts down.
-*/
-struct SyscallTableCleaner_t
-{
-	SyscallTableCleaner_t() {}
-	~SyscallTableCleaner_t()
-	{
-		for (int i = 0; i < kSyscallTableLength; ++i)
-		{
-			if (sc_table[i] != null_func)
-				delete sc_table[i];
-		}
-
-		delete null_func;
-	}
-} SyscallTableCleaner_t;
-
-void default_syscall(PPUThread& CPU)
+void null_func(PPUThread& CPU)
 {
 	u32 code = (u32)CPU.GPR[11];
 	//TODO: remove this
@@ -940,38 +912,35 @@ void default_syscall(PPUThread& CPU)
 		return;
 	}
 
-	LOG_ERROR(HLE, "Unknown syscall: %d - %08x", code, code);
+	LOG_ERROR(HLE, "Unknown syscall: %d - %08x -> CELL_OK", code, code);
 	CPU.GPR[3] = 0;
 	return;
 }
 
-void SysCalls::DoSyscall(PPUThread& CPU, u32 code)
+void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
+	auto old_last_syscall = CPU.m_last_syscall;
+	CPU.m_last_syscall = code;
+
+	if (code >= 1024)
+	{
+		throw "Invalid syscall number";
+	}
+
 	//Auto Pause using simple singleton.
 	Debug::AutoPause::getInstance().TryPause(code);
 
-	if(code < 1024)
+	if (Ini.HLELogging.GetValue())
 	{
-		(*sc_table[code])(CPU);
-		return;
-	}
-	
-	if(Emu.GetModuleManager().CallFunc(CPU, code))
-	{
-		return;
+		LOG_NOTICE(PPU, "SysCall called: %s [0x%llx]", "unknown", code);
 	}
 
+	sc_table[code](CPU);
 
-	LOG_ERROR(HLE, "TODO: %s", GetHLEFuncName(code).c_str());
-	CPU.GPR[3] = 0;
-}
+	if (Ini.HLELogging.GetValue())
+	{
+		LOG_NOTICE(PPU, "SysCall finished: %s [0x%llx] -> 0x%llx", "unknown", code, CPU.GPR[3]);
+	}
 
-IdManager& SysCallBase::GetIdManager() const
-{
-	return Emu.GetIdManager();
-}
-
-bool SysCallBase::RemoveId(u32 id)
-{
-	return Emu.GetIdManager().RemoveID(id);
+	CPU.m_last_syscall = old_last_syscall;
 }

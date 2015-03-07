@@ -3,7 +3,7 @@
 
 class KeyboardManager
 {
-	bool m_inited;
+	bool m_inited = false;
 	std::unique_ptr<KeyboardHandlerBase> m_keyboard_handler;
 
 public:

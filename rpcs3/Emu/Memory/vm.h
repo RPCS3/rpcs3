@@ -36,10 +36,13 @@ namespace vm
 	bool reservation_break(u32 addr);
 	// read memory and reserve it for further atomic update, return true if the previous reservation was broken
 	bool reservation_acquire(void* data, u32 addr, u32 size, const std::function<void()>& callback = nullptr);
+	// same as reservation_acquire but does not have the callback argument
+	// used by the PPU LLVM JIT since creating a std::function object in LLVM IR is too complicated
+	bool reservation_acquire_no_cb(void* data, u32 addr, u32 size);
 	// attempt to atomically update reserved memory
 	bool reservation_update(u32 addr, const void* data, u32 size);
 	// for internal use
-	bool reservation_query(u32 addr, bool is_writing);
+	bool reservation_query(u32 addr, u32 size, bool is_writing, std::function<bool()> callback);
 	// for internal use
 	void reservation_free();
 	// perform complete operation
@@ -74,15 +77,15 @@ namespace vm
 	}
 
 	template<typename T = void>
-	T* const get_priv_ptr(u32 addr)
+	T* const priv_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
 	}
 
 	template<typename T>
-	T& get_priv_ref(u32 addr)
+	T& priv_ref(u32 addr)
 	{
-		return *get_priv_ptr<T>(addr);
+		return *priv_ptr<T>(addr);
 	}
 
 	u32 get_addr(const void* real_pointer);

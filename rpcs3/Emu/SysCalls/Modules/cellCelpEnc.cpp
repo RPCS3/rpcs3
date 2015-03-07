@@ -71,14 +71,14 @@ int cellCelpEncGetAu()
 
 void cellCelpEnc_init()
 {
-	cellCelpEnc.AddFunc(0x6b148570, cellCelpEncQueryAttr);
-	cellCelpEnc.AddFunc(0x77b3b29a, cellCelpEncOpen);
-	cellCelpEnc.AddFunc(0x9eb084db, cellCelpEncOpenEx);
-	cellCelpEnc.AddFunc(0x15ec0cca, cellCelpEncClose);
-	cellCelpEnc.AddFunc(0x55dc23de, cellCelpEncStart);
-	cellCelpEnc.AddFunc(0xf2b85dff, cellCelpEncEnd);
-	cellCelpEnc.AddFunc(0x81fe030c, cellCelpEncEncodeFrame);
-	cellCelpEnc.AddFunc(0x9b244272, cellCelpEncWaitForOutput);
-	cellCelpEnc.AddFunc(0x3773692f, cellCelpEncGetAu);
+	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
+	REG_FUNC(cellCelpEnc, cellCelpEncOpen);
+	REG_FUNC(cellCelpEnc, cellCelpEncOpenEx);
+	REG_FUNC(cellCelpEnc, cellCelpEncClose);
+	REG_FUNC(cellCelpEnc, cellCelpEncStart);
+	REG_FUNC(cellCelpEnc, cellCelpEncEnd);
+	REG_FUNC(cellCelpEnc, cellCelpEncEncodeFrame);
+	REG_FUNC(cellCelpEnc, cellCelpEncWaitForOutput);
+	REG_FUNC(cellCelpEnc, cellCelpEncGetAu);
 }
 #endif 

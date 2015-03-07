@@ -1,9 +1,15 @@
 #pragma once
 
+#undef InterlockedExchange
+#undef InterlockedCompareExchange
+#undef InterlockedOr
+#undef InterlockedAnd
+#undef InterlockedXor
+
 template<typename T, size_t size = sizeof(T)>
 struct _to_atomic
 {
-	static_assert(size == 1 || size == 2 || size == 4 || size == 8, "Invalid atomic type");
+	static_assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 16, "Invalid atomic type");
 
 	typedef T type;
 };
@@ -30,6 +36,12 @@ template<typename T>
 struct _to_atomic<T, 8>
 {
 	typedef uint64_t type;
+};
+
+template<typename T>
+struct _to_atomic<T, 16>
+{
+	typedef u128 type;
 };
 
 template<typename T>
@@ -73,7 +85,7 @@ public:
 	}
 
 	// write data without memory barrier
-	__forceinline void write_relaxed(const T& value) volatile
+	__forceinline void write_relaxed(const T& value)
 	{
 		data = (atomic_type&)(value);
 	}

@@ -10,7 +10,7 @@ class CallbackManager
 	std::mutex m_mutex;
 	std::vector<std::function<s32(CPUThread&)>> m_cb_list;
 	std::vector<std::function<void(CPUThread&)>> m_async_list;
-	CPUThread* m_cb_thread;
+	std::shared_ptr<CPUThread> m_cb_thread;
 
 	struct PauseResumeCBS
 	{

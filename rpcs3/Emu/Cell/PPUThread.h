@@ -1,6 +1,6 @@
 #pragma once
 #include "Emu/Cell/Common.h"
-#include "Emu/Cell/PPCThread.h"
+#include "Emu/CPU/CPUThread.h"
 #include "Emu/Memory/vm.h"
 
 enum
@@ -467,7 +467,7 @@ struct FPRdouble
 	static int Cmp(PPCdouble a, PPCdouble b);
 };
 
-class PPUThread : public PPCThread
+class PPUThread : public CPUThread
 {
 public:
 	PPCdouble FPR[32]; //Floating Point Register
@@ -793,13 +793,27 @@ public:
 		return false;
 	}
 
+	u64 get_next_gpr_arg(u32& g_count, u32& f_count, u32& v_count)
+	{
+		assert(!f_count && !v_count); // not supported
+
+		if (g_count < 8)
+		{
+			return GPR[g_count++ + 3];
+		}
+		else
+		{
+			return GetStackArg(++g_count);
+		}
+	}
+
 public:
 	virtual void InitRegs() override;
 	virtual void InitStack() override;
 	virtual void CloseStack() override;
 	virtual void Task() override;
 	u64 GetStackArg(s32 i);
-	u64 FastCall2(u32 addr, u32 rtoc);
+	void FastCall2(u32 addr, u32 rtoc);
 	void FastStop();
 	virtual void DoRun() override;
 

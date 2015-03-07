@@ -5,7 +5,7 @@
 
 #include "cellMic.h"
 
-Module *cellMic = nullptr;
+extern Module cellMic;
 
 struct cellMicInternal
 {
@@ -17,28 +17,28 @@ struct cellMicInternal
 	}
 };
 
-cellMicInternal CellMicInstance;
+cellMicInternal cellMicInstance;
 
 int cellMicInit()
 {
-	cellMic->Warning("cellMicInit()");
+	cellMic.Warning("cellMicInit()");
 
-	if (CellMicInstance.m_bCellMicInitialized)
+	if (cellMicInstance.m_bCellMicInitialized)
 		return CELL_MICIN_ERROR_ALREADY_INIT;
 
-	CellMicInstance.m_bCellMicInitialized = true;
+	cellMicInstance.m_bCellMicInitialized = true;
 
 	return CELL_OK;
 }
 
 int cellMicEnd()
 {
-	cellMic->Warning("cellMicEnd()");
+	cellMic.Warning("cellMicEnd()");
 
-	if (!CellMicInstance.m_bCellMicInitialized)
+	if (!cellMicInstance.m_bCellMicInitialized)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	CellMicInstance.m_bCellMicInitialized = false;
+	cellMicInstance.m_bCellMicInitialized = false;
 
 	return CELL_OK;
 }
@@ -283,60 +283,55 @@ int cellMicGetDeviceIdentifier()
 	return CELL_OK;
 }
 
-void cellMic_unload()
+Module cellMic("cellMic", []()
 {
-	CellMicInstance.m_bCellMicInitialized = false;
-}
+	cellMicInstance.m_bCellMicInitialized = false;
 
-void cellMic_init(Module *pxThis)
-{
-	cellMic = pxThis;
+	REG_FUNC(cellMic, cellMicInit);
+	REG_FUNC(cellMic, cellMicEnd);
+	REG_FUNC(cellMic, cellMicOpen);
+	REG_FUNC(cellMic, cellMicClose);
 
-	cellMic->AddFunc(0x8325e02d, cellMicInit);
-	cellMic->AddFunc(0xc6328caa, cellMicEnd);
-	cellMic->AddFunc(0xdd1b59f0, cellMicOpen);
-	cellMic->AddFunc(0x8d229f8e, cellMicClose);
+	REG_FUNC(cellMic, cellMicGetDeviceGUID);
+	REG_FUNC(cellMic, cellMicGetType);
+	REG_FUNC(cellMic, cellMicIsAttached);
+	REG_FUNC(cellMic, cellMicIsOpen);
+	REG_FUNC(cellMic, cellMicGetDeviceAttr);
+	REG_FUNC(cellMic, cellMicSetDeviceAttr);
+	REG_FUNC(cellMic, cellMicGetSignalAttr);
+	REG_FUNC(cellMic, cellMicSetSignalAttr);
+	REG_FUNC(cellMic, cellMicGetSignalState);
 
-	cellMic->AddFunc(0x017024a8, cellMicGetDeviceGUID);
-	cellMic->AddFunc(0xa52d2ae4, cellMicGetType);
-	cellMic->AddFunc(0x1b42101b, cellMicIsAttached);
-	cellMic->AddFunc(0x186cb1fb, cellMicIsOpen);
-	cellMic->AddFunc(0x6a024aa0, cellMicGetDeviceAttr);
-	cellMic->AddFunc(0xb2c16321, cellMicSetDeviceAttr);
-	cellMic->AddFunc(0xac5ba03a, cellMicGetSignalAttr);
-	cellMic->AddFunc(0x323deb41, cellMicSetSignalAttr);
-	cellMic->AddFunc(0xb30780eb, cellMicGetSignalState);
+	REG_FUNC(cellMic, cellMicStart);
+	REG_FUNC(cellMic, cellMicRead);
+	REG_FUNC(cellMic, cellMicStop);
+	REG_FUNC(cellMic, cellMicReset);
 
-	cellMic->AddFunc(0xdd724314, cellMicStart);
-	cellMic->AddFunc(0x07e1b12c, cellMicRead);
-	cellMic->AddFunc(0xfcfaf246, cellMicStop);
-	cellMic->AddFunc(0x6bc46aab, cellMicReset);
+	REG_FUNC(cellMic, cellMicSetNotifyEventQueue);
+	REG_FUNC(cellMic, cellMicSetNotifyEventQueue2);
+	REG_FUNC(cellMic, cellMicRemoveNotifyEventQueue);
 
-	cellMic->AddFunc(0x7903400e, cellMicSetNotifyEventQueue);
-	cellMic->AddFunc(0x6cc7ae00, cellMicSetNotifyEventQueue2);
-	cellMic->AddFunc(0x65336418, cellMicRemoveNotifyEventQueue);
+	REG_FUNC(cellMic, cellMicOpenEx);
+	REG_FUNC(cellMic, cellMicStartEx);
+	REG_FUNC(cellMic, cellMicGetFormatRaw);
+	REG_FUNC(cellMic, cellMicGetFormatAux);
+	REG_FUNC(cellMic, cellMicGetFormatDsp);
+	REG_FUNC(cellMic, cellMicOpenRaw);
+	REG_FUNC(cellMic, cellMicReadRaw);
+	REG_FUNC(cellMic, cellMicReadAux);
+	REG_FUNC(cellMic, cellMicReadDsp);
 
-	cellMic->AddFunc(0x05709bbf, cellMicOpenEx);
-	cellMic->AddFunc(0xddd19a89, cellMicStartEx);
-	cellMic->AddFunc(0x4e0b69ee, cellMicGetFormatRaw);
-	cellMic->AddFunc(0xfda12276, cellMicGetFormatAux);
-	cellMic->AddFunc(0x87a08d29, cellMicGetFormatDsp);
-	cellMic->AddFunc(0xa42ac07a, cellMicOpenRaw);
-	cellMic->AddFunc(0x72165a7f, cellMicReadRaw);
-	cellMic->AddFunc(0x3acc118e, cellMicReadAux);
-	cellMic->AddFunc(0xc414faa5, cellMicReadDsp);
-
-	cellMic->AddFunc(0x25c5723f, cellMicGetStatus);
-	cellMic->AddFunc(0xe839380f, cellMicStopEx);
-	cellMic->AddFunc(0x3ace58f3, cellMicSysShareClose);
-	cellMic->AddFunc(0x48108a23, cellMicGetFormat);
-	cellMic->AddFunc(0x891c6291, cellMicSetMultiMicNotifyEventQueue);
-	cellMic->AddFunc(0xad049ecf, cellMicGetFormatEx);
-	cellMic->AddFunc(0xbdfd51e2, cellMicSysShareStop);
-	cellMic->AddFunc(0xc3610dbd, cellMicSysShareOpen);
-	cellMic->AddFunc(0xc461563c, cellMicCommand);
-	cellMic->AddFunc(0xcac7e7d7, cellMicSysShareStart);
-	cellMic->AddFunc(0xd127cd3e, cellMicSysShareInit);
-	cellMic->AddFunc(0xf82bbf7c, cellMicSysShareEnd);
-	cellMic->AddFunc(0xfdbbe469, cellMicGetDeviceIdentifier);
-}
+	REG_FUNC(cellMic, cellMicGetStatus);
+	REG_FUNC(cellMic, cellMicStopEx);
+	REG_FUNC(cellMic, cellMicSysShareClose);
+	REG_FUNC(cellMic, cellMicGetFormat);
+	REG_FUNC(cellMic, cellMicSetMultiMicNotifyEventQueue);
+	REG_FUNC(cellMic, cellMicGetFormatEx);
+	REG_FUNC(cellMic, cellMicSysShareStop);
+	REG_FUNC(cellMic, cellMicSysShareOpen);
+	REG_FUNC(cellMic, cellMicCommand);
+	REG_FUNC(cellMic, cellMicSysShareStart);
+	REG_FUNC(cellMic, cellMicSysShareInit);
+	REG_FUNC(cellMic, cellMicSysShareEnd);
+	REG_FUNC(cellMic, cellMicGetDeviceIdentifier);
+});

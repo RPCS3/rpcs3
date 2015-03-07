@@ -131,9 +131,6 @@
     <ClCompile Include="Emu\SysCalls\Modules.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Static.cpp">
-      <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
@@ -168,6 +165,9 @@
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellGem.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellGifDec.cpp">
@@ -209,7 +209,16 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellRtc.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSaveData.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellScreenshot.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSpurs.cpp">
@@ -236,10 +245,16 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSysutilAp.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUserInfo.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellVdec.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellVpost.cpp">
@@ -326,9 +341,6 @@
     <ClCompile Include="Emu\Cell\PPCDecoder.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPCThread.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
@@ -407,9 +419,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellCelpEnc.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellGem.cpp">
-      <Filter>Emu\SysCalls\Modules</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellHttpUtil.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
@@ -446,16 +455,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellPrint.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellRudp.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSailRec.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellScreenshot.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellSearch.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellSheap.cpp">
@@ -464,13 +464,7 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellSsl.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellUsbd.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\cellUsbpspcm.cpp">
-      <Filter>Emu\SysCalls\currently_unused</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\Modules\cellVoice.cpp">
       <Filter>Emu\SysCalls\currently_unused</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Modules\libsnd3.cpp">
@@ -590,6 +584,9 @@
     <ClCompile Include="Emu\RSX\RSXThread.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_event_flag.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
@@ -652,9 +649,6 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue_type.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
       <Filter>Emu\SysCalls</Filter>
@@ -856,6 +850,15 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\psv_cond.cpp">
       <Filter>Emu\CPU\ARMv7\Objects</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\sleep_queue.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1102,9 +1105,6 @@
     <ClInclude Include="Emu\Cell\PPCInstrTable.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\PPCThread.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\PPUDecoder.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
@@ -1226,9 +1226,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\ModuleManager.h">
-      <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\Static.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\simpleini\ConvertUTF.h">
@@ -1369,6 +1366,9 @@
     <ClInclude Include="Emu\RSX\RSXThread.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\CgBinaryProgram.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
@@ -1447,9 +1447,6 @@
     <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\atomic_type.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
     </ClInclude>
@@ -1458,9 +1455,6 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\PSVFuncList.h">
       <Filter>Emu\CPU\ARMv7</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue_type.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\cellFs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
@@ -1524,6 +1518,30 @@
     </ClInclude>
     <ClInclude Include="Emu\ARMv7\Modules\psv_cond.h">
       <Filter>Emu\CPU\ARMv7\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellUsbd.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellScreenshot.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellRudp.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellSearch.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUContext.h">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\lv2\sleep_queue.h">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\atomic.h">
+      <Filter>Emu\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\refcnt.h">
+      <Filter>Emu\Memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -3,8 +3,6 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/SysCalls/SysCalls.h"
 #include "rpcs3/Ini.h"
-#include "Emu/System.h"
-#include "Emu/SysCalls/Static.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/lv2/sys_time.h"
@@ -18,10 +16,6 @@
 #endif
 
 #include <fenv.h>
-
-#if 0//def _DEBUG
-#define HLE_CALL_DEBUG
-#endif
 
 extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
 inline void InitRotateMask()
@@ -106,28 +100,6 @@ private:
 		CPU.SetFPSCR_FI(fetestexcept(FE_INEXACT) != 0);
 		if (fetestexcept(FE_UNDERFLOW)) CPU.SetFPSCRException(FPSCR_UX);
 		if (fetestexcept(FE_OVERFLOW)) CPU.SetFPSCRException(FPSCR_OX);
-	}
-
-	void Exit() {}
-
-	void SysCall()
-	{
-		const u64 sc = CPU.GPR[11];
-		const u64 old_sc = CPU.m_last_syscall;
-
-		CPU.m_last_syscall = sc;
-		SysCalls::DoSyscall(CPU, (u32)sc);
-
-		if(Ini.HLELogging.GetValue())
-		{
-			LOG_WARNING(PPU, "SysCall[0x%llx ('%s')] done with code [0x%llx]! #pc: 0x%x",
-				sc, SysCalls::GetHLEFuncName((u32)sc).c_str(), CPU.GPR[3], CPU.PC);
-		}
-#ifdef HLE_CALL_DEBUG
-		LOG_NOTICE(PPU, "SysCall[%lld] done with code [0x%llx]! #pc: 0x%x", sc, CPU.GPR[3], CPU.PC);
-#endif
-
-		CPU.m_last_syscall = old_sc;
 	}
 
 	void NULL_OP()
@@ -2253,20 +2225,16 @@ private:
 			if(lk) CPU.LR = nextLR;
 		}
 	}
+	void HACK(u32 index)
+	{
+		execute_ppu_func_by_index(CPU, index);
+	}
 	void SC(u32 lev)
 	{
 		switch (lev)
 		{
-		case 0x0: SysCall(); break;
+		case 0x0: SysCalls::DoSyscall(CPU, CPU.GPR[11]); break;
 		case 0x1: throw "SC(): HyperCall LV1";
-		case 0x2:
-			Emu.GetSFuncManager().StaticExecute(CPU, (u32)CPU.GPR[11]);
-			if (Ini.HLELogging.GetValue())
-			{
-				LOG_NOTICE(PPU, "'%s' done with code[0x%llx]! #pc: 0x%x",
-					Emu.GetSFuncManager()[CPU.GPR[11]]->name, CPU.GPR[3], CPU.PC);
-			}
-			break;
 		case 0x3: CPU.FastStop(); break;
 		default: throw fmt::Format("SC(): unknown level (0x%x)", lev);
 		}

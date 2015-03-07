@@ -1,127 +1,101 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
-#include "Emu/Memory/atomic_type.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sleep_queue_type.h"
+#include "sleep_queue.h"
+#include "sys_time.h"
 #include "sys_event_flag.h"
 
 SysCallBase sys_event_flag("sys_event_flag");
 
-u32 EventFlag::check()
+s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init)
 {
-	u32 target = 0;
-	u64 highest_prio = ~0ull;
-	const u64 flag_set = flags.read_sync();
+	sys_event_flag.Warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
-	for (u32 i = 0; i < waiters.size(); i++)
+	LV2_LOCK;
+
+	if (!id || !attr)
 	{
-		if (((waiters[i].mode & SYS_EVENT_FLAG_WAIT_AND) && (flag_set & waiters[i].bitptn) == waiters[i].bitptn) ||
-			((waiters[i].mode & SYS_EVENT_FLAG_WAIT_OR) && (flag_set & waiters[i].bitptn)))
-		{
-			if (protocol == SYS_SYNC_FIFO)
-			{
-				target = waiters[i].tid;
-				break;
-			}
-			else if (protocol == SYS_SYNC_PRIORITY)
-			{
-				if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(waiters[i].tid))
-				{
-					const u64 prio = t->GetPrio();
-					if (prio < highest_prio)
-					{
-						highest_prio = prio;
-						target = waiters[i].tid;
-					}
-				}
-				else
-				{
-					assert(!"EventFlag::check(): waiter not found");
-				}
-			}
-			else
-			{
-				assert(!"EventFlag::check(): unknown protocol");
-			}
-		}
-	}
-
-	return target;
-}
-
-s32 sys_event_flag_create(vm::ptr<u32> eflag_id, vm::ptr<sys_event_flag_attr> attr, u64 init)
-{
-	sys_event_flag.Warning("sys_event_flag_create(eflag_id_addr=0x%x, attr_addr=0x%x, init=0x%llx)", eflag_id.addr(), attr.addr(), init);
-
-	if (!eflag_id)
-	{
-		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (eflag_id_addr=0x%x)", eflag_id.addr());
 		return CELL_EFAULT;
 	}
 
-	if (!attr)
+	const u32 protocol = attr->protocol;
+
+	switch (protocol)
 	{
-		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (attr_addr=0x%x)", attr.addr());
-		return CELL_EFAULT;
+	case SYS_SYNC_PRIORITY: break;
+	case SYS_SYNC_RETRY: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_RETRY"); break;
+	case SYS_SYNC_PRIORITY_INHERIT: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
+	case SYS_SYNC_FIFO: break;
+	default: sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
-	switch (attr->protocol.data())
+	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
 	{
-	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_event_flag.Todo("SYS_SYNC_RETRY"); break;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_event_flag.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_FIFO): break;
-	default: sys_event_flag.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
-	}
-
-	if (attr->pshared.data() != se32(0x200))
-	{
-		sys_event_flag.Error("Unknown pshared attribute (0x%x)", attr->pshared);
+		sys_event_flag.Error("sys_event_flag_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
-	switch (attr->type.data())
+	const u32 type = attr->type;
+
+	switch (type)
 	{
-	case se32(SYS_SYNC_WAITER_SINGLE): break;
-	case se32(SYS_SYNC_WAITER_MULTIPLE): break;
-	default: sys_event_flag.Error("Unknown event flag type (0x%x)", attr->type); return CELL_EINVAL;
+	case SYS_SYNC_WAITER_SINGLE: break;
+	case SYS_SYNC_WAITER_MULTIPLE: break;
+	default: sys_event_flag.Error("sys_event_flag_create(): unknown type (0x%x)", attr->type); return CELL_EINVAL;
 	}
 
-	std::shared_ptr<EventFlag> ef(new EventFlag(init, attr->protocol, attr->type, attr->name_u64));
-	u32 id = sys_event_flag.GetNewId(ef, TYPE_EVENT_FLAG);
-	*eflag_id = id;
-	sys_event_flag.Warning("*** event_flag created [%s] (protocol=0x%x, type=0x%x): id = %d", std::string(attr->name, 8).c_str(), attr->protocol, attr->type, id);
+	std::shared_ptr<event_flag_t> ef(new event_flag_t(init, protocol, type, attr->name_u64));
+
+	*id = Emu.GetIdManager().GetNewID(ef, TYPE_EVENT_FLAG);
 
 	return CELL_OK;
 }
 
-s32 sys_event_flag_destroy(u32 eflag_id)
+s32 sys_event_flag_destroy(u32 id)
 {
-	sys_event_flag.Warning("sys_event_flag_destroy(eflag_id=%d)", eflag_id);
+	sys_event_flag.Warning("sys_event_flag_destroy(id=%d)", id);
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	if (ef->waiters.size()) // ???
+	std::shared_ptr<event_flag_t> ef;
+
+	if (!Emu.GetIdManager().GetIDData(id, ef))
+	{
+		return CELL_ESRCH;
+	}
+
+	while (ef->waiters < 0)
+	{
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+	}
+
+	if (ef->waiters)
 	{
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID(eflag_id);
+	Emu.GetIdManager().RemoveID(id);
 
 	return CELL_OK;
 }
 
-s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
+s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
-	sys_event_flag.Log("sys_event_flag_wait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x, timeout=%lld)",
-		eflag_id, bitptn, mode, result.addr(), timeout);
+	sys_event_flag.Log("sys_event_flag_wait(id=%d, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
-	if (result) *result = 0;
+	const u64 start_time = get_system_time();
+
+	LV2_LOCK;
+
+	if (result)
+	{
+		*result = 0;
+	}
 
 	switch (mode & 0xf)
 	{
@@ -132,130 +106,107 @@ s32 sys_event_flag_wait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result,
 
 	switch (mode & ~0xf)
 	{
-	case 0: break; // ???
+	case 0: break;
 	case SYS_EVENT_FLAG_WAIT_CLEAR: break;
 	case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
 	default: return CELL_EINVAL;
 	}
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	std::shared_ptr<event_flag_t> ef;
 
-	const u32 tid = GetCurrentPPUThread().GetId();
-
+	if (!Emu.GetIdManager().GetIDData(id, ef))
 	{
-		std::lock_guard<std::mutex> lock(ef->mutex);
-
-		if (ef->type == SYS_SYNC_WAITER_SINGLE && ef->waiters.size() > 0)
-		{
-			return CELL_EPERM;
-		}
-
-		EventFlagWaiter rec;
-		rec.bitptn = bitptn;
-		rec.mode = mode;
-		rec.tid = tid;
-		ef->waiters.push_back(rec);
-
-		if (ef->check() == tid)
-		{
-			const u64 flag_set = ef->flags.read_sync();
-
-			ef->waiters.erase(ef->waiters.end() - 1);
-
-			if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
-			{
-				ef->flags &= ~bitptn;
-			}
-			else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
-			{
-				ef->flags &= 0;
-			}
-
-			if (result)
-			{
-				*result = flag_set;
-			}
-			return CELL_OK;
-		}
+		return CELL_ESRCH;
 	}
 
-	u64 counter = 0;
-	const u64 max_counter = timeout ? (timeout / 1000) : ~0;
+	if (ef->type == SYS_SYNC_WAITER_SINGLE && ef->waiters)
+	{
+		return CELL_EPERM;
+	}
+
+	while (ef->waiters < 0)
+	{
+		// wait until other threads return CELL_ECANCELED (to prevent modifying bit pattern)
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+	}
+
+	// protocol is ignored in current implementation
+	ef->waiters++;
 
 	while (true)
 	{
-		u32 signaled;
-		if (ef->signal.try_peek(signaled) && signaled == tid)
+		if (result)
 		{
-			std::lock_guard<std::mutex> lock(ef->mutex);
+			*result = ef->flags;
+		}
 
-			const u64 flag_set = ef->flags.read_sync();
+		if (mode & SYS_EVENT_FLAG_WAIT_AND && (ef->flags & bitptn) == bitptn)
+		{
+			break;
+		}
 
-			ef->signal.pop(signaled);
+		if (mode & SYS_EVENT_FLAG_WAIT_OR && ef->flags & bitptn)
+		{
+			break;
+		}
 
-			for (u32 i = 0; i < ef->waiters.size(); i++)
+		if (ef->waiters <= 0)
+		{
+			ef->waiters++; assert(ef->waiters <= 0);
+
+			if (!ef->waiters)
 			{
-				if (ef->waiters[i].tid == tid)
-				{
-					ef->waiters.erase(ef->waiters.begin() + i);
-
-					if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
-					{
-						ef->flags &= ~bitptn;
-					}
-					else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
-					{
-						ef->flags &= 0;
-					}
-
-					if (u32 target = ef->check())
-					{
-						ef->signal.push(target);
-					}
-
-					if (result)
-					{
-						*result = flag_set;
-					}
-					return CELL_OK;
-				}
+				ef->cv.notify_all();
 			}
 
 			return CELL_ECANCELED;
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
-		if (counter++ > max_counter)
+		if (timeout && get_system_time() - start_time > timeout)
 		{
-			std::lock_guard<std::mutex> lock(ef->mutex);
-
-			for (u32 i = 0; i < ef->waiters.size(); i++)
-			{
-				if (ef->waiters[i].tid == tid)
-				{
-					ef->waiters.erase(ef->waiters.begin() + i);
-					break;
-				}
-			}
+			ef->waiters--; assert(ef->waiters >= 0);
 			return CELL_ETIMEDOUT;
 		}
 
 		if (Emu.IsStopped())
 		{
-			sys_event_flag.Warning("sys_event_flag_wait(id=%d) aborted", eflag_id);
+			sys_event_flag.Warning("sys_event_flag_wait(id=%d) aborted", id);
 			return CELL_OK;
 		}
+
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
+
+	if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
+	{
+		ef->flags &= ~bitptn;
+	}
+
+	if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+	{
+		ef->flags = 0;
+	}
+
+	ef->waiters--; assert(ef->waiters >= 0);
+
+	if (ef->flags)
+	{
+		ef->cv.notify_one();
+	}
+
+	return CELL_OK;
 }
 
-s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> result)
+s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 {
-	sys_event_flag.Log("sys_event_flag_trywait(eflag_id=%d, bitptn=0x%llx, mode=0x%x, result_addr=0x%x)",
-		eflag_id, bitptn, mode, result.addr());
+	sys_event_flag.Log("sys_event_flag_trywait(id=%d, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
 
-	if (result) *result = 0;
+	LV2_LOCK;
+
+	if (result)
+	{
+		*result = 0;
+	}
 
 	switch (mode & 0xf)
 	{
@@ -266,122 +217,149 @@ s32 sys_event_flag_trywait(u32 eflag_id, u64 bitptn, u32 mode, vm::ptr<u64> resu
 
 	switch (mode & ~0xf)
 	{
-	case 0: break; // ???
+	case 0: break;
 	case SYS_EVENT_FLAG_WAIT_CLEAR: break;
 	case SYS_EVENT_FLAG_WAIT_CLEAR_ALL: break;
 	default: return CELL_EINVAL;
 	}
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
-	
-	std::lock_guard<std::mutex> lock(ef->mutex);
+	std::shared_ptr<event_flag_t> ef;
 
-	const u64 flag_set = ef->flags.read_sync();
-
-	if (((mode & SYS_EVENT_FLAG_WAIT_AND) && (flag_set & bitptn) == bitptn) ||
-		((mode & SYS_EVENT_FLAG_WAIT_OR) && (flag_set & bitptn)))
+	if (!Emu.GetIdManager().GetIDData(id, ef))
 	{
-		if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
-		{
-			ef->flags &= ~bitptn;
-		}
-		else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
-		{
-			ef->flags &= 0;
-		}
-
-		if (result)
-		{
-			*result = flag_set;
-		}
-
-		return CELL_OK;
+		return CELL_ESRCH;
 	}
 
-	return CELL_EBUSY;
+	if (!((mode & SYS_EVENT_FLAG_WAIT_AND) && (ef->flags & bitptn) == bitptn) && !((mode & SYS_EVENT_FLAG_WAIT_OR) && (ef->flags & bitptn)))
+	{
+		return CELL_EBUSY;
+	}
+
+	while (ef->waiters < 0)
+	{
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+	}
+
+	if (mode & SYS_EVENT_FLAG_WAIT_CLEAR)
+	{
+		ef->flags &= ~bitptn;
+	}
+	else if (mode & SYS_EVENT_FLAG_WAIT_CLEAR_ALL)
+	{
+		ef->flags &= 0;
+	}
+
+	if (result)
+	{
+		*result = ef->flags;
+	}
+
+	return CELL_OK;
 }
 
-s32 sys_event_flag_set(u32 eflag_id, u64 bitptn)
+s32 sys_event_flag_set(u32 id, u64 bitptn)
 {
-	sys_event_flag.Log("sys_event_flag_set(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
+	sys_event_flag.Log("sys_event_flag_set(id=%d, bitptn=0x%llx)", id, bitptn);
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	std::lock_guard<std::mutex> lock(ef->mutex);
+	std::shared_ptr<event_flag_t> ef;
+
+	if (!Emu.GetIdManager().GetIDData(id, ef))
+	{
+		return CELL_ESRCH;
+	}
+
+	while (ef->waiters < 0)
+	{
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+	}
 
 	ef->flags |= bitptn;
-	if (u32 target = ef->check())
-	{
-		ef->signal.push(target);
-	}
+	ef->cv.notify_all();
+	
 	return CELL_OK;
 }
 
-s32 sys_event_flag_clear(u32 eflag_id, u64 bitptn)
+s32 sys_event_flag_clear(u32 id, u64 bitptn)
 {
-	sys_event_flag.Log("sys_event_flag_clear(eflag_id=%d, bitptn=0x%llx)", eflag_id, bitptn);
+	sys_event_flag.Log("sys_event_flag_clear(id=%d, bitptn=0x%llx)", id, bitptn);
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	std::lock_guard<std::mutex> lock(ef->mutex);
+	std::shared_ptr<event_flag_t> ef;
+
+	if (!Emu.GetIdManager().GetIDData(id, ef))
+	{
+		return CELL_ESRCH;
+	}
+
+	while (ef->waiters < 0)
+	{
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+	}
+
 	ef->flags &= bitptn;
+
 	return CELL_OK;
 }
 
-s32 sys_event_flag_cancel(u32 eflag_id, vm::ptr<u32> num)
+s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 {
-	sys_event_flag.Log("sys_event_flag_cancel(eflag_id=%d, num_addr=0x%x)", eflag_id, num.addr());
+	sys_event_flag.Log("sys_event_flag_cancel(id=%d, num=*0x%x)", id, num);
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	std::vector<u32> tids;
+	if (num)
 	{
-		std::lock_guard<std::mutex> lock(ef->mutex);
-
-		tids.resize(ef->waiters.size());
-		for (u32 i = 0; i < ef->waiters.size(); i++)
-		{
-			tids[i] = ef->waiters[i].tid;
-		}
-		ef->waiters.clear();
+		*num = 0;
 	}
 
-	for (auto& v : tids)
+	std::shared_ptr<event_flag_t> ef;
+
+	if (!Emu.GetIdManager().GetIDData(id, ef))
 	{
-		ef->signal.push(v);
+		return CELL_ESRCH;
 	}
 
-	if (Emu.IsStopped())
+	while (ef->waiters < 0)
 	{
-		sys_event_flag.Warning("sys_event_flag_cancel(id=%d) aborted", eflag_id);
-		return CELL_OK;
+		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	if (num)
 	{
-		*num = (u32)tids.size();
+		*num = ef->waiters;
 	}
+
+	// negate value to signal waiting threads and prevent modifying bit pattern
+	ef->waiters = -ef->waiters;
+	ef->cv.notify_all();
 
 	return CELL_OK;
 }
 
-s32 sys_event_flag_get(u32 eflag_id, vm::ptr<u64> flags)
+s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 {
-	sys_event_flag.Log("sys_event_flag_get(eflag_id=%d, flags_addr=0x%x)", eflag_id, flags.addr());
+	sys_event_flag.Log("sys_event_flag_get(id=%d, flags=*0x%x)", id, flags);
+
+	LV2_LOCK;
 
 	if (!flags)
 	{
-		sys_event_flag.Error("sys_event_flag_create(): invalid memory access (flags_addr=0x%x)", flags.addr());
 		return CELL_EFAULT;
 	}
 
-	std::shared_ptr<EventFlag> ef;
-	if (!sys_event_flag.CheckId(eflag_id, ef)) return CELL_ESRCH;
+	std::shared_ptr<event_flag_t> ef;
 
-	*flags = ef->flags.read_sync();
+	if (!Emu.GetIdManager().GetIDData(id, ef))
+	{
+		*flags = 0;
+
+		return CELL_ESRCH;
+	}
+
+	*flags = ef->flags;
+
 	return CELL_OK;
 }

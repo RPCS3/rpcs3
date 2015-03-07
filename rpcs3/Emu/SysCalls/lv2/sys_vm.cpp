@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_memory.h"
@@ -39,7 +40,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	{
 		// Check memory container.
 		std::shared_ptr<MemoryContainerInfo> ct;
-		if(!sys_vm.CheckId(cid, ct)) return CELL_ESRCH;
+		if(!Emu.GetIdManager().GetIDData(cid, ct)) return CELL_ESRCH;
 
 		current_ct = ct;
 	}

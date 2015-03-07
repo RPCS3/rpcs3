@@ -1,6 +1,5 @@
 #pragma once
 #include "Loader.h"
-#include <unordered_map>
 
 struct vfsStream;
 class rFile;
@@ -156,6 +155,7 @@ namespace loader
 
 			error_code init(vfsStream& stream) override;
 			error_code load() override;
+			error_code alloc_memory(u64 offset);
 			error_code load_data(u64 offset);
 			error_code load_sprx(sprx_info& info);
 			bool is_sprx() const { return m_ehdr.e_type == 0xffa4; }

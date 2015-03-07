@@ -33,18 +33,12 @@ public:
 
 };
 
-// Abstract HLE function caller base class
-class psv_func_caller
-{
-public:
-	virtual void operator()(ARMv7Context& CPU) = 0;
-	virtual ~psv_func_caller(){};
-};
+typedef void(*psv_func_caller)(ARMv7Context&);
 
 // Utilities for binding ARMv7Context to C++ function arguments received by HLE functions or sent to callbacks
 namespace psv_func_detail
 {
-	enum bind_arg_type
+	enum arg_class
 	{
 		ARG_GENERAL,
 		ARG_FLOAT,
@@ -54,7 +48,7 @@ namespace psv_func_detail
 
 	static const auto FIXED_STACK_FRAME_SIZE = 0x100; // described in CB_FUNC.h
 
-	template<typename T, bind_arg_type type, int g_count, int f_count, int v_count>
+	template<typename T, arg_class type, int g_count, int f_count, int v_count>
 	struct bind_arg;
 
 	template<typename T, int g_count, int f_count, int v_count>
@@ -197,7 +191,7 @@ namespace psv_func_detail
 		}
 	};
 
-	template<typename T, bind_arg_type type>
+	template<typename T, arg_class type>
 	struct bind_result
 	{
 		static_assert(type != ARG_FLOAT, "TODO: Unsupported funcion result type (float)");
@@ -271,7 +265,7 @@ namespace psv_func_detail
 		static_assert(!std::is_reference<RT>::value, "Invalid function result type (reference)");
 		static const bool is_float = std::is_floating_point<RT>::value;
 		static const bool is_vector = std::is_same<RT, u128>::value;
-		static const bind_arg_type value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
 	template<typename T, int g_count, int f_count, int v_count>
@@ -287,7 +281,7 @@ namespace psv_func_detail
 		static const int g_next = g_pos + g_align - 1;
 		static const int f_value = !is_float ? f_count : f_count + 1;
 		static const int v_value = !is_vector ? v_count : v_count + 1;
-		static const bind_arg_type value = is_float
+		static const arg_class value = is_float
 			? ((f_value > 9000) ? ARG_STACK : ARG_FLOAT)
 			: (is_vector ? ((v_value > 9000) ? ARG_STACK : ARG_VECTOR) : ((g_pos > 4) ? ARG_STACK : ARG_GENERAL));
 	};
@@ -328,7 +322,7 @@ namespace psv_func_detail
 	__forceinline std::tuple<T, A...> get_func_args(ARMv7Context& context)
 	{
 		typedef arg_type<T, g_count, f_count, v_count> type;
-		const bind_arg_type t = type::value;
+		const arg_class t = type::value;
 		const int g0 = type::g_pos;
 		const int g1 = type::g_next;
 		const int f = type::f_value;
@@ -348,7 +342,7 @@ namespace psv_func_detail
 	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
 	{
 		typedef arg_type<T1, g_count, f_count, v_count> type;
-		const bind_arg_type t = type::value;
+		const arg_class t = type::value;
 		const int g0 = type::g_pos;
 		const int g1 = type::g_next;
 		const int f = type::f_value;
@@ -361,81 +355,49 @@ namespace psv_func_detail
 	}
 
 	template<typename RT, typename... T>
-	class func_binder;
+	struct func_binder;
 
 	template<typename... T>
-	class func_binder<void, T...> : public psv_func_caller
+	struct func_binder<void, T...>
 	{
 		typedef void(*func_t)(T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: psv_func_caller()
-			, m_call(call)
+		static void do_call(ARMv7Context& context, func_t _func)
 		{
-		}
-
-		virtual void operator()(ARMv7Context& context)
-		{
-			call<void>(m_call, get_func_args<0, 0, 0, T...>(context));
+			call<void>(_func, get_func_args<0, 0, 0, T...>(context));
 		}
 	};
 
 	template<typename... T>
-	class func_binder<void, ARMv7Context&, T...> : public psv_func_caller
+	struct func_binder<void, ARMv7Context&, T...>
 	{
 		typedef void(*func_t)(ARMv7Context&, T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: psv_func_caller()
-			, m_call(call)
+		static void do_call(ARMv7Context& context, func_t _func)
 		{
-		}
-
-		virtual void operator()(ARMv7Context& context)
-		{
-			call<void>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
+			call<void>(_func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
 	template<typename RT, typename... T>
-	class func_binder : public psv_func_caller
+	struct func_binder
 	{
 		typedef RT(*func_t)(T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: psv_func_caller()
-			, m_call(call)
+		static void do_call(ARMv7Context& context, func_t _func)
 		{
-		}
-
-		virtual void operator()(ARMv7Context& context)
-		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, get_func_args<0, 0, 0, T...>(context)));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(_func, get_func_args<0, 0, 0, T...>(context)));
 		}
 	};
 
 	template<typename RT, typename... T>
-	class func_binder<RT, ARMv7Context&, T...> : public psv_func_caller
+	struct func_binder<RT, ARMv7Context&, T...>
 	{
 		typedef RT(*func_t)(ARMv7Context&, T...);
-		const func_t m_call;
 
-	public:
-		func_binder(func_t call)
-			: psv_func_caller()
-			, m_call(call)
+		static void do_call(ARMv7Context& context, func_t _func)
 		{
-		}
-
-		virtual void operator()(ARMv7Context& context)
-		{
-			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(m_call, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
+			bind_result<RT, result_type<RT>::value>::put_result(context, call<RT>(_func, std::tuple_cat(std::tuple<ARMv7Context&>(context), get_func_args<0, 0, 0, T...>(context))));
 		}
 	};
 
@@ -472,31 +434,47 @@ namespace psv_func_detail
 // Basic information about the HLE function
 struct psv_func
 {
-	u32 nid; // Unique function ID only for old PSV executables (should be generated individually for each elf loaded)
+	u32 nid; // Unique function ID (should be generated individually for each elf loaded)
+	u32 flags;
 	const char* name; // Function name for information
-	std::shared_ptr<psv_func_caller> func; // Function caller instance
+	psv_func_caller func; // Function caller
 	psv_log_base* module; // Module for information
+
+	psv_func()
+	{
+	}
+
+	psv_func(u32 nid, u32 flags, psv_log_base* module, const char* name, psv_func_caller func)
+		: nid(nid)
+		, flags(flags)
+		, name(name)
+		, func(func)
+		, module(module)
+	{
+	}
+};
+
+enum psv_special_function_index : u16
+{
+	SFI_HLE_RETURN,
+
+	SFI_MAX
 };
 
 // Do not call directly
-void add_psv_func(psv_func& data);
+u32 add_psv_func(psv_func data);
 // Do not call directly
-template<typename RT, typename... T> void reg_psv_func(u32 nid, psv_log_base* module, const char* name, RT(*func)(T...))
+template<typename RT, typename... T> __forceinline void call_psv_func(ARMv7Context& context, RT(*func)(T...))
 {
-	psv_func f;
-	f.nid = nid;
-	f.name = name;
-	f.func.reset(new psv_func_detail::func_binder<RT, T...>(func));
-	f.module = module;
-
-	add_psv_func(f);
+	psv_func_detail::func_binder<RT, T...>::do_call(context, func);
 }
-// Find registered HLE function by its ID
-const psv_func* get_psv_func_by_nid(u32 nid);
-// Get index of registered HLE function
-u32 get_psv_func_index(const psv_func* func);
+
+#define reg_psv_func(nid, module, name, func) add_psv_func(psv_func(nid, 0, module, name, [](ARMv7Context& context){ call_psv_func(context, func); }))
+
+// Find registered HLE function by NID
+psv_func* get_psv_func_by_nid(u32 nid, u32* out_index = nullptr);
 // Find registered HLE function by its index
-const psv_func* get_psv_func_by_index(u32 index);
+psv_func* get_psv_func_by_index(u32 index);
 // Execute registered HLE function by its index
 void execute_psv_func_by_index(ARMv7Context& context, u32 index);
 // Register all HLE functions

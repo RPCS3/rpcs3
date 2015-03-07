@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Emu/Memory/atomic_type.h"
-
 enum
 {
 	CELL_GCM_DISPLAY_HSYNC            = 1,

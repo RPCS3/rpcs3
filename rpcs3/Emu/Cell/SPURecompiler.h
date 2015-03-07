@@ -380,7 +380,7 @@ private:
 			static void STOP(u32 code)
 			{
 				SPUThread& CPU = *(SPUThread*)GetCurrentNamedThread();
-				CPU.StopAndSignal(code);
+				CPU.stop_and_signal(code);
 				LOG2_OPCODE();
 			}
 		};
@@ -418,7 +418,7 @@ private:
 	{
 		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.ReadChannel(CPU.GPR[rt], ra);
+		CPU.GPR[rt] = u128::from32r(CPU.get_ch_value(ra));
 		WRAPPER_END(rt, ra, 0, 0);
 		// TODO
 	}
@@ -426,8 +426,7 @@ private:
 	{
 		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(rt, ra, yy, zz);
-		CPU.GPR[rt].clear();
-		CPU.GPR[rt]._u32[3] = CPU.GetChannelCount(ra);
+		CPU.GPR[rt] = u128::from32r(CPU.get_ch_count(ra));
 		WRAPPER_END(rt, ra, 0, 0);
 		// TODO
 	}
@@ -1034,7 +1033,7 @@ private:
 	{
 		c.mov(cpu_dword(PC), CPU.PC);
 		WRAPPER_BEGIN(ra, rt, yy, zz);
-		CPU.WriteChannel(ra, CPU.GPR[rt]);
+		CPU.set_ch_value(ra, CPU.GPR[rt]._u32[3]);
 		WRAPPER_END(ra, rt, 0, 0);
 		// TODO
 

@@ -1,8 +1,9 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
 
-void cellVoice_init();
-Module cellVoice(0x0046, cellVoice_init);
+extern Module cellVoice;
 
 // Error Codes
 enum
@@ -27,245 +28,244 @@ enum
 	CELL_VOICE_ERROR_TOPOLOGY              = 0x80310807,
 };
 
-int cellVoiceConnectIPortToOPort()
+s32 cellVoiceConnectIPortToOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceCreateNotifyEventQueue()
+s32 cellVoiceCreateNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceCreatePort()
+s32 cellVoiceCreatePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDeletePort()
+s32 cellVoiceDeletePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDisconnectIPortFromOPort()
+s32 cellVoiceDisconnectIPortFromOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceEnd()
+s32 cellVoiceEnd()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetBitRate()
+s32 cellVoiceGetBitRate()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetMuteFlag()
+s32 cellVoiceGetMuteFlag()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetPortAttr()
+s32 cellVoiceGetPortAttr()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetPortInfo()
+s32 cellVoiceGetPortInfo()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetSignalState()
+s32 cellVoiceGetSignalState()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceGetVolume()
+s32 cellVoiceGetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceInit()
+s32 cellVoiceInit()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceInitEx()
+s32 cellVoiceInitEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoicePausePort()
+s32 cellVoicePausePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoicePausePortAll()
+s32 cellVoicePausePortAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceRemoveNotifyEventQueue()
+s32 cellVoiceRemoveNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResetPort()
+s32 cellVoiceResetPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResumePort()
+s32 cellVoiceResumePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceResumePortAll()
+s32 cellVoiceResumePortAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetBitRate()
+s32 cellVoiceSetBitRate()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetMuteFlag()
+s32 cellVoiceSetMuteFlag()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetMuteFlagAll()
+s32 cellVoiceSetMuteFlagAll()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetNotifyEventQueue()
+s32 cellVoiceSetNotifyEventQueue()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetPortAttr()
+s32 cellVoiceSetPortAttr()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceSetVolume()
+s32 cellVoiceSetVolume()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStart()
+s32 cellVoiceStart()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStartEx()
+s32 cellVoiceStartEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceStop()
+s32 cellVoiceStop()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceUpdatePort()
+s32 cellVoiceUpdatePort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceWriteToIPort()
+s32 cellVoiceWriteToIPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceWriteToIPortEx()
+s32 cellVoiceWriteToIPortEx()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceReadFromOPort()
+s32 cellVoiceReadFromOPort()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-int cellVoiceDebugTopology()
+s32 cellVoiceDebugTopology()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
 	return CELL_OK;
 }
 
-void cellVoice_init()
+Module cellVoice("cellVoice", []()
 {
-	cellVoice.AddFunc(0xae6a21d5, cellVoiceConnectIPortToOPort);
-	cellVoice.AddFunc(0x2a01013e, cellVoiceCreateNotifyEventQueue);
-	cellVoice.AddFunc(0x2de54871, cellVoiceCreatePort);
-	cellVoice.AddFunc(0x9f70c475, cellVoiceDeletePort);
-	cellVoice.AddFunc(0x18d3df30, cellVoiceDisconnectIPortFromOPort);
-	cellVoice.AddFunc(0xe0e1ae12, cellVoiceEnd);
-	cellVoice.AddFunc(0xbef53a2b, cellVoiceGetBitRate);
-	cellVoice.AddFunc(0x474609e2, cellVoiceGetMuteFlag);
-	cellVoice.AddFunc(0xf629ed67, cellVoiceGetPortAttr);
-	cellVoice.AddFunc(0x54ac3519, cellVoiceGetPortInfo);
-	cellVoice.AddFunc(0xd6811aa7, cellVoiceGetSignalState);
-	cellVoice.AddFunc(0x762dc193, cellVoiceGetVolume);
-	cellVoice.AddFunc(0xc7cf1182, cellVoiceInit);
-	cellVoice.AddFunc(0xb1a2c38f, cellVoiceInitEx);
-	cellVoice.AddFunc(0x87c71b06, cellVoicePausePort);
-	cellVoice.AddFunc(0xd14e784d, cellVoicePausePortAll);
-	cellVoice.AddFunc(0xdd000886, cellVoiceRemoveNotifyEventQueue);
-	cellVoice.AddFunc(0xff0fa43a, cellVoiceResetPort);
-	cellVoice.AddFunc(0x7bf17b15, cellVoiceResumePort);
-	cellVoice.AddFunc(0x7f3963f7, cellVoiceResumePortAll);
-	cellVoice.AddFunc(0x7e60adc6, cellVoiceSetBitRate);
-	cellVoice.AddFunc(0xdde35a0c, cellVoiceSetMuteFlag);
-	cellVoice.AddFunc(0xd4d80ea5, cellVoiceSetMuteFlagAll);
-	cellVoice.AddFunc(0x35d84910, cellVoiceSetNotifyEventQueue);
-	cellVoice.AddFunc(0x9d0f4af1, cellVoiceSetPortAttr);
-	cellVoice.AddFunc(0xd5ae37d8, cellVoiceSetVolume);
-	cellVoice.AddFunc(0x0a563878, cellVoiceStart);
-	cellVoice.AddFunc(0x94d51f92, cellVoiceStartEx);
-	cellVoice.AddFunc(0xd3a84be1, cellVoiceStop);
-	cellVoice.AddFunc(0x2f24fea3, cellVoiceUpdatePort);
-	cellVoice.AddFunc(0x3dad26e7, cellVoiceWriteToIPort);
-	cellVoice.AddFunc(0x30f0b5ab, cellVoiceWriteToIPortEx);
-	cellVoice.AddFunc(0x36472c57, cellVoiceReadFromOPort);
-	cellVoice.AddFunc(0x20bafe31, cellVoiceDebugTopology);
-}
-#endif
+	REG_FUNC(cellVoice, cellVoiceConnectIPortToOPort);
+	REG_FUNC(cellVoice, cellVoiceCreateNotifyEventQueue);
+	REG_FUNC(cellVoice, cellVoiceCreatePort);
+	REG_FUNC(cellVoice, cellVoiceDeletePort);
+	REG_FUNC(cellVoice, cellVoiceDisconnectIPortFromOPort);
+	REG_FUNC(cellVoice, cellVoiceEnd);
+	REG_FUNC(cellVoice, cellVoiceGetBitRate);
+	REG_FUNC(cellVoice, cellVoiceGetMuteFlag);
+	REG_FUNC(cellVoice, cellVoiceGetPortAttr);
+	REG_FUNC(cellVoice, cellVoiceGetPortInfo);
+	REG_FUNC(cellVoice, cellVoiceGetSignalState);
+	REG_FUNC(cellVoice, cellVoiceGetVolume);
+	REG_FUNC(cellVoice, cellVoiceInit);
+	REG_FUNC(cellVoice, cellVoiceInitEx);
+	REG_FUNC(cellVoice, cellVoicePausePort);
+	REG_FUNC(cellVoice, cellVoicePausePortAll);
+	REG_FUNC(cellVoice, cellVoiceRemoveNotifyEventQueue);
+	REG_FUNC(cellVoice, cellVoiceResetPort);
+	REG_FUNC(cellVoice, cellVoiceResumePort);
+	REG_FUNC(cellVoice, cellVoiceResumePortAll);
+	REG_FUNC(cellVoice, cellVoiceSetBitRate);
+	REG_FUNC(cellVoice, cellVoiceSetMuteFlag);
+	REG_FUNC(cellVoice, cellVoiceSetMuteFlagAll);
+	REG_FUNC(cellVoice, cellVoiceSetNotifyEventQueue);
+	REG_FUNC(cellVoice, cellVoiceSetPortAttr);
+	REG_FUNC(cellVoice, cellVoiceSetVolume);
+	REG_FUNC(cellVoice, cellVoiceStart);
+	REG_FUNC(cellVoice, cellVoiceStartEx);
+	REG_FUNC(cellVoice, cellVoiceStop);
+	REG_FUNC(cellVoice, cellVoiceUpdatePort);
+	REG_FUNC(cellVoice, cellVoiceWriteToIPort);
+	REG_FUNC(cellVoice, cellVoiceWriteToIPortEx);
+	REG_FUNC(cellVoice, cellVoiceReadFromOPort);
+	REG_FUNC(cellVoice, cellVoiceDebugTopology);
+});

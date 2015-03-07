@@ -2,7 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-Module *cellOvis = nullptr;
+extern Module cellOvis;
 
 // Return Codes
 enum
@@ -14,7 +14,7 @@ enum
 
 int cellOvisGetOverlayTableSize(vm::ptr<const char> elf)
 {
-	cellOvis->Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
+	cellOvis.Todo("cellOvisGetOverlayTableSize(elf_addr=0x%x)", elf.addr());
 	return CELL_OK;
 }
 
@@ -36,12 +36,10 @@ int cellOvisInvalidateOverlappedSegments()
 	return CELL_OK;
 }
 
-void cellOvis_init(Module *pxThis)
+Module cellOvis("cellOvis", []()
 {
-	cellOvis = pxThis;
-
-	cellOvis->AddFunc(0x82f294b2, cellOvisGetOverlayTableSize);
-	cellOvis->AddFunc(0xa876c911, cellOvisInitializeOverlayTable);
-	cellOvis->AddFunc(0xce6cb776, cellOvisFixSpuSegments);
-	cellOvis->AddFunc(0x629ba0c0, cellOvisInvalidateOverlappedSegments);
-}
+	REG_FUNC(cellOvis, cellOvisGetOverlayTableSize);
+	REG_FUNC(cellOvis, cellOvisInitializeOverlayTable);
+	REG_FUNC(cellOvis, cellOvisFixSpuSegments);
+	REG_FUNC(cellOvis, cellOvisInvalidateOverlappedSegments);
+});

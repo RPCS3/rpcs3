@@ -68,7 +68,140 @@ enum
 	RSX_FP_OPCODE_IFE        = 0x42, // If
 	RSX_FP_OPCODE_LOOP       = 0x43, // Loop
 	RSX_FP_OPCODE_REP        = 0x44, // Repeat
-	RSX_FP_OPCODE_RET        = 0x45, // Return
+	RSX_FP_OPCODE_RET        = 0x45  // Return
+};
+
+static union OPDEST
+{
+	u32 HEX;
+
+	struct
+	{
+		u32 end              : 1; // Set to 1 if this is the last instruction
+		u32 dest_reg         : 6; // Destination register index
+		u32 fp16             : 1; // Destination is a half register (H0 to H47)
+		u32 set_cond         : 1; // Condition Code Registers (CC0 and CC1) are updated
+		u32 mask_x           : 1;
+		u32 mask_y           : 1;
+		u32 mask_z           : 1;
+		u32 mask_w           : 1;
+		u32 src_attr_reg_num : 4;
+		u32 tex_num          : 4;
+		u32 exp_tex          : 1; // _bx2
+		u32 prec             : 2;
+		u32 opcode           : 6;
+		u32 no_dest          : 1;
+		u32 saturate         : 1; // _sat
+	};
+} dst;
+
+static union SRC0
+{
+	u32 HEX;
+
+	struct
+	{
+		u32 reg_type        : 2;
+		u32 tmp_reg_index   : 6;
+		u32 fp16            : 1;
+		u32 swizzle_x       : 2;
+		u32 swizzle_y       : 2;
+		u32 swizzle_z       : 2;
+		u32 swizzle_w       : 2;
+		u32 neg             : 1;
+		u32 exec_if_lt      : 1;
+		u32 exec_if_eq      : 1;
+		u32 exec_if_gr      : 1;
+		u32 cond_swizzle_x  : 2;
+		u32 cond_swizzle_y  : 2;
+		u32 cond_swizzle_z  : 2;
+		u32 cond_swizzle_w  : 2;
+		u32 abs : 1;
+		u32 cond_mod_reg_index : 1;
+		u32 cond_reg_index     : 1;
+	};
+} src0;
+
+static union SRC1
+{
+	u32 HEX;
+
+	struct
+	{
+		u32 reg_type         : 2;
+		u32 tmp_reg_index    : 6;
+		u32 fp16             : 1;
+		u32 swizzle_x        : 2;
+		u32 swizzle_y        : 2;
+		u32 swizzle_z        : 2;
+		u32 swizzle_w        : 2;
+		u32 neg              : 1;
+		u32 abs              : 1;
+		u32 input_mod_src0   : 3;
+		u32                  : 6;
+		u32 scale            : 3;
+		u32 opcode_is_branch : 1;
+	};
+
+	struct
+	{
+		u32 else_offset      : 31;
+		u32                  : 1;
+	};
+
+	// LOOP, REP
+	struct
+	{
+		u32                  : 2;
+		u32 end_counter      : 8; // End counter value for LOOP or rep count for REP
+		u32 init_counter     : 8; // Initial counter value for LOOP
+		u32                  : 1;
+		u32 increment        : 8; // Increment value for LOOP
+	};
+} src1;
+
+static union SRC2
+{
+	u32 HEX;
+
+	u32 end_offset;
+
+	struct
+	{
+		u32 reg_type         : 2;
+		u32 tmp_reg_index    : 6;
+		u32 fp16             : 1;
+		u32 swizzle_x        : 2;
+		u32 swizzle_y        : 2;
+		u32 swizzle_z        : 2;
+		u32 swizzle_w        : 2;
+		u32 neg              : 1;
+		u32 abs              : 1;
+		u32 addr_reg         : 11;
+		u32 use_index_reg    : 1;
+		u32 perspective_corr : 1;
+	};
+} src2;
+
+static const char* rsx_fp_input_attr_regs[] =
+{
+	"WPOS", "COL0", "COL1", "FOGC", "TEX0",
+	"TEX1", "TEX2", "TEX3", "TEX4", "TEX5",
+	"TEX6", "TEX7", "TEX8", "TEX9", "SSA"
+};
+
+static const std::string rsx_fp_op_names[] =
+{
+	"NOP", "MOV", "MUL", "ADD", "MAD", "DP3", "DP4",
+	"DST", "MIN", "MAX", "SLT", "SGE", "SLE", "SGT",
+	"SNE", "SEQ", "FRC", "FLR", "KIL", "PK4", "UP4",
+	"DDX", "DDY", "TEX", "TXP", "TXD", "RCP", "RSQ",
+	"EX2", "LG2", "LIT", "LRP", "STR", "SFL", "COS",
+	"SIN", "PK2", "UP2", "POW", "PKB", "UPB", "PK16",
+	"UP16", "BEM", "PKG", "UPG", "DP2A", "TXL", "NULL",
+	"TXB", "NULL", "TEXBEM", "TXPBEM", "BEMLUM", "REFL", "TIMESWTEX",
+	"DP2", "NRM", "DIV", "DIVSQ", "LIF", "FENCT", "FENCB",
+	"NULL", "BRK", "CAL", "IFE", "LOOP", "REP", "RET"
 };
 
 struct RSXFragmentProgram

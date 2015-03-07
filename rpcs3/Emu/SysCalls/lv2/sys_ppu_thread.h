@@ -14,8 +14,13 @@ enum ppu_thread_flags : u64
 	SYS_PPU_THREAD_CREATE_INTERRUPT = 0x2,
 };
 
+enum stackSize
+{
+	SYS_PPU_THREAD_STACK_MIN = 0x4000,
+};
+
 // Aux
-PPUThread* ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, const std::string& name, std::function<void(PPUThread&)> task = nullptr);
+u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task = nullptr);
 
 // SysCalls
 void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode);

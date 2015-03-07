@@ -21,86 +21,86 @@
 
 typedef void (CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 
-Module *cellSysutil = nullptr;
+extern Module cellSysutil;
 
 int cellSysutilGetSystemParamInt(int id, vm::ptr<u32> value)
 {
-	cellSysutil->Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.addr());
+	cellSysutil.Log("cellSysutilGetSystemParamInt(id=0x%x, value_addr=0x%x)", id, value.addr());
 
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_LANG");
 		*value = Ini.SysLanguage.GetValue();
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN");
 		*value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT");
 		*value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT");
 		*value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE");
 		*value = 3;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME");
 		*value = 1;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL");
 		*value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT");
 		*value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT");
 		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ");
 		*value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE");
 		*value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE");
 		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD");
 		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD");
 		*value = 0;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
-		cellSysutil->Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
+		cellSysutil.Warning("cellSysutilGetSystemParamInt: CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF");
 		*value = 0;
 	break;
 
@@ -113,19 +113,19 @@ int cellSysutilGetSystemParamInt(int id, vm::ptr<u32> value)
 
 int cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 {
-	cellSysutil->Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
+	cellSysutil.Log("cellSysutilGetSystemParamString(id=%d, buf_addr=0x%x, bufsize=%d)", id, buf.addr(), bufsize);
 
 	memset(buf.get_ptr(), 0, bufsize);
 
 	switch(id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
-		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
+		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME");
 		memcpy(buf.get_ptr(), "Unknown", 8); // for example
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
-		cellSysutil->Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
+		cellSysutil.Warning("cellSysutilGetSystemParamString: CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME");
 		memcpy(buf.get_ptr(), "Unknown", 8);
 	break;
 
@@ -138,7 +138,7 @@ int cellSysutilGetSystemParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
-	cellSysutil->Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state.addr());
+	cellSysutil.Log("cellVideoOutGetState(videoOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", videoOut, deviceIndex, state.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -164,7 +164,7 @@ int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutStat
 
 int cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> resolution)
 {
-	cellSysutil->Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
+	cellSysutil.Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
 		resolutionId, resolution.addr());
 
 	u32 num = ResolutionIdToNum(resolutionId);
@@ -179,7 +179,7 @@ int cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResolution> 
 
 s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil->Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
+	cellSysutil.Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
 		videoOut, config.addr(), option.addr(), waitForEvent);
 
 	switch(videoOut)
@@ -213,7 +213,7 @@ s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> confi
 
 int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option)
 {
-	cellSysutil->Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
+	cellSysutil.Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
 		videoOut, config.addr(), option.addr());
 
 	if (option) *option = {};
@@ -239,7 +239,7 @@ int cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
-	cellSysutil->Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info_addr=0x%x)",
+	cellSysutil.Warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info_addr=0x%x)",
 		videoOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -271,7 +271,7 @@ int cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOu
 
 int cellVideoOutGetNumberOfDevice(u32 videoOut)
 {
-	cellSysutil->Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
+	cellSysutil.Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
 
 	switch(videoOut)
 	{
@@ -284,7 +284,7 @@ int cellVideoOutGetNumberOfDevice(u32 videoOut)
 
 int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
 {
-	cellSysutil->Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
+	cellSysutil.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, aspect=%d, option=%d)", videoOut, resolutionId, aspect, option);
 
 	if (!Ini.GS3DTV.GetValue() && (resolutionId == CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING ||
 								  resolutionId == CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING || resolutionId == CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING ||
@@ -325,7 +325,7 @@ void sysutilSendSystemCommand(u64 status, u64 param)
 
 s32 cellSysutilCheckCallback(PPUThread& CPU)
 {
-	cellSysutil->Log("cellSysutilCheckCallback()");
+	cellSysutil.Log("cellSysutilCheckCallback()");
 
 	s32 res;
 	u32 count = 0;
@@ -336,7 +336,7 @@ s32 cellSysutilCheckCallback(PPUThread& CPU)
 
 		if (Emu.IsStopped())
 		{
-			cellSysutil->Warning("cellSysutilCheckCallback() aborted");
+			cellSysutil.Warning("cellSysutilCheckCallback() aborted");
 			return CELL_OK;
 		}
 
@@ -356,7 +356,7 @@ s32 cellSysutilCheckCallback(PPUThread& CPU)
 
 s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
 {
-	cellSysutil->Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%x, userdata=0x%x)", slot, func.addr(), userdata.addr());
+	cellSysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%x, userdata=0x%x)", slot, func.addr(), userdata.addr());
 
 	if ((u32)slot > 3)
 	{
@@ -370,7 +370,7 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 
 s32 cellSysutilUnregisterCallback(s32 slot)
 {
-	cellSysutil->Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
+	cellSysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 
 	if ((u32)slot > 3)
 	{
@@ -384,7 +384,7 @@ s32 cellSysutilUnregisterCallback(s32 slot)
 
 int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 {
-	cellSysutil->Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)",
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)",
 		audioOut, type, fs, option);
 
 	option = 0;
@@ -425,7 +425,7 @@ int cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 option)
 
 int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
-	cellSysutil->Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)",
+	cellSysutil.Warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)",
 		audioOut, type, fs, ch, option);
 
 	option = 0;
@@ -475,7 +475,7 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 
 int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
 {
-	cellSysutil->Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", audioOut, deviceIndex, state.addr());
+	cellSysutil.Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", audioOut, deviceIndex, state.addr());
 
 	*state = {};
 
@@ -504,7 +504,7 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 
 int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option, u32 waitForEvent)
 {
-	cellSysutil->Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=%d)",
+	cellSysutil.Warning("cellAudioOutConfigure(audioOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=%d)",
 		audioOut, config.addr(), option.addr(), waitForEvent);
 
 	switch(audioOut)
@@ -533,7 +533,7 @@ int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> confi
 
 int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration> config, vm::ptr<CellAudioOutOption> option)
 {
-	cellSysutil->Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)", audioOut, config.addr(), option.addr());
+	cellSysutil.Warning("cellAudioOutGetConfiguration(audioOut=%d, config_addr=0x%x, option_addr=0x%x)", audioOut, config.addr(), option.addr());
 
 	if (option) *option = {};
 	*config = {};
@@ -557,7 +557,7 @@ int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 int cellAudioOutGetNumberOfDevice(u32 audioOut)
 {
-	cellSysutil->Warning("cellAudioOutGetNumberOfDevice(audioOut=%d)", audioOut);
+	cellSysutil.Warning("cellAudioOutGetNumberOfDevice(audioOut=%d)", audioOut);
 
 	switch(audioOut)
 	{
@@ -570,7 +570,7 @@ int cellAudioOutGetNumberOfDevice(u32 audioOut)
 
 int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo> info)
 {
-	cellSysutil->Todo("cellAudioOutGetDeviceInfo(audioOut=%d, deviceIndex=%d, info_addr=0x%x)", audioOut, deviceIndex, info.addr());
+	cellSysutil.Todo("cellAudioOutGetDeviceInfo(audioOut=%d, deviceIndex=%d, info_addr=0x%x)", audioOut, deviceIndex, info.addr());
 
 	if(deviceIndex) return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
@@ -588,7 +588,7 @@ int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 
 int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 {
-	cellSysutil->Warning("cellAudioOutSetCopyControl(audioOut=%d,control=%d)",audioOut,control);
+	cellSysutil.Warning("cellAudioOutSetCopyControl(audioOut=%d,control=%d)",audioOut,control);
 
 	switch(audioOut)
 	{
@@ -628,7 +628,7 @@ typedef struct{
 //	virtual wxDirTraverseResult OnFile(const wxString& filename)
 //	{
 //		if (!wxRemoveFile(filename)){
-//			cellSysutil->Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
+//			cellSysutil.Error("Couldn't delete File: %s", fmt::ToUTF8(filename).c_str());
 //		}
 //		return wxDIR_CONTINUE;
 //	}
@@ -647,7 +647,7 @@ typedef struct{
 
 int cellSysCacheClear(void)
 {
-	cellSysutil->Warning("cellSysCacheClear()");
+	cellSysutil.Warning("cellSysCacheClear()");
 
 	//if some software expects CELL_SYSCACHE_ERROR_NOTMOUNTED we need to check whether
 	//it was mounted before, for that we would need to save the state which I don't know
@@ -676,7 +676,7 @@ int cellSysCacheClear(void)
 
 int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
-	cellSysutil->Warning("cellSysCacheMount(param_addr=0x%x)", param.addr());
+	cellSysutil.Warning("cellSysCacheMount(param_addr=0x%x)", param.addr());
 
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
@@ -690,7 +690,7 @@ int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 int cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellSysutil->Warning("cellHddGameCheck(version=%d, dirName_addr=0x%x, errDialog=%d, funcStat_addr=0x%x, container=%d)",
+	cellSysutil.Warning("cellHddGameCheck(version=%d, dirName_addr=0x%x, errDialog=%d, funcStat_addr=0x%x, container=%d)",
 		version, dirName.addr(), errDialog, funcStat.addr(), container);
 
 	std::string dir = dirName.get_ptr();
@@ -762,7 +762,7 @@ bool bgm_playback_enabled = true;
 
 int cellSysutilEnableBgmPlayback()
 {
-	cellSysutil->Warning("cellSysutilEnableBgmPlayback()");
+	cellSysutil.Warning("cellSysutilEnableBgmPlayback()");
 
 	// TODO
 	bgm_playback_enabled = true;
@@ -772,7 +772,7 @@ int cellSysutilEnableBgmPlayback()
 
 int cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.addr());
+	cellSysutil.Warning("cellSysutilEnableBgmPlaybackEx(param_addr=0x%x)", param.addr());
 
 	// TODO
 	bgm_playback_enabled = true; 
@@ -782,7 +782,7 @@ int cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> par
 
 int cellSysutilDisableBgmPlayback()
 {
-	cellSysutil->Warning("cellSysutilDisableBgmPlayback()");
+	cellSysutil.Warning("cellSysutilDisableBgmPlayback()");
 
 	// TODO
 	bgm_playback_enabled = false;
@@ -792,7 +792,7 @@ int cellSysutilDisableBgmPlayback()
 
 int cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
-	cellSysutil->Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.addr());
+	cellSysutil.Warning("cellSysutilDisableBgmPlaybackEx(param_addr=0x%x)", param.addr());
 
 	// TODO
 	bgm_playback_enabled = false;
@@ -802,7 +802,7 @@ int cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> pa
 
 int cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
 {
-	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.addr());
+	cellSysutil.Log("cellSysutilGetBgmPlaybackStatus(status_addr=0x%x)", status.addr());
 
 	// TODO
 	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -816,7 +816,7 @@ int cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status
 
 int cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil->Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.addr());
+	cellSysutil.Log("cellSysutilGetBgmPlaybackStatus2(status2_addr=0x%x)", status2.addr());
 
 	// TODO
 	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -827,7 +827,7 @@ int cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 
 int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
 {
-	cellSysutil->Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", config.addr(), memSize.addr());
+	cellSysutil.Warning("cellWebBrowserEstimate2(config_addr=0x%x, memSize_addr=0x%x)", config.addr(), memSize.addr());
 
 	// TODO: When cellWebBrowser stuff is implemented, change this to some real
 	// needed memory buffer size.
@@ -843,77 +843,72 @@ extern int cellGameDataCheckCreate(PPUThread& CPU, u32 version, vm::ptr<const ch
 
 extern void cellSysutil_SaveData_init();
 
-void cellSysutil_init(Module *pxThis)
-{
-	cellSysutil = pxThis;
-
-	cellSysutil->AddFunc(0x40e895d3, cellSysutilGetSystemParamInt);
-	cellSysutil->AddFunc(0x938013a0, cellSysutilGetSystemParamString);
-
-	cellSysutil->AddFunc(0x887572d5, cellVideoOutGetState);
-	cellSysutil->AddFunc(0xe558748d, cellVideoOutGetResolution);
-	cellSysutil->AddFunc(0x0bae8772, cellVideoOutConfigure);
-	cellSysutil->AddFunc(0x15b0b0cd, cellVideoOutGetConfiguration);
-	cellSysutil->AddFunc(0x1e930eef, cellVideoOutGetDeviceInfo);
-	cellSysutil->AddFunc(0x75bbb672, cellVideoOutGetNumberOfDevice);
-	cellSysutil->AddFunc(0xa322db75, cellVideoOutGetResolutionAvailability);
-
-	cellSysutil->AddFunc(0x189a74da, cellSysutilCheckCallback);
-	cellSysutil->AddFunc(0x9d98afa0, cellSysutilRegisterCallback);
-	cellSysutil->AddFunc(0x02ff3c1b, cellSysutilUnregisterCallback);
-
-	cellSysutil->AddFunc(0x7603d3db, cellMsgDialogOpen2);
-	cellSysutil->AddFunc(0x3e22cb4b, cellMsgDialogOpenErrorCode);
-	cellSysutil->AddFunc(0x9d6af72a, cellMsgDialogProgressBarSetMsg);
-	cellSysutil->AddFunc(0x7bc2c8a8, cellMsgDialogProgressBarReset);
-	cellSysutil->AddFunc(0x94862702, cellMsgDialogProgressBarInc);
-	cellSysutil->AddFunc(0x20543730, cellMsgDialogClose);
-	cellSysutil->AddFunc(0x62b0f803, cellMsgDialogAbort);
-
-	cellSysutil->AddFunc(0xf4e3caa0, cellAudioOutGetState);
-	cellSysutil->AddFunc(0x4692ab35, cellAudioOutConfigure);
-	cellSysutil->AddFunc(0xc01b4e7c, cellAudioOutGetSoundAvailability);
-	cellSysutil->AddFunc(0x2beac488, cellAudioOutGetSoundAvailability2);
-	cellSysutil->AddFunc(0x7663e368, cellAudioOutGetDeviceInfo);
-	cellSysutil->AddFunc(0xe5e2b09d, cellAudioOutGetNumberOfDevice);
-	cellSysutil->AddFunc(0xed5d96af, cellAudioOutGetConfiguration);
-	cellSysutil->AddFunc(0xc96e89e9, cellAudioOutSetCopyControl);
-
-	cellSysutil->AddFunc(0xa11552f6, cellSysutilGetBgmPlaybackStatus);
-	cellSysutil->AddFunc(0x6cfd856f, cellSysutilGetBgmPlaybackStatus2);
-	cellSysutil->AddFunc(0x220894e3, cellSysutilEnableBgmPlayback);
-	cellSysutil->AddFunc(0xac58ad2b, cellSysutilEnableBgmPlaybackEx);
-	cellSysutil->AddFunc(0xcfdd8e87, cellSysutilDisableBgmPlayback);
-	cellSysutil->AddFunc(0xa36335a5, cellSysutilDisableBgmPlaybackEx);
-
-	cellSysutil->AddFunc(0x1e7bff94, cellSysCacheMount);
-	cellSysutil->AddFunc(0x744c1544, cellSysCacheClear);
-
-	cellSysutil->AddFunc(0x9117df20, cellHddGameCheck);
-	//cellSysutil->AddFunc(0x4bdec82a, cellHddGameCheck2);
-	//cellSysutil->AddFunc(0xf82e2ef7, cellHddGameGetSizeKB);
-	//cellSysutil->AddFunc(0x9ca9ffa7, cellHddGameSetSystemVer);
-	//cellSysutil->AddFunc(0xafd605b3, cellHddGameExitBroken);
-
-	//cellSysutil->AddFunc(0x886D0747, cellSysutilRegisterCallbackDispatcher);
-	//cellSysutil->AddFunc(0xA2720DF2, cellSysutilPacketWrite);
-	//cellSysutil->AddFunc(0x75AA7373, doc.write);
-	//cellSysutil->AddFunc(0x2D96313F, packet_read);
-
-	// cellSaveData functions
-	cellSysutil_SaveData_init();
-
-	cellSysutil->AddFunc(0x6d087930, cellWebBrowserEstimate2);
-
-	cellSysutil->AddFunc(0xe7951dee, cellGameDataCheckCreate);
-	cellSysutil->AddFunc(0xc9645c41, cellGameDataCheckCreate2);
-}
-
-void cellSysutil_load()
+Module cellSysutil("cellSysutil", []()
 {
 	for (auto& v : g_sys_callback)
 	{
 		v.func.set(0);
 		v.arg.set(0);
 	}
-}
+
+	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
+	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
+
+	REG_FUNC(cellSysutil, cellVideoOutGetState);
+	REG_FUNC(cellSysutil, cellVideoOutGetResolution);
+	REG_FUNC(cellSysutil, cellVideoOutConfigure);
+	REG_FUNC(cellSysutil, cellVideoOutGetConfiguration);
+	REG_FUNC(cellSysutil, cellVideoOutGetDeviceInfo);
+	REG_FUNC(cellSysutil, cellVideoOutGetNumberOfDevice);
+	REG_FUNC(cellSysutil, cellVideoOutGetResolutionAvailability);
+
+	REG_FUNC(cellSysutil, cellSysutilCheckCallback);
+	REG_FUNC(cellSysutil, cellSysutilRegisterCallback);
+	REG_FUNC(cellSysutil, cellSysutilUnregisterCallback);
+
+	REG_FUNC(cellSysutil, cellMsgDialogOpen2);
+	REG_FUNC(cellSysutil, cellMsgDialogOpenErrorCode);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarSetMsg);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarReset);
+	REG_FUNC(cellSysutil, cellMsgDialogProgressBarInc);
+	REG_FUNC(cellSysutil, cellMsgDialogClose);
+	REG_FUNC(cellSysutil, cellMsgDialogAbort);
+
+	REG_FUNC(cellSysutil, cellAudioOutGetState);
+	REG_FUNC(cellSysutil, cellAudioOutConfigure);
+	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability);
+	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability2);
+	REG_FUNC(cellSysutil, cellAudioOutGetDeviceInfo);
+	REG_FUNC(cellSysutil, cellAudioOutGetNumberOfDevice);
+	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration);
+	REG_FUNC(cellSysutil, cellAudioOutSetCopyControl);
+
+	REG_FUNC(cellSysutil, cellSysutilGetBgmPlaybackStatus);
+	REG_FUNC(cellSysutil, cellSysutilGetBgmPlaybackStatus2);
+	REG_FUNC(cellSysutil, cellSysutilEnableBgmPlayback);
+	REG_FUNC(cellSysutil, cellSysutilEnableBgmPlaybackEx);
+	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlayback);
+	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlaybackEx);
+
+	REG_FUNC(cellSysutil, cellSysCacheMount);
+	REG_FUNC(cellSysutil, cellSysCacheClear);
+
+	REG_FUNC(cellSysutil, cellHddGameCheck);
+	//REG_FUNC(cellSysutil, cellHddGameCheck2);
+	//REG_FUNC(cellSysutil, cellHddGameGetSizeKB);
+	//REG_FUNC(cellSysutil, cellHddGameSetSystemVer);
+	//REG_FUNC(cellSysutil, cellHddGameExitBroken);
+
+	//REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
+	//REG_FUNC(cellSysutil, cellSysutilPacketWrite);
+	//REG_FUNC(cellSysutil, doc.write);
+	//REG_FUNC(cellSysutil, packet_read);
+
+	// cellSaveData functions
+	cellSysutil_SaveData_init();
+
+	REG_FUNC(cellSysutil, cellWebBrowserEstimate2);
+
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate);
+	REG_FUNC(cellSysutil, cellGameDataCheckCreate2);
+});

@@ -1,7 +1,7 @@
 #pragma once
-#include "PPUInstrTable.h"
+/*#include "PPUInstrTable.h"
 #include "Loader/ELF64.h"
-/*
+
 enum ArgType
 {
 	ARG_ERR     = 0,

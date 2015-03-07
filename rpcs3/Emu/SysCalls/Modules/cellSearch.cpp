@@ -1,176 +1,183 @@
 #include "stdafx.h"
-#if 0
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/SysCalls/Modules.h"
+#include "cellSearch.h"
 
-void cellSearch_init();
-Module cellSearch(0xf02f, cellSearch_init);
+extern Module cellSearch;
 
-// Error Codes
-enum
+struct cellSearchInternal
 {
-	CELL_SEARCH_OK                          = 0,
-	CELL_SEARCH_CANCELED                    = 1,
-	CELL_SEARCH_ERROR_PARAM                 = 0x8002C801,
-	CELL_SEARCH_ERROR_BUSY                  = 0x8002C802,
-	CELL_SEARCH_ERROR_NO_MEMORY             = 0x8002C803,
-	CELL_SEARCH_ERROR_UNKNOWN_MODE          = 0x8002C804,
-	CELL_SEARCH_ERROR_ALREADY_INITIALIZED   = 0x8002C805,
-	CELL_SEARCH_ERROR_NOT_INITIALIZED       = 0x8002C806,
-	CELL_SEARCH_ERROR_FINALIZING            = 0x8002C807,
-	CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH  = 0x8002C808,
-	CELL_SEARCH_ERROR_CONTENT_OBSOLETE      = 0x8002C809,
-	CELL_SEARCH_ERROR_CONTENT_NOT_FOUND     = 0x8002C80A,
-	CELL_SEARCH_ERROR_NOT_LIST              = 0x8002C80B,
-	CELL_SEARCH_ERROR_OUT_OF_RANGE          = 0x8002C80C,
-	CELL_SEARCH_ERROR_INVALID_SEARCHID      = 0x8002C80D,
-	CELL_SEARCH_ERROR_ALREADY_GOT_RESULT    = 0x8002C80E,
-	CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT = 0x8002C80F,
-	CELL_SEARCH_ERROR_INVALID_CONTENTTYPE   = 0x8002C810,
-	CELL_SEARCH_ERROR_DRM                   = 0x8002C811,
-	CELL_SEARCH_ERROR_TAG                   = 0x8002C812,
-	CELL_SEARCH_ERROR_GENERIC               = 0x8002C8FF,
+	bool m_bInitialized;
+
+	cellSearchInternal()
+		: m_bInitialized(false)
+	{
+	}
 };
 
-int cellSearchInitialize()
+cellSearchInternal cellSearchInstance;
+
+s32 cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<u32> userData)
+{
+	cellSearch.Todo("cellSearchInitialize()");
+
+	if (cellSearchInstance.m_bInitialized)
+		return CELL_SEARCH_ERROR_ALREADY_INITIALIZED;
+	if (mode != 0)
+		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
+	if (!func)
+		return CELL_SEARCH_ERROR_PARAM;
+
+	cellSearchInstance.m_bInitialized = true;
+
+	// TODO: Store the arguments somewhere so we can use them later.
+
+	return CELL_OK;
+}
+
+s32 cellSearchFinalize()
+{
+	cellSearch.Log("cellSearchFinalize()");
+
+	if (!cellSearchInstance.m_bInitialized)
+		return CELL_SEARCH_ERROR_NOT_INITIALIZED;
+
+	cellSearchInstance.m_bInitialized = false;
+
+	return CELL_OK;
+}
+
+s32 cellSearchStartListSearch()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchFinalize()
+s32 cellSearchStartContentSearchInList()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchStartListSearch()
+s32 cellSearchStartContentSearch()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchStartContentSearchInList()
+s32 cellSearchStartSceneSearchInVideo()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchStartContentSearch()
+s32 cellSearchStartSceneSearch()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchStartSceneSearchInVideo()
+s32 cellSearchGetContentInfoByOffset()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchStartSceneSearch()
+s32 cellSearchGetContentInfoByContentId()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoByOffset()
+s32 cellSearchGetOffsetByContentId()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoByContentId()
+s32 cellSearchGetContentIdByOffset()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetOffsetByContentId()
+s32 cellSearchGetContentInfoGameComment()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentIdByOffset()
+s32 cellSearchGetMusicSelectionContext()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoGameComment()
+s32 cellSearchGetMusicSelectionContextOfSingleTrack()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetMusicSelectionContext()
+s32 cellSearchGetContentInfoPath()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetMusicSelectionContextOfSingleTrack()
+s32 cellSearchGetContentInfoPathMovieThumb()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoPath()
+s32 cellSearchPrepareFile()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoPathMovieThumb()
+s32 cellSearchGetContentInfoDeveloperData()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchPrepareFile()
+s32 cellSearchCancel()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchGetContentInfoDeveloperData()
+s32 cellSearchEnd()
 {
 	UNIMPLEMENTED_FUNC(cellSearch);
 	return CELL_OK;
 }
 
-int cellSearchCancel()
+Module cellSearch("cellSearch", []()
 {
-	UNIMPLEMENTED_FUNC(cellSearch);
-	return CELL_OK;
-}
+	cellSearchInstance.m_bInitialized = false;
 
-int cellSearchEnd()
-{
-	UNIMPLEMENTED_FUNC(cellSearch);
-	return CELL_OK;
-}
-
-void cellSearch_init()
-{
-	cellSearch.AddFunc(0xc81ccf8a, cellSearchInitialize);
-	cellSearch.AddFunc(0xbfab7616, cellSearchFinalize);
-	cellSearch.AddFunc(0x0a4c8295, cellSearchStartListSearch);
-	cellSearch.AddFunc(0x64fb0b76, cellSearchStartContentSearchInList);
-	cellSearch.AddFunc(0x0591826f, cellSearchStartContentSearch);
-	cellSearch.AddFunc(0xc0ed0522, cellSearchStartSceneSearchInVideo);
-	cellSearch.AddFunc(0x13524faa, cellSearchStartSceneSearch);
-	cellSearch.AddFunc(0x3b210319, cellSearchGetContentInfoByOffset);
-	cellSearch.AddFunc(0x9663a44b, cellSearchGetContentInfoByContentId);
-	cellSearch.AddFunc(0x540d9068, cellSearchGetOffsetByContentId);
-	cellSearch.AddFunc(0x94e21701, cellSearchGetContentIdByOffset);
-	cellSearch.AddFunc(0xd7a7a433, cellSearchGetContentInfoGameComment);
-	cellSearch.AddFunc(0x025ce169, cellSearchGetMusicSelectionContext);
-	cellSearch.AddFunc(0xed20e079, cellSearchGetMusicSelectionContextOfSingleTrack);
-	cellSearch.AddFunc(0xffb28491, cellSearchGetContentInfoPath);
-	cellSearch.AddFunc(0x37b5ba0c, cellSearchGetContentInfoPathMovieThumb);
-	cellSearch.AddFunc(0xe73cb0d2, cellSearchPrepareFile);
-	cellSearch.AddFunc(0x35cda406, cellSearchGetContentInfoDeveloperData);
-	cellSearch.AddFunc(0x8fe376a6, cellSearchCancel);
-	cellSearch.AddFunc(0x774033d6, cellSearchEnd);
-}
-#endif
+	REG_FUNC(cellSearch, cellSearchInitialize);
+	REG_FUNC(cellSearch, cellSearchFinalize);
+	REG_FUNC(cellSearch, cellSearchStartListSearch);
+	REG_FUNC(cellSearch, cellSearchStartContentSearchInList);
+	REG_FUNC(cellSearch, cellSearchStartContentSearch);
+	REG_FUNC(cellSearch, cellSearchStartSceneSearchInVideo);
+	REG_FUNC(cellSearch, cellSearchStartSceneSearch);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoByOffset);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoByContentId);
+	REG_FUNC(cellSearch, cellSearchGetOffsetByContentId);
+	REG_FUNC(cellSearch, cellSearchGetContentIdByOffset);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoGameComment);
+	REG_FUNC(cellSearch, cellSearchGetMusicSelectionContext);
+	REG_FUNC(cellSearch, cellSearchGetMusicSelectionContextOfSingleTrack);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoPath);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoPathMovieThumb);
+	REG_FUNC(cellSearch, cellSearchPrepareFile);
+	REG_FUNC(cellSearch, cellSearchGetContentInfoDeveloperData);
+	REG_FUNC(cellSearch, cellSearchCancel);
+	REG_FUNC(cellSearch, cellSearchEnd);
+});
