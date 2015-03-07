@@ -187,7 +187,7 @@ s32 scePerfArmPmonStop(ARMv7Context& context, s32 threadId)
 
 s32 scePerfArmPmonGetCounterValue(ARMv7Context& context, s32 threadId, u32 counter, vm::psv::ptr<u32> pValue)
 {
-	scePerf.Warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=0x%x)", threadId, counter, pValue);
+	scePerf.Warning("scePerfArmPmonGetCounterValue(threadId=0x%x, counter=%d, pValue=*0x%x)", threadId, counter, pValue);
 
 	if (threadId != SCE_PERF_ARM_PMON_THREAD_ID_SELF)
 	{

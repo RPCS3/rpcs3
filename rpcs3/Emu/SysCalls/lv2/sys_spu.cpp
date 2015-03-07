@@ -266,12 +266,14 @@ s32 sys_spu_thread_group_destroy(u32 id)
 
 			Memory.MainMem.Free(spu.offset);
 			Emu.GetCPU().RemoveThread(spu.GetId());
+
+			t.reset();
 		}
 	}
 
-	group->threads = {};
 	group->state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED; // hack
 	Emu.GetIdManager().RemoveID(id);
+
 	return CELL_OK;
 }
 
