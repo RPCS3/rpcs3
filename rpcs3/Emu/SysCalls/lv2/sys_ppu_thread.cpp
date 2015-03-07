@@ -10,16 +10,8 @@
 
 SysCallBase sys_ppu_thread("sys_ppu_thread");
 
-static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU/*UUUUUUUUUUuuuuuuuuuu~~~~~~~~*/;
-
 void ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 {
-	if (CPU.owned_mutexes)
-	{
-		sys_ppu_thread.Error("Owned mutexes found (%d)", CPU.owned_mutexes);
-		CPU.owned_mutexes = 0;
-	}
-
 	CPU.SetExitStatus(errorcode);
 	CPU.Stop();
 

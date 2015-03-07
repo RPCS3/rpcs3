@@ -536,7 +536,6 @@ public:
 	//TBR : Time-Base Registers
 	u64 TB;	//TBR 0x10C - 0x10D
 
-	u32 owned_mutexes;
 	std::function<void(PPUThread& CPU)> custom_task;
 
 public:

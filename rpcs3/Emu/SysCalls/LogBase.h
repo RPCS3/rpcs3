@@ -20,7 +20,7 @@ class LogBase
 	template<typename... Targs>
 	__noinline void LogPrepare(LogType type, const char* fmt, Targs... args) const
 	{
-		LogOutput(type, fmt::detail::format(fmt, args...));
+		LogOutput(type, fmt::Format(fmt, args...));
 	}
 
 public:
