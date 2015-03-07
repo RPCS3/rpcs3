@@ -404,6 +404,7 @@ public:
 	volatile bool is_finished;
 	volatile bool is_closed;
 	std::atomic<bool> is_running;
+	std::atomic<bool> is_working;
 
 	PPUThread* dmuxCb;
 
@@ -411,6 +412,7 @@ public:
 		: is_finished(false)
 		, is_closed(false)
 		, is_running(false)
+		, is_working(false)
 		, memAddr(addr)
 		, memSize(size)
 		, cbFunc(func)
