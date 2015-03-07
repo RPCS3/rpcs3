@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Event.h"
+#include "sys_event.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
@@ -13,7 +15,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 	sys_timer.Warning("sys_timer_create(timer_id_addr=0x%x)", timer_id.addr());
 
 	std::shared_ptr<timer> timer_data(new timer);
-	*timer_id = sys_timer.GetNewId(timer_data, TYPE_TIMER);
+	*timer_id = Emu.GetIdManager().GetNewID(timer_data, TYPE_TIMER);
 	return CELL_OK;
 }
 
@@ -21,7 +23,7 @@ s32 sys_timer_destroy(u32 timer_id)
 {
 	sys_timer.Todo("sys_timer_destroy(timer_id=%d)", timer_id);
 
-	if(!sys_timer.CheckId(timer_id)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().CheckID(timer_id)) return CELL_ESRCH;
 
 	Emu.GetIdManager().RemoveID(timer_id);
 	return CELL_OK;
@@ -32,7 +34,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info_addr=0x%x)", timer_id, info.addr());
 	
 	std::shared_ptr<timer> timer_data = nullptr;
-	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
 
 	*info = timer_data->timer_information_t;
 	return CELL_OK;
@@ -43,7 +45,7 @@ s32 sys_timer_start(u32 timer_id, s64 base_time, u64 period)
 	sys_timer.Warning("sys_timer_start_periodic_absolute(timer_id=%d, basetime=%lld, period=%lld)", timer_id, base_time, period);
 
 	std::shared_ptr<timer> timer_data = nullptr;
-	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
 
 	if(timer_data->timer_information_t.timer_state != SYS_TIMER_STATE_STOP) return CELL_EBUSY;
 	if(period < 100) return CELL_EINVAL;
@@ -67,7 +69,7 @@ s32 sys_timer_stop(u32 timer_id)
 	sys_timer.Todo("sys_timer_stop()");
 
 	std::shared_ptr<timer> timer_data = nullptr;
-	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
 
 	timer_data->timer_information_t.timer_state = SYS_TIMER_STATE_STOP;
 	return CELL_OK;
@@ -80,8 +82,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 	std::shared_ptr<timer> timer_data = nullptr;
 	std::shared_ptr<event_queue_t> equeue = nullptr;
-	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
-	if(!sys_timer.CheckId(queue_id, equeue)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(queue_id, equeue)) return CELL_ESRCH;
 
 	//TODO: ?
 
@@ -93,7 +95,7 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 	sys_timer.Todo("sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
 
 	std::shared_ptr<timer> timer_data = nullptr;
-	if(!sys_timer.CheckId(timer_id, timer_data)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
 
 	//TODO: ?
 

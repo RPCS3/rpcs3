@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"
@@ -115,7 +116,7 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, vm::p
 		return CELL_ENOENT;
 	}
 
-	u32 id = sys_fs.GetNewId(stream, TYPE_FS_FILE);
+	u32 id = Emu.GetIdManager().GetNewID(stream, TYPE_FS_FILE);
 	*fd = id;
 	sys_fs.Notice("cellFsOpen(): '%s' opened, id -> 0x%x", path.get_ptr(), id);
 
@@ -127,7 +128,7 @@ s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
 	sys_fs.Log("cellFsRead(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	if (nbytes != (u32)nbytes)
@@ -147,7 +148,7 @@ s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite
 	sys_fs.Log("cellFsWrite(fd=0x%x, buf=0x%x, nbytes=0x%llx, nwrite=0x%x)", fd, buf, nbytes, nwrite);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file)) return CELL_ESRCH;
+	if (!Emu.GetIdManager().GetIDData(fd, file)) return CELL_ESRCH;
 
 	if (nbytes != (u32)nbytes) return CELL_ENOMEM;
 
@@ -181,7 +182,7 @@ s32 cellFsOpendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 		return CELL_ENOENT;
 	}
 
-	*fd = sys_fs.GetNewId(dir, TYPE_FS_DIR);
+	*fd = Emu.GetIdManager().GetNewID(dir, TYPE_FS_DIR);
 	return CELL_OK;
 }
 
@@ -190,7 +191,7 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 	sys_fs.Warning("cellFsReaddir(fd=0x%x, dir=0x%x, nread=0x%x)", fd, dir, nread);
 
 	std::shared_ptr<vfsDirBase> directory;
-	if (!sys_fs.CheckId(fd, directory))
+	if (!Emu.GetIdManager().GetIDData(fd, directory))
 		return CELL_ESRCH;
 
 	const DirEntryInfo* info = directory->Read();
@@ -306,9 +307,8 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.Warning("cellFsFstat(fd=0x%x, sb=0x%x)", fd, sb);
 
-	IDType type;
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file, type) || type != TYPE_FS_FILE)
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	sb->st_mode = 
@@ -452,9 +452,8 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<be_t<u64>> pos)
 	return CELL_EINVAL;
 	}
 
-	IDType type;
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file, type) || type != TYPE_FS_FILE)
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	*pos = file->Seek(offset, seek_mode);
@@ -465,9 +464,8 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 {
 	sys_fs.Warning("cellFsFtruncate(fd=0x%x, size=0x%llx)", fd, size);
 	
-	IDType type;
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file, type) || type != TYPE_FS_FILE)
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	u64 initialSize = file->GetSize();
@@ -526,7 +524,7 @@ s32 cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_siz
 	sys_fs.Warning("cellFsFGetBlockSize(fd=0x%x, sector_size=0x%x, block_size=0x%x)", fd, sector_size, block_size);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	*sector_size = 4096; // ?
@@ -563,7 +561,7 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 	sys_fs.Warning("cellFsGetDirectoryEntries(fd=0x%x, entries=0x%x, entries_size=0x%x, data_count=0x%x)", fd, entries, entries_size, data_count);
 
 	std::shared_ptr<vfsDirBase> directory;
-	if (!sys_fs.CheckId(fd, directory))
+	if (!Emu.GetIdManager().GetIDData(fd, directory))
 		return CELL_ESRCH;
 
 	const DirEntryInfo* info = directory->Read();
@@ -599,7 +597,7 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 	sys_fs.Warning("cellFsStReadInit(fd=0x%x, ringbuf=0x%x)", fd, ringbuf);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	fs_config.m_ring_buffer = *ringbuf;
@@ -624,7 +622,7 @@ s32 cellFsStReadFinish(u32 fd)
 	sys_fs.Warning("cellFsStReadFinish(fd=0x%x)", fd);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	Memory.Free(fs_config.m_buffer);
@@ -638,7 +636,7 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 	sys_fs.Warning("cellFsStReadGetRingBuf(fd=0x%x, ringbuf=0x%x)", fd, ringbuf);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	*ringbuf = fs_config.m_ring_buffer;
@@ -653,7 +651,7 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 	sys_fs.Warning("cellFsStReadGetRingBuf(fd=0x%x, status=0x%x)", fd, status);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	*status = fs_config.m_fs_status;
@@ -666,7 +664,7 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 	sys_fs.Warning("cellFsStReadGetRingBuf(fd=0x%x, regid=0x%x)", fd, regid);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	*regid = fs_config.m_regid;
@@ -679,7 +677,7 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 	sys_fs.Todo("cellFsStReadStart(fd=0x%x, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	fs_config.m_current_addr = fs_config.m_buffer + (u32)offset;
@@ -693,7 +691,7 @@ s32 cellFsStReadStop(u32 fd)
 	sys_fs.Warning("cellFsStReadStop(fd=0x%x)", fd);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	fs_config.m_fs_status = CELL_FS_ST_STOP;
@@ -706,7 +704,7 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 	sys_fs.Warning("cellFsStRead(fd=0x%x, buf=0x%x, size=0x%llx, rsize=0x%x)", fd, buf, size, rsize);
 	
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	// TODO: use ringbuffer (fs_config)
@@ -725,7 +723,7 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<vm::ptr<u8>> addr, vm::ptr<u64> s
 	sys_fs.Todo("cellFsStReadGetCurrentAddr(fd=0x%x, addr=0x%x, size=0x%x)", fd, addr, size);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	return CELL_OK;
@@ -736,7 +734,7 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 	sys_fs.Todo("cellFsStReadPutCurrentAddr(fd=0x%x, addr=0x%x, size=0x%llx)", fd, addr, size);
 	
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	return CELL_OK;
@@ -747,7 +745,7 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 	sys_fs.Todo("cellFsStReadWait(fd=0x%x, size=0x%llx)", fd, size);
 	
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 	
 	return CELL_OK;
@@ -758,7 +756,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, vm::ptr<void(int xfd, u64 xsize)>
 	sys_fs.Todo("cellFsStReadWaitCallback(fd=0x%x, size=0x%llx, func=0x%x)", fd, size, func);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 	
 	return CELL_OK;
@@ -882,7 +880,7 @@ s32 cellFsSdataOpen(vm::ptr<const char> path, s32 flags, vm::ptr<be_t<u32>> fd, 
 	int ret = sdata_unpack(path, unpacked_path);
 	if (ret) return ret;
 
-	fd = sys_fs.GetNewId(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);
+	fd = Emu.GetIdManager().GetNewID(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);
 
 	return CELL_OK;*/
 
@@ -918,7 +916,7 @@ void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(vm::ptr<Cel
 	u64 res = 0;
 	{
 		std::shared_ptr<vfsStream> orig_file;
-		if (!sys_fs.CheckId(fd, orig_file))
+		if (!Emu.GetIdManager().GetIDData(fd, orig_file))
 		{
 			sys_fs.Error("Wrong fd (%s)", fd);
 			Emu.Pause();
@@ -969,7 +967,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, vm::ptr<void(vm::ptr<
 	std::shared_ptr<vfsStream> orig_file;
 	u32 fd = aio->fd;
 
-	if (!sys_fs.CheckId(fd, orig_file))
+	if (!Emu.GetIdManager().GetIDData(fd, orig_file))
 	{
 		return CELL_EBADF;
 	}
@@ -1039,7 +1037,7 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 	sys_fs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
 	std::shared_ptr<vfsStream> file;
-	if (!sys_fs.CheckId(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
 	return CELL_OK;

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 
@@ -209,7 +210,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	std::shared_ptr<VideoDecoder> sptr(vdec_ptr);
 	VideoDecoder& vdec = *vdec_ptr;
 
-	u32 vdec_id = cellVdec.GetNewId(sptr);
+	u32 vdec_id = Emu.GetIdManager().GetNewID(sptr);
 
 	vdec.id = vdec_id;
 

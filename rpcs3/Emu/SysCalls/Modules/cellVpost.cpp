@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
 extern "C"
@@ -29,7 +30,7 @@ int cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVp
 u32 vpostOpen(VpostInstance* data)
 {
 	std::shared_ptr<VpostInstance> data_ptr(data);
-	u32 id = cellVpost.GetNewId(data_ptr);
+	u32 id = Emu.GetIdManager().GetNewID(data_ptr);
 
 	cellVpost.Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
 

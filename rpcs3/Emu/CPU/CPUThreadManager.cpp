@@ -67,7 +67,7 @@ std::shared_ptr<CPUThread> CPUThreadManager::AddThread(CPUThreadType type)
 
 	if (new_thread)
 	{
-		new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread->GetTypeString() + " Thread", new_thread));
+		new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread));
 
 		m_threads.push_back(new_thread);
 		SendDbgCommand(DID_CREATE_THREAD, new_thread.get());

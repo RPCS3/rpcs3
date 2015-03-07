@@ -599,23 +599,3 @@ void Module::SetName(const std::string& name)
 {
 	m_name = name;
 }
-
-bool Module::CheckID(u32 id) const
-{
-	return Emu.GetIdManager().CheckID(id) && Emu.GetIdManager().GetID(id).GetName() == GetName();
-}
-
-bool Module::CheckID(u32 id, ID*& _id) const
-{
-	return Emu.GetIdManager().CheckID(id) && (_id = &Emu.GetIdManager().GetID(id))->GetName() == GetName();
-}
-
-bool Module::RemoveId(u32 id)
-{
-	return Emu.GetIdManager().RemoveID(id);
-}
-
-IdManager& Module::GetIdManager() const
-{
-	return Emu.GetIdManager();
-}

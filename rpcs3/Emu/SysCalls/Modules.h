@@ -1,6 +1,5 @@
 #pragma once
 #include "Emu/SysCalls/SC_FUNC.h"
-#include "Emu/IdManager.h"
 #include "ErrorCodes.h"
 #include "LogBase.h"
 
@@ -76,8 +75,6 @@ class Module : public LogBase
 	bool m_is_loaded;
 	void(*m_init)();
 
-	IdManager& GetIdManager() const;
-
 	Module() = delete;
 
 public:
@@ -104,42 +101,6 @@ public:
 
 	virtual const std::string& GetName() const override;
 	void SetName(const std::string& name);
-
-public:
-	bool CheckID(u32 id) const;
-
-	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data)
-	{
-		ID* id_data;
-
-		if(!CheckID(id, id_data)) return false;
-
-		data = id_data->GetData()->get<T>();
-
-		return true;
-	}
-
-	template<typename T> bool CheckId(u32 id, std::shared_ptr<T>& data, IDType& type)
-	{
-		ID* id_data;
-
-		if(!CheckID(id, id_data)) return false;
-
-		data = id_data->GetData()->get<T>();
-		type = id_data->GetType();
-
-		return true;
-	}
-
-	bool CheckID(u32 id, ID*& _id) const;
-
-	template<typename T>
-	u32 GetNewId(std::shared_ptr<T>& data, IDType type = TYPE_OTHER)
-	{
-		return GetIdManager().GetNewID<T>(GetName(), data, type);
-	}
-
-	bool RemoveId(u32 id);
 };
 
 u32 add_ppu_func(ModuleFunc func);

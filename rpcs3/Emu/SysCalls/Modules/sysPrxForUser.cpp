@@ -2,6 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
 
@@ -226,7 +227,7 @@ int _sys_heap_create_heap(const u32 heap_addr, const u32 align, const u32 size)
 	sysPrxForUser.Warning("_sys_heap_create_heap(heap_addr=0x%x, align=0x%x, size=0x%x)", heap_addr, align, size);
 
 	std::shared_ptr<HeapInfo> heap(new HeapInfo(heap_addr, align, size));
-	u32 heap_id = sysPrxForUser.GetNewId(heap);
+	u32 heap_id = Emu.GetIdManager().GetNewID(heap);
 	sysPrxForUser.Warning("*** sys_heap created: id = %d", heap_id);
 	return heap_id;
 }
@@ -236,7 +237,7 @@ u32 _sys_heap_malloc(const u32 heap_id, const u32 size)
 	sysPrxForUser.Warning("_sys_heap_malloc(heap_id=%d, size=0x%x)", heap_id, size);
 
 	std::shared_ptr<HeapInfo> heap;
-	if(!sysPrxForUser.CheckId(heap_id, heap)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(heap_id, heap)) return CELL_ESRCH;
 
 	return (u32)Memory.Alloc(size, 1);
 }
@@ -246,7 +247,7 @@ u32 _sys_heap_memalign(u32 heap_id, u32 align, u32 size)
 	sysPrxForUser.Warning("_sys_heap_memalign(heap_id=%d, align=0x%x, size=0x%x)", heap_id, align, size);
 
 	std::shared_ptr<HeapInfo> heap;
-	if(!sysPrxForUser.CheckId(heap_id, heap)) return CELL_ESRCH;
+	if(!Emu.GetIdManager().GetIDData(heap_id, heap)) return CELL_ESRCH;
 
 	return (u32)Memory.Alloc(size, align);
 }
@@ -267,9 +268,7 @@ s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
 {
 	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
 
-	vm::stackvar<u64> r13(CPU);
-
-	return _sys_interrupt_thread_disestablish(ih, r13);
+	return _sys_interrupt_thread_disestablish(ih, vm::stackvar<u64>(CPU));
 }
 
 int sys_process_is_stack(u32 p)

@@ -50,20 +50,20 @@ std::string SyncPrimManager::GetSyncPrimName(u32 id, IDType type)
 
 	case TYPE_MUTEX:
 	{
-		std::shared_ptr<Mutex> mutex;
+		std::shared_ptr<mutex_t> mutex;
 		if (Emu.GetIdManager().GetIDData(id, mutex))
 		{
-			return std::string((const char*)&mutex->queue.name, 8);
+			return std::string((const char*)&mutex->name, 8);
 		}
 		break;
 	}
 
 	case TYPE_COND:
 	{
-		std::shared_ptr<Cond> cond;
+		std::shared_ptr<cond_t> cond;
 		if (Emu.GetIdManager().GetIDData(id, cond))
 		{
-			return std::string((const char*)&cond->queue.name, 8);
+			return std::string((const char*)&cond->name, 8);
 		}
 		break;
 	}

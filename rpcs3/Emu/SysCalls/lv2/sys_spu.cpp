@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
@@ -221,7 +222,7 @@ u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type
 
 	std::shared_ptr<spu_group_t> group(new spu_group_t(name, num, prio, type, container));
 
-	return sys_spu.GetNewId(group);
+	return Emu.GetIdManager().GetNewID(group);
 }
 
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
@@ -466,13 +467,43 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	LV2_LOCK;
 
+	// seems the id can be either SPU Thread Group or SPU Thread
+
 	std::shared_ptr<spu_group_t> group;
-	if (!Emu.GetIdManager().GetIDData(id, group))
+	std::shared_ptr<CPUThread> thread = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
+
+	if (!Emu.GetIdManager().GetIDData(id, group) && !thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	// CELL_EPERM is not returned (can't check the condition)
+	auto& spu = static_cast<SPUThread&>(*thread);
+
+	if (thread)
+	{
+		if (group)
+		{
+			throw __FUNCTION__;
+		}
+
+		group = spu.tg.lock();
+
+		for (auto& t : group->threads)
+		{
+			// find primary (?) thread and compare it with the one specified
+			if (t)
+			{
+				if (t == thread)
+				{
+					break;
+				}
+				else
+				{
+					return CELL_EPERM;
+				}
+			}
+		}
+	}
 
 	if (group->state <= SPU_THREAD_GROUP_STATUS_INITIALIZED || group->state == SPU_THREAD_GROUP_STATUS_WAITING || group->state == SPU_THREAD_GROUP_STATUS_WAITING)
 	{
@@ -494,6 +525,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 	group->exit_status = value;
 	group->join_state |= SPU_TGJSF_TERMINATED;
 	group->join_cv.notify_one();
+
 	return CELL_OK;
 }
 

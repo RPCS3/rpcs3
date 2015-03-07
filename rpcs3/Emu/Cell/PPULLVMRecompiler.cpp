@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPULLVMRecompiler.h"
 #include "Emu/Memory/Memory.h"
 #include "llvm/Support/TargetSelect.h"
@@ -22,6 +23,10 @@
 
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
+
+#ifdef ID_MANAGER_INCLUDED
+#error "ID Manager cannot be used in this module"
+#endif
 
 u64  Compiler::s_rotate_mask[64][64];
 bool Compiler::s_rotate_mask_inited = false;

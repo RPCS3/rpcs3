@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
@@ -18,7 +19,7 @@ u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key
 
 	Emu.GetEventManager().RegisterKey(queue, event_queue_key);
 
-	return sys_event.GetNewId(queue, TYPE_EVENT_QUEUE);
+	return Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
 }
 
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
@@ -35,10 +36,10 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	switch (protocol)
 	{
 	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: sys_event.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_event.Error("Invalid protocol (SYS_SYNC_PRIORITY_INHERIT)"); return CELL_EINVAL;
+	case SYS_SYNC_RETRY: sys_event.Error("sys_event_queue_create(): invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
+	case SYS_SYNC_PRIORITY_INHERIT: sys_event.Error("sys_event_queue_create(): invalid protocol (SYS_SYNC_PRIORITY_INHERIT)"); return CELL_EINVAL;
 	case SYS_SYNC_FIFO: break;
-	default: sys_event.Error("Unknown protocol (0x%x)", protocol); return CELL_EINVAL;
+	default: sys_event.Error("sys_event_queue_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
 	const u32 type = attr->type;
@@ -47,7 +48,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	{
 	case SYS_PPU_QUEUE: break;
 	case SYS_SPU_QUEUE: break;
-	default: sys_event.Error("Unknown event queue type (0x%x)", type); return CELL_EINVAL;
+	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
 	LV2_LOCK;
@@ -64,7 +65,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 		return CELL_EAGAIN;
 	}
 
-	*equeue_id = sys_event.GetNewId(queue, TYPE_EVENT_QUEUE);
+	*equeue_id = Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
 	
 	return CELL_OK;
 }
@@ -170,22 +171,19 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	}
 
 	// protocol is ignored in current implementation
-	queue->waiters++;
-	assert(queue->waiters > 0);
+	queue->waiters++; assert(queue->waiters > 0);
 
 	while (queue->events.empty())
 	{
 		if (queue->waiters < 0)
 		{
-			queue->waiters--;
-			assert(queue->waiters < 0);
+			queue->waiters--; assert(queue->waiters < 0);
 			return CELL_ECANCELED;
 		}
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			queue->waiters--;
-			assert(queue->waiters >= 0);
+			queue->waiters--; assert(queue->waiters >= 0);
 			return CELL_ETIMEDOUT;
 		}
 
@@ -206,8 +204,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	CPU.GPR[7] = event.data3;
 
 	queue->events.pop_front();
-	queue->waiters--;
-	assert(queue->waiters >= 0);
+	queue->waiters--; assert(queue->waiters >= 0);
 
 	if (queue->events.size())
 	{
@@ -239,7 +236,7 @@ u32 event_port_create(u64 name)
 {
 	std::shared_ptr<event_port_t> eport(new event_port_t(SYS_EVENT_PORT_LOCAL, name));
 	
-	return sys_event.GetNewId(eport, TYPE_EVENT_PORT);
+	return Emu.GetIdManager().GetNewID(eport, TYPE_EVENT_PORT);
 }
 
 s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
@@ -256,7 +253,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 	std::shared_ptr<event_port_t> eport(new event_port_t(port_type, name));
 
-	*eport_id = sys_event.GetNewId(eport, TYPE_EVENT_PORT);
+	*eport_id = Emu.GetIdManager().GetNewID(eport, TYPE_EVENT_PORT);
 
 	return CELL_OK;
 }

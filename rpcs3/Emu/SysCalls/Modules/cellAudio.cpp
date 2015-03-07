@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/Callback.h"
 
@@ -790,7 +791,7 @@ int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 		return CELL_AUDIO_ERROR_EVENT_QUEUE;
 	}
 
-	*id = cellAudio.GetNewId(eq);
+	*id = Emu.GetIdManager().GetNewID(eq);
 	*key = event_key;
 
 	return CELL_OK;

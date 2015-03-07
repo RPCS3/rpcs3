@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "sys_memory.h"
@@ -76,7 +78,7 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<u32> mem_id)
 
 	// Generate a new mem ID.
 	std::shared_ptr<mmapper_info> info(new mmapper_info(size, flags));
-	*mem_id = sys_mmapper.GetNewId(info);
+	*mem_id = Emu.GetIdManager().GetNewID(info);
 
 	return CELL_OK;
 }
@@ -88,7 +90,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 
 	// Check if this container ID is valid.
 	std::shared_ptr<MemoryContainerInfo> ct;
-	if(!sys_mmapper.CheckId(cid, ct))
+	if(!Emu.GetIdManager().GetIDData(cid, ct))
 		return CELL_ESRCH;
 
 	// Check page granularity.
@@ -112,7 +114,7 @@ s32 sys_mmapper_allocate_memory_from_container(u32 size, u32 cid, u64 flags, vm:
 
 	// Generate a new mem ID.
 	std::shared_ptr<mmapper_info> info(new mmapper_info(ct->size, flags));
-	*mem_id = sys_mmapper.GetNewId(info, TYPE_MEM);
+	*mem_id = Emu.GetIdManager().GetNewID(info, TYPE_MEM);
 
 	return CELL_OK;
 }
@@ -141,11 +143,11 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 
 	// Check if this mem ID is valid.
 	std::shared_ptr<mmapper_info> info;
-	if(!sys_mmapper.CheckId(mem_id, info))
+	if(!Emu.GetIdManager().GetIDData(mem_id, info))
 		return CELL_ESRCH;
 
 	// Release the allocated memory and remove the ID.
-	sys_mmapper.RemoveId(mem_id);
+	Emu.GetIdManager().RemoveID(mem_id);
 
 	return CELL_OK;
 }
@@ -156,7 +158,7 @@ s32 sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
 
 	// Check if this mem ID is valid.
 	std::shared_ptr<mmapper_info> info;
-	if(!sys_mmapper.CheckId(mem_id, info))
+	if(!Emu.GetIdManager().GetIDData(mem_id, info))
 		return CELL_ESRCH;
 
 	// Map the memory into the process address.
@@ -176,7 +178,7 @@ s32 sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, u32 alloc_
 
 	// Check if this mem ID is valid.
 	std::shared_ptr<mmapper_info> info;
-	if(!sys_mmapper.CheckId(mem_id, info))
+	if(!Emu.GetIdManager().GetIDData(mem_id, info))
 		return CELL_ESRCH;
 	
 	// Search for a mappable address.
