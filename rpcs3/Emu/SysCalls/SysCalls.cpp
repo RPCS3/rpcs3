@@ -108,7 +108,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_timer_create),                            //70  (0x046)
 	bind_func(sys_timer_destroy),                           //71  (0x047)
 	bind_func(sys_timer_get_information),                   //72  (0x048)
-	bind_func(sys_timer_start),                             //73  (0x049)
+	bind_func(_sys_timer_start),                             //73  (0x049)
 	bind_func(sys_timer_stop),                              //74  (0x04A)
 	bind_func(sys_timer_connect_event_queue),               //75  (0x04B)
 	bind_func(sys_timer_disconnect_event_queue),            //76  (0x04C)
