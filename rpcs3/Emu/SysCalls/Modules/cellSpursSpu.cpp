@@ -54,7 +54,7 @@ static void spursSysServiceActivateWorkload(SPUThread & spu, SpursKernelContext 
 // TODO: Deactivate workload
 static void spursSysServiceUpdateShutdownCompletionEvents(SPUThread & spu, SpursKernelContext * ctxt, u32 wklShutdownBitSet);
 static void spursSysServiceTraceSaveCount(SPUThread & spu, SpursKernelContext * ctxt);
-static void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 arg2, u32 arg3, u32 arg4);
+static void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 arg2, u32 arg3, u32 forceNotify);
 // TODO: Deactivate trace
 // TODO: System workload entry
 static void spursSysServiceCleanupAfterSystemWorkload(SPUThread & spu, SpursKernelContext * ctxt);
@@ -808,7 +808,7 @@ void spursSysServiceProcessRequests(SPUThread & spu, SpursKernelContext * ctxt) 
         }
 
         // Update trace message
-        if (spurs->sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) {
+        if (spurs->sysSrvTrace.data.sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) {
             updateTrace = true;
         }
 
@@ -954,27 +954,27 @@ void spursSysServiceTraceSaveCount(SPUThread & spu, SpursKernelContext * ctxt) {
 }
 
 /// Update trace control
-void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 arg2, u32 arg3, u32 arg4) {
+void spursSysServiceTraceUpdate(SPUThread & spu, SpursKernelContext * ctxt, u32 arg2, u32 arg3, u32 forceNotify) {
     bool notify;
 
     u8 sysSrvMsgUpdateTrace;
     vm::reservation_op(vm::cast(ctxt->spurs.addr() + offsetof(CellSpurs, wklState1)), 128, [&]() {
         auto spurs = ctxt->spurs.priv_ptr();
 
-        sysSrvMsgUpdateTrace           = spurs->sysSrvMsgUpdateTrace;
-        spurs->sysSrvMsgUpdateTrace &= ~(1 << ctxt->spuNum);
-        spurs->xCC                  &= ~(1 << ctxt->spuNum);
-        spurs->xCC                  |= arg2 << ctxt->spuNum;
+        sysSrvMsgUpdateTrace = spurs->sysSrvTrace.data.sysSrvMsgUpdateTrace;
+        spurs->sysSrvTrace.data.sysSrvMsgUpdateTrace   &= ~(1 << ctxt->spuNum);
+        spurs->sysSrvTrace.data.sysSrvTraceInitialised &= ~(1 << ctxt->spuNum);
+        spurs->sysSrvTrace.data.sysSrvTraceInitialised |= arg2 << ctxt->spuNum;
 
         notify = false;
-        if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) && (spurs->sysSrvMsgUpdateTrace == 0) && (spurs->xCD != 0)) {
-            spurs->xCD = 0;
-            notify       = true;
+        if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) && (spurs->sysSrvTrace.data.sysSrvMsgUpdateTrace == 0) && (spurs->sysSrvTrace.data.sysSrvNotifyUpdateTraceComplete != 0)) {
+            spurs->sysSrvTrace.data.sysSrvNotifyUpdateTraceComplete = 0;
+            notify = true;
         }
 
-        if (arg4 && spurs->xCD != 0) {
-            spurs->xCD = 0;
-            notify       = true;
+        if (forceNotify && spurs->sysSrvTrace.data.sysSrvNotifyUpdateTraceComplete != 0) {
+            spurs->sysSrvTrace.data.sysSrvNotifyUpdateTraceComplete = 0;
+            notify = true;
         }
 
         memcpy(vm::get_ptr(spu.offset + 0x2D80), spurs->wklState1, 128);

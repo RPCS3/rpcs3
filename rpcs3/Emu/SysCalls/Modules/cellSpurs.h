@@ -494,10 +494,17 @@ struct set_alignment(128) CellSpurs
 	u8 spuPort;                                         // 0xC9
 	u8 xCA;                                             // 0xCA
 	u8 xCB;                                             // 0xCB
-	u8 xCC;                                             // 0xCC
-	u8 xCD;                                             // 0xCD
-	u8 sysSrvMsgUpdateTrace;                            // 0xCE
-	u8 xCF;                                             // 0xCF
+
+	struct SrvTraceSyncVar
+	{
+		u8 sysSrvTraceInitialised;                      // 0xCC
+		u8 sysSrvNotifyUpdateTraceComplete;             // 0xCD
+		u8 sysSrvMsgUpdateTrace;                        // 0xCE
+		u8 xCF;
+	};
+
+	atomic_be_t<SrvTraceSyncVar> sysSrvTrace;           // 0xCC
+
 	atomic_be_t<u8> wklState2[0x10];                    // 0xD0 SPURS_WKL_STATE_*
 	u8 wklStatus2[0x10];                                // 0xE0
 	atomic_be_t<u8> wklEvent2[0x10];                    // 0xF0
@@ -599,11 +606,21 @@ CHECK_SIZE_ALIGN(CellSpursWorkloadAttribute, 512, 8);
 
 struct set_alignment(128) CellSpursEventFlag
 {
-	be_t<u16> events;                    // 0x00 Event bits
-	be_t<u16> spuTaskPendingRecv;        // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
-	be_t<u16> ppuWaitMask;               // 0x04 Wait mask for blocked PPU thread
-	u8 ppuWaitSlotAndMode;               // 0x06 Top 4 bits: Wait slot number of the blocked PPU threa, Bottom 4 bits: Wait mode of the blocked PPU thread
-	u8 ppuPendingRecv;                   // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is unblocked
+	struct ControlSyncVar
+	{
+		be_t<u16> events;                // 0x00 Event bits
+		be_t<u16> spuTaskPendingRecv;    // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks
+		be_t<u16> ppuWaitMask;           // 0x04 Wait mask for blocked PPU thread
+		u8 ppuWaitSlotAndMode;           // 0x06 Top 4 bits: Wait slot number of the blocked PPU threa, Bottom 4 bits: Wait mode of the blocked PPU thread
+		u8 ppuPendingRecv;               // 0x07 Set to 1 when the blocked PPU thread's conditions are met and back to 0 when the PPU thread is unblocked
+	};
+
+	union
+	{
+		atomic_be_t<ControlSyncVar> ctrl;// 0x00
+		atomic_be_t<u16> events;         // 0x00
+	};
+
 	be_t<u16> spuTaskUsedWaitSlots;      // 0x08 A bit is set to 1 if the wait slot corresponding to the bit is used by an SPU task and 0 otherwise
 	be_t<u16> spuTaskWaitMode;           // 0x0A A bit is set to 1 if the wait mode for the SPU task corresponding to the bit is AND and 0 otherwise
 	u8 spuPort;                          // 0x0C
