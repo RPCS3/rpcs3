@@ -27,10 +27,10 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 
 	switch (protocol)
 	{
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_RETRY"); break;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_event_flag.Todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
 	case SYS_SYNC_FIFO: break;
+	case SYS_SYNC_RETRY: break;
+	case SYS_SYNC_PRIORITY: break;
+	case SYS_SYNC_PRIORITY_INHERIT: break;
 	default: sys_event_flag.Error("sys_event_flag_create(): unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
 	}
 
