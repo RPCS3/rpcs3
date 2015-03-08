@@ -512,9 +512,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_rsx.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\sys_spinlock.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\sys_ppu_thread.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
@@ -1280,9 +1277,6 @@
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_rsx.h">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\lv2\sys_spinlock.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_ppu_thread.h">

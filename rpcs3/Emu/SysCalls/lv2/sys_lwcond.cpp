@@ -5,6 +5,7 @@
 #include "Emu/SysCalls/SysCalls.h"
 
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/SysCalls/Modules/sysPrxForUser.h"
 #include "sleep_queue.h"
 #include "sys_time.h"
 #include "sys_lwmutex.h"
@@ -159,8 +160,8 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	lw->queue.push(tid_le, mutex->attribute);
 
-	auto old_recursive = mutex->recursive_count.read_relaxed();
-	mutex->recursive_count.exchange(be_t<u32>::make(0));
+	auto old_recursive = mutex->recursive_count;
+	mutex->recursive_count = 0;
 
 	auto target = be_t<u32>::make(sq->signal(mutex->attribute));
 	if (!mutex->owner.compare_and_swap_test(tid, target))
@@ -173,7 +174,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	{
 		if ((signaled = signaled || lw->queue.pop(tid, mutex->attribute))) // check signaled threads
 		{
-			s32 res = mutex->lock(tid, timeout ? get_system_time() - start_time : 0); // this is bad
+			s32 res = sys_lwmutex_lock(CPU, mutex, timeout ? get_system_time() - start_time : 0); // this is bad
 			if (res == CELL_OK)
 			{
 				break;
@@ -226,6 +227,6 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		}
 	}
 
-	mutex->recursive_count.exchange(old_recursive);
+	mutex->recursive_count = old_recursive;
 	return CELL_OK;
 }

@@ -194,7 +194,6 @@
     <ClCompile Include="Emu\SysCalls\lv2\sys_rsx.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_rwlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_semaphore.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\sys_spinlock.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_spu.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_timer.cpp" />
@@ -457,7 +456,6 @@
     <ClInclude Include="Emu\SysCalls\lv2\sys_rsx.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_rwlock.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_semaphore.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\sys_spinlock.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_spu.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_time.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_timer.h" />
