@@ -167,10 +167,8 @@ s32 spursInit(
 		}
 	}
 
-	if (s32 res = lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv"))
-	{
-		assert(!"lwmutex_create() failed");
-	}
+	lwmutex_create(spurs->m.mutex, false, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
+
 	if (s32 res = lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv"))
 	{
 		assert(!"lwcond_create() failed");
