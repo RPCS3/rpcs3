@@ -35,10 +35,8 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 
 	switch (protocol)
 	{
-	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_RETRY: sys_event.Error("sys_event_queue_create(): invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_event.Error("sys_event_queue_create(): invalid protocol (SYS_SYNC_PRIORITY_INHERIT)"); return CELL_EINVAL;
 	case SYS_SYNC_FIFO: break;
+	case SYS_SYNC_PRIORITY: break;
 	default: sys_event.Error("sys_event_queue_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 

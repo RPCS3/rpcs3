@@ -29,8 +29,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 	{
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
-	case SYS_SYNC_PRIORITY_INHERIT: sys_mutex.Todo("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT"); break;
-	case SYS_SYNC_RETRY: sys_mutex.Error("sys_mutex_create(): invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
+	case SYS_SYNC_PRIORITY_INHERIT: break;
 	default: sys_mutex.Error("sys_mutex_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
