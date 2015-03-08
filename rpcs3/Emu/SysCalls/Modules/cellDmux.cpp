@@ -347,12 +347,18 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 				if (!stream.peek(code)) 
 				{
 					// demuxing finished
+					dmux.is_running = false;
+
+					// callback
 					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
 					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
 					dmuxMsg->supplementalInfo = stream.userdata;
 					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
-					dmux.is_running = false;
+					dmux.is_working = false;
+
+					stream = {};
+					
 					continue;
 				}
 				
@@ -634,16 +640,20 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 			case dmuxResetStream:
 			case dmuxResetStreamAndWaitDone:
 			{
-				auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
-				dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
-				dmuxMsg->supplementalInfo = stream.userdata;
-				dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
+				// demuxing stopped
+				if (dmux.is_running.exchange(false))
+				{
+					// callback
+					auto dmuxMsg = vm::ptr<CellDmuxMsg>::make(dmux.memAddr + (cb_add ^= 16));
+					dmuxMsg->msgType = CELL_DMUX_MSG_TYPE_DEMUX_DONE;
+					dmuxMsg->supplementalInfo = stream.userdata;
+					dmux.cbFunc(*dmux.dmuxCb, dmux.id, dmuxMsg, dmux.cbArg);
 
-				stream = {};
-				dmux.is_running = false;
-				//if (task.type == dmuxResetStreamAndWaitDone)
-				//{
-				//}
+					stream = {};
+
+					dmux.is_working = false;
+				}
+
 				break;
 			}
 
@@ -926,8 +936,16 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
+	if (!dmux->is_running)
+	{
+		return CELL_OK;
+	}
+
+	dmux->is_working = true;
+
 	dmux->job.push(DemuxerTask(dmuxResetStreamAndWaitDone), &dmux->is_closed);
-	while (dmux->is_running && !dmux->is_closed) // TODO: ensure that it is safe
+
+	while (dmux->is_running && dmux->is_working && !dmux->is_closed) // TODO: ensure that it is safe
 	{
 		if (Emu.IsStopped())
 		{
@@ -936,6 +954,7 @@ int cellDmuxResetStreamAndWaitDone(u32 demuxerHandle)
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
 	}
+
 	return CELL_OK;
 }
 

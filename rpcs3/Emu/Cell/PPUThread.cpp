@@ -28,7 +28,6 @@ PPUThread& GetCurrentPPUThread()
 
 PPUThread::PPUThread() : CPUThread(CPU_THREAD_PPU)
 {
-	owned_mutexes = 0;
 	Reset();
 }
 

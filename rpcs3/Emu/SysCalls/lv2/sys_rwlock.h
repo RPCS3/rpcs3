@@ -7,6 +7,7 @@ struct sys_rwlock_attribute_t
 	be_t<u64> ipc_key;
 	be_t<s32> flags;
 	be_t<u32> pad;
+
 	union
 	{
 		char name[8];
@@ -14,24 +15,25 @@ struct sys_rwlock_attribute_t
 	};
 };
 
-struct RWLock
+struct rwlock_t
 {
-	struct sync_var_t
-	{
-		u32 readers; // reader count
-		u32 writer; // writer thread id
-	};
-
-	sleep_queue_t wqueue;
-	atomic_le_t<sync_var_t> sync;
-
 	const u32 protocol;
+	const u64 name;
 
-	RWLock(u32 protocol, u64 name)
+	std::atomic<u32> readers; // reader count
+	std::atomic<u32> writer; // writer id
+
+	// TODO: use sleep queue, possibly remove condition variable
+	std::condition_variable cv;
+	std::atomic<s32> waiters;
+
+	rwlock_t(u32 protocol, u64 name)
 		: protocol(protocol)
-		, wqueue(name)
+		, name(name)
+		, readers(0)
+		, writer(0)
+		, waiters(0)
 	{
-		sync.write_relaxed({ 0, 0 });
 	}
 };
 

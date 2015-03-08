@@ -1,12 +1,13 @@
 #pragma once
 
-struct sys_semaphore_attribute
+struct sys_semaphore_attribute_t
 {
 	be_t<u32> protocol;
-	be_t<u32> pshared; // undefined
-	be_t<u64> ipc_key; // undefined
-	be_t<s32> flags; // undefined
-	be_t<u32> pad; // not used
+	be_t<u32> pshared;
+	be_t<u64> ipc_key;
+	be_t<s32> flags;
+	be_t<u32> pad;
+
 	union
 	{
 		char name[8];
@@ -14,31 +15,35 @@ struct sys_semaphore_attribute
 	};
 };
 
-struct Semaphore
+struct semaphore_t
 {
-	sleep_queue_t queue;
-	atomic_le_t<s32> value;
-
-	const s32 max;
 	const u32 protocol;
+	const s32 max;
 	const u64 name;
 
-	Semaphore(s32 initial_count, s32 max_count, u32 protocol, u64 name)
-		: max(max_count)
-		, protocol(protocol)
+	std::atomic<s32> value;
+
+	// TODO: use sleep queue, possibly remove condition variable
+	std::condition_variable cv;
+	std::atomic<s32> waiters;
+
+	semaphore_t(u32 protocol, s32 max, u64 name, s32 value)
+		: protocol(protocol)
+		, max(max)
 		, name(name)
+		, value(value)
+		, waiters(0)
 	{
-		value.write_relaxed(initial_count);
 	}
 };
 
 // Aux
-u32 semaphore_create(s32 initial_count, s32 max_count, u32 protocol, u64 name_u64);
+u32 semaphore_create(s32 initial_val, s32 max_val, u32 protocol, u64 name_u64);
 
 // SysCalls
-s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute> attr, s32 initial_count, s32 max_count);
-s32 sys_semaphore_destroy(u32 sem_id);
-s32 sys_semaphore_wait(u32 sem_id, u64 timeout);
-s32 sys_semaphore_trywait(u32 sem_id);
-s32 sys_semaphore_post(u32 sem_id, s32 count);
-s32 sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count);
+s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);
+s32 sys_semaphore_destroy(u32 sem);
+s32 sys_semaphore_wait(u32 sem, u64 timeout);
+s32 sys_semaphore_trywait(u32 sem);
+s32 sys_semaphore_post(u32 sem, s32 count);
+s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count);

@@ -813,7 +813,7 @@ int cellSailPlayerCancel()
 
 int cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, bool paused)
 {
-	cellSail.Todo("cellSailPlayerSetPaused(pSelf_addr=0x%x, paused=)", pSelf.addr(), paused);
+	cellSail.Todo("cellSailPlayerSetPaused(pSelf_addr=0x%x, paused=%d)", pSelf.addr(), paused);
 	return CELL_OK;
 }
 

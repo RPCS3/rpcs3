@@ -13,35 +13,33 @@ SysCallBase sys_rwlock("sys_rwlock");
 
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
-	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id_addr=0x%x, attr_addr=0x%x)", rw_lock_id.addr(), attr.addr());
+	sys_rwlock.Warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
 
-	if (!attr)
+	if (!rw_lock_id || !attr)
 	{
-		sys_rwlock.Error("sys_rwlock_create(): null attr address");
 		return CELL_EFAULT;
 	}
 
-	switch (attr->protocol.data())
+	const u32 protocol = attr->protocol;
+
+	switch (protocol)
 	{
-	case se32(SYS_SYNC_PRIORITY): break;
-	case se32(SYS_SYNC_RETRY): sys_rwlock.Error("Invalid protocol (SYS_SYNC_RETRY)"); return CELL_EINVAL;
-	case se32(SYS_SYNC_PRIORITY_INHERIT): sys_rwlock.Todo("SYS_SYNC_PRIORITY_INHERIT"); break;
-	case se32(SYS_SYNC_FIFO): break;
-	default: sys_rwlock.Error("Unknown protocol (0x%x)", attr->protocol); return CELL_EINVAL;
+	case SYS_SYNC_FIFO: break;
+	case SYS_SYNC_PRIORITY: break;
+	case SYS_SYNC_PRIORITY_INHERIT: break;
+	default: sys_rwlock.Error("sys_rwlock_create(): unknown protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	if (attr->pshared.data() != se32(0x200))
+	if (attr->pshared.data() != se32(0x200) || attr->ipc_key.data() || attr->flags.data())
 	{
-		sys_rwlock.Error("Unknown pshared attribute (0x%x)", attr->pshared);
+		sys_rwlock.Error("sys_rwlock_create(): unknown attributes (pshared=0x%x, ipc_key=0x%llx, flags=0x%x)", attr->pshared, attr->ipc_key, attr->flags);
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<RWLock> rw(new RWLock(attr->protocol, attr->name_u64));
-	const u32 id = Emu.GetIdManager().GetNewID(rw, TYPE_RWLOCK);
-	*rw_lock_id = id;
-	rw->wqueue.set_full_name(fmt::Format("Rwlock(%d)", id));
+	std::shared_ptr<rwlock_t> rwlock(new rwlock_t(attr->protocol, attr->name_u64));
 
-	sys_rwlock.Warning("*** rwlock created [%s] (protocol=0x%x): id = %d", std::string(attr->name, 8).c_str(), rw->protocol, id);
+	*rw_lock_id = Emu.GetIdManager().GetNewID(rwlock, TYPE_RWLOCK);
+
 	return CELL_OK;
 }
 
@@ -49,52 +47,40 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 {
 	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=%d)", rw_lock_id);
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!rw->sync.compare_and_swap_test({ 0, 0 }, { ~0u, ~0u })) // check if locked and make unusable
+	if (rwlock.use_count() > 2 || rwlock->readers || rwlock->writer || rwlock->waiters)
 	{
 		return CELL_EBUSY;
 	}
 
 	Emu.GetIdManager().RemoveID(rw_lock_id);
+
 	return CELL_OK;
 }
 
 s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	while (true)
+	while (rwlock->writer || rwlock->waiters)
 	{
-		bool succeeded;
-		rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
-		{
-			assert(~sync.readers);
-			if ((succeeded = !sync.writer))
-			{
-				sync.readers++;
-			}
-		});
-
-		if (succeeded)
-		{
-			break;
-		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
 		if (timeout && get_system_time() - start_time > timeout)
 		{
 			return CELL_ETIMEDOUT;
@@ -105,7 +91,11 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 			sys_rwlock.Warning("sys_rwlock_rlock(id=%d) aborted", rw_lock_id);
 			return CELL_OK;
 		}
+
+		rwlock->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
+
+	rwlock->readers++;
 
 	return CELL_OK;
 }
@@ -114,100 +104,76 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	bool succeeded;
-	rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
+	if (rwlock->writer || rwlock->waiters)
 	{
-		assert(~sync.readers);
-		if ((succeeded = !sync.writer))
-		{
-			sync.readers++;
-		}
-	});
-
-	if (succeeded)
-	{
-		return CELL_OK;
+		return CELL_EBUSY;
 	}
 
-	return CELL_EBUSY;
+	rwlock->readers++;
+
+	return CELL_OK;
 }
 
 s32 sys_rwlock_runlock(u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	bool succeeded;
-	rw->sync.atomic_op_sync([&succeeded](RWLock::sync_var_t& sync)
+	if (!rwlock->readers)
 	{
-		if ((succeeded = sync.readers != 0))
-		{
-			assert(!sync.writer);
-			sync.readers--;
-		}
-	});
-
-	if (succeeded)
-	{
-		return CELL_OK;
+		return CELL_EPERM;
 	}
 
-	return CELL_EPERM;
+	if (!--rwlock->readers)
+	{
+		rwlock->cv.notify_one();
+	}
+
+	return CELL_OK;
 }
 
 s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=%lld)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	const u32 tid = CPU.GetId();
-
-	if (rw->sync.compare_and_swap_test({ 0, 0 }, { 0, tid }))
-	{
-		return CELL_OK;
-	}
-
-	if (rw->sync.read_relaxed().writer == tid)
+	if (rwlock->writer == CPU.GetId())
 	{
 		return CELL_EDEADLK;
 	}
 
-	rw->wqueue.push(tid, rw->protocol);
+	// protocol is ignored in current implementation
+	rwlock->waiters++; assert(rwlock->waiters > 0);
 
-	while (true)
+	while (rwlock->readers || rwlock->writer)
 	{
-		auto old_sync = rw->sync.compare_and_swap({ 0, 0 }, { 0, tid });
-		if (!old_sync.readers && (!old_sync.writer || old_sync.writer == tid))
-		{
-			break;
-		}
-
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			if (!rw->wqueue.invalidate(tid, rw->protocol))
-			{
-				assert(!"sys_rwlock_wlock() failed (timeout)");
-			}
+			rwlock->waiters--; assert(rwlock->waiters >= 0);
 			return CELL_ETIMEDOUT;
 		}
 
@@ -216,12 +182,13 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 			sys_rwlock.Warning("sys_rwlock_wlock(id=%d) aborted", rw_lock_id);
 			return CELL_OK;
 		}
+
+		rwlock->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	if (!rw->wqueue.invalidate(tid, rw->protocol) && !rw->wqueue.pop(tid, rw->protocol))
-	{
-		assert(!"sys_rwlock_wlock() failed (locking)");
-	}
+	rwlock->writer = CPU.GetId();
+	rwlock->waiters--; assert(rwlock->waiters >= 0);
+
 	return CELL_OK;
 }
 
@@ -229,48 +196,48 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	const u32 tid = CPU.GetId();
-
-	if (rw->sync.compare_and_swap_test({ 0, 0 }, { 0, tid }))
-	{
-		return CELL_OK;
-	}
-
-	if (rw->sync.read_relaxed().writer == tid)
+	if (rwlock->writer == CPU.GetId())
 	{
 		return CELL_EDEADLK;
 	}
 
-	return CELL_EBUSY;
+	if (rwlock->readers || rwlock->writer || rwlock->waiters)
+	{
+		return CELL_EBUSY;
+	}
+
+	rwlock->writer = CPU.GetId();
+
+	return CELL_OK;
 }
 
 s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 {
 	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
 
-	std::shared_ptr<RWLock> rw;
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rw))
+	LV2_LOCK;
+
+	std::shared_ptr<rwlock_t> rwlock;
+	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	const u32 tid = CPU.GetId();
-	const u32 target = rw->wqueue.signal(rw->protocol);
-
-	if (rw->sync.compare_and_swap_test({ 0, tid }, { 0, target }))
+	if (rwlock->writer != CPU.GetId())
 	{
-		if (!target)
-		{
-			// TODO: signal readers
-		}
-		return CELL_OK;
+		return CELL_EPERM;
 	}
 
-	return CELL_EPERM;
+	rwlock->writer = 0;
+	rwlock->cv.notify_all();
+
+	return CELL_OK;
 }
