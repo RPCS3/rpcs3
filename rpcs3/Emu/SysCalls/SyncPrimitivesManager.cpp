@@ -14,13 +14,13 @@
 
 SemaphoreAttributes SyncPrimManager::GetSemaphoreData(u32 id)
 {
-	std::shared_ptr<Semaphore> sem;
+	std::shared_ptr<semaphore_t> sem;
 	if (!Emu.GetIdManager().GetIDData(id, sem))
 	{
 		return{};
 	}
 	
-	return{ std::string((const char*)&sem->name, 8), sem->value.read_sync(), sem->max };
+	return{ std::string((const char*)&sem->name, 8), sem->value, sem->max };
 }
 
 LwMutexAttributes SyncPrimManager::GetLwMutexData(u32 id)
