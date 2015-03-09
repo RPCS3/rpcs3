@@ -15,7 +15,7 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-struct timer_t
+struct lv2_timer_t
 {
 	std::weak_ptr<event_queue_t> port; // event queue
 	u64 source; // event source
@@ -28,7 +28,7 @@ struct timer_t
 	std::atomic<u32> state; // timer state
 	std::condition_variable cv;
 
-	timer_t()
+	lv2_timer_t()
 		: start(0)
 		, period(0)
 		, state(SYS_TIMER_STATE_STOP)
