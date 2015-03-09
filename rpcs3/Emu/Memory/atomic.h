@@ -195,29 +195,20 @@ public:
 		const atomic_type res = InterlockedXor(&data, (atomic_type&)(right)) ^ (atomic_type&)(right);
 		return (T&)res;
 	}
-
 };
 
-template<typename T> struct atomic_le_t : public _atomic_base<T>
-{
-};
+template<typename T> using atomic_le_t = _atomic_base<T>;
 
-template<typename T> struct atomic_be_t : public _atomic_base<typename to_be_t<T>::type>
-{
-};
+template<typename T> using atomic_be_t = _atomic_base<typename to_be_t<T>::type>;
 
 namespace ps3
 {
-	template<typename T> struct atomic_t : public atomic_be_t<T>
-	{
-	};
+	template<typename T> using atomic_t = atomic_be_t<T>;
 }
 
 namespace psv
 {
-	template<typename T> struct atomic_t : public atomic_le_t<T>
-	{
-	};
+	template<typename T> using atomic_t = atomic_le_t<T>;
 }
 
 using namespace ps3;

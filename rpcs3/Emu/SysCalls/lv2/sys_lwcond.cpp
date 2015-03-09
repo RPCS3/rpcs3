@@ -68,7 +68,7 @@ s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = lwcond->lwmutex.to_le();
+	auto mutex = lwcond->lwmutex;
 
 	if (u32 target = lw->queue.signal(mutex->attribute))
 	{
@@ -92,7 +92,7 @@ s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = lwcond->lwmutex.to_le();
+	auto mutex = lwcond->lwmutex;
 
 	while (u32 target = lw->queue.signal(mutex->attribute))
 	{
@@ -141,7 +141,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	auto mutex = lwcond->lwmutex.to_le();
+	auto mutex = lwcond->lwmutex;
 	u32 tid_le = CPU.GetId();
 	auto tid = be_t<u32>::make(tid_le);
 

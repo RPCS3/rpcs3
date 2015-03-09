@@ -530,7 +530,7 @@ int cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc.to_le(), cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -542,7 +542,7 @@ int cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 
 	if (!adecCheckType(type->audioCodecType)) return CELL_ADEC_ERROR_ARG;
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc.to_le(), cb->cbArg));
+	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
