@@ -89,7 +89,7 @@ s32 sys_cond_signal(u32 cond_id)
 	{
 		cond->signaled++;
 		cond->waiters--;
-		cond->mutex->cv.notify_one();
+		cond->cv.notify_one();
 	}
 
 	return CELL_OK;
@@ -111,7 +111,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 	if (cond->waiters)
 	{
 		cond->signaled += cond->waiters.exchange(0);
-		cond->mutex->cv.notify_all();
+		cond->cv.notify_all();
 	}
 
 	return CELL_OK;
@@ -142,7 +142,8 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	cond->signaled++;
 	cond->waiters--;
-	cond->mutex->cv.notify_one();
+	cond->cv.notify_one();
+
 	return CELL_OK;
 }
 
@@ -174,7 +175,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 	// unlock mutex
 	cond->mutex->owner.reset();
 
-	// not sure whether the recursive value is precisely saved
+	// save recursive value
 	const u32 recursive_value = cond->mutex->recursive_count.exchange(0);
 
 	while (!cond->mutex->owner.expired() || !cond->signaled)
@@ -192,10 +193,11 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 			return CELL_OK;
 		}
 
-		cond->mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		// wait on appropriate condition variable
+		(cond->signaled ? cond->mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	// restore mutex owner
+	// reown the mutex and restore recursive value
 	cond->mutex->owner = thread;
 	cond->mutex->recursive_count = recursive_value;
 

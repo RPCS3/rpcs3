@@ -117,7 +117,7 @@ struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
 {
 	__forceinline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
-		return value.addr();
+		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
 	__forceinline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
@@ -136,7 +136,7 @@ struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
 {
 	__forceinline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
-		return value.addr();
+		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
 	__forceinline static vm::_ref_base<T, AT> from_gpr(const u32 reg)

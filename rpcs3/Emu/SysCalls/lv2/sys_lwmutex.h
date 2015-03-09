@@ -72,7 +72,7 @@ struct lwmutex_t
 	const u64 name;
 
 	// this object is not truly a mutex and its syscall names are wrong, it's probabably sleep queue or something
-	std::atomic<u32> signals;
+	std::atomic<u32> signaled;
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;

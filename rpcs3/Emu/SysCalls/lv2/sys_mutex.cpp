@@ -110,10 +110,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 				return CELL_EKRESOURCE;
 			}
 
-			if (!mutex->recursive_count++)
-			{
-				throw __FUNCTION__;
-			}
+			mutex->recursive_count++;
 
 			return CELL_OK;
 		}
@@ -142,7 +139,6 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 	}
 
 	mutex->owner = thread;
-	mutex->recursive_count = 1;
 	mutex->waiters--; assert(mutex->waiters >= 0);
 
 	return CELL_OK;
@@ -172,10 +168,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 				return CELL_EKRESOURCE;
 			}
 
-			if (!mutex->recursive_count++)
-			{
-				throw __FUNCTION__;
-			}
+			mutex->recursive_count++;
 
 			return CELL_OK;
 		}
@@ -189,7 +182,6 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 	}
 
 	mutex->owner = thread;
-	mutex->recursive_count = 1;
 
 	return CELL_OK;
 }
@@ -214,12 +206,16 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	if (!mutex->recursive_count || (!mutex->recursive && mutex->recursive_count != 1))
+	if (mutex->recursive_count)
 	{
-		throw __FUNCTION__;
+		if (!mutex->recursive)
+		{
+			throw __FUNCTION__;
+		}
+		
+		mutex->recursive_count--;
 	}
-
-	if (!--mutex->recursive_count)
+	else
 	{
 		mutex->owner.reset();
 		mutex->cv.notify_one();

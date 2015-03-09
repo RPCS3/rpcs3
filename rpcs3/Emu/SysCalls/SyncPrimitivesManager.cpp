@@ -40,10 +40,10 @@ std::string SyncPrimManager::GetSyncPrimName(u32 id, IDType type)
 	{
 	case TYPE_LWCOND:
 	{
-		std::shared_ptr<Lwcond> lw;
+		std::shared_ptr<lwcond_t> lw;
 		if (Emu.GetIdManager().GetIDData(id, lw))
 		{
-			return std::string((const char*)&lw->queue.name, 8);
+			return std::string((const char*)&lw->name, 8);
 		}
 		break;
 	}
