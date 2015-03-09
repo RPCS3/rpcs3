@@ -61,51 +61,30 @@ namespace vm
 	};
 
 	//BE reference to LE data
-	template<typename T, typename AT = u32> struct brefl : public _ref_base<T, typename to_be_t<AT>::type>
-	{
-		using _ref_base<T, typename to_be_t<AT>::type>::operator=;
-	};
+	template<typename T, typename AT = u32> using brefl = _ref_base<T, typename to_be_t<AT>::type>;
 
 	//BE reference to BE data
-	template<typename T, typename AT = u32> struct brefb : public _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>
-	{
-		using _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>::operator=;
-	};
+	template<typename T, typename AT = u32> using brefb = _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>;
 
 	//LE reference to BE data
-	template<typename T, typename AT = u32> struct lrefb : public _ref_base<typename to_be_t<T>::type, AT>
-	{
-		using _ref_base<typename to_be_t<T>::type, AT>::operator=;
-	};
+	template<typename T, typename AT = u32> using lrefb = _ref_base<typename to_be_t<T>::type, AT>;
 
 	//LE reference to LE data
-	template<typename T, typename AT = u32> struct lrefl : public _ref_base<T, AT>
-	{
-		using _ref_base<T, AT>::operator=;
-	};
+	template<typename T, typename AT = u32> using lrefl = _ref_base<T, AT>;
 
 	namespace ps3
 	{
 		//default reference for HLE functions (LE reference to BE data)
-		template<typename T, typename AT = u32> struct ref : public lrefb<T, AT>
-		{
-			using lrefb<T, AT>::operator=;
-		};
+		template<typename T, typename AT = u32> using ref = lrefb<T, AT>;
 
 		//default reference for HLE structures (BE reference to BE data)
-		template<typename T, typename AT = u32> struct bref : public brefb<T, AT>
-		{
-			using brefb<T, AT>::operator=;
-		};
+		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
 	}
 
 	namespace psv
 	{
 		//default reference for HLE functions & structures (LE reference to LE data)
-		template<typename T, typename AT = u32> struct ref : public lrefl<T, AT>
-		{
-			using lrefl<T, AT>::operator=;
-		};
+		template<typename T, typename AT = u32> using ref = lrefl<T, AT>;
 	}
 
 	//PS3 emulation is main now, so lets it be as default
@@ -114,36 +93,14 @@ namespace vm
 
 namespace fmt
 {
-	// external specializations for fmt::format function
+	// external specialization for fmt::format function
 
 	template<typename T, typename AT>
-	struct unveil<vm::ps3::ref<T, AT>, false>
+	struct unveil<vm::_ref_base<T, AT>, false>
 	{
 		typedef typename unveil<AT>::result_type result_type;
 
-		__forceinline static result_type get_value(const vm::ps3::ref<T, AT>& arg)
-		{
-			return unveil<AT>::get_value(arg.addr());
-		}
-	};
-
-	template<typename T, typename AT>
-	struct unveil<vm::ps3::bref<T, AT>, false>
-	{
-		typedef typename unveil<AT>::result_type result_type;
-
-		__forceinline static result_type get_value(const vm::ps3::bref<T, AT>& arg)
-		{
-			return unveil<AT>::get_value(arg.addr());
-		}
-	};
-
-	template<typename T, typename AT>
-	struct unveil<vm::psv::ref<T, AT>, false>
-	{
-		typedef typename unveil<AT>::result_type result_type;
-
-		__forceinline static result_type get_value(const vm::psv::ref<T, AT>& arg)
+		__forceinline static result_type get_value(const vm::_ref_base<T, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -156,16 +113,16 @@ template<typename T, bool is_enum>
 struct cast_ppu_gpr;
 
 template<typename T, typename AT>
-struct cast_ppu_gpr<vm::ps3::ref<T, AT>, false>
+struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u64 to_gpr(const vm::ps3::ref<T, AT>& value)
+	__forceinline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return value.addr();
 	}
 
-	__forceinline static vm::ps3::ref<T, AT> from_gpr(const u64 reg)
+	__forceinline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
 	{
-		return vm::ps3::ref<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return vm::_ref_base<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };
 
@@ -175,15 +132,15 @@ template<typename T, bool is_enum>
 struct cast_armv7_gpr;
 
 template<typename T, typename AT>
-struct cast_armv7_gpr<vm::psv::ref<T, AT>, false>
+struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u32 to_gpr(const vm::psv::ref<T, AT>& value)
+	__forceinline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return value.addr();
 	}
 
-	__forceinline static vm::psv::ref<T, AT> from_gpr(const u32 reg)
+	__forceinline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
 	{
-		return vm::psv::ref<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return vm::_ref_base<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };

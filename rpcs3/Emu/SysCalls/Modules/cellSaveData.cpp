@@ -382,9 +382,9 @@ s32 cellSaveDataListSave2(
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, listSet->fixedList.to_le(), listSet->fixedListNum);
+	setSaveDataList(saveEntries, listSet->fixedList, listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, listSet->newData.to_le());
+		addNewSaveDataEntry(saveEntries, listSet->newData);
 	if (saveEntries.size() == 0) {
 		cellSysutil.Error("cellSaveDataListSave2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_OK;
@@ -474,9 +474,9 @@ s32 cellSaveDataListLoad2(
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	setSaveDataList(saveEntries, listSet->fixedList.to_le(), listSet->fixedListNum);
+	setSaveDataList(saveEntries, listSet->fixedList, listSet->fixedListNum);
 	if (listSet->newData)
-		addNewSaveDataEntry(saveEntries, listSet->newData.to_le());
+		addNewSaveDataEntry(saveEntries, listSet->newData);
 	if (saveEntries.size() == 0) {
 		cellSysutil.Error("cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
 		return CELL_OK;

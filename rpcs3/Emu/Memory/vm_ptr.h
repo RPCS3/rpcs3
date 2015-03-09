@@ -411,106 +411,30 @@ namespace vm
 	};
 
 	//BE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> struct bptrl : public _ptr_base<T, lvl, typename to_be_t<AT>::type>
-	{
-		static const bptrl make(AT addr)
-		{
-			auto res = _ptr_base<T, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
-			return static_cast<const bptrl&>(res);
-		}
-
-		using _ptr_base<T, lvl, typename to_be_t<AT>::type>::operator=;
-	};
+	template<typename T, int lvl = 1, typename AT = u32> using bptrl = _ptr_base<T, lvl, typename to_be_t<AT>::type>;
 
 	//BE pointer to BE data
-	template<typename T, int lvl = 1, typename AT = u32> struct bptrb : public _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>
-	{
-		static const bptrb make(AT addr)
-		{
-			auto res = _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::make(convert_le_be<typename to_be_t<AT>::type>(addr));
-			return static_cast<const bptrb&>(res);
-		}
-
-		using _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>::operator=;
-	};
+	template<typename T, int lvl = 1, typename AT = u32> using bptrb = _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>;
 
 	//LE pointer to BE data
-	template<typename T, int lvl = 1, typename AT = u32> struct lptrb : public _ptr_base<typename to_be_t<T>::type, lvl, AT>
-	{
-		static const lptrb make(AT addr)
-		{
-			auto res = _ptr_base<typename to_be_t<T>::type, lvl, AT>::make(addr);
-			return static_cast<const lptrb&>(res);
-		}
-
-		using _ptr_base<typename to_be_t<T>::type, lvl, AT>::operator=;
-	};
+	template<typename T, int lvl = 1, typename AT = u32> using lptrb = _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 
 	//LE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> struct lptrl : public _ptr_base<T, lvl, AT>
-	{
-		static const lptrl make(AT addr)
-		{
-			auto res = _ptr_base<T, lvl, AT>::make(addr);
-			return static_cast<const lptrl&>(res);
-		}
-
-		using _ptr_base<T, lvl, AT>::operator=;
-	};
+	template<typename T, int lvl = 1, typename AT = u32> using lptrl = _ptr_base<T, lvl, AT>;
 
 	namespace ps3
 	{
-		template<typename T, int lvl = 1, typename AT = u32> struct ptr;
-		template<typename T, int lvl = 1, typename AT = u32> struct bptr;
-
 		//default pointer for HLE functions (LE pointer to BE data)
-		template<typename T, int lvl, typename AT> struct ptr : public lptrb<T, lvl, AT>
-		{
-			static const ptr make(AT addr)
-			{
-				auto res = lptrb<T, lvl, AT>::make(addr);
-				return static_cast<const ptr&>(res);
-			}
-
-			vm::ps3::bptr<T, lvl, AT> to_be() const
-			{
-				return vm::ps3::bptr<T, lvl, AT>::make(this->addr());
-			}
-
-			using lptrb<T, lvl, AT>::operator=;
-		};
+		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrb<T, lvl, AT>;
 
 		//default pointer for HLE structures (BE pointer to BE data)
-		template<typename T, int lvl, typename AT> struct bptr : public bptrb<T, lvl, AT>
-		{
-			static const bptr make(AT addr)
-			{
-				auto res = bptrb<T, lvl, AT>::make(addr);
-				return static_cast<const bptr&>(res);
-			}
-
-			vm::ps3::ptr<T, lvl, AT> to_le() const
-			{
-				return vm::ps3::ptr<T, lvl, AT>::make(this->addr());
-			}
-
-			using bptrb<T, lvl, AT>::operator=;
-		};
+		template<typename T, int lvl = 1, typename AT = u32> using bptr = bptrb<T, lvl, AT>;
 	}
 
 	namespace psv
 	{
 		//default pointer for HLE functions & structures (LE pointer to LE data)
-		template<typename T, int lvl = 1, typename AT = u32> struct ptr : public lptrl<T, lvl, AT>
-		{
-			static const ptr make(AT addr)
-			{
-				auto res = lptrl<T, lvl, AT>::make(addr);
-				return static_cast<const ptr&>(res);
-			}
-
-			using lptrl<T, lvl, AT>::operator=;
-		};
+		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrl<T, lvl, AT>;
 	}
 
 	//PS3 emulation is main now, so lets it be as default
@@ -519,36 +443,14 @@ namespace vm
 
 namespace fmt
 {
-	// external specializations for fmt::format function
+	// external specialization for fmt::format function
 
 	template<typename T, int lvl, typename AT>
-	struct unveil<vm::ps3::ptr<T, lvl, AT>, false>
+	struct unveil<vm::_ptr_base<T, lvl, AT>, false>
 	{
 		typedef typename unveil<AT>::result_type result_type;
 
-		__forceinline static result_type get_value(const vm::ps3::ptr<T, lvl, AT>& arg)
-		{
-			return unveil<AT>::get_value(arg.addr());
-		}
-	};
-
-	template<typename T, int lvl, typename AT>
-	struct unveil<vm::ps3::bptr<T, lvl, AT>, false>
-	{
-		typedef typename unveil<AT>::result_type result_type;
-
-		__forceinline static result_type get_value(const vm::ps3::bptr<T, lvl, AT>& arg)
-		{
-			return unveil<AT>::get_value(arg.addr());
-		}
-	};
-
-	template<typename T, int lvl, typename AT>
-	struct unveil<vm::psv::ptr<T, lvl, AT>, false>
-	{
-		typedef typename unveil<AT>::result_type result_type;
-
-		__forceinline static result_type get_value(const vm::psv::ptr<T, lvl, AT>& arg)
+		__forceinline static result_type get_value(const vm::_ptr_base<T, lvl, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -561,16 +463,16 @@ template<typename T, bool is_enum>
 struct cast_ppu_gpr;
 
 template<typename T, int lvl, typename AT>
-struct cast_ppu_gpr<vm::ps3::ptr<T, lvl, AT>, false>
+struct cast_ppu_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
-	__forceinline static u64 to_gpr(const vm::ps3::ptr<T, lvl, AT>& value)
+	__forceinline static u64 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
 		return value.addr();
 	}
 
-	__forceinline static vm::ps3::ptr<T, lvl, AT> from_gpr(const u64 reg)
+	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u64 reg)
 	{
-		return vm::ps3::ptr<T, lvl, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return vm::_ptr_base<T, lvl, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };
 
@@ -580,15 +482,15 @@ template<typename T, bool is_enum>
 struct cast_armv7_gpr;
 
 template<typename T, int lvl, typename AT>
-struct cast_armv7_gpr<vm::psv::ptr<T, lvl, AT>, false>
+struct cast_armv7_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
-	__forceinline static u32 to_gpr(const vm::psv::ptr<T, lvl, AT>& value)
+	__forceinline static u32 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
 		return value.addr();
 	}
 
-	__forceinline static vm::psv::ptr<T, lvl, AT> from_gpr(const u32 reg)
+	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u32 reg)
 	{
-		return vm::psv::ptr<T, lvl, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
+		return vm::_ptr_base<T, lvl, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
 };

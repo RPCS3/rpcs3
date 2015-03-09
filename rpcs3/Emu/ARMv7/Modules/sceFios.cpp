@@ -677,12 +677,12 @@ SceFiosDate sceFiosDateGetCurrent()
 	throw __FUNCTION__;
 }
 
-SceFiosDate sceFiosDateFromComponents(const struct vm::psv::ptr<tm> pComponents)
+SceFiosDate sceFiosDateFromComponents(vm::psv::ptr<const tm> pComponents)
 {
 	throw __FUNCTION__;
 }
 
-struct vm::psv::ptr<tm> sceFiosDateToComponents(SceFiosDate date, struct vm::psv::ptr<tm> pOutComponents)
+vm::psv::ptr<tm> sceFiosDateToComponents(SceFiosDate date, vm::psv::ptr<tm> pOutComponents)
 {
 	throw __FUNCTION__;
 }
