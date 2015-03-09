@@ -8,15 +8,11 @@ enum : u32
 	SYS_PPU_THREAD_DONE_INIT = 1,
 };
 
-enum ppu_thread_flags : u64
+// PPU Thread Flags
+enum : u64
 {
 	SYS_PPU_THREAD_CREATE_JOINABLE = 0x1,
 	SYS_PPU_THREAD_CREATE_INTERRUPT = 0x2,
-};
-
-enum stackSize
-{
-	SYS_PPU_THREAD_STACK_MIN = 0x4000,
 };
 
 // Aux

@@ -175,8 +175,6 @@ namespace sce_libc_func
 	void exit(ARMv7Context& context)
 	{
 		sceLibc.Warning("exit()");
-		
-		LV2_LOCK;
 
 		for (auto func : g_atexit)
 		{

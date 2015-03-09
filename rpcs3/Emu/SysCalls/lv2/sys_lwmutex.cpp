@@ -85,7 +85,7 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 	// protocol is ignored in current implementation
 	mutex->waiters++; assert(mutex->waiters > 0);
 
-	while (!mutex->signals)
+	while (!mutex->signaled)
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
@@ -102,7 +102,7 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 		mutex->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 	
-	mutex->signals--;
+	mutex->signaled--;
 
 	mutex->waiters--; assert(mutex->waiters >= 0);
 
@@ -121,12 +121,12 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (mutex->waiters || !mutex->signals)
+	if (mutex->waiters || !mutex->signaled)
 	{
 		return CELL_EBUSY;
 	}
 
-	mutex->signals--;
+	mutex->signaled--;
 
 	return CELL_OK;
 }
@@ -143,7 +143,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
-	mutex->signals++;
+	mutex->signaled++;
 	mutex->cv.notify_one();
 
 	return CELL_OK;

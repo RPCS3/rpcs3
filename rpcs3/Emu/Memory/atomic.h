@@ -197,6 +197,42 @@ public:
 	}
 };
 
+__forceinline static u64 operator ++(_atomic_base<be_t<u64>>& left, int)
+{
+	u64 result;
+
+	left.atomic_op([&result](be_t<u64>& value)
+	{
+		result = value++;
+	});
+
+	return result;
+}
+
+__forceinline static u64 operator --(_atomic_base<be_t<u64>>& left, int)
+{
+	u64 result;
+
+	left.atomic_op([&result](be_t<u64>& value)
+	{
+		result = value--;
+	});
+
+	return result;
+}
+
+__forceinline static u64 operator +=(_atomic_base<be_t<u64>>& left, u64 right)
+{
+	u64 result;
+
+	left.atomic_op([&result, right](be_t<u64>& value)
+	{
+		result = (value += right);
+	});
+
+	return result;
+}
+
 template<typename T> using atomic_le_t = _atomic_base<T>;
 
 template<typename T> using atomic_be_t = _atomic_base<typename to_be_t<T>::type>;

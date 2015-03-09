@@ -78,10 +78,10 @@ namespace vm
 		}
 
 		template<typename AT2>
-		operator const _ptr_base<T, lvl, AT2>() const
+		operator _ptr_base<T, lvl, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<T, lvl, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<T, lvl, AT2>&>(addr);
 		}
 		
 		AT addr() const
@@ -94,9 +94,9 @@ namespace vm
 			m_addr = value;
 		}
 
-		static const _ptr_base make(const AT& addr)
+		static _ptr_base make(const AT& addr)
 		{
-			return reinterpret_cast<const _ptr_base&>(addr);
+			return reinterpret_cast<_ptr_base&>(addr);
 		}
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
@@ -203,10 +203,10 @@ namespace vm
 		}
 
 		template<typename AT2>
-		operator const _ptr_base<T, 1, AT2>() const
+		operator _ptr_base<T, 1, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<T, 1, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<T, 1, AT2>&>(addr);
 		}
 
 		T* get_ptr() const
@@ -269,17 +269,17 @@ namespace vm
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
-		operator const _ptr_base<void, 1, AT2>() const
+		operator _ptr_base<void, 1, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<void, 1, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<void, 1, AT2>&>(addr);
 		}
 
 		template<typename AT2>
-		operator const _ptr_base<const void, 1, AT2>() const
+		operator _ptr_base<const void, 1, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<const void, 1, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<const void, 1, AT2>&>(addr);
 		}
 
 		static const _ptr_base make(const AT& addr)
@@ -332,10 +332,10 @@ namespace vm
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
-		operator const _ptr_base<const void, 1, AT2>() const
+		operator _ptr_base<const void, 1, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<const void, 1, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<const void, 1, AT2>&>(addr);
 		}
 
 		static const _ptr_base make(const AT& addr)
@@ -381,10 +381,10 @@ namespace vm
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
-		operator const _ptr_base<type, 1, AT2>() const
+		operator _ptr_base<type, 1, AT2>() const
 		{
-			const AT2 addr = convert_le_be<AT2>(m_addr);
-			return reinterpret_cast<const _ptr_base<type, 1, AT2>&>(addr);
+			AT2 addr = convert_le_be<AT2>(m_addr);
+			return reinterpret_cast<_ptr_base<type, 1, AT2>&>(addr);
 		}
 
 		static const _ptr_base make(const AT& addr)
@@ -467,7 +467,7 @@ struct cast_ppu_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
 	__forceinline static u64 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
-		return value.addr();
+		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
 	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u64 reg)
@@ -486,7 +486,7 @@ struct cast_armv7_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
 	__forceinline static u32 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
-		return value.addr();
+		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
 	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u32 reg)
