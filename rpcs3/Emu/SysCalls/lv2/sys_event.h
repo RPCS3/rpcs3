@@ -142,8 +142,6 @@ REG_ID_TYPE(lv2_event_port_t, 0x0E); // SYS_EVENT_PORT_OBJECT
 
 class PPUThread;
 
-void sys_event_queue_attribute_initialize(vm::ptr<sys_event_queue_attr> attr);
-
 // SysCalls
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size);
 s32 sys_event_queue_destroy(u32 equeue_id, s32 mode);

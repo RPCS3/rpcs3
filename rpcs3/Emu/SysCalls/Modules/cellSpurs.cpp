@@ -295,6 +295,13 @@ s32 spursCreateLv2EventQueue(PPUThread& CPU, vm::ptr<CellSpurs> spurs, vm::ptr<u
 {
 	vm::stackvar<sys_event_queue_attr> attr(CPU);
 
+	auto sys_event_queue_attribute_initialize = [](vm::ptr<sys_event_queue_attr> attr)
+	{
+		attr->protocol = SYS_SYNC_PRIORITY;
+		attr->type     = SYS_PPU_QUEUE;
+		attr->name[0]  = '\0';
+	};
+
 	sys_event_queue_attribute_initialize(attr);
 	memcpy(attr->name, name.get_ptr(), sizeof(attr->name));
 	auto rc = sys_event_queue_create(queueId, attr, SYS_EVENT_QUEUE_LOCAL, size);
@@ -954,9 +961,7 @@ s32 spursInit(
 	vm::stackvar<be_t<u32>>                      sem(CPU);
 	vm::stackvar<sys_semaphore_attribute_t>      semAttr(CPU);
 	vm::stackvar<sys_lwcond_attribute_t>         lwCondAttr(CPU);
-	vm::stackvar<sys_lwcond_t>                   lwCond(CPU);
-	vm::stackvar<sys_lwmutex_attribute_t>        lwMutextAttr(CPU);
-	vm::stackvar<sys_lwmutex_t>                  lwMutex(CPU);
+	vm::stackvar<sys_lwmutex_attribute_t>        lwMutexAttr(CPU);
 	vm::stackvar<be_t<u32>>                      spuTgId(CPU);
 	vm::stackvar<char>                           spuTgName(CPU, 128);
 	vm::stackvar<sys_spu_thread_group_attribute> spuTgAttr(CPU);
@@ -1041,6 +1046,14 @@ s32 spursInit(
 	spurs->wklInfoSysSrv.uniqueId.write_relaxed(0xff);
 
 
+	auto sys_semaphore_attribute_initialize = [](vm::ptr<sys_semaphore_attribute_t> attr)
+	{
+		attr->protocol = SYS_SYNC_PRIORITY;
+		attr->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
+		attr->ipc_key  = 0;
+		attr->flags    = 0;
+		attr->name[0]  = '\0';
+	};
 
 	// Create semaphores for each workload
 	// TODO: Find out why these semaphores are needed
@@ -1092,6 +1105,13 @@ s32 spursInit(
 	memcpy(spuTgName.get_ptr(), spurs->prefix, spurs->prefixSize);
 	spuTgName[spurs->prefixSize] = '\0';
 	strcat(spuTgName.get_ptr(), "CellSpursKernelGroup");
+
+	auto sys_spu_thread_group_attribute_initialize = [](vm::ptr<sys_spu_thread_group_attribute> attr)
+	{
+		attr->name  = vm::null;
+		attr->nsize = 0;
+		attr->type  = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
+	};
 
 	sys_spu_thread_group_attribute_initialize(spuTgAttr);
 	spuTgAttr->name  = spuTgName;
@@ -1173,16 +1193,24 @@ s32 spursInit(
 		}
 	}
 
+	const auto lwMutex = spurs.of(&CellSpurs::mutex);
+	const auto lwCond  = spurs.of(&CellSpurs::cond);
+
+	auto sys_lwmutex_attribute_initialize = [](vm::ptr<sys_lwmutex_attribute_t> attr)
+	{
+		attr->protocol  = SYS_SYNC_PRIORITY;
+		attr->recursive = SYS_SYNC_NOT_RECURSIVE;
+		attr->name[0]   = '\0';
+	};
+
 	// Create a mutex to protect access to SPURS handler thread data
-	sys_lwmutex_attribute_initialize(lwMutextAttr);
-	memcpy(lwMutextAttr->name, "_spuPrv", 8);
-	if (s32 rc = sys_lwmutex_create(lwMutex, lwMutextAttr))
+	sys_lwmutex_attribute_initialize(lwMutexAttr);
+	memcpy(lwMutexAttr->name, "_spuPrv", 8);
+	if (s32 rc = sys_lwmutex_create(lwMutex, lwMutexAttr))
 	{
 		spursFinalizeSpu(spurs);
 		return rollback(), rc;
 	}
-
-	spurs->mutex = lwMutex.value();
 
 	// Create condition variable to signal the SPURS handler thread
 	memcpy(lwCondAttr->name, "_spuPrv", 8);
@@ -1192,8 +1220,6 @@ s32 spursInit(
 		spursFinalizeSpu(spurs);
 		return rollback(), rc;
 	}
-
-	spurs->cond = lwCond;
 
 	spurs->flags1 = (flags & SAF_EXIT_IF_NO_WORK ? SF1_EXIT_IF_NO_WORK : 0) | (isSecond ? SF1_32_WORKLOADS : 0);
 	spurs->wklFlagReceiver.write_relaxed(0xff);
@@ -3638,7 +3664,7 @@ s32 cellSpursCreateTask(PPUThread& CPU, vm::ptr<CellSpursTaskset> taskset, vm::p
 		return rc;
 	}
 
-	rc = spursTaskStart(CPU, taskset, tmpTaskId->value());
+	rc = spursTaskStart(CPU, taskset, tmpTaskId.value());
 	if (rc != CELL_OK) 
 	{
 		return rc;

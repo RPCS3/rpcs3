@@ -12,13 +12,6 @@
 
 SysCallBase sys_lwmutex("sys_lwmutex");
 
-void sys_lwmutex_attribute_initialize(vm::ptr<sys_lwmutex_attribute_t> attr)
-{
-	attr->protocol  = SYS_SYNC_PRIORITY;
-	attr->recursive = SYS_SYNC_NOT_RECURSIVE;
-	attr->name[0]   = '\0';
-}
-
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
 {
 	sys_lwmutex.Warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, arg4, name, arg6);
