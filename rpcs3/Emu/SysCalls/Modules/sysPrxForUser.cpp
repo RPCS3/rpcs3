@@ -139,7 +139,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// call the syscall
-	if (s32 res = _sys_lwmutex_destroy(CPU, lwmutex->sleep_queue))
+	if (s32 res = _sys_lwmutex_destroy(lwmutex->sleep_queue))
 	{
 		// unlock the mutex if failed
 		sys_lwmutex_unlock(CPU, lwmutex);
@@ -209,20 +209,21 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		}
 	}
 
-	lwmutex->waiter.atomic_op([](be_t<u32>& value){ value++; });
+	// atomically increment waiter value using 64 bit op
+	lwmutex->all_info.atomic_op([](be_t<u64>& value){ value++; });
 
 	if (lwmutex->owner.compare_and_swap_test(lwmutex::free, tid))
 	{
 		// locking succeeded
-		lwmutex->waiter.atomic_op([](be_t<u32>& value){ value--; });
+		lwmutex->all_info.atomic_op([](be_t<u64>& value){ value--; });
 
 		return CELL_OK;
 	}
 
 	// lock using the syscall
-	const s32 res = _sys_lwmutex_lock(CPU, lwmutex->sleep_queue, timeout);
+	const s32 res = _sys_lwmutex_lock(lwmutex->sleep_queue, timeout);
 
-	lwmutex->waiter.atomic_op([](be_t<u32>& value){ value--; });
+	lwmutex->all_info.atomic_op([](be_t<u64>& value){ value--; });
 
 	if (res == CELL_OK)
 	{
@@ -285,10 +286,10 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		return CELL_EINVAL;
 	}
 
-	if (old_owner.data() == se32(lwmutex_busy))
+	if (old_owner.data() == se32(lwmutex_reserved))
 	{
 		// should be locked by the syscall
-		const s32 res = _sys_lwmutex_trylock(CPU, lwmutex->sleep_queue);
+		const s32 res = _sys_lwmutex_trylock(lwmutex->sleep_queue);
 
 		if (res == CELL_OK)
 		{
@@ -335,10 +336,11 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		// TODO (protocol is ignored in current implementation)
 	}
 
-	lwmutex->owner.exchange(lwmutex::busy);
+	// set special value
+	lwmutex->owner.exchange(lwmutex::reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(CPU, lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(lwmutex->sleep_queue) == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}
