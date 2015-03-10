@@ -131,9 +131,6 @@ s32 cellFsRead(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<be_t<u64>> nread)
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
-	if (nbytes != (u32)nbytes)
-		return CELL_ENOMEM;
-
 	// TODO: checks
 
 	const u64 res = nbytes ? file->Read(buf.get_ptr(), nbytes) : 0;
@@ -149,8 +146,6 @@ s32 cellFsWrite(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite
 
 	std::shared_ptr<vfsStream> file;
 	if (!Emu.GetIdManager().GetIDData(fd, file)) return CELL_ESRCH;
-
-	if (nbytes != (u32)nbytes) return CELL_ENOMEM;
 
 	// TODO: checks
 

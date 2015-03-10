@@ -82,7 +82,7 @@ struct lwmutex_t
 		: protocol(protocol)
 		, name(name)
 	{
-	}	
+	}
 };
 
 // Aux

@@ -65,7 +65,13 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 		return CELL_ESRCH;
 	}
 
-	// lwmutex_id, ppu_thread_id are ignored in current implementation
+	std::shared_ptr<lwmutex_t> mutex;
+	if (lwmutex_id && !Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	{
+		return CELL_ESRCH;
+	}
+
+	// ppu_thread_id is ignored in current implementation
 
 	if (mode != 1 && mode != 2 && mode != 3)
 	{
@@ -129,7 +135,11 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 		return CELL_ESRCH;
 	}
 
-	// lwmutex_id is ignored in current implementation
+	std::shared_ptr<lwmutex_t> mutex;
+	if (lwmutex_id && !Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	{
+		return CELL_ESRCH;
+	}
 
 	if (mode != 1 && mode != 2)
 	{
@@ -171,22 +181,39 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	// lwmutex_id, protocol are ignored in current implementation
+	std::shared_ptr<lwmutex_t> mutex;
+	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	{
+		return CELL_ESRCH;
+	}
+
+	// finalize unlocking the mutex
+	mutex->signaled++;
+	mutex->cv.notify_one();
+
+	// protocol is ignored in current implementation
 	cond->waiters++; assert(cond->waiters > 0);
 
-	while (!cond->signaled1 && !cond->signaled2)
+	while (!(cond->signaled1 && mutex->signaled) && !cond->signaled2)
 	{
 		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
 
 		// check timeout (TODO)
 		if (is_timedout)
 		{
-			sys_lwcond.Fatal("_sys_lwcond_queue_wait(%d): TIMED OUT", lwcond_id);
-
 			// cancel waiting
 			cond->waiters--; assert(cond->waiters >= 0);
 
-			return CELL_ETIMEDOUT;
+			if (mutex->signaled)
+			{
+				mutex->signaled--;
+
+				return CELL_EDEADLK;
+			}
+			else
+			{
+				return CELL_ETIMEDOUT;
+			}
 		}
 
 		if (Emu.IsStopped())
@@ -200,6 +227,7 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 
 	if (cond->signaled1)
 	{
+		mutex->signaled--;
 		cond->signaled1--;
 
 		return CELL_OK;
