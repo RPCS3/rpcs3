@@ -174,6 +174,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 	// unlock mutex
 	cond->mutex->owner.reset();
+	cond->mutex->cv.notify_one();
 
 	// save recursive value
 	const u32 recursive_value = cond->mutex->recursive_count.exchange(0);
