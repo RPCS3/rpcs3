@@ -311,7 +311,7 @@ s32 sys_lwmutex_unlock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	const be_t<u32> tid = be_t<u32>::make(CPU.GetId());
 
 	// check owner
-	if (lwmutex->owner.read_relaxed() != tid)
+	if (lwmutex->owner.read_sync() != tid)
 	{
 		return CELL_EPERM;
 	}
