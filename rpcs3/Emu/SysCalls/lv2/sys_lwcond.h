@@ -21,6 +21,9 @@ struct lwcond_t
 {
 	const u64 name;
 
+	std::atomic<u32> signaled1; // mode 1 signals
+	std::atomic<u32> signaled2; // mode 2 signals
+
 	// TODO: use sleep queue
 	std::condition_variable cv;
 	std::atomic<s32> waiters;

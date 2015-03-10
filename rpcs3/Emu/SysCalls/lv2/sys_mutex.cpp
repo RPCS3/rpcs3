@@ -79,7 +79,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	Emu.GetIdManager().RemoveID(mutex_id);
+	Emu.GetIdManager().RemoveID<mutex_t>(mutex_id);
 
 	return CELL_OK;
 }

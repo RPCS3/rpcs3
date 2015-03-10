@@ -100,7 +100,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	}
 
 	Emu.GetEventManager().UnregisterKey(queue->key);
-	Emu.GetIdManager().RemoveID(equeue_id);
+	Emu.GetIdManager().RemoveID<event_queue_t>(equeue_id);
 
 	return CELL_OK;
 }
@@ -274,7 +274,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 		return CELL_EISCONN;
 	}
 
-	Emu.GetIdManager().RemoveID(eport_id);
+	Emu.GetIdManager().RemoveID<event_port_t>(eport_id);
 
 	return CELL_OK;
 }

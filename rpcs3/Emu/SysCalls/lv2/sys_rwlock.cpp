@@ -60,7 +60,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID(rw_lock_id);
+	Emu.GetIdManager().RemoveID<rwlock_t>(rw_lock_id);
 
 	return CELL_OK;
 }

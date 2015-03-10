@@ -20,10 +20,11 @@ struct cond_t
 	const u64 name;
 	const std::shared_ptr<mutex_t> mutex; // associated mutex
 
+	std::atomic<u32> signaled;
+
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
 	std::atomic<s32> waiters;
-	std::atomic<s32> signaled;
 
 	cond_t(std::shared_ptr<mutex_t>& mutex, u64 name)
 		: mutex(mutex)

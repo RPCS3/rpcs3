@@ -710,7 +710,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					}
 				}
 				es.dmux = nullptr;
-				Emu.GetIdManager().RemoveID(task.es.es);
+				Emu.GetIdManager().RemoveID<ElementaryStream>(task.es.es);
 				break;
 			}
 
@@ -880,7 +880,7 @@ int cellDmuxClose(u32 demuxerHandle)
 	}
 
 	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
-	Emu.GetIdManager().RemoveID(demuxerHandle);
+	Emu.GetIdManager().RemoveID<Demuxer>(demuxerHandle);
 	return CELL_OK;
 }
 

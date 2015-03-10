@@ -67,7 +67,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		throw __FUNCTION__;
 	}
 
-	Emu.GetIdManager().RemoveID(cond_id);
+	Emu.GetIdManager().RemoveID<cond_t>(cond_id);
 
 	return CELL_OK;
 }
@@ -130,7 +130,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (!Emu.GetIdManager().CheckID(thread_id))
+	if (!Emu.GetIdManager().CheckID<CPUThread>(thread_id))
 	{
 		return CELL_ESRCH;
 	}
@@ -180,10 +180,16 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 	while (!cond->mutex->owner.expired() || !cond->signaled)
 	{
-		if (!cond->signaled && timeout && get_system_time() - start_time > timeout)
+		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
+
+		// check timeout only if no thread signaled (the flaw of avoiding sleep queue)
+		if (is_timedout && cond->mutex->owner.expired() && !cond->signaled)
 		{
-			// TODO: mutex not locked, timeout is possible only when signaled == 0
+			// cancel waiting if the mutex is free, restore its owner and recursive value
+			cond->mutex->owner = thread;
+			cond->mutex->recursive_count = recursive_value;
 			cond->waiters--; assert(cond->waiters >= 0);
+
 			return CELL_ETIMEDOUT;
 		}
 
@@ -194,14 +200,13 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 		}
 
 		// wait on appropriate condition variable
-		(cond->signaled ? cond->mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));
+		(cond->signaled || is_timedout ? cond->mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
-	// reown the mutex and restore recursive value
+	// reown the mutex and restore its recursive value
 	cond->mutex->owner = thread;
 	cond->mutex->recursive_count = recursive_value;
-
-	cond->signaled--; assert(cond->signaled >= 0);
+	cond->signaled--;
 
 	return CELL_OK;
 }

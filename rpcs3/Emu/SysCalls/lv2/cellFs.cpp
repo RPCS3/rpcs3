@@ -165,7 +165,7 @@ s32 cellFsClose(u32 fd)
 {
 	sys_fs.Warning("cellFsClose(fd=0x%x)", fd);
 
-	if (!Emu.GetIdManager().RemoveID(fd))
+	if (!Emu.GetIdManager().RemoveID<vfsStream>(fd))
 		return CELL_ESRCH;
 
 	return CELL_OK;
@@ -214,7 +214,7 @@ s32 cellFsClosedir(u32 fd)
 {
 	sys_fs.Warning("cellFsClosedir(fd=0x%x)", fd);
 
-	if (!Emu.GetIdManager().RemoveID(fd))
+	if (!Emu.GetIdManager().RemoveID<vfsDirBase>(fd))
 		return CELL_ESRCH;
 
 	return CELL_OK;

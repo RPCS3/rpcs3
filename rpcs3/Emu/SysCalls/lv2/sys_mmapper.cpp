@@ -78,7 +78,7 @@ s32 sys_mmapper_allocate_memory(u32 size, u64 flags, vm::ptr<u32> mem_id)
 
 	// Generate a new mem ID.
 	std::shared_ptr<mmapper_info> info(new mmapper_info(size, flags));
-	*mem_id = Emu.GetIdManager().GetNewID(info);
+	*mem_id = Emu.GetIdManager().GetNewID(info, TYPE_MEM);
 
 	return CELL_OK;
 }
@@ -147,7 +147,7 @@ s32 sys_mmapper_free_memory(u32 mem_id)
 		return CELL_ESRCH;
 
 	// Release the allocated memory and remove the ID.
-	Emu.GetIdManager().RemoveID(mem_id);
+	Emu.GetIdManager().RemoveID<mmapper_info>(mem_id);
 
 	return CELL_OK;
 }

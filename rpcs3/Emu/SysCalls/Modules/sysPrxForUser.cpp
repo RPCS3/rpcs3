@@ -352,9 +352,9 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 {
 	sysPrxForUser.Warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
-	std::shared_ptr<lwcond_t> lwc(new lwcond_t(attr->name_u64));
+	std::shared_ptr<lwcond_t> cond(new lwcond_t(attr->name_u64));
 
-	lwcond->lwcond_queue = Emu.GetIdManager().GetNewID(lwc, TYPE_LWCOND);
+	lwcond->lwcond_queue = Emu.GetIdManager().GetNewID(cond, TYPE_LWCOND);
 	lwcond->lwmutex = lwmutex;
 
 	return CELL_OK;
@@ -368,7 +368,7 @@ s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
 
 	if (res == CELL_OK)
 	{
-		lwcond->lwcond_queue = lwmutex::dead;
+		lwcond->lwcond_queue = lwmutex_dead;
 	}
 
 	return res;
@@ -383,6 +383,7 @@ s32 sys_lwcond_signal(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
 	{
 		// TODO (protocol ignored)
+		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, -1, 2);
 	}
 
 	if (lwmutex->owner.read_relaxed() == CPU.GetId())
@@ -440,6 +441,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
 	{
 		// TODO (protocol ignored)
+		//return _sys_lwcond_signal_all(lwcond->lwcond_queue, lwmutex->sleep_queue, 2);
 	}
 
 	if (lwmutex->owner.read_relaxed() == CPU.GetId())
@@ -496,6 +498,7 @@ s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_t
 	if ((lwmutex->attribute.data() & se32(SYS_SYNC_ATTR_PROTOCOL_MASK)) == se32(SYS_SYNC_RETRY))
 	{
 		// TODO (protocol ignored)
+		//return _sys_lwcond_signal(lwcond->lwcond_queue, 0, ppu_thread_id, 2);
 	}
 
 	if (lwmutex->owner.read_relaxed() == CPU.GetId())
@@ -613,7 +616,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		return CELL_ETIMEDOUT;
 	}
 
-	sysPrxForUser.Fatal("sys_lwconde_wait(lwcond=*0x%x): unexpected syscall result (0x%x)", lwcond, res);
+	sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): unexpected syscall result (0x%x)", lwcond, res);
 	return res;
 }
 

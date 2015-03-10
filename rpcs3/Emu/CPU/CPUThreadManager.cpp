@@ -106,7 +106,7 @@ void CPUThreadManager::RemoveThread(u32 id)
 	}
 
 	// Removing the ID should trigger the actual deletion of the thread
-	Emu.GetIdManager().RemoveID(id);
+	Emu.GetIdManager().RemoveID<CPUThread>(id);
 	Emu.CheckStatus();
 }
 

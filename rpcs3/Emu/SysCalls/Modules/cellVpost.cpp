@@ -67,7 +67,7 @@ int cellVpostClose(u32 handle)
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
 	}
 
-	Emu.GetIdManager().RemoveID(handle);	
+	Emu.GetIdManager().RemoveID<VpostInstance>(handle);	
 	return CELL_OK;
 }
 

@@ -63,7 +63,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID(lwmutex_id);
+	Emu.GetIdManager().RemoveID<lwmutex_t>(lwmutex_id);
 
 	return CELL_OK;
 }

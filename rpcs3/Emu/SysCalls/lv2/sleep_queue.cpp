@@ -125,7 +125,7 @@ u32 sleep_queue_t::signal(u32 protocol)
 		if (m_waiting.size())
 		{
 			res = m_waiting[0];
-			if (!Emu.GetIdManager().CheckID(res))
+			if (!Emu.GetIdManager().CheckID<CPUThread>(res))
 			{
 				LOG_ERROR(HLE, "sleep_queue_t['%s']::signal(SYS_SYNC_FIFO) failed: invalid thread (%d)", m_name.c_str(), res);
 				Emu.Pause();
