@@ -29,15 +29,21 @@ enum
 	CELL_SYNC_ERROR_NO_SPU_CONTEXT_STORAGE = 0x80410114, // ???
 };
 
-struct CellSyncMutex
+union CellSyncMutex
 {
-	struct data_t
+	struct sync_t
 	{
-		be_t<u16> m_rel; // release order (increased when mutex is unlocked)
-		be_t<u16> m_acq; // acquire order (increased when mutex is locked)
+		be_t<u16> release_count; // increased when mutex is unlocked
+		be_t<u16> acquire_count; // increased when mutex is locked
 	};
 
-	atomic_t<data_t> data;
+	struct
+	{
+		atomic_t<u16> release_count;
+		atomic_t<u16> acquire_count;
+	};
+
+	atomic_t<sync_t> sync_var;
 };
 
 static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong size");

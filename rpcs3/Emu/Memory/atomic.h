@@ -211,9 +211,9 @@ template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>
 
 template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator --(_atomic_base<be_t<T>>& left, int)
 {
-	u64 result;
+	T result;
 
-	left.atomic_op([&result](be_t<u64>& value)
+	left.atomic_op([&result](be_t<T>& value)
 	{
 		result = value--;
 	});
