@@ -197,11 +197,11 @@ public:
 	}
 };
 
-__forceinline static u64 operator ++(_atomic_base<be_t<u64>>& left, int)
+template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator ++(_atomic_base<be_t<T>>& left, int)
 {
-	u64 result;
+	T result;
 
-	left.atomic_op([&result](be_t<u64>& value)
+	left.atomic_op([&result](be_t<T>& value)
 	{
 		result = value++;
 	});
@@ -209,7 +209,7 @@ __forceinline static u64 operator ++(_atomic_base<be_t<u64>>& left, int)
 	return result;
 }
 
-__forceinline static u64 operator --(_atomic_base<be_t<u64>>& left, int)
+template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator --(_atomic_base<be_t<T>>& left, int)
 {
 	u64 result;
 
@@ -221,13 +221,25 @@ __forceinline static u64 operator --(_atomic_base<be_t<u64>>& left, int)
 	return result;
 }
 
-__forceinline static u64 operator +=(_atomic_base<be_t<u64>>& left, u64 right)
+template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator +=(_atomic_base<be_t<T>>& left, T2 right)
 {
-	u64 result;
+	T result;
 
-	left.atomic_op([&result, right](be_t<u64>& value)
+	left.atomic_op([&result, right](be_t<T>& value)
 	{
 		result = (value += right);
+	});
+
+	return result;
+}
+
+template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator -=(_atomic_base<be_t<T>>& left, T2 right)
+{
+	T result;
+
+	left.atomic_op([&result, right](be_t<T>& value)
+	{
+		result = (value -= right);
 	});
 
 	return result;
