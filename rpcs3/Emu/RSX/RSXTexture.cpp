@@ -205,10 +205,14 @@ u32 RSXTexture::GetBorderColor() const
 	return methodRegisters[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index*32)];
 }
 
-void RSXTexture::SetControl3(u16 depth, u32 pitch)
+u32 RSXTexture::GetPitch() const
 {
-	m_depth = depth;
-	m_pitch = pitch;
+	return methodRegisters[NV4097_SET_TEXTURE_CONTROL3 + (m_index * 4)] & 0xFFFFF;
+}
+
+u16 RSXTexture::GetDepth() const
+{
+	return methodRegisters[NV4097_SET_TEXTURE_CONTROL3 + (m_index * 4)] >> 20;
 }
 
 RSXVertexTexture::RSXVertexTexture() : RSXTexture()
