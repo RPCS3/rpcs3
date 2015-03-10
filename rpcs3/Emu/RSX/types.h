@@ -202,6 +202,21 @@ struct position3_base
 };
 
 template<typename T>
+struct position4_base
+{
+	T x, y, z, w;
+	/*
+	position4_base() : x{}, y{}, z{}, w{}
+	{
+	}
+
+	position4_base(T x, T y, T z, T w) : x{ x }, y{ y }, z{ z }, z{ w }
+	{
+	}
+	*/
+};
+
+template<typename T>
 struct size3_base
 {
 	T width, height, depth;

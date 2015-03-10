@@ -6,10 +6,6 @@ protected:
 	u8 m_index;
 
 public:
-	u32 m_pitch;
-	u16 m_depth;
-
-public:
 	RSXTexture();
 	RSXTexture(u8 index);
 	virtual void Init();
@@ -62,7 +58,9 @@ public:
 	// Border Color
 	virtual u32 GetBorderColor() const;
 
-	void SetControl3(u16 depth, u32 pitch);
+	// Control3
+	virtual u32 GetPitch() const;
+	virtual u16 GetDepth() const;
 };
 
 class RSXVertexTexture : public RSXTexture

@@ -1043,14 +1043,14 @@ void GLGSRender::InitVertexData()
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
-	for (const RSXTransformConstant& c : m_transform_constants)
+	for (const auto& c : m_transform_constants)
 	{
-		const std::string name = fmt::Format("vc[%u]", c.id);
+		const std::string name = fmt::Format("vc[%u]", c.first);
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
-		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %d [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		glUniform4fv(l, 4, c.second.xyzw);
+		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
 	}
 
 	// Scale
@@ -1079,9 +1079,9 @@ void GLGSRender::InitFragmentData()
 		return;
 	}
 
-	for (const RSXTransformConstant& c : m_fragment_constants)
+	for (const auto& c : m_fragment_constants)
 	{
-		u32 id = c.id - m_cur_fragment_prog->offset;
+		u32 id = c.first - m_cur_fragment_prog->offset;
 
 		//LOG_WARNING(RSX,"fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
 
@@ -1089,8 +1089,8 @@ void GLGSRender::InitFragmentData()
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
-		glUniform4f(l, c.x, c.y, c.z, c.w);
-		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
+		glUniform4fv(l, 4, c.second.xyzw);
+		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
 	}
 
 	//if (m_fragment_constants.GetCount())
@@ -2177,7 +2177,6 @@ void GLGSRender::Flip()
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
-
 }
 
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)

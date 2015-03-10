@@ -8,6 +8,7 @@
 #include "Utilities/SSemaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
+#include "types.h"
 
 enum Method
 {
@@ -67,29 +68,6 @@ struct RSXIndexArrayData
 	}
 };
 
-struct RSXTransformConstant
-{
-	u32 id;
-	float x, y, z, w;
-
-	RSXTransformConstant()
-		: x(0.0f)
-		, y(0.0f)
-		, z(0.0f)
-		, w(0.0f)
-	{
-	}
-
-	RSXTransformConstant(u32 id, float x, float y, float z, float w)
-		: id(id)
-		, x(x)
-		, y(y)
-		, z(z)
-		, w(w)
-	{
-	}
-};
-
 class RSXThread : public ThreadBase
 {
 public:
@@ -111,8 +89,8 @@ public:
 	RSXVertexTexture m_vertex_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
 	RSXIndexArrayData m_indexed_array;
-	std::vector<RSXTransformConstant> m_fragment_constants;
-	std::vector<RSXTransformConstant> m_transform_constants;
+	std::unordered_map<u32, color4_base<f32>> m_fragment_constants;
+	std::unordered_map<u32, color4_base<f32>> m_transform_constants;
 	
 	u32 m_shader_ctrl, m_cur_fragment_prog_num;
 	RSXFragmentProgram m_fragment_progs[m_fragment_count];
@@ -637,8 +615,8 @@ protected:
 	void Begin(u32 draw_mode);
 	void End();
 
-	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
-	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
+	//void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
+	void update_reg(u32 reg, u32 value);
 	void NativeRescale(float width, float height);
 
 	virtual void OnInit() = 0;
