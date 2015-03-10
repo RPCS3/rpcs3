@@ -266,7 +266,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	Emu.GetIdManager().RemoveID<CellGifDecSubHandle>(subHandle);
 
 	return CELL_OK;
 }

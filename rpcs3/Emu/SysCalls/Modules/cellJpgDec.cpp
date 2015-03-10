@@ -75,7 +75,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_JPGDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	Emu.GetIdManager().RemoveID<CellJpgDecSubHandle>(subHandle);
 
 	return CELL_OK;
 }

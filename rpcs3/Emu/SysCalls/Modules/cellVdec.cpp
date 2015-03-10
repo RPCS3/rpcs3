@@ -615,7 +615,7 @@ int cellVdecClose(u32 handle)
 	}
 
 	if (vdec->vdecCb) Emu.GetCPU().RemoveThread(vdec->vdecCb->GetId());
-	Emu.GetIdManager().RemoveID(handle);
+	Emu.GetIdManager().RemoveID<VideoDecoder>(handle);
 	return CELL_OK;
 }
 

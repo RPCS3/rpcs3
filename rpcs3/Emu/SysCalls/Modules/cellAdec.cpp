@@ -571,7 +571,7 @@ int cellAdecClose(u32 handle)
 	}
 
 	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
-	Emu.GetIdManager().RemoveID(handle);
+	Emu.GetIdManager().RemoveID<AudioDecoder>(handle);
 	return CELL_OK;
 }
 

@@ -79,7 +79,7 @@ s32 sys_event_flag_destroy(u32 id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID(id);
+	Emu.GetIdManager().RemoveID<event_flag_t>(id);
 
 	return CELL_OK;
 }

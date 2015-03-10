@@ -72,7 +72,7 @@ s32 sys_semaphore_destroy(u32 sem)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID(sem);
+	Emu.GetIdManager().RemoveID<semaphore_t>(sem);
 
 	return CELL_OK;
 }

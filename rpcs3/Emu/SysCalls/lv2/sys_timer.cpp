@@ -74,7 +74,7 @@ s32 sys_timer_destroy(u32 timer_id)
 		return CELL_EISCONN;
 	}
 
-	Emu.GetIdManager().RemoveID(timer_id);
+	Emu.GetIdManager().RemoveID<lv2_timer_t>(timer_id);
 
 	return CELL_OK;
 }
