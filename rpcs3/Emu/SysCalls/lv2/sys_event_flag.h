@@ -45,6 +45,7 @@ struct event_flag_t
 		, protocol(protocol)
 		, type(type)
 		, name(name)
+		, cancelled(0)
 		, waiters(0)
 	{
 	}
