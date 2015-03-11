@@ -143,6 +143,11 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 		return CELL_ESRCH;
 	}
 
+	if (mutex->signaled)
+	{
+		sys_lwmutex.Fatal("_sys_lwmutex_unlock(lwmutex_id=%d): already signaled", lwmutex_id);
+	}
+
 	mutex->signaled++;
 	mutex->cv.notify_one();
 
