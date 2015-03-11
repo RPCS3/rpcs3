@@ -197,9 +197,111 @@ public:
 	}
 };
 
-template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator ++(_atomic_base<be_t<T>>& left, int)
+// Helper definitions
+template<typename T, typename T2 = T> using if_arithmetic_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, T>::type;
+template<typename T, typename T2 = T> using if_arithmetic_be_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>::type;
+template<typename T, typename T2 = T> using if_arithmetic_atomic_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<T>>::type;
+template<typename T, typename T2 = T> using if_arithmetic_atomic_be_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<be_t<T>>>::type;
+
+template<typename T> inline static if_arithmetic_t<T> operator ++(_atomic_base<T>& left)
 {
 	T result;
+
+	left.atomic_op([&result](T& value)
+	{
+		result = ++value;
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_t<T> operator --(_atomic_base<T>& left)
+{
+	T result;
+
+	left.atomic_op([&result](T& value)
+	{
+		result = --value;
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_t<T> operator ++(_atomic_base<T>& left, int)
+{
+	T result;
+
+	left.atomic_op([&result](T& value)
+	{
+		result = value++;
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_t<T> operator --(_atomic_base<T>& left, int)
+{
+	T result;
+
+	left.atomic_op([&result](T& value)
+	{
+		result = value--;
+	});
+
+	return result;
+}
+
+template<typename T, typename T2> inline static if_arithmetic_t<T, T2> operator +=(_atomic_base<T>& left, T2 right)
+{
+	T result;
+
+	left.atomic_op([&result, right](T& value)
+	{
+		result = (value += right);
+	});
+
+	return result;
+}
+
+template<typename T, typename T2> inline static if_arithmetic_t<T, T2> operator -=(_atomic_base<T>& left, T2 right)
+{
+	T result;
+
+	left.atomic_op([&result, right](T& value)
+	{
+		result = (value -= right);
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_base<be_t<T>>& left)
+{
+	be_t<T> result;
+
+	left.atomic_op([&result](be_t<T>& value)
+	{
+		result = ++value;
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_base<be_t<T>>& left)
+{
+	be_t<T> result;
+
+	left.atomic_op([&result](be_t<T>& value)
+	{
+		result = --value;
+	});
+
+	return result;
+}
+
+template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
+{
+	be_t<T> result;
 
 	left.atomic_op([&result](be_t<T>& value)
 	{
@@ -209,9 +311,9 @@ template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>
 	return result;
 }
 
-template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator --(_atomic_base<be_t<T>>& left, int)
+template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
 {
-	T result;
+	be_t<T> result;
 
 	left.atomic_op([&result](be_t<T>& value)
 	{
@@ -221,9 +323,9 @@ template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>
 	return result;
 }
 
-template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator +=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operator +=(_atomic_base<be_t<T>>& left, T2 right)
 {
-	T result;
+	be_t<T> result;
 
 	left.atomic_op([&result, right](be_t<T>& value)
 	{
@@ -233,9 +335,9 @@ template<typename T, typename T2> inline static typename std::enable_if<std::is_
 	return result;
 }
 
-template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator -=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operator -=(_atomic_base<be_t<T>>& left, T2 right)
 {
-	T result;
+	be_t<T> result;
 
 	left.atomic_op([&result, right](be_t<T>& value)
 	{
