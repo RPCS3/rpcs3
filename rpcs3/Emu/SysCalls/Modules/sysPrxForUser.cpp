@@ -212,11 +212,6 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	// atomically increment waiter value using 64 bit op
 	lwmutex->all_info++;
 
-	if (!lwmutex->waiter.read_relaxed().data())
-	{
-		sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): unexpected waiter", lwmutex);
-	}
-
 	if (lwmutex->owner.compare_and_swap_test(lwmutex::free, tid))
 	{
 		// locking succeeded
@@ -237,7 +232,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 
 		if (old.data() != se32(lwmutex_reserved))
 		{
-			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): unexpected owner (0x%x)", lwmutex, old);
+			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_OK;
@@ -308,7 +303,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 
 			if (old.data() != se32(lwmutex_reserved))
 			{
-				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): unexpected owner (0x%x)", lwmutex, old);
+				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 			}
 		}
 
@@ -594,8 +589,13 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		}
 
 		// restore owner and recursive value
-		lwmutex->owner.exchange(tid);
+		const auto old = lwmutex->owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
+
+		if (old.data() != se32(lwmutex_reserved))
+		{
+			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed (lwmutex->owner=0x%x)", lwcond, old);
+		}
 
 		return res;
 	}
@@ -617,16 +617,14 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 
 	if (res == CELL_EDEADLK)
 	{
-		const auto owner = lwmutex->owner.read_relaxed();
-
-		if (owner.data() != se32(lwmutex_reserved))
-		{
-			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): unexpected lwmutex->owner (0x%x)", lwcond, owner);
-		}
-
 		// restore owner and recursive value
-		lwmutex->owner.exchange(tid);
+		const auto old = lwmutex->owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
+
+		if (old.data() != se32(lwmutex_reserved))
+		{
+			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed after timeout (lwmutex->owner=0x%x)", lwcond, old);
+		}
 
 		return CELL_ETIMEDOUT;
 	}
