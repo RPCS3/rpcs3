@@ -16,8 +16,6 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
 	sys_mutex.Warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
 
-	LV2_LOCK;
-
 	if (!mutex_id || !attr)
 	{
 		return CELL_EFAULT;
@@ -119,13 +117,13 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 	}
 
 	// protocol is ignored in current implementation
-	mutex->waiters++; assert(mutex->waiters > 0);
+	mutex->waiters++;
 
 	while (!mutex->owner.expired())
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			mutex->waiters--; assert(mutex->waiters >= 0);
+			mutex->waiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -139,7 +137,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 	}
 
 	mutex->owner = thread;
-	mutex->waiters--; assert(mutex->waiters >= 0);
+	mutex->waiters--;
 
 	return CELL_OK;
 }
@@ -218,7 +216,11 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 	else
 	{
 		mutex->owner.reset();
-		mutex->cv.notify_one();
+
+		if (mutex->waiters)
+		{
+			mutex->cv.notify_one();
+		}
 	}
 
 	return CELL_OK;

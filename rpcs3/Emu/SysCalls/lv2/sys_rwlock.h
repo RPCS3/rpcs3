@@ -23,16 +23,19 @@ struct rwlock_t
 	std::atomic<u32> readers; // reader count
 	std::atomic<u32> writer; // writer id
 
-	// TODO: use sleep queue, possibly remove condition variable
-	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	// TODO: use sleep queue, possibly remove condition variables
+	std::condition_variable rcv;
+	std::condition_variable wcv;
+	std::atomic<u32> rwaiters;
+	std::atomic<u32> wwaiters;
 
 	rwlock_t(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
 		, readers(0)
 		, writer(0)
-		, waiters(0)
+		, rwaiters(0)
+		, wwaiters(0)
 	{
 	}
 };

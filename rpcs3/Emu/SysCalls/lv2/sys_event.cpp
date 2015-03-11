@@ -49,18 +49,11 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
-	LV2_LOCK;
-
-	if (Emu.GetEventManager().CheckKey(event_queue_key))
-	{
-		return CELL_EEXIST;
-	}
-
 	std::shared_ptr<event_queue_t> queue(new event_queue_t(protocol, type, attr->name_u64, event_queue_key, size));
 
 	if (!Emu.GetEventManager().RegisterKey(queue, event_queue_key))
 	{
-		return CELL_EAGAIN;
+		return CELL_EEXIST;
 	}
 
 	*equeue_id = Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
@@ -86,16 +79,18 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 		return CELL_EINVAL;
 	}
 
-	assert(queue->waiters >= 0);
-
 	if (!mode && queue->waiters)
 	{
 		return CELL_EBUSY;
 	}
-	else
+
+	if (queue->cancelled.exchange(true))
 	{
-		// set special value for waiters
-		queue->waiters.exchange(-1);
+		throw __FUNCTION__;
+	}
+
+	if (queue->waiters)
+	{
 		queue->cv.notify_all();
 	}
 
@@ -107,7 +102,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
-	sys_event.Warning("sys_event_queue_tryreceive(equeue_id=%d, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
+	sys_event.Log("sys_event_queue_tryreceive(equeue_id=%d, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
 	LV2_LOCK;
 
@@ -130,7 +125,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	s32 count = 0;
 
-	while (count < size && queue->events.size())
+	while (!queue->waiters && count < size && queue->events.size())
 	{
 		auto& event = queue->events.front();
 		event_array[count++] = { be_t<u64>::make(event.source), be_t<u64>::make(event.data1), be_t<u64>::make(event.data2), be_t<u64>::make(event.data3) };
@@ -139,11 +134,6 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 	}
 
 	*number = count;
-
-	if (queue->events.size())
-	{
-		queue->cv.notify_one();
-	}
 
 	return CELL_OK;
 }
@@ -169,19 +159,19 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	}
 
 	// protocol is ignored in current implementation
-	queue->waiters++; assert(queue->waiters > 0);
+	queue->waiters++;
 
 	while (queue->events.empty())
 	{
-		if (queue->waiters < 0)
+		if (queue->cancelled)
 		{
-			queue->waiters--; assert(queue->waiters < 0);
+			queue->waiters--;
 			return CELL_ECANCELED;
 		}
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			queue->waiters--; assert(queue->waiters >= 0);
+			queue->waiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -202,12 +192,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 	CPU.GPR[7] = event.data3;
 
 	queue->events.pop_front();
-	queue->waiters--; assert(queue->waiters >= 0);
-
-	if (queue->events.size())
-	{
-		queue->cv.notify_one();
-	}
+	queue->waiters--;
 
 	return CELL_OK;
 }
@@ -246,8 +231,6 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		sys_event.Error("sys_event_port_create(): invalid port_type (%d)", port_type);
 		return CELL_EINVAL;
 	}
-
-	LV2_LOCK;
 
 	std::shared_ptr<event_port_t> eport(new event_port_t(port_type, name));
 

@@ -53,6 +53,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -77,19 +78,20 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 	LV2_LOCK;
 
 	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
 	}
 
 	// protocol is ignored in current implementation
-	mutex->waiters++; assert(mutex->waiters > 0);
+	mutex->waiters++;
 
 	while (!mutex->signaled)
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			mutex->waiters--; assert(mutex->waiters >= 0);
+			mutex->waiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -104,7 +106,7 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 	
 	mutex->signaled--;
 
-	mutex->waiters--; assert(mutex->waiters >= 0);
+	mutex->waiters--;
 
 	return CELL_OK;
 }
@@ -116,6 +118,7 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -138,6 +141,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -149,7 +153,11 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 	}
 
 	mutex->signaled++;
-	mutex->cv.notify_one();
+
+	if (mutex->waiters)
+	{
+		mutex->cv.notify_one();
+	}
 
 	return CELL_OK;
 }

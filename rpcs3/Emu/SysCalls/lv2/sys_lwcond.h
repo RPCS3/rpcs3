@@ -26,7 +26,7 @@ struct lwcond_t
 
 	// TODO: use sleep queue
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	lwcond_t(u64 name)
 		: name(name)
