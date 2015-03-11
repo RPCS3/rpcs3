@@ -29,11 +29,11 @@ struct sys_event_flag_attr
 
 struct event_flag_t
 {
-	std::atomic<u64> flags;
-
 	const u32 protocol;
 	const s32 type;
 	const u64 name;
+
+	std::atomic<u64> flags;
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;

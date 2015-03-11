@@ -29,8 +29,8 @@ struct cond_t
 	cond_t(std::shared_ptr<mutex_t>& mutex, u64 name)
 		: mutex(mutex)
 		, name(name)
-		, waiters(0)
 		, signaled(0)
+		, waiters(0)
 	{
 	}
 };

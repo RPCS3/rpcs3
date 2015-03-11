@@ -81,6 +81,8 @@ struct lwmutex_t
 	lwmutex_t(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
+		, signaled(0)
+		, waiters(0)
 	{
 	}
 };

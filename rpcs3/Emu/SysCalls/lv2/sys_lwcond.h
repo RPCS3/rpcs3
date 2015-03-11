@@ -30,6 +30,9 @@ struct lwcond_t
 
 	lwcond_t(u64 name)
 		: name(name)
+		, signaled1(0)
+		, signaled2(0)
+		, waiters(0)
 	{
 	}
 };
