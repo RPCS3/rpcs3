@@ -170,11 +170,15 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 	}
 
 	// protocol is ignored in current implementation
-	cond->waiters++; assert(cond->waiters > 0);
+	cond->waiters++;
 
 	// unlock mutex
 	cond->mutex->owner.reset();
-	cond->mutex->cv.notify_one();
+
+	if (cond->mutex->waiters)
+	{
+		cond->mutex->cv.notify_one();
+	}
 
 	// save recursive value
 	const u32 recursive_value = cond->mutex->recursive_count.exchange(0);
@@ -189,7 +193,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 			// cancel waiting if the mutex is free, restore its owner and recursive value
 			cond->mutex->owner = thread;
 			cond->mutex->recursive_count = recursive_value;
-			cond->waiters--; assert(cond->waiters >= 0);
+			cond->waiters--;
 
 			return CELL_ETIMEDOUT;
 		}

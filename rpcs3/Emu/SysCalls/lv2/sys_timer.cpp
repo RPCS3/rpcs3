@@ -32,8 +32,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 
 					if (queue)
 					{
-						queue->events.emplace_back(timer->source, timer->data1, timer->data2, timer->start);
-						queue->cv.notify_one();
+						queue->push(timer->source, timer->data1, timer->data2, timer->start);
 					}
 
 					if (timer->period && queue)
@@ -64,6 +63,7 @@ s32 sys_timer_destroy(u32 timer_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lv2_timer_t> timer;
+
 	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
 	{
 		return CELL_ESRCH;
@@ -86,6 +86,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 	LV2_LOCK;
 	
 	std::shared_ptr<lv2_timer_t> timer;
+
 	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
 	{
 		return CELL_ESRCH;
@@ -94,7 +95,6 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 	info->next_expiration_time = timer->start;
 
 	info->period = timer->period;
-
 	info->timer_state = timer->state;
 
 	return CELL_OK;
@@ -109,6 +109,7 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 	LV2_LOCK;
 
 	std::shared_ptr<lv2_timer_t> timer;
+
 	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
 	{
 		return CELL_ESRCH;
@@ -160,6 +161,7 @@ s32 sys_timer_stop(u32 timer_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lv2_timer_t> timer;
+
 	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
 	{
 		return CELL_ESRCH;
@@ -204,6 +206,7 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lv2_timer_t> timer;
+
 	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
 	{
 		return CELL_ESRCH;

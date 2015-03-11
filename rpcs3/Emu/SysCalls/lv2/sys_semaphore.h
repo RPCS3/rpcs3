@@ -25,7 +25,7 @@ struct semaphore_t
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	semaphore_t(u32 protocol, s32 max, u64 name, s32 value)
 		: protocol(protocol)

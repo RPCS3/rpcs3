@@ -62,6 +62,7 @@ s32 sys_semaphore_destroy(u32 sem)
 	LV2_LOCK;
 
 	std::shared_ptr<semaphore_t> semaphore;
+
 	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
 	{
 		return CELL_ESRCH;
@@ -86,19 +87,20 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 	LV2_LOCK;
 
 	std::shared_ptr<semaphore_t> semaphore;
+
 	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
 	{
 		return CELL_ESRCH;
 	}
 
 	// protocol is ignored in current implementation
-	semaphore->waiters++; assert(semaphore->waiters > 0);
+	semaphore->waiters++;
 
 	while (semaphore->value <= 0)
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			semaphore->waiters--; assert(semaphore->waiters >= 0);
+			semaphore->waiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -112,7 +114,7 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 	}
 
 	semaphore->value--;
-	semaphore->waiters--; assert(semaphore->waiters >= 0);
+	semaphore->waiters--;
 
 	return CELL_OK;
 }
@@ -124,6 +126,7 @@ s32 sys_semaphore_trywait(u32 sem)
 	LV2_LOCK;
 
 	std::shared_ptr<semaphore_t> semaphore;
+
 	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
 	{
 		return CELL_ESRCH;
@@ -146,6 +149,7 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 	LV2_LOCK;
 
 	std::shared_ptr<semaphore_t> semaphore;
+
 	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
 	{
 		return CELL_ESRCH;
@@ -156,13 +160,20 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 		return CELL_EINVAL;
 	}
 
-	if (semaphore->value + count > semaphore->max + semaphore->waiters)
+	const u64 new_value = semaphore->value + count;
+	const u64 max_value = semaphore->max + semaphore->waiters;
+
+	if (new_value > max_value)
 	{
 		return CELL_EBUSY;
 	}
 
-	semaphore->value += count; assert(semaphore->value >= 0);
-	semaphore->cv.notify_all();
+	semaphore->value += count;
+
+	if (semaphore->waiters)
+	{
+		semaphore->cv.notify_all();
+	}
 
 	return CELL_OK;
 }
@@ -179,6 +190,7 @@ s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count)
 	LV2_LOCK;
 
 	std::shared_ptr<semaphore_t> semaphore;
+
 	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
 	{
 		return CELL_ESRCH;

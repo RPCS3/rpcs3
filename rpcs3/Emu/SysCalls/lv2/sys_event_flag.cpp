@@ -16,8 +16,6 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 {
 	sys_event_flag.Warning("sys_event_flag_create(id=*0x%x, attr=*0x%x, init=0x%llx)", id, attr, init);
 
-	LV2_LOCK;
-
 	if (!id || !attr)
 	{
 		return CELL_EFAULT;
@@ -67,11 +65,6 @@ s32 sys_event_flag_destroy(u32 id)
 	if (!Emu.GetIdManager().GetIDData(id, ef))
 	{
 		return CELL_ESRCH;
-	}
-
-	while (ef->waiters < 0)
-	{
-		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	if (ef->waiters)
@@ -124,7 +117,7 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 		return CELL_EPERM;
 	}
 
-	while (ef->waiters < 0)
+	while (ef->cancelled)
 	{
 		// wait until other threads return CELL_ECANCELED (to prevent modifying bit pattern)
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
@@ -150,11 +143,9 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 			break;
 		}
 
-		if (ef->waiters <= 0)
+		if (ef->cancelled)
 		{
-			ef->waiters++; assert(ef->waiters <= 0);
-
-			if (!ef->waiters)
+			if (!--ef->cancelled)
 			{
 				ef->cv.notify_all();
 			}
@@ -164,7 +155,7 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			ef->waiters--; assert(ef->waiters >= 0);
+			ef->waiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -187,9 +178,7 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 		ef->flags = 0;
 	}
 
-	ef->waiters--; assert(ef->waiters >= 0);
-
-	if (ef->flags)
+	if (--ef->waiters && ef->flags)
 	{
 		ef->cv.notify_one();
 	}
@@ -235,7 +224,7 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 		return CELL_EBUSY;
 	}
 
-	while (ef->waiters < 0)
+	while (ef->cancelled)
 	{
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
@@ -270,13 +259,17 @@ s32 sys_event_flag_set(u32 id, u64 bitptn)
 		return CELL_ESRCH;
 	}
 
-	while (ef->waiters < 0)
+	while (ef->cancelled)
 	{
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	ef->flags |= bitptn;
-	ef->cv.notify_all();
+
+	if (ef->waiters)
+	{
+		ef->cv.notify_all();
+	}
 	
 	return CELL_OK;
 }
@@ -294,7 +287,7 @@ s32 sys_event_flag_clear(u32 id, u64 bitptn)
 		return CELL_ESRCH;
 	}
 
-	while (ef->waiters < 0)
+	while (ef->cancelled)
 	{
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
@@ -322,7 +315,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		return CELL_ESRCH;
 	}
 
-	while (ef->waiters < 0)
+	while (ef->cancelled)
 	{
 		ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
@@ -332,10 +325,11 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		*num = ef->waiters;
 	}
 
-	// negate value to signal waiting threads and prevent modifying bit pattern
-	ef->waiters = -ef->waiters;
-	ef->cv.notify_all();
-
+	if ((ef->cancelled = ef->waiters.exchange(0)))
+	{
+		ef->cv.notify_all();
+	}
+	
 	return CELL_OK;
 }
 

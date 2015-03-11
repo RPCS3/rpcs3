@@ -1,6 +1,14 @@
 #pragma once
 #include "SPUThread.h"
 
+enum : u32
+{
+	RAW_SPU_OFFSET = 0x00100000,
+	RAW_SPU_BASE_ADDR = 0xE0000000,
+	RAW_SPU_LS_OFFSET = 0x00000000,
+	RAW_SPU_PROB_OFFSET = 0x00040000,
+};
+
 __forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)
 {
 	return RAW_SPU_OFFSET * num + RAW_SPU_BASE_ADDR + RAW_SPU_PROB_OFFSET + offset;

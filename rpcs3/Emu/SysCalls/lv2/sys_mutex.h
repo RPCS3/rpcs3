@@ -29,7 +29,7 @@ struct mutex_t
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	mutex_t(bool recursive, u32 protocol, u64 name)
 		: recursive(recursive)
