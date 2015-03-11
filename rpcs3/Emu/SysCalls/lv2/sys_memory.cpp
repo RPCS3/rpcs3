@@ -141,7 +141,7 @@ s32 sys_memory_container_destroy(u32 cid)
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(ct->addr);
-	Emu.GetIdManager().RemoveID(cid);
+	Emu.GetIdManager().RemoveID<MemoryContainerInfo>(cid);
 
 	return CELL_OK;
 }

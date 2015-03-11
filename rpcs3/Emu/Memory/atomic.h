@@ -195,29 +195,68 @@ public:
 		const atomic_type res = InterlockedXor(&data, (atomic_type&)(right)) ^ (atomic_type&)(right);
 		return (T&)res;
 	}
-
 };
 
-template<typename T> struct atomic_le_t : public _atomic_base<T>
+template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator ++(_atomic_base<be_t<T>>& left, int)
 {
-};
+	T result;
 
-template<typename T> struct atomic_be_t : public _atomic_base<typename to_be_t<T>::type>
+	left.atomic_op([&result](be_t<T>& value)
+	{
+		result = value++;
+	});
+
+	return result;
+}
+
+template<typename T> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator --(_atomic_base<be_t<T>>& left, int)
 {
-};
+	T result;
+
+	left.atomic_op([&result](be_t<T>& value)
+	{
+		result = value--;
+	});
+
+	return result;
+}
+
+template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator +=(_atomic_base<be_t<T>>& left, T2 right)
+{
+	T result;
+
+	left.atomic_op([&result, right](be_t<T>& value)
+	{
+		result = (value += right);
+	});
+
+	return result;
+}
+
+template<typename T, typename T2> inline static typename std::enable_if<std::is_arithmetic<T>::value, T>::type operator -=(_atomic_base<be_t<T>>& left, T2 right)
+{
+	T result;
+
+	left.atomic_op([&result, right](be_t<T>& value)
+	{
+		result = (value -= right);
+	});
+
+	return result;
+}
+
+template<typename T> using atomic_le_t = _atomic_base<T>;
+
+template<typename T> using atomic_be_t = _atomic_base<typename to_be_t<T>::type>;
 
 namespace ps3
 {
-	template<typename T> struct atomic_t : public atomic_be_t<T>
-	{
-	};
+	template<typename T> using atomic_t = atomic_be_t<T>;
 }
 
 namespace psv
 {
-	template<typename T> struct atomic_t : public atomic_le_t<T>
-	{
-	};
+	template<typename T> using atomic_t = atomic_le_t<T>;
 }
 
 using namespace ps3;

@@ -167,14 +167,8 @@ s32 spursInit(
 		}
 	}
 
-	if (s32 res = lwmutex_create(spurs->m.mutex, SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, *(u64*)"_spuPrv"))
-	{
-		assert(!"lwmutex_create() failed");
-	}
-	if (s32 res = lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv"))
-	{
-		assert(!"lwcond_create() failed");
-	}
+	lwmutex_create(spurs->m.mutex, false, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
+	lwcond_create(spurs->m.cond, spurs->m.mutex, *(u64*)"_spuPrv");
 
 	spurs->m.flags1 = (flags & SAF_EXIT_IF_NO_WORK ? SF1_EXIT_IF_NO_WORK : 0) | (isSecond ? SF1_32_WORKLOADS : 0);
 	spurs->m.wklFlagReceiver.write_relaxed(0xff);
@@ -850,7 +844,7 @@ s32 spursWakeUp(PPUThread& CPU, vm::ptr<CellSpurs> spurs)
 		{
 			assert(!"sys_lwmutex_lock() failed");
 		}
-		if (s32 res = sys_lwcond_signal(spurs->get_lwcond()))
+		if (s32 res = sys_lwcond_signal(CPU, spurs->get_lwcond()))
 		{
 			assert(!"sys_lwcond_signal() failed");
 		}

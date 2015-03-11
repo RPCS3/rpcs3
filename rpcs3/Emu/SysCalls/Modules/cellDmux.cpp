@@ -710,7 +710,7 @@ u32 dmuxOpen(Demuxer* dmux_ptr)
 					}
 				}
 				es.dmux = nullptr;
-				Emu.GetIdManager().RemoveID(task.es.es);
+				Emu.GetIdManager().RemoveID<ElementaryStream>(task.es.es);
 				break;
 			}
 
@@ -814,7 +814,7 @@ int cellDmuxOpen(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDmux
 
 	// TODO: check demuxerResource and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource->memAddr, demuxerResource->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -832,7 +832,7 @@ int cellDmuxOpenEx(vm::ptr<const CellDmuxType> demuxerType, vm::ptr<const CellDm
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResourceEx->memAddr, demuxerResourceEx->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -850,7 +850,7 @@ int cellDmuxOpen2(vm::ptr<const CellDmuxType2> demuxerType2, vm::ptr<const CellD
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
 
-	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc.to_le(), demuxerCb->cbArg));
+	*demuxerHandle = dmuxOpen(new Demuxer(demuxerResource2->memAddr, demuxerResource2->memSize, demuxerCb->cbMsgFunc, demuxerCb->cbArg));
 
 	return CELL_OK;
 }
@@ -880,7 +880,7 @@ int cellDmuxClose(u32 demuxerHandle)
 	}
 
 	if (dmux->dmuxCb) Emu.GetCPU().RemoveThread(dmux->dmuxCb->GetId());
-	Emu.GetIdManager().RemoveID(demuxerHandle);
+	Emu.GetIdManager().RemoveID<Demuxer>(demuxerHandle);
 	return CELL_OK;
 }
 
@@ -1008,7 +1008,7 @@ int cellDmuxEnableEs(u32 demuxerHandle, vm::ptr<const CellCodecEsFilterId> esFil
 
 	std::shared_ptr<ElementaryStream> es(new ElementaryStream(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
-		esCb->cbEsMsgFunc.to_le(), esCb->cbArg, esSpecificInfo_addr));
+		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo_addr));
 
 	u32 id = Emu.GetIdManager().GetNewID(es);
 	es->id = id;

@@ -272,7 +272,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	}
 
 	group->state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED; // hack
-	Emu.GetIdManager().RemoveID(id);
+	Emu.GetIdManager().RemoveID<spu_group_t>(id);
 
 	return CELL_OK;
 }

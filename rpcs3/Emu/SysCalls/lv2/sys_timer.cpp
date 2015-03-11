@@ -4,100 +4,218 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#include "Emu/Event.h"
+#include "Utilities/Thread.h"
+#include "sys_time.h"
 #include "sys_event.h"
+#include "sys_process.h"
 #include "sys_timer.h"
 
 SysCallBase sys_timer("sys_timer");
 
 s32 sys_timer_create(vm::ptr<u32> timer_id)
 {
-	sys_timer.Warning("sys_timer_create(timer_id_addr=0x%x)", timer_id.addr());
+	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	std::shared_ptr<timer> timer_data(new timer);
-	*timer_id = Emu.GetIdManager().GetNewID(timer_data, TYPE_TIMER);
+	std::shared_ptr<lv2_timer_t> timer(new lv2_timer_t);
+
+	thread_t(fmt::format("Timer[%d] Thread", (*timer_id = Emu.GetIdManager().GetNewID(timer, TYPE_TIMER))), [timer]()
+	{
+		LV2_LOCK;
+
+		while (!timer.unique() && !Emu.IsStopped())
+		{
+			if (timer->state == SYS_TIMER_STATE_RUN)
+			{
+				if (get_system_time() >= timer->start)
+				{
+					std::shared_ptr<event_queue_t> queue = timer->port.lock();
+
+					if (queue)
+					{
+						queue->events.emplace_back(timer->source, timer->data1, timer->data2, timer->start);
+						queue->cv.notify_one();
+					}
+
+					if (timer->period && queue)
+					{
+						timer->start += timer->period; // set next expiration time
+
+						continue; // hack: check again
+					}
+					else
+					{
+						timer->state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
+					}
+				}
+			}
+
+			timer->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		}
+
+	}).detach();
+
 	return CELL_OK;
 }
 
 s32 sys_timer_destroy(u32 timer_id)
 {
-	sys_timer.Todo("sys_timer_destroy(timer_id=%d)", timer_id);
+	sys_timer.Warning("sys_timer_destroy(timer_id=%d)", timer_id);
 
-	if(!Emu.GetIdManager().CheckID(timer_id)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	Emu.GetIdManager().RemoveID(timer_id);
+	std::shared_ptr<lv2_timer_t> timer;
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!timer->port.expired())
+	{
+		return CELL_EISCONN;
+	}
+
+	Emu.GetIdManager().RemoveID<lv2_timer_t>(timer_id);
+
 	return CELL_OK;
 }
 
 s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
-	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info_addr=0x%x)", timer_id, info.addr());
-	
-	std::shared_ptr<timer> timer_data = nullptr;
-	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
+	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info=*0x%x)", timer_id, info);
 
-	*info = timer_data->timer_information_t;
+	LV2_LOCK;
+	
+	std::shared_ptr<lv2_timer_t> timer;
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
+	{
+		return CELL_ESRCH;
+	}
+
+	info->next_expiration_time = timer->start;
+
+	info->period = timer->period;
+
+	info->timer_state = timer->state;
+
 	return CELL_OK;
 }
 
-s32 sys_timer_start(u32 timer_id, s64 base_time, u64 period)
+s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 {
-	sys_timer.Warning("sys_timer_start_periodic_absolute(timer_id=%d, basetime=%lld, period=%lld)", timer_id, base_time, period);
+	sys_timer.Warning("_sys_timer_start(timer_id=%d, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
-	std::shared_ptr<timer> timer_data = nullptr;
-	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
+	const u64 start_time = get_system_time();
 
-	if(timer_data->timer_information_t.timer_state != SYS_TIMER_STATE_STOP) return CELL_EBUSY;
-	if(period < 100) return CELL_EINVAL;
-	//TODO: if (timer is not connected to an event queue) return CELL_ENOTCONN;
-	
-	timer_data->timer_information_t.next_expiration_time = base_time;
-	timer_data->timer_information_t.period = period;
-	timer_data->timer_information_t.timer_state = SYS_TIMER_STATE_RUN;
-	//TODO: ?
-	std::function<s32()> task(std::bind(sys_timer_stop, timer_id));
-	std::thread([period, task]() {
-		std::this_thread::sleep_for(std::chrono::milliseconds(period));
-		task();
-	}).detach();
+	LV2_LOCK;
+
+	std::shared_ptr<lv2_timer_t> timer;
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (timer->state != SYS_TIMER_STATE_STOP)
+	{
+		return CELL_EBUSY;
+	}
+
+	if (!period)
+	{
+		// oneshot timer (TODO: what will happen if both args are 0?)
+
+		if (start_time >= base_time)
+		{
+			return CELL_ETIMEDOUT;
+		}
+	}
+	else
+	{
+		// periodic timer
+
+		if (period < 100)
+		{
+			return CELL_EINVAL;
+		}
+	}
+
+	if (timer->port.expired())
+	{
+		return CELL_ENOTCONN;
+	}
+
+	// sys_timer_start_periodic() will use current time (TODO: is it correct?)
+
+	timer->start = base_time ? base_time : start_time + period;
+	timer->period = period;
+	timer->state = SYS_TIMER_STATE_RUN;
+	timer->cv.notify_one();
 
 	return CELL_OK;
 }
 
 s32 sys_timer_stop(u32 timer_id)
 {
-	sys_timer.Todo("sys_timer_stop()");
+	sys_timer.Warning("sys_timer_stop()");
 
-	std::shared_ptr<timer> timer_data = nullptr;
-	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	timer_data->timer_information_t.timer_state = SYS_TIMER_STATE_STOP;
+	std::shared_ptr<lv2_timer_t> timer;
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
+	{
+		return CELL_ESRCH;
+	}
+
+	timer->state = SYS_TIMER_STATE_STOP; // stop timer
+
 	return CELL_OK;
 }
 
 s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
-	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=%d, queue_id=%d, name=0x%llx, data1=0x%llx, data2=0x%llx)",
-		timer_id, queue_id, name, data1, data2);
+	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=%d, queue_id=%d, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
-	std::shared_ptr<timer> timer_data = nullptr;
-	std::shared_ptr<event_queue_t> equeue = nullptr;
-	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
-	if(!Emu.GetIdManager().GetIDData(queue_id, equeue)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	//TODO: ?
+	std::shared_ptr<lv2_timer_t> timer;
+	std::shared_ptr<event_queue_t> queue;
+
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer) || !Emu.GetIdManager().GetIDData(queue_id, queue))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (!timer->port.expired())
+	{
+		return CELL_EISCONN;
+	}
+
+	timer->port = queue; // connect event queue
+	timer->source = name ? name : ((u64)process_getpid() << 32) | timer_id;
+	timer->data1 = data1;
+	timer->data2 = data2;
 
 	return CELL_OK;
 }
 
 s32 sys_timer_disconnect_event_queue(u32 timer_id)
 {
-	sys_timer.Todo("sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
+	sys_timer.Warning("sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
 
-	std::shared_ptr<timer> timer_data = nullptr;
-	if(!Emu.GetIdManager().GetIDData(timer_id, timer_data)) return CELL_ESRCH;
+	LV2_LOCK;
 
-	//TODO: ?
+	std::shared_ptr<lv2_timer_t> timer;
+	if (!Emu.GetIdManager().GetIDData(timer_id, timer))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (timer->port.expired())
+	{
+		return CELL_ENOTCONN;
+	}
+
+	timer->port.reset(); // disconnect event queue
+	timer->state = SYS_TIMER_STATE_STOP; // stop timer
 
 	return CELL_OK;
 }
@@ -105,31 +223,55 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 s32 sys_timer_sleep(u32 sleep_time)
 {
 	sys_timer.Log("sys_timer_sleep(sleep_time=%d)", sleep_time);
-	for (u32 i = 0; i < sleep_time; i++)
+
+	const u64 start_time = get_system_time();
+
+	const u64 useconds = sleep_time * 1000000ull;
+
+	u64 passed;
+
+	while (useconds > (passed = get_system_time() - start_time) + 1000)
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
 		if (Emu.IsStopped())
 		{
 			sys_timer.Warning("sys_timer_sleep(sleep_time=%d) aborted", sleep_time);
 			return CELL_OK;
 		}
 	}
+	
+	if (useconds > passed)
+	{
+		std::this_thread::sleep_for(std::chrono::microseconds(useconds - passed));
+	}
+
 	return CELL_OK;
 }
 
 s32 sys_timer_usleep(u64 sleep_time)
 {
-	sys_timer.Log("sys_timer_usleep(sleep_time=%lld)", sleep_time);
-	if (sleep_time > 0xFFFFFFFFFFFF) sleep_time = 0xFFFFFFFFFFFF; //2^48-1
-	for (u32 i = 0; i < sleep_time / 1000000; i++)
+	sys_timer.Log("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
+
+	const u64 start_time = get_system_time();
+
+	u64 passed;
+
+	while (sleep_time > (passed = get_system_time() - start_time) + 1000)
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
 		if (Emu.IsStopped())
 		{
-			sys_timer.Warning("sys_timer_usleep(sleep_time=%lld) aborted", sleep_time);
+			sys_timer.Warning("sys_timer_usleep(sleep_time=0x%llx) aborted", sleep_time);
 			return CELL_OK;
 		}
 	}
-	std::this_thread::sleep_for(std::chrono::microseconds(sleep_time % 1000000));
+
+	if (sleep_time > passed)
+	{
+		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time - passed));
+	}
+
 	return CELL_OK;
 }

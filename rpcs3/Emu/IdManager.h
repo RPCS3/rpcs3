@@ -2,8 +2,6 @@
 
 #define ID_MANAGER_INCLUDED
 
-#define rID_ANY -1 // was wxID_ANY
-
 enum IDType
 {
 	// Special objects
@@ -133,11 +131,13 @@ public:
 		Clear();
 	}
 
-	bool CheckID(const u32 id)
+	template<typename T> bool CheckID(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-		return m_id_map.find(id) != m_id_map.end();
+		auto f = m_id_map.find(id);
+
+		return f != m_id_map.end() && f->second.GetInfo() == typeid(T);
 	}
 
 	void Clear()
@@ -148,12 +148,7 @@ public:
 		m_cur_id = s_first_id;
 	}
 	
-	template<typename T 
-#ifdef __GNUG__ 
-		= char
-#endif
-	>
-	u32 GetNewID(std::shared_ptr<T>& data = nullptr, const IDType type = TYPE_OTHER)
+	template<typename T> u32 GetNewID(std::shared_ptr<T>& data, const IDType type = TYPE_OTHER)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
@@ -172,12 +167,12 @@ public:
 		return m_id_map[id];
 	}
 
-	template<typename T>
-	bool GetIDData(const u32 id, std::shared_ptr<T>& result)
+	template<typename T> bool GetIDData(const u32 id, std::shared_ptr<T>& result)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		auto f = m_id_map.find(id);
+
 		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T)) {
 			return false;
 		}
@@ -189,23 +184,18 @@ public:
 
 	bool HasID(const u32 id)
 	{
-		{
-			std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mtx_main);
 
-			if(id == rID_ANY) {
-				return m_id_map.begin() != m_id_map.end();
-			}
-		}
-		return CheckID(id);
+		return m_id_map.find(id) != m_id_map.end();
 	}
 
-	bool RemoveID(const u32 id)
+	template<typename T> bool RemoveID(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		auto item = m_id_map.find(id);
 
-		if (item == m_id_map.end()) {
+		if (item == m_id_map.end() || item->second.GetInfo() != typeid(T)) {
 			return false;
 		}
 		if (item->second.GetType() < TYPE_OTHER) {

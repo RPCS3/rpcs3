@@ -287,7 +287,7 @@ struct SceNpMatching2RoomGroup
 
 struct SceNpMatching2RoomMemberDataExternal
 {
-	struct vm::psv::ptr<SceNpMatching2RoomMemberDataExternal> next;
+	vm::psv::ptr<SceNpMatching2RoomMemberDataExternal> next;
 	SceNpId npId;
 	u64 joinDate;
 	SceNpMatching2Role role;
@@ -297,7 +297,7 @@ struct SceNpMatching2RoomMemberDataExternal
 
 struct SceNpMatching2RoomMemberDataInternal
 {
-	struct vm::psv::ptr<SceNpMatching2RoomMemberDataInternal> next;
+	vm::psv::ptr<SceNpMatching2RoomMemberDataInternal> next;
 	SceNpId npId;
 
 	u64 joinDate;

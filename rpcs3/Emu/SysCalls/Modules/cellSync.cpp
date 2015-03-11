@@ -25,13 +25,13 @@ s32 syncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
+
 	if (mutex.addr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: set zero and sync
-	mutex->data.exchange({});
+	mutex->sync_var.exchange({});
 
 	return CELL_OK;
 }
@@ -51,26 +51,22 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
+
 	if (mutex.addr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: increase m_acq and remember its old value
-	be_t<u16> order;
-	mutex->data.atomic_op([&order](CellSyncMutex::data_t& mutex)
-	{
-		order = mutex.m_acq++;
-	});
+	// prx: increase acquire_count and remember its old value
+	const be_t<u16> order = be_t<u16>::make(mutex->acquire_count++);
 
-	// prx: wait until this old value is equal to m_rel
+	// prx: wait until release_count is equal to old acquire_count
 	g_sync_mutex_wm.wait_op(mutex.addr(), [mutex, order]()
 	{
-		return order == mutex->data.read_relaxed().m_rel;
+		return order == mutex->release_count.read_relaxed();
 	});
 
-	// prx: sync
-	mutex->data.read_sync();
+	mutex->sync_var.read_sync();
 
 	return CELL_OK;
 }
@@ -83,19 +79,16 @@ s32 cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
+
 	if (mutex.addr() % 4)
 	{
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	// prx: exit if m_acq and m_rel are not equal, increase m_acq
-	return mutex->data.atomic_op(CELL_OK, [](CellSyncMutex::data_t& mutex) -> s32
+	// prx: lock only if acquire_count and release_count are equal
+	return mutex->sync_var.atomic_op(CELL_OK, [](CellSyncMutex::sync_t& mutex) -> s32
 	{
-		if (mutex.m_acq++ != mutex.m_rel)
-		{
-			return CELL_SYNC_ERROR_BUSY;
-		}
-		return CELL_OK;
+		return (mutex.acquire_count++ != mutex.release_count) ? CELL_SYNC_ERROR_BUSY : CELL_OK;
 	});
 }
 
@@ -112,10 +105,8 @@ s32 cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	mutex->data.atomic_op_sync([](CellSyncMutex::data_t& mutex)
-	{
-		mutex.m_rel++;
-	});
+	// prx: increase release count
+	mutex->release_count++;
 
 	g_sync_mutex_wm.notify(mutex.addr());
 

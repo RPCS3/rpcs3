@@ -41,7 +41,7 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	case se32(CELL_GIFDEC_FILE):
 		// Get file descriptor
 		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName.to_le(), 0, fd, vm::ptr<const void>::make(0), 0);
+		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<const void>::make(0), 0);
 		current_subHandle->fd = fd.value();
 		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
 
@@ -266,7 +266,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_GIFDEC_ERROR_FATAL;
 
 	cellFsClose(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID(subHandle);
+	Emu.GetIdManager().RemoveID<CellGifDecSubHandle>(subHandle);
 
 	return CELL_OK;
 }

@@ -14,31 +14,37 @@ struct sys_lwcond_attribute_t
 struct sys_lwcond_t
 {
 	vm::bptr<sys_lwmutex_t> lwmutex;
-	be_t<u32> lwcond_queue;
+	be_t<u32> lwcond_queue; // lwcond pseudo-id
 };
 
-struct Lwcond
+struct lwcond_t
 {
-	sleep_queue_t queue;
+	const u64 name;
 
-	const u32 addr;
+	std::atomic<u32> signaled1; // mode 1 signals
+	std::atomic<u32> signaled2; // mode 2 signals
 
-	Lwcond(u64 name, u32 addr)
-		: queue(name)
-		, addr(addr)
+	// TODO: use sleep queue
+	std::condition_variable cv;
+	std::atomic<s32> waiters;
+
+	lwcond_t(u64 name)
+		: name(name)
+		, signaled1(0)
+		, signaled2(0)
+		, waiters(0)
 	{
 	}
 };
 
 // Aux
-s32 lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name_u64);
+void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name);
 
 class PPUThread;
 
 // SysCalls
-s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr);
-s32 sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal(vm::ptr<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal_all(vm::ptr<sys_lwcond_t> lwcond);
-s32 sys_lwcond_signal_to(vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id);
-s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout);
+s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5);
+s32 _sys_lwcond_destroy(u32 lwcond_id);
+s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode);
+s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode);
+s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout);

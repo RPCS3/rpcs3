@@ -9,6 +9,7 @@
 #include "lv2/cellFs.h"
 #include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
+#include "lv2/sys_lwcond.h"
 #include "lv2/sys_mutex.h"
 #include "lv2/sys_cond.h"
 #include "lv2/sys_event.h"
@@ -108,7 +109,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_timer_create),                            //70  (0x046)
 	bind_func(sys_timer_destroy),                           //71  (0x047)
 	bind_func(sys_timer_get_information),                   //72  (0x048)
-	bind_func(sys_timer_start),                             //73  (0x049)
+	bind_func(_sys_timer_start),                            //73  (0x049)
 	bind_func(sys_timer_stop),                              //74  (0x04A)
 	bind_func(sys_timer_connect_event_queue),               //75  (0x04B)
 	bind_func(sys_timer_disconnect_event_queue),            //76  (0x04C)
@@ -124,17 +125,17 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_event_flag_trywait),                      //86  (0x056)
 	bind_func(sys_event_flag_set),                          //87  (0x057)
 	bind_func(sys_interrupt_thread_eoi),                    //88  (0x058)
-	bind_func(_sys_interrupt_thread_disestablish),           //89  (0x059)
+	bind_func(_sys_interrupt_thread_disestablish),          //89  (0x059)
 	bind_func(sys_semaphore_create),                        //90  (0x05A)
 	bind_func(sys_semaphore_destroy),                       //91  (0x05B)
 	bind_func(sys_semaphore_wait),                          //92  (0x05C)
 	bind_func(sys_semaphore_trywait),                       //93  (0x05D)
 	bind_func(sys_semaphore_post),                          //94  (0x05E)
-	null_func,//bind_func(_sys_lwmutex_create),             //95  (0x05F) // internal, used by sys_lwmutex_create
-	null_func,//bind_func(_sys_lwmutex_destroy),            //96  (0x060) // internal, used by sys_lwmutex_destroy
-	null_func,//bind_func(_sys_lwmutex_lock),               //97  (0x061) // internal, used by sys_lwmutex_lock
-	null_func,//bind_func(_sys_lwmutex_???lock),            //98  (0x062) // internal, used by sys_lwmutex_unlock
-	null_func,//bind_func(_sys_lwmutex_???lock),            //99  (0x063) // internal, used by sys_lwmutex_trylock
+	bind_func(_sys_lwmutex_create),                         //95  (0x05F)
+	bind_func(_sys_lwmutex_destroy),                        //96  (0x060)
+	bind_func(_sys_lwmutex_lock),                           //97  (0x061)
+	bind_func(_sys_lwmutex_unlock),                         //98  (0x062)
+	bind_func(_sys_lwmutex_trylock),                        //99  (0x063)
 	bind_func(sys_mutex_create),                            //100 (0x064)
 	bind_func(sys_mutex_destroy),                           //101 (0x065)
 	bind_func(sys_mutex_lock),                              //102 (0x066)
@@ -146,12 +147,12 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_cond_signal),                             //108 (0x06C)
 	bind_func(sys_cond_signal_all),                         //109 (0x06D)
 	bind_func(sys_cond_signal_to),                          //110 (0x06E)
-	null_func,//bind_func(_sys_lwcond_create)               //111 (0x06F) // internal, used by sys_lwcond_create
-	null_func,//bind_func(_sys_lwcond_destroy)              //112 (0x070) // internal, used by sys_lwcond_destroy
-	null_func,//bind_func(_sys_lwcond_queue_wait)           //113 (0x071) // internal, used by sys_lwcond_wait
+	bind_func(_sys_lwcond_create),                          //111 (0x06F)
+	bind_func(_sys_lwcond_destroy),                         //112 (0x070)
+	bind_func(_sys_lwcond_queue_wait),                      //113 (0x071)
 	bind_func(sys_semaphore_get_value),                     //114 (0x072)
-	null_func,//bind_func(sys_semaphore_...)                //115 (0x073) // internal, used by sys_lwcond_signal, sys_lwcond_signal_to
-	null_func,//bind_func(sys_semaphore_...)                //116 (0x074) // internal, used by sys_lwcond_signal_all
+	bind_func(_sys_lwcond_signal),                          //115 (0x073)
+	bind_func(_sys_lwcond_signal_all),                      //116 (0x074)
 	null_func,//bind_func(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
 	bind_func(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//bind_func(sys_event_...)                    //119 (0x077)  ROOT
