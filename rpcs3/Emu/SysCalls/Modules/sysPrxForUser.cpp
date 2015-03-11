@@ -212,6 +212,11 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	// atomically increment waiter value using 64 bit op
 	lwmutex->all_info++;
 
+	if (!lwmutex->waiter.read_relaxed().data())
+	{
+		sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): unexpected waiter", lwmutex);
+	}
+
 	if (lwmutex->owner.compare_and_swap_test(lwmutex::free, tid))
 	{
 		// locking succeeded
@@ -228,7 +233,12 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 	if (res == CELL_OK)
 	{
 		// locking succeeded
-		lwmutex->owner.exchange(tid);
+		auto old = lwmutex->owner.exchange(tid);
+
+		if (old.data() != se32(lwmutex_reserved))
+		{
+			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): unexpected owner (0x%x)", lwmutex, old);
+		}
 
 		return CELL_OK;
 	}
@@ -294,7 +304,12 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 		if (res == CELL_OK)
 		{
 			// locking succeeded
-			lwmutex->owner.exchange(tid);
+			auto old = lwmutex->owner.exchange(tid);
+
+			if (old.data() != se32(lwmutex_reserved))
+			{
+				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): unexpected owner (0x%x)", lwmutex, old);
+			}
 		}
 
 		return res;
