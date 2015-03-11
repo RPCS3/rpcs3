@@ -198,8 +198,8 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 	{
 		const bool is_timedout = timeout && get_system_time() - start_time > timeout;
 
-		// check timeout (TODO)
-		if (is_timedout)
+		// check timeout only if no thread signaled in mode 1 (the flaw of avoiding sleep queue)
+		if (is_timedout && !cond->signaled1)
 		{
 			// cancel waiting
 			cond->waiters--; assert(cond->waiters >= 0);
