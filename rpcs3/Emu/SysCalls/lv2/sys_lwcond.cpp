@@ -222,7 +222,7 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 			return CELL_OK;
 		}
 
-		cond->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		(cond->signaled1 ? mutex->cv : cond->cv).wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	if (cond->signaled1 && mutex->signaled)
