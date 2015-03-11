@@ -58,7 +58,7 @@ s32 cellSyncMutexLock(vm::ptr<CellSyncMutex> mutex)
 	}
 
 	// prx: increase acquire_count and remember its old value
-	const be_t<u16> order = be_t<u16>::make(mutex->acquire_count++);
+	const auto order = mutex->acquire_count++;
 
 	// prx: wait until release_count is equal to old acquire_count
 	g_sync_mutex_wm.wait_op(mutex.addr(), [mutex, order]()
