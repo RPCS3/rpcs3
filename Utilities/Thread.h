@@ -202,7 +202,7 @@ public:
 		return sq_size;
 	}
 
-	bool is_full() const volatile
+	bool is_full() const
 	{
 		return m_sync.read_relaxed().count == sq_size;
 	}
