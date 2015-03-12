@@ -145,7 +145,7 @@ s32 pngReadHeader(
 	{
 		auto file = Emu.GetIdManager().GetIDData<vfsStream>(stream->fd);
 		file->Seek(0);
-		file->Read(buffer, buffer.size());
+		file->Read(buffer.begin(), buffer.size());
 		break;
 	}
 	}
