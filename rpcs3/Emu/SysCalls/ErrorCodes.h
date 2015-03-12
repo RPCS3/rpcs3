@@ -34,7 +34,7 @@ enum ErrorCode
 	CELL_EFPOS         = 0x8001001E,
 	CELL_EINTR         = 0x8001001F,
 	CELL_EFBIG         = 0x80010020,
-	CELL_EMLIN         = 0x80010021,
+	CELL_EMLINK        = 0x80010021,
 	CELL_ENFILE        = 0x80010022,
 	CELL_ENOSPC        = 0x80010023,
 	CELL_ENOTTY        = 0x80010024,

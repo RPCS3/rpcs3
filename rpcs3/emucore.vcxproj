@@ -39,6 +39,8 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
     <ClCompile Include="Crypto\aes.cpp" />
     <ClCompile Include="Crypto\ec.cpp" />
@@ -177,7 +179,6 @@
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\LogBase.cpp" />
-    <ClCompile Include="Emu\SysCalls\lv2\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sleep_queue.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_cond.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_event.cpp" />
@@ -439,11 +440,11 @@
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h" />
     <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
     <ClInclude Include="Emu\SysCalls\LogBase.h" />
-    <ClInclude Include="Emu\SysCalls\lv2\cellFs.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sleep_queue.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_cond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_event_flag.h" />
+    <ClInclude Include="Emu\SysCalls\lv2\sys_fs.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_interrupt.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_lwcond.h" />
     <ClInclude Include="Emu\SysCalls\lv2\sys_lwmutex.h" />
@@ -472,6 +473,7 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFont.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFontFT.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellFs.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGame.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGcmSys.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellGem.h" />

@@ -108,14 +108,14 @@ namespace vm
 		}
 		*/
 
-		template<typename AT> operator const ps3::ptr<T, 1, AT>() const
+		template<typename AT> operator _ptr_base<T, 1, AT>() const
 		{
-			return ps3::ptr<T, 1, AT>::make(m_addr);
+			return _ptr_base<T, 1, AT>::make(m_addr);
 		}
 
-		template<typename AT> operator const ps3::ptr<const T, 1, AT>() const
+		template<typename AT> operator _ptr_base<const T, 1, AT>() const
 		{
-			return ps3::ptr<const T, 1, AT>::make(m_addr);
+			return _ptr_base<const T, 1, AT>::make(m_addr);
 		}
 		
 		operator T&()
@@ -604,14 +604,14 @@ namespace vm
 		}
 		*/
 
-		template<typename AT> operator const ps3::ptr<T, 1, AT>() const
+		template<typename AT> operator _ptr_base<T, 1, AT>() const
 		{
-			return ps3::ptr<T, 1, AT>::make(m_data.addr);
+			return _ptr_base<T, 1, AT>::make(m_data.addr);
 		}
 
-		template<typename AT> operator const ps3::ptr<const T, 1, AT>() const
+		template<typename AT> operator _ptr_base<const T, 1, AT>() const
 		{
-			return ps3::ptr<const T, 1, AT>::make(m_data.addr);
+			return _ptr_base<const T, 1, AT>::make(m_data.addr);
 		}
 
 		operator T&()

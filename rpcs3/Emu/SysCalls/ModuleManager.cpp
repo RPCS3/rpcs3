@@ -10,6 +10,7 @@ extern Module cellDmux;
 extern Module cellFiber;
 extern Module cellFont;
 extern Module cellFontFT;
+extern Module cellFs;
 extern Module cellGame;
 extern Module cellGcmSys;
 extern Module cellGem;
@@ -49,7 +50,6 @@ extern Module sceNpCommerce2;
 extern Module sceNpSns;
 extern Module sceNpTrophy;
 extern Module sceNpTus;
-extern Module sys_fs;
 extern Module sys_io;
 extern Module sys_net;
 extern Module sysPrxForUser;
@@ -77,7 +77,7 @@ static const g_module_list[] =
 	{ 0x000b, "cellOvis", &cellOvis },
 	{ 0x000c, "cellSheap", nullptr },
 	{ 0x000d, "sys_sync", &cellSync },
-	{ 0x000e, "sys_fs", &sys_fs },
+	{ 0x000e, "sys_fs", &cellFs },
 	{ 0x000f, "cellJpgDec", &cellJpgDec },
 	{ 0x0010, "cellGcmSys", &cellGcmSys },
 	{ 0x0011, "cellAudio", &cellAudio },

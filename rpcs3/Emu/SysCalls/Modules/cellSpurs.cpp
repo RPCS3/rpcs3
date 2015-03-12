@@ -2428,14 +2428,14 @@ s32 cellSpursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> taskId, 
 		return CELL_SPURS_TASK_ERROR_ALIGN;
 	}
 
-	vm::var<u32> tmpTaskId;
+	vm::var<be_t<u32>> tmpTaskId;
 	auto rc = spursCreateTask(taskset, tmpTaskId, vm::ptr<u32>::make(elf_addr), vm::ptr<u32>::make(context_addr), context_size, lsPattern, argument);
 	if (rc != CELL_OK) 
 	{
 		return rc;
 	}
 
-	rc = spursTaskStart(taskset, tmpTaskId);
+	rc = spursTaskStart(taskset, tmpTaskId->value());
 	if (rc != CELL_OK) 
 	{
 		return rc;

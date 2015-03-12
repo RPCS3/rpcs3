@@ -6,7 +6,10 @@
 
 #include "stblib/stb_image.h"
 #include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
-#include "Emu/SysCalls/lv2/cellFs.h"
+
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
+
 #include "cellGifDec.h"
 
 extern Module cellGifDec;
@@ -39,18 +42,14 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
-		// Get file descriptor
-		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<const void>::make(0), 0);
-		current_subHandle->fd = fd.value();
-		if (ret != CELL_OK) return CELL_GIFDEC_ERROR_OPEN_FILE;
-
-		// Get size of file
-		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb);
-		if (ret != CELL_OK) return ret;
-		current_subHandle->fileSize = sb->st_size; // Get CellFsStat.st_size
+	{
+		// Get file descriptor and size
+		std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		if (!file) return CELL_GIFDEC_ERROR_OPEN_FILE;
+		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
+		current_subHandle->fileSize = file->GetSize();
 		break;
+	}
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
@@ -74,7 +73,6 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 	
 	//Write the header to buffer
 	vm::var<u8[13]> buffer; // Alloc buffer for GIF header
-	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.data())
 	{
@@ -83,9 +81,12 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
+		file->Seek(0);
+		file->Read(buffer.begin(), buffer.size());
 		break;
+	}
 	}
 
 	if (*buffer.To<be_t<u32>>(0) != 0x47494638 ||
@@ -156,7 +157,6 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	//Copy the GIF file to a buffer
 	vm::var<unsigned char[]> gif((u32)fileSize);
-	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.data())
 	{
@@ -165,9 +165,12 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 		break;
 
 	case se32(CELL_GIFDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, vm::ptr<void>::make(gif.addr()), gif.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
+		file->Seek(0);
+		file->Read(gif.ptr(), gif.size());
 		break;
+	}
 	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
@@ -265,7 +268,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
-	cellFsClose(subHandle_data->fd);
+	Emu.GetIdManager().RemoveID<vfsStream>(subHandle_data->fd);
 	Emu.GetIdManager().RemoveID<CellGifDecSubHandle>(subHandle);
 
 	return CELL_OK;
