@@ -32,7 +32,7 @@ u32 g_tls_size;
 
 std::array<std::atomic<u32>, TLS_MAX> g_tls_owners;
 
-waiter_map_t g_sys_spinlock_wm("sys_spinlock_wm"); // TODO
+waiter_map_t g_sys_spinlock_wm("sys_spinlock_wm");
 
 void sys_initialize_tls()
 {
@@ -127,7 +127,7 @@ s32 sys_lwmutex_destroy(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 	sysPrxForUser.Log("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
 	// check to prevent recursive locking in the next call
-	if (lwmutex->lock_var.read_relaxed().owner == CPU.GetId())
+	if (lwmutex->owner.read_relaxed() == CPU.GetId())
 	{
 		return CELL_EBUSY;
 	}
@@ -812,7 +812,7 @@ s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
 {
 	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
 
-	return _sys_interrupt_thread_disestablish(ih, vm::stackvar<u64>(CPU));
+	return _sys_interrupt_thread_disestablish(ih, vm::stackvar<be_t<u64>>(CPU));
 }
 
 int sys_process_is_stack(u32 p)
