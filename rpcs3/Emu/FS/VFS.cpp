@@ -161,7 +161,7 @@ vfsDirBase* VFS::OpenDir(const std::string& ps3_path) const
 	return nullptr;
 }
 
-bool VFS::CreateFile(const std::string& ps3_path) const
+bool VFS::CreateFile(const std::string& ps3_path, bool overwrite) const
 {
 	std::string path;
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
@@ -170,7 +170,7 @@ bool VFS::CreateFile(const std::string& ps3_path) const
 
 		if (res)
 		{
-			return res->Create(path);
+			return res->Create(path, overwrite);
 		}
 	}
 

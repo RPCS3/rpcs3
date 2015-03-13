@@ -537,13 +537,20 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 	return CELL_OK;
 }
 
-s32 cellFsSdataOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<const void> arg, u64 size)
+s32 cellFsSdataOpen(PPUThread& CPU, vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<const void> arg, u64 size)
 {
-	cellFs.Warning("cellFsSdataOpen(path=*0x%x, flags=0x%x, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
+	cellFs.Log("cellFsSdataOpen(path=*0x%x, flags=0x%x, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
-	/*if (flags != CELL_O_RDONLY)
-	return CELL_EINVAL;
+	if (flags != CELL_FS_O_RDONLY)
+	{
+		return CELL_EINVAL;
+	}
 
+	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::stackvar<be_t<u64>>(CPU), 8);
+
+	// Don't implement sdata decryption in this function, it should be done in sys_fs_open() syscall or somewhere else
+
+	/*
 	std::string suffix = path.substr(path.length() - 5, 5);
 	if (suffix != ".sdat" && suffix != ".SDAT")
 	return CELL_ENOTSDATA;
@@ -556,9 +563,8 @@ s32 cellFsSdataOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::pt
 
 	fd = Emu.GetIdManager().GetNewID(Emu.GetVFS().OpenFile(unpacked_path, vfsRead), TYPE_FS_FILE);
 
-	return CELL_OK;*/
-
-	return sys_fs_open(path, flags, fd, 0, arg, size);
+	return CELL_OK;
+	*/
 }
 
 s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offset, vm::ptr<const void> arg, u64 size)

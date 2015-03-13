@@ -27,7 +27,7 @@ public:
 
 	virtual bool Open(const std::string& path, vfsOpenMode mode);
 	virtual bool Close() override;
-	virtual bool Create(const std::string& path) { return false; }
+	virtual bool Create(const std::string& path, bool overwrite = false) { return false; }
 	virtual bool Exists(const std::string& path) { return false; }
 	virtual bool Rename(const std::string& from, const std::string& to) { return false; }
 	virtual bool Remove(const std::string& path) { return false; }

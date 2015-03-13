@@ -199,10 +199,10 @@ public:
 };
 
 // Helper definitions
-template<typename T, typename T2 = T> using if_arithmetic_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, T>::type;
-template<typename T, typename T2 = T> using if_arithmetic_be_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>::type;
-template<typename T, typename T2 = T> using if_arithmetic_atomic_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<T>>::type;
-template<typename T, typename T2 = T> using if_arithmetic_atomic_be_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<be_t<T>>>::type;
+template<typename T, typename T2 = T> using if_arithmetic_t = const typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, T>::type;
+template<typename T, typename T2 = T> using if_arithmetic_be_t = const typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>::type;
+template<typename T, typename T2 = T> using if_arithmetic_atomic_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<T>&>::type;
+template<typename T, typename T2 = T> using if_arithmetic_atomic_be_t = typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, _atomic_base<be_t<T>>&>::type;
 
 template<typename T> inline static if_arithmetic_t<T> operator ++(_atomic_base<T>& left)
 {
