@@ -20,18 +20,12 @@
 
 SysCallBase sys_fs("sys_fs");
 
-s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode mode, vm::ptr<const void> arg, u64 size)
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size)
 {
-	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%d, fd=*0x%x, mode=%d, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
+	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
 	std::shared_ptr<vfsStream> file;
-
-	if (mode)
-	{
-		sys_fs.Error("sys_fs_open(): unknown mode (%d)", mode);
-		//return CELL_FS_EINVAL;
-	}
 
 	// TODO: other checks for path
 
@@ -48,10 +42,40 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsRead));
 		break;
 	}
-	//case CELL_FS_O_WRONLY:
-	//case CELL_FS_O_WRONLY | CELL_FS_O_CREAT:
+
+	case CELL_FS_O_WRONLY:
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
+		
+		if (file)
+		{
+			file->Seek(0);
+		}
+
+		break;
+	}
+	
+	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT:
+	{
+		Emu.GetVFS().CreateFile(path.get_ptr());
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
+
+		if (file)
+		{
+			file->Seek(0);
+		}
+
+		break;
+	}
+
+	case CELL_FS_O_WRONLY | CELL_FS_O_APPEND:
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
+		break;
+	}
 
 	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_EXCL:
+	case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_EXCL: // ???
 	{
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteExcl));
 
@@ -62,6 +86,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode
 
 		break;
 	}
+
 	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
 	{
 		Emu.GetVFS().CreateFile(path.get_ptr());
@@ -75,30 +100,37 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
 		break;
 	}
+
 	case CELL_FS_O_RDWR:
 	{
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
+
 	case CELL_FS_O_RDWR | CELL_FS_O_CREAT:
 	{
 		Emu.GetVFS().CreateFile(path.get_ptr());
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
-	//case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_EXCL:
-	//case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
+	
+	case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
+	{
+		Emu.GetVFS().CreateFile(path.get_ptr(), true);
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
+		break;
+	}
 
 	default:
 	{
-		sys_fs.Error("sys_fs_open(): invalid or unimplemented flags (%d)", flags);
+		sys_fs.Error("sys_fs_open(): invalid or unimplemented flags (%#o)", flags);
 		return CELL_FS_EINVAL;
 	}
 	}
 
 	if (!file || !file->IsOpened())
 	{
-		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%d, mode=%d)", path.get_ptr(), flags, mode);
+		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
 		return CELL_FS_ENOENT;
 	}
 
@@ -169,6 +201,7 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 
 	if (!directory || !directory->IsOpened())
 	{
+		sys_fs.Error("sys_fs_opendir(): failed to open '%s'", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
@@ -329,9 +362,9 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return CELL_OK;
 }
 
-s32 sys_fs_mkdir(vm::ptr<const char> path, CellFsMode mode)
+s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode)
 {
-	sys_fs.Warning("sys_fs_mkdir(path=*0x%x, mode=%d)", path, mode);
+	sys_fs.Warning("sys_fs_mkdir(path=*0x%x, mode=%#o)", path, mode);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
 	const std::string _path = path.get_ptr();
@@ -528,9 +561,9 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 	return CELL_OK;
 }
 
-s32 sys_fs_chmod(vm::ptr<const char> path, CellFsMode mode)
+s32 sys_fs_chmod(vm::ptr<const char> path, s32 mode)
 {
-	sys_fs.Todo("sys_fs_chmod(path=*0x%x, mode=%d) -> CELL_OK", path, mode);
+	sys_fs.Todo("sys_fs_chmod(path=*0x%x, mode=%#o) -> CELL_OK", path, mode);
 	sys_fs.Todo("*** path = '%s'", path.get_ptr());
 
 	return CELL_OK;
