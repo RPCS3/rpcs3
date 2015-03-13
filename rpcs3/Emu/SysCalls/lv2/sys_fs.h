@@ -89,7 +89,7 @@ enum : s32
 
 enum CellFsMode : s32
 {
-	CELL_FS_S_IFMT = 0170000,
+	CELL_FS_S_IFMT  = 0170000,
 	CELL_FS_S_IFDIR = 0040000, // directory
 	CELL_FS_S_IFREG = 0100000, // regular
 	CELL_FS_S_IFLNK = 0120000, // symbolic link
@@ -126,7 +126,7 @@ struct CellFsDirent
 
 struct CellFsStat
 {
-	be_t<u32> mode;
+	be_t<s32> mode;
 	be_t<s32> uid;
 	be_t<s32> gid;
 	be_t<s64> atime;
@@ -145,7 +145,7 @@ struct CellFsUtimbuf
 #pragma pack(pop)
 
 // SysCalls
-s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u64 mode, vm::ptr<const void> arg, u64 size);
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
 s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 sys_fs_close(u32 fd);

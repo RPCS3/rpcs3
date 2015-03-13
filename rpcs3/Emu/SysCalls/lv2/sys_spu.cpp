@@ -315,11 +315,12 @@ s32 sys_spu_thread_group_start(u32 id)
 
 			spu.SetEntry(image->entry_point);
 			spu.Run();
-			spu.status.write_relaxed(SPU_STATUS_RUNNING);
 			spu.GPR[3] = u128::from64(0, args.arg1);
 			spu.GPR[4] = u128::from64(0, args.arg2);
 			spu.GPR[5] = u128::from64(0, args.arg3);
 			spu.GPR[6] = u128::from64(0, args.arg4);
+
+			spu.status.exchange(SPU_STATUS_RUNNING);
 		}
 	}
 
@@ -518,7 +519,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		{
 			auto& spu = static_cast<SPUThread&>(*t);
 
-			spu.status.write_relaxed(SPU_STATUS_STOPPED);
+			spu.status.exchange(SPU_STATUS_STOPPED);
 			spu.FastStop();
 		}
 	}

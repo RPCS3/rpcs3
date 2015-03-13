@@ -882,28 +882,28 @@ void syncLFQueueInit(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u32 siz
 
 	if (direction == CELL_SYNC_QUEUE_ANY2ANY)
 	{
-		queue->pop1.write_relaxed({});
-		queue->push1.write_relaxed({});
+		queue->pop1 = {};
+		queue->push1 = {};
 		queue->m_buffer.set(queue->m_buffer.addr() | 1);
 		queue->m_bs[0] = -1;
 		queue->m_bs[1] = -1;
 		//m_bs[2]
 		//m_bs[3]
 		queue->m_v1 = -1;
-		queue->push2.write_relaxed({ be_t<u16>::make(-1) });
-		queue->pop2.write_relaxed({ be_t<u16>::make(-1) });
+		queue->push2 = { { be_t<u16>::make(-1) } };
+		queue->pop2 = { { be_t<u16>::make(-1) } };
 	}
 	else
 	{
-		queue->pop1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->pop1.read_relaxed().m_h3, be_t<u16>::make(0) });
-		queue->push1.write_relaxed({ be_t<u16>::make(0), be_t<u16>::make(0), queue->push1.read_relaxed().m_h7, be_t<u16>::make(0) });
+		queue->pop1 = { { be_t<u16>::make(0), be_t<u16>::make(0), queue->pop1.read_relaxed().m_h3, be_t<u16>::make(0) } };
+		queue->push1 = { { be_t<u16>::make(0), be_t<u16>::make(0), queue->push1.read_relaxed().m_h7, be_t<u16>::make(0) } };
 		queue->m_bs[0] = -1; // written as u32
 		queue->m_bs[1] = -1;
 		queue->m_bs[2] = -1;
 		queue->m_bs[3] = -1;
 		queue->m_v1 = 0;
-		queue->push2.write_relaxed({});
-		queue->pop2.write_relaxed({});
+		queue->push2 = {};
+		queue->pop2 = {};
 	}
 
 	queue->m_v2 = 0;
