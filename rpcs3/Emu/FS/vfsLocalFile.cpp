@@ -51,9 +51,9 @@ bool vfsLocalFile::Open(const std::string& path, vfsOpenMode mode)
 	// }
 }
 
-bool vfsLocalFile::Create(const std::string& path)
+bool vfsLocalFile::Create(const std::string& path, bool overwrite)
 {
-	LOG_WARNING(HLE, "vfsLocalFile::Create('%s')", path.c_str());
+	LOG_WARNING(HLE, "vfsLocalFile::Create('%s', overwrite=%d)", path.c_str(), overwrite);
 	for(uint p=1; p < path.length() && path[p] != '\0' ; p++)
 	{
 		for(; p < path.length() && path[p] != '\0'; p++)
@@ -75,8 +75,8 @@ bool vfsLocalFile::Create(const std::string& path)
 	if(m != '/' && m != '\\' && !rExists(path)) // ???
 	{
 		rFile f;
-		if (!f.Create(path)) {
-			LOG_NOTICE(HLE, "vfsLocalFile::Create: couldn't create file");
+		if (!f.Create(path, overwrite)) {
+			if (overwrite) LOG_NOTICE(HLE, "vfsLocalFile::Create: couldn't create file");
 			return false;
 		}
 		else

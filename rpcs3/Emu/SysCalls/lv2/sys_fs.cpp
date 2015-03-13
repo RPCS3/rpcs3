@@ -22,83 +22,87 @@ SysCallBase sys_fs("sys_fs");
 
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, vm::ptr<const void> arg, u64 size)
 {
-	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=0x%x, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%d, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	const std::string _path = path.get_ptr();
+	std::shared_ptr<vfsStream> file;
 
-	s32 _oflags = flags;
-	if (flags & CELL_FS_O_CREAT)
+	if (mode)
 	{
-		_oflags &= ~CELL_FS_O_CREAT;
-		Emu.GetVFS().CreateFile(_path);
+		sys_fs.Error("sys_fs_open(): unknown mode (0x%x)", mode);
+		return CELL_FS_EINVAL;
 	}
 
-	vfsOpenMode o_mode;
+	// TODO: other checks for path
 
-	switch (flags & CELL_FS_O_ACCMODE)
+	if (Emu.GetVFS().ExistsDir(path.get_ptr()))
+	{
+		sys_fs.Error("sys_fs_open(): '%s' is a directory", path.get_ptr());
+		return CELL_FS_EISDIR;
+	}
+
+	switch (flags)
 	{
 	case CELL_FS_O_RDONLY:
-		_oflags &= ~CELL_FS_O_RDONLY;
-		o_mode = vfsRead;
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsRead));
 		break;
+	}
+	//case CELL_FS_O_WRONLY:
+	//case CELL_FS_O_WRONLY | CELL_FS_O_CREAT:
 
-	case CELL_FS_O_WRONLY:
-		_oflags &= ~CELL_FS_O_WRONLY;
+	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_EXCL:
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteExcl));
 
-		if (flags & CELL_FS_O_APPEND)
+		if ((!file || !file->IsOpened()) && Emu.GetVFS().ExistsFile(path.get_ptr()))
 		{
-			_oflags &= ~CELL_FS_O_APPEND;
-			o_mode = vfsWriteAppend;
+			return CELL_FS_EEXIST;
 		}
-		else if (flags & CELL_FS_O_EXCL)
-		{
-			_oflags &= ~CELL_FS_O_EXCL;
-			o_mode = vfsWriteExcl;
-		}
-		else //if (flags & CELL_FS_O_TRUNC)
-		{
-			_oflags &= ~CELL_FS_O_TRUNC;
-			o_mode = vfsWrite;
-		}
+
 		break;
+	}
+	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
+	{
+		Emu.GetVFS().CreateFile(path.get_ptr());
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWrite));
+		break;
+	}
 
+	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_APPEND:
+	{
+		Emu.GetVFS().CreateFile(path.get_ptr());
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
+		break;
+	}
 	case CELL_FS_O_RDWR:
-		_oflags &= ~CELL_FS_O_RDWR;
-		if (flags & CELL_FS_O_TRUNC)
-		{
-			_oflags &= ~CELL_FS_O_TRUNC;
-			//truncate file before opening it as read/write
-			auto filePtr = Emu.GetVFS().OpenFile(_path, vfsWrite);
-			delete filePtr;
-		}
-		o_mode = vfsReadWrite;
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
-
-	if (_oflags != 0)
+	case CELL_FS_O_RDWR | CELL_FS_O_CREAT:
 	{
-		sys_fs.Error("sys_fs_open(): '%s' has unknown flags! flags: 0x%08x", path.get_ptr(), flags);
-		return CELL_EINVAL;
+		Emu.GetVFS().CreateFile(path.get_ptr());
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
+		break;
+	}
+	//case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_EXCL:
+	//case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
+
+	default:
+	{
+		sys_fs.Error("sys_fs_open(): invalid or unimplemented flags (%d)", flags);
+		return CELL_FS_EINVAL;
+	}
 	}
 
-	if (!Emu.GetVFS().ExistsFile(_path))
+	if (!file || !file->IsOpened())
 	{
-		sys_fs.Error("sys_fs_open(): '%s' not found! flags: 0x%08x", path.get_ptr(), flags);
-		return CELL_ENOENT;
+		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%d, mode=0x%x)", path.get_ptr(), flags, mode);
+		return CELL_FS_ENOENT;
 	}
 
-	std::shared_ptr<vfsStream> stream(Emu.GetVFS().OpenFile(_path, o_mode));
-
-	if (!stream || !stream->IsOpened())
-	{
-		sys_fs.Error("sys_fs_open(): '%s' not found! flags: 0x%08x", path.get_ptr(), flags);
-		return CELL_ENOENT;
-	}
-
-	u32 id = Emu.GetIdManager().GetNewID(stream, TYPE_FS_FILE);
-	*fd = id;
-	sys_fs.Notice("sys_fs_open(): '%s' opened, id -> 0x%x", path.get_ptr(), id);
+	*fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
 
 	return CELL_OK;
 }
@@ -108,14 +112,13 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 	sys_fs.Log("sys_fs_read(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
 	std::shared_ptr<vfsStream> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		return CELL_FS_EBADF; // TODO: return if not opened for reading
+	}
 
-	// TODO: checks
-
-	const u64 res = nbytes ? file->Read(buf.get_ptr(), nbytes) : 0;
-
-	if (nread) *nread = res;
+	*nread = file->Read(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
 }
@@ -125,23 +128,34 @@ s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrit
 	sys_fs.Log("sys_fs_write(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
 	std::shared_ptr<vfsStream> file;
-	if (!Emu.GetIdManager().GetIDData(fd, file)) return CELL_ESRCH;
 
-	// TODO: checks
+	if (!Emu.GetIdManager().GetIDData(fd, file))
+	{
+		return CELL_FS_EBADF; // TODO: return if not opened for writing
+	}
 
-	const u64 res = nbytes ? file->Write(buf.get_ptr(), nbytes) : 0;
-
-	if (nwrite) *nwrite = res;
+	*nwrite = file->Write(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
 }
 
 s32 sys_fs_close(u32 fd)
 {
-	sys_fs.Warning("sys_fs_close(fd=0x%x)", fd);
+	sys_fs.Log("sys_fs_close(fd=0x%x)", fd);
 
-	if (!Emu.GetIdManager().RemoveID<vfsStream>(fd))
-		return CELL_ESRCH;
+	std::shared_ptr<vfsStream> file;
+
+	if (!Emu.GetIdManager().GetIDData(fd, file))
+	{
+		return CELL_FS_EBADF;
+	}
+
+	if (false)
+	{
+		return CELL_FS_EBUSY; // TODO: return if locked
+	}
+
+	Emu.GetIdManager().RemoveID<vfsStream>(fd);
 
 	return CELL_OK;
 }
@@ -151,13 +165,15 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 	sys_fs.Warning("sys_fs_opendir(path=*0x%x, fd=*0x%x)", path, fd);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::shared_ptr<vfsDirBase> dir(Emu.GetVFS().OpenDir(path.get_ptr()));
-	if (!dir || !dir->IsOpened())
+	std::shared_ptr<vfsDirBase> directory(Emu.GetVFS().OpenDir(path.get_ptr()));
+
+	if (!directory || !directory->IsOpened())
 	{
-		return CELL_ENOENT;
+		return CELL_FS_ENOENT;
 	}
 
-	*fd = Emu.GetIdManager().GetNewID(dir, TYPE_FS_DIR);
+	*fd = Emu.GetIdManager().GetNewID(directory, TYPE_FS_DIR);
+
 	return CELL_OK;
 }
 
@@ -166,10 +182,14 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 	sys_fs.Warning("sys_fs_readdir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
 	std::shared_ptr<vfsDirBase> directory;
+
 	if (!Emu.GetIdManager().GetIDData(fd, directory))
+	{
 		return CELL_ESRCH;
+	}
 
 	const DirEntryInfo* info = directory->Read();
+
 	if (info)
 	{
 		dir->d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
@@ -187,10 +207,16 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 
 s32 sys_fs_closedir(u32 fd)
 {
-	sys_fs.Warning("sys_fs_closedir(fd=0x%x)", fd);
+	sys_fs.Log("sys_fs_closedir(fd=0x%x)", fd);
 
-	if (!Emu.GetIdManager().RemoveID<vfsDirBase>(fd))
+	std::shared_ptr<vfsDirBase> directory;
+
+	if (!Emu.GetIdManager().GetIDData(fd, directory))
+	{
 		return CELL_ESRCH;
+	}
+
+	Emu.GetIdManager().RemoveID<vfsDirBase>(fd);
 
 	return CELL_OK;
 }
