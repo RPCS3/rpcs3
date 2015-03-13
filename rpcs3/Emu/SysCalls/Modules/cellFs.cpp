@@ -47,7 +47,7 @@ s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<con
 	// TODO
 
 	// call the syscall
-	return sys_fs_open(path, flags, fd, 0, arg, size);
+	return sys_fs_open(path, flags, fd, {}, arg, size);
 }
 
 s32 cellFsRead(PPUThread& CPU, u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
