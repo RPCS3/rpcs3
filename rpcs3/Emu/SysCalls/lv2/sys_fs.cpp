@@ -20,7 +20,7 @@
 
 SysCallBase sys_fs("sys_fs");
 
-s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, vm::ptr<const void> arg, u64 size)
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode mode, vm::ptr<const void> arg, u64 size)
 {
 	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%d, fd=*0x%x, mode=%d, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
@@ -98,7 +98,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, 
 
 	if (!file || !file->IsOpened())
 	{
-		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%d, mode=0x%x)", path.get_ptr(), flags, mode);
+		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%d, mode=%d)", path.get_ptr(), flags, mode);
 		return CELL_FS_ENOENT;
 	}
 

@@ -145,7 +145,7 @@ struct CellFsUtimbuf
 #pragma pack(pop)
 
 // SysCalls
-s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, vm::ptr<const void> arg, u64 size);
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
 s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 sys_fs_close(u32 fd);
