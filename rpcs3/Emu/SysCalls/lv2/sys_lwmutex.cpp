@@ -16,7 +16,7 @@ void lwmutex_create(sys_lwmutex_t& lwmutex, bool recursive, u32 protocol, u64 na
 {
 	std::shared_ptr<lwmutex_t> mutex(new lwmutex_t(protocol, name));
 
-	lwmutex.lock_var.write_relaxed({ lwmutex::free, lwmutex::zero });
+	lwmutex.lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex.attribute = protocol | (recursive ? SYS_SYNC_RECURSIVE : SYS_SYNC_NOT_RECURSIVE);
 	lwmutex.recursive_count = 0;
 	lwmutex.sleep_queue = Emu.GetIdManager().GetNewID(mutex, TYPE_LWMUTEX);

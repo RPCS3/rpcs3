@@ -139,10 +139,7 @@ union spu_channel_t
 
 	atomic_t<sync_var_t> sync_var; // atomic variable
 
-	sync_var_t data; // unsafe direct access
-
 public:
-
 	bool push(u32 value)
 	{
 		bool out_result;
@@ -205,14 +202,14 @@ public:
 		sync_var.write_relaxed({ count, value });
 	}
 
-	u32 get_value()
+	u32 get_value() volatile
 	{
-		return sync_var.read_relaxed().value;
+		return sync_var.data.value;
 	}
 
-	u32 get_count()
+	u32 get_count() volatile
 	{
-		return sync_var.read_relaxed().count;
+		return sync_var.data.count;
 	}
 };
 
@@ -232,8 +229,8 @@ struct spu_channel_4_t
 public:
 	void clear()
 	{
-		sync_var.write_relaxed({});
-		value3.write_relaxed({});
+		sync_var = {};
+		value3 = {};
 	}
 
 	void push_uncond(u32 value)
@@ -275,9 +272,9 @@ public:
 		return out_result;
 	}
 
-	u32 get_count()
+	u32 get_count() volatile
 	{
-		return sync_var.read_relaxed().count;
+		return sync_var.data.count;
 	}
 };
 
@@ -311,10 +308,10 @@ public:
 
 	void clear()
 	{
-		mask.write_relaxed(0);
-		stat.write_relaxed(0);
+		mask = {};
+		stat = {};
 
-		assigned.write_relaxed(-1);
+		assigned = { -1 };
 	}
 };
 

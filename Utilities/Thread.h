@@ -193,8 +193,8 @@ class squeue_t
 
 public:
 	squeue_t()
+		: m_sync({})
 	{
-		m_sync.write_relaxed({});
 	}
 
 	u32 get_max_size() const
@@ -202,9 +202,9 @@ public:
 		return sq_size;
 	}
 
-	bool is_full() const
+	bool is_full() const volatile
 	{
-		return m_sync.read_relaxed().count == sq_size;
+		return m_sync.data.count == sq_size;
 	}
 
 	bool push(const T& data, const std::function<bool()>& test_exit)

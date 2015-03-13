@@ -114,7 +114,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 
 	std::shared_ptr<lwmutex_t> lw(new lwmutex_t(protocol, attr->name_u64));
 
-	lwmutex->lock_var.write_relaxed({ lwmutex::free, lwmutex::zero });
+	lwmutex->lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
 	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw);
@@ -575,7 +575,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	const be_t<u32> recursive_value = lwmutex->recursive_count;
 
 	// set special value
-	lwmutex->owner.write_relaxed(lwmutex::reserved);
+	lwmutex->owner = { lwmutex::reserved };
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
