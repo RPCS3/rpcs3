@@ -44,27 +44,17 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 	}
 
 	case CELL_FS_O_WRONLY:
+	case CELL_FS_O_RDWR:
 	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
-		
-		if (file)
-		{
-			file->Seek(0);
-		}
-
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
 	
 	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT:
+	case CELL_FS_O_RDWR | CELL_FS_O_CREAT:
 	{
 		Emu.GetVFS().CreateFile(path.get_ptr());
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
-
-		if (file)
-		{
-			file->Seek(0);
-		}
-
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
 
@@ -87,6 +77,12 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		break;
 	}
 
+	case CELL_FS_O_WRONLY | CELL_FS_O_TRUNC:
+	{
+		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWrite));
+		break;
+	}
+
 	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
 	{
 		Emu.GetVFS().CreateFile(path.get_ptr());
@@ -98,19 +94,6 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 	{
 		Emu.GetVFS().CreateFile(path.get_ptr());
 		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
-		break;
-	}
-
-	case CELL_FS_O_RDWR:
-	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
-		break;
-	}
-
-	case CELL_FS_O_RDWR | CELL_FS_O_CREAT:
-	{
-		Emu.GetVFS().CreateFile(path.get_ptr());
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
 		break;
 	}
 	
@@ -166,6 +149,8 @@ s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrit
 		return CELL_FS_EBADF; // TODO: return if not opened for writing
 	}
 
+	// TODO: return CELL_FS_EBUSY if locked
+
 	*nwrite = file->Write(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
@@ -182,10 +167,7 @@ s32 sys_fs_close(u32 fd)
 		return CELL_FS_EBADF;
 	}
 
-	if (false)
-	{
-		return CELL_FS_EBUSY; // TODO: return if locked
-	}
+	// TODO: return CELL_FS_EBUSY if locked
 
 	Emu.GetIdManager().RemoveID<vfsStream>(fd);
 
