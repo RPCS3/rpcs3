@@ -42,12 +42,12 @@ struct FsRingBufferConfig
 
 s32 cellFsOpen(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<const void> arg, u64 size)
 {
-	cellFs.Warning("cellFsOpen(path=*0x%x, flags=%d, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
+	cellFs.Warning("cellFsOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx) -> sys_fs_open()", path, flags, fd, arg, size);
 
 	// TODO
 
 	// call the syscall
-	return sys_fs_open(path, flags, fd, {}, arg, size);
+	return sys_fs_open(path, flags, fd, flags & CELL_FS_O_CREAT ? CELL_FS_S_IRUSR | CELL_FS_S_IWUSR : 0, arg, size);
 }
 
 s32 cellFsRead(PPUThread& CPU, u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
@@ -118,9 +118,9 @@ s32 cellFsFstat(u32 fd, vm::ptr<CellFsStat> sb)
 	return sys_fs_fstat(fd, sb);
 }
 
-s32 cellFsMkdir(vm::ptr<const char> path, CellFsMode mode)
+s32 cellFsMkdir(vm::ptr<const char> path, s32 mode)
 {
-	cellFs.Warning("cellFsMkdir(path=*0x%x, mode=%d) -> sys_fs_mkdir()", path, mode);
+	cellFs.Warning("cellFsMkdir(path=*0x%x, mode=%#o) -> sys_fs_mkdir()", path, mode);
 
 	// TODO
 
@@ -209,9 +209,9 @@ s32 cellFsFtruncate(u32 fd, u64 size)
 	return sys_fs_ftruncate(fd, size);
 }
 
-s32 cellFsChmod(vm::ptr<const char> path, CellFsMode mode)
+s32 cellFsChmod(vm::ptr<const char> path, s32 mode)
 {
-	cellFs.Warning("cellFsChmod(path=*0x%x, mode=%d) -> sys_fs_chmod()", path, mode);
+	cellFs.Warning("cellFsChmod(path=*0x%x, mode=%#o) -> sys_fs_chmod()", path, mode);
 
 	// TODO
 
@@ -539,7 +539,7 @@ int sdata_unpack(const std::string& packed_file, const std::string& unpacked_fil
 
 s32 cellFsSdataOpen(PPUThread& CPU, vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, vm::ptr<const void> arg, u64 size)
 {
-	cellFs.Log("cellFsSdataOpen(path=*0x%x, flags=%d, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	cellFs.Log("cellFsSdataOpen(path=*0x%x, flags=%#o, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
 
 	if (flags != CELL_FS_O_RDONLY)
 	{
@@ -569,7 +569,7 @@ s32 cellFsSdataOpen(PPUThread& CPU, vm::ptr<const char> path, s32 flags, vm::ptr
 
 s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offset, vm::ptr<const void> arg, u64 size)
 {
-	cellFs.Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%d, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
+	cellFs.Todo("cellFsSdataOpenByFd(mself_fd=0x%x, flags=%#o, sdata_fd=*0x%x, offset=0x%llx, arg=*0x%x, size=0x%llx)", mself_fd, flags, sdata_fd, offset, arg, size);
 
 	// TODO:
 

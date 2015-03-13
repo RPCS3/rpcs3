@@ -145,7 +145,7 @@ struct CellFsUtimbuf
 #pragma pack(pop)
 
 // SysCalls
-s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, CellFsMode mode, vm::ptr<const void> arg, u64 size);
+s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
 s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
 s32 sys_fs_close(u32 fd);
@@ -154,7 +154,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread);
 s32 sys_fs_closedir(u32 fd);
 s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb);
 s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb);
-s32 sys_fs_mkdir(vm::ptr<const char> path, CellFsMode mode);
+s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode);
 s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to);
 s32 sys_fs_rmdir(vm::ptr<const char> path);
 s32 sys_fs_unlink(vm::ptr<const char> path);
@@ -163,4 +163,4 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 s32 sys_fs_get_block_size(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);
 s32 sys_fs_truncate(vm::ptr<const char> path, u64 size);
 s32 sys_fs_ftruncate(u32 fd, u64 size);
-s32 sys_fs_chmod(vm::ptr<const char> path, CellFsMode mode);
+s32 sys_fs_chmod(vm::ptr<const char> path, s32 mode);
