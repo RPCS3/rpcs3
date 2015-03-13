@@ -120,12 +120,12 @@ namespace vm
 
 		template<typename AT> operator _ptr_base<void, 1, AT>() const
 		{
-			return _ptr_base<void, 1, AT>::make(m_data);
+			return _ptr_base<void, 1, AT>::make(m_addr);
 		}
 
 		template<typename AT> operator _ptr_base<const void, 1, AT>() const
 		{
-			return _ptr_base<const void, 1, AT>::make(m_data);
+			return _ptr_base<const void, 1, AT>::make(m_addr);
 		}
 		
 		operator T&()
