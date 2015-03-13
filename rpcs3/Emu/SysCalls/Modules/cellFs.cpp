@@ -267,6 +267,64 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 	return CELL_OK;
 }
 
+s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
+{
+	cellFs.Log("cellFsReadWithOffset(fd=0x%x, offset=0x%llx, buf=*0x%x, buffer_size=0x%llx, nread=*0x%x)", fd, offset, buf, buffer_size, nread);
+
+	// TODO: use single sys_fs_fcntl syscall
+
+	std::shared_ptr<vfsStream> file;
+
+	if (!Emu.GetIdManager().GetIDData(fd, file))
+	{
+		return CELL_FS_EBADF;
+	}
+
+	const auto old_position = file->Tell();
+
+	file->Seek(offset);
+
+	const auto read = file->Read(buf.get_ptr(), buffer_size);
+
+	file->Seek(old_position);
+
+	if (nread)
+	{
+		*nread = read;
+	}
+
+	return CELL_OK;
+}
+
+s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::ptr<const void> buf, u64 data_size, vm::ptr<u64> nwrite)
+{
+	cellFs.Log("cellFsWriteWithOffset(fd=0x%x, offset=0x%llx, buf=*0x%x, data_size=0x%llx, nwrite=*0x%x)", fd, offset, buf, data_size, nwrite);
+
+	// TODO: use single sys_fs_fcntl syscall
+
+	std::shared_ptr<vfsStream> file;
+
+	if (!Emu.GetIdManager().GetIDData(fd, file))
+	{
+		return CELL_FS_EBADF;
+	}
+
+	const auto old_position = file->Tell();
+
+	file->Seek(offset);
+
+	const auto written = file->Write(buf.get_ptr(), data_size);
+
+	file->Seek(old_position);
+
+	if (nwrite)
+	{
+		*nwrite = written;
+	}
+
+	return CELL_OK;
+}
+
 s32 cellFsStReadInit(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
 	cellFs.Warning("cellFsStReadInit(fd=0x%x, ringbuf=*0x%x)", fd, ringbuf);
@@ -687,24 +745,6 @@ s32 cellFsAioFinish(vm::ptr<const char> mount_point)
 	return CELL_OK;
 }
 
-s32 cellFsReadWithOffset(PPUThread& CPU, u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size, vm::ptr<u64> nread)
-{
-	cellFs.Warning("cellFsReadWithOffset(fd=%d, offset=0x%llx, buf=*0x%x, buffer_size=%lld, nread=*0x%llx)", fd, offset, buf, buffer_size, nread);
-
-	int ret;
-	vm::stackvar<be_t<u64>> oldPos(CPU), newPos(CPU);
-	ret = cellFsLseek(fd, 0, CELL_FS_SEEK_CUR, oldPos);       // Save the current position
-	if (ret) return ret;
-	ret = cellFsLseek(fd, offset, CELL_FS_SEEK_SET, newPos);  // Move to the specified offset
-	if (ret) return ret;
-	ret = cellFsRead(CPU, fd, buf, buffer_size, nread);    // Read the file
-	if (ret) return ret;
-	ret = cellFsLseek(fd, oldPos.value(), CELL_FS_SEEK_SET, newPos);  // Return to the old position
-	if (ret) return ret;
-
-	return CELL_OK;
-}
-
 s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
 {
 	cellFs.Todo("cellFsSetDefaultContainer(id=%d, total_limit=%d)", id, total_limit);
@@ -757,6 +797,7 @@ Module cellFs("cellFs", []()
 	REG_FUNC(cellFs, cellFsGetBlockSize);
 	REG_FUNC(cellFs, cellFsGetFreeSize);
 	REG_FUNC(cellFs, cellFsReadWithOffset);
+	REG_FUNC(cellFs, cellFsWriteWithOffset);
 	REG_FUNC(cellFs, cellFsGetDirectoryEntries);
 	REG_FUNC(cellFs, cellFsStReadInit);
 	REG_FUNC(cellFs, cellFsStReadFinish);
