@@ -49,7 +49,7 @@ union _atomic_base
 	using subtype = typename _to_atomic_subtype<type, sizeof(type)>::type;
 
 	type data; // unsafe direct access
-	subtype volatile sub_data; // unsafe direct access to substitute type
+	subtype sub_data; // unsafe direct access to substitute type
 
 	__forceinline static const subtype to_subtype(const type& value)
 	{
@@ -68,44 +68,44 @@ union _atomic_base
 
 public:
 	// atomically compare data with cmp, replace with exch if equal, return previous data value anyway
-	__forceinline const type compare_and_swap(const type& cmp, const type& exch)
+	__forceinline const type compare_and_swap(const type& cmp, const type& exch) volatile
 	{
 		return from_subtype(InterlockedCompareExchange(&sub_data, to_subtype(exch), to_subtype(cmp)));
 	}
 
 	// atomically compare data with cmp, replace with exch if equal, return true if data was replaced
-	__forceinline bool compare_and_swap_test(const type& cmp, const type& exch)
+	__forceinline bool compare_and_swap_test(const type& cmp, const type& exch) volatile
 	{
 		return InterlockedCompareExchangeTest(&sub_data, to_subtype(exch), to_subtype(cmp));
 	}
 
 	// read data with memory barrier
-	__forceinline const type read_sync() const
+	__forceinline const type read_sync() const volatile
 	{
 		return from_subtype(InterlockedCompareExchange(const_cast<subtype*>(&sub_data), 0, 0));
 	}
 
 	// atomically replace data with exch, return previous data value
-	__forceinline const type exchange(const type& exch)
+	__forceinline const type exchange(const type& exch) volatile
 	{
 		return from_subtype(InterlockedExchange(&sub_data, to_subtype(exch)));
 	}
 
 	// read data without memory barrier
-	__forceinline const type read_relaxed() const
+	__forceinline const type read_relaxed() const volatile
 	{
 		const subtype value = const_cast<const subtype&>(sub_data);
 		return from_subtype(value);
 	}
 
 	// write data without memory barrier
-	__forceinline void write_relaxed(const type& value)
+	__forceinline void write_relaxed(const type& value) volatile
 	{
 		const_cast<subtype&>(sub_data) = to_subtype(value);
 	}
 
 	// perform atomic operation on data
-	template<typename FT> __forceinline void atomic_op(const FT atomic_proc)
+	template<typename FT> __forceinline void atomic_op(const FT atomic_proc) volatile
 	{
 		while (true)
 		{
@@ -117,7 +117,7 @@ public:
 	}
 
 	// perform atomic operation on data with special exit condition (if intermediate result != proceed_value)
-	template<typename RT, typename FT> __forceinline RT atomic_op(const RT proceed_value, const FT atomic_proc)
+	template<typename RT, typename FT> __forceinline RT atomic_op(const RT proceed_value, const FT atomic_proc) volatile
 	{
 		while (true)
 		{
@@ -130,7 +130,7 @@ public:
 	}
 
 	// perform atomic operation on data with additional memory barrier
-	template<typename FT> __forceinline void atomic_op_sync(const FT atomic_proc)
+	template<typename FT> __forceinline void atomic_op_sync(const FT atomic_proc) volatile
 	{
 		subtype old = InterlockedCompareExchange(&sub_data, 0, 0);
 		while (true)
@@ -144,7 +144,7 @@ public:
 	}
 
 	// perform atomic operation on data with additional memory barrier and special exit condition (if intermediate result != proceed_value)
-	template<typename RT, typename FT> __forceinline RT atomic_op_sync(const RT proceed_value, const FT atomic_proc)
+	template<typename RT, typename FT> __forceinline RT atomic_op_sync(const RT proceed_value, const FT atomic_proc) volatile
 	{
 		subtype old = InterlockedCompareExchange(&sub_data, 0, 0);
 		while (true)
@@ -159,40 +159,40 @@ public:
 	}
 
 	// atomic bitwise OR, returns previous data
-	__forceinline const type _or(const type& right)
+	__forceinline const type _or(const type& right) volatile
 	{
 		return from_subtype(InterlockedOr(&sub_data, to_subtype(right)));
 	}
 
 	// atomic bitwise AND, returns previous data
-	__forceinline const type _and(const type& right)
+	__forceinline const type _and(const type& right) volatile
 	{
 		return from_subtype(InterlockedAnd(&sub_data, to_subtype(right)));
 	}
 
 	// atomic bitwise AND NOT (inverts right argument), returns previous data
-	__forceinline const type _and_not(const type& right)
+	__forceinline const type _and_not(const type& right) volatile
 	{
 		return from_subtype(InterlockedAnd(&sub_data, ~to_subtype(right)));
 	}
 
 	// atomic bitwise XOR, returns previous data
-	__forceinline const type _xor(const type& right)
+	__forceinline const type _xor(const type& right) volatile
 	{
 		return from_subtype(InterlockedXor(&sub_data, to_subtype(right)));
 	}
 
-	__forceinline const type operator |= (const type& right)
+	__forceinline const type operator |= (const type& right) volatile
 	{
 		return from_subtype(InterlockedOr(&sub_data, to_subtype(right)) | to_subtype(right));
 	}
 
-	__forceinline const type operator &= (const type& right)
+	__forceinline const type operator &= (const type& right) volatile
 	{
 		return from_subtype(InterlockedAnd(&sub_data, to_subtype(right)) & to_subtype(right));
 	}
 
-	__forceinline const type operator ^= (const type& right)
+	__forceinline const type operator ^= (const type& right) volatile
 	{
 		return from_subtype(InterlockedXor(&sub_data, to_subtype(right)) ^ to_subtype(right));
 	}

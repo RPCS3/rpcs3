@@ -78,7 +78,7 @@ void SPUThread::InitRegs()
 	ch_mfc_args = {};
 	mfc_queue.clear();
 
-	ch_tag_mask = {};
+	ch_tag_mask = 0;
 	ch_tag_stat = {};
 	ch_stall_stat = {};
 	ch_atomic_stat = {};
@@ -88,19 +88,20 @@ void SPUThread::InitRegs()
 	ch_out_mbox = {};
 	ch_out_intr_mbox = {};
 
-	snr_config = {};
+	snr_config = 0;
 
 	ch_snr1 = {};
 	ch_snr2 = {};
 
-	ch_event_mask = {};
+	ch_event_mask = 0;
 	ch_event_stat = {};
 
 	ch_dec_start_timestamp = get_time(); // ???
-	ch_dec_value = {};
+	ch_dec_value = 0;
 
 	run_ctrl = {};
 	status = {};
+	npc = {};
 
 	int0.clear();
 	int2.clear();
