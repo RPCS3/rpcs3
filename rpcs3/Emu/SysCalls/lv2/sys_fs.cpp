@@ -22,15 +22,15 @@ SysCallBase sys_fs("sys_fs");
 
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, u32 mode, vm::ptr<const void> arg, u64 size)
 {
-	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%d, fd=*0x%x, arg=*0x%x, size=0x%llx)", path, flags, fd, arg, size);
+	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%d, fd=*0x%x, mode=%d, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
 	std::shared_ptr<vfsStream> file;
 
 	if (mode)
 	{
-		sys_fs.Error("sys_fs_open(): unknown mode (0x%x)", mode);
-		return CELL_FS_EINVAL;
+		sys_fs.Error("sys_fs_open(): unknown mode (%d)", mode);
+		//return CELL_FS_EINVAL;
 	}
 
 	// TODO: other checks for path
