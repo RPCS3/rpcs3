@@ -184,6 +184,26 @@ struct area_base
 	{
 		return{ x1, y1, x2 - x1, y2 - y1 };
 	}
+
+	void flip_vertical()
+	{
+		std::swap(y1, y2);
+	}
+
+	void flip_horizontal()
+	{
+		std::swap(x1, x2);
+	}
+
+	area_base flipped_vertical() const
+	{
+		return{ x1, y2, x2, y1 };
+	}
+
+	area_base flipped_horizontal() const
+	{
+		return{ x2, y1, x1, y2 };
+	}
 };
 
 template<typename T>

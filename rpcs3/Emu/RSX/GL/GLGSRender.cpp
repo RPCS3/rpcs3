@@ -886,13 +886,13 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		if (!m_vertex_data[i].IsEnabled()) continue;
 
 #if	DUMP_VERTEX_DATA
-		dump.Write(wxString::Format("VertexData[%d]:\n", i));
+		dump.Write(fmt::format("VertexData[%d]:\n", i));
 		switch (m_vertex_data[i].type)
 		{
 		case CELL_GCM_VERTEX_S1:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
-				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -900,7 +900,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		case CELL_GCM_VERTEX_F:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 4)
 			{
-				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if (!(((j + 4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -908,7 +908,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		case CELL_GCM_VERTEX_SF:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
-				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -916,7 +916,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		case CELL_GCM_VERTEX_UB:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
 			{
-				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%d\n", m_vertex_data[i].data[j]));
 				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -924,7 +924,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		case CELL_GCM_VERTEX_S32K:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
 			{
-				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -934,7 +934,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		case CELL_GCM_VERTEX_UB256:
 			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
 			{
-				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
+				dump.Write(fmt::Format("%d\n", m_vertex_data[i].data[j]));
 				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
 			break;
@@ -974,34 +974,34 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
 
-		if (!m_vertex_data[i].addr)
+		if (0 && !m_vertex_data[i].addr)
 		{
 			switch (m_vertex_data[i].type)
 			{
 			case CELL_GCM_VERTEX_S32K:
 			case CELL_GCM_VERTEX_S1:
-				switch(m_vertex_data[i].size)
+				switch (std::min<uint>(m_vertex_data[i].size, m_vertex_data[i].data.size()))
 				{
 				case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
-				case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-				case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-				case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2sv(i, (GLshort*)m_vertex_data[i].data.data()); break;
+				case 3: glVertexAttrib3sv(i, (GLshort*)m_vertex_data[i].data.data()); break;
+				case 4: glVertexAttrib4sv(i, (GLshort*)m_vertex_data[i].data.data()); break;
 				}
 				break;
 
 			case CELL_GCM_VERTEX_F:
-				switch (m_vertex_data[i].size)
+				switch (std::min<uint>(m_vertex_data[i].size, m_vertex_data[i].data.size()))
 				{
 				case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
-				case 2: glVertexAttrib2fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-				case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-				case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2fv(i, (GLfloat*)m_vertex_data[i].data.data()); break;
+				case 3: glVertexAttrib3fv(i, (GLfloat*)m_vertex_data[i].data.data()); break;
+				case 4: glVertexAttrib4fv(i, (GLfloat*)m_vertex_data[i].data.data()); break;
 				}
 				break;
 
 			case CELL_GCM_VERTEX_CMP:
 			case CELL_GCM_VERTEX_UB:
-				glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
+				glVertexAttrib4ubv(i, (GLubyte*)m_vertex_data[i].data.data());
 				break;
 			}
 
@@ -1027,6 +1027,7 @@ void GLGSRender::DisableVertexData()
 	{
 		if (!m_vertex_data[i].IsEnabled()) continue;
 		glDisableVertexAttribArray(i);
+		m_vertex_data[i].data.clear();
 		checkForGlError("glDisableVertexAttribArray");
 	}
 	m_vao.Unbind();
@@ -1049,22 +1050,22 @@ void GLGSRender::InitVertexData()
 		l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
-		glUniform4fv(l, 4, c.second.xyzw);
-		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
+		glUniform4f(l, c.second.x, c.second.y, c.second.z, c.second.w);
+		//LOG_ERROR(RSX, "glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
 	}
 
 	// Scale
-	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[5]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[0]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / 2.f);
+	scaleOffsetMat[5] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)] / (RSXThread::m_height / 2.f);
 	scaleOffsetMat[10] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
 
 	// Offset
-	scaleOffsetMat[3]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
-	scaleOffsetMat[7]  = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
+	scaleOffsetMat[3] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - RSXThread::m_width / 2.f;
+	scaleOffsetMat[7] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - RSXThread::m_height / 2.f;
 	scaleOffsetMat[11] = (GLfloat&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
 
-	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
-	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
+	scaleOffsetMat[3] /= RSXThread::m_width / 2.0f;
+	scaleOffsetMat[7] /= RSXThread::m_height / 2.0f;
 
 	l = m_program.GetLocation("scaleOffsetMat");
 	glUniformMatrix4fv(l, 1, false, scaleOffsetMat);
@@ -1089,7 +1090,7 @@ void GLGSRender::InitFragmentData()
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
-		glUniform4fv(l, 4, c.second.xyzw);
+		glUniform4f(l, c.second.x, c.second.y, c.second.z, c.second.w);
 		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
 	}
 
@@ -1951,10 +1952,10 @@ void GLGSRender::ExecCMD()
 
 	if (m_set_fog_params)
 	{
-		glFogf(GL_FOG_START, m_fog_param0);
-		checkForGlError("glFogf(GL_FOG_START)");
-		glFogf(GL_FOG_END, m_fog_param1);
-		checkForGlError("glFogf(GL_FOG_END)");
+		//glFogf(GL_FOG_START, m_fog_param0);
+		//checkForGlError("glFogf(GL_FOG_START)");
+		//glFogf(GL_FOG_END, m_fog_param1);
+		//checkForGlError("glFogf(GL_FOG_END)");
 	}
 
 	if (m_set_restart_index)
@@ -2062,16 +2063,36 @@ void GLGSRender::Flip()
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
-		/*
-		// Fast path for non-MRT using glBlitFramebuffer.
-		GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-		// Renderbuffer is upside turn , swapped srcY0 and srcY1
-		GLfbo::Blit(0, RSXThread::m_height, RSXThread::m_width, 0, 0, 0, RSXThread::m_width, RSXThread::m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		*/
-
 		area screen_area = coordi{ {}, { (int)RSXThread::m_width, (int)RSXThread::m_height } };
-		area flipped_screen_area = { 0, (int)RSXThread::m_height, (int)RSXThread::m_width, 0 };
-		m_fbo.blit(gl::screen, screen_area, flipped_screen_area);
+		coordi aspect_ratio;
+		if (1) //enable aspect ratio
+		{
+			sizei csize = m_frame->GetClientSize();
+			sizei new_size = csize;
+
+			const double aq = (double)RSXThread::m_width / RSXThread::m_height;
+			const double rq = (double)new_size.width / new_size.height;
+			const double q = aq / rq;
+
+			if (q > 1.0)
+			{
+				new_size.height = int(new_size.height / q);
+				aspect_ratio.y = (csize.height - new_size.height) / 2;
+			}
+			else if (q < 1.0)
+			{
+				new_size.width = int(new_size.width * q);
+				aspect_ratio.x = (csize.width - new_size.width) / 2;
+			}
+
+			aspect_ratio.size = new_size;
+		}
+		else
+		{
+			aspect_ratio.size = m_frame->GetClientSize();
+		}
+
+		m_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical());
 	}
 		break;
 
