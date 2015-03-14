@@ -374,13 +374,8 @@ public:
 				vdata[i] = re32(vdata[i]);
 			}
 
-			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)
-			{
-				m_data.push_back(vdata[i]);
-			}
-
 			TaskVP();
-			GLVertexDecompilerThread(m_data, m_glsl_shader, param_array).Task();
+			GLVertexDecompilerThread(0, vdata, m_glsl_shader, param_array).Task();
 		}
 	}
 

@@ -21,45 +21,6 @@ extern "C"
 
 u32 methodRegisters[0xffff];
 
-void RSXThread::NativeRescale(float width, float height)
-{
-	switch (Ini.GSResolution.GetValue())
-	{
-	case 1: // 1920x1080 window size
-	{
-		m_width_scale = 1920 / width  * 2.0f;
-		m_height_scale = 1080 / height * 2.0f;
-		m_width = 1920;
-		m_height = 1080;
-		break;
-	}
-	case 2: // 1280x720 window size
-	{
-		m_width_scale = 1280 / width * 2.0f;
-		m_height_scale = 720 / height * 2.0f;
-		m_width = 1280;
-		m_height = 720;
-		break;
-	}
-	case 4: // 720x480 window size
-	{
-		m_width_scale = 720 / width * 2.0f;
-		m_height_scale = 480 / height * 2.0f;
-		m_width = 720;
-		m_height = 480;
-		break;
-	}
-	case 5: // 720x576 window size
-	{
-		m_width_scale = 720 / width * 2.0f;
-		m_height_scale = 576 / height * 2.0f;
-		m_width = 720;
-		m_height = 576;
-		break;
-	}
-	}
-}
-
 u32 GetAddress(u32 offset, u32 location)
 {
 	u32 res = 0;
@@ -846,10 +807,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	// Arrays
 	case NV4097_INLINE_ARRAY:
 	{
-		if (value)
-		{
-			LOG_WARNING(RSX, "TODO: NNV4097_INLINE_ARRAY: 0x%x", value);
-		}
+		LOG_ERROR(RSX, "TODO: NV4097_INLINE_ARRAY: 0x%x", value);
 		break;
 	}
 
@@ -982,8 +940,8 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		m_cur_fragment_prog = &m_fragment_progs[m_cur_fragment_prog_num];
 
 		const u32 a0 = value;
-		m_cur_fragment_prog->offset = a0 & ~0x3;
-		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (a0 & 0x3) - 1);
+		m_cur_fragment_prog->offset = value & ~0x3;
+		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (value & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
 		break;
 	}
@@ -1023,37 +981,22 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	{
 		//LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_LOAD: prog = %d", value);
 
-		m_cur_vertex_prog = &m_vertex_progs[value];
-		m_cur_vertex_prog->data.clear();
+		//m_cur_vertex_prog = &m_vertex_progs[value];
+		//m_cur_vertex_prog->data.clear();
 
 		break;
 	}
 
 	case NV4097_SET_TRANSFORM_PROGRAM_START:
 	{
-		const u32 start = value;
-		if (start)
-		{
-			LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM_START: start = %d", start);
-		}
 		break;
 	}
 
-	case_range(32, NV4097_SET_TRANSFORM_PROGRAM, 4);
+	case_range(512, NV4097_SET_TRANSFORM_PROGRAM, 4);
 	{
 		//LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM[%d](%d)", index, count);
 
-		if (!m_cur_vertex_prog)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_TRANSFORM_PROGRAM: m_cur_vertex_prog is null");
-			break;
-		}
-
-		if (m_cur_vertex_prog->data.size() <= index)
-		{
-			m_cur_vertex_prog->data.resize(index + 1);
-		}
-		m_cur_vertex_prog->data[index] = value;
+		m_vertex_program_data[methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_LOAD] + index] = value;
 		break;
 	}
 
@@ -1061,13 +1004,6 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	{
 		// TODO:
 		// (cmd)[1] = CELL_GCM_ENDIAN_SWAP((count) | ((registerCount) << 16)); \
-
-		if (!m_cur_vertex_prog)
-		{
-			LOG_ERROR(RSX, "NV4097_SET_TRANSFORM_TIMEOUT: m_cur_vertex_prog is null");
-			break;
-		}
-
 		//m_cur_vertex_prog->Decompile();
 		break;
 	}
@@ -1273,8 +1209,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	case NV4097_SET_POINT_SIZE:
 	{
 		m_set_point_size = true;
-		const u32 a0 = value;
-		m_point_size = (float&)a0;
+		m_point_size = (float&)value;
 		break;
 	}
 
@@ -1336,8 +1271,6 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 		m_width = buffers[m_gcm_current_buffer].width;
 		m_height = buffers[m_gcm_current_buffer].height;
-
-		NativeRescale((float)m_width, (float)m_height);
 		break;
 	}
 
@@ -1430,10 +1363,8 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
 	{
-		if (value)
-		{
-			LOG_WARNING(RSX, "TODO: NV4097_SET_CONTEXT_DMA_COLOR_D: 0x%x", value);
-		}
+		m_set_context_dma_color_d = true;
+		m_context_dma_color_d = value;
 		break;
 	}
 
@@ -2287,7 +2218,6 @@ void RSXThread::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddres
 	m_ctrlAddress = ctrlAddress;
 	m_local_mem_addr = localAddress;
 
-	m_cur_vertex_prog = nullptr;
 	m_cur_fragment_prog = nullptr;
 	m_cur_fragment_prog_num = 0;
 

@@ -93,10 +93,11 @@ public:
 	std::unordered_map<u32, color4_base<f32>> m_transform_constants;
 	
 	u32 m_shader_ctrl, m_cur_fragment_prog_num;
+	u32 m_vertex_program_data[512 * 4] = {};
 	RSXFragmentProgram m_fragment_progs[m_fragment_count];
 	RSXFragmentProgram* m_cur_fragment_prog;
-	RSXVertexProgram m_vertex_progs[m_vertex_count];
-	RSXVertexProgram* m_cur_vertex_prog;
+	//RSXVertexProgram m_vertex_progs[m_vertex_count];
+	//RSXVertexProgram* m_cur_vertex_prog;
 
 public:
 	u32 m_ioAddress, m_ioSize, m_ctrlAddress;
@@ -125,8 +126,6 @@ public:
 
 	u32 m_width;
 	u32 m_height;
-	float m_width_scale;
-	float m_height_scale;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
 	double m_fps_limit = 59.94;
@@ -368,13 +367,13 @@ public:
 
 	// DMA context
 	bool m_set_context_dma_color_a;
-	u32 m_context_dma_color_a;
+	u32 m_context_dma_color_a = 0;
 	bool m_set_context_dma_color_b;
-	u32 m_context_dma_color_b;
+	u32 m_context_dma_color_b = 0;
 	bool m_set_context_dma_color_c;
-	u32 m_context_dma_color_c;
+	u32 m_context_dma_color_c = 0;
 	bool m_set_context_dma_color_d;
-	u32 m_context_dma_color_d;
+	u32 m_context_dma_color_d = 0;
 	bool m_set_context_dma_z;
 	u32 m_context_dma_z;
 	u32 m_context_surface;
@@ -617,7 +616,6 @@ protected:
 
 	//void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
 	void update_reg(u32 reg, u32 value);
-	void NativeRescale(float width, float height);
 
 	virtual void OnInit() = 0;
 	virtual void OnInitThread() = 0;
