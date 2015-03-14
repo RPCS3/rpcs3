@@ -493,40 +493,59 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			/*
-			//TODO
-			static const int branch_size = 6 * 4;
+			static const int branch_size = 8 * 4;
+
 			auto make_branch = [](vm::ptr<u32>& ptr, u32 addr)
 			{
 				u32 stub = vm::read32(addr);
 				u32 rtoc = vm::read32(addr + 4);
 
-				*ptr++ = implicts::LI(r0, stub >> 16);
-				*ptr++ = ORIS(r0, r0, stub & 0xffff);
-				*ptr++ = implicts::LI(r2, rtoc >> 16);
-				*ptr++ = ORIS(r2, r2, rtoc & 0xffff);
+				*ptr++ = LI_(r0, 0);
+				*ptr++ = ORI(r0, r0, stub & 0xffff);
+				*ptr++ = ORIS(r0, r0, stub >> 16);
+				*ptr++ = LI_(r2, 0);
+				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
+				*ptr++ = ORIS(r2, r2, rtoc >> 16);
 				*ptr++ = MTCTR(r0);
 				*ptr++ = BCTRL();
 			};
 
-			auto entry = vm::ptr<u32>::make(vm::alloc(branch_size * (start_funcs.size() + 1), vm::main));
+			auto entry = vm::ptr<u32>::make(vm::alloc(56 + branch_size * (start_funcs.size() + 1), vm::main));
 
-			auto OPD =  vm::ptr<u32>::make(vm::alloc(2 * 4));
-			OPD[0] = entry.addr();
-			OPD[1] = 0;
+			const auto OPD = entry;
+
+			// make initial OPD
+			*entry++ = OPD.addr() + 8;
+			*entry++ = 0xdeadbeef;
+
+			// save initialization args
+			*entry++ = MR(r14, r3);
+			*entry++ = MR(r15, r4);
+			*entry++ = MR(r16, r5);
+			*entry++ = MR(r17, r6);
+			*entry++ = MR(r18, r11);
+			*entry++ = MR(r19, r12);
 
 			for (auto &f : start_funcs)
 			{
 				make_branch(entry, f);
 			}
 
-			make_branch(entry, m_ehdr.e_entry);
-			*/
+			// restore initialization args
+			*entry++ = MR(r3, r14);
+			*entry++ = MR(r4, r15);
+			*entry++ = MR(r5, r16);
+			*entry++ = MR(r6, r17);
+			*entry++ = MR(r11, r18);
+			*entry++ = MR(r12, r19);
 
-			ppu_thread main_thread(m_ehdr.e_entry, "main_thread");
+			// branch to initialization
+			make_branch(entry, m_ehdr.e_entry);
+
+			ppu_thread main_thread(OPD.addr(), "main_thread");
 
 			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
-			main_thread.gpr(11, m_ehdr.e_entry).gpr(12, Emu.GetMallocPageSize());
+			main_thread.gpr(11, OPD.addr()).gpr(12, Emu.GetMallocPageSize());
 
 			return ok;
 		}

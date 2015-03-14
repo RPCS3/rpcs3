@@ -14,14 +14,6 @@ enum MemoryType
 	Memory_PSP,
 };
 
-enum : u32
-{
-	RAW_SPU_OFFSET = 0x00100000,
-	RAW_SPU_BASE_ADDR = 0xE0000000,
-	RAW_SPU_LS_OFFSET = 0x00000000,
-	RAW_SPU_PROB_OFFSET = 0x00040000,
-};
-
 class MemoryBase
 {
 	std::vector<MemoryBlock*> MemoryBlocks;
@@ -98,4 +90,3 @@ public:
 extern MemoryBase Memory;
 
 #include "vm.h"
-

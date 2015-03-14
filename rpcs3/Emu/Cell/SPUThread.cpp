@@ -79,28 +79,29 @@ void SPUThread::InitRegs()
 	mfc_queue.clear();
 
 	ch_tag_mask = 0;
-	ch_tag_stat.data = {};
-	ch_stall_stat.data = {};
-	ch_atomic_stat.data = {};
+	ch_tag_stat = {};
+	ch_stall_stat = {};
+	ch_atomic_stat = {};
 
 	ch_in_mbox.clear();
 
-	ch_out_mbox.data = {};
-	ch_out_intr_mbox.data = {};
+	ch_out_mbox = {};
+	ch_out_intr_mbox = {};
 
 	snr_config = 0;
 
-	ch_snr1.data = {};
-	ch_snr2.data = {};
+	ch_snr1 = {};
+	ch_snr2 = {};
 
 	ch_event_mask = 0;
-	ch_event_stat.write_relaxed(0);
+	ch_event_stat = {};
 
 	ch_dec_start_timestamp = get_time(); // ???
 	ch_dec_value = 0;
 
-	run_ctrl.write_relaxed(0);
-	status.write_relaxed(0);
+	run_ctrl = {};
+	status = {};
+	npc = {};
 
 	int0.clear();
 	int2.clear();
@@ -604,19 +605,17 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 				if (!queue)
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): event queue not connected", spup, (value & 0x00ffffff), data);
-					ch_in_mbox.push_uncond(CELL_ENOTCONN); // TODO: check error passing
-					return;
+					return ch_in_mbox.push_uncond(CELL_ENOTCONN); // TODO: check error passing
 				}
 
 				if (queue->events.size() >= queue->size)
 				{
-					ch_in_mbox.push_uncond(CELL_EBUSY);
-					return;
+					return ch_in_mbox.push_uncond(CELL_EBUSY);
 				}
 
 				queue->push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
-				ch_in_mbox.push_uncond(CELL_OK);
-				return;
+
+				return ch_in_mbox.push_uncond(CELL_OK);
 			}
 			else if (code < 128)
 			{
@@ -685,20 +684,22 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				if (!Emu.GetIdManager().GetIDData(data, ef))
 				{
-					ch_in_mbox.push_uncond(CELL_ESRCH);
-					return;
+					return ch_in_mbox.push_uncond(CELL_ESRCH);
 				}
 
-				while (ef->waiters < 0)
+				while (ef->cancelled)
 				{
 					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 				}
 
 				ef->flags |= 1ull << flag;
-				ef->cv.notify_all();
 
-				ch_in_mbox.push_uncond(CELL_OK);
-				return;
+				if (ef->waiters)
+				{
+					ef->cv.notify_all();
+				}
+				
+				return ch_in_mbox.push_uncond(CELL_OK);
 			}
 			else if (code == 192)
 			{
@@ -732,13 +733,18 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					return;
 				}
 
-				while (ef->waiters < 0)
+				while (ef->cancelled)
 				{
 					ef->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 				}
 
 				ef->flags |= 1ull << flag;
-				ef->cv.notify_all();
+
+				if (ef->waiters)
+				{
+					ef->cv.notify_all();
+				}
+				
 				return;
 			}
 			else
@@ -958,8 +964,7 @@ void SPUThread::stop_and_signal(u32 code)
 		if (ch_in_mbox.get_count())
 		{
 			LOG_ERROR(SPU, "sys_spu_thread_receive_event(spuq=0x%x): In_MBox is not empty", spuq);
-			ch_in_mbox.push_uncond(CELL_EBUSY);
-			return;
+			return ch_in_mbox.push_uncond(CELL_EBUSY);
 		}
 
 		if (Ini.HLELogging.GetValue())
@@ -986,20 +991,17 @@ void SPUThread::stop_and_signal(u32 code)
 
 		if (!queue)
 		{
-			ch_in_mbox.push_uncond(CELL_EINVAL); // TODO: check error value
-			return;
+			return ch_in_mbox.push_uncond(CELL_EINVAL); // TODO: check error value
 		}
 
 		// protocol is ignored in current implementation
-		queue->waiters++; assert(queue->waiters > 0);
+		queue->waiters++;
 
 		while (queue->events.empty())
 		{
-			if (queue->waiters < 0)
+			if (queue->cancelled)
 			{
-				queue->waiters--; assert(queue->waiters < 0);
-				ch_in_mbox.push_uncond(CELL_ECANCELED);
-				return;
+				return ch_in_mbox.push_uncond(CELL_ECANCELED);
 			}
 
 			if (Emu.IsStopped())
@@ -1018,7 +1020,7 @@ void SPUThread::stop_and_signal(u32 code)
 		ch_in_mbox.push_uncond((u32)event.data3);
 		
 		queue->events.pop_front();
-		queue->waiters--; assert(queue->waiters >= 0);
+		queue->waiters--;
 
 		if (queue->events.size())
 		{

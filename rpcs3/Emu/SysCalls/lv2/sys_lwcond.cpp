@@ -38,6 +38,7 @@ s32 _sys_lwcond_destroy(u32 lwcond_id)
 	LV2_LOCK;
 
 	std::shared_ptr<lwcond_t> cond;
+
 	if (!Emu.GetIdManager().GetIDData(lwcond_id, cond))
 	{
 		return CELL_ESRCH;
@@ -60,12 +61,13 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 	LV2_LOCK;
 
 	std::shared_ptr<lwcond_t> cond;
+	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwcond_id, cond))
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<lwmutex_t> mutex;
 	if (lwmutex_id && !Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -117,8 +119,10 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 		cond->signaled1++;
 	}
 
-	cond->waiters--;
-	cond->cv.notify_one();
+	if (--cond->waiters)
+	{
+		cond->cv.notify_one();
+	}
 
 	return CELL_OK;
 }
@@ -130,12 +134,13 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 	LV2_LOCK;
 
 	std::shared_ptr<lwcond_t> cond;
+	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwcond_id, cond))
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<lwmutex_t> mutex;
 	if (lwmutex_id && !Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -147,7 +152,11 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 	}
 
 	const s32 count = cond->waiters.exchange(0);
-	cond->cv.notify_all();
+
+	if (count)
+	{
+		cond->cv.notify_all();
+	}
 
 	if (mode == 1)
 	{
@@ -176,12 +185,13 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 	LV2_LOCK;
 
 	std::shared_ptr<lwcond_t> cond;
+	std::shared_ptr<lwmutex_t> mutex;
+
 	if (!Emu.GetIdManager().GetIDData(lwcond_id, cond))
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<lwmutex_t> mutex;
 	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
 	{
 		return CELL_ESRCH;
@@ -189,10 +199,14 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 
 	// finalize unlocking the mutex
 	mutex->signaled++;
-	mutex->cv.notify_one();
+
+	if (mutex->waiters)
+	{
+		mutex->cv.notify_one();
+	}
 
 	// protocol is ignored in current implementation
-	cond->waiters++; assert(cond->waiters > 0);
+	cond->waiters++;
 
 	while (!(cond->signaled1 && mutex->signaled) && !cond->signaled2)
 	{
@@ -202,7 +216,7 @@ s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 		if (is_timedout && !cond->signaled1)
 		{
 			// cancel waiting
-			cond->waiters--; assert(cond->waiters >= 0);
+			cond->waiters--;
 
 			if (mutex->signaled)
 			{

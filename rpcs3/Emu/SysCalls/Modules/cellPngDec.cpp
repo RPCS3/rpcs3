@@ -1,12 +1,16 @@
 #include "stdafx.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
 #include "stblib/stb_image.h"
-#include "Emu/SysCalls/lv2/cellFs.h"
+
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
+#include "Emu/SysCalls/lv2/sys_fs.h"
+
 #include "cellPngDec.h"
-#include <map>
 
 extern Module cellPngDec;
 
@@ -76,18 +80,14 @@ s32 pngDecOpen(
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
-		// Get file descriptor
-		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<const void>::make(0), 0);
-		stream->fd = fd.value();
-		if (ret != CELL_OK) return CELL_PNGDEC_ERROR_OPEN_FILE;
-
-		// Get size of file
-		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(stream->fd, sb);
-		if (ret != CELL_OK) return ret;
-		stream->fileSize = sb->st_size;	// Get CellFsStat.st_size
+	{
+		// Get file descriptor and size
+		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
+		if (!file) return CELL_PNGDEC_ERROR_OPEN_FILE;
+		stream->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
+		stream->fileSize = file->file->GetSize();
 		break;
+	}
 	}
 
 	if (cb)
@@ -111,7 +111,8 @@ s32 pngDecOpen(
 
 s32 pngDecClose(CellPngDecSubHandle stream)
 {
-	cellFsClose(stream->fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(stream->fd);
+
 	if (!Memory.Free(stream.addr()))
 	{
 		return CELL_PNGDEC_ERROR_FATAL;
@@ -135,7 +136,6 @@ s32 pngReadHeader(
 	//Write the header to buffer
 	vm::var<u8[34]> buffer; // Alloc buffer for PNG header
 	auto buffer_32 = buffer.To<be_t<u32>>();
-	vm::var<be_t<u64>> pos, nread;
 
 	switch (stream->src.srcSelect.data())
 	{
@@ -143,9 +143,12 @@ s32 pngReadHeader(
 		memmove(buffer.begin(), stream->src.streamPtr.get_ptr(), buffer.size());
 		break;
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(stream->fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(stream->fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(stream->fd);
+		file->file->Seek(0);
+		file->file->Read(buffer.begin(), buffer.size());
 		break;
+	}
 	}
 
 	if (buffer_32[0].data() != se32(0x89504E47) ||
@@ -244,7 +247,6 @@ s32 pngDecodeData(
 
 	//Copy the PNG file to a buffer
 	vm::var<unsigned char[]> png((u32)fileSize);
-	vm::var<be_t<u64>> pos, nread;
 
 	switch (stream->src.srcSelect.data())
 	{
@@ -253,9 +255,12 @@ s32 pngDecodeData(
 		break;
 
 	case se32(CELL_PNGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, vm::ptr<void>::make(png.addr()), png.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(stream->fd);
+		file->file->Seek(0);
+		file->file->Read(png.ptr(), png.size());
 		break;
+	}
 	}
 
 	//Decode PNG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)

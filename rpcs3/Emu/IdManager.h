@@ -153,7 +153,9 @@ public:
 		std::lock_guard<std::mutex> lock(m_mtx_main);
 
 		m_id_map.emplace(m_cur_id, ID(data, type));
-		if (type < TYPE_OTHER) {
+
+		if (type < TYPE_OTHER)
+		{
 			m_types[type].insert(m_cur_id);
 		}
 
@@ -173,13 +175,28 @@ public:
 
 		auto f = m_id_map.find(id);
 
-		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T)) {
+		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T))
+		{
 			return false;
 		}
 
 		result = f->second.GetData()->get<T>();
 
 		return true;
+	}
+
+	template<typename T> std::shared_ptr<T> GetIDData(const u32 id)
+	{
+		std::lock_guard<std::mutex> lock(m_mtx_main);
+
+		auto f = m_id_map.find(id);
+
+		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T))
+		{
+			return nullptr;
+		}
+
+		return f->second.GetData()->get<T>();
 	}
 
 	bool HasID(const u32 id)
@@ -195,10 +212,13 @@ public:
 
 		auto item = m_id_map.find(id);
 
-		if (item == m_id_map.end() || item->second.GetInfo() != typeid(T)) {
+		if (item == m_id_map.end() || item->second.GetInfo() != typeid(T))
+		{
 			return false;
 		}
-		if (item->second.GetType() < TYPE_OTHER) {
+
+		if (item->second.GetType() < TYPE_OTHER)
+		{
 			m_types[item->second.GetType()].erase(id);
 		}
 

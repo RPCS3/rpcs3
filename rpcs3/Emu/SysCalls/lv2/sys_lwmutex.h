@@ -76,7 +76,7 @@ struct lwmutex_t
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	lwmutex_t(u32 protocol, u64 name)
 		: protocol(protocol)

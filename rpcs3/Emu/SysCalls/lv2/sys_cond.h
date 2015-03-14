@@ -24,7 +24,7 @@ struct cond_t
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	cond_t(std::shared_ptr<mutex_t>& mutex, u64 name)
 		: mutex(mutex)

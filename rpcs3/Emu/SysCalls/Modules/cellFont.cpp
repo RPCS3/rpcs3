@@ -30,7 +30,7 @@ int cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontConfig> co
 	return CELL_FONT_OK;
 }
 
-int cellFontGetRevisionFlags(vm::ptr<be_t<u64>> revisionFlags)
+int cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
 	UNIMPLEMENTED_FUNC(cellFont);
 	return CELL_FONT_OK;
@@ -375,7 +375,7 @@ int cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
 	return CELL_FONT_OK;
 }
 
-int cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<be_t<float>> slantParam)
+int cellFontGetEffectSlant(vm::ptr<CellFont> font, vm::ptr<float> slantParam)
 {
 	cellFont.Warning("cellFontSetEffectSlant(font_addr=0x%x, slantParam_addr=0x%x)", font.addr(), slantParam.addr());
 

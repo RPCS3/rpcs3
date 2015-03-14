@@ -78,10 +78,11 @@ struct event_queue_t
 	const s32 size;
 
 	std::deque<event_t> events;
+	std::atomic<bool> cancelled;
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
 		: protocol(protocol)
@@ -89,6 +90,7 @@ struct event_queue_t
 		, name(name)
 		, key(key)
 		, size(size)
+		, cancelled(false)
 		, waiters(0)
 	{
 	}
@@ -96,7 +98,11 @@ struct event_queue_t
 	void push(u64 source, u64 data1, u64 data2, u64 data3)
 	{
 		events.emplace_back(source, data1, data2, data3);
-		cv.notify_one();
+
+		if (waiters)
+		{
+			cv.notify_one();
+		}
 	}
 };
 

@@ -5,7 +5,11 @@
 #include "Emu/SysCalls/Modules.h"
 
 #include "stblib/stb_image.h"
-#include "Emu/SysCalls/lv2/cellFs.h"
+
+#include "Emu/FS/VFS.h"
+#include "Emu/FS/vfsFileBase.h"
+#include "Emu/SysCalls/lv2/sys_fs.h"
+
 #include "cellJpgDec.h"
 
 extern Module cellJpgDec;
@@ -45,18 +49,14 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		// Get file descriptor
-		vm::var<be_t<u32>> fd;
-		int ret = cellFsOpen(src->fileName, 0, fd, vm::ptr<const void>::make(0), 0);
-		current_subHandle->fd = fd.value();
-		if (ret != CELL_OK) return CELL_JPGDEC_ERROR_OPEN_FILE;
-
-		// Get size of file
-		vm::var<CellFsStat> sb; // Alloc a CellFsStat struct
-		ret = cellFsFstat(current_subHandle->fd, sb);
-		if (ret != CELL_OK) return ret;
-		current_subHandle->fileSize = sb->st_size;	// Get CellFsStat.st_size
+	{
+		// Get file descriptor and size
+		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
+		if (!file) return CELL_JPGDEC_ERROR_OPEN_FILE;
+		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
+		current_subHandle->fileSize = file->file->GetSize();
 		break;
+	}
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
@@ -74,7 +74,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
-	cellFsClose(subHandle_data->fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(subHandle_data->fd);
 	Emu.GetIdManager().RemoveID<CellJpgDecSubHandle>(subHandle);
 
 	return CELL_OK;
@@ -94,7 +94,6 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 	//Write the header to buffer
 	vm::var<u8[]> buffer((u32)fileSize);
-	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.data())
 	{
@@ -103,9 +102,12 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, vm::ptr<void>::make(buffer.addr()), buffer.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(buffer.ptr(), buffer.size());
 		break;
+	}
 	}
 
 	if (*buffer.To<u32>(0) != 0xE0FFD8FF || // Error: Not a valid SOI header
@@ -163,7 +165,6 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	//Copy the JPG file to a buffer
 	vm::var<unsigned char[]> jpg((u32)fileSize);
-	vm::var<be_t<u64>> pos, nread;
 
 	switch(subHandle_data->src.srcSelect.data())
 	{
@@ -172,9 +173,12 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 		break;
 
 	case se32(CELL_JPGDEC_FILE):
-		cellFsLseek(fd, 0, CELL_SEEK_SET, pos);
-		cellFsRead(fd, vm::ptr<void>::make(jpg.addr()), jpg.size(), nread);
+	{
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(jpg.ptr(), jpg.size());
 		break;
+	}
 	}
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)

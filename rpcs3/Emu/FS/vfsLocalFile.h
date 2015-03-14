@@ -11,7 +11,7 @@ public:
 	vfsLocalFile(vfsDevice* device);
 
 	virtual bool Open(const std::string& path, vfsOpenMode mode = vfsRead) override;
-	virtual bool Create(const std::string& path) override;
+	virtual bool Create(const std::string& path, bool overwrite = false) override;
 	virtual bool Close() override;
 	virtual bool Exists(const std::string& path) override;
 

@@ -50,12 +50,13 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock.use_count() > 2 || rwlock->readers || rwlock->writer || rwlock->waiters)
+	if (rwlock->readers || rwlock->writer || rwlock->rwaiters || rwlock->wwaiters)
 	{
 		return CELL_EBUSY;
 	}
@@ -74,15 +75,20 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	while (rwlock->writer || rwlock->waiters)
+	// waiting threads are not properly registered in current implementation
+	rwlock->rwaiters++;
+
+	while (rwlock->writer || rwlock->wwaiters)
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
+			rwlock->rwaiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -92,10 +98,11 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 			return CELL_OK;
 		}
 
-		rwlock->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		rwlock->rcv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	rwlock->readers++;
+	rwlock->rwaiters--;
 
 	return CELL_OK;
 }
@@ -107,12 +114,13 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (rwlock->writer || rwlock->waiters)
+	if (rwlock->writer || rwlock->wwaiters)
 	{
 		return CELL_EBUSY;
 	}
@@ -129,6 +137,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
@@ -139,9 +148,9 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 		return CELL_EPERM;
 	}
 
-	if (!--rwlock->readers)
+	if (!--rwlock->readers && rwlock->wwaiters)
 	{
-		rwlock->cv.notify_one();
+		rwlock->wcv.notify_one();
 	}
 
 	return CELL_OK;
@@ -156,6 +165,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
@@ -167,13 +177,13 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 	}
 
 	// protocol is ignored in current implementation
-	rwlock->waiters++; assert(rwlock->waiters > 0);
+	rwlock->wwaiters++;
 
 	while (rwlock->readers || rwlock->writer)
 	{
 		if (timeout && get_system_time() - start_time > timeout)
 		{
-			rwlock->waiters--; assert(rwlock->waiters >= 0);
+			rwlock->wwaiters--;
 			return CELL_ETIMEDOUT;
 		}
 
@@ -183,11 +193,11 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 			return CELL_OK;
 		}
 
-		rwlock->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+		rwlock->wcv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 	}
 
 	rwlock->writer = CPU.GetId();
-	rwlock->waiters--; assert(rwlock->waiters >= 0);
+	rwlock->wwaiters--;
 
 	return CELL_OK;
 }
@@ -199,6 +209,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
@@ -209,7 +220,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 		return CELL_EDEADLK;
 	}
 
-	if (rwlock->readers || rwlock->writer || rwlock->waiters)
+	if (rwlock->readers || rwlock->writer || rwlock->wwaiters)
 	{
 		return CELL_EBUSY;
 	}
@@ -226,6 +237,7 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 	LV2_LOCK;
 
 	std::shared_ptr<rwlock_t> rwlock;
+
 	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
 	{
 		return CELL_ESRCH;
@@ -237,7 +249,15 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 	}
 
 	rwlock->writer = 0;
-	rwlock->cv.notify_all();
+
+	if (rwlock->wwaiters)
+	{
+		rwlock->wcv.notify_one();
+	}
+	else if (rwlock->rwaiters)
+	{
+		rwlock->rcv.notify_all();
+	}
 
 	return CELL_OK;
 }

@@ -26,9 +26,9 @@ bool vfsFile::Open(const std::string& path, vfsOpenMode mode)
 	return m_stream && m_stream->IsOpened();
 }
 
-bool vfsFile::Create(const std::string& path)
+bool vfsFile::Create(const std::string& path, bool overwrite)
 {
-	return m_stream->Create(path);
+	return m_stream->Create(path, overwrite);
 }
 
 bool vfsFile::Exists(const std::string& path)

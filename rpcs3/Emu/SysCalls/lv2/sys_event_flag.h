@@ -34,16 +34,18 @@ struct event_flag_t
 	const u64 name;
 
 	std::atomic<u64> flags;
+	std::atomic<u32> cancelled;
 
 	// TODO: use sleep queue, possibly remove condition variable
 	std::condition_variable cv;
-	std::atomic<s32> waiters;
+	std::atomic<u32> waiters;
 
 	event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
 		: flags(pattern)
 		, protocol(protocol)
 		, type(type)
 		, name(name)
+		, cancelled(0)
 		, waiters(0)
 	{
 	}
