@@ -8,6 +8,7 @@
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
+#include "Emu/SysCalls/lv2/sys_fs.h"
 
 #include "cellPngDec.h"
 
@@ -81,10 +82,10 @@ s32 pngDecOpen(
 	case se32(CELL_PNGDEC_FILE):
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
 		if (!file) return CELL_PNGDEC_ERROR_OPEN_FILE;
 		stream->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
-		stream->fileSize = file->GetSize();
+		stream->fileSize = file->file->GetSize();
 		break;
 	}
 	}
@@ -110,7 +111,7 @@ s32 pngDecOpen(
 
 s32 pngDecClose(CellPngDecSubHandle stream)
 {
-	Emu.GetIdManager().RemoveID<vfsStream>(stream->fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(stream->fd);
 
 	if (!Memory.Free(stream.addr()))
 	{
@@ -143,9 +144,9 @@ s32 pngReadHeader(
 		break;
 	case se32(CELL_PNGDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(stream->fd);
-		file->Seek(0);
-		file->Read(buffer.begin(), buffer.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(stream->fd);
+		file->file->Seek(0);
+		file->file->Read(buffer.begin(), buffer.size());
 		break;
 	}
 	}
@@ -255,9 +256,9 @@ s32 pngDecodeData(
 
 	case se32(CELL_PNGDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(stream->fd);
-		file->Seek(0);
-		file->Read(png.ptr(), png.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(stream->fd);
+		file->file->Seek(0);
+		file->file->Read(png.ptr(), png.size());
 		break;
 	}
 	}

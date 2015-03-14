@@ -144,6 +144,20 @@ struct CellFsUtimbuf
 
 #pragma pack(pop)
 
+struct fs_file_t
+{
+	const std::shared_ptr<vfsStream> file;
+	const s32 mode;
+	const s32 flags;
+
+	fs_file_t(std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
+		: file(file)
+		, mode(mode)
+		, flags(flags)
+	{
+	}
+};
+
 // SysCalls
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
