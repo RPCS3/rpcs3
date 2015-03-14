@@ -219,7 +219,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	u32 index = 0;
 
-	m_used_gcm_commands.insert(reg);
+	//m_used_gcm_commands.insert(reg);
 
 	switch (reg)
 	{
@@ -396,19 +396,20 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	}
 
 		// Vertex data
-	case_range(32, NV4097_SET_VERTEX_DATA4UB_M, 4);
+	case_range(16, NV4097_SET_VERTEX_DATA4UB_M, 4);
 	{
 		int row = index;
 
-		m_vertex_data[row].size = 4;
-		m_vertex_data[row].type = CELL_GCM_VERTEX_UB;
-
-		if (m_vertex_data[row].data.size() < sizeof(u8) * 4)
+		if (m_vertex_data[row].type != CELL_GCM_VERTEX_UB || m_vertex_data[row].size != 4)
 		{
-			m_vertex_data[row].data.resize(sizeof(u8) * 4);
+			m_vertex_data[row].type = CELL_GCM_VERTEX_UB;
+			m_vertex_data[row].size = 4;
+			m_vertex_data[row].data.clear();
 		}
 
-		(u32&)m_vertex_data[index].data[0] = value;
+		u32 pos = m_vertex_data[row].data.size();
+		m_vertex_data[row].data.resize(pos + sizeof(u8) * 4);
+		(u32&)m_vertex_data[row].data[pos] = value;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4UB_M: index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
 		break;
@@ -419,15 +420,16 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		int row = index / 2;
 		int col = index % 2;
 
-		m_vertex_data[row].type = CELL_GCM_VERTEX_F;
-		m_vertex_data[row].size = 2;
-
-		if (m_vertex_data[row].data.size() < sizeof(f32) * 2)
+		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 2)
 		{
-			m_vertex_data[row].data.resize(sizeof(f32) * 2);
+			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
+			m_vertex_data[row].size = 2;
+			m_vertex_data[row].data.clear();
 		}
 
-		(u32&)m_vertex_data[row].data[sizeof(f32) * col] = value;
+		u32 pos = m_vertex_data[row].data.size();
+		m_vertex_data[row].data.resize(pos + sizeof(f32) * col);
+		(u32&)m_vertex_data[row].data[pos] = value;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA2F_M: index = %d, v0 = %f, v1 = %f", index, v0, v1);
 		break;
@@ -438,15 +440,16 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		int row = index / 4;
 		int col = index % 4;
 
-		m_vertex_data[row].type = CELL_GCM_VERTEX_F;
-		m_vertex_data[row].size = 4;
-
-		if (m_vertex_data[row].data.size() < sizeof(f32) * 4)
+		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 4)
 		{
-			m_vertex_data[row].data.resize(sizeof(f32) * 4);
+			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
+			m_vertex_data[row].size = 4;
+			m_vertex_data[row].data.clear();
 		}
 
-		(u32&)m_vertex_data[row].data[sizeof(f32) * col] = value;
+		u32 pos = m_vertex_data[row].data.size();
+		m_vertex_data[row].data.resize(pos + sizeof(f32));
+		(u32&)m_vertex_data[row].data[pos] = value;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA4F_M: index = %d, v0 = %f, v1 = %f, v2 = %f, v3 = %f", index, v0, v1, v2, v3);
 		break;
@@ -454,28 +457,17 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 4);
 	{
-		const u32 addr = GetAddress(value & 0x7fffffff, value >> 31);
-
-		m_vertex_data[index].addr = addr;
-		m_vertex_data[index].data.clear();
-
-		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_OFFSET: num=%d, addr=0x%x", index, addr);
+		m_vertex_data[index].addr = GetAddress(value & 0x7fffffff, value >> 31);
+		//m_vertex_data[index].data.clear();
 		break;
 	}
 
-	case_range(16, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4);
+	case_range(32, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 4);
 	{
-		const u32 a0 = value;
-		u16 frequency = a0 >> 16;
-		u8 stride = (a0 >> 8) & 0xff;
-		u8 size = (a0 >> 4) & 0xf;
-		u8 type = a0 & 0xf;
-
-		RSXVertexData& cv = m_vertex_data[index];
-		cv.frequency = frequency;
-		cv.stride = stride;
-		cv.size = size;
-		cv.type = type;
+		m_vertex_data[index].frequency = value >> 16;
+		m_vertex_data[index].stride = (value >> 8) & 0xff;
+		m_vertex_data[index].size = (value >> 4) & 0xf;
+		m_vertex_data[index].type = value & 0xf;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA_ARRAY_FORMAT: index=%d, frequency=%d, stride=%d, size=%d, type=%d", index, frequency, stride, size, type);
 
@@ -509,13 +501,11 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	// Color Mask
 	case NV4097_SET_COLOR_MASK:
 	{
-		const u32 a0 = value;
-
 		m_set_color_mask = true;
-		m_color_mask_a = a0 & 0x1000000 ? true : false;
-		m_color_mask_r = a0 & 0x0010000 ? true : false;
-		m_color_mask_g = a0 & 0x0000100 ? true : false;
-		m_color_mask_b = a0 & 0x0000001 ? true : false;
+		m_color_mask_a = value & 0x01000000 ? true : false;
+		m_color_mask_r = value & 0x00010000 ? true : false;
+		m_color_mask_g = value & 0x00000100 ? true : false;
+		m_color_mask_b = value & 0x00000001 ? true : false;
 		break;
 	}
 
@@ -1113,7 +1103,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case_range(32, NV4097_SET_TRANSFORM_CONSTANT, 4);
 	{
-		(u32&)m_transform_constants[methodRegisters[NV4097_SET_TRANSFORM_CONSTANT_LOAD] + index / 4].xyzw[index % 4] = value;
+		m_transform_constants[methodRegisters[NV4097_SET_TRANSFORM_CONSTANT_LOAD] + index / 4].xyzw[index % 4] = (f32&)value;
 		break;
 	}
 
@@ -1738,29 +1728,21 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	// NV0039
 	case NV0039_SET_CONTEXT_DMA_BUFFER_IN:
-	{
 		m_context_dma_buffer_in_src = value;
 		break;
-	}
 
 	case NV0039_SET_CONTEXT_DMA_BUFFER_OUT:
 		m_context_dma_buffer_in_dst = value;
 		break;
 
 	case NV0039_OFFSET_IN:
-	{
 		break;
-	}
 
-	case NV0039_OFFSET_OUT: // [E : RSXThread]: TODO: unknown/illegal method [0x00002310](0x0)
-	{
+	case NV0039_OFFSET_OUT:
 		break;
-	}
 
 	case NV0039_PITCH_IN:
-	{
 		break;
-	}
 
 	case NV0039_LINE_LENGTH_IN:
 		break;
@@ -1773,8 +1755,8 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		const u32 outPitch = methodRegisters[NV0039_PITCH_OUT];
 		const u32 lineLength = methodRegisters[NV0039_LINE_LENGTH_IN];
 		const u32 lineCount = methodRegisters[NV0039_LINE_COUNT];
-		const u8 outFormat = (methodRegisters[NV0039_FORMAT] >> 8);
-		const u8 inFormat = (methodRegisters[NV0039_FORMAT] >> 0);
+		const u8 outFormat = methodRegisters[NV0039_FORMAT] >> 8;
+		const u8 inFormat = methodRegisters[NV0039_FORMAT];
 		const u32 notify = value;
 
 		// The existing GCM commands use only the value 0x1 for inFormat and outFormat
@@ -1797,22 +1779,16 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	// NV3062
 	case NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN:
-	{
 		m_context_dma_img_dst = value;
 		break;
-	}
 
 	case NV3062_SET_OFFSET_DESTIN:
-	{
 		m_dst_offset = value;
 		break;
-	}
 
 	case NV3062_SET_COLOR_FORMAT:
-	{
 		m_color_format = value;
 		break;
-	}
 
 	case NV3062_SET_PITCH:
 		m_color_format_src_pitch = value;
@@ -1824,18 +1800,14 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	// NV309E
 	case NV309E_SET_CONTEXT_DMA_IMAGE:
-	{
 		m_context_dma_img_src = value;
 		break;
-	}
 
 	case NV309E_SET_FORMAT:
-	{
 		m_swizzle_format = value;
 		m_swizzle_width = value >> 16;
 		m_swizzle_height = value >> 24;
 		break;
-	}
 
 	case NV309E_SET_OFFSET:
 		m_swizzle_offset = value;
@@ -1843,12 +1815,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	// NV308A
 	case NV308A_POINT:
-	{
-		const u32 a0 = value;
-		m_point_x = a0 & 0xffff;
-		m_point_y = a0 >> 16;
+		m_point_x = value & 0xffff;
+		m_point_y = value >> 16;
 		break;
-	}
 
 	case_range(32, NV308A_COLOR, 4);
 	{
@@ -2234,11 +2203,6 @@ void RSXThread::Task()
 
 		const u32 cmd = ReadIO32(get);
 		const u32 count = (cmd >> 18) & 0x7ff;
-
-		if (Ini.RSXLogging.GetValue())
-		{
-			LOG_NOTICE(Log::RSX, "%s (cmd=0x%x)", GetMethodName(cmd & 0xffff).c_str(), cmd);
-		}
 	
 		if (cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
@@ -2284,6 +2248,11 @@ void RSXThread::Task()
 		{
 			u32 reg = (cmd & 0xffff) + (i * 4 * inc);
 			u32 value = args[i];
+
+			if (Ini.RSXLogging.GetValue())
+			{
+				LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", GetMethodName(reg).c_str(), reg, value);
+			}
 
 			update_reg(reg, value);
 			methodRegisters[reg] = value;

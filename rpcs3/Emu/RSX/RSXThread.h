@@ -72,7 +72,7 @@ class RSXThread : public ThreadBase
 {
 public:
 	static const uint m_textures_count = 16;
-	static const uint m_vertex_count = 32;
+	static const uint m_vertex_count = 16;
 	static const uint m_fragment_count = 32;
 	static const uint m_tiles_count = 15;
 	static const uint m_zculls_count = 8;

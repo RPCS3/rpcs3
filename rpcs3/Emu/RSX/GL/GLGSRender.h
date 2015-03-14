@@ -124,7 +124,7 @@ public:
 	virtual void SetCurrent(void* ctx) = 0;
 	virtual void DeleteContext(void* ctx) = 0;
 	virtual void Flip(void* ctx) = 0;
-
+	virtual sizei GetClientSize() = 0;
 };
 
 typedef GSFrameBase*(*GetGSFrameCb)();
