@@ -8,6 +8,7 @@
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
+#include "Emu/SysCalls/lv2/sys_fs.h"
 
 #include "cellJpgDec.h"
 
@@ -50,10 +51,10 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	case se32(CELL_JPGDEC_FILE):
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
 		if (!file) return CELL_JPGDEC_ERROR_OPEN_FILE;
 		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
-		current_subHandle->fileSize = file->GetSize();
+		current_subHandle->fileSize = file->file->GetSize();
 		break;
 	}
 	}
@@ -73,7 +74,7 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_JPGDEC_ERROR_FATAL;
 
-	Emu.GetIdManager().RemoveID<vfsStream>(subHandle_data->fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(subHandle_data->fd);
 	Emu.GetIdManager().RemoveID<CellJpgDecSubHandle>(subHandle);
 
 	return CELL_OK;
@@ -102,9 +103,9 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 	case se32(CELL_JPGDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
-		file->Seek(0);
-		file->Read(buffer.ptr(), buffer.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(buffer.ptr(), buffer.size());
 		break;
 	}
 	}
@@ -173,9 +174,9 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	case se32(CELL_JPGDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
-		file->Seek(0);
-		file->Read(jpg.ptr(), jpg.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(jpg.ptr(), jpg.size());
 		break;
 	}
 	}

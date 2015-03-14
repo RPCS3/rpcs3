@@ -9,6 +9,7 @@
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
+#include "Emu/SysCalls/lv2/sys_fs.h"
 
 #include "cellGifDec.h"
 
@@ -44,10 +45,10 @@ int cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	case se32(CELL_GIFDEC_FILE):
 	{
 		// Get file descriptor and size
-		std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
 		if (!file) return CELL_GIFDEC_ERROR_OPEN_FILE;
 		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
-		current_subHandle->fileSize = file->GetSize();
+		current_subHandle->fileSize = file->file->GetSize();
 		break;
 	}
 	}
@@ -82,9 +83,9 @@ int cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 
 	case se32(CELL_GIFDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
-		file->Seek(0);
-		file->Read(buffer.begin(), buffer.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(buffer.begin(), buffer.size());
 		break;
 	}
 	}
@@ -166,9 +167,9 @@ int cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	case se32(CELL_GIFDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<vfsStream>(fd);
-		file->Seek(0);
-		file->Read(gif.ptr(), gif.size());
+		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		file->file->Seek(0);
+		file->file->Read(gif.ptr(), gif.size());
 		break;
 	}
 	}
@@ -268,7 +269,7 @@ int cellGifDecClose(u32 mainHandle, u32 subHandle)
 	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
 		return CELL_GIFDEC_ERROR_FATAL;
 
-	Emu.GetIdManager().RemoveID<vfsStream>(subHandle_data->fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(subHandle_data->fd);
 	Emu.GetIdManager().RemoveID<CellGifDecSubHandle>(subHandle);
 
 	return CELL_OK;

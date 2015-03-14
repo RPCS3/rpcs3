@@ -116,8 +116,10 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
 		return CELL_FS_ENOENT;
 	}
+	
+	std::shared_ptr<fs_file_t> file_handler(new fs_file_t(file, mode, flags));
 
-	*fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
+	*fd = Emu.GetIdManager().GetNewID(file_handler, TYPE_FS_FILE);
 
 	return CELL_OK;
 }
@@ -126,14 +128,14 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
 	sys_fs.Log("sys_fs_read(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file) || file->flags & CELL_FS_O_WRONLY)
 	{
-		return CELL_FS_EBADF; // TODO: return if not opened for reading
+		return CELL_FS_EBADF;
 	}
 
-	*nread = file->Read(buf.get_ptr(), nbytes);
+	*nread = file->file->Read(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
 }
@@ -142,16 +144,16 @@ s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrit
 {
 	sys_fs.Log("sys_fs_write(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!Emu.GetIdManager().GetIDData(fd, file) || !(file->flags & CELL_FS_O_ACCMODE))
 	{
-		return CELL_FS_EBADF; // TODO: return if not opened for writing
+		return CELL_FS_EBADF;
 	}
 
 	// TODO: return CELL_FS_EBUSY if locked
 
-	*nwrite = file->Write(buf.get_ptr(), nbytes);
+	*nwrite = file->file->Write(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
 }
@@ -160,7 +162,7 @@ s32 sys_fs_close(u32 fd)
 {
 	sys_fs.Log("sys_fs_close(fd=0x%x)", fd);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 	{
@@ -169,7 +171,7 @@ s32 sys_fs_close(u32 fd)
 
 	// TODO: return CELL_FS_EBUSY if locked
 
-	Emu.GetIdManager().RemoveID<vfsStream>(fd);
+	Emu.GetIdManager().RemoveID<fs_file_t>(fd);
 
 	return CELL_OK;
 }
@@ -323,7 +325,7 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.Warning("sys_fs_fstat(fd=0x%x, sb=*0x%x)", fd, sb);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
@@ -338,7 +340,7 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	sb->atime = 0; //TODO
 	sb->mtime = 0; //TODO
 	sb->ctime = 0; //TODO
-	sb->size = file->GetSize();
+	sb->size = file->file->GetSize();
 	sb->blksize = 4096;
 
 	return CELL_OK;
@@ -451,11 +453,11 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
-	*pos = file->Seek(offset, seek_mode);
+	*pos = file->file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
 
@@ -463,7 +465,7 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 {
 	sys_fs.Todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
@@ -519,20 +521,20 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 {
 	sys_fs.Warning("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
 
-	std::shared_ptr<vfsStream> file;
+	std::shared_ptr<fs_file_t> file;
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
-	u64 initialSize = file->GetSize();
+	u64 initialSize = file->file->GetSize();
 
 	if (initialSize < size)
 	{
-		u64 last_pos = file->Tell();
-		file->Seek(0, vfsSeekEnd);
+		u64 last_pos = file->file->Tell();
+		file->file->Seek(0, vfsSeekEnd);
 		static const char nullbyte = 0;
-		file->Seek(size - initialSize - 1, vfsSeekCur);
-		file->Write(&nullbyte, sizeof(char));
-		file->Seek(last_pos, vfsSeekSet);
+		file->file->Seek(size - initialSize - 1, vfsSeekCur);
+		file->file->Write(&nullbyte, sizeof(char));
+		file->file->Seek(last_pos, vfsSeekSet);
 	}
 
 	if (initialSize > size)
