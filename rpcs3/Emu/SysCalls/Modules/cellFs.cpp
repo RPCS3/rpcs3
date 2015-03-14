@@ -638,16 +638,18 @@ std::mutex g_fs_aio_mutex;
 
 using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)>;
 
-void fsAioRead(vm::ptr<CellFsAio> aio, s32 xid, fs_aio_cb_t func)
+void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 {
 	std::lock_guard<std::mutex> lock(g_fs_aio_mutex);
 
+	cellFs.Notice("FS AIO Request(%d): fd=0x%x, offset=0x%llx, buf=*0x%x, size=0x%llx, user_data=0x%llx", xid, aio->fd, aio->offset, aio->buf, aio->size, aio->user_data);
+
 	s32 error = CELL_OK;
-	u64 nread = 0;
+	u64 result = 0;
 
 	std::shared_ptr<fs_file_t> file;
 
-	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || file->flags & CELL_FS_O_WRONLY)
+	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
 		error = CELL_FS_EBADF;
 	}
@@ -657,46 +659,15 @@ void fsAioRead(vm::ptr<CellFsAio> aio, s32 xid, fs_aio_cb_t func)
 
 		file->file->Seek(aio->offset);
 
-		nread = file->file->Read(aio->buf.get_ptr(), aio->size);
+		result = write ? file->file->Write(aio->buf.get_ptr(), aio->size) : file->file->Read(aio->buf.get_ptr(), aio->size);
 
 		file->file->Seek(old_position);
 	}
 
 	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([func, aio, error, xid, nread](PPUThread& CPU)
+	Emu.GetCallbackManager().Async([func, aio, error, xid, result](PPUThread& CPU)
 	{
-		func(CPU, aio, error, xid, nread);
-	});
-}
-
-void fsAioWrite(vm::ptr<CellFsAio> aio, s32 xid, fs_aio_cb_t func)
-{
-	std::lock_guard<std::mutex> lock(g_fs_aio_mutex);
-
-	s32 error = CELL_OK;
-	u64 nwritten = 0;
-
-	std::shared_ptr<fs_file_t> file;
-
-	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || !(file->flags & CELL_FS_O_ACCMODE))
-	{
-		error = CELL_FS_EBADF;
-	}
-	else
-	{
-		const auto old_position = file->file->Tell();
-
-		file->file->Seek(aio->offset);
-
-		nwritten = file->file->Write(aio->buf.get_ptr(), aio->size);
-
-		file->file->Seek(old_position);
-	}
-
-	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([func, aio, error, xid, nwritten](PPUThread& CPU)
-	{
-		func(CPU, aio, error, xid, nwritten);
+		func(CPU, aio, error, xid, result);
 	});
 }
 
@@ -733,14 +704,14 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	thread_t("FS AIO Read Thread", std::bind(fsAioRead, aio, (*id = ++g_fs_aio_id), func)).detach();
+	thread_t("FS AIO Read Thread", std::bind(fsAio, aio, false, (*id = ++g_fs_aio_id), func)).detach();
 
 	return CELL_OK;
 }
 
 s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 {
-	cellFs.Todo("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+	cellFs.Warning("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
 
 	if (!Emu.GetIdManager().CheckID<fs_file_t>(aio->fd))
 	{
@@ -749,14 +720,14 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	thread_t("FS AIO Write Thread", std::bind(fsAioWrite, aio, (*id = ++g_fs_aio_id), func)).detach();
+	thread_t("FS AIO Write Thread", std::bind(fsAio, aio, true, (*id = ++g_fs_aio_id), func)).detach();
 
 	return CELL_OK;
 }
 
 s32 cellFsAioCancel(s32 id)
 {
-	cellFs.Todo("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
+	cellFs.Warning("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
 
 	// TODO: cancelled requests return CELL_FS_ECANCELED through their own callbacks
 
