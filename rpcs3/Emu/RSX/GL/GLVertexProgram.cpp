@@ -520,7 +520,7 @@ void GLVertexDecompilerThread::Task()
 
 	bool is_has_BRA = false;
 
-	for (u32 i = 1; m_instr_count < m_max_instr_count; m_instr_count++)
+	for (u32 i = m_start * 4 + 1; m_instr_count < m_max_instr_count; m_instr_count++)
 	{
 		m_cur_instr = &m_instructions[m_instr_count];
 
@@ -560,11 +560,6 @@ void GLVertexDecompilerThread::Task()
 		if (d3.end)
 		{
 			m_instr_count++;
-
-			if (i < m_data.size())
-			{
-				LOG_ERROR(RSX, "Program end before buffer end.");
-			}
 
 			break;
 		}
@@ -796,13 +791,13 @@ void GLVertexProgram::Wait()
 	}
 }
 
-void GLVertexProgram::Decompile(RSXVertexProgram& prog)
+void GLVertexProgram::Decompile(u32 start, u32 *prog)
 {
-	GLVertexDecompilerThread decompiler(prog.data, shader, parr);
+	GLVertexDecompilerThread decompiler(start, prog, shader, parr);
 	decompiler.Task();
 }
 
-void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
+void GLVertexProgram::DecompileAsync(u32 start, u32 *prog)
 {
 	if (m_decompiler_thread)
 	{
@@ -816,7 +811,7 @@ void GLVertexProgram::DecompileAsync(RSXVertexProgram& prog)
 		m_decompiler_thread = nullptr;
 	}
 
-	m_decompiler_thread = new GLVertexDecompilerThread(prog.data, shader, parr);
+	m_decompiler_thread = new GLVertexDecompilerThread(start, prog, shader, parr);
 	m_decompiler_thread->Start();
 }
 

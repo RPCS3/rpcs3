@@ -38,12 +38,14 @@ struct GLVertexDecompilerThread : public ThreadBase
 
 	//wxString main;
 	std::string& m_shader;
-	std::vector<u32>& m_data;
+	u32 *m_data;
+	u32 m_start;
 	GLParamArray& m_parr;
 
-	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, GLParamArray& parr)
+	GLVertexDecompilerThread(u32 start, u32* data, std::string& shader, GLParamArray& parr)
 		: ThreadBase("Vertex Shader Decompiler Thread")
 		, m_data(data)
+		, m_start(start)
 		, m_shader(shader)
 		, m_parr(parr)
 	{
@@ -90,8 +92,8 @@ public:
 	u32 id;
 	std::string shader;
 
-	void Decompile(RSXVertexProgram& prog);
-	void DecompileAsync(RSXVertexProgram& prog);
+	void Decompile(u32 start, u32 *prog);
+	void DecompileAsync(u32 start, u32 *prog);
 	void Wait();
 	void Compile();
 

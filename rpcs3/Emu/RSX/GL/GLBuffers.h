@@ -473,6 +473,25 @@ namespace gl
 			texture3D = GL_TEXTURE_3D
 		};
 
+		enum class channel_type
+		{
+			none = GL_NONE,
+			signed_normalized = GL_SIGNED_NORMALIZED,
+			unsigned_normalized = GL_UNSIGNED_NORMALIZED,
+			float_ = GL_FLOAT,
+			int_ = GL_INT,
+			uint_ = GL_UNSIGNED_INT
+		};
+
+		enum class channel_name
+		{
+			red = GL_TEXTURE_RED_TYPE,
+			green = GL_TEXTURE_GREEN_TYPE,
+			blue = GL_TEXTURE_BLUE_TYPE,
+			alpha = GL_TEXTURE_ALPHA_TYPE,
+			depth = GL_TEXTURE_DEPTH_TYPE
+		};
+
 		class save_binding_state
 		{
 			GLint m_last_binding;
@@ -992,6 +1011,90 @@ namespace gl
 			settings_.apply(*this);
 		}
 
+		int width() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_WIDTH, &result);
+			return (int)result;
+		}
+
+		int height() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_HEIGHT, &result);
+			return (int)result;
+		}
+
+		int depth() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_DEPTH, &result);
+			return (int)result;
+		}
+
+		sizei size() const
+		{
+			return{ width(), height() };
+		}
+
+		size3i size3d() const
+		{
+			return{ width(), height(), depth() };
+		}
+
+		texture::format internal_format() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_INTERNAL_FORMAT, &result);
+			return (texture::format)result;
+		}
+
+		texture::channel_type get_channel_type(texture::channel_name channel) const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), (GLenum)channel, &result);
+			return (texture::channel_type)result;
+		}
+
+		int get_channel_count() const
+		{
+			int result = 0;
+
+			if (get_channel_type(channel_name::red) != channel_type::none)
+				result++;
+			if (get_channel_type(channel_name::green) != channel_type::none)
+				result++;
+			if (get_channel_type(channel_name::blue) != channel_type::none)
+				result++;
+			if (get_channel_type(channel_name::alpha) != channel_type::none)
+				result++;
+			if (get_channel_type(channel_name::depth) != channel_type::none)
+				result++;
+
+			return result;
+		}
+
+		bool compressed() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_COMPRESSED, &result);
+			return (bool)result;
+		}
+
+		int compressed_size() const
+		{
+			save_binding_state save(*this);
+			GLint result;
+			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &result);
+			return (int)result;
+		}
+
 		texture() = default;
 
 		texture(texture_target target, GLuint id = 0)
@@ -1005,6 +1108,11 @@ namespace gl
 			save_binding_state save(*this);
 			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
 			checkForGlError("glGetTexImage");
+		}
+
+		void copy_to(void* dst, texture::type type)
+		{
+			copy_to(dst, internal_format(), type);
 		}
 	};
 
@@ -1110,7 +1218,7 @@ namespace gl
 				std::vector<attachment> result;
 
 				for (int i = from; i < from + count; ++i)
-					result.push_back((*this)[from]);
+					result.push_back((*this)[i]);
 
 				return result;
 			}

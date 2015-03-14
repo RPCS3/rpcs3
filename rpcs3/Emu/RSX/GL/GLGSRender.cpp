@@ -1108,14 +1108,8 @@ bool GLGSRender::LoadProgram()
 
 	m_cur_fragment_prog->ctrl = m_shader_ctrl;
 
-	if (!m_cur_vertex_prog)
-	{
-		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
-		return false;
-	}
-
 	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog);
-	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
+	m_vp_buf_num = -1;
 
 	if (m_fp_buf_num == -1)
 	{
@@ -1132,7 +1126,7 @@ bool GLGSRender::LoadProgram()
 	if (m_vp_buf_num == -1)
 	{
 		LOG_WARNING(RSX, "VP not found in buffer!");
-		m_vertex_prog.Decompile(*m_cur_vertex_prog);
+		m_vertex_prog.Decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_vertex_program_data);
 		m_vertex_prog.Compile();
 		checkForGlError("m_vertex_prog.Compile");
 
@@ -1182,7 +1176,7 @@ bool GLGSRender::LoadProgram()
 	{
 		m_program.Create(m_vertex_prog.id, m_fragment_prog.id);
 		checkForGlError("m_program.Create");
-		m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
+		//m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
 		checkForGlError("m_prog_buffer.Add");
 		m_program.Use();
 
@@ -1291,9 +1285,6 @@ void GLGSRender::OnInit()
 	m_skip_frames = 0;
 	RSXThread::m_width = 720;
 	RSXThread::m_height = 576;
-	RSXThread::m_width_scale = 2.0f;
-	RSXThread::m_height_scale = 2.0f;
-
 	last_width = 0;
 	last_height = 0;
 	last_depth_format = 0;
@@ -1364,9 +1355,7 @@ void GLGSRender::InitDrawBuffers()
 		m_fbo.create();
 
 		checkForGlError("m_fbo.Create");
-
 		m_rbo.assign(5, gl::rbo());
-
 		checkForGlError("m_rbo.Create");
 
 		for (int i = 0; i < 4; ++i)
