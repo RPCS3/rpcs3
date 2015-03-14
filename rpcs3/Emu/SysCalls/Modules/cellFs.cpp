@@ -634,97 +634,70 @@ s32 cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u64 offs
 	return CELL_OK;
 }
 
-std::atomic<s32> g_FsAioReadID(0);
-std::atomic<s32> g_FsAioReadCur(0);
-bool aio_init = false;
+std::mutex g_fs_aio_mutex;
 
-void fsAioRead(u32 fd, vm::ptr<CellFsAio> aio, int xid, vm::ptr<void(vm::ptr<CellFsAio> xaio, int error, int xid, u64 size)> func)
+using fs_aio_cb_t = vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)>;
+
+void fsAioRead(vm::ptr<CellFsAio> aio, s32 xid, fs_aio_cb_t func)
 {
-	while (g_FsAioReadCur != xid)
+	std::lock_guard<std::mutex> lock(g_fs_aio_mutex);
+
+	s32 error = CELL_OK;
+	u64 nread = 0;
+
+	std::shared_ptr<fs_file_t> file;
+
+	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || file->flags & CELL_FS_O_WRONLY)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
-		if (Emu.IsStopped())
-		{
-			cellFs.Warning("fsAioRead() aborted");
-			return;
-		}
+		error = CELL_FS_EBADF;
+	}
+	else
+	{
+		const auto old_position = file->file->Tell();
+
+		file->file->Seek(aio->offset);
+
+		nread = file->file->Read(aio->buf.get_ptr(), aio->size);
+
+		file->file->Seek(old_position);
 	}
 
-	u32 error = CELL_OK;
-	u64 res = 0;
+	// should be executed directly by FS AIO thread
+	Emu.GetCallbackManager().Async([func, aio, error, xid, nread](PPUThread& CPU)
 	{
-		std::shared_ptr<fs_file_t> orig_file;
-		if (!Emu.GetIdManager().GetIDData(fd, orig_file))
-		{
-			cellFs.Error("Wrong fd (%s)", fd);
-			Emu.Pause();
-			return;
-		}
-
-		u64 nbytes = aio->size;
-
-		vfsStream& file = *orig_file->file;
-		const u64 old_pos = file.Tell();
-		file.Seek((u64)aio->offset);
-
-		if (nbytes != (u32)nbytes)
-		{
-			error = CELL_ENOMEM;
-		}
-		else
-		{
-			res = nbytes ? file.Read(aio->buf.get_ptr(), nbytes) : 0;
-		}
-
-		file.Seek(old_pos);
-
-		cellFs.Log("*** fsAioRead(fd=%d, offset=0x%llx, buf=0x%x, size=0x%llx, error=0x%x, res=0x%llx, xid=0x%x)",
-			fd, aio->offset, aio->buf, aio->size, error, res, xid);
-	}
-
-	if (func)
-	{
-		Emu.GetCallbackManager().Async([func, aio, error, xid, res](PPUThread& CPU)
-		{
-			func(CPU, aio, error, xid, res);
-		});
-	}
-
-	g_FsAioReadCur++;
+		func(CPU, aio, error, xid, nread);
+	});
 }
 
-s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)> func)
+void fsAioWrite(vm::ptr<CellFsAio> aio, s32 xid, fs_aio_cb_t func)
 {
-	cellFs.Warning("cellFsAioRead(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+	std::lock_guard<std::mutex> lock(g_fs_aio_mutex);
 
-	if (!aio_init)
+	s32 error = CELL_OK;
+	u64 nwritten = 0;
+
+	std::shared_ptr<fs_file_t> file;
+
+	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || !(file->flags & CELL_FS_O_ACCMODE))
 	{
-		return CELL_ENXIO;
+		error = CELL_FS_EBADF;
+	}
+	else
+	{
+		const auto old_position = file->file->Tell();
+
+		file->file->Seek(aio->offset);
+
+		nwritten = file->file->Write(aio->buf.get_ptr(), aio->size);
+
+		file->file->Seek(old_position);
 	}
 
-	std::shared_ptr<fs_file_t> orig_file;
-	u32 fd = aio->fd;
-
-	if (!Emu.GetIdManager().GetIDData(fd, orig_file))
+	// should be executed directly by FS AIO thread
+	Emu.GetCallbackManager().Async([func, aio, error, xid, nwritten](PPUThread& CPU)
 	{
-		return CELL_EBADF;
-	}
-
-	//get a unique id for the callback (may be used by cellFsAioCancel)
-	const s32 xid = g_FsAioReadID++;
-	*id = xid;
-
-	thread_t t("CellFsAio Reading Thread", std::bind(fsAioRead, fd, aio, xid, func));
-	return CELL_OK;
-}
-
-s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, vm::ptr<void(vm::ptr<CellFsAio> xaio, s32 error, s32 xid, u64 size)> func)
-{
-	cellFs.Todo("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
-
-	// TODO:
-
-	return CELL_OK;
+		func(CPU, aio, error, xid, nwritten);
+	});
 }
 
 s32 cellFsAioInit(vm::ptr<const char> mount_point)
@@ -732,7 +705,8 @@ s32 cellFsAioInit(vm::ptr<const char> mount_point)
 	cellFs.Warning("cellFsAioInit(mount_point=*0x%x)", mount_point);
 	cellFs.Warning("*** mount_point = '%s'", mount_point.get_ptr());
 
-	aio_init = true;
+	// TODO: create AIO thread (if not exists) for specified mount point
+
 	return CELL_OK;
 }
 
@@ -741,8 +715,52 @@ s32 cellFsAioFinish(vm::ptr<const char> mount_point)
 	cellFs.Warning("cellFsAioFinish(mount_point=*0x%x)", mount_point);
 	cellFs.Warning("*** mount_point = '%s'", mount_point.get_ptr());
 
-	//aio_init = false;
+	// TODO: delete existing AIO thread for specified mount point
+
 	return CELL_OK;
+}
+
+std::atomic<s32> g_fs_aio_id(0);
+
+s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
+{
+	cellFs.Warning("cellFsAioRead(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+
+	if (!Emu.GetIdManager().CheckID<fs_file_t>(aio->fd))
+	{
+		return CELL_FS_EBADF;
+	}
+
+	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
+
+	thread_t("FS AIO Read Thread", std::bind(fsAioRead, aio, (*id = ++g_fs_aio_id), func)).detach();
+
+	return CELL_OK;
+}
+
+s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
+{
+	cellFs.Todo("cellFsAioWrite(aio=*0x%x, id=*0x%x, func=*0x%x)", aio, id, func);
+
+	if (!Emu.GetIdManager().CheckID<fs_file_t>(aio->fd))
+	{
+		return CELL_FS_EBADF;
+	}
+
+	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
+
+	thread_t("FS AIO Write Thread", std::bind(fsAioWrite, aio, (*id = ++g_fs_aio_id), func)).detach();
+
+	return CELL_OK;
+}
+
+s32 cellFsAioCancel(s32 id)
+{
+	cellFs.Todo("cellFsAioCancel(id=%d) -> CELL_FS_EINVAL", id);
+
+	// TODO: cancelled requests return CELL_FS_ECANCELED through their own callbacks
+
+	return CELL_FS_EINVAL;
 }
 
 s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
@@ -765,10 +783,6 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 
 Module cellFs("cellFs", []()
 {
-	g_FsAioReadID = 0;
-	g_FsAioReadCur = 0;
-	aio_init = false;
-
 	REG_FUNC(cellFs, cellFsOpen);
 	REG_FUNC(cellFs, cellFsSdataOpen);
 	REG_FUNC(cellFs, cellFsSdataOpenByFd);
@@ -790,10 +804,11 @@ Module cellFs("cellFs", []()
 	REG_FUNC(cellFs, cellFsFtruncate);
 	REG_FUNC(cellFs, cellFsTruncate);
 	REG_FUNC(cellFs, cellFsFGetBlockSize);
-	REG_FUNC(cellFs, cellFsAioRead);
-	REG_FUNC(cellFs, cellFsAioWrite);
 	REG_FUNC(cellFs, cellFsAioInit);
 	REG_FUNC(cellFs, cellFsAioFinish);
+	REG_FUNC(cellFs, cellFsAioRead);
+	REG_FUNC(cellFs, cellFsAioWrite);
+	REG_FUNC(cellFs, cellFsAioCancel);
 	REG_FUNC(cellFs, cellFsGetBlockSize);
 	REG_FUNC(cellFs, cellFsGetFreeSize);
 	REG_FUNC(cellFs, cellFsReadWithOffset);
