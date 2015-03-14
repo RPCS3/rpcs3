@@ -665,7 +665,7 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 	}
 
 	// should be executed directly by FS AIO thread
-	Emu.GetCallbackManager().Async([func, aio, error, xid, result](PPUThread& CPU)
+	Emu.GetCallbackManager().Async([=](PPUThread& CPU)
 	{
 		func(CPU, aio, error, xid, result);
 	});
