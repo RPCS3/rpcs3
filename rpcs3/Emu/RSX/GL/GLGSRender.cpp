@@ -1250,169 +1250,37 @@ void GLGSRender::WriteDepthBuffer()
 	checkForGlError("WriteDepthBuffer(): glGetTexImage");
 }
 
-void GLGSRender::WriteColorBufferA()
-{
-	if (!m_set_context_dma_color_a)
-	{
-		return;
-	}
-
-	u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkForGlError("WriteColorBufferA(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
-	checkForGlError("WriteColorBufferA(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferA(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferA(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-}
-
-void GLGSRender::WriteColorBufferB()
-{
-	if (!m_set_context_dma_color_b)
-	{
-		return;
-	}
-
-	u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT1);
-	checkForGlError("WriteColorBufferB(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
-	checkForGlError("WriteColorBufferB(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferB(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferB(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-}
-
-void GLGSRender::WriteColorBufferC()
-{
-	if (!m_set_context_dma_color_c)
-	{
-		return;
-	}
-
-	u32 address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT2);
-	checkForGlError("WriteColorBufferC(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[2]);
-	checkForGlError("WriteColorBufferC(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferC(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferC(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-}
-
-void GLGSRender::WriteColorBufferD()
-{
-	if (!m_set_context_dma_color_d)
-	{
-		return;
-	}
-
-	u32 address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT3);
-	checkForGlError("WriteColorBufferD(): glReadBuffer");
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[3]);
-	checkForGlError("WriteColorBufferD(): glBindBuffer");
-	glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 0);
-	checkForGlError("WriteColorBufferD(): glReadPixels");
-	GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-	if (packed)
-	{
-		memcpy(vm::get_ptr<void>(address), packed, RSXThread::m_width * RSXThread::m_height * 4);
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		checkForGlError("WriteColorBufferD(): glUnmapBuffer");
-	}
-
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-}
-
 void GLGSRender::WriteColorBuffers()
 {
-	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-	glPixelStorei(GL_PACK_ALIGNMENT, 4);
-
 	switch(m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		//glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[0]);
-		//glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		//glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		//WriteColorBufferA();
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[1]);
-		glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferB();
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		for (int i = 0; i < 2; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		for (int i = 0; i < 3; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
-		WriteColorBufferC();
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		for (int i = 0; i < 4; i++)
-		{
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[i]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-		}
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-		WriteColorBufferA();
-		WriteColorBufferB();
-		WriteColorBufferC();
-		WriteColorBufferD();
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
 		break;
 	}
 }
@@ -1486,16 +1354,12 @@ void GLGSRender::OnReset()
 
 void GLGSRender::InitDrawBuffers()
 {
-	u32 color_a_address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-	static u32 last_color_a_address = 0;
-
-	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format || color_a_address != last_color_a_address)
+	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
 	{
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
 		last_width = RSXThread::m_width;
 		last_height = RSXThread::m_height;
 		last_depth_format = m_surface_depth_format;
-		last_color_a_address = color_a_address;
 
 		m_fbo.create();
 
@@ -1505,23 +1369,15 @@ void GLGSRender::InitDrawBuffers()
 
 		checkForGlError("m_rbo.Create");
 
-		m_rto[0].create();
-		checkForGlError("m_rto[0].create()");
-		m_rto[0].config()
-			.size(RSXThread::m_width, RSXThread::m_height)
-			.type(gl::texture::type::uint_8_8_8_8)
-			.format(gl::texture::format::bgra)
-			.pixels(vm::get_ptr(color_a_address));
-		checkForGlError("m_rto[0].config()");
-		m_fbo.color[0] = m_rto[0];
-		checkForGlError("m_fbo.color[0] = m_rto[0]");
-
-		for (int i = 1; i < m_rbo.size() - 1; ++i)
+		for (int i = 0; i < 4; ++i)
 		{
-			m_rbo[i].create(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.create(GL_RGBA)");
-			m_fbo.color[i] = m_rbo[i];
-			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
+			m_rto[i].create(gl::texture::texture_target::texture2D);
+			m_rto[i].config()
+				.size(RSXThread::m_width, RSXThread::m_height)
+				.type(gl::texture::type::uint_8_8_8_8)
+				.format(gl::texture::format::bgra);
+
+			m_fbo.color[i] = m_rto[i];
 		}
 
 		switch (m_surface_depth_format)
@@ -2062,55 +1918,39 @@ void GLGSRender::Flip()
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-	{
-		area screen_area = coordi{ {}, { (int)RSXThread::m_width, (int)RSXThread::m_height } };
-		coordi aspect_ratio;
-		if (1) //enable aspect ratio
-		{
-			sizei csize = m_frame->GetClientSize();
-			sizei new_size = csize;
-
-			const double aq = (double)RSXThread::m_width / RSXThread::m_height;
-			const double rq = (double)new_size.width / new_size.height;
-			const double q = aq / rq;
-
-			if (q > 1.0)
-			{
-				new_size.height = int(new_size.height / q);
-				aspect_ratio.y = (csize.height - new_size.height) / 2;
-			}
-			else if (q < 1.0)
-			{
-				new_size.width = int(new_size.width * q);
-				aspect_ratio.x = (csize.width - new_size.width) / 2;
-			}
-
-			aspect_ratio.size = new_size;
-		}
-		else
-		{
-			aspect_ratio.size = m_frame->GetClientSize();
-		}
-
-		m_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical());
-	}
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_NONE:
 	{
+		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
+		u32 width = buffers[m_gcm_current_buffer].width;
+		u32 height = buffers[m_gcm_current_buffer].height;
+
+		if (!m_fbo)
+		{
+			m_fbo.create();
+
+			checkForGlError("m_fbo.Create");
+
+			m_rto[0].create();
+			checkForGlError("m_rto[0].create()");
+			m_rto[0].config()
+				.size(RSXThread::m_width, RSXThread::m_height)
+				.type(gl::texture::type::uint_8_8_8_8)
+				.format(gl::texture::format::bgra)
+				.pixels(nullptr);
+			checkForGlError("m_rto[0].config()");
+			m_fbo.color = m_rto[0];
+		}
+		m_fbo.bind();
 		// Slow path for MRT/None target using glReadPixels.
 		static u8* src_buffer = nullptr;
-		static u32 width = 0;
-		static u32 height = 0;
 		GLenum format = GL_RGBA;
 
 		if (m_read_buffer)
 		{
 			format = GL_BGRA;
-			CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
 			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			width = buffers[m_gcm_current_buffer].width;
-			height = buffers[m_gcm_current_buffer].height;
 			src_buffer = vm::get_ptr<u8>(addr);
 		}
 		else if (m_fbo)
@@ -2164,9 +2004,7 @@ void GLGSRender::Flip()
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 
-			gl::screen.bind_as(gl::fbo::target::draw_frame_buffer);
-			m_program.Use();
-			gl::screen.clear(gl::buffers::color_depth_stencil);
+			m_fbo.clear(gl::buffers::color_depth_stencil);
 
 			glColor3f(1, 1, 1);
 			glBegin(GL_QUADS);
@@ -2183,6 +2021,37 @@ void GLGSRender::Flip()
 	}
 		break;
 	}
+
+	area screen_area = coordi{ {}, { (int)RSXThread::m_width, (int)RSXThread::m_height } };
+	coordi aspect_ratio;
+	if (1) //enable aspect ratio
+	{
+		sizei csize = m_frame->GetClientSize();
+		sizei new_size = csize;
+
+		const double aq = (double)RSXThread::m_width / RSXThread::m_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
+
+		if (q > 1.0)
+		{
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
+
+		aspect_ratio.size = new_size;
+	}
+	else
+	{
+		aspect_ratio.size = m_frame->GetClientSize();
+	}
+
+	m_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical());
 
 	// Draw Objects
 	for (uint i = 0; i < m_post_draw_objs.size(); ++i)

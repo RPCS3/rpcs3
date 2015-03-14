@@ -152,7 +152,7 @@ private:
 
 	GLvao m_vao;
 	GLvbo m_vbo;
-	gl::texture2d m_rto[4];
+	gl::texture m_rto[4];
 	std::vector<gl::rbo> m_rbo;
 	gl::fbo m_fbo;
 
@@ -178,10 +178,6 @@ private:
 	void WriteBuffers();
 	void WriteDepthBuffer();
 	void WriteColorBuffers();
-	void WriteColorBufferA();
-	void WriteColorBufferB();
-	void WriteColorBufferC();
-	void WriteColorBufferD();
 
 	void DrawObjects();
 	void InitDrawBuffers();

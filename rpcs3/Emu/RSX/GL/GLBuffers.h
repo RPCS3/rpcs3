@@ -466,121 +466,46 @@ namespace gl
 			always = GL_ALWAYS
 		};
 
-		static bool compressed_format(format format_)
+		enum class texture_target
 		{
-			switch (format_)
-			{
-			case format::compressed_rgb_s3tc_dxt1:
-			case format::compressed_rgba_s3tc_dxt1:
-			case format::compressed_rgba_s3tc_dxt3:
-			case format::compressed_rgba_s3tc_dxt5:
-				return true;
-			}
-
-			return false;
-		}
-
-		uint id() const
-		{
-			return m_id;
-		}
-
-		uint level() const
-		{
-			return m_level;
-		}
-
-		void create()
-		{
-			if (created())
-				remove();
-
-			glGenTextures(1, &m_id);
-		}
-
-		bool created() const
-		{
-			return m_id != 0;
-		}
-
-		void remove()
-		{
-			glDeleteTextures(1, &m_id);
-			m_id = 0;
-		}
-
-		void set_id(GLuint id)
-		{
-			m_id = id;
-		}
-
-		void set_level(int level)
-		{
-			m_level = level;
-		}
-
-		texture with_level(int level)
-		{
-			texture result = *this;
-			result.set_level(level);
-
-			return result;
-		}
-
-		explicit operator bool() const
-		{
-			return created();
-		}
-	};
-
-	//TODO
-	class texture1d : public texture
-	{
-	public:
-		texture1d() = default;
-
-		texture1d(GLuint id)
-		{
-			set_id(id);
-		}
+			texture1D = GL_TEXTURE_1D,
+			texture2D = GL_TEXTURE_2D,
+			texture3D = GL_TEXTURE_3D
+		};
 
 		class save_binding_state
 		{
 			GLint m_last_binding;
+			GLenum m_target;
 
 		public:
-			save_binding_state(const texture1d& new_binding)
+			save_binding_state(const texture& new_binding)
 			{
-				glGetIntegerv(GL_TEXTURE_1D_BINDING_EXT, &m_last_binding);
+				GLenum pname;
+				switch (new_binding.target())
+				{
+				case texture_target::texture1D: pname = GL_TEXTURE_1D_BINDING_EXT; break;
+				case texture_target::texture2D: pname = GL_TEXTURE_2D_BINDING_EXT; break;
+				case texture_target::texture3D: pname = GL_TEXTURE_3D_BINDING_EXT; break;
+				}
+
+				glGetIntegerv(pname, &m_last_binding);
+				
+				checkForGlError("glGetIntegerv(GL_TEXTURE_2D_BINDING_EXT, &m_last_binding);");
 				new_binding.bind();
+				m_target = (GLenum)new_binding.target();
 			}
 
 			~save_binding_state()
 			{
-				glBindTexture(GL_TEXTURE_1D, m_last_binding);
+				glBindTexture(m_target, m_last_binding);
+				checkForGlError(fmt::format("glBindTexture(GL_TEXTURE_2D, m_last_binding=0x%x)", m_last_binding));
 			}
 		};
 
-		void bind() const
-		{
-			glBindTexture(GL_TEXTURE_1D, id());
-		}
-	};
-
-	//TODO
-	class texture2d : public texture
-	{
-	public:
-		texture2d() = default;
-
-		texture2d(GLuint id)
-		{
-			set_id(id);
-		}
-
 		class settings
 		{
-			texture2d *m_parent;
+			texture *m_parent;
 
 			texture::channel m_swizzle_r = texture::channel::r;
 			texture::channel m_swizzle_g = texture::channel::g;
@@ -636,7 +561,7 @@ namespace gl
 			color m_border_color;
 
 		public:
-			settings(texture2d *parent = nullptr) : m_parent(parent)
+			settings(texture *parent = nullptr) : m_parent(parent)
 			{
 			}
 
@@ -645,7 +570,7 @@ namespace gl
 				apply();
 			}
 
-			void apply(const texture2d &texture) const
+			void apply(const texture &texture) const
 			{
 				save_binding_state save(texture);
 
@@ -689,40 +614,40 @@ namespace gl
 						}
 					}
 
-					glCompressedTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
+					glCompressedTexImage2D((GLenum)m_parent->target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
 					checkForGlError("glCompressedTexImage2D");
 				}
 				else
 				{
-					glTexImage2D(GL_TEXTURE_2D, m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+					glTexImage2D((GLenum)m_parent->target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
 					checkForGlError("glTexImage2D");
 				}
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_max_level);
-				glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
+				glTexParameteri((GLenum)m_parent->target(), GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
 
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, m_max_lod);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, m_min_lod);
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, m_lod);
+				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MIN_LOD, m_max_lod);
+				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MAX_LOD, m_min_lod);
+				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_LOD_BIAS, m_lod);
 
-				glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
+				glTexParameterfv((GLenum)m_parent->target(), GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
+				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
 
-				glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
+				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
 			}
 
 			void apply()
@@ -966,28 +891,95 @@ namespace gl
 			}
 		};
 
-		class save_binding_state
+	private:
+		texture_target m_target = texture_target::texture2D;
+
+	public:
+		texture_target target() const
 		{
-			GLint m_last_binding;
+			return m_target;
+		}
 
-		public:
-			save_binding_state(const texture2d& new_binding)
+		void set_target(texture_target target)
+		{
+			m_target = target;
+		}
+
+		static bool compressed_format(format format_)
+		{
+			switch (format_)
 			{
-				glGetIntegerv(GL_TEXTURE_2D_BINDING_EXT, &m_last_binding);
-				checkForGlError("glGetIntegerv(GL_TEXTURE_2D_BINDING_EXT, &m_last_binding);");
-				new_binding.bind();
+			case format::compressed_rgb_s3tc_dxt1:
+			case format::compressed_rgba_s3tc_dxt1:
+			case format::compressed_rgba_s3tc_dxt3:
+			case format::compressed_rgba_s3tc_dxt5:
+				return true;
 			}
 
-			~save_binding_state()
-			{
-				glBindTexture(GL_TEXTURE_2D, m_last_binding);
-				checkForGlError(fmt::format("glBindTexture(GL_TEXTURE_2D, m_last_binding=0x%x)", m_last_binding));
-			}
-		};
+			return false;
+		}
+
+		uint id() const
+		{
+			return m_id;
+		}
+
+		uint level() const
+		{
+			return m_level;
+		}
+
+		void create()
+		{
+			if (created())
+				remove();
+
+			glGenTextures(1, &m_id);
+		}
+
+		void create(texture_target target_)
+		{
+			set_target(target_);
+			create();
+		}
+
+		bool created() const
+		{
+			return m_id != 0;
+		}
+
+		void remove()
+		{
+			glDeleteTextures(1, &m_id);
+			m_id = 0;
+		}
+
+		void set_id(GLuint id)
+		{
+			m_id = id;
+		}
+
+		void set_level(int level)
+		{
+			m_level = level;
+		}
+
+		texture with_level(int level)
+		{
+			texture result = *this;
+			result.set_level(level);
+
+			return result;
+		}
+
+		explicit operator bool() const
+		{
+			return created();
+		}
 
 		void bind() const
 		{
-			glBindTexture(GL_TEXTURE_2D, id());
+			glBindTexture((GLenum)target(), id());
 		}
 
 		settings config()
@@ -999,32 +991,20 @@ namespace gl
 		{
 			settings_.apply(*this);
 		}
-	};
 
-	//TODO
-	class texture3d : public texture
-	{
-	public:
-		class save_binding_state
+		texture() = default;
+
+		texture(texture_target target, GLuint id = 0)
 		{
-			GLint m_last_binding;
+			m_target = target;
+			set_id(id);
+		}
 
-		public:
-			save_binding_state(const texture3d& new_binding)
-			{
-				glGetIntegerv(GL_TEXTURE_3D_BINDING_EXT, &m_last_binding);
-				new_binding.bind();
-			}
-
-			~save_binding_state()
-			{
-				glBindTexture(GL_TEXTURE_3D, m_last_binding);
-			}
-		};
-
-		void bind() const
+		void copy_to(void* dst, texture::format format, texture::type type)
 		{
-			glBindTexture(GL_TEXTURE_3D, id());
+			save_binding_state save(*this);
+			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
+			checkForGlError("glGetTexImage");
 		}
 	};
 
@@ -1100,22 +1080,16 @@ namespace gl
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, m_id, GL_RENDERBUFFER, rhs.id());
 			}
 
-			void operator = (const texture1d& rhs)
+			void operator = (const texture& rhs)
 			{
 				save_binding_state save(m_parent);
-				glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level());
-			}
 
-			void operator = (const texture2d& rhs)
-			{
-				save_binding_state save(m_parent);
-				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level());
-			}
-
-			void operator = (const texture3d& rhs)
-			{
-				save_binding_state save(m_parent);
-				glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0);
+				switch (rhs.target())
+				{
+				case texture::texture_target::texture1D: glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level()); break;
+				case texture::texture_target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
+				case texture::texture_target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
+				}
 			}
 		};
 
