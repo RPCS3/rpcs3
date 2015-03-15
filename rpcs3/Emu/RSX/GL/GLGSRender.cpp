@@ -1119,7 +1119,8 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rFile f("./FragmentProgram.txt", rFile::write);
+		static int index = 0;
+		rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
 		f.Write(m_fragment_prog.shader);
 	}
 
@@ -1131,7 +1132,8 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_vertex_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rFile f("./VertexProgram.txt", rFile::write);
+		static int index = 0;
+		rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
 		f.Write(m_vertex_prog.shader);
 	}
 

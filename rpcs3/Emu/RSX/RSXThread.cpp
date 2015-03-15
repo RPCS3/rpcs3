@@ -996,7 +996,11 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	{
 		//LOG_WARNING(RSX, "NV4097_SET_TRANSFORM_PROGRAM[%d](%d)", index, count);
 
-		m_vertex_program_data[methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_LOAD] + index] = value;
+		m_vertex_program_data[methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_LOAD] * 4 + index % 4] = value;
+		if (index % 4 == 3)
+		{
+			methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_LOAD]++;
+		}
 		break;
 	}
 

@@ -377,8 +377,8 @@ public:
 	bool m_set_context_dma_z;
 	u32 m_context_dma_z;
 	u32 m_context_surface;
-	u32 m_context_dma_img_src;
-	u32 m_context_dma_img_dst;
+	u32 m_context_dma_img_src = 0xfeed0000;
+	u32 m_context_dma_img_dst = 0xfeed0000;
 	u32 m_context_dma_buffer_in_src;
 	u32 m_context_dma_buffer_in_dst;
 	u32 m_dst_offset;
