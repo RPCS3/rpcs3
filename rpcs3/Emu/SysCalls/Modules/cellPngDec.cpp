@@ -82,7 +82,8 @@ s32 pngDecOpen(
 	case se32(CELL_PNGDEC_FILE):
 	{
 		// Get file descriptor and size
-		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
+		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<fs_file_t> file(new fs_file_t(file_s, 0, 0));
 		if (!file) return CELL_PNGDEC_ERROR_OPEN_FILE;
 		stream->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
 		stream->fileSize = file->file->GetSize();

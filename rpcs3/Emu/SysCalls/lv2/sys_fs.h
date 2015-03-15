@@ -159,6 +159,7 @@ struct fs_file_t
 };
 
 // SysCalls
+s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
 s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
@@ -172,6 +173,7 @@ s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode);
 s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to);
 s32 sys_fs_rmdir(vm::ptr<const char> path);
 s32 sys_fs_unlink(vm::ptr<const char> path);
+s32 sys_fs_fcntl(u32 fd, s32 flags, u32 addr, u32 arg4, u32 arg5, u32 arg6);
 s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5);
 s32 sys_fs_get_block_size(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);

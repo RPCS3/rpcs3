@@ -20,6 +20,13 @@
 
 SysCallBase sys_fs("sys_fs");
 
+s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6)
+{
+	sys_fs.Todo("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, arg5=*0x%x, arg6=0x%x) -> CELL_OK", arg1, arg2, arg3, arg4, arg5, arg6);
+
+	return CELL_OK;
+}
+
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size)
 {
 	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
@@ -435,6 +442,13 @@ s32 sys_fs_unlink(vm::ptr<const char> path)
 		return CELL_EACCES;
 
 	sys_fs.Notice("sys_fs_unlink(): file '%s' deleted", path.get_ptr());
+	return CELL_OK;
+}
+
+s32 sys_fs_fcntl(u32 fd, s32 flags, u32 addr, u32 arg4, u32 arg5, u32 arg6)
+{
+	sys_fs.Todo("sys_fs_fcntl(fd=0x%x, flags=0x%x, addr=*0x%x, arg4=0x%x, arg5=0x%x, arg6=0x%x) -> CELL_OK", fd, flags, addr, arg4, arg5, arg6);
+
 	return CELL_OK;
 }
 
