@@ -1254,29 +1254,29 @@ void GLGSRender::WriteColorBuffers()
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
-		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000)), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 	}
 }
