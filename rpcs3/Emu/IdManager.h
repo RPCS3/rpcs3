@@ -86,14 +86,14 @@ class IdManager
 
 	std::unordered_map<u32, ID> m_id_map;
 	std::set<u32> m_types[TYPE_OTHER];
-	std::mutex m_mtx_main;
+	std::mutex m_mutex;
 
 	u32 m_cur_id = s_first_id;
 
 public:
 	template<typename T> bool CheckID(const u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto f = m_id_map.find(id);
 
@@ -102,7 +102,7 @@ public:
 
 	void Clear()
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		m_id_map.clear();
 		m_cur_id = s_first_id;
@@ -110,7 +110,7 @@ public:
 	
 	template<typename T> u32 GetNewID(std::shared_ptr<T>& data, const IDType type = TYPE_OTHER)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		m_id_map.emplace(m_cur_id, ID(data, type));
 
@@ -124,7 +124,7 @@ public:
 
 	template<typename T> bool GetIDData(const u32 id, std::shared_ptr<T>& result)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto f = m_id_map.find(id);
 
@@ -140,7 +140,7 @@ public:
 
 	template<typename T> std::shared_ptr<T> GetIDData(const u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto f = m_id_map.find(id);
 
@@ -154,14 +154,14 @@ public:
 
 	bool HasID(const u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		return m_id_map.find(id) != m_id_map.end();
 	}
 
 	IDType GetIDType(const u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto item = m_id_map.find(id);
 
@@ -175,7 +175,7 @@ public:
 
 	template<typename T> bool RemoveID(const u32 id)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto item = m_id_map.find(id);
 
@@ -196,7 +196,7 @@ public:
 
 	u32 GetTypeCount(IDType type)
 	{
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		if (type < TYPE_OTHER)
 		{
@@ -212,7 +212,7 @@ public:
 	std::set<u32> GetTypeIDs(IDType type)
 	{
 		// you cannot simply return reference to existing set
-		std::lock_guard<std::mutex> lock(m_mtx_main);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		if (type < TYPE_OTHER)
 		{
