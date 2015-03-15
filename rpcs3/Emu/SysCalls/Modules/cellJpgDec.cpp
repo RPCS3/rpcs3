@@ -51,7 +51,8 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	case se32(CELL_JPGDEC_FILE):
 	{
 		// Get file descriptor and size
-		std::shared_ptr<fs_file_t> file(new fs_file_t(std::shared_ptr<vfsStream>(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead)), 0, 0));
+		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
+		std::shared_ptr<fs_file_t> file(new fs_file_t(file_s, 0, 0));
 		if (!file) return CELL_JPGDEC_ERROR_OPEN_FILE;
 		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
 		current_subHandle->fileSize = file->file->GetSize();

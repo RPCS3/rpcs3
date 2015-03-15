@@ -695,7 +695,7 @@ const ppu_func_caller sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func,  //794  UNS
 	null_func, null_func, null_func, null_func, null_func,  //799  UNS
 
-	null_func,//bind_func(sys_fs_test),                     //800 (0x320)
+	bind_func(sys_fs_test),                                 //800 (0x320)
 	bind_func(sys_fs_open),                                 //801 (0x321)
 	bind_func(sys_fs_read),                                 //802 (0x322)
 	bind_func(sys_fs_write),                                //803 (0x323)
@@ -712,7 +712,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_fs_unlink),                               //814 (0x32E)
 	null_func,//bind_func(sys_fs_utime),                    //815 (0x32F)
 	null_func,//bind_func(sys_fs_access),                   //816 (0x330)
-	null_func,//bind_func(sys_fs_fcntl),                    //817 (0x331)
+	bind_func(sys_fs_fcntl),                                //817 (0x331)
 	bind_func(sys_fs_lseek),                                //818 (0x332)
 	null_func,//bind_func(sys_fs_fdatasync),                //819 (0x333)
 	null_func,//bind_func(sys_fs_fsync),                    //820 (0x334)
