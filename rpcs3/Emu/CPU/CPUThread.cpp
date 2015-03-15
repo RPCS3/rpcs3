@@ -65,25 +65,13 @@ void CPUThread::DumpInformation()
 
 		case CPU_THREAD_PPU:
 		{
-			if ((u32)syscall == syscall)
+			if (syscall)
 			{
-				if (syscall)
-				{
-					if (syscall < 1024)
-					{
-						// TODO:
-						//return SysCalls::GetSyscallName((u32)syscall);
-						return "unknown syscall";
-					}
-					else
-					{
-						return SysCalls::GetHLEFuncName((u32)syscall);
-					}
-				}
-				else
-				{
-					return{};
-				}
+				return SysCalls::GetFuncName(syscall);
+			}
+			else
+			{
+				return{};
 			}
 
 			return "unknown function";

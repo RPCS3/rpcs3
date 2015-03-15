@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/Cell/PPUThread.h"
 
-typedef void(*ppu_func_caller)(PPUThread&);
+using ppu_func_caller = void(*)(PPUThread&);
 
 namespace ppu_func_detail
 {
@@ -181,7 +181,7 @@ namespace ppu_func_detail
 	template<typename... T>
 	struct func_binder<void, PPUThread&, T...>
 	{
-		typedef void(*func_t)(PPUThread&, T...);
+		using func_t = void(*)(PPUThread&, T...);
 
 		static void do_call(PPUThread& CPU, func_t func)
 		{
@@ -192,7 +192,7 @@ namespace ppu_func_detail
 	template<typename... T>
 	struct func_binder<void, T...>
 	{
-		typedef void(*func_t)(T...);
+		using func_t = void(*)(T...);
 
 		static void do_call(PPUThread& CPU, func_t func)
 		{
@@ -203,7 +203,7 @@ namespace ppu_func_detail
 	template<typename RT, typename... T>
 	struct func_binder<RT, PPUThread&, T...>
 	{
-		typedef RT(*func_t)(PPUThread&, T...);
+		using func_t = RT(*)(PPUThread&, T...);
 
 		static void do_call(PPUThread& CPU, func_t func)
 		{
@@ -214,7 +214,7 @@ namespace ppu_func_detail
 	template<typename RT, typename... T>
 	struct func_binder
 	{
-		typedef RT(*func_t)(T...);
+		using func_t = RT(*)(T...);
 
 		static void do_call(PPUThread& CPU, func_t func)
 		{
