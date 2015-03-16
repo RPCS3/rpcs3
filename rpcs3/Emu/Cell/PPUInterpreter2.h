@@ -6,6 +6,40 @@ class PPUThread;
 union ppu_opcode_t
 {
 	u32 opcode;
+
+	struct
+	{
+		u32    : 6; // 26..31
+		u32 vc : 5; // 21..25
+		u32 vb : 5; // 16..20
+		u32 va : 5; // 11..15
+		u32 vd : 5; // 6..10
+		u32    : 6; // 0..5
+	};
+
+	struct
+	{
+		u32    : 6; // 26..31
+		u32    : 5; // 21..25
+		u32 rb : 5; // 16..20
+		u32 ra : 5; // 11..15
+		u32 rd : 5; // 6..10
+		u32    : 6; // 0..5
+	};
+
+	struct
+	{
+		u32 uimm16 : 16; // 16..31
+		u32        : 5;  // 11..15
+		u32 rs     : 5;  // 6..10
+		u32        : 6;  // 0..5
+	};
+
+	struct
+	{
+		s32 simm16 : 16; // 16..31
+		s32        : 16;
+	};
 };
 
 using ppu_inter_func_t = void(*)(PPUThread& CPU, ppu_opcode_t opcode);
