@@ -94,18 +94,21 @@ void PPUThread::CloseStack()
 
 void PPUThread::DoRun()
 {
+	m_dec = nullptr;
+
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
-	case 0:
-		//m_dec = new PPUDecoder(*new PPUDisAsm());
-	break;
-
-	case 1:
+	case 0: // original interpreter
 	{
 		auto ppui = new PPUInterpreter(*this);
 		m_dec = new PPUDecoder(ppui);
+		break;
 	}
-	break;
+
+	case 1: // alternative interpreter
+	{
+		break;
+	}
 
 	case 2:
 #ifdef PPU_LLVM_RECOMPILER
@@ -217,9 +220,13 @@ void PPUThread::Task()
 	{
 		custom_task(*this);
 	}
-	else
+	else if (m_dec)
 	{
 		CPUThread::Task();
+	}
+	else
+	{
+
 	}
 }
 

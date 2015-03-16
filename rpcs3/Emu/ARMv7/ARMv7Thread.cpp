@@ -174,16 +174,17 @@ void ARMv7Thread::DoReset()
 
 void ARMv7Thread::DoRun()
 {
+	m_dec = nullptr;
+
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
-		//m_dec = new ARMv7Decoder(*new ARMv7DisAsm());
-	break;
-
 	case 1:
-	case 2:
 		m_dec = new ARMv7Decoder(context);
-	break;
+		break;
+	default:
+		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		Emu.Pause();
 	}
 }
 
