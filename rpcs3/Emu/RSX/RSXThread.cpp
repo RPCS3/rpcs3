@@ -21,17 +21,54 @@ extern "C"
 
 u32 methodRegisters[0xffff];
 
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+{
+	u32 offset = 0;
+	u32 shift_count = 0;
+	while (log2_width | log2_height | log2_depth)
+	{
+		if (log2_width)
+		{
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+
+		if (log2_height)
+		{
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+
+		if (log2_depth)
+		{
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
+}
+
+
 u32 GetAddress(u32 offset, u32 location)
 {
 	u32 res = 0;
 
 	switch (location)
 	{
+	case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 	case CELL_GCM_LOCATION_LOCAL:
 	{
 		res = (u32)Memory.RSXFBMem.GetStartAddr() + offset;
 		break;
 	}
+
+	case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 	case CELL_GCM_LOCATION_MAIN:
 	{
 		res = (u32)Memory.RSXIOMem.RealAddr(offset); // TODO: Error Check?
@@ -1702,7 +1739,10 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (lineCount == 1 && !inPitch && !outPitch && !notify)
 		{
-			memcpy(vm::get_ptr<void>(GetAddress(outOffset, 0)), vm::get_ptr<void>(GetAddress(inOffset, 0)), lineLength);
+			memcpy(
+				vm::get_ptr<void>(GetAddress(outOffset, methodRegisters[NV0039_SET_CONTEXT_DMA_BUFFER_OUT])),
+				vm::get_ptr<void>(GetAddress(inOffset, methodRegisters[NV0039_SET_CONTEXT_DMA_BUFFER_IN])),
+				lineLength);
 		}
 		else
 		{
@@ -1790,35 +1830,52 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		const u16 width = methodRegisters[NV3089_IMAGE_IN_SIZE];
 		const u16 height = methodRegisters[NV3089_IMAGE_IN_SIZE] >> 16;
 		const u16 pitch = methodRegisters[NV3089_IMAGE_IN_FORMAT];
-
 		const u8 origin = methodRegisters[NV3089_IMAGE_IN_FORMAT] >> 16;
+		const u8 inter = methodRegisters[NV3089_IMAGE_IN_FORMAT] >> 24;
+
 		if (origin != 2 /* CELL_GCM_TRANSFER_ORIGIN_CORNER */)
 		{
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", origin);
 		}
 
-		const u8 inter = methodRegisters[NV3089_IMAGE_IN_FORMAT] >> 24;
 		if (inter != 0 /* CELL_GCM_TRANSFER_INTERPOLATOR_ZOH */ && inter != 1 /* CELL_GCM_TRANSFER_INTERPOLATOR_FOH */)
 		{
 			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown inter (%d)", inter);
 		}
 
-		const u32 offset = methodRegisters[NV3089_IMAGE_IN_OFFSET];
+		const u32 src_offset = methodRegisters[NV3089_IMAGE_IN_OFFSET];
+		const u32 src_dma = methodRegisters[NV3089_SET_CONTEXT_DMA_IMAGE];
+
+		u32 dst_offset;
+		u32 dst_dma = 0;
+
+		switch (methodRegisters[NV3089_SET_CONTEXT_SURFACE])
+		{
+		case CELL_GCM_CONTEXT_SURFACE2D:
+			dst_dma = methodRegisters[NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN];
+			dst_offset = methodRegisters[NV3062_SET_OFFSET_DESTIN];
+			break;
+
+		case CELL_GCM_CONTEXT_SWIZZLE2D:
+			dst_dma = methodRegisters[NV309E_SET_CONTEXT_DMA_IMAGE];
+			dst_offset = methodRegisters[NV309E_SET_OFFSET];
+			break;
+
+		default:
+			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", m_context_surface);
+			break;
+		}
+
+		if (!dst_dma)
+			break;
+
+		LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: src = 0x%x, dst = 0x%x", src_offset, dst_offset);
 
 		const u16 u = value; // inX (currently ignored)
 		const u16 v = value >> 16; // inY (currently ignored)
 
-		u8* pixels_src = vm::get_ptr<u8>(GetAddress(offset, m_context_dma_img_src - 0xfeed0000));
-		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(m_dst_offset, m_context_dma_img_dst - 0xfeed0000));
-
-		if (m_context_surface == CELL_GCM_CONTEXT_SWIZZLE2D)
-		{
-			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Swizzle2D not implemented");
-		}
-		else if (m_context_surface != CELL_GCM_CONTEXT_SURFACE2D)
-		{
-			LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", m_context_surface);
-		}
+		u8* pixels_src = vm::get_ptr<u8>(GetAddress(src_offset, src_dma));
+		u8* pixels_dst = vm::get_ptr<u8>(GetAddress(dst_offset, dst_dma));
 
 		if (m_color_format != 4 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5 */ && m_color_format != 10 /* CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8 */)
 		{
@@ -1831,8 +1888,39 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		const s32 out_w = (s32)(u64(width) * (1 << 20) / m_color_conv_dsdx);
 		const s32 out_h = (s32)(u64(height) * (1 << 20) / m_color_conv_dtdy);
 
+		if (methodRegisters[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+		{
+			u8* linear_pixels = pixels_src;
+			u8* swizzled_pixels = new u8[in_bpp * width * height];
+
+			int sw_width = 1 << (int)log2(width);
+			int sw_height = 1 << (int)log2(height);
+
+			for (int y = 0; y < sw_height; y++)
+			{
+				for (int x = 0; x < sw_width; x++)
+				{
+					switch (in_bpp)
+					{
+					case 1:
+						swizzled_pixels[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = linear_pixels[y * sw_height + x];
+						break;
+					case 2:
+						((u16*)swizzled_pixels)[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = ((u16*)linear_pixels)[y * sw_height + x];
+						break;
+					case 4:
+						((u32*)swizzled_pixels)[LinearToSwizzleAddress(x, y, 0, sw_width, sw_height, 0)] = ((u32*)linear_pixels)[y * sw_height + x];
+						break;
+					}
+					
+				}
+			}
+
+			pixels_src = swizzled_pixels;
+		}
+
 		LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: w=%d, h=%d, pitch=%d, offset=0x%x, inX=%f, inY=%f, scaleX=%f, scaleY=%f",
-			width, height, pitch, offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
+			width, height, pitch, src_offset, double(u) / 16, double(v) / 16, double(1 << 20) / (m_color_conv_dsdx), double(1 << 20) / (m_color_conv_dtdy));
 
 		std::unique_ptr<u8[]> temp;
 		
@@ -1845,7 +1933,8 @@ void RSXThread::update_reg(u32 reg, u32 value)
 			AVPixelFormat in_format = m_color_format == 4 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 			AVPixelFormat out_format = m_color_conv_fmt == 7 ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB; // ???
 
-			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format, inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+			std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(width, height, in_format, out_w, out_h, out_format,
+				inter ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
 
 			int in_line = in_bpp * width;
 			u8* out_ptr = temp.get();
@@ -1895,6 +1984,11 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		else
 		{
 			memcpy(pixels_dst, pixels_src, out_w * out_h * out_bpp);
+		}
+
+		if (methodRegisters[NV3089_SET_CONTEXT_SURFACE] == CELL_GCM_CONTEXT_SWIZZLE2D)
+		{
+			delete[] pixels_src;
 		}
 
 		break;

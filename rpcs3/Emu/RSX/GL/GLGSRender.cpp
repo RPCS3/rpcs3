@@ -181,8 +181,8 @@ void GLTexture::Init(RSXTexture& tex)
 			src = (u32*)pixels;
 			dst = (u32*)unswizzledPixels;
 
-			log2width = log(tex.GetWidth()) / log(2);
-			log2height = log(tex.GetHeight()) / log(2);
+			log2width = log2(tex.GetWidth());
+			log2height = log2(tex.GetHeight());
 
 			for (int i = 0; i < tex.GetHeight(); i++)
 			{
@@ -1120,8 +1120,8 @@ bool GLGSRender::LoadProgram()
 
 		// TODO: This shouldn't use current dir
 		static int index = 0;
-		rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
-		f.Write(m_fragment_prog.shader);
+		//rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
+		//f.Write(m_fragment_prog.shader);
 	}
 
 	if (m_vp_buf_num == -1)
@@ -1133,8 +1133,8 @@ bool GLGSRender::LoadProgram()
 
 		// TODO: This shouldn't use current dir
 		static int index = 0;
-		rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
-		f.Write(m_vertex_prog.shader);
+		//rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
+		//f.Write(m_vertex_prog.shader);
 	}
 
 	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)
@@ -1221,7 +1221,7 @@ void GLGSRender::WriteDepthBuffer()
 		return;
 	}
 
-	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z);
 
 	auto ptr = vm::get_ptr<void>(address);
 	glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[4]);
@@ -1254,29 +1254,29 @@ void GLGSRender::WriteColorBuffers()
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 		break;
 	}
 }
@@ -2058,34 +2058,4 @@ void GLGSRender::Flip()
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
 	}
-}
-
-u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
-{
-	u32 offset = 0;
-	u32 shift_count = 0;
-	while (log2_width | log2_height | log2_depth){
-		if (log2_width)
-		{
-			offset |= (x & 0x01) << shift_count;
-			x >>= 1;
-			++shift_count;
-			--log2_width;
-		}
-		if (log2_height)
-		{
-			offset |= (y & 0x01) << shift_count;
-			y >>= 1;
-			++shift_count;
-			--log2_height;
-		}
-		if (log2_depth)
-		{
-			offset |= (z & 0x01) << shift_count;
-			z >>= 1;
-			++shift_count;
-			--log2_depth;
-		}
-	}
-	return offset;
 }
