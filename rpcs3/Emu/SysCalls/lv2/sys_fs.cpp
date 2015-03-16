@@ -213,7 +213,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 
 	if (!Emu.GetIdManager().GetIDData(fd, directory))
 	{
-		return CELL_ESRCH;
+		return CELL_FS_EBADF;
 	}
 
 	const DirEntryInfo* info = directory->Read();
@@ -241,7 +241,7 @@ s32 sys_fs_closedir(u32 fd)
 
 	if (!Emu.GetIdManager().GetIDData(fd, directory))
 	{
-		return CELL_ESRCH;
+		return CELL_FS_EBADF;
 	}
 
 	Emu.GetIdManager().RemoveID<vfsDirBase>(fd);
@@ -329,7 +329,7 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 		sys_fs.Error("sys_fs_stat(): size is the same (0x%x)", size);
 
 	sys_fs.Warning("sys_fs_stat(): '%s' not found", path.get_ptr());
-	return CELL_ENOENT;
+	return CELL_FS_ENOENT;
 }
 
 s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
@@ -337,8 +337,11 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 	sys_fs.Warning("sys_fs_fstat(fd=0x%x, sb=*0x%x)", fd, sb);
 
 	std::shared_ptr<fs_file_t> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		return CELL_FS_EBADF;
+	}
 
 	sb->mode =
 		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
@@ -364,11 +367,15 @@ s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode)
 
 	const std::string _path = path.get_ptr();
 
-	if (vfsDir().IsExists(_path))
-		return CELL_EEXIST;
+	if (Emu.GetVFS().ExistsDir(_path))
+	{
+		return CELL_FS_EEXIST;
+	}
 
 	if (!Emu.GetVFS().CreateDir(_path))
-		return CELL_EBUSY;
+	{
+		return CELL_FS_EIO; // ???
+	}
 
 	sys_fs.Notice("sys_fs_mkdir(): directory '%s' created", path.get_ptr());
 	return CELL_OK;
@@ -383,32 +390,29 @@ s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to)
 	std::string _from = from.get_ptr();
 	std::string _to = to.get_ptr();
 
+	if (Emu.GetVFS().ExistsDir(_from))
 	{
-		vfsDir dir;
-		if (dir.IsExists(_from))
+		if (!Emu.GetVFS().RenameDir(_from, _to))
 		{
-			if (!dir.Rename(_from, _to))
-				return CELL_EBUSY;
-
-			sys_fs.Notice("sys_fs_rename(): directory '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
-			return CELL_OK;
+			return CELL_FS_EIO; // ???
 		}
+
+		sys_fs.Notice("sys_fs_rename(): directory '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
+		return CELL_OK;
 	}
 
+	if (Emu.GetVFS().ExistsFile(_from))
 	{
-		vfsFile f;
-
-		if (f.Exists(_from))
+		if (!Emu.GetVFS().RenameFile(_from, _to))
 		{
-			if (!f.Rename(_from, _to))
-				return CELL_EBUSY;
-
-			sys_fs.Notice("sys_fs_rename(): file '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
-			return CELL_OK;
+			return CELL_FS_EIO; // ???
 		}
+
+		sys_fs.Notice("sys_fs_rename(): file '%s' renamed to '%s'", from.get_ptr(), to.get_ptr());
+		return CELL_OK;
 	}
 
-	return CELL_ENOENT;
+	return CELL_FS_ENOENT;
 }
 
 s32 sys_fs_rmdir(vm::ptr<const char> path)
@@ -418,12 +422,15 @@ s32 sys_fs_rmdir(vm::ptr<const char> path)
 
 	std::string _path = path.get_ptr();
 
-	vfsDir d;
-	if (!d.IsExists(_path))
-		return CELL_ENOENT;
+	if (!Emu.GetVFS().RemoveDir(_path))
+	{
+		if (Emu.GetVFS().ExistsDir(_path))
+		{
+			return CELL_FS_EIO; // ???
+		}
 
-	if (!d.Remove(_path))
-		return CELL_EBUSY;
+		return CELL_FS_ENOENT;
+	}
 
 	sys_fs.Notice("sys_fs_rmdir(): directory '%s' removed", path.get_ptr());
 	return CELL_OK;
@@ -436,14 +443,15 @@ s32 sys_fs_unlink(vm::ptr<const char> path)
 
 	std::string _path = path.get_ptr();
 
-	if (vfsDir().IsExists(_path))
-		return CELL_EISDIR;
-
-	if (!Emu.GetVFS().ExistsFile(_path))
-		return CELL_ENOENT;
-
 	if (!Emu.GetVFS().RemoveFile(_path))
-		return CELL_EACCES;
+	{
+		if (Emu.GetVFS().ExistsFile(_path))
+		{
+			return CELL_FS_EIO; // ???
+		}
+
+		return CELL_FS_ENOENT;
+	}
 
 	sys_fs.Notice("sys_fs_unlink(): file '%s' deleted", path.get_ptr());
 	return CELL_OK;
@@ -461,6 +469,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	sys_fs.Log("sys_fs_lseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
 	vfsSeekMode seek_mode;
+
 	switch (whence)
 	{
 	case CELL_FS_SEEK_SET: seek_mode = vfsSeekSet; break;
@@ -468,15 +477,20 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	case CELL_FS_SEEK_END: seek_mode = vfsSeekEnd; break;
 	default:
 		sys_fs.Error("sys_fs_lseek(fd=0x%x): unknown seek whence (0x%x)", fd, whence);
-		return CELL_EINVAL;
+		return CELL_FS_EINVAL;
 	}
 
 	std::shared_ptr<fs_file_t> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		return CELL_FS_EBADF;
+	}
 
 	std::lock_guard<std::mutex> lock(file->mutex);
+
 	*pos = file->file->Seek(offset, seek_mode);
+
 	return CELL_OK;
 }
 
@@ -485,8 +499,11 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 	sys_fs.Todo("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
 	std::shared_ptr<fs_file_t> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		CELL_FS_EBADF;
+	}
 
 	*sector_size = 4096; // ?
 	*block_size = 4096; // ?
@@ -514,8 +531,9 @@ s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 	if (!f.IsOpened())
 	{
 		sys_fs.Warning("sys_fs_truncate(): '%s' not found", path.get_ptr());
-		return CELL_ENOENT;
+		return CELL_FS_ENOENT;
 	}
+
 	u64 initialSize = f.GetSize();
 
 	if (initialSize < size)
@@ -541,8 +559,11 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 	sys_fs.Warning("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
 
 	std::shared_ptr<fs_file_t> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		CELL_FS_EBADF;
+	}
 
 	u64 initialSize = file->file->GetSize();
 
