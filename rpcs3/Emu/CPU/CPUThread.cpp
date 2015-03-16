@@ -73,8 +73,6 @@ void CPUThread::DumpInformation()
 			{
 				return{};
 			}
-
-			return "unknown function";
 		}
 
 		case CPU_THREAD_SPU:

@@ -1,5 +1,11 @@
 #pragma once
 
+struct CellFsDirectoryEntry
+{
+	CellFsStat attribute;
+	CellFsDirent entry_name;
+};
+
 // CellFsRingBuffer.copy
 enum : s32
 {
@@ -15,7 +21,7 @@ struct CellFsRingBuffer
 	be_t<s32> copy;
 };
 
-// cellFsSt(Read|Write)GetStatus status
+// cellFsStReadGetStatus status
 enum : u64
 {
 	CELL_FS_ST_INITIALIZED     = 0x0001,

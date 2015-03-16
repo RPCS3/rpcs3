@@ -142,6 +142,8 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 		return CELL_FS_EBADF;
 	}
 
+	std::lock_guard<std::mutex> lock(file->mutex);
+
 	*nread = file->file->Read(buf.get_ptr(), nbytes);
 
 	return CELL_OK;
@@ -158,7 +160,9 @@ s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrit
 		return CELL_FS_EBADF;
 	}
 
-	// TODO: return CELL_FS_EBUSY if locked
+	// TODO: return CELL_FS_EBUSY if locked by stream
+
+	std::lock_guard<std::mutex> lock(file->mutex);
 
 	*nwrite = file->file->Write(buf.get_ptr(), nbytes);
 
@@ -471,6 +475,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	if (!Emu.GetIdManager().GetIDData(fd, file))
 		return CELL_ESRCH;
 
+	std::lock_guard<std::mutex> lock(file->mutex);
 	*pos = file->file->Seek(offset, seek_mode);
 	return CELL_OK;
 }
