@@ -154,6 +154,14 @@ enum : u32
 	SSS_STOPPED,
 };
 
+using fs_st_cb_t = vm::ptr<void(u32 xfd, u64 xsize)>;
+
+struct fs_st_cb_rec_t
+{
+	u32 size;
+	fs_st_cb_t func;
+};
+
 struct fs_file_t
 {
 	const std::shared_ptr<vfsStream> file;
@@ -173,13 +181,18 @@ struct fs_file_t
 	thread_t st_thread;
 
 	u32 st_buffer;
-	std::atomic<u64> st_read; // amount of data that can be read from the ringbuffer
+	u64 st_read_size;
+	std::atomic<u64> st_total_read;
+	std::atomic<u64> st_copied;
+
+	atomic_le_t<fs_st_cb_rec_t> st_callback;
 
 	fs_file_t(std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
 		: file(file)
 		, mode(mode)
 		, flags(flags)
 		, st_status({ SSS_NOT_INITIALIZED })
+		, st_callback({})
 	{
 	}
 };
