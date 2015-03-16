@@ -125,3 +125,13 @@ bool vfsLocalFile::Exists(const std::string& path)
 {
 	return rExists(path);
 }
+
+bool vfsLocalFile::Rename(const std::string& from, const std::string& to)
+{
+	return rRename(from, to);
+}
+
+bool vfsLocalFile::Remove(const std::string& path)
+{
+	return rRemoveFile(path);
+}

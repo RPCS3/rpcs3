@@ -64,7 +64,7 @@ s32 cellFsReaddir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 	cellFs.Log("cellFsReaddir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
 	// call the syscall
-	return dir && nread ? sys_fs_readdir(fd, dir, nread) : CELL_EFAULT;
+	return dir && nread ? sys_fs_readdir(fd, dir, nread) : CELL_FS_EFAULT;
 }
 
 s32 cellFsClosedir(u32 fd)
@@ -138,7 +138,7 @@ s32 cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 	cellFs.Log("cellFsLseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
 	// call the syscall
-	return pos ? sys_fs_lseek(fd, offset, whence, pos) : CELL_EFAULT;
+	return pos ? sys_fs_lseek(fd, offset, whence, pos) : CELL_FS_EFAULT;
 }
 
 s32 cellFsFsync(u32 fd)
@@ -153,7 +153,7 @@ s32 cellFsFGetBlockSize(PPUThread& CPU, u32 fd, vm::ptr<u64> sector_size, vm::pt
 	cellFs.Log("cellFsFGetBlockSize(fd=0x%x, sector_size=*0x%x, block_size=*0x%x)", fd, sector_size, block_size);
 
 	// call the syscall
-	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::stackvar<be_t<u64>>(CPU), vm::stackvar<be_t<u64>>(CPU)) : CELL_EFAULT;
+	return sector_size && block_size ? sys_fs_fget_block_size(fd, sector_size, block_size, vm::stackvar<be_t<u64>>(CPU), vm::stackvar<be_t<u64>>(CPU)) : CELL_FS_EFAULT;
 }
 
 s32 cellFsGetBlockSize(PPUThread& CPU, vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
@@ -211,8 +211,11 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 	cellFs.Warning("cellFsGetDirectoryEntries(fd=0x%x, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
 	std::shared_ptr<vfsDirBase> directory;
+
 	if (!Emu.GetIdManager().GetIDData(fd, directory))
-		return CELL_ESRCH;
+	{
+		return CELL_FS_EBADF;
+	}
 
 	const DirEntryInfo* info = directory->Read();
 	if (info)
@@ -502,9 +505,10 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 				const u32 position = vm::cast(file->st_buffer + file->st_total_read % file->st_ringbuf_size);
 
 				// read data
-				auto old = file->file->Seek(offset + file->st_total_read);
+				auto old = file->file->Tell();
+				file->file->Seek(offset + file->st_total_read);
 				auto res = file->file->Read(vm::get_ptr(position), file->st_block_size);
-				file->file->Seek(old - file->st_block_size);
+				file->file->Seek(old);
 
 				// notify
 				file->st_total_read += res;
@@ -829,7 +833,7 @@ s32 cellFsSdataOpen(PPUThread& CPU, vm::ptr<const char> path, s32 flags, vm::ptr
 
 	if (flags != CELL_FS_O_RDONLY)
 	{
-		return CELL_EINVAL;
+		return CELL_FS_EINVAL;
 	}
 
 	return cellFsOpen(path, CELL_FS_O_RDONLY, fd, vm::stackvar<be_t<u64>>(CPU), 8);
@@ -976,8 +980,11 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
 	std::shared_ptr<fs_file_t> file;
+
 	if (!Emu.GetIdManager().GetIDData(fd, file))
-		return CELL_ESRCH;
+	{
+		CELL_FS_EBADF;
+	}
 
 	return CELL_OK;
 }

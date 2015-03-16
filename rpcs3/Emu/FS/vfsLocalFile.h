@@ -14,6 +14,8 @@ public:
 	virtual bool Create(const std::string& path, bool overwrite = false) override;
 	virtual bool Close() override;
 	virtual bool Exists(const std::string& path) override;
+	virtual bool Rename(const std::string& from, const std::string& to) override;
+	virtual bool Remove(const std::string& path) override;
 
 	virtual u64 GetSize() override;
 
