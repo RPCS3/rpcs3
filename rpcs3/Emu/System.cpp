@@ -39,6 +39,8 @@ static const std::string& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
+extern void finalize_ppu_exec_map();
+
 Emulator::Emulator()
 	: m_status(Stopped)
 	, m_mode(DisAsm)
@@ -98,40 +100,41 @@ void Emulator::SetTitle(const std::string& title)
 
 void Emulator::CheckStatus()
 {
-	//auto& threads = GetCPU().GetThreads();
+	//auto threads = GetCPU().GetThreads();
+
 	//if (!threads.size())
 	//{
 	//	Stop();
 	//	return;	
 	//}
 
-	//bool IsAllPaused = true;
-	//for (u32 i = 0; i < threads.size(); ++i)
+	//bool AllPaused = true;
+
+	//for (auto& t : threads)
 	//{
-	//	if (threads[i]->IsPaused()) continue;
-	//	IsAllPaused = false;
+	//	if (t->IsPaused()) continue;
+	//	AllPaused = false;
 	//	break;
 	//}
 
-	//if(IsAllPaused)
+	//if (AllPaused)
 	//{
-	//	//ConLog.Warning("all paused!");
 	//	Pause();
 	//	return;
 	//}
 
-	//bool IsAllStoped = true;
-	//for (u32 i = 0; i < threads.size(); ++i)
+	//bool AllStopped = true;
+
+	//for (auto& t : threads)
 	//{
-	//	if (threads[i]->IsStopped()) continue;
-	//	IsAllStoped = false;
+	//	if (t->IsStopped()) continue;
+	//	AllStopped = false;
 	//	break;
 	//}
 
-	//if (IsAllStoped)
+	//if (AllStopped)
 	//{
-	//	//LOG_WARNING(GENERAL, "all stoped!");
-	//	Pause(); //Stop();
+	//	Pause();
 	//}
 }
 
@@ -327,7 +330,17 @@ void Emulator::Stop()
 	if(IsStopped()) return;
 
 	SendDbgCommand(DID_STOP_EMU);
+
 	m_status = Stopped;
+
+	{
+		auto threads = GetCPU().GetThreads();
+
+		for (auto& t : threads)
+		{
+			t->AddEvent(CPU_EVENT_STOP);
+		}
+	}
 
 	while (g_thread_count)
 	{
@@ -370,6 +383,8 @@ void Emulator::Stop()
 
 	CurGameInfo.Reset();
 	Memory.Close();
+	
+	finalize_ppu_exec_map();
 
 	SendDbgCommand(DID_STOPPED_EMU);
 }

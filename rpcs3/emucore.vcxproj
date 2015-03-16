@@ -37,6 +37,7 @@
     <ClCompile Include="..\Utilities\SSemaphore.cpp" />
     <ClCompile Include="..\Utilities\StrFmt.cpp" />
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="Emu\Cell\PPUInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
@@ -366,6 +367,7 @@
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
     <ClInclude Include="Emu\Cell\PPUInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
+    <ClInclude Include="Emu\Cell\PPUInterpreter2.h" />
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\RawSPUThread.h" />

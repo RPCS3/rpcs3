@@ -178,6 +178,7 @@ void SPUThread::FastCall(u32 ls_addr)
 void SPUThread::FastStop()
 {
 	m_status = Stopped;
+	m_events |= CPU_EVENT_STOP;
 }
 
 void SPUThread::FastRun()

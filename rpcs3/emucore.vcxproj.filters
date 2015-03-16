@@ -860,6 +860,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUInterpreter.cpp">
+      <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1542,6 +1545,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellFs.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUInterpreter2.h">
+      <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

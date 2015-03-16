@@ -229,6 +229,7 @@ void ARMv7Thread::FastCall(u32 addr)
 void ARMv7Thread::FastStop()
 {
 	m_status = Stopped;
+	m_events |= CPU_EVENT_STOP;
 }
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)

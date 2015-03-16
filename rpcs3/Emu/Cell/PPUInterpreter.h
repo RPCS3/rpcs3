@@ -18,6 +18,7 @@
 #include <fenv.h>
 
 extern u64 rotate_mask[64][64]; // defined in PPUThread.cpp, static didn't work correctly in GCC 4.9 for some reason
+
 inline void InitRotateMask()
 {
 	static bool inited = false;
@@ -91,7 +92,6 @@ private:
 public:
 	PPUInterpreter(PPUThread& cpu) : CPU(cpu)
 	{
-		InitRotateMask();
 	}
 
 private:
