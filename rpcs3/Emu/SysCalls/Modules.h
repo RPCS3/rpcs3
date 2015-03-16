@@ -25,6 +25,7 @@ struct ModuleFunc
 	u32 id;
 	u32 flags;
 	Module* module;
+	const char* name;
 	ppu_func_caller func;
 	vm::ptr<void()> lle_func;
 
@@ -32,10 +33,11 @@ struct ModuleFunc
 	{
 	}
 
-	ModuleFunc(u32 id, u32 flags, Module* module, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc(u32 id, u32 flags, Module* module, const char* name, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
 		: id(id)
 		, flags(flags)
 		, module(module)
+		, name(name)
 		, func(func)
 		, lle_func(lle_func)
 	{
@@ -117,10 +119,10 @@ void hook_ppu_funcs(vm::ptr<u32> base, u32 size);
 
 bool patch_ppu_import(u32 addr, u32 index);
 
-#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, bind_func(name)))
-#define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, bind_func(name)))
+#define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, #name, bind_func(name)))
+#define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, #name, bind_func(name)))
 
-#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, bind_func(_nid_##nid)))
+#define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, "_nid_"#nid, bind_func(_nid_##nid)))
 
 #define REG_SUB(module, group, ns, name, ...) \
 	const SearchPatternEntry name##_table[] = {__VA_ARGS__}; \

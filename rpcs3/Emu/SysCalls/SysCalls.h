@@ -2,8 +2,6 @@
 #include "ErrorCodes.h"
 #include "LogBase.h"
 
-//#define SYSCALLS_DEBUG
-
 class SysCallBase : public LogBase
 {
 private:
@@ -21,13 +19,11 @@ public:
 	}
 };
 
-extern bool dump_enable;
-
 class PPUThread;
 
 class SysCalls
 {
 public:
 	static void DoSyscall(PPUThread& CPU, u64 code);
-	static std::string GetHLEFuncName(const u32 fid);
+	static std::string GetFuncName(const u64 fid);
 };

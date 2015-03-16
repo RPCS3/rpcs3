@@ -40,7 +40,7 @@ u32 add_ppu_func_sub(const char group[8], const SearchPatternEntry ops[], const 
 	}
 
 	StaticFunc sf;
-	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, func));
+	sf.index = add_ppu_func(ModuleFunc(get_function_id(name), 0, module, name, func));
 	sf.name = name;
 	sf.group = *(u64*)group_name;
 	sf.found = 0;
@@ -108,33 +108,33 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetHLEFuncName(func->id));
+				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetFuncName(func->id));
 			}
 
 			func->lle_func(CPU);
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", SysCalls::GetHLEFuncName(func->id), CPU.GPR[3]);
+				LOG_NOTICE(HLE, "LLE function finished: %s -> 0x%llx", SysCalls::GetFuncName(func->id), CPU.GPR[3]);
 			}
 		}
 		else if (func->func)
 		{
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "HLE function called: %s", SysCalls::GetHLEFuncName(func->id));
+				LOG_NOTICE(HLE, "HLE function called: %s", SysCalls::GetFuncName(func->id));
 			}
 
 			func->func(CPU);
 
 			if (Ini.HLELogging.GetValue())
 			{
-				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", SysCalls::GetHLEFuncName(func->id), CPU.GPR[3]);
+				LOG_NOTICE(HLE, "HLE function finished: %s -> 0x%llx", SysCalls::GetFuncName(func->id), CPU.GPR[3]);
 			}
 		}
 		else
 		{
-			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", SysCalls::GetHLEFuncName(func->id));
+			LOG_ERROR(HLE, "Unimplemented function: %s -> CELL_OK", SysCalls::GetFuncName(func->id));
 			CPU.GPR[3] = 0;
 		}
 

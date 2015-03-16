@@ -1,4 +1,5 @@
 #pragma once
+#include "Utilities/Thread.h"
 
 #pragma pack(push, 4)
 
@@ -144,21 +145,60 @@ struct CellFsUtimbuf
 
 #pragma pack(pop)
 
+// Stream Support Status (st_status)
+enum : u32
+{
+	SSS_NOT_INITIALIZED = 0,
+	SSS_INITIALIZED,
+	SSS_STARTED,
+	SSS_STOPPED,
+};
+
+using fs_st_cb_t = vm::ptr<void(u32 xfd, u64 xsize)>;
+
+struct fs_st_cb_rec_t
+{
+	u32 size;
+	fs_st_cb_t func;
+};
+
 struct fs_file_t
 {
 	const std::shared_ptr<vfsStream> file;
 	const s32 mode;
 	const s32 flags;
 
+	std::mutex mutex;
+	std::condition_variable cv;
+
+	atomic_le_t<u32> st_status;
+	
+	u64 st_ringbuf_size;
+	u64 st_block_size;
+	u64 st_trans_rate;
+	bool st_copyless;
+
+	thread_t st_thread;
+
+	u32 st_buffer;
+	u64 st_read_size;
+	std::atomic<u64> st_total_read;
+	std::atomic<u64> st_copied;
+
+	atomic_le_t<fs_st_cb_rec_t> st_callback;
+
 	fs_file_t(std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
 		: file(file)
 		, mode(mode)
 		, flags(flags)
+		, st_status({ SSS_NOT_INITIALIZED })
+		, st_callback({})
 	{
 	}
 };
 
 // SysCalls
+s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);
 s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, vm::ptr<const void> arg, u64 size);
 s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread);
 s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrite);
@@ -172,6 +212,7 @@ s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode);
 s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to);
 s32 sys_fs_rmdir(vm::ptr<const char> path);
 s32 sys_fs_unlink(vm::ptr<const char> path);
+s32 sys_fs_fcntl(u32 fd, s32 flags, u32 addr, u32 arg4, u32 arg5, u32 arg6);
 s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos);
 s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4, vm::ptr<u64> arg5);
 s32 sys_fs_get_block_size(vm::ptr<const char> path, vm::ptr<u64> sector_size, vm::ptr<u64> block_size, vm::ptr<u64> arg4);

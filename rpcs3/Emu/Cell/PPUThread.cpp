@@ -141,8 +141,6 @@ void PPUThread::DoStop()
 	m_dec = nullptr;
 }
 
-bool dump_enable = false;
-
 bool FPRdouble::IsINF(PPCdouble d)
 {
 	return ((u64&)d & 0x7FFFFFFFFFFFFFFFULL) == 0x7FF0000000000000ULL;

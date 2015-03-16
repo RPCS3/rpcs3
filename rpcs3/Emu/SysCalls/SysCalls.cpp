@@ -36,8 +36,6 @@
 
 void null_func(PPUThread& CPU);
 
-const int kSyscallTableLength = 1024;
-
 // UNS = Unused
 // ROOT = Root
 // DBG = Debug
@@ -695,7 +693,7 @@ const ppu_func_caller sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func,  //794  UNS
 	null_func, null_func, null_func, null_func, null_func,  //799  UNS
 
-	null_func,//bind_func(sys_fs_test),                     //800 (0x320)
+	bind_func(sys_fs_test),                                 //800 (0x320)
 	bind_func(sys_fs_open),                                 //801 (0x321)
 	bind_func(sys_fs_read),                                 //802 (0x322)
 	bind_func(sys_fs_write),                                //803 (0x323)
@@ -712,7 +710,7 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_fs_unlink),                               //814 (0x32E)
 	null_func,//bind_func(sys_fs_utime),                    //815 (0x32F)
 	null_func,//bind_func(sys_fs_access),                   //816 (0x330)
-	null_func,//bind_func(sys_fs_fcntl),                    //817 (0x331)
+	bind_func(sys_fs_fcntl),                                //817 (0x331)
 	bind_func(sys_fs_lseek),                                //818 (0x332)
 	null_func,//bind_func(sys_fs_fdatasync),                //819 (0x333)
 	null_func,//bind_func(sys_fs_fsync),                    //820 (0x334)
@@ -890,30 +888,7 @@ const ppu_func_caller sc_table[1024] =
 
 void null_func(PPUThread& CPU)
 {
-	u32 code = (u32)CPU.GPR[11];
-	//TODO: remove this
-	switch(code)
-	{
-		//tty
-		case 988:
-			LOG_WARNING(HLE, "SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%x",
-				CPU.GPR[3], CPU.GPR[4], CPU.PC);
-			CPU.GPR[3] = 0;
-		return;
-
-		case 999:
-			dump_enable = !dump_enable;
-			Emu.Pause();
-			LOG_WARNING(HLE, "Dump %s", (dump_enable ? "enabled" : "disabled"));
-		return;
-
-		case 1000:
-			Ini.HLELogging.SetValue(!Ini.HLELogging.GetValue());
-			LOG_WARNING(HLE, "Log %s", (Ini.HLELogging.GetValue() ? "enabled" : "disabled"));
-		return;
-	}
-
-	LOG_ERROR(HLE, "Unknown syscall: %d - %08x -> CELL_OK", code, code);
+	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", CPU.GPR[11], SysCalls::GetFuncName(CPU.GPR[11]));
 	CPU.GPR[3] = 0;
 	return;
 }
@@ -933,14 +908,14 @@ void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "SysCall called: %s [0x%llx]", "unknown", code);
+		LOG_NOTICE(PPU, "Syscall %d called: %s", code, SysCalls::GetFuncName(code));
 	}
 
 	sc_table[code](CPU);
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "SysCall finished: %s [0x%llx] -> 0x%llx", "unknown", code, CPU.GPR[3]);
+		LOG_NOTICE(PPU, "Syscall %d finished: %s -> 0x%llx", code, SysCalls::GetFuncName(code), CPU.GPR[3]);
 	}
 
 	CPU.m_last_syscall = old_last_syscall;

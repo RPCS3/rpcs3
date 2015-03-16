@@ -73,8 +73,6 @@ s32 cellAudioInit()
 
 		squeue_t<float*, BUFFER_NUM - 1> out_queue;
 
-		std::vector<u64> keys;
-
 		thread_t iat("Internal Audio Thread", true /* autojoin */, [&out_queue]()
 		{
 			const bool use_u16 = Ini.AudioConvertToU16.GetValue();
@@ -374,11 +372,13 @@ s32 cellAudioInit()
 
 			//const u64 stamp2 = get_system_time();
 
-			// send aftermix event (normal audio event)
 			{
 				std::lock_guard<std::mutex> lock(g_audio.mutex);
-				// update indexes:
+
+				// update indices:
+
 				auto indexes = vm::ptr<u64>::make(g_audio.indexes);
+
 				for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
 				{
 					AudioPortConfig& port = g_audio.ports[i];
@@ -390,16 +390,14 @@ s32 cellAudioInit()
 					port.tag++; // absolute index of block that will be read
 					indexes[i] = (position + 1) % port.block; // write new value
 				}
-				// load keys:
-				keys.resize(g_audio.keys.size());
-				memcpy(keys.data(), g_audio.keys.data(), sizeof(u64) * keys.size());
-			}
-			{
+
+				// send aftermix event (normal audio event)
+
 				LV2_LOCK;
 
-				for (u32 i = 0; i < keys.size(); i++)
+				for (auto key : g_audio.keys)
 				{
-					if (std::shared_ptr<event_queue_t> queue = Emu.GetEventManager().GetEventQueue(keys[i]))
+					if (std::shared_ptr<event_queue_t> queue = Emu.GetEventManager().GetEventQueue(key))
 					{
 						queue->push(0, 0, 0, 0); // TODO: check arguments
 					}
@@ -455,7 +453,7 @@ s32 cellAudioQuit()
 
 s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
 {
-	cellAudio.Warning("cellAudioPortOpen(audioParam=0x%x, portNum=0x%x)", audioParam, portNum);
+	cellAudio.Warning("cellAudioPortOpen(audioParam=*0x%x, portNum=*0x%x)", audioParam, portNum);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -519,7 +517,7 @@ s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 	}
 	if (attr & 0xFFFFFFFFF0EFEFEEULL)
 	{
-		cellAudio.Todo("cellAudioPortOpen(): unknown attributes set (0x%llx)", attr);
+		cellAudio.Todo("cellAudioPortOpen(): unknown attributes (0x%llx)", attr);
 	}
 
 	// open audio port
@@ -560,7 +558,7 @@ s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 
 s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 {
-	cellAudio.Warning("cellAudioGetPortConfig(portNum=0x%x, portConfig=0x%x)", portNum, portConfig);
+	cellAudio.Warning("cellAudioGetPortConfig(portNum=%d, portConfig=*0x%x)", portNum, portConfig);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -581,7 +579,7 @@ s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 	case AUDIO_PORT_STATE_CLOSED: portConfig->status = CELL_AUDIO_STATUS_CLOSE; break;
 	case AUDIO_PORT_STATE_OPENED: portConfig->status = CELL_AUDIO_STATUS_READY; break;
 	case AUDIO_PORT_STATE_STARTED: portConfig->status = CELL_AUDIO_STATUS_RUN; break;
-	default: throw fmt::format("cellAudioGetPortConfig(%d): invalid port state (0x%x)", portNum, state);
+	default: throw fmt::format("cellAudioGetPortConfig(%d): invalid port state (%d)", portNum, state);
 	}
 
 	portConfig->nChannel = port.channel;
@@ -593,7 +591,7 @@ s32 cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> portConfig)
 
 s32 cellAudioPortStart(u32 portNum)
 {
-	cellAudio.Warning("cellAudioPortStart(portNum=0x%x)", portNum);
+	cellAudio.Warning("cellAudioPortStart(portNum=%d)", portNum);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -610,13 +608,13 @@ s32 cellAudioPortStart(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
 	case AUDIO_PORT_STATE_OPENED: return CELL_OK;
-	default: throw fmt::format("cellAudioPortStart(%d): invalid port state (0x%x)", portNum, state);
+	default: throw fmt::format("cellAudioPortStart(%d): invalid port state (%d)", portNum, state);
 	}
 }
 
 s32 cellAudioPortClose(u32 portNum)
 {
-	cellAudio.Warning("cellAudioPortClose(portNum=0x%x)", portNum);
+	cellAudio.Warning("cellAudioPortClose(portNum=%d)", portNum);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -633,13 +631,13 @@ s32 cellAudioPortClose(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_OK;
 	case AUDIO_PORT_STATE_OPENED: return CELL_OK;
-	default: throw fmt::format("cellAudioPortClose(%d): invalid port state (0x%x)", portNum, state);
+	default: throw fmt::format("cellAudioPortClose(%d): invalid port state (%d)", portNum, state);
 	}
 }
 
 s32 cellAudioPortStop(u32 portNum)
 {
-	cellAudio.Warning("cellAudioPortStop(portNum=0x%x)", portNum);
+	cellAudio.Warning("cellAudioPortStop(portNum=%d)", portNum);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -656,13 +654,13 @@ s32 cellAudioPortStop(u32 portNum)
 	case AUDIO_PORT_STATE_CLOSED: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case AUDIO_PORT_STATE_STARTED: return CELL_OK;
 	case AUDIO_PORT_STATE_OPENED: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	default: throw fmt::format("cellAudioPortStop(%d): invalid port state (0x%x)", portNum, state);
+	default: throw fmt::format("cellAudioPortStop(%d): invalid port state (%d)", portNum, state);
 	}
 }
 
 s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 {
-	cellAudio.Log("cellAudioGetPortTimestamp(portNum=0x%x, tag=0x%llx, stamp=0x%x)", portNum, tag, stamp);
+	cellAudio.Log("cellAudioGetPortTimestamp(portNum=%d, tag=0x%llx, stamp=*0x%x)", portNum, tag, stamp);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -692,7 +690,7 @@ s32 cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 {
-	cellAudio.Log("cellAudioGetPortBlockTag(portNum=0x%x, blockNo=0x%llx, tag=0x%x)", portNum, blockNo, tag);
+	cellAudio.Log("cellAudioGetPortBlockTag(portNum=%d, blockNo=0x%llx, tag=*0x%x)", portNum, blockNo, tag);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -735,7 +733,7 @@ s32 cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 
 s32 cellAudioSetPortLevel(u32 portNum, float level)
 {
-	cellAudio.Log("cellAudioSetPortLevel(portNum=0x%x, level=%f)", portNum, level);
+	cellAudio.Log("cellAudioSetPortLevel(portNum=%d, level=%f)", portNum, level);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -763,121 +761,118 @@ s32 cellAudioSetPortLevel(u32 portNum, float level)
 	}
 	else
 	{
-		cellAudio.Todo("cellAudioSetPortLevel(portNum=0x%x): negative level value (%f)", portNum, level);
+		cellAudio.Todo("cellAudioSetPortLevel(%d): negative level value (%f)", portNum, level);
 	}
 
 	return CELL_OK;
 }
 
-// Utility Functions  
-int cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+s32 cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
-	cellAudio.Warning("cellAudioCreateNotifyEventQueue(id_addr=0x%x, key_addr=0x%x)", id.addr(), key.addr());
+	cellAudio.Warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
 
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
-
-	u64 event_key = 0;
-	while (Emu.GetEventManager().CheckKey((event_key << 48) | 0x80004d494f323221))
+	for (u64 k = 0; k < 100; k++)
 	{
-		event_key++; // experimental
-		//return CELL_AUDIO_ERROR_EVENT_QUEUE;
-	}
-	event_key = (event_key << 48) | 0x80004d494f323221; // left part: 0x8000, 0x8001, 0x8002 ...
+		const u64 key_value = 0x80004d494f323221ull + k;
 
-	std::shared_ptr<event_queue_t> eq(new event_queue_t(SYS_SYNC_FIFO, SYS_PPU_QUEUE, event_key, event_key, 32));
+		std::shared_ptr<event_queue_t> queue(new event_queue_t(SYS_SYNC_FIFO, SYS_PPU_QUEUE, 0, key_value, 32));
 
-	if (!Emu.GetEventManager().RegisterKey(eq, event_key))
-	{
-		return CELL_AUDIO_ERROR_EVENT_QUEUE;
-	}
-
-	*id = Emu.GetIdManager().GetNewID(eq);
-	*key = event_key;
-
-	return CELL_OK;
-}
-
-int cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
-{
-	cellAudio.Todo("cellAudioCreateNotifyEventQueueEx(id_addr=0x%x, key_addr=0x%x, iFlags=0x%x)", id.addr(), key.addr(), iFlags);
-	return CELL_OK;
-}
-
-int cellAudioSetNotifyEventQueue(u64 key)
-{
-	cellAudio.Warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
-
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
-
-	for (u32 i = 0; i < g_audio.keys.size(); i++) // check for duplicates
-	{
-		if (g_audio.keys[i] == key)
+		// register key if not used yet
+		if (Emu.GetEventManager().RegisterKey(queue, key_value))
 		{
-			return CELL_AUDIO_ERROR_PARAM;
-		}
-	}
-	g_audio.keys.push_back(key);
+			*id = Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
+			*key = key_value;
 
-	/*EventQueue* eq;
-	if (!Emu.GetEventManager().GetEventQueue(key, eq))
-	{
-	return CELL_AUDIO_ERROR_PARAM;
-	}*/
-
-	// TODO: connect port (?????)
-
-	return CELL_OK;
-}
-
-int cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
-{
-	cellAudio.Todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
-	return CELL_OK;
-}
-
-int cellAudioRemoveNotifyEventQueue(u64 key)
-{
-	cellAudio.Warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
-
-	std::lock_guard<std::mutex> lock(g_audio.mutex);
-
-	bool found = false;
-	for (u32 i = 0; i < g_audio.keys.size(); i++)
-	{
-		if (g_audio.keys[i] == key)
-		{
-			g_audio.keys.erase(g_audio.keys.begin() + i);
-			found = true;
-			break;
+			return CELL_OK;
 		}
 	}
 
-	if (!found)
+	return CELL_AUDIO_ERROR_EVENT_QUEUE;
+}
+
+s32 cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
+{
+	cellAudio.Todo("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
+
+	if (iFlags & ~CELL_AUDIO_CREATEEVENTFLAG_SPU)
 	{
-		// ???
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	/*EventQueue* eq;
-	if (!Emu.GetEventManager().GetEventQueue(key, eq))
-	{
-	return CELL_AUDIO_ERROR_PARAM;
-	}*/
+	// TODO
 
-	// TODO: disconnect port
+	return CELL_AUDIO_ERROR_EVENT_QUEUE;
+}
+
+s32 cellAudioSetNotifyEventQueue(u64 key)
+{
+	cellAudio.Warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
+
+	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	std::lock_guard<std::mutex> lock(g_audio.mutex);
+
+	for (auto k : g_audio.keys) // check for duplicates
+	{
+		if (k == key)
+		{
+			return CELL_AUDIO_ERROR_TRANS_EVENT;
+		}
+	}
+
+	g_audio.keys.emplace_back(key);
 
 	return CELL_OK;
 }
 
-int cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
+s32 cellAudioSetNotifyEventQueueEx(u64 key, u32 iFlags)
+{
+	cellAudio.Todo("cellAudioSetNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
+
+	// TODO
+
+	return CELL_OK;
+}
+
+s32 cellAudioRemoveNotifyEventQueue(u64 key)
+{
+	cellAudio.Warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
+
+	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	std::lock_guard<std::mutex> lock(g_audio.mutex);
+
+	for (auto i = g_audio.keys.begin(); i != g_audio.keys.end(); i++)
+	{
+		if (*i == key)
+		{
+			g_audio.keys.erase(i);
+			
+			return CELL_OK;
+		}
+	}
+
+	return CELL_AUDIO_ERROR_TRANS_EVENT;
+}
+
+s32 cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
 {
 	cellAudio.Todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
+
+	// TODO
+
 	return CELL_OK;
 }
 
 s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio.Log("cellAudioAddData(portNum=%d, src=0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
+	cellAudio.Log("cellAudioAddData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -892,7 +887,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 	if (samples != 256)
 	{
 		// despite the docs, seems that only fixed value is supported
-		cellAudio.Error("cellAudioAddData(): invalid samples value (0x%x)", samples);
+		cellAudio.Error("cellAudioAddData(): invalid samples value (%d)", samples);
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
@@ -910,7 +905,7 @@ s32 cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 
 s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volume)
 {
-	cellAudio.Log("cellAudioAdd2chData(portNum=%d, src=0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
+	cellAudio.Log("cellAudioAdd2chData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -925,7 +920,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 	if (samples != 256)
 	{
 		// despite the docs, seems that only fixed value is supported
-		cellAudio.Error("cellAudioAdd2chData(): invalid samples value (0x%x)", samples);
+		cellAudio.Error("cellAudioAdd2chData(): invalid samples value (%d)", samples);
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
@@ -973,7 +968,7 @@ s32 cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, float volu
 
 s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
-	cellAudio.Log("cellAudioAdd6chData(portNum=%d, src=0x%x, volume=%f)", portNum, src, volume);
+	cellAudio.Log("cellAudioAdd6chData(portNum=%d, src=*0x%x, volume=%f)", portNum, src, volume);
 
 	if (g_audio.state.read_relaxed() != AUDIO_STATE_INITIALIZED)
 	{
@@ -1015,27 +1010,27 @@ s32 cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	return CELL_OK;
 }
 
-int cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
+s32 cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 {
-	cellAudio.Todo("cellAudioMiscSetAccessoryVolume(devNum=0x%x, volume=%f)", devNum, volume);
+	cellAudio.Todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
 	return CELL_OK;
 }
 
-int cellAudioSendAck(u64 data3)
+s32 cellAudioSendAck(u64 data3)
 {
 	cellAudio.Todo("cellAudioSendAck(data3=0x%llx)", data3);
 	return CELL_OK;
 }
 
-int cellAudioSetPersonalDevice(int iPersonalStream, int iDevice)
+s32 cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 {
-	cellAudio.Todo("cellAudioSetPersonalDevice(iPersonalStream=0x%x, iDevice=0x%x)", iPersonalStream, iDevice);
+	cellAudio.Todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
 	return CELL_OK;
 }
 
-int cellAudioUnsetPersonalDevice(int iPersonalStream)
+s32 cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 {
-	cellAudio.Todo("cellAudioUnsetPersonalDevice(iPersonalStream=0x%x)", iPersonalStream);
+	cellAudio.Todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
 	return CELL_OK;
 }
 

@@ -125,10 +125,15 @@ bool rRename(const std::string &from, const std::string &to)
 {
 	// TODO: Deal with case-sensitivity
 #ifdef _WIN32
-	return (MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()) == TRUE);
+	if (!MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()))
 #else
-	return (0 == rename(from.c_str(), to.c_str()));
+	if (rename(from.c_str(), to.c_str()))
 #endif
+	{
+		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), (u64)GET_API_ERROR);
+		return false;
+	}
+	return true;
 }
 
 bool rExists(const std::string &file)
