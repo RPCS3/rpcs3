@@ -20,6 +20,7 @@ enum Method
 
 extern u32 methodRegisters[0xffff];
 u32 GetAddress(u32 offset, u32 location);
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
 struct RSXVertexData
 {
