@@ -9,31 +9,36 @@
 
 void CallbackManager::Register(const std::function<s32(PPUThread& PPU)>& func)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	m_cb_list.push_back([=](CPUThread& CPU) -> s32
 	{
-		assert(CPU.GetType() == CPU_THREAD_PPU);
-		return func(static_cast<PPUThread&>(CPU));
-	});
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		m_cb_list.push_back([=](CPUThread& CPU) -> s32
+		{
+			assert(CPU.GetType() == CPU_THREAD_PPU);
+			return func(static_cast<PPUThread&>(CPU));
+		});
+	}
 }
 
 void CallbackManager::Async(const std::function<void(PPUThread& PPU)>& func)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
-
-	m_async_list.push_back([=](CPUThread& CPU)
 	{
-		assert(CPU.GetType() == CPU_THREAD_PPU);
-		func(static_cast<PPUThread&>(CPU));
-	});
+		std::lock_guard<std::mutex> lock(m_mutex);
 
-	m_cb_thread->Notify();
+		m_async_list.push_back([=](CPUThread& CPU)
+		{
+			assert(CPU.GetType() == CPU_THREAD_PPU);
+			func(static_cast<PPUThread&>(CPU));
+		});
+	}
+
+	m_cv.notify_one();
 }
 
 bool CallbackManager::Check(CPUThread& CPU, s32& result)
 {
 	std::function<s32(CPUThread& CPU)> func;
+
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -44,15 +49,7 @@ bool CallbackManager::Check(CPUThread& CPU, s32& result)
 		}
 	}
 	
-	if (func)
-	{
-		result = func(CPU);
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+	return func ? result = func(CPU), true : false;
 }
 
 void CallbackManager::Init()
@@ -86,26 +83,27 @@ void CallbackManager::Init()
 	{
 		SetCurrentNamedThread(&*m_cb_thread);
 
+		std::unique_lock<std::mutex> lock(m_mutex);
+
 		while (!Emu.IsStopped())
 		{
 			std::function<void(CPUThread& CPU)> func;
-			{
-				std::lock_guard<std::mutex> lock(m_mutex);
 
-				if (m_async_list.size())
-				{
-					func = m_async_list[0];
-					m_async_list.erase(m_async_list.begin());
-				}
+			if (m_async_list.size())
+			{
+				func = m_async_list[0];
+				m_async_list.erase(m_async_list.begin());
 			}
 
 			if (func)
 			{
+				lock.unlock();
 				func(*m_cb_thread);
+				lock.lock();
 				continue;
 			}
 
-			m_cb_thread->WaitForAnySignal();
+			m_cv.wait_for(lock, std::chrono::milliseconds(1));
 		}
 	});
 }

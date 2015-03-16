@@ -1,4 +1,5 @@
 #pragma once
+#include "Utilities/Thread.h"
 
 #pragma pack(push, 4)
 
@@ -144,16 +145,41 @@ struct CellFsUtimbuf
 
 #pragma pack(pop)
 
+// Stream Support Status (st_status)
+enum : u32
+{
+	SSS_NOT_INITIALIZED = 0,
+	SSS_INITIALIZED,
+	SSS_STARTED,
+	SSS_STOPPED,
+};
+
 struct fs_file_t
 {
 	const std::shared_ptr<vfsStream> file;
 	const s32 mode;
 	const s32 flags;
 
+	std::mutex mutex;
+	std::condition_variable cv;
+
+	atomic_le_t<u32> st_status;
+	
+	u64 st_ringbuf_size;
+	u64 st_block_size;
+	u64 st_trans_rate;
+	bool st_copyless;
+
+	thread_t st_thread;
+
+	u32 st_buffer;
+	std::atomic<u64> st_read; // amount of data that can be read from the ringbuffer
+
 	fs_file_t(std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
 		: file(file)
 		, mode(mode)
 		, flags(flags)
+		, st_status({ SSS_NOT_INITIALIZED })
 	{
 	}
 };
