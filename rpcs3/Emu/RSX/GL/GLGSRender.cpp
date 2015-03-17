@@ -1120,8 +1120,8 @@ bool GLGSRender::LoadProgram()
 
 		// TODO: This shouldn't use current dir
 		static int index = 0;
-		//rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
-		//f.Write(m_fragment_prog.shader);
+		rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
+		f.Write(m_fragment_prog.shader);
 	}
 
 	if (m_vp_buf_num == -1)
@@ -1133,8 +1133,8 @@ bool GLGSRender::LoadProgram()
 
 		// TODO: This shouldn't use current dir
 		static int index = 0;
-		//rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
-		//f.Write(m_vertex_prog.shader);
+		rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
+		f.Write(m_vertex_prog.shader);
 	}
 
 	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)
@@ -1208,19 +1208,70 @@ void GLGSRender::WriteBuffers()
 		WriteDepthBuffer();
 	}
 
-	if (Ini.GSDumpColorBuffers.GetValue())
+	//if (Ini.GSDumpColorBuffers.GetValue())
 	{
 		WriteColorBuffers();
 	}
 }
 
-void GLGSRender::WriteDepthBuffer()
+void GLGSRender::ReadBuffers()
 {
-	if (!m_set_context_dma_z)
+	CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
+	u32 width = buffers[m_gcm_current_buffer].width;
+	u32 height = buffers[m_gcm_current_buffer].height;
+	u32 address = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
+
+	m_fbo.clear(gl::buffers::color);
+	//TODO: optimize
+
+	gl::texture::format format;
+	gl::texture::type type;
+
+	//color format
+	switch (int color_format = methodRegisters[NV4097_SET_SURFACE_FORMAT] & 0x1f)
 	{
-		return;
+	case CELL_GCM_SURFACE_R5G6B5:
+		format = gl::texture::format::bgr;
+		type = gl::texture::type::ushort_5_6_5;
+		break;
+
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		format = gl::texture::format::bgra;
+		type = gl::texture::type::uint_8_8_8_8;
+		break;
+
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		format = gl::texture::format::bgra;
+		type = gl::texture::type::half_float;
+		break;
+	case CELL_GCM_SURFACE_F_W32Z32Y32X32:
+		format = gl::texture::format::bgra;
+		type = gl::texture::type::float_;
+		break;
+
+	case CELL_GCM_SURFACE_B8:
+	case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5:
+	case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5:
+	case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8:
+	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
+	case CELL_GCM_SURFACE_G8B8:
+	case CELL_GCM_SURFACE_F_X32:
+	case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8:
+	case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8:
+	case CELL_GCM_SURFACE_A8B8G8R8:
+		LOG_ERROR(RSX, "Surface color buffer writting: Unsupported surface color format (0x%x)", color_format);
+		format = gl::texture::format::bgra;
+		type = gl::texture::type::uint_8_8_8_8;
+		break;
 	}
 
+	//TODO: swizzle
+	m_fbo.draw_pixels(width, height, format, type, vm::get_ptr(address));
+	//TODO: depth buffer
+}
+
+void GLGSRender::WriteDepthBuffer()
+{
 	u32 address = GetAddress(m_surface_offset_z, m_context_dma_z);
 
 	auto ptr = vm::get_ptr<void>(address);
@@ -1248,35 +1299,79 @@ void GLGSRender::WriteDepthBuffer()
 
 void GLGSRender::WriteColorBuffers()
 {
+	auto write_color_buffers = [&](int index, int count)
+	{
+		for (int i = index; i < index + count; ++i)
+		{
+			gl::texture::format format;
+			gl::texture::type type;
+
+			//color format
+			switch (int color_format = methodRegisters[NV4097_SET_SURFACE_FORMAT] & 0x1f)
+			{
+			case CELL_GCM_SURFACE_R5G6B5:
+				format = gl::texture::format::bgr;
+				type = gl::texture::type::ushort_5_6_5;
+				break;
+
+			case CELL_GCM_SURFACE_A8R8G8B8:
+				format = gl::texture::format::bgra;
+				type = gl::texture::type::uint_8_8_8_8;
+				break;
+
+			case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+				format = gl::texture::format::bgra;
+				type = gl::texture::type::half_float;
+				break;
+			case CELL_GCM_SURFACE_F_W32Z32Y32X32:
+				format = gl::texture::format::bgra;
+				type = gl::texture::type::float_;
+				break;
+
+			case CELL_GCM_SURFACE_B8:
+			case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5:
+			case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5:
+			case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8:
+			case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
+			case CELL_GCM_SURFACE_G8B8:
+			case CELL_GCM_SURFACE_F_X32:
+			case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8:
+			case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8:
+			case CELL_GCM_SURFACE_A8B8G8R8:
+				LOG_ERROR(RSX, "Surface color buffer writting: Unsupported surface color format (0x%x)", color_format);
+				format = gl::texture::format::bgra;
+				type = gl::texture::type::uint_8_8_8_8;
+				break;
+			}
+
+			//TODO: swizzle
+			m_rto[i].copy_to(vm::get_ptr(GetAddress(m_surface_offset[i], m_context_dma_color[i])), format, type);
+		}
+	};
+
 	switch(m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE:
 		return;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		write_color_buffers(0, 1);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		write_color_buffers(1, 1);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		write_color_buffers(0, 2);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		write_color_buffers(0, 3);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		m_rto[0].copy_to(vm::get_ptr(GetAddress(m_surface_offset_a, m_context_dma_color_a)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[1].copy_to(vm::get_ptr(GetAddress(m_surface_offset_b, m_context_dma_color_b)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[2].copy_to(vm::get_ptr(GetAddress(m_surface_offset_c, m_context_dma_color_c)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
-		m_rto[3].copy_to(vm::get_ptr(GetAddress(m_surface_offset_d, m_context_dma_color_d)), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
+		write_color_buffers(0, 4);
 		break;
 	}
 }
@@ -1347,11 +1442,15 @@ void GLGSRender::OnReset()
 
 void GLGSRender::InitDrawBuffers()
 {
-	if (!m_fbo || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
+	//FIXME: viewport doesn't work correctly
+	int width = RSXThread::m_width;//m_viewport_w - m_viewport_x;
+	int height = RSXThread::m_height; m_viewport_h - m_viewport_y;
+
+	if (!m_fbo || width != last_width || height != last_height || last_depth_format != m_surface_depth_format)
 	{
-		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
-		last_width = RSXThread::m_width;
-		last_height = RSXThread::m_height;
+		LOG_WARNING(RSX, "New FBO (%dx%d)", width, height);
+		last_width = width;
+		last_height = height;
 		last_depth_format = m_surface_depth_format;
 
 		m_fbo.create();
@@ -1474,15 +1573,10 @@ void GLGSRender::InitDrawBuffers()
 	}
 	}
 
-	if (m_read_buffer)
-	{
-		u32 format = GL_BGRA;
-		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 width = buffers[m_gcm_current_buffer].width;
-		u32 height = buffers[m_gcm_current_buffer].height;
-		glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
-	}
+	glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+	glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+
+	ReadBuffers();
 }
 
 void GLGSRender::ExecCMD(u32 cmd)
@@ -1495,12 +1589,6 @@ void GLGSRender::ExecCMD(u32 cmd)
 	{
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
-	}
-
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
 	}
 
 	GLbitfield f = 0;
@@ -1636,12 +1724,6 @@ void GLGSRender::ExecCMD()
 	{
 		glLogicOp(m_logic_op);
 		checkForGlError("glLogicOp");
-	}
-
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
 	}
 
 	if (m_set_two_sided_stencil_test_enable)
@@ -1895,125 +1977,11 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Flip()
 {
-	// Set scissor to FBO size 
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(0, 0, RSXThread::m_width, RSXThread::m_height);
-		checkForGlError("glScissor");
-	}
+	InitDrawBuffers();
+	//m_fbo.clear(gl::buffers::color_depth_stencil);
+	//m_fbo.draw_pixels(m_viewport_w, m_viewport_h, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, vm::get_ptr(GetAddress(0x45d580, CELL_GCM_LOCATION_LOCAL)));
+	area screen_area = coordi({ (int)m_viewport_x, (int)m_viewport_y }, { (int)m_viewport_w, (int)m_viewport_h });
 
-	switch (m_surface_color_target)
-	{
-	case CELL_GCM_SURFACE_TARGET_0:
-	case CELL_GCM_SURFACE_TARGET_1:
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-	case CELL_GCM_SURFACE_TARGET_MRT3:
-		break;
-
-	case CELL_GCM_SURFACE_TARGET_NONE:
-	{
-		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		u32 width = buffers[m_gcm_current_buffer].width;
-		u32 height = buffers[m_gcm_current_buffer].height;
-
-		if (!m_fbo)
-		{
-			m_fbo.create();
-
-			checkForGlError("m_fbo.Create");
-
-			m_rto[0].create();
-			checkForGlError("m_rto[0].create()");
-			m_rto[0].config()
-				.size(RSXThread::m_width, RSXThread::m_height)
-				.type(gl::texture::type::uint_8_8_8_8)
-				.format(gl::texture::format::bgra)
-				.pixels(nullptr);
-			checkForGlError("m_rto[0].config()");
-			m_fbo.color = m_rto[0];
-		}
-		m_fbo.bind();
-		// Slow path for MRT/None target using glReadPixels.
-		static u8* src_buffer = nullptr;
-		GLenum format = GL_RGBA;
-
-		if (m_read_buffer)
-		{
-			format = GL_BGRA;
-			u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-			src_buffer = vm::get_ptr<u8>(addr);
-		}
-		else if (m_fbo)
-		{
-			format = GL_RGBA;
-			static std::vector<u8> pixels;
-			pixels.resize(RSXThread::m_width * RSXThread::m_height * 4);
-			m_fbo.bind_as(gl::fbo::target::read_frame_buffer);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, g_pbo[5]);
-			glBufferData(GL_PIXEL_PACK_BUFFER, RSXThread::m_width * RSXThread::m_height * 4, 0, GL_STREAM_READ);
-			glReadPixels(0, 0, RSXThread::m_width, RSXThread::m_height, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 0);
-			checkForGlError("Flip(): glReadPixels(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8)");
-			GLubyte *packed = (GLubyte *)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
-			if (packed)
-			{
-				memcpy(pixels.data(), packed, RSXThread::m_width * RSXThread::m_height * 4);
-				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-				checkForGlError("Flip(): glUnmapBuffer");
-			}
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-			src_buffer = pixels.data();
-			width = RSXThread::m_width;
-			height = RSXThread::m_height;
-		}
-		else
-		{
-			src_buffer = nullptr;
-		}
-			
-		if (src_buffer)
-		{
-			glDisable(GL_STENCIL_TEST);
-			glDisable(GL_DEPTH_TEST);
-			glDisable(GL_CLIP_PLANE0);
-			glDisable(GL_CLIP_PLANE1);
-			glDisable(GL_CLIP_PLANE2);
-			glDisable(GL_CLIP_PLANE3);
-			glDisable(GL_CLIP_PLANE4);
-			glDisable(GL_CLIP_PLANE5);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, g_flip_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, format, GL_UNSIGNED_INT_8_8_8_8, src_buffer);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			glOrtho(0, 1, 0, 1, 0, 1);
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-
-			m_fbo.clear(gl::buffers::color_depth_stencil);
-
-			glColor3f(1, 1, 1);
-			glBegin(GL_QUADS);
-			glTexCoord2i(0, 1);
-			glVertex2i(0, 0);
-			glTexCoord2i(1, 1);
-			glVertex2i(1, 0);
-			glTexCoord2i(1, 0);
-			glVertex2i(1, 1);
-			glTexCoord2i(0, 0);
-			glVertex2i(0, 1);
-			glEnd();
-		}
-	}
-		break;
-	}
-
-	area screen_area = coordi{ {}, { (int)RSXThread::m_width, (int)RSXThread::m_height } };
 	coordi aspect_ratio;
 	if (1) //enable aspect ratio
 	{
@@ -2051,11 +2019,4 @@ void GLGSRender::Flip()
 	}
 
 	m_frame->Flip(m_context);
-
-	// Restore scissor
-	if (m_set_scissor_horizontal && m_set_scissor_vertical)
-	{
-		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-		checkForGlError("glScissor");
-	}
 }

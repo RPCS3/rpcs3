@@ -359,6 +359,7 @@ std::string GLFragmentDecompilerThread::BuildCode()
 void GLFragmentDecompilerThread::Task()
 {
 	auto data = vm::ptr<u32>::make(m_addr);
+	LOG_ERROR(RSX, "fragment shader address = 0x%x", m_addr);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -373,7 +374,7 @@ void GLFragmentDecompilerThread::Task()
 
 	int forced_unit = FORCE_NONE;
 
-	while (true)
+	for (int i = 0; i < 512; ++i)
 	{
 		for (auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
 			finded != m_end_offsets.end();

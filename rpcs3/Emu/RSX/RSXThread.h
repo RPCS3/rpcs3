@@ -354,28 +354,14 @@ public:
 	bool m_set_surface_clip_vertical;
 	u16 m_surface_clip_y;
 	u16 m_surface_clip_h;
-	u32 m_surface_pitch_a;
-	u32 m_surface_pitch_b;
-	u32 m_surface_pitch_c;
-	u32 m_surface_pitch_d;
-	u32 m_surface_pitch_z;
-	u32 m_surface_offset_a;
-	u32 m_surface_offset_b;
-	u32 m_surface_offset_c;
-	u32 m_surface_offset_d;
-	u32 m_surface_offset_z;
-	u32 m_surface_color_target;
+	u32 m_surface_pitch[4] = {};
+	u32 m_surface_pitch_z = 0;
+	u32 m_surface_offset[4] = {};
+	u32 m_surface_offset_z = 0;
+	u32 m_surface_color_target = 0;
 
 	// DMA context
-	bool m_set_context_dma_color_a;
-	u32 m_context_dma_color_a = 0;
-	bool m_set_context_dma_color_b;
-	u32 m_context_dma_color_b = 0;
-	bool m_set_context_dma_color_c;
-	u32 m_context_dma_color_c = 0;
-	bool m_set_context_dma_color_d;
-	u32 m_context_dma_color_d = 0;
-	bool m_set_context_dma_z;
+	u32 m_context_dma_color[4] = {};
 	u32 m_context_dma_z;
 	u32 m_context_surface;
 	u32 m_context_dma_img_src = 0xfeed0000;
@@ -579,11 +565,6 @@ protected:
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
-		m_set_context_dma_color_a = false;
-		m_set_context_dma_color_b = false;
-		m_set_context_dma_color_c = false;
-		m_set_context_dma_color_d = false;
-		m_set_context_dma_z = false;
 		m_set_cull_face = false;
 		m_set_front_face = false;
 		m_set_alpha_test = false;

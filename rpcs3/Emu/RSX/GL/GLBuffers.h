@@ -1,5 +1,7 @@
 #pragma once
 #include "OpenGL.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 void printGlError(GLenum err, const char* situation);
 void printGlError(GLenum err, const std::string& situation);
@@ -114,174 +116,6 @@ namespace gl
 		color_stencil = color | stencil,
 
 		depth_stencil = depth | stencil
-	};
-
-	namespace glsl
-	{
-		class link_exception : public exception
-		{
-		public:
-			explicit link_exception(const std::string& what_arg)
-			{
-				m_what = "linkage failed: '" + what_arg + "'";
-			}
-		};
-
-		class compile_exception : public exception
-		{
-		public:
-			explicit compile_exception(const std::string& what_arg)
-			{
-				m_what = "compilation failed: '" + what_arg + "'";
-			}
-		};
-
-		class shader
-		{
-			GLuint m_id = 0;
-
-		public:
-			enum class type
-			{
-				fragment = GL_FRAGMENT_SHADER,
-				vertext = GL_VERTEX_SHADER,
-				geometry = GL_GEOMETRY_SHADER
-			};
-
-			shader() = default;
-
-			shader(type type_)
-			{
-				create(type_);
-			}
-
-			shader(type type_, const std::string& src)
-			{
-				create(type_);
-				source(src);
-			}
-
-			void create(type type_)
-			{
-				m_id = glCreateShader((GLenum)type_);
-			}
-
-			void source(const std::string& src) const
-			{
-				const char* str = src.c_str();
-				const GLint length = src.length();
-
-				glShaderSource(m_id, 1, &str, &length);
-			}
-
-			void clear()
-			{
-				glDeleteShader(m_id);
-				m_id = 0;
-			}
-
-			uint id() const
-			{
-				return m_id;
-			}
-
-			void set_id(uint id)
-			{
-				m_id = id;
-			}
-
-			bool created() const
-			{
-				return m_id != 0;
-			}
-
-			explicit operator bool() const
-			{
-				return created();
-			}
-		};
-
-		class program
-		{
-			GLuint m_id = 0;
-
-		public:
-			program() = default;
-
-			program(GLuint id)
-			{
-				set_id(id);
-			}
-
-			~program()
-			{
-				remove();
-			}
-
-			void create()
-			{
-				m_id = glCreateProgram();
-			}
-
-			void remove()
-			{
-				glDeleteProgram(m_id);
-				m_id = 0;
-			}
-
-			static program get_current_program()
-			{
-				GLint id;
-				glGetIntegerv(GL_CURRENT_PROGRAM, &id);
-				return{ (GLuint)id };
-			}
-
-			void use()
-			{
-				glUseProgram(m_id);
-			}
-
-			void compile()
-			{
-				glCompileShader(m_id);
-			}
-
-			void link()
-			{
-				glLinkProgram(m_id);
-			}
-
-			void make()
-			{
-				compile();
-				link();
-			}
-
-			uint id() const
-			{
-				return m_id;
-			}
-
-			void set_id(uint id)
-			{
-				m_id = id;
-			}
-
-			bool created() const
-			{
-				return m_id != 0;
-			}
-
-			explicit operator bool() const
-			{
-				return created();
-			}
-
-			void operator += (const shader& rhs)
-			{
-				glAttachShader(m_id, rhs.id());
-			}
-		};
 	};
 
 	class rbo
@@ -404,6 +238,7 @@ namespace gl
 			sshort = GL_SHORT,
 			sint = GL_INT,
 			float_ = GL_FLOAT,
+			half_float = GL_HALF_FLOAT,
 			double_ = GL_DOUBLE,
 		};
 
@@ -1266,6 +1101,12 @@ namespace gl
 			glClear((GLbitfield)buffers_);
 		}
 
+		void draw_pixels(GLsizei width, GLsizei height, gl::texture::format format_, gl::texture::type type_, const void* pixels) const
+		{
+			save_binding_state save(*this);
+			glDrawPixels(width, height, (GLenum)format_, (GLenum)type_, pixels);
+		}
+
 		static fbo get_binded_draw_buffer()
 		{
 			GLint value;
@@ -1307,4 +1148,525 @@ namespace gl
 	};
 
 	static const fbo screen{};
+
+	class vertex_attrib_array
+	{
+	public:
+		class entry
+		{
+			bool m_normalize = false;
+			int m_stride = 0;
+			std::vector<u8> m_data;
+			int m_element_size = 0;
+
+		public:
+			void set_data(const void *data, int element_size, int size, bool normalize = false, int stride = 0)
+			{
+				m_data.resize(size);
+				memcpy(m_data.data(), data, size);
+
+				m_normalize = normalize;
+				m_stride = stride;
+				m_element_size = element_size;
+			}
+
+			bool normalize() const
+			{
+				return m_normalize;
+			}
+
+			void set_normalize(bool value)
+			{
+				m_normalize = value;
+			}
+
+			int element_size() const
+			{
+				return m_element_size;
+			}
+
+			size_t size() const
+			{
+				return m_data.size();
+			}
+
+			int stride() const
+			{
+				return m_stride;
+			}
+
+			void set_stride(int value)
+			{
+				m_stride = value;
+			}
+
+			const void* data() const
+			{
+				return m_data.data();
+			}
+
+			template<typename T>
+			void operator += (const T& value)
+			{
+				size_t position = m_data.size();
+				m_data.resize(position + sizeof(T));
+				(T&)m_data[position] = value;
+			}
+
+			void clear()
+			{
+				m_data.clear();
+			}
+		};
+
+	private:
+		mutable std::unordered_map<int, entry> m_entries;
+
+	public:
+		entry operator[](int index) const
+		{
+			return m_entries[index];
+		}
+
+		std::unordered_map<int, entry>& entries() const
+		{
+			return m_entries;
+		}
+	};
+
+	//TODO
+	class vbo
+	{
+	public:
+		enum class usage
+		{
+			static_draw = GL_STATIC_DRAW,
+			dynamic_draw = GL_DYNAMIC_DRAW
+		};
+
+		enum class target
+		{
+			array_buffer = GL_ARRAY_BUFFER,
+			element_array_buffer = GL_ELEMENT_ARRAY_BUFFER
+		};
+
+		class save_binding_state
+		{
+			GLint m_last_binding;
+			target m_target;
+
+		public:
+			save_binding_state(const vbo& new_binding)
+			{
+				GLenum pname;
+				switch (m_target = new_binding.get_target())
+				{
+				case target::array_buffer: pname = GL_ARRAY_BUFFER_BINDING; break;
+				case target::element_array_buffer: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
+				}
+
+				glGetIntegerv(pname, &m_last_binding);
+				new_binding.bind();
+			}
+
+			~save_binding_state()
+			{
+				glBindBuffer((GLenum)m_target, m_last_binding);
+			}
+		};
+
+	private:
+		GLuint m_id = GL_NONE;
+		target m_target = target::array_buffer;
+
+	public:
+		vbo() = default;
+		vbo(GLint id)
+		{
+			set_id(id);
+		}
+
+		vbo(const vertex_attrib_array& array)
+		{
+			std::unordered_map<int, int> index_offset;
+			std::vector<u8> data;
+
+			for (auto &entry : array.entries())
+			{
+				int index = entry.first;
+				size_t offset = data.size();
+				index_offset[index] = offset;
+				size_t size = entry.second.size();
+				data.resize(offset + size);
+
+				if (entry.second.stride() == 0)
+				{
+					memcpy(&data[offset], entry.second.data(), size);
+				}
+				else
+				{
+					for (size_t i = 0, loffset = 0, end = data.size(), step = entry.second.stride() ? entry.second.stride() : entry.second.element_size();
+						i < end;
+						i += step, loffset += entry.second.element_size())
+					{
+						memcpy(&data[offset + loffset], (u8*)entry.second.data() + i, entry.second.element_size());
+					}
+				}
+			}
+
+			create(target::array_buffer, data.data(), data.size());
+		}
+
+		~vbo()
+		{
+			remove();
+		}
+
+		target get_target() const
+		{
+			return m_target;
+		}
+
+		void set_data(const void* data, size_t size, usage usage_ = usage::dynamic_draw)
+		{
+			glBufferData((GLenum)m_target, size, data, (GLenum)usage_);
+		}
+
+		void bind() const
+		{
+			glBindBuffer((GLenum)m_target, id());
+		}
+
+		void create(target target_)
+		{
+			if (created())
+			{
+				remove();
+			}
+
+			m_target = target_;
+			glGenBuffers(1, &m_id);
+		}
+
+		void create(target target_, const void* data, size_t size, usage usage_ = usage::dynamic_draw)
+		{
+			create(target_);
+			set_data(data, size, usage_);
+		}
+
+		void remove()
+		{
+			glDeleteBuffers(1, &m_id);
+			m_id = GL_NONE;
+		}
+
+		GLuint id() const
+		{
+			return m_id;
+		}
+
+		void set_id(GLuint id)
+		{
+			m_id = id;
+		}
+
+		bool created() const
+		{
+			return m_id != 0;
+		}
+
+		explicit operator bool() const
+		{
+			return created();
+		}
+	};
+
+	namespace glsl
+	{
+		class link_exception : public exception
+		{
+		public:
+			explicit link_exception(const std::string& what_arg)
+			{
+				m_what = "linkage failed: '" + what_arg + "'";
+			}
+		};
+
+		class compile_exception : public exception
+		{
+		public:
+			explicit compile_exception(const std::string& what_arg)
+			{
+				m_what = "compilation failed: '" + what_arg + "'";
+			}
+		};
+
+		class shader
+		{
+			GLuint m_id = 0;
+
+		public:
+			enum class type
+			{
+				fragment = GL_FRAGMENT_SHADER,
+				vertext = GL_VERTEX_SHADER,
+				geometry = GL_GEOMETRY_SHADER
+			};
+
+			shader() = default;
+
+			shader(type type_)
+			{
+				create(type_);
+			}
+
+			shader(type type_, const std::string& src)
+			{
+				create(type_);
+				source(src);
+			}
+
+			void create(type type_)
+			{
+				m_id = glCreateShader((GLenum)type_);
+			}
+
+			void source(const std::string& src) const
+			{
+				const char* str = src.c_str();
+				const GLint length = src.length();
+
+				glShaderSource(m_id, 1, &str, &length);
+			}
+
+			void clear()
+			{
+				glDeleteShader(m_id);
+				m_id = 0;
+			}
+
+			uint id() const
+			{
+				return m_id;
+			}
+
+			void set_id(uint id)
+			{
+				m_id = id;
+			}
+
+			bool created() const
+			{
+				return m_id != 0;
+			}
+
+			explicit operator bool() const
+			{
+				return created();
+			}
+		};
+
+		class program
+		{
+			GLuint m_id = 0;
+
+		public:
+			class uniform_t
+			{
+				GLuint program;
+				GLint location;
+
+			public:
+				uniform_t(GLuint program, GLint location)
+					: program(program)
+					, location(location)
+				{
+				}
+
+				void operator = (int rhs) const { glProgramUniform1i(program, location, rhs); }
+				void operator = (float rhs) const { glProgramUniform1f(program, location, rhs); }
+				void operator = (double rhs) const { glProgramUniform1d(program, location, rhs); }
+
+				void operator = (const color1i& rhs) const { glProgramUniform1i(program, location, rhs.r); }
+				void operator = (const color1f& rhs) const { glProgramUniform1f(program, location, rhs.r); }
+				void operator = (const color1d& rhs) const { glProgramUniform1d(program, location, rhs.r); }
+				void operator = (const color2i& rhs) const { glProgramUniform2i(program, location, rhs.r, rhs.g); }
+				void operator = (const color2f& rhs) const { glProgramUniform2f(program, location, rhs.r, rhs.g); }
+				void operator = (const color2d& rhs) const { glProgramUniform2d(program, location, rhs.r, rhs.g); }
+				void operator = (const color3i& rhs) const { glProgramUniform3i(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const color3f& rhs) const { glProgramUniform3f(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const color3d& rhs) const { glProgramUniform3d(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const color4i& rhs) const { glProgramUniform4i(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const color4f& rhs) const { glProgramUniform4f(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const color4d& rhs) const { glProgramUniform4d(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+
+				void operator = (const glm::ivec2& rhs) const { glProgramUniform2f(program, location, rhs.r, rhs.g); }
+				void operator = (const glm::vec2& rhs) const { glProgramUniform2f(program, location, rhs.r, rhs.g); }
+				void operator = (const glm::dvec2& rhs) const { glProgramUniform2d(program, location, rhs.r, rhs.g); }
+				void operator = (const glm::ivec3& rhs) const { glProgramUniform3i(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const glm::vec3& rhs) const { glProgramUniform3f(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const glm::dvec3& rhs) const { glProgramUniform3d(program, location, rhs.r, rhs.g, rhs.b); }
+				void operator = (const glm::ivec4& rhs) const { glProgramUniform4i(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const glm::vec4& rhs) const { glProgramUniform4f(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+				void operator = (const glm::dvec4& rhs) const { glProgramUniform4d(program, location, rhs.r, rhs.g, rhs.b, rhs.a); }
+
+				void operator = (const glm::mat2& rhs) const { glProgramUniformMatrix2fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::dmat2& rhs) const { glProgramUniformMatrix2dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::mat3& rhs) const { glProgramUniformMatrix3fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::dmat3& rhs) const { glProgramUniformMatrix3dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::mat4& rhs) const { glProgramUniformMatrix4fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::dmat4& rhs) const { glProgramUniformMatrix4dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+			};
+
+			class uniforms_t
+			{
+				GLuint program;
+				std::unordered_map<std::string, GLint> locations;
+				int active_texture = 0;
+
+			public:
+				uniforms_t(GLuint program) : program(program)
+				{
+				}
+
+				GLint location(const std::string &name)
+				{
+					auto finded = locations.find(name);
+
+					if (finded != locations.end())
+					{
+						return finded->second;
+					}
+
+					int result = glGetUniformLocation(program, name.c_str());
+					locations[name] = result;
+
+					return result;
+				}
+
+				int texture(const std::string &name, int active_texture, const ::gl::texture& texture)
+				{
+					glActiveTexture(GL_TEXTURE0 + active_texture);
+					texture.bind();
+					(*this)[name] = active_texture;
+
+					return active_texture;
+				}
+
+				int texture(const std::string &name, const ::gl::texture& tex)
+				{
+					int atex;
+					auto finded = locations.find(name);
+
+					if (finded != locations.end())
+					{
+						atex = finded->second;
+					}
+					else
+					{
+						atex = active_texture++;
+					}
+
+					return texture(name, atex, tex);
+				}
+
+				uniform_t operator[](int location)
+				{
+					return{ program, location };
+				}
+
+				uniform_t operator[](const std::string &name)
+				{
+					return{ program, location(name) };
+				}
+			};
+
+			class attribs_t
+			{
+				GLuint program;
+
+			public:
+				void operator = (const vertex_attrib_array& array) const
+				{
+
+				}
+			};
+
+			program() = default;
+
+			program(GLuint id)
+			{
+				set_id(id);
+			}
+
+			~program()
+			{
+				remove();
+			}
+
+			void create()
+			{
+				m_id = glCreateProgram();
+			}
+
+			void remove()
+			{
+				glDeleteProgram(m_id);
+				m_id = 0;
+			}
+
+			static program get_current_program()
+			{
+				GLint id;
+				glGetIntegerv(GL_CURRENT_PROGRAM, &id);
+				return{ (GLuint)id };
+			}
+
+			void use()
+			{
+				glUseProgram(m_id);
+			}
+
+			void compile()
+			{
+				glCompileShader(m_id);
+			}
+
+			void link()
+			{
+				glLinkProgram(m_id);
+			}
+
+			void make()
+			{
+				compile();
+				link();
+			}
+
+			uint id() const
+			{
+				return m_id;
+			}
+
+			void set_id(uint id)
+			{
+				m_id = id;
+			}
+
+			bool created() const
+			{
+				return m_id != 0;
+			}
+
+			explicit operator bool() const
+			{
+				return created();
+			}
+
+			void operator += (const shader& rhs)
+			{
+				glAttachShader(m_id, rhs.id());
+			}
+		};
+	};
 }
