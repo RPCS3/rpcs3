@@ -13,7 +13,7 @@
 
 void ppu_interpreter::NULL_OP(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
 }
 
 void ppu_interpreter::NOP(PPUThread& CPU, ppu_opcode_t op)
@@ -23,12 +23,30 @@ void ppu_interpreter::NOP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::TDI(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	s64 a = CPU.GPR[op.ra];
+
+	if ((a < (s64)op.simm16 && (op.bo & 0x10)) ||
+		(a >(s64)op.simm16 && (op.bo & 0x8)) ||
+		(a == (s64)op.simm16 && (op.bo & 0x4)) ||
+		((u64)a < (u64)op.simm16 && (op.bo & 0x2)) ||
+		((u64)a >(u64)op.simm16 && (op.bo & 0x1)))
+	{
+		throw fmt::format("Trap! (tdi 0x%x, r%d, 0x%x)", op.bo, op.ra, op.simm16);
+	}
 }
 
 void ppu_interpreter::TWI(PPUThread& CPU, ppu_opcode_t op)
 {
-	throw __FUNCTION__;
+	s32 a = (s32)CPU.GPR[op.ra];
+
+	if ((a < op.simm16 && (op.bo & 0x10)) ||
+		(a > op.simm16 && (op.bo & 0x8)) ||
+		(a == op.simm16 && (op.bo & 0x4)) ||
+		((u32)a < (u32)op.simm16 && (op.bo & 0x2)) ||
+		((u32)a >(u32)op.simm16 && (op.bo & 0x1)))
+	{
+		throw fmt::Format("Trap! (twi 0x%x, r%d, 0x%x)", op.bo, op.ra, op.simm16);
+	}
 }
 
 
@@ -39,6 +57,7 @@ void ppu_interpreter::MFVSCR(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::MTVSCR(PPUThread& CPU, ppu_opcode_t op)
 {
+	// ignored (MFVSCR disabled)
 }
 
 void ppu_interpreter::VADDCUW(PPUThread& CPU, ppu_opcode_t op)
@@ -59,57 +78,144 @@ void ppu_interpreter::VADDFP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDSBS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (u32 b = 0; b < 16; ++b)
+	{
+		s16 result = (s16)CPU.VPR[op.va]._s8[b] + (s16)CPU.VPR[op.vb]._s8[b];
+
+		if (result > 0x7f)
+		{
+			CPU.VPR[op.vd]._s8[b] = 0x7f;
+		}
+		else if (result < -0x80)
+		{
+			CPU.VPR[op.vd]._s8[b] = -0x80;
+		}
+		else
+			CPU.VPR[op.vd]._s8[b] = (s8)result;
+	}
 }
 
 void ppu_interpreter::VADDSHS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint h = 0; h < 8; h++)
+	{
+		s32 result = (s32)CPU.VPR[op.va]._s16[h] + (s32)CPU.VPR[op.vb]._s16[h];
+
+		if (result > 0x7fff)
+		{
+			CPU.VPR[op.vd]._s16[h] = 0x7fff;
+		}
+		else if (result < -0x8000)
+		{
+			CPU.VPR[op.vd]._s16[h] = -0x8000;
+		}
+		else
+			CPU.VPR[op.vd]._s16[h] = result;
+	}
 }
 
 void ppu_interpreter::VADDSWS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint w = 0; w < 4; w++)
+	{
+		s64 result = (s64)CPU.VPR[op.va]._s32[w] + (s64)CPU.VPR[op.vb]._s32[w];
+
+		if (result > 0x7fffffff)
+		{
+			CPU.VPR[op.vd]._s32[w] = 0x7fffffff;
+		}
+		else if (result < (s32)0x80000000)
+		{
+			CPU.VPR[op.vd]._s32[w] = 0x80000000;
+		}
+		else
+			CPU.VPR[op.vd]._s32[w] = (s32)result;
+	}
 }
 
 void ppu_interpreter::VADDUBM(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint b = 0; b < 16; b++)
+	{
+		CPU.VPR[op.vd]._u8[b] = CPU.VPR[op.va]._u8[b] + CPU.VPR[op.vb]._u8[b];
+	}
 }
 
 void ppu_interpreter::VADDUBS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint b = 0; b < 16; b++)
+	{
+		u16 result = (u16)CPU.VPR[op.va]._u8[b] + (u16)CPU.VPR[op.vb]._u8[b];
+
+		if (result > 0xff)
+		{
+			CPU.VPR[op.vd]._u8[b] = 0xff;
+		}
+		else
+			CPU.VPR[op.vd]._u8[b] = (u8)result;
+	}
 }
 
 void ppu_interpreter::VADDUHM(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint h = 0; h < 8; h++)
+	{
+		CPU.VPR[op.vd]._u16[h] = CPU.VPR[op.va]._u16[h] + CPU.VPR[op.vb]._u16[h];
+	}
 }
 
 void ppu_interpreter::VADDUHS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint h = 0; h < 8; h++)
+	{
+		u32 result = (u32)CPU.VPR[op.va]._u16[h] + (u32)CPU.VPR[op.vb]._u16[h];
+
+		if (result > 0xffff)
+		{
+			CPU.VPR[op.vd]._u16[h] = 0xffff;
+		}
+		else
+			CPU.VPR[op.vd]._u16[h] = result;
+	}
 }
 
 void ppu_interpreter::VADDUWM(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint w = 0; w < 4; w++)
+	{
+		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] + CPU.VPR[op.vb]._u32[w];
+	}
 }
 
 void ppu_interpreter::VADDUWS(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint w = 0; w < 4; w++)
+	{
+		u64 result = (u64)CPU.VPR[op.va]._u32[w] + (u64)CPU.VPR[op.vb]._u32[w];
+
+		if (result > 0xffffffff)
+		{
+			CPU.VPR[op.vd]._u32[w] = 0xffffffff;
+		}
+		else
+			CPU.VPR[op.vd]._u32[w] = (u32)result;
+	}
 }
 
 void ppu_interpreter::VAND(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint w = 0; w < 4; w++)
+	{
+		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] & CPU.VPR[op.vb]._u32[w];
+	}
 }
 
 void ppu_interpreter::VANDC(PPUThread& CPU, ppu_opcode_t op)
 {
-	PPUInterpreter inter(CPU); (*PPU_instr::main_list)(&inter, op.opcode);
+	for (uint w = 0; w < 4; w++)
+	{
+		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] & (~CPU.VPR[op.vb]._u32[w]);
+	}
 }
 
 void ppu_interpreter::VAVGSB(PPUThread& CPU, ppu_opcode_t op)
