@@ -1392,7 +1392,9 @@ void GLGSRender::OnInit()
 void GLGSRender::OnInitThread()
 {
 	m_context = m_frame->GetNewContext();
-
+	
+	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
+	
 	m_frame->SetCurrent(m_context);
 
 	InitProcTable();
@@ -1664,7 +1666,6 @@ void GLGSRender::ExecCMD()
 
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
-	Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
 	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
 	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
@@ -1682,6 +1683,11 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_line_stipple, GL_LINE_STIPPLE);
 	Enable(m_set_polygon_stipple, GL_POLYGON_STIPPLE);
 
+	if (!is_intel_vendor)
+	{
+		Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
+	}
+	
 	if (m_set_clip_plane)
 	{
 		Enable(m_clip_plane_0, GL_CLIP_PLANE0);
@@ -1807,7 +1813,7 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glDepthFunc");
 	}
 
-	if (m_set_depth_bounds)
+	if (m_set_depth_bounds && !is_intel_vendor)
 	{
 		glDepthBoundsEXT(m_depth_bounds_min, m_depth_bounds_max);
 		checkForGlError("glDepthBounds");

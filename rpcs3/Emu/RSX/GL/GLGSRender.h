@@ -163,7 +163,8 @@ public:
 	GSFrameBase* m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
-
+	bool is_intel_vendor;
+	
 	GLGSRender();
 	virtual ~GLGSRender();
 
