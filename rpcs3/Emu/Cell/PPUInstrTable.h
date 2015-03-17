@@ -115,8 +115,6 @@ namespace PPU_instr
 		*/
 		static CodeField<30> AA;
 
-		static CodeFieldSignedOffset<6, 29, 2> LI(FIELD_BRANCH);
-
 		//
 		static CodeFieldSignedOffset<6, 29, 2> LL(FIELD_BRANCH);
 		/*
@@ -245,7 +243,7 @@ namespace PPU_instr
 		bind_instr(main_list, BC, BO, BI, BD, AA, LK);
 		bind_instr(main_list, HACK, uimm26);
 		bind_instr(main_list, SC, LEV);
-		bind_instr(main_list, B, LI, AA, LK);
+		bind_instr(main_list, B, LL, AA, LK);
 		bind_instr(main_list, RLWIMI, RA, RS, SH, MB, ME, RC);
 		bind_instr(main_list, RLWINM, RA, RS, SH, MB, ME, RC);
 		bind_instr(main_list, RLWNM, RA, RS, RB, MB, ME, RC);

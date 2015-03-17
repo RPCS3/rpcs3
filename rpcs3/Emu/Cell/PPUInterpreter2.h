@@ -22,10 +22,11 @@ union ppu_opcode_t
 
 	struct
 	{
-		u32     : 6; // 26..31
-	    u32 vsh : 4; // 22..25
-		u32     : 1;  // 21
+		u32     : 6;  // 26..31
+	    u32 vsh : 4;  // 22..25
+		u32 oe  : 1;  // 21
 		u32 spr : 10; // 11..20
+		u32     : 11;
 	};
 
 	struct
@@ -40,7 +41,9 @@ union ppu_opcode_t
 
 	struct
 	{
-		u32    : 6; // 26..31
+		u32 lk : 1; // 31
+		u32 aa : 1; // 30
+		u32    : 4; // 26..29
 		u32    : 5; // 21..25
 		u32 rb : 5; // 16..20
 		u32 ra : 5; // 11..15
@@ -51,7 +54,8 @@ union ppu_opcode_t
 	struct
 	{
 		u32 uimm16 : 16; // 16..31
-		u32        : 5;  // 11..15
+		u32        : 4;  // 12..15
+		u32 l11    : 1;  // 11
 		u32 rs     : 5;  // 6..10
 		u32        : 6;
 	};
@@ -65,10 +69,32 @@ union ppu_opcode_t
 
 	struct
 	{
-		u32      : 18; // 14..31
-		u32 crfs : 3;  // 11..13
-		u32      : 2;  // 9..10
-		u32 crfd : 3;  // 6..8
+		s32 ll : 26; // 6..31
+		s32    : 6;
+	};
+
+	struct
+	{
+	    u32      : 5; // 27..31
+	    u32 lev  : 7; // 20..26
+		u32 i    : 4; // 16..19
+		u32      : 2; // 14..15
+		u32 crfs : 3; // 11..13
+		u32 l10  : 1; // 10
+		u32      : 1; // 9
+		u32 crfd : 3; // 6..8
+		u32      : 6;
+	};
+
+	struct
+	{
+		u32      : 1; // 31
+		u32      : 1; // 30
+		u32      : 4; // 26..29
+		u32      : 5; // 21..25
+		u32 crbb : 5; // 16..20
+		u32 crba : 5; // 11..15
+		u32 crbd : 5; // 6..10
 		u32      : 6;
 	};
 
@@ -81,6 +107,32 @@ union ppu_opcode_t
 		u32 bi : 5; // 11..15
 		u32 bo : 5; // 6..10
 		u32    : 6;
+	};
+
+	struct
+	{
+		u32     : 6; // 26..31
+		u32 frc : 5; // 21..25
+		u32 frb : 5; // 16..20
+		u32 fra : 5; // 11..15
+		u32 frd : 5; // 6..10
+		u32     : 6;
+	};
+
+	struct
+	{
+		u32     : 12; // 20..31
+		u32 crm : 8;  // 12..19
+		u32     : 1;  // 11
+		u32 frs : 5;  // 6..10
+		u32     : 6;
+	};
+
+	struct
+	{
+		u32     : 17; // 15..31
+		u32 flm : 8;  // 7..14
+		u32     : 7;
 	};
 };
 
@@ -406,8 +458,7 @@ namespace ppu_interpreter
 	void LVRXL(PPUThread& CPU, ppu_opcode_t op);
 	void DSS(PPUThread& CPU, ppu_opcode_t op);
 	void SRAWI(PPUThread& CPU, ppu_opcode_t op);
-	void SRADI1(PPUThread& CPU, ppu_opcode_t op);
-	void SRADI2(PPUThread& CPU, ppu_opcode_t op);
+	void SRADI(PPUThread& CPU, ppu_opcode_t op);
 	void EIEIO(PPUThread& CPU, ppu_opcode_t op);
 	void STVLXL(PPUThread& CPU, ppu_opcode_t op);
 	void STHBRX(PPUThread& CPU, ppu_opcode_t op);
@@ -816,8 +867,8 @@ public:
 	virtual void LVRXL(u32 vd, u32 ra, u32 rb) { func = ppu_interpreter::LVRXL; }
 	virtual void DSS(u32 strm, u32 a) { func = ppu_interpreter::DSS; }
 	virtual void SRAWI(u32 ra, u32 rs, u32 sh, bool rc) { func = ppu_interpreter::SRAWI; }
-	virtual void SRADI1(u32 ra, u32 rs, u32 sh, bool rc) { func = ppu_interpreter::SRADI1; }
-	virtual void SRADI2(u32 ra, u32 rs, u32 sh, bool rc) { func = ppu_interpreter::SRADI2; }
+	virtual void SRADI1(u32 ra, u32 rs, u32 sh, bool rc) { func = ppu_interpreter::SRADI; }
+	virtual void SRADI2(u32 ra, u32 rs, u32 sh, bool rc) { func = ppu_interpreter::SRADI; }
 	virtual void EIEIO() { func = ppu_interpreter::EIEIO; }
 	virtual void STVLXL(u32 vs, u32 ra, u32 rb) { func = ppu_interpreter::STVLXL; }
 	virtual void STHBRX(u32 rs, u32 ra, u32 rb) { func = ppu_interpreter::STHBRX; }

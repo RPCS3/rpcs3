@@ -2445,6 +2445,11 @@ private:
 		if(oe) CPU.SetOV((~RA>>63 == RB>>63) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
+	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
+	{
+		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+	}
 	void ADDC(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		const u64 RA = CPU.GPR[ra];
@@ -2452,11 +2457,6 @@ private:
 		CPU.GPR[rd] = RA + RB;
 		CPU.XER.CA = CPU.IsCarry(RA, RB);
 		if(oe) CPU.SetOV((RA>>63 == RB>>63) && (RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-	}
-	void MULHDU(u32 rd, u32 ra, u32 rb, bool rc)
-	{
-		CPU.GPR[rd] = __umulh(CPU.GPR[ra], CPU.GPR[rb]);
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void MULHWU(u32 rd, u32 ra, u32 rb, bool rc)
@@ -2780,20 +2780,20 @@ private:
 		const u8 eb = (addr & 0xf) >> 2;
 		vm::write32(vm::cast(addr), CPU.VPR[vs]._u32[3 - eb]);
 	}
-	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
-	{
-		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = RA + CPU.XER.CA;
-		CPU.XER.CA = CPU.IsCarry(RA, CPU.XER.CA);
-		if(oe) CPU.SetOV((RA>>63 == 0) && (RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-	}
 	void SUBFZE(u32 rd, u32 ra, u32 oe, bool rc)
 	{
 		const u64 RA = CPU.GPR[ra];
 		CPU.GPR[rd] = ~RA + CPU.XER.CA;
 		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA);
 		if(oe) CPU.SetOV((~RA>>63 == 0) && (~RA>>63 != CPU.GPR[rd]>>63));
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+	}
+	void ADDZE(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		const u64 RA = CPU.GPR[ra];
+		CPU.GPR[rd] = RA + CPU.XER.CA;
+		CPU.XER.CA = CPU.IsCarry(RA, CPU.XER.CA);
+		if(oe) CPU.SetOV((RA>>63 == 0) && (RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void STDCX_(u32 rs, u32 ra, u32 rb)
@@ -2812,14 +2812,6 @@ private:
 	{
 		vm::write128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL), CPU.VPR[vs]);
 	}
-	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
-	{
-		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
-		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA, ~0ULL);
-		if(oe) CPU.SetOV((~RA>>63 == 1) && (~RA>>63 != CPU.GPR[rd]>>63));
-		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
-	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
 		const s64 RA = CPU.GPR[ra];
@@ -2830,6 +2822,14 @@ private:
 			const s64 high = __mulh(RA, RB);
 			CPU.SetOV(high != s64(CPU.GPR[rd]) >> 63);
 		}
+		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
+	}
+	void SUBFME(u32 rd, u32 ra, u32 oe, bool rc)
+	{
+		const u64 RA = CPU.GPR[ra];
+		CPU.GPR[rd] = ~RA + CPU.XER.CA + ~0ULL;
+		CPU.XER.CA = CPU.IsCarry(~RA, CPU.XER.CA, ~0ULL);
+		if(oe) CPU.SetOV((~RA>>63 == 1) && (~RA>>63 != CPU.GPR[rd]>>63));
 		if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rd]);
 	}
 	void ADDME(u32 rd, u32 ra, u32 oe, bool rc)
@@ -3432,9 +3432,7 @@ private:
 	{
 		const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-		auto const cache_line = vm::get_ptr<u8>(vm::cast(addr) & ~127);
-		if (cache_line)
-			memset(cache_line, 0, 128);
+		memset(vm::get_ptr<u8>(vm::cast(addr) & ~127), 0, 128);
 	}
 	void LWZ(u32 rd, u32 ra, s32 d)
 	{
@@ -3618,7 +3616,6 @@ private:
 	}
 	void LDU(u32 rd, u32 ra, s32 ds)
 	{
-		//if(ra == 0 || rt == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
 		CPU.GPR[rd] = vm::read64(vm::cast(addr));
 		CPU.GPR[ra] = addr;
@@ -3684,7 +3681,6 @@ private:
 	}
 	void STDU(u32 rs, u32 ra, s32 ds)
 	{
-		//if(ra == 0 || rs == ra) return;
 		const u64 addr = CPU.GPR[ra] + ds;
 		vm::write64(vm::cast(addr), CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;

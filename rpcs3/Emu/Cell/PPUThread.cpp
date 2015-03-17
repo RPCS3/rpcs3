@@ -24,8 +24,6 @@ u64 rotate_mask[64][64];
 
 const ppu_inter_func_t g_ppu_inter_func_list[] =
 {
-	nullptr,
-
 	ppu_interpreter::NULL_OP,
 	ppu_interpreter::NOP,
 
@@ -344,8 +342,7 @@ const ppu_inter_func_t g_ppu_inter_func_list[] =
 	ppu_interpreter::LVRXL,
 	ppu_interpreter::DSS,
 	ppu_interpreter::SRAWI,
-	ppu_interpreter::SRADI1,
-	ppu_interpreter::SRADI2,
+	ppu_interpreter::SRADI,
 	ppu_interpreter::EIEIO,
 	ppu_interpreter::STVLXL,
 	ppu_interpreter::STHBRX,
@@ -471,7 +468,7 @@ void fill_ppu_exec_map(u32 addr, u32 size)
 
 	for (u32 pos = addr; pos < addr + size; pos += 4)
 	{
-		inter->func = nullptr;
+		inter->func = ppu_interpreter::NULL_OP;
 
 		// decode PPU opcode
 		dec.Decode(vm::read32(pos));
@@ -479,17 +476,13 @@ void fill_ppu_exec_map(u32 addr, u32 size)
 		u32 index = 0;
 
 		// find function index
-		for (const auto& func : g_ppu_inter_func_list)
+		for (; index < sizeof(g_ppu_inter_func_list) / sizeof(ppu_inter_func_t); index++)
 		{
-			if (inter->func == func)
+			if (inter->func == g_ppu_inter_func_list[index])
 			{
-				index = &func - g_ppu_inter_func_list;
 				break;
 			}
 		}
-
-		// zero function is nullptr, it shouldn't happen
-		assert(index);
 
 		// write index in memory
 		*(u32*)((u8*)g_ppu_exec_map + pos) = index;
@@ -700,6 +693,8 @@ void PPUThread::FastStop()
 
 void PPUThread::Task()
 {
+	SetHostRoundingMode(FPSCR_RN_NEAR);
+
 	if (custom_task)
 	{
 		return custom_task(*this);
@@ -712,10 +707,8 @@ void PPUThread::Task()
 
 	while (true)
 	{
-		//if (Emu.IsStopped())
-		//{
-		//	return;
-		//}
+		// get interpreter function
+		const auto func = g_ppu_inter_func_list[*(u32*)((u8*)g_ppu_exec_map + PC)];
 
 		if (m_events)
 		{
@@ -730,11 +723,8 @@ void PPUThread::Task()
 		// read opcode
 		const ppu_opcode_t opcode = { vm::read32(PC) };
 
-		// read interpreter function index
-		const u32 index = *(u32*)((u8*)g_ppu_exec_map + PC);
-
 		// call interpreter function
-		g_ppu_inter_func_list[index](*this, opcode);
+		func(*this, opcode);
 
 		// next instruction
 		//PC += 4;
