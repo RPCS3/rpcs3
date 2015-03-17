@@ -979,6 +979,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		const u32 a0 = value;
 		m_cur_fragment_prog->offset = value & ~0x3;
 		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (value & 0x3) - 1);
+		LOG_ERROR(RSX, "[rsx thread] fragment shader address = 0x%x (0x%x:0x%x)", m_cur_fragment_prog->addr, m_cur_fragment_prog->offset, (value & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
 		break;
 	}
@@ -1323,25 +1324,25 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case NV4097_SET_SURFACE_COLOR_AOFFSET:
 	{
-		m_surface_offset_a = value;
+		m_surface_offset[0] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_COLOR_BOFFSET:
 	{
-		m_surface_offset_b = value;
+		m_surface_offset[1] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_COLOR_COFFSET:
 	{
-		m_surface_offset_c = value;
+		m_surface_offset[2] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_COLOR_DOFFSET:
 	{
-		m_surface_offset_d = value;
+		m_surface_offset[3] = value;
 		break;
 	}
 
@@ -1353,25 +1354,25 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case NV4097_SET_SURFACE_PITCH_A:
 	{
-		m_surface_pitch_a = value;
+		m_surface_pitch[0] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_PITCH_B:
 	{
-		m_surface_pitch_b = value;
+		m_surface_pitch[1] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_PITCH_C:
 	{
-		m_surface_pitch_c = value;
+		m_surface_pitch[2] = value;
 		break;
 	}
 
 	case NV4097_SET_SURFACE_PITCH_D:
 	{
-		m_surface_pitch_d = value;
+		m_surface_pitch[3] = value;
 		break;
 	}
 
@@ -1383,35 +1384,30 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_A:
 	{
-		m_set_context_dma_color_a = true;
-		m_context_dma_color_a = value;
+		m_context_dma_color[0] = value;
 		break;
 	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_B:
 	{
-		m_set_context_dma_color_b = true;
-		m_context_dma_color_b = value;
+		m_context_dma_color[1] = value;
 		break;
 	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_C:
 	{
-		m_set_context_dma_color_c = true;
-		m_context_dma_color_c = value;
+		m_context_dma_color[2] = value;
 		break;
 	}
 
 	case NV4097_SET_CONTEXT_DMA_COLOR_D:
 	{
-		m_set_context_dma_color_d = true;
-		m_context_dma_color_d = value;
+		m_context_dma_color[3] = value;
 		break;
 	}
 
 	case NV4097_SET_CONTEXT_DMA_ZETA:
 	{
-		m_set_context_dma_z = true;
 		m_context_dma_z = value;
 		break;
 	}

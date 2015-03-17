@@ -206,16 +206,9 @@ static const std::string rsx_fp_op_names[] =
 
 struct RSXFragmentProgram
 {
-	u32 size;
-	u32 addr;
-	u32 offset;
-	u32 ctrl;
-
-	RSXFragmentProgram()
-		: size(0)
-		, addr(0)
-		, offset(0)
-		, ctrl(0)
-	{
-	}
+	u32 size = 0;
+	u32 addr = 0;
+	u32 offset = 0;
+	u32 ctrl = 0;
+	bool used = true;
 };

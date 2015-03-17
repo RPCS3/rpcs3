@@ -155,6 +155,7 @@ private:
 	gl::texture m_rto[4];
 	std::vector<gl::rbo> m_rbo;
 	gl::fbo m_fbo;
+	gl::glsl::program m_glsl_draw_texture_program;
 
 	void* m_context;
 
@@ -176,6 +177,7 @@ private:
 	virtual void Close();
 	bool LoadProgram();
 	void WriteBuffers();
+	void ReadBuffers();
 	void WriteDepthBuffer();
 	void WriteColorBuffers();
 
