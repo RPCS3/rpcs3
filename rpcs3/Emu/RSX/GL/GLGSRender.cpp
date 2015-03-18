@@ -1987,7 +1987,7 @@ void GLGSRender::Flip()
 	//m_fbo.clear(gl::buffers::color_depth_stencil);
 	//m_fbo.draw_pixels(m_viewport_w, m_viewport_h, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, vm::get_ptr(GetAddress(0x45d580, CELL_GCM_LOCATION_LOCAL)));
 	area screen_area = coordi({ (int)m_viewport_x, (int)m_viewport_y }, { (int)m_viewport_w, (int)m_viewport_h });
-
+	
 	coordi aspect_ratio;
 	if (1) //enable aspect ratio
 	{
