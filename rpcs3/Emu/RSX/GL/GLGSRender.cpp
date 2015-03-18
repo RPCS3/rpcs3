@@ -1448,12 +1448,12 @@ void GLGSRender::OnInitThread()
 {
 	m_context = m_frame->GetNewContext();
 	
-	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
-	
 	m_frame->SetCurrent(m_context);
 
 	InitProcTable();
 
+	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
+	
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
