@@ -825,7 +825,7 @@ protected:
 
 PPUThread& GetCurrentPPUThread();
 
-class ppu_thread : cpu_thread
+class ppu_thread : public cpu_thread
 {
 	static const u32 stack_align = 0x10;
 	vm::ptr<u64> argv;

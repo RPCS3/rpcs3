@@ -316,9 +316,23 @@ namespace loader
 				return res;
 			}
 
-			std::vector<u32> start_funcs;
-			std::vector<u32> stop_funcs;
-			std::vector<u32> exit_funcs;
+			struct module_control_func
+			{
+				u32 entry;
+				u32 rtoc;
+
+				module_control_func() = default;
+
+				module_control_func(u32 entry, u32 rtoc)
+					: entry(entry)
+					, rtoc(rtoc)
+				{
+				}
+			};
+
+			std::vector<module_control_func> start_funcs;
+			std::vector<module_control_func> stop_funcs;
+			std::vector<module_control_func> exit_funcs;
 
 			//load modules
 			vfsDir lle_dir("/dev_flash/sys/external");
@@ -373,7 +387,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "start func found in '%s' library (0x%x)", info.name.c_str(), code);
-											start_funcs.push_back(e.second);
+											start_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -383,7 +397,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "stop func found in '%s' library (0x%x)", info.name.c_str(), code);
-											stop_funcs.push_back(e.second);
+											stop_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -393,7 +407,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "exit func found in '%s' library (0x%x)", info.name.c_str(), code);
-											exit_funcs.push_back(e.second);
+											exit_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -493,19 +507,33 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-			static const int branch_size = 8 * 4;
+			static const int branch_size = 6 * 4;
 
-			auto make_branch = [](vm::ptr<u32>& ptr, u32 addr)
+			auto make_branch = [](vm::ptr<u32>& ptr, const module_control_func& func)
 			{
-				u32 stub = vm::read32(addr);
-				u32 rtoc = vm::read32(addr + 4);
+				u32 stub = vm::read32(func.entry);
+				u32 custom_rtoc = vm::read32(func.entry + 4);
+				u32 rtoc;
+				
+				if (func.rtoc)
+				{
+					rtoc = func.rtoc;
 
-				*ptr++ = LI_(r0, 0);
+					if (custom_rtoc && custom_rtoc != rtoc)
+					{
+						LOG_WARNING(LOADER, "redefinition module rtoc (from 0x%x to 0x%x)", rtoc, custom_rtoc);
+						rtoc = custom_rtoc;
+					}
+				}
+				else
+				{
+					rtoc = custom_rtoc;
+				}
+
+				*ptr++ = LIS(r0, stub >> 16);
 				*ptr++ = ORI(r0, r0, stub & 0xffff);
-				*ptr++ = ORIS(r0, r0, stub >> 16);
-				*ptr++ = LI_(r2, 0);
+				*ptr++ = LIS(r2, rtoc >> 16);
 				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
-				*ptr++ = ORIS(r2, r2, rtoc >> 16);
 				*ptr++ = MTCTR(r0);
 				*ptr++ = BCTRL();
 			};
@@ -516,7 +544,7 @@ namespace loader
 
 			// make initial OPD
 			*entry++ = OPD.addr() + 8;
-			*entry++ = 0xdeadbeef;
+			*entry++ = start_funcs.size() ? start_funcs[0].rtoc : 0xdeadbeef;
 
 			// save initialization args
 			*entry++ = MR(r14, r3);
@@ -540,12 +568,18 @@ namespace loader
 			*entry++ = MR(r12, r19);
 
 			// branch to initialization
-			make_branch(entry, m_ehdr.e_entry);
+			make_branch(entry, { m_ehdr.e_entry, 0 });
 
 			ppu_thread main_thread(OPD.addr(), "main_thread");
 
 			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
-			main_thread.gpr(11, OPD.addr()).gpr(12, Emu.GetMallocPageSize());
+			main_thread
+				.gpr(7, main_thread.get_id())
+				.gpr(8, Emu.GetTLSAddr())
+				.gpr(9, Emu.GetTLSFilesz())
+				.gpr(10, Emu.GetTLSMemsz())
+				.gpr(11, m_ehdr.e_entry)
+				.gpr(12, Emu.GetMallocPageSize());
 
 			return ok;
 		}
