@@ -9,7 +9,7 @@ union ppu_opcode_t
 
 	struct
 	{
-		u32 rc    : 1; // 31
+		u32       : 1; // 31
 		u32 shh   : 1; // 30
 		u32       : 3; // 27..29
 		u32 mbmeh : 1; // 26

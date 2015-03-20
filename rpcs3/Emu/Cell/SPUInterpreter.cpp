@@ -16,37 +16,36 @@ void spu_interpreter::DEFAULT(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::STOP(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.stop_and_signal(op.opcode & 0x3fff);
 }
 
 void spu_interpreter::LNOP(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::SYNC(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	_mm_mfence();
 }
 
 void spu_interpreter::DSYNC(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	_mm_mfence();
 }
 
 void spu_interpreter::MFSPR(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].clear();
 }
 
 void spu_interpreter::RDCH(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt] = u128::from32r(CPU.get_ch_value(op.ra));
 }
 
 void spu_interpreter::RCHCNT(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt] = u128::from32r(CPU.get_ch_count(op.ra));
 }
 
 void spu_interpreter::SF(SPUThread& CPU, spu_opcode_t op)
@@ -191,12 +190,11 @@ void spu_interpreter::AVGB(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MTSPR(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::WRCH(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.set_ch_value(op.ra, CPU.GPR[op.rt]._u32[3]);
 }
 
 void spu_interpreter::BIZ(SPUThread& CPU, spu_opcode_t op)
@@ -1019,4 +1017,3 @@ void spu_interpreter::UNK(SPUThread& CPU, spu_opcode_t op)
 {
 	DEFAULT(CPU, op);
 }
-
