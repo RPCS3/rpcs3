@@ -569,7 +569,7 @@ void PPUThread::DoRun()
 {
 	m_dec = nullptr;
 
-	switch(Ini.CPUDecoderMode.GetValue())
+	switch (auto mode = Ini.CPUDecoderMode.GetValue())
 	{
 	case 0: // original interpreter
 	{
@@ -598,8 +598,10 @@ void PPUThread::DoRun()
 	//case 3: m_dec = new PPURecompiler(*this); break;
 
 	default:
-		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+	{
+		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", mode);
 		Emu.Pause();
+	}
 	}
 }
 

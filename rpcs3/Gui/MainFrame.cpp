@@ -441,6 +441,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
 
 	cbox_spu_decoder->Append("SPU Interpreter");
+	cbox_spu_decoder->Append("SPU Interpreter 2");
 	cbox_spu_decoder->Append("SPU JIT (ASMJIT)");
 
 	cbox_gs_render->Append("Null");
@@ -533,7 +534,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_dbg_ap_functioncall->SetValue(Ini.DBGAutoPauseFunctionCall.GetValue());
 
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() : 0);
-	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() - 1 : 0);
+	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() : 0);
 	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_gs_resolution   ->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect       ->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
@@ -634,7 +635,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection());
-		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection() + 1);
+		Ini.SPUDecoderMode.SetValue(cbox_spu_decoder->GetSelection());
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);

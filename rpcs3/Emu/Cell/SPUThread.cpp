@@ -17,9 +17,37 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Cell/SPUInterpreter2.h"
 #include "Emu/Cell/SPURecompiler.h"
 
 #include <cfenv>
+
+class spu_inter_func_list_t
+{
+	std::array<spu_inter_func_t, 2048> funcs;
+
+public:
+	spu_inter_func_list_t()
+	{
+		auto inter = new SPUInterpreter2;
+		SPUDecoder dec(*inter);
+
+		for (u32 i = 0; i < funcs.size(); i++)
+		{
+			inter->func = spu_interpreter::DEFAULT;
+			
+			dec.Decode(i << 21);
+
+			funcs[i] = inter->func;
+		}
+	}
+
+	__forceinline spu_inter_func_t operator [] (u32 opcode)
+	{
+		return funcs[opcode >> 21];
+	}
+}
+g_spu_inter_func_list;
 
 SPUThread& GetCurrentSPUThread()
 {
@@ -46,23 +74,43 @@ SPUThread::~SPUThread()
 
 void SPUThread::Task()
 {
-	const int round = std::fegetround();
 	std::fesetround(FE_TOWARDZERO);
 
 	if (m_custom_task)
 	{
-		m_custom_task(*this);
-	}
-	else
-	{
-		CPUThread::Task();
+		return m_custom_task(*this);
 	}
 	
-	if (std::fegetround() != FE_TOWARDZERO)
+	if (m_dec)
 	{
-		LOG_ERROR(SPU, "Rounding mode has changed(%d)", std::fegetround());
+		return CPUThread::Task();
 	}
-	std::fesetround(round);
+	
+	while (true)
+	{
+		// read opcode
+		const spu_opcode_t opcode = { vm::read32(PC + offset) };
+
+		// get interpreter function
+		const auto func = g_spu_inter_func_list[opcode.opcode];
+
+		if (m_events)
+		{
+			// process events
+			if (m_events & CPU_EVENT_STOP && (Emu.IsStopped() || IsStopped() || IsPaused()))
+			{
+				m_events &= ~CPU_EVENT_STOP;
+				return;
+			}
+		}
+
+		// call interpreter function
+		func(*this, opcode);
+
+		// next instruction
+		//PC += 4;
+		NextPc(4);
+	}
 }
 
 void SPUThread::DoReset()
@@ -122,18 +170,32 @@ void SPUThread::CloseStack()
 
 void SPUThread::DoRun()
 {
-	switch(Ini.SPUDecoderMode.GetValue())
+	m_dec = nullptr;
+
+	switch (auto mode = Ini.SPUDecoderMode.GetValue())
 	{
-	case 1:
+	case 0: // original interpreter
+	{
 		m_dec = new SPUDecoder(*new SPUInterpreter(*this));
-	break;
+		break;
+	}
+		
+	case 1: // alternative interpreter
+	{
+		break;
+	}
+
 	case 2:
+	{
 		m_dec = new SPURecompilerCore(*this);
-	break;
+		break;
+	}
 
 	default:
-		LOG_ERROR(SPU, "Invalid SPU decoder mode: %d", Ini.SPUDecoderMode.GetValue());
+	{
+		LOG_ERROR(SPU, "Invalid SPU decoder mode: %d", mode);
 		Emu.Pause();
+	}
 	}
 }
 
