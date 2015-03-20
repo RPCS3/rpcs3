@@ -97,7 +97,12 @@ void SPUThread::Task()
 		if (m_events)
 		{
 			// process events
-			if (m_events & CPU_EVENT_STOP && (Emu.IsStopped() || IsStopped() || IsPaused()))
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
+			if (m_events & CPU_EVENT_STOP && (IsStopped() || IsPaused()))
 			{
 				m_events &= ~CPU_EVENT_STOP;
 				return;
@@ -225,16 +230,19 @@ void SPUThread::FastCall(u32 ls_addr)
 	auto old_PC = PC;
 	auto old_LR = GPR[0]._u32[3];
 	auto old_stack = GPR[1]._u32[3]; // only saved and restored (may be wrong)
+	auto old_task = decltype(m_custom_task)();
 
 	m_status = Running;
 	PC = ls_addr;
 	GPR[0]._u32[3] = 0x0;
+	m_custom_task.swap(m_custom_task);
 
-	CPUThread::Task();
+	SPUThread::Task();
 
 	PC = old_PC;
 	GPR[0]._u32[3] = old_LR;
 	GPR[1]._u32[3] = old_stack;
+	m_custom_task.swap(m_custom_task);
 }
 
 void SPUThread::FastStop()

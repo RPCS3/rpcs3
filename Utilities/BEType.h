@@ -227,14 +227,56 @@ union _CRT_ALIGN(16) u128
 		return ret;
 	}
 
+	static u128 fromF(__m128 value)
+	{
+		u128 ret;
+		ret.vf = value;
+		return ret;
+	}
+
 	static __forceinline u128 add8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));
 	}
 
+	static __forceinline u128 add16(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi16(left.vi, right.vi));
+	}
+
+	static __forceinline u128 add32(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi32(left.vi, right.vi));
+	}
+
+	static __forceinline u128 addfs(const u128& left, const u128& right)
+	{
+		return fromF(_mm_add_ps(left.vf, right.vf));
+	}
+
 	static __forceinline u128 sub8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub16(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi16(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub32(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi32(left.vi, right.vi));
+	}
+
+	static __forceinline u128 subfs(const u128& left, const u128& right)
+	{
+		return fromF(_mm_sub_ps(left.vf, right.vf));
+	}
+
+	static __forceinline u128 maxu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_max_epu8(left.vi, right.vi));
 	}
 
 	static __forceinline u128 minu8(const u128& left, const u128& right)

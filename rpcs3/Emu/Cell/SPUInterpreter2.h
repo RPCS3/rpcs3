@@ -73,6 +73,13 @@ union spu_opcode_t
 		s32      : 7; // 25..31
 		s32 si18 : 18; // 7..24
 	};
+
+	struct
+	{
+		u32   : 18; // 14..31
+		u32 e : 1; // 13
+		u32 d : 1; // 12
+	};
 };
 
 using spu_inter_func_t = void(*)(SPUThread& CPU, spu_opcode_t opcode);

@@ -667,14 +667,14 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
 	auto old_thread = GetCurrentNamedThread();
-	auto old_task = custom_task;
+	auto old_task = decltype(custom_task)();
 
 	m_status = Running;
 	PC = addr;
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
-	custom_task = nullptr;
+	custom_task.swap(old_task);
 
 	Task();
 
@@ -684,7 +684,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
-	custom_task = old_task;
+	custom_task.swap(old_task);
 }
 
 void PPUThread::FastStop()
@@ -715,7 +715,12 @@ void PPUThread::Task()
 		if (m_events)
 		{
 			// process events
-			if (m_events & CPU_EVENT_STOP && (Emu.IsStopped() || IsStopped() || IsPaused()))
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
+			if (m_events & CPU_EVENT_STOP && (IsStopped() || IsPaused()))
 			{
 				m_events &= ~CPU_EVENT_STOP;
 				return;
