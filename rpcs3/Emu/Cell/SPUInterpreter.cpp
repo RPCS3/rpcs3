@@ -777,8 +777,9 @@ void spu_interpreter::CEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYHHU(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
-	//CPU.GPR[op.rt].vi = _mm_madd_epi16(_mm_srli_epi32(CPU.GPR[op.ra].vi, 16), _mm_srli_epi32(CPU.GPR[op.rb].vi, 16));
+	const auto a = _mm_srli_epi32(CPU.GPR[op.ra].vi, 16);
+	const auto b = _mm_srli_epi32(CPU.GPR[op.rb].vi, 16);
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b));
 }
 
 void spu_interpreter::ADDX(SPUThread& CPU, spu_opcode_t op)
@@ -811,13 +812,11 @@ void spu_interpreter::BGX(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYHHA(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	CPU.GPR[op.rt].vi = _mm_add_epi32(CPU.GPR[op.rt].vi, _mm_madd_epi16(_mm_srli_epi32(CPU.GPR[op.ra].vi, 16), _mm_srli_epi32(CPU.GPR[op.rb].vi, 16)));
 }
 
 void spu_interpreter::MPYHHAU(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	const auto a = _mm_srli_epi32(CPU.GPR[op.ra].vi, 16);
 	const auto b = _mm_srli_epi32(CPU.GPR[op.rb].vi, 16);
 	CPU.GPR[op.rt].vi = _mm_add_epi32(CPU.GPR[op.rt].vi, _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b)));
@@ -861,26 +860,22 @@ void spu_interpreter::DFCEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPY(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	const auto mask = _mm_set1_epi32(0xffff);
 	CPU.GPR[op.rt].vi = _mm_madd_epi16(_mm_and_si128(CPU.GPR[op.ra].vi, mask), _mm_and_si128(CPU.GPR[op.rb].vi, mask));
 }
 
 void spu_interpreter::MPYH(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	CPU.GPR[op.rt].vi = _mm_slli_epi32(_mm_mullo_epi16(_mm_srli_epi32(CPU.GPR[op.ra].vi, 16), CPU.GPR[op.rb].vi), 16);
 }
 
 void spu_interpreter::MPYHH(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	CPU.GPR[op.rt].vi = _mm_madd_epi16(_mm_srli_epi32(CPU.GPR[op.ra].vi, 16), _mm_srli_epi32(CPU.GPR[op.rb].vi, 16));
 }
 
 void spu_interpreter::MPYS(SPUThread& CPU, spu_opcode_t op)
 {
-	return DEFAULT(CPU, op);
 	CPU.GPR[op.rt].vi = _mm_srai_epi32(_mm_slli_epi32(_mm_mulhi_epi16(CPU.GPR[op.ra].vi, CPU.GPR[op.rb].vi), 16), 16);
 }
 
@@ -902,7 +897,9 @@ void spu_interpreter::DFCMEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYU(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto a = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0xffff));
+	const auto b = _mm_and_si128(CPU.GPR[op.rb].vi, _mm_set1_epi32(0xffff));
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b));
 }
 
 void spu_interpreter::CEQB(SPUThread& CPU, spu_opcode_t op)
@@ -1182,12 +1179,14 @@ void spu_interpreter::HLGTI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_madd_epi16(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10 & 0xffff));
 }
 
 void spu_interpreter::MPYUI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto a = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0xffff));
+	const auto i = _mm_set1_epi32(op.si10 & 0xffff);
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, i), 16), _mm_mullo_epi16(a, i));
 }
 
 void spu_interpreter::CEQI(SPUThread& CPU, spu_opcode_t op)
@@ -1237,13 +1236,24 @@ void spu_interpreter::SELB(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::SHUFB(SPUThread& CPU, spu_opcode_t op)
 {
 	// rt <> rc
-	DEFAULT(CPU, op);
+	const auto index = _mm_xor_si128(CPU.GPR[op.rt].vi, _mm_set1_epi32(0x0f0f0f0f));
+	const auto res1 = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, index);
+	const auto bit4 = _mm_set1_epi32(0x10101010);
+	const auto k1 = _mm_cmpeq_epi8(_mm_and_si128(index, bit4), bit4);
+	const auto res2 = _mm_or_si128(_mm_and_si128(k1, _mm_shuffle_epi8(CPU.GPR[op.rb].vi, index)), _mm_andnot_si128(k1, res1));
+	const auto bit67 = _mm_set1_epi32(0xc0c0c0c0);
+	const auto k2 = _mm_cmpeq_epi8(_mm_and_si128(index, bit67), bit67);
+	const auto res3 = _mm_or_si128(res2, k2);
+	const auto bit567 = _mm_set1_epi32(0xe0e0e0e0);
+	const auto k3 = _mm_cmpeq_epi8(_mm_and_si128(index, bit567), bit567);
+	CPU.GPR[op.rc].vi = _mm_sub_epi8(res3, _mm_and_si128(k3, _mm_set1_epi32(0x7f7f7f7f)));
 }
 
 void spu_interpreter::MPYA(SPUThread& CPU, spu_opcode_t op)
 {
 	// rt <> rc
-	DEFAULT(CPU, op);
+	const auto mask = _mm_set1_epi32(0xffff);
+	CPU.GPR[op.rc].vi = _mm_add_epi32(CPU.GPR[op.rt].vi, _mm_madd_epi16(_mm_and_si128(CPU.GPR[op.ra].vi, mask), _mm_and_si128(CPU.GPR[op.rb].vi, mask)));
 }
 
 void spu_interpreter::FNMS(SPUThread& CPU, spu_opcode_t op)
