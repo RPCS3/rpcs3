@@ -676,7 +676,7 @@ void spu_interpreter::ANDC(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FCGT(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vf = _mm_cmp_ps(CPU.GPR[op.rb].vf, CPU.GPR[op.ra].vf, 1);
+	CPU.GPR[op.rt].vf = _mm_cmplt_ps(CPU.GPR[op.rb].vf, CPU.GPR[op.ra].vf);
 }
 
 void spu_interpreter::DFCGT(SPUThread& CPU, spu_opcode_t op)
@@ -713,7 +713,7 @@ void spu_interpreter::ORC(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::FCMGT(SPUThread& CPU, spu_opcode_t op)
 {
 	const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
-	CPU.GPR[op.rt].vf = _mm_cmp_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask), _mm_and_ps(CPU.GPR[op.ra].vf, mask), 1);
+	CPU.GPR[op.rt].vf = _mm_cmplt_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask), _mm_and_ps(CPU.GPR[op.ra].vf, mask));
 }
 
 void spu_interpreter::DFCMGT(SPUThread& CPU, spu_opcode_t op)
@@ -850,7 +850,7 @@ void spu_interpreter::DFTSV(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FCEQ(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vf = _mm_cmp_ps(CPU.GPR[op.rb].vf, CPU.GPR[op.ra].vf, 0);
+	CPU.GPR[op.rt].vf = _mm_cmpeq_ps(CPU.GPR[op.rb].vf, CPU.GPR[op.ra].vf);
 }
 
 void spu_interpreter::DFCEQ(SPUThread& CPU, spu_opcode_t op)
@@ -887,7 +887,7 @@ void spu_interpreter::CEQH(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::FCMEQ(SPUThread& CPU, spu_opcode_t op)
 {
 	const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
-	CPU.GPR[op.rt].vf = _mm_cmp_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask), _mm_and_ps(CPU.GPR[op.ra].vf, mask), 0);
+	CPU.GPR[op.rt].vf = _mm_cmpeq_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask), _mm_and_ps(CPU.GPR[op.ra].vf, mask));
 }
 
 void spu_interpreter::DFCMEQ(SPUThread& CPU, spu_opcode_t op)
