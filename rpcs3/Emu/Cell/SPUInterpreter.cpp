@@ -1025,99 +1025,100 @@ void spu_interpreter::IOHL(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ORI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_or_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10));
 }
 
 void spu_interpreter::ORHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_or_si128(CPU.GPR[op.ra].vi, _mm_set1_epi16(op.si10));
 }
 
 void spu_interpreter::ORBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_or_si128(CPU.GPR[op.ra].vi, _mm_set1_epi8(op.i8));
 }
 
 void spu_interpreter::SFI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_sub_epi32(_mm_set1_epi32(op.si10), CPU.GPR[op.ra].vi);
 }
 
 void spu_interpreter::SFHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_sub_epi16(_mm_set1_epi16(op.si10), CPU.GPR[op.ra].vi);
 }
 
 void spu_interpreter::ANDI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10));
 }
 
 void spu_interpreter::ANDHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi16(op.si10));
 }
 
 void spu_interpreter::ANDBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi8(op.i8));
 }
 
 void spu_interpreter::AI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_add_epi32(_mm_set1_epi32(op.si10), CPU.GPR[op.ra].vi);
 }
 
 void spu_interpreter::AHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_add_epi16(_mm_set1_epi16(op.si10), CPU.GPR[op.ra].vi);
 }
 
 void spu_interpreter::STQD(SPUThread& CPU, spu_opcode_t op)
 {
-	//
-	DEFAULT(CPU, op);
+	CPU.write128((CPU.GPR[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0, CPU.GPR[op.rt]);
 }
 
 void spu_interpreter::LQD(SPUThread& CPU, spu_opcode_t op)
 {
-	//
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt] = CPU.read128((CPU.GPR[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0);
 }
 
 void spu_interpreter::XORI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10));
 }
 
 void spu_interpreter::XORHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi16(op.si10));
 }
 
 void spu_interpreter::XORBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi8(op.i8));
 }
 
 void spu_interpreter::CGTI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi32(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10));
 }
 
 void spu_interpreter::CGTHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi16(CPU.GPR[op.ra].vi, _mm_set1_epi16(op.si10));
 }
 
 void spu_interpreter::CGTBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi8(CPU.GPR[op.ra].vi, _mm_set1_epi8(op.i8));
 }
 
 void spu_interpreter::HGTI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	if (CPU.GPR[op.ra]._s32[3] > op.si10)
+	{
+		CPU.halt();
+	}
 }
 
 void spu_interpreter::CLGTI(SPUThread& CPU, spu_opcode_t op)
@@ -1137,7 +1138,10 @@ void spu_interpreter::CLGTBI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::HLGTI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	if (CPU.GPR[op.ra]._u32[3] > static_cast<u32>(op.si10))
+	{
+		CPU.halt();
+	}
 }
 
 void spu_interpreter::MPYI(SPUThread& CPU, spu_opcode_t op)
@@ -1152,73 +1156,80 @@ void spu_interpreter::MPYUI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CEQI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpeq_epi32(CPU.GPR[op.ra].vi, _mm_set1_epi32(op.si10));
 }
 
 void spu_interpreter::CEQHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpeq_epi16(CPU.GPR[op.ra].vi, _mm_set1_epi16(op.si10));
 }
 
 void spu_interpreter::CEQBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpeq_epi8(CPU.GPR[op.ra].vi, _mm_set1_epi8(op.i8));
 }
 
 void spu_interpreter::HEQI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	if (CPU.GPR[op.ra]._s32[3] == op.si10)
+	{
+		CPU.halt();
+	}
 }
 
 
 void spu_interpreter::HBRA(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::HBRR(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::ILA(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_set1_epi32(op.i18);
 }
 
 
 void spu_interpreter::SELB(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	// rt <> rc
+	CPU.GPR[op.rc] = (CPU.GPR[op.rt] & CPU.GPR[op.rb]) | u128::andnot(CPU.GPR[op.rt], CPU.GPR[op.ra]);
 }
 
 void spu_interpreter::SHUFB(SPUThread& CPU, spu_opcode_t op)
 {
+	// rt <> rc
 	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::MPYA(SPUThread& CPU, spu_opcode_t op)
 {
+	// rt <> rc
 	DEFAULT(CPU, op);
 }
 
 void spu_interpreter::FNMS(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	// rt <> rc
+	CPU.GPR[op.rc].vf = _mm_sub_ps(CPU.GPR[op.rt].vf, _mm_mul_ps(CPU.GPR[op.ra].vf, CPU.GPR[op.rb].vf));
 }
 
 void spu_interpreter::FMA(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	// rt <> rc
+	CPU.GPR[op.rc].vf = _mm_add_ps(_mm_mul_ps(CPU.GPR[op.ra].vf, CPU.GPR[op.rb].vf), CPU.GPR[op.rt].vf);
 }
 
 void spu_interpreter::FMS(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	// rt <> rc
+	CPU.GPR[op.rc].vf = _mm_sub_ps(_mm_mul_ps(CPU.GPR[op.ra].vf, CPU.GPR[op.rb].vf), CPU.GPR[op.rt].vf);
 }
 
 
 void spu_interpreter::UNK(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	throw __FUNCTION__;
 }
