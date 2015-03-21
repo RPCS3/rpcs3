@@ -88,6 +88,7 @@ union _CRT_ALIGN(16) u128
 	double _d[2];
 	__m128 vf;
 	__m128i vi;
+	__m128d vd;
 
 	class bit_array_128
 	{
@@ -234,6 +235,13 @@ union _CRT_ALIGN(16) u128
 		return ret;
 	}
 
+	static u128 fromD(__m128d value)
+	{
+		u128 ret;
+		ret.vd = value;
+		return ret;
+	}
+
 	static __forceinline u128 add8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));
@@ -254,6 +262,11 @@ union _CRT_ALIGN(16) u128
 		return fromF(_mm_add_ps(left.vf, right.vf));
 	}
 
+	static __forceinline u128 addfd(const u128& left, const u128& right)
+	{
+		return fromD(_mm_add_pd(left.vd, right.vd));
+	}
+
 	static __forceinline u128 sub8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi8(left.vi, right.vi));
@@ -272,6 +285,11 @@ union _CRT_ALIGN(16) u128
 	static __forceinline u128 subfs(const u128& left, const u128& right)
 	{
 		return fromF(_mm_sub_ps(left.vf, right.vf));
+	}
+
+	static __forceinline u128 subfd(const u128& left, const u128& right)
+	{
+		return fromD(_mm_sub_pd(left.vd, right.vd));
 	}
 
 	static __forceinline u128 maxu8(const u128& left, const u128& right)
