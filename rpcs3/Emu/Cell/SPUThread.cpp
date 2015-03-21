@@ -42,12 +42,12 @@ public:
 		}
 	}
 
-	__forceinline spu_inter_func_t operator [] (u32 opcode)
+	__forceinline spu_inter_func_t operator [] (u32 opcode) const
 	{
 		return funcs[opcode >> 21];
 	}
 }
-g_spu_inter_func_list;
+const g_spu_inter_func_list;
 
 SPUThread& GetCurrentSPUThread()
 {

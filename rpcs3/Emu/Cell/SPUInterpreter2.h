@@ -8,10 +8,10 @@ union spu_opcode_t
 
 	struct
 	{
-		u32 rt : 7; // 25..31
+		u32 rt : 7; // 25..31, it's actually RC in 4-op instructions
 		u32 ra : 7; // 18..24
 		u32 rb : 7; // 11..17
-		u32 rc : 7; // 4..10
+		u32 rc : 7; // 4..10, it's actually RT in 4-op instructions
 	};
 
 	struct
@@ -77,8 +77,8 @@ union spu_opcode_t
 	struct
 	{
 		u32   : 18; // 14..31
-		u32 e : 1; // 13
-		u32 d : 1; // 12
+		u32 e : 1; // 13, "enable interrupts" bit
+		u32 d : 1; // 12, "disable interrupts" bit
 	};
 };
 

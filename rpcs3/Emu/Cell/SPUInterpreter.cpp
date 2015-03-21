@@ -408,7 +408,7 @@ void spu_interpreter::FREST(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FRSQEST(SPUThread& CPU, spu_opcode_t op)
 {
-	static const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
+	const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
 	CPU.GPR[op.rt].vf = _mm_rsqrt_ps(_mm_and_ps(CPU.GPR[op.ra].vf, mask));
 }
 
@@ -631,7 +631,10 @@ void spu_interpreter::XSHW(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CNTB(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto counts = _mm_set_epi8(4, 3, 3, 2, 3, 2, 2, 1, 3, 2, 2, 1, 2, 1, 1, 0);
+	const auto mask = _mm_set1_epi8(0xf);
+	const auto a = CPU.GPR[op.ra].vi;
+	CPU.GPR[op.rt].vi = _mm_add_epi8(_mm_shuffle_epi8(counts, _mm_and_si128(a, mask)), _mm_shuffle_epi8(counts, _mm_and_si128(_mm_srli_epi64(a, 4), mask)));
 }
 
 void spu_interpreter::XSBH(SPUThread& CPU, spu_opcode_t op)
@@ -688,7 +691,7 @@ void spu_interpreter::ORC(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FCMGT(SPUThread& CPU, spu_opcode_t op)
 {
-	static const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
+	const auto mask = _mm_castsi128_ps(_mm_set1_epi32(0x7fffffff));
 	CPU.GPR[op.rt].vf = _mm_cmp_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask), _mm_and_ps(CPU.GPR[op.ra].vf, mask), 1);
 }
 
@@ -838,7 +841,7 @@ void spu_interpreter::DFCEQ(SPUThread& CPU, spu_opcode_t op)
 void spu_interpreter::MPY(SPUThread& CPU, spu_opcode_t op)
 {
 	return DEFAULT(CPU, op);
-	static const auto mask = _mm_set1_epi32(0xffff);
+	const auto mask = _mm_set1_epi32(0xffff);
 	CPU.GPR[op.rt].vi = _mm_madd_epi16(_mm_and_si128(CPU.GPR[op.ra].vi, mask), _mm_and_si128(CPU.GPR[op.rb].vi, mask));
 }
 
@@ -900,24 +903,50 @@ void spu_interpreter::HEQ(SPUThread& CPU, spu_opcode_t op)
 }
 
 
+class spu_scale_table_t
+{
+	std::array<__m128, 155 + 174> m_data;
+
+public:
+	spu_scale_table_t()
+	{
+		for (s32 i = -155; i < 174; i++)
+		{
+			m_data[i + 155] = _mm_set1_ps(static_cast<float>(pow(2, i)));
+		}
+	}
+
+	__forceinline __m128 operator [] (s32 scale) const
+	{
+		return m_data[scale + 155];
+	}
+}
+const g_spu_scale_table;
+
+
 void spu_interpreter::CFLTS(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto scaled = _mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_scale_table[173 - op.i8]);
+	CPU.GPR[op.rt].vi = _mm_xor_si128(_mm_cvttps_epi32(scaled), _mm_castps_si128(_mm_cmpge_ps(scaled, _mm_set1_ps(0x80000000))));
 }
 
 void spu_interpreter::CFLTU(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto scaled1 = _mm_max_ps(_mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_scale_table[173 - op.i8]), _mm_set1_ps(0.0f));
+	const auto scaled2 = _mm_and_ps(_mm_sub_ps(scaled1, _mm_set1_ps(0x80000000)), _mm_cmpge_ps(scaled1, _mm_set1_ps(0x80000000)));
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_or_si128(_mm_cvttps_epi32(scaled1), _mm_cvttps_epi32(scaled2)), _mm_castps_si128(_mm_cmpge_ps(scaled1, _mm_set1_ps(0x100000000))));
 }
 
 void spu_interpreter::CSFLT(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_cvtepi32_ps(CPU.GPR[op.ra].vi), g_spu_scale_table[op.i8 - 155]);
 }
 
 void spu_interpreter::CUFLT(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	const auto a = CPU.GPR[op.ra].vi;
+	const auto fix = _mm_and_ps(_mm_castsi128_ps(_mm_srai_epi32(a, 31)), _mm_set1_ps(0x80000000));
+	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(a, _mm_set1_epi32(0x7fffffff))), fix), g_spu_scale_table[op.i8 - 155]);
 }
 
 
@@ -987,7 +1016,7 @@ void spu_interpreter::BR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FSMBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = g_imm_table.fsmb_table[op.i16];
 }
 
 void spu_interpreter::BRSL(SPUThread& CPU, spu_opcode_t op)
@@ -1123,17 +1152,17 @@ void spu_interpreter::HGTI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CLGTI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi32(_mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0x80000000)), _mm_set1_epi32(op.si10 ^ 0x80000000));
 }
 
 void spu_interpreter::CLGTHI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi16(_mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0x80008000)), _mm_set1_epi16(op.si10 ^ 0x8000));
 }
 
 void spu_interpreter::CLGTBI(SPUThread& CPU, spu_opcode_t op)
 {
-	DEFAULT(CPU, op);
+	CPU.GPR[op.rt].vi = _mm_cmpgt_epi8(_mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0x80808080)), _mm_set1_epi8(op.i8 ^ 0x80));
 }
 
 void spu_interpreter::HLGTI(SPUThread& CPU, spu_opcode_t op)
