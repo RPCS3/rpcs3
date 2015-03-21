@@ -18,6 +18,27 @@
 #define rotl32(x,r) (((u32)(x) << (r)) | ((u32)(x) >> (32 - (r))))
 #endif
 
+class spu_scale_table_t
+{
+	std::array<__m128, 155 + 174> m_data;
+
+public:
+	spu_scale_table_t()
+	{
+		for (s32 i = -155; i < 174; i++)
+		{
+			m_data[i + 155] = _mm_set1_ps(static_cast<float>(pow(2, i)));
+		}
+	}
+
+	__forceinline __m128 operator [] (s32 scale) const
+	{
+		return m_data[scale + 155];
+	}
+}
+const g_spu_scale_table;
+
+
 void spu_interpreter::DEFAULT(SPUThread& CPU, spu_opcode_t op)
 {
 	SPUInterpreter inter(CPU); (*SPU_instr::rrr_list)(&inter, op.opcode);
@@ -891,7 +912,14 @@ void spu_interpreter::CEQB(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt] = CPU.GPR[op.rb];
+	const auto mask_se = _mm_castsi128_ps(_mm_set1_epi32(0xff800000)); // sign and exponent mask
+	const auto mask_bf = _mm_castsi128_ps(_mm_set1_epi32(0x007ffc00)); // base fraction mask
+	const auto mask_sf = _mm_set1_epi32(0x000003ff); // step fraction mask
+	const auto mask_yf = _mm_set1_epi32(0x0007ffff); // Y fraction mask (bits 13..31)
+	const auto base = _mm_or_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask_bf), _mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
+	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.rb].vi, mask_sf)), g_spu_scale_table[-13]);
+	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.ra].vi, mask_yf)), g_spu_scale_table[-19]);
+	CPU.GPR[op.rt].vf = _mm_or_ps(_mm_and_ps(mask_se, CPU.GPR[op.rb].vf), _mm_andnot_ps(mask_se, _mm_sub_ps(base, _mm_mul_ps(step, y))));
 }
 
 void spu_interpreter::HEQ(SPUThread& CPU, spu_opcode_t op)
@@ -901,27 +929,6 @@ void spu_interpreter::HEQ(SPUThread& CPU, spu_opcode_t op)
 		CPU.halt();
 	}
 }
-
-
-class spu_scale_table_t
-{
-	std::array<__m128, 155 + 174> m_data;
-
-public:
-	spu_scale_table_t()
-	{
-		for (s32 i = -155; i < 174; i++)
-		{
-			m_data[i + 155] = _mm_set1_ps(static_cast<float>(pow(2, i)));
-		}
-	}
-
-	__forceinline __m128 operator [] (s32 scale) const
-	{
-		return m_data[scale + 155];
-	}
-}
-const g_spu_scale_table;
 
 
 void spu_interpreter::CFLTS(SPUThread& CPU, spu_opcode_t op)
