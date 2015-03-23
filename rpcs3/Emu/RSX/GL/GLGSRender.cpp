@@ -1583,7 +1583,14 @@ void GLGSRender::SetupFBO()
 		break;
 	}
 
-	glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+	if (m_scissor_w || m_scissor_h)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+	}
+	else
+	{
+		glScissor(0, 0, m_width, m_height);
+	}
 }
 
 void GLGSRender::InitDrawBuffers()

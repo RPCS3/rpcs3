@@ -195,10 +195,10 @@ public:
 	u16 m_viewport_h;
 	bool m_set_scissor_horizontal;
 	bool m_set_scissor_vertical;
-	u16 m_scissor_x;
-	u16 m_scissor_y;
-	u16 m_scissor_w;
-	u16 m_scissor_h;
+	u16 m_scissor_x = 0;
+	u16 m_scissor_y = 0;
+	u16 m_scissor_w = 0;
+	u16 m_scissor_h = 0;
 
 	// Polygon mode/offset
 	bool m_set_poly_smooth;
