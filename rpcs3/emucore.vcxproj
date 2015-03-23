@@ -608,7 +608,7 @@
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include</IncludePath>
+    <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;.\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include;..\glm</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
