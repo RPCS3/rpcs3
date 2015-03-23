@@ -1788,7 +1788,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 	case_range(32, NV308A_COLOR, 4);
 	{
-		(u32&)m_fragment_constants[m_dst_offset | ((u32)m_point_x << 2) + index / 4].rgba[index % 4] = value;
+		(u32&)m_fragment_constants[(m_dst_offset | ((u32)m_point_x << 2)) + index / 4].rgba[index % 4] = (value << 16) | (value >> 16);
 
 		//LOG_WARNING(RSX, "NV308A_COLOR: [%d]: %f, %f, %f, %f", c.id, c.x, c.y, c.z, c.w);
 		break;

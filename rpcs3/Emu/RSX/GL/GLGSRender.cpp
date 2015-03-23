@@ -1096,7 +1096,7 @@ void GLGSRender::InitFragmentData()
 	{
 		u32 id = c.first - m_cur_fragment_prog->offset;
 
-		//LOG_WARNING(RSX,"fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.id, m_cur_shader_prog->offset, c.x, c.y, c.z, c.w);
+		//LOG_ERROR(RSX, "fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.first, m_cur_fragment_prog->offset, c.second.x, c.second.y, c.second.z, c.second.w);
 
 		const std::string name = fmt::Format("fc%u", id);
 		const int l = m_program.GetLocation(name);
@@ -2006,22 +2006,18 @@ void GLGSRender::Flip(int buffer)
 	RSXThread::m_height = m_gcm_buffers[buffer].height;
 
 	m_draw_buffer_fbo.create();
-	m_rbo_flip_color.create(gl::texture::format::rgba, RSXThread::m_width, RSXThread::m_height);
-	m_draw_buffer_fbo.color = m_rbo_flip_color;
+	m_draw_buffer_color.create(gl::texture::texture_target::texture2D);
+	m_draw_buffer_color.config()
+		.size(RSXThread::m_width, RSXThread::m_height)
+		.type(gl::texture::type::uint_8_8_8_8)
+		.format(gl::texture::format::bgra);
+
+	m_draw_buffer_fbo.color = m_draw_buffer_color;
 	m_draw_buffer_fbo.draw(m_draw_buffer_fbo.color);
 
-	m_draw_buffer_fbo.draw_pixels(
-		vm::get_ptr(GetAddress(
-		//0x45d580,
-		m_gcm_buffers[buffer].offset,
-		CELL_GCM_LOCATION_LOCAL)),
-		{ RSXThread::m_width, RSXThread::m_height },
-		gl::texture::format::bgra,
-		gl::texture::type::uint_8_8_8_8
-		);
-
-	//m_draw_buffer_fbo.clear(gl::buffers::color);
-	//m_draw_buffer_fbo.draw_pixels(256, 256, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, vm::get_ptr(GetAddress(0x45d580, CELL_GCM_LOCATION_LOCAL)));
+	m_draw_buffer_color.copy_from(
+		vm::get_ptr(GetAddress(m_gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL)),
+		gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8);
 
 	area screen_area = coordi({}, { (int)RSXThread::m_width, (int)RSXThread::m_height });
 

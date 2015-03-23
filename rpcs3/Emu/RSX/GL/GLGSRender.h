@@ -154,7 +154,7 @@ private:
 	gl::texture m_texture_depth;
 	gl::fbo m_fbo;
 	gl::fbo m_draw_buffer_fbo;
-	gl::rbo m_rbo_flip_color;
+	gl::texture m_draw_buffer_color;
 	gl::pbo m_pbo_color[4];
 	gl::pbo m_pbo_depth;
 	gl::glsl::program m_glsl_draw_texture_program;
