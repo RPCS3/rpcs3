@@ -1,7 +1,7 @@
 #pragma once
 #include "OpenGL.h"
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include <glm/glm/glm.hpp>
+#include <glm/glm/gtc/type_ptr.hpp>
 
 void printGlError(GLenum err, const char* situation);
 void printGlError(GLenum err, const std::string& situation);
