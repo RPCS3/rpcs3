@@ -1434,6 +1434,7 @@ void GLGSRender::OnInitThread()
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	glEnable(GL_SCISSOR_TEST);
 
 #ifdef _WIN32
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
@@ -1544,9 +1545,6 @@ void GLGSRender::InitFBO()
 	}
 
 	m_fbo.bind();
-
-	//glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
-	glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 }
 
 void GLGSRender::SetupFBO()
@@ -1584,6 +1582,8 @@ void GLGSRender::SetupFBO()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 		break;
 	}
+
+	glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 }
 
 void GLGSRender::InitDrawBuffers()
@@ -1606,18 +1606,20 @@ void GLGSRender::ExecCMD(u32 cmd)
 
 	if (m_clear_surface_mask & 0x1)
 	{
+		glDepthMask(GL_TRUE);
 		glClearDepth(m_clear_surface_z / double(m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0xffff : 0x00ffffff));
 		checkForGlError("glClearDepth");
 
-		f |= (int)gl::buffers::depth;
+		f |= (GLbitfield)gl::buffers::depth;
 	}
 
 	if (m_clear_surface_mask & 0x2)
 	{
+		glStencilMask(0xff);
 		glClearStencil(m_clear_surface_s);
 		checkForGlError("glClearStencil");
 
-		f |= (int)gl::buffers::stencil;
+		f |= (GLbitfield)gl::buffers::stencil;
 	}
 
 	if (m_clear_surface_mask & 0xF0)
@@ -1630,7 +1632,7 @@ void GLGSRender::ExecCMD(u32 cmd)
 		checkForGlError("glClearColor");
 
 		glColorMask(m_clear_surface_mask & 0x20, m_clear_surface_mask & 0x40, m_clear_surface_mask & 0x80, m_clear_surface_mask & 0x10);
-		f |= (int)gl::buffers::color;
+		f |= (GLbitfield)gl::buffers::color;
 	}
 
 	m_fbo.clear((gl::buffers)f);
@@ -1676,7 +1678,6 @@ void GLGSRender::ExecCMD()
 	Enable(m_set_depth_test, GL_DEPTH_TEST);
 	Enable(m_set_alpha_test, GL_ALPHA_TEST);
 	Enable(m_set_blend || m_set_blend_mrt1 || m_set_blend_mrt2 || m_set_blend_mrt3, GL_BLEND);
-	Enable(m_set_scissor_horizontal && m_set_scissor_vertical, GL_SCISSOR_TEST);
 	Enable(m_set_logic_op, GL_LOGIC_OP);
 	Enable(m_set_cull_face, GL_CULL_FACE);
 	Enable(m_set_dither, GL_DITHER);
@@ -2054,4 +2055,6 @@ void GLGSRender::Flip(int buffer)
 	}
 
 	m_frame->Flip(m_context);
+
+	glEnable(GL_SCISSOR_TEST);
 }
