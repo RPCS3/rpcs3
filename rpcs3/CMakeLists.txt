@@ -94,6 +94,7 @@ ${LLVM_INCLUDE_DIRS}
 "${RPCS3_SRC_DIR}/Loader"
 "${RPCS3_SRC_DIR}/Crypto"
 "${RPCS3_SRC_DIR}/.."
+"${RPCS3_SRC_DIR}/../glm"
 "${RPCS3_SRC_DIR}/../asmjit/src/asmjit"
 )
 

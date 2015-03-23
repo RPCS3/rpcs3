@@ -131,9 +131,7 @@ typedef GSFrameBase*(*GetGSFrameCb)();
 
 void SetGetGSFrameCallback(GetGSFrameCb value);
 
-class GLGSRender //TODO: find out why this used to inherit from wxWindow
-	: //public wxWindow
-	/*,*/ public GSRender
+class GLGSRender : public GSRender
 {
 private:
 	std::vector<u8> m_vdata;
@@ -152,9 +150,13 @@ private:
 
 	GLvao m_vao;
 	GLvbo m_vbo;
-	gl::texture m_rto[4];
-	std::vector<gl::rbo> m_rbo;
+	gl::texture m_textures_color[4];
+	gl::texture m_texture_depth;
 	gl::fbo m_fbo;
+	gl::fbo m_draw_buffer_fbo;
+	gl::rbo m_rbo_flip_color;
+	gl::pbo m_pbo_color[4];
+	gl::pbo m_pbo_depth;
 	gl::glsl::program m_glsl_draw_texture_program;
 
 	void* m_context;
@@ -179,18 +181,18 @@ private:
 	bool LoadProgram();
 	void WriteBuffers();
 	void ReadBuffers();
-	void WriteDepthBuffer();
-	void WriteColorBuffers();
 
 	void DrawObjects();
+	void InitFBO();
+	void SetupFBO();
 	void InitDrawBuffers();
 
 protected:
-	virtual void OnInit();
-	virtual void OnInitThread();
-	virtual void OnExitThread();
-	virtual void OnReset();
-	virtual void ExecCMD(u32 cmd);
-	virtual void ExecCMD();
-	virtual void Flip();
+	void OnInit() override;
+	void OnInitThread() override;
+	void OnExitThread() override;
+	void OnReset() override;
+	void ExecCMD(u32 cmd) override;
+	void ExecCMD() override;
+	void Flip(int buffer) override;
 };

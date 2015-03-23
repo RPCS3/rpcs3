@@ -379,7 +379,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 
 	auto& render = Emu.GetGSManager().GetRender();
 	render.m_ctxt_addr = context.addr();
-	render.m_gcm_buffers_addr = (u32)Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo));
+	render.m_gcm_buffers.set(Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo)));
 	render.m_zculls_addr = (u32)Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
 	render.m_tiles_addr = (u32)Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
 	render.m_gcm_buffers_count = 0;
@@ -427,7 +427,7 @@ s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 		return CELL_EINVAL;
 	}
 
-	auto buffers = vm::get_ptr<CellGcmDisplayInfo>(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+	auto buffers = Emu.GetGSManager().GetRender().m_gcm_buffers;
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
@@ -505,7 +505,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	}
 
 	current = ctxt->current;
-	vm::write32(current, 0x3fead | (1 << 18));
+	vm::write32(current, 0xfead | (1 << 18));
 	vm::write32(current + 4, id);
 	ctxt->current += 8;
 
@@ -684,8 +684,8 @@ u32 cellGcmGetZcullInfo()
 
 u32 cellGcmGetDisplayInfo()
 {
-	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
-	return Emu.GetGSManager().GetRender().m_gcm_buffers_addr;
+	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().m_gcm_buffers);
+	return Emu.GetGSManager().GetRender().m_gcm_buffers.addr();
 }
 
 s32 cellGcmGetCurrentDisplayBufferId(u32 id_addr)
@@ -792,9 +792,9 @@ s32 cellGcmSortRemapEaIoAddress()
 //----------------------------------------------------------------------------
 // Memory Mapping
 //----------------------------------------------------------------------------
-s32 cellGcmAddressToOffset(u32 address, vm::ptr<be_t<u32>> offset)
+s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 {
-	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset.addr());
+	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x, &offset=0x%x)", address, offset.addr());
 
 	// Address not on main memory or local memory
 	if (address >= 0xD0000000)

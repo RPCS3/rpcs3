@@ -273,7 +273,8 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	// NV4097
 	case 0x0000fead:
 	{
-		Flip();
+		m_gcm_current_buffer = value;
+		Flip(value);
 
 		m_last_flip_time = get_system_time();
 		m_gcm_current_buffer = value;
@@ -979,7 +980,6 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		const u32 a0 = value;
 		m_cur_fragment_prog->offset = value & ~0x3;
 		m_cur_fragment_prog->addr = GetAddress(m_cur_fragment_prog->offset, (value & 0x3) - 1);
-		LOG_ERROR(RSX, "[rsx thread] fragment shader address = 0x%x (0x%x:0x%x)", m_cur_fragment_prog->addr, m_cur_fragment_prog->offset, (value & 0x3) - 1);
 		m_cur_fragment_prog->ctrl = 0x40;
 		break;
 	}
@@ -1309,10 +1309,6 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		m_surface_antialias = (a0 >> 12) & 0xf;
 		m_surface_width = (a0 >> 16) & 0xff;
 		m_surface_height = (a0 >> 24) & 0xff;
-
-		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		m_width = buffers[m_gcm_current_buffer].width;
-		m_height = buffers[m_gcm_current_buffer].height;
 		break;
 	}
 

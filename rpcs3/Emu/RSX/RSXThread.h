@@ -109,7 +109,7 @@ public:
 
 	u32 m_tiles_addr;
 	u32 m_zculls_addr;
-	u32 m_gcm_buffers_addr;
+	vm::ptr<CellGcmDisplayInfo> m_gcm_buffers;
 	u32 m_gcm_buffers_count;
 	u32 m_gcm_current_buffer;
 	u32 m_ctxt_addr;
@@ -127,6 +127,8 @@ public:
 
 	u32 m_width;
 	u32 m_height;
+	u32 m_pitch = 4;
+	u32 m_address = 0;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
 	double m_fps_limit = 59.94;
@@ -605,7 +607,7 @@ protected:
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
 	virtual void ExecCMD(u32 cmd) = 0;
-	virtual void Flip() = 0;
+	virtual void Flip(int buffer) = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{

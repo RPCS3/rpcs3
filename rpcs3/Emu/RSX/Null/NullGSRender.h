@@ -1,8 +1,7 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
 
-class NullGSRender
-	: public GSRender
+class NullGSRender : public GSRender
 {
 public:
 
@@ -15,35 +14,35 @@ public:
 	}
 
 private:
-	virtual void OnInit()
+	void OnInit() override
 	{
 	}
 
-	virtual void OnInitThread()
+	void OnInitThread() override
 	{
 	}
 
-	virtual void OnExitThread()
+	void OnExitThread() override
 	{
 	}
 
-	virtual void OnReset()
+	void OnReset() override
 	{
 	}
 
-	virtual void ExecCMD(u32 cmd)
+	void ExecCMD(u32 cmd) override
 	{
 	}
 
-	virtual void ExecCMD()
+	void ExecCMD() override
 	{
 	}
 
-	virtual void Flip()
+	void Flip(int buffer) override
 	{
 	}
 
-	virtual void Close()
+	void Close() override
 	{
 	}
 };

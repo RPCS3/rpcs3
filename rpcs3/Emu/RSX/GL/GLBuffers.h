@@ -118,37 +118,217 @@ namespace gl
 		depth_stencil = depth | stencil
 	};
 
-	class rbo
+	class pixel_settings
 	{
-		GLuint m_id = 0;
+		bool m_pack_swap_bytes = false;
+		bool m_pack_lsb_first = false;
+		int m_pack_row_length = 0;
+		int m_pack_image_height = 0;
+		int m_pack_skip_rows = 0;
+		int m_pack_skip_pixels = 0;
+		int m_pack_skip_images = 0;
+		int m_pack_aligment = 4;
+		bool m_unpack_swap_bytes = false;
+		bool m_unpack_lsb_first = false;
+		int m_unpack_row_length = 0;
+		int m_unpack_image_height = 0;
+		int m_unpack_skip_rows = 0;
+		int m_unpack_skip_pixels = 0;
+		int m_unpack_skip_images = 0;
+		int m_unpack_aligment = 4;
 
 	public:
-		rbo() = default;
+		void apply() const
+		{
+			glPixelStorei(GL_PACK_SWAP_BYTES, m_pack_swap_bytes ? GL_TRUE : GL_FALSE);
+			glPixelStorei(GL_PACK_LSB_FIRST, m_pack_lsb_first ? GL_TRUE : GL_FALSE);
+			glPixelStorei(GL_PACK_ROW_LENGTH, m_pack_row_length);
+			glPixelStorei(GL_PACK_IMAGE_HEIGHT, m_pack_image_height);
+			glPixelStorei(GL_PACK_SKIP_ROWS, m_pack_skip_rows);
+			glPixelStorei(GL_PACK_SKIP_PIXELS, m_pack_skip_pixels);
+			glPixelStorei(GL_PACK_SKIP_IMAGES, m_pack_skip_images);
+			glPixelStorei(GL_PACK_ALIGNMENT, m_pack_aligment);
 
-		rbo(GLuint id)
+			glPixelStorei(GL_UNPACK_SWAP_BYTES, m_unpack_swap_bytes ? GL_TRUE : GL_FALSE);
+			glPixelStorei(GL_UNPACK_LSB_FIRST, m_unpack_lsb_first ? GL_TRUE : GL_FALSE);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, m_unpack_row_length);
+			glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, m_unpack_image_height);
+			glPixelStorei(GL_UNPACK_SKIP_ROWS, m_unpack_skip_rows);
+			glPixelStorei(GL_UNPACK_SKIP_PIXELS, m_unpack_skip_pixels);
+			glPixelStorei(GL_UNPACK_SKIP_IMAGES, m_unpack_skip_images);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, m_unpack_aligment);
+		}
+
+		pixel_settings& pack_swap_bytes(bool value = true)
+		{
+			m_pack_swap_bytes = value;
+			return *this;
+		}
+		pixel_settings& pack_lsb_first(bool value = true)
+		{
+			m_pack_lsb_first = value;
+			return *this;
+		}
+		pixel_settings& pack_row_length(int value)
+		{
+			m_pack_row_length = value;
+			return *this;
+		}
+		pixel_settings& pack_image_height(int value)
+		{
+			m_pack_image_height = value;
+			return *this;
+		}
+		pixel_settings& pack_skip_rows(int value)
+		{
+			m_pack_skip_rows = value;
+			return *this;
+		}
+		pixel_settings& pack_skip_pixels(int value)
+		{
+			m_pack_skip_pixels = value;
+			return *this;
+		}
+		pixel_settings& pack_skip_images(int value)
+		{
+			m_pack_skip_images = value;
+			return *this;
+		}
+		pixel_settings& pack_aligment(int value)
+		{
+			m_pack_aligment = value;
+			return *this;
+		}
+		pixel_settings& unpack_swap_bytes(bool value = true)
+		{
+			m_unpack_swap_bytes = value;
+			return *this;
+		}
+		pixel_settings& unpack_lsb_first(bool value = true)
+		{
+			m_unpack_lsb_first = value;
+			return *this;
+		}
+		pixel_settings& unpack_row_length(int value)
+		{
+			m_unpack_row_length = value;
+			return *this;
+		}
+		pixel_settings& unpack_image_height(int value)
+		{
+			m_unpack_image_height = value;
+			return *this;
+		}
+		pixel_settings& unpack_skip_rows(int value)
+		{
+			m_unpack_skip_rows = value;
+			return *this;
+		}
+		pixel_settings& unpack_skip_pixels(int value)
+		{
+			m_unpack_skip_pixels = value;
+			return *this;
+		}
+		pixel_settings& unpack_skip_images(int value)
+		{
+			m_unpack_skip_images = value;
+			return *this;
+		}
+		pixel_settings& unpack_aligment(int value)
+		{
+			m_unpack_aligment = value;
+			return *this;
+		}
+
+		pixel_settings& swap_bytes(bool value = true)
+		{
+			return pack_swap_bytes(value).unpack_swap_bytes(value);
+		}
+		pixel_settings& lsb_first(bool value = true)
+		{
+			return pack_lsb_first(value).unpack_lsb_first(value);
+		}
+		pixel_settings& row_length(int value)
+		{
+			return pack_row_length(value).unpack_row_length(value);
+		}
+		pixel_settings& image_height(int value)
+		{
+			return pack_image_height(value).unpack_image_height(value);
+		}
+		pixel_settings& skip_rows(int value)
+		{
+			return pack_skip_rows(value).unpack_skip_rows(value);
+		}
+		pixel_settings& skip_pixels(int value)
+		{
+			return pack_skip_pixels(value).unpack_skip_pixels(value);
+		}
+		pixel_settings& skip_images(int value)
+		{
+			return pack_skip_images(value).unpack_skip_images(value);
+		}
+		pixel_settings& aligment(int value)
+		{
+			return pack_aligment(value).unpack_aligment(value);
+		}
+	};
+
+	class pbo
+	{
+	public:
+		enum class target
+		{
+			pack = GL_PIXEL_PACK_BUFFER,
+			unpack = GL_PIXEL_UNPACK_BUFFER
+		};
+		enum class access
+		{
+			read = GL_READ_ONLY,
+			write = GL_WRITE_ONLY,
+			read_write = GL_READ_WRITE
+		};
+
+	private:
+		GLuint m_id = GL_NONE;
+		target m_target = target::unpack;
+
+	public:
+		pbo() = default;
+
+		pbo(GLuint id)
 		{
 			set_id(id);
 		}
 
-		~rbo()
+		~pbo()
 		{
 			remove();
 		}
 
 		class save_binding_state
 		{
-			GLint m_old_value;
+			GLint m_last_binding;
+			GLenum m_target;
 
 		public:
-			save_binding_state(const rbo& new_state)
+			save_binding_state(target target_, const pbo& new_state)
 			{
-				glGetIntegerv(GL_RENDERBUFFER_BINDING, &m_old_value);
-				new_state.bind();
+				GLenum pname;
+				switch (target_)
+				{
+				case target::pack: pname = GL_PIXEL_PACK_BUFFER_BINDING; break;
+				case target::unpack: pname = GL_PIXEL_UNPACK_BUFFER_BINDING; break;
+				}
+
+				glGetIntegerv(pname, &m_last_binding);
+				new_state.bind(target_);
+				m_target = (GLenum)target_;
 			}
 
 			~save_binding_state()
 			{
-				glBindRenderbuffer(GL_RENDERBUFFER, m_old_value);
+				glBindBuffer(m_target, m_last_binding);
 			}
 		};
 
@@ -159,29 +339,35 @@ namespace gl
 				remove();
 			}
 
-			glGenRenderbuffers(1, &m_id);
+			glGenBuffers(1, &m_id);
 		}
 
-		void create(u32 format, u32 width, u32 height)
+		void create(GLsizeiptr size)
 		{
 			create();
-			storage(format, width, height);
+			data(size);
 		}
 
-		void bind() const
+		void data(GLsizeiptr size)
 		{
-			glBindRenderbuffer(GL_RENDERBUFFER, m_id);
+			target target_ = current_target();
+			save_binding_state save(target_, *this);
+			glBufferData((GLenum)target_, size, 0, GL_STREAM_DRAW);
 		}
 
-		void storage(u32 format, u32 width, u32 height)
+		void bind(target target_) const
 		{
-			save_binding_state save(*this);
-			glRenderbufferStorage(GL_RENDERBUFFER, format, width, height);
+			glBindBuffer((GLenum)target_, m_id);
+		}
+
+		target current_target() const
+		{
+			return m_target;
 		}
 
 		void remove()
 		{
-			glDeleteRenderbuffers(1, &m_id);
+			glDeleteBuffers(1, &m_id);
 			m_id = 0;
 		}
 
@@ -204,13 +390,39 @@ namespace gl
 		{
 			return created();
 		}
+
+		void map(std::function<void(GLubyte*)> impl, access access_, GLsizeiptr data_size = 0)
+		{
+			target target_ = current_target();
+			save_binding_state save(target_, *this);
+
+			if (data_size != 0)
+			{
+				GLenum usage;
+
+				switch (access_)
+				{
+				case access::read: usage = GL_STREAM_READ; break;
+				case access::write: usage = GL_STREAM_DRAW; break;
+				case access::read_write: usage = GL_STREAM_DRAW; break;
+				}
+
+				glBufferData((GLenum)target_, data_size, 0, usage);
+			}
+
+			if (GLubyte* ptr = (GLubyte*)glMapBuffer((GLenum)target_, (GLenum)access_))
+			{
+				impl(ptr);
+				glUnmapBuffer((GLenum)target_);
+			}
+		}
 	};
 
-	//TODO
 	class texture
 	{
 		GLuint m_id = 0;
 		GLuint m_level = 0;
+		gl::pixel_settings m_pixel_settings;
 
 	public:
 		enum class type
@@ -233,13 +445,14 @@ namespace gl
 			uint_8_8_8_8_rev = GL_UNSIGNED_INT_8_8_8_8_REV,
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
+			uint_24_8 = GL_UNSIGNED_INT_24_8,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
 			sint = GL_INT,
-			float_ = GL_FLOAT,
-			half_float = GL_HALF_FLOAT,
-			double_ = GL_DOUBLE,
+			f16 = GL_HALF_FLOAT,
+			f32 = GL_FLOAT,
+			f64 = GL_DOUBLE,
 		};
 
 		enum class channel
@@ -264,7 +477,9 @@ namespace gl
 			bgra = GL_BGRA,
 
 			depth = GL_DEPTH_COMPONENT,
+			depth16 = GL_DEPTH_COMPONENT16,
 			depth_stencil = GL_DEPTH_STENCIL,
+			depth24_stencil8 = GL_DEPTH24_STENCIL8,
 
 			compressed_rgb_s3tc_dxt1 = GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
 			compressed_rgba_s3tc_dxt1 = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
@@ -380,24 +595,6 @@ namespace gl
 			int m_compressed_image_size = 0;
 
 			const void* m_pixels = nullptr;
-
-			bool m_pack_swap_bypes = false;
-			bool m_pack_lsb_first = false;
-			int m_pack_row_length = 0;
-			int m_pack_image_height = 0;
-			int m_pack_skip_rows = 0;
-			int m_pack_skip_pixels = 0;
-			int m_pack_skip_images = 0;
-			int m_pack_aligment = 4;
-			bool m_unpack_swap_bypes = false;
-			bool m_unpack_lsb_first = false;
-			int m_unpack_row_length = 0;
-			int m_unpack_image_height = 0;
-			int m_unpack_skip_rows = 0;
-			int m_unpack_skip_pixels = 0;
-			int m_unpack_skip_images = 0;
-			int m_unpack_aligment = 4;
-
 			float m_aniso = 1.f;
 			texture::compare_mode m_compare_mode = texture::compare_mode::none;
 			texture::compare_func m_compare_func = texture::compare_func::greater;
@@ -428,23 +625,7 @@ namespace gl
 			{
 				save_binding_state save(texture);
 
-				glPixelStorei(GL_PACK_SWAP_BYTES, m_pack_swap_bypes ? GL_TRUE : GL_FALSE);
-				glPixelStorei(GL_PACK_LSB_FIRST, m_pack_lsb_first ? GL_TRUE : GL_FALSE);
-				glPixelStorei(GL_PACK_ROW_LENGTH, m_pack_row_length);
-				glPixelStorei(GL_PACK_IMAGE_HEIGHT, m_pack_image_height);
-				glPixelStorei(GL_PACK_SKIP_ROWS, m_pack_skip_rows);
-				glPixelStorei(GL_PACK_SKIP_PIXELS, m_pack_skip_pixels);
-				glPixelStorei(GL_PACK_SKIP_IMAGES, m_pack_skip_images);
-				glPixelStorei(GL_PACK_ALIGNMENT, m_pack_aligment);
-
-				glPixelStorei(GL_UNPACK_SWAP_BYTES, m_unpack_swap_bypes ? GL_TRUE : GL_FALSE);
-				glPixelStorei(GL_UNPACK_LSB_FIRST, m_unpack_lsb_first ? GL_TRUE : GL_FALSE);
-				glPixelStorei(GL_UNPACK_ROW_LENGTH, m_unpack_row_length);
-				glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, m_unpack_image_height);
-				glPixelStorei(GL_UNPACK_SKIP_ROWS, m_unpack_skip_rows);
-				glPixelStorei(GL_UNPACK_SKIP_PIXELS, m_unpack_skip_pixels);
-				glPixelStorei(GL_UNPACK_SKIP_IMAGES, m_unpack_skip_images);
-				glPixelStorei(GL_UNPACK_ALIGNMENT, m_unpack_aligment);
+				texture.pixel_settings().apply();
 
 				if (compressed_format(m_internal_format))
 				{
@@ -586,87 +767,6 @@ namespace gl
 				return *this;
 			}
 
-			settings& pack_swap_bypes(bool value)
-			{
-				m_pack_swap_bypes = value;
-				return *this;
-			}
-			settings& pack_lsb_first(bool value)
-			{
-				m_pack_lsb_first = value;
-				return *this;
-			}
-			settings& pack_row_length(int value)
-			{
-				m_pack_row_length = value;
-				return *this;
-			}
-			settings& pack_image_height(int value)
-			{
-				m_pack_image_height = value;
-				return *this;
-			}
-			settings& pack_skip_rows(int value)
-			{
-				m_pack_skip_rows = value;
-				return *this;
-			}
-			settings& pack_skip_pixels(int value)
-			{
-				m_pack_skip_pixels = value;
-				return *this;
-			}
-			settings& pack_skip_images(int value)
-			{
-				m_pack_skip_images = value;
-				return *this;
-			}
-			settings& pack_aligment(int value)
-			{
-				m_pack_aligment = value;
-				return *this;
-			}
-			settings& unpack_swap_bypes(bool value)
-			{
-				m_unpack_swap_bypes = value;
-				return *this;
-			}
-			settings& unpack_lsb_first(bool value)
-			{
-				m_unpack_lsb_first = value;
-				return *this;
-			}
-			settings& unpack_row_length(int value)
-			{
-				m_unpack_row_length = value;
-				return *this;
-			}
-			settings& unpack_image_height(int value)
-			{
-				m_unpack_image_height = value;
-				return *this;
-			}
-			settings& unpack_skip_rows(int value)
-			{
-				m_unpack_skip_rows = value;
-				return *this;
-			}
-			settings& unpack_skip_pixels(int value)
-			{
-				m_unpack_skip_pixels = value;
-				return *this;
-			}
-			settings& unpack_skip_images(int value)
-			{
-				m_unpack_skip_images = value;
-				return *this;
-			}
-			settings& unpack_aligment(int value)
-			{
-				m_unpack_aligment = value;
-				return *this;
-			}
-
 			settings& aniso(float value)
 			{
 				m_aniso = value;
@@ -733,7 +833,7 @@ namespace gl
 				m_generate_mipmap = value;
 				return *this;
 			}
-			settings& mipmap(int level, int max_level, int lod, int min_lod, int max_lod, bool generate)
+			settings& mipmap(int level, int max_level, float lod, float min_lod, float max_lod, bool generate)
 			{
 				return this->level(level).max_level(max_level).lod(lod).min_lod(min_lod).max_lod(max_lod).generate_mipmap(generate);
 			}
@@ -846,6 +946,16 @@ namespace gl
 			settings_.apply(*this);
 		}
 
+		gl::pixel_settings& pixel_settings()
+		{
+			return m_pixel_settings;
+		}
+
+		const gl::pixel_settings& pixel_settings() const
+		{
+			return m_pixel_settings;
+		}
+
 		int width() const
 		{
 			save_binding_state save(*this);
@@ -938,16 +1048,138 @@ namespace gl
 			set_id(id);
 		}
 
-		void copy_to(void* dst, texture::format format, texture::type type)
+		void copy_from(const void* src, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
 		{
 			save_binding_state save(*this);
-			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
-			checkForGlError("glGetTexImage");
+			pixel_settings.apply();
+			glTexSubImage2D((GLenum)target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
 		}
 
-		void copy_to(void* dst, texture::type type)
+		void copy_from(const pbo& pbo_, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
 		{
-			copy_to(dst, internal_format(), type);
+			pbo::save_binding_state save_pbo(pbo::target::unpack, pbo_);
+			copy_from(nullptr, format, type, pixel_settings);
+		}
+
+		void copy_from(void* dst, texture::format format, texture::type type)
+		{
+			copy_from(dst, format, type, pixel_settings());
+		}
+
+		void copy_from(const pbo& pbo_, texture::format format, texture::type type)
+		{
+			copy_from(pbo_, format, type, pixel_settings());
+		}
+
+		void copy_to(void* dst, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
+		{
+			save_binding_state save(*this);
+			pixel_settings.apply();
+			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
+		}
+
+		void copy_to(const pbo& pbo_, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
+		{
+			pbo::save_binding_state save_pbo(pbo::target::pack, pbo_);
+			copy_to(nullptr, format, type, pixel_settings);
+		}
+
+		void copy_to(void* dst, texture::format format, texture::type type)
+		{
+			copy_to(dst, format, type, pixel_settings());
+		}
+
+		void copy_to(const pbo& pbo_, texture::format format, texture::type type)
+		{
+			copy_to(pbo_, format, type, pixel_settings());
+		}
+	};
+
+	class rbo
+	{
+		GLuint m_id = 0;
+
+	public:
+		rbo() = default;
+
+		rbo(GLuint id)
+		{
+			set_id(id);
+		}
+
+		~rbo()
+		{
+			remove();
+		}
+
+		class save_binding_state
+		{
+			GLint m_old_value;
+
+		public:
+			save_binding_state(const rbo& new_state)
+			{
+				glGetIntegerv(GL_RENDERBUFFER_BINDING, &m_old_value);
+				new_state.bind();
+			}
+
+			~save_binding_state()
+			{
+				glBindRenderbuffer(GL_RENDERBUFFER, m_old_value);
+			}
+		};
+
+		void create()
+		{
+			if (created())
+			{
+				remove();
+			}
+
+			glGenRenderbuffers(1, &m_id);
+		}
+
+		void create(texture::format format, u32 width, u32 height)
+		{
+			create();
+			storage(format, width, height);
+		}
+
+		void bind() const
+		{
+			glBindRenderbuffer(GL_RENDERBUFFER, m_id);
+		}
+
+		void storage(texture::format format, u32 width, u32 height)
+		{
+			save_binding_state save(*this);
+			glRenderbufferStorage(GL_RENDERBUFFER, (GLenum)format, width, height);
+		}
+
+		void remove()
+		{
+			glDeleteRenderbuffers(1, &m_id);
+			m_id = 0;
+		}
+
+		uint id() const
+		{
+			return m_id;
+		}
+
+		void set_id(uint id)
+		{
+			m_id = id;
+		}
+
+		bool created() const
+		{
+			return m_id != 0;
+		}
+
+		explicit operator bool() const
+		{
+			return created();
 		}
 	};
 
@@ -1064,6 +1296,7 @@ namespace gl
 		indexed_attachment color{ *this, attachment::type::color };
 		attachment depth{ *this, attachment::type::depth };
 		attachment stencil{ *this, attachment::type::stencil };
+		attachment depth_stencil{ *this, attachment::type::depth_stencil };
 
 		enum class target
 		{
@@ -1081,7 +1314,8 @@ namespace gl
 		void draw(const attachment& buffer)
 		{
 			save_binding_state save(*this);
-			glDrawBuffer(buffer.id());
+			GLenum buf = buffer.id();
+			glDrawBuffers(1, &buf);
 		}
 
 		void draw(const std::vector<attachment>& indexes)
@@ -1101,10 +1335,34 @@ namespace gl
 			glClear((GLbitfield)buffers_);
 		}
 
-		void draw_pixels(GLsizei width, GLsizei height, gl::texture::format format_, gl::texture::type type_, const void* pixels) const
+		void draw_pixels(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
 		{
 			save_binding_state save(*this);
-			glDrawPixels(width, height, (GLenum)format_, (GLenum)type_, pixels);
+			pixel_settings.apply();
+			glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, pixels);
+		}
+
+		void draw_pixels(const pbo& pbo_, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		{
+			save_binding_state save(*this);
+			pbo::save_binding_state save_pbo(pbo::target::unpack, pbo_);
+			pixel_settings.apply();
+			glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, nullptr);
+		}
+
+		void read_pixels(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		{
+			save_binding_state save(*this);
+			pixel_settings.apply();
+			glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, pixels);
+		}
+
+		void read_pixels(const pbo& pbo_, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		{
+			save_binding_state save(*this);
+			pbo::save_binding_state save_pbo(pbo::target::pack, pbo_);
+			pixel_settings.apply();
+			glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, nullptr);
 		}
 
 		static fbo get_binded_draw_buffer()

@@ -295,7 +295,7 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 {
 	if (!RSXReady()) return;
 	const GSRender& render = Emu.GetGSManager().GetRender();
-	const auto buffers = vm::ptr<CellGcmDisplayInfo>::make(render.m_gcm_buffers_addr);
+	const auto buffers = render.m_gcm_buffers;
 
 	if(!buffers)
 		return;
@@ -409,10 +409,10 @@ void RSXDebugger::GetBuffers()
 	// TODO: Currently it only supports color buffers
 	for (u32 bufferId=0; bufferId < render.m_gcm_buffers_count; bufferId++)
 	{
-		if(!vm::check_addr(render.m_gcm_buffers_addr))
+		if(!render.m_gcm_buffers)
 			continue;
 
-		auto buffers = vm::get_ptr<CellGcmDisplayInfo>(render.m_gcm_buffers_addr);
+		auto buffers = render.m_gcm_buffers;
 		u32 RSXbuffer_addr = render.m_local_mem_addr + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
