@@ -23,13 +23,14 @@ void ppu_interpreter::NOP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::TDI(PPUThread& CPU, ppu_opcode_t op)
 {
-	s64 a = CPU.GPR[op.ra];
+	const s64 a = CPU.GPR[op.ra], b = op.simm16;
+	const u64 a_ = a, b_ = b; // unsigned
 
-	if ((a < (s64)op.simm16 && (op.bo & 0x10)) ||
-		(a >(s64)op.simm16 && (op.bo & 0x8)) ||
-		(a == (s64)op.simm16 && (op.bo & 0x4)) ||
-		((u64)a < (u64)op.simm16 && (op.bo & 0x2)) ||
-		((u64)a >(u64)op.simm16 && (op.bo & 0x1)))
+	if (((op.bo & 0x10) && a < b) ||
+		((op.bo & 0x8) && a > b) ||
+		((op.bo & 0x4) && a == b) ||
+		((op.bo & 0x2) && a_ < b_) ||
+		((op.bo & 0x1) && a_ > b_))
 	{
 		throw __FUNCTION__;
 	}
@@ -37,13 +38,14 @@ void ppu_interpreter::TDI(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::TWI(PPUThread& CPU, ppu_opcode_t op)
 {
-	s32 a = (s32)CPU.GPR[op.ra];
+	const s32 a = (s32)CPU.GPR[op.ra], b = op.simm16;
+	const u32 a_ = a, b_ = b; // unsigned
 
-	if ((a < op.simm16 && (op.bo & 0x10)) ||
-		(a > op.simm16 && (op.bo & 0x8)) ||
-		(a == op.simm16 && (op.bo & 0x4)) ||
-		((u32)a < (u32)op.simm16 && (op.bo & 0x2)) ||
-		((u32)a >(u32)op.simm16 && (op.bo & 0x1)))
+	if (((op.bo & 0x10) && a < b) ||
+		((op.bo & 0x8) && a > b) ||
+		((op.bo & 0x4) && a == b) ||
+		((op.bo & 0x2) && a_ < b_) ||
+		((op.bo & 0x1) && a_ > b_))
 	{
 		throw __FUNCTION__;
 	}
@@ -70,10 +72,7 @@ void ppu_interpreter::VADDCUW(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._f[w] = CPU.VPR[op.va]._f[w] + CPU.VPR[op.vb]._f[w];
-	}
+	CPU.VPR[op.vd] = u128::addfs(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VADDSBS(PPUThread& CPU, ppu_opcode_t op)
@@ -135,10 +134,7 @@ void ppu_interpreter::VADDSWS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUBM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		CPU.VPR[op.vd]._u8[b] = CPU.VPR[op.va]._u8[b] + CPU.VPR[op.vb]._u8[b];
-	}
+	CPU.VPR[op.vd] = u128::add8(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VADDUBS(PPUThread& CPU, ppu_opcode_t op)
@@ -158,10 +154,7 @@ void ppu_interpreter::VADDUBS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUHM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._u16[h] = CPU.VPR[op.va]._u16[h] + CPU.VPR[op.vb]._u16[h];
-	}
+	CPU.VPR[op.vd] = u128::add16(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VADDUHS(PPUThread& CPU, ppu_opcode_t op)
@@ -181,10 +174,7 @@ void ppu_interpreter::VADDUHS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUWM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] + CPU.VPR[op.vb]._u32[w];
-	}
+	CPU.VPR[op.vd] = u128::add32(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VADDUWS(PPUThread& CPU, ppu_opcode_t op)
@@ -204,18 +194,12 @@ void ppu_interpreter::VADDUWS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VAND(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] & CPU.VPR[op.vb]._u32[w];
-	}
+	CPU.VPR[op.vd] = CPU.VPR[op.va] & CPU.VPR[op.vb];
 }
 
 void ppu_interpreter::VANDC(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] & (~CPU.VPR[op.vb]._u32[w]);
-	}
+	CPU.VPR[op.vd] = CPU.VPR[op.va] & ~CPU.VPR[op.vb];
 }
 
 void ppu_interpreter::VAVGSB(PPUThread& CPU, ppu_opcode_t op)
@@ -1351,18 +1335,12 @@ void ppu_interpreter::VNMSUBFP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VNOR(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = ~(CPU.VPR[op.va]._u32[w] | CPU.VPR[op.vb]._u32[w]);
-	}
+	CPU.VPR[op.vd] = ~(CPU.VPR[op.va] | CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VOR(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] | CPU.VPR[op.vb]._u32[w];
-	}
+	CPU.VPR[op.vd] = CPU.VPR[op.va] | CPU.VPR[op.vb];
 }
 
 void ppu_interpreter::VPERM(PPUThread& CPU, ppu_opcode_t op)
@@ -1691,10 +1669,7 @@ void ppu_interpreter::VRSQRTEFP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VSEL(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		CPU.VPR[op.vd]._u8[b] = (CPU.VPR[op.vb]._u8[b] & CPU.VPR[op.vc]._u8[b]) | (CPU.VPR[op.va]._u8[b] & (~CPU.VPR[op.vc]._u8[b]));
-	}
+	CPU.VPR[op.vd] = (CPU.VPR[op.vb] & CPU.VPR[op.vc]) | (CPU.VPR[op.va] & ~CPU.VPR[op.vc]);
 }
 
 void ppu_interpreter::VSL(PPUThread& CPU, ppu_opcode_t op)
@@ -1899,12 +1874,7 @@ void ppu_interpreter::VSUBCUW(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VSUBFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float a = CPU.VPR[op.va]._f[w];
-		const float b = CPU.VPR[op.vb]._f[w];
-		CPU.VPR[op.vd]._f[w] = a - b;
-	}
+	CPU.VPR[op.vd] = u128::subfs(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VSUBSBS(PPUThread& CPU, ppu_opcode_t op)
@@ -1966,10 +1936,7 @@ void ppu_interpreter::VSUBSWS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VSUBUBM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		CPU.VPR[op.vd]._u8[b] = (u8)((CPU.VPR[op.va]._u8[b] - CPU.VPR[op.vb]._u8[b]) & 0xff);
-	}
+	CPU.VPR[op.vd] = u128::sub8(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VSUBUBS(PPUThread& CPU, ppu_opcode_t op)
@@ -1989,10 +1956,7 @@ void ppu_interpreter::VSUBUBS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VSUBUHM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._u16[h] = CPU.VPR[op.va]._u16[h] - CPU.VPR[op.vb]._u16[h];
-	}
+	CPU.VPR[op.vd] = u128::sub16(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VSUBUHS(PPUThread& CPU, ppu_opcode_t op)
@@ -2012,10 +1976,7 @@ void ppu_interpreter::VSUBUHS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VSUBUWM(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = CPU.VPR[op.va]._u32[w] - CPU.VPR[op.vb]._u32[w];
-	}
+	CPU.VPR[op.vd] = u128::sub32(CPU.VPR[op.va], CPU.VPR[op.vb]);
 }
 
 void ppu_interpreter::VSUBUWS(PPUThread& CPU, ppu_opcode_t op)
@@ -2206,10 +2167,7 @@ void ppu_interpreter::VUPKLSH(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VXOR(PPUThread& CPU, ppu_opcode_t op)
 {
-	CPU.VPR[op.vd]._u32[0] = CPU.VPR[op.va]._u32[0] ^ CPU.VPR[op.vb]._u32[0];
-	CPU.VPR[op.vd]._u32[1] = CPU.VPR[op.va]._u32[1] ^ CPU.VPR[op.vb]._u32[1];
-	CPU.VPR[op.vd]._u32[2] = CPU.VPR[op.va]._u32[2] ^ CPU.VPR[op.vb]._u32[2];
-	CPU.VPR[op.vd]._u32[3] = CPU.VPR[op.va]._u32[3] ^ CPU.VPR[op.vb]._u32[3];
+	CPU.VPR[op.vd] = CPU.VPR[op.va] ^ CPU.VPR[op.vb];
 }
 
 void ppu_interpreter::MULLI(PPUThread& CPU, ppu_opcode_t op)
