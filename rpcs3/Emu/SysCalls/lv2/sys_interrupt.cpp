@@ -14,7 +14,7 @@ SysCallBase sys_interrupt("sys_interrupt");
 
 s32 sys_interrupt_tag_destroy(u32 intrtag)
 {
-	sys_interrupt.Warning("sys_interrupt_tag_destroy(intrtag=%d)", intrtag);
+	sys_interrupt.Warning("sys_interrupt_tag_destroy(intrtag=0x%x)", intrtag);
 
 	const u32 class_id = intrtag >> 8;
 
@@ -49,7 +49,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 
 s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread, u64 arg)
 {
-	sys_interrupt.Warning("sys_interrupt_thread_establish(ih_addr=0x%x, intrtag=%d, intrthread=%lld, arg=0x%llx)", ih.addr(), intrtag, intrthread, arg);
+	sys_interrupt.Warning("sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=%lld, arg=0x%llx)", ih, intrtag, intrthread, arg);
 
 	const u32 class_id = intrtag >> 8;
 
@@ -130,7 +130,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 {
-	sys_interrupt.Todo("_sys_interrupt_thread_disestablish(ih=%d)", ih);
+	sys_interrupt.Todo("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
 	std::shared_ptr<interrupt_handler_t> handler;
 	if (!Emu.GetIdManager().GetIDData(ih, handler))
@@ -147,9 +147,9 @@ s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 	return CELL_OK;
 }
 
-void sys_interrupt_thread_eoi()
+void sys_interrupt_thread_eoi(PPUThread& CPU)
 {
 	sys_interrupt.Log("sys_interrupt_thread_eoi()");
 
-	GetCurrentPPUThread().FastStop();
+	CPU.FastStop();
 }
