@@ -307,16 +307,6 @@ union _CRT_ALIGN(16) u128
 		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 gtu8(const u128& left, const u128& right)
-	{
-		return fromV(_mm_cmpgt_epu8(left.vi, right.vi));
-	}
-
-	static __forceinline u128 leu8(const u128& left, const u128& right)
-	{
-		return fromV(_mm_cmple_epu8(left.vi, right.vi));
-	}
-
 	bool operator == (const u128& right) const
 	{
 		return (_u64[0] == right._u64[0]) && (_u64[1] == right._u64[1]);

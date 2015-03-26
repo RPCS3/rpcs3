@@ -91,10 +91,7 @@ void spu_interpreter::OR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::BG(SPUThread& CPU, spu_opcode_t op)
 {
-	for (u32 i = 0; i < 4; i++)
-	{
-		CPU.GPR[op.rt]._u32[i] = CPU.GPR[op.ra]._u32[i] <= CPU.GPR[op.rb]._u32[i];
-	}
+	CPU.GPR[op.rt].vi = _mm_add_epi32(sse_cmpgt_epu32(CPU.GPR[op.ra].vi, CPU.GPR[op.rb].vi), _mm_set1_epi32(1));
 }
 
 void spu_interpreter::SFH(SPUThread& CPU, spu_opcode_t op)
@@ -264,10 +261,9 @@ void spu_interpreter::AND(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CG(SPUThread& CPU, spu_opcode_t op)
 {
-	for (u32 i = 0; i < 4; i++)
-	{
-		CPU.GPR[op.rt]._u32[i] = ~CPU.GPR[op.ra]._u32[i] < CPU.GPR[op.rb]._u32[i];
-	}
+	const auto a = _mm_xor_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0x7fffffff));
+	const auto b = _mm_xor_si128(CPU.GPR[op.rb].vi, _mm_set1_epi32(0x80000000));
+	CPU.GPR[op.rt].vi = _mm_srli_epi32(_mm_cmpgt_epi32(b, a), 31);
 }
 
 void spu_interpreter::AH(SPUThread& CPU, spu_opcode_t op)
@@ -665,8 +661,7 @@ void spu_interpreter::XSBH(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CLGT(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto sign = _mm_set1_epi32(0x80000000);
-	CPU.GPR[op.rt].vi = _mm_cmpgt_epi32(_mm_xor_si128(CPU.GPR[op.ra].vi, sign), _mm_xor_si128(CPU.GPR[op.rb].vi, sign));
+	CPU.GPR[op.rt].vi = sse_cmpgt_epu32(CPU.GPR[op.ra].vi, CPU.GPR[op.rb].vi);
 }
 
 void spu_interpreter::ANDC(SPUThread& CPU, spu_opcode_t op)
@@ -701,8 +696,7 @@ void spu_interpreter::FM(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CLGTH(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto sign = _mm_set1_epi32(0x80008000);
-	CPU.GPR[op.rt].vi = _mm_cmpgt_epi16(_mm_xor_si128(CPU.GPR[op.ra].vi, sign), _mm_xor_si128(CPU.GPR[op.rb].vi, sign));
+	CPU.GPR[op.rt].vi = sse_cmpgt_epu16(CPU.GPR[op.ra].vi, CPU.GPR[op.rb].vi);
 }
 
 void spu_interpreter::ORC(SPUThread& CPU, spu_opcode_t op)
@@ -738,8 +732,7 @@ void spu_interpreter::DFM(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CLGTB(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto sign = _mm_set1_epi32(0x80808080);
-	CPU.GPR[op.rt].vi = _mm_cmpgt_epi8(_mm_xor_si128(CPU.GPR[op.ra].vi, sign), _mm_xor_si128(CPU.GPR[op.rb].vi, sign));
+	CPU.GPR[op.rt].vi = sse_cmpgt_epu8(CPU.GPR[op.ra].vi, CPU.GPR[op.rb].vi);
 }
 
 void spu_interpreter::HLGT(SPUThread& CPU, spu_opcode_t op)

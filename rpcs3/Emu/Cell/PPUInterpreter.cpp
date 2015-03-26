@@ -64,10 +64,9 @@ void ppu_interpreter::MTVSCR(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDCUW(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = ~CPU.VPR[op.va]._u32[w] < CPU.VPR[op.vb]._u32[w];
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	CPU.VPR[op.vd].vi = _mm_srli_epi32(_mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))), 31);
 }
 
 void ppu_interpreter::VADDFP(PPUThread& CPU, ppu_opcode_t op)
@@ -77,59 +76,23 @@ void ppu_interpreter::VADDFP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDSBS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (u32 b = 0; b < 16; ++b)
-	{
-		s16 result = (s16)CPU.VPR[op.va]._s8[b] + (s16)CPU.VPR[op.vb]._s8[b];
-
-		if (result > 0x7f)
-		{
-			CPU.VPR[op.vd]._s8[b] = 0x7f;
-		}
-		else if (result < -0x80)
-		{
-			CPU.VPR[op.vd]._s8[b] = -0x80;
-		}
-		else
-			CPU.VPR[op.vd]._s8[b] = (s8)result;
-	}
+	CPU.VPR[op.vd].vi = _mm_adds_epi8(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VADDSHS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		s32 result = (s32)CPU.VPR[op.va]._s16[h] + (s32)CPU.VPR[op.vb]._s16[h];
-
-		if (result > 0x7fff)
-		{
-			CPU.VPR[op.vd]._s16[h] = 0x7fff;
-		}
-		else if (result < -0x8000)
-		{
-			CPU.VPR[op.vd]._s16[h] = -0x8000;
-		}
-		else
-			CPU.VPR[op.vd]._s16[h] = result;
-	}
+	CPU.VPR[op.vd].vi = _mm_adds_epi16(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VADDSWS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		s64 result = (s64)CPU.VPR[op.va]._s32[w] + (s64)CPU.VPR[op.vb]._s32[w];
-
-		if (result > 0x7fffffff)
-		{
-			CPU.VPR[op.vd]._s32[w] = 0x7fffffff;
-		}
-		else if (result < (s32)0x80000000)
-		{
-			CPU.VPR[op.vd]._s32[w] = 0x80000000;
-		}
-		else
-			CPU.VPR[op.vd]._s32[w] = (s32)result;
-	}
+	const auto a = CPU.VPR[op.va];
+	const auto b = CPU.VPR[op.vb];
+	const auto s = u128::add32(a, b); // a + b
+	const auto m = (a ^ s) & (b ^ s); // overflow bit
+	const auto x = _mm_srai_epi32(m.vi, 31); // saturation mask
+	const auto y = _mm_srai_epi32(_mm_and_si128(s.vi, m.vi), 31); // positive saturation mask
+	CPU.VPR[op.vd].vi = _mm_xor_si128(_mm_xor_si128(_mm_srli_epi32(x, 1), y), _mm_or_si128(s.vi, x));
 }
 
 void ppu_interpreter::VADDUBM(PPUThread& CPU, ppu_opcode_t op)
@@ -139,17 +102,7 @@ void ppu_interpreter::VADDUBM(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUBS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		u16 result = (u16)CPU.VPR[op.va]._u8[b] + (u16)CPU.VPR[op.vb]._u8[b];
-
-		if (result > 0xff)
-		{
-			CPU.VPR[op.vd]._u8[b] = 0xff;
-		}
-		else
-			CPU.VPR[op.vd]._u8[b] = (u8)result;
-	}
+	CPU.VPR[op.vd].vi = _mm_adds_epu8(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VADDUHM(PPUThread& CPU, ppu_opcode_t op)
@@ -159,17 +112,7 @@ void ppu_interpreter::VADDUHM(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUHS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		u32 result = (u32)CPU.VPR[op.va]._u16[h] + (u32)CPU.VPR[op.vb]._u16[h];
-
-		if (result > 0xffff)
-		{
-			CPU.VPR[op.vd]._u16[h] = 0xffff;
-		}
-		else
-			CPU.VPR[op.vd]._u16[h] = result;
-	}
+	CPU.VPR[op.vd].vi = _mm_adds_epu16(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VADDUWM(PPUThread& CPU, ppu_opcode_t op)
@@ -179,17 +122,9 @@ void ppu_interpreter::VADDUWM(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VADDUWS(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		u64 result = (u64)CPU.VPR[op.va]._u32[w] + (u64)CPU.VPR[op.vb]._u32[w];
-
-		if (result > 0xffffffff)
-		{
-			CPU.VPR[op.vd]._u32[w] = 0xffffffff;
-		}
-		else
-			CPU.VPR[op.vd]._u32[w] = (u32)result;
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_add_epi32(a, b), _mm_cmpgt_epi32(_mm_xor_si128(b, _mm_set1_epi32(0x80000000)), _mm_xor_si128(a, _mm_set1_epi32(0x7fffffff))));
 }
 
 void ppu_interpreter::VAND(PPUThread& CPU, ppu_opcode_t op)
@@ -228,16 +163,12 @@ void ppu_interpreter::VAVGSW(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VAVGUB(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-		CPU.VPR[op.vd]._u8[b] = (CPU.VPR[op.va]._u8[b] + CPU.VPR[op.vb]._u8[b] + 1) >> 1;
+	CPU.VPR[op.vd].vi = _mm_avg_epu8(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VAVGUH(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._u16[h] = (CPU.VPR[op.va]._u16[h] + CPU.VPR[op.vb]._u16[h] + 1) >> 1;
-	}
+	CPU.VPR[op.vd].vi = _mm_avg_epu16(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VAVGUW(PPUThread& CPU, ppu_opcode_t op)

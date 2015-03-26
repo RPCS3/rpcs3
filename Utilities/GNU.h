@@ -342,15 +342,21 @@ static __forceinline uint64_t cntlz64(uint64_t arg)
 }
 
 // compare 16 packed unsigned bytes (greater than)
-static __forceinline __m128i _mm_cmpgt_epu8(__m128i A, __m128i B)
+inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
 	// (A xor 0x80) > (B xor 0x80)
-	return _mm_cmpgt_epi8(_mm_xor_si128(A, _mm_set1_epi8(-128)), _mm_xor_si128(B, _mm_set1_epi8(-128)));
+	const auto sign = _mm_set1_epi32(0x80808080);
+	return _mm_cmpgt_epi8(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
 }
 
-// compare 16 packed unsigned bytes (less or equal)
-static __forceinline __m128i _mm_cmple_epu8(__m128i A, __m128i B)
+inline __m128i sse_cmpgt_epu16(__m128i A, __m128i B)
 {
-	// ((B xor 0x80) > (A xor 0x80)) || A == B
-	return _mm_or_si128(_mm_cmpgt_epu8(B, A), _mm_cmpeq_epi8(A, B));
+	const auto sign = _mm_set1_epi32(0x80008000);
+	return _mm_cmpgt_epi16(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
+{
+	const auto sign = _mm_set1_epi32(0x80000000);
+	return _mm_cmpgt_epi32(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
 }
