@@ -27,6 +27,7 @@ __Windows__
 
 __Linux__
 * Debian & Ubuntu: `sudo apt-get install libopenal-dev libwxgtk3.0-dev build-essential libglew-dev`
+* Arch: `sudo pacman -S glew openal wxgtk cmake llvm`
 
 __Mac OSX__
 * Install with Homebrew: `brew install glew wxwidgets`
