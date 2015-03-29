@@ -203,14 +203,21 @@ union _CRT_ALIGN(16) u128
 	static u128 from32p(u32 value)
 	{
 		u128 ret;
-		ret.vi = _mm_set1_epi32((int)value);
+		ret.vi = _mm_set1_epi32(static_cast<s32>(value));
+		return ret;
+	}
+
+	static u128 from16p(u16 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi16(static_cast<s16>(value));
 		return ret;
 	}
 
 	static u128 from8p(u8 value)
 	{
 		u128 ret;
-		ret.vi = _mm_set1_epi8((char)value);
+		ret.vi = _mm_set1_epi8(static_cast<s8>(value));
 		return ret;
 	}
 
@@ -305,6 +312,16 @@ union _CRT_ALIGN(16) u128
 	static __forceinline u128 eq8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 eq16(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpeq_epi16(left.vi, right.vi));
+	}
+
+	static __forceinline u128 eq32(const u128& left, const u128& right)
+	{
+		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
 
 	bool operator == (const u128& right) const

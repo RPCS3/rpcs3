@@ -27,7 +27,7 @@ public:
 	{
 		for (s32 i = -155; i < 174; i++)
 		{
-			m_data[i + 155] = _mm_set1_ps(static_cast<float>(pow(2, i)));
+			m_data[i + 155] = _mm_set1_ps(static_cast<float>(exp2(i)));
 		}
 	}
 
