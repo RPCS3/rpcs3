@@ -60,8 +60,9 @@ inline void Node::EnsureNodeExists() const {
 }
 
 inline bool Node::IsDefined() const {
-  if (!m_isValid)
-    throw InvalidNode();
+  if (!m_isValid) {
+    return false;
+  }
   return m_pNode ? m_pNode->is_defined() : true;
 }
 

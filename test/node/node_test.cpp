@@ -281,6 +281,13 @@ TEST(NodeTest, DefaultNodeStyle) {
   EXPECT_EQ(EmitterStyle::Default, node.Style());
 }
 
+TEST(NodeTest, AccessNonexistentKeyOnConstNode) {
+  YAML::Node node;
+  node["3"] = "4";
+  const YAML::Node& other = node;
+  ASSERT_FALSE(other["5"]);
+}
+
 class NodeEmitterTest : public ::testing::Test {
  protected:
   void ExpectOutput(const std::string& output, const Node& node) {

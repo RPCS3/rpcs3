@@ -181,8 +181,8 @@ TEST(LoadNodeTest, DereferenceIteratorError) {
   EXPECT_THROW(node.begin()->first.as<int>(), InvalidNode);
   EXPECT_EQ(true, (*node.begin()).IsMap());
   EXPECT_EQ(true, node.begin()->IsMap());
-  EXPECT_THROW((*node.begin()->begin()).IsDefined(), InvalidNode);
-  EXPECT_THROW(node.begin()->begin()->IsDefined(), InvalidNode);
+  EXPECT_THROW((*node.begin()->begin()).Type(), InvalidNode);
+  EXPECT_THROW(node.begin()->begin()->Type(), InvalidNode);
 }
 
 TEST(NodeTest, EmitEmptyNode) {
