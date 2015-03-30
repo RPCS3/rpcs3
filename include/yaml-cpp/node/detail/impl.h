@@ -56,6 +56,19 @@ struct get_idx<Key, typename boost::enable_if<boost::is_signed<Key> >::type> {
   }
 };
 
+template <typename T>
+inline bool node::equals(const T& rhs, shared_memory_holder pMemory) {
+  T lhs;
+  if (convert<T>::decode(Node(*this, pMemory), lhs)) {
+    return lhs == rhs;
+  }
+  return false;
+}
+
+inline bool node::equals(const char* rhs, shared_memory_holder pMemory) {
+  return equals<std::string>(rhs, pMemory);
+}
+
 // indexing
 template <typename Key>
 inline node* node_data::get(const Key& key,
@@ -75,8 +88,9 @@ inline node* node_data::get(const Key& key,
   }
 
   for (node_map::const_iterator it = m_map.begin(); it != m_map.end(); ++it) {
-    if (equals(*it->first, key, pMemory))
+    if (it->first->equals(key, pMemory)) {
       return it->second;
+    }
   }
 
   return NULL;
@@ -102,8 +116,9 @@ inline node& node_data::get(const Key& key, shared_memory_holder pMemory) {
   }
 
   for (node_map::const_iterator it = m_map.begin(); it != m_map.end(); ++it) {
-    if (equals(*it->first, key, pMemory))
+    if (it->first->equals(key, pMemory)) {
       return *it->second;
+    }
   }
 
   node& k = convert_to_node(key, pMemory);
@@ -146,20 +161,6 @@ inline void node_data::force_insert(const Key& key, const Value& value,
   node& k = convert_to_node(key, pMemory);
   node& v = convert_to_node(value, pMemory);
   insert_map_pair(k, v);
-}
-
-template <typename T>
-inline bool node_data::equals(node& node, const T& rhs,
-                              shared_memory_holder pMemory) {
-  T lhs;
-  if (convert<T>::decode(Node(node, pMemory), lhs))
-    return lhs == rhs;
-  return false;
-}
-
-inline bool node_data::equals(node& node, const char* rhs,
-                              shared_memory_holder pMemory) {
-  return equals<std::string>(node, rhs, pMemory);
 }
 
 template <typename T>

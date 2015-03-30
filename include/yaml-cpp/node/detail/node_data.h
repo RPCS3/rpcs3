@@ -93,10 +93,6 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   void convert_sequence_to_map(shared_memory_holder pMemory);
 
   template <typename T>
-  static bool equals(node& node, const T& rhs, shared_memory_holder pMemory);
-  static bool equals(node& node, const char* rhs, shared_memory_holder pMemory);
-
-  template <typename T>
   static node& convert_to_node(const T& rhs, shared_memory_holder pMemory);
 
  private:

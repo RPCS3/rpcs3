@@ -30,6 +30,7 @@ class YAML_CPP_API Node {
   friend class NodeBuilder;
   friend class NodeEvents;
   friend struct detail::iterator_value;
+  friend class detail::node;
   friend class detail::node_data;
   template <typename>
   friend class detail::iterator_base;

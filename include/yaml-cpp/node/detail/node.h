@@ -31,6 +31,10 @@ class node : private boost::noncopyable {
   const std::string& tag() const { return m_pRef->tag(); }
   EmitterStyle::value style() const { return m_pRef->style(); }
 
+  template <typename T>
+  bool equals(const T& rhs, shared_memory_holder pMemory);
+  bool equals(const char* rhs, shared_memory_holder pMemory);
+
   void mark_defined() {
     if (is_defined())
       return;
