@@ -64,7 +64,7 @@ struct convert<const char*> {
 
 template <std::size_t N>
 struct convert<const char[N]> {
-  static Node encode(const char (&rhs)[N]) { return Node(rhs); }
+  static Node encode(const char(&rhs)[N]) { return Node(rhs); }
 };
 
 template <>

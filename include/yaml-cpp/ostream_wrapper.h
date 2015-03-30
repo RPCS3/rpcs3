@@ -52,7 +52,7 @@ class YAML_CPP_API ostream_wrapper {
 
 template <std::size_t N>
 inline ostream_wrapper& operator<<(ostream_wrapper& stream,
-                                   const char (&str)[N]) {
+                                   const char(&str)[N]) {
   stream.write(str, N - 1);
   return stream;
 }
