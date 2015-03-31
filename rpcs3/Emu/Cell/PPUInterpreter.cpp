@@ -602,75 +602,52 @@ void ppu_interpreter::VLOGEFP(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VMADDFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float a = CPU.VPR[op.va]._f[w];
-		const float b = CPU.VPR[op.vb]._f[w];
-		const float c = CPU.VPR[op.vc]._f[w];
-		const float result = fmaf(a, c, b);
-		CPU.VPR[op.vd]._f[w] = result;
-	}
+	CPU.VPR[op.vd].vf = _mm_add_ps(_mm_mul_ps(CPU.VPR[op.va].vf, CPU.VPR[op.vc].vf), CPU.VPR[op.vb].vf);
 }
 
 void ppu_interpreter::VMAXFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float a = CPU.VPR[op.va]._f[w];
-		const float b = CPU.VPR[op.vb]._f[w];
-		if (a > b)
-			CPU.VPR[op.vd]._f[w] = a;
-		else if (b > a)
-			CPU.VPR[op.vd]._f[w] = b;
-		else if (CPU.VPR[op.vb]._u32[w] == 0x80000000)
-			CPU.VPR[op.vd]._f[w] = a;  // max(+0,-0) = +0
-		else
-			CPU.VPR[op.vd]._f[w] = b;
-	}
+	CPU.VPR[op.vd].vf = _mm_max_ps(CPU.VPR[op.va].vf, CPU.VPR[op.vb].vf);
 }
 
 void ppu_interpreter::VMAXSB(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-		CPU.VPR[op.vd]._s8[b] = std::max(CPU.VPR[op.va]._s8[b], CPU.VPR[op.vb]._s8[b]);
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = _mm_cmpgt_epi8(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_and_si128(a, m), _mm_andnot_si128(m, b));
 }
 
 void ppu_interpreter::VMAXSH(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._s16[h] = std::max(CPU.VPR[op.va]._s16[h], CPU.VPR[op.vb]._s16[h]);
-	}
+	CPU.VPR[op.vd].vi = _mm_max_epi16(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VMAXSW(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._s32[w] = std::max(CPU.VPR[op.va]._s32[w], CPU.VPR[op.vb]._s32[w]);
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = _mm_cmpgt_epi32(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_and_si128(a, m), _mm_andnot_si128(m, b));
 }
 
 void ppu_interpreter::VMAXUB(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-		CPU.VPR[op.vd]._u8[b] = std::max(CPU.VPR[op.va]._u8[b], CPU.VPR[op.vb]._u8[b]);
+	CPU.VPR[op.vd].vi = _mm_max_epu8(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VMAXUH(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._u16[h] = std::max(CPU.VPR[op.va]._u16[h], CPU.VPR[op.vb]._u16[h]);
-	}
+	const auto mask = _mm_set1_epi32(0x80008000);
+	CPU.VPR[op.vd].vi = _mm_xor_si128(_mm_max_epi16(_mm_xor_si128(CPU.VPR[op.va].vi, mask), _mm_xor_si128(CPU.VPR[op.vb].vi, mask)), mask);
 }
 
 void ppu_interpreter::VMAXUW(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = std::max(CPU.VPR[op.va]._u32[w], CPU.VPR[op.vb]._u32[w]);
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = sse_cmpgt_epu32(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_and_si128(a, m), _mm_andnot_si128(m, b));
 }
 
 void ppu_interpreter::VMHADDSHS(PPUThread& CPU, ppu_opcode_t op)
@@ -715,67 +692,47 @@ void ppu_interpreter::VMHRADDSHS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VMINFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float a = CPU.VPR[op.va]._f[w];
-		const float b = CPU.VPR[op.vb]._f[w];
-		if (a < b)
-			CPU.VPR[op.vd]._f[w] = a;
-		else if (b < a)
-			CPU.VPR[op.vd]._f[w] = b;
-		else if (CPU.VPR[op.vb]._u32[w] == 0x00000000)
-			CPU.VPR[op.vd]._f[w] = a;  // min(-0,+0) = -0
-		else
-			CPU.VPR[op.vd]._f[w] = b;
-	}
+	CPU.VPR[op.vd].vf = _mm_min_ps(CPU.VPR[op.va].vf, CPU.VPR[op.vb].vf);
 }
 
 void ppu_interpreter::VMINSB(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		CPU.VPR[op.vd]._s8[b] = std::min(CPU.VPR[op.va]._s8[b], CPU.VPR[op.vb]._s8[b]);
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = _mm_cmpgt_epi8(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_andnot_si128(a, m), _mm_and_si128(m, b));
 }
 
 void ppu_interpreter::VMINSH(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._s16[h] = std::min(CPU.VPR[op.va]._s16[h], CPU.VPR[op.vb]._s16[h]);
-	}
+	CPU.VPR[op.vd].vi = _mm_min_epi16(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VMINSW(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._s32[w] = std::min(CPU.VPR[op.va]._s32[w], CPU.VPR[op.vb]._s32[w]);
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = _mm_cmpgt_epi32(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_andnot_si128(a, m), _mm_and_si128(m, b));
 }
 
 void ppu_interpreter::VMINUB(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint b = 0; b < 16; b++)
-	{
-		CPU.VPR[op.vd]._u8[b] = std::min(CPU.VPR[op.va]._u8[b], CPU.VPR[op.vb]._u8[b]);
-	}
+	CPU.VPR[op.vd].vi = _mm_min_epu8(CPU.VPR[op.va].vi, CPU.VPR[op.vb].vi);
 }
 
 void ppu_interpreter::VMINUH(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint h = 0; h < 8; h++)
-	{
-		CPU.VPR[op.vd]._u16[h] = std::min(CPU.VPR[op.va]._u16[h], CPU.VPR[op.vb]._u16[h]);
-	}
+	const auto mask = _mm_set1_epi32(0x80008000);
+	CPU.VPR[op.vd].vi = _mm_xor_si128(_mm_min_epi16(_mm_xor_si128(CPU.VPR[op.va].vi, mask), _mm_xor_si128(CPU.VPR[op.vb].vi, mask)), mask);
 }
 
 void ppu_interpreter::VMINUW(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		CPU.VPR[op.vd]._u32[w] = std::min(CPU.VPR[op.va]._u32[w], CPU.VPR[op.vb]._u32[w]);
-	}
+	const auto a = CPU.VPR[op.va].vi;
+	const auto b = CPU.VPR[op.vb].vi;
+	const auto m = sse_cmpgt_epu32(a, b);
+	CPU.VPR[op.vd].vi = _mm_or_si128(_mm_andnot_si128(a, m), _mm_and_si128(m, b));
 }
 
 void ppu_interpreter::VMLADDUHM(PPUThread& CPU, ppu_opcode_t op)
@@ -1036,14 +993,7 @@ void ppu_interpreter::VMULOUH(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VNMSUBFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float a = CPU.VPR[op.va]._f[w];
-		const float b = CPU.VPR[op.vb]._f[w];
-		const float c = CPU.VPR[op.vc]._f[w];
-		const float result = -fmaf(a, c, -b);
-		CPU.VPR[op.vd]._f[w] = result;
-	}
+	CPU.VPR[op.vd].vf = _mm_sub_ps(CPU.VPR[op.vb].vf, _mm_mul_ps(CPU.VPR[op.va].vf, CPU.VPR[op.vc].vf));
 }
 
 void ppu_interpreter::VNOR(PPUThread& CPU, ppu_opcode_t op)
@@ -1302,11 +1252,7 @@ void ppu_interpreter::VPKUWUS(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VREFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float b = CPU.VPR[op.vb]._f[w];
-		CPU.VPR[op.vd]._f[w] = 1.0f / b;
-	}
+	CPU.VPR[op.vd].vf = _mm_rcp_ps(CPU.VPR[op.vb].vf);
 }
 
 void ppu_interpreter::VRFIM(PPUThread& CPU, ppu_opcode_t op)
@@ -1373,11 +1319,7 @@ void ppu_interpreter::VRLW(PPUThread& CPU, ppu_opcode_t op)
 
 void ppu_interpreter::VRSQRTEFP(PPUThread& CPU, ppu_opcode_t op)
 {
-	for (uint w = 0; w < 4; w++)
-	{
-		const float b = CPU.VPR[op.vb]._f[w];
-		CPU.VPR[op.vd]._f[w] = 1.0f / sqrtf(b);
-	}
+	CPU.VPR[op.vd].vf = _mm_rsqrt_ps(CPU.VPR[op.vb].vf);
 }
 
 void ppu_interpreter::VSEL(PPUThread& CPU, ppu_opcode_t op)
