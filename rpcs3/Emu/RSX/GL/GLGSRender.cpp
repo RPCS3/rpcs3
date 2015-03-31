@@ -9,6 +9,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 
+#ifdef _WIN32
+extern "C"
+{
+	__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 GetGSFrameCb GetGSFrame = nullptr;
 
 void SetGetGSFrameCallback(GetGSFrameCb value)
@@ -165,14 +173,8 @@ void GLTexture::Init(RSXTexture& tex)
 
 	case CELL_GCM_TEXTURE_R5G6B5:
 	{
-		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G6B5)");
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_RGB, GL_UNSIGNED_SHORT_5_6_5, pixels);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, tex.GetWidth(), tex.GetHeight(), 0, GL_BGR, GL_UNSIGNED_SHORT_5_6_5, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_R5G6B5)");
-
-		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
-		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_R5G6B5)");
 		break;
 	}
 
@@ -339,8 +341,6 @@ void GLTexture::Init(RSXTexture& tex)
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: // Four fp16 values
 	{
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_TRUE);
-		checkForGlError("GLTexture::Init() -> glPixelStorei(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
-
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex.GetWidth(), tex.GetHeight(), 0, GL_RGBA, GL_HALF_FLOAT, pixels);
 		checkForGlError("GLTexture::Init() -> glTexImage2D(CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT)");
 		break;
@@ -511,6 +511,7 @@ void GLTexture::Init(RSXTexture& tex)
 
 	checkForGlError("GLTexture::Init() -> wrap");
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[tex.GetZfunc()]);
 
 	checkForGlError("GLTexture::Init() -> compare");
@@ -1040,6 +1041,8 @@ void GLGSRender::DisableVertexData()
 
 void GLGSRender::InitVertexData()
 {
+	//TODO
+	return;
 	int l;
 	for (const auto& c : m_transform_constants)
 	{
@@ -1175,26 +1178,53 @@ bool GLGSRender::LoadProgram()
 		return false;
 	}
 
+	std::string fragment_program_source = gl::fragment_program::decompiler(vm::ptr<u32>::make(m_cur_fragment_prog->addr))
+		.decompile(m_shader_ctrl)
+		.shader();
+
+	gl::gpu_program::enable(gl::gpu_program::target::fragment);
+	gl::gpu_program fragment_program(gl::gpu_program::target::fragment, fragment_program_source);
+	fragment_program.bind();
+	LOG_ERROR(RSX, fragment_program_source.c_str());
+	LOG_ERROR(RSX, fragment_program.error().c_str());
+	checkForGlError("gl::gpu_program::target::fragment");
+
+	std::string vertex_program_source =
+		"!!ARBvp1.0\n"
+		"OPTION NV_vertex_program3;\n"
+		"MOV result.position, vertex.attrib[0];\n"
+		"MOV result.color, vertex.color;\n"
+		"END";
+	gl::gpu_program::enable(gl::gpu_program::target::vertex);
+	gl::gpu_program vertex_program(gl::gpu_program::target::vertex, vertex_program_source);
+	vertex_program.bind();
+	LOG_ERROR(RSX, vertex_program_source.c_str());
+	LOG_ERROR(RSX, vertex_program.error().c_str());
+	checkForGlError("gl::gpu_program::target::vertex");
+
+	/*
 	m_cur_fragment_prog->ctrl = m_shader_ctrl;
 
-	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog);
+	m_fp_buf_num = )m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog;
 	m_vp_buf_num = -1;
 
 	if (m_fp_buf_num == -1)
 	{
-		LOG_WARNING(RSX, "FP not found in buffer!");
-		m_fragment_prog.Decompile(*m_cur_fragment_prog);
-		m_fragment_prog.Compile();
-		checkForGlError("m_fragment_prog.Compile");
+		//LOG_WARNING(RSX, "FP not found in buffer!");
+		//m_fragment_prog.Decompile(*m_cur_fragment_prog);
+		//m_fragment_prog.Compile();
+		//checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		static int index = 0;
+		//static int index = 0;
 		//rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
 		//f.Write(m_fragment_prog.shader);
 	}
 
 	if (m_vp_buf_num == -1)
 	{
+		
+		/*
 		LOG_WARNING(RSX, "VP not found in buffer!");
 		m_vertex_prog.Decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_vertex_program_data);
 		m_vertex_prog.Compile();
@@ -1263,7 +1293,7 @@ bool GLGSRender::LoadProgram()
 			m_debug_programs.push_back(program);
 		}
 	}
-
+	*/
 	return true;
 }
 

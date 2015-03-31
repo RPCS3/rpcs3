@@ -693,26 +693,6 @@ namespace loader
 								LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 							}
 
-							//struct tbl_item
-							//{
-							//	be_t<u32> stub;
-							//	be_t<u32> rtoc;
-							//};
-
-							//struct stub_data_t
-							//{
-							//	be_t<u32> data[3];
-							//}
-							//static const stub_data =
-							//{
-							//	be_t<u32>::make(MR(11, 2)),
-							//	be_t<u32>::make(SC(0)),
-							//	be_t<u32>::make(BLR())
-							//};
-
-							//const auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
-							//const auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
-
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
 								const u32 nid = stub->s_nid[i];
@@ -739,31 +719,6 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Failed to inject code at address 0x%x", addr);
 								}
-
-								//if (!func || !func->lle_func)
-								//{
-								//	dst[i] = stub_data;
-
-								//	tbl[i].stub = (dst + i).addr();
-								//	tbl[i].rtoc = stub->s_nid[i];
-
-								//	stub->s_text[i] = (tbl + i).addr();
-
-								//	if (!func)
-								//	{
-								//		
-								//	}
-								//	else //if (Ini.HLELogging.GetValue())
-								//	{
-								//		LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
-								//	}
-								//}
-								//else
-								//{
-								//	stub->s_text[i] = func->lle_func.addr();
-								//	//Is function auto exported, than we can use it
-								//	LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (LLE: 0x%x)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str(), (u32)stub->s_text[i]);
-								//}
 							}
 						}
 					}

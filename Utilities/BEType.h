@@ -889,7 +889,7 @@ template<typename T> __forceinline void Write64(T& f, const u64 data)
 template<typename Tto, typename Tfrom>
 struct convert_le_be_t
 {
-	static Tto func(Tfrom&& value)
+	static Tto func(Tfrom value)
 	{
 		return (Tto)value;
 	}
@@ -898,7 +898,7 @@ struct convert_le_be_t
 template<typename Tt, typename Tt1, typename Tfrom>
 struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
 {
-	static be_t<Tt, Tt1> func(Tfrom&& value)
+	static be_t<Tt, Tt1> func(Tfrom value)
 	{
 		return be_t<Tt, Tt1>::make(value);
 	}
@@ -907,7 +907,7 @@ struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
 template<typename Tt, typename Tt1, typename Tf, typename Tf1>
 struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
 {
-	static be_t<Tt, Tt1> func(be_t<Tf, Tf1>&& value)
+	static be_t<Tt, Tt1> func(be_t<Tf, Tf1> value)
 	{
 		return value;
 	}
@@ -916,20 +916,20 @@ struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
 template<typename Tto, typename Tf, typename Tf1>
 struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
 {
-	static Tto func(be_t<Tf, Tf1>&& value)
+	static Tto func(be_t<Tf, Tf1> value)
 	{
 		return value.value();
 	}
 };
 
 template<typename Tto, typename Tfrom>
-__forceinline Tto convert_le_be(Tfrom&& value)
+__forceinline Tto convert_le_be(Tfrom value)
 {
 	return convert_le_be_t<Tto, Tfrom>::func(value);
 }
 
 template<typename Tto, typename Tfrom>
-__forceinline void convert_le_be(Tto& dst, Tfrom&& src)
+__forceinline void convert_le_be(Tto& dst, Tfrom src)
 {
 	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }

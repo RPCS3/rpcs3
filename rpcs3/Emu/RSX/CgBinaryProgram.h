@@ -111,7 +111,11 @@ struct CgBinaryProgram
 
 class CgBinaryDisasm
 {
-private:
+	OPDEST dst;
+	SRC0 src0;
+	SRC1 src1;
+	SRC2 src2;
+
 	std::string m_path; // used for FP decompiler thread, delete this later
 
 	u8* m_buffer;

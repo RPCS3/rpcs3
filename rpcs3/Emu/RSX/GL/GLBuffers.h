@@ -312,7 +312,12 @@ namespace gl
 			GLenum m_target;
 
 		public:
-			save_binding_state(target target_, const pbo& new_state)
+			save_binding_state(target target_, const pbo& new_state) : save_binding_state(target_)
+			{
+				new_state.bind(target_);
+			}
+
+			save_binding_state(target target_)
 			{
 				GLenum pname;
 				switch (target_)
@@ -322,9 +327,9 @@ namespace gl
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
-				new_state.bind(target_);
 				m_target = (GLenum)target_;
 			}
+
 
 			~save_binding_state()
 			{
@@ -1466,6 +1471,10 @@ namespace gl
 			template<typename T>
 			void operator += (const T& value)
 			{
+				if (m_element_size && m_element_size != sizeof(T))
+					throw std::runtime_error("redefinition vertex_attrib_array element size");
+
+				m_element_size = sizeof(T);
 				size_t position = m_data.size();
 				m_data.resize(position + sizeof(T));
 				(T&)m_data[position] = value;
@@ -1489,6 +1498,11 @@ namespace gl
 		std::unordered_map<int, entry>& entries() const
 		{
 			return m_entries;
+		}
+
+		void clear()
+		{
+			m_entries.clear();
 		}
 	};
 
@@ -1514,17 +1528,21 @@ namespace gl
 			target m_target;
 
 		public:
-			save_binding_state(const vbo& new_binding)
+			save_binding_state(const vbo& new_binding) : save_binding_state(new_binding.get_target())
+			{
+				new_binding.bind();
+			}
+
+			save_binding_state(target target_)
 			{
 				GLenum pname;
-				switch (m_target = new_binding.get_target())
+				switch (m_target = target_)
 				{
 				case target::array_buffer: pname = GL_ARRAY_BUFFER_BINDING; break;
 				case target::element_array_buffer: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
-				new_binding.bind();
 			}
 
 			~save_binding_state()

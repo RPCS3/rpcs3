@@ -67,14 +67,16 @@ namespace vm
 		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
-		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
+		__forceinline _ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type> operator *() const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr));
+			AT addr = convert_le_be<AT>(read64(convert_le_be<u32>(m_addr)));
+			return (_ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type>&)addr;
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
+		__forceinline _ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type> operator [](AT index) const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr + sizeof(AT)* index));
+			AT addr = convert_le_be<AT>(read64(convert_le_be<u32>(m_addr + 8 * index)));
+			return (_ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type>&)addr;
 		}
 
 		template<typename AT2>
@@ -89,14 +91,15 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		static _ptr_base make(const AT& addr)
 		{
-			return reinterpret_cast<_ptr_base&>(addr);
+			return reinterpret_cast<const _ptr_base&>(addr);
 		}
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
@@ -112,9 +115,9 @@ namespace vm
 		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 		typedef typename std::remove_cv<T>::type type;
 
-		__forceinline static const u32 data_size()
+		__forceinline static const AT data_size()
 		{
-			return sizeof(T);
+			return convert_le_be<AT>(sizeof(T));
 		}
 
 		__forceinline T* const operator -> () const
@@ -160,10 +163,10 @@ namespace vm
 			return *this;
 		}
 
-		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
-		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
-		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
-		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) + count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) + count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) - count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) - count * convert_le_be<decltype(count)>(data_size()))); }
 
 		__forceinline T& operator *() const
 		{
@@ -238,9 +241,10 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		void* get_ptr() const
@@ -301,9 +305,10 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		const void* get_ptr() const
@@ -354,20 +359,22 @@ namespace vm
 	public:
 		typedef RT(type)(T...);
 
-		RT operator()(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
-
-		RT operator()(ARMv7Context& context, T... args) const; // defined in ARMv7Callback.h, passing context is mandatory
-
-		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current PPU thread context
+		// defined in CB_FUNC.h, call using specified PPU thread context
+		RT operator()(CPUThread& CPU, T... args) const;
+		// defined in ARMv7Callback.h, passing context is mandatory
+		RT operator()(ARMv7Context& context, T... args) const;
+		// defined in CB_FUNC.h, call using current PPU thread context
+		RT operator()(T... args) const;
 
 		AT addr() const
 		{
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }

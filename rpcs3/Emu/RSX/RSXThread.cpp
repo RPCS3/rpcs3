@@ -1190,6 +1190,20 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		break;
 	}
 
+	case NV4097_SET_STENCIL_OP_ZFAIL:
+	{
+		m_set_stencil_zfail = true;
+		m_stencil_zfail = value;
+		break;
+	}
+
+	case NV4097_SET_STENCIL_OP_ZPASS:
+	{
+		m_set_stencil_zpass = true;
+		m_stencil_zpass = value;
+		break;
+	}
+
 	case NV4097_SET_BACK_STENCIL_MASK:
 	{
 		m_set_back_stencil_mask = true;
