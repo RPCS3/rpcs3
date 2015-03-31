@@ -66,6 +66,13 @@ inline bool Node::IsDefined() const {
   return m_pNode ? m_pNode->is_defined() : true;
 }
 
+inline Mark Node::Mark() const {
+  if (!m_isValid) {
+    throw InvalidNode();
+  }
+  return m_pNode ? m_pNode->mark() : Mark::null_mark();
+}
+
 inline NodeType::value Node::Type() const {
   if (!m_isValid)
     throw InvalidNode();
@@ -110,12 +117,12 @@ struct as_if<T, void> {
 
   const T operator()() const {
     if (!node.m_pNode)
-      throw TypedBadConversion<T>();
+      throw TypedBadConversion<T>(node.Mark());
 
     T t;
     if (convert<T>::decode(node, t))
       return t;
-    throw TypedBadConversion<T>();
+    throw TypedBadConversion<T>(node.Mark());
   }
 };
 
@@ -126,7 +133,7 @@ struct as_if<std::string, void> {
 
   const std::string operator()() const {
     if (node.Type() != NodeType::Scalar)
-      throw TypedBadConversion<std::string>();
+      throw TypedBadConversion<std::string>(node.Mark());
     return node.Scalar();
   }
 };

@@ -11,6 +11,7 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/emitterstyle.h"
+#include "yaml-cpp/mark.h"
 #include "yaml-cpp/node/detail/bool_type.h"
 #include "yaml-cpp/node/detail/iterator_fwd.h"
 #include "yaml-cpp/node/ptr.h"
@@ -48,6 +49,7 @@ class YAML_CPP_API Node {
   Node(const Node& rhs);
   ~Node();
 
+  YAML::Mark Mark() const;
   NodeType::value Type() const;
   bool IsDefined() const;
   bool IsNull() const { return Type() == NodeType::Null; }

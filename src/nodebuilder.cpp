@@ -28,8 +28,8 @@ void NodeBuilder::OnDocumentStart(const Mark&) {}
 
 void NodeBuilder::OnDocumentEnd() {}
 
-void NodeBuilder::OnNull(const Mark& /* mark */, anchor_t anchor) {
-  detail::node& node = Push(anchor);
+void NodeBuilder::OnNull(const Mark& mark, anchor_t anchor) {
+  detail::node& node = Push(mark, anchor);
   node.set_null();
   Pop();
 }
@@ -40,18 +40,18 @@ void NodeBuilder::OnAlias(const Mark& /* mark */, anchor_t anchor) {
   Pop();
 }
 
-void NodeBuilder::OnScalar(const Mark& /* mark */, const std::string& tag,
+void NodeBuilder::OnScalar(const Mark& mark, const std::string& tag,
                            anchor_t anchor, const std::string& value) {
-  detail::node& node = Push(anchor);
+  detail::node& node = Push(mark, anchor);
   node.set_scalar(value);
   node.set_tag(tag);
   Pop();
 }
 
-void NodeBuilder::OnSequenceStart(const Mark& /* mark */,
+void NodeBuilder::OnSequenceStart(const Mark& mark,
                                   const std::string& tag, anchor_t anchor,
                                   EmitterStyle::value style) {
-  detail::node& node = Push(anchor);
+  detail::node& node = Push(mark, anchor);
   node.set_tag(tag);
   node.set_type(NodeType::Sequence);
   node.set_style(style);
@@ -59,9 +59,9 @@ void NodeBuilder::OnSequenceStart(const Mark& /* mark */,
 
 void NodeBuilder::OnSequenceEnd() { Pop(); }
 
-void NodeBuilder::OnMapStart(const Mark& /* mark */, const std::string& tag,
+void NodeBuilder::OnMapStart(const Mark& mark, const std::string& tag,
                              anchor_t anchor, EmitterStyle::value style) {
-  detail::node& node = Push(anchor);
+  detail::node& node = Push(mark, anchor);
   node.set_type(NodeType::Map);
   node.set_tag(tag);
   node.set_style(style);
@@ -74,8 +74,9 @@ void NodeBuilder::OnMapEnd() {
   Pop();
 }
 
-detail::node& NodeBuilder::Push(anchor_t anchor) {
+detail::node& NodeBuilder::Push(const Mark& mark, anchor_t anchor) {
   detail::node& node = m_pMemory->create_node();
+  node.set_mark(mark);
   RegisterAnchor(anchor, node);
   Push(node);
   return node;

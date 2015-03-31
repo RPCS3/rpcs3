@@ -20,6 +20,7 @@ class node_ref : private boost::noncopyable {
   node_ref() : m_pData(new node_data) {}
 
   bool is_defined() const { return m_pData->is_defined(); }
+  const Mark& mark() const { return m_pData->mark(); }
   NodeType::value type() const { return m_pData->type(); }
   const std::string& scalar() const { return m_pData->scalar(); }
   const std::string& tag() const { return m_pData->tag(); }
@@ -28,6 +29,7 @@ class node_ref : private boost::noncopyable {
   void mark_defined() { m_pData->mark_defined(); }
   void set_data(const node_ref& rhs) { m_pData = rhs.m_pData; }
 
+  void set_mark(const Mark& mark) { m_pData->set_mark(mark); }
   void set_type(NodeType::value type) { m_pData->set_type(type); }
   void set_tag(const std::string& tag) { m_pData->set_tag(tag); }
   void set_null() { m_pData->set_null(); }

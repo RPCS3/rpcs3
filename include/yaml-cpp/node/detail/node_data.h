@@ -34,6 +34,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   node_data();
 
   void mark_defined();
+  void set_mark(const Mark& mark);
   void set_type(NodeType::value type);
   void set_tag(const std::string& tag);
   void set_null();
@@ -41,6 +42,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
   void set_style(EmitterStyle::value style);
 
   bool is_defined() const { return m_isDefined; }
+  const Mark& mark() const { return m_mark; }
   NodeType::value type() const {
     return m_isDefined ? m_type : NodeType::Undefined;
   }
@@ -97,6 +99,7 @@ class YAML_CPP_API node_data : private boost::noncopyable {
 
  private:
   bool m_isDefined;
+  Mark m_mark;
   NodeType::value m_type;
   std::string m_tag;
   EmitterStyle::value m_style;

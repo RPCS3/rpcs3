@@ -15,6 +15,8 @@ struct YAML_CPP_API Mark {
 
   static const Mark null_mark() { return Mark(-1, -1, -1); }
 
+  bool is_null() const { return pos == -1 && line == -1 && column == -1; }
+
   int pos;
   int line, column;
 
