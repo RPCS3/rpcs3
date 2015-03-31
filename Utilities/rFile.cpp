@@ -5,6 +5,7 @@
 #include <wx/file.h>
 #include <wx/filename.h>
 #include "rFile.h"
+#include "errno.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -25,7 +26,7 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 #ifdef _WIN32
 #define GET_API_ERROR GetLastError()
 #else
-#define GET_API_ERROR err
+#define GET_API_ERROR errno
 #endif
 
 bool getFileInfo(const char *path, FileInfo *fileInfo) {
@@ -112,7 +113,7 @@ bool rRmdir(const std::string &dir)
 #ifdef _WIN32
 	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str()))
 #else
-	if (int err = rmdir(dir.c_str()))
+	if (rmdir(dir.c_str()))
 #endif
 	{
 		LOG_ERROR(GENERAL, "Error deleting directory %s: 0x%llx", dir.c_str(), (u64)GET_API_ERROR);
@@ -152,7 +153,7 @@ bool rRemoveFile(const std::string &file)
 #ifdef _WIN32
 	if (!DeleteFile(ConvertUTF8ToWString(file).c_str()))
 #else
-	if (int err = unlink(file.c_str()))
+	if (unlink(file.c_str()))
 #endif
 	{
 		LOG_ERROR(GENERAL, "Error deleting file %s: 0x%llx", file.c_str(), (u64)GET_API_ERROR);
