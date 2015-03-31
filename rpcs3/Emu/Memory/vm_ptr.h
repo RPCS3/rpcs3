@@ -66,14 +66,16 @@ namespace vm
 		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
-		force_inline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
+		force_inline _ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type> operator *() const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr));
+			AT addr = convert_le_be<AT>(read64(convert_le_be<u32>(m_addr)));
+			return (_ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type>&)addr;
 		}
 
-		force_inline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
+		force_inline _ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type> operator [](AT index) const
 		{
-			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr + sizeof(AT)* index));
+			AT addr = convert_le_be<AT>(read64(convert_le_be<u32>(m_addr + 8 * index)));
+			return (_ptr_base<T, lvl - 1, typename std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>::type>&)addr;
 		}
 
 		template<typename AT2>
@@ -88,14 +90,15 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		static _ptr_base make(const AT& addr)
 		{
-			return reinterpret_cast<_ptr_base&>(addr);
+			return reinterpret_cast<const _ptr_base&>(addr);
 		}
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
@@ -112,7 +115,7 @@ namespace vm
 
 		force_inline static const u32 data_size()
 		{
-			return sizeof(T);
+			return convert_le_be<AT>(sizeof(T));
 		}
 
 		force_inline T* const operator -> () const
@@ -158,10 +161,10 @@ namespace vm
 			return *this;
 		}
 
-		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
-		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(m_addr + count * data_size()); }
-		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
-		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
+		_ptr_base operator + (typename	remove_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) + count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator + (typename		to_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) + count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) - count * convert_le_be<decltype(count)>(data_size()))); }
+		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(convert_le_be<AT>(convert_le_be<decltype(count)>(m_addr) - count * convert_le_be<decltype(count)>(data_size()))); }
 
 		force_inline T& operator *() const
 		{
@@ -235,9 +238,10 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		void* get_ptr() const
@@ -297,9 +301,10 @@ namespace vm
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		const void* get_ptr() const
@@ -349,20 +354,24 @@ namespace vm
 
 		typedef RT(type)(T...);
 
-		RT operator()(PPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
+		// defined in CB_FUNC.h, call using specified PPU thread context
+		RT operator()(PPUThread& CPU, T... args) const;
 
-		RT operator()(ARMv7Context& context, T... args) const; // defined in ARMv7Callback.h, passing context is mandatory
+		// defined in ARMv7Callback.h, passing context is mandatory
+		RT operator()(ARMv7Context& context, T... args) const;
 
-		RT operator()(T... args) const; // defined in CB_FUNC.h, call using current PPU thread context
+		// defined in CB_FUNC.h, call using current PPU thread context
+		RT operator()(T... args) const;
 
 		AT addr() const
 		{
 			return m_addr;
 		}
 
-		void set(const AT value)
+		template<typename U>
+		void set(U&& value)
 		{
-			m_addr = value;
+			m_addr = convert_le_be<AT>(value);
 		}
 
 		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }

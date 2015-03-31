@@ -422,7 +422,7 @@ const ppu_func_caller sc_table[1024] =
 	null_func,                                              //462 (0x1CE)  UNS
 	null_func,//bind_func(sys_prx_load_module_by_fd)        //463 (0x1CF)
 	null_func,//bind_func(sys_prx_load_module_on_memcontainer_by_fd) //464 (0x1D0)
-	null_func,//bind_func(sys_prx_load_module_list)         //465 (0x1D1)
+	bind_func(sys_prx_load_module_list),         //465 (0x1D1)
 	null_func,//bind_func(sys_prx_load_module_list_on_memcontainer) //466 (0x1D2)
 	null_func,//bind_func(sys_prx_get_ppu_guid)             //467 (0x1D3)
 	null_func,//bind_func(sys_...)                          //468 (0x1D4)  ROOT
@@ -437,14 +437,14 @@ const ppu_func_caller sc_table[1024] =
 	
 	null_func, null_func, null_func,                        //477-479  UNS
 
-	null_func,//bind_func(sys_prx_load_module),             //480 (0x1E0)
-	null_func,//bind_func(sys_prx_start_module),            //481 (0x1E1)
-	null_func,//bind_func(sys_prx_stop_module),             //482 (0x1E2)
-	null_func,//bind_func(sys_prx_unload_module),           //483 (0x1E3)
-	null_func,//bind_func(sys_prx_register_module),         //484 (0x1E4)
+	bind_func(sys_prx_load_module),             //480 (0x1E0)
+	bind_func(sys_prx_start_module),            //481 (0x1E1)
+	bind_func(sys_prx_stop_module),             //482 (0x1E2)
+	bind_func(sys_prx_unload_module),           //483 (0x1E3)
+	bind_func(sys_prx_register_module),         //484 (0x1E4)
 	bind_func(sys_prx_query_module),                        //485 (0x1E5)
 	bind_func(sys_prx_register_library),                    //486 (0x1E6)
-	null_func,//bind_func(sys_prx_unregister_library),      //487 (0x1E7)
+	bind_func(sys_prx_unregister_library),      //487 (0x1E7)
 	bind_func(sys_prx_link_library),                        //488 (0x1E8)
 	bind_func(sys_prx_unlink_library),                      //489 (0x1E9)
 	bind_func(sys_prx_query_library),                       //490 (0x1EA)

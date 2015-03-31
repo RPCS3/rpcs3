@@ -595,6 +595,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		return true;
 	}
 
+	//vm::write32(addr, HACK(imm));
 	return false;
 }
 

@@ -289,8 +289,54 @@ namespace fmt
 	std::vector<std::string> rSplit(const std::string& source, const std::string& delim);
 
 	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
-	std::string merge(std::vector<std::string> source, const std::string& separator);
-	std::string merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator);
+
+	template<typename T>
+	std::string merge(const T& source, const std::string& separator)
+	{
+		if (!source.size())
+		{
+			return{};
+		}
+
+		std::string result;
+
+		auto it = source.begin();
+		auto end = source.end();
+		for (--end; it != end; ++it)
+		{
+			result += *it + separator;
+		}
+
+		return result + source.back();
+	}
+
+	template<typename T>
+	std::string merge(std::initializer_list<T> sources, const std::string& separator)
+	{
+		if (!sources.size())
+		{
+			return{};
+		}
+
+		std::string result;
+		bool first = true;
+
+		for (auto &v : sources)
+		{
+			if (first)
+			{
+				result = fmt::merge(v, separator);
+				first = false;
+			}
+			else
+			{
+				result += separator + fmt::merge(v, separator);
+			}
+		}
+
+		return result;
+	}
+
 	std::string tolower(std::string source);
 	std::string toupper(std::string source);
 	std::string escape(std::string source);
