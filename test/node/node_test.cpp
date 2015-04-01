@@ -39,6 +39,13 @@ TEST(NodeTest, SimpleAppendSequence) {
   EXPECT_TRUE(node.IsSequence());
 }
 
+TEST(NodeTest, MapElementRemoval) {
+  Node node;
+  node["foo"] = "bar";
+  node.remove("foo");
+  EXPECT_TRUE(!node["foo"]);
+}
+
 TEST(NodeTest, SimpleAssignSequence) {
   Node node;
   node[0] = 10;
