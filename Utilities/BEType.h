@@ -354,6 +354,16 @@ union _CRT_ALIGN(16) u128
 		return from64(~_u64[0], ~_u64[1]);
 	}
 
+	__forceinline bool test() const
+	{
+		return _u64[0] || _u64[1];
+	}
+
+	__forceinline bool inv_test() const
+	{
+		return ~_u64[0] || ~_u64[1];
+	}
+
 	// result = (~left) & (right)
 	static __forceinline u128 andnot(const u128& left, const u128& right)
 	{
