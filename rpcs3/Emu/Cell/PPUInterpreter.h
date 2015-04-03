@@ -57,6 +57,11 @@ static double SilenceNaN(double x)
 	return (double&)bits;
 }
 
+static float SilenceNaN(float x)
+{
+	return static_cast<float>(SilenceNaN(static_cast<double>(x)));
+}
+
 static void SetHostRoundingMode(u32 rn)
 {
 	switch (rn)
@@ -2644,7 +2649,8 @@ private:
 	}
 	void LVX(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd] = vm::read128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL));
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
+		CPU.VPR[vd] = vm::read128(vm::cast(addr));
 	}
 	void NEG(u32 rd, u32 ra, u32 oe, bool rc)
 	{
@@ -2810,7 +2816,8 @@ private:
 	}
 	void STVX(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL), CPU.VPR[vs]);
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
+		vm::write128(vm::cast(addr), CPU.VPR[vs]);
 	}
 	void MULLD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -2911,7 +2918,8 @@ private:
 	}
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
-		CPU.VPR[vd] = vm::read128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL));
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
+		CPU.VPR[vd] = vm::read128(vm::cast(addr));
 	}
 	void MFTB(u32 rd, u32 spr)
 	{
@@ -3016,7 +3024,8 @@ private:
 	}
 	void STVXL(u32 vs, u32 ra, u32 rb)
 	{
-		vm::write128((u64)((ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfULL), CPU.VPR[vs]);
+		const u64 addr = (ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) & ~0xfull;
+		vm::write128(vm::cast(addr), CPU.VPR[vs]);
 	}
 	void DIVD(u32 rd, u32 ra, u32 rb, u32 oe, bool rc)
 	{
@@ -3238,7 +3247,7 @@ private:
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
 		}
 	}
 	void STVRX(u32 vs, u32 ra, u32 rb)
@@ -3260,7 +3269,7 @@ private:
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
 		}
 		CPU.GPR[ra] = addr;
 	}
@@ -3579,7 +3588,7 @@ private:
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
 		}
 	}
 	void STFSU(u32 frs, u32 ra, s32 d)
@@ -3594,7 +3603,7 @@ private:
 		{
 			u64 bits = (u64&)val;
 			u32 bits32 = (bits>>32 & 0x80000000) | (bits>>29 & 0x7fffffff);
-			vm::get_ref<be_t<u32>>(vm::cast(addr)) = (float)bits32;
+			vm::get_ref<be_t<u32>>(vm::cast(addr)) = bits32;
 		}
 		CPU.GPR[ra] = addr;
 	}
@@ -3687,8 +3696,8 @@ private:
 	}
 	void MTFSB1(u32 crbd, bool rc)
 	{
-		u64 mask = (1ULL << (31 - crbd));
-		if ((crbd >= 3 && crbd <= 6) && !(CPU.FPSCR.FPSCR & mask)) mask |= 1ULL << 31;  //FPSCR.FX
+		u32 mask = 1 << (31 - crbd);
+		if ((crbd >= 3 && crbd <= 6) && !(CPU.FPSCR.FPSCR & mask)) mask |= 1 << 31;  //FPSCR.FX
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode enabled");
 		CPU.SetFPSCR(CPU.FPSCR.FPSCR | mask);
 
@@ -3702,7 +3711,7 @@ private:
 	}
 	void MTFSB0(u32 crbd, bool rc)
 	{
-		u64 mask = (1ULL << (31 - crbd));
+		u32 mask = 1 << (31 - crbd);
 		if ((crbd == 29) && !CPU.FPSCR.NI) LOG_WARNING(PPU, "Non-IEEE mode disabled");
 		CPU.SetFPSCR(CPU.FPSCR.FPSCR & ~mask);
 

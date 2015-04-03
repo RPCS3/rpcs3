@@ -354,12 +354,12 @@ union _CRT_ALIGN(16) u128
 		return from64(~_u64[0], ~_u64[1]);
 	}
 
-	__forceinline bool test() const
+	__forceinline bool is_any_1() const // check if any bit is 1
 	{
 		return _u64[0] || _u64[1];
 	}
 
-	__forceinline bool inv_test() const
+	__forceinline bool is_any_0() const // check if any bit is 0
 	{
 		return ~_u64[0] || ~_u64[1];
 	}
