@@ -48,7 +48,7 @@ class NodeBuilder : public EventHandler {
   virtual void OnMapEnd();
 
  private:
-  detail::node& Push(anchor_t anchor);
+  detail::node& Push(const Mark& mark, anchor_t anchor);
   void Push(detail::node& node);
   void Pop();
   void RegisterAnchor(anchor_t anchor, detail::node& node);
