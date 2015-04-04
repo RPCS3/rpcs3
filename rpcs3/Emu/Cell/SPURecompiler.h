@@ -432,111 +432,69 @@ private:
 	}
 	void SF(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// sub from
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.psubd(vb.get(), va->read());
 		}
 		else
 		{
-			// sub from
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.psubd(vb.get(), va->read());
-			}
-			else
-			{
-				c.psubd(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.psubd(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void OR(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
+			c.por(vb.get(), va->read());
 		}
 		else
 		{
-			// or
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.por(vb.get(), va->read());
-			}
-			else
-			{
-				c.por(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.por(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void BG(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.movdqa(v1.get(), XmmConst(_mm_set1_epi32(1)));
-			XmmFinalize(v1, rt);
-		}
-		else
-		{
-			// compare if-greater-than
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.pcmpgtd(va.get(), vb.get());
-			c.paddd(va.get(), XmmConst(_mm_set1_epi32(1)));
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-			// sign bits:
-			// a b (b-a) -> (result of BG)
-			// 0 0 0 -> 1
-			// 0 0 1 -> 0
-			// 0 1 0 -> 1
-			// 0 1 1 -> 1
-			// 1 0 0 -> 0
-			// 1 0 1 -> 0
-			// 1 1 0 -> 0
-			// 1 1 1 -> 1
-		}
+		// compare if-greater-than
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.pcmpgtd(va.get(), vb.get());
+		c.paddd(va.get(), XmmConst(_mm_set1_epi32(1)));
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
+		// sign bits:
+		// a b (b-a) -> (result of BG)
+		// 0 0 0 -> 1
+		// 0 0 1 -> 0
+		// 0 1 0 -> 1
+		// 0 1 1 -> 1
+		// 1 0 0 -> 0
+		// 1 0 1 -> 0
+		// 1 1 0 -> 0
+		// 1 1 1 -> 1
 		LOG_OPCODE();
 	}
 	void SFH(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// sub from (halfword)
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.psubw(vb.get(), va->read());
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.psubw(vb.get(), va->read());
-			}
-			else
-			{
-				c.psubw(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.psubw(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void NOR(u32 rt, u32 ra, u32 rb)
@@ -559,25 +517,15 @@ private:
 	}
 	void ABSDB(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			const XmmLink& vm = XmmCopy(va);
-			c.pmaxub(va.get(), vb.get());
-			c.pminub(vb.get(), vm.get());
-			c.psubb(va.get(), vb.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-			XmmFinalize(vm);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		const XmmLink& vm = XmmCopy(va);
+		c.pmaxub(va.get(), vb.get());
+		c.pminub(vb.get(), vm.get());
+		c.psubb(va.get(), vb.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
+		XmmFinalize(vm);
 		LOG_OPCODE();
 	}
 	void ROT(u32 rt, u32 ra, u32 rb)
@@ -682,334 +630,154 @@ private:
 	}
 	void ROTI(u32 rt, u32 ra, s32 i7)
 	{
+		// rotate left
 		const int s = i7 & 0x1f;
-		if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& v1 = XmmCopy(va);
-			c.pslld(va.get(), s);
-			c.psrld(v1.get(), 32 - s);
-			c.por(va.get(), v1.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(v1);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& v1 = XmmCopy(va);
+		c.pslld(va.get(), s);
+		c.psrld(v1.get(), 32 - s);
+		c.por(va.get(), v1.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(v1);
 		LOG_OPCODE();
 	}
 	void ROTMI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift right logical
 		const int s = (0 - i7) & 0x3f;
-		if (s > 31)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift right logical
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psrld(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psrld(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ROTMAI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift right arithmetical
 		const int s = (0 - i7) & 0x3f;
-		if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift right arithmetical
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psrad(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psrad(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void SHLI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift left
 		const int s = i7 & 0x3f;
-		if (s > 31)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift left
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pslld(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pslld(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ROTHI(u32 rt, u32 ra, s32 i7)
 	{
+		// rotate left (halfword)
 		const int s = i7 & 0xf;
-		if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& v1 = XmmCopy(va);
-			c.psllw(va.get(), s);
-			c.psrlw(v1.get(), 16 - s);
-			c.por(va.get(), v1.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(v1);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& v1 = XmmCopy(va);
+		c.psllw(va.get(), s);
+		c.psrlw(v1.get(), 16 - s);
+		c.por(va.get(), v1.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(v1);
 		LOG_OPCODE();
 	}
 	void ROTHMI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift right logical
 		const int s = (0 - i7) & 0x1f;
-		if (s > 15)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift right logical
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psrlw(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psrlw(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ROTMAHI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift right arithmetical (halfword)
 		const int s = (0 - i7) & 0x1f;
-		if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift right arithmetical
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psraw(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psraw(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void SHLHI(u32 rt, u32 ra, s32 i7)
 	{
+		// shift left (halfword)
 		const int s = i7 & 0x1f;
-		if (s > 15)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// shift left
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psllw(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psllw(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void A(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			const XmmLink& vb = XmmGet(rb, rt);
-			c.paddd(vb.get(), vb.get());
-			XmmFinalize(vb, rt);
+			c.paddd(vb.get(), va->read());
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.paddd(vb.get(), va->read());
-			}
-			else
-			{
-				c.paddd(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.paddd(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void AND(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// and
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			if (rt != ra)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
+			c.pand(vb.get(), va->read());
 		}
 		else
 		{
-			// and
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.pand(vb.get(), va->read());
-			}
-			else
-			{
-				c.pand(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.pand(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void CG(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psrld(va.get(), 31);
-			XmmFinalize(va, rt);
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			c.paddd(vb.get(), va.get());
-			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.pcmpgtd(va.get(), vb.get());
-			c.psrld(va.get(), 31);
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.paddd(vb.get(), va.get());
+		c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.pcmpgtd(va.get(), vb.get());
+		c.psrld(va.get(), 31);
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
 		LOG_OPCODE();
 	}
 	void AH(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.paddw(va.get(), va.get());
-			XmmFinalize(va, rt);
+			c.paddw(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.paddw(va.get(), vb->read());
-			}
-			else
-			{
-				c.paddw(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.paddw(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void NAND(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// nand
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// not
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pxor(va.get(), XmmConst(_mm_set1_epi32(-1)));
-			XmmFinalize(va, rt);
+			c.pand(va.get(), vb->read());
 		}
 		else
 		{
-			// nand
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pand(va.get(), vb->read());
-			}
-			else
-			{
-				c.pand(va.get(), cpu_xmm(GPR[rb]));
-			}
-			c.pxor(va.get(), XmmConst(_mm_set1_epi32(-1)));
-			XmmFinalize(va, rt);
+			c.pand(va.get(), cpu_xmm(GPR[rb]));
 		}
+		c.pxor(va.get(), XmmConst(_mm_set1_epi32(-1)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void AVGB(u32 rt, u32 ra, u32 rb)
@@ -1027,7 +795,6 @@ private:
 	}
 	void MTSPR(u32 rt, u32 sa)
 	{
-		UNIMPLEMENTED();
 	}
 	void WRCH(u32 ra, u32 rt)
 	{
@@ -1690,81 +1457,25 @@ private:
 	void ROTQBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = i7 & 0xf;
-		if (s == 0)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// rotate left
-			const XmmLink& va = XmmGet(ra, rt);
-			c.palignr(va.get(), va.get(), 16 - s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.palignr(va.get(), va.get(), 16 - s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ROTQMBYI(u32 rt, u32 ra, s32 i7)
 	{
 		const int s = (0 - i7) & 0x1f;
-		if (s == 0)
-		{
-			if (ra != rt)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else if (s > 15)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// shift right
-			const XmmLink& va = XmmGet(ra, rt);
-			c.psrldq(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.psrldq(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void SHLQBYI(u32 rt, u32 ra, s32 i7)
-	{
+	{		
 		const int s = i7 & 0x1f;
-		if (s == 0)
-		{
-			if (ra != rt)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else if (s > 15)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// shift left
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pslldq(va.get(), s);
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pslldq(va.get(), s);
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void NOP(u32 rt)
@@ -1773,123 +1484,74 @@ private:
 	}
 	void CGT(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.pcmpgtd(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpgtd(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpgtd(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpgtd(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void XOR(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// xor
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.pxor(va.get(), vb->read());
 		}
 		else
 		{
-			// xor
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pxor(va.get(), vb->read());
-			}
-			else
-			{
-				c.pxor(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pxor(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CGTH(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.pcmpgtw(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpgtw(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpgtw(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpgtw(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void EQV(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& vb = XmmGet(rb, rt);
+		c.pxor(vb.get(), XmmConst(_mm_set1_epi32(-1)));
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqd(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
+			c.pxor(vb.get(), va->read());
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb, rt);
-			c.pxor(vb.get(), XmmConst(_mm_set1_epi32(-1)));
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.pxor(vb.get(), va->read());
-			}
-			else
-			{
-				c.pxor(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.pxor(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void CGTB(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.pcmpgtb(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpgtb(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpgtb(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpgtb(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void SUMB(u32 rt, u32 ra, u32 rb)
@@ -1987,13 +1649,6 @@ private:
 	}
 	void CNTB(u32 rt, u32 ra)
 	{
-		/*XmmInvalidate(rt);
-		for (u32 i = 0; i < 8; i++)
-		{
-			c.movzx(*addr, cpu_word(GPR[ra]._u16[i]));
-			c.movzx(*addr, word_ptr(*g_imm_var, *addr, 1, (s32)offsetof(g_imm_table_struct, cntb_table[0])));
-			c.mov(cpu_word(GPR[rt]._u16[i]), addr->r16());
-		}*/
 		const XmmLink& va = XmmGet(ra, rt);
 		const XmmLink& v1 = XmmCopy(va);
 		const XmmLink& vm = XmmAlloc();
@@ -2020,49 +1675,29 @@ private:
 	}
 	void CLGT(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// compare if-greater-than
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.pcmpgtd(va.get(), vb.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-		}
+		// compare if-greater-than
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.psubd(vb.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.pcmpgtd(va.get(), vb.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
 		LOG_OPCODE();
 	}
 	void ANDC(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		// and not
+		const XmmLink& vb = XmmGet(rb, rt);
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.pandn(vb.get(), va->read());
 		}
 		else
 		{
-			// and not
-			const XmmLink& vb = XmmGet(rb, rt);
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.pandn(vb.get(), va->read());
-			}
-			else
-			{
-				c.pandn(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.pandn(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void FCGT(u32 rt, u32 ra, u32 rb)
@@ -2087,115 +1722,70 @@ private:
 	void FA(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& va = XmmGet(ra, rt);
-		if (ra == rb)
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			c.addps(va.get(), va.get());
+			c.addps(va.get(), vb->read());
 		}
 		else
 		{
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.addps(va.get(), vb->read());
-			}
-			else
-			{
-				c.addps(va.get(), cpu_xmm(GPR[rb]));
-			}
+			c.addps(va.get(), cpu_xmm(GPR[rb]));
 		}
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void FS(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero (?)
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.subps(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.subps(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.subps(va.get(), vb->read());
-			}
-			else
-			{
-				c.subps(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.subps(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void FM(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.mulps(va.get(), va.get());
-			XmmFinalize(va, rt);
+			c.mulps(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.mulps(va.get(), vb->read());
-			}
-			else
-			{
-				c.mulps(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.mulps(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CLGTH(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// compare if-greater-than
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			c.psubw(va.get(), XmmConst(_mm_set1_epi32(0x80008000)));
-			c.psubw(vb.get(), XmmConst(_mm_set1_epi32(0x80008000)));
-			c.pcmpgtw(va.get(), vb.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-		}
+		// compare if-greater-than
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.psubw(va.get(), XmmConst(_mm_set1_epi32(0x80008000)));
+		c.psubw(vb.get(), XmmConst(_mm_set1_epi32(0x80008000)));
+		c.pcmpgtw(va.get(), vb.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
 		LOG_OPCODE();
 	}
 	void ORC(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& vb = XmmGet(rb, rt);
+		c.pxor(vb.get(), XmmConst(_mm_set1_epi32(-1)));
+		if (const XmmLink* va = XmmRead(ra))
 		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqd(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
+			c.por(vb.get(), va->read());
 		}
 		else
 		{
-			const XmmLink& vb = XmmGet(rb, rt);
-			c.pxor(vb.get(), XmmConst(_mm_set1_epi32(-1)));
-			if (const XmmLink* va = XmmRead(ra))
-			{
-				c.por(vb.get(), va->read());
-			}
-			else
-			{
-				c.por(vb.get(), cpu_xmm(GPR[ra]));
-			}
-			XmmFinalize(vb, rt);
+			c.por(vb.get(), cpu_xmm(GPR[ra]));
 		}
+		XmmFinalize(vb, rt);
 		LOG_OPCODE();
 	}
 	void FCMGT(u32 rt, u32 ra, u32 rb)
@@ -2217,91 +1807,55 @@ private:
 	void DFA(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& va = XmmGet(ra, rt);
-		if (ra == rb)
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			c.addpd(va.get(), va.get());
+			c.addpd(va.get(), vb->read());
 		}
 		else
 		{
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.addpd(va.get(), vb->read());
-			}
-			else
-			{
-				c.addpd(va.get(), cpu_xmm(GPR[rb]));
-			}
+			c.addpd(va.get(), cpu_xmm(GPR[rb]));
 		}
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void DFS(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			// zero (?)
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.subpd(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
+			c.subpd(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.subpd(va.get(), vb->read());
-			}
-			else
-			{
-				c.subpd(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.subpd(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void DFM(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.mulpd(va.get(), va.get());
-			XmmFinalize(va, rt);
+			c.mulpd(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.mulpd(va.get(), vb->read());
-			}
-			else
-			{
-				c.mulpd(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.mulpd(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CLGTB(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// compare if-greater-than
-			const XmmLink& va = XmmGet(ra, rt);
-			const XmmLink& vb = XmmGet(rb);
-			c.psubb(va.get(), XmmConst(_mm_set1_epi32(0x80808080)));
-			c.psubb(vb.get(), XmmConst(_mm_set1_epi32(0x80808080)));
-			c.pcmpgtb(va.get(), vb.get());
-			XmmFinalize(va, rt);
-			XmmFinalize(vb);
-		}
+		// compare if-greater-than
+		const XmmLink& va = XmmGet(ra, rt);
+		const XmmLink& vb = XmmGet(rb);
+		c.psubb(va.get(), XmmConst(_mm_set1_epi32(0x80808080)));
+		c.psubb(vb.get(), XmmConst(_mm_set1_epi32(0x80808080)));
+		c.pcmpgtb(va.get(), vb.get());
+		XmmFinalize(va, rt);
+		XmmFinalize(vb);
 		LOG_OPCODE();
 	}
 	void HLGT(u32 rt, u32 ra, u32 rb)
@@ -2359,25 +1913,16 @@ private:
 	}
 	void CEQ(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqd(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
+			c.pcmpeqd(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpeqd(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpeqd(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpeqd(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void MPYHHU(u32 rt, u32 ra, u32 rb)
@@ -2403,24 +1948,11 @@ private:
 	void SFX(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& vt = XmmGet(rt);
-		if (ra == rb)
-		{
-			// load zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pandn(vt.get(), XmmConst(_mm_set1_epi32(1)));
-			c.pxor(v0.get(), v0.get());
-			c.psubd(v0.get(), vt.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			// sub
-			const XmmLink& vb = XmmGet(rb, rt);
-			c.pandn(vt.get(), XmmConst(_mm_set1_epi32(1)));
-			c.psubd(vb.get(), cpu_xmm(GPR[ra]));
-			c.psubd(vb.get(), vt.get());
-			XmmFinalize(vb, rt);
-		}
+		const XmmLink& vb = XmmGet(rb, rt);
+		c.pandn(vt.get(), XmmConst(_mm_set1_epi32(1)));
+		c.psubd(vb.get(), cpu_xmm(GPR[ra]));
+		c.psubd(vb.get(), vt.get());
+		XmmFinalize(vb, rt);
 		XmmFinalize(vt);
 		LOG_OPCODE();
 	}
@@ -2571,25 +2103,16 @@ private:
 	}
 	void CEQH(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqw(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
+			c.pcmpeqw(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpeqw(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpeqw(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpeqw(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void FCMEQ(u32 rt, u32 ra, u32 rb)
@@ -2610,45 +2133,27 @@ private:
 	void MPYU(u32 rt, u32 ra, u32 rb)
 	{
 		const XmmLink& va = XmmGet(ra, rt);
-		if (ra == rb)
-		{
-			c.pslld(va.get(), 16);
-			c.psrld(va.get(), 16);
-			c.pmulld(va.get(), va.get());
-		}
-		else
-		{
-			const XmmLink& v1 = XmmAlloc();
-			c.movdqa(v1.get(), XmmConst(_mm_set1_epi32(0xffff))); // load mask
-			c.pand(va.get(), v1.get()); // clear high words of each dword
-			c.pand(v1.get(), cpu_xmm(GPR[rb]));
-			c.pmulld(va.get(), v1.get());
-			XmmFinalize(v1);
-		}
+		const XmmLink& v1 = XmmAlloc();
+		c.movdqa(v1.get(), XmmConst(_mm_set1_epi32(0xffff))); // load mask
+		c.pand(va.get(), v1.get()); // clear high words of each dword
+		c.pand(v1.get(), cpu_xmm(GPR[rb]));
+		c.pmulld(va.get(), v1.get());
+		XmmFinalize(v1);
 		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CEQB(u32 rt, u32 ra, u32 rb)
 	{
-		if (ra == rb)
+		const XmmLink& va = XmmGet(ra, rt);
+		if (const XmmLink* vb = XmmRead(rb))
 		{
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqb(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
+			c.pcmpeqb(va.get(), vb->read());
 		}
 		else
 		{
-			const XmmLink& va = XmmGet(ra, rt);
-			if (const XmmLink* vb = XmmRead(rb))
-			{
-				c.pcmpeqb(va.get(), vb->read());
-			}
-			else
-			{
-				c.pcmpeqb(va.get(), cpu_xmm(GPR[rb]));
-			}
-			XmmFinalize(va, rt);
+			c.pcmpeqb(va.get(), cpu_xmm(GPR[rb]));
 		}
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void FI(u32 rt, u32 ra, u32 rb)
@@ -2934,43 +2439,22 @@ private:
 	void ILHU(u32 rt, s32 i16)
 	{
 		const XmmLink& vr = XmmAlloc(rt);
-		if (i16 == 0)
-		{
-			c.pxor(vr.get(), vr.get());
-		}
-		else
-		{
-			c.movdqa(vr.get(), XmmConst(_mm_set1_epi32(i16 << 16)));
-		}
+		c.movdqa(vr.get(), XmmConst(_mm_set1_epi32(i16 << 16)));
 		XmmFinalize(vr, rt);
 		LOG_OPCODE();
 	}
 	void ILH(u32 rt, s32 i16)
 	{
 		const XmmLink& vr = XmmAlloc(rt);
-		if (i16 == 0)
-		{
-			c.pxor(vr.get(), vr.get());
-		}
-		else
-		{
-			c.movdqa(vr.get(), XmmConst(_mm_set1_epi16(i16)));
-		}
+		c.movdqa(vr.get(), XmmConst(_mm_set1_epi16(i16)));
 		XmmFinalize(vr, rt);
 		LOG_OPCODE();
 	}
 	void IOHL(u32 rt, s32 i16)
 	{
-		if (i16 == 0)
-		{
-			// nop
-		}
-		else
-		{
-			const XmmLink& vt = XmmGet(rt, rt);
-			c.por(vt.get(), XmmConst(_mm_set1_epi32(i16 & 0xffff)));
-			XmmFinalize(vt, rt);
-		}
+		const XmmLink& vt = XmmGet(rt, rt);
+		c.por(vt.get(), XmmConst(_mm_set1_epi32(i16 & 0xffff)));
+		XmmFinalize(vt, rt);
 		LOG_OPCODE();
 	}
 	
@@ -3005,56 +2489,16 @@ private:
 	}
 	void ORHI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == -1)
-		{
-			// fill with 1
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqd(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
-		}
-		else if (i10 == 0)
-		{
-			if (rt != ra)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.por(va.get(), XmmConst(_mm_set1_epi16(i10)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.por(va.get(), XmmConst(_mm_set1_epi16(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ORBI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == -1)
-		{
-			// fill with 1
-			const XmmLink& v1 = XmmAlloc(rt);
-			c.pcmpeqd(v1.get(), v1.get());
-			XmmFinalize(v1, rt);
-		}
-		else if (i10 == 0)
-		{
-			if (rt != ra)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.por(va.get(), XmmConst(_mm_set1_epi8(i10)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.por(va.get(), XmmConst(_mm_set1_epi8(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void SFI(u32 rt, u32 ra, s32 i10)
@@ -3113,125 +2557,39 @@ private:
 	}
 	void ANDI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == 0)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (i10 == -1)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pand(va.get(), XmmConst(_mm_set1_epi32(i10)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pand(va.get(), XmmConst(_mm_set1_epi32(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ANDHI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == 0)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (i10 == -1)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pand(va.get(), XmmConst(_mm_set1_epi16(i10)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pand(va.get(), XmmConst(_mm_set1_epi16(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void ANDBI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == 0)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else if (i10 == -1)
-		{
-			// mov
-			if (ra != rt)
-			{
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra, rt);
-			c.pand(va.get(), XmmConst(_mm_set1_epi8(i10)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra, rt);
+		c.pand(va.get(), XmmConst(_mm_set1_epi8(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void AI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == 0)
-		{
-			if (rt != ra)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// add
-			const XmmLink& va = XmmGet(ra, rt);
-			c.paddd(va.get(), XmmConst(_mm_set1_epi32(i10)));
-			XmmFinalize(va, rt);
-		}
+		// add
+		const XmmLink& va = XmmGet(ra, rt);
+		c.paddd(va.get(), XmmConst(_mm_set1_epi32(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void AHI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == 0)
-		{
-			if (rt != ra)
-			{
-				// mov
-				const XmmLink& va = XmmGet(ra, rt);
-				XmmFinalize(va, rt);
-			}
-			// else nop
-		}
-		else
-		{
-			// add
-			const XmmLink& va = XmmGet(ra, rt);
-			c.paddw(va.get(), XmmConst(_mm_set1_epi16(i10)));
-			XmmFinalize(va, rt);
-		}
+		// add
+		const XmmLink& va = XmmGet(ra, rt);
+		c.paddw(va.get(), XmmConst(_mm_set1_epi16(i10)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void STQD(u32 rt, s32 i10, u32 ra) // i10 is shifted left by 4 while decoding
@@ -3331,56 +2689,26 @@ private:
 	}
 	void CLGTI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == -1)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra);
-			c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
-			c.pcmpgtd(va.get(), XmmConst(_mm_set1_epi32((u32)i10 - 0x80000000)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra);
+		c.psubd(va.get(), XmmConst(_mm_set1_epi32(0x80000000)));
+		c.pcmpgtd(va.get(), XmmConst(_mm_set1_epi32((u32)i10 - 0x80000000)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CLGTHI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == -1)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra);
-			c.psubw(va.get(), XmmConst(_mm_set1_epi16((u16)0x8000)));
-			c.pcmpgtw(va.get(), XmmConst(_mm_set1_epi16((u16)i10 - 0x8000)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra);
+		c.psubw(va.get(), XmmConst(_mm_set1_epi16((u16)0x8000)));
+		c.pcmpgtw(va.get(), XmmConst(_mm_set1_epi16((u16)i10 - 0x8000)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void CLGTBI(u32 rt, u32 ra, s32 i10)
 	{
-		if (i10 == -1)
-		{
-			// zero
-			const XmmLink& v0 = XmmAlloc(rt);
-			c.pxor(v0.get(), v0.get());
-			XmmFinalize(v0, rt);
-		}
-		else
-		{
-			const XmmLink& va = XmmGet(ra);
-			c.psubb(va.get(), XmmConst(_mm_set1_epi8((s8)0x80)));
-			c.pcmpgtb(va.get(), XmmConst(_mm_set1_epi8((s8)i10 - 0x80)));
-			XmmFinalize(va, rt);
-		}
+		const XmmLink& va = XmmGet(ra);
+		c.psubb(va.get(), XmmConst(_mm_set1_epi8((s8)0x80)));
+		c.pcmpgtb(va.get(), XmmConst(_mm_set1_epi8((s8)i10 - 0x80)));
+		XmmFinalize(va, rt);
 		LOG_OPCODE();
 	}
 	void HLGTI(u32 rt, u32 ra, s32 i10)
@@ -3484,44 +2812,6 @@ private:
 	}
 	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
-		/*WRAPPER_BEGIN(rc, rt, ra, rb);
-		const SPU_GPR_hdr _a = CPU.GPR[ra];
-		const SPU_GPR_hdr _b = CPU.GPR[rb];
-		for (int i = 0; i < 16; i++)
-		{
-			u8 b = CPU.GPR[rc]._u8[i];
-			if (b & 0x80)
-			{
-				if (b & 0x40)
-				{
-					if (b & 0x20)
-						CPU.GPR[rt]._u8[i] = 0x80;
-					else
-						CPU.GPR[rt]._u8[i] = 0xFF;
-				}
-				else
-					CPU.GPR[rt]._u8[i] = 0x00;
-			}
-			else
-			{
-				if (b & 0x10)
-					CPU.GPR[rt]._u8[i] = _b._u8[15 - (b & 0x0F)];
-				else
-					CPU.GPR[rt]._u8[i] = _a._u8[15 - (b & 0x0F)];
-			}
-		}
-		WRAPPER_END(rc, rt, ra, rb);*/
-
-		// hypothetical AVX-512 implementation:
-		// VPXORD mask, rc, [byte:0x0f] // 15 - rc (only for index bits)
-		// VPSHUFB res {k0}, ra, mask
-		// VPTESTMB k1 {k0}, rc, [byte:0x10]
-		// VPSHUFB res {k1}, rb, mask
-		// VPCMPNLTUB k1 {k0}, mask, [byte:0xc0]
-		// VPADDB res {k1}, res, [byte:0xff]
-		// VPCMPNLTUB k1 {k1}, mask, [byte:0xe0]
-		// VPSUBB res {k1}, res, [byte:0x7f]
-
 		const XmmLink& v0 = XmmGet(rc); // v0 = mask
 		const XmmLink& v1 = XmmAlloc();
 		const XmmLink& v2 = XmmCopy(v0); // v2 = mask
@@ -3687,7 +2977,7 @@ private:
 		}
 		else
 		{
-			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
+			throw "FMA: invalid case"; // should never happen
 		}
 		LOG_OPCODE();
 	}
@@ -3772,7 +3062,7 @@ private:
 		}
 		else
 		{
-			throw (std::string(__FUNCTION__) + std::string("(): invalid case")).c_str();
+			throw "FMS: invalid case"; // should never happen
 		}
 		LOG_OPCODE();
 	}
