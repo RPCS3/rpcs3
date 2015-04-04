@@ -342,15 +342,49 @@ static __forceinline uint64_t cntlz64(uint64_t arg)
 }
 
 // compare 16 packed unsigned bytes (greater than)
-static __forceinline __m128i _mm_cmpgt_epu8(__m128i A, __m128i B)
+inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
 	// (A xor 0x80) > (B xor 0x80)
-	return _mm_cmpgt_epi8(_mm_xor_si128(A, _mm_set1_epi8(-128)), _mm_xor_si128(B, _mm_set1_epi8(-128)));
+	const auto sign = _mm_set1_epi32(0x80808080);
+	return _mm_cmpgt_epi8(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
 }
 
-// compare 16 packed unsigned bytes (less or equal)
-static __forceinline __m128i _mm_cmple_epu8(__m128i A, __m128i B)
+inline __m128i sse_cmpgt_epu16(__m128i A, __m128i B)
 {
-	// ((B xor 0x80) > (A xor 0x80)) || A == B
-	return _mm_or_si128(_mm_cmpgt_epu8(B, A), _mm_cmpeq_epi8(A, B));
+	const auto sign = _mm_set1_epi32(0x80008000);
+	return _mm_cmpgt_epi16(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+inline __m128i sse_cmpgt_epu32(__m128i A, __m128i B)
+{
+	const auto sign = _mm_set1_epi32(0x80000000);
+	return _mm_cmpgt_epi32(_mm_xor_si128(A, sign), _mm_xor_si128(B, sign));
+}
+
+inline __m128 sse_exp2_ps(__m128 A)
+{
+	const auto x0 = _mm_max_ps(_mm_min_ps(A, _mm_set1_ps(127.4999961f)), _mm_set1_ps(-127.4999961f));
+	const auto x1 = _mm_add_ps(x0, _mm_set1_ps(0.5f));
+	const auto x2 = _mm_sub_epi32(_mm_cvtps_epi32(x1), _mm_and_si128(_mm_castps_si128(_mm_cmpnlt_ps(_mm_setzero_ps(), x1)), _mm_set1_epi32(1)));
+	const auto x3 = _mm_sub_ps(x0, _mm_cvtepi32_ps(x2));
+	const auto x4 = _mm_mul_ps(x3, x3);
+	const auto x5 = _mm_mul_ps(x3, _mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(x4, _mm_set1_ps(0.023093347705f)), _mm_set1_ps(20.20206567f)), x4), _mm_set1_ps(1513.906801f)));
+	const auto x6 = _mm_mul_ps(x5, _mm_rcp_ps(_mm_sub_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(233.1842117f), x4), _mm_set1_ps(4368.211667f)), x5)));
+	return _mm_mul_ps(_mm_add_ps(_mm_add_ps(x6, x6), _mm_set1_ps(1.0f)), _mm_castsi128_ps(_mm_slli_epi32(_mm_add_epi32(x2, _mm_set1_epi32(127)), 23)));
+}
+
+inline __m128 sse_log2_ps(__m128 A)
+{
+	const auto _1 = _mm_set1_ps(1.0f);
+	const auto _c = _mm_set1_ps(1.442695040f);
+	const auto x0 = _mm_max_ps(A, _mm_castsi128_ps(_mm_set1_epi32(0x00800000)));
+	const auto x1 = _mm_or_ps(_mm_and_ps(x0, _mm_castsi128_ps(_mm_set1_epi32(0x807fffff))), _1);
+	const auto x2 = _mm_rcp_ps(_mm_add_ps(x1, _1));
+	const auto x3 = _mm_mul_ps(_mm_sub_ps(x1, _1), x2);
+	const auto x4 = _mm_add_ps(x3, x3);
+	const auto x5 = _mm_mul_ps(x4, x4);
+	const auto x6 = _mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(-0.7895802789f), x5), _mm_set1_ps(16.38666457f)), x5), _mm_set1_ps(-64.1409953f));
+	const auto x7 = _mm_rcp_ps(_mm_add_ps(_mm_mul_ps(_mm_add_ps(_mm_mul_ps(_mm_set1_ps(-35.67227983f), x5), _mm_set1_ps(312.0937664f)), x5), _mm_set1_ps(-769.6919436f)));
+	const auto x8 = _mm_cvtepi32_ps(_mm_sub_epi32(_mm_srli_epi32(_mm_castps_si128(x0), 23), _mm_set1_epi32(127)));
+	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
 }

@@ -30,15 +30,27 @@ s32 sys_process_getppid()
 	return 0;
 }
 
-s32 sys_process_exit(s32 errorcode)
+s32 sys_process_exit(s32 status)
 {
-	sys_process.Warning("sys_process_exit(%d)", errorcode);
-	Emu.Pause();
-	sys_process.Success("Process finished");
-	CallAfter([]()
+	sys_process.Warning("sys_process_exit(status=0x%x)", status);
+
+	LV2_LOCK;
+
+	if (!Emu.IsStopped())
 	{
-		Emu.Stop();
-	});
+		sys_process.Success("Process finished");
+
+		CallAfter([]()
+		{
+			Emu.Stop();
+		});
+
+		while (!Emu.IsStopped())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	}
+
 	return CELL_OK;
 }
 

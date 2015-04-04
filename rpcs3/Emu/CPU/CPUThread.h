@@ -20,11 +20,19 @@ enum CPUThreadStatus
 	CPUThread_Step,
 };
 
+// CPU Thread Events
+enum : u64
+{
+	CPU_EVENT_STOP = (1ull << 0),
+};
+
 class CPUDecoder;
 
 class CPUThread : public ThreadBase
 {
 protected:
+	std::atomic<u64> m_events; // flags
+
 	u32 m_status;
 	u32 m_id;
 	u64 m_prio;
@@ -45,6 +53,8 @@ protected:
 	virtual void DumpInformation() override;
 
 public:
+	void AddEvent(const u64 event) { m_events |= event; }
+
 	virtual void InitRegs() = 0;
 
 	virtual void InitStack() = 0;

@@ -16,6 +16,9 @@
 
 using namespace PPU_instr;
 
+extern void initialize_ppu_exec_map();
+extern void fill_ppu_exec_map(u32 addr, u32 size);
+
 namespace loader
 {
 	namespace handlers
@@ -546,6 +549,16 @@ namespace loader
 
 			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
 			main_thread.gpr(11, OPD.addr()).gpr(12, Emu.GetMallocPageSize());
+
+			initialize_ppu_exec_map();
+
+			for (u32 page = 0; page < 0x20000000; page += 4096)
+			{
+				if (vm::check_addr(page, 4096))
+				{
+					fill_ppu_exec_map(page, 4096);
+				}
+			}
 
 			return ok;
 		}

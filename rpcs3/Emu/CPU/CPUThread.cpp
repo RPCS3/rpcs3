@@ -17,6 +17,7 @@ CPUThread* GetCurrentCPUThread()
 
 CPUThread::CPUThread(CPUThreadType type)
 	: ThreadBase("CPUThread")
+	, m_events(0)
 	, m_type(type)
 	, m_stack_size(0)
 	, m_stack_addr(0)
@@ -242,6 +243,7 @@ void CPUThread::Stop()
 	SendDbgCommand(DID_STOP_THREAD, this);
 
 	m_status = Stopped;
+	m_events |= CPU_EVENT_STOP;
 
 	if(static_cast<NamedThreadBase*>(this) != GetCurrentNamedThread())
 	{

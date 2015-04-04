@@ -88,6 +88,7 @@ union _CRT_ALIGN(16) u128
 	double _d[2];
 	__m128 vf;
 	__m128i vi;
+	__m128d vd;
 
 	class bit_array_128
 	{
@@ -202,14 +203,21 @@ union _CRT_ALIGN(16) u128
 	static u128 from32p(u32 value)
 	{
 		u128 ret;
-		ret.vi = _mm_set1_epi32((int)value);
+		ret.vi = _mm_set1_epi32(static_cast<s32>(value));
+		return ret;
+	}
+
+	static u128 from16p(u16 value)
+	{
+		u128 ret;
+		ret.vi = _mm_set1_epi16(static_cast<s16>(value));
 		return ret;
 	}
 
 	static u128 from8p(u8 value)
 	{
 		u128 ret;
-		ret.vi = _mm_set1_epi8((char)value);
+		ret.vi = _mm_set1_epi8(static_cast<s8>(value));
 		return ret;
 	}
 
@@ -227,14 +235,73 @@ union _CRT_ALIGN(16) u128
 		return ret;
 	}
 
+	static u128 fromF(__m128 value)
+	{
+		u128 ret;
+		ret.vf = value;
+		return ret;
+	}
+
+	static u128 fromD(__m128d value)
+	{
+		u128 ret;
+		ret.vd = value;
+		return ret;
+	}
+
 	static __forceinline u128 add8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));
 	}
 
+	static __forceinline u128 add16(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi16(left.vi, right.vi));
+	}
+
+	static __forceinline u128 add32(const u128& left, const u128& right)
+	{
+		return fromV(_mm_add_epi32(left.vi, right.vi));
+	}
+
+	static __forceinline u128 addfs(const u128& left, const u128& right)
+	{
+		return fromF(_mm_add_ps(left.vf, right.vf));
+	}
+
+	static __forceinline u128 addfd(const u128& left, const u128& right)
+	{
+		return fromD(_mm_add_pd(left.vd, right.vd));
+	}
+
 	static __forceinline u128 sub8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi8(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub16(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi16(left.vi, right.vi));
+	}
+
+	static __forceinline u128 sub32(const u128& left, const u128& right)
+	{
+		return fromV(_mm_sub_epi32(left.vi, right.vi));
+	}
+
+	static __forceinline u128 subfs(const u128& left, const u128& right)
+	{
+		return fromF(_mm_sub_ps(left.vf, right.vf));
+	}
+
+	static __forceinline u128 subfd(const u128& left, const u128& right)
+	{
+		return fromD(_mm_sub_pd(left.vd, right.vd));
+	}
+
+	static __forceinline u128 maxu8(const u128& left, const u128& right)
+	{
+		return fromV(_mm_max_epu8(left.vi, right.vi));
 	}
 
 	static __forceinline u128 minu8(const u128& left, const u128& right)
@@ -247,14 +314,14 @@ union _CRT_ALIGN(16) u128
 		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 gtu8(const u128& left, const u128& right)
+	static __forceinline u128 eq16(const u128& left, const u128& right)
 	{
-		return fromV(_mm_cmpgt_epu8(left.vi, right.vi));
+		return fromV(_mm_cmpeq_epi16(left.vi, right.vi));
 	}
 
-	static __forceinline u128 leu8(const u128& left, const u128& right)
+	static __forceinline u128 eq32(const u128& left, const u128& right)
 	{
-		return fromV(_mm_cmple_epu8(left.vi, right.vi));
+		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
 
 	bool operator == (const u128& right) const
@@ -285,6 +352,16 @@ union _CRT_ALIGN(16) u128
 	u128 operator ~ () const
 	{
 		return from64(~_u64[0], ~_u64[1]);
+	}
+
+	__forceinline bool is_any_1() const // check if any bit is 1
+	{
+		return _u64[0] || _u64[1];
+	}
+
+	__forceinline bool is_any_0() const // check if any bit is 0
+	{
+		return ~_u64[0] || ~_u64[1];
 	}
 
 	// result = (~left) & (right)

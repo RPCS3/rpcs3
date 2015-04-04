@@ -174,16 +174,17 @@ void ARMv7Thread::DoReset()
 
 void ARMv7Thread::DoRun()
 {
+	m_dec = nullptr;
+
 	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
-		//m_dec = new ARMv7Decoder(*new ARMv7DisAsm());
-	break;
-
 	case 1:
-	case 2:
 		m_dec = new ARMv7Decoder(context);
-	break;
+		break;
+	default:
+		LOG_ERROR(PPU, "Invalid CPU decoder mode: %d", Ini.CPUDecoderMode.GetValue());
+		Emu.Pause();
 	}
 }
 
@@ -228,6 +229,7 @@ void ARMv7Thread::FastCall(u32 addr)
 void ARMv7Thread::FastStop()
 {
 	m_status = Stopped;
+	m_events |= CPU_EVENT_STOP;
 }
 
 armv7_thread::armv7_thread(u32 entry, const std::string& name, u32 stack_size, s32 prio)

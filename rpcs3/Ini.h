@@ -247,8 +247,8 @@ public:
 	void Load()
 	{
 		// Core
-		CPUDecoderMode.Load(1);
-		SPUDecoderMode.Load(1);
+		CPUDecoderMode.Load(0);
+		SPUDecoderMode.Load(0);
 
 		// Graphics
 		GSRenderMode.Load(1);
