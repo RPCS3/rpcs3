@@ -13,6 +13,8 @@ typedef void(atexit_func_t)(vm::psv::ptr<void>);
 
 std::vector<std::function<void(ARMv7Context&)>> g_atexit;
 
+std::mutex g_atexit_mutex;
+
 std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g_count, u32 f_count, u32 v_count)
 {
 	std::string result;
@@ -152,7 +154,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("__cxa_atexit(func=*0x%x, arg=*0x%x, dso=*0x%x)", func, arg, dso);
 		
-		LV2_LOCK;
+		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
@@ -164,7 +166,7 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("__aeabi_atexit(arg=*0x%x, func=*0x%x, dso=*0x%x)", arg, func, dso);
 
-		LV2_LOCK;
+		std::lock_guard<std::mutex> lock(g_atexit_mutex);
 
 		g_atexit.insert(g_atexit.begin(), [func, arg, dso](ARMv7Context& context)
 		{
@@ -176,19 +178,27 @@ namespace sce_libc_func
 	{
 		sceLibc.Warning("exit()");
 
-		for (auto func : g_atexit)
+		std::lock_guard<std::mutex> lock(g_atexit_mutex);
+
+		if (!Emu.IsStopped())
 		{
-			func(context);
+			for (auto func : decltype(g_atexit)(std::move(g_atexit)))
+			{
+				func(context);
+			}
+
+			sceLibc.Success("Process finished");
+
+			CallAfter([]()
+			{
+				Emu.Stop();
+			});
+
+			while (!Emu.IsStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 		}
-
-		g_atexit.clear();
-
-		sceLibc.Success("Process finished");
-
-		CallAfter([]()
-		{
-			Emu.Stop();
-		});
 	}
 
 	void printf(ARMv7Context& context, vm::psv::ptr<const char> fmt) // va_args...

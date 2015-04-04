@@ -225,7 +225,7 @@ void ppu_interpreter::VCMPBFP(PPUThread& CPU, ppu_opcode_t op)
 	const auto b = CPU.VPR[op.vb].vf;
 	const auto sign = _mm_castsi128_ps(_mm_set1_epi32(0x80000000));
 	const auto bneg = _mm_xor_ps(b, sign);
-	CPU.VPR[op.vd].vf = _mm_or_ps(_mm_and_ps(_mm_cmple_ps(a, b), sign), _mm_and_ps(_mm_cmpge_ps(a, bneg), _mm_castsi128_ps(_mm_set1_epi32(0x40000000))));
+	CPU.VPR[op.vd].vf = _mm_or_ps(_mm_and_ps(_mm_cmpnle_ps(a, b), sign), _mm_and_ps(_mm_cmpnge_ps(a, bneg), _mm_castsi128_ps(_mm_set1_epi32(0x40000000))));
 }
 
 void ppu_interpreter::VCMPBFP_(PPUThread& CPU, ppu_opcode_t op)
