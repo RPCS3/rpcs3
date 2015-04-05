@@ -96,10 +96,10 @@ s32 cellAudioInit()
 					u16 buf_u16[out_buffer_size];
 					for (size_t i = 0; i < out_buffer_size; i += 8)
 					{
-						static const __m128 float2u16 = { 0x8000, 0x8000, 0x8000, 0x8000 };
+						const auto scale = _mm_set1_ps(0x8000);
 						(__m128i&)(buf_u16[i]) = _mm_packs_epi32(
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buffer[i]), float2u16)),
-							_mm_cvtps_epi32(_mm_mul_ps((__m128&)(buffer[i + 4]), float2u16)));
+							_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(buffer + i), scale)),
+							_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(buffer + i + 4), scale)));
 					}
 
 					if (!opened)

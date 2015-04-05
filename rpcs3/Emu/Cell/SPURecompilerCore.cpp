@@ -13,8 +13,6 @@
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
 
-const g_imm_table_struct g_imm_table;
-
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	: m_enc(new SPURecompiler(cpu, *this))
 	, inter(new SPUInterpreter(cpu))
@@ -25,11 +23,6 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	memset(entry, 0, sizeof(entry));
 	X86CpuInfo inf;
 	X86CpuUtil::detect(&inf);
-	if (!inf.hasFeature(kX86CpuFeatureSSE4_1))
-	{
-		LOG_ERROR(SPU, "SPU JIT requires SSE4.1 instruction set support");
-		Emu.Pause();
-	}
 }
 
 SPURecompilerCore::~SPURecompilerCore()
@@ -51,12 +44,12 @@ void SPURecompilerCore::Compile(u16 pos)
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
 	dis_asm.offset = vm::get_ptr<u8>(CPU.offset);
 
-	StringLogger stringLogger;
-	stringLogger.setOption(kLoggerOptionBinaryForm, true);
+	//StringLogger stringLogger;
+	//stringLogger.setOption(kLoggerOptionBinaryForm, true);
 
 	X86Compiler compiler(&runtime);
 	m_enc->compiler = &compiler;
-	compiler.setLogger(&stringLogger);
+	//compiler.setLogger(&stringLogger);
 
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
@@ -154,28 +147,22 @@ void SPURecompilerCore::Compile(u16 pos)
 	entry[start].pointer = compiler.make();
 	compiler.setLogger(nullptr); // crashes without it
 
-	rFile log;
-	log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
-	log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
-	log.Write(std::string(stringLogger.getString()));
-	if (!entry[start].pointer)
-	{
-		LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
-		log.Write("========== FAILED ============\n\n");
-		Emu.Pause();
-	}
-	else
-	{
-		log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
-			entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
-#ifdef _WIN32
-		//if (!RtlAddFunctionTable(&info, 1, (u64)entry[start].pointer))
-		//{
-		//	LOG_ERROR(Log::SPU, "RtlAddFunctionTable() failed");
-		//}
-#endif
-	}
-	log.Close();
+	//rFile log;
+	//log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
+	//log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
+	//log.Write(std::string(stringLogger.getString()));
+	//if (!entry[start].pointer)
+	//{
+	//	LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
+	//	log.Write("========== FAILED ============\n\n");
+	//	Emu.Pause();
+	//}
+	//else
+	//{
+	//	log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+	//}
+	//log.Close();
 	m_enc->compiler = nullptr;
 	first = false;
 }
@@ -217,9 +204,6 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 					i < (u32)pos + (u32)entry[pos].count)
 				{
 					runtime.release(entry[i].pointer);
-#ifdef _WIN32
-					//RtlDeleteFunctionTable(&entry[i].info);
-#endif
 					entry[i].pointer = nullptr;
 					for (u32 j = i; j < i + (u32)entry[i].count; j++)
 					{
@@ -264,7 +248,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 	}
 
 	u32 res = pos;
-	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_imm_table);
+	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_spu_imm);
 
 	if (res & 0x1000000)
 	{

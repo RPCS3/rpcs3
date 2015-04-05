@@ -22,6 +22,8 @@
 
 #include <cfenv>
 
+const g_spu_imm_table_t g_spu_imm;
+
 class spu_inter_func_list_t
 {
 	std::array<spu_inter_func_t, 2048> funcs;

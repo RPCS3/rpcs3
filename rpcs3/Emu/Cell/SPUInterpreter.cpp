@@ -18,26 +18,6 @@
 #define rotl32(x,r) (((u32)(x) << (r)) | ((u32)(x) >> (32 - (r))))
 #endif
 
-class spu_scale_table_t
-{
-	std::array<__m128, 155 + 174> m_data;
-
-public:
-	spu_scale_table_t()
-	{
-		for (s32 i = -155; i < 174; i++)
-		{
-			m_data[i + 155] = _mm_set1_ps(static_cast<float>(exp2(i)));
-		}
-	}
-
-	__forceinline __m128 operator [] (s32 scale) const
-	{
-		return m_data[scale + 155];
-	}
-}
-const g_spu_scale_table;
-
 
 void spu_interpreter::DEFAULT(SPUThread& CPU, spu_opcode_t op)
 {
@@ -405,17 +385,17 @@ void spu_interpreter::GBB(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FSM(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = g_imm_table.fsm_table[CPU.GPR[op.ra]._u32[3] & 0xf];
+	CPU.GPR[op.rt] = g_spu_imm.fsm[CPU.GPR[op.ra]._u32[3] & 0xf];
 }
 
 void spu_interpreter::FSMH(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = g_imm_table.fsmh_table[CPU.GPR[op.ra]._u32[3] & 0xff];
+	CPU.GPR[op.rt] = g_spu_imm.fsmh[CPU.GPR[op.ra]._u32[3] & 0xff];
 }
 
 void spu_interpreter::FSMB(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = g_imm_table.fsmb_table[CPU.GPR[op.ra]._u32[3] & 0xffff];
+	CPU.GPR[op.rt] = g_spu_imm.fsmb[CPU.GPR[op.ra]._u32[3] & 0xffff];
 }
 
 void spu_interpreter::FREST(SPUThread& CPU, spu_opcode_t op)
@@ -436,17 +416,17 @@ void spu_interpreter::LQX(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ROTQBYBI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.rldq_pshufb[CPU.GPR[op.rb]._u32[3] >> 3 & 0xf]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.rldq_pshufb[CPU.GPR[op.rb]._u32[3] >> 3 & 0xf].vi);
 }
 
 void spu_interpreter::ROTQMBYBI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.srdq_pshufb[-(CPU.GPR[op.rb]._s32[3] >> 3) & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.srdq_pshufb[-(CPU.GPR[op.rb]._s32[3] >> 3) & 0x1f].vi);
 }
 
 void spu_interpreter::SHLQBYBI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.sldq_pshufb[CPU.GPR[op.rb]._u32[3] >> 3 & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.sldq_pshufb[CPU.GPR[op.rb]._u32[3] >> 3 & 0x1f].vi);
 }
 
 void spu_interpreter::CBX(SPUThread& CPU, spu_opcode_t op)
@@ -500,17 +480,17 @@ void spu_interpreter::SHLQBI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ROTQBY(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.rldq_pshufb[CPU.GPR[op.rb]._u32[3] & 0xf]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.rldq_pshufb[CPU.GPR[op.rb]._u32[3] & 0xf].vi);
 }
 
 void spu_interpreter::ROTQMBY(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.srdq_pshufb[-CPU.GPR[op.rb]._s32[3] & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.srdq_pshufb[-CPU.GPR[op.rb]._s32[3] & 0x1f].vi);
 }
 
 void spu_interpreter::SHLQBY(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.sldq_pshufb[CPU.GPR[op.rb]._u32[3] & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.sldq_pshufb[CPU.GPR[op.rb]._u32[3] & 0x1f].vi);
 }
 
 void spu_interpreter::ORX(SPUThread& CPU, spu_opcode_t op)
@@ -569,17 +549,17 @@ void spu_interpreter::SHLQBII(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::ROTQBYI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.rldq_pshufb[op.i7 & 0xf]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.rldq_pshufb[op.i7 & 0xf].vi);
 }
 
 void spu_interpreter::ROTQMBYI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.srdq_pshufb[-op.si7 & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.srdq_pshufb[-op.si7 & 0x1f].vi);
 }
 
 void spu_interpreter::SHLQBYI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_imm_table.sldq_pshufb[op.i7 & 0x1f]);
+	CPU.GPR[op.rt].vi = _mm_shuffle_epi8(CPU.GPR[op.ra].vi, g_spu_imm.sldq_pshufb[op.i7 & 0x1f].vi);
 }
 
 void spu_interpreter::NOP(SPUThread& CPU, spu_opcode_t op)
@@ -770,9 +750,9 @@ void spu_interpreter::CEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYHHU(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto a = _mm_srli_epi32(CPU.GPR[op.ra].vi, 16);
-	const auto b = _mm_srli_epi32(CPU.GPR[op.rb].vi, 16);
-	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b));
+	const auto a = CPU.GPR[op.ra].vi;
+	const auto b = CPU.GPR[op.rb].vi;
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_srli_epi32(_mm_mullo_epi16(a, b), 16), _mm_and_si128(_mm_mulhi_epu16(a, b), _mm_set1_epi32(0xffff0000)));
 }
 
 void spu_interpreter::ADDX(SPUThread& CPU, spu_opcode_t op)
@@ -810,9 +790,9 @@ void spu_interpreter::MPYHHA(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYHHAU(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto a = _mm_srli_epi32(CPU.GPR[op.ra].vi, 16);
-	const auto b = _mm_srli_epi32(CPU.GPR[op.rb].vi, 16);
-	CPU.GPR[op.rt].vi = _mm_add_epi32(CPU.GPR[op.rt].vi, _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b)));
+	const auto a = CPU.GPR[op.ra].vi;
+	const auto b = CPU.GPR[op.rb].vi;
+	CPU.GPR[op.rt].vi = _mm_add_epi32(CPU.GPR[op.rt].vi, _mm_or_si128(_mm_srli_epi32(_mm_mullo_epi16(a, b), 16), _mm_and_si128(_mm_mulhi_epu16(a, b), _mm_set1_epi32(0xffff0000))));
 }
 
 void spu_interpreter::FSCRRD(SPUThread& CPU, spu_opcode_t op)
@@ -890,9 +870,9 @@ void spu_interpreter::DFCMEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYU(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto a = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0xffff));
-	const auto b = _mm_and_si128(CPU.GPR[op.rb].vi, _mm_set1_epi32(0xffff));
-	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_mullo_epi16(a, b));
+	const auto a = CPU.GPR[op.ra].vi;
+	const auto b = CPU.GPR[op.rb].vi;
+	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, b), 16), _mm_and_si128(_mm_mullo_epi16(a, b), _mm_set1_epi32(0xffff)));
 }
 
 void spu_interpreter::CEQB(SPUThread& CPU, spu_opcode_t op)
@@ -907,8 +887,8 @@ void spu_interpreter::FI(SPUThread& CPU, spu_opcode_t op)
 	const auto mask_sf = _mm_set1_epi32(0x000003ff); // step fraction mask
 	const auto mask_yf = _mm_set1_epi32(0x0007ffff); // Y fraction mask (bits 13..31)
 	const auto base = _mm_or_ps(_mm_and_ps(CPU.GPR[op.rb].vf, mask_bf), _mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
-	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.rb].vi, mask_sf)), g_spu_scale_table[-13]);
-	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.ra].vi, mask_yf)), g_spu_scale_table[-19]);
+	const auto step = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.rb].vi, mask_sf)), _mm_set1_ps(exp2f(-13)));
+	const auto y = _mm_mul_ps(_mm_cvtepi32_ps(_mm_and_si128(CPU.GPR[op.ra].vi, mask_yf)), _mm_set1_ps(exp2f(-19)));
 	CPU.GPR[op.rt].vf = _mm_or_ps(_mm_and_ps(mask_se, CPU.GPR[op.rb].vf), _mm_andnot_ps(mask_se, _mm_sub_ps(base, _mm_mul_ps(step, y))));
 }
 
@@ -923,27 +903,27 @@ void spu_interpreter::HEQ(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::CFLTS(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto scaled = _mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_scale_table[173 - op.i8]);
+	const auto scaled = _mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_imm.scale[173 - op.i8]);
 	CPU.GPR[op.rt].vi = _mm_xor_si128(_mm_cvttps_epi32(scaled), _mm_castps_si128(_mm_cmpge_ps(scaled, _mm_set1_ps(0x80000000))));
 }
 
 void spu_interpreter::CFLTU(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto scaled1 = _mm_max_ps(_mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_scale_table[173 - op.i8]), _mm_set1_ps(0.0f));
+	const auto scaled1 = _mm_max_ps(_mm_mul_ps(CPU.GPR[op.ra].vf, g_spu_imm.scale[173 - op.i8]), _mm_set1_ps(0.0f));
 	const auto scaled2 = _mm_and_ps(_mm_sub_ps(scaled1, _mm_set1_ps(0x80000000)), _mm_cmpge_ps(scaled1, _mm_set1_ps(0x80000000)));
 	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_or_si128(_mm_cvttps_epi32(scaled1), _mm_cvttps_epi32(scaled2)), _mm_castps_si128(_mm_cmpge_ps(scaled1, _mm_set1_ps(0x100000000))));
 }
 
 void spu_interpreter::CSFLT(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_cvtepi32_ps(CPU.GPR[op.ra].vi), g_spu_scale_table[op.i8 - 155]);
+	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_cvtepi32_ps(CPU.GPR[op.ra].vi), g_spu_imm.scale[op.i8 - 155]);
 }
 
 void spu_interpreter::CUFLT(SPUThread& CPU, spu_opcode_t op)
 {
 	const auto a = CPU.GPR[op.ra].vi;
 	const auto fix = _mm_and_ps(_mm_castsi128_ps(_mm_srai_epi32(a, 31)), _mm_set1_ps(0x80000000));
-	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(a, _mm_set1_epi32(0x7fffffff))), fix), g_spu_scale_table[op.i8 - 155]);
+	CPU.GPR[op.rt].vf = _mm_mul_ps(_mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(a, _mm_set1_epi32(0x7fffffff))), fix), g_spu_imm.scale[op.i8 - 155]);
 }
 
 
@@ -1013,7 +993,7 @@ void spu_interpreter::BR(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::FSMBI(SPUThread& CPU, spu_opcode_t op)
 {
-	CPU.GPR[op.rt].vi = g_imm_table.fsmb_table[op.i16];
+	CPU.GPR[op.rt] = g_spu_imm.fsmb[op.i16];
 }
 
 void spu_interpreter::BRSL(SPUThread& CPU, spu_opcode_t op)
@@ -1177,7 +1157,7 @@ void spu_interpreter::MPYI(SPUThread& CPU, spu_opcode_t op)
 
 void spu_interpreter::MPYUI(SPUThread& CPU, spu_opcode_t op)
 {
-	const auto a = _mm_and_si128(CPU.GPR[op.ra].vi, _mm_set1_epi32(0xffff));
+	const auto a = CPU.GPR[op.ra].vi;
 	const auto i = _mm_set1_epi32(op.si10 & 0xffff);
 	CPU.GPR[op.rt].vi = _mm_or_si128(_mm_slli_epi32(_mm_mulhi_epu16(a, i), 16), _mm_mullo_epi16(a, i));
 }
