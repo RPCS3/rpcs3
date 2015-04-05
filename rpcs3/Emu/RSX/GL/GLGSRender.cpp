@@ -1089,6 +1089,7 @@ void GLGSRender::InitVertexData()
 
 void GLGSRender::InitFragmentData()
 {
+	/*
 	if (!m_cur_fragment_prog)
 	{
 		LOG_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
@@ -1108,6 +1109,7 @@ void GLGSRender::InitFragmentData()
 		glUniform4f(l, c.second.x, c.second.y, c.second.z, c.second.w);
 		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
 	}
+	*/
 
 	//if (m_fragment_constants.GetCount())
 	//	LOG_NOTICE(HLE, "");
@@ -1190,17 +1192,47 @@ bool GLGSRender::LoadProgram()
 	checkForGlError("gl::gpu_program::target::fragment");
 
 	std::string vertex_program_source =
-		"!!ARBvp1.0\n"
-		"OPTION NV_vertex_program3;\n"
-		"MOV result.position, vertex.attrib[0];\n"
-		"MOV result.color, vertex.color;\n"
-		"END";
+		gl::vertex_program::decompiler(m_vertex_program_data)
+		.decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_transform_constants)
+		.shader();
 	gl::gpu_program::enable(gl::gpu_program::target::vertex);
 	gl::gpu_program vertex_program(gl::gpu_program::target::vertex, vertex_program_source);
 	vertex_program.bind();
+
 	LOG_ERROR(RSX, vertex_program_source.c_str());
 	LOG_ERROR(RSX, vertex_program.error().c_str());
 	checkForGlError("gl::gpu_program::target::vertex");
+
+	f32 viewport_x = f32(methodRegisters[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
+	f32 viewport_y = f32(methodRegisters[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
+	f32 viewport_w = f32(methodRegisters[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
+	f32 viewport_h = f32(methodRegisters[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+	f32 viewport_near = (f32&)methodRegisters[NV4097_SET_CLIP_MIN];
+	f32 viewport_far = (f32&)methodRegisters[NV4097_SET_CLIP_MAX];
+
+	f32 viewport_offset_x = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)];
+	f32 viewport_offset_y = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)];
+	f32 viewport_offset_z = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
+	f32 viewport_offset_w = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 3)];
+
+	f32 viewport_scale_x = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)];
+	f32 viewport_scale_y = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)];
+	f32 viewport_scale_z = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
+	f32 viewport_scale_w = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 3)];
+
+	glm::mat4 scaleOffsetMat(1.f);
+
+	//Scale
+	scaleOffsetMat[0][0] = viewport_scale_x / (RSXThread::m_width / 2.f);
+	scaleOffsetMat[1][1] = viewport_scale_y / (RSXThread::m_height / 2.f);
+	scaleOffsetMat[2][2] = viewport_scale_z;
+
+	// Offset
+	scaleOffsetMat[0][3] = viewport_offset_x / (RSXThread::m_width / 2.f) - 1.f;
+	scaleOffsetMat[1][3] = viewport_offset_y / (RSXThread::m_height / 2.f) - 1.f;
+	scaleOffsetMat[2][3] = viewport_offset_z - (/*viewport_far - viewport_near*/1) * .5f;
+
+	vertex_program.matrix[0] = scaleOffsetMat;
 
 	/*
 	m_cur_fragment_prog->ctrl = m_shader_ctrl;

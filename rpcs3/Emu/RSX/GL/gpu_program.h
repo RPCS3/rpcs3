@@ -351,7 +351,15 @@ namespace gl
 
 		public:
 			argument& mask(mask_t mask) { m_mask = mask; return *this; }
-			argument& mask(const std::string& mask) { m_mask.append(mask); return *this; }
+			argument& mask(const std::string& mask)
+			{
+				if (!mask.empty())
+				{
+					m_mask.append(mask);
+				}
+
+				return *this;
+			}
 			argument& neg(bool value = true) { m_neg = value; return *this; }
 			argument& abs(bool value = true) { m_abs = value; return *this; }
 
@@ -365,11 +373,75 @@ namespace gl
 			}
 		};
 
-		struct operation
+		class operation
 		{
-			std::string label;
-			std::string instruction;
-			std::vector<argument> args;
+			std::string m_label;
+			std::string m_instruction;
+			std::string m_condition;
+			std::vector<argument> m_arguments;
+
+		public:
+			operation() = default;
+			operation(const std::string& instruction)
+				: m_instruction(instruction)
+			{
+
+			}
+
+			std::string label() const
+			{
+				return m_label;
+			}
+
+			std::string instruction() const
+			{
+				return m_instruction;
+			}
+
+			std::string condition() const
+			{
+				return m_condition;
+			}
+
+			std::vector<argument>& arguments()
+			{
+				return m_arguments;
+			}
+
+			const std::vector<argument>& arguments() const
+			{
+				return m_arguments;
+			}
+
+			operation& label(const std::string& value)
+			{
+				m_label = value;
+				return *this;
+			}
+
+			operation& instruction(const std::string& value)
+			{
+				m_instruction = value;
+				return *this;
+			}
+
+			operation& condition(const std::string& value)
+			{
+				m_condition = value;
+				return *this;
+			}
+
+			operation& arguments(const std::vector<argument>& value)
+			{
+				m_arguments = value;
+				return *this;
+			}
+
+			operation& argument(const argument& value)
+			{
+				m_arguments.push_back(value);
+				return *this;
+			}
 		};
 
 		std::string header;
@@ -402,23 +474,23 @@ namespace gl
 
 				if (info.value_f32[0] == info.value_f32[1] && info.value_f32[1] == info.value_f32[2] && info.value_f32[2] == info.value_f32[3])
 				{
-					result += "{" + std::to_string(info.value_f32[0]) + "}";
+					result += "{" + fmt::format("%g", info.value_f32[0]) + "}";
 					mask.append_front("xxxx");
 				}
 				else if (info.value_f32[0] == info.value_f32[1] && info.value_f32[2] == info.value_f32[3])
 				{
-					result += "{" + std::to_string(info.value_f32[0]) + ", " + std::to_string(info.value_f32[0]) + "}";
+					result += "{" + fmt::format("%g", info.value_f32[0]) + ", " + fmt::format("%g", info.value_f32[1]) + "}";
 					mask.append_front("xxyy");
 				}
 				else
 				{
 					result +=
 						"{" +
-						std::to_string(info.value_f32[0]) + "," +
-						std::to_string(info.value_f32[1]) + "," +
-						std::to_string(info.value_f32[2]) + "," +
-						std::to_string(info.value_f32[3])
-						+ "}";
+						fmt::format("%g", info.value_f32[0]) + ", " +
+						fmt::format("%g", info.value_f32[1]) + ", " +
+						fmt::format("%g", info.value_f32[2]) + ", " +
+						fmt::format("%g", info.value_f32[3]) +
+						"}";
 				}
 			}
 			break;
@@ -443,12 +515,12 @@ namespace gl
 			{
 				auto &info = operations[arg.index];
 
-				if (info.label.empty())
+				if (info.label().empty())
 				{
 					throw std::runtime_error("bad label");
 				}
 
-				result += info.label;
+				result += info.label();
 			}
 			break;
 			}
@@ -480,26 +552,32 @@ namespace gl
 			result += "\n#code\n";
 			for (auto &operation : operations)
 			{
-				if (!operation.label.empty())
+				if (!operation.label().empty())
 				{
-					result += operation.label + ":\n";
+					result += operation.label() + ":\n";
 				}
 
-				result += "\t" + operation.instruction + " ";
+				result += "\t" + operation.instruction() + " ";
 
 				bool is_first = true;
-				for (auto &arg : operation.args)
+				for (auto &arg : operation.arguments())
 				{
-					if (is_first)
-					{
-						is_first = false;
-					}
-					else
+					if (!is_first)
 					{
 						result += ", ";
 					}
 
 					result += get(arg);
+
+					if (is_first)
+					{
+						is_first = false;
+
+						if (!operation.condition().empty())
+						{
+							result += "(" + operation.condition() + ")";
+						}
+					}
 				}
 
 				result += ";\n";
@@ -513,6 +591,7 @@ namespace gl
 	struct gpu_program_builder
 	{
 		typedef _context_t context_t;
+		typedef typename _context_t::operation operation_t;
 		context_t context;
 
 		struct predeclared_variable_t : context_t::argument
@@ -641,20 +720,22 @@ namespace gl
 			return result;
 		}
 
-		void op(const std::string& instruction)
+		operation_t& op(const std::string& instruction)
 		{
-			context_t::operation operation;
-			operation.instruction = instruction;
+			context_t::operation operation(instruction);
+			size_t index = context.operations.size();
 			context.operations.push_back(operation);
+			return context.operations[index];
 		}
 
 		template<typename ...T>
-		void op(const std::string& instruction, T... args)
+		operation_t& op(const std::string& instruction, T... args)
 		{
-			context_t::operation operation;
-			operation.instruction = instruction;
-			operation.args = std::vector<context_t::argument> { static_cast<context_t::argument>(args)...};
+			context_t::operation operation(instruction);
+			operation.arguments(std::vector<context_t::argument> { static_cast<context_t::argument>(args)...});
+			size_t index = context.operations.size();
 			context.operations.push_back(operation);
+			return context.operations[index];
 		}
 
 		void link()
@@ -662,7 +743,7 @@ namespace gl
 			//initialize labels
 			for (auto &label : labels)
 			{
-				context.operations[label.first].label = label.second;
+				context.operations[label.first].label(label.second);
 			}
 		}
 	};
