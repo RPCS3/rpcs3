@@ -388,9 +388,9 @@ namespace gl
 					case RSX_FP_OPCODE_UP4: op(instr("UP4", F | I | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_DDX: op(instr("DDX", F | I | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_DDY: op(instr("DDY", F | I | H), arg(dst), arg(src0)); break;
-					case RSX_FP_OPCODE_TEX: op(instr("TEX", F | I | H), arg(dst), texture(), predeclared_variable("2D")); break;
-					case RSX_FP_OPCODE_TXP: op(instr("TXP", F | I | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
-					case RSX_FP_OPCODE_TXD: op(instr("TXD", F | I | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TEX: op(instr("TEX"), arg(dst), arg(src0), texture(), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TXP: op(instr("TXP"), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TXD: op(instr("TXD"), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
 					case RSX_FP_OPCODE_RCP: op(instr("RCP", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_RSQ: op(instr("RSQ", F | I | C | S | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_EX2: op(instr("EX2", F | I | C | S | H), arg(dst), arg(src0).mask("x")); break;
