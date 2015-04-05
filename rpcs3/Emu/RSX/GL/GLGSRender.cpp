@@ -1180,28 +1180,39 @@ bool GLGSRender::LoadProgram()
 		return false;
 	}
 
-	std::string fragment_program_source = gl::fragment_program::decompiler(vm::ptr<u32>::make(m_cur_fragment_prog->addr))
-		.decompile(m_shader_ctrl)
-		.shader();
+	gl::gpu_program vertex_program;
 
-	gl::gpu_program::enable(gl::gpu_program::target::fragment);
-	gl::gpu_program fragment_program(gl::gpu_program::target::fragment, fragment_program_source);
-	fragment_program.bind();
-	LOG_ERROR(RSX, fragment_program_source.c_str());
-	LOG_ERROR(RSX, fragment_program.error().c_str());
-	checkForGlError("gl::gpu_program::target::fragment");
+	try
+	{
+		std::string fragment_program_source = gl::fragment_program::decompiler(vm::ptr<u32>::make(m_cur_fragment_prog->addr))
+			.decompile(m_shader_ctrl)
+			.shader();
 
-	std::string vertex_program_source =
-		gl::vertex_program::decompiler(m_vertex_program_data)
-		.decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_transform_constants)
-		.shader();
-	gl::gpu_program::enable(gl::gpu_program::target::vertex);
-	gl::gpu_program vertex_program(gl::gpu_program::target::vertex, vertex_program_source);
-	vertex_program.bind();
+		gl::gpu_program::enable(gl::gpu_program::target::fragment);
+		gl::gpu_program fragment_program(gl::gpu_program::target::fragment, fragment_program_source);
+		fragment_program.bind();
+		LOG_ERROR(RSX, fragment_program_source.c_str());
+		LOG_ERROR(RSX, fragment_program.error().c_str());
+		checkForGlError("gl::gpu_program::target::fragment");
 
-	LOG_ERROR(RSX, vertex_program_source.c_str());
-	LOG_ERROR(RSX, vertex_program.error().c_str());
-	checkForGlError("gl::gpu_program::target::vertex");
+		std::string vertex_program_source =
+			gl::vertex_program::decompiler(m_vertex_program_data)
+			.decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_transform_constants)
+			.shader();
+		gl::gpu_program::enable(gl::gpu_program::target::vertex);
+		vertex_program.create(gl::gpu_program::target::vertex, vertex_program_source);
+		vertex_program.bind();
+
+		LOG_ERROR(RSX, vertex_program_source.c_str());
+		LOG_ERROR(RSX, vertex_program.error().c_str());
+		checkForGlError("gl::gpu_program::target::vertex");
+	}
+	catch (const std::runtime_error& e)
+	{
+		LOG_ERROR(RSX, e.what());
+
+		return false;
+	}
 
 	f32 viewport_x = f32(methodRegisters[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
 	f32 viewport_y = f32(methodRegisters[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);

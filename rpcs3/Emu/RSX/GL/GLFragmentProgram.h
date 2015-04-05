@@ -117,6 +117,7 @@ namespace gl
 
 			bool next_is_constant = false;
 
+			std::unordered_map<u32, std::vector<std::string>> custom_instruction;
 			std::string m_shader;
 
 		public:
@@ -176,20 +177,16 @@ namespace gl
 
 				case 2: //constant
 				{
-					static f32 c0;
-					static f32 c1;
-					static f32 c2;
-					static f32 c3;
+					f32 c0;
+					f32 c1;
+					f32 c2;
+					f32 c3;
 
-					if (!next_is_constant)
-					{
-						(u32&)c0 = swap_bytes(m_data[0]);
-						(u32&)c1 = swap_bytes(m_data[1]);
-						(u32&)c2 = swap_bytes(m_data[2]);
-						(u32&)c3 = swap_bytes(m_data[3]);
-
-						next_is_constant = true;
-					}
+					(u32&)c0 = swap_bytes(m_data[0]);
+					(u32&)c1 = swap_bytes(m_data[1]);
+					(u32&)c2 = swap_bytes(m_data[2]);
+					(u32&)c3 = swap_bytes(m_data[3]);
+					next_is_constant = true;
 
 					result = constant(c0, c1, c2, c3);
 				}
@@ -324,18 +321,38 @@ namespace gl
 					}
 				}
 
+				if (flags & instr_flag::S)
+				{
+					if (!src1.scale && dst.saturate)
+					{
+						instruction += "_SAT";
+					}
+				}
+
 				return instruction;
 			}
 
 		public:
 			decompiler& decompile(u32 control)
 			{
-				for (int i = 0; i < 512; ++i)
+				u32 begin = m_data.addr();
+				//for (int i = 0; i < 512; ++i)
+				while (true)
 				{
 					if (next_is_constant)
 					{
 						m_data += 4;
 						next_is_constant = false;
+					}
+
+					{
+						auto finded = custom_instruction.find(m_data.addr() - begin);
+
+						if (finded != custom_instruction.end())
+						{
+							for (auto &value : finded->second)
+								gpu_program_builder<>::op(value);
+						}
 					}
 
 					dst.HEX = swap_bytes(m_data[0]);
@@ -366,24 +383,24 @@ namespace gl
 					case RSX_FP_OPCODE_SEQ: op(instr("SEQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_FRC: op(instr("FRC", F | C | S | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_FLR: op(instr("FLR", F | I | C | S | H), arg(dst), arg(src0)); break;
-					case RSX_FP_OPCODE_KIL: op(instr("KIL", F | I | H), arg(src0)); break;
-					case RSX_FP_OPCODE_PK4: op(instr("PK4", F | I | H), arg(src0)); break;
-					case RSX_FP_OPCODE_UP4: op(instr("UP4", F | I | H), arg(src0)); break;
-					case RSX_FP_OPCODE_DDX: op(instr("DDX", F | I | H), arg(src0)); break;
+					case RSX_FP_OPCODE_KIL: op(instr("KIL", F | I | H), arg(dst), arg(src0)); break;
+					case RSX_FP_OPCODE_PK4: op(instr("PK4", F | I | H), arg(dst), arg(src0)); break;
+					case RSX_FP_OPCODE_UP4: op(instr("UP4", F | I | H), arg(dst), arg(src0)); break;
+					case RSX_FP_OPCODE_DDX: op(instr("DDX", F | I | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_DDY: op(instr("DDY", F | I | H), arg(dst), arg(src0)); break;
-					//case RSX_FP_OPCODE_TEX: op(instr("TEX", F | I | H), arg(dst), std::to_string(dst.tex_num), predeclared_variable("2D")); break;
-					case RSX_FP_OPCODE_TXP: op(instr("TXP", F | I | H), arg(dst), arg(src0), predeclared_variable("2D")); break;
-					case RSX_FP_OPCODE_TXD: op(instr("TXD", F | I | H), arg(dst), arg(src0), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TEX: op(instr("TEX", F | I | H), arg(dst), texture(), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TXP: op(instr("TXP", F | I | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TXD: op(instr("TXD", F | I | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
 					case RSX_FP_OPCODE_RCP: op(instr("RCP", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_RSQ: op(instr("RSQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_EX2: op(instr("EX2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_LG2: op(instr("LG2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_RSQ: op(instr("RSQ", F | I | C | S | H), arg(dst), arg(src0)); break;
+					case RSX_FP_OPCODE_EX2: op(instr("EX2", F | I | C | S | H), arg(dst), arg(src0).mask("x")); break;
+					case RSX_FP_OPCODE_LG2: op(instr("LG2", F | I | C | S | H), arg(dst), arg(src0).mask("x")); break;
 					case RSX_FP_OPCODE_LIT: op(instr("LIT", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_LRP: op(instr("LRP", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_STR: op(instr("STR", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_SFL: op(instr("SFL", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_COS: op(instr("COS", F | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_SIN: op(instr("SIN", F | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_COS: op(instr("COS", F | C | S | H), arg(dst), arg(src0).mask("x")); break;
+					case RSX_FP_OPCODE_SIN: op(instr("SIN", F | C | S | H), arg(dst), arg(src0).mask("x")); break;
 					case RSX_FP_OPCODE_PK2: op(instr("PK2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_UP2: op(instr("UP2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_POW: op(instr("POW", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
@@ -395,31 +412,85 @@ namespace gl
 					case RSX_FP_OPCODE_PKG: op(instr("PKG", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_UPG: op(instr("UPG", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_DP2A: op(instr("DP2A", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_TXL: op(instr("TXL", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_TXB: op(instr("TXB", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_TXL: op(instr("TXL", F | I | C | S | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
+					case RSX_FP_OPCODE_TXB: op(instr("TXB", F | I | C | S | H), arg(dst), texture(), arg(src0), predeclared_variable("2D")); break;
 					case RSX_FP_OPCODE_TEXBEM: op(instr("TEXBEM", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_TXPBEM: op(instr("TXPBEM", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_BEMLUM: op(instr("BEMLUM", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_REFL: op(instr("REFL", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_TIMESWTEX: op(instr("TIMESWTEX", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_DP2: op(instr("DP2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_NRM: op(instr("NRM", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_NRM: op(instr("NRM", F | I | C | S | H), arg(dst), arg(src0)); break;
 					case RSX_FP_OPCODE_DIV: op(instr("DIV", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					case RSX_FP_OPCODE_DIVSQ: op(instr("DIVSQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_DIVSQ:
+					{
+						auto arg_dst = arg(dst);
+						auto arg_src0 = arg(src0);
+						auto arg_src1 = arg(src1).mask("x");
+						auto arg_temp = variable("TEMP", "local_temp").mask(arg_src1.get_mask());
+
+						//DST = SRC0 * inversesqrt(SRC1)
+						op(instr("RSQ", F | I | C | S | H), arg_temp, arg_src1);
+						op(instr("MUL", F | I | C | S | H), arg_dst, arg_src0, arg_temp);
+					}
+					break;
 					case RSX_FP_OPCODE_LIF: op(instr("LIF", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					case RSX_FP_OPCODE_FENCT: /*op(instr("FENCT", F | I | C | S | H), arg(dst), arg(src0), arg(src1));*/ break;
 					case RSX_FP_OPCODE_FENCB: /*op(instr("FENCB", F | I | C | S | H), arg(dst), arg(src0), arg(src1));*/ break;
 
-					//case RSX_FP_OPCODE_BRK: op(instr("BRK"), arg(src0)); break;
+					case RSX_FP_OPCODE_BRK: op("BRK"); break;
 					//case RSX_FP_OPCODE_CAL: op(instr("CAL"), arg(src0)); break;
-					//case RSX_FP_OPCODE_IFE: op(instr("IFE", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
-					//case RSX_FP_OPCODE_LOOP: op(instr("SEQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+					case RSX_FP_OPCODE_IFE:
+						if (src2.end_offset != src1.else_offset)
+							custom_instruction[src1.else_offset << 2].emplace_back("ELSE");
+						custom_instruction[src2.end_offset << 2].emplace_back("ENDIF");
+						gpu_program_builder<>::op("IF", condition());
+						break;
+					case RSX_FP_OPCODE_LOOP:
+						op(instr("LOOP"), predeclared_variable(fmt::format("{%d, %d, %d}", src1.end_counter, src1.init_counter, src1.increment)));
+						custom_instruction[src2.end_offset << 2].emplace_back("ENDLOOP");
+						break;
 					//case RSX_FP_OPCODE_REP: op(instr("SEQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					//case RSX_FP_OPCODE_RET: op(instr("SEQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 					default:
 						throw std::runtime_error(fmt::format("Unknown/illegal fp instruction: 0x%x", opcode));
 						//LOG_ERROR(RSX, "Unknown/illegal fp instruction: 0x%x", opcode);
 						break;
+					}
+
+					if (src1.scale)
+					{
+						std::string instruction;
+						int value = 0;
+						switch (src1.scale)
+						{
+						case 0: break;
+						case 1: value = 2; instruction = "MUL"; break;
+						case 2: value = 4; instruction = "MUL"; break;
+						case 3: value = 8; instruction = "MUL"; break;
+						case 5: value = 2; instruction = "DIV"; break;
+						case 6: value = 4; instruction = "DIV"; break;
+						case 7: value = 8; instruction = "DIV"; break;
+
+						default:
+							throw std::runtime_error(fmt::format("Bad scale: %d", fmt::by_value(src1.scale)));
+						}
+
+						if (dst.saturate)
+							instruction += "_SAT";
+
+						auto arg_dst = arg(dst);
+
+						std::string mask = ((gpu4_program_context::mask_t)arg_dst.get_mask()).symplify().get();
+
+						for (size_t i = 0; i < mask.length() - 1/*skip dot*/; ++i)
+						{
+							gpu4_program_context::argument arg = arg_dst;
+							auto arg_dst_swizzle = arg.mask(std::string(1, swizzle_mask[i]));
+
+							op(instr(instruction), arg_dst_swizzle, arg_dst_swizzle,
+								constant(value).mask(std::string(1, swizzle_mask[i])));
+						}
 					}
 
 					if (dst.end)

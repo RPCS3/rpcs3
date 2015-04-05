@@ -308,7 +308,7 @@ namespace gl
 
 				if (m_max_constant_id >= 0)
 				{
-					for (int i = m_min_constant_id; i < m_max_constant_id; ++i)
+					for (uint i = m_min_constant_id; i < m_max_constant_id; ++i)
 					{
 						auto result = constants.find(i);
 						if (result == constants.end())

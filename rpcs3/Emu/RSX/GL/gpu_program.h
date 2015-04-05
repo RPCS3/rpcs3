@@ -474,22 +474,22 @@ namespace gl
 
 				if (info.value_f32[0] == info.value_f32[1] && info.value_f32[1] == info.value_f32[2] && info.value_f32[2] == info.value_f32[3])
 				{
-					result += "{" + fmt::format("%g", info.value_f32[0]) + "}";
+					result += "{" + fmt::format("%.08g", info.value_f32[0]) + "}";
 					mask.append_front("xxxx");
 				}
 				else if (info.value_f32[0] == info.value_f32[1] && info.value_f32[2] == info.value_f32[3])
 				{
-					result += "{" + fmt::format("%g", info.value_f32[0]) + ", " + fmt::format("%g", info.value_f32[1]) + "}";
+					result += "{" + fmt::format("%.08g", info.value_f32[0]) + ", " + fmt::format("%.08g", info.value_f32[1]) + "}";
 					mask.append_front("xxyy");
 				}
 				else
 				{
 					result +=
 						"{" +
-						fmt::format("%g", info.value_f32[0]) + ", " +
-						fmt::format("%g", info.value_f32[1]) + ", " +
-						fmt::format("%g", info.value_f32[2]) + ", " +
-						fmt::format("%g", info.value_f32[3]) +
+						fmt::format("%.08g", info.value_f32[0]) + ", " +
+						fmt::format("%.08g", info.value_f32[1]) + ", " +
+						fmt::format("%.08g", info.value_f32[2]) + ", " +
+						fmt::format("%.08g", info.value_f32[3]) +
 						"}";
 				}
 			}
@@ -559,23 +559,33 @@ namespace gl
 
 				result += "\t" + operation.instruction() + " ";
 
-				bool is_first = true;
-				for (auto &arg : operation.arguments())
+				if (operation.arguments().empty())
 				{
-					if (!is_first)
+					if (!operation.condition().empty())
 					{
-						result += ", ";
+						result += "(" + operation.condition() + ")";
 					}
-
-					result += get(arg);
-
-					if (is_first)
+				}
+				else
+				{
+					bool is_first = true;
+					for (auto &arg : operation.arguments())
 					{
-						is_first = false;
-
-						if (!operation.condition().empty())
+						if (!is_first)
 						{
-							result += "(" + operation.condition() + ")";
+							result += ", ";
+						}
+
+						result += get(arg);
+
+						if (is_first)
+						{
+							is_first = false;
+
+							if (!operation.condition().empty())
+							{
+								result += "(" + operation.condition() + ")";
+							}
 						}
 					}
 				}
