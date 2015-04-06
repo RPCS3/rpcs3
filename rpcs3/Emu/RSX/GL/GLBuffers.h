@@ -357,7 +357,7 @@ namespace gl
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, 0, GL_STREAM_DRAW);
+			glBufferData((GLenum)target_, size, 0, GL_STREAM_COPY);
 		}
 
 		void bind(target target_) const

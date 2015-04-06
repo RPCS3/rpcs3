@@ -286,8 +286,6 @@ public:
 
 	void BuildShaderBody()
 	{
-		GLParamArray param_array;
-
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
 
 		if (prog.profile == 7004)
@@ -341,7 +339,7 @@ public:
 				auto& vmfprog = vm::get_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl).Task();
+				//GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl).Task();
 				vm::close();
 			}
 		}
@@ -385,7 +383,7 @@ public:
 			}
 
 			TaskVP();
-			GLVertexDecompilerThread(0, vdata, m_glsl_shader, param_array).Task();
+			//GLVertexDecompilerThread(0, vdata, m_glsl_shader, param_array).Task();
 		}
 	}
 

@@ -8,6 +8,9 @@
 #include "GLGSRender.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
+#include "gpu_program.h"
+#include "GLFragmentProgram.h"
+#include "GLVertexProgram.h"
 
 #ifdef _WIN32
 extern "C"
@@ -643,146 +646,9 @@ void GLTexture::Delete()
 	}
 }
 
-void PostDrawObj::Draw()
-{
-	static bool s_is_initialized = false;
-
-	if (!s_is_initialized)
-	{
-		s_is_initialized = true;
-		Initialize();
-	}
-	else
-	{
-		m_program.Use();
-	}
-}
-
-void PostDrawObj::Initialize()
-{
-	InitializeShaders();
-	m_fp.Compile();
-	m_vp.Compile();
-	m_program.Create(m_vp.id, m_fp.id);
-	m_program.Use();
-	InitializeLocations();
-}
-
-void DrawCursorObj::Draw()
-{
-	checkForGlError("PostDrawObj : Unknown error.");
-
-	PostDrawObj::Draw();
-	checkForGlError("PostDrawObj::Draw");
-
-	if (!m_fbo)
-	{
-		m_fbo.create();
-		checkForGlError("DrawCursorObj : m_fbo.Create");
-		m_fbo.bind();
-		checkForGlError("DrawCursorObj : m_fbo.Bind");
-
-		m_rbo.create(gl::texture::format::rgba, m_width, m_height);
-		checkForGlError("DrawCursorObj : m_rbo.create");
-
-		m_fbo.color = m_rbo;
-		checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
-	}
-
-	m_fbo.bind();
-	checkForGlError("DrawCursorObj : m_fbo.Bind");
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	checkForGlError("DrawCursorObj : glDrawBuffer");
-
-	m_program.Use();
-	checkForGlError("DrawCursorObj : m_program.Use");
-
-	if (m_update_texture)
-	{
-		glUniform2f(m_program.GetLocation("in_tc"), m_width, m_height);
-		checkForGlError("DrawCursorObj : glUniform2f");
-		if (!m_tex_id)
-		{
-			glGenTextures(1, &m_tex_id);
-			checkForGlError("DrawCursorObj : glGenTextures");
-		}
-
-		glActiveTexture(GL_TEXTURE0);
-		checkForGlError("DrawCursorObj : glActiveTexture");
-		glBindTexture(GL_TEXTURE_2D, m_tex_id);
-		checkForGlError("DrawCursorObj : glBindTexture");
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_pixels);
-		checkForGlError("DrawCursorObj : glTexImage2D");
-		m_program.SetTex(0);
-	}
-
-	if (m_update_pos)
-	{
-		glUniform4f(m_program.GetLocation("in_pos"), m_pos_x, m_pos_y, m_pos_z, 1.0f);
-		checkForGlError("DrawCursorObj : glUniform4f");
-	}
-
-	glDrawArrays(GL_QUADS, 0, 4);
-	checkForGlError("DrawCursorObj : glDrawArrays");
-	coordi screen_coords = { {}, { (int)m_width, (int)m_height } };
-	m_fbo.blit(gl::screen, screen_coords, screen_coords);
-}
-
-void DrawCursorObj::InitializeShaders()
-{
-	m_vp.shader =
-		"#version 420\n"
-		"\n"
-		"uniform vec4 in_pos;\n"
-		"uniform vec2 in_tc;\n"
-		"out vec2 tc;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	tc = in_tc;\n"
-		"	gl_Position = in_pos;\n"
-		"}\n";
-
-	m_fp.shader = 
-		"#version 420\n"
-		"\n"
-		"in vec2 tc;\n"
-		"layout (binding = 0) uniform sampler2D tex0;\n"
-		"layout (location = 0) out vec4 res;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	res = texture(tex0, tc);\n"
-		"}\n";
-}
-
-void DrawCursorObj::SetTexture(void* pixels, int width, int height)
-{
-	m_pixels = pixels;
-	m_width = width;
-	m_height = height;
-
-	m_update_texture = true;
-}
-
-void DrawCursorObj::SetPosition(float x, float y, float z)
-{
-	m_pos_x = x;
-	m_pos_y = y;
-	m_pos_z = z;
-	m_update_pos = true;
-}
-
-void DrawCursorObj::InitializeLocations()
-{
-	//LOG_WARNING(RSX, "tex0 location = 0x%x", m_program.GetLocation("tex0"));
-}
-
 GLGSRender::GLGSRender()
 	: GSRender()
 	, m_frame(nullptr)
-	, m_fp_buf_num(-1)
-	, m_vp_buf_num(-1)
 	, m_context(nullptr)
 {
 	m_frame = GetGSFrame();
@@ -1039,82 +905,6 @@ void GLGSRender::DisableVertexData()
 	m_vao.Unbind();
 }
 
-void GLGSRender::InitVertexData()
-{
-	//TODO
-	return;
-	int l;
-	for (const auto& c : m_transform_constants)
-	{
-		const std::string name = fmt::Format("vc[%u]", c.first);
-		l = m_program.GetLocation(name);
-		checkForGlError("glGetUniformLocation " + name);
-
-		glUniform4f(l, c.second.x, c.second.y, c.second.z, c.second.w);
-		//LOG_ERROR(RSX, "glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
-	}
-
-	f32 viewport_x = f32(methodRegisters[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
-	f32 viewport_y = f32(methodRegisters[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
-	f32 viewport_w = f32(methodRegisters[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
-	f32 viewport_h = f32(methodRegisters[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
-	f32 viewport_near = (f32&)methodRegisters[NV4097_SET_CLIP_MIN];
-	f32 viewport_far = (f32&)methodRegisters[NV4097_SET_CLIP_MAX];
-
-	f32 viewport_offset_x = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)];
-	f32 viewport_offset_y = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)];
-	f32 viewport_offset_z = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
-	f32 viewport_offset_w = (f32&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 3)];
-
-	f32 viewport_scale_x = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)];
-	f32 viewport_scale_y = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 1)];
-	f32 viewport_scale_z = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 2)];
-	f32 viewport_scale_w = (f32&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 3)];
-
-	glm::mat4 scaleOffsetMat(1.f);
-
-	//Scale
-	scaleOffsetMat[0][0] = viewport_scale_x / (RSXThread::m_width / 2.f);
-	scaleOffsetMat[1][1] = viewport_scale_y / (RSXThread::m_height / 2.f);
-	scaleOffsetMat[2][2] = viewport_scale_z;
-
-	// Offset
-	scaleOffsetMat[0][3] = viewport_offset_x / (RSXThread::m_width / 2.f) - 1.f;
-	scaleOffsetMat[1][3] = viewport_offset_y / (RSXThread::m_height / 2.f) - 1.f;
-	scaleOffsetMat[2][3] = viewport_offset_z - (/*viewport_far - viewport_near*/1) * .5f;
-
-	l = m_program.GetLocation("scaleOffsetMat");
-	glUniformMatrix4fv(l, 1, false, glm::value_ptr(scaleOffsetMat));
-}
-
-void GLGSRender::InitFragmentData()
-{
-	/*
-	if (!m_cur_fragment_prog)
-	{
-		LOG_ERROR(RSX, "InitFragmentData: m_cur_shader_prog == NULL");
-		return;
-	}
-
-	for (const auto& c : m_fragment_constants)
-	{
-		u32 id = c.first - m_cur_fragment_prog->offset;
-
-		//LOG_ERROR(RSX, "fc%u[0x%x - 0x%x] = (%f, %f, %f, %f)", id, c.first, m_cur_fragment_prog->offset, c.second.x, c.second.y, c.second.z, c.second.w);
-
-		const std::string name = fmt::Format("fc%u", id);
-		const int l = m_program.GetLocation(name);
-		checkForGlError("glGetUniformLocation " + name);
-
-		glUniform4f(l, c.second.x, c.second.y, c.second.z, c.second.w);
-		checkForGlError("glUniform4fv " + name + fmt::Format(" %d [%f %f %f %f]", l, c.second.x, c.second.y, c.second.z, c.second.w));
-	}
-	*/
-
-	//if (m_fragment_constants.GetCount())
-	//	LOG_NOTICE(HLE, "");
-}
-
 struct color_format
 {
 	gl::texture::type type;
@@ -1245,98 +1035,6 @@ bool GLGSRender::LoadProgram()
 
 	vertex_program.matrix[0] = scaleOffsetMat;
 
-	/*
-	m_cur_fragment_prog->ctrl = m_shader_ctrl;
-
-	m_fp_buf_num = )m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog;
-	m_vp_buf_num = -1;
-
-	if (m_fp_buf_num == -1)
-	{
-		//LOG_WARNING(RSX, "FP not found in buffer!");
-		//m_fragment_prog.Decompile(*m_cur_fragment_prog);
-		//m_fragment_prog.Compile();
-		//checkForGlError("m_fragment_prog.Compile");
-
-		// TODO: This shouldn't use current dir
-		//static int index = 0;
-		//rFile f(fmt::format("./FragmentProgram%d.txt", index++), rFile::write);
-		//f.Write(m_fragment_prog.shader);
-	}
-
-	if (m_vp_buf_num == -1)
-	{
-		
-		/*
-		LOG_WARNING(RSX, "VP not found in buffer!");
-		m_vertex_prog.Decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_vertex_program_data);
-		m_vertex_prog.Compile();
-		checkForGlError("m_vertex_prog.Compile");
-
-		// TODO: This shouldn't use current dir
-		static int index = 0;
-		//rFile f(fmt::format("./VertexProgram%d.txt", index++), rFile::write);
-		//f.Write(m_vertex_prog.shader);
-	}
-
-	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)
-	{
-		m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
-	}
-
-	if (m_program.id)
-	{
-		// RSX Debugger: Check if this program was modified and update it
-		if (Ini.GSLogPrograms.GetValue())
-		{
-			for (auto& program : m_debug_programs)
-			{
-				if (program.id == m_program.id && program.modified)
-				{
-					// TODO: This isn't working perfectly. Is there any better/shorter way to update the program
-					m_vertex_prog.shader = program.vp_shader;
-					m_fragment_prog.shader = program.fp_shader;
-					m_vertex_prog.Wait();
-					m_vertex_prog.Compile();
-					checkForGlError("m_vertex_prog.Compile");
-					m_fragment_prog.Wait();
-					m_fragment_prog.Compile();
-					checkForGlError("m_fragment_prog.Compile");
-					glAttachShader(m_program.id, m_vertex_prog.id);
-					glAttachShader(m_program.id, m_fragment_prog.id);
-					glLinkProgram(m_program.id);
-					checkForGlError("glLinkProgram");
-					glDetachShader(m_program.id, m_vertex_prog.id);
-					glDetachShader(m_program.id, m_fragment_prog.id);
-					program.vp_id = m_vertex_prog.id;
-					program.fp_id = m_fragment_prog.id;
-					program.modified = false;
-				}
-			}
-		}
-		m_program.Use();
-	}
-	else
-	{
-		m_program.Create(m_vertex_prog.id, m_fragment_prog.id);
-		checkForGlError("m_program.Create");
-		//m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
-		checkForGlError("m_prog_buffer.Add");
-		m_program.Use();
-
-		// RSX Debugger
-		if (Ini.GSLogPrograms.GetValue())
-		{
-			RSXDebuggerProgram program;
-			program.id = m_program.id;
-			program.vp_id = m_vertex_prog.id;
-			program.fp_id = m_fragment_prog.id;
-			program.vp_shader = m_vertex_prog.shader;
-			program.fp_shader = m_fragment_prog.shader;
-			m_debug_programs.push_back(program);
-		}
-	}
-	*/
 	return true;
 }
 
@@ -1401,7 +1099,6 @@ void GLGSRender::ReadBuffers()
 				dst[i] = src[i];
 			}
 		}
-
 	}, gl::pbo::access::write);
 
 	m_texture_depth.copy_from(m_pbo_depth, depth_format.second, depth_format.first);
@@ -1422,8 +1119,8 @@ void GLGSRender::WriteBuffers()
 		{
 			//TODO: swizzle
 			u32 address = GetAddress(m_surface_offset[i], m_context_dma_color[i]);
-
 			m_textures_color[i].copy_to(vm::get_ptr(address), color_format.format, color_format.type);
+
 			checkForGlError("m_textures_color[i].copy_to");
 		}
 	};
@@ -1519,17 +1216,13 @@ void GLGSRender::OnExitThread()
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
-	m_program.Delete();
 	m_fbo.remove();
 	m_vbo.Delete();
 	m_vao.Delete();
-	m_prog_buffer.Clear();
 }
 
 void GLGSRender::OnReset()
 {
-	m_program.UnUse();
-
 	if (m_vbo.IsCreated())
 	{
 		m_vbo.UnBind();
@@ -1568,6 +1261,7 @@ void GLGSRender::InitFBO()
 				.swap_bytes(format.swap_bytes);
 
 			m_fbo.color[i] = m_textures_color[i];
+			m_pbo_color[i].create(format.channel_count * format.channel_size * m_width * m_height);
 		}
 
 		m_texture_depth.create(gl::texture::texture_target::texture2D);
@@ -2032,9 +1726,6 @@ void GLGSRender::ExecCMD()
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
 		EnableVertexData(m_indexed_array.m_count ? true : false);
-
-		InitVertexData();
-		InitFragmentData();
 	}
 
 	if (m_indexed_array.m_count)
@@ -2123,13 +1814,6 @@ void GLGSRender::Flip(int buffer)
 	}
 
 	m_draw_buffer_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical());
-
-	// Draw Objects
-	for (uint i = 0; i < m_post_draw_objs.size(); ++i)
-	{
-		m_post_draw_objs[i].Draw();
-	}
-
 	m_frame->Flip(m_context);
 
 	glEnable(GL_SCISSOR_TEST);

@@ -52,61 +52,11 @@ public:
 	}
 
 	void Init(RSXTexture& tex);
-
 	void Save(RSXTexture& tex, const std::string& name);
-
 	void Save(RSXTexture& tex);
-
 	void Bind();
-
 	void Unbind();
-
 	void Delete();
-};
-
-class PostDrawObj
-{
-protected:
-	GLFragmentProgram m_fp;
-	GLVertexProgram m_vp;
-	GLProgram m_program;
-	gl::fbo m_fbo;
-	gl::rbo m_rbo;
-
-public:
-	virtual void Draw();
-
-	virtual void InitializeShaders() = 0;
-	virtual void InitializeLocations() = 0;
-
-	void Initialize();
-};
-
-class DrawCursorObj : public PostDrawObj
-{
-	u32 m_tex_id;
-	void* m_pixels;
-	u32 m_width, m_height;
-	double m_pos_x, m_pos_y, m_pos_z;
-	bool m_update_texture, m_update_pos;
-
-public:
-	DrawCursorObj() : PostDrawObj()
-		, m_tex_id(0)
-		, m_update_texture(false)
-		, m_update_pos(false)
-	{
-	}
-
-	virtual void Draw();
-
-	virtual void InitializeShaders();
-
-	void SetTexture(void* pixels, int width, int height);
-
-	void SetPosition(float x, float y, float z = 0.0f);
-
-	void InitializeLocations();
 };
 
 class GSFrameBase
@@ -135,15 +85,6 @@ class GLGSRender : public GSRender
 {
 private:
 	std::vector<u8> m_vdata;
-	std::vector<PostDrawObj> m_post_draw_objs;
-
-	GLProgram m_program;
-	int m_fp_buf_num;
-	int m_vp_buf_num;
-	GLProgramBuffer m_prog_buffer;
-
-	GLFragmentProgram m_fragment_prog;
-	GLVertexProgram m_vertex_prog;
 
 	GLTexture m_gl_textures[m_textures_count];
 	GLTexture m_gl_vertex_textures[m_textures_count];
@@ -173,8 +114,6 @@ public:
 private:
 	void EnableVertexData(bool indexed_draw = false);
 	void DisableVertexData();
-	void InitVertexData();
-	void InitFragmentData();
 
 	void Enable(bool enable, const u32 cap);
 	virtual void Close();

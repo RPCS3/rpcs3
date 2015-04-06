@@ -1,872 +1,375 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Emu/System.h"
-
+#include "OpenGL.h"
 #include "GLVertexProgram.h"
 
-std::string GLVertexDecompilerThread::GetMask(bool is_sca)
+namespace gl
 {
-	std::string ret;
-
-	if (is_sca)
+	namespace vertex_program
 	{
-		if (d3.sca_writemask_x) ret += "x";
-		if (d3.sca_writemask_y) ret += "y";
-		if (d3.sca_writemask_z) ret += "z";
-		if (d3.sca_writemask_w) ret += "w";
-	}
-	else
-	{
-		if (d3.vec_writemask_x) ret += "x";
-		if (d3.vec_writemask_y) ret += "y";
-		if (d3.vec_writemask_z) ret += "z";
-		if (d3.vec_writemask_w) ret += "w";
-	}
+		static const char swizzle_mask[4] = { 'x', 'y', 'z', 'w' };
 
-	return ret.empty() || ret == "xyzw" ? "" : ("." + ret);
-}
-
-std::string GLVertexDecompilerThread::GetVecMask()
-{
-	return GetMask(false);
-}
-
-std::string GLVertexDecompilerThread::GetScaMask()
-{
-	return GetMask(true);
-}
-
-std::string GLVertexDecompilerThread::GetDST(bool isSca)
-{
-	std::string ret;
-
-	switch (isSca ? 0x1f : d3.dst)
-	{
-	case 0x1f:
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
-		break;
-
-	default:
-		if (d3.dst > 15)
-			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? "vec4(0.0f, 0.0f, 0.0f, 1.0f)" : "vec4(0.0)");
-		break;
-	}
-
-	return ret;
-}
-
-std::string GLVertexDecompilerThread::GetSRC(const u32 n)
-{
-	static const std::string reg_table[] =
-	{
-		"in_pos", "in_weight", "in_normal",
-		"in_diff_color", "in_spec_color",
-		"in_fog",
-		"in_point_size", "in_7",
-		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
-		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
-	};
-
-	std::string ret;
-
-	switch (src[n].reg_type)
-	{
-	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", "tmp" + std::to_string(src[n].tmp_src));
-		break;
-	case 2: //input
-		if (d1.input_src < (sizeof(reg_table) / sizeof(reg_table[0])))
+		decompiler::decompiler(u32* data)
+			: m_data(data)
 		{
-			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src], d1.input_src);
+			gpu_program_builder::context.header = "!!ARBvp1.0";
+			gpu_program_builder::context.extensions.push_back("NV_vertex_program3");
 		}
-		else
+
+		gpu4_program_context::argument decompiler::arg(SRC src)
 		{
-			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
-			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
-		}
-		break;
-	case 3: //const
-		m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("vc[468]"));
-		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
-		break;
-
-	default:
-		LOG_ERROR(RSX, fmt::Format("Bad src%u reg type: %d", n, fmt::by_value(src[n].reg_type)));
-		Emu.Pause();
-		break;
-	}
-
-	static const std::string f = "xyzw";
-
-	std::string swizzle;
-
-	swizzle += f[src[n].swz_x];
-	swizzle += f[src[n].swz_y];
-	swizzle += f[src[n].swz_z];
-	swizzle += f[src[n].swz_w];
-
-	if (swizzle != f) ret += '.' + swizzle;
-
-	bool abs;
-
-	switch (n)
-	{
-	case 0: abs = d0.src0_abs; break;
-	case 1: abs = d0.src1_abs; break;
-	case 2: abs = d0.src2_abs; break;
-	}
-
-	if (abs) ret = "abs(" + ret + ")";
-	if (src[n].neg) ret = "-" + ret;
-
-	return ret;
-}
-
-void GLVertexDecompilerThread::SetDST(bool is_sca, std::string value)
-{
-	if (d0.cond == 0) return;
-
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	std::string mask = GetMask(is_sca);
-
-	value += mask;
-
-	if (is_sca && d0.vec_result)
-	{
-		//value = "vec4(" + value + ")";
-	}
-
-	if (d0.staturate)
-	{
-		value = "clamp(" + value + ", 0.0, 1.0)";
-	}
-
-	std::string dest;
-
-	if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
-	{
-		dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(d0.cond_reg_sel_1), "vec4(0.0)") + mask;
-	}
-	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
-	{
-		dest = GetDST(is_sca) + mask;
-	}
-
-	//std::string code;
-	//if (d0.cond_test_enable)
-	//	code += "$ifcond ";
-	//code += dest + value;
-	//AddCode(code + ";");
-
-	AddCodeCond(Format(dest), value);
-}
-
-std::string GLVertexDecompilerThread::GetFunc()
-{
-	std::string name = "func$a";
-
-	for (const auto& func : m_funcs) {
-		if (func.name.compare(name) == 0) {
-			return name + "()";
-		}
-	}
-
-	m_funcs.emplace_back();
-	FuncInfo &idx = m_funcs.back();
-	idx.offset = GetAddr();
-	idx.name = name;
-
-	return name + "()";
-}
-
-std::string GLVertexDecompilerThread::GetTex()
-{
-	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(/*?.tex_num*/0));
-}
-
-std::string GLVertexDecompilerThread::Format(const std::string& code)
-{
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
-	{
-		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 0) },
-		{ "$1", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 1) },
-		{ "$2", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
-		{ "$s", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
-		{ "$am", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrMask), this) },
-		{ "$a", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrReg), this) },
-
-		{ "$t", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetTex), this) },
-
-		{ "$fa", [this]()->std::string { return std::to_string(GetAddr()); } },
-		{ "$f()", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetFunc), this) },
-		{ "$ifcond ", [this]() -> std::string
-		{
-			const std::string& cond = GetCond();
-			if (cond == "true") return "";
-			return "if(" + cond + ") ";
-		}
-		},
-		{ "$cond", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetCond), this) }
-	};
-
-	return fmt::replace_all(code, repl_list);
-}
-
-std::string GLVertexDecompilerThread::GetCond()
-{
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	if (d0.cond == 0) return "false";
-	if (d0.cond == (lt | gt | eq)) return "true";
-
-	static const char* cond_string_table[(lt | gt | eq) + 1] =
-	{
-		"error",
-		"lessThan",
-		"equal",
-		"lessThanEqual",
-		"greaterThan",
-		"notEqual",
-		"greaterThanEqual",
-		"error"
-	};
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle;
-	swizzle += f[d0.mask_x];
-	swizzle += f[d0.mask_y];
-	swizzle += f[d0.mask_z];
-	swizzle += f[d0.mask_w];
-
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	return fmt::Format("any(%s(cc%d%s, vec4(0.0)%s))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str(), swizzle.c_str());
-}
-
-void GLVertexDecompilerThread::AddCodeCond(const std::string& dst, const std::string& src)
-{
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-
-	if (!d0.cond_test_enable || d0.cond == (lt | gt | eq))
-	{
-		AddCode(dst + " = " + src + ";");
-		return;
-	}
-
-	if (d0.cond == 0)
-	{
-		AddCode("//" + dst + " = " + src + ";");
-		return;
-	}
-
-	static const char* cond_string_table[(lt | gt | eq) + 1] =
-	{
-		"error",
-		"lessThan",
-		"equal",
-		"lessThanEqual",
-		"greaterThan",
-		"notEqual",
-		"greaterThanEqual",
-		"error"
-	};
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle;
-	swizzle += f[d0.mask_x];
-	swizzle += f[d0.mask_y];
-	swizzle += f[d0.mask_z];
-	swizzle += f[d0.mask_w];
-
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	std::string cond = fmt::Format("%s(cc%d%s, vec4(0.0))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str());
-
-	ShaderVar dst_var(dst);
-	dst_var.symplify();
-
-	//const char *c_mask = f;
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		AddCode("if (" + cond + ".x) " + dst + " = vec4(" + src + ").x;");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
-		}
-	}
-}
-
-
-std::string GLVertexDecompilerThread::AddAddrMask()
-{
-	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return std::string(".") + f[d0.addr_swz];
-}
-
-std::string GLVertexDecompilerThread::AddAddrReg()
-{
-	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return m_parr.AddParam(PARAM_NONE, "ivec4", "a" + std::to_string(d0.addr_reg_sel_1), "ivec4(0)") + AddAddrMask();
-}
-
-u32 GLVertexDecompilerThread::GetAddr()
-{
-	return (d2.iaddrh << 3) | d3.iaddrl;
-}
-
-void GLVertexDecompilerThread::AddCode(const std::string& code)
-{
-	m_body.push_back(Format(code) + ";");
-	m_cur_instr->body.push_back(Format(code));
-}
-
-void GLVertexDecompilerThread::SetDSTVec(const std::string& code)
-{
-	SetDST(false, code);
-}
-
-void GLVertexDecompilerThread::SetDSTSca(const std::string& code)
-{
-	SetDST(true, code);
-}
-
-std::string GLVertexDecompilerThread::BuildFuncBody(const FuncInfo& func)
-{
-	std::string result;
-
-	for (uint i = func.offset; i<m_body.size(); ++i)
-	{
-		if (i != func.offset)
-		{
-			uint call_func = -1;
-			for (uint j = 0; j<m_funcs.size(); ++j)
+			gpu4_program_context::argument result;
+			switch (src.reg_type)
 			{
-				if (m_funcs[j].offset == i)
+			case 1: //template register
+				result = variable("TEMP", "R" + std::to_string(src.tmp_src));
+				break;
+
+			case 2: //input register
+				result = predeclared_variable("vertex.attrib[" + std::to_string(d1.input_src) + "]");
+				break;
+
+			case 3: //constant
+				if (d1.const_src < m_min_constant_id || d1.const_src > m_max_constant_id)
 				{
-					call_func = j;
-					break;
+					result = constant(0);
 				}
-			}
+				else
+				{
+					std::string constant_offset;
+					if (d3.index_const)
+					{
+						std::string address_register = "A" + std::to_string(d0.addr_reg_sel_1);
+						variable("ADDRESS", address_register);
 
-			if (call_func != -1)
-			{
-				result += '\t' + m_funcs[call_func].name + "();\n";
-				break;
-			}
-		}
-
-		result += '\t' + m_body[i] + '\n';
-	}
-
-	return result;
-}
-
-std::string GLVertexDecompilerThread::BuildCode()
-{
-	struct reg_info
-	{
-		std::string name;
-		bool need_declare;
-		std::string src_reg;
-		std::string src_reg_mask;
-		bool need_cast;
-	};
-
-	static const reg_info reg_table[] =
-	{
-		{ "gl_Position", false, "dst_reg0", "", false },
-		{ "diff_color", true, "dst_reg1", "", false },
-		{ "spec_color", true, "dst_reg2", "", false },
-		{ "front_diff_color", true, "dst_reg3", "", false },
-		{ "front_spec_color", true, "dst_reg4", "", false },
-		{ "fogc", true, "dst_reg5", ".x", true },
-		{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
-		{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
-		{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
-		{ "gl_PointSize", false, "dst_reg6", ".x", false },
-		{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-		{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-		{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
-		{ "tc0", true, "dst_reg7", "", false },
-		{ "tc1", true, "dst_reg8", "", false },
-		{ "tc2", true, "dst_reg9", "", false },
-		{ "tc3", true, "dst_reg10", "", false },
-		{ "tc4", true, "dst_reg11", "", false },
-		{ "tc5", true, "dst_reg12", "", false },
-		{ "tc6", true, "dst_reg13", "", false },
-		{ "tc7", true, "dst_reg14", "", false },
-		{ "tc8", true, "dst_reg15", "", false },
-		{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
-	};
-
-	std::string f;
-
-	for (auto &i : reg_table)
-	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
-		{
-			if (i.need_declare)
-			{
-				m_parr.AddParam(PARAM_OUT, "vec4", i.name);
-			}
-
-			if (i.need_cast)
-			{
-				f += "\t" + i.name + " = vec4(" + i.src_reg + i.src_reg_mask + ");\n";
-			}
-			else
-			{
-				f += "\t" + i.name + " = " + i.src_reg + i.src_reg_mask + ";\n";
-			}
-		}
-	}
-
-	std::string p;
-
-	for (auto& param : m_parr.params) {
-		p += param.Format();
-	}
-
-	std::string fp;
-
-	for (int i = m_funcs.size() - 1; i > 0; --i)
-	{
-		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
-	}
-
-	f = fmt::Format("void %s()\n{\n\t%s();\n%s\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
-		m_funcs[0].name.c_str(), m_funcs[1].name.c_str(), f.c_str());
-
-	std::string main_body;
-	for (uint i = 0, lvl = 1; i < m_instr_count; i++)
-	{
-		lvl -= m_instructions[i].close_scopes;
-		if (lvl < 1) lvl = 1;
-		//assert(lvl >= 1);
-		for (uint j = 0; j < m_instructions[i].put_close_scopes; ++j)
-		{
-			--lvl;
-			if (lvl < 1) lvl = 1;
-			main_body.append(lvl, '\t') += "}\n";
-		}
-
-		for (uint j = 0; j < m_instructions[i].do_count; ++j)
-		{
-			main_body.append(lvl, '\t') += "do\n";
-			main_body.append(lvl, '\t') += "{\n";
-			lvl++;
-		}
-
-		for (uint j = 0; j < m_instructions[i].body.size(); ++j)
-		{
-			main_body.append(lvl, '\t') += m_instructions[i].body[j] + "\n";
-		}
-
-		lvl += m_instructions[i].open_scopes;
-	}
-
-	f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[1].name.c_str(), main_body.c_str());
-
-	for (uint i = 2; i<m_funcs.size(); ++i)
-	{
-		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
-	}
-
-	static const std::string& prot =
-		"#version 420\n"
-		"\n"
-		"uniform mat4 scaleOffsetMat = mat4(1.0);\n"
-		"%s\n"
-		"%s\n"
-		"%s";
-
-	return fmt::Format(prot.c_str(), p.c_str(), fp.c_str(), f.c_str());
-}
-
-void GLVertexDecompilerThread::Task()
-{
-	m_parr.params.clear();
-	m_instr_count = 0;
-
-	for (int i = 0; i < m_max_instr_count; ++i)
-	{
-		m_instructions[i].reset();
-	}
-
-	bool is_has_BRA = false;
-
-	for (u32 i = m_start * 4 + 1; m_instr_count < m_max_instr_count; m_instr_count++)
-	{
-		m_cur_instr = &m_instructions[m_instr_count];
-
-		if (is_has_BRA)
-		{
-			d3.HEX = m_data[i];
-			i += 4;
-		}
-		else
-		{
-			d1.HEX = m_data[i++];
-
-			switch (d1.sca_opcode)
-			{
-			case 0x08: //BRA
-				LOG_ERROR(RSX, "BRA found. Please report to RPCS3 team.");
-				is_has_BRA = true;
-				m_jump_lvls.clear();
-				d3.HEX = m_data[++i];
-				i += 4;
-				break;
-
-			case 0x09: //BRI
-				d2.HEX = m_data[i++];
-				d3.HEX = m_data[i];
-				i += 2;
-				m_jump_lvls.emplace(GetAddr());
+						constant_offset = " + " + address_register + "." + (std::string(1, swizzle_mask[d0.addr_swz]));
+					}
+					result = predeclared_variable("constants[" + std::to_string(d1.const_src - m_min_constant_id) + constant_offset + "]");
+				}
 				break;
 
 			default:
-				d3.HEX = m_data[++i];
-				i += 2;
-				break;
+				throw std::runtime_error(fmt::Format("Bad src reg type: %d", fmt::by_value(src.reg_type)));
 			}
-		}
 
-		if (d3.end)
-		{
-			m_instr_count++;
+			std::string mask;
+			mask += swizzle_mask[src.swz_x];
+			mask += swizzle_mask[src.swz_y];
+			mask += swizzle_mask[src.swz_z];
+			mask += swizzle_mask[src.swz_w];
 
-			break;
-		}
-	}
-
-	uint jump_position = 0;
-
-	if (is_has_BRA || !m_jump_lvls.empty())
-	{
-		m_cur_instr = &m_instructions[0];
-		AddCode("int jump_position = 0;");
-		AddCode("while (true)");
-		AddCode("{");
-		m_cur_instr->open_scopes++;
-
-		AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
-		AddCode("{");
-		m_cur_instr->open_scopes++;
-	}
-
-	for (u32 i = 0; i < m_instr_count; ++i)
-	{
-		m_cur_instr = &m_instructions[i];
-
-		d0.HEX = m_data[i * 4 + 0];
-		d1.HEX = m_data[i * 4 + 1];
-		d2.HEX = m_data[i * 4 + 2];
-		d3.HEX = m_data[i * 4 + 3];
-
-		src[0].src0l = d2.src0l;
-		src[0].src0h = d1.src0h;
-		src[1].src1 = d2.src1;
-		src[2].src2l = d3.src2l;
-		src[2].src2h = d2.src2h;
-
-		if (i && (is_has_BRA || std::find(m_jump_lvls.begin(), m_jump_lvls.end(), i) != m_jump_lvls.end()))
-		{
-			m_cur_instr->close_scopes++;
-			AddCode("}");
-			AddCode("");
-
-			AddCode(fmt::Format("if (jump_position <= %u)", jump_position++));
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-		}
-
-		if (!d1.sca_opcode && !d1.vec_opcode)
-		{
-			AddCode("//nop");
-		}
-
-		switch (d1.sca_opcode)
-		{
-		case RSX_SCA_OPCODE_NOP: break;
-		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
-		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
-		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("inversesqrt(abs($s))"); break;
-		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
-		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
-		case RSX_SCA_OPCODE_LIT: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
-		case RSX_SCA_OPCODE_BRA:
-		{
-			AddCode("$if ($cond)");
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode("jump_position = $a$am;");
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
-		}
-		break;
-		/* This triggers opengl driver lost connection error code 7
-		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
-		{
-			uint jump_position;
-
-			if (is_has_BRA)
+			if (mask[0] == mask[1] && mask[1] == mask[2] && mask[2] == mask[3])
 			{
-				jump_position = GetAddr();
+				mask = std::string(1, mask[0]);
+			}
+
+			result.abs(src.abs).neg(src.neg).mask(mask);
+
+			if (is_sca)
+				result.mask("x");
+
+			return result;
+		}
+
+		gpu4_program_context::argument decompiler::arg_dst()
+		{
+			if (is_sca)
+			{
+				std::string mask;
+				if (d3.sca_writemask_x) mask += "x";
+				if (d3.sca_writemask_y) mask += "y";
+				if (d3.sca_writemask_z) mask += "z";
+				if (d3.sca_writemask_w) mask += "w";
+
+				return variable("TEMP", "R" + std::to_string(d3.sca_dst_tmp)).mask(mask);
+			}
+
+			gpu_program_builder<>::variable_t result;
+			if (d3.dst == 0x1f)
+			{
+				result = variable("TEMP", "R" + std::to_string(d0.dst_tmp));
 			}
 			else
 			{
-				int addr = GetAddr();
-
-				jump_position = 0;
-				for (auto pos : m_jump_lvls)
+				if (d0.vec_result)
 				{
-					if (addr == pos)
-						break;
-
-					++jump_position;
+					result = variable("TEMP", "oR" + std::to_string(d3.dst));
+				}
+				else
+				{
+					result = variable("ADDRESS", "A" + std::to_string(d3.dst));
 				}
 			}
 
-			AddCode("$ifcond ");
-			AddCode("{");
-			m_cur_instr->open_scopes++;
-			AddCode(fmt::Format("jump_position = %u;", jump_position));
-			AddCode("continue;");
-			m_cur_instr->close_scopes++;
-			AddCode("}");
-		}
-		break;
-		*/
-		case RSX_SCA_OPCODE_CAL:
-			// works same as BRI
-			AddCode("$ifcond $f(); //CAL");
-			break;
-		case RSX_SCA_OPCODE_CLI:
-			// works same as BRI
-			AddCode("$ifcond $f(); //CLI");
-			break;
-		case RSX_SCA_OPCODE_RET:
-			// works like BRI but shorter (RET o[1].x(TR);)
-			AddCode("$ifcond return;");
-			break;
-		case RSX_SCA_OPCODE_LG2: SetDSTSca("log2($s)"); break;
-		case RSX_SCA_OPCODE_EX2: SetDSTSca("exp2($s)"); break;
-		case RSX_SCA_OPCODE_SIN: SetDSTSca("sin($s)"); break;
-		case RSX_SCA_OPCODE_COS: SetDSTSca("cos($s)"); break;
-		case RSX_SCA_OPCODE_BRB:
-			// works differently (BRB o[1].x !b0, L0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode BRB");
-			break;
-		case RSX_SCA_OPCODE_CLB: break;
-			// works same as BRB
-			LOG_ERROR(RSX, "Unimplemented sca_opcode CLB");
-			break;
-		case RSX_SCA_OPCODE_PSH: break;
-			// works differently (PSH o[1].x A0;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode PSH");
-			break;
-		case RSX_SCA_OPCODE_POP: break;
-			// works differently (POP o[1].x;)
-			LOG_ERROR(RSX, "Unimplemented sca_opcode POP");
-			break;
+			std::string mask;
+			if (d3.vec_writemask_x) mask += "x";
+			if (d3.vec_writemask_y) mask += "y";
+			if (d3.vec_writemask_z) mask += "z";
+			if (d3.vec_writemask_w) mask += "w";
 
-		default:
-			AddCode(fmt::Format("//Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode)));
-			LOG_ERROR(RSX, "Unknown vp sca_opcode 0x%x", fmt::by_value(d1.sca_opcode));
-			Emu.Pause();
-			break;
+			return result.mask(mask);
 		}
 
-		switch (d1.vec_opcode)
+		gpu4_program_context::argument decompiler::condition()
 		{
-		case RSX_VEC_OPCODE_NOP: break;
-		case RSX_VEC_OPCODE_MOV: SetDSTVec("$0"); break;
-		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
-		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
-		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
-		case RSX_VEC_OPCODE_DP3: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break;
-		case RSX_VEC_OPCODE_DPH: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break;
-		case RSX_VEC_OPCODE_DP4: SetDSTVec("vec4(dot($0, $1))"); break;
-		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
-		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
-		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
-		case RSX_VEC_OPCODE_SLT: SetDSTVec("vec4(lessThan($0, $1))"); break;
-		case RSX_VEC_OPCODE_SGE: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break;
-		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = ivec4($0)$am;");  break;
-		case RSX_VEC_OPCODE_FRC: SetDSTVec("fract($0)"); break;
-		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
-		case RSX_VEC_OPCODE_SEQ: SetDSTVec("vec4(equal($0, $1))"); break;
-		case RSX_VEC_OPCODE_SFL: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break;
-		case RSX_VEC_OPCODE_SGT: SetDSTVec("vec4(greaterThan($0, $1))"); break;
-		case RSX_VEC_OPCODE_SLE: SetDSTVec("vec4(lessThanEqual($0, $1))"); break;
-		case RSX_VEC_OPCODE_SNE: SetDSTVec("vec4(notEqual($0, $1))"); break;
-		case RSX_VEC_OPCODE_STR: SetDSTVec("vec4(equal($0, vec4(1.0)))"); break;
-		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
-		case RSX_VEC_OPCODE_TXL: SetDSTVec("texture($t, $0.xy)"); break;
+			if (!d0.cond_test_enable)
+				return{};
 
-		default:
-			AddCode(fmt::Format("//Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
-			LOG_ERROR(RSX, "Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode));
-			Emu.Pause();
-			break;
+			enum
+			{
+				lt = 0x1,
+				eq = 0x2,
+				gt = 0x4,
+			};
+
+			if (d0.cond == (lt | gt | eq))
+				return{};
+
+			static const char* cond_string_table[(lt | gt | eq) + 1] =
+			{
+				"error",
+				"LT",
+				"EQ",
+				"LE",
+				"GT",
+				"NE",
+				"GE",
+				"error"
+			};
+
+			std::string mask;
+			mask += swizzle_mask[d0.mask_x];
+			mask += swizzle_mask[d0.mask_y];
+			mask += swizzle_mask[d0.mask_z];
+			mask += swizzle_mask[d0.mask_w];
+
+			if (mask[0] == mask[1] && mask[1] == mask[2] && mask[2] == mask[3])
+			{
+				mask = std::string(1, mask[0]);
+			}
+
+			return predeclared_variable(cond_string_table[d0.cond]).mask(mask);
 		}
-	}
 
-	if (is_has_BRA || !m_jump_lvls.empty())
-	{
-		m_cur_instr = &m_instructions[m_instr_count - 1];
-		m_cur_instr->close_scopes++;
-		AddCode("}");
-		AddCode("break;");
-		m_cur_instr->close_scopes++;
-		AddCode("}");
-	}
-
-	m_shader = BuildCode();
-
-	m_jump_lvls.clear();
-	m_body.clear();
-	if (m_funcs.size() > 2)
-	{
-		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
-	}
-}
-
-GLVertexProgram::GLVertexProgram()
-	: m_decompiler_thread(nullptr)
-	, id(0)
-{
-}
-
-GLVertexProgram::~GLVertexProgram()
-{
-	if (m_decompiler_thread)
-	{
-		Wait();
-		if (m_decompiler_thread->IsAlive())
+		gpu4_program_context::argument decompiler::texture()
 		{
-			m_decompiler_thread->Stop();
+			return predeclared_variable("texture[0]");
 		}
 
-		delete m_decompiler_thread;
-		m_decompiler_thread = nullptr;
-	}
-
-	Delete();
-}
-
-void GLVertexProgram::Wait()
-{
-	if (m_decompiler_thread && m_decompiler_thread->IsAlive())
-	{
-		m_decompiler_thread->Join();
-	}
-}
-
-void GLVertexProgram::Decompile(u32 start, u32 *prog)
-{
-	GLVertexDecompilerThread decompiler(start, prog, shader, parr);
-	decompiler.Task();
-}
-
-void GLVertexProgram::DecompileAsync(u32 start, u32 *prog)
-{
-	if (m_decompiler_thread)
-	{
-		Wait();
-		if (m_decompiler_thread->IsAlive())
+		void decompiler::sca_op(const std::string& instruction, gpu4_program_context::argument dst, gpu4_program_context::argument src)
 		{
-			m_decompiler_thread->Stop();
+			std::string dst_mask = dst.get_mask().get();
+			std::string src_mask = src.get_mask().get();
+			if (dst_mask == src_mask || dst_mask.empty() || src_mask.empty())
+			{
+				op(instruction, dst, src);
+			}
+			else
+			{
+				auto tmp = variable("TEMP", "scalar");
+				op(instruction, tmp, src);
+				op("MOV", dst, tmp);
+			}
 		}
 
-		delete m_decompiler_thread;
-		m_decompiler_thread = nullptr;
-	}
-
-	m_decompiler_thread = new GLVertexDecompilerThread(start, prog, shader, parr);
-	m_decompiler_thread->Start();
-}
-
-void GLVertexProgram::Compile()
-{
-	if (id) 
-	{
-		glDeleteShader(id);
-	}
-
-	id = glCreateShader(GL_VERTEX_SHADER);
-
-	const char* str = shader.c_str();
-	const int strlen = shader.length();
-
-	glShaderSource(id, 1, &str, &strlen);
-	glCompileShader(id);
-
-	GLint r = GL_FALSE;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
-	if (r != GL_TRUE)
-	{
-		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &r);
-
-		if (r)
+		std::string decompiler::instr(const std::string& instruction)
 		{
-			char* buf = new char[r + 1]();
-			GLsizei len;
-			glGetShaderInfoLog(id, r, &len, buf);
-			LOG_ERROR(RSX, "Failed to compile vertex shader: %s", buf);
-			delete[] buf;
+			if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
+			{
+				return instruction + (d0.cond_reg_sel_1 ? "1" : "");
+			}
+
+			return instruction;
 		}
 
-		LOG_NOTICE(RSX, "%s", shader.c_str());
-		Emu.Pause();
-	}
-	//else LOG_WARNING(RSX, "Vertex shader compiled successfully!");
-
-}
-
-void GLVertexProgram::Delete()
-{
-	parr.params.clear();
-	shader.clear();
-
-	if (id)
-	{
-		if (Emu.IsStopped())
+		decompiler& decompiler::decompile(u32 start, std::unordered_map<u32, color4>& constants)
 		{
-			LOG_WARNING(RSX, "GLVertexProgram::Delete(): glDeleteShader(%d) avoided", id);
+			if (constants.empty())
+			{
+				m_min_constant_id = 0;
+				m_max_constant_id = -1;
+			}
+			else
+			{
+				auto find_fn = [](std::pair<u32, color4> a, std::pair<u32, color4> b)
+				{
+					return a.first < b.first;
+				};
+
+				m_min_constant_id = std::min_element(constants.begin(), constants.end(), find_fn)->first;
+				m_max_constant_id = std::max_element(constants.begin(), constants.end(), find_fn)->first;
+			}
+
+			std::string constants_initialization = "{\n";
+
+			if (m_max_constant_id != -1)
+			{
+				for (uint i = m_min_constant_id; i < m_max_constant_id; ++i)
+				{
+					auto result = constants.find(i);
+					if (result == constants.end())
+					{
+						constants_initialization += "\t\t{0, 0, 0, 0},\n";
+					}
+					else
+					{
+						constants_initialization += "\t\t{" +
+							fmt::format("%g", result->second.r) + ", " +
+							fmt::format("%g", result->second.g) + ", " +
+							fmt::format("%g", result->second.b) + ", " +
+							fmt::format("%g", result->second.a) + "},\n";
+					}
+				}
+
+				constants_initialization += "\t\t{" +
+					fmt::format("%g", constants[m_max_constant_id].r) + ", " +
+					fmt::format("%g", constants[m_max_constant_id].g) + ", " +
+					fmt::format("%g", constants[m_max_constant_id].b) + ", " +
+					fmt::format("%g", constants[m_max_constant_id].a) + "}\n}";
+
+				variable("PARAM", "constants[" + std::to_string(m_max_constant_id - m_min_constant_id + 1) + "]", constants_initialization);
+			}
+
+			gpu_program_builder<>::op("MOV", variable("TEMP", "oR0"), constant(0.f, 0.f, 0.f, 1.f));
+
+			for (int i = start; i < 512; ++i)
+			{
+				d0.HEX = m_data[i * 4 + 0];
+				d1.HEX = m_data[i * 4 + 1];
+				d2.HEX = m_data[i * 4 + 2];
+				d3.HEX = m_data[i * 4 + 3];
+
+				src[0].src0l = d2.src0l;
+				src[0].src0h = d1.src0h;
+				src[1].src1 = d2.src1;
+				src[2].src2l = d3.src2l;
+				src[2].src2h = d2.src2h;
+
+				src[0].abs = d0.src0_abs;
+				src[1].abs = d0.src1_abs;
+				src[2].abs = d0.src2_abs;
+
+				is_sca = true;
+				switch (d1.sca_opcode)
+				{
+				case RSX_SCA_OPCODE_NOP: break;
+				case RSX_SCA_OPCODE_MOV: op(instr("MOV"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_RCP: sca_op(instr("RCP"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_RCC: sca_op(instr("RCC"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_RSQ: sca_op(instr("RSQ"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_EXP: sca_op(instr("EXP"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_LOG: sca_op(instr("LOG"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_LIT: op(instr("LIT"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_BRA: op(instr("BRA"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_BRI: op(instr("BRI"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_CAL: op(instr("CAL"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_CLI: op(instr("CLI"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_RET: op("RET"); break;
+				case RSX_SCA_OPCODE_LG2: sca_op(instr("LG2"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_EX2: sca_op(instr("EX2"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_SIN: sca_op(instr("SIN"), arg_dst(), arg(src[2])); break;
+				case RSX_SCA_OPCODE_COS: sca_op(instr("COS"), arg_dst(), arg(src[2])); break;
+				//case RSX_SCA_OPCODE_BRB: op(instr("BRB"), arg_dst(), arg(src[2])); break;
+				//case RSX_SCA_OPCODE_CLB: op(instr("CLB"), arg_dst(), arg(src[2])); break;
+				//case RSX_SCA_OPCODE_PSH: op(instr("PSH"), arg_dst(), arg(src[2])); break;
+				//case RSX_SCA_OPCODE_POP: op(instr("POP"), arg_dst(), arg(src[2])); break;
+
+				default:
+					throw std::runtime_error(fmt::format("#Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
+				}
+
+				is_sca = false;
+				switch (d1.vec_opcode)
+				{
+				case RSX_VEC_OPCODE_NOP: break;
+				case RSX_VEC_OPCODE_MOV: op(instr("MOV"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_MUL: op(instr("MUL"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_ADD: op(instr("ADD"), arg_dst(), arg(src[0]), arg(src[2])); break;
+				case RSX_VEC_OPCODE_MAD: op(instr("MAD"), arg_dst(), arg(src[0]), arg(src[1]), arg(src[2])); break;
+				case RSX_VEC_OPCODE_DP3: op(instr("DP3"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_DPH: op(instr("DPH"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_DP4: op(instr("DP4"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_DST: op(instr("DST"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_MIN: op(instr("MIN"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_MAX: op(instr("MAX"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_SLT: op(instr("SLT"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_SGE: op(instr("SGE"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_ARL: op(instr("ARL"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_FRC: op(instr("FRC"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_FLR: op(instr("FLR"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SEQ: op(instr("SEQ"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SFL: op(instr("SFL"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SGT: op(instr("SGT"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SLE: op(instr("SLE"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_SNE: op(instr("SNE"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_STR: op(instr("STR"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_SSG: op(instr("SSG"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_TXL: op(instr("TXL"), arg_dst(), texture(), arg(src[0]), predeclared_variable("2D")); break;
+
+				default:
+					throw std::runtime_error(fmt::format("#Unknown vp opcode 0x%x", fmt::by_value(d1.vec_opcode)));
+				}
+
+				if (d3.end)
+					break;
+			}
+
+			struct table_entry
+			{
+				std::string destination;
+				std::string source;
+				std::string source_channel;
+			};
+
+			const table_entry table[] =
+			{
+				//{ "result.position", "oR0" },
+				{ "result.color.front.primary", "oR1" },
+				{ "result.color.front.secondary", "oR2" },
+				{ "result.color.back.primary", "oR3" },
+				{ "result.color.back.secondary", "oR4" },
+				{ "result.fogcoord", "oR5", "x" },
+				{ "result.clip[0]", "oR5", "y" },
+				{ "result.clip[1]", "oR5", "z" },
+				{ "result.clip[2]", "oR5", "w" },
+				{ "result.texcoord[9]", "oR6" },
+				{ "result.pointsize", "oR6", "x" },
+				{ "result.clip[3]", "oR6", "y" },
+				{ "result.clip[4]", "oR6", "z" },
+				{ "result.clip[5]", "oR6", "w" },
+				{ "result.texcoord[9]", "oR6" },
+				{ "result.texcoord[0]", "oR7" },
+				{ "result.texcoord[1]", "oR8" },
+				{ "result.texcoord[2]", "oR9" },
+				{ "result.texcoord[3]", "oR10" },
+				{ "result.texcoord[4]", "oR11" },
+				{ "result.texcoord[5]", "oR12" },
+				{ "result.texcoord[6]", "oR13" },
+				{ "result.texcoord[7]", "oR14" },
+				{ "result.texcoord[8]", "oR15" }
+			};
+
+			if (variables.find("oR0") != variables.end())
+			{
+				gpu_program_builder<>::op("DP4", predeclared_variable("result.position.x"), variable("TEMP", "oR0"), predeclared_variable("state.matrix.program[0].row[0]"));
+				gpu_program_builder<>::op("DP4", predeclared_variable("result.position.y"), variable("TEMP", "oR0"), predeclared_variable("state.matrix.program[0].row[1]"));
+				gpu_program_builder<>::op("DP4", predeclared_variable("result.position.z"), variable("TEMP", "oR0"), predeclared_variable("state.matrix.program[0].row[2]"));
+				gpu_program_builder<>::op("DP4", predeclared_variable("result.position.w"), variable("TEMP", "oR0"), predeclared_variable("state.matrix.program[0].row[3]"));
+			}
+
+			for (auto& entry : table)
+			{
+				if (variables.find(entry.source) != variables.end())
+				{
+					gpu_program_builder<>::op("MOV", predeclared_variable(entry.destination),
+						variable("TEMP", entry.source).mask(entry.source_channel));
+				}
+			}
+
+			link();
+			m_shader = context.make();
+
+			return *this;
 		}
-		else
-		{
-			glDeleteShader(id);
-		}
-		id = 0;
 	}
 }
