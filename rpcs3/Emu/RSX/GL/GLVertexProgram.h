@@ -306,7 +306,7 @@ namespace gl
 
 				std::string constants_initialization = "{\n";
 
-				if (m_max_constant_id >= 0)
+				if (m_max_constant_id != -1)
 				{
 					for (uint i = m_min_constant_id; i < m_max_constant_id; ++i)
 					{

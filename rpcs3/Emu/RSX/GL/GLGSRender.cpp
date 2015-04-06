@@ -2003,7 +2003,7 @@ void GLGSRender::ExecCMD()
 		m_gl_textures[i].Create();
 		m_gl_textures[i].Bind();
 		checkForGlError(fmt::Format("m_gl_textures[%d].Bind", i));
-		m_program.SetTex(i);
+		//m_program.SetTex(i);
 		m_gl_textures[i].Init(m_textures[i]);
 		checkForGlError(fmt::Format("m_gl_textures[%d].Init", i));
 	}
@@ -2017,7 +2017,7 @@ void GLGSRender::ExecCMD()
 		m_gl_vertex_textures[i].Create();
 		m_gl_vertex_textures[i].Bind();
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Bind", i));
-		m_program.SetVTex(i);
+		//m_program.SetVTex(i);
 		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
 	}
