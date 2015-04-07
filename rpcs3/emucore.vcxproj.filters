@@ -90,6 +90,9 @@
     <Filter Include="Emu\CPU\ARMv7\Objects">
       <UniqueIdentifier>{368770cf-c8d9-4f4a-9ac3-5bdf48101ffe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\D3D">
+      <UniqueIdentifier>{d6c27316-92c6-4a29-bd8c-f52a644b7868}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -860,6 +863,9 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Direct3D9\D3D9GSRender.cpp">
+      <Filter>Emu\GPU\RSX\D3D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1542,6 +1548,9 @@
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\Modules\cellFs.h">
       <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Direct3D9\D3D9GSRender.h">
+      <Filter>Emu\GPU\RSX\D3D</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

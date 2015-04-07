@@ -421,6 +421,55 @@ namespace gl
 				glUnmapBuffer((GLenum)target_);
 			}
 		}
+
+		class mapper
+		{
+			pbo *m_parent;
+			GLubyte *m_data;
+
+		public:
+			mapper(pbo& parent, access access_, GLsizeiptr data_size = 0)
+			{
+				m_parent = &parent;
+				m_data = parent.map(access_, data_size);
+			}
+
+			~mapper()
+			{
+				m_parent->unmap();
+			}
+
+			GLubyte* get() const
+			{
+				return m_data;
+			}
+		};
+
+		GLubyte* map(access access_, GLsizeiptr data_size = 0)
+		{
+			bind(current_target());
+
+			if (data_size != 0)
+			{
+				GLenum usage;
+
+				switch (access_)
+				{
+				case access::read: usage = GL_STREAM_READ; break;
+				case access::write: usage = GL_STREAM_DRAW; break;
+				case access::read_write: usage = GL_STREAM_DRAW; break;
+				}
+
+				glBufferData((GLenum)current_target(), data_size, 0, usage);
+			}
+
+			return (GLubyte*)glMapBuffer((GLenum)current_target(), (GLenum)access_);
+		}
+
+		void unmap()
+		{
+			glUnmapBuffer((GLenum)current_target());
+		}
 	};
 
 	class texture
@@ -481,6 +530,8 @@ namespace gl
 			bgr = GL_BGR,
 			bgra = GL_BGRA,
 
+			stencil = GL_STENCIL_INDEX,
+			stencil8 = GL_STENCIL_INDEX8,
 			depth = GL_DEPTH_COMPONENT,
 			depth16 = GL_DEPTH_COMPONENT16,
 			depth_stencil = GL_DEPTH_STENCIL,

@@ -6,6 +6,7 @@
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
 #include "GL/GLGSRender.h"
+#include "Direct3D9/D3D9GSRender.h"
 
 void GSInfo::Init()
 {
@@ -33,6 +34,7 @@ void GSManager::Init()
 	default:
 	case 0: m_render = new NullGSRender(); break;
 	case 1: m_render = new GLGSRender(); break;
+	case 2: m_render = new D3D9GSRender(); break;
 	}
 	//m_render->Init(GetInfo().outresolution.width, GetInfo().outresolution.height);
 }

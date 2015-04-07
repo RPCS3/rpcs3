@@ -5,6 +5,13 @@
 #include "GSManager.h"
 #include "GSRender.h"
 
+GetGSFrameCb GetGSFrame = nullptr;
+
+void SetGetGSFrameCallback(GetGSFrameCb value)
+{
+	GetGSFrame = value;
+}
+
 GSLock::GSLock(GSRender& renderer, GSLockType type)
 	: m_renderer(renderer)
 	, m_type(type)

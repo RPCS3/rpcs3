@@ -59,28 +59,6 @@ public:
 	void Delete();
 };
 
-class GSFrameBase
-{
-public:
-	GSFrameBase() {}
-	GSFrameBase(const GSFrameBase&) = delete;
-	virtual void Close() = 0;
-
-	virtual bool IsShown() = 0;
-	virtual void Hide() = 0;
-	virtual void Show() = 0;
-
-	virtual void* GetNewContext() = 0;
-	virtual void SetCurrent(void* ctx) = 0;
-	virtual void DeleteContext(void* ctx) = 0;
-	virtual void Flip(void* ctx) = 0;
-	virtual sizei GetClientSize() = 0;
-};
-
-typedef GSFrameBase*(*GetGSFrameCb)();
-
-void SetGetGSFrameCallback(GetGSFrameCb value);
-
 class GLGSRender : public GSRender
 {
 private:
@@ -98,6 +76,7 @@ private:
 	gl::texture m_draw_buffer_color;
 	gl::pbo m_pbo_color[4];
 	gl::pbo m_pbo_depth;
+	gl::pbo m_pbo_stencil;
 	gl::glsl::program m_glsl_draw_texture_program;
 
 	void* m_context;

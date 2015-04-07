@@ -444,6 +444,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
+	cbox_gs_render->Append("Direct3D 9");
 	//cbox_gs_render->Append("Software");
 
 	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)

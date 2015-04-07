@@ -39,6 +39,7 @@
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Direct3D9\D3D9GSRender.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellSpursSpu.cpp" />
@@ -413,6 +414,7 @@
     <ClInclude Include="Emu\Memory\atomic.h" />
     <ClInclude Include="Emu\Memory\refcnt.h" />
     <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
+    <ClInclude Include="Emu\RSX\Direct3D9\D3D9GSRender.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
     <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
@@ -592,7 +594,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;..\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;..\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\minidx9\Lib\x64;$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
@@ -604,7 +606,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">
     <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;..\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;..\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\minidx9\Lib\x64;$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -616,7 +618,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
     <IncludePath>.\;..\;..\minidx9\Include;..\asmjit\src\asmjit;..\wxWidgets\include\msvc;..\wxWidgets\include;..\OpenAL\include;..\ffmpeg\WindowsInclude;..\ffmpeg\Windows\x86_64\Include;..\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath);..\llvm\include;..\llvm_build\include</IncludePath>
     <IntDir>$(Platform)\$(Configuration)\emucore\</IntDir>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\minidx9\Lib\x64;$(LibraryPath)</LibraryPath>
     <ExcludePath>$(ExcludePath)</ExcludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

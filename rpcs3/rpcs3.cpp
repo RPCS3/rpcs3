@@ -26,6 +26,7 @@
 #include "Gui/MsgDialog.h"
 
 #include "Gui/GLGSFrame.h"
+#include "Gui/D3D9GSFrame.h"
 #include <wx/stdpaths.h>
 
 #ifdef _WIN32
@@ -129,9 +130,14 @@ bool Rpcs3App::OnInit()
 		return new NullPadHandler();
 	});
 
-	SetGetGSFrameCallback([]() -> GSFrameBase*
+	SetGetGSFrameCallback([](int renderer) -> GSFrameBase*
 	{
-		return new GLGSFrame();
+		switch (renderer)
+		{
+		case 0: return new GLGSFrame();
+		case 1: return new D3D9GSFrame();
+		}
+		return nullptr;
 	});
 
 	SetMsgDialogCallbacks(MsgDialogCreate, MsgDialogDestroy, MsgDialogProgressBarSetMsg, MsgDialogProgressBarReset, MsgDialogProgressBarInc);

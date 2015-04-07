@@ -99,6 +99,9 @@
     <ClCompile Include="Gui\CgDisasm.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\D3D9GSFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -198,6 +201,9 @@
       <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="Gui\CgDisasm.h">
+      <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\D3D9GSFrame.h">
       <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>

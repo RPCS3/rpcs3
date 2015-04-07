@@ -20,13 +20,6 @@ extern "C"
 }
 #endif
 
-GetGSFrameCb GetGSFrame = nullptr;
-
-void SetGetGSFrameCallback(GetGSFrameCb value)
-{
-	GetGSFrame = value;
-}
-
 #define CMD_DEBUG 0
 #define DUMP_VERTEX_DATA 0
 
@@ -651,7 +644,7 @@ GLGSRender::GLGSRender()
 	, m_frame(nullptr)
 	, m_context(nullptr)
 {
-	m_frame = GetGSFrame();
+	m_frame = GetGSFrame(0);
 }
 
 GLGSRender::~GLGSRender()
@@ -1292,9 +1285,6 @@ void GLGSRender::InitFBO()
 				.format(gl::texture::format::depth_stencil)
 				.internal_format(gl::texture::format::depth24_stencil8);
 
-			//m_texture_depth.pixel_settings()
-			//	.swap_bytes();
-
 			m_fbo.depth_stencil = m_texture_depth;
 			checkForGlError("m_fbo.depth_stencil = m_texture_depth");
 
@@ -1309,6 +1299,10 @@ void GLGSRender::InitFBO()
 			break;
 		}
 		}
+
+		m_texture_depth.pixel_settings()
+			.aligment(1);
+		//	.swap_bytes();
 	}
 
 	m_fbo.bind();

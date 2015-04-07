@@ -151,7 +151,7 @@ namespace gl
 				case RSX_FP_OPCODE_SEQ: op(instr("SEQ", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 				case RSX_FP_OPCODE_FRC: op(instr("FRC", F | C | S | H), arg(dst), arg(src0)); break;
 				case RSX_FP_OPCODE_FLR: op(instr("FLR", F | I | C | S | H), arg(dst), arg(src0)); break;
-				case RSX_FP_OPCODE_KIL: op(instr("KIL", F | I | H), arg(dst), arg(src0)); break;
+				case RSX_FP_OPCODE_KIL: gpu_program_builder<>::op(instr("KIL"), condition()); break;
 				case RSX_FP_OPCODE_PK4: op(instr("PK4", F | I | H), arg(dst), arg(src0)); break;
 				case RSX_FP_OPCODE_UP4: op(instr("UP4", F | I | H), arg(dst), arg(src0)); break;
 				case RSX_FP_OPCODE_DDX: op(instr("DDX", F | I | H), arg(dst), arg(src0)); break;
