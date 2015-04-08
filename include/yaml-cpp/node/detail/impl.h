@@ -133,7 +133,7 @@ inline bool node_data::remove(const Key& key, shared_memory_holder pMemory) {
     return false;
 
   for (node_map::iterator it = m_map.begin(); it != m_map.end(); ++it) {
-    if (equals(*it->first, key, pMemory)) {
+    if (it->first->equals(key, pMemory)) {
       m_map.erase(it);
       return true;
     }
