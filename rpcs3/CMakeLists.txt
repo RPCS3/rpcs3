@@ -44,8 +44,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	#on some Linux distros shm_unlink and similar functions are in librt only
-	set(ADDITIONAL_LIBS "rt")
-	set(ADDITIONAL_LIBS "X11")
+	set(ADDITIONAL_LIBS "rt" "X11")
 elseif(UNIX)
 	#it seems like glibc includes the iconv functions we use but other libc
 	#implementations like the one on OSX don't seem implement them
