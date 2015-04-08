@@ -1,7 +1,7 @@
 RPCS3
 =====
 
-[![Build Status](https://travis-ci.org/DHrpcs3/rpcs3.svg?branch=master)](https://travis-ci.org/DHrpcs3/rpcs3)
+[![Build Status](https://travis-ci.org/RPCS3/rpcs3.svg?branch=master)](https://travis-ci.org/RPCS3/rpcs3)
 
 <a href="https://scan.coverity.com/projects/3960">
   <img alt="Coverity Scan Build Status"
