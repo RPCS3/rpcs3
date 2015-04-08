@@ -53,9 +53,12 @@ addons:
     build_command:   "make -j 4"
     branch_pattern: coverity_scan
 
-#These modifys are from https://github.com/devernay/cminpack/blob/master/.travis.yml
+# These modifys are from https://github.com/devernay/cminpack/blob/master/.travis.yml
+# It passed but when coverall it failed.
 script:
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
- - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .f --extension .h fi
+# Add a command to show all the variables now. maybe only useful for debugging travis.
+ - echo "Current all Shell Variables" ; export -p
+ - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
 
