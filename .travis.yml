@@ -21,7 +21,7 @@ before_install:
 # Add later version of Clang, apt from llvm.org. the repository link is for development version.
   - echo "yes" | wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
     sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise main';
-    sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main';
+    sudo add-apt-repository --yes 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main'
 # And the libstdc++4.8 of GCC from ppa
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update
@@ -66,9 +66,9 @@ addons:
 
 script:
 # Add a command to show all the variables now. maybe only useful for debugging travis.
- - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
+ - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--"
 # And to ensure the versions of toolchain
-   echo "--CXX version?"; if [ "$CXX" = "g++" ]; then g++ --version; else clang++ --version; fi; echo "--CXX version confirmed";
+   echo "--CXX version?"; if [ "$CXX" = "g++" ]; then g++ --version; else clang++ --version; fi; echo "--CXX version confirmed"
 # From https://github.com/devernay/cminpack/blob/master/.travis.yml: that is $COVERITY_SCAN_BRANCH not ${COVERITY_SCAN_BRANCH}
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
