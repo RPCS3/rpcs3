@@ -29,6 +29,8 @@ before_install:
     aria2c -x 16 http://www.cmake.org/files/v3.0/cmake-3.0.0-Linux-i386.sh &&
     chmod a+x cmake-3.0.0-Linux-i386.sh &&
     sudo ./cmake-3.0.0-Linux-i386.sh --skip-license --prefix=/usr;
+# Add coverall for C++ so coverity could be triggered. Even it should be --coverage and gcov.
+  - sudo pip install cpp-coveralls
 
 before_script:
  - git submodule update --init asmjit ffmpeg llvm
@@ -51,5 +53,12 @@ addons:
     build_command:   "make -j 4"
     branch_pattern: coverity_scan
 
+# These modifys are from https://github.com/devernay/cminpack/blob/master/.travis.yml
+# It passed but when coverall it failed.
 script:
- - if [ ${COVERITY_SCAN_BRANCH} != 1 ]; then make -j 4; fi
+# Add a command to show all the variables now. maybe only useful for debugging travis.
+ - echo "Current all Shell Variables" ; export -p
+ - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
+after_success:
+ - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
+
