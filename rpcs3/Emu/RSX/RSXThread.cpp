@@ -401,9 +401,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_UB || m_vertex_data[row].size != 4)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_UB;
 			m_vertex_data[row].size = 4;
-			m_vertex_data[row].data.clear();
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
@@ -421,9 +421,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 2)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
 			m_vertex_data[row].size = 2;
-			m_vertex_data[row].data.clear();
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
@@ -441,9 +441,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 4)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
 			m_vertex_data[row].size = 4;
-			m_vertex_data[row].data.clear();
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
