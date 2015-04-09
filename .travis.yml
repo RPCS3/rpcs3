@@ -18,18 +18,29 @@ git:
 before_install:
   - echo "yes" | sudo apt-key adv --fetch-keys http://repos.codelite.org/CodeLite.asc
   - echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe'
+# Add later version of Clang, apt from llvm.org. the repository link is for development version.
+  - echo "yes" | sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main';
+    echo "yes" | sudo add-apt-repository 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main';
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
+# And the libstdc++4.8 of GCC from ppa
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update
   - sudo apt-get install libwxgtk3.0-dev libopenal-dev freeglut3-dev libglew-dev libc6-dev
   - sudo apt-get install aria2 -qq
   - download_extract() { aria2c -x 16 $1 -o $2 && tar -xf $2; }
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; export CXX="g++-4.8" CC="gcc-4.8"; else sudo apt-get install libstdc++-4.8-dev; fi
+  - if [ "$CXX" = "g++" ]; then
+      sudo apt-get install -qq g++-4.8;
+      export CXX="g++-4.8" CC="gcc-4.8";
+    else
+      sudo apt-get install -qq --allow-unauthenticated llvm-3.6 llvm-3.6-dev clang-3.6 libstdc++-4.8-dev;
+      export CXX="clang++-3.6" CC="clang-3.6";
+    fi;
 # Travis uses CMake 2.8.7. We require 2.8.8. Grab latest
   - sudo apt-get install lib32stdc++6 -qq &&
     aria2c -x 16 http://www.cmake.org/files/v3.0/cmake-3.0.0-Linux-i386.sh &&
     chmod a+x cmake-3.0.0-Linux-i386.sh &&
     sudo ./cmake-3.0.0-Linux-i386.sh --skip-license --prefix=/usr;
-# Add coverall for C++ so coverity could be triggered. Even it should be --coverage and gcov.
+# Add coverall for C++ so coverall.io could be triggered. Even it should be --coverage and gcov.
   - sudo pip install cpp-coveralls
 
 before_script:
@@ -57,7 +68,10 @@ addons:
 # It passed but when coverall it failed.
 script:
 # Add a command to show all the variables now. maybe only useful for debugging travis.
- - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--"
+ - echo "--Shell Export Lists START--" ; export -p; echo "--Shell Export Lists STOP--";
+# And to ensure the versions of toolchain
+ - echo "--CXX version?"; "$CXX" --version; echo "--CXX version confirmed";
+# From https://github.com/devernay/cminpack/blob/master/.travis.yml: that is $COVERITY_SCAN_BRANCH not ${COVERITY_SCAN_BRANCH}
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then make -j 4; fi
 after_success:
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then coveralls --extension .c --extension .cpp --extension .h; fi
