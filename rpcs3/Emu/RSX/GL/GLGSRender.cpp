@@ -974,10 +974,11 @@ bool GLGSRender::LoadProgram()
 		gl::gpu_program::enable(gl::gpu_program::target::fragment);
 		gl::gpu_program fragment_program(gl::gpu_program::target::fragment, fragment_program_source);
 		fragment_program.bind();
-		LOG_ERROR(RSX, fragment_program_source.c_str());
-		LOG_ERROR(RSX, fragment_program.error().c_str());
-		checkForGlError("gl::gpu_program::target::fragment");
-
+		if (glGetError() != GL_NO_ERROR)
+		{
+			LOG_ERROR(RSX, fragment_program_source.c_str());
+			LOG_ERROR(RSX, fragment_program.error().c_str());
+		}
 		std::string vertex_program_source =
 			gl::vertex_program::decompiler(m_vertex_program_data)
 			.decompile(methodRegisters[NV4097_SET_TRANSFORM_PROGRAM_START], m_transform_constants)
@@ -986,9 +987,11 @@ bool GLGSRender::LoadProgram()
 		vertex_program.create(gl::gpu_program::target::vertex, vertex_program_source);
 		vertex_program.bind();
 
-		LOG_ERROR(RSX, vertex_program_source.c_str());
-		LOG_ERROR(RSX, vertex_program.error().c_str());
-		checkForGlError("gl::gpu_program::target::vertex");
+		if (glGetError() != GL_NO_ERROR)
+		{
+			LOG_ERROR(RSX, vertex_program_source.c_str());
+			LOG_ERROR(RSX, vertex_program.error().c_str());
+		}
 	}
 	catch (const std::runtime_error& e)
 	{
@@ -1072,6 +1075,9 @@ void GLGSRender::ReadBuffers()
 
 	auto depth_format = surface_depth_format_to_gl((methodRegisters[NV4097_SET_SURFACE_FORMAT] >> 5) & 0x7);
 
+	int pixel_size = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 2 : 4;
+	m_pbo_depth.create(m_width * m_height * pixel_size);
+
 	m_pbo_depth.map([&](GLubyte* pixels)
 	{
 		if (m_surface_depth_format == CELL_GCM_SURFACE_Z16)
@@ -1092,7 +1098,7 @@ void GLGSRender::ReadBuffers()
 				dst[i] = src[i];
 			}
 		}
-	}, gl::pbo::access::write);
+	}, gl::buffer::access::write);
 
 	m_texture_depth.copy_from(m_pbo_depth, depth_format.second, depth_format.first);
 
@@ -1169,7 +1175,7 @@ void GLGSRender::WriteBuffers()
 			}
 		}
 
-	}, gl::pbo::access::read);
+	}, gl::buffer::access::read);
 }
 
 void GLGSRender::OnInit()
@@ -1271,8 +1277,6 @@ void GLGSRender::InitFBO()
 
 			m_fbo.depth = m_texture_depth;
 			checkForGlError("m_fbo.depth = m_texture_depth");
-
-			m_pbo_depth.create(m_width * m_height * 2);
 			break;
 		}
 
@@ -1287,8 +1291,6 @@ void GLGSRender::InitFBO()
 
 			m_fbo.depth_stencil = m_texture_depth;
 			checkForGlError("m_fbo.depth_stencil = m_texture_depth");
-
-			m_pbo_depth.create(m_width * m_height * 4);
 			break;
 		}
 
@@ -1639,17 +1641,10 @@ void GLGSRender::ExecCMD()
 		checkForGlError("glBlendColor");
 	}
 
-	if (m_set_cull_face)
-	{
-		glCullFace(m_cull_face);
-		checkForGlError("glCullFace");
-	}
-
-	if (m_set_front_face)
-	{
-		glFrontFace(m_front_face);
-		checkForGlError("glFrontFace");
-	}
+	glFrontFace(m_front_face);
+	checkForGlError("glFrontFace");
+	glCullFace(m_cull_face);
+	checkForGlError("glCullFace");
 
 	if (m_set_alpha_func && m_set_alpha_ref)
 	{

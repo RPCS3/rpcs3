@@ -10,14 +10,6 @@
 #include "Utilities/Timer.h"
 #include "types.h"
 
-enum Method
-{
-	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
-	CELL_GCM_METHOD_FLAG_JUMP          = 0x20000000,
-	CELL_GCM_METHOD_FLAG_CALL          = 0x00000002,
-	CELL_GCM_METHOD_FLAG_RETURN        = 0x00020000,
-};
-
 extern u32 methodRegisters[0xffff];
 u32 GetAddress(u32 offset, u32 location);
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
@@ -380,7 +372,7 @@ public:
 
 	// Cull face
 	bool m_set_cull_face;
-	u32 m_cull_face;
+	u32 m_cull_face = 0x0405;//GL_BACK
 
 	// Alpha test
 	bool m_set_alpha_test;
@@ -399,8 +391,7 @@ public:
 	u32 m_vertex_data_base_index;
 
 	// Front face
-	bool m_set_front_face;
-	u32 m_front_face;
+	u32 m_front_face = 0x0900; //GL_CW
 
 	// Frequency divider
 	u32 m_set_frequency_divider_operation;
@@ -472,8 +463,6 @@ protected:
 		m_restart_index = 0xffffffff;
 		m_front_polygon_mode = 0x1b02; // GL_FILL
 		m_back_polygon_mode = 0x1b02; // GL_FILL
-		m_front_face = 0x0901; // GL_CCW
-		m_cull_face = 0x0405; // GL_BACK
 		m_alpha_func = 0x0207; // GL_ALWAYS
 		m_alpha_ref = 0.0f;
 		m_logic_op = 0x1503; // GL_COPY
@@ -568,7 +557,6 @@ protected:
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
 		m_set_cull_face = false;
-		m_set_front_face = false;
 		m_set_alpha_test = false;
 		m_set_alpha_func = false;
 		m_set_alpha_ref = false;

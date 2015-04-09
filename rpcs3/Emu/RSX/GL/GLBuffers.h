@@ -274,13 +274,15 @@ namespace gl
 		}
 	};
 
-	class pbo
+	class buffer
 	{
 	public:
 		enum class target
 		{
-			pack = GL_PIXEL_PACK_BUFFER,
-			unpack = GL_PIXEL_UNPACK_BUFFER
+			pixel_pack = GL_PIXEL_PACK_BUFFER,
+			pixel_unpack = GL_PIXEL_UNPACK_BUFFER,
+			array = GL_ARRAY_BUFFER,
+			element_array = GL_ELEMENT_ARRAY_BUFFER
 		};
 		enum class access
 		{
@@ -291,17 +293,17 @@ namespace gl
 
 	private:
 		GLuint m_id = GL_NONE;
-		target m_target = target::unpack;
+		target m_target = target::array;
 
 	public:
-		pbo() = default;
+		buffer() = default;
 
-		pbo(GLuint id)
+		buffer(GLuint id)
 		{
 			set_id(id);
 		}
 
-		~pbo()
+		~buffer()
 		{
 			remove();
 		}
@@ -312,7 +314,7 @@ namespace gl
 			GLenum m_target;
 
 		public:
-			save_binding_state(target target_, const pbo& new_state) : save_binding_state(target_)
+			save_binding_state(target target_, const buffer& new_state) : save_binding_state(target_)
 			{
 				new_state.bind(target_);
 			}
@@ -322,8 +324,10 @@ namespace gl
 				GLenum pname;
 				switch (target_)
 				{
-				case target::pack: pname = GL_PIXEL_PACK_BUFFER_BINDING; break;
-				case target::unpack: pname = GL_PIXEL_UNPACK_BUFFER_BINDING; break;
+				case target::pixel_pack: pname = GL_PIXEL_PACK_BUFFER_BINDING; break;
+				case target::pixel_unpack: pname = GL_PIXEL_UNPACK_BUFFER_BINDING; break;
+				case target::array: pname = GL_ARRAY_BUFFER_BINDING; break;
+				case target::element_array: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -347,17 +351,24 @@ namespace gl
 			glGenBuffers(1, &m_id);
 		}
 
-		void create(GLsizeiptr size)
+		void create(GLsizeiptr size, const void* data_ = nullptr)
 		{
 			create();
-			data(size);
+			data(size, data_);
 		}
 
-		void data(GLsizeiptr size)
+		void data(GLsizeiptr size, const void* data_ = nullptr)
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, 0, GL_STREAM_COPY);
+			glBufferData((GLenum)target_, size, data_, GL_STREAM_COPY);
+		}
+
+		void sub_data(GLintptr offset, GLsizeiptr size, const void* data_ = nullptr)
+		{
+			target target_ = current_target();
+			save_binding_state save(target_, *this);
+			glBufferSubData((GLenum)target_, offset, size, data_);
 		}
 
 		void bind(target target_) const
@@ -396,24 +407,10 @@ namespace gl
 			return created();
 		}
 
-		void map(std::function<void(GLubyte*)> impl, access access_, GLsizeiptr data_size = 0)
+		void map(std::function<void(GLubyte*)> impl, access access_)
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-
-			if (data_size != 0)
-			{
-				GLenum usage;
-
-				switch (access_)
-				{
-				case access::read: usage = GL_STREAM_READ; break;
-				case access::write: usage = GL_STREAM_DRAW; break;
-				case access::read_write: usage = GL_STREAM_DRAW; break;
-				}
-
-				glBufferData((GLenum)target_, data_size, 0, usage);
-			}
 
 			if (GLubyte* ptr = (GLubyte*)glMapBuffer((GLenum)target_, (GLenum)access_))
 			{
@@ -424,14 +421,14 @@ namespace gl
 
 		class mapper
 		{
-			pbo *m_parent;
+			buffer *m_parent;
 			GLubyte *m_data;
 
 		public:
-			mapper(pbo& parent, access access_, GLsizeiptr data_size = 0)
+			mapper(buffer& parent, access access_)
 			{
 				m_parent = &parent;
-				m_data = parent.map(access_, data_size);
+				m_data = parent.map(access_);
 			}
 
 			~mapper()
@@ -445,23 +442,9 @@ namespace gl
 			}
 		};
 
-		GLubyte* map(access access_, GLsizeiptr data_size = 0)
+		GLubyte* map(access access_)
 		{
 			bind(current_target());
-
-			if (data_size != 0)
-			{
-				GLenum usage;
-
-				switch (access_)
-				{
-				case access::read: usage = GL_STREAM_READ; break;
-				case access::write: usage = GL_STREAM_DRAW; break;
-				case access::read_write: usage = GL_STREAM_DRAW; break;
-				}
-
-				glBufferData((GLenum)current_target(), data_size, 0, usage);
-			}
 
 			return (GLubyte*)glMapBuffer((GLenum)current_target(), (GLenum)access_);
 		}
@@ -1111,9 +1094,9 @@ namespace gl
 			glTexSubImage2D((GLenum)target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
 		}
 
-		void copy_from(const pbo& pbo_, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
+		void copy_from(const buffer& buf, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
 		{
-			pbo::save_binding_state save_pbo(pbo::target::unpack, pbo_);
+			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
 			copy_from(nullptr, format, type, pixel_settings);
 		}
 
@@ -1122,9 +1105,9 @@ namespace gl
 			copy_from(dst, format, type, pixel_settings());
 		}
 
-		void copy_from(const pbo& pbo_, texture::format format, texture::type type)
+		void copy_from(const buffer& buf, texture::format format, texture::type type)
 		{
-			copy_from(pbo_, format, type, pixel_settings());
+			copy_from(buf, format, type, pixel_settings());
 		}
 
 		void copy_to(void* dst, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
@@ -1134,9 +1117,9 @@ namespace gl
 			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
 		}
 
-		void copy_to(const pbo& pbo_, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
+		void copy_to(const buffer& buf, texture::format format, texture::type type, gl::pixel_settings pixel_settings)
 		{
-			pbo::save_binding_state save_pbo(pbo::target::pack, pbo_);
+			buffer::save_binding_state save_buffer(buffer::target::pixel_pack, buf);
 			copy_to(nullptr, format, type, pixel_settings);
 		}
 
@@ -1145,9 +1128,9 @@ namespace gl
 			copy_to(dst, format, type, pixel_settings());
 		}
 
-		void copy_to(const pbo& pbo_, texture::format format, texture::type type)
+		void copy_to(const buffer& buf, texture::format format, texture::type type)
 		{
-			copy_to(pbo_, format, type, pixel_settings());
+			copy_to(buf, format, type, pixel_settings());
 		}
 	};
 
@@ -1391,32 +1374,32 @@ namespace gl
 			glClear((GLbitfield)buffers_);
 		}
 
-		void draw_pixels(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		void copy_from(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
 			glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, pixels);
 		}
 
-		void draw_pixels(const pbo& pbo_, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		void copy_from(const buffer& buf, sizei size, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
 		{
 			save_binding_state save(*this);
-			pbo::save_binding_state save_pbo(pbo::target::unpack, pbo_);
+			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
 			pixel_settings.apply();
 			glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, nullptr);
 		}
 
-		void read_pixels(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		void copy_to(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
 			glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, pixels);
 		}
 
-		void read_pixels(const pbo& pbo_, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
+		void copy_to(const buffer& buf, coordi coord, gl::texture::format format_, gl::texture::type type_, gl::pixel_settings pixel_settings = gl::pixel_settings()) const
 		{
 			save_binding_state save(*this);
-			pbo::save_binding_state save_pbo(pbo::target::pack, pbo_);
+			buffer::save_binding_state save_buffer(buffer::target::pixel_pack, buf);
 			pixel_settings.apply();
 			glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, nullptr);
 		}
@@ -1554,157 +1537,6 @@ namespace gl
 		void clear()
 		{
 			m_entries.clear();
-		}
-	};
-
-	//TODO
-	class vbo
-	{
-	public:
-		enum class usage
-		{
-			static_draw = GL_STATIC_DRAW,
-			dynamic_draw = GL_DYNAMIC_DRAW
-		};
-
-		enum class target
-		{
-			array_buffer = GL_ARRAY_BUFFER,
-			element_array_buffer = GL_ELEMENT_ARRAY_BUFFER
-		};
-
-		class save_binding_state
-		{
-			GLint m_last_binding;
-			target m_target;
-
-		public:
-			save_binding_state(const vbo& new_binding) : save_binding_state(new_binding.get_target())
-			{
-				new_binding.bind();
-			}
-
-			save_binding_state(target target_)
-			{
-				GLenum pname;
-				switch (m_target = target_)
-				{
-				case target::array_buffer: pname = GL_ARRAY_BUFFER_BINDING; break;
-				case target::element_array_buffer: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
-				}
-
-				glGetIntegerv(pname, &m_last_binding);
-			}
-
-			~save_binding_state()
-			{
-				glBindBuffer((GLenum)m_target, m_last_binding);
-			}
-		};
-
-	private:
-		GLuint m_id = GL_NONE;
-		target m_target = target::array_buffer;
-
-	public:
-		vbo() = default;
-		vbo(GLint id)
-		{
-			set_id(id);
-		}
-
-		vbo(const vertex_attrib_array& array)
-		{
-			std::unordered_map<int, int> index_offset;
-			std::vector<u8> data;
-
-			for (auto &entry : array.entries())
-			{
-				int index = entry.first;
-				size_t offset = data.size();
-				index_offset[index] = offset;
-				size_t size = entry.second.size();
-				data.resize(offset + size);
-
-				if (entry.second.stride() == 0)
-				{
-					memcpy(&data[offset], entry.second.data(), size);
-				}
-				else
-				{
-					for (size_t i = 0, loffset = 0, end = data.size(), step = entry.second.stride() ? entry.second.stride() : entry.second.element_size();
-						i < end;
-						i += step, loffset += entry.second.element_size())
-					{
-						memcpy(&data[offset + loffset], (u8*)entry.second.data() + i, entry.second.element_size());
-					}
-				}
-			}
-
-			create(target::array_buffer, data.data(), data.size());
-		}
-
-		~vbo()
-		{
-			remove();
-		}
-
-		target get_target() const
-		{
-			return m_target;
-		}
-
-		void set_data(const void* data, size_t size, usage usage_ = usage::dynamic_draw)
-		{
-			glBufferData((GLenum)m_target, size, data, (GLenum)usage_);
-		}
-
-		void bind() const
-		{
-			glBindBuffer((GLenum)m_target, id());
-		}
-
-		void create(target target_)
-		{
-			if (created())
-			{
-				remove();
-			}
-
-			m_target = target_;
-			glGenBuffers(1, &m_id);
-		}
-
-		void create(target target_, const void* data, size_t size, usage usage_ = usage::dynamic_draw)
-		{
-			create(target_);
-			set_data(data, size, usage_);
-		}
-
-		void remove()
-		{
-			glDeleteBuffers(1, &m_id);
-			m_id = GL_NONE;
-		}
-
-		GLuint id() const
-		{
-			return m_id;
-		}
-
-		void set_id(GLuint id)
-		{
-			m_id = id;
-		}
-
-		bool created() const
-		{
-			return m_id != 0;
-		}
-
-		explicit operator bool() const
-		{
-			return created();
 		}
 	};
 

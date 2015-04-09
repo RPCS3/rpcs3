@@ -71,12 +71,13 @@ private:
 	GLvbo m_vbo;
 	gl::texture m_textures_color[4];
 	gl::texture m_texture_depth;
+	gl::buffer m_buffer;
 	gl::fbo m_fbo;
 	gl::fbo m_draw_buffer_fbo;
 	gl::texture m_draw_buffer_color;
-	gl::pbo m_pbo_color[4];
-	gl::pbo m_pbo_depth;
-	gl::pbo m_pbo_stencil;
+	gl::buffer m_pbo_color[4];
+	gl::buffer m_pbo_depth;
+	gl::buffer m_pbo_stencil;
 	gl::glsl::program m_glsl_draw_texture_program;
 
 	void* m_context;
