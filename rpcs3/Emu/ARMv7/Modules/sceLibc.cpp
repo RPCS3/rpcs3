@@ -28,6 +28,7 @@ std::string armv7_fmt(ARMv7Context& context, vm::psv::ptr<const char> fmt, u32 g
 			const auto start = fmt - 1;
 
 			// read flags
+			// TODO:: Syphurith: Sorry i can not classify/understand these lines exactly..
 			const bool plus_sign = *fmt == '+' ? fmt++, true : false;
 			const bool minus_sign = *fmt == '-' ? fmt++, true : false;
 			const bool space_sign = *fmt == ' ' ? fmt++, true : false;

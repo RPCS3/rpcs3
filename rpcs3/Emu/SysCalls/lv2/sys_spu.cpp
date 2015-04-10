@@ -508,7 +508,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 		}
 	}
 
-	if (group->state <= SPU_THREAD_GROUP_STATUS_INITIALIZED || group->state == SPU_THREAD_GROUP_STATUS_WAITING || group->state == SPU_THREAD_GROUP_STATUS_WAITING)
+	if ((group->state <= SPU_THREAD_GROUP_STATUS_INITIALIZED) || (group->state == SPU_THREAD_GROUP_STATUS_WAITING) || (group->state == SPU_THREAD_GROUP_STATUS_WAITING))
 	{
 		return CELL_EINVAL;
 	}
