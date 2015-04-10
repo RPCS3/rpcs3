@@ -148,7 +148,6 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 	u32 addr;
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		// TODO:: Syphurith: Should us convert this to a if statement? Since Asserts aren't included in Release builds.
 		assert(!is_full(size));
 
 		if (put + size + 128 > memAddr + memSize)
