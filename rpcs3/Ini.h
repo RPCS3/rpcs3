@@ -403,6 +403,7 @@ public:
 
 		// Customed EmulationDir
 		SysEmulationDirPath.Save();
+		SysEmulationDirPathEnable.Save();
 	}
 };
 

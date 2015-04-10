@@ -433,15 +433,10 @@ void VFS::Init(const std::string& path)
 		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
 		if (Ini.SysEmulationDirPathEnable.GetValue())
 		{
-			if (Ini.SysEmulationDirPath.GetValue().empty())
-				Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
-			LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is On, Binded $(EmulatorDir) to %s.",
-				Ini.SysEmulationDirPath.GetValue());
 			fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
 		}
 		else
 		{
-			LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
 			fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
 		}
 		fmt::Replace(mpath, "$(GameDir)", cwd);
@@ -482,6 +477,17 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 		entries_count.SaveValue(count);
 	}
 
+	//Custom EmulationDir. should check if that is a valid directory.
+	if (Ini.SysEmulationDirPathEnable.GetValue())
+	{
+		if (Ini.SysEmulationDirPath.GetValue().empty())
+			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
+		LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is On, Binded $(EmulatorDir) to %s.", Ini.SysEmulationDirPath.GetValue());
+	}
+	else
+	{
+		LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
+	}
 	for(int i=0; i<count; ++i)
 	{
 		IniEntry<std::string> entry_path;
