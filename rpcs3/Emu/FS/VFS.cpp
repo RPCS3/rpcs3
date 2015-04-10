@@ -6,6 +6,12 @@
 #include "Ini.h"
 #include "Emu/System.h"
 
+#ifdef __linux__
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#endif
+
 #undef CreateFile
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
@@ -429,7 +435,26 @@ void VFS::Init(const std::string& path)
 		
 		std::string mpath = entry.path;
 		// TODO: This shouldn't use current dir
+		
+		#ifdef __linux__
+               // Hacky fix. Check if EmulatorDir and GameDir are set in the env, otherwise fallback to home/.rpcs3
+		// Remember copy the files to home/.rpcs3 !
+               const char *homedir, *emudir;
+
+               homedir = getenv("HOME");
+               emudir = getenv("EmulatorDir");
+
+               if (emudir)
+                       fmt::Replace(mpath, "$(EmulatorDir)", std::string(emudir));
+               else if (homedir)
+                       fmt::Replace(mpath, "$(EmulatorDir)", std::string(homedir) + "/.rpcs3");
+               else
+                       fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+
+		#else
 		fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+		#endif
+
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
 	}
