@@ -165,6 +165,7 @@ public:
 
 	//Customed EmulationDir
 	IniEntry<std::string> SysEmulationDirPath;
+	IniEntry<bool> SysEmulationDirPathEnable;
 
 	// Language
 	IniEntry<u8> SysLanguage;
@@ -245,6 +246,7 @@ public:
 
 		// Customed EmulationDir
 		SysEmulationDirPath.Init("System_EmulationDir", path);
+		SysEmulationDirPathEnable.Init("System_EmulationDirEnable", path);
 
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
@@ -324,6 +326,7 @@ public:
 
 		// Customed EmulationDir
 		SysEmulationDirPath.Load("");
+		SysEmulationDirPathEnable.Load(false);
 	}
 
 	void Save()

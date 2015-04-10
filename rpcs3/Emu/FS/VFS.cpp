@@ -431,10 +431,19 @@ void VFS::Init(const std::string& path)
 		std::string mpath = entry.path;
 		// TODO: This shouldn't use current dir
 		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
-		if (Ini.SysEmulationDirPath.GetValue().empty())
-			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
-		LOG_NOTICE(GENERAL, "$(EmulatorDir) binded to %s.", Ini.SysEmulationDirPath.GetValue());
-		fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
+		if (Ini.SysEmulationDirPathEnable.GetValue())
+		{
+			if (Ini.SysEmulationDirPath.GetValue().empty())
+				Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
+			LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is On, Binded $(EmulatorDir) to %s.",
+				Ini.SysEmulationDirPath.GetValue());
+			fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
+		}
+		else
+		{
+			LOG_NOTICE(GENERAL, "EmualtionDir: Custom EmulationDir is Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
+			fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+		}
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
 	}
