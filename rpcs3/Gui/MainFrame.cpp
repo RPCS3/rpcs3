@@ -437,8 +437,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
 	//Custom EmulationDir
-	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Custom EmulationDir Path?");
-	wxTextCtrl* txt_emulationdir_path     = new wxTextCtrl(p_system, wxID_ANY, "EmulationDir Path, Need Restart");
+	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Path Below as EmulationDir ? (Need Restart)");
+	wxTextCtrl* txt_emulationdir_path     = new wxTextCtrl(p_system, wxID_ANY, Emu.GetEmulatorPath());
 
 	cbox_cpu_decoder->Append("PPU Interpreter");
 	cbox_cpu_decoder->Append("PPU Interpreter 2");
