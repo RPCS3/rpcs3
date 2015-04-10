@@ -200,6 +200,7 @@ u32 RSXThread::OutOfArgsCount(const uint x, const u32 cmd, const u32 count, cons
 #define case_32(offset, step) \
     case_16(offset, step) \
     case_16(offset + 16*step, step)
+// TODO:: Syphurith: I'm not sure about whether this is correct or missing a break;.
 #define case_range(n, offset, step) \
     case_##n(offset, step) \
     index = (cmd - offset) / step
@@ -368,6 +369,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	// Texture
+	// TODO:: Syphurith: Ensure it don't need to break;? case 0: A=0; case 1: A=1; would always give you A=1.
 	case_range(16, NV4097_SET_TEXTURE_FORMAT, 0x20);
 	case_range(16, NV4097_SET_TEXTURE_OFFSET, 0x20);
 	case_range(16, NV4097_SET_TEXTURE_FILTER, 0x20);
@@ -397,7 +399,8 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
-		// Vertex Texture
+	// Vertex Texture
+	// TODO:: Syphurith: Ensure it don't need to break;? Similiar reason..
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20);
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20);
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20);
