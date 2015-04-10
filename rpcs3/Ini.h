@@ -163,6 +163,9 @@ public:
 	IniEntry<bool> DBGAutoPauseSystemCall;
 	IniEntry<bool> DBGAutoPauseFunctionCall;
 
+	//Customed EmulationDir
+	IniEntry<std::string> SysEmulationDirPath;
+
 	// Language
 	IniEntry<u8> SysLanguage;
 
@@ -240,6 +243,9 @@ public:
 		DBGAutoPauseFunctionCall.Init("DBG_AutoPauseFunctionCall", path);
 		DBGAutoPauseSystemCall.Init("DBG_AutoPauseSystemCall", path);
 
+		// Customed EmulationDir
+		SysEmulationDirPath.Init("System_EmulationDir", path);
+
 		// Language
 		SysLanguage.Init("Sytem_SysLanguage", path);
 	}
@@ -316,6 +322,8 @@ public:
 		// Language
 		SysLanguage.Load(1);
 
+		// Customed EmulationDir
+		SysEmulationDirPath.Load("");
 	}
 
 	void Save()
@@ -389,6 +397,9 @@ public:
 
 		// Language
 		SysLanguage.Save();
+
+		// Customed EmulationDir
+		SysEmulationDirPath.Save();
 	}
 };
 

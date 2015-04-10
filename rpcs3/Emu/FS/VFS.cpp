@@ -5,6 +5,7 @@
 #include "vfsDeviceLocalFile.h"
 #include "Ini.h"
 #include "Emu/System.h"
+#include "Utilities/Log.h"
 
 #undef CreateFile
 
@@ -429,7 +430,11 @@ void VFS::Init(const std::string& path)
 		
 		std::string mpath = entry.path;
 		// TODO: This shouldn't use current dir
-		fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
+		if (Ini.SysEmulationDirPath.GetValue().empty())
+			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
+		LOG_NOTICE(GENERAL, "$(EmulatorDir) binded to %s.", Ini.SysEmulationDirPath.GetValue());
+		fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
 	}
