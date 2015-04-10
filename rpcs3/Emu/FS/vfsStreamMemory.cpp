@@ -38,6 +38,7 @@ u64 vfsStreamMemory::Write(const void* src, u64 size)
 
 u64 vfsStreamMemory::Read(void* dst, u64 size)
 {
+	// TODO:: Syphurith: Should us do anything? Since Asserts aren't included in Release builds.
 	assert(Tell() < GetSize());
 	if (Tell() + size > GetSize())
 	{

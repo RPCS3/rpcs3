@@ -5820,7 +5820,9 @@ void RecompilationEngine::ProcessExecutionTrace(const ExecutionTrace & execution
             }
         }
     }
-
+	// TODO:: Syphurith: It is said that just remove_if would cause some troubles.. I don't know if that would cause Memleak. From CppCheck:
+	// The return value of std::remove_if() is ignored. This function returns an iterator to the end of the range containing those elements that should be kept.
+	// Elements past new end remain valid but with unspecified values. Use the erase method of the container to delete them.
     std::remove_if(processed_execution_trace_i->second.begin(), processed_execution_trace_i->second.end(), [](const BlockEntry * b)->bool { return b->is_compiled; });
 }
 
