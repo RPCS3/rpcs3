@@ -314,7 +314,6 @@ struct CellCameraAttributes
 	u32 LED;
 	u32 AUDIOGAIN;
 	u32 QS;
-// Syphurith: Found using cppcheck. This is originally stated as an single-element array, however references its [0] and [1]. So i changed this to 2 u32 units.
 	u32 NONZEROCOEFFS[2];
 	u32 YUVFLAG;
 	u32 JPEGFLAG;

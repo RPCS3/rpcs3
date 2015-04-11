@@ -2206,7 +2206,6 @@ s32 cellSpursCreateTasksetWithAttribute(vm::ptr<CellSpurs> spurs, vm::ptr<CellSp
 
 	if (!attr)
 	{
-		// Syphurith: If that is intentionally done, please remove the 'return'. Or else just remove this comment.
 		return CELL_SPURS_TASK_ERROR_NULL_POINTER;
 	}
 
@@ -2375,7 +2374,6 @@ s32 spursCreateTask(vm::ptr<CellSpursTaskset> taskset, vm::ptr<u32> task_id, vm:
 
 	if (tmp_task_id >= CELL_SPURS_MAX_TASK)
 	{
-		// Syphurith: If that is intentionally done, please remove the 'return'. Or else just remove this comment.
 		return CELL_SPURS_TASK_ERROR_AGAIN;
 	}
 
