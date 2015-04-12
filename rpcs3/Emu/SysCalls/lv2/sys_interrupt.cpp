@@ -23,7 +23,7 @@ s32 sys_interrupt_tag_destroy(u32 intrtag)
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
+	const auto t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
 
 	if (!t)
 	{
@@ -58,7 +58,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
+	const auto t = Emu.GetCPU().GetRawSPUThread(intrtag & 0xff);
 
 	if (!t)
 	{
@@ -71,7 +71,7 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 	// CELL_ESTAT is not returned (can't detect exact condition)
 
-	std::shared_ptr<CPUThread> it = Emu.GetCPU().GetThread((u32)intrthread);
+	const auto it = Emu.GetCPU().GetThread((u32)intrthread);
 
 	if (!it)
 	{
@@ -132,8 +132,9 @@ s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 {
 	sys_interrupt.Todo("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
-	std::shared_ptr<interrupt_handler_t> handler;
-	if (!Emu.GetIdManager().GetIDData(ih, handler))
+	const auto handler = Emu.GetIdManager().GetIDData<interrupt_handler_t>(ih);
+
+	if (!handler)
 	{
 		return CELL_ESRCH;
 	}

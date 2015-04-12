@@ -319,8 +319,7 @@ int cellSurMixerCreate(vm::ptr<const CellSurMixerConfig> config)
 	port.size = port.channel * port.block * AUDIO_SAMPLES * sizeof(float);
 	port.tag = 0;
 	port.level = 1.0f;
-	port.level_set = 1.0f;
-	port.level_inc = 0.0f;
+	port.level_set.data = { 1.0f, 0.0f };
 
 	libmixer.Warning("*** audio port opened (port=%d)", g_surmx.audio_port);
 

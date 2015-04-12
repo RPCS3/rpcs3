@@ -60,9 +60,9 @@ s32 sys_event_flag_destroy(u32 id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -105,9 +105,9 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 	default: return CELL_EINVAL;
 	}
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -212,9 +212,9 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 	default: return CELL_EINVAL;
 	}
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -252,9 +252,9 @@ s32 sys_event_flag_set(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -280,9 +280,9 @@ s32 sys_event_flag_clear(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -308,9 +308,9 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		*num = 0;
 	}
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		return CELL_ESRCH;
 	}
@@ -344,9 +344,9 @@ s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 		return CELL_EFAULT;
 	}
 
-	std::shared_ptr<event_flag_t> ef;
+	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
 
-	if (!Emu.GetIdManager().GetIDData(id, ef))
+	if (!ef)
 	{
 		*flags = 0;
 

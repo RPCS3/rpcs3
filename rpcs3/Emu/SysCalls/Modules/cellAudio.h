@@ -108,9 +108,15 @@ struct AudioPortConfig
 	u32 addr;
 	u32 read_index_addr;
 	u32 size;
-	float level;
-	float level_set;
-	float level_inc;
+
+	struct level_set_t
+	{
+		float value;
+		float inc;
+	};
+
+	float level;	
+	atomic_le_t<level_set_t> level_set;
 };
 
 struct AudioConfig  //custom structure

@@ -273,12 +273,11 @@ void SPUThread::do_dma_transfer(u32 cmd, spu_mfc_arg_t args)
 		const u32 index = (eal - SYS_SPU_THREAD_BASE_LOW) / SYS_SPU_THREAD_OFFSET; // thread number in group
 		const u32 offset = (eal - SYS_SPU_THREAD_BASE_LOW) % SYS_SPU_THREAD_OFFSET; // LS offset or MMIO register
 
-		std::shared_ptr<spu_group_t> group = tg.lock();
-		std::shared_ptr<CPUThread> t;
+		const auto group = tg.lock();
 
-		if (group && index < group->num && (t = group->threads[index]))
+		if (group && index < group->num && group->threads[index])
 		{
-			auto& spu = static_cast<SPUThread&>(*t);
+			auto& spu = static_cast<SPUThread&>(*group->threads[index]);
 
 			if (offset + args.size - 1 < 0x40000) // LS access
 			{
@@ -489,6 +488,7 @@ u32 SPUThread::get_ch_count(u32 ch)
 
 	switch (ch)
 	{
+	//case MFC_Cmd:             return 16;
 	//case SPU_WrSRR0:          return 1; break;
 	//case SPU_RdSRR0:          return 1; break;
 	case SPU_WrOutMbox:       return ch_out_mbox.get_count() ^ 1; break;
@@ -673,7 +673,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				std::shared_ptr<event_queue_t> queue = this->spup[spup].lock();
+				const auto queue = this->spup[spup].lock();
 
 				if (!queue)
 				{
@@ -710,7 +710,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				std::shared_ptr<event_queue_t> queue = this->spup[spup].lock();
+				const auto queue = this->spup[spup].lock();
 
 				if (!queue)
 				{
@@ -753,9 +753,9 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				std::shared_ptr<event_flag_t> ef;
+				const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(data);
 
-				if (!Emu.GetIdManager().GetIDData(data, ef))
+				if (!ef)
 				{
 					return ch_in_mbox.push_uncond(CELL_ESRCH);
 				}
@@ -799,9 +799,9 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				std::shared_ptr<event_flag_t> ef;
+				const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(data);
 
-				if (!Emu.GetIdManager().GetIDData(data, ef))
+				if (!ef)
 				{
 					return;
 				}
@@ -1121,7 +1121,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		LV2_LOCK;
 
-		std::shared_ptr<spu_group_t> group = tg.lock();
+		const auto group = tg.lock();
 
 		if (!group)
 		{

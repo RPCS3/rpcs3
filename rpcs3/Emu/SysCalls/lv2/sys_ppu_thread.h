@@ -15,22 +15,32 @@ enum : u64
 	SYS_PPU_THREAD_CREATE_INTERRUPT = 0x2,
 };
 
+struct sys_ppu_thread_stack_t
+{
+	u32 pst_addr;
+	u32 pst_size;
+};
+
+struct ppu_thread_param_t
+{
+	u32 entry;
+	u32 tls;
+};
+
 // Aux
 u32 ppu_thread_create(u32 entry, u64 arg, s32 prio, u32 stacksize, bool is_joinable, bool is_interrupt, std::string name, std::function<void(PPUThread&)> task = nullptr);
 
 // SysCalls
-void sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode);
-void sys_internal_ppu_thread_exit(PPUThread& CPU, u64 errorcode);
-s32 sys_ppu_thread_yield();
-s32 sys_ppu_thread_join(u64 thread_id, vm::ptr<u64> vptr);
-s32 sys_ppu_thread_detach(u64 thread_id);
+void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode);
+void sys_ppu_thread_yield();
+s32 sys_ppu_thread_join(u32 thread_id, vm::ptr<u64> vptr);
+s32 sys_ppu_thread_detach(u32 thread_id);
 void sys_ppu_thread_get_join_state(PPUThread& CPU, vm::ptr<s32> isjoinable);
-s32 sys_ppu_thread_set_priority(u64 thread_id, s32 prio);
-s32 sys_ppu_thread_get_priority(u64 thread_id, u32 prio_addr);
-s32 sys_ppu_thread_get_stack_information(PPUThread& CPU, u32 info_addr);
-s32 sys_ppu_thread_stop(u64 thread_id);
-s32 sys_ppu_thread_restart(u64 thread_id);
-s32 sys_ppu_thread_create(vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname);
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void()> init);
-s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id);
-s32 sys_ppu_thread_rename(u64 thread_id, vm::ptr<const char> name);
+s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio);
+s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop);
+s32 sys_ppu_thread_get_stack_information(PPUThread& CPU, vm::ptr<sys_ppu_thread_stack_t> sp);
+s32 sys_ppu_thread_stop(u32 thread_id);
+s32 sys_ppu_thread_restart(u32 thread_id);
+s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname);
+s32 sys_ppu_thread_start(u32 thread_id);
+s32 sys_ppu_thread_rename(u32 thread_id, vm::ptr<const char> name);

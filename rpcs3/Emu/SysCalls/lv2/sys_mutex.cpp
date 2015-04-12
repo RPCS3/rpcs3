@@ -54,9 +54,9 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<mutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
@@ -90,14 +90,14 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	std::shared_ptr<mutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<CPUThread> thread = Emu.GetCPU().GetThread(CPU.GetId(), CPU_THREAD_PPU);
+	const auto thread = Emu.GetCPU().GetThread(CPU.GetId(), CPU_THREAD_PPU);
 
 	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
 	{
@@ -148,14 +148,14 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<mutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<CPUThread> thread = Emu.GetCPU().GetThread(CPU.GetId());
+	const auto thread = Emu.GetCPU().GetThread(CPU.GetId());
 
 	if (!mutex->owner.owner_before(thread) && !thread.owner_before(mutex->owner)) // check equality
 	{
@@ -190,16 +190,16 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<mutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(mutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
-	std::shared_ptr<CPUThread> thread = Emu.GetCPU().GetThread(CPU.GetId());
+	const auto thread = Emu.GetCPU().GetThread(CPU.GetId());
 
-	if (mutex->owner.owner_before(thread) || thread.owner_before(mutex->owner)) // check equality
+	if (mutex->owner.owner_before(thread) || thread.owner_before(mutex->owner)) // check inequality
 	{
 		return CELL_EPERM;
 	}

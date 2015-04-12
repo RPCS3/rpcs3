@@ -579,7 +579,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
-	s32 res = _sys_lwcond_queue_wait(lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
+	s32 res = _sys_lwcond_queue_wait(CPU, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
 
 	if (res == CELL_OK || res == CELL_ESRCH)
 	{
@@ -1208,6 +1208,65 @@ void sys_spinlock_unlock(vm::ptr<atomic_t<u32>> lock)
 	lock->exchange(be_t<u32>::make(0));
 
 	g_sys_spinlock_wm.notify(lock.addr());
+}
+
+s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
+{
+	sysPrxForUser.Warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)", thread_id, entry, arg, prio, stacksize, flags, threadname);
+
+	// (allocate TLS)
+	// (return CELL_ENOMEM if failed)
+	// ...
+
+	vm::stackvar<ppu_thread_param_t> attr(CPU);
+
+	attr->entry = entry;
+	attr->tls = 0;
+
+	// call the syscall
+	if (s32 res = _sys_ppu_thread_create(thread_id, attr, arg, 0, prio, stacksize, flags, threadname))
+	{
+		return res;
+	}
+
+	// run the thread
+	return flags & SYS_PPU_THREAD_CREATE_INTERRUPT ? CELL_OK : sys_ppu_thread_start(static_cast<u32>(*thread_id));
+}
+
+s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id)
+{
+	sysPrxForUser.Log("sys_ppu_thread_get_id(thread_id=*0x%x)", thread_id);
+
+	*thread_id = CPU.GetId();
+
+	return CELL_OK;
+}
+
+void sys_ppu_thread_exit(PPUThread& CPU, u64 val)
+{
+	sysPrxForUser.Log("sys_ppu_thread_exit(val=0x%llx)", val);
+
+	// (call registered atexit functions)
+	// (deallocate TLS)
+	// ...
+
+	// call the syscall
+	_sys_ppu_thread_exit(CPU, val);
+}
+
+std::mutex g_once_mutex;
+
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void()> init)
+{
+	sysPrxForUser.Warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
+
+	std::lock_guard<std::mutex> lock(g_once_mutex);
+
+	if (once_ctrl->compare_and_swap_test(be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT), be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)))
+	{
+		// call init function using current thread context
+		init(CPU);
+	}
 }
 
 Module sysPrxForUser("sysPrxForUser", []()

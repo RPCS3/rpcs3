@@ -75,7 +75,7 @@ const ppu_func_caller sc_table[1024] =
 	
 	null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, null_func, //32-40  UNS
 
-	bind_func(sys_internal_ppu_thread_exit),                //41  (0x029)
+	bind_func(_sys_ppu_thread_exit),                        //41  (0x029)
 	null_func,                                              //42  (0x02A)  UNS
 	bind_func(sys_ppu_thread_yield),                        //43  (0x02B)
 	bind_func(sys_ppu_thread_join),                         //44  (0x02C)
@@ -86,8 +86,8 @@ const ppu_func_caller sc_table[1024] =
 	bind_func(sys_ppu_thread_get_stack_information),        //49  (0x031)
 	null_func,//bind_func(sys_ppu_thread_stop),             //50  (0x032)  ROOT
 	null_func,//bind_func(sys_ppu_thread_restart),          //51  (0x033)  ROOT
-	null_func,//bind_func(sys_ppu_thread_create),           //52  (0x034)  DBG
-	null_func,//bind_func(sys_ppu_thread_start),            //53  (0x035)
+	bind_func(_sys_ppu_thread_create),                       //52  (0x034)  DBG
+	bind_func(sys_ppu_thread_start),                        //53  (0x035)
 	null_func,//bind_func(sys_ppu_...),                     //54  (0x036)  ROOT
 	null_func,//bind_func(sys_ppu_...),                     //55  (0x037)  ROOT
 	bind_func(sys_ppu_thread_rename),                       //56  (0x038)
@@ -888,34 +888,32 @@ const ppu_func_caller sc_table[1024] =
 
 void null_func(PPUThread& CPU)
 {
-	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", CPU.GPR[11], SysCalls::GetFuncName(CPU.GPR[11]));
+	const auto code = CPU.GPR[11];
+	LOG_ERROR(HLE, "Unimplemented syscall %lld: %s -> CELL_OK", code, SysCalls::GetFuncName(~code));
 	CPU.GPR[3] = 0;
-	return;
 }
 
 void SysCalls::DoSyscall(PPUThread& CPU, u64 code)
 {
-	auto old_last_syscall = CPU.m_last_syscall;
-	CPU.m_last_syscall = code;
-
 	if (code >= 1024)
 	{
+		CPU.m_last_syscall = code;
 		throw "Invalid syscall number";
 	}
-
-	//Auto Pause using simple singleton.
-	Debug::AutoPause::getInstance().TryPause(code);
+	
+	auto old_last_syscall = CPU.m_last_syscall;
+	CPU.m_last_syscall = ~code;
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "Syscall %d called: %s", code, SysCalls::GetFuncName(code));
+		LOG_NOTICE(PPU, "Syscall %lld called: %s", code, SysCalls::GetFuncName(~code));
 	}
 
 	sc_table[code](CPU);
 
 	if (Ini.HLELogging.GetValue())
 	{
-		LOG_NOTICE(PPU, "Syscall %d finished: %s -> 0x%llx", code, SysCalls::GetFuncName(code), CPU.GPR[3]);
+		LOG_NOTICE(PPU, "Syscall %lld finished: %s -> 0x%llx", code, SysCalls::GetFuncName(~code), CPU.GPR[3]);
 	}
 
 	CPU.m_last_syscall = old_last_syscall;

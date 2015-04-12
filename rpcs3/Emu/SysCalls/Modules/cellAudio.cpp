@@ -206,25 +206,17 @@ s32 cellAudioInit()
 
 				auto step_volume = [](AudioPortConfig& port) // part of cellAudioSetPortLevel functionality
 				{
-					if (port.level_inc)
-					{
-						port.level += port.level_inc;
+					const auto param = port.level_set.read_sync();
 
-						if (port.level_inc > 0.0f)
+					if (param.inc != 0.0f)
+					{
+						port.level += param.inc;
+						const bool dec = param.inc < 0.0f;
+
+						if ((!dec && param.value - port.level <= 0.0f) || (dec && param.value - port.level >= 0.0f))
 						{
-							if (port.level_set - port.level <= 0.0f)
-							{
-								port.level = port.level_set;
-								port.level_inc = 0.0f;
-							}
-						}
-						else
-						{
-							if (port.level_set - port.level >= 0.0f)
-							{
-								port.level = port.level_set;
-								port.level_inc = 0.0f;
-							}
+							port.level = param.value;
+							port.level_set.compare_and_swap(param, { param.value, 0.0f });
 						}
 					}
 				};
@@ -547,8 +539,7 @@ s32 cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portN
 		port.level = 1.0f;
 	}
 
-	port.level_set = port.level;
-	port.level_inc = 0.0f;
+	port.level_set.data = { port.level, 0.0f };
 
 	*portNum = port_index;
 	cellAudio.Warning("*** audio port opened(nChannel=%d, nBlock=%d, attr=0x%llx, level=%f): port = %d", channel, block, attr, port.level, port_index);
@@ -754,10 +745,7 @@ s32 cellAudioSetPortLevel(u32 portNum, float level)
 
 	if (level >= 0.0f)
 	{
-		std::lock_guard<std::mutex> lock(g_audio.mutex);
-
-		port.level_set = level;
-		port.level_inc = (port.level - level) / 624.0f;
+		port.level_set.exchange({ level, (port.level - level) / 624.0f });
 	}
 	else
 	{
