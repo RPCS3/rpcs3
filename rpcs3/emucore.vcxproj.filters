@@ -860,12 +860,15 @@
     <ClCompile Include="Emu\SysCalls\Modules\cellFs.cpp">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
+<<<<<<< HEAD
     <ClCompile Include="Emu\Cell\PPUInterpreter.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
+=======
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1549,11 +1552,14 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellFs.h">
       <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
+<<<<<<< HEAD
     <ClInclude Include="Emu\Cell\PPUInterpreter2.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInterpreter2.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
+=======
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
   </ItemGroup>
 </Project>

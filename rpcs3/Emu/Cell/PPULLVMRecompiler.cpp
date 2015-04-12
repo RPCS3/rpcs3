@@ -2019,6 +2019,7 @@ void Compiler::HACK(u32 index) {
         CreateBranch(nullptr, lr_i32, false, true);
     }
     // copied from Compiler::SC()
+<<<<<<< HEAD
     //auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
     //auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
     //auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
@@ -2027,6 +2028,16 @@ void Compiler::HACK(u32 index) {
     //m_ir_builder->SetInsertPoint(then_bb);
     //m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
     //m_ir_builder->SetInsertPoint(merge_bb);
+=======
+    auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
+    auto cmp_i1   = m_ir_builder->CreateICmpEQ(ret_i1, m_ir_builder->getInt1(true));
+    auto then_bb  = GetBasicBlockFromAddress(m_state.current_instruction_address, "then_true");
+    auto merge_bb = GetBasicBlockFromAddress(m_state.current_instruction_address, "merge_true");
+    m_ir_builder->CreateCondBr(cmp_i1, then_bb, merge_bb);
+    m_ir_builder->SetInsertPoint(then_bb);
+    m_ir_builder->CreateRet(m_ir_builder->getInt32(0xFFFFFFFF));
+    m_ir_builder->SetInsertPoint(merge_bb);
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 }
 
 void Compiler::SC(u32 lev) {

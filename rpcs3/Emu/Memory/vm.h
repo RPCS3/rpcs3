@@ -315,9 +315,15 @@ namespace vm
 		u32 alloc_offset;
 
 		template<typename T = char>
-		ptr<T> alloc(u32 count) const
+		ptr<T> alloc(u32 count = 1) const
 		{
 			return ptr<T>::make(allocator(count * sizeof(T)));
+		}
+
+		template<typename T = char>
+		ptr<T> fixed_alloc(u32 addr, u32 count = 1) const
+		{
+			return ptr<T>::make(fixed_allocator(addr, count * sizeof(T)));
 		}
 	};
 

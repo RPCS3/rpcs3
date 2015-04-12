@@ -128,7 +128,11 @@ bool rRename(const std::string &from, const std::string &to)
 #ifdef _WIN32
 	if (!MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()))
 #else
+<<<<<<< HEAD
 	if (int err = rename(from.c_str(), to.c_str()))
+=======
+	if (rename(from.c_str(), to.c_str()))
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 #endif
 	{
 		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), (u64)GET_API_ERROR);

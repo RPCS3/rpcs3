@@ -111,7 +111,17 @@ struct CgBinaryProgram
 
 class CgBinaryDisasm
 {
-private:
+	OPDEST dst;
+	SRC0 src0;
+	SRC1 src1;
+	SRC2 src2;
+
+	D0 d0;
+	D1 d1;
+	D2 d2;
+	D3 d3;
+	SRC src[3];
+
 	std::string m_path; // used for FP decompiler thread, delete this later
 
 	u8* m_buffer;
@@ -276,8 +286,6 @@ public:
 
 	void BuildShaderBody()
 	{
-		GLParamArray param_array;
-
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
 
 		if (prog.profile == 7004)
@@ -331,7 +339,7 @@ public:
 				auto& vmfprog = vm::get_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
 				u32 size;
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl).Task();
+				//GLFragmentDecompilerThread(m_glsl_shader, param_array, ptr + vmprog.ucode, size, ctrl).Task();
 				vm::close();
 			}
 		}
@@ -374,13 +382,8 @@ public:
 				vdata[i] = re32(vdata[i]);
 			}
 
-			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)
-			{
-				m_data.push_back(vdata[i]);
-			}
-
 			TaskVP();
-			GLVertexDecompilerThread(m_data, m_glsl_shader, param_array).Task();
+			//GLVertexDecompilerThread(0, vdata, m_glsl_shader, param_array).Task();
 		}
 	}
 

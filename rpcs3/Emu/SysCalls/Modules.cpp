@@ -531,6 +531,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		return true;
 	}
 
+	vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
 	return false;
 }
 

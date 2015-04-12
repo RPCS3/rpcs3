@@ -319,9 +319,23 @@ namespace loader
 				return res;
 			}
 
-			std::vector<u32> start_funcs;
-			std::vector<u32> stop_funcs;
-			std::vector<u32> exit_funcs;
+			struct module_control_func
+			{
+				u32 entry;
+				u32 rtoc;
+
+				module_control_func() = default;
+
+				module_control_func(u32 entry, u32 rtoc)
+					: entry(entry)
+					, rtoc(rtoc)
+				{
+				}
+			};
+
+			std::vector<module_control_func> start_funcs;
+			std::vector<module_control_func> stop_funcs;
+			std::vector<module_control_func> exit_funcs;
 
 			//load modules
 			vfsDir lle_dir("/dev_flash/sys/external");
@@ -376,7 +390,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "start func found in '%s' library (0x%x)", info.name.c_str(), code);
-											start_funcs.push_back(e.second);
+											start_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -386,7 +400,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "stop func found in '%s' library (0x%x)", info.name.c_str(), code);
-											stop_funcs.push_back(e.second);
+											stop_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -396,7 +410,7 @@ namespace loader
 										if (!is_empty)
 										{
 											LOG_ERROR(LOADER, "exit func found in '%s' library (0x%x)", info.name.c_str(), code);
-											exit_funcs.push_back(e.second);
+											exit_funcs.emplace_back(e.second, info.rtoc);
 										}
 										break;
 									}
@@ -496,30 +510,68 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
+<<<<<<< HEAD
 			static const int branch_size = 8 * 4;
 
 			auto make_branch = [](vm::ptr<u32>& ptr, u32 addr)
-			{
-				u32 stub = vm::read32(addr);
-				u32 rtoc = vm::read32(addr + 4);
+=======
+			static const int branch_size = 6 * 4;
 
+			auto make_branch = [](vm::ptr<u32>& ptr, const module_control_func& func)
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
+			{
+				u32 stub = vm::read32(func.entry);
+				u32 custom_rtoc = vm::read32(func.entry + 4);
+				u32 rtoc;
+				
+				if (func.rtoc)
+				{
+					rtoc = func.rtoc;
+
+					if (custom_rtoc && custom_rtoc != rtoc)
+					{
+						LOG_WARNING(LOADER, "redefinition module rtoc (from 0x%x to 0x%x)", rtoc, custom_rtoc);
+						rtoc = custom_rtoc;
+					}
+				}
+				else
+				{
+					rtoc = custom_rtoc;
+				}
+
+<<<<<<< HEAD
 				*ptr++ = LI_(r0, 0);
 				*ptr++ = ORI(r0, r0, stub & 0xffff);
 				*ptr++ = ORIS(r0, r0, stub >> 16);
 				*ptr++ = LI_(r2, 0);
 				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
 				*ptr++ = ORIS(r2, r2, rtoc >> 16);
+=======
+				*ptr++ = LIS(r0, stub >> 16);
+				*ptr++ = ORI(r0, r0, stub & 0xffff);
+				*ptr++ = LIS(r2, rtoc >> 16);
+				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 				*ptr++ = MTCTR(r0);
 				*ptr++ = BCTRL();
 			};
 
 			auto entry = vm::ptr<u32>::make(vm::alloc(56 + branch_size * (start_funcs.size() + 1), vm::main));
+<<<<<<< HEAD
 
 			const auto OPD = entry;
 
 			// make initial OPD
 			*entry++ = OPD.addr() + 8;
 			*entry++ = 0xdeadbeef;
+=======
+
+			const auto OPD = entry;
+
+			// make initial OPD
+			*entry++ = OPD.addr() + 8;
+			*entry++ = start_funcs.size() ? start_funcs[0].rtoc : 0xdeadbeef;
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			// save initialization args
 			*entry++ = MR(r14, r3);
@@ -543,11 +595,16 @@ namespace loader
 			*entry++ = MR(r12, r19);
 
 			// branch to initialization
+<<<<<<< HEAD
 			make_branch(entry, m_ehdr.e_entry);
+=======
+			make_branch(entry, { m_ehdr.e_entry, 0 });
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			ppu_thread main_thread(OPD.addr(), "main_thread");
 
 			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
+<<<<<<< HEAD
 			main_thread.gpr(11, OPD.addr()).gpr(12, Emu.GetMallocPageSize());
 
 			initialize_ppu_exec_map();
@@ -559,6 +616,15 @@ namespace loader
 					fill_ppu_exec_map(page, 4096);
 				}
 			}
+=======
+			main_thread
+				.gpr(7, main_thread.get_id())
+				.gpr(8, Emu.GetTLSAddr())
+				.gpr(9, Emu.GetTLSFilesz())
+				.gpr(10, Emu.GetTLSMemsz())
+				.gpr(11, m_ehdr.e_entry)
+				.gpr(12, Emu.GetMallocPageSize());
+>>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			return ok;
 		}
@@ -672,26 +738,6 @@ namespace loader
 								LOG_WARNING(LOADER, "Unknown module '%s'", module_name.c_str());
 							}
 
-							//struct tbl_item
-							//{
-							//	be_t<u32> stub;
-							//	be_t<u32> rtoc;
-							//};
-
-							//struct stub_data_t
-							//{
-							//	be_t<u32> data[3];
-							//}
-							//static const stub_data =
-							//{
-							//	be_t<u32>::make(MR(11, 2)),
-							//	be_t<u32>::make(SC(0)),
-							//	be_t<u32>::make(BLR())
-							//};
-
-							//const auto& tbl = vm::get().alloc<tbl_item>(stub->s_imports);
-							//const auto& dst = vm::get().alloc<stub_data_t>(stub->s_imports);
-
 							for (u32 i = 0; i < stub->s_imports; ++i)
 							{
 								const u32 nid = stub->s_nid[i];
@@ -718,31 +764,6 @@ namespace loader
 								{
 									LOG_ERROR(LOADER, "Failed to inject code at address 0x%x", addr);
 								}
-
-								//if (!func || !func->lle_func)
-								//{
-								//	dst[i] = stub_data;
-
-								//	tbl[i].stub = (dst + i).addr();
-								//	tbl[i].rtoc = stub->s_nid[i];
-
-								//	stub->s_text[i] = (tbl + i).addr();
-
-								//	if (!func)
-								//	{
-								//		
-								//	}
-								//	else //if (Ini.HLELogging.GetValue())
-								//	{
-								//		LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (HLE)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str());
-								//	}
-								//}
-								//else
-								//{
-								//	stub->s_text[i] = func->lle_func.addr();
-								//	//Is function auto exported, than we can use it
-								//	LOG_NOTICE(LOADER, "Imported function '%s' in '%s' module  (LLE: 0x%x)", SysCalls::GetHLEFuncName(nid).c_str(), module_name.c_str(), (u32)stub->s_text[i]);
-								//}
 							}
 						}
 					}

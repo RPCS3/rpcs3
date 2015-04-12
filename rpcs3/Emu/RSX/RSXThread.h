@@ -8,6 +8,7 @@
 #include "Utilities/SSemaphore.h"
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
+#include "types.h"
 
 enum Method
 {
@@ -19,6 +20,7 @@ enum Method
 
 extern u32 methodRegisters[0xffff];
 u32 GetAddress(u32 offset, u32 location);
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
 struct RSXVertexData
 {
@@ -67,34 +69,11 @@ struct RSXIndexArrayData
 	}
 };
 
-struct RSXTransformConstant
-{
-	u32 id;
-	float x, y, z, w;
-
-	RSXTransformConstant()
-		: x(0.0f)
-		, y(0.0f)
-		, z(0.0f)
-		, w(0.0f)
-	{
-	}
-
-	RSXTransformConstant(u32 id, float x, float y, float z, float w)
-		: id(id)
-		, x(x)
-		, y(y)
-		, z(z)
-		, w(w)
-	{
-	}
-};
-
 class RSXThread : public ThreadBase
 {
 public:
 	static const uint m_textures_count = 16;
-	static const uint m_vertex_count = 32;
+	static const uint m_vertex_count = 16;
 	static const uint m_fragment_count = 32;
 	static const uint m_tiles_count = 15;
 	static const uint m_zculls_count = 8;
@@ -111,14 +90,15 @@ public:
 	RSXVertexTexture m_vertex_textures[m_textures_count];
 	RSXVertexData m_vertex_data[m_vertex_count];
 	RSXIndexArrayData m_indexed_array;
-	std::vector<RSXTransformConstant> m_fragment_constants;
-	std::vector<RSXTransformConstant> m_transform_constants;
+	std::unordered_map<u32, color4_base<f32>> m_fragment_constants;
+	std::unordered_map<u32, color4_base<f32>> m_transform_constants;
 	
 	u32 m_shader_ctrl, m_cur_fragment_prog_num;
+	u32 m_vertex_program_data[512 * 4] = {};
 	RSXFragmentProgram m_fragment_progs[m_fragment_count];
 	RSXFragmentProgram* m_cur_fragment_prog;
-	RSXVertexProgram m_vertex_progs[m_vertex_count];
-	RSXVertexProgram* m_cur_vertex_prog;
+	//RSXVertexProgram m_vertex_progs[m_vertex_count];
+	//RSXVertexProgram* m_cur_vertex_prog;
 
 public:
 	u32 m_ioAddress, m_ioSize, m_ctrlAddress;
@@ -129,7 +109,7 @@ public:
 
 	u32 m_tiles_addr;
 	u32 m_zculls_addr;
-	u32 m_gcm_buffers_addr;
+	vm::ptr<CellGcmDisplayInfo> m_gcm_buffers;
 	u32 m_gcm_buffers_count;
 	u32 m_gcm_current_buffer;
 	u32 m_ctxt_addr;
@@ -147,8 +127,8 @@ public:
 
 	u32 m_width;
 	u32 m_height;
-	float m_width_scale;
-	float m_height_scale;
+	u32 m_pitch = 4;
+	u32 m_address = 0;
 	u32 m_draw_array_count;
 	u32 m_draw_array_first;
 	double m_fps_limit = 59.94;
@@ -215,10 +195,10 @@ public:
 	u16 m_viewport_h;
 	bool m_set_scissor_horizontal;
 	bool m_set_scissor_vertical;
-	u16 m_scissor_x;
-	u16 m_scissor_y;
-	u16 m_scissor_w;
-	u16 m_scissor_h;
+	u16 m_scissor_x = 0;
+	u16 m_scissor_y = 0;
+	u16 m_scissor_w = 0;
+	u16 m_scissor_h = 0;
 
 	// Polygon mode/offset
 	bool m_set_poly_smooth;
@@ -376,32 +356,18 @@ public:
 	bool m_set_surface_clip_vertical;
 	u16 m_surface_clip_y;
 	u16 m_surface_clip_h;
-	u32 m_surface_pitch_a;
-	u32 m_surface_pitch_b;
-	u32 m_surface_pitch_c;
-	u32 m_surface_pitch_d;
-	u32 m_surface_pitch_z;
-	u32 m_surface_offset_a;
-	u32 m_surface_offset_b;
-	u32 m_surface_offset_c;
-	u32 m_surface_offset_d;
-	u32 m_surface_offset_z;
-	u32 m_surface_color_target;
+	u32 m_surface_pitch[4] = {};
+	u32 m_surface_pitch_z = 0;
+	u32 m_surface_offset[4] = {};
+	u32 m_surface_offset_z = 0;
+	u32 m_surface_color_target = 0;
 
 	// DMA context
-	bool m_set_context_dma_color_a;
-	u32 m_context_dma_color_a;
-	bool m_set_context_dma_color_b;
-	u32 m_context_dma_color_b;
-	bool m_set_context_dma_color_c;
-	u32 m_context_dma_color_c;
-	bool m_set_context_dma_color_d;
-	u32 m_context_dma_color_d;
-	bool m_set_context_dma_z;
+	u32 m_context_dma_color[4] = {};
 	u32 m_context_dma_z;
 	u32 m_context_surface;
-	u32 m_context_dma_img_src;
-	u32 m_context_dma_img_dst;
+	u32 m_context_dma_img_src = 0xfeed0000;
+	u32 m_context_dma_img_dst = 0xfeed0000;
 	u32 m_context_dma_buffer_in_src;
 	u32 m_context_dma_buffer_in_dst;
 	u32 m_dst_offset;
@@ -601,11 +567,6 @@ protected:
 		m_set_fog_mode = false;
 		m_set_fog_params = false;
 		m_set_clip_plane = false;
-		m_set_context_dma_color_a = false;
-		m_set_context_dma_color_b = false;
-		m_set_context_dma_color_c = false;
-		m_set_context_dma_color_d = false;
-		m_set_context_dma_z = false;
 		m_set_cull_face = false;
 		m_set_front_face = false;
 		m_set_alpha_test = false;
@@ -637,9 +598,8 @@ protected:
 	void Begin(u32 draw_mode);
 	void End();
 
-	u32 OutOfArgsCount(const uint x, const u32 cmd, const u32 count, const u32 args_addr);
-	void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
-	void NativeRescale(float width, float height);
+	//void DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const u32 count);
+	void update_reg(u32 reg, u32 value);
 
 	virtual void OnInit() = 0;
 	virtual void OnInitThread() = 0;
@@ -647,7 +607,7 @@ protected:
 	virtual void OnReset() = 0;
 	virtual void ExecCMD() = 0;
 	virtual void ExecCMD(u32 cmd) = 0;
-	virtual void Flip() = 0;
+	virtual void Flip(int buffer) = 0;
 
 	void LoadVertexData(u32 first, u32 count)
 	{

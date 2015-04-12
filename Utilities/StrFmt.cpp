@@ -204,49 +204,6 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 	return std::move(result);
 }
 
-std::string fmt::merge(std::vector<std::string> source, const std::string& separator)
-{
-	if (!source.size())
-	{
-		return "";
-	}
-
-	std::string result;
-
-	for (int i = 0; i < source.size() - 1; ++i)
-	{
-		result += source[i] + separator;
-	}
-
-	return result + source[source.size() - 1];
-}
-
-std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)
-{
-	if (!sources.size())
-	{
-		return "";
-	}
-
-	std::string result;
-	bool first = true;
-
-	for (auto &v : sources)
-	{
-		if (first)
-		{
-			result = fmt::merge(v, separator);
-			first = false;
-		}
-		else
-		{
-			result += separator + fmt::merge(v, separator);
-		}
-	}
-
-	return result;
-}
-
 std::string fmt::tolower(std::string source)
 {
 	std::transform(source.begin(), source.end(), source.begin(), ::tolower);

@@ -7,6 +7,52 @@
 
 SysCallBase sys_rsx("sys_rsx");
 
+struct display_head
+{
+	be_t<u64> time_stamp;
+	be_t<u32> status;
+	be_t<u32> offset;
+	be_t<u32> res1;
+	be_t<u32> res2;
+	be_t<u32> field;
+	be_t<u32> reserved1;
+	be_t<u64> res3;
+	be_t<u32> raster;
+	be_t<u64> vblank_count;
+	be_t<u32> field_vsync;
+	be_t<u32> reserved2;
+};
+struct gpu_irq
+{
+	be_t<u32> irq_outlet;
+	be_t<u32> status;
+	be_t<u32> mask;
+	be_t<u32> video_cause;
+	be_t<u32> graph_cause;
+	be_t<u32> user_cause;
+	be_t<u32> res1;
+	be_t<u64> res2;
+	be_t<u32> reserved[4];
+};
+
+struct gpu_driver_info
+{
+	be_t<u32> version_driver;
+	be_t<u32> version_gpu;
+	be_t<u32> memory_size;
+	be_t<u32> hardware_channel;
+	be_t<u32> nvcore_frequency;
+	be_t<u32> memory_frequency;
+	be_t<u32> reserved[1063];
+	display_head display_head[8];
+	gpu_irq irq;
+};
+
+struct rsx_context_t
+{
+	u8 context[0x1000];
+};
+
 s32 sys_rsx_device_open()
 {
 	sys_rsx.Todo("sys_rsx_device_open()");
@@ -60,6 +106,7 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u32> lpar_dma_cont
 	sys_rsx.Todo("sys_rsx_context_allocate(context_id_addr=0x%x, lpar_dma_control_addr=0x%x, lpar_driver_info_addr=0x%x, lpar_reports_addr=0x%x, mem_ctx=0x%x, system_mode=0x%x)",
 		context_id.addr(), lpar_dma_control.addr(), lpar_driver_info.addr(), lpar_reports.addr(), mem_ctx, system_mode);
 
+	//vm::get().alloc<rsx_context_t>();
 	return CELL_OK;
 }
 

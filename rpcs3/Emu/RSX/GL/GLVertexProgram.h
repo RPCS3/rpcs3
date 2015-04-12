@@ -1,101 +1,58 @@
 #pragma once
-#include "GLShaderParam.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Utilities/Thread.h"
-#include <set>
+#include "gpu_program.h"
 
-struct GLVertexDecompilerThread : public ThreadBase
+namespace gl
 {
-	struct FuncInfo
+	namespace vertex_program
 	{
-		u32 offset;
-		std::string name;
-	};
-
-	struct Instruction
-	{
-		std::vector<std::string> body;
-		int open_scopes;
-		int close_scopes;
-		int put_close_scopes;
-		int do_count;
-
-		void reset()
+		class decompiler : gpu_program_builder<>
 		{
-			body.clear();
-			put_close_scopes = open_scopes = close_scopes = do_count = 0;
-		}
-	};
+			u32* m_data;
 
-	static const size_t m_max_instr_count = 512;
-	Instruction m_instructions[m_max_instr_count];
-	Instruction* m_cur_instr;
-	size_t m_instr_count;
+			D0 d0;
+			D1 d1;
+			D2 d2;
+			D3 d3;
+			SRC src[3];
 
-	std::set<int> m_jump_lvls;
-	std::vector<std::string> m_body;
-	std::vector<FuncInfo> m_funcs;
+			bool is_sca = false;
 
-	//wxString main;
-	std::string& m_shader;
-	std::vector<u32>& m_data;
-	GLParamArray& m_parr;
+			std::string m_shader;
+			uint m_min_constant_id;
+			uint m_max_constant_id;
 
-	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, GLParamArray& parr)
-		: ThreadBase("Vertex Shader Decompiler Thread")
-		, m_data(data)
-		, m_shader(shader)
-		, m_parr(parr)
-	{
-		m_funcs.emplace_back();
-		m_funcs[0].offset = 0;
-		m_funcs[0].name = "main";
-		m_funcs.emplace_back();
-		m_funcs[1].offset = 0;
-		m_funcs[1].name = "func0";
-		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
+		public:
+			decompiler(u32* data);
+
+		private:
+			gpu4_program_context::argument arg(SRC src);
+			gpu4_program_context::argument arg_dst();
+			gpu4_program_context::argument condition();
+			gpu4_program_context::argument texture();
+
+			context_t::operation& op(const std::string& instruction)
+			{
+				return gpu_program_builder<>::op(instruction).condition(context.get(condition()));
+			}
+
+			template<typename ...T>
+			context_t::operation& op(const std::string& instruction, T... args)
+			{
+				return gpu_program_builder<>::op(instruction, args...).condition(context.get(condition()));
+			}
+
+			void sca_op(const std::string& instruction, gpu4_program_context::argument dst, gpu4_program_context::argument src);
+
+			std::string instr(const std::string& instruction);
+
+		public:
+			decompiler& decompile(u32 start, std::unordered_map<u32, color4>& constants);
+
+			std::string shader() const
+			{
+				return m_shader;
+			}
+		};
 	}
-
-	std::string GetMask(bool is_sca);
-	std::string GetVecMask();
-	std::string GetScaMask();
-	std::string GetDST(bool is_sca = false);
-	std::string GetSRC(const u32 n);
-	std::string GetFunc();
-	std::string GetTex();
-	std::string GetCond();
-	std::string AddAddrMask();
-	std::string AddAddrReg();
-	u32 GetAddr();
-	std::string Format(const std::string& code);
-
-	void AddCodeCond(const std::string& dst, const std::string& src);
-	void AddCode(const std::string& code);
-	void SetDST(bool is_sca, std::string value);
-	void SetDSTVec(const std::string& code);
-	void SetDSTSca(const std::string& code);
-	std::string BuildFuncBody(const FuncInfo& func);
-	std::string BuildCode();
-
-	virtual void Task();
-};
-
-class GLVertexProgram
-{ 
-public:
-	GLVertexProgram();
-	~GLVertexProgram();
-
-	GLParamArray parr;
-	u32 id;
-	std::string shader;
-
-	void Decompile(RSXVertexProgram& prog);
-	void DecompileAsync(RSXVertexProgram& prog);
-	void Wait();
-	void Compile();
-
-private:
-	GLVertexDecompilerThread* m_decompiler_thread;
-	void Delete();
-};
+}
