@@ -210,9 +210,9 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 {
 	cellFs.Warning("cellFsGetDirectoryEntries(fd=0x%x, entries=*0x%x, entries_size=0x%x, data_count=*0x%x)", fd, entries, entries_size, data_count);
 
-	std::shared_ptr<vfsDirBase> directory;
+	const auto directory = Emu.GetIdManager().GetIDData<vfsDirBase>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, directory))
+	if (!directory)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -251,9 +251,9 @@ s32 cellFsReadWithOffset(u32 fd, u64 offset, vm::ptr<void> buf, u64 buffer_size,
 
 	// TODO: use single sys_fs_fcntl syscall
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file) || file->flags & CELL_FS_O_WRONLY)
+	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -282,9 +282,9 @@ s32 cellFsWriteWithOffset(u32 fd, u64 offset, vm::ptr<const void> buf, u64 data_
 
 	// TODO: use single sys_fs_fcntl syscall
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file) || !(file->flags & CELL_FS_O_ACCMODE))
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_FS_EBADF;
 	}
@@ -326,9 +326,9 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<const CellFsRingBuffer> ringbuf)
 		return CELL_FS_EINVAL;
 	}
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -364,9 +364,9 @@ s32 cellFsStReadFinish(u32 fd)
 {
 	cellFs.Warning("cellFsStReadFinish(fd=0x%x)", fd);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF; // ???
 	}
@@ -387,9 +387,9 @@ s32 cellFsStReadGetRingBuf(u32 fd, vm::ptr<CellFsRingBuffer> ringbuf)
 {
 	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, ringbuf=*0x%x)", fd, ringbuf);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -411,9 +411,9 @@ s32 cellFsStReadGetStatus(u32 fd, vm::ptr<u64> status)
 {
 	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, status=*0x%x)", fd, status);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -445,9 +445,9 @@ s32 cellFsStReadGetRegid(u32 fd, vm::ptr<u64> regid)
 {
 	cellFs.Warning("cellFsStReadGetRingBuf(fd=0x%x, regid=*0x%x)", fd, regid);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -466,9 +466,9 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 {
 	cellFs.Warning("cellFsStReadStart(fd=0x%x, offset=0x%llx, size=0x%llx)", fd, offset, size);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -548,9 +548,9 @@ s32 cellFsStReadStop(u32 fd)
 {
 	cellFs.Warning("cellFsStReadStop(fd=0x%x)", fd);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -579,9 +579,9 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 {
 	cellFs.Warning("cellFsStRead(fd=0x%x, buf=*0x%x, size=0x%llx, rsize=*0x%x)", fd, buf, size, rsize);
 	
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -613,9 +613,9 @@ s32 cellFsStReadGetCurrentAddr(u32 fd, vm::ptr<u32> addr, vm::ptr<u64> size)
 {
 	cellFs.Warning("cellFsStReadGetCurrentAddr(fd=0x%x, addr=*0x%x, size=*0x%x)", fd, addr, size);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -646,9 +646,9 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 {
 	cellFs.Warning("cellFsStReadPutCurrentAddr(fd=0x%x, addr=*0x%x, size=0x%llx)", fd, addr, size);
 	
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -673,9 +673,9 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 {
 	cellFs.Warning("cellFsStReadWait(fd=0x%x, size=0x%llx)", fd, size);
 	
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -707,9 +707,9 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 {
 	cellFs.Warning("cellFsStReadWaitCallback(fd=0x%x, size=0x%llx, func=*0x%x)", fd, size, func);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
 		return CELL_FS_EBADF;
 	}
@@ -875,9 +875,9 @@ void fsAio(vm::ptr<CellFsAio> aio, bool write, s32 xid, fs_aio_cb_t func)
 	s32 error = CELL_OK;
 	u64 result = 0;
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(aio->fd);
 
-	if (!Emu.GetIdManager().GetIDData(aio->fd, file) || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
+	if (!file || (!write && file->flags & CELL_FS_O_WRONLY) || (write && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
 		error = CELL_FS_EBADF;
 	}
@@ -979,11 +979,11 @@ s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type
 {
 	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
-	std::shared_ptr<fs_file_t> file;
+	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!Emu.GetIdManager().GetIDData(fd, file))
+	if (!file)
 	{
-		CELL_FS_EBADF;
+		return CELL_FS_EBADF;
 	}
 
 	return CELL_OK;

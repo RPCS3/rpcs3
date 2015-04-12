@@ -4,8 +4,11 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
+extern "C"
+{
 #include "stblib/stb_image.h"
-#include "stblib/stb_image.c" // (TODO: Should we put this elsewhere?)
+#include "stblib/stb_image.c"
+}
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"

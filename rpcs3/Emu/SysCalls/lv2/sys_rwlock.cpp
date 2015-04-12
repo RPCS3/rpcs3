@@ -49,9 +49,9 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -74,9 +74,9 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -113,9 +113,9 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -136,9 +136,9 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -164,9 +164,9 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -208,9 +208,9 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -236,9 +236,9 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}

@@ -169,7 +169,7 @@ struct CellDmuxPamfSpecificInfo
 struct CellDmuxType2
 {
 	be_t<CellDmuxStreamType> streamType;
-	be_t<u32> streamSpecificInfo_addr;
+	be_t<u32> streamSpecificInfo;
 };
 
 struct CellDmuxResource

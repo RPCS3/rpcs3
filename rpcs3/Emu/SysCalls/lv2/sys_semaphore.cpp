@@ -61,9 +61,9 @@ s32 sys_semaphore_destroy(u32 sem)
 
 	LV2_LOCK;
 
-	std::shared_ptr<semaphore_t> semaphore;
+	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
 
-	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
+	if (!semaphore)
 	{
 		return CELL_ESRCH;
 	}
@@ -86,9 +86,9 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 
 	LV2_LOCK;
 
-	std::shared_ptr<semaphore_t> semaphore;
+	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
 
-	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
+	if (!semaphore)
 	{
 		return CELL_ESRCH;
 	}
@@ -125,9 +125,9 @@ s32 sys_semaphore_trywait(u32 sem)
 
 	LV2_LOCK;
 
-	std::shared_ptr<semaphore_t> semaphore;
+	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
 
-	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
+	if (!semaphore)
 	{
 		return CELL_ESRCH;
 	}
@@ -148,9 +148,9 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 
 	LV2_LOCK;
 
-	std::shared_ptr<semaphore_t> semaphore;
+	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
 
-	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
+	if (!semaphore)
 	{
 		return CELL_ESRCH;
 	}
@@ -189,9 +189,9 @@ s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count)
 
 	LV2_LOCK;
 
-	std::shared_ptr<semaphore_t> semaphore;
+	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
 
-	if (!Emu.GetIdManager().GetIDData(sem, semaphore))
+	if (!semaphore)
 	{
 		return CELL_ESRCH;
 	}

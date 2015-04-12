@@ -389,7 +389,7 @@ s32 cellAudioInit()
 
 				for (auto key : g_audio.keys)
 				{
-					if (std::shared_ptr<event_queue_t> queue = Emu.GetEventManager().GetEventQueue(key))
+					if (const auto queue = Emu.GetEventManager().GetEventQueue(key))
 					{
 						queue->push(0, 0, 0, 0); // TODO: check arguments
 					}

@@ -17,14 +17,14 @@ enum : u64
 
 struct sys_ppu_thread_stack_t
 {
-	u32 pst_addr;
-	u32 pst_size;
+	be_t<u32> pst_addr;
+	be_t<u32> pst_size;
 };
 
 struct ppu_thread_param_t
 {
-	u32 entry;
-	u32 tls;
+	be_t<u32> entry; // vm::bptr<void(u64)>
+	be_t<u32> tls; // vm::bptr<void>
 };
 
 // Aux
