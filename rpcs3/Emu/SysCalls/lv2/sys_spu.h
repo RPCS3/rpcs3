@@ -1,6 +1,6 @@
 #pragma once
 
-struct event_queue_t;
+#include "sys_event.h"
 
 enum : s32
 {
@@ -171,6 +171,36 @@ struct spu_group_t
 		, exit_status(0)
 		, join_state(0)
 	{
+	}
+
+	void send_run_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	{
+		CHECK_LV2_LOCK(lv2_lock);
+
+		if (const auto queue = ep_run.lock())
+		{
+			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
+		}
+	}
+
+	void send_exception_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	{
+		CHECK_LV2_LOCK(lv2_lock);
+
+		if (const auto queue = ep_exception.lock())
+		{
+			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
+		}
+	}
+
+	void send_sysmodule_event(lv2_lock_type& lv2_lock, u64 data1, u64 data2, u64 data3)
+	{
+		CHECK_LV2_LOCK(lv2_lock);
+
+		if (const auto queue = ep_sysmodule.lock())
+		{
+			queue->push(lv2_lock, SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
+		}
 	}
 };
 

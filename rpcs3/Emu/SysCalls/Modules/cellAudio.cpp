@@ -391,7 +391,7 @@ s32 cellAudioInit()
 				{
 					if (const auto queue = Emu.GetEventManager().GetEventQueue(key))
 					{
-						queue->push(0, 0, 0, 0); // TODO: check arguments
+						queue->push(lv2_lock, 0, 0, 0, 0); // TODO: check arguments
 					}
 				}
 			}

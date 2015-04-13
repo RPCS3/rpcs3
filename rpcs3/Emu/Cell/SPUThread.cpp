@@ -686,7 +686,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					return ch_in_mbox.push_uncond(CELL_EBUSY);
 				}
 
-				queue->push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
+				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
 
 				return ch_in_mbox.push_uncond(CELL_OK);
 			}
@@ -725,7 +725,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 					return;
 				}
 
-				queue->push(SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
+				queue->push(lv2_lock, SYS_SPU_THREAD_EVENT_USER_KEY, GetId(), ((u64)spup << 32) | (value & 0x00ffffff), data);
 				return;
 			}
 			else if (code == 128)

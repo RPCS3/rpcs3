@@ -199,7 +199,10 @@ public:
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
-#define LV2_LOCK std::unique_lock<std::mutex> lv2_lock(Emu.GetCoreMutex())
+using lv2_lock_type = std::unique_lock<std::mutex>;
+
+#define LV2_LOCK lv2_lock_type lv2_lock(Emu.GetCoreMutex())
+#define CHECK_LV2_LOCK(x) assert((x).owns_lock() && (x).mutex() == &Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

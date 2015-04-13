@@ -32,7 +32,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 
 					if (queue)
 					{
-						queue->push(timer->source, timer->data1, timer->data2, timer->start);
+						queue->push(lv2_lock, timer->source, timer->data1, timer->data2, timer->start);
 					}
 
 					if (timer->period && queue)
