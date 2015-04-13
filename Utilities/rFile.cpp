@@ -11,7 +11,8 @@
 #include <Windows.h>
 
 // Maybe in StrFmt?
-std::wstring ConvertUTF8ToWString(const std::string &source) {
+std::wstring ConvertUTF8ToWString(const std::string &source)
+{
 	int len = (int)source.size();
 	int size = (int)MultiByteToWideChar(CP_UTF8, 0, source.c_str(), len, NULL, 0);
 	std::wstring str;
@@ -37,7 +38,8 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 #define GET_API_ERROR static_cast<u64>(errno)
 #endif
 
-bool getFileInfo(const char *path, FileInfo *fileInfo) {
+bool getFileInfo(const char *path, FileInfo *fileInfo)
+{
 	// TODO: Expand relative paths?
 	fileInfo->fullName = path;
 
@@ -46,6 +48,7 @@ bool getFileInfo(const char *path, FileInfo *fileInfo) {
 	if (!GetFileAttributesExW(ConvertUTF8ToWString(path).c_str(), GetFileExInfoStandard, &attrs)) {
 		fileInfo->size = 0;
 		fileInfo->isDirectory = false;
+		fileInfo->isWritable = false;
 		fileInfo->exists = false;
 		return false;
 	}
@@ -58,7 +61,9 @@ bool getFileInfo(const char *path, FileInfo *fileInfo) {
 	int result = stat64(path, &file_info);
 
 	if (result < 0) {
-		LOG_NOTICE(GENERAL, "IsDirectory: stat failed on %s", path);
+		fileInfo->size = 0;
+		fileInfo->isDirectory = false;
+		fileInfo->isWritable = false;
 		fileInfo->exists = false;
 		return false;
 	}
