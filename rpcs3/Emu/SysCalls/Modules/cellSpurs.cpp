@@ -150,11 +150,12 @@ s32 spursInit(
 	name += "CellSpursKernel0";
 	for (s32 num = 0; num < nSpus; num++, name[name.size() - 1]++)
 	{
-		const u32 id = spu_thread_initialize(spurs->m.spuTG, num, vm::ptr<sys_spu_image>::make(spurs.addr() + offsetof(CellSpurs, m.spuImg)), name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0);
-
-		static_cast<SPUThread&>(*Emu.GetCPU().GetThread(id).get()).RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
-
-		spurs->m.spus[num] = id;
+		spurs->m.spus[num] = spu_thread_initialize(spurs->m.spuTG, num, vm::ptr<sys_spu_image>::make(spurs.addr() + offsetof(CellSpurs, m.spuImg)),
+			name, SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE, (u64)num << 32, spurs.addr(), 0, 0, [spurs](SPUThread& SPU)
+		{
+			SPU.RegisterHleFunction(spurs->m.spuImg.entry_point, spursKernelEntry);
+			SPU.FastCall(spurs->m.spuImg.entry_point);
+		});
 	}
 
 	if (flags & SAF_SPU_PRINTF_ENABLED)

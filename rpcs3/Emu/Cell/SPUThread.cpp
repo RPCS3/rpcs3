@@ -237,14 +237,14 @@ void SPUThread::FastCall(u32 ls_addr)
 	m_status = Running;
 	PC = ls_addr;
 	GPR[0]._u32[3] = 0x0;
-	m_custom_task.swap(m_custom_task);
+	m_custom_task.swap(old_task);
 
 	SPUThread::Task();
 
 	PC = old_PC;
 	GPR[0]._u32[3] = old_LR;
 	GPR[1]._u32[3] = old_stack;
-	m_custom_task.swap(m_custom_task);
+	m_custom_task.swap(old_task);
 }
 
 void SPUThread::FastStop()
