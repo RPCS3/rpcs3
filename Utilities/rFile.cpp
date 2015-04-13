@@ -163,7 +163,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 	{
 		return -1;
 	}
-	if ((output = open(destination, O_RDWR | O_CREAT | (overwrite ? 0 : O_EXCL))) == -1)
+	if ((output = open(destination, O_RDWR | O_CREAT | (overwrite ? 0 : O_EXCL)), S_IRUSR | S_IWUSR) == -1)
 	{
 		close(input);
 		return -1;
