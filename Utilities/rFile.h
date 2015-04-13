@@ -14,9 +14,10 @@ bool rIsDir(const std::string& filename);
 bool rRmdir(const std::string& dir);
 bool rMkdir(const std::string& dir);
 bool rMkpath(const std::string& path);
-bool rRename(const std::string &from, const std::string &to);
-bool rExists(const std::string &path);
-bool rRemoveFile(const std::string &path);
+bool rRename(const std::string& from, const std::string& to);
+bool rCopy(const std::string& from, const std::string& to, bool overwrite);
+bool rExists(const std::string& path);
+bool rRemoveFile(const std::string& path);
 
 enum rSeekMode
 {

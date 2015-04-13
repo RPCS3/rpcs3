@@ -418,8 +418,8 @@ s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CEL
 
 	cellGame.Success("cellGameCreateGameData(): gamedata directory created ('%s')", contentInfo);
 
-	//Emu.GetVFS().CreateFile(contentInfo + "/ICON0.PNG");
-	//Emu.GetVFS().CreateFile(contentInfo + "/PIC1.PNG");
+	Emu.GetVFS().CopyFile("/dev_bdvd/PS3_GAME/ICON0.PNG", contentInfo + "/ICON0.PNG");
+	Emu.GetVFS().CopyFile("/dev_bdvd/PS3_GAME/PIC1.PNG", contentInfo + "/PIC1.PNG");
 
 	// TODO: set initial PARAM.SFO parameters
 	

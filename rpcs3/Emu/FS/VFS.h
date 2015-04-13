@@ -86,6 +86,7 @@ struct VFS
 	bool ExistsDir(const std::string& ps3_path) const;
 	bool RenameFile(const std::string& ps3_path_from, const std::string& ps3_path_to) const;
 	bool RenameDir(const std::string& ps3_path_from, const std::string& ps3_path_to) const;
+	bool CopyFile(const std::string& ps3_path_from, const std::string& ps3_path_to, bool overwrite = true) const;
 
 	vfsDevice* GetDevice(const std::string& ps3_path, std::string& path) const;
 	vfsDevice* GetDeviceLocal(const std::string& local_path, std::string& path) const;

@@ -21,12 +21,20 @@ std::wstring ConvertUTF8ToWString(const std::string &source) {
 	}
 	return str;
 }
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <copyfile.h>
+#else
+#include <sys/sendfile.h>
+#endif
 #endif
 
 #ifdef _WIN32
-#define GET_API_ERROR GetLastError()
+#define GET_API_ERROR static_cast<u64>(GetLastError())
 #else
-#define GET_API_ERROR errno
+#define GET_API_ERROR static_cast<u64>(errno)
 #endif
 
 bool getFileInfo(const char *path, FileInfo *fileInfo) {
@@ -116,9 +124,10 @@ bool rRmdir(const std::string &dir)
 	if (rmdir(dir.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting directory %s: 0x%llx", dir.c_str(), (u64)GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting directory %s: 0x%llx", dir.c_str(), GET_API_ERROR);
 		return false;
 	}
+
 	return true;
 }
 
@@ -128,12 +137,64 @@ bool rRename(const std::string &from, const std::string &to)
 #ifdef _WIN32
 	if (!MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()))
 #else
-	if (int err = rename(from.c_str(), to.c_str()))
+	if (rename(from.c_str(), to.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), (u64)GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), GET_API_ERROR);
 		return false;
 	}
+
+	return true;
+}
+
+#ifndef _WIN32
+
+int OSCopyFile(const char* source, const char* destination, bool overwrite)
+{
+	/* This function was taken from http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
+
+	int input, output;
+	if ((input = open(source, O_RDONLY)) == -1)
+	{
+		return -1;
+	}
+	if ((output = open(destination, O_RDWR | O_CREAT | (overwrite ? 0 : O_EXCL))) == -1)
+	{
+		close(input);
+		return -1;
+	}
+
+	//Here we use kernel-space copying for performance reasons
+#if defined(__APPLE__) || defined(__FreeBSD__)
+	//fcopyfile works on FreeBSD and OS X 10.5+ 
+	int result = fcopyfile(input, output, 0, COPYFILE_ALL);
+#else
+	//sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
+	off_t bytesCopied = 0;
+	struct stat fileinfo = { 0 };
+	fstat(input, &fileinfo);
+	int result = sendfile(output, input, &bytesCopied, fileinfo.st_size);
+#endif
+
+	close(input);
+	close(output);
+
+	return result;
+}
+#endif
+
+bool rCopy(const std::string& from, const std::string& to, bool overwrite)
+{
+#ifdef _WIN32
+	if (!CopyFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str(), !overwrite))
+#else
+	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
+#endif
+	{
+		LOG_ERROR(GENERAL, "Error copying '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), GET_API_ERROR);
+		return false;
+	}
+
 	return true;
 }
 
@@ -156,7 +217,7 @@ bool rRemoveFile(const std::string &file)
 	if (unlink(file.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting file %s: 0x%llx", file.c_str(), (u64)GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting file %s: 0x%llx", file.c_str(), GET_API_ERROR);
 		return false;
 	}
 	return true;
@@ -411,4 +472,3 @@ bool rFileName::Normalize()
 {
 	return reinterpret_cast<wxFileName*>(handle)->Normalize();
 }
-

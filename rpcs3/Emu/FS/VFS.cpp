@@ -7,6 +7,7 @@
 #include "Emu/System.h"
 
 #undef CreateFile
+#undef CopyFile
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
@@ -291,6 +292,21 @@ bool VFS::RenameDir(const std::string& ps3_path_from, const std::string& ps3_pat
 			{
 				return res->Rename(path_from, path_to);
 			}
+		}
+	}
+
+	return false;
+}
+
+bool VFS::CopyFile(const std::string& ps3_path_from, const std::string& ps3_path_to, bool overwrite) const
+{
+	std::string path_from, path_to;
+
+	if (vfsDevice* dev = GetDevice(ps3_path_from, path_from))
+	{
+		if (vfsDevice* dev_ = GetDevice(ps3_path_to, path_to))
+		{
+			return rCopy(path_from, path_to, overwrite);
 		}
 	}
 
