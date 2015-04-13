@@ -19,9 +19,9 @@ before_install:
   - echo "yes" | sudo apt-key adv --fetch-keys http://repos.codelite.org/CodeLite.asc
   - echo "yes" | sudo apt-add-repository 'deb http://repos.codelite.org/wx3.0/ubuntu/ precise universe'
 # Add later version of Clang, apt from llvm.org. the repository link is for development version.
-  - echo "yes" | sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main';
-    echo "yes" | sudo add-apt-repository 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main';
-    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
+  - echo "yes" | sudo add-apt-repository 'deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main'
+  - echo "yes" | sudo add-apt-repository 'deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.6 main'
+  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key | sudo apt-key add -;
 # And the libstdc++4.8 of GCC from ppa
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update
