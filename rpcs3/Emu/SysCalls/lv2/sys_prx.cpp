@@ -64,12 +64,15 @@ s32 sys_prx_load_module_on_memcontainer_by_fd()
 
 s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u64 flags, vm::ptr<sys_prx_start_module_option_t> pOpt)
 {
-	sys_prx.Todo("sys_prx_start_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
+	sys_prx.Todo("sys_prx_start_module(id=0x%x, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
-	std::shared_ptr<sys_prx_t> prx;
-	if (!Emu.GetIdManager().GetIDData(id, prx))
+	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+
+	if (!prx)
+	{
 		return CELL_ESRCH;
+	}
 
 	if (prx->isStarted)
 		return CELL_PRX_ERROR_ALREADY_STARTED;
@@ -79,12 +82,15 @@ s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u
 
 s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u64 flags, vm::ptr<sys_prx_stop_module_option_t> pOpt)
 {
-	sys_prx.Todo("sys_prx_stop_module(id=%d, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
+	sys_prx.Todo("sys_prx_stop_module(id=0x%x, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
-	std::shared_ptr<sys_prx_t> prx;
-	if (!Emu.GetIdManager().GetIDData(id, prx))
+	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+
+	if (!prx)
+	{
 		return CELL_ESRCH;
+	}
 
 	if (!prx->isStarted)
 		return CELL_PRX_ERROR_ALREADY_STOPPED;
@@ -94,12 +100,16 @@ s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u6
 
 s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)
 {
-	sys_prx.Todo("sys_prx_unload_module(id=%d, flags=0x%llx, pOpt=0x%x)", id, flags, pOpt.addr());
+	sys_prx.Todo("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=0x%x)", id, flags, pOpt.addr());
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	std::shared_ptr<sys_prx_t> prx;
-	if (!Emu.GetIdManager().GetIDData(id, prx))
+	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+
+	if (!prx)
+	{
 		return CELL_ESRCH;
+	}
+
 	Memory.Free(prx->address);
 	Emu.GetIdManager().RemoveID<sys_prx_t>(id);
 	

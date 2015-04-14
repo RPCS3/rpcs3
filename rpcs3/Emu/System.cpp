@@ -26,7 +26,6 @@
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/Event.h"
-#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
 
@@ -55,7 +54,6 @@ Emulator::Emulator()
 	, m_callback_manager(new CallbackManager())
 	, m_event_manager(new EventManager())
 	, m_module_manager(new ModuleManager())
-	, m_sync_prim_manager(new SyncPrimManager())
 	, m_vfs(new VFS())
 {
 	m_loader.register_handler(new loader::handlers::elf32);
@@ -379,7 +377,6 @@ void Emulator::Stop()
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
 	GetModuleManager().Close();
-	GetSyncPrimManager().Close();
 
 	CurGameInfo.Reset();
 	Memory.Close();

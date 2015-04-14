@@ -57,7 +57,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 
 s32 sys_semaphore_destroy(u32 sem)
 {
-	sys_semaphore.Warning("sys_semaphore_destroy(sem=%d)", sem);
+	sys_semaphore.Warning("sys_semaphore_destroy(sem=0x%x)", sem);
 
 	LV2_LOCK;
 
@@ -80,7 +80,7 @@ s32 sys_semaphore_destroy(u32 sem)
 
 s32 sys_semaphore_wait(u32 sem, u64 timeout)
 {
-	sys_semaphore.Log("sys_semaphore_wait(sem=%d, timeout=0x%llx)", sem, timeout);
+	sys_semaphore.Log("sys_semaphore_wait(sem=0x%x, timeout=0x%llx)", sem, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -121,7 +121,7 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 
 s32 sys_semaphore_trywait(u32 sem)
 {
-	sys_semaphore.Log("sys_semaphore_trywait(sem=%d)", sem);
+	sys_semaphore.Log("sys_semaphore_trywait(sem=0x%x)", sem);
 
 	LV2_LOCK;
 
@@ -144,7 +144,7 @@ s32 sys_semaphore_trywait(u32 sem)
 
 s32 sys_semaphore_post(u32 sem, s32 count)
 {
-	sys_semaphore.Log("sys_semaphore_post(sem=%d, count=%d)", sem, count);
+	sys_semaphore.Log("sys_semaphore_post(sem=0x%x, count=%d)", sem, count);
 
 	LV2_LOCK;
 
@@ -180,7 +180,7 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 
 s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count)
 {
-	sys_semaphore.Log("sys_semaphore_get_value(sem=%d, count=*0x%x)", sem, count);
+	sys_semaphore.Log("sys_semaphore_get_value(sem=0x%x, count=*0x%x)", sem, count);
 
 	if (!count)
 	{

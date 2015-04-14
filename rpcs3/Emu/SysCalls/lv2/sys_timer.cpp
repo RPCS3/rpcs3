@@ -18,7 +18,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 
 	std::shared_ptr<lv2_timer_t> timer(new lv2_timer_t);
 
-	thread_t(fmt::format("Timer[%d] Thread", (*timer_id = Emu.GetIdManager().GetNewID(timer, TYPE_TIMER))), [timer]()
+	thread_t(fmt::format("Timer[0x%x] Thread", (*timer_id = Emu.GetIdManager().GetNewID(timer, TYPE_TIMER))), [timer]()
 	{
 		LV2_LOCK;
 
@@ -58,7 +58,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 
 s32 sys_timer_destroy(u32 timer_id)
 {
-	sys_timer.Warning("sys_timer_destroy(timer_id=%d)", timer_id);
+	sys_timer.Warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
 	LV2_LOCK;
 
@@ -81,7 +81,7 @@ s32 sys_timer_destroy(u32 timer_id)
 
 s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
-	sys_timer.Warning("sys_timer_get_information(timer_id=%d, info=*0x%x)", timer_id, info);
+	sys_timer.Warning("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
 	LV2_LOCK;
 	
@@ -102,7 +102,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 {
-	sys_timer.Warning("_sys_timer_start(timer_id=%d, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
+	sys_timer.Warning("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_system_time();
 
@@ -174,7 +174,7 @@ s32 sys_timer_stop(u32 timer_id)
 
 s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
-	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=%d, queue_id=%d, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
+	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
 	LV2_LOCK;
 
@@ -201,7 +201,7 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 s32 sys_timer_disconnect_event_queue(u32 timer_id)
 {
-	sys_timer.Warning("sys_timer_disconnect_event_queue(timer_id=%d)", timer_id);
+	sys_timer.Warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
 	LV2_LOCK;
 

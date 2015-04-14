@@ -6,7 +6,14 @@
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/SysCalls/SyncPrimitivesManager.h"
+#include "Emu/SysCalls/lv2/sleep_queue.h"
+#include "Emu/SysCalls/lv2/sys_lwmutex.h"
+#include "Emu/SysCalls/lv2/sys_lwcond.h"
+#include "Emu/SysCalls/lv2/sys_mutex.h"
+#include "Emu/SysCalls/lv2/sys_cond.h"
+#include "Emu/SysCalls/lv2/sys_semaphore.h"
+#include "Emu/SysCalls/lv2/sys_event.h"
+
 #include "KernelExplorer.h"
 
 KernelExplorer::KernelExplorer(wxWindow* parent) 
@@ -51,6 +58,22 @@ void KernelExplorer::Update()
 
 	const auto& root = m_tree->AddRoot(fmt::Format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024)));
 
+	union name64
+	{
+		u64 u64_data;
+		char string[8];
+
+		name64(u64 data)
+			: u64_data(data & 0x00ffffffffffffffull)
+		{
+		}
+
+		const char* operator &() const
+		{
+			return string;
+		}
+	};
+
 	// TODO: FileSystem
 
 	// Semaphores
@@ -59,10 +82,10 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Semaphores (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_SEMAPHORE))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_SEMAPHORE))
 		{
-			auto sem = Emu.GetSyncPrimManager().GetSemaphoreData(id);
-			sprintf(name, "Semaphore: ID = 0x%08x '%s', Count = %d, Max Count = %d", id, sem.name.c_str(), sem.count, sem.max_count);
+			const auto sem = Emu.GetIdManager().GetIDData<semaphore_t>(id);
+			sprintf(name, "Semaphore: ID = 0x%x '%s', Count = %d, Max Count = %d, Waiters = %d", id, &name64(sem->name), sem->value.load(), sem->max, sem->waiters.load());
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -73,9 +96,10 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Mutexes (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_MUTEX))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_MUTEX))
 		{
-			sprintf(name, "Mutex: ID = 0x%08x '%s'", id, Emu.GetSyncPrimManager().GetSyncPrimName(id, TYPE_MUTEX).c_str());
+			const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(id);
+			sprintf(name, "Mutex: ID = 0x%x '%s'", id, &name64(mutex->name));
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -84,12 +108,12 @@ void KernelExplorer::Update()
 	count = Emu.GetIdManager().GetTypeCount(TYPE_LWMUTEX);
 	if (count)
 	{
-		sprintf(name, "Light Weight Mutexes (%d)", count);
+		sprintf(name, "Lightweight Mutexes (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_LWMUTEX))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_LWMUTEX))
 		{
-			auto lwm = Emu.GetSyncPrimManager().GetLwMutexData(id);
-			sprintf(name, "LW Mutex: ID = 0x%08x '%s'", id, lwm.name.c_str());
+			const auto lwm = Emu.GetIdManager().GetIDData<lwmutex_t>(id);
+			sprintf(name, "Lightweight Mutex: ID = 0x%x '%s'", id, &name64(lwm->name));
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -100,9 +124,10 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Condition Variables (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_COND))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_COND))
 		{
-			sprintf(name, "Condition Variable: ID = 0x%08x '%s'", id, Emu.GetSyncPrimManager().GetSyncPrimName(id, TYPE_COND).c_str());
+			const auto cond = Emu.GetIdManager().GetIDData<cond_t>(id);
+			sprintf(name, "Condition Variable: ID = 0x%x '%s'", id, &name64(cond->name));
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -111,11 +136,12 @@ void KernelExplorer::Update()
 	count = Emu.GetIdManager().GetTypeCount(TYPE_LWCOND);
 	if (count)
 	{
-		sprintf(name, "Light Weight Condition Variables (%d)", count);
+		sprintf(name, "Lightweight Condition Variables (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_LWCOND))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_LWCOND))
 		{
-			sprintf(name, "LW Condition Variable: ID = 0x%08x '%s'", id, Emu.GetSyncPrimManager().GetSyncPrimName(id, TYPE_LWCOND).c_str());
+			const auto lwc = Emu.GetIdManager().GetIDData<lwcond_t>(id);
+			sprintf(name, "Lightweight Condition Variable: ID = 0x%x '%s'", id, &name64(lwc->name));
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -126,9 +152,24 @@ void KernelExplorer::Update()
 	{
 		sprintf(name, "Event Queues (%d)", count);
 		const auto& node = m_tree->AppendItem(root, name);
-		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_EVENT_QUEUE))
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_EVENT_QUEUE))
 		{
-			sprintf(name, "Event Queue: ID = 0x%08x", id);
+			const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(id);
+			sprintf(name, "Event Queue: ID = 0x%x '%s', Key = %#llx", id, &name64(queue->name), queue->key);
+			m_tree->AppendItem(node, name);
+		}
+	}
+
+	// Event Ports
+	count = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_PORT);
+	if (count)
+	{
+		sprintf(name, "Event Ports (%d)", count);
+		const auto& node = m_tree->AppendItem(root, name);
+		for (const auto id : Emu.GetIdManager().GetTypeIDs(TYPE_EVENT_PORT))
+		{
+			const auto port = Emu.GetIdManager().GetIDData<event_port_t>(id);
+			sprintf(name, "Event Port: ID = 0x%x, Name = %#llx", id, port->name);
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -143,7 +184,7 @@ void KernelExplorer::Update()
 		//m_tree->AppendItem(node, name);
 		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_PRX))
 		{
-			sprintf(name, "PRX: ID = 0x%08x", id);
+			sprintf(name, "PRX: ID = 0x%x", id);
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -156,7 +197,7 @@ void KernelExplorer::Update()
 		const auto& node = m_tree->AppendItem(root, name);
 		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_MEM))
 		{
-			sprintf(name, "Memory Container: ID = 0x%08x", id);
+			sprintf(name, "Memory Container: ID = 0x%x", id);
 			m_tree->AppendItem(node, name);
 		}
 	}
@@ -169,7 +210,7 @@ void KernelExplorer::Update()
 		const auto& node = m_tree->AppendItem(root, name);
 		for (const auto& id : Emu.GetIdManager().GetTypeIDs(TYPE_EVENT_FLAG))
 		{
-			sprintf(name, "Event Flag: ID = 0x%08x", id);
+			sprintf(name, "Event Flag: ID = 0x%x", id);
 			m_tree->AppendItem(node, name);
 		}
 	}

@@ -122,22 +122,6 @@ public:
 		return m_cur_id++;
 	}
 
-	template<typename T> bool GetIDData(const u32 id, std::shared_ptr<T>& result)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		auto f = m_id_map.find(id);
-
-		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T))
-		{
-			return false;
-		}
-
-		result = f->second.GetData<T>();
-
-		return true;
-	}
-
 	template<typename T> std::shared_ptr<T> GetIDData(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);

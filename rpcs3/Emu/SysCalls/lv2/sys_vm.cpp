@@ -12,7 +12,7 @@ std::shared_ptr<MemoryContainerInfo> current_ct;
 
 s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 addr)
 {
-	sys_vm.Error("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cidr=0x%x, flags=0x%llx, policy=0x%llx, addr_addr=0x%x)", 
+	sys_vm.Error("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%llx, policy=0x%llx, addr_addr=0x%x)", 
 		vsize, psize, cid, flag, policy, addr);
 
 	// Check virtual size.
@@ -39,8 +39,12 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	else
 	{
 		// Check memory container.
-		std::shared_ptr<MemoryContainerInfo> ct;
-		if(!Emu.GetIdManager().GetIDData(cid, ct)) return CELL_ESRCH;
+		const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+
+		if (!ct)
+		{
+			return CELL_ESRCH;
+		}
 
 		current_ct = ct;
 	}

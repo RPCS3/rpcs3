@@ -152,7 +152,6 @@ public:
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
-	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{

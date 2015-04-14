@@ -970,14 +970,14 @@ s32 cellFsAioCancel(s32 id)
 
 s32 cellFsSetDefaultContainer(u32 id, u32 total_limit)
 {
-	cellFs.Todo("cellFsSetDefaultContainer(id=%d, total_limit=%d)", id, total_limit);
+	cellFs.Todo("cellFsSetDefaultContainer(id=0x%x, total_limit=%d)", id, total_limit);
 
 	return CELL_OK;
 }
 
 s32 cellFsSetIoBufferFromDefaultContainer(u32 fd, u32 buffer_size, u32 page_type)
 {
-	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=%d, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
+	cellFs.Todo("cellFsSetIoBufferFromDefaultContainer(fd=0x%x, buffer_size=%d, page_type=%d)", fd, buffer_size, page_type);
 
 	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 

@@ -63,7 +63,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 
 s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 {
-	sys_event.Warning("sys_event_queue_destroy(equeue_id=%d, mode=%d)", equeue_id, mode);
+	sys_event.Warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
 
 	LV2_LOCK;
 
@@ -102,7 +102,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
-	sys_event.Log("sys_event_queue_tryreceive(equeue_id=%d, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
+	sys_event.Log("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
 	LV2_LOCK;
 
@@ -140,7 +140,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
-	sys_event.Log("sys_event_queue_receive(equeue_id=%d, event=*0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
+	sys_event.Log("sys_event_queue_receive(equeue_id=0x%x, event=*0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -177,7 +177,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 		if (Emu.IsStopped())
 		{
-			sys_event.Warning("sys_event_queue_receive(equeue_id=%d) aborted", equeue_id);
+			sys_event.Warning("sys_event_queue_receive(equeue_id=0x%x) aborted", equeue_id);
 			return CELL_OK;
 		}
 
@@ -199,7 +199,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 s32 sys_event_queue_drain(u32 equeue_id)
 {
-	sys_event.Log("sys_event_queue_drain(equeue_id=%d)", equeue_id);
+	sys_event.Log("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
 
 	LV2_LOCK;
 
@@ -241,7 +241,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 
 s32 sys_event_port_destroy(u32 eport_id)
 {
-	sys_event.Warning("sys_event_port_destroy(eport_id=%d)", eport_id);
+	sys_event.Warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
 
 	LV2_LOCK;
 
@@ -264,7 +264,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 
 s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 {
-	sys_event.Warning("sys_event_port_connect_local(eport_id=%d, equeue_id=%d)", eport_id, equeue_id);
+	sys_event.Warning("sys_event_port_connect_local(eport_id=0x%x, equeue_id=0x%x)", eport_id, equeue_id);
 
 	LV2_LOCK;
 
@@ -293,7 +293,7 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 s32 sys_event_port_disconnect(u32 eport_id)
 {
-	sys_event.Warning("sys_event_port_disconnect(eport_id=%d)", eport_id);
+	sys_event.Warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
 
 	LV2_LOCK;
 
@@ -320,7 +320,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 
 s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
-	sys_event.Log("sys_event_port_send(eport_id=%d, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
+	sys_event.Log("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
 	LV2_LOCK;
 

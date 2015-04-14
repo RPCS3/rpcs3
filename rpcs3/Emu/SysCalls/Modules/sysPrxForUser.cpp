@@ -117,7 +117,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	lwmutex->lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw);
+	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw, TYPE_LWMUTEX);
 
 	return CELL_OK;
 }
@@ -501,7 +501,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 
 s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
-	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=%d)", lwcond, ppu_thread_id);
+	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -821,7 +821,7 @@ s64 _sys_process_at_Exitspawn()
 
 s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
 {
-	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
+	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
 	return _sys_interrupt_thread_disestablish(ih, vm::stackvar<be_t<u64>>(CPU));
 }
@@ -1053,7 +1053,7 @@ s32 _sys_spu_printf_finalize()
 
 s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=%d)", group);
+	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=0x%x)", group);
 
 	if (!spu_printf_agcb)
 	{
@@ -1065,7 +1065,7 @@ s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 
 s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=%d)", group);
+	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=0x%x)", group);
 
 	if (!spu_printf_dgcb)
 	{
@@ -1077,7 +1077,7 @@ s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 
 s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=%d)", thread);
+	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=0x%x)", thread);
 
 	if (!spu_printf_atcb)
 	{
@@ -1089,7 +1089,7 @@ s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 
 s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=%d)", thread);
+	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=0x%x)", thread);
 
 	if (!spu_printf_dtcb)
 	{

@@ -36,7 +36,7 @@ void sys_ppu_thread_yield()
 
 s32 sys_ppu_thread_join(u32 thread_id, vm::ptr<u64> vptr)
 {
-	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=%d, vptr=*0x%x)", thread_id, vptr);
+	sys_ppu_thread.Warning("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -62,7 +62,7 @@ s32 sys_ppu_thread_join(u32 thread_id, vm::ptr<u64> vptr)
 
 s32 sys_ppu_thread_detach(u32 thread_id)
 {
-	sys_ppu_thread.Warning("sys_ppu_thread_detach(thread_id=%d)", thread_id);
+	sys_ppu_thread.Warning("sys_ppu_thread_detach(thread_id=0x%x)", thread_id);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -90,7 +90,7 @@ void sys_ppu_thread_get_join_state(PPUThread& CPU, vm::ptr<s32> isjoinable)
 
 s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_set_priority(thread_id=%d, prio=%d)", thread_id, prio);
+	sys_ppu_thread.Log("sys_ppu_thread_set_priority(thread_id=0x%x, prio=%d)", thread_id, prio);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -106,7 +106,7 @@ s32 sys_ppu_thread_set_priority(u32 thread_id, s32 prio)
 
 s32 sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop)
 {
-	sys_ppu_thread.Log("sys_ppu_thread_get_priority(thread_id=%d, priop=*0x%x)", thread_id, priop);
+	sys_ppu_thread.Log("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -132,7 +132,7 @@ s32 sys_ppu_thread_get_stack_information(PPUThread& CPU, vm::ptr<sys_ppu_thread_
 
 s32 sys_ppu_thread_stop(u32 thread_id)
 {
-	sys_ppu_thread.Error("sys_ppu_thread_stop(thread_id=%d)", thread_id);
+	sys_ppu_thread.Error("sys_ppu_thread_stop(thread_id=0x%x)", thread_id);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -148,7 +148,7 @@ s32 sys_ppu_thread_stop(u32 thread_id)
 
 s32 sys_ppu_thread_restart(u32 thread_id)
 {
-	sys_ppu_thread.Error("sys_ppu_thread_restart(thread_id=%d)", thread_id);
+	sys_ppu_thread.Error("sys_ppu_thread_restart(thread_id=0x%x)", thread_id);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id);
 
@@ -230,7 +230,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 
 s32 sys_ppu_thread_start(u32 thread_id)
 {
-	sys_ppu_thread.Warning("sys_ppu_thread_start(thread_id=%d)", thread_id);
+	sys_ppu_thread.Warning("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id, CPU_THREAD_PPU);
 
@@ -246,7 +246,7 @@ s32 sys_ppu_thread_start(u32 thread_id)
 
 s32 sys_ppu_thread_rename(u32 thread_id, vm::ptr<const char> name)
 {
-	sys_ppu_thread.Error("sys_ppu_thread_rename(thread_id=%d, name=*0x%x)", thread_id, name);
+	sys_ppu_thread.Error("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 
 	const auto t = Emu.GetCPU().GetThread(thread_id, CPU_THREAD_PPU);
 

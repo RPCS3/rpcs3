@@ -77,7 +77,7 @@ public:
 	std::string GetName() const { return NamedThreadBase::GetThreadName(); }
 	std::string GetFName() const
 	{
-		return fmt::format("%s[%d] Thread (%s)", GetTypeString(), m_id, GetName());
+		return fmt::format("%s[0x%x] Thread (%s)", GetTypeString(), m_id, GetName());
 	}
 
 	static std::string CPUThreadTypeToString(CPUThreadType type)

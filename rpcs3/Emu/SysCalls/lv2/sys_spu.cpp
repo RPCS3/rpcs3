@@ -136,7 +136,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 
 s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_thread_attribute> attr, vm::ptr<sys_spu_thread_argument> arg)
 {
-	sys_spu.Warning("sys_spu_thread_initialize(thread=*0x%x, group=%d, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
+	sys_spu.Warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
 	LV2_LOCK;
 
@@ -163,7 +163,7 @@ s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm
 
 s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 {
-	sys_spu.Warning("sys_spu_thread_set_argument(id=%d, arg=*0x%x)", id, arg);
+	sys_spu.Warning("sys_spu_thread_set_argument(id=0x%x, arg=*0x%x)", id, arg);
 
 	LV2_LOCK;
 
@@ -190,7 +190,7 @@ s32 sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg)
 
 s32 sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status)
 {
-	sys_spu.Warning("sys_spu_thread_get_exit_status(id=%d, status=*0x%x)", id, status);
+	sys_spu.Warning("sys_spu_thread_get_exit_status(id=0x%x, status=*0x%x)", id, status);
 
 	LV2_LOCK;
 
@@ -243,7 +243,7 @@ s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_
 
 s32 sys_spu_thread_group_destroy(u32 id)
 {
-	sys_spu.Warning("sys_spu_thread_group_destroy(id=%d)", id);
+	sys_spu.Warning("sys_spu_thread_group_destroy(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -281,7 +281,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 
 s32 sys_spu_thread_group_start(u32 id)
 {
-	sys_spu.Warning("sys_spu_thread_group_start(id=%d)", id);
+	sys_spu.Warning("sys_spu_thread_group_start(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -344,7 +344,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 s32 sys_spu_thread_group_suspend(u32 id)
 {
-	sys_spu.Log("sys_spu_thread_group_suspend(id=%d)", id);
+	sys_spu.Log("sys_spu_thread_group_suspend(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -399,7 +399,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 
 s32 sys_spu_thread_group_resume(u32 id)
 {
-	sys_spu.Log("sys_spu_thread_group_resume(id=%d)", id);
+	sys_spu.Log("sys_spu_thread_group_resume(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -446,7 +446,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 
 s32 sys_spu_thread_group_yield(u32 id)
 {
-	sys_spu.Log("sys_spu_thread_group_yield(id=%d)", id);
+	sys_spu.Log("sys_spu_thread_group_yield(id=0x%x)", id);
 
 	LV2_LOCK;
 
@@ -469,7 +469,7 @@ s32 sys_spu_thread_group_yield(u32 id)
 
 s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 {
-	sys_spu.Warning("sys_spu_thread_group_terminate(id=%d, value=0x%x)", id, value);
+	sys_spu.Warning("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
 
 	LV2_LOCK;
 
@@ -536,7 +536,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 {
-	sys_spu.Warning("sys_spu_thread_group_join(id=%d, cause=*0x%x, status=*0x%x)", id, cause, status);
+	sys_spu.Warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
 	LV2_LOCK;
 
@@ -583,7 +583,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 		if (Emu.IsStopped())
 		{
-			sys_spu.Warning("sys_spu_thread_group_join(id=%d) aborted", id);
+			sys_spu.Warning("sys_spu_thread_group_join(id=0x%x) aborted", id);
 			return CELL_OK;
 		}
 
@@ -622,7 +622,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_write_ls(id=%d, address=0x%x, value=0x%llx, type=%d)", id, address, value, type);
+	sys_spu.Log("sys_spu_thread_write_ls(id=0x%x, address=0x%x, value=0x%llx, type=%d)", id, address, value, type);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -657,7 +657,7 @@ s32 sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 {
-	sys_spu.Log("sys_spu_thread_read_ls(id=%d, address=0x%x, value=*0x%x, type=%d)", id, address, value, type);
+	sys_spu.Log("sys_spu_thread_read_ls(id=0x%x, address=0x%x, value=*0x%x, type=%d)", id, address, value, type);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -692,7 +692,7 @@ s32 sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type)
 
 s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 {
-	sys_spu.Warning("sys_spu_thread_write_spu_mb(id=%d, value=0x%x)", id, value);
+	sys_spu.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -710,7 +710,7 @@ s32 sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 {
-	sys_spu.Warning("sys_spu_thread_set_spu_cfg(id=%d, value=0x%x)", id, value);
+	sys_spu.Warning("sys_spu_thread_set_spu_cfg(id=0x%x, value=0x%x)", id, value);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -733,7 +733,7 @@ s32 sys_spu_thread_set_spu_cfg(u32 id, u64 value)
 
 s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 {
-	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=%d, value=*0x%x)", id, value);
+	sys_spu.Warning("sys_spu_thread_get_spu_cfg(id=0x%x, value=*0x%x)", id, value);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -751,7 +751,7 @@ s32 sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value)
 
 s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 {
-	sys_spu.Log("sys_spu_thread_write_snr(id=%d, number=%d, value=0x%x)", id, number, value);
+	sys_spu.Log("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
 
@@ -774,7 +774,7 @@ s32 sys_spu_thread_write_snr(u32 id, u32 number, u32 value)
 
 s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 {
-	sys_spu.Warning("sys_spu_thread_group_connect_event(id=%d, eq=%d, et=%d)", id, eq, et);
+	sys_spu.Warning("sys_spu_thread_group_connect_event(id=0x%x, eq=0x%x, et=%d)", id, eq, et);
 
 	LV2_LOCK;
 
@@ -830,7 +830,7 @@ s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 
 s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 {
-	sys_spu.Warning("sys_spu_thread_group_disconnect_event(id=%d, et=%d)", id, et);
+	sys_spu.Warning("sys_spu_thread_group_disconnect_event(id=0x%x, et=%d)", id, et);
 
 	LV2_LOCK;
 
@@ -893,7 +893,7 @@ s32 sys_spu_thread_tryreceive_event(u32 spuq_num, mem32_t d1, mem32_t d2, mem32_
 
 s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 {
-	sys_spu.Warning("sys_spu_thread_connect_event(id=%d, eq=%d, et=%d, spup=%d)", id, eq, et, spup);
+	sys_spu.Warning("sys_spu_thread_connect_event(id=0x%x, eq=0x%x, et=%d, spup=%d)", id, eq, et, spup);
 
 	LV2_LOCK;
 
@@ -927,7 +927,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 
 s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 {
-	sys_spu.Warning("sys_spu_thread_disconnect_event(id=%d, event_type=%d, spup=%d)", id, et, spup);
+	sys_spu.Warning("sys_spu_thread_disconnect_event(id=0x%x, et=%d, spup=%d)", id, et, spup);
 
 	LV2_LOCK;
 
@@ -960,7 +960,7 @@ s32 sys_spu_thread_disconnect_event(u32 id, u32 et, u8 spup)
 
 s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 {
-	sys_spu.Warning("sys_spu_thread_bind_queue(id=%d, spuq=%d, spuq_num=0x%x)", id, spuq, spuq_num);
+	sys_spu.Warning("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
 
 	LV2_LOCK;
 
@@ -1006,7 +1006,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 
 s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 {
-	sys_spu.Warning("sys_spu_thread_unbind_queue(id=%d, spuq_num=0x%x)", id, spuq_num);
+	sys_spu.Warning("sys_spu_thread_unbind_queue(id=0x%x, spuq_num=0x%x)", id, spuq_num);
 
 	LV2_LOCK;
 
@@ -1034,7 +1034,7 @@ s32 sys_spu_thread_unbind_queue(u32 id, u32 spuq_num)
 
 s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::ptr<u8> spup)
 {
-	sys_spu.Warning("sys_spu_thread_group_connect_event_all_threads(id=%d, eq=%d, req=0x%llx, spup=*0x%x)", id, eq, req, spup);
+	sys_spu.Warning("sys_spu_thread_group_connect_event_all_threads(id=0x%x, eq=0x%x, req=0x%llx, spup=*0x%x)", id, eq, req, spup);
 
 	LV2_LOCK;
 
@@ -1109,7 +1109,7 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::
 
 s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 {
-	sys_spu.Warning("sys_spu_thread_group_disconnect_event_all_threads(id=%d, spup=%d)", id, spup);
+	sys_spu.Warning("sys_spu_thread_group_disconnect_event_all_threads(id=0x%x, spup=%d)", id, spup);
 
 	LV2_LOCK;
 

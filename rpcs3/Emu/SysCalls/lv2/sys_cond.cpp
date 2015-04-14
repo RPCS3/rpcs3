@@ -15,7 +15,7 @@ SysCallBase sys_cond("sys_cond");
 
 s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
-	sys_cond.Warning("sys_cond_create(cond_id=*0x%x, mutex_id=%d, attr=*0x%x)", cond_id, mutex_id, attr);
+	sys_cond.Warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
 	LV2_LOCK;
 
@@ -46,7 +46,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 s32 sys_cond_destroy(u32 cond_id)
 {
-	sys_cond.Warning("sys_cond_destroy(cond_id=%d)", cond_id);
+	sys_cond.Warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -74,7 +74,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 s32 sys_cond_signal(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal(cond_id=%d)", cond_id);
+	sys_cond.Log("sys_cond_signal(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -97,7 +97,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 s32 sys_cond_signal_all(u32 cond_id)
 {
-	sys_cond.Log("sys_cond_signal_all(cond_id=%d)", cond_id);
+	sys_cond.Log("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
 	LV2_LOCK;
 
@@ -120,7 +120,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 {
-	sys_cond.Log("sys_cond_signal_to(cond_id=%d, thread_id=%d)", cond_id, thread_id);
+	sys_cond.Log("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
 	LV2_LOCK;
 
@@ -152,7 +152,7 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 {
-	sys_cond.Log("sys_cond_wait(cond_id=%d, timeout=%lld)", cond_id, timeout);
+	sys_cond.Log("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -207,7 +207,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 		if (Emu.IsStopped())
 		{
-			sys_cond.Warning("sys_cond_wait(id=%d) aborted", cond_id);
+			sys_cond.Warning("sys_cond_wait(id=0x%x) aborted", cond_id);
 			return CELL_OK;
 		}
 

@@ -647,9 +647,6 @@
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
-      <Filter>Emu\SysCalls</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1445,9 +1442,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h">
-      <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">

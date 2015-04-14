@@ -50,7 +50,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 
 s32 sys_mutex_destroy(u32 mutex_id)
 {
-	sys_mutex.Warning("sys_mutex_destroy(mutex_id=%d)", mutex_id);
+	sys_mutex.Warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 
@@ -84,7 +84,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 {
-	sys_mutex.Log("sys_mutex_lock(mutex_id=%d, timeout=0x%llx)", mutex_id, timeout);
+	sys_mutex.Log("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
 	const u64 start_time = get_system_time();
 
@@ -129,7 +129,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 		if (Emu.IsStopped())
 		{
-			sys_mutex.Warning("sys_mutex_lock(id=%d) aborted", mutex_id);
+			sys_mutex.Warning("sys_mutex_lock(mutex_id=0x%x) aborted", mutex_id);
 			return CELL_OK;
 		}
 
@@ -144,7 +144,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 {
-	sys_mutex.Log("sys_mutex_trylock(mutex_id=%d)", mutex_id);
+	sys_mutex.Log("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 
@@ -186,7 +186,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 
 s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 {
-	sys_mutex.Log("sys_mutex_unlock(mutex_id=%d)", mutex_id);
+	sys_mutex.Log("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
 	LV2_LOCK;
 

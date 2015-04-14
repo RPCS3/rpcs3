@@ -215,7 +215,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.id = vdec_id;
 
 	vdec.vdecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	vdec.vdecCb->SetName(fmt::format("VideoDecoder[%d] Callback", vdec_id));
+	vdec.vdecCb->SetName(fmt::format("VideoDecoder[0x%x] Callback", vdec_id));
 	vdec.vdecCb->SetEntry(0);
 	vdec.vdecCb->SetPrio(1001);
 	vdec.vdecCb->SetStackSize(0x10000);
@@ -223,7 +223,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread_t t(fmt::format("VideoDecoder[%d] Thread", vdec_id), [vdec_ptr, sptr]()
+	thread_t t(fmt::format("VideoDecoder[0x%x] Thread", vdec_id), [vdec_ptr, sptr]()
 	{
 		VideoDecoder& vdec = *vdec_ptr;
 		VdecTask& task = vdec.task;
@@ -585,7 +585,7 @@ s32 cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecRes
 
 s32 cellVdecClose(u32 handle)
 {
-	cellVdec.Warning("cellVdecClose(handle=%d)", handle);
+	cellVdec.Warning("cellVdecClose(handle=0x%x)", handle);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -614,7 +614,7 @@ s32 cellVdecClose(u32 handle)
 
 s32 cellVdecStartSeq(u32 handle)
 {
-	cellVdec.Log("cellVdecStartSeq(handle=%d)", handle);
+	cellVdec.Log("cellVdecStartSeq(handle=0x%x)", handle);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -629,7 +629,7 @@ s32 cellVdecStartSeq(u32 handle)
 
 s32 cellVdecEndSeq(u32 handle)
 {
-	cellVdec.Warning("cellVdecEndSeq(handle=%d)", handle);
+	cellVdec.Warning("cellVdecEndSeq(handle=0x%x)", handle);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -644,7 +644,7 @@ s32 cellVdecEndSeq(u32 handle)
 
 s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdecAuInfo> auInfo)
 {
-	cellVdec.Log("cellVdecDecodeAu(handle=%d, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
+	cellVdec.Log("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -674,7 +674,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 
 s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
-	cellVdec.Log("cellVdecGetPicture(handle=%d, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
+	cellVdec.Log("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -730,7 +730,7 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 s32 cellVdecGetPicItem(u32 handle, vm::ptr<vm::bptr<CellVdecPicItem>> picItem)
 {
-	cellVdec.Log("cellVdecGetPicItem(handle=%d, picItem=**0x%x)", handle, picItem);
+	cellVdec.Log("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
@@ -875,7 +875,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::ptr<vm::bptr<CellVdecPicItem>> picItem)
 
 s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	cellVdec.Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
+	cellVdec.Log("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, frc);
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 

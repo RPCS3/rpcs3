@@ -23,7 +23,7 @@ std::vector<SSPlayer> ssp;
 
 int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr, u32 samples)
 {
-	libmixer.Log("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
+	libmixer.Log("cellAANAddData(handle=0x%x, port=0x%x, offset=0x%x, addr_addr=0x%x, samples=%d)", aan_handle, aan_port, offset, addr.addr(), samples);
 
 	u32 type = aan_port >> 16;
 	u32 port = aan_port & 0xffff;
@@ -44,7 +44,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 
 	if (aan_handle != 0x11111111 || samples != 256 || !type || offset != 0)
 	{
-		libmixer.Error("cellAANAddData(handle=%d, port=%d, offset=0x%x, addr_addr=0x%x, samples=%d): invalid parameters", aan_handle, aan_port, offset, addr.addr(), samples);
+		libmixer.Error("cellAANAddData(handle=0x%x, port=0x%x, offset=0x%x, addr_addr=0x%x, samples=%d): invalid parameters", aan_handle, aan_port, offset, addr.addr(), samples);
 		return CELL_LIBMIXER_ERROR_INVALID_PARAMATER;
 	}
 
@@ -104,7 +104,7 @@ int cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 
 int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer.Warning("cellAANConnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
+	libmixer.Warning("cellAANConnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
@@ -122,7 +122,7 @@ int cellAANConnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 
 int cellAANDisconnect(u32 receive, u32 receivePortNo, u32 source, u32 sourcePortNo)
 {
-	libmixer.Warning("cellAANDisconnect(receive=%d, receivePortNo=%d, source=%d, sourcePortNo=%d)",
+	libmixer.Warning("cellAANDisconnect(receive=0x%x, receivePortNo=0x%x, source=0x%x, sourcePortNo=0x%x)",
 		receive, receivePortNo, source, sourcePortNo);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
@@ -165,7 +165,7 @@ int cellSSPlayerCreate(vm::ptr<u32> handle, vm::ptr<CellSSPlayerConfig> config)
 
 int cellSSPlayerRemove(u32 handle)
 {
-	libmixer.Warning("cellSSPlayerRemove(handle=%d)", handle);
+	libmixer.Warning("cellSSPlayerRemove(handle=0x%x)", handle);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -184,7 +184,7 @@ int cellSSPlayerRemove(u32 handle)
 
 int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm::ptr<CellSSPlayerCommonParam> commonInfo)
 {
-	libmixer.Warning("cellSSPlayerSetWave(handle=%d, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
+	libmixer.Warning("cellSSPlayerSetWave(handle=0x%x, waveInfo_addr=0x%x, commonInfo_addr=0x%x)",
 		handle, waveInfo.addr(), commonInfo.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
@@ -208,7 +208,7 @@ int cellSSPlayerSetWave(u32 handle, vm::ptr<CellSSPlayerWaveParam> waveInfo, vm:
 
 int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer.Warning("cellSSPlayerPlay(handle=%d, info_addr=0x%x)", handle, info.addr());
+	libmixer.Warning("cellSSPlayerPlay(handle=0x%x, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -232,7 +232,7 @@ int cellSSPlayerPlay(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 
 int cellSSPlayerStop(u32 handle, u32 mode)
 {
-	libmixer.Warning("cellSSPlayerStop(handle=%d, mode=0x%x)", handle, mode);
+	libmixer.Warning("cellSSPlayerStop(handle=0x%x, mode=0x%x)", handle, mode);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -251,7 +251,7 @@ int cellSSPlayerStop(u32 handle, u32 mode)
 
 int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
 {
-	libmixer.Warning("cellSSPlayerSetParam(handle=%d, info_addr=0x%x)", handle, info.addr());
+	libmixer.Warning("cellSSPlayerSetParam(handle=0x%x, info_addr=0x%x)", handle, info.addr());
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 
@@ -274,7 +274,7 @@ int cellSSPlayerSetParam(u32 handle, vm::ptr<CellSSPlayerRuntimeInfo> info)
  
 int cellSSPlayerGetState(u32 handle)
 {
-	libmixer.Warning("cellSSPlayerGetState(handle=%d)", handle);
+	libmixer.Warning("cellSSPlayerGetState(handle=0x%x)", handle);
 
 	std::lock_guard<std::mutex> lock(mixer_mutex);
 

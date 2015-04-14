@@ -57,7 +57,7 @@ s32 cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const Cel
 
 s32 cellVpostClose(u32 handle)
 {
-	cellVpost.Warning("cellVpostClose(handle=%d)", handle);
+	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
 
 	const auto vpost = Emu.GetIdManager().GetIDData<VpostInstance>(handle);
 
@@ -72,7 +72,7 @@ s32 cellVpostClose(u32 handle)
 
 s32 cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpostCtrlParam> ctrlParam, vm::ptr<u8> outPicBuff, vm::ptr<CellVpostPictureInfo> picInfo)
 {
-	cellVpost.Log("cellVpostExec(handle=%d, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
+	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
 
 	const auto vpost = Emu.GetIdManager().GetIDData<VpostInstance>(handle);
 
