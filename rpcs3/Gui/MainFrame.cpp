@@ -436,6 +436,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_dbg_ap_systemcall   = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at System Call");
 	wxCheckBox* chbox_dbg_ap_functioncall = new wxCheckBox(p_hle, wxID_ANY, "Auto Pause at Function Call");
 
+	//Custom EmulationDir
+	wxCheckBox* chbox_emulationdir_enable = new wxCheckBox(p_system, wxID_ANY, "Use Path Below as EmulationDir ? (Need Restart)");
+	wxTextCtrl* txt_emulationdir_path     = new wxTextCtrl(p_system, wxID_ANY, Emu.GetEmulatorPath());
+
 	cbox_cpu_decoder->Append("PPU Interpreter");
 	cbox_cpu_decoder->Append("PPU Interpreter 2");
 	cbox_cpu_decoder->Append("PPU JIT (LLVM)");
@@ -533,6 +537,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_dbg_ap_systemcall  ->SetValue(Ini.DBGAutoPauseSystemCall.GetValue());
 	chbox_dbg_ap_functioncall->SetValue(Ini.DBGAutoPauseFunctionCall.GetValue());
 
+	//Custom EmulationDir
+	chbox_emulationdir_enable->SetValue(Ini.SysEmulationDirPathEnable.GetValue());
+	txt_emulationdir_path    ->SetValue(Ini.SysEmulationDirPath.GetValue());
+
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() : 0);
 	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
@@ -614,6 +622,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// System
 	s_subpanel_system->Add(s_round_sys_lang, wxSizerFlags().Border(wxALL, 5).Expand());
+
+	//Custom EmulationDir
+	s_subpanel_system->Add(chbox_emulationdir_enable, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_system->Add(txt_emulationdir_path, wxSizerFlags().Border(wxALL, 5).Expand());
 	
 	// Buttons
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
@@ -666,6 +678,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		//Auto Pause
 		Ini.DBGAutoPauseFunctionCall.SetValue(chbox_dbg_ap_functioncall->GetValue());
 		Ini.DBGAutoPauseSystemCall.SetValue(chbox_dbg_ap_systemcall->GetValue());
+
+		//Custom EmulationDir
+		Ini.SysEmulationDirPathEnable.SetValue(chbox_emulationdir_enable->GetValue());
+		Ini.SysEmulationDirPath.SetValue(txt_emulationdir_path->GetValue().ToStdString());
 
 		Ini.Save();
 	}

@@ -25,11 +25,9 @@ namespace lwmutex
 	template<u32 _value>
 	struct const_be_u32_t
 	{
-		static const u32 value = _value;
-
 		operator const be_t<u32>() const
 		{
-			return be_t<u32>::make(value);
+			return be_t<u32>::make(_value);
 		}
 	};
 

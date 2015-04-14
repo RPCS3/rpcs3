@@ -5,6 +5,8 @@
 #include "vfsDeviceLocalFile.h"
 #include "Ini.h"
 #include "Emu/System.h"
+#include "Utilities/Log.h"
+#include <sys/stat.h> // To check whether directory exists
 
 #undef CreateFile
 #undef CopyFile
@@ -445,7 +447,15 @@ void VFS::Init(const std::string& path)
 		
 		std::string mpath = entry.path;
 		// TODO: This shouldn't use current dir
-		fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+		// If no value assigned to SysEmulationDirPath in INI, use the path that with executable.
+		if (Ini.SysEmulationDirPathEnable.GetValue())
+		{
+			fmt::Replace(mpath, "$(EmulatorDir)", Ini.SysEmulationDirPath.GetValue());
+		}
+		else
+		{
+			fmt::Replace(mpath, "$(EmulatorDir)", Emu.GetEmulatorPath());
+		}
 		fmt::Replace(mpath, "$(GameDir)", cwd);
 		Mount(entry.mount, mpath, dev);
 	}
@@ -482,6 +492,34 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 	{
 		count = (int)res.size();
 		entries_count.SaveValue(count);
+	}
+
+	// Custom EmulationDir.
+	// TODO:: should have a better log that would show results before loading a game?
+	if (Ini.SysEmulationDirPathEnable.GetValue())
+	{
+		std::string EmulationDir = Ini.SysEmulationDirPath.GetValue();
+		if (EmulationDir.empty())
+			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
+		struct stat fstatinfo;
+		if ((stat(EmulationDir.c_str(), &fstatinfo)))
+		{
+			LOG_NOTICE(GENERAL, "Custom EmualtionDir: Tried %s but it doesn't exists. Maybe you add some not needed chars like '\"'?");
+			Ini.SysEmulationDirPathEnable.SetValue(false);
+		}
+		else if (fstatinfo.st_mode & S_IFDIR)
+			LOG_NOTICE(GENERAL, "Custom EmualtionDir: On, Binded $(EmulatorDir) to %s.", EmulationDir);
+		else
+		{
+			// If that is not directory turn back to use original one.
+			LOG_NOTICE(GENERAL, "Custom EmulationDir: Cause path %s is not a valid directory.", EmulationDir);
+			Ini.SysEmulationDirPathEnable.SetValue(false);
+		}
+	}
+	// I left this to check again just to catch those failed in directory checks.
+	if (!Ini.SysEmulationDirPathEnable.GetValue())
+	{
+		LOG_NOTICE(GENERAL, "Custom EmualtionDir: Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
 	}
 
 	for(int i=0; i<count; ++i)
