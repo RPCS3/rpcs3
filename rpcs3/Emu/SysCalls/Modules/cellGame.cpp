@@ -17,13 +17,16 @@ std::string contentInfo = "";
 std::string usrdir = "";
 bool path_set = false;
 
-s32 cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
+s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.Warning("cellHddGameCheck(version=%d, dirName=*0x%x, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	std::string dir = dirName.get_ptr();
+
 	if (dir.size() != 9)
+	{
 		return CELL_HDDGAME_ERROR_PARAM;
+	}
 
 	vm::var<CellHddGameSystemFileParam> param;
 	vm::var<CellHddGameCBResult> result;
@@ -37,20 +40,19 @@ s32 cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 	get->ctime = 0; // TODO
 	get->mtime = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
-	memcpy(get->contentInfoPath, ("/dev_hdd0/game/" + dir).c_str(), CELL_HDDGAME_PATH_MAX);
-	memcpy(get->hddGamePath, ("/dev_hdd0/game/" + dir + "/USRDIR").c_str(), CELL_HDDGAME_PATH_MAX);
+	strcpy_trunc(get->contentInfoPath, "/dev_hdd0/game/" + dir);
+	strcpy_trunc(get->hddGamePath, "/dev_hdd0/game/" + dir + "/USRDIR");
 
-	if (!Emu.GetVFS().ExistsDir(("/dev_hdd0/game/" + dir).c_str()))
+	if (!Emu.GetVFS().ExistsDir("/dev_hdd0/game/" + dir))
 	{
 		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
 	}
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-
-		vfsFile f(("/dev_hdd0/game/" + dir + "/PARAM.SFO").c_str());
-		PSFLoader psf(f);
-		if (!psf.Load(false)) {
+		const PSFLoader psf(vfsFile("/dev_hdd0/game/" + dir + "/PARAM.SFO"));
+		if (!psf)
+		{
 			return CELL_HDDGAME_ERROR_BROKEN;
 		}
 
@@ -64,7 +66,8 @@ s32 cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 		strcpy_trunc(get->getParam.dataVersion, app_ver);
 		strcpy_trunc(get->getParam.titleId, dir);
 
-		for (u32 i = 0; i<CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++) {
+		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
+		{
 			char key[16];
 			sprintf(key, "TITLE_%02d", i);
 			title = psf.GetString(key);
@@ -76,10 +79,10 @@ s32 cellHddGameCheck(u32 version, vm::ptr<const char> dirName, u32 errDialog, vm
 
 	//funcStat(result, get, set);
 
-	if (result->result != CELL_HDDGAME_CBRESULT_OK &&
-		result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL) {
-		return CELL_HDDGAME_ERROR_CBRESULT;
-	}
+	//if (result->result != CELL_HDDGAME_CBRESULT_OK && result->result != CELL_HDDGAME_CBRESULT_OK_CANCEL)
+	//{
+	//	return CELL_HDDGAME_ERROR_CBRESULT;
+	//}
 
 	// TODO ?
 
@@ -100,15 +103,8 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
-	if (!f.IsOpened())
-	{
-		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
-		return CELL_GAME_ERROR_ACCESS_ERROR;
-	}
-
-	PSFLoader psf(f);
-	if (!psf.Load(false))
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	if (!psf)
 	{
 		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
@@ -167,15 +163,8 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 		size->sysSizeKB = 0;
 	}
 
-	vfsFile f("/app_home/../PARAM.SFO");
-	if (!f.IsOpened())
-	{
-		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot open PARAM.SFO)");
-		return CELL_GAME_ERROR_ACCESS_ERROR;
-	}
-
-	PSFLoader psf(f);
-	if (!psf.Load(false))
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	if (!psf)
 	{
 		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
 		return CELL_GAME_ERROR_ACCESS_ERROR;
@@ -301,15 +290,8 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 		return CELL_GAMEDATA_RET_OK;
 	}
 
-	vfsFile f(dir + "/PARAM.SFO");
-	if (!f.IsOpened())
-	{
-		cellGame.Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot open PARAM.SFO)");
-		return CELL_GAMEDATA_ERROR_BROKEN;
-	}
-
-	PSFLoader psf(f);
-	if (!psf.Load(false))
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	if (!psf)
 	{
 		cellGame.Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
 		return CELL_GAMEDATA_ERROR_BROKEN;
@@ -437,10 +419,11 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 	cellGame.Warning("cellGameGetParamInt(id=%d, value=*0x%x)", id, value);
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
-	PSFLoader psf(f);
-	if(!psf.Load(false))
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	if (!psf)
+	{
 		return CELL_GAME_ERROR_FAILURE;
+	}
 
 	switch(id)
 	{
@@ -460,10 +443,11 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 	cellGame.Warning("cellGameGetParamString(id=%d, buf=*0x%x, bufsize=%d)", id, buf, bufsize);
 
 	// TODO: Access through cellGame***Check functions
-	vfsFile f("/app_home/../PARAM.SFO");
-	PSFLoader psf(f);
-	if(!psf.Load(false))
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	if (!psf)
+	{
 		return CELL_GAME_ERROR_FAILURE;
+	}
 
 	std::string data;
 	switch(id)

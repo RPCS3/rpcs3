@@ -212,9 +212,7 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
-	vfsFile sfo("/app_home/../PARAM.SFO");
-	PSFLoader psf(sfo);
-	psf.Load(false);
+	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
 	std::string title = psf.GetString("TITLE");
 	std::string title_id = psf.GetString("TITLE_ID");
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());

@@ -271,11 +271,17 @@ struct SaveDataEntry
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u64 sizeKB;
+	u64 size;
 	s64 atime;
 	s64 mtime;
 	s64 ctime;
 	//void* iconBuf;
 	//u32 iconBufSize;
 	bool isNew;
+};
+
+struct SaveDataDialogInstance
+{
+	SaveDataDialogInstance();
+	virtual ~SaveDataDialogInstance() = default;
 };

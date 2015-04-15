@@ -144,8 +144,8 @@ void GameViewer::LoadPSF()
 		if(!f.Open(sfo))
 			continue;
 
-		PSFLoader psf(f);
-		if(!psf.Load(false))
+		const PSFLoader psf(f);
+		if(!psf)
 			continue;
 
 		// get local path from VFS...

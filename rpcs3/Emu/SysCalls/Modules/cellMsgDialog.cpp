@@ -18,10 +18,6 @@ MsgDialogInstance::MsgDialogInstance()
 {
 }
 
-MsgDialogInstance::~MsgDialogInstance()
-{
-}
-
 void MsgDialogInstance::Close()
 {
 	state = msgDialogClose;

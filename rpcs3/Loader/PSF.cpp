@@ -3,111 +3,104 @@
 #include "Emu/FS/vfsStream.h"
 #include "PSF.h"
 
-PSFLoader::PSFLoader(vfsStream& f) : psf_f(f)
+bool PSFLoader::Load(vfsStream& stream)
 {
+	Close();
+
+	// Load Header
+	if (stream.Read(&m_header, sizeof(PSFHeader)) != sizeof(PSFHeader) || !m_header.CheckMagic())
+	{
+		return false;
+	}
+
+	m_psfindxs.resize(m_header.psf_entries_num);
+	m_entries.resize(m_header.psf_entries_num);
+
+	// Load Indices
+	for (u32 i = 0; i < m_header.psf_entries_num; ++i)
+	{
+		if (!stream.Read(m_psfindxs[i]))
+		{
+			return false;
+		}
+
+		m_entries[i].fmt = m_psfindxs[i].psf_param_fmt;
+	}
+
+	// Load Key Table
+	for (u32 i = 0; i < m_header.psf_entries_num; ++i)
+	{
+		stream.Seek(m_header.psf_offset_key_table + m_psfindxs[i].psf_key_table_offset);
+
+		int c_pos = 0;
+
+		while (c_pos < sizeof(m_entries[i].name) - 1)
+		{
+			char c;
+
+			if (!stream.Read(c) || !c)
+			{
+				break;
+			}
+
+			m_entries[i].name[c_pos++] = c;
+		}
+
+		m_entries[i].name[c_pos] = 0;
+	}
+
+	// Load Data Table
+	for (u32 i = 0; i < m_header.psf_entries_num; ++i)
+	{
+		stream.Seek(m_header.psf_offset_data_table + m_psfindxs[i].psf_data_tbl_offset);
+		stream.Read(m_entries[i].param, m_psfindxs[i].psf_param_len);
+		memset(m_entries[i].param + m_psfindxs[i].psf_param_len, 0, m_psfindxs[i].psf_param_max_len - m_psfindxs[i].psf_param_len);
+	}
+
+	return (m_loaded = true);
 }
 
-PSFEntry* PSFLoader::SearchEntry(const std::string& key)
+void PSFLoader::Close()
 {
-	for(auto& entry : m_entries)
+	m_loaded = false;
+	m_header = {};
+	m_psfindxs.clear();
+	m_entries.clear();
+}
+
+const PSFEntry* PSFLoader::SearchEntry(const std::string& key) const
+{
+	for (auto& entry : m_entries)
 	{
-		if(entry.name == key)
+		if (key == entry.name)
+		{
 			return &entry;
+		}
 	}
 
 	return nullptr;
 }
 
-bool PSFLoader::Load(bool show)
+std::string PSFLoader::GetString(const std::string& key, std::string def) const
 {
-	if(!psf_f.IsOpened()) return false;
-
-	m_show_log = show;
-
-	if(!LoadHeader()) return false;
-	if(!LoadKeyTable()) return false;
-	if(!LoadDataTable()) return false;
-
-	return true;
-}
-
-bool PSFLoader::Close()
-{
-	return psf_f.Close();
-}
-
-bool PSFLoader::LoadHeader()
-{
-	if(psf_f.Read(&m_header, sizeof(PSFHeader)) != sizeof(PSFHeader))
-		return false;
-
-	if(!m_header.CheckMagic())
-		return false;
-
-	if(m_show_log) LOG_NOTICE(LOADER, "PSF version: 0x%x", m_header.psf_version);
-
-	m_psfindxs.clear();
-	m_entries.clear();
-	m_psfindxs.resize(m_header.psf_entries_num);
-	m_entries.resize(m_header.psf_entries_num);
-
-	for(u32 i=0; i<m_header.psf_entries_num; ++i)
+	if (const auto entry = SearchEntry(key))
 	{
-		if(psf_f.Read(&m_psfindxs[i], sizeof(PSFDefTbl)) != sizeof(PSFDefTbl))
-			return false;
-
-		m_entries[i].fmt = m_psfindxs[i].psf_param_fmt;
-	}
-
-	return true;
-}
-
-bool PSFLoader::LoadKeyTable()
-{
-	for(u32 i=0; i<m_header.psf_entries_num; ++i)
-	{
-		psf_f.Seek(m_header.psf_offset_key_table + m_psfindxs[i].psf_key_table_offset);
-
-		int c_pos = 0;
-
-		while(!psf_f.Eof())
-		{
-			char c;
-			psf_f.Read(&c, 1);
-			m_entries[i].name[c_pos++] = c;
-
-			if(c_pos >= sizeof(m_entries[i].name) || c == '\0')
-				break;
-		}
-	}
-
-	return true;
-}
-
-bool PSFLoader::LoadDataTable()
-{
-	for(u32 i=0; i<m_header.psf_entries_num; ++i)
-	{
-		psf_f.Seek(m_header.psf_offset_data_table + m_psfindxs[i].psf_data_tbl_offset);
-		psf_f.Read(m_entries[i].param, m_psfindxs[i].psf_param_len);
-		memset(m_entries[i].param + m_psfindxs[i].psf_param_len, 0, m_psfindxs[i].psf_param_max_len - m_psfindxs[i].psf_param_len);
-	}
-
-	return true;
-}
-
-std::string PSFLoader::GetString(const std::string& key)
-{
-	if(PSFEntry* entry = SearchEntry(key))
 		return entry->FormatString();
+	}
 	else
-		return "";
+	{
+		return def;
+	}
 }
 
-u32 PSFLoader::GetInteger(const std::string& key)
+u32 PSFLoader::GetInteger(const std::string& key, u32 def) const
 {
-	if(PSFEntry* entry = SearchEntry(key))
+	if (const auto entry = SearchEntry(key))
+	{
 		return entry->FormatInteger();
+	}
 	else
-		return 0;
+	{
+		return def;
+	}
 }

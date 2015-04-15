@@ -11,14 +11,20 @@
 #include "cellSaveData.h"
 
 #ifdef _WIN32
-	#include <windows.h>
-	#undef CreateFile
+#include <windows.h>
+#undef CreateFile
 #else
-	#include <sys/types.h>
-	#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #endif
 
 extern Module cellSysutil;
+
+std::unique_ptr<SaveDataDialogInstance> g_savedata_dialog;
+
+SaveDataDialogInstance::SaveDataDialogInstance()
+{
+}
 
 // Auxiliary Classes
 class SortSaveDataEntry
@@ -66,21 +72,6 @@ public:
 };
 
 // Auxiliary Functions
-u64 get_save_data_size(const std::string& dir)
-{
-	u64 result = 0;
-
-	for (const auto entry : vfsDir(dir))
-	{
-		if ((entry->flags & DirEntry_TypeMask) == DirEntry_TypeFile)
-		{
-			result += entry->size;
-		}
-	}
-
-	return result;
-}
-
 void addNewSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDataListNewData> newData)
 {
 	SaveDataEntry saveEntry;
@@ -158,7 +149,7 @@ void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
 		statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_NO;
 
 	statGet->bind = 0; // TODO ?
-	statGet->sizeKB = entry.sizeKB;
+	statGet->sizeKB = entry.size / 1024;
 	statGet->hddFreeSizeKB = 40000000; // 40 GB. TODO ?
 	statGet->sysSizeKB = 0; // TODO: This is the size of PARAM.SFO + PARAM.PDF
 	statGet->dir.st_atime_ = 0; // TODO ?
@@ -358,9 +349,8 @@ __noinline s32 savedata_op(
 						listGet->dirNum++;
 
 						// PSF parameters
-						vfsFile f(base_dir + entry->name + "/PARAM.SFO");
-						PSFLoader psf(f);
-						if (!psf.Load(false))
+						const PSFLoader psf(vfsFile(base_dir + entry->name + "/PARAM.SFO"));
+						if (!psf)
 						{
 							break;
 						}
@@ -371,13 +361,19 @@ __noinline s32 savedata_op(
 						save_entry.title = psf.GetString("TITLE");
 						save_entry.subtitle = psf.GetString("SUB_TITLE");
 						save_entry.details = psf.GetString("DETAIL");
-						save_entry.sizeKB = get_save_data_size(base_dir + entry->name) / 1024;
+
 						save_entry.atime = entry->access_time;
 						save_entry.mtime = entry->modify_time;
 						save_entry.ctime = entry->create_time;
 						//save_entry.iconBuf = NULL; // TODO: Here should be the PNG buffer
 						//save_entry.iconBufSize = 0; // TODO: Size of the PNG file
 						save_entry.isNew = false;
+
+						save_entry.size = 0;
+						for (const auto& entry2 : vfsDir(base_dir + entry->name))
+						{
+							save_entry.size += entry2->size;
+						}
 
 						save_entries.push_back(save_entry);
 					}

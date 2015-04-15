@@ -1,5 +1,4 @@
 #pragma once
-#include "Loader.h"
 
 struct vfsStream;
 
@@ -50,23 +49,29 @@ struct PSFEntry
 
 class PSFLoader
 {
-	vfsStream& psf_f;
-
-	PSFHeader m_header;
+	bool m_loaded = false;
+	PSFHeader m_header = {};
 	std::vector<PSFDefTbl> m_psfindxs;
 	std::vector<PSFEntry> m_entries;
-	bool m_show_log;
-
-	bool LoadHeader();
-	bool LoadKeyTable();
-	bool LoadDataTable();
 
 public:
-	PSFLoader(vfsStream& f);
-	virtual bool Load(bool show = true);
-	virtual bool Close();
+	PSFLoader(vfsStream& stream)
+	{
+		Load(stream);
+	}
 
-	PSFEntry* SearchEntry(const std::string& key);
-	std::string GetString(const std::string& key);
-	u32 GetInteger(const std::string& key);
+	virtual ~PSFLoader() = default;
+
+	bool Load(vfsStream& stream);
+
+	void Close();
+
+	operator bool() const
+	{
+		return m_loaded;
+	}
+
+	const PSFEntry* SearchEntry(const std::string& key) const;
+	std::string GetString(const std::string& key, std::string def = "") const;
+	u32 GetInteger(const std::string& key, u32 def = 0) const;
 };

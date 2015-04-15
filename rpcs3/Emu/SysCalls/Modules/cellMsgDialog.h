@@ -99,7 +99,7 @@ struct MsgDialogInstance
 	u32 progress_bar_count = 0;
 
 	MsgDialogInstance();
-	virtual ~MsgDialogInstance();
+	virtual ~MsgDialogInstance() = default;
 
 	virtual void Close();
 
