@@ -410,35 +410,47 @@ namespace vm
 		static_assert(!sizeof(AT), "vm::_ptr_base<> error: use RT(T...) format for functions instead of RT(*)(T...)");
 	};
 
-	//BE pointer to LE data
+	// BE pointer to LE data
 	template<typename T, int lvl = 1, typename AT = u32> using bptrl = _ptr_base<T, lvl, typename to_be_t<AT>::type>;
 
-	//BE pointer to BE data
+	// BE pointer to BE data
 	template<typename T, int lvl = 1, typename AT = u32> using bptrb = _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>;
 
-	//LE pointer to BE data
+	// LE pointer to BE data
 	template<typename T, int lvl = 1, typename AT = u32> using lptrb = _ptr_base<typename to_be_t<T>::type, lvl, AT>;
 
-	//LE pointer to LE data
+	// LE pointer to LE data
 	template<typename T, int lvl = 1, typename AT = u32> using lptrl = _ptr_base<T, lvl, AT>;
 
 	namespace ps3
 	{
-		//default pointer for HLE functions (LE pointer to BE data)
+		// default pointer for HLE functions (LE pointer to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrb<T, lvl, AT>;
 
-		//default pointer for HLE structures (BE pointer to BE data)
+		// default pointer for HLE structures (BE pointer to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> using bptr = bptrb<T, lvl, AT>;
 	}
 
 	namespace psv
 	{
-		//default pointer for HLE functions & structures (LE pointer to LE data)
+		// default pointer for HLE functions & structures (LE pointer to LE data)
 		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrl<T, lvl, AT>;
 	}
 
-	//PS3 emulation is main now, so lets it be as default
+	// PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
+
+	struct null_t
+	{
+		template<typename T, int lvl, typename AT> operator _ptr_base<T, lvl, AT>() const
+		{
+			const std::array<AT, 1> value = {};
+			return _ptr_base<T, lvl, AT>::make(value[0]);
+		}
+	};
+
+	// vm::null is convertible to any vm::ptr type as null pointer in virtual memory
+	static const null_t null;
 }
 
 namespace fmt

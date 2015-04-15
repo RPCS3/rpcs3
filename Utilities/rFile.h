@@ -1,16 +1,20 @@
 #pragma once
 
-struct FileInfo {
+struct FileInfo
+{
 	std::string name;
 	std::string fullName;
 	bool exists;
 	bool isDirectory;
 	bool isWritable;
 	uint64_t size;
+	time_t atime;
+	time_t mtime;
+	time_t ctime;
 };
 
-bool getFileInfo(const char *path, FileInfo *fileInfo);
-bool rIsDir(const std::string& filename);
+bool get_file_info(const std::string& path, FileInfo& fileInfo);
+bool rIsDir(const std::string& dir);
 bool rRmdir(const std::string& dir);
 bool rMkdir(const std::string& dir);
 bool rMkpath(const std::string& path);

@@ -5,23 +5,37 @@
 #include <wx/file.h>
 #include <wx/filename.h>
 #include "rFile.h"
-#include "errno.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 
-// Maybe in StrFmt?
-std::wstring ConvertUTF8ToWString(const std::string &source)
+#define GET_API_ERROR static_cast<u64>(GetLastError())
+
+std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
 {
-	int len = (int)source.size();
-	int size = (int)MultiByteToWideChar(CP_UTF8, 0, source.c_str(), len, NULL, 0);
-	std::wstring str;
-	str.resize(size);
-	if (size > 0) {
-		MultiByteToWideChar(CP_UTF8, 0, source.c_str(), len, &str[0], size);
+	const size_t length = source.size() + 1; // size + null terminator
+
+	const int size = length && length <= INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
+
+	std::unique_ptr<wchar_t> buffer(new wchar_t[length]); // allocate buffer assuming that length is the max possible size
+
+	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
+	{
+		LOG_ERROR(GENERAL, "ConvertUTF8ToWChar(source='%s') failed: 0x%llx", source.c_str(), GET_API_ERROR);
 	}
-	return str;
+
+	return buffer;
 }
+
+time_t to_time_t(const FILETIME& ft)
+{
+	ULARGE_INTEGER v;
+	v.LowPart = ft.dwLowDateTime;
+	v.HighPart = ft.dwHighDateTime;
+
+	return v.QuadPart / 10000000ULL - 11644473600ULL;
+}
+
 #else
 #include <fcntl.h>
 #include <unistd.h>
@@ -30,62 +44,79 @@ std::wstring ConvertUTF8ToWString(const std::string &source)
 #else
 #include <sys/sendfile.h>
 #endif
-#endif
+#include "errno.h"
 
-#ifdef _WIN32
-#define GET_API_ERROR static_cast<u64>(GetLastError())
-#else
 #define GET_API_ERROR static_cast<u64>(errno)
+
 #endif
 
-bool getFileInfo(const char *path, FileInfo *fileInfo)
+bool get_file_info(const std::string& path, FileInfo& info)
 {
 	// TODO: Expand relative paths?
-	fileInfo->fullName = path;
+	info.fullName = path;
 
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
-	if (!GetFileAttributesExW(ConvertUTF8ToWString(path).c_str(), GetFileExInfoStandard, &attrs)) {
-		fileInfo->size = 0;
-		fileInfo->isDirectory = false;
-		fileInfo->isWritable = false;
-		fileInfo->exists = false;
+	if (!GetFileAttributesExW(ConvertUTF8ToWChar(path).get(), GetFileExInfoStandard, &attrs))
+	{
+		info.exists = false;
+		info.isDirectory = false;
+		info.isWritable = false;
+		info.size = 0;
 		return false;
 	}
-	fileInfo->size = (uint64_t)attrs.nFileSizeLow | ((uint64_t)attrs.nFileSizeHigh << 32);
-	fileInfo->isDirectory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-	fileInfo->isWritable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-	fileInfo->exists = true;
+
+	info.exists = true;
+	info.isDirectory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.isWritable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.size = (uint64_t)attrs.nFileSizeLow | ((uint64_t)attrs.nFileSizeHigh << 32);
+	info.atime = to_time_t(attrs.ftLastAccessTime);
+	info.mtime = to_time_t(attrs.ftLastWriteTime);
+	info.ctime = to_time_t(attrs.ftCreationTime);
 #else
 	struct stat64 file_info;
-	int result = stat64(path, &file_info);
-
-	if (result < 0) {
-		fileInfo->size = 0;
-		fileInfo->isDirectory = false;
-		fileInfo->isWritable = false;
-		fileInfo->exists = false;
+	if (stat64(path, &file_info) < 0)
+	{
+		info.exists = false;
+		info.isDirectory = false;
+		info.isWritable = false;
+		info.size = 0;
 		return false;
 	}
 
-	fileInfo->isDirectory = S_ISDIR(file_info.st_mode);
-	fileInfo->isWritable = false;
-	fileInfo->size = file_info.st_size;
-	fileInfo->exists = true;
-	// HACK: approximation
-	if (file_info.st_mode & 0200)
-		fileInfo->isWritable = true;
+	info.exists = true;
+	info.isDirectory = S_ISDIR(file_info.st_mode);
+	info.isWritable = file_info.st_mode & 0200; // HACK: approximation
+	info.size = file_info.st_size;
+	info.atime = file_info.st_atime;
+	info.mtime = file_info.st_mtime;
+	info.ctime = file_info.st_ctime;
 #endif
 	return true;
 }
 
-bool rIsDir(const std::string &filename) {
-	FileInfo info;
-	getFileInfo(filename.c_str(), &info);
-	return info.isDirectory;
+bool rIsDir(const std::string& dir)
+{
+#ifdef _WIN32
+	DWORD attrs;
+	if ((attrs = GetFileAttributesW(ConvertUTF8ToWChar(dir).get())) == INVALID_FILE_ATTRIBUTES)
+	{
+		return false;
+	}
+
+	return (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+	struct stat64 file_info;
+	if (stat64(path, &file_info) < 0)
+	{
+		return false;
+	}
+
+	return S_ISDIR(file_info.st_mode);
+#endif
 }
 
-bool rMkdir(const std::string &dir)
+bool rMkdir(const std::string& dir)
 {
 #ifdef _WIN32
 	return !_mkdir(dir.c_str());
@@ -94,7 +125,7 @@ bool rMkdir(const std::string &dir)
 #endif
 }
 
-bool rMkpath(const std::string &path)
+bool rMkpath(const std::string& path)
 {
 	size_t start=0, pos;
 	std::string dir;
@@ -121,10 +152,10 @@ bool rMkpath(const std::string &path)
 	return true;
 }
 
-bool rRmdir(const std::string &dir)
+bool rRmdir(const std::string& dir)
 {
 #ifdef _WIN32
-	if (!RemoveDirectory(ConvertUTF8ToWString(dir).c_str()))
+	if (!RemoveDirectory(ConvertUTF8ToWChar(dir).get()))
 #else
 	if (rmdir(dir.c_str()))
 #endif
@@ -136,11 +167,11 @@ bool rRmdir(const std::string &dir)
 	return true;
 }
 
-bool rRename(const std::string &from, const std::string &to)
+bool rRename(const std::string& from, const std::string& to)
 {
 	// TODO: Deal with case-sensitivity
 #ifdef _WIN32
-	if (!MoveFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str()))
+	if (!MoveFile(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get()))
 #else
 	if (rename(from.c_str(), to.c_str()))
 #endif
@@ -191,7 +222,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 {
 #ifdef _WIN32
-	if (!CopyFile(ConvertUTF8ToWString(from).c_str(), ConvertUTF8ToWString(to).c_str(), !overwrite))
+	if (!CopyFile(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get(), !overwrite))
 #else
 	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
 #endif
@@ -203,21 +234,20 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 	return true;
 }
 
-bool rExists(const std::string &file)
+bool rExists(const std::string& file)
 {
 #ifdef _WIN32
-	std::wstring wstr = ConvertUTF8ToWString(file);
-	return GetFileAttributes(wstr.c_str()) != 0xFFFFFFFF;
+	return GetFileAttributes(ConvertUTF8ToWChar(file).get()) != 0xFFFFFFFF;
 #else
 	struct stat buffer;
-	return (stat (file.c_str(), &buffer) == 0);
+	return stat(file.c_str(), &buffer) == 0;
 #endif
 }
 
-bool rRemoveFile(const std::string &file)
+bool rRemoveFile(const std::string& file)
 {
 #ifdef _WIN32
-	if (!DeleteFile(ConvertUTF8ToWString(file).c_str()))
+	if (!DeleteFile(ConvertUTF8ToWChar(file).get()))
 #else
 	if (unlink(file.c_str()))
 #endif

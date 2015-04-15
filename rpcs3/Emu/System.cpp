@@ -72,7 +72,6 @@ Emulator::~Emulator()
 	delete m_callback_manager;
 	delete m_event_manager;
 	delete m_module_manager;
-	delete m_sync_prim_manager;
 	delete m_vfs;
 }
 

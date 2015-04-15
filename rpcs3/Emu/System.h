@@ -21,7 +21,6 @@ class CallbackManager;
 class CPUThread;
 class EventManager;
 class ModuleManager;
-class SyncPrimManager;
 struct VFS;
 
 struct EmuInfo
@@ -91,7 +90,6 @@ class Emulator
 	CallbackManager* m_callback_manager;
 	EventManager* m_event_manager;
 	ModuleManager* m_module_manager;
-	SyncPrimManager* m_sync_prim_manager;
 	VFS* m_vfs;
 
 	EmuInfo m_info;

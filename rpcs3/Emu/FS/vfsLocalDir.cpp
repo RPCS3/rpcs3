@@ -12,30 +12,29 @@ vfsLocalDir::~vfsLocalDir()
 
 bool vfsLocalDir::Open(const std::string& path)
 {
-	if(!vfsDirBase::Open(path))
+	if (!vfsDirBase::Open(path) || !dir.Open(path))
+	{
 		return false;
-
-	if(!dir.Open(path))
-		return false;
+	}
 
 	std::string name;
-	for(bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
+
+	for (bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
 	{
-		std::string dir_path = path + "/" + name;
+		FileInfo file_info;
+		get_file_info(path + "/" + name, file_info);
 
 		m_entries.emplace_back();
-		// TODO: Use same info structure as fileinfo?
+
 		DirEntryInfo& info = m_entries.back();
+
 		info.name = name;
-
-		FileInfo fileinfo;
-		getFileInfo(dir_path.c_str(), &fileinfo);
-
-		// Not sure of purpose for below. I hope these don't need to be correct
-		info.flags |= rIsDir(dir_path) ? DirEntry_TypeDir : DirEntry_TypeFile;
-		if(fileinfo.isWritable) info.flags |= DirEntry_PermWritable;
-		info.flags |= DirEntry_PermReadable; // Always?
-		info.flags |= DirEntry_PermExecutable; // Always?
+		info.flags |= file_info.isDirectory ? DirEntry_TypeDir | DirEntry_PermExecutable : DirEntry_TypeFile;
+		info.flags |= file_info.isWritable ? DirEntry_PermWritable | DirEntry_PermReadable : DirEntry_PermReadable;
+		info.size = file_info.size;
+		info.access_time = file_info.atime;
+		info.modify_time = file_info.mtime;
+		info.create_time = file_info.ctime;
 	}
 
 	return true;

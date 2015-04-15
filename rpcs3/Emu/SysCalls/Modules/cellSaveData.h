@@ -271,11 +271,11 @@ struct SaveDataEntry
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u32 sizeKB;
-	s64 st_atime_;
-	s64 st_mtime_;
-	s64 st_ctime_;
-	void* iconBuf;
-	u32 iconBufSize;
+	u64 sizeKB;
+	s64 atime;
+	s64 mtime;
+	s64 ctime;
+	//void* iconBuf;
+	//u32 iconBufSize;
 	bool isNew;
 };
