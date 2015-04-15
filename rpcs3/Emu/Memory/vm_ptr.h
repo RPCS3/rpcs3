@@ -450,7 +450,7 @@ namespace vm
 	};
 
 	// vm::null is convertible to any vm::ptr type as null pointer in virtual memory
-	static const null_t null;
+	static null_t null;
 }
 
 namespace fmt

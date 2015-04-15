@@ -15,7 +15,7 @@ std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
 {
 	const size_t length = source.size() + 1; // size + null terminator
 
-	const int size = length && length <= INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
+	const int size = source.size() < INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
 
 	std::unique_ptr<wchar_t> buffer(new wchar_t[length]); // allocate buffer assuming that length is the max possible size
 

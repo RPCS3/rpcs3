@@ -43,6 +43,8 @@ Rpcs3App* TheApp;
 
 std::string simplify_path(const std::string& path, bool is_dir);
 
+extern std::unique_ptr<MsgDialogInstance> g_msg_dialog;
+
 bool Rpcs3App::OnInit()
 {
 	static const wxCmdLineEntryDesc desc[]
@@ -134,7 +136,7 @@ bool Rpcs3App::OnInit()
 		return new GLGSFrame();
 	});
 
-	SetMsgDialogCallbacks(MsgDialogCreate, MsgDialogDestroy, MsgDialogProgressBarSetMsg, MsgDialogProgressBarReset, MsgDialogProgressBarInc);
+	g_msg_dialog.reset(new MsgDialogFrame);
 
 	TheApp = this;
 	SetAppName(_PRGNAME_);

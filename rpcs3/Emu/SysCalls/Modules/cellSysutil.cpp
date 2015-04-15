@@ -764,6 +764,7 @@ int cellWebBrowserEstimate2(const vm::ptr<const CellWebBrowserConfig2> config, v
 
 extern void cellSysutil_SaveData_init();
 extern void cellSysutil_GameData_init();
+extern void cellSysutil_MsgDialog_init();
 
 Module cellSysutil("cellSysutil", []()
 {
@@ -775,6 +776,7 @@ Module cellSysutil("cellSysutil", []()
 
 	cellSysutil_SaveData_init(); // cellSaveData functions
 	cellSysutil_GameData_init(); // cellGameData, cellHddGame functions
+	cellSysutil_MsgDialog_init(); // cellMsgDialog functions
 
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
@@ -790,14 +792,6 @@ Module cellSysutil("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilCheckCallback);
 	REG_FUNC(cellSysutil, cellSysutilRegisterCallback);
 	REG_FUNC(cellSysutil, cellSysutilUnregisterCallback);
-
-	REG_FUNC(cellSysutil, cellMsgDialogOpen2);
-	REG_FUNC(cellSysutil, cellMsgDialogOpenErrorCode);
-	REG_FUNC(cellSysutil, cellMsgDialogProgressBarSetMsg);
-	REG_FUNC(cellSysutil, cellMsgDialogProgressBarReset);
-	REG_FUNC(cellSysutil, cellMsgDialogProgressBarInc);
-	REG_FUNC(cellSysutil, cellMsgDialogClose);
-	REG_FUNC(cellSysutil, cellMsgDialogAbort);
 
 	REG_FUNC(cellSysutil, cellAudioOutGetState);
 	REG_FUNC(cellSysutil, cellAudioOutConfigure);

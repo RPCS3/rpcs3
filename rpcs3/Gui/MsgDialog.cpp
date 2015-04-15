@@ -2,36 +2,29 @@
 #include "Emu/Memory/Memory.h"
 
 #include "Emu/SysCalls/lv2/sys_time.h"
-#include "Emu/SysCalls/Modules/cellMsgDialog.h"
 #include "MsgDialog.h"
 
-wxDialog* m_dialog = nullptr;
-wxGauge* m_gauge1 = nullptr;
-wxGauge* m_gauge2 = nullptr;
-wxStaticText* m_text1 = nullptr;
-wxStaticText* m_text2 = nullptr;
-
-void MsgDialogCreate(u32 type, const char* msg, u64& status)
+void MsgDialogFrame::Create(u32 type, const char* msg)
 {
-	wxWindow* parent = nullptr; // TODO: align it better
+	wxWindow* parent = nullptr; // TODO: align the window better
 
 	m_gauge1 = nullptr;
 	m_gauge2 = nullptr;
 	m_text1 = nullptr;
 	m_text2 = nullptr;
-	wxButton* m_button_ok = nullptr;
-	wxButton* m_button_yes = nullptr;
-	wxButton* m_button_no = nullptr;
+	m_button_ok = nullptr;
+	m_button_yes = nullptr;
+	m_button_no = nullptr;
 
 	m_dialog = new wxDialog(parent, wxID_ANY, type & CELL_MSGDIALOG_TYPE_SE_TYPE ? "" : "Error", wxDefaultPosition, wxDefaultSize);
 
 	m_dialog->SetExtraStyle(m_dialog->GetExtraStyle() | wxWS_EX_TRANSIENT);
 	m_dialog->SetTransparent(127 + (type & CELL_MSGDIALOG_TYPE_BG) * (128 / CELL_MSGDIALOG_TYPE_BG_INVISIBLE));
 
-	wxSizer* sizer1 = new wxBoxSizer(wxVERTICAL);
+	m_sizer1 = new wxBoxSizer(wxVERTICAL);
 
-	wxStaticText* m_text = new wxStaticText(m_dialog, wxID_ANY, wxString(msg, wxConvUTF8));
-	sizer1->Add(m_text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
+	m_text = new wxStaticText(m_dialog, wxID_ANY, wxString(msg, wxConvUTF8));
+	m_sizer1->Add(m_text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 
 	switch (type & CELL_MSGDIALOG_TYPE_PROGRESSBAR)
 	{
@@ -49,14 +42,14 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 
 	if (m_gauge1)
 	{
-		sizer1->Add(m_text1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
-		sizer1->Add(m_gauge1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
+		m_sizer1->Add(m_text1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
+		m_sizer1->Add(m_gauge1, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
 		m_gauge1->SetValue(0);
 	}
 	if (m_gauge2)
 	{
-		sizer1->Add(m_text2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
-		sizer1->Add(m_gauge2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
+		m_sizer1->Add(m_text2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 8);
+		m_sizer1->Add(m_gauge2, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 16);
 		m_gauge2->SetValue(0);
 	}
 
@@ -78,7 +71,7 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 			m_button_yes->SetFocus();
 		}
 
-		sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
+		m_sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 		break;
 
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
@@ -89,22 +82,22 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 			m_button_ok->SetFocus();
 		}
 
-		sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
+		m_sizer1->Add(buttons, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT | wxTOP, 16);
 		break;
 	}
 
-	sizer1->AddSpacer(16);
+	m_sizer1->AddSpacer(16);
 
-	m_dialog->SetSizerAndFit(sizer1);
+	m_dialog->SetSizerAndFit(m_sizer1);
 	m_dialog->Centre(wxBOTH);
 	m_dialog->Show();
 	m_dialog->Enable();
 
 	m_dialog->Bind(wxEVT_BUTTON, [&](wxCommandEvent& event)
 	{
-		status = (event.GetId() == wxID_NO) ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES /* OK */;
-		m_dialog->Hide();
-		MsgDialogClose();
+		this->status = (event.GetId() == wxID_NO) ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES /* OK */;
+		this->m_dialog->Hide();
+		this->Close();
 	});
 
 
@@ -115,20 +108,20 @@ void MsgDialogCreate(u32 type, const char* msg, u64& status)
 		}
 		else
 		{
-			status = CELL_MSGDIALOG_BUTTON_ESCAPE;
-			m_dialog->Hide();
-			MsgDialogClose();
+			this->status = CELL_MSGDIALOG_BUTTON_ESCAPE;
+			this->m_dialog->Hide();
+			this->Close();
 		}
 	});
 }
 
-void MsgDialogDestroy()
+void MsgDialogFrame::Destroy()
 {
 	delete m_dialog;
 	m_dialog = nullptr;
 }
 
-void MsgDialogProgressBarSetMsg(u32 index, const char* msg)
+void MsgDialogFrame::ProgressBarSetMsg(u32 index, const char* msg)
 {
 	if (m_dialog)
 	{
@@ -139,7 +132,7 @@ void MsgDialogProgressBarSetMsg(u32 index, const char* msg)
 	}
 }
 
-void MsgDialogProgressBarReset(u32 index)
+void MsgDialogFrame::ProgressBarReset(u32 index)
 {
 	if (m_dialog)
 	{
@@ -148,7 +141,7 @@ void MsgDialogProgressBarReset(u32 index)
 	}
 }
 
-void MsgDialogProgressBarInc(u32 index, u32 delta)
+void MsgDialogFrame::ProgressBarInc(u32 index, u32 delta)
 {
 	if (m_dialog)
 	{
