@@ -74,7 +74,7 @@ u64 get_save_data_size(const std::string& dir)
 	{
 		if ((entry->flags & DirEntry_TypeMask) == DirEntry_TypeFile)
 		{
-			result += vfsFile(dir + "/" + entry->name).GetSize();
+			result += entry->size;
 		}
 	}
 

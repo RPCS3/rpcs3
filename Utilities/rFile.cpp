@@ -75,7 +75,7 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	info.ctime = to_time_t(attrs.ftCreationTime);
 #else
 	struct stat64 file_info;
-	if (stat64(path, &file_info) < 0)
+	if (stat64(path.c_str(), &file_info) < 0)
 	{
 		info.exists = false;
 		info.isDirectory = false;
@@ -107,7 +107,7 @@ bool rIsDir(const std::string& dir)
 	return (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
 	struct stat64 file_info;
-	if (stat64(path, &file_info) < 0)
+	if (stat64(dir.c_str(), &file_info) < 0)
 	{
 		return false;
 	}
