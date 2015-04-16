@@ -311,6 +311,16 @@ __noinline s32 savedata_op(
 	u32 userId,
 	vm::ptr<CellSaveDataDoneCallback> funcDone)
 {
+	// TODO: check arguments
+
+	// try to lock the mutex (not sure how it originally works; std::try_to_lock makes it non-blocking)
+	std::unique_lock<std::mutex> lock(g_savedata_dialog->mutex, std::try_to_lock);
+
+	if (!lock)
+	{
+		return CELL_SAVEDATA_ERROR_BUSY;
+	}
+
 	static const std::string base_dir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current or specified user
 
 	vm::stackvar<CellSaveDataCBResult> result(CPU);
@@ -370,7 +380,7 @@ __noinline s32 savedata_op(
 						save_entry.isNew = false;
 
 						save_entry.size = 0;
-						for (const auto& entry2 : vfsDir(base_dir + entry->name))
+						for (const auto entry2 : vfsDir(base_dir + entry->name))
 						{
 							save_entry.size += entry2->size;
 						}

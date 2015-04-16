@@ -183,6 +183,7 @@
     <ClCompile Include="Gui\MsgDialog.cpp" />
     <ClCompile Include="Gui\PADManager.cpp" />
     <ClCompile Include="Gui\RSXDebugger.cpp" />
+    <ClCompile Include="Gui\SaveDataDialog.cpp" />
     <ClCompile Include="Gui\SaveDataUtility.cpp" />
     <ClCompile Include="Gui\TextInputDialog.cpp" />
     <ClCompile Include="Gui\VFSManager.cpp" />
@@ -224,6 +225,7 @@
     <ClInclude Include="Gui\MsgDialog.h" />
     <ClInclude Include="Gui\RegisterEditor.h" />
     <ClInclude Include="Gui\RSXDebugger.h" />
+    <ClInclude Include="Gui\SaveDataDialog.h" />
     <ClInclude Include="Gui\SaveDataUtility.h" />
     <ClInclude Include="Gui\TextInputDialog.h" />
     <ClInclude Include="Gui\VFSManager.h" />

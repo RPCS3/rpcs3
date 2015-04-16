@@ -282,6 +282,8 @@ struct SaveDataEntry
 
 struct SaveDataDialogInstance
 {
+	std::mutex mutex;
+
 	SaveDataDialogInstance();
 	virtual ~SaveDataDialogInstance() = default;
 };

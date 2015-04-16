@@ -24,16 +24,16 @@ public:
 
 	virtual u64 Write(const void* src, u64 size);
 
-	template<typename T> __forceinline bool Write(const T& data)
+	template<typename T> __forceinline bool SWrite(const T& data, u64 size = sizeof(T))
 	{
-		return Write(&data, sizeof(T)) == sizeof(T);
+		return Write(&data, size) == size;
 	}
 
 	virtual u64 Read(void* dst, u64 size);
 
-	template<typename T> __forceinline bool Read(T& data)
+	template<typename T> __forceinline bool SRead(T& data, u64 size = sizeof(T))
 	{
-		return Read(&data, sizeof(T)) == sizeof(T);
+		return Read(&data, size) == size;
 	}
 
 	virtual u64 Seek(s64 offset, vfsSeekMode mode = vfsSeekSet);
