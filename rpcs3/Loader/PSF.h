@@ -38,8 +38,6 @@ struct PSFEntry
 
 class PSFLoader
 {
-	bool m_loaded = false;
-	PSFHeader m_header = {};
 	std::vector<PSFEntry> m_entries;
 
 public:
@@ -58,7 +56,7 @@ public:
 
 	operator bool() const
 	{
-		return m_loaded;
+		return !m_entries.empty();
 	}
 
 	const PSFEntry* SearchEntry(const std::string& key) const;
