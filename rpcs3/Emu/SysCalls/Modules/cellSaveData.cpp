@@ -200,7 +200,7 @@ __noinline s32 savedata_op(
 		if (funcList)
 		{
 			vm::stackvar<CellSaveDataListSet> listSet(CPU);
-			
+
 			// List Callback
 			funcList(CPU, result, listGet, listSet);
 
@@ -340,161 +340,163 @@ __noinline s32 savedata_op(
 			save_entry.dirName = std::move(save_entries[selected < save_entries.size() ? selected : throw __FUNCTION__].dirName);
 		}
 	}
-	
+
 	if (dirName)
 	{
 		save_entry.dirName = dirName.get_ptr();
 	}
 
 	// get save stats
-	vm::stackvar<CellSaveDataStatGet> statGet(CPU);
-	vm::stackvar<CellSaveDataStatSet> statSet(CPU);
-
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
-	vfsFile f(sfo_path);
-	PSFLoader psf(f);
-	f.Close();
-
-	std::string dir_local_path;
-	
-	Emu.GetVFS().GetDevice(dir_path, dir_local_path);
-
-	FileInfo dir_info = {};
-
-	get_file_info(dir_local_path, dir_info);
-
-	statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
-	statGet->isNewData = save_entry.isNew = !psf;
-
-	statGet->dir.atime = save_entry.atime = dir_info.atime;
-	statGet->dir.mtime = save_entry.mtime = dir_info.mtime;
-	statGet->dir.ctime = save_entry.ctime = dir_info.ctime;
-	strcpy_trunc(statGet->dir.dirName, save_entry.dirName);
-
-	statGet->getParam.attribute = psf.GetInteger("ATTRIBUTE"); // ???
-	strcpy_trunc(statGet->getParam.title, save_entry.title = psf.GetString("TITLE"));
-	strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.GetString("SUB_TITLE"));
-	strcpy_trunc(statGet->getParam.detail, save_entry.details = psf.GetString("DETAIL"));
-	strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.GetString("SAVEDATA_LIST_PARAM"));
-
-	statGet->bind = 0;
-	statGet->sizeKB = save_entry.size / 1024;
-	statGet->sysSizeKB = 0; // This is the size of system files, but PARAM.SFO is very small and PARAM.PDF is not used
-
-	statGet->fileNum = 0;
-	statGet->fileList.set(setBuf->buf.addr());
-	statGet->fileListNum = 0;
-	memset(statGet->reserved, 0, sizeof(statGet->reserved));
-
-	auto file_list = statGet->fileList.get_ptr();
-
-	for (const auto entry : vfsDir(dir_path))
 	{
-		// only files, system files ignored, fileNum is limited by setBuf->fileListMax
-		if (entry->flags & DirEntry_TypeFile && entry->name != "PARAM.SFO" && statGet->fileListNum++ < setBuf->fileListMax)
-		{
-			statGet->fileNum++;
+		vm::stackvar<CellSaveDataStatGet> statGet(CPU);
+		vm::stackvar<CellSaveDataStatSet> statSet(CPU);
 
-			auto& file = *file_list++;
+		vfsFile f(sfo_path);
+		PSFLoader psf(f);
+		f.Close();
 
-			if (entry->name == "ICON0.PNG")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-			}
-			else if (entry->name == "ICON1.PAM")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-			}
-			else if (entry->name == "PIC1.PNG")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-			}
-			else if (entry->name == "SND0.AT3")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
-			}
-			else
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE; // protected files are not supported
-			}
+		std::string dir_local_path;
 
-			file.size = entry->size;
-			file.atime = entry->access_time;
-			file.mtime = entry->modify_time;
-			file.ctime = entry->create_time;
-			strcpy_trunc(file.fileName, entry->name);
-		}
-	}
+		Emu.GetVFS().GetDevice(dir_path, dir_local_path);
 
-	// Stat Callback
-	funcStat(CPU, result, statGet, statSet);
+		FileInfo dir_info = {};
 
-	if (result->result < 0)
-	{
-		return CELL_SAVEDATA_ERROR_CBRESULT;
-	}
+		get_file_info(dir_local_path, dir_info);
 
-	// Update PARAM.SFO
-	if (statSet->setParam)
-	{
-		psf.Clear();
-		psf.SetString("ACCOUNT_ID", ""); // ???
-		psf.SetInteger("ATTRIBUTE", statSet->setParam->attribute);
-		psf.SetString("CATEGORY", "SD"); // ???
-		psf.SetString("PARAMS", ""); // ???
-		psf.SetString("PARAMS2", ""); // ???
-		psf.SetInteger("PARENTAL_LEVEL", 0); // ???
-		psf.SetString("DETAIL", statSet->setParam->detail);
-		psf.SetString("SAVEDATA_DIRECTORY", save_entry.dirName);
-		psf.SetString("SAVEDATA_LIST_PARAM", statSet->setParam->listParam);
-		psf.SetString("SUB_TITLE", statSet->setParam->subTitle);
-		psf.SetString("TITLE", statSet->setParam->title);
-	}
+		statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+		statGet->isNewData = save_entry.isNew = !psf;
 
-	switch (const auto mode = statSet->reCreateMode & 0xffff)
-	{
-	case CELL_SAVEDATA_RECREATE_NO:
-	case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
-	{
-		break;
-	}
-	case CELL_SAVEDATA_RECREATE_YES:
-	case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
-	{
-		// kill it with fire
+		statGet->dir.atime = save_entry.atime = dir_info.atime;
+		statGet->dir.mtime = save_entry.mtime = dir_info.mtime;
+		statGet->dir.ctime = save_entry.ctime = dir_info.ctime;
+		strcpy_trunc(statGet->dir.dirName, save_entry.dirName);
+
+		statGet->getParam.attribute = psf.GetInteger("ATTRIBUTE"); // ???
+		strcpy_trunc(statGet->getParam.title, save_entry.title = psf.GetString("TITLE"));
+		strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.GetString("SUB_TITLE"));
+		strcpy_trunc(statGet->getParam.detail, save_entry.details = psf.GetString("DETAIL"));
+		strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.GetString("SAVEDATA_LIST_PARAM"));
+
+		statGet->bind = 0;
+		statGet->sizeKB = save_entry.size / 1024;
+		statGet->sysSizeKB = 0; // This is the size of system files, but PARAM.SFO is very small and PARAM.PDF is not used
+
+		statGet->fileNum = 0;
+		statGet->fileList.set(setBuf->buf.addr());
+		statGet->fileListNum = 0;
+		memset(statGet->reserved, 0, sizeof(statGet->reserved));
+
+		auto file_list = statGet->fileList.get_ptr();
+
 		for (const auto entry : vfsDir(dir_path))
 		{
-			if (entry->flags & DirEntry_TypeFile)
+			// only files, system files ignored, fileNum is limited by setBuf->fileListMax
+			if (entry->flags & DirEntry_TypeFile && entry->name != "PARAM.SFO" && statGet->fileListNum++ < setBuf->fileListMax)
 			{
-				Emu.GetVFS().RemoveFile(dir_path + entry->name);
+				statGet->fileNum++;
+
+				auto& file = *file_list++;
+
+				if (entry->name == "ICON0.PNG")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+				}
+				else if (entry->name == "ICON1.PAM")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+				}
+				else if (entry->name == "PIC1.PNG")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+				}
+				else if (entry->name == "SND0.AT3")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+				}
+				else
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE; // protected files are not supported
+				}
+
+				file.size = entry->size;
+				file.atime = entry->access_time;
+				file.mtime = entry->modify_time;
+				file.ctime = entry->create_time;
+				strcpy_trunc(file.fileName, entry->name);
 			}
 		}
 
-		break;
-	}
-	default:
-	{
-		cellSysutil.Error("savedata_op(): unknown statSet->reCreateMode (0x%x)", statSet->reCreateMode);
-		return CELL_SAVEDATA_ERROR_PARAM;
-	}
-	}
+		// Stat Callback
+		funcStat(CPU, result, statGet, statSet);
 
-	// Create save directory if necessary
-	if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
-	{
-		// error
-	}
+		if (result->result < 0)
+		{
+			return CELL_SAVEDATA_ERROR_CBRESULT;
+		}
 
-	// Write PARAM.SFO
-	if (psf)
-	{
-		Emu.GetVFS().CreateFile(sfo_path, true);
+		// Update PARAM.SFO
+		if (statSet->setParam)
+		{
+			psf.Clear();
+			psf.SetString("ACCOUNT_ID", ""); // ???
+			psf.SetInteger("ATTRIBUTE", statSet->setParam->attribute);
+			psf.SetString("CATEGORY", "SD"); // ???
+			psf.SetString("PARAMS", ""); // ???
+			psf.SetString("PARAMS2", ""); // ???
+			psf.SetInteger("PARENTAL_LEVEL", 0); // ???
+			psf.SetString("DETAIL", statSet->setParam->detail);
+			psf.SetString("SAVEDATA_DIRECTORY", save_entry.dirName);
+			psf.SetString("SAVEDATA_LIST_PARAM", statSet->setParam->listParam);
+			psf.SetString("SUB_TITLE", statSet->setParam->subTitle);
+			psf.SetString("TITLE", statSet->setParam->title);
+		}
 
-		f.Open(sfo_path, vfsWrite);
-		psf.Save(f);
-		f.Close();
+		switch (const auto mode = statSet->reCreateMode & 0xffff)
+		{
+		case CELL_SAVEDATA_RECREATE_NO:
+		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
+		{
+			break;
+		}
+		case CELL_SAVEDATA_RECREATE_YES:
+		case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
+		{
+			// kill it with fire
+			for (const auto entry : vfsDir(dir_path))
+			{
+				if (entry->flags & DirEntry_TypeFile)
+				{
+					Emu.GetVFS().RemoveFile(dir_path + entry->name);
+				}
+			}
+
+			break;
+		}
+		default:
+		{
+			cellSysutil.Error("savedata_op(): unknown statSet->reCreateMode (0x%x)", statSet->reCreateMode);
+			return CELL_SAVEDATA_ERROR_PARAM;
+		}
+		}
+
+		// Create save directory if necessary
+		if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
+		{
+			// error
+		}
+
+		// Write PARAM.SFO
+		if (psf)
+		{
+			Emu.GetVFS().CreateFile(sfo_path, true);
+
+			f.Open(sfo_path, vfsWrite);
+			psf.Save(f);
+			f.Close();
+		}
 	}
 
 	// Enter the loop where the save files are read/created/deleted
