@@ -756,7 +756,7 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 			out_line[2] = w / 2;
 		}
 
-		sws_scale(sws.get(), in_data, frame->linesize, 0, h, out_data, out_line);
+		sws_scale(sws.get(), in_data, in_line, 0, h, out_data, out_line);
 
 		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
