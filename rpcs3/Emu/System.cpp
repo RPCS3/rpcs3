@@ -212,7 +212,8 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");
 	std::string title_id = psf.GetString("TITLE_ID");
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
@@ -222,12 +223,12 @@ void Emulator::Load()
 	SetTitleID(title_id);
 
 	// bdvd inserting imitation
-	vfsFile f1("/app_home/../dev_bdvd.path");
-	if (f1.IsOpened())
+	f.Open("/app_home/../dev_bdvd.path");
+	if (f.IsOpened())
 	{
 		std::string bdvd;
-		bdvd.resize(f1.GetSize());
-		f1.Read(&bdvd[0], bdvd.size());
+		bdvd.resize(f.GetSize());
+		f.Read(&bdvd[0], bdvd.size());
 
 		// load desired /dev_bdvd/ real directory and remount
 		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
@@ -240,7 +241,7 @@ void Emulator::Load()
 		GetVFS().GetDeviceLocal(m_path, m_elf_path);
 	}
 
-	vfsFile f(m_elf_path);
+	f.Open(m_elf_path);
 
 	if (!f.IsOpened())
 	{

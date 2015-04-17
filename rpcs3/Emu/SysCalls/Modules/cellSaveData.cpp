@@ -354,6 +354,7 @@ __noinline s32 savedata_op(
 
 	vfsFile f(sfo_path);
 	PSFLoader psf(f);
+	f.Close();
 
 	std::string dir_local_path;
 	
@@ -490,8 +491,9 @@ __noinline s32 savedata_op(
 	{
 		Emu.GetVFS().CreateFile(sfo_path, true);
 
-		vfsFile f(sfo_path, vfsWrite);
+		f.Open(sfo_path, vfsWrite);
 		psf.Save(f);
+		f.Close();
 	}
 
 	// Enter the loop where the save files are read/created/deleted
