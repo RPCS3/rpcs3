@@ -115,7 +115,7 @@ bool PSFLoader::Load(vfsStream& stream)
 	return true;
 }
 
-bool PSFLoader::Save(vfsStream& stream)
+bool PSFLoader::Save(vfsStream& stream) const
 {
 	std::vector<PSFDefTable> indices;
 

@@ -218,7 +218,7 @@ std::string fmt::merge(std::vector<std::string> source, const std::string& separ
 		result += source[i] + separator;
 	}
 
-	return result + source[source.size() - 1];
+	return result + source.back();
 }
 
 std::string fmt::merge(std::initializer_list<std::vector<std::string>> sources, const std::string& separator)

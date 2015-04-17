@@ -7,16 +7,9 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
+#include "Utilities/rFile.h"
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#undef CreateFile
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-#endif
 
 extern Module cellSysutil;
 
@@ -71,214 +64,6 @@ public:
 	}
 };
 
-// Auxiliary Functions
-void addNewSaveDataEntry(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDataListNewData> newData)
-{
-	SaveDataEntry saveEntry;
-	saveEntry.dirName = newData->dirName.get_ptr();
-	saveEntry.title = newData->icon->title.get_ptr();
-	saveEntry.subtitle = newData->icon->title.get_ptr();
-	//saveEntry.iconBuf = newData->icon->iconBuf.get_ptr();
-	//saveEntry.iconBufSize = newData->icon->iconBufSize;
-	saveEntry.isNew = true;
-	// TODO: Add information stored in newData->iconPosition. (It's not very relevant)
-
-	saveEntries.push_back(saveEntry);
-}
-
-u32 focusSaveDataEntry(const std::vector<SaveDataEntry>& saveEntries, u32 focusPosition)
-{
-	// TODO: Get the correct index. Right now, this returns the first element of the list.
-	return 0;
-}
-
-void setSaveDataList(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDataDirList> fixedList, u32 fixedListNum)
-{
-	std::vector<SaveDataEntry>::iterator entry = saveEntries.begin();
-	while (entry != saveEntries.end())
-	{
-		bool found = false;
-		for (u32 j = 0; j < fixedListNum; j++)
-		{
-			if (entry->dirName == (char*)fixedList[j].dirName)
-			{
-				found = true;
-				break;
-			}
-		}
-		if (!found)
-			entry = saveEntries.erase(entry);
-		else
-			entry++;
-	}
-}
-
-void setSaveDataFixed(std::vector<SaveDataEntry>& saveEntries, vm::ptr<CellSaveDataFixedSet> fixedSet)
-{
-	std::vector<SaveDataEntry>::iterator entry = saveEntries.begin();
-	while (entry != saveEntries.end())
-	{
-		if (entry->dirName == fixedSet->dirName.get_ptr())
-			entry = saveEntries.erase(entry);
-		else
-			entry++;
-	}
-
-	if (saveEntries.size() == 0)
-	{
-		SaveDataEntry entry;
-		entry.dirName = fixedSet->dirName.get_ptr();
-		entry.isNew = true;
-		saveEntries.push_back(entry);
-	}
-
-	if (fixedSet->newIcon)
-	{
-		//saveEntries[0].iconBuf = fixedSet->newIcon->iconBuf.get_ptr();
-		//saveEntries[0].iconBufSize = fixedSet->newIcon->iconBufSize;
-		saveEntries[0].title = fixedSet->newIcon->title.get_ptr();
-		saveEntries[0].subtitle = fixedSet->newIcon->title.get_ptr();
-	}
-}
-
-void getSaveDataStat(SaveDataEntry entry, vm::ptr<CellSaveDataStatGet> statGet)
-{
-	if (entry.isNew)
-		statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_YES;
-	else
-		statGet->isNewData = CELL_SAVEDATA_ISNEWDATA_NO;
-
-	statGet->bind = 0; // TODO ?
-	statGet->sizeKB = entry.size / 1024;
-	statGet->hddFreeSizeKB = 40000000; // 40 GB. TODO ?
-	statGet->sysSizeKB = 0; // TODO: This is the size of PARAM.SFO + PARAM.PDF
-	statGet->dir.st_atime_ = 0; // TODO ?
-	statGet->dir.st_mtime_ = 0; // TODO ?
-	statGet->dir.st_ctime_ = 0; // TODO ?
-	strcpy_trunc(statGet->dir.dirName, entry.dirName);
-
-	statGet->getParam.attribute = 0; // TODO ?
-	strcpy_trunc(statGet->getParam.title, entry.title);
-	strcpy_trunc(statGet->getParam.subTitle, entry.subtitle);
-	strcpy_trunc(statGet->getParam.detail, entry.details);
-	strcpy_trunc(statGet->getParam.listParam, entry.listParam);
-
-	statGet->fileNum = 0;
-	statGet->fileList.set(0);
-	statGet->fileListNum = 0;
-	std::string saveDir = "/dev_hdd0/home/00000001/savedata/" + entry.dirName; // TODO: Get the path of the current user
-	vfsDir dir(saveDir);
-	if (!dir.IsOpened())
-		return;
-
-	std::vector<CellSaveDataFileStat> fileEntries;
-	for(const DirEntryInfo* dirEntry = dir.Read(); dirEntry; dirEntry = dir.Read()) {
-		if (dirEntry->flags & DirEntry_TypeFile) {
-			if (dirEntry->name == "PARAM.SFO" || dirEntry->name == "PARAM.PFD")
-				continue;
-
-			statGet->fileNum++;
-			statGet->fileListNum++;
-			CellSaveDataFileStat fileEntry;
-			vfsFile file(saveDir + "/" + dirEntry->name);
-
-			if (dirEntry->name == "ICON0.PNG")
-				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-			else if (dirEntry->name == "ICON1.PAM")
-				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-			else if (dirEntry->name == "PIC1.PNG") 
-				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-			else if (dirEntry->name == "SND0.AT3") 
-				fileEntry.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
-
-			fileEntry.st_size = file.GetSize();
-			fileEntry.st_atime_ = 0; // TODO ?
-			fileEntry.st_mtime_ = 0; // TODO ?
-			fileEntry.st_ctime_ = 0; // TODO ?
-			strcpy_trunc(fileEntry.fileName, dirEntry->name);
-
-			fileEntries.push_back(fileEntry);
-		}
-	}
-
-	statGet->fileList.set((u32)Memory.Alloc(sizeof(CellSaveDataFileStat) * fileEntries.size(), 8));
-	for (u32 i = 0; i < fileEntries.size(); i++) {
-		CellSaveDataFileStat *dst = &statGet->fileList[i];
-		memcpy(dst, &fileEntries[i], sizeof(CellSaveDataFileStat));
-	}
-}
-
-s32 modifySaveDataFiles(vm::ptr<CellSaveDataFileCallback> funcFile, vm::ptr<CellSaveDataCBResult> result, const std::string& saveDataDir)
-{
-	vm::var<CellSaveDataFileGet> fileGet;
-	vm::var<CellSaveDataFileSet> fileSet;
-
-	if (!Emu.GetVFS().ExistsDir(saveDataDir))
-		Emu.GetVFS().CreateDir(saveDataDir);
-
-	fileGet->excSize = 0;
-	while (true)
-	{
-		funcFile(result, fileGet, fileSet);
-		if (result->result < 0)	{
-			cellSysutil.Error("modifySaveDataFiles: CellSaveDataFileCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
-			return CELL_SAVEDATA_ERROR_CBRESULT;
-		}
-		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM) {
-			break;
-		}
-
-		std::string filepath = saveDataDir + '/';
-		vfsStream* file = NULL;
-		void* buf = fileSet->fileBuf.get_ptr();
-
-		switch ((u32)fileSet->fileType)
-		{
-		case CELL_SAVEDATA_FILETYPE_SECUREFILE:     filepath += fileSet->fileName.get_ptr(); break;
-		case CELL_SAVEDATA_FILETYPE_NORMALFILE:     filepath += fileSet->fileName.get_ptr(); break;
-		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:  filepath += "ICON0.PNG"; break;
-		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:  filepath += "ICON1.PAM"; break;
-		case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:   filepath += "PIC1.PNG";  break;
-		case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:   filepath += "SND0.AT3";  break;
-
-		default:
-			cellSysutil.Error("modifySaveDataFiles: Unknown fileType! Aborting...");
-			return CELL_SAVEDATA_ERROR_PARAM;
-		}
-
-		switch ((u32)fileSet->fileOperation)
-		{
-		case CELL_SAVEDATA_FILEOP_READ:
-			file = Emu.GetVFS().OpenFile(filepath, vfsRead);
-			fileGet->excSize = (u32)file->Read(buf, (u32)std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
-			break;
-		
-		case CELL_SAVEDATA_FILEOP_WRITE:
-			Emu.GetVFS().CreateFile(filepath);
-			file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
-			fileGet->excSize = (u32)file->Write(buf, (u32)std::min(fileSet->fileSize, fileSet->fileBufSize)); // TODO: This may fail for big files because of the dest pointer.
-			break;
-
-		case CELL_SAVEDATA_FILEOP_DELETE:
-			Emu.GetVFS().RemoveFile(filepath);
-			fileGet->excSize = 0;
-			break;
-
-		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
-			cellSysutil.Todo("modifySaveDataFiles: CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC");
-			break;
-
-		default:
-			cellSysutil.Error("modifySaveDataFiles: Unknown fileOperation! Aborting...");
-			return CELL_SAVEDATA_ERROR_PARAM;
-		}
-
-		if (file && file->IsOpened())
-			file->Close();
-	}
-	return CELL_OK;
-}
-
 enum : u32
 {
 	SAVEDATA_OP_AUTO_SAVE = 0,
@@ -321,20 +106,26 @@ __noinline s32 savedata_op(
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
-	static const std::string base_dir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current or specified user
+	std::string base_dir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current or specified user
 
 	vm::stackvar<CellSaveDataCBResult> result(CPU);
 	vm::stackvar<CellSaveDataListGet> listGet(CPU);
 	vm::stackvar<CellSaveDataListSet> listSet(CPU);
+	vm::stackvar<CellSaveDataFixedSet> fixedSet(CPU);
 	vm::stackvar<CellSaveDataStatGet> statGet(CPU);
 	vm::stackvar<CellSaveDataStatSet> statSet(CPU);
+	vm::stackvar<CellSaveDataFileGet> fileGet(CPU);
+	vm::stackvar<CellSaveDataFileSet> fileSet(CPU);
+	vm::stackvar<CellSaveDataDoneGet> doneGet(CPU);
 
-	result->userdata = userdata;
+	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
-	std::vector<SaveDataEntry> save_entries;
+	SaveDataEntry save_entry;
 
 	if (setList)
 	{
+		std::vector<SaveDataEntry> save_entries;
+
 		listGet->dirNum = 0;
 		listGet->dirListNum = 0;
 		listGet->dirList.set(setBuf->buf.addr());
@@ -344,7 +135,7 @@ __noinline s32 savedata_op(
 
 		for (const auto entry : vfsDir(base_dir))
 		{
-			if ((entry->flags & DirEntry_TypeMask) != DirEntry_TypeDir)
+			if (!(entry->flags & DirEntry_TypeDir))
 			{
 				continue;
 			}
@@ -360,32 +151,34 @@ __noinline s32 savedata_op(
 
 						// PSF parameters
 						const PSFLoader psf(vfsFile(base_dir + entry->name + "/PARAM.SFO"));
+
 						if (!psf)
 						{
 							break;
 						}
 
-						SaveDataEntry save_entry;
-						save_entry.dirName = psf.GetString("SAVEDATA_DIRECTORY");
-						save_entry.listParam = psf.GetString("SAVEDATA_LIST_PARAM");
-						save_entry.title = psf.GetString("TITLE");
-						save_entry.subtitle = psf.GetString("SUB_TITLE");
-						save_entry.details = psf.GetString("DETAIL");
+						SaveDataEntry save_entry2;
+						save_entry2.dirName = psf.GetString("SAVEDATA_DIRECTORY");
+						save_entry2.listParam = psf.GetString("SAVEDATA_LIST_PARAM");
+						save_entry2.title = psf.GetString("TITLE");
+						save_entry2.subtitle = psf.GetString("SUB_TITLE");
+						save_entry2.details = psf.GetString("DETAIL");
 
-						save_entry.atime = entry->access_time;
-						save_entry.mtime = entry->modify_time;
-						save_entry.ctime = entry->create_time;
-						//save_entry.iconBuf = NULL; // TODO: Here should be the PNG buffer
-						//save_entry.iconBufSize = 0; // TODO: Size of the PNG file
-						save_entry.isNew = false;
+						save_entry2.size = 0;
 
-						save_entry.size = 0;
 						for (const auto entry2 : vfsDir(base_dir + entry->name))
 						{
-							save_entry.size += entry2->size;
+							save_entry2.size += entry2->size;
 						}
 
-						save_entries.push_back(save_entry);
+						save_entry2.atime = entry->access_time;
+						save_entry2.mtime = entry->modify_time;
+						save_entry2.ctime = entry->create_time;
+						//save_entry2.iconBuf = NULL; // TODO: Here should be the PNG buffer
+						//save_entry2.iconBufSize = 0; // TODO: Size of the PNG file
+						save_entry2.isNew = false;
+
+						save_entries.push_back(save_entry2);
 					}
 
 					break;
@@ -407,42 +200,403 @@ __noinline s32 savedata_op(
 			memset(dir.reserved, 0, sizeof(dir.reserved));
 		}
 
-		// Data List Callback
-		funcList(result, listGet, listSet);
+		s32 selected = -1;
+
+		if (funcList)
+		{
+			// List Callback
+			funcList(CPU, result, listGet, listSet);
+
+			if (result->result < 0)
+			{
+				return CELL_SAVEDATA_ERROR_CBRESULT;
+			}
+
+			// Clean save data list
+			save_entries.erase(std::remove_if(save_entries.begin(), save_entries.end(), [&listSet](const SaveDataEntry& entry) -> bool
+			{
+				for (u32 i = 0; i < listSet->fixedListNum; i++)
+				{
+					if (entry.dirName == listSet->fixedList[i].dirName)
+					{
+						return false;
+					}
+				}
+
+				return true;
+			}), save_entries.end());
+
+			// Focus save data
+			s32 focused = -1;
+
+			switch (const u32 pos_type = listSet->focusPosition.value())
+			{
+			case CELL_SAVEDATA_FOCUSPOS_DIRNAME:
+			{
+				for (s32 i = 0; i < save_entries.size(); i++)
+				{
+					if (save_entries[i].dirName == listSet->focusDirName.get_ptr())
+					{
+						focused = i;
+						break;
+					}
+				}
+
+				break;
+			}
+			case CELL_SAVEDATA_FOCUSPOS_LISTHEAD:
+			{
+				focused = save_entries.empty() ? -1 : 0;
+				break;
+			}
+			case CELL_SAVEDATA_FOCUSPOS_LISTTAIL:
+			{
+				focused = save_entries.size() - 1;
+				break;
+			}
+			case CELL_SAVEDATA_FOCUSPOS_LATEST:
+			{
+				s64 max = INT64_MIN;
+
+				for (s32 i = 0; i < save_entries.size(); i++)
+				{
+					if (save_entries[i].mtime > max)
+					{
+						focused = i;
+						max = save_entries[i].mtime;
+					}
+				}
+
+				break;
+			}
+			case CELL_SAVEDATA_FOCUSPOS_OLDEST:
+			{
+				s64 min = INT64_MAX;
+
+				for (s32 i = 0; i < save_entries.size(); i++)
+				{
+					if (save_entries[i].mtime < min)
+					{
+						focused = i;
+						min = save_entries[i].mtime;
+					}
+				}
+
+				break;
+			}
+			case CELL_SAVEDATA_FOCUSPOS_NEWDATA:
+			{
+				break;
+			}
+			default:
+			{
+				cellSysutil.Error("savedata_op(): unknown listSet->focusPosition (0x%x)", pos_type);
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+			}
+
+			// Display Save Data List
+			selected = g_savedata_dialog->ShowSaveDataList(save_entries, focused, listSet);
+
+			if (selected == -1)
+			{
+				if (listSet->newData)
+				{
+					save_entry.dirName = listSet->newData->dirName.get_ptr();
+				}
+				else
+				{
+					return CELL_OK; // ???
+				}
+			}
+		}
+
+		if (funcFixed)
+		{
+			// Fixed Callback
+			funcFixed(CPU, result, listGet, fixedSet);
+
+			if (result->result < 0)
+			{
+				return CELL_SAVEDATA_ERROR_CBRESULT;
+			}
+
+			for (s32 i = 0; i < save_entries.size(); i++)
+			{
+				if (save_entries[i].dirName == fixedSet->dirName.get_ptr())
+				{
+					selected = i;
+					break;
+				}
+			}
+
+			if (selected == -1)
+			{
+				save_entry.dirName = fixedSet->dirName.get_ptr();
+			}
+		}
+
+		if (selected >= 0)
+		{
+			save_entry.dirName = std::move(save_entries[selected < save_entries.size() ? selected : throw __FUNCTION__].dirName);
+		}
 	}
 	
-
-	
-
-	setSaveDataList(save_entries, listSet->fixedList, listSet->fixedListNum);
-	if (listSet->newData)
-		addNewSaveDataEntry(save_entries, listSet->newData);
-	if (save_entries.size() == 0) {
-		cellSysutil.Error("cellSaveDataListLoad2: No save entries found!"); // TODO: Find a better way to handle this error
-		return CELL_OK;
+	if (dirName)
+	{
+		save_entry.dirName = dirName.get_ptr();
 	}
 
-	u32 focusIndex = focusSaveDataEntry(save_entries, listSet->focusPosition);
-	// TODO: Display the dialog here
-	u32 selectedIndex = focusIndex; // TODO: Until the dialog is implemented, select always the focused entry
-	getSaveDataStat(save_entries[selectedIndex], statGet);
-	result->userdata = userdata;
+	// get save stats
+	std::string dir_path = base_dir + save_entry.dirName + "/";
+	std::string sfo_path = dir_path + "PARAM.SFO";
 
-	funcStat(result, statGet, statSet);
-	Memory.Free(statGet->fileList.addr());
-	if (result->result < 0)	{
-		cellSysutil.Error("cellSaveDataListLoad2: CellSaveDataStatCallback failed."); // TODO: Once we verify that the entire SysCall is working, delete this debug error message.
+	PSFLoader psf(vfsFile(sfo_path, vfsRead));
+
+	std::string dir_local_path;
+	
+	Emu.GetVFS().GetDevice(dir_path, dir_local_path);
+
+	FileInfo dir_info = {};
+
+	get_file_info(dir_local_path, dir_info);
+
+	statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
+	statGet->isNewData = save_entry.isNew = !psf;
+
+	statGet->dir.atime = save_entry.atime = dir_info.atime;
+	statGet->dir.mtime = save_entry.mtime = dir_info.mtime;
+	statGet->dir.ctime = save_entry.ctime = dir_info.ctime;
+	strcpy_trunc(statGet->dir.dirName, save_entry.dirName);
+
+	statGet->getParam.attribute = psf.GetInteger("ATTRIBUTE"); // ???
+	strcpy_trunc(statGet->getParam.title, save_entry.title = psf.GetString("TITLE"));
+	strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.GetString("SUB_TITLE"));
+	strcpy_trunc(statGet->getParam.detail, save_entry.details = psf.GetString("DETAIL"));
+	strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.GetString("SAVEDATA_LIST_PARAM"));
+
+	statGet->bind = 0;
+	statGet->sizeKB = save_entry.size / 1024;
+	statGet->sysSizeKB = 0; // This is the size of system files, but PARAM.SFO is very small and PARAM.PDF is not used
+
+	statGet->fileNum = 0;
+	statGet->fileList.set(setBuf->buf.addr());
+	statGet->fileListNum = 0;
+	memset(statGet->reserved, 0, sizeof(statGet->reserved));
+
+	auto file_list = statGet->fileList.get_ptr();
+
+	for (const auto entry : vfsDir(dir_path))
+	{
+		// only files, system files ignored, fileNum is limited by setBuf->fileListMax
+		if (entry->flags & DirEntry_TypeFile && entry->name != "PARAM.SFO" && statGet->fileListNum++ < setBuf->fileListMax)
+		{
+			statGet->fileNum++;
+
+			auto& file = *file_list++;
+
+			if (entry->name == "ICON0.PNG")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+			}
+			else if (entry->name == "ICON1.PAM")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+			}
+			else if (entry->name == "PIC1.PNG")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+			}
+			else if (entry->name == "SND0.AT3")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+			}
+			else
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE; // protected files are not supported
+			}
+
+			file.size = entry->size;
+			file.atime = entry->access_time;
+			file.mtime = entry->modify_time;
+			file.ctime = entry->create_time;
+			strcpy_trunc(file.fileName, entry->name);
+		}
+	}
+
+	// Stat Callback
+	funcStat(CPU, result, statGet, statSet);
+
+	if (result->result < 0)
+	{
 		return CELL_SAVEDATA_ERROR_CBRESULT;
 	}
 
-	/*if (statSet->setParam)
-	// TODO: Write PARAM.SFO file
-	*/
+	// Update PARAM.SFO
+	if (statSet->setParam)
+	{
+		psf.Clear();
+		psf.SetString("ACCOUNT_ID", ""); // ???
+		psf.SetInteger("ATTRIBUTE", statSet->setParam->attribute);
+		psf.SetString("CATEGORY", "SD"); // ???
+		psf.SetString("PARAMS", ""); // ???
+		psf.SetString("PARAMS2", ""); // ???
+		psf.SetInteger("PARENTAL_LEVEL", 0); // ???
+		psf.SetString("DETAIL", statSet->setParam->detail);
+		psf.SetString("SAVEDATA_DIRECTORY", save_entry.dirName);
+		psf.SetString("SAVEDATA_LIST_PARAM", statSet->setParam->listParam);
+		psf.SetString("SUB_TITLE", statSet->setParam->subTitle);
+		psf.SetString("TITLE", statSet->setParam->title);
+	}
 
-	// Enter the loop where the save files are read/created/deleted.
-	s32 ret = modifySaveDataFiles(funcFile, result, base_dir + (char*)statGet->dir.dirName);
+	switch (const auto mode = statSet->reCreateMode.value() & 0xffff)
+	{
+	case CELL_SAVEDATA_RECREATE_NO:
+	case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
+	{
+		break;
+	}
+	case CELL_SAVEDATA_RECREATE_YES:
+	case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
+	{
+		// kill it with fire
+		for (const auto entry : vfsDir(dir_path))
+		{
+			if (entry->flags & DirEntry_TypeFile)
+			{
+				Emu.GetVFS().RemoveFile(dir_path + entry->name);
+			}
+		}
 
-	return ret;
+		break;
+	}
+	default:
+	{
+		cellSysutil.Error("savedata_op(): unknown statSet->reCreateMode (0x%x)", statSet->reCreateMode);
+		return CELL_SAVEDATA_ERROR_PARAM;
+	}
+	}
+
+	// Create save directory if necessary
+	if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
+	{
+		// error
+	}
+
+	// Write PARAM.SFO
+	if (psf)
+	{
+		Emu.GetVFS().CreateFile(sfo_path, true);
+		psf.Save(vfsFile(sfo_path, vfsWrite));
+	}
+
+	// Enter the loop where the save files are read/created/deleted
+	fileGet->excSize = 0;
+	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
+
+	while (true)
+	{
+		funcFile(CPU, result, fileGet, fileSet);
+
+		if (result->result < 0)
+		{
+			return CELL_SAVEDATA_ERROR_CBRESULT;
+		}
+
+		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
+		{
+			break;
+		}
+
+		std::string filepath = dir_path;
+
+		switch (const auto type = fileSet->fileType.value())
+		{
+		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
+		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
+		{
+			filepath += fileSet->fileName.get_ptr();
+			break;
+		}
+
+		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:
+		{
+			filepath += "ICON0.PNG";
+			break;
+		}
+
+		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:
+		{
+			filepath += "ICON1.PAM";
+			break;
+		}
+
+		case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:
+		{
+			filepath += "PIC1.PNG";
+			break;
+		}
+
+		case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:
+		{
+			filepath += "SND0.AT3";
+			break;
+		}
+
+		default:
+		{
+			cellSysutil.Error("savedata_op(): unknown fileSet->fileType (0x%x)", type);
+			return CELL_SAVEDATA_ERROR_PARAM;
+		}
+		}
+
+		std::unique_ptr<vfsStream> file;
+
+		switch (const auto op = fileSet->fileOperation.value())
+		{
+		case CELL_SAVEDATA_FILEOP_READ:
+		{
+			file.reset(Emu.GetVFS().OpenFile(filepath, vfsRead));
+			file->Seek(fileSet->fileOffset);
+			fileGet->excSize = file->Read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			break;
+		}
+
+		case CELL_SAVEDATA_FILEOP_WRITE:
+		{
+			Emu.GetVFS().CreateFile(filepath);
+			file.reset(Emu.GetVFS().OpenFile(filepath, vfsReadWrite));
+			file->Seek(fileSet->fileOffset);
+			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			// TODO: truncate this fucked shit
+			break;
+		}
+
+		case CELL_SAVEDATA_FILEOP_DELETE:
+		{
+			Emu.GetVFS().RemoveFile(filepath);
+			fileGet->excSize = 0;
+			break;
+		}
+
+		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
+		{
+			Emu.GetVFS().CreateFile(filepath);
+			file.reset(Emu.GetVFS().OpenFile(filepath, vfsReadWrite));
+			file->Seek(fileSet->fileOffset);
+			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			break;
+		}
+
+		default:
+		{
+			cellSysutil.Error("savedata_op(): unknown fileSet->fileOperation (0x%x)", op);
+			return CELL_SAVEDATA_ERROR_PARAM;
+		}
+		}
+	}
+
+	return CELL_OK;
 }
 
 // Functions

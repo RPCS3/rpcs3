@@ -155,7 +155,7 @@ bool rMkpath(const std::string& path)
 bool rRmdir(const std::string& dir)
 {
 #ifdef _WIN32
-	if (!RemoveDirectory(ConvertUTF8ToWChar(dir).get()))
+	if (!RemoveDirectoryW(ConvertUTF8ToWChar(dir).get()))
 #else
 	if (rmdir(dir.c_str()))
 #endif
@@ -171,7 +171,7 @@ bool rRename(const std::string& from, const std::string& to)
 {
 	// TODO: Deal with case-sensitivity
 #ifdef _WIN32
-	if (!MoveFile(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get()))
+	if (!MoveFileW(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get()))
 #else
 	if (rename(from.c_str(), to.c_str()))
 #endif
@@ -222,7 +222,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 {
 #ifdef _WIN32
-	if (!CopyFile(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get(), !overwrite))
+	if (!CopyFileW(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get(), !overwrite))
 #else
 	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
 #endif
@@ -237,7 +237,7 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 bool rExists(const std::string& file)
 {
 #ifdef _WIN32
-	return GetFileAttributes(ConvertUTF8ToWChar(file).get()) != 0xFFFFFFFF;
+	return GetFileAttributesW(ConvertUTF8ToWChar(file).get()) != 0xFFFFFFFF;
 #else
 	struct stat buffer;
 	return stat(file.c_str(), &buffer) == 0;
@@ -247,7 +247,7 @@ bool rExists(const std::string& file)
 bool rRemoveFile(const std::string& file)
 {
 #ifdef _WIN32
-	if (!DeleteFile(ConvertUTF8ToWChar(file).get()))
+	if (!DeleteFileW(ConvertUTF8ToWChar(file).get()))
 #else
 	if (unlink(file.c_str()))
 #endif

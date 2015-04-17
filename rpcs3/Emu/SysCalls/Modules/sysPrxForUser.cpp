@@ -982,6 +982,13 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
 	return dest;
 }
 
+vm::ptr<const char> _sys_strchr(vm::ptr<const char> str, s32 ch)
+{
+	sysPrxForUser.Log("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
+
+	return vm::ptr<const char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
+}
+
 vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
 {
 	sysPrxForUser.Log("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
@@ -1363,6 +1370,7 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, _sys_strcmp);
 	REG_FUNC(sysPrxForUser, _sys_strncmp);
 	REG_FUNC(sysPrxForUser, _sys_strcat);
+	REG_FUNC(sysPrxForUser, _sys_strchr);
 	REG_FUNC(sysPrxForUser, _sys_strncat);
 	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);

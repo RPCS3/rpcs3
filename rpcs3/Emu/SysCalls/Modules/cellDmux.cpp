@@ -835,6 +835,11 @@ s32 cellDmuxOpenEx(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResou
 	return CELL_OK;
 }
 
+s32 _nid_e075fabc(vm::ptr<const CellDmuxType> type, vm::ptr<const CellDmuxResourceEx> resEx, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
+{
+	return cellDmuxOpenEx(type, resEx, cb, handle);
+}
+
 s32 cellDmuxOpen2(vm::ptr<const CellDmuxType2> type2, vm::ptr<const CellDmuxResource2> res2, vm::ptr<const CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.Warning("cellDmuxOpen2(type2=*0x%x, res2=*0x%x, cb=*0x%x, handle=*0x%x)", type2, res2, cb, handle);
@@ -1190,6 +1195,7 @@ Module cellDmux("cellDmux", []()
 	REG_FUNC(cellDmux, cellDmuxQueryAttr2);
 	REG_FUNC(cellDmux, cellDmuxOpen);
 	REG_FUNC(cellDmux, cellDmuxOpenEx);
+	REG_UNNAMED(cellDmux, e075fabc);
 	REG_FUNC(cellDmux, cellDmuxOpen2);
 	REG_FUNC(cellDmux, cellDmuxClose);
 	REG_FUNC(cellDmux, cellDmuxSetStream);

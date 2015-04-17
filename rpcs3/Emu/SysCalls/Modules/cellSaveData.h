@@ -85,6 +85,13 @@ enum
 	CELL_SAVEDATA_FILETYPE_CONTENT_ICON1  = 3,
 	CELL_SAVEDATA_FILETYPE_CONTENT_PIC1   = 4,
 	CELL_SAVEDATA_FILETYPE_CONTENT_SND0   = 5,
+
+	// reCreateMode
+	CELL_SAVEDATA_RECREATE_NO              = 0,
+	CELL_SAVEDATA_RECREATE_NO_NOBROKEN     = 1,
+	CELL_SAVEDATA_RECREATE_YES             = 2,
+	CELL_SAVEDATA_RECREATE_YES_RESET_OWNER = 3,
+	CELL_SAVEDATA_RECREATE_MASK            = 0xffff,
 };
 
 
@@ -167,9 +174,9 @@ struct CellSaveDataSystemFileParam
 
 struct CellSaveDataDirStat
 { 
-	be_t<s64> st_atime_;
-	be_t<s64> st_mtime_;
-	be_t<s64> st_ctime_;
+	be_t<s64> atime;
+	be_t<s64> mtime;
+	be_t<s64> ctime;
 	char dirName[CELL_SAVEDATA_DIRNAME_SIZE]; 
 };
 
@@ -177,10 +184,10 @@ struct CellSaveDataFileStat
 { 
 	be_t<u32> fileType;
 	u8 reserved1[4];
-	be_t<u64> st_size;
-	be_t<s64> st_atime_;
-	be_t<s64> st_mtime_;
-	be_t<s64> st_ctime_;
+	be_t<u64> size;
+	be_t<s64> atime;
+	be_t<s64> mtime;
+	be_t<s64> ctime;
 	char fileName[CELL_SAVEDATA_FILENAME_SIZE]; 
 	u8 reserved2[3];
 };
@@ -286,4 +293,6 @@ struct SaveDataDialogInstance
 
 	SaveDataDialogInstance();
 	virtual ~SaveDataDialogInstance() = default;
+
+	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, vm::ptr<CellSaveDataListSet> listSet) = 0;
 };

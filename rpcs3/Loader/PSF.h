@@ -50,7 +50,7 @@ public:
 
 	bool Load(vfsStream& stream);
 
-	bool Save(vfsStream& stream);
+	bool Save(vfsStream& stream) const;
 
 	void Clear();
 

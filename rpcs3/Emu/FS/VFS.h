@@ -46,6 +46,9 @@ struct VFSManagerEntry
 std::vector<std::string> simplify_path_blocks(const std::string& path);
 std::string simplify_path(const std::string& path, bool is_dir, bool is_ps3);
 
+#undef CreateFile
+#undef CopyFile
+
 struct VFS
 {
 	~VFS();
