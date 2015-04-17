@@ -12,6 +12,7 @@ extern "C"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/imgutils.h"
+#include "libswscale/swscale.h"
 }
 
 #include "Emu/CPU/CPUThreadManager.h"
@@ -678,7 +679,7 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
 
-	if (!vdec)
+	if (!vdec || !format)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -704,9 +705,21 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 	if (outBuff)
 	{
-		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
+		const auto f = vdec->ctx->pix_fmt;
+		const auto w = vdec->ctx->width;
+		const auto h = vdec->ctx->height;
+
+		auto out_f = AV_PIX_FMT_YUV420P;
+
+		std::unique_ptr<u8> alpha_plane;
+
+		switch (const auto type = format->formatType.value())
 		{
-			cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", format->formatType);
+		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_UYVY422_ILV: out_f = AV_PIX_FMT_UYVY422; break;
+		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
+		default: cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", type);
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
@@ -714,18 +727,66 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 			cellVdec.Fatal("cellVdecGetPicture: unknown colorMatrixType(%d)", format->colorMatrixType);
 		}
 
-		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
-
-		// TODO: zero padding bytes
-
-		int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
-		if (err < 0)
+		if (alpha_plane)
 		{
-			cellVdec.Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+			memset(alpha_plane.get(), format->alpha, w * h);
 		}
+
+		auto in_f = AV_PIX_FMT_YUV420P;
+
+		switch (f)
+		{
+		case AV_PIX_FMT_YUV420P: in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : AV_PIX_FMT_YUV420P; break;
+		default: cellVdec.Fatal("cellVdecGetPicture: unknown pix_fmt(%d)", f);
+		}
+
+		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, in_f, w, h, out_f, SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+
+		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
+		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
+		u8* out_data[4] = { outBuff.get_ptr() };
+		int out_line[4] = { w * 4 };
+
+		if (!alpha_plane)
+		{
+			out_data[1] = out_data[0] + w * h;
+			out_data[2] = out_data[0] + w * h * 5 / 4;
+			out_line[0] = w;
+			out_line[1] = w / 2;
+			out_line[2] = w / 2;
+		}
+
+		sws_scale(sws.get(), in_data, frame->linesize, 0, h, out_data, out_line);
+
+		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+
+		//// TODO: zero padding bytes
+
+		//int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
+		//if (err < 0)
+		//{
+		//	cellVdec.Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+		//}
 	}
 
 	return CELL_OK;
+}
+
+s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::ptr<const CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+{
+	cellVdec.Warning("_nid_a21aa896(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
+
+	if (arg4 || format2->unk0 || format2->unk1)
+	{
+		cellVdec.Fatal("_nid_a21aa896(): unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
+	}
+
+	vm::stackvar<CellVdecPicFormat> format(CPU);
+	format->formatType = format2->formatType;
+	format->colorMatrixType = format2->colorMatrixType;
+	format->alpha = format2->alpha;
+
+	return cellVdecGetPicture(handle, format, outBuff);
 }
 
 s32 cellVdecGetPicItem(u32 handle, vm::ptr<vm::bptr<CellVdecPicItem>> picItem)
@@ -903,6 +964,7 @@ Module cellVdec("cellVdec", []()
 	REG_FUNC(cellVdec, cellVdecEndSeq);
 	REG_FUNC(cellVdec, cellVdecDecodeAu);
 	REG_FUNC(cellVdec, cellVdecGetPicture);
+	REG_UNNAMED(cellVdec, a21aa896);
 	REG_FUNC(cellVdec, cellVdecGetPicItem);
 	REG_FUNC(cellVdec, cellVdecSetFrameRate);
 });

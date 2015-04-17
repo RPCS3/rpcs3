@@ -1156,7 +1156,7 @@ s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
 
 	// probably, assertion failed
-	sysPrxForUser.Warning("_sys_printf: \n%s", fmt.get_ptr());
+	sysPrxForUser.Fatal("_sys_printf: \n%s", fmt.get_ptr());
 	Emu.Pause();
 	return CELL_OK;
 }

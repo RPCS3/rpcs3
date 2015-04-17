@@ -163,6 +163,15 @@ struct CellVdecPicFormat
 	u8 alpha;
 };
 
+struct CellVdecPicFormat2
+{
+	be_t<CellVdecPicFormatType> formatType;
+	be_t<CellVdecColorMatrixType> colorMatrixType;
+	be_t<u32> unk0;
+	u8 alpha;
+	be_t<u32> unk1;
+};
+
 typedef u32(CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
 
 // Callback Function Information

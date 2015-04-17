@@ -554,6 +554,11 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 	return CELL_OK;
 }
 
+s32 _nid_df982d2c(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
+{
+	return cellAdecOpenEx(type, res, cb, handle);
+}
+
 s32 cellAdecClose(u32 handle)
 {
 	cellAdec.Warning("cellAdecClose(handle=0x%x)", handle);
@@ -874,6 +879,7 @@ Module cellAdec("cellAdec", []()
 	REG_FUNC(cellAdec, cellAdecQueryAttr);
 	REG_FUNC(cellAdec, cellAdecOpen);
 	REG_FUNC(cellAdec, cellAdecOpenEx);
+	REG_UNNAMED(cellAdec, df982d2c);
 	REG_FUNC(cellAdec, cellAdecClose);
 	REG_FUNC(cellAdec, cellAdecStartSeq);
 	REG_FUNC(cellAdec, cellAdecEndSeq);
