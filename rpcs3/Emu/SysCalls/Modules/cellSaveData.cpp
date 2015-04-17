@@ -454,7 +454,7 @@ __noinline s32 savedata_op(
 			psf.SetString("TITLE", statSet->setParam->title);
 		}
 
-		switch (const auto mode = statSet->reCreateMode & 0xffff)
+		switch (const u32 mode = statSet->reCreateMode & 0xffff)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
@@ -522,7 +522,7 @@ __noinline s32 savedata_op(
 
 		std::string filepath = dir_path;
 
-		switch (const auto type = fileSet->fileType)
+		switch (const u32 type = fileSet->fileType)
 		{
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
@@ -564,7 +564,7 @@ __noinline s32 savedata_op(
 
 		std::unique_ptr<vfsStream> file;
 
-		switch (const auto op = fileSet->fileOperation)
+		switch (const u32 op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
