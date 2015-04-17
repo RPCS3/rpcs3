@@ -12,7 +12,7 @@ SysCallBase sys_ppu_thread("sys_ppu_thread");
 
 void _sys_ppu_thread_exit(PPUThread& CPU, u64 errorcode)
 {
-	sys_ppu_thread.Warning("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
+	sys_ppu_thread.Log("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	CPU.SetExitStatus(errorcode);
 	CPU.Stop();
@@ -212,7 +212,7 @@ s32 _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> p
 	ppu.SetPrio(prio);
 	ppu.SetStackSize(stacksize < 0x4000 ? 0x4000 : stacksize); // (hack) adjust minimal stack size
 	ppu.SetJoinable(is_joinable);
-	ppu.SetName(threadname.get_ptr());
+	ppu.SetName(threadname ? threadname.get_ptr() : "");
 	ppu.Run();
 
 	ppu.GPR[3] = arg;

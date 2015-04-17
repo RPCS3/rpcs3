@@ -109,14 +109,6 @@ __noinline s32 savedata_op(
 	std::string base_dir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current or specified user
 
 	vm::stackvar<CellSaveDataCBResult> result(CPU);
-	vm::stackvar<CellSaveDataListGet> listGet(CPU);
-	vm::stackvar<CellSaveDataListSet> listSet(CPU);
-	vm::stackvar<CellSaveDataFixedSet> fixedSet(CPU);
-	vm::stackvar<CellSaveDataStatGet> statGet(CPU);
-	vm::stackvar<CellSaveDataStatSet> statSet(CPU);
-	vm::stackvar<CellSaveDataFileGet> fileGet(CPU);
-	vm::stackvar<CellSaveDataFileSet> fileSet(CPU);
-	vm::stackvar<CellSaveDataDoneGet> doneGet(CPU);
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
@@ -125,6 +117,8 @@ __noinline s32 savedata_op(
 	if (setList)
 	{
 		std::vector<SaveDataEntry> save_entries;
+
+		vm::stackvar<CellSaveDataListGet> listGet(CPU);
 
 		listGet->dirNum = 0;
 		listGet->dirListNum = 0;
@@ -205,6 +199,8 @@ __noinline s32 savedata_op(
 
 		if (funcList)
 		{
+			vm::stackvar<CellSaveDataListSet> listSet(CPU);
+			
 			// List Callback
 			funcList(CPU, result, listGet, listSet);
 
@@ -230,7 +226,7 @@ __noinline s32 savedata_op(
 			// Focus save data
 			s32 focused = -1;
 
-			switch (const u32 pos_type = listSet->focusPosition.value())
+			switch (const u32 pos_type = listSet->focusPosition)
 			{
 			case CELL_SAVEDATA_FOCUSPOS_DIRNAME:
 			{
@@ -314,6 +310,8 @@ __noinline s32 savedata_op(
 
 		if (funcFixed)
 		{
+			vm::stackvar<CellSaveDataFixedSet> fixedSet(CPU);
+
 			// Fixed Callback
 			funcFixed(CPU, result, listGet, fixedSet);
 
@@ -349,6 +347,9 @@ __noinline s32 savedata_op(
 	}
 
 	// get save stats
+	vm::stackvar<CellSaveDataStatGet> statGet(CPU);
+	vm::stackvar<CellSaveDataStatSet> statSet(CPU);
+
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
@@ -452,7 +453,7 @@ __noinline s32 savedata_op(
 		psf.SetString("TITLE", statSet->setParam->title);
 	}
 
-	switch (const auto mode = statSet->reCreateMode.value() & 0xffff)
+	switch (const auto mode = statSet->reCreateMode & 0xffff)
 	{
 	case CELL_SAVEDATA_RECREATE_NO:
 	case CELL_SAVEDATA_RECREATE_NO_NOBROKEN:
@@ -497,6 +498,9 @@ __noinline s32 savedata_op(
 	}
 
 	// Enter the loop where the save files are read/created/deleted
+	vm::stackvar<CellSaveDataFileGet> fileGet(CPU);
+	vm::stackvar<CellSaveDataFileSet> fileSet(CPU);
+
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
@@ -516,7 +520,7 @@ __noinline s32 savedata_op(
 
 		std::string filepath = dir_path;
 
-		switch (const auto type = fileSet->fileType.value())
+		switch (const auto type = fileSet->fileType)
 		{
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
@@ -558,7 +562,7 @@ __noinline s32 savedata_op(
 
 		std::unique_ptr<vfsStream> file;
 
-		switch (const auto op = fileSet->fileOperation.value())
+		switch (const auto op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{

@@ -985,7 +985,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 
 	if (old_value == 2)
 	{
-		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer.addr().value() != buffer.addr())
+		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer != buffer)
 		{
 			return CELL_SYNC_ERROR_INVAL;
 		}
