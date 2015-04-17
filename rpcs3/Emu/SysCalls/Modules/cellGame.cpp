@@ -50,7 +50,8 @@ s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-		const PSFLoader psf(vfsFile("/dev_hdd0/game/" + dir + "/PARAM.SFO"));
+		vfsFile f("/dev_hdd0/game/" + dir + "/PARAM.SFO");
+		const PSFLoader psf(f);
 		if (!psf)
 		{
 			return CELL_HDDGAME_ERROR_BROKEN;
@@ -103,7 +104,8 @@ s32 cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGa
 		size->sysSizeKB = 0;
 	}
 
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	if (!psf)
 	{
 		cellGame.Error("cellGameBootCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
@@ -163,7 +165,8 @@ s32 cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved
 		size->sysSizeKB = 0;
 	}
 
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	if (!psf)
 	{
 		cellGame.Error("cellGamePatchCheck(): CELL_GAME_ERROR_ACCESS_ERROR (cannot read PARAM.SFO)");
@@ -290,7 +293,8 @@ s32 cellGameDataCheckCreate2(PPUThread& CPU, u32 version, vm::ptr<const char> di
 		return CELL_GAMEDATA_RET_OK;
 	}
 
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	if (!psf)
 	{
 		cellGame.Error("cellGameDataCheckCreate2(): CELL_GAMEDATA_ERROR_BROKEN (cannot read PARAM.SFO)");
@@ -419,7 +423,8 @@ s32 cellGameGetParamInt(u32 id, vm::ptr<u32> value)
 	cellGame.Warning("cellGameGetParamInt(id=%d, value=*0x%x)", id, value);
 
 	// TODO: Access through cellGame***Check functions
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	if (!psf)
 	{
 		return CELL_GAME_ERROR_FAILURE;
@@ -443,7 +448,8 @@ s32 cellGameGetParamString(u32 id, vm::ptr<char> buf, u32 bufsize)
 	cellGame.Warning("cellGameGetParamString(id=%d, buf=*0x%x, bufsize=%d)", id, buf, bufsize);
 
 	// TODO: Access through cellGame***Check functions
-	const PSFLoader psf(vfsFile("/app_home/../PARAM.SFO"));
+	vfsFile f("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	if (!psf)
 	{
 		return CELL_GAME_ERROR_FAILURE;

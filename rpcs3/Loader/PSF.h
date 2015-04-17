@@ -61,7 +61,7 @@ public:
 
 	const PSFEntry* SearchEntry(const std::string& key) const;
 
-	PSFEntry& PSFLoader::AddEntry(const std::string& key, u16 type);
+	PSFEntry& AddEntry(const std::string& key, u16 type);
 
 	std::string GetString(const std::string& key, std::string def = "") const;
 

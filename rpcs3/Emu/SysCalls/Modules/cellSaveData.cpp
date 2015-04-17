@@ -150,7 +150,8 @@ __noinline s32 savedata_op(
 						listGet->dirNum++;
 
 						// PSF parameters
-						const PSFLoader psf(vfsFile(base_dir + entry->name + "/PARAM.SFO"));
+						vfsFile f(base_dir + entry->name + "/PARAM.SFO");
+						const PSFLoader psf(f);
 
 						if (!psf)
 						{
@@ -351,7 +352,8 @@ __noinline s32 savedata_op(
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
-	PSFLoader psf(vfsFile(sfo_path, vfsRead));
+	vfsFile f(sfo_path);
+	PSFLoader psf(f);
 
 	std::string dir_local_path;
 	
@@ -487,7 +489,9 @@ __noinline s32 savedata_op(
 	if (psf)
 	{
 		Emu.GetVFS().CreateFile(sfo_path, true);
-		psf.Save(vfsFile(sfo_path, vfsWrite));
+
+		vfsFile f(sfo_path, vfsWrite);
+		psf.Save(f);
 	}
 
 	// Enter the loop where the save files are read/created/deleted
