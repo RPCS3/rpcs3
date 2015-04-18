@@ -14,7 +14,7 @@ namespace cb_detail
 	// Current implementation can handle only fixed amount of stack arguments.
 	// This constant can be increased if necessary.
 	// It's possible to calculate suitable stack frame size in template, but too complicated.
-	static const auto FIXED_STACK_FRAME_SIZE = 0x100;
+	static const auto FIXED_STACK_FRAME_SIZE = 0x90;
 
 	template<typename T, _func_arg_type type, int g_count, int f_count, int v_count>
 	struct _func_arg;
@@ -61,7 +61,7 @@ namespace cb_detail
 
 		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			const int stack_pos = 0x70 + (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
+			const int stack_pos = (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
 			vm::write64(CPU.GPR[1] + stack_pos, cast_to_ppu_gpr<T>(arg));
 		}

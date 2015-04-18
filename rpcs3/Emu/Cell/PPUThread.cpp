@@ -663,7 +663,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
-	auto old_stack = GPR[1]; // only saved and restored (may be wrong)
+	auto old_stack = GPR[1];
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
 	auto old_thread = GetCurrentNamedThread();
@@ -671,6 +671,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	m_status = Running;
 	PC = addr;
+	GPR[1] -= 0x70; // create stack frame reserved area
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
@@ -680,7 +681,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	m_status = old_status;
 	PC = old_PC;
-	GPR[1] = old_stack;
+	GPR[1] = old_stack; // TODO: error check instead of blind assignment? GPR[1] shouldn't change
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
