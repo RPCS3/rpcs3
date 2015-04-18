@@ -109,8 +109,8 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 	{
 		switch (type & CELL_MSGDIALOG_TYPE_SE_TYPE)
 		{
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil.Warning("%s", msg.c_str()); break;
-		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil.Error("%s", msg.c_str()); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL: cellSysutil.Warning("%s", msg); break;
+		case CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR: cellSysutil.Error("%s", msg); break;
 		}
 
 		g_msg_dialog->status = CELL_MSGDIALOG_BUTTON_NONE;
@@ -120,7 +120,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::ptr<const char> msgString, vm::ptr<CellMsgD
 		{
 			if (Emu.IsStopped()) return;
 
-			g_msg_dialog->Create(type, msg.c_str());
+			g_msg_dialog->Create(type, msg);
 
 			m_signal = true;
 		});
@@ -266,6 +266,7 @@ s32 cellMsgDialogClose(float delay)
 	}
 
 	g_msg_dialog->wait_until = get_system_time() + static_cast<u64>(std::max<float>(delay, 0.0f) * 1000);
+
 	return CELL_OK;
 }
 
@@ -306,12 +307,7 @@ s32 cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::ptr<const char> msg
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	std::string text = msgString.get_ptr();
-
-	CallAfter([text, progressBarIndex]()
-	{
-		g_msg_dialog->ProgressBarSetMsg(progressBarIndex, text.c_str());
-	});
+	g_msg_dialog->ProgressBarSetMsg(progressBarIndex, msgString.get_ptr());
 
 	return CELL_OK;
 }
@@ -330,10 +326,7 @@ s32 cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	CallAfter([=]()
-	{
-		g_msg_dialog->ProgressBarReset(progressBarIndex);
-	});
+	g_msg_dialog->ProgressBarReset(progressBarIndex);
 
 	return CELL_OK;
 }
@@ -352,10 +345,7 @@ s32 cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	CallAfter([=]()
-	{
-		g_msg_dialog->ProgressBarInc(progressBarIndex, delta);
-	});
+	g_msg_dialog->ProgressBarInc(progressBarIndex, delta);
 
 	return CELL_OK;
 }

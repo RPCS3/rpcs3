@@ -103,9 +103,9 @@ struct MsgDialogInstance
 
 	virtual void Close();
 
-	virtual void Create(u32 type, const char* msg) = 0;
+	virtual void Create(u32 type, std::string msg) = 0;
 	virtual void Destroy() = 0;
-	virtual void ProgressBarSetMsg(u32 progressBarIndex, const char* msg) = 0;
+	virtual void ProgressBarSetMsg(u32 progressBarIndex, std::string msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
 };

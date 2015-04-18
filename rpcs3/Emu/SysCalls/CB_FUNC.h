@@ -162,14 +162,13 @@ namespace cb_detail
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(CPUThread& CPU, T... args) const
+	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(PPUThread& CPU, T... args) const
 	{
-		auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
+		const auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
 		const u32 pc = data[0];
 		const u32 rtoc = data[1];
 
-		assert(CPU.GetType() == CPU_THREAD_PPU);
-		return cb_detail::_func_caller<RT, T...>::call(static_cast<PPUThread&>(CPU), pc, rtoc, args...);
+		return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 	}
 
 	template<typename AT, typename RT, typename... T>

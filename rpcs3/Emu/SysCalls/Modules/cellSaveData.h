@@ -183,13 +183,13 @@ struct CellSaveDataDirStat
 struct CellSaveDataFileStat
 { 
 	be_t<u32> fileType;
-	u8 reserved1[4];
+	char reserved1[4];
 	be_t<u64> size;
 	be_t<s64> atime;
 	be_t<s64> mtime;
 	be_t<s64> ctime;
 	char fileName[CELL_SAVEDATA_FILENAME_SIZE]; 
-	u8 reserved2[3];
+	char reserved2[3];
 };
 
 struct CellSaveDataStatGet

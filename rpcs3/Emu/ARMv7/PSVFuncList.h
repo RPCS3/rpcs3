@@ -46,7 +46,7 @@ namespace psv_func_detail
 		ARG_STACK,
 	};
 
-	static const auto FIXED_STACK_FRAME_SIZE = 0x100; // described in CB_FUNC.h
+	static const auto FIXED_STACK_FRAME_SIZE = 0x80; // described in CB_FUNC.h
 
 	template<typename T, arg_class type, int g_count, int f_count, int v_count>
 	struct bind_arg;

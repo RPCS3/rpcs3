@@ -1,6 +1,6 @@
 #pragma once
 
-class CPUThread;
+class PPUThread;
 struct ARMv7Context;
 
 namespace vm
@@ -354,7 +354,7 @@ namespace vm
 	public:
 		typedef RT(type)(T...);
 
-		RT operator()(CPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
+		RT operator()(PPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
 
 		RT operator()(ARMv7Context& context, T... args) const; // defined in ARMv7Callback.h, passing context is mandatory
 

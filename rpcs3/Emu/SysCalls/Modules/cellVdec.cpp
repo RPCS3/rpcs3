@@ -719,7 +719,11 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; alpha_plane.reset(new u8[w * h]); break;
 		case CELL_VDEC_PICFMT_UYVY422_ILV: out_f = AV_PIX_FMT_UYVY422; break;
 		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
-		default: cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", type);
+
+		default:
+		{
+			cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", type);
+		}
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
@@ -737,7 +741,11 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 		switch (f)
 		{
 		case AV_PIX_FMT_YUV420P: in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : AV_PIX_FMT_YUV420P; break;
-		default: cellVdec.Fatal("cellVdecGetPicture: unknown pix_fmt(%d)", f);
+
+		default:
+		{
+			cellVdec.Fatal("cellVdecGetPicture: unknown pix_fmt(%d)", f);
+		}
 		}
 
 		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, in_f, w, h, out_f, SWS_POINT, NULL, NULL, NULL), sws_freeContext);
