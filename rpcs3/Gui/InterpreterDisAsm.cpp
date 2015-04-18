@@ -514,10 +514,12 @@ void InterpreterDisAsmFrame::InstrKey(wxListEvent& event)
 	switch(event.GetKeyCode())
 	{
 	case 'E':
+		// TODO:: Syphurith: It is said the InstructionEditorDialog would be immediately destroyed.
 		InstructionEditorDialog(this, pc, CPU, decoder, disasm);
 		DoUpdate();
 		return;
 	case 'R':
+		// TODO:: Syphurith: Eh Similiar for this one.
 		RegisterEditorDialog(this, pc, CPU, decoder, disasm);
 		DoUpdate();
 		return;

@@ -168,6 +168,7 @@ next:
 		
 		goto next;
 	}
+	// TODO:: Syphurith: Orz. The if condition above is same with this one, so this would not be executed.
 	else if (vdec.reader.size < (u32)buf_size)
 	{
 		buf_size = vdec.reader.size;

@@ -258,7 +258,7 @@ public:
 
 		sync_var.atomic_op([&out_result, &out_value, &out_count, last_value](sync_var_t& data)
 		{
-			if ((out_result = data.count != 0))
+			if ((out_result = (data.count != 0)))
 			{
 				out_value = data.value0;
 				out_count = --data.count;

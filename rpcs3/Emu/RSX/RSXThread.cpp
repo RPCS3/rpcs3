@@ -397,7 +397,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
-		// Vertex Texture
+	// Vertex Texture
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_FORMAT, 0x20);
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_OFFSET, 0x20);
 	case_range(4, NV4097_SET_VERTEX_TEXTURE_FILTER, 0x20);

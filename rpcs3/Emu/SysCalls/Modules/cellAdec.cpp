@@ -196,6 +196,7 @@ next:
 
 		goto next;
 	}
+	// TODO:: Syphurith: I don't know whether we should keep this else-if now. Since the if condition is same with this one.
 	else if (adec.reader.size < (u32)buf_size)
 	{
 		buf_size = adec.reader.size;
