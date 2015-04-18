@@ -20,8 +20,9 @@ bool rMkdir(const std::string& dir);
 bool rMkpath(const std::string& path);
 bool rRename(const std::string& from, const std::string& to);
 bool rCopy(const std::string& from, const std::string& to, bool overwrite);
-bool rExists(const std::string& path);
-bool rRemoveFile(const std::string& path);
+bool rExists(const std::string& file);
+bool rRemoveFile(const std::string& file);
+bool rTruncate(const std::string& file, uint64_t length);
 
 enum rSeekMode
 {

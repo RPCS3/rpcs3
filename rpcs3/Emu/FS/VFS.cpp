@@ -315,6 +315,18 @@ bool VFS::CopyFile(const std::string& ps3_path_from, const std::string& ps3_path
 	return false;
 }
 
+bool VFS::TruncateFile(const std::string& ps3_path, u64 length) const
+{
+	std::string path;
+
+	if (vfsDevice* dev = GetDevice(ps3_path, path))
+	{
+		return rTruncate(path, length);
+	}
+
+	return false;
+}
+
 vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 {
 	auto try_get_device = [this, &path](const std::string& ps3_path) -> vfsDevice*

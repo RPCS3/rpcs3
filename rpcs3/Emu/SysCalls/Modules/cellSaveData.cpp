@@ -346,17 +346,21 @@ __noinline s32 savedata_op(
 		save_entry.dirName = dirName.get_ptr();
 	}
 
-	// get save stats
 	std::string dir_path = base_dir + save_entry.dirName + "/";
 	std::string sfo_path = dir_path + "PARAM.SFO";
 
+	PSFLoader psf;
+
+	// Load PARAM.SFO
+	{
+		vfsFile f(sfo_path);
+		psf.Load(f);
+	}
+
+	// Get save stats
 	{
 		vm::stackvar<CellSaveDataStatGet> statGet(CPU);
 		vm::stackvar<CellSaveDataStatSet> statSet(CPU);
-
-		vfsFile f(sfo_path);
-		PSFLoader psf(f);
-		f.Close();
 
 		std::string dir_local_path;
 
@@ -416,9 +420,13 @@ __noinline s32 savedata_op(
 				{
 					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
 				}
+				else if (psf.GetInteger("*" + entry->name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
+				}
 				else
 				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE; // protected files are not supported
+					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
 				}
 
 				file.size = entry->size;
@@ -481,22 +489,12 @@ __noinline s32 savedata_op(
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+	}
 
-		// Create save directory if necessary
-		if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
-		{
-			// error
-		}
-
-		// Write PARAM.SFO
-		if (psf)
-		{
-			Emu.GetVFS().CreateFile(sfo_path, true);
-
-			f.Open(sfo_path, vfsWrite);
-			psf.Save(f);
-			f.Close();
-		}
+	// Create save directory if necessary
+	if (save_entry.isNew && !Emu.GetVFS().CreateDir(dir_path))
+	{
+		// Let's ignore this error for now
 	}
 
 	// Enter the loop where the save files are read/created/deleted
@@ -520,38 +518,38 @@ __noinline s32 savedata_op(
 			break;
 		}
 
-		std::string filepath = dir_path;
+		std::string filepath;
 
 		switch (const u32 type = fileSet->fileType)
 		{
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
 		{
-			filepath += fileSet->fileName.get_ptr();
+			filepath = fileSet->fileName.get_ptr();
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:
 		{
-			filepath += "ICON0.PNG";
+			filepath = "ICON0.PNG";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:
 		{
-			filepath += "ICON1.PAM";
+			filepath = "ICON1.PAM";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:
 		{
-			filepath += "PIC1.PNG";
+			filepath = "PIC1.PNG";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:
 		{
-			filepath += "SND0.AT3";
+			filepath = "SND0.AT3";
 			break;
 		}
 
@@ -561,6 +559,10 @@ __noinline s32 savedata_op(
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+
+		psf.SetInteger("*" + filepath, fileSet->fileType.data() == se32(CELL_SAVEDATA_FILETYPE_SECUREFILE));
+
+		filepath = dir_path + filepath;
 
 		std::unique_ptr<vfsStream> file;
 
@@ -606,6 +608,15 @@ __noinline s32 savedata_op(
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
 		}
+	}
+
+	// Write PARAM.SFO
+	if (psf)
+	{
+		Emu.GetVFS().CreateFile(sfo_path, true);
+
+		vfsFile f(sfo_path, vfsWrite);
+		psf.Save(f);
 	}
 
 	return CELL_OK;

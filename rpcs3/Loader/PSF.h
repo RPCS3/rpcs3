@@ -41,6 +41,8 @@ class PSFLoader
 	std::vector<PSFEntry> m_entries;
 
 public:
+	PSFLoader() = default;
+
 	PSFLoader(vfsStream& stream)
 	{
 		Load(stream);

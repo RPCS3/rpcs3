@@ -21,7 +21,7 @@ std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
 
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
-		LOG_ERROR(GENERAL, "ConvertUTF8ToWChar(source='%s') failed: 0x%llx", source.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "ConvertUTF8ToWChar(source='%s') failed: 0x%llx", source, GET_API_ERROR);
 	}
 
 	return buffer;
@@ -34,6 +34,33 @@ time_t to_time_t(const FILETIME& ft)
 	v.HighPart = ft.dwHighDateTime;
 
 	return v.QuadPart / 10000000ULL - 11644473600ULL;
+}
+
+bool truncate_file(const std::string& file, uint64_t length)
+{
+	const auto handle = CreateFileW(ConvertUTF8ToWChar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (handle == INVALID_HANDLE_VALUE)
+	{
+		return false;
+	}
+
+	LARGE_INTEGER distance;
+	distance.QuadPart = length;
+
+	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN))
+	{
+		CloseHandle(handle);
+		return false;
+	}
+
+	if (!SetEndOfFile(handle))
+	{
+		CloseHandle(handle);
+		return false;
+	}
+
+	return CloseHandle(handle);
 }
 
 #else
@@ -119,10 +146,16 @@ bool rIsDir(const std::string& dir)
 bool rMkdir(const std::string& dir)
 {
 #ifdef _WIN32
-	return !_mkdir(dir.c_str());
+	if (!CreateDirectoryW(ConvertUTF8ToWChar(dir).get(), NULL))
 #else
-	return !mkdir(dir.c_str(), 0777);
+	if (mkdir(dir.c_str(), 0777))
 #endif
+	{
+		LOG_ERROR(GENERAL, "Error creating directory '%s': 0x%llx", dir, GET_API_ERROR);
+		return false;
+	}
+
+	return true;
 }
 
 bool rMkpath(const std::string& path)
@@ -160,7 +193,7 @@ bool rRmdir(const std::string& dir)
 	if (rmdir(dir.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting directory %s: 0x%llx", dir.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting directory '%s': 0x%llx", dir, GET_API_ERROR);
 		return false;
 	}
 
@@ -176,7 +209,7 @@ bool rRename(const std::string& from, const std::string& to)
 	if (rename(from.c_str(), to.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
 		return false;
 	}
 
@@ -227,7 +260,7 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error copying '%s' to '%s': 0x%llx", from.c_str(), to.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error copying '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
 		return false;
 	}
 
@@ -252,9 +285,25 @@ bool rRemoveFile(const std::string& file)
 	if (unlink(file.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting file %s: 0x%llx", file.c_str(), GET_API_ERROR);
+		LOG_ERROR(GENERAL, "Error deleting file '%s': 0x%llx", file, GET_API_ERROR);
 		return false;
 	}
+
+	return true;
+}
+
+bool rTruncate(const std::string& file, uint64_t length)
+{
+#ifdef _WIN32
+	if (!truncate_file(file, length))
+#else
+	if (truncate64(file.c_str()), length)
+#endif
+	{
+		LOG_ERROR(GENERAL, "Error resizing file '%s' to 0x%llx: 0x%llx", file, length, GET_API_ERROR);
+		return false;
+	}
+
 	return true;
 }
 
@@ -350,7 +399,6 @@ rFile::rFile()
 
 rFile::rFile(const std::string& filename, rFile::OpenMode open)
 {
-
 	handle = reinterpret_cast<void*>(new wxFile(fmt::FromUTF8(filename), convertOpenMode(open)));
 }
 

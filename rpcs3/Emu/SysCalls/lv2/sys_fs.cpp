@@ -527,28 +527,16 @@ s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 	sys_fs.Warning("sys_fs_truncate(path=*0x%x, size=0x%llx)", path, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	vfsFile f(path.get_ptr(), vfsReadWrite);
-	if (!f.IsOpened())
+	const std::string filename = path.get_ptr();
+
+	if (!Emu.GetVFS().ExistsFile(filename))
 	{
-		sys_fs.Warning("sys_fs_truncate(): '%s' not found", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
-	u64 initialSize = f.GetSize();
-
-	if (initialSize < size)
+	if (!Emu.GetVFS().TruncateFile(filename, size))
 	{
-		u64 last_pos = f.Tell();
-		f.Seek(0, vfsSeekEnd);
-		static const char nullbyte = 0;
-		f.Seek(size - initialSize - 1, vfsSeekCur);
-		f.Write(&nullbyte, sizeof(char));
-		f.Seek(last_pos, vfsSeekSet);
-	}
-
-	if (initialSize > size)
-	{
-		// (TODO)
+		return CELL_FS_EIO; // ???
 	}
 
 	return CELL_OK;
