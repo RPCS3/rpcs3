@@ -106,12 +106,16 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 		{
 			// call LLE function if available
 
+			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
+			const u32 pc = data[0];
+			const u32 rtoc = data[1];
+
 			if (Ini.HLELogging.GetValue())
 			{
 				LOG_NOTICE(HLE, "LLE function called: %s", SysCalls::GetFuncName(func->id));
 			}
-
-			func->lle_func(CPU);
+			
+			CPU.FastCall2(pc, rtoc);
 
 			if (Ini.HLELogging.GetValue())
 			{

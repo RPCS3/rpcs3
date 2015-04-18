@@ -132,10 +132,7 @@ namespace cb_detail
 	{
 		__forceinline static RT call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 		{
-			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
-			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
-			CPU.FastCall2(pc, rtoc);
-			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
+			_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
 
 			static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
 			static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
@@ -154,7 +151,9 @@ namespace cb_detail
 		{
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
+			CPU.GPR[1] -= 0x70; // create reserved area
 			CPU.FastCall2(pc, rtoc);
+			CPU.GPR[1] += 0x70;
 			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 		}
 	};

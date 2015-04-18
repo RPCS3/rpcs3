@@ -671,7 +671,6 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	m_status = Running;
 	PC = addr;
-	GPR[1] -= 0x70; // create stack frame reserved area
 	GPR[2] = rtoc;
 	LR = Emu.GetCPUThreadStop();
 	SetCurrentNamedThread(this);
@@ -681,7 +680,13 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	m_status = old_status;
 	PC = old_PC;
-	GPR[1] = old_stack; // TODO: error check instead of blind assignment? GPR[1] shouldn't change
+
+	if (GPR[1] != old_stack) // GPR[1] shouldn't change
+	{
+		LOG_ERROR(PPU, "PPUThread::FastCall2(0x%x,0x%x): stack inconsistency (SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
+		GPR[1] = old_stack;
+	}
+
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);
