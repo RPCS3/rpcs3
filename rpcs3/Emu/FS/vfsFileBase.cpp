@@ -12,17 +12,10 @@ vfsFileBase::~vfsFileBase()
 	Close();
 }
 
-bool Access(const std::string& path, vfsOpenMode mode)
-{
-	return false;
-}
-
-bool vfsFileBase::Open(const std::string& path, vfsOpenMode mode)
+bool vfsFileBase::Open(const std::string& path, u32 mode)
 {
 	m_path = path;
 	m_mode = mode;
-
-	vfsStream::Reset();
 
 	return true;
 }
@@ -39,7 +32,7 @@ std::string vfsFileBase::GetPath() const
 	return m_path;
 }
 
-vfsOpenMode vfsFileBase::GetOpenMode() const
+u32 vfsFileBase::GetOpenMode() const
 {
 	return m_mode;
 }

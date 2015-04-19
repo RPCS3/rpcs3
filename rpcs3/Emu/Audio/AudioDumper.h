@@ -56,7 +56,7 @@ struct WAVHeader
 class AudioDumper
 {
 	WAVHeader m_header;
-	rFile m_output;
+	rfile_t m_output;
 	bool m_init;
 	
 public:

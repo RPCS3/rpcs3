@@ -1,13 +1,8 @@
 #pragma once
 
-class rFile;
+struct rfile_t;
 
-class PKGLoader
+struct PKGLoader
 {
-	rFile& pkg_f;
-
-public:
-	PKGLoader(rFile& f);
-	virtual bool Install(std::string dest);
-	virtual bool Close();
+	static bool Install(const rfile_t& pkg_f, std::string dest);
 };

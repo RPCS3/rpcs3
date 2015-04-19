@@ -580,10 +580,8 @@ void GLTexture::Save(RSXTexture& tex, const std::string& name)
 		return;
 	}
 
-	{
-		rFile f(name + ".raw", rFile::write);
-		f.Write(alldata, texPixelCount * 4);
-	}
+	rfile_t(name + ".raw", o_write | o_create | o_trunc).write(alldata, texPixelCount * 4);
+
 	u8* data = new u8[texPixelCount * 3];
 	u8* alpha = new u8[texPixelCount];
 
@@ -1136,8 +1134,7 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rFile f("./FragmentProgram.txt", rFile::write);
-		f.Write(m_fragment_prog.shader);
+		rfile_t("./FragmentProgram.txt", o_write | o_create | o_trunc).write(m_fragment_prog.shader.c_str(), m_fragment_prog.shader.size());
 	}
 
 	if (m_vp_buf_num == -1)
@@ -1148,8 +1145,7 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_vertex_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rFile f("./VertexProgram.txt", rFile::write);
-		f.Write(m_vertex_prog.shader);
+		rfile_t("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
 	}
 
 	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)

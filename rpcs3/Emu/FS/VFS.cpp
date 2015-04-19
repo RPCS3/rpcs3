@@ -133,7 +133,7 @@ void VFS::UnMountAll()
 	m_devices.clear();
 }
 
-vfsFileBase* VFS::OpenFile(const std::string& ps3_path, vfsOpenMode mode) const
+vfsFileBase* VFS::OpenFile(const std::string& ps3_path, u32 mode) const
 {
 	std::string path;
 
@@ -163,23 +163,6 @@ vfsDirBase* VFS::OpenDir(const std::string& ps3_path) const
 	}
 
 	return nullptr;
-}
-
-bool VFS::CreateFile(const std::string& ps3_path, bool overwrite) const
-{
-	std::string path;
-
-	if (vfsDevice* dev = GetDevice(ps3_path, path))
-	{
-		std::unique_ptr<vfsFileBase> res(dev->GetNewFileStream());
-
-		if (res)
-		{
-			return res->Create(path, overwrite);
-		}
-	}
-
-	return false;
 }
 
 bool VFS::CreateDir(const std::string& ps3_path) const

@@ -1,15 +1,12 @@
 #pragma once
 #include "vfsStream.h"
 
-enum vfsOpenMode : u8
+enum vfsOpenMode : u32
 {
-	vfsRead = 0x1,
-	vfsWrite = 0x2,
-	vfsExcl = 0x4,
-	vfsAppend = 0x8,
-	vfsReadWrite = vfsRead | vfsWrite,
-	vfsWriteExcl = vfsWrite | vfsExcl,
-	vfsWriteAppend = vfsWrite | vfsAppend,
+	vfsRead = o_read,
+	vfsReadWrite = o_read | o_write,
+	vfsWriteNew = o_write | o_create | o_trunc,
+	vfsWriteExcl = o_write | o_create | o_excl,
 };
 
 class vfsDevice;
@@ -18,20 +15,19 @@ struct vfsFileBase : public vfsStream
 {
 protected:
 	std::string m_path;
-	vfsOpenMode m_mode;
+	u32 m_mode;
 	vfsDevice* m_device;
 
 public:
 	vfsFileBase(vfsDevice* device);
 	virtual ~vfsFileBase();
 
-	virtual bool Open(const std::string& path, vfsOpenMode mode);
+	virtual bool Open(const std::string& path, u32 mode);
 	virtual bool Close() override;
-	virtual bool Create(const std::string& path, bool overwrite = false) { return false; }
 	virtual bool Exists(const std::string& path) { return false; }
 	virtual bool Rename(const std::string& from, const std::string& to) { return false; }
 	virtual bool Remove(const std::string& path) { return false; }
 
 	std::string GetPath() const;
-	vfsOpenMode GetOpenMode() const;
+	u32 GetOpenMode() const;
 };

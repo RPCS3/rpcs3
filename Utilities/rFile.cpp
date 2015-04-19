@@ -2,7 +2,6 @@
 #include "Log.h"
 #pragma warning(disable : 4996)
 #include <wx/dir.h>
-#include <wx/file.h>
 #include <wx/filename.h>
 #include "rFile.h"
 
@@ -38,6 +37,7 @@ time_t to_time_t(const FILETIME& ft)
 
 bool truncate_file(const std::string& file, uint64_t length)
 {
+	// open the file
 	const auto handle = CreateFileW(ConvertUTF8ToWChar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
@@ -48,15 +48,12 @@ bool truncate_file(const std::string& file, uint64_t length)
 	LARGE_INTEGER distance;
 	distance.QuadPart = length;
 
-	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN))
+	// seek and truncate
+	if (!SetFilePointerEx(handle, distance, NULL, FILE_BEGIN) || !SetEndOfFile(handle))
 	{
+		const auto error = GetLastError();
 		CloseHandle(handle);
-		return false;
-	}
-
-	if (!SetEndOfFile(handle))
-	{
-		CloseHandle(handle);
+		SetLastError(error);
 		return false;
 	}
 
@@ -297,7 +294,7 @@ bool rTruncate(const std::string& file, uint64_t length)
 #ifdef _WIN32
 	if (!truncate_file(file, length))
 #else
-	if (truncate64(file.c_str()), length)
+	if (truncate64(file.c_str(), length))
 #endif
 	{
 		LOG_ERROR(GENERAL, "Error resizing file '%s' to 0x%llx: 0x%llx", file, length, GET_API_ERROR);
@@ -307,164 +304,207 @@ bool rTruncate(const std::string& file, uint64_t length)
 	return true;
 }
 
-wxFile::OpenMode convertOpenMode(rFile::OpenMode open)
+rfile_t::rfile_t()
+#ifdef _WIN32
+	: fd(INVALID_HANDLE_VALUE)
+#else
+	: fd(-1)
+#endif
 {
-	wxFile::OpenMode mode;
-	switch (open)
+}
+
+rfile_t::~rfile_t()
+{
+#ifdef _WIN32
+	if (fd != INVALID_HANDLE_VALUE)
 	{
-	case rFile::read:
-		mode = wxFile::read;
-		break;
-	case rFile::write:
-		mode = wxFile::write;
-		break;
-	case rFile::read_write:
-		mode = wxFile::read_write;
-		break;
-	case rFile::write_append:
-		mode = wxFile::write_append;
-		break;
-	case rFile::write_excl:
-		mode = wxFile::write_excl;
-		break;
+		CloseHandle(fd);
 	}
-	return mode;
-}
-
-rFile::OpenMode rConvertOpenMode(wxFile::OpenMode open)
-{
-	rFile::OpenMode mode;
-	switch (open)
+#else
+	if (fd != -1)
 	{
-	case wxFile::read:
-		mode = rFile::read;
-		break;
-	case wxFile::write:
-		mode = rFile::write;
-		break;
-	case wxFile::read_write:
-		mode = rFile::read_write;
-		break;
-	case wxFile::write_append:
-		mode = rFile::write_append;
-		break;
-	case wxFile::write_excl:
-		mode = rFile::write_excl;
-		break;
+		close(fd);
 	}
-	return mode;
+#endif
 }
 
-wxSeekMode convertSeekMode(rSeekMode mode)
+rfile_t::rfile_t(handle_type handle)
+	: fd(handle)
 {
-	wxSeekMode ret;
-	switch (mode)
+}
+
+rfile_t::rfile_t(const std::string& filename, u32 mode)
+#ifdef _WIN32
+	: fd(INVALID_HANDLE_VALUE)
+#else
+	: fd(-1)
+#endif
+{
+	open(filename, mode);
+}
+
+rfile_t::operator bool() const
+{
+#ifdef _WIN32
+	return fd != INVALID_HANDLE_VALUE;
+#else
+	return fd != -1;
+#endif
+}
+
+bool rfile_t::open(const std::string& filename, u32 mode)
+{
+	this->~rfile_t();
+
+#ifdef _WIN32
+	DWORD access = 0;
+	if (mode & o_read) access |= GENERIC_READ;
+	if (mode & o_write) access |= GENERIC_WRITE;
+
+	DWORD disp = 0;
+	switch (mode & (o_create | o_trunc | o_excl))
 	{
-	case rFromStart:
-		ret = wxFromStart;
-		break;
-	case rFromCurrent:
-		ret = wxFromCurrent;
-		break;
-	case rFromEnd:
-		ret = wxFromEnd;
-		break;
-	}
-	return ret;
-}
-
-rSeekMode rConvertSeekMode(wxSeekMode mode)
-{
-	rSeekMode ret;
-	switch (mode)
+	case 0: disp = OPEN_EXISTING; break;
+	case o_create: disp = OPEN_ALWAYS; break;
+	case o_trunc: disp = TRUNCATE_EXISTING; break;
+	case o_create | o_trunc: disp = CREATE_ALWAYS; break;
+	case o_create | o_excl: disp = CREATE_NEW; break;
+	case o_excl: // ???
+	case o_trunc | o_excl: // ???
+	case o_create | o_trunc | o_excl: // ???
 	{
-	case wxFromStart:
-		ret = rFromStart;
-		break;
-	case wxFromCurrent:
-		ret = rFromCurrent;
-		break;
-	case wxFromEnd:
-		ret = rFromEnd;
-		break;
+		LOG_ERROR(GENERAL, "rfile_t::open(): unknown mode specified (0x%x)", mode);
+		return false;
 	}
-	return ret;
+	}
+
+	fd = CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
+	int flags = 0;
+	if (mode & o_read) flags |= O_READ;
+	if (mode & o_write) flags |= O_WRITE;
+	if (mode & o_create) flags |= O_CREAT;
+	if (mode & o_trunc) flags |= O_TRUNC;
+	if (mode & o_excl) flags |= O_EXCL;
+
+	fd = open(filename.c_str(), flags, 0666);
+#endif
+
+	return is_opened();
 }
 
-
-rFile::rFile()
+bool rfile_t::is_opened() const
 {
-	handle = reinterpret_cast<void*>(new wxFile());
+	return *this;
 }
 
-rFile::rFile(const std::string& filename, rFile::OpenMode open)
+bool rfile_t::trunc(u64 size) const
 {
-	handle = reinterpret_cast<void*>(new wxFile(fmt::FromUTF8(filename), convertOpenMode(open)));
+#ifdef _WIN32
+	LARGE_INTEGER old, pos;
+
+	pos.QuadPart = 0;
+	SetFilePointerEx(fd, pos, &old, FILE_CURRENT); // get old position
+
+	pos.QuadPart = size;
+	SetFilePointerEx(fd, pos, NULL, FILE_BEGIN); // set new position
+
+	SetEndOfFile(fd); // change file size
+	SetFilePointerEx(fd, old, NULL, FILE_BEGIN); // restore position
+
+	return true; // TODO
+#else
+	return !ftruncate64(fd, size);
+#endif
 }
 
-rFile::rFile(int fd)
+bool rfile_t::close()
 {
-	handle = reinterpret_cast<void*>(new wxFile(fd));
+#ifdef _WIN32
+	if (CloseHandle(fd))
+	{
+		fd = INVALID_HANDLE_VALUE;
+		return true;
+	}
+#else
+	if (!close(fd))
+	{
+		fd = -1;
+		return true;
+	}
+#endif
+
+	return false;
 }
 
-rFile::~rFile()
+u64 rfile_t::read(void* buffer, u64 count) const
 {
-	delete reinterpret_cast<wxFile*>(handle);
+#ifdef _WIN32
+	DWORD nread;
+	if (!ReadFile(fd, buffer, count, &nread, NULL))
+	{
+		return -1;
+	}
+
+	return nread;
+#else
+	return read64(fd, buffer, count);
+#endif
 }
 
-bool rFile::Access(const std::string &filename, rFile::OpenMode mode)
+u64 rfile_t::write(const void* buffer, u64 count) const
 {
-	return wxFile::Access(fmt::FromUTF8(filename), convertOpenMode(mode));
+#ifdef _WIN32
+	DWORD nwritten;
+	if (!WriteFile(fd, buffer, count, &nwritten, NULL))
+	{
+		return -1;
+	}
+
+	return nwritten;
+#else
+	return write64(fd, buffer, count);
+#endif
 }
 
-size_t rFile::Write(const void *buffer, size_t count)
+u64 rfile_t::seek(u64 offset, u32 mode) const
 {
-	return reinterpret_cast<wxFile*>(handle)->Write(buffer,count);
+	assert(mode < 3);
+
+#ifdef _WIN32
+	LARGE_INTEGER pos;
+	pos.QuadPart = offset;
+
+	if (!SetFilePointerEx(fd, pos, &pos, mode))
+	{
+		return -1;
+	}
+
+	return pos.QuadPart;
+#else
+	return lseek64(fd, offset, mode);
+#endif
 }
 
-bool rFile::Write(const std::string &text)
+u64 rfile_t::size() const
 {
-	return reinterpret_cast<wxFile*>(handle)->Write(reinterpret_cast<const void*>(text.c_str()),text.size()) != 0;
-}
+#ifdef _WIN32
+	LARGE_INTEGER size;
+	if (!GetFileSizeEx(fd, &size))
+	{
+		return -1;
+	}
 
-bool rFile::Close()
-{
-	return reinterpret_cast<wxFile*>(handle)->Close();
-}
+	return size.QuadPart;
+#else
+	struct stat64 file_info;
+	if (fstat64(fd, &file_info) < 0)
+	{
+		return -1;
+	}
 
-bool rFile::Create(const std::string &filename, bool overwrite, int access)
-{
-	return reinterpret_cast<wxFile*>(handle)->Create(fmt::FromUTF8(filename), overwrite, access);
-}
-
-bool rFile::Open(const std::string &filename, rFile::OpenMode mode, int access)
-{
-	return reinterpret_cast<wxFile*>(handle)->Open(fmt::FromUTF8(filename), convertOpenMode(mode), access);
-}
-
-bool rFile::IsOpened() const
-{
-	return reinterpret_cast<wxFile*>(handle)->IsOpened();
-}
-
-size_t	rFile::Length() const
-{
-	return reinterpret_cast<wxFile*>(handle)->Length();
-}
-
-size_t  rFile::Read(void *buffer, size_t count)
-{
-	return reinterpret_cast<wxFile*>(handle)->Read(buffer,count);
-}
-
-size_t 	rFile::Seek(size_t ofs, rSeekMode mode)
-{
-	return reinterpret_cast<wxFile*>(handle)->Seek(ofs, convertSeekMode(mode));
-}
-
-size_t rFile::Tell() const
-{
-	return reinterpret_cast<wxFile*>(handle)->Tell();
+	return file_info.st_size;
+#endif
 }
 
 rDir::rDir()

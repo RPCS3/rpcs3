@@ -570,7 +570,7 @@ __noinline s32 savedata_op(
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			file.reset(Emu.GetVFS().OpenFile(filepath, vfsRead));
+			file.reset(Emu.GetVFS().OpenFile(filepath, o_read));
 			file->Seek(fileSet->fileOffset);
 			fileGet->excSize = file->Read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
 			break;
@@ -578,8 +578,7 @@ __noinline s32 savedata_op(
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			Emu.GetVFS().CreateFile(filepath);
-			file.reset(Emu.GetVFS().OpenFile(filepath, vfsReadWrite));
+			file.reset(Emu.GetVFS().OpenFile(filepath, o_write | o_create));
 			file->Seek(fileSet->fileOffset);
 			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
 			// TODO: truncate this fucked shit
@@ -595,8 +594,7 @@ __noinline s32 savedata_op(
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			Emu.GetVFS().CreateFile(filepath);
-			file.reset(Emu.GetVFS().OpenFile(filepath, vfsReadWrite));
+			file.reset(Emu.GetVFS().OpenFile(filepath, o_write | o_create));
 			file->Seek(fileSet->fileOffset);
 			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
 			break;
@@ -613,9 +611,7 @@ __noinline s32 savedata_op(
 	// Write PARAM.SFO
 	if (psf)
 	{
-		Emu.GetVFS().CreateFile(sfo_path, true);
-
-		vfsFile f(sfo_path, vfsWrite);
+		vfsFile f(sfo_path, vfsWriteNew);
 		psf.Save(f);
 	}
 

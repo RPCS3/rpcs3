@@ -756,17 +756,17 @@ bool sdata_check(u32 version, u32 flags, u64 filesizeInput, u64 filesizeTmp)
 int sdata_unpack(const std::string& packed_file, const std::string& unpacked_file)
 {
 	std::shared_ptr<vfsFileBase> packed_stream(Emu.GetVFS().OpenFile(packed_file, vfsRead));
-	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWrite));
+	std::shared_ptr<vfsFileBase> unpacked_stream(Emu.GetVFS().OpenFile(unpacked_file, vfsWriteNew));
 
 	if (!packed_stream || !packed_stream->IsOpened())
 	{
-		cellFs.Error("'%s' not found! flags: 0x%02x", packed_file.c_str(), vfsRead);
+		cellFs.Error("File '%s' not found!", packed_file.c_str());
 		return CELL_ENOENT;
 	}
 
 	if (!unpacked_stream || !unpacked_stream->IsOpened())
 	{
-		cellFs.Error("'%s' couldn't be created! flags: 0x%02x", unpacked_file.c_str(), vfsWrite);
+		cellFs.Error("File '%s' couldn't be created!", unpacked_file.c_str());
 		return CELL_ENOENT;
 	}
 

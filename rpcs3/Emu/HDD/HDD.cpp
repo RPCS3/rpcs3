@@ -21,7 +21,7 @@ void vfsHDDManager::CreateEntry(vfsHDD_Entry& entry)
 
 void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 {
-	rFile f(path, rFile::write);
+	rfile_t f(path, o_write | o_create | o_trunc);
 
 	static const u64 cur_dir_block = 1;
 
@@ -32,7 +32,7 @@ void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 	hdr.version = g_hdd_version;
 	hdr.block_count = (size + block_size) / block_size;
 	hdr.block_size = block_size;
-	f.Write(&hdr, sizeof(vfsHDD_Hdr));
+	f.write(&hdr, sizeof(vfsHDD_Hdr));
 
 	{
 		vfsHDD_Entry entry;
@@ -41,14 +41,14 @@ void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 		entry.data_block = hdr.next_block;
 		entry.next_block = 0;
 
-		f.Seek(cur_dir_block * hdr.block_size);
-		f.Write(&entry, sizeof(vfsHDD_Entry));
-		f.Write(".");
+		f.seek(cur_dir_block * hdr.block_size);
+		f.write(&entry, sizeof(vfsHDD_Entry));
+		f.write(".", 1);
 	}
 
 	u8 null = 0;
-	f.Seek(hdr.block_count * hdr.block_size - sizeof(null));
-	f.Write(&null, sizeof(null));
+	f.seek(hdr.block_count * hdr.block_size - sizeof(null));
+	f.write(&null, sizeof(null));
 }
 
 void vfsHDDManager::Format()
@@ -599,7 +599,7 @@ bool vfsHDD::GetNextEntry(u64& block, vfsHDD_Entry& entry, std::string& name)
 	return true;
 }
 
-bool vfsHDD::Open(const std::string& path, vfsOpenMode mode)
+bool vfsHDD::Open(const std::string& path, u32 mode)
 {
 	const char* s = path.c_str();
 	u64 from = 0;
@@ -737,47 +737,44 @@ bool vfsHDD::RemoveEntry(const std::string& name)
 	return true;
 }
 
-bool vfsHDD::Create(const std::string& path)
+u64 vfsHDD::Write(const void* src, u64 size)
 {
-	return false;
+	return m_file.Write(src, size); // ???
 }
 
-u32 vfsHDD::Write(const void* src, u32 size)
+u64 vfsHDD::Read(void* dst, u64 size)
 {
-	return vfsFileBase::Write(src, m_file.Write(src, size));
+	return m_file.Read(dst, size); // ???
 }
 
-u32 vfsHDD::Read(void* dst, u32 size)
-{
-	return vfsFileBase::Read(dst, m_file.Read(dst, size));
-}
-
-u64 vfsHDD::Seek(s64 offset, vfsSeekMode mode)
+u64 vfsHDD::Seek(s64 offset, u32 mode)
 {
 	switch (mode)
 	{
-	case vfsSeekCur:
-		m_file.Seek(Tell() + offset);
-		break;
-
-	case vfsSeekSet:
-		m_file.Seek(offset);
-		break;
-
-	case vfsSeekEnd:
-		m_file.Seek(m_file.GetSize() + offset);
-		break;
+	case from_begin: return m_file.Seek(offset);
+	case from_cur: return m_file.Seek(Tell() + offset);
+	case from_end: return m_file.Seek(m_file.GetSize() + offset);
 	}
 
-	return vfsFileBase::Seek(offset, mode);
+	return m_file.Tell(); // ???
 }
 
-bool vfsHDD::Eof()
+u64 vfsHDD::Tell() const
+{
+	return m_file.Tell(); // ???
+}
+
+bool vfsHDD::Eof() const
 {
 	return m_file.Eof();
 }
 
-u64 vfsHDD::GetSize()
+bool vfsHDD::IsOpened() const
+{
+	return true; // ???
+}
+
+u64 vfsHDD::GetSize() const
 {
 	return m_file.GetSize();
 }

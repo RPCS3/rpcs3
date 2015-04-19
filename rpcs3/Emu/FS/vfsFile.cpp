@@ -10,25 +10,20 @@ vfsFile::vfsFile()
 {
 }
 
-vfsFile::vfsFile(const std::string& path, vfsOpenMode mode)
+vfsFile::vfsFile(const std::string& path, u32 mode)
 	: vfsFileBase(nullptr)
 	, m_stream(nullptr)
 {
 	Open(path, mode);
 }
 
-bool vfsFile::Open(const std::string& path, vfsOpenMode mode)
+bool vfsFile::Open(const std::string& path, u32 mode)
 {
 	Close();
 
 	m_stream.reset(Emu.GetVFS().OpenFile(path, mode));
 
 	return m_stream && m_stream->IsOpened();
-}
-
-bool vfsFile::Create(const std::string& path, bool overwrite)
-{
-	return m_stream->Create(path, overwrite);
 }
 
 bool vfsFile::Exists(const std::string& path)
@@ -52,7 +47,7 @@ bool vfsFile::Close()
 	return vfsFileBase::Close();
 }
 
-u64 vfsFile::GetSize()
+u64 vfsFile::GetSize() const
 {
 	return m_stream->GetSize();
 }
@@ -67,7 +62,7 @@ u64 vfsFile::Read(void* dst, u64 size)
 	return m_stream->Read(dst, size);
 }
 
-u64 vfsFile::Seek(s64 offset, vfsSeekMode mode)
+u64 vfsFile::Seek(s64 offset, u32 mode)
 {
 	return m_stream->Seek(offset, mode);
 }
@@ -79,5 +74,5 @@ u64 vfsFile::Tell() const
 
 bool vfsFile::IsOpened() const
 {
-	return m_stream && m_stream->IsOpened() && vfsFileBase::IsOpened();
+	return m_stream && m_stream->IsOpened() /*&& vfsFileBase::IsOpened()*/;
 }

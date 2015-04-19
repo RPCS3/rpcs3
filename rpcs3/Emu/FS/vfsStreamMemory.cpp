@@ -2,48 +2,28 @@
 #include "Emu/Memory/Memory.h"
 #include "vfsStreamMemory.h"
 
-vfsStreamMemory::vfsStreamMemory() : vfsStream()
+u64 vfsStreamMemory::Write(const void* src, u64 count)
 {
-}
-
-vfsStreamMemory::vfsStreamMemory(u32 addr, u32 size) : vfsStream()
-{
-	Open(addr, size);
-}
-
-void vfsStreamMemory::Open(u32 addr, u32 size)
-{
-	m_addr = addr;
-	m_size = size ? size : 0x100000000ull - addr; // determine max possible size
-
-	vfsStream::Reset();
-}
-
-u64 vfsStreamMemory::GetSize()
-{
-	return m_size;
-}
-
-u64 vfsStreamMemory::Write(const void* src, u64 size)
-{
-	assert(Tell() < m_size);
-	if (Tell() + size > m_size)
+	assert(m_pos < m_size);
+	if (m_pos + count > m_size)
 	{
-		size = m_size - Tell();
+		count = m_size - m_pos;
 	}
 
-	memcpy(vm::get_ptr<void>(vm::cast(m_addr + Tell())), src, size);
-	return vfsStream::Write(src, size);
+	memcpy(vm::get_ptr<void>(vm::cast(m_addr + m_pos)), src, count);
+	m_pos += count;
+	return count;
 }
 
-u64 vfsStreamMemory::Read(void* dst, u64 size)
+u64 vfsStreamMemory::Read(void* dst, u64 count)
 {
-	assert(Tell() < GetSize());
-	if (Tell() + size > GetSize())
+	assert(m_pos < m_size);
+	if (m_pos + count > m_size)
 	{
-		size = GetSize() - Tell();
+		count = m_size - m_pos;
 	}
 
-	memcpy(dst, vm::get_ptr<void>(vm::cast(m_addr + Tell())), size);
-	return vfsStream::Read(dst, size);
+	memcpy(dst, vm::get_ptr<void>(vm::cast(m_addr + m_pos)), count);
+	m_pos += count;
+	return count;
 }

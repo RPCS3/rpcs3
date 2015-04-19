@@ -90,14 +90,14 @@ struct CoutListener : LogListener
 
 struct FileListener : LogListener
 {
-	rFile mFile;
+	rfile_t mFile;
 	bool mPrependChannelName;
 
 	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)
-		: mFile(std::string(rPlatform::getConfigDir() + name + ".log").c_str(), rFile::write),
-		mPrependChannelName(prependChannel)
+		: mFile(rPlatform::getConfigDir() + name + ".log", o_write | o_create | o_trunc)
+		, mPrependChannelName(prependChannel)
 	{
-		if (!mFile.IsOpened())
+		if (!mFile)
 		{
 			rMessageBox("Can't create log file! (" + name + ".log)", "Error", rICON_ERROR);
 		}
@@ -119,7 +119,8 @@ struct FileListener : LogListener
 				}
 			}
 		}
-		mFile.Write(text);
+
+		mFile.write(text.c_str(), text.size());
 	}
 };
 

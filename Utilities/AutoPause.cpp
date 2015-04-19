@@ -51,16 +51,15 @@ void AutoPause::Reload(void)
 		m_pause_syscall.clear();
 		m_pause_syscall.reserve(16);
 
-		rFile list;
-		list.Open("pause.bin", rFile::read);
+		rfile_t list("pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
-		size_t fmax = list.Length();
+		size_t fmax = list.size();
 		size_t fcur = 0;
-		list.Seek(0);
+		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
-			list.Read(&num, sizeof(u32));
+			list.read(&num, sizeof(u32));
 			fcur += sizeof(u32);
 			if (num == 0xFFFFFFFF) break;
 			
@@ -77,7 +76,6 @@ void AutoPause::Reload(void)
 				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID 0x%x", num);
 			}
 		}
-		list.Close();
 	}
 	else
 	{

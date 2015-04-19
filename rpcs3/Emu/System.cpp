@@ -146,11 +146,12 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN"
 	};
+
 	auto curpath = path;
 
 	if (direct)
 	{
-		if (rFile::Access(curpath, rFile::read))
+		if (rfile_t(curpath))
 		{
 			SetPath(curpath);
 			Load();
@@ -163,7 +164,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	{
 		curpath = path + elf_path[i];
 		
-		if (rFile::Access(curpath, rFile::read))
+		if (rfile_t(curpath))
 		{
 			SetPath(curpath);
 			Load();

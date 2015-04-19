@@ -235,8 +235,7 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 		stopped = true;
 	}
 
-	wxFileDialog ctrl (this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*",
-		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	wxFileDialog ctrl(this, L"Select PKG", wxEmptyString, wxEmptyString, "PKG files (*.pkg)|*.pkg|All files (*.*)|*.*", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 	
 	if(ctrl.ShowModal() == wxID_CANCEL)
 	{
@@ -247,14 +246,11 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	std::string filePath = ctrl.GetPath().ToStdString();
-	rFile pkg_f(filePath, rFile::read); // TODO: Use VFS to install PKG files
+	rfile_t pkg_f(ctrl.GetPath().ToStdString(), o_read);
 
-	if (pkg_f.IsOpened())
+	if(pkg_f)
 	{
-		PKGLoader pkg(pkg_f);
-		pkg.Install("/dev_hdd0/game/");
-		pkg.Close();
+		PKGLoader::Install(pkg_f, "/dev_hdd0/game/");
 
 		// Refresh game list
 		m_game_viewer->Refresh();

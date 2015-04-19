@@ -102,10 +102,7 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 	if (m_file)
 		Close();
 
-	if (!Emu.GetVFS().ExistsFile(filepath))
-		Emu.GetVFS().CreateFile(filepath);
-
-	m_file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
+	m_file = Emu.GetVFS().OpenFile(filepath, vfsWriteNew);
 	m_file->Write(&m_header, sizeof(TROPUSRHeader));
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)

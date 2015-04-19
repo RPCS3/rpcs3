@@ -12,7 +12,7 @@ AudioDumper::~AudioDumper()
 
 bool AudioDumper::Init(u8 ch)
 {
-	if ((m_init = m_output.Open("audio.wav", rFile::write)))
+	if ((m_init = m_output.open("audio.wav", o_write | o_create | o_trunc)))
 	{
 		m_header = WAVHeader(ch);
 		WriteHeader();
@@ -25,7 +25,7 @@ void AudioDumper::WriteHeader()
 {
 	if (m_init)
 	{
-		m_output.Write(&m_header, sizeof(m_header)); // write file header
+		m_output.write(&m_header, sizeof(m_header)); // write file header
 	}
 }
 
@@ -47,7 +47,7 @@ size_t AudioDumper::WriteData(const void* buffer, size_t size)
 	if (m_init)
 #endif
 	{
-		size_t ret = m_output.Write(buffer, size);
+		size_t ret = m_output.write(buffer, size);
 		m_header.Size += (u32)ret;
 		m_header.RIFF.Size += (u32)ret;
 		return ret;
@@ -60,8 +60,8 @@ void AudioDumper::Finalize()
 {
 	if (m_init)
 	{
-		m_output.Seek(0);
-		m_output.Write(&m_header, sizeof(m_header)); // write fixed file header
-		m_output.Close();
+		m_output.seek(0);
+		m_output.write(&m_header, sizeof(m_header)); // write fixed file header
+		m_output.close();
 	}
 }

@@ -11,53 +11,56 @@
 #include <wx/zstream.h>
 
 
-void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr)
+void WriteEhdr(const rfile_t& f, Elf64_Ehdr& ehdr)
 {
-Write32(f, ehdr.e_magic);
-Write8(f, ehdr.e_class);
-Write8(f, ehdr.e_data);
-Write8(f, ehdr.e_curver);
-Write8(f, ehdr.e_os_abi);
-Write64(f, ehdr.e_abi_ver);
-Write16(f, ehdr.e_type);
-Write16(f, ehdr.e_machine);
-Write32(f, ehdr.e_version);
-Write64(f, ehdr.e_entry);
-Write64(f, ehdr.e_phoff);
-Write64(f, ehdr.e_shoff);
-Write32(f, ehdr.e_flags);
-Write16(f, ehdr.e_ehsize);
-Write16(f, ehdr.e_phentsize);
-Write16(f, ehdr.e_phnum);
-Write16(f, ehdr.e_shentsize);
-Write16(f, ehdr.e_shnum);
-Write16(f, ehdr.e_shstrndx);
+	Write32(f, ehdr.e_magic);
+	Write8(f, ehdr.e_class);
+	Write8(f, ehdr.e_data);
+	Write8(f, ehdr.e_curver);
+	Write8(f, ehdr.e_os_abi);
+	Write64(f, ehdr.e_abi_ver);
+	Write16(f, ehdr.e_type);
+	Write16(f, ehdr.e_machine);
+	Write32(f, ehdr.e_version);
+	Write64(f, ehdr.e_entry);
+	Write64(f, ehdr.e_phoff);
+	Write64(f, ehdr.e_shoff);
+	Write32(f, ehdr.e_flags);
+	Write16(f, ehdr.e_ehsize);
+	Write16(f, ehdr.e_phentsize);
+	Write16(f, ehdr.e_phnum);
+	Write16(f, ehdr.e_shentsize);
+	Write16(f, ehdr.e_shnum);
+	Write16(f, ehdr.e_shstrndx);
 }
-void WritePhdr(rFile& f, Elf64_Phdr& phdr)
+
+void WritePhdr(const rfile_t& f, Elf64_Phdr& phdr)
 {
-Write32(f, phdr.p_type);
-Write32(f, phdr.p_flags);
-Write64(f, phdr.p_offset);
-Write64(f, phdr.p_vaddr);
-Write64(f, phdr.p_paddr);
-Write64(f, phdr.p_filesz);
-Write64(f, phdr.p_memsz);
-Write64(f, phdr.p_align);
+	Write32(f, phdr.p_type);
+	Write32(f, phdr.p_flags);
+	Write64(f, phdr.p_offset);
+	Write64(f, phdr.p_vaddr);
+	Write64(f, phdr.p_paddr);
+	Write64(f, phdr.p_filesz);
+	Write64(f, phdr.p_memsz);
+	Write64(f, phdr.p_align);
 }
-void WriteShdr(rFile& f, Elf64_Shdr& shdr)
+
+void WriteShdr(const rfile_t& f, Elf64_Shdr& shdr)
 {
-Write32(f, shdr.sh_name);
-Write32(f, shdr.sh_type);
-Write64(f, shdr.sh_flags);
-Write64(f, shdr.sh_addr);
-Write64(f, shdr.sh_offset);
-Write64(f, shdr.sh_size);
-Write32(f, shdr.sh_link);
-Write32(f, shdr.sh_info);
-Write64(f, shdr.sh_addralign);
-Write64(f, shdr.sh_entsize);
+	Write32(f, shdr.sh_name);
+	Write32(f, shdr.sh_type);
+	Write64(f, shdr.sh_flags);
+	Write64(f, shdr.sh_addr);
+	Write64(f, shdr.sh_offset);
+	Write64(f, shdr.sh_size);
+	Write32(f, shdr.sh_link);
+	Write32(f, shdr.sh_info);
+	Write64(f, shdr.sh_addralign);
+	Write64(f, shdr.sh_entsize);
 }
-void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
+
+void WriteEhdr(const rfile_t& f, Elf32_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -79,7 +82,8 @@ void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
 	Write16(f, ehdr.e_shnum);
 	Write16(f, ehdr.e_shstrndx);
 }
-void WritePhdr(rFile& f, Elf32_Phdr& phdr)
+
+void WritePhdr(const rfile_t& f, Elf32_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_offset);
@@ -90,7 +94,8 @@ void WritePhdr(rFile& f, Elf32_Phdr& phdr)
 	Write32(f, phdr.p_flags);
 	Write32(f, phdr.p_align);
 }
-void WriteShdr(rFile& f, Elf32_Shdr& shdr)
+
+void WriteShdr(const rfile_t& f, Elf32_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -794,8 +799,8 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	rFile e(elf.c_str(), rFile::write);
-	if(!e.IsOpened())
+	rfile_t e(elf, o_write | o_create | o_trunc);
+	if(!e)
 	{
 		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 		return false;
@@ -819,8 +824,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				e.Seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
-				e.Write(data_buf + data_buf_offset, meta_shdr[i].data_size);
+				e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
+				e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 
 				// Advance the data buffer offset by data size.
 				data_buf_offset += meta_shdr[i].data_size;
@@ -830,7 +835,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if(self_hdr.se_shdroff != 0)
 		{
-			e.Seek(elf32_hdr.e_shoff);
+			e.seek(elf32_hdr.e_shoff);
 
 			for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 				WriteShdr(e, shdr32_arr[i]);
@@ -870,8 +875,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					decomp_stream_out.CopyTo(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Seek to the program header data offset and write the data.
-					e.Seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.Write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Release the decompression buffer.
 					free(decomp_buf);
@@ -879,8 +884,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					e.Seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.Write(data_buf + data_buf_offset, meta_shdr[i].data_size);
+					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 				}
 
 				// Advance the data buffer offset by data size.
@@ -891,14 +896,13 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if(self_hdr.se_shdroff != 0)
 		{
-			e.Seek(elf64_hdr.e_shoff);
+			e.seek(elf64_hdr.e_shoff);
 
 			for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 				WriteShdr(e, shdr64_arr[i]);
 		}
 	}
 
-	e.Close();
 	return true;
 }
 
@@ -921,17 +925,16 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	}
 
 	// Open the RAP file and read the key.
-	rFile rap_file(rap_path, rFile::read);
+	rfile_t rap_file(rap_path);
 
-	if (!rap_file.IsOpened())
+	if (!rap_file)
 	{
 		LOG_ERROR(LOADER, "Failed to load RAP file!");
 		return false;
 	}
 
-	LOG_NOTICE(LOADER, "Loading RAP file %s", (ci_str + ".rap").c_str());
-	rap_file.Read(rap_key, 0x10);
-	rap_file.Close();
+	LOG_NOTICE(LOADER, "Loading RAP file %s.rap", ci_str);
+	rap_file.read(rap_key, 0x10);
 
 	// Convert the RAP key.
 	rap_to_rif(rap_key, npdrm_key);
@@ -975,18 +978,18 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	rFile s(self);
+	rfile_t s(self);
 
-	if(!s.IsOpened())
+	if(!s)
 	{
 		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
 	// Get the key version.
-	s.Seek(0x08);
+	s.seek(0x08);
 	u16 key_version;
-	s.Read(&key_version, sizeof(key_version));
+	s.read(&key_version, sizeof(key_version));
 
 	// Check for DEBUG version.
 	if(swap16(key_version) == 0x8000)
@@ -994,17 +997,17 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
-		s.Seek(0x10);
+		s.seek(0x10);
 		u64 elf_offset;
-		s.Read(&elf_offset, sizeof(elf_offset));
+		s.read(&elf_offset, sizeof(elf_offset));
 
 		// Start at the real elf offset.
 		elf_offset = swap64(elf_offset);
-		s.Seek(elf_offset);
+		s.seek(elf_offset);
 
 		// Write the real ELF file back.
-		rFile e(elf, rFile::write);
-		if(!e.IsOpened())
+		rfile_t e(elf, o_write | o_create | o_trunc);
+		if(!e)
 		{
 			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 			return false;
@@ -1012,18 +1015,14 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 		// Copy the data.
 		char buf[2048];
-		while (ssize_t size = s.Read(buf, 2048))
-			e.Write(buf, size);
+		while (ssize_t size = s.read(buf, 2048))
+			e.write(buf, size);
 
-		e.Close();
 		return true;
 	}
-	else
-	{
-		// Leave the file untouched.
-		s.Seek(0);
-		return false;
-	}
+
+	// Leave the file untouched.
+	return false;
 }
 
 bool DecryptSelf(const std::string& elf, const std::string& self)

@@ -4,7 +4,6 @@
 class vfsDevice;
 struct vfsFileBase;
 class vfsDirBase;
-enum vfsOpenMode : u8;
 
 enum vfsDeviceType
 {
@@ -79,9 +78,8 @@ struct VFS
 
 	std::string GetLinked(const std::string& ps3_path) const;
 
-	vfsFileBase* OpenFile(const std::string& ps3_path, vfsOpenMode mode) const;
+	vfsFileBase* OpenFile(const std::string& ps3_path, u32 mode) const;
 	vfsDirBase* OpenDir(const std::string& ps3_path) const;
-	bool CreateFile(const std::string& ps3_path, bool overwrite = false) const;
 	bool CreateDir(const std::string& ps3_path) const;
 	bool RemoveFile(const std::string& ps3_path) const;
 	bool RemoveDir(const std::string& ps3_path) const;

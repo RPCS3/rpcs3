@@ -5,35 +5,38 @@
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 
-PKGLoader::PKGLoader(rFile& f) : pkg_f(f)
-{
-}
-
-bool PKGLoader::Install(std::string dest)
+bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
 {
 	// Initial checks
-	if (!pkg_f.IsOpened())
+	if (!pkg_f)
+	{
 		return false;
+	}
 
 	// TODO: This shouldn't use current dir
 	dest.insert(0, 1, '.');
 	if (!dest.empty() && dest.back() != '/')
+	{
 		dest += '/';
+	}
 
 	// Fetch title ID from the header.
 	char title_id[48];
-	pkg_f.Seek(48);
-	pkg_f.Read(title_id, 48);
+	pkg_f.seek(48);
+	pkg_f.read(title_id, 48);
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (rExists(dest + titleID)) {
-		rMessageDialog d_overwrite(NULL, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO|rCENTRE);
-		if (d_overwrite.ShowModal() != rID_YES) {
+	if (rExists(dest + titleID))
+	{
+		if (rMessageDialog(NULL, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO | rCENTRE).ShowModal() != rID_YES)
+		{
 			LOG_ERROR(LOADER, "PKG Loader: Another installation found in: %s", titleID.c_str());
 			return false;
 		}
-	} else if (!rMkdir(dest + titleID)) {
+	}
+	else if (!rMkdir(dest + titleID))
+	{
 		LOG_ERROR(LOADER, "PKG Loader: Could not create the installation directory: %s", titleID.c_str());
 		return false;
 	}
@@ -49,9 +52,4 @@ bool PKGLoader::Install(std::string dest)
 		LOG_NOTICE(LOADER, "PKG Loader: Package successfully installed in: /dev_hdd0/game/%s", titleID.c_str());
 		return true;
 	}
-}
-
-bool PKGLoader::Close()
-{
-	return pkg_f.Close();
 }

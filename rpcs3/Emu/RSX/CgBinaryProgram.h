@@ -182,14 +182,13 @@ public:
 		, m_arb_shader("")
 		, m_dst_reg_name("")
 	{
-		rFile f(path);
-		if (!f.IsOpened())
+		rfile_t f(path);
+		if (!f)
 			return;
 
-		m_buffer_size = f.Length();
+		m_buffer_size = f.size();
 		m_buffer = new u8[m_buffer_size];
-		f.Read(m_buffer, m_buffer_size);
-		f.Close();
+		f.read(m_buffer, m_buffer_size);
 		m_arb_shader += fmt::format("Loading... [%s]\n", path.c_str());
 	}
 
@@ -315,16 +314,15 @@ public:
 			{
 				u32 ptr;
 				{
-					rFile f(m_path);
+					rfile_t f(m_path);
 
-					if (!f.IsOpened())
+					if (!f)
 						return;
 
-					size_t size = f.Length();
+					size_t size = f.size();
 					vm::ps3::init();
 					ptr = vm::alloc(size);
-					f.Read(vm::get_ptr(ptr), size);
-					f.Close();
+					f.read(vm::get_ptr(ptr), size);
 				}
 				
 				auto& vmprog = vm::get_ref<CgBinaryProgram>(ptr);

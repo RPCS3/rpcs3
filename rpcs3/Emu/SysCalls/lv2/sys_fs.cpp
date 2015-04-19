@@ -32,8 +32,6 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::shared_ptr<vfsStream> file;
-
 	// TODO: other checks for path
 
 	if (Emu.GetVFS().ExistsDir(path.get_ptr()))
@@ -42,81 +40,54 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		return CELL_FS_EISDIR;
 	}
 
-	switch (flags)
+	u32 open_mode = 0;
+
+	switch (flags & CELL_FS_O_ACCMODE)
 	{
-	case CELL_FS_O_RDONLY:
-	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsRead));
-		break;
+	case CELL_FS_O_RDONLY: open_mode |= o_read; break;
+	case CELL_FS_O_WRONLY: open_mode |= o_write; break;
+	case CELL_FS_O_RDWR: open_mode |= o_read | o_write; break;
 	}
 
-	case CELL_FS_O_WRONLY:
-	case CELL_FS_O_RDWR:
+	if (flags & CELL_FS_O_CREAT)
 	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
-		break;
-	}
-	
-	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT:
-	case CELL_FS_O_RDWR | CELL_FS_O_CREAT:
-	{
-		Emu.GetVFS().CreateFile(path.get_ptr());
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
-		break;
+		open_mode |= o_create;
 	}
 
-	case CELL_FS_O_WRONLY | CELL_FS_O_APPEND:
+	if (flags & CELL_FS_O_TRUNC)
 	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
-		break;
+		open_mode |= o_trunc;
 	}
 
-	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_EXCL:
-	case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_EXCL: // ???
+	if (flags & CELL_FS_O_EXCL)
 	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteExcl));
-
-		if ((!file || !file->IsOpened()) && Emu.GetVFS().ExistsFile(path.get_ptr()))
+		if ((flags & CELL_FS_O_CREAT) && !(flags & CELL_FS_O_TRUNC))
 		{
-			return CELL_FS_EEXIST;
+			open_mode |= o_excl;
 		}
-
-		break;
+		else
+		{
+			open_mode = 0; // error
+		}
 	}
 
-	case CELL_FS_O_WRONLY | CELL_FS_O_TRUNC:
+	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_EXCL))
 	{
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWrite));
-		break;
+		open_mode = 0; // error
 	}
 
-	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
+	if ((flags & CELL_FS_O_ACCMODE) == CELL_FS_O_ACCMODE)
 	{
-		Emu.GetVFS().CreateFile(path.get_ptr());
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWrite));
-		break;
+		open_mode = 0; // error
 	}
 
-	case CELL_FS_O_WRONLY | CELL_FS_O_CREAT | CELL_FS_O_APPEND:
-	{
-		Emu.GetVFS().CreateFile(path.get_ptr());
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsWriteAppend));
-		break;
-	}
-	
-	case CELL_FS_O_RDWR | CELL_FS_O_CREAT | CELL_FS_O_TRUNC:
-	{
-		Emu.GetVFS().CreateFile(path.get_ptr(), true);
-		file.reset(Emu.GetVFS().OpenFile(path.get_ptr(), vfsReadWrite));
-		break;
-	}
-
-	default:
+	if (!open_mode)
 	{
 		sys_fs.Error("sys_fs_open(): invalid or unimplemented flags (%#o)", flags);
 		return CELL_FS_EINVAL;
 	}
-	}
+
+	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path.get_ptr(), open_mode));
 
 	if (!file || !file->IsOpened())
 	{
@@ -468,15 +439,9 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 {
 	sys_fs.Log("sys_fs_lseek(fd=0x%x, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
-	vfsSeekMode seek_mode;
-
-	switch (whence)
+	if (whence >= 3)
 	{
-	case CELL_FS_SEEK_SET: seek_mode = vfsSeekSet; break;
-	case CELL_FS_SEEK_CUR: seek_mode = vfsSeekCur; break;
-	case CELL_FS_SEEK_END: seek_mode = vfsSeekEnd; break;
-	default:
-		sys_fs.Error("sys_fs_lseek(fd=0x%x): unknown seek whence (0x%x)", fd, whence);
+		sys_fs.Error("sys_fs_lseek(fd=0x%x): unknown seek whence (%d)", fd, whence);
 		return CELL_FS_EINVAL;
 	}
 
@@ -489,7 +454,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	*pos = file->file->Seek(offset, seek_mode);
+	*pos = file->file->Seek(offset, whence);
 
 	return CELL_OK;
 }
@@ -544,7 +509,7 @@ s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 
 s32 sys_fs_ftruncate(u32 fd, u64 size)
 {
-	sys_fs.Warning("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
+	sys_fs.Todo("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
 
 	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
@@ -555,22 +520,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	u64 initialSize = file->file->GetSize();
-
-	if (initialSize < size)
-	{
-		u64 last_pos = file->file->Tell();
-		file->file->Seek(0, vfsSeekEnd);
-		static const char nullbyte = 0;
-		file->file->Seek(size - initialSize - 1, vfsSeekCur);
-		file->file->Write(&nullbyte, sizeof(char));
-		file->file->Seek(last_pos, vfsSeekSet);
-	}
-
-	if (initialSize > size)
-	{
-		// (TODO)
-	}
+	// it's near
 
 	return CELL_OK;
 }

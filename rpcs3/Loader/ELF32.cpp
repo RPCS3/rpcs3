@@ -153,11 +153,9 @@ namespace loader
 
 					m_stream->Seek(handler::get_stream_offset() + m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset + shdr.data_le.sh_name);
 					std::string name;
-					while (!m_stream->Eof())
+					char c;
+					while (m_stream->SRead(c) && c)
 					{
-						char c;
-						m_stream->Read(&c, 1);
-						if (c == 0) break;
 						name.push_back(c);
 					}
 

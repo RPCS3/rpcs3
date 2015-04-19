@@ -1,44 +1,44 @@
 #pragma once
-
-enum vfsSeekMode
-{
-	vfsSeekSet,
-	vfsSeekCur,
-	vfsSeekEnd,
-};
+#include "Utilities/rFile.h"
 
 struct vfsStream
 {
-protected:
-	u64 m_pos;
+	vfsStream() = default;
 
-public:
-	vfsStream();
-
-	virtual ~vfsStream();
-
-	virtual void Reset();
-	virtual bool Close();
-
-	virtual u64 GetSize();
-
-	virtual u64 Write(const void* src, u64 size);
-
-	template<typename T> __forceinline bool SWrite(const T& data, u64 size = sizeof(T))
+	virtual ~vfsStream()
 	{
-		return Write(&data, size) == size;
+		Close();
 	}
 
-	virtual u64 Read(void* dst, u64 size);
-
-	template<typename T> __forceinline bool SRead(T& data, u64 size = sizeof(T))
+	virtual bool Close()
 	{
-		return Read(&data, size) == size;
+		return true;
 	}
 
-	virtual u64 Seek(s64 offset, vfsSeekMode mode = vfsSeekSet);
-	virtual u64 Tell() const;
-	virtual bool Eof();
+	virtual u64 GetSize() const = 0;
 
-	virtual bool IsOpened() const;
+	virtual u64 Write(const void* src, u64 count) = 0;
+
+	template<typename T> __forceinline bool SWrite(const T& data, u64 count = sizeof(T))
+	{
+		return Write(&data, count) == count;
+	}
+
+	virtual u64 Read(void* dst, u64 count) = 0;
+
+	template<typename T> __forceinline bool SRead(T& data, u64 count = sizeof(T))
+	{
+		return Read(&data, count) == count;
+	}
+
+	virtual u64 Seek(s64 offset, u32 mode = from_begin) = 0;
+
+	virtual u64 Tell() const = 0;
+
+	virtual bool Eof() const
+	{
+		return Tell() >= GetSize();
+	}
+
+	virtual bool IsOpened() const = 0;
 };
