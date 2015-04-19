@@ -20,19 +20,15 @@ protected:
 
 public:
 	vfsFileBase(vfsDevice* device);
-	virtual ~vfsFileBase();
+	virtual ~vfsFileBase() override;
 
 	virtual bool Open(const std::string& path, u32 mode);
 	virtual bool Close() override;
 	virtual bool Exists(const std::string& path) { return false; }
 	virtual bool Rename(const std::string& from, const std::string& to) { return false; }
 	virtual bool Remove(const std::string& path) { return false; }
+	virtual bool IsOpened() const override { return !m_path.empty(); }
 
 	std::string GetPath() const;
 	u32 GetOpenMode() const;
-
-	virtual bool IsOpened() const override
-	{
-		return !m_path.empty();
-	}
 };

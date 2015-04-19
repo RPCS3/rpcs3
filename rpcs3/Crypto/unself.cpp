@@ -10,6 +10,124 @@
 #include <wx/mstream.h>
 #include <wx/zstream.h>
 
+__forceinline u8 Read8(vfsStream& f)
+{
+	u8 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u16 Read16(vfsStream& f)
+{
+	be_t<u16> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u32 Read32(vfsStream& f)
+{
+	be_t<u32> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u64 Read64(vfsStream& f)
+{
+	be_t<u64> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u16 Read16LE(vfsStream& f)
+{
+	u16 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u32 Read32LE(vfsStream& f)
+{
+	u32 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u64 Read64LE(vfsStream& f)
+{
+	u64 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline void Write8(vfsStream& f, const u8 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write8(const rfile_t& f, const u8 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write16LE(vfsStream& f, const u16 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write16LE(const rfile_t& f, const u16 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write32LE(vfsStream& f, const u32 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write32LE(const rfile_t& f, const u32 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write64LE(vfsStream& f, const u64 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write64LE(const rfile_t& f, const u64 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write16(vfsStream& f, const u16 data)
+{
+	Write16LE(f, re16(data));
+}
+
+__forceinline void Write16(const rfile_t& f, const u16 data)
+{
+	Write16LE(f, re16(data));
+}
+
+__forceinline void Write32(vfsStream& f, const u32 data)
+{
+	Write32LE(f, re32(data));
+}
+
+__forceinline void Write32(const rfile_t& f, const u32 data)
+{
+	Write32LE(f, re32(data));
+}
+
+__forceinline void Write64(vfsStream& f, const u64 data)
+{
+	Write64LE(f, re64(data));
+}
+
+__forceinline void Write64(const rfile_t& f, const u64 data)
+{
+	Write64LE(f, re64(data));
+}
 
 void WriteEhdr(const rfile_t& f, Elf64_Ehdr& ehdr)
 {
@@ -413,8 +531,164 @@ void SelfSection::Load(vfsStream& f)
 	offset = Read64(f);
 }
 
+void Elf32_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+
+	if (IsLittleEndian())
+	{
+		e_abi_ver = Read64LE(f);
+		e_type = Read16LE(f);
+		e_machine = Read16LE(f);
+		e_version = Read32LE(f);
+		e_entry = Read32LE(f);
+		e_phoff = Read32LE(f);
+		e_shoff = Read32LE(f);
+		e_flags = Read32LE(f);
+		e_ehsize = Read16LE(f);
+		e_phentsize = Read16LE(f);
+		e_phnum = Read16LE(f);
+		e_shentsize = Read16LE(f);
+		e_shnum = Read16LE(f);
+		e_shstrndx = Read16LE(f);
+	}
+	else
+	{
+		e_abi_ver = Read64(f);
+		e_type = Read16(f);
+		e_machine = Read16(f);
+		e_version = Read32(f);
+		e_entry = Read32(f);
+		e_phoff = Read32(f);
+		e_shoff = Read32(f);
+		e_flags = Read32(f);
+		e_ehsize = Read16(f);
+		e_phentsize = Read16(f);
+		e_phnum = Read16(f);
+		e_shentsize = Read16(f);
+		e_shnum = Read16(f);
+		e_shstrndx = Read16(f);
+	}
+}
+
+void Elf32_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read32(f);
+	sh_addr = Read32(f);
+	sh_offset = Read32(f);
+	sh_size = Read32(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read32(f);
+	sh_entsize = Read32(f);
+}
+
+void Elf32_Shdr::LoadLE(vfsStream& f)
+{
+	f.Read(this, sizeof(*this));
+}
+
+void Elf32_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_offset = Read32(f);
+	p_vaddr = Read32(f);
+	p_paddr = Read32(f);
+	p_filesz = Read32(f);
+	p_memsz = Read32(f);
+	p_flags = Read32(f);
+	p_align = Read32(f);
+}
+
+void Elf32_Phdr::LoadLE(vfsStream& f)
+{
+	f.Read(this, sizeof(*this));
+}
+
+void Elf64_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+	e_abi_ver = Read64(f);
+	e_type = Read16(f);
+	e_machine = Read16(f);
+	e_version = Read32(f);
+	e_entry = Read64(f);
+	e_phoff = Read64(f);
+	e_shoff = Read64(f);
+	e_flags = Read32(f);
+	e_ehsize = Read16(f);
+	e_phentsize = Read16(f);
+	e_phnum = Read16(f);
+	e_shentsize = Read16(f);
+	e_shnum = Read16(f);
+	e_shstrndx = Read16(f);
+}
+
+void Elf64_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read64(f);
+	sh_addr = Read64(f);
+	sh_offset = Read64(f);
+	sh_size = Read64(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read64(f);
+	sh_entsize = Read64(f);
+}
+
+void Elf64_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_flags = Read32(f);
+	p_offset = Read64(f);
+	p_vaddr = Read64(f);
+	p_paddr = Read64(f);
+	p_filesz = Read64(f);
+	p_memsz = Read64(f);
+	p_align = Read64(f);
+}
+
+void SceHeader::Load(vfsStream& f)
+{
+	se_magic = Read32(f);
+	se_hver = Read32(f);
+	se_flags = Read16(f);
+	se_type = Read16(f);
+	se_meta = Read32(f);
+	se_hsize = Read64(f);
+	se_esize = Read64(f);
+}
+
+void SelfHeader::Load(vfsStream& f)
+{
+	se_htype = Read64(f);
+	se_appinfooff = Read64(f);
+	se_elfoff = Read64(f);
+	se_phdroff = Read64(f);
+	se_shdroff = Read64(f);
+	se_secinfoff = Read64(f);
+	se_sceveroff = Read64(f);
+	se_controloff = Read64(f);
+	se_controlsize = Read64(f);
+	pad = Read64(f);
+}
+
 SELFDecrypter::SELFDecrypter(vfsStream& s)
-	: self_f(s), key_v(), data_buf_length(0)
+	: self_f(s)
+	, key_v()
+	, data_buf_length(0)
 {
 }
 

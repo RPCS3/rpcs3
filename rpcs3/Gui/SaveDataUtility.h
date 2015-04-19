@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 
 //TODO: Implement function calls related to Save Data List.
 //Those function calls may be needed to use this GUI.

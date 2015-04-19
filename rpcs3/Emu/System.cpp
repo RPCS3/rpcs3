@@ -28,6 +28,8 @@
 #include "Emu/Event.h"
 
 #include "Loader/PSF.h"
+#include "Loader/ELF64.h"
+#include "Loader/ELF32.h"
 
 #include "../Crypto/unself.h"
 #include <cstdlib>

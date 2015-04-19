@@ -92,17 +92,11 @@ bool truncate_file(const std::string& file, uint64_t length)
 
 bool get_file_info(const std::string& path, FileInfo& info)
 {
-	info.name = path;
-
-	info.exists = false;
-	info.isDirectory = false;
-	info.isWritable = false;
-	info.size = 0;
-
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
 	if (!GetFileAttributesExW(ConvertUTF8ToWChar(path).get(), GetFileExInfoStandard, &attrs))
 	{
+		info = {};
 		return false;
 	}
 
@@ -117,6 +111,7 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	struct stat64 file_info;
 	if (stat64(path.c_str(), &file_info) < 0)
 	{
+		info = {};
 		return false;
 	}
 
@@ -128,7 +123,6 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	info.mtime = file_info.st_mtime;
 	info.ctime = file_info.st_ctime;
 #endif
-
 	return true;
 }
 
@@ -460,19 +454,13 @@ bool rfile_t::trunc(u64 size) const
 
 bool rfile_t::stat(FileInfo& info) const
 {
-	info.name.clear(); // possibly, TODO
-
-	info.exists = false;
-	info.isDirectory = false;
-	info.isWritable = false;
-	info.size = 0;
-
 #ifdef _WIN32
 	FILE_BASIC_INFO basic_info;
 	//FILE_NAME_INFO name_info;
 
 	if (!GetFileInformationByHandleEx(fd, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
 	{
+		info = {};
 		return false;
 	}
 
@@ -487,10 +475,7 @@ bool rfile_t::stat(FileInfo& info) const
 	struct stat64 file_info;
 	if (fstat64(fd, &file_info) < 0)
 	{
-		info.exists = false;
-		info.isDirectory = false;
-		info.isWritable = false;
-		info.size = 0;
+		info = {};
 		return false;
 	}
 
@@ -502,7 +487,6 @@ bool rfile_t::stat(FileInfo& info) const
 	info.mtime = file_info.st_mtime;
 	info.ctime = file_info.st_ctime;
 #endif
-
 	return true;
 }
 

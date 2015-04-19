@@ -2,7 +2,6 @@
 
 struct FileInfo
 {
-	std::string name;
 	bool exists;
 	bool isDirectory;
 	bool isWritable;
@@ -50,29 +49,33 @@ struct rfile_t final
 private:
 	handle_type fd;
 
+#ifndef _WIN32
+	handle_type pad;
+#endif
+
 public:
 	rfile_t();
 	~rfile_t();
 	explicit rfile_t(const std::string& filename, u32 mode = o_read);
 
 	rfile_t(const rfile_t&) = delete;
-	rfile_t(rfile_t&&) = delete;
+	rfile_t(rfile_t&&) = delete; // possibly TODO
 
 	rfile_t& operator =(const rfile_t&) = delete;
-	rfile_t& operator =(rfile_t&&) = delete;
+	rfile_t& operator =(rfile_t&&) = delete; // possibly TODO
 
-	operator bool() const;
+	operator bool() const; // check is_opened()
 
-	void import(handle_type fd);
+	void import(handle_type fd); // replace file handle
+
 	bool open(const std::string& filename, u32 mode = o_read);
-	bool is_opened() const;
-	bool trunc(u64 size) const;
-	bool stat(FileInfo& info) const;
+	bool is_opened() const; // check whether the file is opened
+	bool trunc(u64 size) const; // change file size (possibly appending zero bytes)
+	bool stat(FileInfo& info) const; // get file info
 	bool close();
 
 	u64 read(void* buffer, u64 count) const;
 	u64 write(const void* buffer, u64 count) const;
-	//u64 write(const std::string& str) const;
 	u64 seek(u64 offset, u32 mode = from_begin) const;
 	u64 size() const;
 };
@@ -105,109 +108,3 @@ struct rFileName
 
 	void *handle;
 };
-
-// TODO: eliminate this:
-
-template<typename T> __forceinline u8 Read8(T& f)
-{
-	u8 ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u16 Read16(T& f)
-{
-	be_t<u16> ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u32 Read32(T& f)
-{
-	be_t<u32> ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u64 Read64(T& f)
-{
-	be_t<u64> ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u16 Read16LE(T& f)
-{
-	u16 ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u32 Read32LE(T& f)
-{
-	u32 ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline u64 Read64LE(T& f)
-{
-	u64 ret;
-	f.Read(&ret, sizeof(ret));
-	return ret;
-}
-
-template<typename T> __forceinline void Write8(T& f, const u8 data)
-{
-	f.Write(&data, sizeof(data));
-}
-
-__forceinline void Write8(const rfile_t& f, const u8 data)
-{
-	f.write(&data, sizeof(data));
-}
-
-template<typename T> __forceinline void Write16LE(T& f, const u16 data)
-{
-	f.Write(&data, sizeof(data));
-}
-
-__forceinline void Write16LE(const rfile_t& f, const u16 data)
-{
-	f.write(&data, sizeof(data));
-}
-
-template<typename T> __forceinline void Write32LE(T& f, const u32 data)
-{
-	f.Write(&data, sizeof(data));
-}
-
-__forceinline void Write32LE(const rfile_t& f, const u32 data)
-{
-	f.write(&data, sizeof(data));
-}
-
-template<typename T> __forceinline void Write64LE(T& f, const u64 data)
-{
-	f.Write(&data, sizeof(data));
-}
-
-__forceinline void Write64LE(const rfile_t& f, const u64 data)
-{
-	f.write(&data, sizeof(data));
-}
-
-template<typename T> __forceinline void Write16(T& f, const u16 data)
-{
-	Write16LE(f, re16(data));
-}
-
-template<typename T> __forceinline void Write32(T& f, const u32 data)
-{
-	Write32LE(f, re32(data));
-}
-
-template<typename T> __forceinline void Write64(T& f, const u64 data)
-{
-	Write64LE(f, re64(data));
-}

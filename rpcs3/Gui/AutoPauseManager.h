@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 
 class AutoPauseManagerDialog : public wxDialog
 {
