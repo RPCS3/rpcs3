@@ -420,7 +420,7 @@ void Emulator::LoadPoints(const std::string& path)
 
 	if (version != bpdb_version || (sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		LOG_ERROR(LOADER, "'%s' is broken", path.c_str());
+		LOG_ERROR(LOADER, "'%s' is broken (version=0x%x, break_count=0x%x, marked_count=0x%x, length=0x%x)", path, version, break_count, marked_count, length);
 		return;
 	}
 

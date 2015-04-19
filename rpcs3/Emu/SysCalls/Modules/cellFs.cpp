@@ -217,30 +217,61 @@ s32 cellFsGetDirectoryEntries(u32 fd, vm::ptr<CellFsDirectoryEntry> entries, u32
 		return CELL_FS_EBADF;
 	}
 
-	const DirEntryInfo* info = directory->Read();
-	if (info)
-	{
-		entries->attribute.mode = 
-		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
-		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
-		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
+	u32 count = 0;
 
-		entries->attribute.uid = 0;
-		entries->attribute.gid = 0;
-		entries->attribute.atime = 0; //TODO
-		entries->attribute.mtime = 0; //TODO
-		entries->attribute.ctime = 0; //TODO
-		entries->attribute.blksize = 4096;
+	entries_size /= sizeof(CellFsDirectoryEntry);
 
-		entries->entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
-		entries->entry_name.d_namlen = u8(std::min<size_t>(info->name.length(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-		strcpy_trunc(entries->entry_name.d_name, info->name);
-		*data_count = 1;
-	}
-	else
+	for (; count < entries_size; count++)
 	{
-		*data_count = 0;
+		if (const auto info = directory->Read())
+		{
+			s32 mode = 0;
+			
+			if (info->flags & DirEntry_PermReadable)
+			{
+				mode |= CELL_FS_S_IRUSR | CELL_FS_S_IRGRP | CELL_FS_S_IROTH;
+			}
+
+			if (info->flags & DirEntry_PermWritable)
+			{
+				mode |= CELL_FS_S_IWUSR | CELL_FS_S_IWGRP | CELL_FS_S_IWOTH;
+			}
+
+			if (info->flags & DirEntry_PermExecutable)
+			{
+				mode |= CELL_FS_S_IXUSR | CELL_FS_S_IXGRP | CELL_FS_S_IXOTH;
+			}
+
+			if (info->flags & DirEntry_TypeDir)
+			{
+				mode |= CELL_FS_S_IFDIR;
+			}
+			
+			if (info->flags & DirEntry_TypeFile)
+			{
+				mode |= CELL_FS_S_IFREG;
+			}
+
+			entries[count].attribute.mode = mode;
+			entries[count].attribute.uid = 1; // ???
+			entries[count].attribute.gid = 1; // ???
+			entries[count].attribute.atime = info->access_time;
+			entries[count].attribute.mtime = info->modify_time;
+			entries[count].attribute.ctime = info->create_time;
+			entries[count].attribute.size = info->size;
+			entries[count].attribute.blksize = info->size ? align(info->size, 4096) : 4096;
+
+			entries[count].entry_name.d_type = (info->flags & DirEntry_TypeFile) ? CELL_FS_TYPE_REGULAR : CELL_FS_TYPE_DIRECTORY;
+			entries[count].entry_name.d_namlen = u8(std::min<size_t>(info->name.length(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+			strcpy_trunc(entries[count].entry_name.d_name, info->name);
+		}
+		else
+		{
+			break;
+		}
 	}
+
+	*data_count = count;
 
 	return CELL_OK;
 }

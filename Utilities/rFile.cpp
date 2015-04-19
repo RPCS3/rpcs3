@@ -26,14 +26,23 @@ std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
 	return buffer;
 }
 
-time_t to_time_t(const LARGE_INTEGER& ft)
+time_t to_time_t(const ULARGE_INTEGER& ft)
 {
 	return ft.QuadPart / 10000000ULL - 11644473600ULL;
 }
 
+time_t to_time_t(const LARGE_INTEGER& ft)
+{
+	ULARGE_INTEGER v;
+	v.LowPart = ft.LowPart;
+	v.HighPart = ft.HighPart;
+
+	return to_time_t(v);
+}
+
 time_t to_time_t(const FILETIME& ft)
 {
-	LARGE_INTEGER v;
+	ULARGE_INTEGER v;
 	v.LowPart = ft.dwLowDateTime;
 	v.HighPart = ft.dwHighDateTime;
 
