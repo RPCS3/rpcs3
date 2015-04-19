@@ -518,38 +518,38 @@ __noinline s32 savedata_op(
 			break;
 		}
 
-		std::string filepath;
+		std::string file_path;
 
 		switch (const u32 type = fileSet->fileType)
 		{
 		case CELL_SAVEDATA_FILETYPE_SECUREFILE:
 		case CELL_SAVEDATA_FILETYPE_NORMALFILE:
 		{
-			filepath = fileSet->fileName.get_ptr();
+			file_path = fileSet->fileName.get_ptr();
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:
 		{
-			filepath = "ICON0.PNG";
+			file_path = "ICON0.PNG";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:
 		{
-			filepath = "ICON1.PAM";
+			file_path = "ICON1.PAM";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:
 		{
-			filepath = "PIC1.PNG";
+			file_path = "PIC1.PNG";
 			break;
 		}
 
 		case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:
 		{
-			filepath = "SND0.AT3";
+			file_path = "SND0.AT3";
 			break;
 		}
 
@@ -560,43 +560,43 @@ __noinline s32 savedata_op(
 		}
 		}
 
-		psf.SetInteger("*" + filepath, fileSet->fileType.data() == se32(CELL_SAVEDATA_FILETYPE_SECUREFILE));
+		psf.SetInteger("*" + file_path, fileSet->fileType.data() == se32(CELL_SAVEDATA_FILETYPE_SECUREFILE));
 
-		filepath = dir_path + filepath;
+		std::string local_path;
 
-		std::unique_ptr<vfsStream> file;
+		Emu.GetVFS().GetDevice(dir_path + file_path, local_path);
 
 		switch (const u32 op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			file.reset(Emu.GetVFS().OpenFile(filepath, o_read));
-			file->Seek(fileSet->fileOffset);
-			fileGet->excSize = file->Read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			rfile_t file(local_path, o_read);
+			file.seek(fileSet->fileOffset);
+			fileGet->excSize = static_cast<u32>(file.read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			file.reset(Emu.GetVFS().OpenFile(filepath, o_write | o_create));
-			file->Seek(fileSet->fileOffset);
-			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
-			// TODO: truncate this fucked shit
+			rfile_t file(local_path, o_write | o_create);
+			file.seek(fileSet->fileOffset);
+			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
+			file.trunc(file.seek(0, from_cur)); // truncate
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_DELETE:
 		{
-			Emu.GetVFS().RemoveFile(filepath);
+			rRemoveFile(local_path);
 			fileGet->excSize = 0;
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			file.reset(Emu.GetVFS().OpenFile(filepath, o_write | o_create));
-			file->Seek(fileSet->fileOffset);
-			fileGet->excSize = file->Write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
+			rfile_t file(local_path, o_write | o_create);
+			file.seek(fileSet->fileOffset);
+			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
 		}
 

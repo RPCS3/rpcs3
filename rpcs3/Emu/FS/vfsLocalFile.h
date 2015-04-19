@@ -24,4 +24,9 @@ public:
 	virtual u64 Tell() const override;
 
 	virtual bool IsOpened() const override;
+	
+	virtual const rfile_t& GetFile() const
+	{
+		return m_file;
+	}
 };

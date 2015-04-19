@@ -395,8 +395,8 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 	switch (mode & (o_read | o_write))
 	{
-	case o_read: flags |= O_READ; break;
-	case o_write: flags |= O_WRITE; break;
+	case o_read: flags |= O_RDONLY; break;
+	case o_write: flags |= O_WRONLY; break;
 	case o_read | o_write: flags |= O_RDWR; break;
 	default:
 	{
@@ -476,7 +476,7 @@ u64 rfile_t::read(void* buffer, u64 count) const
 
 	return nread;
 #else
-	return read64(fd, buffer, count);
+	return ::read(fd, buffer, count);
 #endif
 }
 
@@ -491,7 +491,7 @@ u64 rfile_t::write(const void* buffer, u64 count) const
 
 	return nwritten;
 #else
-	return write64(fd, buffer, count);
+	return ::write(fd, buffer, count);
 #endif
 }
 

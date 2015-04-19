@@ -14,6 +14,7 @@
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
+#include "Emu/FS/vfsLocalFile.h"
 #include "Emu/FS/vfsDir.h"
 
 #include "sys_fs.h"
@@ -471,18 +472,29 @@ s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 
 s32 sys_fs_ftruncate(u32 fd, u64 size)
 {
-	sys_fs.Todo("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
+	sys_fs.Warning("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
 
 	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
-	if (!file)
+	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
 		return CELL_FS_EBADF;
 	}
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	// must use rfile_t::trunc()
+	const auto local_file = dynamic_cast<vfsLocalFile*>(file->file.get());
+
+	if (!local_file)
+	{
+		sys_fs.Error("sys_fs_ftruncate(fd=0x%x): not a local file");
+		return CELL_FS_ENOTSUP;
+	}
+
+	if (!local_file->GetFile().trunc(size))
+	{
+		return CELL_FS_EIO; // ???
+	}
 
 	return CELL_OK;
 }

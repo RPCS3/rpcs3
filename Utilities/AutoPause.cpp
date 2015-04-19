@@ -77,10 +77,7 @@ void AutoPause::Reload(void)
 			}
 		}
 	}
-	else
-	{
-		LOG_WARNING(HLE, "No pause.bin found, Auto Pause will not work.");
-	}
+
 	m_pause_syscall_enable = Ini.DBGAutoPauseSystemCall.GetValue();
 	m_pause_function_enable = Ini.DBGAutoPauseFunctionCall.GetValue();
 	initialized = true;

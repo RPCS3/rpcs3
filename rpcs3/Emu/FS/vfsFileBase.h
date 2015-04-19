@@ -30,4 +30,9 @@ public:
 
 	std::string GetPath() const;
 	u32 GetOpenMode() const;
+
+	virtual bool IsOpened() const override
+	{
+		return !m_path.empty();
+	}
 };

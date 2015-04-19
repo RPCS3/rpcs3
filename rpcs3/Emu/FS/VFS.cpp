@@ -6,7 +6,6 @@
 #include "Ini.h"
 #include "Emu/System.h"
 #include "Utilities/Log.h"
-#include <sys/stat.h> // To check whether directory exists
 
 #undef CreateFile
 #undef CopyFile
@@ -496,32 +495,29 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 		entries_count.SaveValue(count);
 	}
 
-	// Custom EmulationDir.
-	// TODO:: should have a better log that would show results before loading a game?
+	// Custom EmulationDir
 	if (Ini.SysEmulationDirPathEnable.GetValue())
 	{
-		std::string EmulationDir = Ini.SysEmulationDirPath.GetValue();
-		if (EmulationDir.empty())
-			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
-		struct stat fstatinfo;
-		if ((stat(EmulationDir.c_str(), &fstatinfo)))
+		std::string dir = Ini.SysEmulationDirPath.GetValue();
+
+		if (dir.empty())
 		{
-			LOG_NOTICE(GENERAL, "Custom EmualtionDir: Tried %s but it doesn't exists. Maybe you add some not needed chars like '\"'?");
-			Ini.SysEmulationDirPathEnable.SetValue(false);
+			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
 		}
-		else if (fstatinfo.st_mode & S_IFDIR)
-			LOG_NOTICE(GENERAL, "Custom EmualtionDir: On, Binded $(EmulatorDir) to %s.", EmulationDir);
+
+		FileInfo info;
+		if (!get_file_info(dir, info) || !info.exists)
+		{
+			LOG_ERROR(GENERAL, "Custom EmulationDir: '%s' not found", dir);
+		}
+		else if (!info.isDirectory)
+		{
+			LOG_ERROR(GENERAL, "Custom EmulationDir: '%s' is not a valid directory", dir);
+		}
 		else
 		{
-			// If that is not directory turn back to use original one.
-			LOG_NOTICE(GENERAL, "Custom EmulationDir: Cause path %s is not a valid directory.", EmulationDir);
-			Ini.SysEmulationDirPathEnable.SetValue(false);
+			LOG_NOTICE(GENERAL, "Custom EmulationDir: $(EmulatorDir) bound to '%s'", dir);
 		}
-	}
-	// I left this to check again just to catch those failed in directory checks.
-	if (!Ini.SysEmulationDirPathEnable.GetValue())
-	{
-		LOG_NOTICE(GENERAL, "Custom EmualtionDir: Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
 	}
 
 	for(int i=0; i<count; ++i)

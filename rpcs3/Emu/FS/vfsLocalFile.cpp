@@ -45,7 +45,7 @@ u64 vfsLocalFile::Tell() const
 
 bool vfsLocalFile::IsOpened() const
 {
-	return m_file /*&& vfsFileBase::IsOpened()*/;
+	return m_file && vfsFileBase::IsOpened();
 }
 
 bool vfsLocalFile::Exists(const std::string& path)
