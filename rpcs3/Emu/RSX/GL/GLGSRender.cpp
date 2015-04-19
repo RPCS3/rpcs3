@@ -846,7 +846,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
 		}
 
-		if (0 && !m_vertex_data[i].addr)
+		if (!m_vertex_data[i].addr)
 		{
 			switch (m_vertex_data[i].type)
 			{
