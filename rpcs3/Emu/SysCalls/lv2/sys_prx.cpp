@@ -200,13 +200,10 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	std::shared_ptr<sys_prx_t> prx;
 	if (!Emu.GetIdManager().GetIDData(id, prx))
 		return CELL_ESRCH;
-<<<<<<< HEAD
-	Memory.Free(prx->address);
-=======
+
 	//Memory.Free(prx->address);
 
 	//s32 result = prx->exit ? prx->exit() : CELL_OK;
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 	Emu.GetIdManager().RemoveID<sys_prx_t>(id);
 	
 	return CELL_OK;

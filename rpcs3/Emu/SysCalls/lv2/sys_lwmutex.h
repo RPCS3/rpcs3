@@ -25,17 +25,9 @@ namespace lwmutex
 	template<u32 _value>
 	struct const_be_u32_t
 	{
-<<<<<<< HEAD
 		operator const be_t<u32>() const
 		{
 			return be_t<u32>::make(_value);
-=======
-		static const u32 value = _value;
-
-		operator const be_t<u32>() const
-		{
-			return be_t<u32>::make(value);
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 		}
 	};
 
@@ -71,21 +63,12 @@ struct sys_lwmutex_t
 	be_t<u32> sleep_queue; // lwmutex pseudo-id
 	be_t<u32> pad;
 };
-<<<<<<< HEAD
 
 struct lwmutex_t
 {
 	const u32 protocol;
 	const u64 name;
 
-=======
-
-struct lwmutex_t
-{
-	const u32 protocol;
-	const u64 name;
-
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 	// this object is not truly a mutex and its syscall names are wrong, it's probabably sleep queue or something
 	std::atomic<u32> signaled;
 

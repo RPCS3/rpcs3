@@ -1196,10 +1196,7 @@ void GLGSRender::OnInit()
 void GLGSRender::OnInitThread()
 {
 	m_context = m_frame->GetNewContext();
-<<<<<<< HEAD
-	
-=======
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
+
 	m_frame->SetCurrent(m_context);
 
 	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");

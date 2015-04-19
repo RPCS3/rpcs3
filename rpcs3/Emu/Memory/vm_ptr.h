@@ -99,7 +99,7 @@ namespace vm
 
 		static _ptr_base make(const AT& addr)
 		{
-			return reinterpret_cast<_ptr_base&>(addr);
+			return reinterpret_cast<const _ptr_base&>(addr);
 		}
 
 		_ptr_base& operator = (const _ptr_base& right) = default;
