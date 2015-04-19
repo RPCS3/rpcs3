@@ -230,11 +230,7 @@ s32 sys_lwmutex_lock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout
 		// locking succeeded
 		auto old = lwmutex->owner.exchange(tid);
 
-<<<<<<< HEAD
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
-=======
-		if (old.data() != se32(lwmutex_reserved))
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 		{
 			sysPrxForUser.Fatal("sys_lwmutex_lock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 		}
@@ -305,11 +301,7 @@ s32 sys_lwmutex_trylock(PPUThread& CPU, vm::ptr<sys_lwmutex_t> lwmutex)
 			// locking succeeded
 			auto old = lwmutex->owner.exchange(tid);
 
-<<<<<<< HEAD
 			if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
-=======
-			if (old.data() != se32(lwmutex_reserved))
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 			{
 				sysPrxForUser.Fatal("sys_lwmutex_trylock(lwmutex=*0x%x): locking failed (owner=0x%x)", lwmutex, old);
 			}
@@ -600,11 +592,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-<<<<<<< HEAD
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
-=======
-		if (old.data() != se32(lwmutex_reserved))
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed (lwmutex->owner=0x%x)", lwcond, old);
 		}
@@ -633,11 +621,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 		const auto old = lwmutex->owner.exchange(tid);
 		lwmutex->recursive_count = recursive_value;
 
-<<<<<<< HEAD
 		if (old.data() != se32(lwmutex_reserved) && !Emu.IsStopped())
-=======
-		if (old.data() != se32(lwmutex_reserved))
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 		{
 			sysPrxForUser.Fatal("sys_lwcond_wait(lwcond=*0x%x): locking failed after timeout (lwmutex->owner=0x%x)", lwcond, old);
 		}

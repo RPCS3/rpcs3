@@ -1174,35 +1174,14 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 		ctrl.put.write_relaxed(res);
 		ctrl.get.write_relaxed(be_t<u32>::make(0));
 
-		return CELL_OK;
-	}
-
-	//auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-
-	// preparations for changing the place (for optimized FIFO mode)
-	//auto cmd = vm::ptr<u32>::make(context->current);
-	//cmd[0] = 0x41D6C;
-	//cmd[1] = 0x20;
-	//cmd[2] = 0x41D74;
-	//cmd[3] = 0; // some incrementing by module value
-	//context->current += 0x10;
-
-	if (0)
-	{
-		const u32 address = context->begin;
-		const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-		assert(upper != 0xFFFF);
-		const u32 offset = (upper << 20) | (address & 0xFFFFF);
-		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset); // set JUMP cmd
-
-		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
-		ctrl.put.exchange(be_t<u32>::make(offset));
-	}
-	else
-	{
-		vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT | (0));
-	}
-	
+	auto cmd = vm::ptr<u32>::make(context->current);
+	/*
+	size_t offset;
+	offset  = make_rsx_command(cmd, NV4097_SET_SEMAPHORE_OFFSET, 0x20);
+	offset += make_rsx_command(cmd, NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, 0); //incrementing by module value
+	context->current += offset * sizeof(u32);
+	*/
+	make_rsx_jump(cmd, 0);
 	context->current = context->begin; // rewind to the beginning
 	// TODO: something is missing
 	return CELL_OK;

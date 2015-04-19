@@ -510,15 +510,9 @@ namespace loader
 			ppu_thr_stop_data[1] = BLR();
 			Emu.SetCPUThreadStop(ppu_thr_stop_data.addr());
 
-<<<<<<< HEAD
-			static const int branch_size = 8 * 4;
-
-			auto make_branch = [](vm::ptr<u32>& ptr, u32 addr)
-=======
 			static const int branch_size = 6 * 4;
 
 			auto make_branch = [](vm::ptr<u32>& ptr, const module_control_func& func)
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 			{
 				u32 stub = vm::read32(func.entry);
 				u32 custom_rtoc = vm::read32(func.entry + 4);
@@ -539,39 +533,21 @@ namespace loader
 					rtoc = custom_rtoc;
 				}
 
-<<<<<<< HEAD
-				*ptr++ = LI_(r0, 0);
-				*ptr++ = ORI(r0, r0, stub & 0xffff);
-				*ptr++ = ORIS(r0, r0, stub >> 16);
-				*ptr++ = LI_(r2, 0);
-				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
-				*ptr++ = ORIS(r2, r2, rtoc >> 16);
-=======
 				*ptr++ = LIS(r0, stub >> 16);
 				*ptr++ = ORI(r0, r0, stub & 0xffff);
 				*ptr++ = LIS(r2, rtoc >> 16);
 				*ptr++ = ORI(r2, r2, rtoc & 0xffff);
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 				*ptr++ = MTCTR(r0);
 				*ptr++ = BCTRL();
 			};
 
 			auto entry = vm::ptr<u32>::make(vm::alloc(56 + branch_size * (start_funcs.size() + 1), vm::main));
-<<<<<<< HEAD
-
-			const auto OPD = entry;
-
-			// make initial OPD
-			*entry++ = OPD.addr() + 8;
-			*entry++ = 0xdeadbeef;
-=======
 
 			const auto OPD = entry;
 
 			// make initial OPD
 			*entry++ = OPD.addr() + 8;
 			*entry++ = start_funcs.size() ? start_funcs[0].rtoc : 0xdeadbeef;
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			// save initialization args
 			*entry++ = MR(r14, r3);
@@ -595,28 +571,12 @@ namespace loader
 			*entry++ = MR(r12, r19);
 
 			// branch to initialization
-<<<<<<< HEAD
-			make_branch(entry, m_ehdr.e_entry);
-=======
 			make_branch(entry, { m_ehdr.e_entry, 0 });
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			ppu_thread main_thread(OPD.addr(), "main_thread");
 
 			main_thread.args({ Emu.GetPath()/*, "-emu"*/ }).run();
-<<<<<<< HEAD
-			main_thread.gpr(11, OPD.addr()).gpr(12, Emu.GetMallocPageSize());
 
-			initialize_ppu_exec_map();
-
-			for (u32 page = 0; page < 0x20000000; page += 4096)
-			{
-				if (vm::check_addr(page, 4096))
-				{
-					fill_ppu_exec_map(page, 4096);
-				}
-			}
-=======
 			main_thread
 				.gpr(7, main_thread.get_id())
 				.gpr(8, Emu.GetTLSAddr())
@@ -624,7 +584,6 @@ namespace loader
 				.gpr(10, Emu.GetTLSMemsz())
 				.gpr(11, m_ehdr.e_entry)
 				.gpr(12, Emu.GetMallocPageSize());
->>>>>>> 6894ec113f7a436851e93e91270ba2cef56d00ef
 
 			return ok;
 		}

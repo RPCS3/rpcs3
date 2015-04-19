@@ -271,7 +271,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	}
 
 	// NV4097
-	case 0x0000fead:
+	case GCM_FLIP_COMMAND:
 	{
 		m_gcm_current_buffer = value;
 		Flip(value);
@@ -401,6 +401,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_UB || m_vertex_data[row].size != 4)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_UB;
 			m_vertex_data[row].size = 4;
 			m_vertex_data[row].data.clear();
@@ -421,9 +422,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 2)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
 			m_vertex_data[row].size = 2;
-			m_vertex_data[row].data.clear();
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
@@ -441,9 +442,9 @@ void RSXThread::update_reg(u32 reg, u32 value)
 
 		if (m_vertex_data[row].type != CELL_GCM_VERTEX_F || m_vertex_data[row].size != 4)
 		{
+			m_vertex_data[row].Reset();
 			m_vertex_data[row].type = CELL_GCM_VERTEX_F;
 			m_vertex_data[row].size = 4;
-			m_vertex_data[row].data.clear();
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
@@ -958,8 +959,6 @@ void RSXThread::update_reg(u32 reg, u32 value)
 			m_draw_array_count = min_vertex_size;
 			m_draw_array_first = 0;
 		}
-
-		m_read_buffer = Ini.GSReadColorBuffer.GetValue() || (!m_indexed_array.m_count && !m_draw_array_count);
 
 		if (a0)
 		{
