@@ -997,8 +997,8 @@ bool GLGSRender::LoadProgram()
 
 		if (glGetError() != GL_NO_ERROR)
 		{
-		LOG_ERROR(RSX, vertex_program_source.c_str());
-		LOG_ERROR(RSX, vertex_program.error().c_str());
+			LOG_ERROR(RSX, vertex_program_source.c_str());
+			LOG_ERROR(RSX, vertex_program.error().c_str());
 		}
 	}
 	catch (const std::runtime_error& e)
