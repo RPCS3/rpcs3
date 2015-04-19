@@ -61,6 +61,8 @@ bool truncate_file(const std::string& file, uint64_t length)
 }
 
 #else
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -323,14 +325,9 @@ rfile_t::~rfile_t()
 #else
 	if (fd != -1)
 	{
-		close(fd);
+		::close(fd);
 	}
 #endif
-}
-
-rfile_t::rfile_t(handle_type handle)
-	: fd(handle)
-{
 }
 
 rfile_t::rfile_t(const std::string& filename, u32 mode)
@@ -352,14 +349,29 @@ rfile_t::operator bool() const
 #endif
 }
 
+void rfile_t::import(handle_type handle)
+{
+	this->~rfile_t();
+	fd = handle;
+}
+
 bool rfile_t::open(const std::string& filename, u32 mode)
 {
 	this->~rfile_t();
 
 #ifdef _WIN32
 	DWORD access = 0;
-	if (mode & o_read) access |= GENERIC_READ;
-	if (mode & o_write) access |= GENERIC_WRITE;
+	switch (mode & (o_read | o_write))
+	{
+	case o_read: access |= GENERIC_READ; break;
+	case o_write: access |= GENERIC_WRITE; break;
+	case o_read | o_write: access |= GENERIC_READ | GENERIC_WRITE; break;
+	default:
+	{
+		LOG_ERROR(GENERAL, "rfile_t::open(): neither o_read nor o_write specified");
+		return false;
+	}
+	}
 
 	DWORD disp = 0;
 	switch (mode & (o_create | o_trunc | o_excl))
@@ -369,25 +381,41 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_trunc: disp = TRUNCATE_EXISTING; break;
 	case o_create | o_trunc: disp = CREATE_ALWAYS; break;
 	case o_create | o_excl: disp = CREATE_NEW; break;
-	case o_excl: // ???
-	case o_trunc | o_excl: // ???
-	case o_create | o_trunc | o_excl: // ???
+	}
+
+	if (!disp || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
 	{
 		LOG_ERROR(GENERAL, "rfile_t::open(): unknown mode specified (0x%x)", mode);
 		return false;
-	}
 	}
 
 	fd = CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
 	int flags = 0;
-	if (mode & o_read) flags |= O_READ;
-	if (mode & o_write) flags |= O_WRITE;
+
+	switch (mode & (o_read | o_write))
+	{
+	case o_read: flags |= O_READ; break;
+	case o_write: flags |= O_WRITE; break;
+	case o_read | o_write: flags |= O_RDWR; break;
+	default:
+	{
+		LOG_ERROR(GENERAL, "rfile_t::open(): neither o_read nor o_write specified");
+		return false;
+	}
+	}
+
 	if (mode & o_create) flags |= O_CREAT;
 	if (mode & o_trunc) flags |= O_TRUNC;
 	if (mode & o_excl) flags |= O_EXCL;
 
-	fd = open(filename.c_str(), flags, 0666);
+	if (((mode & o_excl) && (!(mode & o_create) || (mode & o_trunc))) || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
+	{
+		LOG_ERROR(GENERAL, "rfile_t::open(): unknown mode specified (0x%x)", mode);
+		return false;
+	}
+
+	fd = ::open(filename.c_str(), flags, 0666);
 #endif
 
 	return is_opened();
@@ -427,7 +455,7 @@ bool rfile_t::close()
 		return true;
 	}
 #else
-	if (!close(fd))
+	if (!::close(fd))
 	{
 		fd = -1;
 		return true;

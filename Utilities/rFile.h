@@ -54,7 +54,6 @@ private:
 public:
 	rfile_t();
 	~rfile_t();
-	explicit rfile_t(handle_type fd);
 	explicit rfile_t(const std::string& filename, u32 mode = o_read);
 
 	rfile_t(const rfile_t&) = delete;
@@ -65,6 +64,7 @@ public:
 
 	operator bool() const;
 
+	void import(handle_type fd);
 	bool open(const std::string& filename, u32 mode = o_read);
 	bool is_opened() const;
 	bool trunc(u64 size) const;

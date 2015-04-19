@@ -225,87 +225,49 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 	sys_fs.Warning("sys_fs_stat(path=*0x%x, sb=*0x%x)", path, sb);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	const std::string _path = path.get_ptr();
+	std::string local_path;
 
-	u32 mode = 0;
-	s32 uid = 0;
-	s32 gid = 0;
-	u64 atime = 0;
-	u64 mtime = 0;
-	u64 ctime = 0;
-	u64 size = 0;
+	Emu.GetVFS().GetDevice(path.get_ptr(), local_path);
 
-	std::string real_path;
+	FileInfo info;
 
-	Emu.GetVFS().GetDevice(_path, real_path);
-
-	int stat_result;
-#ifdef _WIN32
-	struct _stat64 buf;
-	stat_result = _stat64(real_path.c_str(), &buf);
-#else
-	struct stat buf;
-	stat_result = stat(real_path.c_str(), &buf);
-#endif
-	if (stat_result)
+	if (!get_file_info(local_path, info) || !info.exists)
 	{
-		sys_fs.Error("sys_fs_stat(): stat('%s') failed -> 0x%x", real_path.c_str(), stat_result);
+		sys_fs.Error("sys_fs_stat(): '%s' not found or get_file_info() failed", path.get_ptr());
+		return CELL_FS_ENOENT;
+	}
+
+	s32 mode = CELL_FS_S_IRUSR | CELL_FS_S_IRGRP | CELL_FS_S_IROTH;
+
+	if (info.isWritable)
+	{
+		mode |= CELL_FS_S_IWUSR | CELL_FS_S_IWGRP | CELL_FS_S_IWOTH;
+	}
+
+	if (info.isDirectory)
+	{
+		mode |= CELL_FS_S_IFDIR;
+		mode |= CELL_FS_S_IXUSR | CELL_FS_S_IXGRP | CELL_FS_S_IXOTH; // ???
 	}
 	else
 	{
-		mode = buf.st_mode;
-		uid = buf.st_uid;
-		gid = buf.st_gid;
-		atime = buf.st_atime;
-		mtime = buf.st_mtime;
-		ctime = buf.st_ctime;
-		size = buf.st_size;
+		mode |= CELL_FS_S_IFREG;
 	}
 
-	sb->mode =
-		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
-		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
-		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
+	sb->uid = 1; // ???
+	sb->gid = 1; // ???
+	sb->atime = info.atime;
+	sb->mtime = info.mtime;
+	sb->ctime = info.ctime;
+	sb->size = info.size;
+	sb->blksize = 4096; // ???
 
-	if (sb->mode == mode)
-		sys_fs.Error("sys_fs_stat(): mode is the same (0x%x)", mode);
-
-	sb->uid = uid;
-	sb->gid = gid;
-	sb->atime = atime;
-	sb->mtime = mtime;
-	sb->ctime = ctime;
-	sb->blksize = 4096;
-
-	{
-		vfsDir dir(_path);
-		if (dir.IsOpened())
-		{
-			sb->mode |= CELL_FS_S_IFDIR;
-			return CELL_OK;
-		}
-	}
-
-	{
-		vfsFile f(_path);
-		if (f.IsOpened())
-		{
-			sb->mode |= CELL_FS_S_IFREG;
-			sb->size = f.GetSize();
-			return CELL_OK;
-		}
-	}
-
-	if (sb->size == size && size != 0)
-		sys_fs.Error("sys_fs_stat(): size is the same (0x%x)", size);
-
-	sys_fs.Warning("sys_fs_stat(): '%s' not found", path.get_ptr());
-	return CELL_FS_ENOENT;
+	return CELL_OK;
 }
 
 s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
-	sys_fs.Warning("sys_fs_fstat(fd=0x%x, sb=*0x%x)", fd, sb);
+	sys_fs.Error("sys_fs_fstat(fd=0x%x, sb=*0x%x)", fd, sb);
 
 	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
 
@@ -319,12 +281,12 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
 		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH;
 
-	sb->mode |= CELL_FS_S_IFREG; //TODO: dir CELL_FS_S_IFDIR
-	sb->uid = 0;
-	sb->gid = 0;
-	sb->atime = 0; //TODO
-	sb->mtime = 0; //TODO
-	sb->ctime = 0; //TODO
+	sb->mode |= CELL_FS_S_IFREG;
+	sb->uid = 1; // ???
+	sb->gid = 1; // ???
+	sb->atime = 0; // TODO
+	sb->mtime = 0; // TODO
+	sb->ctime = 0; // TODO
 	sb->size = file->file->GetSize();
 	sb->blksize = 4096;
 
@@ -520,7 +482,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 
 	std::lock_guard<std::mutex> lock(file->mutex);
 
-	// it's near
+	// must use rfile_t::trunc()
 
 	return CELL_OK;
 }

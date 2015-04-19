@@ -381,9 +381,9 @@ s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CEL
 {
 	cellGame.Error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
-	std::string titleId = init->titleId;
-	contentInfo = "/dev_hdd0/game/" + titleId;
-	usrdir = "/dev_hdd0/game/" + titleId + "/USRDIR";
+	std::string title = init->title;
+	contentInfo = "/dev_hdd0/game/" + title;
+	usrdir = "/dev_hdd0/game/" + title + "/USRDIR";
 
 	if (!Emu.GetVFS().CreateDir(contentInfo))
 	{
@@ -399,13 +399,10 @@ s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CEL
 
 	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement
 	strcpy_trunc(*tmp_contentInfoPath, contentInfo);
-	strcpy_trunc(*tmp_usrdirPath, contentInfo);
+	strcpy_trunc(*tmp_usrdirPath, usrdir);
 	path_set = true;
 
 	cellGame.Success("cellGameCreateGameData(): gamedata directory created ('%s')", contentInfo);
-
-	Emu.GetVFS().CopyFile("/dev_bdvd/PS3_GAME/ICON0.PNG", contentInfo + "/ICON0.PNG");
-	Emu.GetVFS().CopyFile("/dev_bdvd/PS3_GAME/PIC1.PNG", contentInfo + "/PIC1.PNG");
 
 	// TODO: set initial PARAM.SFO parameters
 	

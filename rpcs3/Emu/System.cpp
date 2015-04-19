@@ -407,9 +407,7 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	struct stat buf;
-	if (!stat(path.c_str(), &buf))
-		return;
+	if (!rExists(path)) return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;
