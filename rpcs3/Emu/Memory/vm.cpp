@@ -693,7 +693,7 @@ namespace vm
 		{
 			PPUThread& context = static_cast<PPUThread&>(CPU);
 
-			if (context.GPR[1] != addr)
+			if (context.GPR[1] != addr && !Emu.IsStopped())
 			{
 				LOG_ERROR(PPU, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%llx)", addr, old_pos, context.GPR[1]);
 			}
@@ -713,7 +713,7 @@ namespace vm
 		{
 			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
 
-			if (context.SP != addr)
+			if (context.SP != addr && !Emu.IsStopped())
 			{
 				LOG_ERROR(ARMv7, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%x)", addr, old_pos, context.SP);
 			}

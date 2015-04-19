@@ -681,7 +681,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 	m_status = old_status;
 	PC = old_PC;
 
-	if (GPR[1] != old_stack) // GPR[1] shouldn't change
+	if (GPR[1] != old_stack && !Emu.IsStopped()) // GPR[1] shouldn't change
 	{
 		LOG_ERROR(PPU, "PPUThread::FastCall2(0x%x,0x%x): stack inconsistency (SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
 		GPR[1] = old_stack;

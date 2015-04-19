@@ -106,15 +106,20 @@ s32 sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u64 intrthread,
 
 		ppu.custom_task = [t, &tag, arg](PPUThread& CPU)
 		{
-			auto func = vm::ptr<void(u64 arg)>::make(CPU.entry);
+			const auto func = vm::ptr<void(u64 arg)>::make(CPU.entry);
+			const auto pc   = vm::read32(func.addr());
+			const auto rtoc = vm::read32(func.addr() + 4);
 
 			std::unique_lock<std::mutex> cond_lock(tag.handler_mutex);
 
 			while (!Emu.IsStopped())
 			{
+				// call interrupt handler until int status is clear
 				if (tag.stat.read_relaxed())
 				{
-					func(CPU, arg); // call interrupt handler until int status is clear
+					//func(CPU, arg);
+					CPU.GPR[3] = arg;
+					CPU.FastCall2(pc, rtoc);
 				}
 
 				tag.cond.wait_for(cond_lock, std::chrono::milliseconds(1));
@@ -151,6 +156,9 @@ s32 _sys_interrupt_thread_disestablish(u32 ih, vm::ptr<u64> r13)
 void sys_interrupt_thread_eoi(PPUThread& CPU)
 {
 	sys_interrupt.Log("sys_interrupt_thread_eoi()");
+
+	// TODO: maybe it should actually unwind the stack (ensure that all the automatic objects are finalized)?
+	CPU.GPR[1] = align(CPU.GetStackAddr() + CPU.GetStackSize(), 0x200) - 0x200; // supercrutch (just to hide error messages)
 
 	CPU.FastStop();
 }
