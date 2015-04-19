@@ -26,13 +26,18 @@ std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
 	return buffer;
 }
 
+time_t to_time_t(const LARGE_INTEGER& ft)
+{
+	return ft.QuadPart / 10000000ULL - 11644473600ULL;
+}
+
 time_t to_time_t(const FILETIME& ft)
 {
-	ULARGE_INTEGER v;
+	LARGE_INTEGER v;
 	v.LowPart = ft.dwLowDateTime;
 	v.HighPart = ft.dwHighDateTime;
 
-	return v.QuadPart / 10000000ULL - 11644473600ULL;
+	return to_time_t(v);
 }
 
 bool truncate_file(const std::string& file, uint64_t length)
@@ -78,17 +83,17 @@ bool truncate_file(const std::string& file, uint64_t length)
 
 bool get_file_info(const std::string& path, FileInfo& info)
 {
-	// TODO: Expand relative paths?
-	info.fullName = path;
+	info.name = path;
+
+	info.exists = false;
+	info.isDirectory = false;
+	info.isWritable = false;
+	info.size = 0;
 
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
 	if (!GetFileAttributesExW(ConvertUTF8ToWChar(path).get(), GetFileExInfoStandard, &attrs))
 	{
-		info.exists = false;
-		info.isDirectory = false;
-		info.isWritable = false;
-		info.size = 0;
 		return false;
 	}
 
@@ -103,10 +108,6 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	struct stat64 file_info;
 	if (stat64(path.c_str(), &file_info) < 0)
 	{
-		info.exists = false;
-		info.isDirectory = false;
-		info.isWritable = false;
-		info.size = 0;
 		return false;
 	}
 
@@ -118,6 +119,7 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	info.mtime = file_info.st_mtime;
 	info.ctime = file_info.st_ctime;
 #endif
+
 	return true;
 }
 
@@ -438,12 +440,61 @@ bool rfile_t::trunc(u64 size) const
 	SetFilePointerEx(fd, pos, NULL, FILE_BEGIN); // set new position
 
 	SetEndOfFile(fd); // change file size
+
 	SetFilePointerEx(fd, old, NULL, FILE_BEGIN); // restore position
 
 	return true; // TODO
 #else
 	return !ftruncate64(fd, size);
 #endif
+}
+
+bool rfile_t::stat(FileInfo& info) const
+{
+	info.name.clear(); // possibly, TODO
+
+	info.exists = false;
+	info.isDirectory = false;
+	info.isWritable = false;
+	info.size = 0;
+
+#ifdef _WIN32
+	FILE_BASIC_INFO basic_info;
+	//FILE_NAME_INFO name_info;
+
+	if (!GetFileInformationByHandleEx(fd, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
+	{
+		return false;
+	}
+
+	info.exists = true;
+	info.isDirectory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.isWritable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.size = this->size();
+	info.atime = to_time_t(basic_info.LastAccessTime);
+	info.mtime = to_time_t(basic_info.ChangeTime);
+	info.ctime = to_time_t(basic_info.CreationTime);
+#else
+	struct stat64 file_info;
+	if (fstat64(fd, &file_info) < 0)
+	{
+		info.exists = false;
+		info.isDirectory = false;
+		info.isWritable = false;
+		info.size = 0;
+		return false;
+	}
+
+	info.exists = true;
+	info.isDirectory = S_ISDIR(file_info.st_mode);
+	info.isWritable = file_info.st_mode & 0200; // HACK: approximation
+	info.size = file_info.st_size;
+	info.atime = file_info.st_atime;
+	info.mtime = file_info.st_mtime;
+	info.ctime = file_info.st_ctime;
+#endif
+
+	return true;
 }
 
 bool rfile_t::close()

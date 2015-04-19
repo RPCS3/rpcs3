@@ -3,7 +3,6 @@
 struct FileInfo
 {
 	std::string name;
-	std::string fullName;
 	bool exists;
 	bool isDirectory;
 	bool isWritable;
@@ -68,6 +67,7 @@ public:
 	bool open(const std::string& filename, u32 mode = o_read);
 	bool is_opened() const;
 	bool trunc(u64 size) const;
+	bool stat(FileInfo& info) const;
 	bool close();
 
 	u64 read(void* buffer, u64 count) const;
