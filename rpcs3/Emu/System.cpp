@@ -351,12 +351,10 @@ void Emulator::Stop()
 	finalize_psv_modules();
 	clear_all_psv_objects();
 
-	for (auto& v : g_armv7_dump)
+	for (auto& v : decltype(g_armv7_dump)(std::move(g_armv7_dump)))
 	{
 		LOG_NOTICE(ARMv7, v.second);
 	}
-
-	g_armv7_dump.clear();
 
 	m_rsx_callback = 0;
 

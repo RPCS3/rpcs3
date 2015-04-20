@@ -155,7 +155,7 @@ bool rMkdir(const std::string& dir)
 	if (mkdir(dir.c_str(), 0777))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error creating directory '%s': 0x%llx", dir, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error creating directory '%s': 0x%llx", dir, GET_API_ERROR);
 		return false;
 	}
 
@@ -197,7 +197,7 @@ bool rRmdir(const std::string& dir)
 	if (rmdir(dir.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting directory '%s': 0x%llx", dir, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error deleting directory '%s': 0x%llx", dir, GET_API_ERROR);
 		return false;
 	}
 
@@ -213,7 +213,7 @@ bool rRename(const std::string& from, const std::string& to)
 	if (rename(from.c_str(), to.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error renaming '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
 		return false;
 	}
 
@@ -264,7 +264,7 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error copying '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error copying '%s' to '%s': 0x%llx", from, to, GET_API_ERROR);
 		return false;
 	}
 
@@ -289,7 +289,7 @@ bool rRemoveFile(const std::string& file)
 	if (unlink(file.c_str()))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error deleting file '%s': 0x%llx", file, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error deleting file '%s': 0x%llx", file, GET_API_ERROR);
 		return false;
 	}
 
@@ -304,7 +304,7 @@ bool rTruncate(const std::string& file, uint64_t length)
 	if (truncate64(file.c_str(), length))
 #endif
 	{
-		LOG_ERROR(GENERAL, "Error resizing file '%s' to 0x%llx: 0x%llx", file, length, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "Error resizing file '%s' to 0x%llx: 0x%llx", file, length, GET_API_ERROR);
 		return false;
 	}
 
@@ -373,7 +373,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_read | o_write: access |= GENERIC_READ | GENERIC_WRITE; break;
 	default:
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open(): neither o_read nor o_write specified");
+		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
 		return false;
 	}
 	}
@@ -390,11 +390,11 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 	if (!disp || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open(): unknown mode specified (0x%x)", mode);
+		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
 	}
 
-	fd = CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	if ((fd = CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
 #else
 	int flags = 0;
 
@@ -405,7 +405,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_read | o_write: flags |= O_RDWR; break;
 	default:
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open(): neither o_read nor o_write specified");
+		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
 		return false;
 	}
 	}
@@ -416,14 +416,18 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 	if (((mode & o_excl) && (!(mode & o_create) || (mode & o_trunc))) || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open(): unknown mode specified (0x%x)", mode);
+		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
 	}
 
-	fd = ::open(filename.c_str(), flags, 0666);
+	if ((fd = ::open(filename.c_str(), flags, 0666)) == -1)
 #endif
+	{
+		LOG_WARNING(GENERAL, "rfile_t::open('%s', 0x%x) failed: error 0x%llx", filename, mode, GET_API_ERROR);
+		return false;
+	}
 
-	return is_opened();
+	return true;
 }
 
 bool rfile_t::is_opened() const

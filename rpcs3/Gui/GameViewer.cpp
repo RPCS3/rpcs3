@@ -130,23 +130,27 @@ void GameViewer::LoadPSF()
 	m_game_data.clear();
 	for(uint i=0; i<m_games.size(); ++i)
 	{
-		vfsFile f;
-		std::string sfo;
-		std::string sfb;
+		const std::string sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
+		const std::string sfo = m_path + m_games[i] + (Emu.GetVFS().ExistsFile(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
 
-		sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
-
-		if (!f.Open(sfb))
-			sfo = m_path + m_games[i] + "/PARAM.SFO";
-		else
-			sfo = m_path + m_games[i] + "/PS3_GAME/PARAM.SFO";
-
-		if(!f.Open(sfo))
+		if (!Emu.GetVFS().ExistsFile(sfo))
+		{
 			continue;
+		}
+
+		vfsFile f;
+
+		if (!f.Open(sfo))
+		{
+			continue;
+		}
 
 		const PSFLoader psf(f);
-		if(!psf)
+
+		if (!psf)
+		{
 			continue;
+		}
 
 		// get local path from VFS...
 		std::string local_path;
