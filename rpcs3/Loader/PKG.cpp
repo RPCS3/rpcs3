@@ -27,7 +27,7 @@ bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (rExists(dest + titleID))
+	if (rIsDir(dest + titleID))
 	{
 		if (rMessageDialog(NULL, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO | rCENTRE).ShowModal() != rID_YES)
 		{
@@ -35,7 +35,7 @@ bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
 			return false;
 		}
 	}
-	else if (!rMkdir(dest + titleID))
+	else if (!rMkDir(dest + titleID))
 	{
 		LOG_ERROR(LOADER, "PKG Loader: Could not create the installation directory: %s", titleID.c_str());
 		return false;

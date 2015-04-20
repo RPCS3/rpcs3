@@ -62,7 +62,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 
 	if (flags & CELL_FS_O_EXCL)
 	{
-		if ((flags & CELL_FS_O_CREAT) && !(flags & CELL_FS_O_TRUNC))
+		if (flags & CELL_FS_O_CREAT)
 		{
 			open_mode |= o_excl;
 		}
@@ -93,6 +93,12 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 	if (!file || !file->IsOpened())
 	{
 		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
+
+		if (open_mode & o_excl)
+		{
+			return CELL_FS_EEXIST; // approximation
+		}
+
 		return CELL_FS_ENOENT;
 	}
 	
@@ -334,7 +340,7 @@ s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode)
 		return CELL_FS_EEXIST;
 	}
 
-	if (!Emu.GetVFS().CreateDir(_path))
+	if (!Emu.GetVFS().CreatePath(_path))
 	{
 		return CELL_FS_EIO; // ???
 	}
@@ -384,14 +390,14 @@ s32 sys_fs_rmdir(vm::ptr<const char> path)
 
 	std::string _path = path.get_ptr();
 
+	if (!Emu.GetVFS().ExistsDir(_path))
+	{
+		return CELL_FS_ENOENT;
+	}
+
 	if (!Emu.GetVFS().RemoveDir(_path))
 	{
-		if (Emu.GetVFS().ExistsDir(_path))
-		{
-			return CELL_FS_EIO; // ???
-		}
-
-		return CELL_FS_ENOENT;
+		return CELL_FS_EIO; // ???
 	}
 
 	sys_fs.Notice("sys_fs_rmdir(): directory '%s' removed", path.get_ptr());
@@ -405,14 +411,14 @@ s32 sys_fs_unlink(vm::ptr<const char> path)
 
 	std::string _path = path.get_ptr();
 
+	if (!Emu.GetVFS().ExistsFile(_path))
+	{
+		return CELL_FS_ENOENT;
+	}
+
 	if (!Emu.GetVFS().RemoveFile(_path))
 	{
-		if (Emu.GetVFS().ExistsFile(_path))
-		{
-			return CELL_FS_EIO; // ???
-		}
-
-		return CELL_FS_ENOENT;
+		return CELL_FS_EIO; // ???
 	}
 
 	sys_fs.Notice("sys_fs_unlink(): file '%s' deleted", path.get_ptr());

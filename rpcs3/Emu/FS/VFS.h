@@ -81,6 +81,7 @@ struct VFS
 	vfsFileBase* OpenFile(const std::string& ps3_path, u32 mode) const;
 	vfsDirBase* OpenDir(const std::string& ps3_path) const;
 	bool CreateDir(const std::string& ps3_path) const;
+	bool CreatePath(const std::string& ps3_path) const;
 	bool RemoveFile(const std::string& ps3_path) const;
 	bool RemoveDir(const std::string& ps3_path) const;
 	bool ExistsFile(const std::string& ps3_path) const;

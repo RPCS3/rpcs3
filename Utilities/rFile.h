@@ -12,13 +12,14 @@ struct FileInfo
 };
 
 bool get_file_info(const std::string& path, FileInfo& fileInfo);
+bool rExists(const std::string& path);
+bool rIsFile(const std::string& file);
 bool rIsDir(const std::string& dir);
-bool rRmdir(const std::string& dir);
-bool rMkdir(const std::string& dir);
-bool rMkpath(const std::string& path);
+bool rRmDir(const std::string& dir);
+bool rMkDir(const std::string& dir);
+bool rMkPath(const std::string& path);
 bool rRename(const std::string& from, const std::string& to);
 bool rCopy(const std::string& from, const std::string& to, bool overwrite);
-bool rExists(const std::string& file);
 bool rRemoveFile(const std::string& file);
 bool rTruncate(const std::string& file, uint64_t length);
 

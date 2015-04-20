@@ -182,7 +182,7 @@ void Emulator::Load()
 {
 	GetModuleManager().Init();
 
-	if (!rExists(m_path)) return;
+	if (!rIsFile(m_path)) return;
 
 	if (IsSelf(m_path))
 	{
@@ -407,7 +407,7 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	if (!rExists(path)) return;
+	if (!rIsFile(path)) return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;

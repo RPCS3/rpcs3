@@ -13,8 +13,8 @@
 
 extern Module cellGame;
 
-std::string contentInfo = "";
-std::string usrdir = "";
+std::string contentInfo;
+std::string usrdir;
 bool path_set = false;
 
 s32 cellHddGameCheck(PPUThread& CPU, u32 version, vm::ptr<const char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
@@ -250,7 +250,7 @@ s32 cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 {
 	cellGame.Warning("cellGameContentPermit(contentInfoPath=*0x%x, usrdirPath=*0x%x)", contentInfoPath, usrdirPath);
 
-	if (!contentInfoPath || !usrdirPath)
+	if (!contentInfoPath && !usrdirPath)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
@@ -260,6 +260,17 @@ s32 cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm:
 	if (!path_set)
 	{
 		return CELL_GAME_ERROR_FAILURE;
+	}
+
+	if (contentInfo.size() == 9 && usrdir.empty())
+	{
+		if (Emu.GetVFS().RenameDir("/dev_hdd0/game/TMP_" + contentInfo, "/dev_hdd0/game/" + contentInfo))
+		{
+			cellGame.Success("cellGameContentPermit(): gamedata directory created ('/dev_hdd0/game/%s')", contentInfo);
+		}
+
+		contentInfo = "/dev_hdd0/game/" + contentInfo;
+		usrdir = contentInfo + "/USRDIR";
 	}
 
 	strcpy_trunc(*contentInfoPath, contentInfo);
@@ -381,28 +392,31 @@ s32 cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CEL
 {
 	cellGame.Error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
-	std::string title = init->title;
-	contentInfo = "/dev_hdd0/game/" + title;
-	usrdir = "/dev_hdd0/game/" + title + "/USRDIR";
+	std::string dir = init->titleId;
+	std::string tmp_contentInfo = "/dev_hdd0/game/TMP_" + dir;
+	std::string tmp_usrdir = "/dev_hdd0/game/TMP_" + dir + "/USRDIR";
 
-	if (!Emu.GetVFS().CreateDir(contentInfo))
+	if (!Emu.GetVFS().CreateDir(tmp_contentInfo))
 	{
-		cellGame.Error("cellGameCreateGameData(): failed to create content directory ('%s')", contentInfo);
+		cellGame.Error("cellGameCreateGameData(): failed to create content directory ('%s')", tmp_contentInfo);
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
-	if (!Emu.GetVFS().CreateDir(usrdir))
+	if (!Emu.GetVFS().CreateDir(tmp_usrdir))
 	{
-		cellGame.Error("cellGameCreateGameData(): failed to create USRDIR directory ('%s')", usrdir);
+		cellGame.Error("cellGameCreateGameData(): failed to create USRDIR directory ('%s')", tmp_usrdir);
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
 	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement
-	strcpy_trunc(*tmp_contentInfoPath, contentInfo);
-	strcpy_trunc(*tmp_usrdirPath, usrdir);
+	strcpy_trunc(*tmp_contentInfoPath, tmp_contentInfo);
+	strcpy_trunc(*tmp_usrdirPath, tmp_usrdir);
+
+	contentInfo = dir;
+	usrdir.clear();
 	path_set = true;
 
-	cellGame.Success("cellGameCreateGameData(): gamedata directory created ('%s')", contentInfo);
+	cellGame.Success("cellGameCreateGameData(): temporary gamedata directory created ('%s')", tmp_contentInfo);
 
 	// TODO: set initial PARAM.SFO parameters
 	

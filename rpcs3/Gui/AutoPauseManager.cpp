@@ -71,7 +71,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 	m_entries.clear();
 	m_entries.reserve(16);
 
-	if (rExists("pause.bin"))
+	if (rIsFile("pause.bin"))
 	{
 		rfile_t list("pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.

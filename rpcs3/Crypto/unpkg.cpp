@@ -186,7 +186,7 @@ bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string di
 	{
 		auto path = dir + std::string(buf, entry.name_size);
 
-		if (rExists(path))
+		if (rIsFile(path))
 		{
 			LOG_WARNING(LOADER, "PKG Loader: '%s' is overwritten", path);
 		}
@@ -218,7 +218,7 @@ bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string di
 	case PKG_FILE_ENTRY_FOLDER:
 	{
 		auto path = dir + std::string(buf, entry.name_size);
-		if (!rExists(path) && !rMkdir(path))
+		if (!rIsDir(path) && !rMkPath(path))
 		{
 			LOG_ERROR(LOADER, "PKG Loader: Could not create directory: %s", path.c_str());
 			return false;

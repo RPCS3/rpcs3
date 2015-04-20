@@ -50,7 +50,7 @@ bool vfsLocalFile::IsOpened() const
 
 bool vfsLocalFile::Exists(const std::string& path)
 {
-	return rExists(path);
+	return rIsFile(path);
 }
 
 bool vfsLocalFile::Rename(const std::string& from, const std::string& to)

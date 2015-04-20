@@ -181,6 +181,18 @@ bool VFS::CreateDir(const std::string& ps3_path) const
 	return false;
 }
 
+bool VFS::CreatePath(const std::string& ps3_path) const
+{
+	std::string path;
+
+	if (vfsDevice* dev = GetDevice(ps3_path, path))
+	{
+		return rMkPath(path);
+	}
+
+	return false;
+}
+
 bool VFS::RemoveFile(const std::string& ps3_path) const
 {
 	std::string path;

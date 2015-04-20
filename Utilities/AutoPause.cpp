@@ -44,7 +44,7 @@ AutoPause::~AutoPause(void)
 //This would be able to create in a GUI window.
 void AutoPause::Reload(void)
 {
-	if (rExists("pause.bin"))
+	if (rIsFile("pause.bin"))
 	{
 		m_pause_function.clear();
 		m_pause_function.reserve(16);

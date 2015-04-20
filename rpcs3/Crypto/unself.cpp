@@ -1192,7 +1192,7 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	std::string rap_path("dev_hdd0/home/" + pf_str + "/exdata/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!rExists(rap_path))
+	if (!rIsFile(rap_path))
 	{
 		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;

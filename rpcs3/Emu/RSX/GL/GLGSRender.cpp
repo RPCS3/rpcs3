@@ -610,10 +610,10 @@ void GLTexture::Save(RSXTexture& tex)
 	static const std::string& dir_path = "textures";
 	static const std::string& file_fmt = dir_path + "/" + "tex[%d].png";
 
-	if (!rExists(dir_path)) rMkdir(dir_path);
+	if (!rIsDir(dir_path)) rMkDir(dir_path);
 
 	u32 count = 0;
-	while (rExists(fmt::Format(file_fmt.c_str(), count))) count++;
+	while (rIsFile(fmt::Format(file_fmt.c_str(), count))) count++;
 	Save(tex, fmt::Format(file_fmt.c_str(), count));
 }
 

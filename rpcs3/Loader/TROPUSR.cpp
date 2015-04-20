@@ -22,7 +22,6 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 	if (m_file)
 		Close();
 
-	// TODO: This seems to be always true... A bug in ExistsFile() ?
 	if (!Emu.GetVFS().ExistsFile(filepath))
 		Generate(filepath, configpath);
 

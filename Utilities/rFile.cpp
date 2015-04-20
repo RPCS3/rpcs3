@@ -126,6 +126,37 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	return true;
 }
 
+bool rExists(const std::string& path)
+{
+#ifdef _WIN32
+	return GetFileAttributesW(ConvertUTF8ToWChar(path).get()) != 0xFFFFFFFF;
+#else
+	struct stat buffer;
+	return stat(path.c_str(), &buffer) == 0;
+#endif
+}
+
+bool rIsFile(const std::string& file)
+{
+#ifdef _WIN32
+	DWORD attrs;
+	if ((attrs = GetFileAttributesW(ConvertUTF8ToWChar(file).get())) == INVALID_FILE_ATTRIBUTES)
+	{
+		return false;
+	}
+
+	return (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
+#else
+	struct stat64 file_info;
+	if (stat64(file.c_str(), &file_info) < 0)
+	{
+		return false;
+	}
+
+	return !S_ISDIR(file_info.st_mode);
+#endif
+}
+
 bool rIsDir(const std::string& dir)
 {
 #ifdef _WIN32
@@ -147,7 +178,7 @@ bool rIsDir(const std::string& dir)
 #endif
 }
 
-bool rMkdir(const std::string& dir)
+bool rMkDir(const std::string& dir)
 {
 #ifdef _WIN32
 	if (!CreateDirectoryW(ConvertUTF8ToWChar(dir).get(), NULL))
@@ -162,34 +193,49 @@ bool rMkdir(const std::string& dir)
 	return true;
 }
 
-bool rMkpath(const std::string& path)
+bool rMkPath(const std::string& path)
 {
-	size_t start=0, pos;
-	std::string dir;
-	bool ret;
+	size_t start = 0;
 
-	while (true) {
-		if ((pos = path.find_first_of("/\\", start)) == std::string::npos)
+	while (true)
+	{
+		// maybe it could be more optimal if goes from the end recursively
+		size_t pos = path.find_first_of("/\\", start);
+
+		if (pos == std::string::npos)
+		{
 			pos = path.length();
-
-		dir = path.substr(0,pos++);
-		start = pos;
-		if(dir.size() == 0)
-			continue;
-#ifdef _WIN32
-		if((ret = _mkdir(dir.c_str()) != 0) && errno != EEXIST){
-#else
-		if((ret = mkdir(dir.c_str(), 0777) != 0) && errno != EEXIST){
-#endif
-			return !ret;
 		}
+
+		std::string dir = path.substr(0, pos);
+
+		start = ++pos;
+
+		if (dir.size() == 0)
+		{
+			continue;
+		}
+
+		if (!rIsDir(dir))
+		{
+			// if doesn't exist or not a dir
+			if (!rMkDir(dir))
+			{
+				// if creating failed
+				return false;
+			}
+		}
+
 		if (pos >= path.length())
-			return true;
+		{
+			break;
+		}
 	}
+
 	return true;
 }
 
-bool rRmdir(const std::string& dir)
+bool rRmDir(const std::string& dir)
 {
 #ifdef _WIN32
 	if (!RemoveDirectoryW(ConvertUTF8ToWChar(dir).get()))
@@ -269,16 +315,6 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 	}
 
 	return true;
-}
-
-bool rExists(const std::string& file)
-{
-#ifdef _WIN32
-	return GetFileAttributesW(ConvertUTF8ToWChar(file).get()) != 0xFFFFFFFF;
-#else
-	struct stat buffer;
-	return stat(file.c_str(), &buffer) == 0;
-#endif
 }
 
 bool rRemoveFile(const std::string& file)
@@ -386,6 +422,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_trunc: disp = TRUNCATE_EXISTING; break;
 	case o_create | o_trunc: disp = CREATE_ALWAYS; break;
 	case o_create | o_excl: disp = CREATE_NEW; break;
+	case o_create | o_excl | o_trunc: disp = CREATE_NEW; break;
 	}
 
 	if (!disp || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
@@ -414,7 +451,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	if (mode & o_trunc) flags |= O_TRUNC;
 	if (mode & o_excl) flags |= O_EXCL;
 
-	if (((mode & o_excl) && (!(mode & o_create) || (mode & o_trunc))) || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
+	if (((mode & o_excl) && !(mode & o_create)) || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
 	{
 		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
