@@ -38,11 +38,11 @@ void SPURecompilerCore::Decode(const u32 code) // decode instruction and run wit
 
 void SPURecompilerCore::Compile(u16 pos)
 {
-	const u64 stamp0 = get_system_time();
-	u64 time0 = 0;
+	//const u64 stamp0 = get_system_time();
+	//u64 time0 = 0;
 
-	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = vm::get_ptr<u8>(CPU.offset);
+	//SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	//dis_asm.offset = vm::get_ptr<u8>(CPU.offset);
 
 	//StringLogger stringLogger;
 	//stringLogger.setOption(kLoggerOptionBinaryForm, true);
@@ -53,7 +53,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
-	u32 excess = 0;
+	//u32 excess = 0;
 	entry[start].count = 0;
 
 	X86GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
@@ -100,11 +100,11 @@ void SPURecompilerCore::Compile(u16 pos)
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
-			const u64 stamp1 = get_system_time();
+			//const u64 stamp1 = get_system_time();
 			// disasm for logging:
-			dis_asm.dump_pc = pos * 4;
-			(*SPU_instr::rrr_list)(&dis_asm, opcode);
-			compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
+			//dis_asm.dump_pc = pos * 4;
+			//(*SPU_instr::rrr_list)(&dis_asm, opcode);
+			//compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
 			// compile single opcode:
 			(*SPU_instr::rrr_list)(m_enc, opcode);
 			// force finalization between every slice using absolute alignment
@@ -114,17 +114,17 @@ void SPURecompilerCore::Compile(u16 pos)
 				m_enc->do_finalize = true;
 			}*/
 			entry[start].count++;
-			time0 += get_system_time() - stamp1;
+			//time0 += get_system_time() - stamp1;
 		}
 		else
 		{
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		if (entry[pos].valid == re32(opcode))
-		{
-			excess++;
-		}
+		//if (entry[pos].valid == re32(opcode))
+		//{
+		//	excess++;
+		//}
 		entry[pos].valid = re32(opcode);
 
 		if (fin) break;
@@ -141,7 +141,7 @@ void SPURecompilerCore::Compile(u16 pos)
 		m_enc->xmm_var[i].data = nullptr;
 	}
 
-	const u64 stamp1 = get_system_time();
+	//const u64 stamp1 = get_system_time();
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[start].pointer = compiler.make();
