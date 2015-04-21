@@ -711,7 +711,7 @@ s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 		auto out_f = AV_PIX_FMT_YUV420P;
 
-		std::unique_ptr<u8> alpha_plane;
+		std::unique_ptr<u8[]> alpha_plane;
 
 		switch (const u32 type = format->formatType)
 		{

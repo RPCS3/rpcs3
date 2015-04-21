@@ -46,7 +46,7 @@ bool PSFLoader::Load(vfsStream& stream)
 
 	const u32 key_table_size = header.off_data_table - header.off_key_table;
 
-	std::unique_ptr<char> keys(new char[key_table_size + 1]);
+	std::unique_ptr<char[]> keys(new char[key_table_size + 1]);
 
 	stream.Seek(header.off_key_table);
 
@@ -91,7 +91,7 @@ bool PSFLoader::Load(vfsStream& stream)
 
 			const u32 size = indices[i].param_len;
 
-			std::unique_ptr<char> str(new char[size + 1]);
+			std::unique_ptr<char[]> str(new char[size + 1]);
 
 			if (stream.Read(str.get(), size) != size)
 			{

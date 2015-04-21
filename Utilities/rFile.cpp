@@ -10,13 +10,13 @@
 
 #define GET_API_ERROR static_cast<u64>(GetLastError())
 
-std::unique_ptr<wchar_t> ConvertUTF8ToWChar(const std::string& source)
+std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 {
 	const size_t length = source.size() + 1; // size + null terminator
 
 	const int size = source.size() < INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
 
-	std::unique_ptr<wchar_t> buffer(new wchar_t[length]); // allocate buffer assuming that length is the max possible size
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[length]); // allocate buffer assuming that length is the max possible size
 
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
