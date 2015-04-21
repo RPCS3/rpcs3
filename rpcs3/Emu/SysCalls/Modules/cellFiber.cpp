@@ -84,7 +84,7 @@ vm::ptr<void> cellFiberPpuSelf()
 	cellFiber.Log("cellFiberPpuSelf() -> nullptr"); // TODO
 
 	// returns fiber structure (zero for simple PPU thread)
-	return vm::ptr<void>::make(0);
+	return vm::null;
 }
 
 int cellFiberPpuSendSignal()

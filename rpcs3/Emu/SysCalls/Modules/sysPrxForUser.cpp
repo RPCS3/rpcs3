@@ -1019,7 +1019,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 
 	if (!dest || !source)
 	{
-		return vm::ptr<char>::make(0);
+		return vm::null;
 	}
 
 	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())

@@ -33,7 +33,7 @@ struct ModuleFunc
 	{
 	}
 
-	ModuleFunc(u32 id, u32 flags, Module* module, const char* name, ppu_func_caller func, vm::ptr<void()> lle_func = vm::ptr<void()>::make(0))
+	ModuleFunc(u32 id, u32 flags, Module* module, const char* name, ppu_func_caller func, vm::ptr<void()> lle_func = vm::null)
 		: id(id)
 		, flags(flags)
 		, module(module)

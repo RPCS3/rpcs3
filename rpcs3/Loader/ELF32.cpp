@@ -144,7 +144,7 @@ namespace loader
 				u32 vnid_addr = 0;
 				std::unordered_map<u32, u32> vnid_list;
 
-				auto proc_param = vm::psv::ptr<psv_process_param_t>::make(0);
+				vm::psv::ptr<psv_process_param_t> proc_param = vm::null;
 
 				for (auto& shdr : m_shdrs)
 				{
