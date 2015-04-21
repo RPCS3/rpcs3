@@ -127,11 +127,11 @@ bool PSFLoader::Save(vfsStream& stream) const
 	header.version = 0x101;
 	header.entries_num = static_cast<u32>(m_entries.size());
 	header.off_key_table = sizeof(PSFHeader) + sizeof(PSFDefTable) * header.entries_num;
-	header.off_data_table = header.off_key_table + [&]() -> u32
+
 	{
 		// calculate key table length and generate indices
 
-		u32 key_offset = 0;
+		u32& key_offset = header.off_data_table = 0;
 		u32 data_offset = 0;
 
 		for (u32 i = 0; i < m_entries.size(); i++)
@@ -161,9 +161,9 @@ bool PSFLoader::Save(vfsStream& stream) const
 			}
 			}
 		}
+	}
 
-		return key_offset;
-	}();
+	header.off_data_table += header.off_key_table;
 
 	// save header
 	if (!stream.SWrite(header))

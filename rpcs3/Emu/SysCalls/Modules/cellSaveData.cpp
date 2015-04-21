@@ -337,7 +337,14 @@ __noinline s32 savedata_op(
 
 		if (selected >= 0)
 		{
-			save_entry.dirName = std::move(save_entries[selected < save_entries.size() ? selected : throw __FUNCTION__].dirName);
+			if (selected < save_entries.size())
+			{
+				save_entry.dirName = std::move(save_entries[selected].dirName);
+			}
+			else
+			{
+				throw __FUNCTION__;
+			}
 		}
 	}
 
