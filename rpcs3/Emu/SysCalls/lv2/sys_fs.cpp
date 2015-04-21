@@ -4,14 +4,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#undef CreateFile
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-#endif
-
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsLocalFile.h"
@@ -33,11 +25,27 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 	sys_fs.Warning("sys_fs_open(path=*0x%x, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
+	if (!path[0])
+	{
+		sys_fs.Error("sys_fs_open('%s') failed: path is invalid", path.get_ptr());
+		return CELL_FS_EINVAL;
+	}
+
+	std::string local_path;
+
+	const auto device = Emu.GetVFS().GetDevice(path.get_ptr(), local_path);
+
+	if (!device)
+	{
+		sys_fs.Error("sys_fs_open('%s') failed: device not mounted", path.get_ptr());
+		return CELL_FS_ENOTMOUNTED;
+	}
+
 	// TODO: other checks for path
 
-	if (Emu.GetVFS().ExistsDir(path.get_ptr()))
+	if (rIsDir(local_path))
 	{
-		sys_fs.Error("sys_fs_open(): '%s' is a directory", path.get_ptr());
+		sys_fs.Error("sys_fs_open('%s') failed: path is a directory", path.get_ptr());
 		return CELL_FS_EISDIR;
 	}
 
@@ -84,15 +92,14 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 
 	if (!open_mode)
 	{
-		sys_fs.Error("sys_fs_open(): invalid or unimplemented flags (%#o)", flags);
-		return CELL_FS_EINVAL;
+		sys_fs.Fatal("sys_fs_open('%s'): invalid or unimplemented flags (%#o)", path.get_ptr(), flags);
 	}
 
 	std::shared_ptr<vfsStream> file(Emu.GetVFS().OpenFile(path.get_ptr(), open_mode));
 
 	if (!file || !file->IsOpened())
 	{
-		sys_fs.Error("sys_fs_open(): failed to open '%s' (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
+		sys_fs.Error("sys_fs_open('%s'): failed to open file (flags=%#o, mode=%#o)", path.get_ptr(), flags, mode);
 
 		if (open_mode & o_excl)
 		{
@@ -174,7 +181,7 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 
 	if (!directory || !directory->IsOpened())
 	{
-		sys_fs.Error("sys_fs_opendir(): failed to open '%s'", path.get_ptr());
+		sys_fs.Error("sys_fs_opendir('%s'): failed to open directory", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
@@ -234,13 +241,17 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 	std::string local_path;
 
-	Emu.GetVFS().GetDevice(path.get_ptr(), local_path);
+	if (!Emu.GetVFS().GetDevice(path.get_ptr(), local_path))
+	{
+		sys_fs.Warning("sys_fs_stat('%s') failed: not mounted", path.get_ptr());
+		return CELL_FS_ENOTMOUNTED;
+	}
 
 	FileInfo info;
 
 	if (!get_file_info(local_path, info) || !info.exists)
 	{
-		sys_fs.Error("sys_fs_stat(): '%s' not found or get_file_info() failed", path.get_ptr());
+		sys_fs.Error("sys_fs_stat('%s') failed: not found", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
@@ -333,14 +344,14 @@ s32 sys_fs_mkdir(vm::ptr<const char> path, s32 mode)
 	sys_fs.Warning("sys_fs_mkdir(path=*0x%x, mode=%#o)", path, mode);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	const std::string _path = path.get_ptr();
+	std::string ps3_path = path.get_ptr();
 
-	if (Emu.GetVFS().ExistsDir(_path))
+	if (Emu.GetVFS().ExistsDir(ps3_path))
 	{
 		return CELL_FS_EEXIST;
 	}
 
-	if (!Emu.GetVFS().CreatePath(_path))
+	if (!Emu.GetVFS().CreatePath(ps3_path))
 	{
 		return CELL_FS_EIO; // ???
 	}
@@ -355,12 +366,11 @@ s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to)
 	sys_fs.Warning("*** from = '%s'", from.get_ptr());
 	sys_fs.Warning("*** to   = '%s'", to.get_ptr());
 
-	std::string _from = from.get_ptr();
-	std::string _to = to.get_ptr();
+	std::string ps3_path = from.get_ptr();
 
-	if (Emu.GetVFS().ExistsDir(_from))
+	if (Emu.GetVFS().ExistsDir(ps3_path))
 	{
-		if (!Emu.GetVFS().RenameDir(_from, _to))
+		if (!Emu.GetVFS().RenameDir(ps3_path, to.get_ptr()))
 		{
 			return CELL_FS_EIO; // ???
 		}
@@ -369,9 +379,9 @@ s32 sys_fs_rename(vm::ptr<const char> from, vm::ptr<const char> to)
 		return CELL_OK;
 	}
 
-	if (Emu.GetVFS().ExistsFile(_from))
+	if (Emu.GetVFS().ExistsFile(ps3_path))
 	{
-		if (!Emu.GetVFS().RenameFile(_from, _to))
+		if (!Emu.GetVFS().RenameFile(ps3_path, to.get_ptr()))
 		{
 			return CELL_FS_EIO; // ???
 		}
@@ -388,14 +398,14 @@ s32 sys_fs_rmdir(vm::ptr<const char> path)
 	sys_fs.Warning("sys_fs_rmdir(path=*0x%x)", path);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::string _path = path.get_ptr();
+	std::string ps3_path = path.get_ptr();
 
-	if (!Emu.GetVFS().ExistsDir(_path))
+	if (!Emu.GetVFS().ExistsDir(ps3_path))
 	{
 		return CELL_FS_ENOENT;
 	}
 
-	if (!Emu.GetVFS().RemoveDir(_path))
+	if (!Emu.GetVFS().RemoveDir(ps3_path))
 	{
 		return CELL_FS_EIO; // ???
 	}
@@ -409,14 +419,14 @@ s32 sys_fs_unlink(vm::ptr<const char> path)
 	sys_fs.Warning("sys_fs_unlink(path=*0x%x)", path);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::string _path = path.get_ptr();
+	std::string ps3_path = path.get_ptr();
 
-	if (!Emu.GetVFS().ExistsFile(_path))
+	if (!Emu.GetVFS().ExistsFile(ps3_path))
 	{
 		return CELL_FS_ENOENT;
 	}
 
-	if (!Emu.GetVFS().RemoveFile(_path))
+	if (!Emu.GetVFS().RemoveFile(ps3_path))
 	{
 		return CELL_FS_EIO; // ???
 	}
@@ -489,14 +499,14 @@ s32 sys_fs_truncate(vm::ptr<const char> path, u64 size)
 	sys_fs.Warning("sys_fs_truncate(path=*0x%x, size=0x%llx)", path, size);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	const std::string filename = path.get_ptr();
+	std::string ps3_path = path.get_ptr();
 
-	if (!Emu.GetVFS().ExistsFile(filename))
+	if (!Emu.GetVFS().ExistsFile(ps3_path))
 	{
 		return CELL_FS_ENOENT;
 	}
 
-	if (!Emu.GetVFS().TruncateFile(filename, size))
+	if (!Emu.GetVFS().TruncateFile(ps3_path, size))
 	{
 		return CELL_FS_EIO; // ???
 	}
