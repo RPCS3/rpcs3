@@ -255,30 +255,14 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 		return CELL_FS_ENOENT;
 	}
 
-	s32 mode = CELL_FS_S_IRUSR | CELL_FS_S_IRGRP | CELL_FS_S_IROTH;
-
-	if (info.isWritable)
-	{
-		mode |= CELL_FS_S_IWUSR | CELL_FS_S_IWGRP | CELL_FS_S_IWOTH;
-	}
-
-	if (info.isDirectory)
-	{
-		mode |= CELL_FS_S_IFDIR;
-		mode |= CELL_FS_S_IXUSR | CELL_FS_S_IXGRP | CELL_FS_S_IXOTH; // ???
-	}
-	else
-	{
-		mode |= CELL_FS_S_IFREG;
-	}
-
+	sb->mode = info.isDirectory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = 1; // ???
 	sb->gid = 1; // ???
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime;
 	sb->size = info.size;
-	sb->blksize = info.size ? align(info.size, 4096) : 4096; // ???
+	sb->blksize = 4096; // ???
 
 	return CELL_OK;
 }
@@ -311,30 +295,14 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_FS_EIO; // ???
 	}
 
-	s32 mode = CELL_FS_S_IRUSR | CELL_FS_S_IRGRP | CELL_FS_S_IROTH;
-
-	if (info.isWritable)
-	{
-		mode |= CELL_FS_S_IWUSR | CELL_FS_S_IWGRP | CELL_FS_S_IWOTH;
-	}
-
-	if (info.isDirectory)
-	{
-		mode |= CELL_FS_S_IFDIR;
-		mode |= CELL_FS_S_IXUSR | CELL_FS_S_IXGRP | CELL_FS_S_IXOTH; // ???
-	}
-	else
-	{
-		mode |= CELL_FS_S_IFREG;
-	}
-
+	sb->mode = info.isDirectory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = 1; // ???
 	sb->gid = 1; // ???
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
-	sb->ctime = info.ctime; // may be incorrect
+	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
-	sb->blksize = info.size ? align(info.size, 4096) : 4096; // ???
+	sb->blksize = 4096; // ???
 
 	return CELL_OK;
 }
