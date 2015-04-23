@@ -6,9 +6,12 @@
 #include "utils.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependencies: <wx/mstream.h> <wx/zstream.h>")
 #pragma warning(disable : 4996)
 #include <wx/mstream.h>
 #include <wx/zstream.h>
+#pragma warning(pop)
 
 __forceinline u8 Read8(vfsStream& f)
 {

@@ -32,7 +32,6 @@
 #include "Loader/ELF32.h"
 
 #include "../Crypto/unself.h"
-#include <cstdlib>
 #include <fstream>
 using namespace PPU_instr;
 
@@ -184,28 +183,44 @@ void Emulator::Load()
 
 	if (!rIsFile(m_path)) return;
 
+	const std::string elf_dir = m_path.substr(0, m_path.find_last_of("/\\", std::string::npos, 2) + 1);
+
 	if (IsSelf(m_path))
 	{
-		std::string elf_path = rFileName(m_path).GetPath();
+		const std::string full_name = m_path.substr(elf_dir.length());
 
-		if (fmt::CmpNoCase(rFileName(m_path).GetFullName(),"EBOOT.BIN") == 0)
+		const std::string base_name = full_name.substr(0, full_name.find_last_of('.', std::string::npos));
+
+		const std::string ext = full_name.substr(base_name.length());
+
+		if (fmt::toupper(full_name) == "EBOOT.BIN")
 		{
-			elf_path += "/BOOT.BIN";
+			m_path = elf_dir + "BOOT.BIN";
+		}
+		else if (fmt::toupper(ext) == ".SELF")
+		{
+			m_path = elf_dir + base_name + ".elf";
+		}
+		else if (fmt::toupper(ext) == ".SPRX")
+		{
+			m_path = elf_dir + base_name + ".prx";
 		}
 		else
 		{
-			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
+			m_path = elf_dir + base_name + ".decrypted" + ext;
 		}
 
-		if (!DecryptSelf(elf_path, m_path))
-			return;
+		LOG_NOTICE(LOADER, "Decrypting '%s%s'...", elf_dir, full_name);
 
-		m_path = elf_path;
+		if (!DecryptSelf(m_path, elf_dir + full_name))
+		{
+			return;
+		}
 	}
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
-	GetVFS().Init(rFileName(m_path).GetPath());
+	GetVFS().Init(elf_dir);
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
@@ -242,13 +257,14 @@ void Emulator::Load()
 	if (m_elf_path.empty())
 	{
 		GetVFS().GetDeviceLocal(m_path, m_elf_path);
+		LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 	}
 
 	f.Open(m_elf_path);
 
 	if (!f.IsOpened())
 	{
-		LOG_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
+		LOG_ERROR(LOADER, "Opening '%s' failed", m_path.c_str());
 		return;
 	}
 

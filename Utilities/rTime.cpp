@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "rTime.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/datetime.h>")
 #pragma warning(disable : 4996)
 #include <wx/datetime.h>
+#pragma warning(pop)
 
 std::string rDefaultDateTimeFormat = "%c";
 

@@ -1,5 +1,9 @@
 #include "stdafx.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/string.h>")
+#pragma warning(disable : 4996)
 #include <wx/string.h>
+#pragma warning(pop)
 
 std::string u128::to_hex() const
 {

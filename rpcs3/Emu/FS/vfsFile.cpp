@@ -44,7 +44,8 @@ bool vfsFile::Remove(const std::string& path)
 bool vfsFile::Close()
 {
 	m_stream.reset();
-	return vfsFileBase::Close();
+
+	return true;
 }
 
 u64 vfsFile::GetSize() const
@@ -74,5 +75,5 @@ u64 vfsFile::Tell() const
 
 bool vfsFile::IsOpened() const
 {
-	return m_stream && m_stream->IsOpened() /*&& vfsFileBase::IsOpened()*/;
+	return m_stream && m_stream->IsOpened();
 }

@@ -1,16 +1,18 @@
 #include "stdafx.h"
+#include "Utilities/Log.h"
+#include "Utilities/rFile.h"
 #include "utils.h"
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
 #include "unpkg.h"
 #include "restore_new.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/progdlg.h>")
 #pragma warning(disable : 4996)
 #include <wx/progdlg.h>
+#pragma warning(pop)
 #include "define_new_memleakdetect.h"
-
-#include "Utilities/Log.h"
-#include "Utilities/rFile.h"
 
 // Decryption.
 bool CheckHeader(const rfile_t& pkg_f, PKGHeader* m_header)

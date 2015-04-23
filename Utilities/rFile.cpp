@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "Log.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/dir.h>")
 #pragma warning(disable : 4996)
 #include <wx/dir.h>
-#include <wx/filename.h>
+#pragma warning(pop)
 #include "rFile.h"
 
 #ifdef _WIN32
@@ -661,50 +663,4 @@ bool rDir::GetNext(std::string *filename) const
 	res = reinterpret_cast<wxDir*>(handle)->GetNext(&str);
 	*filename = str.ToStdString();
 	return res;
-}
-	
-rFileName::rFileName()
-{
-	handle = reinterpret_cast<void*>(new wxFileName());
-}
-
-rFileName::~rFileName()
-{
-	delete reinterpret_cast<wxFileName*>(handle);
-}
-
-rFileName::rFileName(const rFileName& filename)
-{
-	handle = reinterpret_cast<void*>(new wxFileName(*reinterpret_cast<wxFileName*>(filename.handle)));
-}
-
-
-rFileName::rFileName(const std::string& name)
-{
-	handle = reinterpret_cast<void*>(new wxFileName(fmt::FromUTF8(name)));
-}
-
-std::string rFileName::GetFullPath()
-{
-	return fmt::ToUTF8(reinterpret_cast<wxFileName*>(handle)->GetFullPath());
-}
-
-std::string rFileName::GetPath()
-{
-	return fmt::ToUTF8(reinterpret_cast<wxFileName*>(handle)->GetPath());
-}
-
-std::string rFileName::GetName()
-{
-	return fmt::ToUTF8(reinterpret_cast<wxFileName*>(handle)->GetName());
-}
-
-std::string rFileName::GetFullName()
-{
-	return fmt::ToUTF8(reinterpret_cast<wxFileName*>(handle)->GetFullName());
-}
-
-bool rFileName::Normalize()
-{
-	return reinterpret_cast<wxFileName*>(handle)->Normalize();
 }

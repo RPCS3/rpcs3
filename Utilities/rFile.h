@@ -44,15 +44,11 @@ struct rfile_t final
 #ifdef _WIN32
 	using handle_type = void*;
 #else
-	using handle_type = int;
+	using handle_type = intptr_t;
 #endif
 
 private:
 	handle_type fd;
-
-#ifndef _WIN32
-	handle_type pad;
-#endif
 
 public:
 	rfile_t();
@@ -92,20 +88,6 @@ struct rDir
 	static bool Exists(const std::string &path);
 	bool 	GetFirst(std::string *filename) const;
 	bool 	GetNext(std::string *filename) const;
-
-	void *handle;
-};
-struct rFileName
-{
-	rFileName();
-	rFileName(const rFileName& other);
-	~rFileName();
-	rFileName(const std::string& name);
-	std::string GetFullPath();
-	std::string GetPath();
-	std::string GetName();
-	std::string GetFullName();
-	bool Normalize();
 
 	void *handle;
 };
