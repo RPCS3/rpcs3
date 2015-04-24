@@ -1,6 +1,6 @@
 #pragma once
 
-struct fs::file;
+namespace fs { struct file; }
 
 struct PKGLoader
 {
