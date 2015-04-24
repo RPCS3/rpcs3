@@ -1,11 +1,5 @@
 #pragma once
 
-#include <utility>
-#include "Utilities/simpleini/SimpleIni.h"
-
-//TODO: make thread safe/remove static singleton
-CSimpleIniCaseA *getIniFile();
-
 //TODO: move this to the gui module
 struct WindowInfo
 {
@@ -26,7 +20,7 @@ public:
 	virtual ~Ini();
 
 protected:
-	CSimpleIniCaseA *m_Config;
+	void* m_config;
 
 	Ini();
 

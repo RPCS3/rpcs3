@@ -34,9 +34,10 @@ enum rfile_open_mode : u32
 {
 	o_read = 1 << 0,
 	o_write = 1 << 1,
-	o_create = 1 << 2,
-	o_trunc = 1 << 3,
-	o_excl = 1 << 4,
+	o_append = 1 << 2,
+	o_create = 1 << 3,
+	o_trunc = 1 << 4,
+	o_excl = 1 << 5,
 };
 
 struct rfile_t final

@@ -7,9 +7,6 @@
 #include "Emu/System.h"
 #include "Utilities/Log.h"
 
-#undef CreateFile
-#undef CopyFile
-
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
 	// fmt::tolower() removed

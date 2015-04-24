@@ -404,11 +404,14 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 #ifdef _WIN32
 	DWORD access = 0;
-	switch (mode & (o_read | o_write))
+	switch (mode & (o_read | o_write | o_append))
 	{
 	case o_read: access |= GENERIC_READ; break;
+	case o_read | o_append: access |= GENERIC_READ; break;
 	case o_write: access |= GENERIC_WRITE; break;
+	case o_write | o_append: access |= FILE_APPEND_DATA; break;
 	case o_read | o_write: access |= GENERIC_READ | GENERIC_WRITE; break;
+	case o_read | o_write | o_append: access |= GENERIC_READ | FILE_APPEND_DATA; break;
 	default:
 	{
 		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
@@ -427,7 +430,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_create | o_excl | o_trunc: disp = CREATE_NEW; break;
 	}
 
-	if (!disp || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
+	if (!disp || (mode & ~(o_read | o_write | o_append | o_create | o_trunc | o_excl)))
 	{
 		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
@@ -449,11 +452,12 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	}
 	}
 
+	if (mode & o_append) flags |= O_APPEND;
 	if (mode & o_create) flags |= O_CREAT;
 	if (mode & o_trunc) flags |= O_TRUNC;
 	if (mode & o_excl) flags |= O_EXCL;
 
-	if (((mode & o_excl) && !(mode & o_create)) || (mode & ~(o_read | o_write | o_create | o_trunc | o_excl)))
+	if (((mode & o_excl) && !(mode & o_create)) || (mode & ~(o_read | o_write | o_append | o_create | o_trunc | o_excl)))
 	{
 		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
@@ -538,15 +542,17 @@ bool rfile_t::close()
 #ifdef _WIN32
 	if (CloseHandle(fd))
 	{
-		fd = INVALID_HANDLE_VALUE;
 		return true;
 	}
+
+	fd = INVALID_HANDLE_VALUE;
 #else
 	if (!::close(fd))
 	{
-		fd = -1;
 		return true;
 	}
+
+	fd = -1;
 #endif
 
 	return false;
