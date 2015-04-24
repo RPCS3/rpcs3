@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -152,7 +152,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 
 	if (direct)
 	{
-		if (rfile_t(curpath))
+		if (fs::is_file(curpath))
 		{
 			SetPath(curpath);
 			Load();
@@ -165,7 +165,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	{
 		curpath = path + elf_path[i];
 		
-		if (rfile_t(curpath))
+		if (fs::is_file(curpath))
 		{
 			SetPath(curpath);
 			Load();
@@ -181,7 +181,7 @@ void Emulator::Load()
 {
 	GetModuleManager().Init();
 
-	if (!rIsFile(m_path)) return;
+	if (!fs::is_file(m_path)) return;
 
 	const std::string elf_dir = m_path.substr(0, m_path.find_last_of("/\\", std::string::npos, 2) + 1);
 
@@ -233,7 +233,7 @@ void Emulator::Load()
 
 		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
 	}
-	else if (rIsFile(elf_dir + "../../PS3_DISC.SFB")) // guess loading disc game
+	else if (fs::is_file(elf_dir + "../../PS3_DISC.SFB")) // guess loading disc game
 	{
 		const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
 
@@ -436,7 +436,7 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	if (!rIsFile(path)) return;
+	if (!fs::is_file(path)) return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;

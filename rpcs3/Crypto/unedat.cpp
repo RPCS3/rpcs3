@@ -2,7 +2,7 @@
 #include "key_vault.h"
 #include "unedat.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
@@ -136,7 +136,7 @@ unsigned char* get_block_key(int block, NPD_HEADER *npd)
 }
 
 // EDAT/SDAT decryption.
-int decrypt_data(const rfile_t *in, const rfile_t *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
 {
 	// Get metadata info and setup buffers.
 	int block_num = (int)((edat->file_size + edat->block_size - 1) / edat->block_size);
@@ -340,7 +340,7 @@ int decrypt_data(const rfile_t *in, const rfile_t *out, EDAT_HEADER *edat, NPD_H
 	return 0;
 }
 
-int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const rfile_t *f, bool verbose)
+int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs::file* f, bool verbose)
 {
 	f->seek(0);
 	unsigned char header[0xA0];
@@ -639,7 +639,7 @@ int validate_npd_hashes(const char* file_name, unsigned char *klicensee, NPD_HEA
 	return (title_hash_result && dev_hash_result);
 }
 
-bool extract_data(const rfile_t *input, const rfile_t *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
+bool extract_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER *NPD = new NPD_HEADER();
@@ -812,9 +812,9 @@ bool extract_data(const rfile_t *input, const rfile_t *output, const char* input
 int DecryptEDAT(const std::string& input_file_name, const std::string& output_file_name, int mode, const std::string& rap_file_name, unsigned char *custom_klic, bool verbose)
 {
 	// Prepare the files.
-	rfile_t input(input_file_name);
-	rfile_t output(output_file_name, o_write | o_create | o_trunc);
-	rfile_t rap(rap_file_name);
+	fs::file input(input_file_name);
+	fs::file output(output_file_name, o_write | o_create | o_trunc);
+	fs::file rap(rap_file_name);
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -887,7 +887,7 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	if (extract_data(&input, &output, input_file_name.c_str(), devklic, rifkey, verbose))
 	{
 		output.close();
-		rRemoveFile(output_file_name);
+		fs::remove_file(output_file_name);
 		return -1;
 	}
 	

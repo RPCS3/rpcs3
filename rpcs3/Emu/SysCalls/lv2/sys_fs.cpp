@@ -43,7 +43,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 
 	// TODO: other checks for path
 
-	if (rIsDir(local_path))
+	if (fs::is_dir(local_path))
 	{
 		sys_fs.Error("sys_fs_open('%s') failed: path is a directory", path.get_ptr());
 		return CELL_FS_EISDIR;
@@ -247,15 +247,15 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 		return CELL_FS_ENOTMOUNTED;
 	}
 
-	FileInfo info;
+	fs::stat_t info;
 
-	if (!get_file_info(local_path, info) || !info.exists)
+	if (!fs::stat(local_path, info) || !info.exists)
 	{
 		sys_fs.Error("sys_fs_stat('%s') failed: not found", path.get_ptr());
 		return CELL_FS_ENOENT;
 	}
 
-	sb->mode = info.isDirectory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = 1; // ???
 	sb->gid = 1; // ???
 	sb->atime = info.atime;
@@ -288,14 +288,14 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_FS_ENOTSUP;
 	}
 
-	FileInfo info;
+	fs::stat_t info;
 
 	if (!local_file->GetFile().stat(info))
 	{
 		return CELL_FS_EIO; // ???
 	}
 
-	sb->mode = info.isDirectory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = 1; // ???
 	sb->gid = 1; // ???
 	sb->atime = info.atime;

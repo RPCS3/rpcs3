@@ -4,7 +4,7 @@
 class vfsLocalFile : public vfsFileBase
 {
 private:
-	rfile_t m_file;
+	fs::file m_file;
 
 public:
 	vfsLocalFile(vfsDevice* device);
@@ -25,8 +25,5 @@ public:
 
 	virtual bool IsOpened() const override;
 	
-	virtual const rfile_t& GetFile() const
-	{
-		return m_file;
-	}
+	virtual const fs::file& GetFile() const { return m_file; }
 };

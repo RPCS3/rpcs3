@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 enum
 {
@@ -71,9 +71,10 @@ void AutoPauseManagerDialog::LoadEntries(void)
 	m_entries.clear();
 	m_entries.reserve(16);
 
-	if (rIsFile("pause.bin"))
+	fs::file list("pause.bin");
+
+	if (list)
 	{
-		rfile_t list("pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
 		size_t fmax = list.size();
@@ -95,7 +96,7 @@ void AutoPauseManagerDialog::LoadEntries(void)
 //This would always use a 0xFFFFFFFF as end of the pause.bin
 void AutoPauseManagerDialog::SaveEntries(void)
 {
-	rfile_t list("pause.bin", o_write | o_create | o_trunc);
+	fs::file list("pause.bin", o_write | o_create | o_trunc);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	list.seek(0);

@@ -246,9 +246,9 @@ void MainFrame::InstallPkg(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 	
 	// Open and install PKG file
-	rfile_t pkg_f(ctrl.GetPath().ToStdString(), o_read);
+	fs::file pkg_f(ctrl.GetPath().ToStdString(), o_read);
 
-	if(pkg_f)
+	if (pkg_f)
 	{
 		PKGLoader::Install(pkg_f, "/dev_hdd0/game/");
 

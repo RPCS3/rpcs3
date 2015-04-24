@@ -5,7 +5,7 @@
 #include "Emu/SysCalls/lv2/sys_process.h"
 
 #include "Emu/FS/VFS.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Emu/FS/vfsDir.h"
 #include "Crypto/unedat.h"
 #include "sceNp.h"
@@ -140,8 +140,8 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	if (DecryptEDAT(enc_drm_path_local, dec_drm_path_local, 8, rap_path_local, k_licensee, false) >= 0)
 	{
 		// If decryption succeeds, replace the encrypted file with it.
-		rRemoveFile(enc_drm_path_local);
-		rRename(dec_drm_path_local, enc_drm_path_local);
+		fs::remove_file(enc_drm_path_local);
+		fs::rename(dec_drm_path_local, enc_drm_path_local);
 	}
 
 	return CELL_OK;

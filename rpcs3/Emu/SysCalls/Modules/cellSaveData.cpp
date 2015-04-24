@@ -7,7 +7,7 @@
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFile.h"
 #include "Emu/FS/vfsDir.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Loader/PSF.h"
 #include "cellSaveData.h"
 
@@ -373,9 +373,8 @@ __noinline s32 savedata_op(
 
 		Emu.GetVFS().GetDevice(dir_path, dir_local_path);
 
-		FileInfo dir_info = {};
-
-		get_file_info(dir_local_path, dir_info);
+		fs::stat_t dir_info;
+		fs::stat(dir_local_path, dir_info);
 
 		statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
 		statGet->isNewData = save_entry.isNew = !psf;
@@ -577,7 +576,7 @@ __noinline s32 savedata_op(
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			rfile_t file(local_path, o_read);
+			fs::file file(local_path, o_read);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.read(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;
@@ -585,7 +584,7 @@ __noinline s32 savedata_op(
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			rfile_t file(local_path, o_write | o_create);
+			fs::file file(local_path, o_write | o_create);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			file.trunc(file.seek(0, from_cur)); // truncate
@@ -594,14 +593,14 @@ __noinline s32 savedata_op(
 
 		case CELL_SAVEDATA_FILEOP_DELETE:
 		{
-			rRemoveFile(local_path);
+			fs::remove_file(local_path);
 			fileGet->excSize = 0;
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			rfile_t file(local_path, o_write | o_create);
+			fs::file file(local_path, o_write | o_create);
 			file.seek(fileSet->fileOffset);
 			fileGet->excSize = static_cast<u32>(file.write(fileSet->fileBuf.get_ptr(), std::min<u32>(fileSet->fileSize, fileSet->fileBufSize)));
 			break;

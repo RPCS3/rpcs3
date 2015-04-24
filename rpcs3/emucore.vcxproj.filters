@@ -599,9 +599,6 @@
     <ClCompile Include="Ini.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\rFile.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rMsgBox.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -862,6 +859,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\File.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1402,9 +1402,6 @@
     <ClInclude Include="..\Utilities\MTRingbuffer.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\rFile.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\rMsgBox.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1548,6 +1545,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInterpreter2.h">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\File.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

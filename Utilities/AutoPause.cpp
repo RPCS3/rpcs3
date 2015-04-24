@@ -2,7 +2,7 @@
 #include "rpcs3/Ini.h"
 #include "AutoPause.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
 
 using namespace Debug;
@@ -44,14 +44,14 @@ AutoPause::~AutoPause(void)
 //This would be able to create in a GUI window.
 void AutoPause::Reload(void)
 {
-	if (rIsFile("pause.bin"))
+	if (fs::is_file("pause.bin"))
 	{
 		m_pause_function.clear();
 		m_pause_function.reserve(16);
 		m_pause_syscall.clear();
 		m_pause_syscall.reserve(16);
 
-		rfile_t list("pause.bin");
+		fs::file list("pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
 		size_t fmax = list.size();

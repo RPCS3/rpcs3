@@ -56,6 +56,6 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-struct rfile_t;
+struct fs::file;
 
-int Unpack(const rfile_t& dec_pkg_f, std::string src, std::string dst);
+int Unpack(const fs::file& dec_pkg_f, std::string src, std::string dst);

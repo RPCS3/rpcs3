@@ -1,7 +1,6 @@
 #pragma once
-
 #include <sstream>
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
@@ -182,9 +181,8 @@ public:
 		, m_arb_shader("")
 		, m_dst_reg_name("")
 	{
-		rfile_t f(path);
-		if (!f)
-			return;
+		fs::file f(path);
+		if (!f) return;
 
 		m_buffer_size = f.size();
 		m_buffer = new u8[m_buffer_size];
@@ -314,10 +312,8 @@ public:
 			{
 				u32 ptr;
 				{
-					rfile_t f(m_path);
-
-					if (!f)
-						return;
+					fs::file f(m_path);
+					if (!f) return;
 
 					size_t size = f.size();
 					vm::ps3::init();

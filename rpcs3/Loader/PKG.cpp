@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
 #include "Utilities/rMsgBox.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "PKG.h"
 #include "../Crypto/unpkg.h"
 
-bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
+bool PKGLoader::Install(const fs::file& pkg_f, std::string dest)
 {
 	// Initial checks
 	if (!pkg_f)
@@ -27,7 +27,7 @@ bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
 	
 	std::string titleID = std::string(title_id).substr(7, 9);
 
-	if (rIsDir(dest + titleID))
+	if (fs::is_dir(dest + titleID))
 	{
 		if (rMessageDialog(NULL, "Another installation found. Do you want to overwrite it?", "PKG Decrypter / Installer", rYES_NO | rCENTRE).ShowModal() != rID_YES)
 		{
@@ -35,7 +35,7 @@ bool PKGLoader::Install(const rfile_t& pkg_f, std::string dest)
 			return false;
 		}
 	}
-	else if (!rMkDir(dest + titleID))
+	else if (!fs::create_dir(dest + titleID))
 	{
 		LOG_ERROR(LOADER, "PKG Loader: Could not create the installation directory: %s", titleID.c_str());
 		return false;

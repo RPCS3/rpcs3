@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"
@@ -67,7 +67,7 @@ __forceinline void Write8(vfsStream& f, const u8 data)
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write8(const rfile_t& f, const u8 data)
+__forceinline void Write8(const fs::file& f, const u8 data)
 {
 	f.write(&data, sizeof(data));
 }
@@ -77,7 +77,7 @@ __forceinline void Write16LE(vfsStream& f, const u16 data)
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write16LE(const rfile_t& f, const u16 data)
+__forceinline void Write16LE(const fs::file& f, const u16 data)
 {
 	f.write(&data, sizeof(data));
 }
@@ -87,7 +87,7 @@ __forceinline void Write32LE(vfsStream& f, const u32 data)
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write32LE(const rfile_t& f, const u32 data)
+__forceinline void Write32LE(const fs::file& f, const u32 data)
 {
 	f.write(&data, sizeof(data));
 }
@@ -97,7 +97,7 @@ __forceinline void Write64LE(vfsStream& f, const u64 data)
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write64LE(const rfile_t& f, const u64 data)
+__forceinline void Write64LE(const fs::file& f, const u64 data)
 {
 	f.write(&data, sizeof(data));
 }
@@ -107,7 +107,7 @@ __forceinline void Write16(vfsStream& f, const u16 data)
 	Write16LE(f, re16(data));
 }
 
-__forceinline void Write16(const rfile_t& f, const u16 data)
+__forceinline void Write16(const fs::file& f, const u16 data)
 {
 	Write16LE(f, re16(data));
 }
@@ -117,7 +117,7 @@ __forceinline void Write32(vfsStream& f, const u32 data)
 	Write32LE(f, re32(data));
 }
 
-__forceinline void Write32(const rfile_t& f, const u32 data)
+__forceinline void Write32(const fs::file& f, const u32 data)
 {
 	Write32LE(f, re32(data));
 }
@@ -127,12 +127,12 @@ __forceinline void Write64(vfsStream& f, const u64 data)
 	Write64LE(f, re64(data));
 }
 
-__forceinline void Write64(const rfile_t& f, const u64 data)
+__forceinline void Write64(const fs::file& f, const u64 data)
 {
 	Write64LE(f, re64(data));
 }
 
-void WriteEhdr(const rfile_t& f, Elf64_Ehdr& ehdr)
+void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -155,7 +155,7 @@ void WriteEhdr(const rfile_t& f, Elf64_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(const rfile_t& f, Elf64_Phdr& phdr)
+void WritePhdr(const fs::file& f, Elf64_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_flags);
@@ -167,7 +167,7 @@ void WritePhdr(const rfile_t& f, Elf64_Phdr& phdr)
 	Write64(f, phdr.p_align);
 }
 
-void WriteShdr(const rfile_t& f, Elf64_Shdr& shdr)
+void WriteShdr(const fs::file& f, Elf64_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -181,7 +181,7 @@ void WriteShdr(const rfile_t& f, Elf64_Shdr& shdr)
 	Write64(f, shdr.sh_entsize);
 }
 
-void WriteEhdr(const rfile_t& f, Elf32_Ehdr& ehdr)
+void WriteEhdr(const fs::file& f, Elf32_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -204,7 +204,7 @@ void WriteEhdr(const rfile_t& f, Elf32_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(const rfile_t& f, Elf32_Phdr& phdr)
+void WritePhdr(const fs::file& f, Elf32_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_offset);
@@ -216,7 +216,7 @@ void WritePhdr(const rfile_t& f, Elf32_Phdr& phdr)
 	Write32(f, phdr.p_align);
 }
 
-void WriteShdr(const rfile_t& f, Elf32_Shdr& shdr)
+void WriteShdr(const fs::file& f, Elf32_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -1076,7 +1076,7 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	rfile_t e(elf, o_write | o_create | o_trunc);
+	fs::file e(elf, o_write | o_create | o_trunc);
 	if(!e)
 	{
 		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
@@ -1195,14 +1195,14 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	std::string rap_path("dev_hdd0/home/" + pf_str + "/exdata/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!rIsFile(rap_path))
+	if (!fs::is_file(rap_path))
 	{
 		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
 	// Open the RAP file and read the key.
-	rfile_t rap_file(rap_path);
+	fs::file rap_file(rap_path);
 
 	if (!rap_file)
 	{
@@ -1255,7 +1255,7 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	rfile_t s(self);
+	fs::file s(self);
 
 	if(!s)
 	{
@@ -1283,7 +1283,7 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		s.seek(elf_offset);
 
 		// Write the real ELF file back.
-		rfile_t e(elf, o_write | o_create | o_trunc);
+		fs::file e(elf, o_write | o_create | o_trunc);
 		if(!e)
 		{
 			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());

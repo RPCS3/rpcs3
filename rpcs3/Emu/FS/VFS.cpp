@@ -185,7 +185,7 @@ bool VFS::CreatePath(const std::string& ps3_path) const
 
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		return rMkPath(path);
+		return fs::create_path(path);
 	}
 
 	return false;
@@ -307,7 +307,7 @@ bool VFS::CopyFile(const std::string& ps3_path_from, const std::string& ps3_path
 	{
 		if (vfsDevice* dev_ = GetDevice(ps3_path_to, path_to))
 		{
-			return rCopy(path_from, path_to, overwrite);
+			return fs::copy_file(path_from, path_to, overwrite);
 		}
 	}
 
@@ -320,7 +320,7 @@ bool VFS::TruncateFile(const std::string& ps3_path, u64 length) const
 
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		return rTruncate(path, length);
+		return fs::truncate_file(path, length);
 	}
 
 	return false;
@@ -514,14 +514,9 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
 		}
 
-		FileInfo info;
-		if (!get_file_info(dir, info) || !info.exists)
+		if (!fs::is_dir(dir))
 		{
-			LOG_ERROR(GENERAL, "Custom EmulationDir: '%s' not found", dir);
-		}
-		else if (!info.isDirectory)
-		{
-			LOG_ERROR(GENERAL, "Custom EmulationDir: '%s' is not a valid directory", dir);
+			LOG_ERROR(GENERAL, "Custom EmulationDir: directory '%s' not found", dir);
 		}
 		else
 		{

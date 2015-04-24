@@ -2,7 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 #include "Emu/SysCalls/lv2/sys_time.h"
 
@@ -147,22 +147,22 @@ void SPURecompilerCore::Compile(u16 pos)
 	entry[start].pointer = compiler.make();
 	compiler.setLogger(nullptr); // crashes without it
 
-	//rFile log;
-	//log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
-	//log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
-	//log.Write(std::string(stringLogger.getString()));
+	//std::string log = fmt::format("========== START POSITION 0x%x ==========\n\n", start * 4);
+	//log += stringLogger.getString();
 	//if (!entry[start].pointer)
 	//{
 	//	LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
-	//	log.Write("========== FAILED ============\n\n");
+	//	log += "========== FAILED ============\n\n";
 	//	Emu.Pause();
 	//}
 	//else
 	//{
-	//	log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
-	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
+	//	log += fmt::format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1);
 	//}
-	//log.Close();
+
+	//fs::file(fmt::Format("SPUjit_%d.log", this->CPU.GetId()), o_write | o_create | (first ? o_trunc : o_append)).write(log.c_str(), log.size());
+
 	m_enc->compiler = nullptr;
 	first = false;
 }

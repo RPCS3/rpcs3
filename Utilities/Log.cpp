@@ -5,7 +5,7 @@
 #include <iostream>
 #include <cinttypes>
 #include "Thread.h"
-#include "rFile.h"
+#include "File.h"
 
 using namespace Log;
 
@@ -90,7 +90,7 @@ struct CoutListener : LogListener
 
 struct FileListener : LogListener
 {
-	rfile_t mFile;
+	fs::file mFile;
 	bool mPrependChannelName;
 
 	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)

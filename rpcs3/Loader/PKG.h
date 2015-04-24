@@ -1,8 +1,8 @@
 #pragma once
 
-struct rfile_t;
+struct fs::file;
 
 struct PKGLoader
 {
-	static bool Install(const rfile_t& pkg_f, std::string dest);
+	static bool Install(const fs::file& pkg_f, std::string dest);
 };

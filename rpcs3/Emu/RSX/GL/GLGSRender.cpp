@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
@@ -580,7 +580,7 @@ void GLTexture::Save(RSXTexture& tex, const std::string& name)
 		return;
 	}
 
-	rfile_t(name + ".raw", o_write | o_create | o_trunc).write(alldata, texPixelCount * 4);
+	fs::file(name + ".raw", o_write | o_create | o_trunc).write(alldata, texPixelCount * 4);
 
 	u8* data = new u8[texPixelCount * 3];
 	u8* alpha = new u8[texPixelCount];
@@ -610,10 +610,10 @@ void GLTexture::Save(RSXTexture& tex)
 	static const std::string& dir_path = "textures";
 	static const std::string& file_fmt = dir_path + "/" + "tex[%d].png";
 
-	if (!rIsDir(dir_path)) rMkDir(dir_path);
+	if (!fs::exists(dir_path)) fs::create_dir(dir_path);
 
 	u32 count = 0;
-	while (rIsFile(fmt::Format(file_fmt.c_str(), count))) count++;
+	while (fs::exists(fmt::Format(file_fmt.c_str(), count))) count++;
 	Save(tex, fmt::Format(file_fmt.c_str(), count));
 }
 
@@ -1134,7 +1134,7 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rfile_t("./FragmentProgram.txt", o_write | o_create | o_trunc).write(m_fragment_prog.shader.c_str(), m_fragment_prog.shader.size());
+		fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(m_fragment_prog.shader.c_str(), m_fragment_prog.shader.size());
 	}
 
 	if (m_vp_buf_num == -1)
@@ -1145,7 +1145,7 @@ bool GLGSRender::LoadProgram()
 		checkForGlError("m_vertex_prog.Compile");
 
 		// TODO: This shouldn't use current dir
-		rfile_t("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
+		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
 	}
 
 	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)

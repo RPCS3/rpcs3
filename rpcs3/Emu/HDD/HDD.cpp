@@ -21,7 +21,7 @@ void vfsHDDManager::CreateEntry(vfsHDD_Entry& entry)
 
 void vfsHDDManager::CreateHDD(const std::string& path, u64 size, u64 block_size)
 {
-	rfile_t f(path, o_write | o_create | o_trunc);
+	fs::file f(path, o_write | o_create | o_trunc);
 
 	static const u64 cur_dir_block = 1;
 

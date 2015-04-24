@@ -29,7 +29,7 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />
-    <ClCompile Include="..\Utilities\rFile.cpp" />
+    <ClCompile Include="..\Utilities\File.cpp" />
     <ClCompile Include="..\Utilities\rMsgBox.cpp" />
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
     <ClCompile Include="..\Utilities\rTime.cpp" />
@@ -311,7 +311,7 @@
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\Log.h" />
-    <ClInclude Include="..\Utilities\rFile.h" />
+    <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />

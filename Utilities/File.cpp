@@ -5,7 +5,7 @@
 #pragma warning(disable : 4996)
 #include <wx/dir.h>
 #pragma warning(pop)
-#include "rFile.h"
+#include "File.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -92,7 +92,7 @@ bool truncate_file(const std::string& file, uint64_t length)
 
 #endif
 
-bool get_file_info(const std::string& path, FileInfo& info)
+bool fs::stat(const std::string& path, stat_t& info)
 {
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
@@ -103,8 +103,8 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	}
 
 	info.exists = true;
-	info.isDirectory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-	info.isWritable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = (uint64_t)attrs.nFileSizeLow | ((uint64_t)attrs.nFileSizeHigh << 32);
 	info.atime = to_time_t(attrs.ftLastAccessTime);
 	info.mtime = to_time_t(attrs.ftLastWriteTime);
@@ -118,8 +118,8 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	}
 
 	info.exists = true;
-	info.isDirectory = S_ISDIR(file_info.st_mode);
-	info.isWritable = file_info.st_mode & 0200; // HACK: approximation
+	info.is_directory = S_ISDIR(file_info.st_mode);
+	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
 	info.atime = file_info.st_atime;
 	info.mtime = file_info.st_mtime;
@@ -128,7 +128,7 @@ bool get_file_info(const std::string& path, FileInfo& info)
 	return true;
 }
 
-bool rExists(const std::string& path)
+bool fs::exists(const std::string& path)
 {
 #ifdef _WIN32
 	return GetFileAttributesW(ConvertUTF8ToWChar(path).get()) != 0xFFFFFFFF;
@@ -138,7 +138,7 @@ bool rExists(const std::string& path)
 #endif
 }
 
-bool rIsFile(const std::string& file)
+bool fs::is_file(const std::string& file)
 {
 #ifdef _WIN32
 	DWORD attrs;
@@ -159,7 +159,7 @@ bool rIsFile(const std::string& file)
 #endif
 }
 
-bool rIsDir(const std::string& dir)
+bool fs::is_dir(const std::string& dir)
 {
 #ifdef _WIN32
 	DWORD attrs;
@@ -180,7 +180,7 @@ bool rIsDir(const std::string& dir)
 #endif
 }
 
-bool rMkDir(const std::string& dir)
+bool fs::create_dir(const std::string& dir)
 {
 #ifdef _WIN32
 	if (!CreateDirectoryW(ConvertUTF8ToWChar(dir).get(), NULL))
@@ -195,7 +195,7 @@ bool rMkDir(const std::string& dir)
 	return true;
 }
 
-bool rMkPath(const std::string& path)
+bool fs::create_path(const std::string& path)
 {
 	size_t start = 0;
 
@@ -218,10 +218,10 @@ bool rMkPath(const std::string& path)
 			continue;
 		}
 
-		if (!rIsDir(dir))
+		if (!is_dir(dir))
 		{
 			// if doesn't exist or not a dir
-			if (!rMkDir(dir))
+			if (!create_dir(dir))
 			{
 				// if creating failed
 				return false;
@@ -237,7 +237,7 @@ bool rMkPath(const std::string& path)
 	return true;
 }
 
-bool rRmDir(const std::string& dir)
+bool fs::remove_dir(const std::string& dir)
 {
 #ifdef _WIN32
 	if (!RemoveDirectoryW(ConvertUTF8ToWChar(dir).get()))
@@ -252,7 +252,7 @@ bool rRmDir(const std::string& dir)
 	return true;
 }
 
-bool rRename(const std::string& from, const std::string& to)
+bool fs::rename(const std::string& from, const std::string& to)
 {
 	// TODO: Deal with case-sensitivity
 #ifdef _WIN32
@@ -304,7 +304,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 }
 #endif
 
-bool rCopy(const std::string& from, const std::string& to, bool overwrite)
+bool fs::copy_file(const std::string& from, const std::string& to, bool overwrite)
 {
 #ifdef _WIN32
 	if (!CopyFileW(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get(), !overwrite))
@@ -319,7 +319,7 @@ bool rCopy(const std::string& from, const std::string& to, bool overwrite)
 	return true;
 }
 
-bool rRemoveFile(const std::string& file)
+bool fs::remove_file(const std::string& file)
 {
 #ifdef _WIN32
 	if (!DeleteFileW(ConvertUTF8ToWChar(file).get()))
@@ -334,10 +334,10 @@ bool rRemoveFile(const std::string& file)
 	return true;
 }
 
-bool rTruncate(const std::string& file, uint64_t length)
+bool fs::truncate_file(const std::string& file, uint64_t length)
 {
 #ifdef _WIN32
-	if (!truncate_file(file, length))
+	if (!::truncate_file(file, length))
 #else
 	if (truncate64(file.c_str(), length))
 #endif
@@ -349,7 +349,7 @@ bool rTruncate(const std::string& file, uint64_t length)
 	return true;
 }
 
-rfile_t::rfile_t()
+fs::file::file()
 #ifdef _WIN32
 	: fd(INVALID_HANDLE_VALUE)
 #else
@@ -358,7 +358,7 @@ rfile_t::rfile_t()
 {
 }
 
-rfile_t::~rfile_t()
+fs::file::~file()
 {
 #ifdef _WIN32
 	if (fd != INVALID_HANDLE_VALUE)
@@ -373,7 +373,7 @@ rfile_t::~rfile_t()
 #endif
 }
 
-rfile_t::rfile_t(const std::string& filename, u32 mode)
+fs::file::file(const std::string& filename, u32 mode)
 #ifdef _WIN32
 	: fd(INVALID_HANDLE_VALUE)
 #else
@@ -383,7 +383,7 @@ rfile_t::rfile_t(const std::string& filename, u32 mode)
 	open(filename, mode);
 }
 
-rfile_t::operator bool() const
+fs::file::operator bool() const
 {
 #ifdef _WIN32
 	return fd != INVALID_HANDLE_VALUE;
@@ -392,15 +392,15 @@ rfile_t::operator bool() const
 #endif
 }
 
-void rfile_t::import(handle_type handle)
+void fs::file::import(handle_type handle)
 {
-	this->~rfile_t();
+	this->~file();
 	fd = handle;
 }
 
-bool rfile_t::open(const std::string& filename, u32 mode)
+bool fs::file::open(const std::string& filename, u32 mode)
 {
-	this->~rfile_t();
+	this->~file();
 
 #ifdef _WIN32
 	DWORD access = 0;
@@ -414,7 +414,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_read | o_write | o_append: access |= GENERIC_READ | FILE_APPEND_DATA; break;
 	default:
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
+		LOG_ERROR(GENERAL, "fs::file::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
 		return false;
 	}
 	}
@@ -432,7 +432,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 	if (!disp || (mode & ~(o_read | o_write | o_append | o_create | o_trunc | o_excl)))
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
+		LOG_ERROR(GENERAL, "fs::file::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
 	}
 
@@ -447,7 +447,7 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 	case o_read | o_write: flags |= O_RDWR; break;
 	default:
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
+		LOG_ERROR(GENERAL, "fs::file::open('%s') failed: neither o_read nor o_write specified (0x%x)", filename, mode);
 		return false;
 	}
 	}
@@ -459,26 +459,26 @@ bool rfile_t::open(const std::string& filename, u32 mode)
 
 	if (((mode & o_excl) && !(mode & o_create)) || (mode & ~(o_read | o_write | o_append | o_create | o_trunc | o_excl)))
 	{
-		LOG_ERROR(GENERAL, "rfile_t::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
+		LOG_ERROR(GENERAL, "fs::file::open('%s') failed: unknown mode specified (0x%x)", filename, mode);
 		return false;
 	}
 
 	if ((fd = ::open(filename.c_str(), flags, 0666)) == -1)
 #endif
 	{
-		LOG_WARNING(GENERAL, "rfile_t::open('%s', 0x%x) failed: error 0x%llx", filename, mode, GET_API_ERROR);
+		LOG_WARNING(GENERAL, "fs::file::open('%s', 0x%x) failed: error 0x%llx", filename, mode, GET_API_ERROR);
 		return false;
 	}
 
 	return true;
 }
 
-bool rfile_t::is_opened() const
+bool fs::file::is_opened() const
 {
 	return *this;
 }
 
-bool rfile_t::trunc(u64 size) const
+bool fs::file::trunc(u64 size) const
 {
 #ifdef _WIN32
 	LARGE_INTEGER old, pos;
@@ -499,7 +499,7 @@ bool rfile_t::trunc(u64 size) const
 #endif
 }
 
-bool rfile_t::stat(FileInfo& info) const
+bool fs::file::stat(stat_t& info) const
 {
 #ifdef _WIN32
 	FILE_BASIC_INFO basic_info;
@@ -512,8 +512,8 @@ bool rfile_t::stat(FileInfo& info) const
 	}
 
 	info.exists = true;
-	info.isDirectory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-	info.isWritable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = this->size();
 	info.atime = to_time_t(basic_info.LastAccessTime);
 	info.mtime = to_time_t(basic_info.ChangeTime);
@@ -527,8 +527,8 @@ bool rfile_t::stat(FileInfo& info) const
 	}
 
 	info.exists = true;
-	info.isDirectory = S_ISDIR(file_info.st_mode);
-	info.isWritable = file_info.st_mode & 0200; // HACK: approximation
+	info.is_directory = S_ISDIR(file_info.st_mode);
+	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
 	info.atime = file_info.st_atime;
 	info.mtime = file_info.st_mtime;
@@ -537,7 +537,7 @@ bool rfile_t::stat(FileInfo& info) const
 	return true;
 }
 
-bool rfile_t::close()
+bool fs::file::close()
 {
 #ifdef _WIN32
 	if (CloseHandle(fd))
@@ -558,7 +558,7 @@ bool rfile_t::close()
 	return false;
 }
 
-u64 rfile_t::read(void* buffer, u64 count) const
+u64 fs::file::read(void* buffer, u64 count) const
 {
 #ifdef _WIN32
 	DWORD nread;
@@ -573,7 +573,7 @@ u64 rfile_t::read(void* buffer, u64 count) const
 #endif
 }
 
-u64 rfile_t::write(const void* buffer, u64 count) const
+u64 fs::file::write(const void* buffer, u64 count) const
 {
 #ifdef _WIN32
 	DWORD nwritten;
@@ -588,7 +588,7 @@ u64 rfile_t::write(const void* buffer, u64 count) const
 #endif
 }
 
-u64 rfile_t::seek(u64 offset, u32 mode) const
+u64 fs::file::seek(u64 offset, u32 mode) const
 {
 	assert(mode < 3);
 
@@ -607,7 +607,7 @@ u64 rfile_t::seek(u64 offset, u32 mode) const
 #endif
 }
 
-u64 rfile_t::size() const
+u64 fs::file::size() const
 {
 #ifdef _WIN32
 	LARGE_INTEGER size;

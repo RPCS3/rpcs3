@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "utils.h"
 #include "aes.h"
 #include "sha1.h"
@@ -15,7 +15,7 @@
 #include "define_new_memleakdetect.h"
 
 // Decryption.
-bool CheckHeader(const rfile_t& pkg_f, PKGHeader* m_header)
+bool CheckHeader(const fs::file& pkg_f, PKGHeader* m_header)
 {
 	if (m_header->pkg_magic != 0x7F504B47)
 	{
@@ -66,7 +66,7 @@ bool CheckHeader(const rfile_t& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-bool LoadHeader(const rfile_t& pkg_f, PKGHeader* m_header)
+bool LoadHeader(const fs::file& pkg_f, PKGHeader* m_header)
 {
 	pkg_f.seek(0);
 	
@@ -82,7 +82,7 @@ bool LoadHeader(const rfile_t& pkg_f, PKGHeader* m_header)
 	return true;
 }
 
-int Decrypt(const rfile_t& pkg_f, const rfile_t& dec_pkg_f, PKGHeader* m_header)
+int Decrypt(const fs::file& pkg_f, const fs::file& dec_pkg_f, PKGHeader* m_header)
 {
 	if (!LoadHeader(pkg_f, m_header))
 	{
@@ -157,7 +157,7 @@ int Decrypt(const rfile_t& pkg_f, const rfile_t& dec_pkg_f, PKGHeader* m_header)
 }
 
 // Unpacking.
-bool LoadEntries(const rfile_t& dec_pkg_f, PKGHeader* m_header, PKGEntry* m_entries)
+bool LoadEntries(const fs::file& dec_pkg_f, PKGHeader* m_header, PKGEntry* m_entries)
 {
 	dec_pkg_f.seek(0);
 	dec_pkg_f.read(m_entries, sizeof(PKGEntry) * m_header->file_count);
@@ -171,7 +171,7 @@ bool LoadEntries(const rfile_t& dec_pkg_f, PKGHeader* m_header, PKGEntry* m_entr
 	return true;
 }
 
-bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string dir)
+bool UnpackEntry(const fs::file& dec_pkg_f, const PKGEntry& entry, std::string dir)
 {
 	char buf[BUF_SIZE];
 
@@ -186,26 +186,31 @@ bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string di
 	case PKG_FILE_ENTRY_SDAT:
 	case PKG_FILE_ENTRY_REGULAR:
 	{
-		auto path = dir + std::string(buf, entry.name_size);
+		const std::string path = dir + std::string(buf, entry.name_size);
 
-		if (rIsFile(path))
+		if (fs::is_file(path))
 		{
 			LOG_WARNING(LOADER, "PKG Loader: '%s' is overwritten", path);
 		}
 
-		rfile_t out;
+		fs::file out(path, o_write | o_create | o_trunc);
 
-		if (out.open(path, o_write | o_create | o_trunc))
+		if (out)
 		{
 			dec_pkg_f.seek(entry.file_offset);
 
 			for (u64 size = 0; size < entry.file_size;)
 			{
 				size += dec_pkg_f.read(buf, BUF_SIZE);
+
 				if (size > entry.file_size)
+				{
 					out.write(buf, BUF_SIZE - (size - entry.file_size));
+				}
 				else
+				{
 					out.write(buf, BUF_SIZE);
+				}
 			}
 
 			return true;
@@ -219,10 +224,11 @@ bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string di
 
 	case PKG_FILE_ENTRY_FOLDER:
 	{
-		auto path = dir + std::string(buf, entry.name_size);
-		if (!rIsDir(path) && !rMkPath(path))
+		const std::string path = dir + std::string(buf, entry.name_size);
+
+		if (!fs::is_dir(path) && !fs::create_dir(path))
 		{
-			LOG_ERROR(LOADER, "PKG Loader: Could not create directory: %s", path.c_str());
+			LOG_ERROR(LOADER, "PKG Loader: Could not create directory: %s", path);
 			return false;
 		}
 
@@ -237,14 +243,14 @@ bool UnpackEntry(const rfile_t& dec_pkg_f, const PKGEntry& entry, std::string di
 	}
 }
 
-int Unpack(const rfile_t& pkg_f, std::string src, std::string dst)
+int Unpack(const fs::file& pkg_f, std::string src, std::string dst)
 {
 	PKGHeader* m_header = (PKGHeader*) malloc (sizeof(PKGHeader));
 
 	// TODO: This shouldn't use current dir
 	std::string decryptedFile = "./dev_hdd1/" + src + ".dec";
 
-	rfile_t dec_pkg_f(decryptedFile, o_read | o_write | o_create | o_trunc);
+	fs::file dec_pkg_f(decryptedFile, o_read | o_write | o_create | o_trunc);
 	
 	if (Decrypt(pkg_f, dec_pkg_f, m_header) < 0)
 	{
@@ -274,7 +280,7 @@ int Unpack(const rfile_t& pkg_f, std::string src, std::string dst)
 	pdlg.Update(m_entries.size());
 
 	dec_pkg_f.close();
-	rRemoveFile(decryptedFile);
+	fs::remove_file(decryptedFile);
 
 	return 0;
 }

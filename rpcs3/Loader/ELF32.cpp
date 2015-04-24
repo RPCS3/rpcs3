@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Ini.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
 #include "ELF32.h"
