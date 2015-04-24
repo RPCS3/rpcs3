@@ -15,13 +15,14 @@ std::vector<std::string> simplify_path_blocks(const std::string& path)
 	// fmt::tolower() removed
 	std::vector<std::string> path_blocks = std::move(fmt::split(path, { "/", "\\" }));
 
-	for (size_t i = 0; i < path_blocks.size(); ++i)
+	for (s32 i = 0; i < path_blocks.size(); ++i)
 	{
-		if (path_blocks[i] == ".")
+		if (path_blocks[i] == "." || (i > 0 && path_blocks[i].empty()))
 		{
-			path_blocks.erase(path_blocks.begin() + i--);
+			path_blocks.erase(path_blocks.begin() + i);
+			i--;
 		}
-		else if (i && path_blocks[i] == "..")
+		else if (i > 0 && path_blocks[i] == "..")
 		{
 			path_blocks.erase(path_blocks.begin() + (i - 1), path_blocks.begin() + (i + 1));
 			i--;
@@ -493,7 +494,6 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_flash/",  "/dev_flash/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb000/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb/");
-			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../../",          "/dev_bdvd/");
 			res.emplace_back(vfsDevice_LocalFile, "",                           "/host_root/");
 
 			return;

@@ -222,6 +222,29 @@ void Emulator::Load()
 	GetInfo().Reset();
 	GetVFS().Init(elf_dir);
 
+	// /dev_bdvd/ mounting
+	vfsFile f("/app_home/../dev_bdvd.path");
+	if (f.IsOpened())
+	{
+		// load specified /dev_bdvd/ directory and mount it
+		std::string bdvd;
+		bdvd.resize(f.GetSize());
+		f.Read(&bdvd[0], bdvd.size());
+
+		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
+	}
+	else if (rIsFile(elf_dir + "../../PS3_DISC.SFB")) // guess loading disc game
+	{
+		const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
+
+		// check latest two directories
+		if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
+		{
+			// mount detected /dev_bdvd/ directory
+			Emu.GetVFS().Mount("/dev_bdvd/", elf_dir.substr(0, elf_dir.length() - 17), new vfsDeviceLocalFile());
+		}
+	}
+
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
 	for (uint i = 0; i < GetVFS().m_devices.size(); ++i)
@@ -230,7 +253,7 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
-	vfsFile f("/app_home/../PARAM.SFO");
+	f.Open("/app_home/../PARAM.SFO");
 	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");
 	std::string title_id = psf.GetString("TITLE_ID");
@@ -240,23 +263,13 @@ void Emulator::Load()
 	title.length() ? SetTitle(title) : SetTitle(m_path);
 	SetTitleID(title_id);
 
-	// bdvd inserting imitation
-	f.Open("/app_home/../dev_bdvd.path");
-	if (f.IsOpened())
-	{
-		std::string bdvd;
-		bdvd.resize(f.GetSize());
-		f.Read(&bdvd[0], bdvd.size());
-
-		// load desired /dev_bdvd/ real directory and remount
-		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
-		LOG_NOTICE(LOADER, "/dev_bdvd/ remounted into %s", bdvd.c_str());
-	}
-	LOG_NOTICE(LOADER, " "); //used to be skip_line
-
 	if (m_elf_path.empty())
 	{
-		GetVFS().GetDeviceLocal(m_path, m_elf_path);
+		if (!GetVFS().GetDeviceLocal(m_path, m_elf_path))
+		{
+			m_elf_path = "/host_root/" + m_path; // should be probably app_home
+		}
+
 		LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 	}
 
