@@ -94,6 +94,7 @@ bool truncate_file(const std::string& file, u64 length)
 #else
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
 #if defined(__APPLE__) || defined(__FreeBSD__)
