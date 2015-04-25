@@ -1,16 +1,13 @@
 #include "stdafx.h"
 #include "Log.h"
-#pragma warning(push)
-#pragma message("TODO: remove wx dependency: <wx/dir.h>")
-#pragma warning(disable : 4996)
-#include <wx/dir.h>
-#pragma warning(pop)
 #include "File.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 
 #define GET_API_ERROR static_cast<u64>(GetLastError())
+
+static_assert(fs::file::null == intptr_t(INVALID_HANDLE_VALUE) && fs::dir::null == fs::file::null, "Check fs::file::null definition");
 
 std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 {
@@ -26,6 +23,24 @@ std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 	}
 
 	return buffer;
+}
+
+std::string ConvertWCharToUTF8(const wchar_t* source)
+{
+	const int size = WideCharToMultiByte(CP_UTF8, 0, source, -1 /* NTS */, NULL, 0, NULL, NULL); // size
+
+	if (size < 1) throw std::length_error(__FUNCTION__); // ???
+
+	std::string result;
+
+	result.resize(size - 1);
+
+	if (!WideCharToMultiByte(CP_UTF8, 0, source, -1 /* NTS */, &result.front(), size, NULL, NULL))
+	{
+		LOG_ERROR(GENERAL, "ConvertWCharToUTF8() failed: 0x%llx", GET_API_ERROR);
+	}
+
+	return result;
 }
 
 time_t to_time_t(const ULARGE_INTEGER& ft)
@@ -51,7 +66,7 @@ time_t to_time_t(const FILETIME& ft)
 	return to_time_t(v);
 }
 
-bool truncate_file(const std::string& file, uint64_t length)
+bool truncate_file(const std::string& file, u64 length)
 {
 	// open the file
 	const auto handle = CreateFileW(ConvertUTF8ToWChar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -98,14 +113,12 @@ bool fs::stat(const std::string& path, stat_t& info)
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
 	if (!GetFileAttributesExW(ConvertUTF8ToWChar(path).get(), GetFileExInfoStandard, &attrs))
 	{
-		info = {};
 		return false;
 	}
 
-	info.exists = true;
 	info.is_directory = (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (attrs.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-	info.size = (uint64_t)attrs.nFileSizeLow | ((uint64_t)attrs.nFileSizeHigh << 32);
+	info.size = (u64)attrs.nFileSizeLow | ((u64)attrs.nFileSizeHigh << 32);
 	info.atime = to_time_t(attrs.ftLastAccessTime);
 	info.mtime = to_time_t(attrs.ftLastWriteTime);
 	info.ctime = to_time_t(attrs.ftCreationTime);
@@ -113,11 +126,9 @@ bool fs::stat(const std::string& path, stat_t& info)
 	struct stat64 file_info;
 	if (stat64(path.c_str(), &file_info) < 0)
 	{
-		info = {};
 		return false;
 	}
 
-	info.exists = true;
 	info.is_directory = S_ISDIR(file_info.st_mode);
 	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
@@ -125,6 +136,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.mtime = file_info.st_mtime;
 	info.ctime = file_info.st_ctime;
 #endif
+
 	return true;
 }
 
@@ -334,7 +346,7 @@ bool fs::remove_file(const std::string& file)
 	return true;
 }
 
-bool fs::truncate_file(const std::string& file, uint64_t length)
+bool fs::truncate_file(const std::string& file, u64 length)
 {
 #ifdef _WIN32
 	if (!::truncate_file(file, length))
@@ -349,53 +361,16 @@ bool fs::truncate_file(const std::string& file, uint64_t length)
 	return true;
 }
 
-fs::file::file()
-#ifdef _WIN32
-	: fd(INVALID_HANDLE_VALUE)
-#else
-	: fd(-1)
-#endif
-{
-}
-
 fs::file::~file()
 {
+	if (m_fd != null)
+	{
 #ifdef _WIN32
-	if (fd != INVALID_HANDLE_VALUE)
-	{
-		CloseHandle(fd);
-	}
+		CloseHandle((HANDLE)m_fd);
 #else
-	if (fd != -1)
-	{
 		::close(fd);
+#endif
 	}
-#endif
-}
-
-fs::file::file(const std::string& filename, u32 mode)
-#ifdef _WIN32
-	: fd(INVALID_HANDLE_VALUE)
-#else
-	: fd(-1)
-#endif
-{
-	open(filename, mode);
-}
-
-fs::file::operator bool() const
-{
-#ifdef _WIN32
-	return fd != INVALID_HANDLE_VALUE;
-#else
-	return fd != -1;
-#endif
-}
-
-void fs::file::import(handle_type handle)
-{
-	this->~file();
-	fd = handle;
 }
 
 bool fs::file::open(const std::string& filename, u32 mode)
@@ -436,7 +411,7 @@ bool fs::file::open(const std::string& filename, u32 mode)
 		return false;
 	}
 
-	if ((fd = CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL)) == INVALID_HANDLE_VALUE)
+	m_fd = (intptr_t)CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
 	int flags = 0;
 
@@ -463,8 +438,10 @@ bool fs::file::open(const std::string& filename, u32 mode)
 		return false;
 	}
 
-	if ((fd = ::open(filename.c_str(), flags, 0666)) == -1)
+	m_fd = ::open(filename.c_str(), flags, 0666);
 #endif
+
+	if (m_fd == null)
 	{
 		LOG_WARNING(GENERAL, "fs::file::open('%s', 0x%x) failed: error 0x%llx", filename, mode, GET_API_ERROR);
 		return false;
@@ -473,29 +450,24 @@ bool fs::file::open(const std::string& filename, u32 mode)
 	return true;
 }
 
-bool fs::file::is_opened() const
-{
-	return *this;
-}
-
 bool fs::file::trunc(u64 size) const
 {
 #ifdef _WIN32
 	LARGE_INTEGER old, pos;
 
 	pos.QuadPart = 0;
-	SetFilePointerEx(fd, pos, &old, FILE_CURRENT); // get old position
+	SetFilePointerEx((HANDLE)m_fd, pos, &old, FILE_CURRENT); // get old position
 
 	pos.QuadPart = size;
-	SetFilePointerEx(fd, pos, NULL, FILE_BEGIN); // set new position
+	SetFilePointerEx((HANDLE)m_fd, pos, NULL, FILE_BEGIN); // set new position
 
-	SetEndOfFile(fd); // change file size
+	SetEndOfFile((HANDLE)m_fd); // change file size
 
-	SetFilePointerEx(fd, old, NULL, FILE_BEGIN); // restore position
+	SetFilePointerEx((HANDLE)m_fd, old, NULL, FILE_BEGIN); // restore position
 
 	return true; // TODO
 #else
-	return !ftruncate64(fd, size);
+	return !ftruncate64(m_fd, size);
 #endif
 }
 
@@ -503,15 +475,12 @@ bool fs::file::stat(stat_t& info) const
 {
 #ifdef _WIN32
 	FILE_BASIC_INFO basic_info;
-	//FILE_NAME_INFO name_info;
 
-	if (!GetFileInformationByHandleEx(fd, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
+	if (!GetFileInformationByHandleEx((HANDLE)m_fd, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO)))
 	{
-		info = {};
 		return false;
 	}
 
-	info.exists = true;
 	info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 	info.size = this->size();
@@ -520,13 +489,11 @@ bool fs::file::stat(stat_t& info) const
 	info.ctime = to_time_t(basic_info.CreationTime);
 #else
 	struct stat64 file_info;
-	if (fstat64(fd, &file_info) < 0)
+	if (fstat64(m_fd, &file_info) < 0)
 	{
-		info = {};
 		return false;
 	}
 
-	info.exists = true;
 	info.is_directory = S_ISDIR(file_info.st_mode);
 	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 	info.size = file_info.st_size;
@@ -534,42 +501,39 @@ bool fs::file::stat(stat_t& info) const
 	info.mtime = file_info.st_mtime;
 	info.ctime = file_info.st_ctime;
 #endif
+
 	return true;
 }
 
 bool fs::file::close()
 {
+	if (m_fd == null)
+	{
+		return false;
+	}
+
+	auto fd = m_fd;
+	m_fd = null;
+
 #ifdef _WIN32
-	if (CloseHandle(fd))
-	{
-		return true;
-	}
-
-	fd = INVALID_HANDLE_VALUE;
+	return CloseHandle((HANDLE)fd);
 #else
-	if (!::close(fd))
-	{
-		return true;
-	}
-
-	fd = -1;
+	return !::close(fd);
 #endif
-
-	return false;
 }
 
 u64 fs::file::read(void* buffer, u64 count) const
 {
 #ifdef _WIN32
 	DWORD nread;
-	if (!ReadFile(fd, buffer, count, &nread, NULL))
+	if (!ReadFile((HANDLE)m_fd, buffer, count, &nread, NULL))
 	{
 		return -1;
 	}
 
 	return nread;
 #else
-	return ::read(fd, buffer, count);
+	return ::read(m_fd, buffer, count);
 #endif
 }
 
@@ -577,14 +541,14 @@ u64 fs::file::write(const void* buffer, u64 count) const
 {
 #ifdef _WIN32
 	DWORD nwritten;
-	if (!WriteFile(fd, buffer, count, &nwritten, NULL))
+	if (!WriteFile((HANDLE)m_fd, buffer, count, &nwritten, NULL))
 	{
 		return -1;
 	}
 
 	return nwritten;
 #else
-	return ::write(fd, buffer, count);
+	return ::write(m_fd, buffer, count);
 #endif
 }
 
@@ -596,14 +560,14 @@ u64 fs::file::seek(u64 offset, u32 mode) const
 	LARGE_INTEGER pos;
 	pos.QuadPart = offset;
 
-	if (!SetFilePointerEx(fd, pos, &pos, mode))
+	if (!SetFilePointerEx((HANDLE)m_fd, pos, &pos, mode))
 	{
 		return -1;
 	}
 
 	return pos.QuadPart;
 #else
-	return lseek64(fd, offset, mode);
+	return lseek64(m_fd, offset, mode);
 #endif
 }
 
@@ -611,7 +575,7 @@ u64 fs::file::size() const
 {
 #ifdef _WIN32
 	LARGE_INTEGER size;
-	if (!GetFileSizeEx(fd, &size))
+	if (!GetFileSizeEx((HANDLE)m_fd, &size))
 	{
 		return -1;
 	}
@@ -619,7 +583,7 @@ u64 fs::file::size() const
 	return size.QuadPart;
 #else
 	struct stat64 file_info;
-	if (fstat64(fd, &file_info) < 0)
+	if (fstat64(m_fd, &file_info) < 0)
 	{
 		return -1;
 	}
@@ -628,45 +592,166 @@ u64 fs::file::size() const
 #endif
 }
 
-rDir::rDir()
+fs::dir::~dir()
 {
-	handle = reinterpret_cast<void*>(new wxDir());
+	if (m_dd != null)
+	{
+#ifdef _WIN32
+		FindClose((HANDLE)m_dd);
+#else
+		::closedir(m_dd);
+#endif
+	}
 }
 
-rDir::~rDir()
+void fs::dir::import(handle_type dd, const std::string& path)
 {
-	delete reinterpret_cast<wxDir*>(handle);
+	if (m_dd != null)
+	{
+#ifdef _WIN32
+		FindClose((HANDLE)m_dd);
+#else
+		::closedir(m_dd);
+#endif
+	}
+
+	m_dd = dd;
+
+#ifdef _WIN32
+	m_path = ConvertUTF8ToWChar(path);
+#else
+	m_path.reset(new char[path.size() + 1]);
+	memcpy(m_path.get(), path.c_str(), path.size() + 1);
+#endif
 }
 
-rDir::rDir(const std::string &path)
+bool fs::dir::open(const std::string& dirname)
 {
-	handle = reinterpret_cast<void*>(new wxDir(fmt::FromUTF8(path)));
+	if (m_dd != null)
+	{
+#ifdef _WIN32
+		FindClose((HANDLE)m_dd);
+#else
+		::closedir(m_dd);
+#endif
+	}
+
+	m_dd = null;
+
+	m_path.reset();
+
+	if (!is_dir(dirname))
+	{
+		return false;
+	}
+
+#ifdef _WIN32
+	m_path = ConvertUTF8ToWChar(dirname + "/*");
+#else
+	m_path.reset(new char[dirname.size() + 1]);
+	memcpy(m_path.get(), dirname.c_str(), dirname.size() + 1);
+#endif
+
+	return true;
 }
 
-bool rDir::Open(const std::string& path)
+bool fs::dir::close()
 {
-	return reinterpret_cast<wxDir*>(handle)->Open(fmt::FromUTF8(path));
+	if (m_dd == null)
+	{
+		if (m_path)
+		{
+			m_path.reset();
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	auto dd = m_dd;
+	m_dd = null;
+
+	m_path.reset();
+
+#ifdef _WIN32
+	return FindClose((HANDLE)dd);
+#else
+	return !::closedir(dd);
+#endif
 }
 
-bool rDir::IsOpened() const
+bool fs::dir::get_first(std::string& name, stat_t& info)
 {
-	return reinterpret_cast<wxDir*>(handle)->IsOpened();
+	if (m_dd != null) // close previous handle
+	{
+#ifdef _WIN32
+		FindClose((HANDLE)m_dd);
+#else
+		::closedir(m_dd);
+#endif
+	}
+
+	m_dd = null;
+
+	if (!m_path)
+	{
+		return false;
+	}
+
+#ifdef _WIN32
+	WIN32_FIND_DATAW found;
+
+	m_dd = (intptr_t)FindFirstFileW(m_path.get(), &found);
+#else
+	m_dd = ::opendir(m_path.get());
+#endif
+
+	return get_next(name, info);
 }
 
-bool rDir::GetFirst(std::string *filename) const
+bool fs::dir::get_next(std::string& name, stat_t& info)
 {
-	wxString str;
-	bool res;
-	res = reinterpret_cast<wxDir*>(handle)->GetFirst(&str);
-	*filename = str.ToStdString();
-	return res;
-}
+	if (m_dd == null)
+	{
+		return false;
+	}
 
-bool rDir::GetNext(std::string *filename) const
-{
-	wxString str;
-	bool res;
-	res = reinterpret_cast<wxDir*>(handle)->GetNext(&str);
-	*filename = str.ToStdString();
-	return res;
+#ifdef _WIN32
+	WIN32_FIND_DATAW found;
+
+	if (!FindNextFileW((HANDLE)m_dd, &found))
+	{
+		return false;
+	}
+
+	name = ConvertWCharToUTF8(found.cFileName);
+
+	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
+	info.atime = to_time_t(found.ftLastAccessTime);
+	info.mtime = to_time_t(found.ftLastWriteTime);
+	info.ctime = to_time_t(found.ftCreationTime);
+#else
+	const auto found = ::readdir(m_dd);
+
+	struct stat64 file_info;
+	if (fstatat64(::dirfd(m_dd), found.d_name, &file_info, 0) < 0)
+	{
+		return false;
+	}
+
+	name = found.d_name;
+
+	info.is_directory = S_ISDIR(file_info.st_mode);
+	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
+	info.size = file_info.st_size;
+	info.atime = file_info.st_atime;
+	info.mtime = file_info.st_mtime;
+	info.ctime = file_info.st_ctime;
+#endif
+
+	return true;
 }

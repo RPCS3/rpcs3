@@ -12,18 +12,16 @@ vfsLocalDir::~vfsLocalDir()
 
 bool vfsLocalDir::Open(const std::string& path)
 {
-	if (!vfsDirBase::Open(path) || !dir.Open(path))
+	if (!vfsDirBase::Open(path) || !m_dir.open(path))
 	{
 		return false;
 	}
 
 	std::string name;
+	fs::stat_t file_info;
 
-	for (bool is_ok = dir.GetFirst(&name); is_ok; is_ok = dir.GetNext(&name))
+	for (bool is_ok = m_dir.get_first(name, file_info); is_ok; is_ok = m_dir.get_next(name, file_info))
 	{
-		fs::stat_t file_info;
-		fs::stat(path + "/" + name, file_info);
-
 		m_entries.emplace_back();
 
 		DirEntryInfo& info = m_entries.back();
@@ -62,5 +60,5 @@ bool vfsLocalDir::Remove(const std::string& path)
 
 bool vfsLocalDir::IsOpened() const
 {
-	return dir.IsOpened() && vfsDirBase::IsOpened();
+	return m_dir && vfsDirBase::IsOpened();
 }

@@ -249,7 +249,7 @@ s32 sys_fs_stat(vm::ptr<const char> path, vm::ptr<CellFsStat> sb)
 
 	fs::stat_t info;
 
-	if (!fs::stat(local_path, info) || !info.exists)
+	if (!fs::stat(local_path, info))
 	{
 		sys_fs.Error("sys_fs_stat('%s') failed: not found", path.get_ptr());
 		return CELL_FS_ENOENT;
