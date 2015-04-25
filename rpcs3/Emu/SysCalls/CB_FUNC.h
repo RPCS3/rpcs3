@@ -14,7 +14,7 @@ namespace cb_detail
 	// Current implementation can handle only fixed amount of stack arguments.
 	// This constant can be increased if necessary.
 	// It's possible to calculate suitable stack frame size in template, but too complicated.
-	static const auto FIXED_STACK_FRAME_SIZE = 0x100;
+	static const auto FIXED_STACK_FRAME_SIZE = 0x90;
 
 	template<typename T, _func_arg_type type, int g_count, int f_count, int v_count>
 	struct _func_arg;
@@ -61,7 +61,7 @@ namespace cb_detail
 
 		__forceinline static void set_value(PPUThread& CPU, const T& arg)
 		{
-			const int stack_pos = 0x70 + (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
+			const int stack_pos = (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
 			vm::write64(CPU.GPR[1] + stack_pos, cast_to_ppu_gpr<T>(arg));
 		}
@@ -132,10 +132,7 @@ namespace cb_detail
 	{
 		__forceinline static RT call(PPUThread& CPU, u32 pc, u32 rtoc, T... args)
 		{
-			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
-			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
-			CPU.FastCall2(pc, rtoc);
-			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
+			_func_caller<void, T...>::call(CPU, pc, rtoc, args...);
 
 			static_assert(!std::is_pointer<RT>::value, "Invalid callback result type (pointer)");
 			static_assert(!std::is_reference<RT>::value, "Invalid callback result type (reference)");
@@ -154,7 +151,9 @@ namespace cb_detail
 		{
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			if (stack) CPU.GPR[1] -= FIXED_STACK_FRAME_SIZE;
+			CPU.GPR[1] -= 0x70; // create reserved area
 			CPU.FastCall2(pc, rtoc);
+			CPU.GPR[1] += 0x70;
 			if (stack) CPU.GPR[1] += FIXED_STACK_FRAME_SIZE;
 		}
 	};
@@ -163,14 +162,13 @@ namespace cb_detail
 namespace vm
 {
 	template<typename AT, typename RT, typename... T>
-	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(CPUThread& CPU, T... args) const
+	__forceinline RT _ptr_base<RT(T...), 1, AT>::operator()(PPUThread& CPU, T... args) const
 	{
-		auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
+		const auto data = vm::get_ptr<be_t<u32>>(vm::cast(m_addr));
 		const u32 pc = data[0];
 		const u32 rtoc = data[1];
 
-		assert(CPU.GetType() == CPU_THREAD_PPU);
-		return cb_detail::_func_caller<RT, T...>::call(static_cast<PPUThread&>(CPU), pc, rtoc, args...);
+		return cb_detail::_func_caller<RT, T...>::call(CPU, pc, rtoc, args...);
 	}
 
 	template<typename AT, typename RT, typename... T>

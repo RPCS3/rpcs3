@@ -1,21 +1,32 @@
 #pragma once
 
 // Constants
-#define PKG_HEADER_SIZE 0xC0 //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
-#define PKG_RELEASE_TYPE_RELEASE      0x8000
-#define PKG_RELEASE_TYPE_DEBUG        0x0000
-#define PKG_PLATFORM_TYPE_PS3         0x0001
-#define PKG_PLATFORM_TYPE_PSP         0x0002
+enum
+{
+	HASH_LEN = 16,
+	BUF_SIZE = 4096,
+	PKG_HEADER_SIZE = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+};
 
-#define PKG_FILE_ENTRY_NPDRM          0x0001
-#define PKG_FILE_ENTRY_NPDRMEDAT      0x0002
-#define PKG_FILE_ENTRY_REGULAR        0x0003
-#define PKG_FILE_ENTRY_FOLDER         0x0004
-#define PKG_FILE_ENTRY_SDAT           0x0009
-#define PKG_FILE_ENTRY_OVERWRITE  0x80000000
+enum : u16
+{
+	PKG_RELEASE_TYPE_RELEASE      = 0x8000,
+	PKG_RELEASE_TYPE_DEBUG        = 0x0000,
 
-#define HASH_LEN 16
-#define BUF_SIZE 4096
+	PKG_PLATFORM_TYPE_PS3         = 0x0001,
+	PKG_PLATFORM_TYPE_PSP         = 0x0002,
+};
+
+enum : u32
+{
+	PKG_FILE_ENTRY_NPDRM          = 1,
+	PKG_FILE_ENTRY_NPDRMEDAT      = 2,
+	PKG_FILE_ENTRY_REGULAR        = 3,
+	PKG_FILE_ENTRY_FOLDER         = 4,
+	PKG_FILE_ENTRY_SDAT           = 9,
+
+	PKG_FILE_ENTRY_OVERWRITE      = 0x80000000,
+};
 
 // Structs
 struct PKGHeader
@@ -45,6 +56,6 @@ struct PKGEntry
 	be_t<u32> pad;          // Padding (zeros)
 };
 
-class rFile;
+namespace fs { struct file; }
 
-extern int Unpack(rFile& dec_pkg_f, std::string src, std::string dst);
+int Unpack(const fs::file& dec_pkg_f, std::string src, std::string dst);

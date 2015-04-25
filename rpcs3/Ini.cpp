@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/rPlatform.h"
-#include "Utilities/StrFmt.h"
+#include "Utilities/simpleini/SimpleIni.h"
 
 #include "Ini.h"
 #include <cctype>
@@ -8,6 +8,7 @@
 
 #define DEF_CONFIG_NAME "./rpcs3.ini"
 
+//TODO: make thread safe/remove static singleton
 CSimpleIniCaseA *getIniFile()
 {
 	static bool inited = false;
@@ -98,7 +99,7 @@ static std::string WindowInfoToString(const WindowInfo& wind)
 //Ini
 Ini::Ini()
 {
-	m_Config = getIniFile();
+	m_config = getIniFile();
 }
 
 Ini::~Ini()
@@ -109,55 +110,55 @@ Ini::~Ini()
 //TODO: saving the file after each change seems like overkill but that's how wx did it
 void Ini::Save(const std::string& section, const std::string& key, int value)
 {
-	m_Config->SetLongValue(section.c_str(), key.c_str(), value);
+	static_cast<CSimpleIniCaseA*>(m_config)->SetLongValue(section.c_str(), key.c_str(), value);
 	saveIniFile();
 }
 
 void Ini::Save(const std::string& section, const std::string& key, bool value)
 {
-	m_Config->SetBoolValue(section.c_str(), key.c_str(), value);
+	static_cast<CSimpleIniCaseA*>(m_config)->SetBoolValue(section.c_str(), key.c_str(), value);
 	saveIniFile();
 }
 
 void Ini::Save(const std::string& section, const std::string& key, std::pair<int, int> value)
 {
-	m_Config->SetValue(section.c_str(), key.c_str(), SizeToString(value).c_str());
+	static_cast<CSimpleIniCaseA*>(m_config)->SetValue(section.c_str(), key.c_str(), SizeToString(value).c_str());
 	saveIniFile();
 }
 
 void Ini::Save(const std::string& section, const std::string& key, const std::string& value)
 {
-	m_Config->SetValue(section.c_str(), key.c_str(), value.c_str());
+	static_cast<CSimpleIniCaseA*>(m_config)->SetValue(section.c_str(), key.c_str(), value.c_str());
 	saveIniFile();
 }
 
 void Ini::Save(const std::string& section, const std::string& key, WindowInfo value)
 {
-	m_Config->SetValue(section.c_str(), key.c_str(), WindowInfoToString(value).c_str());
+	static_cast<CSimpleIniCaseA*>(m_config)->SetValue(section.c_str(), key.c_str(), WindowInfoToString(value).c_str());
 	saveIniFile();
 }
 
 int Ini::Load(const std::string& section, const std::string& key, const int def_value)
 {
-	return m_Config->GetLongValue(section.c_str(), key.c_str(), def_value);
+	return static_cast<CSimpleIniCaseA*>(m_config)->GetLongValue(section.c_str(), key.c_str(), def_value);
 }
 
 bool Ini::Load(const std::string& section, const std::string& key, const bool def_value)
 {
-	return StringToBool(m_Config->GetValue(section.c_str(), key.c_str(), BoolToString(def_value).c_str()));
+	return StringToBool(static_cast<CSimpleIniCaseA*>(m_config)->GetValue(section.c_str(), key.c_str(), BoolToString(def_value).c_str()));
 }
 
 std::pair<int, int> Ini::Load(const std::string& section, const std::string& key, const std::pair<int, int> def_value)
 {
-	return StringToSize(m_Config->GetValue(section.c_str(), key.c_str(), SizeToString(def_value).c_str()));
+	return StringToSize(static_cast<CSimpleIniCaseA*>(m_config)->GetValue(section.c_str(), key.c_str(), SizeToString(def_value).c_str()));
 }
 
 std::string Ini::Load(const std::string& section, const std::string& key, const std::string& def_value)
 {
-	return std::string(m_Config->GetValue(section.c_str(), key.c_str(), def_value.c_str()));
+	return std::string(static_cast<CSimpleIniCaseA*>(m_config)->GetValue(section.c_str(), key.c_str(), def_value.c_str()));
 }
 
 WindowInfo Ini::Load(const std::string& section, const std::string& key, const WindowInfo& def_value)
 {
-	return StringToWindowInfo(m_Config->GetValue(section.c_str(), key.c_str(), WindowInfoToString(def_value).c_str()));
+	return StringToWindowInfo(static_cast<CSimpleIniCaseA*>(m_config)->GetValue(section.c_str(), key.c_str(), WindowInfoToString(def_value).c_str()));
 }

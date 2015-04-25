@@ -603,7 +603,7 @@ void cellRescExit()
 	if (IsPalTemporal())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_DISABLE);
-		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::null);
 		//GcmSysTypePrefix::cellGcmSetSecondVHandler(NULL);
 
 		if (IsPalInterpolate())
@@ -770,7 +770,7 @@ int cellRescSetDisplayMode(u32 displayMode)
 	videocfg->aspect       = CELL_VIDEO_OUT_ASPECT_AUTO;
 	videocfg->pitch        = s_rescInternalInstance->m_dstPitch;
 
-	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg, vm::ptr<CellVideoOutOption>::make(0), 0);
+	cellVideoOutConfigure(CELL_VIDEO_OUT_PRIMARY, videocfg, vm::null, 0);
 
 	if (IsPalInterpolate())
 	{
@@ -780,20 +780,20 @@ int cellRescSetDisplayMode(u32 displayMode)
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
 		//cellGcmSetVBlankHandler(IntrHandler50);
 		//cellGcmSetSecondVHandler(IntrHandler60);
-		cellGcmSetFlipHandler(vm::ptr<void(u32)>::make(0));
+		cellGcmSetFlipHandler(vm::null);
 	}
 	else if (IsPalDrop())
 	{
 		//InitLabels();
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::null);
 		//cellGcmSetSecondVHandler(IntrHandler60Drop);
-		cellGcmSetFlipHandler(vm::ptr<void(u32)>::make(0));
+		cellGcmSetFlipHandler(vm::null);
 	} 
 	else if (IsPal60Hsync())
 	{
 		cellGcmSetSecondVFrequency(CELL_GCM_DISPLAY_FREQUENCY_59_94HZ);
-		cellGcmSetVBlankHandler(vm::ptr<void(u32)>::make(0));
+		cellGcmSetVBlankHandler(vm::null);
 	}
 
 	if (s_rescInternalInstance->s_applicationVBlankHandler) SetVBlankHandler(s_rescInternalInstance->s_applicationVBlankHandler);

@@ -5,11 +5,11 @@
 #include <iostream>
 #include <cinttypes>
 #include "Thread.h"
-#include "rFile.h"
+#include "File.h"
 
 using namespace Log;
 
-LogManager *gLogManager = nullptr;
+std::unique_ptr<LogManager> g_log_manager;
 
 u32 LogMessage::size() const
 {
@@ -90,14 +90,14 @@ struct CoutListener : LogListener
 
 struct FileListener : LogListener
 {
-	rFile mFile;
+	fs::file mFile;
 	bool mPrependChannelName;
 
 	FileListener(const std::string& name = _PRGNAME_, bool prependChannel = true)
-		: mFile(std::string(rPlatform::getConfigDir() + name + ".log").c_str(), rFile::write),
-		mPrependChannelName(prependChannel)
+		: mFile(rPlatform::getConfigDir() + name + ".log", o_write | o_create | o_trunc)
+		, mPrependChannelName(prependChannel)
 	{
-		if (!mFile.IsOpened())
+		if (!mFile)
 		{
 			rMessageBox("Can't create log file! (" + name + ".log)", "Error", rICON_ERROR);
 		}
@@ -119,7 +119,8 @@ struct FileListener : LogListener
 				}
 			}
 		}
-		mFile.Write(text);
+
+		mFile.write(text.c_str(), text.size());
 	}
 };
 
@@ -223,6 +224,7 @@ void LogManager::addListener(std::shared_ptr<LogListener> listener)
 		channel.addListener(listener);
 	}
 }
+
 void LogManager::removeListener(std::shared_ptr<LogListener> listener)
 {
 	for (auto& channel : mChannels)
@@ -233,12 +235,14 @@ void LogManager::removeListener(std::shared_ptr<LogListener> listener)
 
 LogManager& LogManager::getInstance()
 {
-	if (!gLogManager)
+	if (!g_log_manager)
 	{
-		gLogManager = new LogManager();
+		g_log_manager.reset(new LogManager());
 	}
-	return *gLogManager;
+
+	return *g_log_manager;
 }
+
 LogChannel &LogManager::getChannel(LogType type)
 {
 	return mChannels[static_cast<u32>(type)];
@@ -251,9 +255,22 @@ void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)
 
 void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
 {
-	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
-	//Log::LogManager::getInstance().log({logType, severity, text})
-
-	Log::LogMessage msg{ type, sev, std::move(text) };
-	Log::LogManager::getInstance().log(msg);
+	if (g_log_manager)
+	{
+		// another msvc bug makes this not work, uncomment this when it's fixed
+		//g_log_manager->log({logType, severity, text});
+		Log::LogMessage msg{ type, sev, std::move(text) };
+		g_log_manager->log(msg);
+	}
+	else
+	{
+		rMessageBox(text,
+			sev == Notice ? "Notice" :
+			sev == Warning ? "Warning" :
+			sev == Success ? "Success" :
+			sev == Error ? "Error" : "Unknown",
+			sev == Notice ? rICON_INFORMATION :
+			sev == Warning ? rICON_EXCLAMATION :
+			sev == Error ? rICON_ERROR : rICON_INFORMATION);
+	}
 }

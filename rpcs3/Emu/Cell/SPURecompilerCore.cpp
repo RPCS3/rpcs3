@@ -2,7 +2,7 @@
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 #include "Emu/SysCalls/lv2/sys_time.h"
 
@@ -12,8 +12,6 @@
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
 #include "SPURecompiler.h"
-
-const g_imm_table_struct g_imm_table;
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	: m_enc(new SPURecompiler(cpu, *this))
@@ -25,11 +23,6 @@ SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	memset(entry, 0, sizeof(entry));
 	X86CpuInfo inf;
 	X86CpuUtil::detect(&inf);
-	if (!inf.hasFeature(kX86CpuFeatureSSE4_1))
-	{
-		LOG_ERROR(SPU, "SPU JIT requires SSE4.1 instruction set support");
-		Emu.Pause();
-	}
 }
 
 SPURecompilerCore::~SPURecompilerCore()
@@ -45,22 +38,22 @@ void SPURecompilerCore::Decode(const u32 code) // decode instruction and run wit
 
 void SPURecompilerCore::Compile(u16 pos)
 {
-	const u64 stamp0 = get_system_time();
-	u64 time0 = 0;
+	//const u64 stamp0 = get_system_time();
+	//u64 time0 = 0;
 
-	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = vm::get_ptr<u8>(CPU.offset);
+	//SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	//dis_asm.offset = vm::get_ptr<u8>(CPU.offset);
 
-	StringLogger stringLogger;
-	stringLogger.setOption(kLoggerOptionBinaryForm, true);
+	//StringLogger stringLogger;
+	//stringLogger.setOption(kLoggerOptionBinaryForm, true);
 
 	X86Compiler compiler(&runtime);
 	m_enc->compiler = &compiler;
-	compiler.setLogger(&stringLogger);
+	//compiler.setLogger(&stringLogger);
 
 	compiler.addFunc(kFuncConvHost, FuncBuilder4<u32, void*, void*, void*, u32>());
 	const u16 start = pos;
-	u32 excess = 0;
+	//u32 excess = 0;
 	entry[start].count = 0;
 
 	X86GpVar cpu_var(compiler, kVarTypeIntPtr, "cpu");
@@ -107,11 +100,11 @@ void SPURecompilerCore::Compile(u16 pos)
 		m_enc->do_finalize = false;
 		if (opcode)
 		{
-			const u64 stamp1 = get_system_time();
+			//const u64 stamp1 = get_system_time();
 			// disasm for logging:
-			dis_asm.dump_pc = pos * 4;
-			(*SPU_instr::rrr_list)(&dis_asm, opcode);
-			compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
+			//dis_asm.dump_pc = pos * 4;
+			//(*SPU_instr::rrr_list)(&dis_asm, opcode);
+			//compiler.addComment(fmt::Format("SPU data: PC=0x%05x %s", pos * 4, dis_asm.last_opcode.c_str()).c_str());
 			// compile single opcode:
 			(*SPU_instr::rrr_list)(m_enc, opcode);
 			// force finalization between every slice using absolute alignment
@@ -121,17 +114,17 @@ void SPURecompilerCore::Compile(u16 pos)
 				m_enc->do_finalize = true;
 			}*/
 			entry[start].count++;
-			time0 += get_system_time() - stamp1;
+			//time0 += get_system_time() - stamp1;
 		}
 		else
 		{
 			m_enc->do_finalize = true;
 		}
 		bool fin = m_enc->do_finalize;
-		if (entry[pos].valid == re32(opcode))
-		{
-			excess++;
-		}
+		//if (entry[pos].valid == re32(opcode))
+		//{
+		//	excess++;
+		//}
 		entry[pos].valid = re32(opcode);
 
 		if (fin) break;
@@ -148,34 +141,28 @@ void SPURecompilerCore::Compile(u16 pos)
 		m_enc->xmm_var[i].data = nullptr;
 	}
 
-	const u64 stamp1 = get_system_time();
+	//const u64 stamp1 = get_system_time();
 	compiler.ret(pos_var);
 	compiler.endFunc();
 	entry[start].pointer = compiler.make();
 	compiler.setLogger(nullptr); // crashes without it
 
-	rFile log;
-	log.Open(fmt::Format("SPUjit_%d.log", GetCurrentSPUThread().GetId()), first ? rFile::write : rFile::write_append);
-	log.Write(fmt::Format("========== START POSITION 0x%x ==========\n\n", start * 4));
-	log.Write(std::string(stringLogger.getString()));
-	if (!entry[start].pointer)
-	{
-		LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
-		log.Write("========== FAILED ============\n\n");
-		Emu.Pause();
-	}
-	else
-	{
-		log.Write(fmt::Format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
-			entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1));
-#ifdef _WIN32
-		//if (!RtlAddFunctionTable(&info, 1, (u64)entry[start].pointer))
-		//{
-		//	LOG_ERROR(Log::SPU, "RtlAddFunctionTable() failed");
-		//}
-#endif
-	}
-	log.Close();
+	//std::string log = fmt::format("========== START POSITION 0x%x ==========\n\n", start * 4);
+	//log += stringLogger.getString();
+	//if (!entry[start].pointer)
+	//{
+	//	LOG_ERROR(Log::SPU, "SPURecompilerCore::Compile(pos=0x%x) failed", start * sizeof(u32));
+	//	log += "========== FAILED ============\n\n";
+	//	Emu.Pause();
+	//}
+	//else
+	//{
+	//	log += fmt::format("========== COMPILED %d (excess %d), time: [start=%lld (decoding=%lld), finalize=%lld]\n\n",
+	//		entry[start].count, excess, stamp1 - stamp0, time0, get_system_time() - stamp1);
+	//}
+
+	//fs::file(fmt::Format("SPUjit_%d.log", this->CPU.GetId()), o_write | o_create | (first ? o_trunc : o_append)).write(log.c_str(), log.size());
+
 	m_enc->compiler = nullptr;
 	first = false;
 }
@@ -217,9 +204,6 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 					i < (u32)pos + (u32)entry[pos].count)
 				{
 					runtime.release(entry[i].pointer);
-#ifdef _WIN32
-					//RtlDeleteFunctionTable(&entry[i].info);
-#endif
 					entry[i].pointer = nullptr;
 					for (u32 j = i; j < i + (u32)entry[i].count; j++)
 					{
@@ -264,7 +248,7 @@ u32 SPURecompilerCore::DecodeMemory(const u32 address)
 	}
 
 	u32 res = pos;
-	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_imm_table);
+	res = func(cpu, vm::get_ptr<void>(m_offset), imm_table.data(), &g_spu_imm);
 
 	if (res & 0x1000000)
 	{

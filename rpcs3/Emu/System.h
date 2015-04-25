@@ -21,7 +21,6 @@ class CallbackManager;
 class CPUThread;
 class EventManager;
 class ModuleManager;
-class SyncPrimManager;
 struct VFS;
 
 struct EmuInfo
@@ -91,7 +90,6 @@ class Emulator
 	CallbackManager* m_callback_manager;
 	EventManager* m_event_manager;
 	ModuleManager* m_module_manager;
-	SyncPrimManager* m_sync_prim_manager;
 	VFS* m_vfs;
 
 	EmuInfo m_info;
@@ -152,7 +150,6 @@ public:
 	std::vector<u64>& GetMarkedPoints()    { return m_marked_points; }
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
-	SyncPrimManager&  GetSyncPrimManager() { return *m_sync_prim_manager; }
 
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
@@ -199,7 +196,10 @@ public:
 	__forceinline bool IsReady()   const { return m_status == Ready; }
 };
 
-#define LV2_LOCK std::unique_lock<std::mutex> lv2_lock(Emu.GetCoreMutex())
+using lv2_lock_type = std::unique_lock<std::mutex>;
+
+#define LV2_LOCK lv2_lock_type lv2_lock(Emu.GetCoreMutex())
+#define CHECK_LV2_LOCK(x) assert((x).owns_lock() && (x).mutex() == &Emu.GetCoreMutex())
 
 extern Emulator Emu;
 

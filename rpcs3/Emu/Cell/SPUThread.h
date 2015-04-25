@@ -315,51 +315,89 @@ public:
 	}
 };
 
-#define mmToU64Ptr(x) ((u64*)(&x))
-#define mmToU32Ptr(x) ((u32*)(&x))
-#define mmToU16Ptr(x) ((u16*)(&x))
-#define mmToU8Ptr(x) ((u8*)(&x))
-
-struct g_imm_table_struct
+struct g_spu_imm_table_t
 {
-	__m128i fsmb_table[65536];
-	__m128i fsmh_table[256];
-	__m128i fsm_table[16];
+	u128 fsmb[65536]; // table for FSMB, FSMBI instructions
+	u128 fsmh[256]; // table for FSMH instruction
+	u128 fsm[16]; // table for FSM instruction
 
-	__m128i sldq_pshufb[32];
-	__m128i srdq_pshufb[32];
-	__m128i rldq_pshufb[16];
+	u128 sldq_pshufb[32]; // table for SHLQBYBI, SHLQBY, SHLQBYI instructions
+	u128 srdq_pshufb[32]; // table for ROTQMBYBI, ROTQMBY, ROTQMBYI instructions
+	u128 rldq_pshufb[16]; // table for ROTQBYBI, ROTQBY, ROTQBYI instructions
 
-	g_imm_table_struct()
+	class scale_table_t
 	{
-		for (u32 i = 0; i < sizeof(fsm_table) / sizeof(fsm_table[0]); i++)
+		std::array<__m128, 155 + 174> m_data;
+
+	public:
+		scale_table_t()
 		{
-			for (u32 j = 0; j < 4; j++) mmToU32Ptr(fsm_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+			for (s32 i = -155; i < 174; i++)
+			{
+				m_data[i + 155] = _mm_set1_ps(static_cast<float>(exp2(i)));
+			}
 		}
-		for (u32 i = 0; i < sizeof(fsmh_table) / sizeof(fsmh_table[0]); i++)
+
+		__forceinline __m128 operator [] (s32 scale) const
 		{
-			for (u32 j = 0; j < 8; j++) mmToU16Ptr(fsmh_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+			return m_data[scale + 155];
 		}
-		for (u32 i = 0; i < sizeof(fsmb_table) / sizeof(fsmb_table[0]); i++)
+	}
+	const scale;
+
+	g_spu_imm_table_t()
+	{
+		for (u32 i = 0; i < sizeof(fsm) / sizeof(fsm[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(fsmb_table[i])[j] = (i & (1 << j)) ? ~0 : 0;
+			for (u32 j = 0; j < 4; j++)
+			{
+				fsm[i]._u32[j] = (i & (1 << j)) ? 0xffffffff : 0;
+			}
 		}
+
+		for (u32 i = 0; i < sizeof(fsmh) / sizeof(fsmh[0]); i++)
+		{
+			for (u32 j = 0; j < 8; j++)
+			{
+				fsmh[i]._u16[j] = (i & (1 << j)) ? 0xffff : 0;
+			}
+		}
+
+		for (u32 i = 0; i < sizeof(fsmb) / sizeof(fsmb[0]); i++)
+		{
+			for (u32 j = 0; j < 16; j++)
+			{
+				fsmb[i]._u8[j] = (i & (1 << j)) ? 0xff : 0;
+			}
+		}
+
 		for (u32 i = 0; i < sizeof(sldq_pshufb) / sizeof(sldq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(sldq_pshufb[i])[j] = (u8)(j - i);
+			for (u32 j = 0; j < 16; j++)
+			{
+				sldq_pshufb[i]._u8[j] = static_cast<u8>(j - i);
+			}
 		}
+
 		for (u32 i = 0; i < sizeof(srdq_pshufb) / sizeof(srdq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(srdq_pshufb[i])[j] = (j + i > 15) ? 0xff : (u8)(j + i);
+			for (u32 j = 0; j < 16; j++)
+			{
+				srdq_pshufb[i]._u8[j] = (j + i > 15) ? 0xff : static_cast<u8>(j + i);
+			}
 		}
+
 		for (u32 i = 0; i < sizeof(rldq_pshufb) / sizeof(rldq_pshufb[0]); i++)
 		{
-			for (u32 j = 0; j < 16; j++) mmToU8Ptr(rldq_pshufb[i])[j] = (u8)(j - i) & 0xf;
+			for (u32 j = 0; j < 16; j++)
+			{
+				rldq_pshufb[i]._u8[j] = static_cast<u8>((j - i) & 0xf);
+			}
 		}
 	}
 };
 
-extern const g_imm_table_struct g_imm_table;
+extern const g_spu_imm_table_t g_spu_imm;
 
 enum FPSCR_EX
 {

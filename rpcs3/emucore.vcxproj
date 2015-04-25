@@ -29,7 +29,7 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\AutoPause.cpp" />
     <ClCompile Include="..\Utilities\Log.cpp" />
-    <ClCompile Include="..\Utilities\rFile.cpp" />
+    <ClCompile Include="..\Utilities\File.cpp" />
     <ClCompile Include="..\Utilities\rMsgBox.cpp" />
     <ClCompile Include="..\Utilities\rPlatform.cpp" />
     <ClCompile Include="..\Utilities\rTime.cpp" />
@@ -282,7 +282,6 @@
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_libc.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_net.cpp" />
-    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp" />
     <ClCompile Include="Emu\SysCalls\SysCalls.cpp" />
     <ClCompile Include="Emu\System.cpp" />
     <ClCompile Include="Ini.cpp" />
@@ -312,7 +311,7 @@
     <ClInclude Include="..\Utilities\GNU.h" />
     <ClInclude Include="..\Utilities\MTRingbuffer.h" />
     <ClInclude Include="..\Utilities\Log.h" />
-    <ClInclude Include="..\Utilities\rFile.h" />
+    <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\rMsgBox.h" />
     <ClInclude Include="..\Utilities\rPlatform.h" />
     <ClInclude Include="..\Utilities\rTime.h" />
@@ -522,7 +521,6 @@
     <ClInclude Include="Emu\SysCalls\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\SysCalls\Modules\sys_net.h" />
     <ClInclude Include="Emu\SysCalls\SC_FUNC.h" />
-    <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h" />
     <ClInclude Include="Emu\SysCalls\SysCalls.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Ini.h" />

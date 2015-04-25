@@ -86,7 +86,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 	if (location == CELL_GCM_LOCATION_LOCAL) {
 		if (index >= 2048) {
 			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
-			return vm::ptr<CellGcmReportData>::make(0);
+			return vm::null;
 		}
 		return vm::ptr<CellGcmReportData>::make((u32)Memory.RSXFBMem.GetStartAddr() + index * 0x10);
 	}
@@ -94,14 +94,14 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 	if (location == CELL_GCM_LOCATION_MAIN) {
 		if (index >= 1024 * 1024) {
 			cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
-			return vm::ptr<CellGcmReportData>::make(0);
+			return vm::null;
 		}
 		// TODO: It seems m_report_main_addr is not initialized
 		return vm::ptr<CellGcmReportData>::make(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
-	return vm::ptr<CellGcmReportData>::make(0);
+	return vm::null;
 }
 
 u64 cellGcmGetTimeStamp(u32 index)

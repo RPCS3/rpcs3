@@ -12,7 +12,7 @@ enum
 	CELL_VDEC_ERROR_FATAL = 0x80610180,
 };
 
-enum CellVdecCodecType
+enum CellVdecCodecType : u32
 {
 	CELL_VDEC_CODEC_TYPE_MPEG2 = 0x00000000,
 	CELL_VDEC_CODEC_TYPE_AVC   = 0x00000001,
@@ -20,7 +20,7 @@ enum CellVdecCodecType
 };
 
 // Callback Messages
-enum CellVdecMsgType
+enum CellVdecMsgType : u32
 {
 	CELL_VDEC_MSG_TYPE_AUDONE, // decoding finished
 	CELL_VDEC_MSG_TYPE_PICOUT, // picture done
@@ -37,7 +37,7 @@ enum CellVdecDecodeMode : u32
 };
 
 // Output Picture Format Type
-enum CellVdecPicFormatType
+enum CellVdecPicFormatType : u32
 {
 	CELL_VDEC_PICFMT_ARGB32_ILV,
 	CELL_VDEC_PICFMT_RGBA32_ILV,
@@ -46,13 +46,13 @@ enum CellVdecPicFormatType
 };
 
 // Output Color Matrix Coef
-enum CellVdecColorMatrixType
+enum CellVdecColorMatrixType : u32
 {
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT601,
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT709,
 };
 
-enum CellVdecPicAttr
+enum CellVdecPicAttr : u32
 {
 	CELL_VDEC_PICITEM_ATTR_NORMAL,
 	CELL_VDEC_PICITEM_ATTR_SKIPPED,
@@ -161,6 +161,15 @@ struct CellVdecPicFormat
 	be_t<CellVdecPicFormatType> formatType;
 	be_t<CellVdecColorMatrixType> colorMatrixType;
 	u8 alpha;
+};
+
+struct CellVdecPicFormat2
+{
+	be_t<CellVdecPicFormatType> formatType;
+	be_t<CellVdecColorMatrixType> colorMatrixType;
+	be_t<u32> unk0;
+	u8 alpha;
+	be_t<u32> unk1;
 };
 
 typedef u32(CellVdecCbMsg)(u32 handle, CellVdecMsgType msgType, s32 msgData, u32 cbArg);
@@ -348,8 +357,6 @@ struct CellVdecAvcInfo
 	u8 ccData[2][CELL_VDEC_AVC_CCD_MAX];
 	be_t<u64> reserved[2];
 };
-
-const int sz = sizeof(CellVdecAvcInfo);
 
 // DIVX Profile
 enum DIVX_level : u8

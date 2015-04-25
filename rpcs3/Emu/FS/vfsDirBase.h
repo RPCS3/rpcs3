@@ -16,12 +16,14 @@ struct DirEntryInfo
 {
 	std::string name;
 	u32 flags;
+	u64 size;
 	time_t create_time;
 	time_t access_time;
 	time_t modify_time;
 
 	DirEntryInfo()
 		: flags(0)
+		, size(0)
 		, create_time(0)
 		, access_time(0)
 		, modify_time(0)

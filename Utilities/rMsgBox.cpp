@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "restore_new.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/msgdlg.h>")
 #pragma warning(disable : 4996)
 #include <wx/msgdlg.h>
+#pragma warning(pop)
 #include "define_new_memleakdetect.h"
 #include "rMsgBox.h"
 

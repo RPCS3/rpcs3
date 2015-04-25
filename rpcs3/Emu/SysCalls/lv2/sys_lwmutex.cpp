@@ -48,13 +48,13 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 
 s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 {
-	sys_lwmutex.Warning("_sys_lwmutex_destroy(lwmutex_id=%d)", lwmutex_id);
+	sys_lwmutex.Warning("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<lwmutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
@@ -71,15 +71,15 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 
 s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 {
-	sys_lwmutex.Log("_sys_lwmutex_lock(lwmutex_id=%d, timeout=0x%llx)", lwmutex_id, timeout);
+	sys_lwmutex.Log("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 
 	const u64 start_time = get_system_time();
 
 	LV2_LOCK;
 
-	std::shared_ptr<lwmutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
@@ -97,7 +97,7 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 
 		if (Emu.IsStopped())
 		{
-			sys_lwmutex.Warning("_sys_lwmutex_lock(lwmutex_id=%d) aborted", lwmutex_id);
+			sys_lwmutex.Warning("_sys_lwmutex_lock(lwmutex_id=0x%x) aborted", lwmutex_id);
 			return CELL_OK;
 		}
 
@@ -113,13 +113,13 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 
 s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 {
-	sys_lwmutex.Log("_sys_lwmutex_trylock(lwmutex_id=%d)", lwmutex_id);
+	sys_lwmutex.Log("_sys_lwmutex_trylock(lwmutex_id=0x%x)", lwmutex_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<lwmutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
@@ -136,20 +136,20 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 
 s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 {
-	sys_lwmutex.Log("_sys_lwmutex_unlock(lwmutex_id=%d)", lwmutex_id);
+	sys_lwmutex.Log("_sys_lwmutex_unlock(lwmutex_id=0x%x)", lwmutex_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<lwmutex_t> mutex;
+	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
 
-	if (!Emu.GetIdManager().GetIDData(lwmutex_id, mutex))
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}
 
 	if (mutex->signaled)
 	{
-		sys_lwmutex.Fatal("_sys_lwmutex_unlock(lwmutex_id=%d): already signaled", lwmutex_id);
+		sys_lwmutex.Fatal("_sys_lwmutex_unlock(lwmutex_id=0x%x): already signaled", lwmutex_id);
 	}
 
 	mutex->signaled++;

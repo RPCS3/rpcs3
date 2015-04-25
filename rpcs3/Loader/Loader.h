@@ -3,7 +3,6 @@
 
 struct vfsFileBase;
 struct vfsStream;
-class rFile;
 
 #ifdef _DEBUG	
 	//#define LOADER_DEBUG

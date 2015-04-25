@@ -4,7 +4,10 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
+extern "C"
+{
 #include "stblib/stb_image.h"
+}
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
@@ -17,7 +20,7 @@ extern Module cellPngDec;
 s32 pngDecCreate(
 	vm::ptr<u32> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> param,
-	vm::ptr<const CellPngDecExtThreadInParam> ext = vm::ptr<const CellPngDecExtThreadInParam>::make(0))
+	vm::ptr<const CellPngDecExtThreadInParam> ext = vm::null)
 {
 	// alloc memory (should probably use param->cbCtrlMallocFunc)
 	auto dec = CellPngDecMainHandle::make(Memory.Alloc(sizeof(PngDecoder), 128));
@@ -58,8 +61,8 @@ s32 pngDecOpen(
 	vm::ptr<u32> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo,
-	vm::ptr<const CellPngDecCbCtrlStrm> cb = vm::ptr<const CellPngDecCbCtrlStrm>::make(0),
-	vm::ptr<const CellPngDecOpnParam> param = vm::ptr<const CellPngDecOpnParam>::make(0))
+	vm::ptr<const CellPngDecCbCtrlStrm> cb = vm::null,
+	vm::ptr<const CellPngDecOpnParam> param = vm::null)
 {
 	// alloc memory (should probably use dec->malloc)
 	auto stream = CellPngDecSubHandle::make(Memory.Alloc(sizeof(PngStream), 128));
@@ -125,7 +128,7 @@ s32 pngDecClose(CellPngDecSubHandle stream)
 s32 pngReadHeader(
 	CellPngDecSubHandle stream,
 	vm::ptr<CellPngDecInfo> info,
-	vm::ptr<CellPngDecExtInfo> extInfo = vm::ptr<CellPngDecExtInfo>::make(0))
+	vm::ptr<CellPngDecExtInfo> extInfo = vm::null)
 {
 	CellPngDecInfo& current_info = stream->info;
 
@@ -191,8 +194,8 @@ s32 pngDecSetParameter(
 	CellPngDecSubHandle stream,
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam,
-	vm::ptr<const CellPngDecExtInParam> extInParam = vm::ptr<const CellPngDecExtInParam>::make(0),
-	vm::ptr<CellPngDecExtOutParam> extOutParam = vm::ptr<CellPngDecExtOutParam>::make(0))
+	vm::ptr<const CellPngDecExtInParam> extInParam = vm::null,
+	vm::ptr<CellPngDecExtOutParam> extOutParam = vm::null)
 {
 	CellPngDecInfo& current_info = stream->info;
 	CellPngDecOutParam& current_outParam = stream->outParam;
@@ -237,8 +240,8 @@ s32 pngDecodeData(
 	vm::ptr<u8> data,
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo,
-	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp = vm::ptr<const CellPngDecCbCtrlDisp>::make(0),
-	vm::ptr<CellPngDecDispParam> dispParam = vm::ptr<CellPngDecDispParam>::make(0))
+	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp = vm::null,
+	vm::ptr<CellPngDecDispParam> dispParam = vm::null)
 {
 	dataOutInfo->status = CELL_PNGDEC_DEC_STATUS_STOP;
 
@@ -365,8 +368,7 @@ s32 pngDecodeData(
 
 s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam)
 {
-	cellPngDec.Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x)",
-		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr());
+	cellPngDec.Warning("cellPngDecCreate(mainHandle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x)", mainHandle, threadInParam, threadOutParam);
 
 	// create decoder
 	if (auto res = pngDecCreate(mainHandle, threadInParam)) return res;
@@ -384,8 +386,8 @@ s32 cellPngDecExtCreate(
 	vm::ptr<const CellPngDecExtThreadInParam> extThreadInParam,
 	vm::ptr<CellPngDecExtThreadOutParam> extThreadOutParam)
 {
-	cellPngDec.Warning("cellPngDecCreate(mainHandle_addr=0x%x, threadInParam_addr=0x%x, threadOutParam_addr=0x%x, extThreadInParam_addr=0x%x, extThreadOutParam_addr=0x%x)",
-		mainHandle.addr(), threadInParam.addr(), threadOutParam.addr(), extThreadInParam.addr(), extThreadOutParam.addr());
+	cellPngDec.Warning("cellPngDecCreate(mainHandle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x, extThreadInParam=*0x%x, extThreadOutParam=*0x%x)",
+		mainHandle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 
 	// create decoder
 	if (auto res = pngDecCreate(mainHandle, threadInParam, extThreadInParam)) return res;
@@ -400,7 +402,7 @@ s32 cellPngDecExtCreate(
 
 s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle)
 {
-	cellPngDec.Warning("cellPngDecDestroy(mainHandle=0x%x)", mainHandle.addr());
+	cellPngDec.Warning("cellPngDecDestroy(mainHandle=*0x%x)", mainHandle);
 
 	// destroy decoder
 	return pngDecDestroy(mainHandle);
@@ -412,8 +414,7 @@ s32 cellPngDecOpen(
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo)
 {
-	cellPngDec.Warning("cellPngDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr());
+	cellPngDec.Warning("cellPngDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
 	// create stream handle
 	return pngDecOpen(mainHandle, subHandle, src, openInfo);
@@ -427,8 +428,7 @@ s32 cellPngDecExtOpen(
 	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
 	vm::ptr<const CellPngDecOpnParam> opnParam)
 {
-	cellPngDec.Warning("cellPngDecExtOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x, cbCtrlStrm_addr=0x%x, opnParam_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), src.addr(), openInfo.addr(), cbCtrlStrm.addr(), opnParam.addr());
+	cellPngDec.Warning("cellPngDecExtOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x, cbCtrlStrm=*0x%x, opnParam=*0x%x)", mainHandle, subHandle, src, openInfo, cbCtrlStrm, opnParam);
 
 	// create stream handle
 	return pngDecOpen(mainHandle, subHandle, src, openInfo, cbCtrlStrm, opnParam);
@@ -436,15 +436,14 @@ s32 cellPngDecExtOpen(
 
 s32 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle)
 {
-	cellPngDec.Warning("cellPngDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle.addr(), subHandle.addr());
+	cellPngDec.Warning("cellPngDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
 	return pngDecClose(subHandle);
 }
 
 s32 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info)
 {
-	cellPngDec.Warning("cellPngDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), info.addr());
+	cellPngDec.Warning("cellPngDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
 	return pngReadHeader(subHandle, info);
 }
@@ -455,8 +454,7 @@ s32 cellPngDecExtReadHeader(
 	vm::ptr<CellPngDecInfo> info,
 	vm::ptr<CellPngDecExtInfo> extInfo)
 {
-	cellPngDec.Warning("cellPngDecExtReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x, extInfo_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), info.addr(), extInfo.addr());
+	cellPngDec.Warning("cellPngDecExtReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x, extInfo=*0x%x)", mainHandle, subHandle, info, extInfo);
 
 	return pngReadHeader(subHandle, info, extInfo);
 }
@@ -467,8 +465,7 @@ s32 cellPngDecSetParameter(
 	vm::ptr<const CellPngDecInParam> inParam,
 	vm::ptr<CellPngDecOutParam> outParam)
 {
-	cellPngDec.Warning("cellPngDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr());
+	cellPngDec.Warning("cellPngDecSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
 	return pngDecSetParameter(subHandle, inParam, outParam);
 }
@@ -481,8 +478,7 @@ s32 cellPngDecExtSetParameter(
 	vm::ptr<const CellPngDecExtInParam> extInParam,
 	vm::ptr<CellPngDecExtOutParam> extOutParam)
 {
-	cellPngDec.Warning("cellPngDecExtSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x, extInParam=0x%x, extOutParam=0x%x",
-		mainHandle.addr(), subHandle.addr(), inParam.addr(), outParam.addr(), extInParam.addr(), extOutParam.addr());
+	cellPngDec.Warning("cellPngDecExtSetParameter(mainHandle=*0x%x, subHandle=*0x%x, inParam=*0x%x, outParam=*0x%x, extInParam=*0x%x, extOutParam=*0x%x", mainHandle, subHandle, inParam, outParam, extInParam, extOutParam);
 
 	return pngDecSetParameter(subHandle, inParam, outParam, extInParam, extOutParam);
 }
@@ -494,8 +490,8 @@ s32 cellPngDecDecodeData(
 	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
 	vm::ptr<CellPngDecDataOutInfo> dataOutInfo)
 {
-	cellPngDec.Warning("cellPngDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
+	cellPngDec.Warning("cellPngDecDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)",
+		mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
 	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo);
 }
@@ -509,8 +505,8 @@ s32 cellPngDecExtDecodeData(
 	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp,
 	vm::ptr<CellPngDecDispParam> dispParam)
 {
-	cellPngDec.Warning("cellPngDecExtDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x, cbCtrlDisp_addr=0x%x, dispParam_addr=0x%x)",
-		mainHandle.addr(), subHandle.addr(), data.addr(), dataCtrlParam.addr(), dataOutInfo.addr(), cbCtrlDisp.addr(), dispParam.addr());
+	cellPngDec.Warning("cellPngDecExtDecodeData(mainHandle=*0x%x, subHandle=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x, cbCtrlDisp=*0x%x, dispParam=*0x%x)",
+		mainHandle, subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 
 	return pngDecodeData(subHandle, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 }

@@ -64,7 +64,7 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pAr
 {
 	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
 	if (!t)
 	{
@@ -106,7 +106,7 @@ s32 sceKernelDeleteThread(s32 threadId)
 {
 	sceLibKernel.Warning("sceKernelDeleteThread(threadId=0x%x)", threadId);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
 	if (!t)
 	{
@@ -264,7 +264,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv:
 {
 	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
-	std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
+	const auto t = Emu.GetCPU().GetThread(threadId, CPU_THREAD_ARMv7);
 
 	if (!t)
 	{

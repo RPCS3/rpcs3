@@ -95,8 +95,10 @@ struct event_queue_t
 	{
 	}
 
-	void push(u64 source, u64 data1, u64 data2, u64 data3)
+	void push(lv2_lock_type& lv2_lock, u64 source, u64 data1, u64 data2, u64 data3)
 	{
+		CHECK_LV2_LOCK(lv2_lock);
+
 		events.emplace_back(source, data1, data2, data3);
 
 		if (waiters)

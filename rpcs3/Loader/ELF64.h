@@ -2,7 +2,6 @@
 #include "Loader.h"
 
 struct vfsStream;
-class rFile;
 
 namespace loader
 {

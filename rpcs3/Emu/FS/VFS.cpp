@@ -6,22 +6,20 @@
 #include "Ini.h"
 #include "Emu/System.h"
 #include "Utilities/Log.h"
-#include <sys/stat.h> // To check whether directory exists
-
-#undef CreateFile
 
 std::vector<std::string> simplify_path_blocks(const std::string& path)
 {
 	// fmt::tolower() removed
 	std::vector<std::string> path_blocks = std::move(fmt::split(path, { "/", "\\" }));
 
-	for (size_t i = 0; i < path_blocks.size(); ++i)
+	for (s32 i = 0; i < path_blocks.size(); ++i)
 	{
-		if (path_blocks[i] == ".")
+		if (path_blocks[i] == "." || (i > 0 && path_blocks[i].empty()))
 		{
-			path_blocks.erase(path_blocks.begin() + i--);
+			path_blocks.erase(path_blocks.begin() + i);
+			i--;
 		}
-		else if (i && path_blocks[i] == "..")
+		else if (i > 0 && path_blocks[i] == "..")
 		{
 			path_blocks.erase(path_blocks.begin() + (i - 1), path_blocks.begin() + (i + 1));
 			i--;
@@ -132,9 +130,10 @@ void VFS::UnMountAll()
 	m_devices.clear();
 }
 
-vfsFileBase* VFS::OpenFile(const std::string& ps3_path, vfsOpenMode mode) const
+vfsFileBase* VFS::OpenFile(const std::string& ps3_path, u32 mode) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
 		if (vfsFileBase* res = dev->GetNewFileStream())
@@ -163,28 +162,13 @@ vfsDirBase* VFS::OpenDir(const std::string& ps3_path) const
 	return nullptr;
 }
 
-bool VFS::CreateFile(const std::string& ps3_path, bool overwrite) const
-{
-	std::string path;
-	if (vfsDevice* dev = GetDevice(ps3_path, path))
-	{
-		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
-
-		if (res)
-		{
-			return res->Create(path, overwrite);
-		}
-	}
-
-	return false;
-}
-
 bool VFS::CreateDir(const std::string& ps3_path) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+		std::unique_ptr<vfsDirBase> res(dev->GetNewDirStream());
 
 		if (res)
 		{
@@ -195,12 +179,25 @@ bool VFS::CreateDir(const std::string& ps3_path) const
 	return false;
 }
 
+bool VFS::CreatePath(const std::string& ps3_path) const
+{
+	std::string path;
+
+	if (vfsDevice* dev = GetDevice(ps3_path, path))
+	{
+		return fs::create_path(path);
+	}
+
+	return false;
+}
+
 bool VFS::RemoveFile(const std::string& ps3_path) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+		std::unique_ptr<vfsFileBase> res(dev->GetNewFileStream());
 
 		if (res)
 		{
@@ -214,9 +211,10 @@ bool VFS::RemoveFile(const std::string& ps3_path) const
 bool VFS::RemoveDir(const std::string& ps3_path) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+		std::unique_ptr<vfsDirBase> res(dev->GetNewDirStream());
 
 		if (res)
 		{
@@ -230,9 +228,10 @@ bool VFS::RemoveDir(const std::string& ps3_path) const
 bool VFS::ExistsFile(const std::string& ps3_path) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+		std::unique_ptr<vfsFileBase> res(dev->GetNewFileStream());
 
 		if (res)
 		{
@@ -246,9 +245,10 @@ bool VFS::ExistsFile(const std::string& ps3_path) const
 bool VFS::ExistsDir(const std::string& ps3_path) const
 {
 	std::string path;
+
 	if (vfsDevice* dev = GetDevice(ps3_path, path))
 	{
-		std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+		std::unique_ptr<vfsDirBase> res(dev->GetNewDirStream());
 
 		if (res)
 		{
@@ -267,7 +267,7 @@ bool VFS::RenameFile(const std::string& ps3_path_from, const std::string& ps3_pa
 	{
 		if (vfsDevice* dev_ = GetDevice(ps3_path_to, path_to))
 		{
-			std::shared_ptr<vfsFileBase> res(dev->GetNewFileStream());
+			std::unique_ptr<vfsFileBase> res(dev->GetNewFileStream());
 
 			if (res)
 			{
@@ -287,13 +287,40 @@ bool VFS::RenameDir(const std::string& ps3_path_from, const std::string& ps3_pat
 	{
 		if (vfsDevice* dev_ = GetDevice(ps3_path_to, path_to))
 		{
-			std::shared_ptr<vfsDirBase> res(dev->GetNewDirStream());
+			std::unique_ptr<vfsDirBase> res(dev->GetNewDirStream());
 
 			if (res)
 			{
 				return res->Rename(path_from, path_to);
 			}
 		}
+	}
+
+	return false;
+}
+
+bool VFS::CopyFile(const std::string& ps3_path_from, const std::string& ps3_path_to, bool overwrite) const
+{
+	std::string path_from, path_to;
+
+	if (vfsDevice* dev = GetDevice(ps3_path_from, path_from))
+	{
+		if (vfsDevice* dev_ = GetDevice(ps3_path_to, path_to))
+		{
+			return fs::copy_file(path_from, path_to, overwrite);
+		}
+	}
+
+	return false;
+}
+
+bool VFS::TruncateFile(const std::string& ps3_path, u64 length) const
+{
+	std::string path;
+
+	if (vfsDevice* dev = GetDevice(ps3_path, path))
+	{
+		return fs::truncate_file(path, length);
 	}
 
 	return false;
@@ -464,7 +491,6 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_flash/",  "/dev_flash/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb000/");
 			res.emplace_back(vfsDevice_LocalFile, "$(EmulatorDir)/dev_usb000/", "/dev_usb/");
-			res.emplace_back(vfsDevice_LocalFile, "$(GameDir)/../../",          "/dev_bdvd/");
 			res.emplace_back(vfsDevice_LocalFile, "",                           "/host_root/");
 
 			return;
@@ -478,32 +504,24 @@ void VFS::SaveLoadDevices(std::vector<VFSManagerEntry>& res, bool is_load)
 		entries_count.SaveValue(count);
 	}
 
-	// Custom EmulationDir.
-	// TODO:: should have a better log that would show results before loading a game?
+	// Custom EmulationDir
 	if (Ini.SysEmulationDirPathEnable.GetValue())
 	{
-		std::string EmulationDir = Ini.SysEmulationDirPath.GetValue();
-		if (EmulationDir.empty())
-			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
-		struct stat fstatinfo;
-		if ((stat(EmulationDir.c_str(), &fstatinfo)))
+		std::string dir = Ini.SysEmulationDirPath.GetValue();
+
+		if (dir.empty())
 		{
-			LOG_NOTICE(GENERAL, "Custom EmualtionDir: Tried %s but it doesn't exists. Maybe you add some not needed chars like '\"'?");
-			Ini.SysEmulationDirPathEnable.SetValue(false);
+			Ini.SysEmulationDirPath.SetValue(Emu.GetEmulatorPath());
 		}
-		else if (fstatinfo.st_mode & S_IFDIR)
-			LOG_NOTICE(GENERAL, "Custom EmualtionDir: On, Binded $(EmulatorDir) to %s.", EmulationDir);
+
+		if (!fs::is_dir(dir))
+		{
+			LOG_ERROR(GENERAL, "Custom EmulationDir: directory '%s' not found", dir);
+		}
 		else
 		{
-			// If that is not directory turn back to use original one.
-			LOG_NOTICE(GENERAL, "Custom EmulationDir: Cause path %s is not a valid directory.", EmulationDir);
-			Ini.SysEmulationDirPathEnable.SetValue(false);
+			LOG_NOTICE(GENERAL, "Custom EmulationDir: $(EmulatorDir) bound to '%s'", dir);
 		}
-	}
-	// I left this to check again just to catch those failed in directory checks.
-	if (!Ini.SysEmulationDirPathEnable.GetValue())
-	{
-		LOG_NOTICE(GENERAL, "Custom EmualtionDir: Off, Binded $(EmulatorDir) to %s.", Emu.GetEmulatorPath());
 	}
 
 	for(int i=0; i<count; ++i)

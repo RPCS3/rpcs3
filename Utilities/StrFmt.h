@@ -48,47 +48,47 @@ namespace fmt
 	// the stream `os`. Then write `arg` to to the stream. If there's no
 	// `fmt::placeholder` after `pos` everything in `fmt` after pos is written
 	// to `os`. Then `arg` is written to `os` after appending a space character
-	template<typename T>
-	empty_t write(const std::string &fmt, std::ostream &os, std::string::size_type &pos, T &&arg)
-	{
-		std::string::size_type ins = fmt.find(placeholder, pos);
+	//template<typename T>
+	//empty_t write(const std::string &fmt, std::ostream &os, std::string::size_type &pos, T &&arg)
+	//{
+	//	std::string::size_type ins = fmt.find(placeholder, pos);
 
-		if (ins == std::string::npos)
-		{
-			os.write(fmt.data() + pos, fmt.size() - pos);
-			os << ' ' << arg;
+	//	if (ins == std::string::npos)
+	//	{
+	//		os.write(fmt.data() + pos, fmt.size() - pos);
+	//		os << ' ' << arg;
 
-			pos = fmt.size();
-		}
-		else
-		{
-			os.write(fmt.data() + pos, ins - pos);
-			os << arg;
+	//		pos = fmt.size();
+	//	}
+	//	else
+	//	{
+	//		os.write(fmt.data() + pos, ins - pos);
+	//		os << arg;
 
-			pos = ins + placeholder.size();
-		}
-		return{};
-	}
+	//		pos = ins + placeholder.size();
+	//	}
+	//	return{};
+	//}
 
 	// typesafe version of a sprintf-like function. Returns the printed to
 	// string. To mark positions where the arguments are supposed to be
 	// inserted use `fmt::placeholder`. If there's not enough placeholders
 	// the rest of the arguments are appended at the end, seperated by spaces
-	template<typename  ... Args>
-	std::string SFormat(const std::string &fmt, Args&& ... parameters)
-	{
-		std::ostringstream os;
-		std::string::size_type pos = 0;
-		std::initializer_list<empty_t> { write(fmt, os, pos, parameters)... };
+	//template<typename  ... Args>
+	//std::string SFormat(const std::string &fmt, Args&& ... parameters)
+	//{
+	//	std::ostringstream os;
+	//	std::string::size_type pos = 0;
+	//	std::initializer_list<empty_t> { write(fmt, os, pos, parameters)... };
 
-		if (!fmt.empty())
-		{
-			os.write(fmt.data() + pos, fmt.size() - pos);
-		}
+	//	if (!fmt.empty())
+	//	{
+	//		os.write(fmt.data() + pos, fmt.size() - pos);
+	//	}
 
-		std::string result = os.str();
-		return result;
-	}
+	//	std::string result = os.str();
+	//	return result;
+	//}
 
 	//small wrapper used to deal with bitfields
 	template<typename T>

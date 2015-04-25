@@ -259,7 +259,7 @@ namespace sce_libc_func
 
 psv_log_base sceLibc("SceLibc", []()
 {
-	g_dso.set(0);
+	g_dso = vm::null;
 	g_atexit.clear();
 
 	sceLibc.on_load = nullptr;

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "vfsDevice.h"
-#include "Utilities/rFile.h"
 
 vfsDevice::vfsDevice(const std::string& ps3_path, const std::string& local_path)
 	: m_ps3_path(ps3_path)
@@ -46,16 +45,13 @@ u32 vfsDevice::CmpLocalPath(const std::string& local_path)
 	if(local_path.length() < m_local_path.length())
 		return 0;
 
-	rFileName path0(m_local_path);
-	path0.Normalize();
-
 #ifdef _WIN32
 #define DL "\\"
 #else
 #define DL "/"
 #endif
 
-	std::vector<std::string> arr0 = fmt::rSplit(path0.GetFullPath(), DL);
+	std::vector<std::string> arr0 = fmt::rSplit(m_local_path, DL);
 	std::vector<std::string> arr1 = fmt::rSplit(local_path, DL);
 
 	const u32 lim = (u32)std::min(arr0.size(), arr1.size());
@@ -188,9 +184,7 @@ std::string vfsDevice::GetWinPath(const std::string& p, bool is_dir)
 
 	if(is_dir && ret[ret.length() - 1] != '/' && ret[ret.length() - 1] != '\\') ret += '/'; // ???
 
-	rFileName res(ret);
-	res.Normalize();
-	return res.GetFullPath();
+	return ret;
 }
 
 std::string vfsDevice::GetWinPath(const std::string& l, const std::string& r)

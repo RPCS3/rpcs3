@@ -1,7 +1,6 @@
 #pragma once
 
 class CPUThread;
-class RawSPUThread;
 enum CPUThreadType : unsigned char;
 
 class CPUThreadManager

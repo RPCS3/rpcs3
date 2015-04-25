@@ -26,7 +26,7 @@ struct lwcond_t
 
 	// TODO: use sleep queue
 	std::condition_variable cv;
-	std::atomic<u32> waiters;
+	std::unordered_set<u32> waiters;
 
 	lwcond_t(u64 name)
 		: name(name)
@@ -47,4 +47,4 @@ s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcon
 s32 _sys_lwcond_destroy(u32 lwcond_id);
 s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode);
 s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode);
-s32 _sys_lwcond_queue_wait(u32 lwcond_id, u32 lwmutex_id, u64 timeout);
+s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 timeout);

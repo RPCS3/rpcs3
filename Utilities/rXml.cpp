@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "Utilities/rXml.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependency: <wx/xml/xml.h>")
+#pragma warning(disable : 4996)
 #include <wx/xml/xml.h>
+#pragma warning(pop)
 
 rXmlNode::rXmlNode()
 {

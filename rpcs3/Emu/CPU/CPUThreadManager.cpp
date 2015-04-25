@@ -112,26 +112,14 @@ void CPUThreadManager::RemoveThread(u32 id)
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id)
 {
-	std::shared_ptr<CPUThread> res;
-
-	if (!id) return nullptr;
-
-	if (!Emu.GetIdManager().GetIDData(id, res)) return nullptr;
-
-	return res;
+	return Emu.GetIdManager().GetIDData<CPUThread>(id);
 }
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id, CPUThreadType type)
 {
-	std::shared_ptr<CPUThread> res;
+	const auto res = GetThread(id);
 
-	if (!id) return nullptr;
-
-	if (!Emu.GetIdManager().GetIDData(id, res)) return nullptr;
-
-	if (res->GetType() != type) return nullptr;
-
-	return res;
+	return res && res->GetType() == type ? res : nullptr;
 }
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetRawSPUThread(u32 index)

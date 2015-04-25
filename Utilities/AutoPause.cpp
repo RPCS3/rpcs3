@@ -2,7 +2,7 @@
 #include "rpcs3/Ini.h"
 #include "AutoPause.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
 
 using namespace Debug;
@@ -44,23 +44,22 @@ AutoPause::~AutoPause(void)
 //This would be able to create in a GUI window.
 void AutoPause::Reload(void)
 {
-	if (rExists("pause.bin"))
+	if (fs::is_file("pause.bin"))
 	{
 		m_pause_function.clear();
 		m_pause_function.reserve(16);
 		m_pause_syscall.clear();
 		m_pause_syscall.reserve(16);
 
-		rFile list;
-		list.Open("pause.bin", rFile::read);
+		fs::file list("pause.bin");
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
-		size_t fmax = list.Length();
+		size_t fmax = list.size();
 		size_t fcur = 0;
-		list.Seek(0);
+		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
-			list.Read(&num, sizeof(u32));
+			list.read(&num, sizeof(u32));
 			fcur += sizeof(u32);
 			if (num == 0xFFFFFFFF) break;
 			
@@ -77,12 +76,8 @@ void AutoPause::Reload(void)
 				LOG_WARNING(HLE, "Auto Pause: Find Function Call ID 0x%x", num);
 			}
 		}
-		list.Close();
 	}
-	else
-	{
-		LOG_WARNING(HLE, "No pause.bin found, Auto Pause will not work.");
-	}
+
 	m_pause_syscall_enable = Ini.DBGAutoPauseSystemCall.GetValue();
 	m_pause_function_enable = Ini.DBGAutoPauseFunctionCall.GetValue();
 	initialized = true;

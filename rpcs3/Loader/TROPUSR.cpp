@@ -22,7 +22,6 @@ bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configp
 	if (m_file)
 		Close();
 
-	// TODO: This seems to be always true... A bug in ExistsFile() ?
 	if (!Emu.GetVFS().ExistsFile(filepath))
 		Generate(filepath, configpath);
 
@@ -102,10 +101,7 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 	if (m_file)
 		Close();
 
-	if (!Emu.GetVFS().ExistsFile(filepath))
-		Emu.GetVFS().CreateFile(filepath);
-
-	m_file = Emu.GetVFS().OpenFile(filepath, vfsWrite);
+	m_file = Emu.GetVFS().OpenFile(filepath, vfsWriteNew);
 	m_file->Write(&m_header, sizeof(TROPUSRHeader));
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)

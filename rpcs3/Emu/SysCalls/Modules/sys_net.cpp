@@ -19,7 +19,7 @@ extern "C"
 
 extern Module sys_net;
 
-vm::ptr<s32> g_lastError = vm::ptr<s32>::make(0);
+vm::ptr<s32> g_lastError = vm::null;
 
 
 // Auxiliary Functions
@@ -478,7 +478,7 @@ s32 sys_net_finalize_network()
 {
 	sys_net.Warning("sys_net_initialize_network_ex()");
 	Memory.Free(g_lastError.addr());
-	g_lastError = vm::ptr<s32>::make(0);
+	g_lastError = vm::null;
 #ifdef _WIN32
 	WSACleanup();
 #endif

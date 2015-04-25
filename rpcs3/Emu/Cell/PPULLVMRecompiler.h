@@ -4,6 +4,7 @@
 #ifdef LLVM_AVAILABLE
 #define PPU_LLVM_RECOMPILER 1
 
+#include <list>
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUInterpreter.h"

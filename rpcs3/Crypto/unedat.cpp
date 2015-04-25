@@ -2,7 +2,7 @@
 #include "key_vault.h"
 #include "unedat.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
@@ -136,7 +136,7 @@ unsigned char* get_block_key(int block, NPD_HEADER *npd)
 }
 
 // EDAT/SDAT decryption.
-int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
 {
 	// Get metadata info and setup buffers.
 	int block_num = (int)((edat->file_size + edat->block_size - 1) / edat->block_size);
@@ -170,11 +170,11 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 		if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
-			in->Seek(metadata_sec_offset);
+			in->seek(metadata_sec_offset);
 
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
-			in->Read(metadata, 0x20);
+			in->read(metadata, 0x20);
 
 			// If the data is compressed, decrypt the metadata.
 			// NOTE: For NPD version 1 the metadata is not encrypted.
@@ -199,11 +199,11 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 		{
 			// If FLAG 0x20, the metadata precedes each data block.
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * (metadata_section_size + length);
-			in->Seek(metadata_sec_offset);
+			in->seek(metadata_sec_offset);
 
 			unsigned char metadata[0x20];
 			memset(metadata, 0, 0x20);
-			in->Read(metadata, 0x20);
+			in->read(metadata, 0x20);
 			memcpy(hash_result, metadata, 0x14);
 
 			// If FLAG 0x20 is set, apply custom xor.
@@ -220,9 +220,9 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 		else
 		{
 			metadata_sec_offset = metadata_offset + (unsigned long long) i * metadata_section_size;
-			in->Seek(metadata_sec_offset);
+			in->seek(metadata_sec_offset);
 
-			in->Read(hash_result, 0x10);
+			in->read(hash_result, 0x10);
 			offset = metadata_offset + (unsigned long long) i * edat->block_size + (unsigned long long) block_num * metadata_section_size;
 			length = edat->block_size;
 
@@ -242,8 +242,8 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 		memset(hash, 0, 0x10);
 		memset(key_result, 0, 0x10);
 
-		in->Seek(offset);
-		in->Read(enc_data, length);
+		in->seek(offset);
+		in->read(enc_data, length);
 
 		// Generate a key for the current block.
 		b_key = get_block_key(i, npd);
@@ -305,7 +305,7 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 				LOG_NOTICE(LOADER, "EDAT: Decompressing data...");
 
 			int res = decompress(decomp_data, dec_data, decomp_size);
-			out->Write(decomp_data, res);
+			out->write(decomp_data, res);
 
 			if (verbose)
 			{
@@ -330,7 +330,7 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 		}
 		else
 		{
-			out->Write(dec_data, pad_length);
+			out->write(dec_data, pad_length);
 		}
 
 		delete[] enc_data;
@@ -340,9 +340,9 @@ int decrypt_data(rFile *in, rFile *out, EDAT_HEADER *edat, NPD_HEADER *npd, unsi
 	return 0;
 }
 
-int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f, bool verbose)
+int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs::file* f, bool verbose)
 {
-	f->Seek(0);
+	f->seek(0);
 	unsigned char header[0xA0];
 	unsigned char empty_header[0xA0];
 	unsigned char header_hash[0x10];
@@ -384,12 +384,12 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f,
 	}
 
 	// Read in the file header.
-	f->Read(header, 0xA0);
+	f->read(header, 0xA0);
 
 	// Read in the header and metadata section hashes.
-	f->Seek(0x90);
-	f->Read(metadata_hash, 0x10);
-	f->Read(header_hash, 0x10);
+	f->seek(0x90);
+	f->read(metadata_hash, 0x10);
+	f->read(header_hash, 0x10);
 
 	// Setup the hashing mode and the crypto mode used in the file.
 	int crypto_mode = 0x1;
@@ -443,10 +443,10 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f,
 	while (bytes_to_read > 0)
 	{
 		// Locate the metadata blocks.
-		f->Seek(metadata_section_offset);
+		f->seek(metadata_section_offset);
 
 		// Read in the metadata.
-		f->Read(metadata + bytes_read, metadata_section_size);
+		f->read(metadata + bytes_read, metadata_section_size);
 
 		// Adjust sizes.
 		bytes_read += metadata_section_size;
@@ -490,10 +490,10 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f,
 
 
 		// Read in the metadata and header signatures.
-		f->Seek(0xB0);
-		f->Read(metadata_signature, 0x28);
-		f->Seek(0xD8);
-		f->Read(header_signature, 0x28);
+		f->seek(0xB0);
+		f->read(metadata_signature, 0x28);
+		f->seek(0xD8);
+		f->read(header_signature, 0x28);
 
 		// Checking metadata signature.
 		// Setup signature r and s.
@@ -508,8 +508,8 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f,
 			{
 				int metadata_buf_size = block_num * 0x10;
 				unsigned char *metadata_buf = new unsigned char[metadata_buf_size];
-				f->Seek(metadata_offset);
-				f->Read(metadata_buf, metadata_buf_size);
+				f->seek(metadata_offset);
+				f->read(metadata_buf, metadata_buf_size);
 				sha1(metadata_buf, metadata_buf_size, signature_hash);
 				delete[] metadata_buf;
 			}
@@ -541,8 +541,8 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, rFile *f,
 			// Setup header signature hash.
 			memset(signature_hash, 0, 20);
 			unsigned char *header_buf = new unsigned char[0xD8];
-			f->Seek(0x00);
-			f->Read(header_buf, 0xD8);
+			f->seek(0x00);
+			f->read(header_buf, 0xD8);
 			sha1(header_buf, 0xD8, signature_hash );
 			delete[] header_buf;
 
@@ -639,7 +639,7 @@ int validate_npd_hashes(const char* file_name, unsigned char *klicensee, NPD_HEA
 	return (title_hash_result && dev_hash_result);
 }
 
-bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
+bool extract_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER *NPD = new NPD_HEADER();
@@ -648,8 +648,8 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 	// Read in the NPD and EDAT/SDAT headers.
 	char npd_header[0x80];
 	char edat_header[0x10];
-	input->Read(npd_header, sizeof(npd_header));
-	input->Read(edat_header, sizeof(edat_header));
+	input->read(npd_header, sizeof(npd_header));
+	input->read(edat_header, sizeof(edat_header));
 
 	memcpy(NPD->magic, npd_header, 4);
 	NPD->version = swap32(*(int*)&npd_header[4]);
@@ -812,9 +812,9 @@ bool extract_data(rFile *input, rFile *output, const char* input_file_name, unsi
 int DecryptEDAT(const std::string& input_file_name, const std::string& output_file_name, int mode, const std::string& rap_file_name, unsigned char *custom_klic, bool verbose)
 {
 	// Prepare the files.
-	rFile input(input_file_name.c_str());
-	rFile output(output_file_name.c_str(), rFile::write);
-	rFile rap(rap_file_name.c_str());
+	fs::file input(input_file_name);
+	fs::file output(output_file_name, o_write | o_create | o_trunc);
+	fs::file rap(rap_file_name);
 
 	// Set keys (RIF and DEVKLIC).
 	unsigned char rifkey[0x10];
@@ -866,36 +866,30 @@ int DecryptEDAT(const std::string& input_file_name, const std::string& output_fi
 	}
 	
 	// Check the input/output files.
-	if (!input.IsOpened() || !output.IsOpened())
+	if (!input || !output)
 	{
 		LOG_ERROR(LOADER, "EDAT: Failed to open files!");
 		return -1;
 	}
 
 	// Read the RAP file, if provided.
-	if (rap.IsOpened())
+	if (rap)
 	{
 		unsigned char rapkey[0x10];
 		memset(rapkey, 0, 0x10);
 		
-		rap.Read(rapkey, 0x10);
+		rap.read(rapkey, 0x10);
 		
 		rap_to_rif(rapkey, rifkey);
-		
-		rap.Close();
 	}
 
 	// Delete the bad output file if any errors arise.
 	if (extract_data(&input, &output, input_file_name.c_str(), devklic, rifkey, verbose))
 	{
-		input.Close();
-		output.Close();
-		rRemoveFile(output_file_name);
+		output.close();
+		fs::remove_file(output_file_name);
 		return -1;
 	}
 	
-	// Cleanup.
-	input.Close();
-	output.Close();
 	return 0;
 }

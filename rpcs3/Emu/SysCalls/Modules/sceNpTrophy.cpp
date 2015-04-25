@@ -79,7 +79,7 @@ static sceNpTrophyInternalContext& getContext(u32 context) {
 // Functions
 int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 {
-	sceNpTrophy.Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=%d, options=0x%llx)", pool_addr, poolSize, containerId, options);
+	sceNpTrophy.Log("sceNpTrophyInit(pool_addr=0x%x, poolSize=%d, containerId=0x%x, options=0x%llx)", pool_addr, poolSize, containerId, options);
 
 	if (sceNpTrophyInstance.m_bInitialized)
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
@@ -145,7 +145,7 @@ int sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 
 int sceNpTrophyRegisterContext(u32 context, u32 handle, vm::ptr<SceNpTrophyStatusCallback> statusCb, u32 arg_addr, u64 options)
 {
-	sceNpTrophy.Warning("sceNpTrophyRegisterContext(context=%d, handle=%d, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
+	sceNpTrophy.Warning("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb_addr=0x%x, arg_addr=0x%x, options=0x%llx)",
 		context, handle, statusCb.addr(), arg_addr, options);
 
 	if (!(sceNpTrophyInstance.m_bInitialized))
@@ -224,7 +224,7 @@ int sceNpTrophySetSoundLevel()
 
 int sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64> reqspace, u64 options)
 {
-	sceNpTrophy.Warning("sceNpTrophyGetRequiredDiskSpace(context=%d, handle=%d, reqspace_addr=0x%x, options=0x%llx)",
+	sceNpTrophy.Warning("sceNpTrophyGetRequiredDiskSpace(context=0x%x, handle=0x%x, reqspace_addr=0x%x, options=0x%llx)",
 		context, handle, reqspace.addr(), options);
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -251,7 +251,7 @@ int sceNpTrophyDestroyContext()
 
 int sceNpTrophyAbortHandle(u32 handle)
 {
-	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=%d)", handle);
+	sceNpTrophy.Todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
 	// TODO: ?
 
@@ -263,7 +263,7 @@ int sceNpTrophyAbortHandle(u32 handle)
 
 int sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGameDetails> details, vm::ptr<SceNpTrophyGameData> data)
 {
-	sceNpTrophy.Warning("sceNpTrophyGetGameInfo(context=%d, handle=%d, details_addr=0x%x, data_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, details.addr(), data.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -321,7 +321,7 @@ int sceNpTrophyDestroyHandle()
 
 int sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
-	sceNpTrophy.Warning("sceNpTrophyUnlockTrophy(context=%d, handle=%d, trophyId=%d, platinumId_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId_addr=0x%x)",
 		context, handle, trophyId, platinumId.addr());
 	
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -358,7 +358,7 @@ int sceNpTrophyTerm()
 
 int sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceNpTrophyFlagArray> flags, vm::ptr<u32> count)
 {
-	sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState(context=%d, handle=%d, flags_addr=0x%x, count_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags_addr=0x%x, count_addr=0x%x)",
 		context, handle, flags.addr(), count.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)
@@ -395,7 +395,7 @@ int sceNpTrophyGetTrophyIcon()
 
 int sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data)
 {
-	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=%d, handle=%d, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
+	sceNpTrophy.Warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details_addr=0x%x, data_addr=0x%x)",
 		context, handle, trophyId, details.addr(), data.addr());
 
 	if (!sceNpTrophyInstance.m_bInitialized)

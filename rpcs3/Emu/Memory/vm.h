@@ -65,7 +65,7 @@ namespace vm
 	void dealloc(u32 addr, memory_location location = user_space);
 	
 	template<typename T = void>
-	T* const get_ptr(u32 addr)
+	T* get_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_base_addr) + addr);
 	}
@@ -77,7 +77,7 @@ namespace vm
 	}
 
 	template<typename T = void>
-	T* const priv_ptr(u32 addr)
+	T* priv_ptr(u32 addr)
 	{
 		return reinterpret_cast<T*>(static_cast<u8*>(g_priv_addr) + addr);
 	}
@@ -107,15 +107,11 @@ namespace vm
 	template<>
 	struct cast_ptr<unsigned long>
 	{
+		static_assert(sizeof(unsigned long) == 8, "Unexpected size of unsigned long");
+
 		__forceinline static u32 cast(const unsigned long addr, const char* func)
 		{
-			const u32 res = static_cast<u32>(addr);
-			if (res != addr)
-			{
-				vm::error(addr, func);
-			}
-
-			return res;
+			return cast_ptr<u64>::cast(addr, func);
 		}
 	};
 #endif

@@ -149,7 +149,7 @@ u32 sleep_queue_t::signal(u32 protocol)
 		u64 sel = ~0ull;
 		for (auto& v : m_waiting)
 		{
-			if (std::shared_ptr<CPUThread> t = Emu.GetCPU().GetThread(v))
+			if (const auto t = Emu.GetCPU().GetThread(v))
 			{
 				const u64 prio = t->GetPrio();
 				if (prio < highest_prio)

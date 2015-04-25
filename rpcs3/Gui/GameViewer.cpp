@@ -1,7 +1,7 @@
 #include "stdafx_gui.h"
 #include "Utilities/AutoPause.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+//#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/FS/VFS.h"
@@ -130,23 +130,27 @@ void GameViewer::LoadPSF()
 	m_game_data.clear();
 	for(uint i=0; i<m_games.size(); ++i)
 	{
+		const std::string sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
+		const std::string sfo = m_path + m_games[i] + (Emu.GetVFS().ExistsFile(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
+
+		if (!Emu.GetVFS().ExistsFile(sfo))
+		{
+			continue;
+		}
+
 		vfsFile f;
-		std::string sfo;
-		std::string sfb;
 
-		sfb = m_path + m_games[i] + "/PS3_DISC.SFB"; 
-
-		if (!f.Open(sfb))
-			sfo = m_path + m_games[i] + "/PARAM.SFO";
-		else
-			sfo = m_path + m_games[i] + "/PS3_GAME/PARAM.SFO";
-
-		if(!f.Open(sfo))
+		if (!f.Open(sfo))
+		{
 			continue;
+		}
 
-		PSFLoader psf(f);
-		if(!psf.Load(false))
+		const PSFLoader psf(f);
+
+		if (!psf)
+		{
 			continue;
+		}
 
 		// get local path from VFS...
 		std::string local_path;

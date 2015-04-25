@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Ini.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
 #include "Emu/FS/vfsStream.h"
 #include "Emu/Memory/Memory.h"
 #include "ELF32.h"
@@ -144,7 +143,7 @@ namespace loader
 				u32 vnid_addr = 0;
 				std::unordered_map<u32, u32> vnid_list;
 
-				auto proc_param = vm::psv::ptr<psv_process_param_t>::make(0);
+				vm::psv::ptr<psv_process_param_t> proc_param = vm::null;
 
 				for (auto& shdr : m_shdrs)
 				{
@@ -153,11 +152,9 @@ namespace loader
 
 					m_stream->Seek(handler::get_stream_offset() + m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset + shdr.data_le.sh_name);
 					std::string name;
-					while (!m_stream->Eof())
+					char c;
+					while (m_stream->SRead(c) && c)
 					{
-						char c;
-						m_stream->Read(&c, 1);
-						if (c == 0) break;
 						name.push_back(c);
 					}
 

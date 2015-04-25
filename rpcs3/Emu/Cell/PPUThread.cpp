@@ -663,7 +663,7 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 {
 	auto old_status = m_status;
 	auto old_PC = PC;
-	auto old_stack = GPR[1]; // only saved and restored (may be wrong)
+	auto old_stack = GPR[1];
 	auto old_rtoc = GPR[2];
 	auto old_LR = LR;
 	auto old_thread = GetCurrentNamedThread();
@@ -680,7 +680,13 @@ void PPUThread::FastCall2(u32 addr, u32 rtoc)
 
 	m_status = old_status;
 	PC = old_PC;
-	GPR[1] = old_stack;
+
+	if (GPR[1] != old_stack && !Emu.IsStopped()) // GPR[1] shouldn't change
+	{
+		LOG_ERROR(PPU, "PPUThread::FastCall2(0x%x,0x%x): stack inconsistency (SP=0x%llx, old=0x%llx)", addr, rtoc, GPR[1], old_stack);
+		GPR[1] = old_stack;
+	}
+
 	GPR[2] = old_rtoc;
 	LR = old_LR;
 	SetCurrentNamedThread(old_thread);

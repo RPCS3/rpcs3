@@ -599,9 +599,6 @@
     <ClCompile Include="Ini.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\rFile.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rMsgBox.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -646,9 +643,6 @@
     </ClCompile>
     <ClCompile Include="Emu\ARMv7\Modules\sceLibm.cpp">
       <Filter>Emu\CPU\ARMv7\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\SysCalls\SyncPrimitivesManager.cpp">
-      <Filter>Emu\SysCalls</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp">
       <Filter>Utilities</Filter>
@@ -865,6 +859,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\File.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1405,9 +1402,6 @@
     <ClInclude Include="..\Utilities\MTRingbuffer.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\rFile.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\rMsgBox.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1445,9 +1439,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Emu\SysCalls\CB_FUNC.h">
-      <Filter>Emu\SysCalls</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\SysCalls\SyncPrimitivesManager.h">
       <Filter>Emu\SysCalls</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\ec.h">
@@ -1554,6 +1545,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\SPUInterpreter2.h">
       <Filter>Emu\CPU\Cell</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\File.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

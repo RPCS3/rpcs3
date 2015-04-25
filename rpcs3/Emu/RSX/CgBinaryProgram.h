@@ -1,7 +1,6 @@
 #pragma once
-
 #include <sstream>
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Utilities/Log.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
@@ -182,14 +181,12 @@ public:
 		, m_arb_shader("")
 		, m_dst_reg_name("")
 	{
-		rFile f(path);
-		if (!f.IsOpened())
-			return;
+		fs::file f(path);
+		if (!f) return;
 
-		m_buffer_size = f.Length();
+		m_buffer_size = f.size();
 		m_buffer = new u8[m_buffer_size];
-		f.Read(m_buffer, m_buffer_size);
-		f.Close();
+		f.read(m_buffer, m_buffer_size);
 		m_arb_shader += fmt::format("Loading... [%s]\n", path.c_str());
 	}
 
@@ -315,16 +312,13 @@ public:
 			{
 				u32 ptr;
 				{
-					rFile f(m_path);
+					fs::file f(m_path);
+					if (!f) return;
 
-					if (!f.IsOpened())
-						return;
-
-					size_t size = f.Length();
+					size_t size = f.size();
 					vm::ps3::init();
 					ptr = vm::alloc(size);
-					f.Read(vm::get_ptr(ptr), size);
-					f.Close();
+					f.read(vm::get_ptr(ptr), size);
 				}
 				
 				auto& vmprog = vm::get_ref<CgBinaryProgram>(ptr);

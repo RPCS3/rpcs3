@@ -45,13 +45,13 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 
 s32 sys_rwlock_destroy(u32 rw_lock_id)
 {
-	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -68,15 +68,15 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 
 s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=%d, timeout=0x%llx)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -94,7 +94,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 		if (Emu.IsStopped())
 		{
-			sys_rwlock.Warning("sys_rwlock_rlock(id=%d) aborted", rw_lock_id);
+			sys_rwlock.Warning("sys_rwlock_rlock(rw_lock_id=0x%x) aborted", rw_lock_id);
 			return CELL_OK;
 		}
 
@@ -109,13 +109,13 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -132,13 +132,13 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 
 s32 sys_rwlock_runlock(u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -158,15 +158,15 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 
 s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 {
-	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=%d, timeout=0x%llx)", rw_lock_id, timeout);
+	sys_rwlock.Log("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const u64 start_time = get_system_time();
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -189,7 +189,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 		if (Emu.IsStopped())
 		{
-			sys_rwlock.Warning("sys_rwlock_wlock(id=%d) aborted", rw_lock_id);
+			sys_rwlock.Warning("sys_rwlock_wlock(rw_lock_id=0x%x) aborted", rw_lock_id);
 			return CELL_OK;
 		}
 
@@ -204,13 +204,13 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}
@@ -232,13 +232,13 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 
 s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 {
-	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=%d)", rw_lock_id);
+	sys_rwlock.Log("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	LV2_LOCK;
 
-	std::shared_ptr<rwlock_t> rwlock;
+	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
 
-	if (!Emu.GetIdManager().GetIDData(rw_lock_id, rwlock))
+	if (!rwlock)
 	{
 		return CELL_ESRCH;
 	}

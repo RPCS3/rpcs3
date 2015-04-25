@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
@@ -26,12 +26,12 @@
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "Emu/Event.h"
-#include "Emu/SysCalls/SyncPrimitivesManager.h"
 
 #include "Loader/PSF.h"
+#include "Loader/ELF64.h"
+#include "Loader/ELF32.h"
 
 #include "../Crypto/unself.h"
-#include <cstdlib>
 #include <fstream>
 using namespace PPU_instr;
 
@@ -55,7 +55,6 @@ Emulator::Emulator()
 	, m_callback_manager(new CallbackManager())
 	, m_event_manager(new EventManager())
 	, m_module_manager(new ModuleManager())
-	, m_sync_prim_manager(new SyncPrimManager())
 	, m_vfs(new VFS())
 {
 	m_loader.register_handler(new loader::handlers::elf32);
@@ -74,7 +73,6 @@ Emulator::~Emulator()
 	delete m_callback_manager;
 	delete m_event_manager;
 	delete m_module_manager;
-	delete m_sync_prim_manager;
 	delete m_vfs;
 }
 
@@ -149,11 +147,12 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 		"/USRDIR/EBOOT.BIN",
 		"/EBOOT.BIN"
 	};
+
 	auto curpath = path;
 
 	if (direct)
 	{
-		if (rFile::Access(curpath, rFile::read))
+		if (fs::is_file(curpath))
 		{
 			SetPath(curpath);
 			Load();
@@ -166,7 +165,7 @@ bool Emulator::BootGame(const std::string& path, bool direct)
 	{
 		curpath = path + elf_path[i];
 		
-		if (rFile::Access(curpath, rFile::read))
+		if (fs::is_file(curpath))
 		{
 			SetPath(curpath);
 			Load();
@@ -182,30 +181,69 @@ void Emulator::Load()
 {
 	GetModuleManager().Init();
 
-	if (!rExists(m_path)) return;
+	if (!fs::is_file(m_path)) return;
+
+	const std::string elf_dir = m_path.substr(0, m_path.find_last_of("/\\", std::string::npos, 2) + 1);
 
 	if (IsSelf(m_path))
 	{
-		std::string elf_path = rFileName(m_path).GetPath();
+		const std::string full_name = m_path.substr(elf_dir.length());
 
-		if (fmt::CmpNoCase(rFileName(m_path).GetFullName(),"EBOOT.BIN") == 0)
+		const std::string base_name = full_name.substr(0, full_name.find_last_of('.', std::string::npos));
+
+		const std::string ext = full_name.substr(base_name.length());
+
+		if (fmt::toupper(full_name) == "EBOOT.BIN")
 		{
-			elf_path += "/BOOT.BIN";
+			m_path = elf_dir + "BOOT.BIN";
+		}
+		else if (fmt::toupper(ext) == ".SELF")
+		{
+			m_path = elf_dir + base_name + ".elf";
+		}
+		else if (fmt::toupper(ext) == ".SPRX")
+		{
+			m_path = elf_dir + base_name + ".prx";
 		}
 		else
 		{
-			elf_path += "/" + rFileName(m_path).GetName() + ".elf";
+			m_path = elf_dir + base_name + ".decrypted" + ext;
 		}
 
-		if (!DecryptSelf(elf_path, m_path))
-			return;
+		LOG_NOTICE(LOADER, "Decrypting '%s%s'...", elf_dir, full_name);
 
-		m_path = elf_path;
+		if (!DecryptSelf(m_path, elf_dir + full_name))
+		{
+			return;
+		}
 	}
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
 	GetInfo().Reset();
-	GetVFS().Init(rFileName(m_path).GetPath());
+	GetVFS().Init(elf_dir);
+
+	// /dev_bdvd/ mounting
+	vfsFile f("/app_home/../dev_bdvd.path");
+	if (f.IsOpened())
+	{
+		// load specified /dev_bdvd/ directory and mount it
+		std::string bdvd;
+		bdvd.resize(f.GetSize());
+		f.Read(&bdvd[0], bdvd.size());
+
+		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
+	}
+	else if (fs::is_file(elf_dir + "../../PS3_DISC.SFB")) // guess loading disc game
+	{
+		const auto dir_list = fmt::split(elf_dir, { "/", "\\" });
+
+		// check latest two directories
+		if (dir_list.size() >= 2 && dir_list.back() == "USRDIR" && *(dir_list.end() - 2) == "PS3_GAME")
+		{
+			// mount detected /dev_bdvd/ directory
+			Emu.GetVFS().Mount("/dev_bdvd/", elf_dir.substr(0, elf_dir.length() - 17), new vfsDeviceLocalFile());
+		}
+	}
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
 	LOG_NOTICE(LOADER, "Mount info:");
@@ -215,9 +253,8 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, " "); //used to be skip_line
-	vfsFile sfo("/app_home/../PARAM.SFO");
-	PSFLoader psf(sfo);
-	psf.Load(false);
+	f.Open("/app_home/../PARAM.SFO");
+	const PSFLoader psf(f);
 	std::string title = psf.GetString("TITLE");
 	std::string title_id = psf.GetString("TITLE_ID");
 	LOG_NOTICE(LOADER, "Title: %s", title.c_str());
@@ -226,30 +263,21 @@ void Emulator::Load()
 	title.length() ? SetTitle(title) : SetTitle(m_path);
 	SetTitleID(title_id);
 
-	// bdvd inserting imitation
-	vfsFile f1("/app_home/../dev_bdvd.path");
-	if (f1.IsOpened())
-	{
-		std::string bdvd;
-		bdvd.resize(f1.GetSize());
-		f1.Read(&bdvd[0], bdvd.size());
-
-		// load desired /dev_bdvd/ real directory and remount
-		Emu.GetVFS().Mount("/dev_bdvd/", bdvd, new vfsDeviceLocalFile());
-		LOG_NOTICE(LOADER, "/dev_bdvd/ remounted into %s", bdvd.c_str());
-	}
-	LOG_NOTICE(LOADER, " "); //used to be skip_line
-
 	if (m_elf_path.empty())
 	{
-		GetVFS().GetDeviceLocal(m_path, m_elf_path);
+		if (!GetVFS().GetDeviceLocal(m_path, m_elf_path))
+		{
+			m_elf_path = "/host_root/" + m_path; // should be probably app_home
+		}
+
+		LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 	}
 
-	vfsFile f(m_elf_path);
+	f.Open(m_elf_path);
 
 	if (!f.IsOpened())
 	{
-		LOG_ERROR(LOADER, "Elf not found! (%s - %s)", m_path.c_str(), m_elf_path.c_str());
+		LOG_ERROR(LOADER, "Opening '%s' failed", m_path.c_str());
 		return;
 	}
 
@@ -352,12 +380,10 @@ void Emulator::Stop()
 	finalize_psv_modules();
 	clear_all_psv_objects();
 
-	for (auto& v : g_armv7_dump)
+	for (auto& v : decltype(g_armv7_dump)(std::move(g_armv7_dump)))
 	{
 		LOG_NOTICE(ARMv7, v.second);
 	}
-
-	g_armv7_dump.clear();
 
 	m_rsx_callback = 0;
 
@@ -379,7 +405,6 @@ void Emulator::Stop()
 	GetMouseManager().Close();
 	GetCallbackManager().Clear();
 	GetModuleManager().Close();
-	GetSyncPrimManager().Close();
 
 	CurGameInfo.Reset();
 	Memory.Close();
@@ -411,9 +436,7 @@ void Emulator::SavePoints(const std::string& path)
 
 void Emulator::LoadPoints(const std::string& path)
 {
-	struct stat buf;
-	if (!stat(path.c_str(), &buf))
-		return;
+	if (!fs::is_file(path)) return;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
 		return;
@@ -426,7 +449,7 @@ void Emulator::LoadPoints(const std::string& path)
 
 	if (version != bpdb_version || (sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
 	{
-		LOG_ERROR(LOADER, "'%s' is broken", path.c_str());
+		LOG_ERROR(LOADER, "'%s' is broken (version=0x%x, break_count=0x%x, marked_count=0x%x, length=0x%x)", path, version, break_count, marked_count, length);
 		return;
 	}
 

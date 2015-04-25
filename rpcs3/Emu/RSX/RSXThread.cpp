@@ -2484,18 +2484,19 @@ void RSXThread::Task()
 			if (get_system_time() - start_time > m_vblank_count * 1000000 / 60)
 			{
 				m_vblank_count++;
-				if (m_vblank_handler)
+
+				if (auto cb = m_vblank_handler)
 				{
-					auto cb = m_vblank_handler;
-					Emu.GetCallbackManager().Async([cb](PPUThread& CPU)
+					Emu.GetCallbackManager().Async([=](PPUThread& CPU)
 					{
 						cb(CPU, 1);
 					});
 				}
-				continue;
 			}
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1)); // hack
+			}
 		}
 	});
 

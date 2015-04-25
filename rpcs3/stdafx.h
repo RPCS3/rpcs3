@@ -31,8 +31,6 @@
 #include <set>
 #include <array>
 #include <string>
-#include <ostream>
-#include <sstream>
 #include <functional>
 #include <algorithm>
 #include <random>
@@ -40,7 +38,6 @@
 #include <map>
 #include <unordered_map>
 
-#include <sys/stat.h>
 #include "Utilities/GNU.h"
 
 typedef unsigned int uint;

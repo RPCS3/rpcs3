@@ -5,7 +5,7 @@
 std::string SysCalls::GetFuncName(const u64 fid)
 {
 	// check syscalls
-	switch (fid)
+	switch (~fid)
 	{
 	case 1: return "sys_process_getpid";
 	case 2: return "sys_process_wait_for_child";
@@ -26,7 +26,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 29: return "sys_process_get_id";
 	case 30: return "_sys_process_get_paramsfo";
 	case 31: return "sys_process_get_ppu_guid";
-	case 41: return "sys_internal_ppu_thread_exit";
+	case 41: return "_sys_ppu_thread_exit";
 	case 43: return "sys_ppu_thread_yield";
 	case 44: return "sys_ppu_thread_join";
 	case 45: return "sys_ppu_thread_detach";
@@ -36,7 +36,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 49: return "sys_ppu_thread_get_stack_information";
 	case 50: return "sys_ppu_thread_stop";
 	case 51: return "sys_ppu_thread_restart";
-	case 52: return "sys_ppu_thread_create";
+	case 52: return "_sys_ppu_thread_create";
 	case 53: return "sys_ppu_thread_start";
 	case 56: return "sys_ppu_thread_rename";
 	case 57: return "sys_ppu_thread_recover_page_fault";
@@ -4414,5 +4414,5 @@ std::string SysCalls::GetFuncName(const u64 fid)
 		}
 	}
 
-	return fmt::format("0x%08llX", fid);
+	return ~fid < 1024 ? fmt::format("syscall_%lld", ~fid) : fmt::format("0x%08llX", fid);
 }

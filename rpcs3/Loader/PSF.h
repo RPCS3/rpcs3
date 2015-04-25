@@ -1,72 +1,75 @@
 #pragma once
-#include "Loader.h"
 
 struct vfsStream;
 
 struct PSFHeader
 {
-	u32 psf_magic;
-	u32 psf_version;
-	u32 psf_offset_key_table;
-	u32 psf_offset_data_table;
-	u32 psf_entries_num;
-
-	bool CheckMagic() const { return psf_magic == *(u32*)"\0PSF"; }
+	u32 magic;
+	u32 version;
+	u32 off_key_table;
+	u32 off_data_table;
+	u32 entries_num;
 };
 
-struct PSFDefTbl
+struct PSFDefTable
 {
-	u16 psf_key_table_offset;
-	u16 psf_param_fmt;
-	u32 psf_param_len;
-	u32 psf_param_max_len;
-	u32 psf_data_tbl_offset;
+	u16 key_off;
+	u16 param_fmt;
+	u32 param_len;
+	u32 param_max;
+	u32 data_off;
+};
+
+enum : u16
+{
+	PSF_PARAM_UNK = 0x0004,
+	PSF_PARAM_STR = 0x0204,
+	PSF_PARAM_INT = 0x0404,
 };
 
 struct PSFEntry
 {
-	char name[128];
 	u16 fmt;
-	char param[4096];
+	std::string name;
 
-	std::string FormatString() const
-	{
-		switch(fmt)
-		{
-		default:
-		case 0x0400:
-		case 0x0402:
-			return std::string(param);
-		case 0x0404:
-			return fmt::Format("0x%x", FormatInteger());
-		}
-	}
-
-	u32 FormatInteger() const
-	{
-		return *(u32*)param;
-	}
+	s32 vint;
+	std::string vstr;
 };
 
 class PSFLoader
 {
-	vfsStream& psf_f;
-
-	PSFHeader m_header;
-	std::vector<PSFDefTbl> m_psfindxs;
 	std::vector<PSFEntry> m_entries;
-	bool m_show_log;
-
-	bool LoadHeader();
-	bool LoadKeyTable();
-	bool LoadDataTable();
 
 public:
-	PSFLoader(vfsStream& f);
-	virtual bool Load(bool show = true);
-	virtual bool Close();
+	PSFLoader() = default;
 
-	PSFEntry* SearchEntry(const std::string& key);
-	std::string GetString(const std::string& key);
-	u32 GetInteger(const std::string& key);
+	PSFLoader(vfsStream& stream)
+	{
+		Load(stream);
+	}
+
+	virtual ~PSFLoader() = default;
+
+	bool Load(vfsStream& stream);
+
+	bool Save(vfsStream& stream) const;
+
+	void Clear();
+
+	operator bool() const
+	{
+		return !m_entries.empty();
+	}
+
+	const PSFEntry* SearchEntry(const std::string& key) const;
+
+	PSFEntry& AddEntry(const std::string& key, u16 type);
+
+	std::string GetString(const std::string& key, std::string def = "") const;
+
+	s32 GetInteger(const std::string& key, s32 def = 0) const;
+
+	void SetString(const std::string& key, std::string value);
+
+	void SetInteger(const std::string& key, s32 value);
 };

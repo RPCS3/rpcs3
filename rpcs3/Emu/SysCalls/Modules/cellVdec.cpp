@@ -12,6 +12,7 @@ extern "C"
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/imgutils.h"
+#include "libswscale/swscale.h"
 }
 
 #include "Emu/CPU/CPUThreadManager.h"
@@ -216,7 +217,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.id = vdec_id;
 
 	vdec.vdecCb = static_cast<PPUThread*>(Emu.GetCPU().AddThread(CPU_THREAD_PPU).get());
-	vdec.vdecCb->SetName(fmt::format("VideoDecoder[%d] Callback", vdec_id));
+	vdec.vdecCb->SetName(fmt::format("VideoDecoder[0x%x] Callback", vdec_id));
 	vdec.vdecCb->SetEntry(0);
 	vdec.vdecCb->SetPrio(1001);
 	vdec.vdecCb->SetStackSize(0x10000);
@@ -224,7 +225,7 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	vdec.vdecCb->InitRegs();
 	vdec.vdecCb->DoRun();
 
-	thread_t t(fmt::format("VideoDecoder[%d] Thread", vdec_id), [vdec_ptr, sptr]()
+	thread_t t(fmt::format("VideoDecoder[0x%x] Thread", vdec_id), [vdec_ptr, sptr]()
 	{
 		VideoDecoder& vdec = *vdec_ptr;
 		VdecTask& task = vdec.task;
@@ -268,12 +269,6 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 			case vdecDecodeAu:
 			{
 				int err;
-
-				if (task.mode != CELL_VDEC_DEC_MODE_NORMAL)
-				{
-					cellVdec.Error("vdecDecodeAu: unsupported decoding mode(%d)", task.mode);
-					break;
-				}
 
 				vdec.reader.addr = task.addr;
 				vdec.reader.size = task.size;
@@ -558,46 +553,45 @@ u32 vdecOpen(VideoDecoder* vdec_ptr)
 	return vdec_id;
 }
 
-int cellVdecQueryAttr(vm::ptr<const CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+s32 cellVdecQueryAttr(vm::ptr<const CellVdecType> type, vm::ptr<CellVdecAttr> attr)
 {
-	cellVdec.Warning("cellVdecQueryAttr(type_addr=0x%x, attr_addr=0x%x)", type.addr(), attr.addr());
+	cellVdec.Warning("cellVdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
-int cellVdecQueryAttrEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+s32 cellVdecQueryAttrEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
 {
-	cellVdec.Warning("cellVdecQueryAttrEx(type_addr=0x%x, attr_addr=0x%x)", type.addr(), attr.addr());
+	cellVdec.Warning("cellVdecQueryAttrEx(type=*0x%x, attr=*0x%x)", type, attr);
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr);
 }
 
-int cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResource> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpen(vm::ptr<const CellVdecType> type, vm::ptr<const CellVdecResource> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
 {
-	cellVdec.Warning("cellVdecOpen(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
-		type.addr(), res.addr(), cb.addr(), handle.addr());
+	cellVdec.Warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
 
-int cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecResourceEx> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
+s32 cellVdecOpenEx(vm::ptr<const CellVdecTypeEx> type, vm::ptr<const CellVdecResourceEx> res, vm::ptr<const CellVdecCb> cb, vm::ptr<u32> handle)
 {
-	cellVdec.Warning("cellVdecOpenEx(type_addr=0x%x, res_addr=0x%x, cb_addr=0x%x, handle_addr=0x%x)",
-		type.addr(), res.addr(), cb.addr(), handle.addr());
+	cellVdec.Warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	*handle = vdecOpen(new VideoDecoder(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
 
-int cellVdecClose(u32 handle)
+s32 cellVdecClose(u32 handle)
 {
-	cellVdec.Warning("cellVdecClose(handle=%d)", handle);
+	cellVdec.Warning("cellVdecClose(handle=0x%x)", handle);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -620,12 +614,13 @@ int cellVdecClose(u32 handle)
 	return CELL_OK;
 }
 
-int cellVdecStartSeq(u32 handle)
+s32 cellVdecStartSeq(u32 handle)
 {
-	cellVdec.Log("cellVdecStartSeq(handle=%d)", handle);
+	cellVdec.Log("cellVdecStartSeq(handle=0x%x)", handle);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -634,12 +629,13 @@ int cellVdecStartSeq(u32 handle)
 	return CELL_OK;
 }
 
-int cellVdecEndSeq(u32 handle)
+s32 cellVdecEndSeq(u32 handle)
 {
-	cellVdec.Warning("cellVdecEndSeq(handle=%d)", handle);
+	cellVdec.Warning("cellVdecEndSeq(handle=0x%x)", handle);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -648,14 +644,20 @@ int cellVdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdecAuInfo> auInfo)
+s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdecAuInfo> auInfo)
 {
-	cellVdec.Log("cellVdecDecodeAu(handle=%d, mode=0x%x, auInfo_addr=0x%x)", handle, mode, auInfo.addr());
+	cellVdec.Log("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, mode, auInfo);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec || mode > CELL_VDEC_DEC_MODE_PB_SKIP)
 	{
 		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (mode != CELL_VDEC_DEC_MODE_NORMAL)
+	{
+		cellVdec.Fatal("cellVdecDecodeAu(): unsupported decoding mode (%d)", mode);
 	}
 
 	// TODO: check info
@@ -672,12 +674,13 @@ int cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::ptr<const CellVdec
 	return CELL_OK;
 }
 
-int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::ptr<u8> outBuff)
+s32 cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
-	cellVdec.Log("cellVdecGetPicture(handle=%d, format_addr=0x%x, outBuff_addr=0x%x)", handle, format.addr(), outBuff.addr());
+	cellVdec.Log("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec || !format)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -703,9 +706,25 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 
 	if (outBuff)
 	{
-		if (format->formatType != CELL_VDEC_PICFMT_YUV420_PLANAR)
+		const auto f = vdec->ctx->pix_fmt;
+		const auto w = vdec->ctx->width;
+		const auto h = vdec->ctx->height;
+
+		auto out_f = AV_PIX_FMT_YUV420P;
+
+		std::unique_ptr<u8[]> alpha_plane;
+
+		switch (const u32 type = format->formatType)
 		{
-			cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", format->formatType);
+		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_UYVY422_ILV: out_f = AV_PIX_FMT_UYVY422; break;
+		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
+
+		default:
+		{
+			cellVdec.Fatal("cellVdecGetPicture: unknown formatType(%d)", type);
+		}
 		}
 
 		if (format->colorMatrixType != CELL_VDEC_COLOR_MATRIX_TYPE_BT709)
@@ -713,26 +732,79 @@ int cellVdecGetPicture(u32 handle, vm::ptr<const CellVdecPicFormat> format, vm::
 			cellVdec.Fatal("cellVdecGetPicture: unknown colorMatrixType(%d)", format->colorMatrixType);
 		}
 
-		const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
-
-		// TODO: zero padding bytes
-
-		int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
-		if (err < 0)
+		if (alpha_plane)
 		{
-			cellVdec.Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+			memset(alpha_plane.get(), format->alpha, w * h);
 		}
+
+		auto in_f = AV_PIX_FMT_YUV420P;
+
+		switch (f)
+		{
+		case AV_PIX_FMT_YUV420P: in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : AV_PIX_FMT_YUV420P; break;
+
+		default:
+		{
+			cellVdec.Fatal("cellVdecGetPicture: unknown pix_fmt(%d)", f);
+		}
+		}
+
+		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(w, h, in_f, w, h, out_f, SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+
+		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
+		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
+		u8* out_data[4] = { outBuff.get_ptr() };
+		int out_line[4] = { w * 4 };
+
+		if (!alpha_plane)
+		{
+			out_data[1] = out_data[0] + w * h;
+			out_data[2] = out_data[0] + w * h * 5 / 4;
+			out_line[0] = w;
+			out_line[1] = w / 2;
+			out_line[2] = w / 2;
+		}
+
+		sws_scale(sws.get(), in_data, in_line, 0, h, out_data, out_line);
+
+		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+
+		//// TODO: zero padding bytes
+
+		//int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
+		//if (err < 0)
+		//{
+		//	cellVdec.Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+		//}
 	}
 
 	return CELL_OK;
 }
 
-int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
+s32 _nid_a21aa896(PPUThread& CPU, u32 handle, vm::ptr<const CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
-	cellVdec.Log("cellVdecGetPicItem(handle=%d, picItem_ptr_addr=0x%x)", handle, picItem_ptr.addr());
+	cellVdec.Warning("_nid_a21aa896(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	if (arg4 || format2->unk0 || format2->unk1)
+	{
+		cellVdec.Fatal("_nid_a21aa896(): unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
+	}
+
+	vm::stackvar<CellVdecPicFormat> format(CPU);
+	format->formatType = format2->formatType;
+	format->colorMatrixType = format2->colorMatrixType;
+	format->alpha = format2->alpha;
+
+	return cellVdecGetPicture(handle, format, outBuff);
+}
+
+s32 cellVdecGetPicItem(u32 handle, vm::ptr<vm::bptr<CellVdecPicItem>> picItem)
+{
+	cellVdec.Log("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
+
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -746,7 +818,7 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 
 	AVFrame& frame = *vf.data;
 
-	auto info = vm::ptr<CellVdecPicItem>::make(vdec->memAddr + vdec->memBias);
+	const auto info = vm::ptr<CellVdecPicItem>::make(vdec->memAddr + vdec->memBias);
 
 	vdec->memBias += 512;
 	if (vdec->memBias + 512 > vdec->memSize)
@@ -867,16 +939,17 @@ int cellVdecGetPicItem(u32 handle, vm::ptr<u32> picItem_ptr)
 		cellVdec.Fatal("cellVdecGetPicItem(MPEG2)");
 	}
 
-	*picItem_ptr = info.addr();
+	*picItem = info;
 	return CELL_OK;
 }
 
-int cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
+s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	cellVdec.Log("cellVdecSetFrameRate(handle=%d, frc=0x%x)", handle, frc);
+	cellVdec.Log("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, frc);
 
-	std::shared_ptr<VideoDecoder> vdec;
-	if (!Emu.GetIdManager().GetIDData(handle, vdec))
+	const auto vdec = Emu.GetIdManager().GetIDData<VideoDecoder>(handle);
+
+	if (!vdec)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -900,6 +973,7 @@ Module cellVdec("cellVdec", []()
 	REG_FUNC(cellVdec, cellVdecEndSeq);
 	REG_FUNC(cellVdec, cellVdecDecodeAu);
 	REG_FUNC(cellVdec, cellVdecGetPicture);
+	REG_UNNAMED(cellVdec, a21aa896);
 	REG_FUNC(cellVdec, cellVdecGetPicItem);
 	REG_FUNC(cellVdec, cellVdecSetFrameRate);
 });

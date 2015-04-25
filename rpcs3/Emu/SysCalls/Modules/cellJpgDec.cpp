@@ -4,7 +4,10 @@
 #include "Emu/IdManager.h"
 #include "Emu/SysCalls/Modules.h"
 
+extern "C"
+{
 #include "stblib/stb_image.h"
+}
 
 #include "Emu/FS/VFS.h"
 #include "Emu/FS/vfsFileBase.h"
@@ -14,28 +17,27 @@
 
 extern Module cellJpgDec;
 
-int cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
+s32 cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-int cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
+s32 cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-int cellJpgDecDestroy(u32 mainHandle)
+s32 cellJpgDecDestroy(u32 mainHandle)
 {
 	UNIMPLEMENTED_FUNC(cellJpgDec);
 	return CELL_OK;
 }
 
-int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
+s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc> src, vm::ptr<CellJpgDecOpnInfo> openInfo)
 {
-	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle_addr=0x%x, src_addr=0x%x, openInfo_addr=0x%x)",
-		mainHandle, subHandle.addr(), src.addr(), openInfo.addr());
+	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
 	std::shared_ptr<CellJpgDecSubHandle> current_subHandle(new CellJpgDecSubHandle);
 
@@ -66,14 +68,16 @@ int cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	return CELL_OK;
 }
 
-int cellJpgDecClose(u32 mainHandle, u32 subHandle)
+s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
-	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)",
-		mainHandle, subHandle);
+	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
 
-	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
+	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellJpgDecSubHandle>(subHandle);
+
+	if (!subHandle_data)
+	{
 		return CELL_JPGDEC_ERROR_FATAL;
+	}
 
 	Emu.GetIdManager().RemoveID<fs_file_t>(subHandle_data->fd);
 	Emu.GetIdManager().RemoveID<CellJpgDecSubHandle>(subHandle);
@@ -81,13 +85,16 @@ int cellJpgDecClose(u32 mainHandle, u32 subHandle)
 	return CELL_OK;
 }
 
-int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
+s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> info)
 {
-	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info_addr=0x%x)", mainHandle, subHandle, info.addr());
+	cellJpgDec.Log("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
-	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
+	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellJpgDecSubHandle>(subHandle);
+
+	if (!subHandle_data)
+	{
 		return CELL_JPGDEC_ERROR_FATAL;
+	}
 
 	const u32& fd = subHandle_data->fd;
 	const u64& fileSize = subHandle_data->fileSize;
@@ -150,15 +157,18 @@ int cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	return CELL_OK;
 }
 
-int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
+s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::ptr<const CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
 {
-	cellJpgDec.Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data_addr=0x%x, dataCtrlParam_addr=0x%x, dataOutInfo_addr=0x%x)",
-		mainHandle, subHandle, data.addr(), dataCtrlParam.addr(), dataOutInfo.addr());
+	cellJpgDec.Log("cellJpgDecDecodeData(mainHandle=0x%x, subHandle=0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", mainHandle, subHandle, data, dataCtrlParam, dataOutInfo);
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
-	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
+
+	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellJpgDecSubHandle>(subHandle);
+
+	if (!subHandle_data)
+	{
 		return CELL_JPGDEC_ERROR_FATAL;
+	}
 
 	const u32& fd = subHandle_data->fd;
 	const u64& fileSize = subHandle_data->fileSize;
@@ -283,14 +293,16 @@ int cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 	return CELL_OK;
 }
 
-int cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
+s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
 {
-	cellJpgDec.Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam_addr=0x%x, outParam_addr=0x%x)",
-		mainHandle, subHandle, inParam.addr(), outParam.addr());
+	cellJpgDec.Log("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
-	std::shared_ptr<CellJpgDecSubHandle> subHandle_data;
-	if(!Emu.GetIdManager().GetIDData(subHandle, subHandle_data))
+	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellJpgDecSubHandle>(subHandle);
+
+	if (!subHandle_data)
+	{
 		return CELL_JPGDEC_ERROR_FATAL;
+	}
 
 	CellJpgDecInfo& current_info = subHandle_data->info;
 	CellJpgDecOutParam& current_outParam = subHandle_data->outParam;

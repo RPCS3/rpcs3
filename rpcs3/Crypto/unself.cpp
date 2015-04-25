@@ -1,63 +1,187 @@
 #include "stdafx.h"
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"
 #include "Emu/FS/vfsLocalFile.h"
 #include "unself.h"
+#pragma warning(push)
+#pragma message("TODO: remove wx dependencies: <wx/mstream.h> <wx/zstream.h>")
 #pragma warning(disable : 4996)
 #include <wx/mstream.h>
 #include <wx/zstream.h>
+#pragma warning(pop)
 
+__forceinline u8 Read8(vfsStream& f)
+{
+	u8 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
 
-void WriteEhdr(rFile& f, Elf64_Ehdr& ehdr)
+__forceinline u16 Read16(vfsStream& f)
 {
-Write32(f, ehdr.e_magic);
-Write8(f, ehdr.e_class);
-Write8(f, ehdr.e_data);
-Write8(f, ehdr.e_curver);
-Write8(f, ehdr.e_os_abi);
-Write64(f, ehdr.e_abi_ver);
-Write16(f, ehdr.e_type);
-Write16(f, ehdr.e_machine);
-Write32(f, ehdr.e_version);
-Write64(f, ehdr.e_entry);
-Write64(f, ehdr.e_phoff);
-Write64(f, ehdr.e_shoff);
-Write32(f, ehdr.e_flags);
-Write16(f, ehdr.e_ehsize);
-Write16(f, ehdr.e_phentsize);
-Write16(f, ehdr.e_phnum);
-Write16(f, ehdr.e_shentsize);
-Write16(f, ehdr.e_shnum);
-Write16(f, ehdr.e_shstrndx);
+	be_t<u16> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
 }
-void WritePhdr(rFile& f, Elf64_Phdr& phdr)
+
+__forceinline u32 Read32(vfsStream& f)
 {
-Write32(f, phdr.p_type);
-Write32(f, phdr.p_flags);
-Write64(f, phdr.p_offset);
-Write64(f, phdr.p_vaddr);
-Write64(f, phdr.p_paddr);
-Write64(f, phdr.p_filesz);
-Write64(f, phdr.p_memsz);
-Write64(f, phdr.p_align);
+	be_t<u32> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
 }
-void WriteShdr(rFile& f, Elf64_Shdr& shdr)
+
+__forceinline u64 Read64(vfsStream& f)
 {
-Write32(f, shdr.sh_name);
-Write32(f, shdr.sh_type);
-Write64(f, shdr.sh_flags);
-Write64(f, shdr.sh_addr);
-Write64(f, shdr.sh_offset);
-Write64(f, shdr.sh_size);
-Write32(f, shdr.sh_link);
-Write32(f, shdr.sh_info);
-Write64(f, shdr.sh_addralign);
-Write64(f, shdr.sh_entsize);
+	be_t<u64> ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
 }
-void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
+
+__forceinline u16 Read16LE(vfsStream& f)
+{
+	u16 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u32 Read32LE(vfsStream& f)
+{
+	u32 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline u64 Read64LE(vfsStream& f)
+{
+	u64 ret;
+	f.Read(&ret, sizeof(ret));
+	return ret;
+}
+
+__forceinline void Write8(vfsStream& f, const u8 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write8(const fs::file& f, const u8 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write16LE(vfsStream& f, const u16 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write16LE(const fs::file& f, const u16 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write32LE(vfsStream& f, const u32 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write32LE(const fs::file& f, const u32 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write64LE(vfsStream& f, const u64 data)
+{
+	f.Write(&data, sizeof(data));
+}
+
+__forceinline void Write64LE(const fs::file& f, const u64 data)
+{
+	f.write(&data, sizeof(data));
+}
+
+__forceinline void Write16(vfsStream& f, const u16 data)
+{
+	Write16LE(f, re16(data));
+}
+
+__forceinline void Write16(const fs::file& f, const u16 data)
+{
+	Write16LE(f, re16(data));
+}
+
+__forceinline void Write32(vfsStream& f, const u32 data)
+{
+	Write32LE(f, re32(data));
+}
+
+__forceinline void Write32(const fs::file& f, const u32 data)
+{
+	Write32LE(f, re32(data));
+}
+
+__forceinline void Write64(vfsStream& f, const u64 data)
+{
+	Write64LE(f, re64(data));
+}
+
+__forceinline void Write64(const fs::file& f, const u64 data)
+{
+	Write64LE(f, re64(data));
+}
+
+void WriteEhdr(const fs::file& f, Elf64_Ehdr& ehdr)
+{
+	Write32(f, ehdr.e_magic);
+	Write8(f, ehdr.e_class);
+	Write8(f, ehdr.e_data);
+	Write8(f, ehdr.e_curver);
+	Write8(f, ehdr.e_os_abi);
+	Write64(f, ehdr.e_abi_ver);
+	Write16(f, ehdr.e_type);
+	Write16(f, ehdr.e_machine);
+	Write32(f, ehdr.e_version);
+	Write64(f, ehdr.e_entry);
+	Write64(f, ehdr.e_phoff);
+	Write64(f, ehdr.e_shoff);
+	Write32(f, ehdr.e_flags);
+	Write16(f, ehdr.e_ehsize);
+	Write16(f, ehdr.e_phentsize);
+	Write16(f, ehdr.e_phnum);
+	Write16(f, ehdr.e_shentsize);
+	Write16(f, ehdr.e_shnum);
+	Write16(f, ehdr.e_shstrndx);
+}
+
+void WritePhdr(const fs::file& f, Elf64_Phdr& phdr)
+{
+	Write32(f, phdr.p_type);
+	Write32(f, phdr.p_flags);
+	Write64(f, phdr.p_offset);
+	Write64(f, phdr.p_vaddr);
+	Write64(f, phdr.p_paddr);
+	Write64(f, phdr.p_filesz);
+	Write64(f, phdr.p_memsz);
+	Write64(f, phdr.p_align);
+}
+
+void WriteShdr(const fs::file& f, Elf64_Shdr& shdr)
+{
+	Write32(f, shdr.sh_name);
+	Write32(f, shdr.sh_type);
+	Write64(f, shdr.sh_flags);
+	Write64(f, shdr.sh_addr);
+	Write64(f, shdr.sh_offset);
+	Write64(f, shdr.sh_size);
+	Write32(f, shdr.sh_link);
+	Write32(f, shdr.sh_info);
+	Write64(f, shdr.sh_addralign);
+	Write64(f, shdr.sh_entsize);
+}
+
+void WriteEhdr(const fs::file& f, Elf32_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -79,7 +203,8 @@ void WriteEhdr(rFile& f, Elf32_Ehdr& ehdr)
 	Write16(f, ehdr.e_shnum);
 	Write16(f, ehdr.e_shstrndx);
 }
-void WritePhdr(rFile& f, Elf32_Phdr& phdr)
+
+void WritePhdr(const fs::file& f, Elf32_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_offset);
@@ -90,7 +215,8 @@ void WritePhdr(rFile& f, Elf32_Phdr& phdr)
 	Write32(f, phdr.p_flags);
 	Write32(f, phdr.p_align);
 }
-void WriteShdr(rFile& f, Elf32_Shdr& shdr)
+
+void WriteShdr(const fs::file& f, Elf32_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -408,8 +534,164 @@ void SelfSection::Load(vfsStream& f)
 	offset = Read64(f);
 }
 
+void Elf32_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+
+	if (IsLittleEndian())
+	{
+		e_abi_ver = Read64LE(f);
+		e_type = Read16LE(f);
+		e_machine = Read16LE(f);
+		e_version = Read32LE(f);
+		e_entry = Read32LE(f);
+		e_phoff = Read32LE(f);
+		e_shoff = Read32LE(f);
+		e_flags = Read32LE(f);
+		e_ehsize = Read16LE(f);
+		e_phentsize = Read16LE(f);
+		e_phnum = Read16LE(f);
+		e_shentsize = Read16LE(f);
+		e_shnum = Read16LE(f);
+		e_shstrndx = Read16LE(f);
+	}
+	else
+	{
+		e_abi_ver = Read64(f);
+		e_type = Read16(f);
+		e_machine = Read16(f);
+		e_version = Read32(f);
+		e_entry = Read32(f);
+		e_phoff = Read32(f);
+		e_shoff = Read32(f);
+		e_flags = Read32(f);
+		e_ehsize = Read16(f);
+		e_phentsize = Read16(f);
+		e_phnum = Read16(f);
+		e_shentsize = Read16(f);
+		e_shnum = Read16(f);
+		e_shstrndx = Read16(f);
+	}
+}
+
+void Elf32_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read32(f);
+	sh_addr = Read32(f);
+	sh_offset = Read32(f);
+	sh_size = Read32(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read32(f);
+	sh_entsize = Read32(f);
+}
+
+void Elf32_Shdr::LoadLE(vfsStream& f)
+{
+	f.Read(this, sizeof(*this));
+}
+
+void Elf32_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_offset = Read32(f);
+	p_vaddr = Read32(f);
+	p_paddr = Read32(f);
+	p_filesz = Read32(f);
+	p_memsz = Read32(f);
+	p_flags = Read32(f);
+	p_align = Read32(f);
+}
+
+void Elf32_Phdr::LoadLE(vfsStream& f)
+{
+	f.Read(this, sizeof(*this));
+}
+
+void Elf64_Ehdr::Load(vfsStream& f)
+{
+	e_magic = Read32(f);
+	e_class = Read8(f);
+	e_data = Read8(f);
+	e_curver = Read8(f);
+	e_os_abi = Read8(f);
+	e_abi_ver = Read64(f);
+	e_type = Read16(f);
+	e_machine = Read16(f);
+	e_version = Read32(f);
+	e_entry = Read64(f);
+	e_phoff = Read64(f);
+	e_shoff = Read64(f);
+	e_flags = Read32(f);
+	e_ehsize = Read16(f);
+	e_phentsize = Read16(f);
+	e_phnum = Read16(f);
+	e_shentsize = Read16(f);
+	e_shnum = Read16(f);
+	e_shstrndx = Read16(f);
+}
+
+void Elf64_Shdr::Load(vfsStream& f)
+{
+	sh_name = Read32(f);
+	sh_type = Read32(f);
+	sh_flags = Read64(f);
+	sh_addr = Read64(f);
+	sh_offset = Read64(f);
+	sh_size = Read64(f);
+	sh_link = Read32(f);
+	sh_info = Read32(f);
+	sh_addralign = Read64(f);
+	sh_entsize = Read64(f);
+}
+
+void Elf64_Phdr::Load(vfsStream& f)
+{
+	p_type = Read32(f);
+	p_flags = Read32(f);
+	p_offset = Read64(f);
+	p_vaddr = Read64(f);
+	p_paddr = Read64(f);
+	p_filesz = Read64(f);
+	p_memsz = Read64(f);
+	p_align = Read64(f);
+}
+
+void SceHeader::Load(vfsStream& f)
+{
+	se_magic = Read32(f);
+	se_hver = Read32(f);
+	se_flags = Read16(f);
+	se_type = Read16(f);
+	se_meta = Read32(f);
+	se_hsize = Read64(f);
+	se_esize = Read64(f);
+}
+
+void SelfHeader::Load(vfsStream& f)
+{
+	se_htype = Read64(f);
+	se_appinfooff = Read64(f);
+	se_elfoff = Read64(f);
+	se_phdroff = Read64(f);
+	se_shdroff = Read64(f);
+	se_secinfoff = Read64(f);
+	se_sceveroff = Read64(f);
+	se_controloff = Read64(f);
+	se_controlsize = Read64(f);
+	pad = Read64(f);
+}
+
 SELFDecrypter::SELFDecrypter(vfsStream& s)
-	: self_f(s), key_v(), data_buf_length(0)
+	: self_f(s)
+	, key_v()
+	, data_buf_length(0)
 {
 }
 
@@ -794,8 +1076,8 @@ bool SELFDecrypter::DecryptData()
 bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 {
 	// Create a new ELF file.
-	rFile e(elf.c_str(), rFile::write);
-	if(!e.IsOpened())
+	fs::file e(elf, o_write | o_create | o_trunc);
+	if(!e)
 	{
 		LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 		return false;
@@ -819,8 +1101,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 			if (meta_shdr[i].type == 2)
 			{
 				// Seek to the program header data offset and write the data.
-				e.Seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
-				e.Write(data_buf + data_buf_offset, meta_shdr[i].data_size);
+				e.seek(phdr32_arr[meta_shdr[i].program_idx].p_offset);
+				e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 
 				// Advance the data buffer offset by data size.
 				data_buf_offset += meta_shdr[i].data_size;
@@ -830,7 +1112,7 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if(self_hdr.se_shdroff != 0)
 		{
-			e.Seek(elf32_hdr.e_shoff);
+			e.seek(elf32_hdr.e_shoff);
 
 			for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 				WriteShdr(e, shdr32_arr[i]);
@@ -870,8 +1152,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 					decomp_stream_out.CopyTo(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Seek to the program header data offset and write the data.
-					e.Seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.Write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
+					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					e.write(decomp_buf, phdr64_arr[meta_shdr[i].program_idx].p_filesz);
 
 					// Release the decompression buffer.
 					free(decomp_buf);
@@ -879,8 +1161,8 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					e.Seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
-					e.Write(data_buf + data_buf_offset, meta_shdr[i].data_size);
+					e.seek(phdr64_arr[meta_shdr[i].program_idx].p_offset);
+					e.write(data_buf + data_buf_offset, meta_shdr[i].data_size);
 				}
 
 				// Advance the data buffer offset by data size.
@@ -891,14 +1173,13 @@ bool SELFDecrypter::MakeElf(const std::string& elf, bool isElf32)
 		// Write section headers.
 		if(self_hdr.se_shdroff != 0)
 		{
-			e.Seek(elf64_hdr.e_shoff);
+			e.seek(elf64_hdr.e_shoff);
 
 			for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 				WriteShdr(e, shdr64_arr[i]);
 		}
 	}
 
-	e.Close();
 	return true;
 }
 
@@ -914,24 +1195,23 @@ bool SELFDecrypter::GetKeyFromRap(u8 *content_id, u8 *npdrm_key)
 	std::string rap_path("dev_hdd0/home/" + pf_str + "/exdata/" + ci_str + ".rap");
 
 	// Check if we have a valid RAP file.
-	if (!rExists(rap_path))
+	if (!fs::is_file(rap_path))
 	{
 		LOG_ERROR(LOADER, "This application requires a valid RAP file for decryption!");
 		return false;
 	}
 
 	// Open the RAP file and read the key.
-	rFile rap_file(rap_path, rFile::read);
+	fs::file rap_file(rap_path);
 
-	if (!rap_file.IsOpened())
+	if (!rap_file)
 	{
 		LOG_ERROR(LOADER, "Failed to load RAP file!");
 		return false;
 	}
 
-	LOG_NOTICE(LOADER, "Loading RAP file %s", (ci_str + ".rap").c_str());
-	rap_file.Read(rap_key, 0x10);
-	rap_file.Close();
+	LOG_NOTICE(LOADER, "Loading RAP file %s.rap", ci_str);
+	rap_file.read(rap_key, 0x10);
 
 	// Convert the RAP key.
 	rap_to_rif(rap_key, npdrm_key);
@@ -975,18 +1255,18 @@ bool IsSelfElf32(const std::string& path)
 bool CheckDebugSelf(const std::string& self, const std::string& elf)
 {
 	// Open the SELF file.
-	rFile s(self);
+	fs::file s(self);
 
-	if(!s.IsOpened())
+	if(!s)
 	{
 		LOG_ERROR(LOADER, "Could not open SELF file! (%s)", self.c_str());
 		return false;
 	}
 
 	// Get the key version.
-	s.Seek(0x08);
+	s.seek(0x08);
 	u16 key_version;
-	s.Read(&key_version, sizeof(key_version));
+	s.read(&key_version, sizeof(key_version));
 
 	// Check for DEBUG version.
 	if(swap16(key_version) == 0x8000)
@@ -994,17 +1274,17 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 		LOG_WARNING(LOADER, "Debug SELF detected! Removing fake header...");
 
 		// Get the real elf offset.
-		s.Seek(0x10);
+		s.seek(0x10);
 		u64 elf_offset;
-		s.Read(&elf_offset, sizeof(elf_offset));
+		s.read(&elf_offset, sizeof(elf_offset));
 
 		// Start at the real elf offset.
 		elf_offset = swap64(elf_offset);
-		s.Seek(elf_offset);
+		s.seek(elf_offset);
 
 		// Write the real ELF file back.
-		rFile e(elf, rFile::write);
-		if(!e.IsOpened())
+		fs::file e(elf, o_write | o_create | o_trunc);
+		if(!e)
 		{
 			LOG_ERROR(LOADER, "Could not create ELF file! (%s)", elf.c_str());
 			return false;
@@ -1012,18 +1292,14 @@ bool CheckDebugSelf(const std::string& self, const std::string& elf)
 
 		// Copy the data.
 		char buf[2048];
-		while (ssize_t size = s.Read(buf, 2048))
-			e.Write(buf, size);
+		while (ssize_t size = s.read(buf, 2048))
+			e.write(buf, size);
 
-		e.Close();
 		return true;
 	}
-	else
-	{
-		// Leave the file untouched.
-		s.Seek(0);
-		return false;
-	}
+
+	// Leave the file untouched.
+	return false;
 }
 
 bool DecryptSelf(const std::string& elf, const std::string& self)

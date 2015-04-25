@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include "Utilities/Log.h"
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 enum
 {
@@ -71,24 +71,23 @@ void AutoPauseManagerDialog::LoadEntries(void)
 	m_entries.clear();
 	m_entries.reserve(16);
 
-	if (rExists("pause.bin"))
+	fs::file list("pause.bin");
+
+	if (list)
 	{
-		rFile list;
-		list.Open("pause.bin", rFile::read);
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
-		size_t fmax = list.Length();
+		size_t fmax = list.size();
 		size_t fcur = 0;
-		list.Seek(0);
+		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
-			list.Read(&num, sizeof(u32));
+			list.read(&num, sizeof(u32));
 			fcur += sizeof(u32);
 			if (num == 0xFFFFFFFF) break;
 
 			m_entries.emplace_back(num);
 		}
-		list.Close();
 	}
 }
 
@@ -97,24 +96,18 @@ void AutoPauseManagerDialog::LoadEntries(void)
 //This would always use a 0xFFFFFFFF as end of the pause.bin
 void AutoPauseManagerDialog::SaveEntries(void)
 {
-	if (rExists("pause.bin"))
-	{
-		rRemoveFile("pause.bin");
-	}
-	rFile list;
-	list.Open("pause.bin", rFile::write);
+	fs::file list("pause.bin", o_write | o_create | o_trunc);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
-	list.Seek(0);
+	list.seek(0);
 	for (size_t i = 0; i < m_entries.size(); ++i)
 	{
 		if (num == 0xFFFFFFFF) continue;
 		num = m_entries[i];
-		list.Write(&num, sizeof(u32));
+		list.write(&num, sizeof(u32));
 	}
 	num = 0xFFFFFFFF;
-	list.Write(&num, sizeof(u32));
-	list.Close();
+	list.write(&num, sizeof(u32));
 }
 
 void AutoPauseManagerDialog::UpdateList(void)

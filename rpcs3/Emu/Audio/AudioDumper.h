@@ -1,6 +1,5 @@
 #pragma once
-
-#include "Utilities/rFile.h"
+#include "Utilities/File.h"
 
 struct WAVHeader
 {
@@ -56,7 +55,7 @@ struct WAVHeader
 class AudioDumper
 {
 	WAVHeader m_header;
-	rFile m_output;
+	fs::file m_output;
 	bool m_init;
 	
 public:

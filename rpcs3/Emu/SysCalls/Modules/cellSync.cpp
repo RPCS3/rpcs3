@@ -289,7 +289,7 @@ s32 syncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer, u32 buffer
 	}
 
 	// prx: zeroize first u16 and second u16, write buffer_size in second u32, write buffer_addr in second u64 and sync
-	rwm->m_size = be_t<u32>::make(buffer_size);
+	rwm->m_size = buffer_size;
 	rwm->m_buffer = buffer;
 	rwm->data.exchange({});
 
@@ -488,9 +488,9 @@ s32 syncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buffer, u32 si
 	}
 
 	// prx: zeroize first u64, write size in third u32, write depth in fourth u32, write address in third u64 and sync
-	queue->m_size = be_t<u32>::make(size);
-	queue->m_depth = be_t<u32>::make(depth);
-	queue->m_buffer.set(buffer.addr());
+	queue->m_size = size;
+	queue->m_depth = depth;
+	queue->m_buffer = buffer;
 	queue->data.exchange({});
 
 	return CELL_OK;
@@ -985,7 +985,7 @@ s32 syncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u8> buffer, u3
 
 	if (old_value == 2)
 	{
-		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer.addr().value() != buffer.addr())
+		if (queue->m_size != size || queue->m_depth != depth || queue->m_buffer != buffer)
 		{
 			return CELL_SYNC_ERROR_INVAL;
 		}
@@ -1104,7 +1104,7 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::null, 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}
@@ -1448,7 +1448,7 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 			}
 		}
 
-		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::ptr<sys_event_t>::make(0), 0))
+		if (s32 res = sys_event_queue_receive(GetCurrentPPUThread(), queue->m_eq_id, vm::null, 0))
 		{
 			assert(!"sys_event_queue_receive() failed");
 		}

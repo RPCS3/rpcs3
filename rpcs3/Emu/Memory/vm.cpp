@@ -628,27 +628,25 @@ namespace vm
 
 	u32 stack_push(CPUThread& CPU, u32 size, u32 align_v, u32& old_pos)
 	{
-		assert(align_v);
-
 		switch (CPU.GetType())
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& PPU = static_cast<PPUThread&>(CPU);
+			PPUThread& context = static_cast<PPUThread&>(CPU);
 
-			old_pos = vm::cast(PPU.GPR[1], "SP");
-			PPU.GPR[1] -= align(size, 8); // room minimal possible size
-			PPU.GPR[1] &= ~(align_v - 1); // fix stack alignment
+			old_pos = vm::cast(context.GPR[1], "SP");
+			context.GPR[1] -= align(size, 8); // room minimal possible size
+			context.GPR[1] &= ~(align_v - 1); // fix stack alignment
 
-			if (PPU.GPR[1] < CPU.GetStackAddr())
+			if (context.GPR[1] < CPU.GetStackAddr())
 			{
-				// stack overflow
-				PPU.GPR[1] = old_pos;
+				LOG_ERROR(PPU, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%llx, stack=*0x%x)", size, align_v, context.GPR[1], CPU.GetStackAddr());
+				context.GPR[1] = old_pos;
 				return 0;
 			}
 			else
 			{
-				return (u32)PPU.GPR[1];
+				return static_cast<u32>(context.GPR[1]);
 			}
 		}
 
@@ -669,7 +667,7 @@ namespace vm
 
 			if (context.SP < CPU.GetStackAddr())
 			{
-				// stack overflow
+				LOG_ERROR(ARMv7, "vm::stack_push(0x%x,%d): stack overflow (SP=0x%x, stack=*0x%x)", size, align_v, context.SP, CPU.GetStackAddr());
 				context.SP = old_pos;
 				return 0;
 			}
@@ -693,10 +691,14 @@ namespace vm
 		{
 		case CPU_THREAD_PPU:
 		{
-			PPUThread& PPU = static_cast<PPUThread&>(CPU);
+			PPUThread& context = static_cast<PPUThread&>(CPU);
 
-			assert(PPU.GPR[1] == addr);
-			PPU.GPR[1] = old_pos;
+			if (context.GPR[1] != addr && !Emu.IsStopped())
+			{
+				LOG_ERROR(PPU, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%llx)", addr, old_pos, context.GPR[1]);
+			}
+
+			context.GPR[1] = old_pos;
 			return;
 		}
 
@@ -711,7 +713,11 @@ namespace vm
 		{
 			ARMv7Context& context = static_cast<ARMv7Thread&>(CPU).context;
 
-			assert(context.SP == addr);
+			if (context.SP != addr && !Emu.IsStopped())
+			{
+				LOG_ERROR(ARMv7, "vm::stack_pop(*0x%x,*0x%x): stack inconsistency (SP=0x%x)", addr, old_pos, context.SP);
+			}
+
 			context.SP = old_pos;
 			return;
 		}

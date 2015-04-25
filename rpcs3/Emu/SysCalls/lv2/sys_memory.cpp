@@ -45,9 +45,12 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 	sys_memory.Log("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%x)", size, cid, flags);
 
 	// Check if this container ID is valid.
-	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!Emu.GetIdManager().GetIDData(cid, ct))
+	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+
+	if (!ct)
+	{
 		return CELL_ESRCH;
+	}
 	
 	// Check page size.
 	switch(flags)
@@ -132,12 +135,15 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 
 s32 sys_memory_container_destroy(u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_destroy(cid=%d)", cid);
+	sys_memory.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
 	// Check if this container ID is valid.
-	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!Emu.GetIdManager().GetIDData(cid, ct))
+	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+
+	if (!ct)
+	{
 		return CELL_ESRCH;
+	}
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(ct->addr);
@@ -148,12 +154,15 @@ s32 sys_memory_container_destroy(u32 cid)
 
 s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=%d)", mem_info.addr(), cid);
+	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=0x%x)", mem_info.addr(), cid);
 
 	// Check if this container ID is valid.
-	std::shared_ptr<MemoryContainerInfo> ct;
-	if (!Emu.GetIdManager().GetIDData(cid, ct))
+	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+
+	if (!ct)
+	{
 		return CELL_ESRCH;
+	}
 
 	// HACK: Return all memory.
 	mem_info->total_user_memory = ct->size;

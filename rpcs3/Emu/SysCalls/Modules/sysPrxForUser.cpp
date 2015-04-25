@@ -117,7 +117,7 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	lwmutex->lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw);
+	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw, TYPE_LWMUTEX);
 
 	return CELL_OK;
 }
@@ -501,7 +501,7 @@ s32 sys_lwcond_signal_all(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond)
 
 s32 sys_lwcond_signal_to(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u32 ppu_thread_id)
 {
-	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=%d)", lwcond, ppu_thread_id);
+	sysPrxForUser.Log("sys_lwcond_signal_to(lwcond=*0x%x, ppu_thread_id=0x%x)", lwcond, ppu_thread_id);
 
 	const vm::ptr<sys_lwmutex_t> lwmutex = lwcond->lwmutex;
 
@@ -579,7 +579,7 @@ s32 sys_lwcond_wait(PPUThread& CPU, vm::ptr<sys_lwcond_t> lwcond, u64 timeout)
 	lwmutex->recursive_count = 0;
 
 	// call the syscall
-	s32 res = _sys_lwcond_queue_wait(lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
+	s32 res = _sys_lwcond_queue_wait(CPU, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
 
 	if (res == CELL_OK || res == CELL_ESRCH)
 	{
@@ -821,7 +821,7 @@ s64 _sys_process_at_Exitspawn()
 
 s32 sys_interrupt_thread_disestablish(PPUThread& CPU, u32 ih)
 {
-	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=%d)", ih);
+	sysPrxForUser.Todo("sys_interrupt_thread_disestablish(ih=0x%x)", ih);
 
 	return _sys_interrupt_thread_disestablish(ih, vm::stackvar<be_t<u64>>(CPU));
 }
@@ -982,6 +982,13 @@ vm::ptr<char> _sys_strcat(vm::ptr<char> dest, vm::ptr<const char> source)
 	return dest;
 }
 
+vm::ptr<const char> _sys_strchr(vm::ptr<const char> str, s32 ch)
+{
+	sysPrxForUser.Log("_sys_strchr(str=*0x%x, ch=0x%x)", str, ch);
+
+	return vm::ptr<const char>::make(vm::get_addr(strchr(str.get_ptr(), ch)));
+}
+
 vm::ptr<char> _sys_strncat(vm::ptr<char> dest, vm::ptr<const char> source, u32 len)
 {
 	sysPrxForUser.Log("_sys_strncat(dest=*0x%x, source=*0x%x, len=%d)", dest, source, len);
@@ -1012,7 +1019,7 @@ vm::ptr<char> _sys_strncpy(vm::ptr<char> dest, vm::ptr<const char> source, u32 l
 
 	if (!dest || !source)
 	{
-		return vm::ptr<char>::make(0);
+		return vm::null;
 	}
 
 	if (strncpy(dest.get_ptr(), source.get_ptr(), len) != dest.get_ptr())
@@ -1053,7 +1060,7 @@ s32 _sys_spu_printf_finalize()
 
 s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=%d)", group);
+	sysPrxForUser.Warning("_sys_spu_printf_attach_group(group=0x%x)", group);
 
 	if (!spu_printf_agcb)
 	{
@@ -1065,7 +1072,7 @@ s32 _sys_spu_printf_attach_group(PPUThread& CPU, u32 group)
 
 s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=%d)", group);
+	sysPrxForUser.Warning("_sys_spu_printf_detach_group(group=0x%x)", group);
 
 	if (!spu_printf_dgcb)
 	{
@@ -1077,7 +1084,7 @@ s32 _sys_spu_printf_detach_group(PPUThread& CPU, u32 group)
 
 s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=%d)", thread);
+	sysPrxForUser.Warning("_sys_spu_printf_attach_thread(thread=0x%x)", thread);
 
 	if (!spu_printf_atcb)
 	{
@@ -1089,7 +1096,7 @@ s32 _sys_spu_printf_attach_thread(PPUThread& CPU, u32 thread)
 
 s32 _sys_spu_printf_detach_thread(PPUThread& CPU, u32 thread)
 {
-	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=%d)", thread);
+	sysPrxForUser.Warning("_sys_spu_printf_detach_thread(thread=0x%x)", thread);
 
 	if (!spu_printf_dtcb)
 	{
@@ -1149,7 +1156,7 @@ s32 _sys_printf(vm::ptr<const char> fmt) // va_args...
 	sysPrxForUser.Todo("_sys_printf(fmt=*0x%x, ...)", fmt);
 
 	// probably, assertion failed
-	sysPrxForUser.Warning("_sys_printf: \n%s", fmt.get_ptr());
+	sysPrxForUser.Fatal("_sys_printf: \n%s", fmt.get_ptr());
 	Emu.Pause();
 	return CELL_OK;
 }
@@ -1208,6 +1215,65 @@ void sys_spinlock_unlock(vm::ptr<atomic_t<u32>> lock)
 	lock->exchange(be_t<u32>::make(0));
 
 	g_sys_spinlock_wm.notify(lock.addr());
+}
+
+s32 sys_ppu_thread_create(PPUThread& CPU, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::ptr<const char> threadname)
+{
+	sysPrxForUser.Warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)", thread_id, entry, arg, prio, stacksize, flags, threadname);
+
+	// (allocate TLS)
+	// (return CELL_ENOMEM if failed)
+	// ...
+
+	vm::stackvar<ppu_thread_param_t> attr(CPU);
+
+	attr->entry = entry;
+	attr->tls = 0;
+
+	// call the syscall
+	if (s32 res = _sys_ppu_thread_create(thread_id, attr, arg, 0, prio, stacksize, flags, threadname))
+	{
+		return res;
+	}
+
+	// run the thread
+	return flags & SYS_PPU_THREAD_CREATE_INTERRUPT ? CELL_OK : sys_ppu_thread_start(static_cast<u32>(*thread_id));
+}
+
+s32 sys_ppu_thread_get_id(PPUThread& CPU, vm::ptr<u64> thread_id)
+{
+	sysPrxForUser.Log("sys_ppu_thread_get_id(thread_id=*0x%x)", thread_id);
+
+	*thread_id = CPU.GetId();
+
+	return CELL_OK;
+}
+
+void sys_ppu_thread_exit(PPUThread& CPU, u64 val)
+{
+	sysPrxForUser.Log("sys_ppu_thread_exit(val=0x%llx)", val);
+
+	// (call registered atexit functions)
+	// (deallocate TLS)
+	// ...
+
+	// call the syscall
+	_sys_ppu_thread_exit(CPU, val);
+}
+
+std::mutex g_once_mutex;
+
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void()> init)
+{
+	sysPrxForUser.Warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
+
+	std::lock_guard<std::mutex> lock(g_once_mutex);
+
+	if (once_ctrl->compare_and_swap_test(be_t<u32>::make(SYS_PPU_THREAD_ONCE_INIT), be_t<u32>::make(SYS_PPU_THREAD_DONE_INIT)))
+	{
+		// call init function using current thread context
+		init(CPU);
+	}
 }
 
 Module sysPrxForUser("sysPrxForUser", []()
@@ -1304,6 +1370,7 @@ Module sysPrxForUser("sysPrxForUser", []()
 	REG_FUNC(sysPrxForUser, _sys_strcmp);
 	REG_FUNC(sysPrxForUser, _sys_strncmp);
 	REG_FUNC(sysPrxForUser, _sys_strcat);
+	REG_FUNC(sysPrxForUser, _sys_strchr);
 	REG_FUNC(sysPrxForUser, _sys_strncat);
 	REG_FUNC(sysPrxForUser, _sys_strcpy);
 	REG_FUNC(sysPrxForUser, _sys_strncpy);
