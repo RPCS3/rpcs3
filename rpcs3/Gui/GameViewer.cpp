@@ -106,23 +106,15 @@ void GameViewer::OnColClick(wxListEvent& event)
 
 void GameViewer::LoadGames()
 {
-	vfsDir dir(m_path);
-	LOG_NOTICE(HLE, "path: %s", m_path.c_str());
-	if(!dir.IsOpened()) return;
-
 	m_games.clear();
 
-	for(const DirEntryInfo* info : dir)
+	for (const auto info : vfsDir(m_path))
 	{
 		if(info->flags & DirEntry_TypeDir)
 		{
 			m_games.push_back(info->name);
 		}
 	}
-	dir.Close();
-
-	//ConLog.Write("path: %s", m_path.wx_str());
-	//ConLog.Write("folders count: %d", m_games.GetCount());
 }
 
 void GameViewer::LoadPSF()

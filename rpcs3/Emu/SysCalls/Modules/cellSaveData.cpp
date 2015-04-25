@@ -129,7 +129,7 @@ __noinline s32 savedata_op(
 
 		for (const auto entry : vfsDir(base_dir))
 		{
-			if (!(entry->flags & DirEntry_TypeDir))
+			if (entry->flags & DirEntry_TypeFile)
 			{
 				continue;
 			}
