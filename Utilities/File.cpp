@@ -369,7 +369,7 @@ fs::file::~file()
 #ifdef _WIN32
 		CloseHandle((HANDLE)m_fd);
 #else
-		::close(fd);
+		::close(m_fd);
 #endif
 	}
 }
@@ -706,7 +706,7 @@ bool fs::dir::get_first(std::string& name, stat_t& info)
 
 	m_dd = (intptr_t)FindFirstFileW(m_path.get(), &found);
 #else
-	m_dd = ::opendir(m_path.get());
+	m_dd = (intptr_t)::opendir(m_path.get());
 #endif
 
 	return get_next(name, info);
@@ -739,12 +739,12 @@ bool fs::dir::get_next(std::string& name, stat_t& info)
 	const auto found = ::readdir((DIR*)m_dd);
 
 	struct stat64 file_info;
-	if (fstatat64(::dirfd((DIR*)m_dd), found.d_name, &file_info, 0) < 0)
+	if (fstatat64(::dirfd((DIR*)m_dd), found->d_name, &file_info, 0) < 0)
 	{
 		return false;
 	}
 
-	name = found.d_name;
+	name = found->d_name;
 
 	info.is_directory = S_ISDIR(file_info.st_mode);
 	info.is_writable = file_info.st_mode & 0200; // HACK: approximation
