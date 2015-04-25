@@ -26,11 +26,17 @@ const g_spu_imm_table_t g_spu_imm;
 
 class spu_inter_func_list_t
 {
-	std::array<spu_inter_func_t, 2048> funcs;
+	std::array<spu_inter_func_t, 2048> funcs = {};
+
+	std::mutex m_mutex;
 
 public:
-	spu_inter_func_list_t()
+	void initialize()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (funcs[0]) return; // check if already initialized
+
 		auto inter = new SPUInterpreter2;
 		SPUDecoder dec(*inter);
 
@@ -49,7 +55,7 @@ public:
 		return funcs[opcode >> 21];
 	}
 }
-const g_spu_inter_func_list;
+g_spu_inter_func_list;
 
 SPUThread& GetCurrentSPUThread()
 {
@@ -189,6 +195,7 @@ void SPUThread::DoRun()
 		
 	case 1: // alternative interpreter
 	{
+		g_spu_inter_func_list.initialize(); // initialize helper table
 		break;
 	}
 
