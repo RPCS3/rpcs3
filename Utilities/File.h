@@ -17,8 +17,6 @@ enum file_open_mode : u32
 	o_excl = 1 << 5,
 };
 
-struct DIR;
-
 namespace fs
 {
 	struct stat_t
@@ -87,10 +85,10 @@ namespace fs
 
 		static const handle_type null = -1;
 #else
-		using handle_type = DIR*;
+		using handle_type = intptr_t;
 		using name_type = std::unique_ptr<char[]>;
 
-		static const auto null = NULL;
+		static const handle_type null = 0;
 #endif
 
 	private:

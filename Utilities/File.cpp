@@ -599,7 +599,7 @@ fs::dir::~dir()
 #ifdef _WIN32
 		FindClose((HANDLE)m_dd);
 #else
-		::closedir(m_dd);
+		::closedir((DIR*)m_dd);
 #endif
 	}
 }
@@ -611,7 +611,7 @@ void fs::dir::import(handle_type dd, const std::string& path)
 #ifdef _WIN32
 		FindClose((HANDLE)m_dd);
 #else
-		::closedir(m_dd);
+		::closedir((DIR*)m_dd);
 #endif
 	}
 
@@ -632,7 +632,7 @@ bool fs::dir::open(const std::string& dirname)
 #ifdef _WIN32
 		FindClose((HANDLE)m_dd);
 #else
-		::closedir(m_dd);
+		::closedir((DIR*)m_dd);
 #endif
 	}
 
@@ -678,7 +678,7 @@ bool fs::dir::close()
 #ifdef _WIN32
 	return FindClose((HANDLE)dd);
 #else
-	return !::closedir(dd);
+	return !::closedir((DIR*)dd);
 #endif
 }
 
@@ -689,7 +689,7 @@ bool fs::dir::get_first(std::string& name, stat_t& info)
 #ifdef _WIN32
 		FindClose((HANDLE)m_dd);
 #else
-		::closedir(m_dd);
+		::closedir((DIR*)m_dd);
 #endif
 	}
 
@@ -735,10 +735,10 @@ bool fs::dir::get_next(std::string& name, stat_t& info)
 	info.mtime = to_time_t(found.ftLastWriteTime);
 	info.ctime = to_time_t(found.ftCreationTime);
 #else
-	const auto found = ::readdir(m_dd);
+	const auto found = ::readdir((DIR*)m_dd);
 
 	struct stat64 file_info;
-	if (fstatat64(::dirfd(m_dd), found.d_name, &file_info, 0) < 0)
+	if (fstatat64(::dirfd((DIR*)m_dd), found.d_name, &file_info, 0) < 0)
 	{
 		return false;
 	}
