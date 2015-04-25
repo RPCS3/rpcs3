@@ -705,11 +705,27 @@ bool fs::dir::get_first(std::string& name, stat_t& info)
 	WIN32_FIND_DATAW found;
 
 	m_dd = (intptr_t)FindFirstFileW(m_path.get(), &found);
+
+	if (m_dd == null)
+	{
+		return false;
+	}
+
+	name = ConvertWCharToUTF8(found.cFileName);
+
+	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+	info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
+	info.atime = to_time_t(found.ftLastAccessTime);
+	info.mtime = to_time_t(found.ftLastWriteTime);
+	info.ctime = to_time_t(found.ftCreationTime);
+
+	return true;
 #else
 	m_dd = (intptr_t)::opendir(m_path.get());
-#endif
 
 	return get_next(name, info);
+#endif
 }
 
 bool fs::dir::get_next(std::string& name, stat_t& info)
