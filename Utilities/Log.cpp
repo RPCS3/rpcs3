@@ -9,7 +9,7 @@
 
 using namespace Log;
 
-LogManager *gLogManager = nullptr;
+std::unique_ptr<LogManager> g_log_manager;
 
 u32 LogMessage::size() const
 {
@@ -224,6 +224,7 @@ void LogManager::addListener(std::shared_ptr<LogListener> listener)
 		channel.addListener(listener);
 	}
 }
+
 void LogManager::removeListener(std::shared_ptr<LogListener> listener)
 {
 	for (auto& channel : mChannels)
@@ -234,12 +235,14 @@ void LogManager::removeListener(std::shared_ptr<LogListener> listener)
 
 LogManager& LogManager::getInstance()
 {
-	if (!gLogManager)
+	if (!g_log_manager)
 	{
-		gLogManager = new LogManager();
+		g_log_manager.reset(new LogManager());
 	}
-	return *gLogManager;
+
+	return *g_log_manager;
 }
+
 LogChannel &LogManager::getChannel(LogType type)
 {
 	return mChannels[static_cast<u32>(type)];
@@ -252,9 +255,22 @@ void log_message(Log::LogType type, Log::LogSeverity sev, const char* text)
 
 void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
 {
-	//another msvc bug makes this not work, uncomment this and delete everything else in this function when it's fixed
-	//Log::LogManager::getInstance().log({logType, severity, text})
-
-	Log::LogMessage msg{ type, sev, std::move(text) };
-	Log::LogManager::getInstance().log(msg);
+	if (g_log_manager)
+	{
+		// another msvc bug makes this not work, uncomment this when it's fixed
+		//g_log_manager->log({logType, severity, text});
+		Log::LogMessage msg{ type, sev, std::move(text) };
+		g_log_manager->log(msg);
+	}
+	else
+	{
+		rMessageBox(text,
+			sev == Notice ? "Notice" :
+			sev == Warning ? "Warning" :
+			sev == Success ? "Success" :
+			sev == Error ? "Error" : "Unknown",
+			sev == Notice ? rICON_INFORMATION :
+			sev == Warning ? rICON_EXCLAMATION :
+			sev == Error ? rICON_ERROR : rICON_INFORMATION);
+	}
 }

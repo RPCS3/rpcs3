@@ -148,8 +148,6 @@ bool Rpcs3App::OnInit()
 	const wxString executablePath = wxPathOnly(wxStandardPaths::Get().GetExecutablePath());
 	wxSetWorkingDirectory(executablePath);
 
-	main_thread = std::this_thread::get_id();
-
 	Ini.Load();
 	Emu.Init();
 	Emu.SetEmulatorPath(executablePath.ToStdString());

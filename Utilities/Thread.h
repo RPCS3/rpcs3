@@ -1,7 +1,5 @@
 #pragma once
 
-static std::thread::id main_thread;
-
 class NamedThreadBase
 {
 	std::string m_name;

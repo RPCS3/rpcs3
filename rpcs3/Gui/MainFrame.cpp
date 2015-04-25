@@ -122,9 +122,9 @@ MainFrame::MainFrame()
 	SetMenuBar(menubar);
 
 	// Panels
+	m_log_frame = new LogFrame(this);
 	m_game_viewer = new GameViewer(this);
 	m_debugger_frame = new DebuggerPanel(this);
-	m_log_frame = new LogFrame(this);
 
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_CENTRE);
 	AddPane(m_log_frame, "Log", wxAUI_DOCK_BOTTOM);
