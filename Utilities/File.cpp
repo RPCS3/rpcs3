@@ -755,7 +755,7 @@ bool fs::dir::get_next(std::string& name, stat_t& info)
 	const auto found = ::readdir((DIR*)m_dd);
 
 	struct stat64 file_info;
-	if (fstatat64(::dirfd((DIR*)m_dd), found->d_name, &file_info, 0) < 0)
+	if (!found || fstatat64(::dirfd((DIR*)m_dd), found->d_name, &file_info, 0) < 0)
 	{
 		return false;
 	}
