@@ -129,7 +129,7 @@ __noinline s32 savedata_op(
 
 		for (const auto entry : vfsDir(base_dir))
 		{
-			if (!(entry->flags & DirEntry_TypeDir))
+			if (entry->flags & DirEntry_TypeFile)
 			{
 				continue;
 			}
@@ -374,7 +374,10 @@ __noinline s32 savedata_op(
 		Emu.GetVFS().GetDevice(dir_path, dir_local_path);
 
 		fs::stat_t dir_info;
-		fs::stat(dir_local_path, dir_info);
+		if (!fs::stat(dir_local_path, dir_info))
+		{
+			// error
+		}
 
 		statGet->hddFreeSizeKB = 40 * 1024 * 1024; // 40 GB
 		statGet->isNewData = save_entry.isNew = !psf;

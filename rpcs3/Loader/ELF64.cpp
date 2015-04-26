@@ -327,6 +327,11 @@ namespace loader
 			
 			for (const auto module : lle_dir)
 			{
+				if (module->flags & DirEntry_TypeDir)
+				{
+					continue;
+				}
+
 				elf64 sprx_handler;
 
 				vfsFile fsprx(lle_dir.GetPath() + "/" + module->name);

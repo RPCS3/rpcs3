@@ -91,24 +91,29 @@ int sceNpTrophyInit(u32 pool_addr, u32 poolSize, u32 containerId, u64 options)
 	return CELL_OK;
 }
 
-int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<SceNpCommunicationId> commID, vm::ptr<SceNpCommunicationSignature> commSign, u64 options)
+int sceNpTrophyCreateContext(vm::ptr<u32> context, vm::ptr<const SceNpCommunicationId> commID, vm::ptr<const SceNpCommunicationSignature> commSign, u64 options)
 {
-	sceNpTrophy.Warning("sceNpTrophyCreateContext(context_addr=0x%x, commID_addr=0x%x, commSign_addr=0x%x, options=0x%llx)",
-		context.addr(), commID.addr(), commSign.addr(), options);
+	sceNpTrophy.Warning("sceNpTrophyCreateContext(context=*0x%x, commID=*0x%x, commSign=*0x%x, options=0x%llx)", context, commID, commSign, options);
 
 	if (!sceNpTrophyInstance.m_bInitialized)
+	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
-	if (options & (~(u64)1))
+	}
+
+	if (options & ~1)
+	{
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
+	}
 	// TODO: There are other possible errors
 
 	// TODO: Is the TROPHY.TRP file necessarily located in this path?
-	vfsDir dir("/app_home/../TROPDIR/");
-	if(!dir.IsOpened())
+	if (!Emu.GetVFS().ExistsDir("/app_home/../TROPDIR/"))
+	{
 		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+	}
 
 	// TODO: Following method will retrieve the TROPHY.TRP of the first folder that contains such file
-	for(const DirEntryInfo* entry = dir.Read(); entry; entry = dir.Read())
+	for (const auto entry : vfsDir("/app_home/../TROPDIR/"))
 	{
 		if (entry->flags & DirEntry_TypeDir)
 		{

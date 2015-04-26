@@ -44,10 +44,9 @@ void LLEModulesManagerFrame::Refresh()
 
 	Emu.GetVFS().Init(path);
 
-	vfsDir dir(path);
-
 	loader::handlers::elf64 sprx_loader;
-	for (const auto info : dir)
+
+	for (const auto info : vfsDir(path))
 	{
 		if (info->flags & DirEntry_TypeFile)
 		{

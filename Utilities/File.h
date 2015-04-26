@@ -21,10 +21,9 @@ namespace fs
 {
 	struct stat_t
 	{
-		bool exists;
 		bool is_directory;
 		bool is_writable;
-		uint64_t size;
+		u64 size;
 		time_t atime;
 		time_t mtime;
 		time_t ctime;
@@ -40,23 +39,21 @@ namespace fs
 	bool rename(const std::string& from, const std::string& to);
 	bool copy_file(const std::string& from, const std::string& to, bool overwrite);
 	bool remove_file(const std::string& file);
-	bool truncate_file(const std::string& file, uint64_t length);
+	bool truncate_file(const std::string& file, u64 length);
 
 	struct file final
 	{
-#ifdef _WIN32
-		using handle_type = void*;
-#else
 		using handle_type = intptr_t;
-#endif
+
+		static const handle_type null = -1;
 
 	private:
-		handle_type fd;
+		handle_type m_fd = null;
 
 	public:
-		file();
+		file() = default;
 		~file();
-		explicit file(const std::string& filename, u32 mode = o_read);
+		explicit file(const std::string& filename, u32 mode = o_read) { open(filename, mode); }
 
 		file(const file&) = delete;
 		file(file&&) = delete; // possibly TODO
@@ -64,12 +61,12 @@ namespace fs
 		file& operator =(const file&) = delete;
 		file& operator =(file&&) = delete; // possibly TODO
 
-		operator bool() const; // check is_opened()
+		operator bool() const { return m_fd != null; }
 
-		void import(handle_type fd); // replace file handle
+		void import(handle_type fd) { this->~file(); m_fd = fd; }
 
 		bool open(const std::string& filename, u32 mode = o_read);
-		bool is_opened() const; // check whether the file is opened
+		bool is_opened() const { return m_fd != null; }
 		bool trunc(u64 size) const; // change file size (possibly appending zero bytes)
 		bool stat(stat_t& info) const; // get file info
 		bool close();
@@ -79,19 +76,47 @@ namespace fs
 		u64 seek(u64 offset, u32 mode = from_begin) const;
 		u64 size() const;
 	};
+
+	struct dir final
+	{
+#ifdef _WIN32
+		using handle_type = intptr_t;
+		using name_type = std::unique_ptr<wchar_t[]>;
+
+		static const handle_type null = -1;
+#else
+		using handle_type = intptr_t;
+		using name_type = std::unique_ptr<char[]>;
+
+		static const handle_type null = 0;
+#endif
+
+	private:
+		handle_type m_dd = null;
+		name_type m_path;
+
+	public:
+		dir() = default;
+		~dir();
+		explicit dir(const std::string& dirname) { open(dirname); }
+
+		dir(const dir&) = delete;
+		dir(dir&&) = delete; // possibly TODO
+
+		dir& operator =(const dir&) = delete;
+		dir& operator =(dir&&) = delete; // possibly TODO
+
+		operator bool() const { return m_path.operator bool(); }
+
+		void import(handle_type dd, const std::string& path);
+
+		bool open(const std::string& dirname);
+		bool is_opened() const { return *this; }
+		bool close();
+
+		bool get_first(std::string& name, stat_t& info);
+		//bool get_first(std::string& name);
+		bool get_next(std::string& name, stat_t& info);
+		//bool get_next(std::string& name);
+	};
 }
-
-struct rDir
-{
-	rDir();
-	~rDir();
-	rDir(const rDir& other) = delete;
-	rDir(const std::string &path);
-	bool Open(const std::string& path);
-	bool IsOpened() const;
-	static bool Exists(const std::string &path);
-	bool 	GetFirst(std::string *filename) const;
-	bool 	GetNext(std::string *filename) const;
-
-	void *handle;
-};

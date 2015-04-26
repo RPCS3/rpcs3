@@ -6,7 +6,7 @@ class vfsLocalDir : public vfsDirBase
 {
 private:
 	u32 m_pos;
-	rDir dir;
+	fs::dir m_dir;
 
 public:
 	vfsLocalDir(vfsDevice* device);

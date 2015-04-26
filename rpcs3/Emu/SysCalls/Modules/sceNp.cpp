@@ -100,8 +100,8 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 		}
 	}
 
-	sceNp.Warning("npDrmIsAvailable: Found DRM license file at %s", drm_path.get_ptr());
-	sceNp.Warning("npDrmIsAvailable: Using k_licensee 0x%s", k_licensee_str.c_str());
+	sceNp.Warning("npDrmIsAvailable(): Found DRM license file at %s", drm_path.get_ptr());
+	sceNp.Warning("npDrmIsAvailable(): Using k_licensee 0x%s", k_licensee_str.c_str());
 
 	// Set the necessary file paths.
 	std::string drm_file_name = fmt::AfterLast(drm_path.get_ptr(), '/');
@@ -116,19 +116,18 @@ int npDrmIsAvailable(u32 k_licensee_addr, vm::ptr<const char> drm_path)
 	std::string rap_path("/dev_hdd0/home/" + pf_str + "/exdata/");
 
 	// Search dev_usb000 for a compatible RAP file. 
-	vfsDir raps_dir(rap_path);
-	if (!raps_dir.IsOpened())
-		sceNp.Warning("npDrmIsAvailable: Can't find RAP file for DRM!");
-	else
+	for (const auto entry : vfsDir(rap_path))
 	{
-		for (const DirEntryInfo *entry : raps_dir)
+		if (entry->name.find(titleID) != std::string::npos)
 		{
-			if (entry->name.find(titleID) != std::string::npos)
-			{
-				rap_path += entry->name;
-				break;
-			}
+			rap_path += entry->name;
+			break;
 		}
+	}
+
+	if (rap_path.back() == '/')
+	{
+		sceNp.Warning("npDrmIsAvailable(): Can't find RAP file for '%s' (titleID='%s')", drm_path.get_ptr(), titleID);
 	}
 
 	// Decrypt this EDAT using the supplied k_licensee and matching RAP file.
