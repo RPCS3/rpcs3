@@ -10,45 +10,68 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/node/ptr.h"
 #include "yaml-cpp/node/detail/node_iterator.h"
-#include <boost/iterator/iterator_adaptor.hpp>
-#include <boost/utility.hpp>
+#include <cstddef>
+#include <iterator>
 
 namespace YAML {
 namespace detail {
 struct iterator_value;
 
 template <typename V>
-class iterator_base
-    : public boost::iterator_adaptor<iterator_base<V>, node_iterator, V,
-                                     std::forward_iterator_tag, V> {
+class iterator_base : public std::iterator<std::forward_iterator_tag, V,
+                                           std::ptrdiff_t, V*, V> {
+
  private:
   template <typename>
   friend class iterator_base;
   struct enabler {};
-  typedef typename iterator_base::base_type base_type;
+  typedef node_iterator base_type;
+
+  struct proxy {
+    explicit proxy(const V& x) : m_ref(x) {}
+    V* operator->() { return std::addressof(m_ref); }
+    operator V*() { return std::addressof(m_ref); }
+
+    V m_ref;
+  };
 
  public:
   typedef typename iterator_base::value_type value_type;
 
  public:
-  iterator_base() {}
+  iterator_base() : m_iterator(), m_pMemory() {}
   explicit iterator_base(base_type rhs, shared_memory_holder pMemory)
-      : iterator_base::iterator_adaptor_(rhs), m_pMemory(pMemory) {}
+      : m_iterator(rhs), m_pMemory(pMemory) {}
 
   template <class W>
   iterator_base(const iterator_base<W>& rhs,
-                typename boost::enable_if<boost::is_convertible<W*, V*>,
-                                          enabler>::type = enabler())
-      : iterator_base::iterator_adaptor_(rhs.base()),
-        m_pMemory(rhs.m_pMemory) {}
+                typename std::enable_if<std::is_convertible<W*, V*>::value,
+                                        enabler>::type = enabler())
+      : m_iterator(rhs.m_iterator), m_pMemory(rhs.m_pMemory) {}
 
- private:
-  friend class boost::iterator_core_access;
+  iterator_base<V>& operator++() {
+    ++m_iterator;
+    return *this;
+  }
 
-  void increment() { this->base_reference() = boost::next(this->base()); }
+  iterator_base<V> operator++(int) {
+    iterator_base<V> iterator_pre(*this);
+    ++(*this);
+    return iterator_pre;
+  }
 
-  value_type dereference() const {
-    const typename base_type::value_type& v = *this->base();
+  template <typename W>
+  bool operator==(const iterator_base<W>& rhs) {
+    return m_iterator == rhs.m_iterator;
+  }
+
+  template <typename W>
+  bool operator!=(const iterator_base<W>& rhs) {
+    return m_iterator != rhs.m_iterator;
+  }
+
+  value_type operator*() const {
+    const typename base_type::value_type& v = *m_iterator;
     if (v.pNode)
       return value_type(Node(*v, m_pMemory));
     if (v.first && v.second)
@@ -56,7 +79,10 @@ class iterator_base
     return value_type();
   }
 
+  proxy operator->() const { return proxy(**this); }
+
  private:
+  base_type m_iterator;
   shared_memory_holder m_pMemory;
 };
 }

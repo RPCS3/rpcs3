@@ -16,33 +16,35 @@
 
 namespace YAML {
 
+// TODO: This class is no longer needed
 template <typename T>
 class ptr_vector : private YAML::noncopyable {
  public:
   ptr_vector() {}
-  ~ptr_vector() { clear(); }
 
   void clear() {
-    for (std::size_t i = 0; i < m_data.size(); i++)
-      delete m_data[i];
     m_data.clear();
   }
 
   std::size_t size() const { return m_data.size(); }
   bool empty() const { return m_data.empty(); }
 
-  void push_back(std::auto_ptr<T> t) {
-    m_data.push_back(NULL);
-    m_data.back() = t.release();
+  void push_back(std::unique_ptr<T>&& t) {
+    m_data.push_back(std::move(t));
   }
   T& operator[](std::size_t i) { return *m_data[i]; }
   const T& operator[](std::size_t i) const { return *m_data[i]; }
 
-  T& back() { return *m_data.back(); }
-  const T& back() const { return *m_data.back(); }
+  T& back() {
+      return *(m_data.back().get());
+  }
+
+  const T& back() const {
+      return *(m_data.back().get());
+  }
 
  private:
-  std::vector<T*> m_data;
+   std::vector<std::unique_ptr<T>> m_data;
 };
 }
 

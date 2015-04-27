@@ -7,8 +7,6 @@
 #pragma once
 #endif
 
-#include <boost/noncopyable.hpp>
-#include <boost/utility.hpp>
 #include <list>
 #include <map>
 #include <string>
@@ -29,9 +27,11 @@ class node;
 
 namespace YAML {
 namespace detail {
-class YAML_CPP_API node_data : private boost::noncopyable {
+class YAML_CPP_API node_data {
  public:
   node_data();
+  node_data(const node_data&) = delete;
+  node_data& operator=(const node_data&) = delete;
 
   void mark_defined();
   void set_mark(const Mark& mark);

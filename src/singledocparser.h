@@ -53,7 +53,7 @@ class SingleDocParser : private noncopyable {
  private:
   Scanner& m_scanner;
   const Directives& m_directives;
-  std::auto_ptr<CollectionStack> m_pCollectionStack;
+  std::unique_ptr<CollectionStack> m_pCollectionStack;
 
   typedef std::map<std::string, anchor_t> Anchors;
   Anchors m_anchors;

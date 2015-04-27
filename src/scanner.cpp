@@ -233,8 +233,8 @@ const RegEx& Scanner::GetValueRegex() const {
 void Scanner::StartStream() {
   m_startedStream = true;
   m_simpleKeyAllowed = true;
-  std::auto_ptr<IndentMarker> pIndent(new IndentMarker(-1, IndentMarker::NONE));
-  m_indentRefs.push_back(pIndent);
+  std::unique_ptr<IndentMarker> pIndent(new IndentMarker(-1, IndentMarker::NONE));
+  m_indentRefs.push_back(std::move(pIndent));
   m_indents.push(&m_indentRefs.back());
 }
 
@@ -281,7 +281,7 @@ Scanner::IndentMarker* Scanner::PushIndentTo(int column,
   if (InFlowContext())
     return 0;
 
-  std::auto_ptr<IndentMarker> pIndent(new IndentMarker(column, type));
+  std::unique_ptr<IndentMarker> pIndent(new IndentMarker(column, type));
   IndentMarker& indent = *pIndent;
   const IndentMarker& lastIndent = *m_indents.top();
 
@@ -298,7 +298,7 @@ Scanner::IndentMarker* Scanner::PushIndentTo(int column,
 
   // and then the indent
   m_indents.push(&indent);
-  m_indentRefs.push_back(pIndent);
+  m_indentRefs.push_back(std::move(pIndent));
   return &m_indentRefs.back();
 }
 

@@ -124,10 +124,14 @@ void EmitterState::StartedGroup(GroupType::value type) {
   const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
   m_curIndent += lastGroupIndent;
 
-  std::auto_ptr<Group> pGroup(new Group(type));
+  // TODO: Create move constructors for settings types to simplify transfer
+  std::unique_ptr<Group> pGroup(new Group(type));
 
   // transfer settings (which last until this group is done)
-  pGroup->modifiedSettings = m_modifiedSettings;
+  //
+  // NB: if pGroup->modifiedSettings == m_modifiedSettings,
+  // m_modifiedSettings is not changed!
+  pGroup->modifiedSettings = std::move(m_modifiedSettings);
 
   // set up group
   if (GetFlowType(type) == Block)
@@ -136,7 +140,7 @@ void EmitterState::StartedGroup(GroupType::value type) {
     pGroup->flowType = FlowType::Flow;
   pGroup->indent = GetIndent();
 
-  m_groups.push(pGroup);
+  m_groups.push(std::move(pGroup));
 }
 
 void EmitterState::EndedGroup(GroupType::value type) {
@@ -149,7 +153,7 @@ void EmitterState::EndedGroup(GroupType::value type) {
 
   // get rid of the current group
   {
-    std::auto_ptr<Group> pFinishedGroup = m_groups.pop();
+    std::unique_ptr<Group> pFinishedGroup = m_groups.pop();
     if (pFinishedGroup->type != type)
       return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
   }

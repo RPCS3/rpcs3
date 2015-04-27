@@ -14,40 +14,45 @@
 
 #include "yaml-cpp/noncopyable.h"
 
+// TODO: This class is no longer needed
 template <typename T>
 class ptr_stack : private YAML::noncopyable {
  public:
   ptr_stack() {}
-  ~ptr_stack() { clear(); }
 
   void clear() {
-    for (std::size_t i = 0; i < m_data.size(); i++)
-      delete m_data[i];
     m_data.clear();
   }
 
   std::size_t size() const { return m_data.size(); }
   bool empty() const { return m_data.empty(); }
 
-  void push(std::auto_ptr<T> t) {
-    m_data.push_back(NULL);
-    m_data.back() = t.release();
+  void push(std::unique_ptr<T>&& t) {
+    m_data.push_back(std::move(t));
   }
-  std::auto_ptr<T> pop() {
-    std::auto_ptr<T> t(m_data.back());
+  std::unique_ptr<T> pop() {
+   std::unique_ptr<T> t(std::move(m_data.back()));
     m_data.pop_back();
     return t;
   }
-  T& top() { return *m_data.back(); }
-  const T& top() const { return *m_data.back(); }
 
-  T& top(std::ptrdiff_t diff) { return **(m_data.end() - 1 + diff); }
+  T& top() {
+    return *(m_data.back().get());
+  }
+  const T& top() const {
+    return *(m_data.back().get());
+  }
+
+  T& top(std::ptrdiff_t diff) {
+    return *((m_data.end() - 1 + diff)->get());
+  }
+
   const T& top(std::ptrdiff_t diff) const {
-    return **(m_data.end() - 1 + diff);
+    return *((m_data.end() - 1 + diff)->get());
   }
 
  private:
-  std::vector<T*> m_data;
+    std::vector<std::unique_ptr<T>> m_data;
 };
 
 #endif  // PTR_STACK_H_62B23520_7C8E_11DE_8A39_0800200C9A66

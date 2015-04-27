@@ -122,7 +122,7 @@ class YAML_CPP_API Emitter : private noncopyable {
   bool CanEmitNewline() const;
 
  private:
-  std::auto_ptr<EmitterState> m_pState;
+  std::unique_ptr<EmitterState> m_pState;
   ostream_wrapper m_stream;
 };
 

@@ -20,7 +20,7 @@ class Setting {
   Setting() : m_value() {}
 
   const T get() const { return m_value; }
-  std::auto_ptr<SettingChangeBase> set(const T& value);
+  std::unique_ptr<SettingChangeBase> set(const T& value);
   void restore(const Setting<T>& oldSetting) { m_value = oldSetting.get(); }
 
  private:
@@ -49,8 +49,8 @@ class SettingChange : public SettingChangeBase {
 };
 
 template <typename T>
-inline std::auto_ptr<SettingChangeBase> Setting<T>::set(const T& value) {
-  std::auto_ptr<SettingChangeBase> pChange(new SettingChange<T>(this));
+inline std::unique_ptr<SettingChangeBase> Setting<T>::set(const T& value) {
+  std::unique_ptr<SettingChangeBase> pChange(new SettingChange<T>(this));
   m_value = value;
   return pChange;
 }
@@ -62,10 +62,6 @@ class SettingChanges : private noncopyable {
 
   void clear() {
     restore();
-
-    for (setting_changes::const_iterator it = m_settingChanges.begin();
-         it != m_settingChanges.end(); ++it)
-      delete *it;
     m_settingChanges.clear();
   }
 
@@ -75,23 +71,23 @@ class SettingChanges : private noncopyable {
       (*it)->pop();
   }
 
-  void push(std::auto_ptr<SettingChangeBase> pSettingChange) {
-    m_settingChanges.push_back(pSettingChange.release());
+  void push(std::unique_ptr<SettingChangeBase> pSettingChange) {
+    m_settingChanges.push_back(std::move(pSettingChange));
   }
 
-  // like std::auto_ptr - assignment is transfer of ownership
-  SettingChanges& operator=(SettingChanges& rhs) {
+  // like std::unique_ptr - assignment is transfer of ownership
+  SettingChanges& operator=(SettingChanges&& rhs) {
     if (this == &rhs)
       return *this;
 
     clear();
-    m_settingChanges = rhs.m_settingChanges;
-    rhs.m_settingChanges.clear();
+    std::swap(m_settingChanges, rhs.m_settingChanges);
+
     return *this;
   }
 
  private:
-  typedef std::vector<SettingChangeBase*> setting_changes;
+  typedef std::vector<std::unique_ptr<SettingChangeBase>> setting_changes;
   setting_changes m_settingChanges;
 };
 }
