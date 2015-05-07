@@ -1482,6 +1482,12 @@ void GLGSRender::ExecCMD()
 
 	checkForGlError("glEnable");
 
+	glFrontFace(m_front_face);
+	checkForGlError("glFrontFace");
+
+	glCullFace(m_cull_face);
+	checkForGlError("glCullFace");
+
 	if (m_set_front_polygon_mode)
 	{
 		glPolygonMode(GL_FRONT, m_front_polygon_mode);
@@ -1571,14 +1577,15 @@ void GLGSRender::ExecCMD()
 		}
 	}
 
-	// TODO: Use other glLightModel functions?
-	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, m_set_two_side_light_enable ? GL_TRUE : GL_FALSE);
-	checkForGlError("glLightModeli");
-
-	if (m_set_shade_mode)
+	if (m_set_two_side_light_enable)
 	{
-		glShadeModel(m_shade_mode);
-		checkForGlError("glShadeModel");
+		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+		checkForGlError("glLightModeli");
+	}
+	else
+	{
+		glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+		checkForGlError("glLightModeli");
 	}
 
 	if (m_set_depth_mask)
@@ -1640,11 +1647,6 @@ void GLGSRender::ExecCMD()
 		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
 		checkForGlError("glBlendColor");
 	}
-
-	glFrontFace(m_front_face);
-	checkForGlError("glFrontFace");
-	glCullFace(m_cull_face);
-	checkForGlError("glCullFace");
 
 	if (m_set_alpha_func && m_set_alpha_ref)
 	{
