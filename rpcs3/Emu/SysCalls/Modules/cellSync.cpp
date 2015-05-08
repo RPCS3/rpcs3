@@ -1025,8 +1025,10 @@ s32 syncLFQueueGetPushPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 
 		return CELL_SYNC_ERROR_PERM;
 	}
 
+	const s32 depth = queue->m_depth;
+
 	u32 var1 = 0;
-	s32 depth = queue->m_depth;
+
 	while (true)
 	{
 		while (true)
@@ -1149,7 +1151,7 @@ s32 syncLFQueueCompletePushPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, 
 		return CELL_SYNC_ERROR_PERM;
 	}
 
-	s32 depth = (u32)queue->m_depth;
+	const s32 depth = queue->m_depth;
 
 	while (true)
 	{
@@ -1343,8 +1345,8 @@ s32 _cellSyncLFQueuePushBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm:
 		}
 	}
 
-	const s32 depth = (u32)queue->m_depth;
-	const s32 size = (u32)queue->m_size;
+	const s32 depth = queue->m_depth;
+	const s32 size = queue->m_size;
 	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (position >= depth ? position - depth : position));
 	memcpy(vm::get_ptr<void>(addr), buffer.get_ptr(), size);
 
@@ -1369,8 +1371,10 @@ s32 syncLFQueueGetPopPointer(vm::ptr<CellSyncLFQueue> queue, s32& pointer, u32 i
 		return CELL_SYNC_ERROR_PERM;
 	}
 
+	const s32 depth = queue->m_depth;
+
 	u32 var1 = 0;
-	s32 depth = (u32)queue->m_depth;
+
 	while (true)
 	{
 		while (true)
@@ -1493,7 +1497,7 @@ s32 syncLFQueueCompletePopPointer(vm::ptr<CellSyncLFQueue> queue, s32 pointer, c
 		return CELL_SYNC_ERROR_PERM;
 	}
 
-	s32 depth = (u32)queue->m_depth;
+	const s32 depth = queue->m_depth;
 
 	while (true)
 	{
@@ -1686,8 +1690,8 @@ s32 _cellSyncLFQueuePopBody(PPUThread& CPU, vm::ptr<CellSyncLFQueue> queue, vm::
 		}
 	}
 
-	const s32 depth = (u32)queue->m_depth;
-	const s32 size = (u32)queue->m_size;
+	const s32 depth = queue->m_depth;
+	const s32 size = queue->m_size;
 	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (position >= depth ? position - depth : position));
 	memcpy(buffer.get_ptr(), vm::get_ptr<void>(addr), size);
 
@@ -1807,9 +1811,9 @@ s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<u32> ppSignal)
+s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<vm::bptr<void>> ppSignal)
 {
-	cellSync.Log("_cellSyncLFQueueGetSignalAddress(queue=*0x%x, ppSignal=*0x%x)", queue, ppSignal);
+	cellSync.Log("_cellSyncLFQueueGetSignalAddress(queue=*0x%x, ppSignal=**0x%x)", queue, ppSignal);
 
 	if (!queue || !ppSignal)
 	{
@@ -1820,7 +1824,8 @@ s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::p
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	*ppSignal = (u32)queue->m_eaSignal.addr();
+	*ppSignal = queue->m_eaSignal;
+
 	return CELL_OK;
 }
 

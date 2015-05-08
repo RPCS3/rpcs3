@@ -103,19 +103,6 @@ namespace vm
 		}
 	};
 
-#ifdef __APPLE__
-	template<>
-	struct cast_ptr<unsigned long>
-	{
-		static_assert(sizeof(unsigned long) == 8, "Unexpected size of unsigned long");
-
-		__forceinline static u32 cast(const unsigned long addr, const char* func)
-		{
-			return cast_ptr<u64>::cast(addr, func);
-		}
-	};
-#endif
-
 	template<>
 	struct cast_ptr<u32>
 	{

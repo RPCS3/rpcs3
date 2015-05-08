@@ -156,7 +156,7 @@ public:
 		return out_result;
 	}
 
-	void push_logical_or(u32 value)
+	void push_bit_or(u32 value)
 	{
 		sync_var._or({ 1, value });
 	}
@@ -550,7 +550,7 @@ public:
 		{
 			if (snr_config & 1)
 			{
-				ch_snr1.push_logical_or(value);
+				ch_snr1.push_bit_or(value);
 			}
 			else
 			{
@@ -561,7 +561,7 @@ public:
 		{
 			if (snr_config & 2)
 			{
-				ch_snr2.push_logical_or(value);
+				ch_snr2.push_bit_or(value);
 			}
 			else
 			{

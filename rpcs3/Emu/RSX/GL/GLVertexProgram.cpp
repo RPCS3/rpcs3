@@ -195,18 +195,17 @@ std::string GLVertexDecompilerThread::Format(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
-		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 0) },
-		{ "$1", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 1) },
-		{ "$2", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
-		{ "$s", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetSRC), this, 2) },
-		{ "$am", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrMask), this) },
-		{ "$a", std::bind(std::mem_fn(&GLVertexDecompilerThread::AddAddrReg), this) },
+		{ "$$",   []() -> std::string { return "$"; } },
+		{ "$0",   [this]{ return GetSRC(0); } },
+		{ "$1",   [this]{ return GetSRC(1); } },
+		{ "$2",   [this]{ return GetSRC(2); } },
+		{ "$s",   [this]{ return GetSRC(2); } },
+		{ "$am",  [this]{ return AddAddrMask(); } },
+		{ "$a",   [this]{ return AddAddrReg(); } },
+		{ "$t",   [this]{ return GetTex(); } },
+		{ "$fa",  [this]{ return std::to_string(GetAddr()); } },
+		{ "$f()", [this]{ return GetFunc(); } },
 
-		{ "$t", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetTex), this) },
-
-		{ "$fa", [this]()->std::string { return std::to_string(GetAddr()); } },
-		{ "$f()", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetFunc), this) },
 		{ "$ifcond ", [this]() -> std::string
 		{
 			const std::string& cond = GetCond();
@@ -214,7 +213,8 @@ std::string GLVertexDecompilerThread::Format(const std::string& code)
 			return "if(" + cond + ") ";
 		}
 		},
-		{ "$cond", std::bind(std::mem_fn(&GLVertexDecompilerThread::GetCond), this) }
+
+		{ "$cond", [this]{ return GetCond(); } }
 	};
 
 	return fmt::replace_all(code, repl_list);

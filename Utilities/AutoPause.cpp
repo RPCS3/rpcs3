@@ -7,17 +7,16 @@
 
 using namespace Debug;
 
-//Even different from those tutorials on webpages, i use the method similiar from Log.h
-//TODO:: Question: Does such a Singleton struct get fully deallocated after its pointer?
-AutoPause* gAutoPause = nullptr;
+std::unique_ptr<AutoPause> g_autopause;
 
 AutoPause& AutoPause::getInstance(void)
 {
-	if (!gAutoPause)
+	if (!g_autopause)
 	{
-		gAutoPause = new AutoPause();
+		g_autopause.reset(new AutoPause);
 	}
-	return *gAutoPause;
+
+	return *g_autopause;
 }
 
 //Still use binary format. Default Setting should be "disable all auto pause".

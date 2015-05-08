@@ -258,7 +258,7 @@ cpu_thread& armv7_thread::args(std::initializer_list<std::string> values)
 
 	for (auto& arg : values)
 	{
-		const u32 arg_size = vm::cast(arg.size(), "arg.size()"); // get arg size
+		const u32 arg_size = arg.size(); // get arg size
 
 		for (char c : arg)
 		{
