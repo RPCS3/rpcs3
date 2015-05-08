@@ -4,7 +4,7 @@
 	ignore = dirty
 [submodule "rpcs3-ffmpeg"]
 	path = ffmpeg
-	url = https://github.com/hrydgard/ppsspp-ffmpeg
+	url = https://github.com/bigpet/ppsspp-ffmpeg
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicek/asmjit
