@@ -477,6 +477,11 @@ s32 cellFsStReadStart(u32 fd, u64 offset, u64 size)
 		return CELL_FS_EBADF;
 	}
 
+	if (size > std::numeric_limits<u32>::max()) // ???
+	{
+		return CELL_FS_EINVAL;
+	}
+
 	switch (auto status = file->st_status.compare_and_swap(SSS_INITIALIZED, SSS_STARTED))
 	{
 	case SSS_NOT_INITIALIZED:
@@ -590,6 +595,11 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 		return CELL_FS_EBADF;
 	}
 
+	if (size > std::numeric_limits<u32>::max()) // ???
+	{
+		return CELL_FS_EINVAL;
+	}
+
 	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED || file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
@@ -657,6 +667,11 @@ s32 cellFsStReadPutCurrentAddr(u32 fd, vm::ptr<u8> addr, u64 size)
 		return CELL_FS_EBADF;
 	}
 
+	if (size > std::numeric_limits<u32>::max()) // ???
+	{
+		return CELL_FS_EINVAL;
+	}
+
 	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED || !file->st_copyless)
 	{
 		return CELL_FS_ENXIO;
@@ -682,6 +697,11 @@ s32 cellFsStReadWait(u32 fd, u64 size)
 	if (!file)
 	{
 		return CELL_FS_EBADF;
+	}
+
+	if (size > std::numeric_limits<u32>::max()) // ???
+	{
+		return CELL_FS_EINVAL;
 	}
 
 	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
@@ -718,12 +738,17 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 		return CELL_FS_EBADF;
 	}
 
+	if (size > std::numeric_limits<u32>::max()) // ???
+	{
+		return CELL_FS_EINVAL;
+	}
+
 	if (file->st_status.read_sync() == SSS_NOT_INITIALIZED)
 	{
 		return CELL_FS_ENXIO;
 	}
 
-	if (!file->st_callback.compare_and_swap_test({}, { size, func }))
+	if (!file->st_callback.compare_and_swap_test({}, { static_cast<u32>(size), func }))
 	{
 		return CELL_FS_EIO;
 	}
