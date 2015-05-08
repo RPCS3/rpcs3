@@ -158,8 +158,9 @@ using fs_st_cb_t = vm::ptr<void(u32 xfd, u64 xsize)>;
 
 struct fs_st_cb_rec_t
 {
-	u32 size;
+	u64 size;
 	fs_st_cb_t func;
+	u32 pad;
 };
 
 struct fs_file_t
