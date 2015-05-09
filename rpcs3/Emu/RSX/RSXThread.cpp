@@ -555,7 +555,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 	// Front face 
 	case NV4097_SET_FRONT_FACE:
 	{
-		m_front_face = value;
+		m_front_face = (value == 0x0900) || (value == 0x0901) ? value : 0x0900/*default GL_CW*/;
 		break;
 	}
 

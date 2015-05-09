@@ -189,7 +189,7 @@ namespace gl
 				case RSX_FP_OPCODE_TIMESWTEX: op(instr("TIMESWTEX", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 				case RSX_FP_OPCODE_DP2: op(instr("DP2", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
 				case RSX_FP_OPCODE_NRM: op(instr("NRM", F | I | C | S | H), arg(dst), arg(src0)); break;
-				case RSX_FP_OPCODE_DIV: op(instr("DIV", F | I | C | S | H), arg(dst), arg(src0), arg(src1)); break;
+				case RSX_FP_OPCODE_DIV: op(instr("DIV", F | I | C | S | H), arg(dst), arg(src0), arg(src1).mask("x")); break;
 				case RSX_FP_OPCODE_DIVSQ:
 				{
 					auto arg_dst = arg(dst);
