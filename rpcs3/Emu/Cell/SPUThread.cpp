@@ -369,7 +369,7 @@ void SPUThread::do_dma_list_cmd(u32 cmd, spu_mfc_arg_t args)
 
 		if (rec->sb.data() & se16(0x8000))
 		{
-			ch_stall_stat.push_logical_or(1 << args.tag);
+			ch_stall_stat.push_bit_or(1 << args.tag);
 
 			spu_mfc_arg_t stalled;
 			stalled.ea = (args.ea & ~0xffffffff) | (list_addr + (i + 1) * 8);

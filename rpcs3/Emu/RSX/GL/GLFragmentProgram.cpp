@@ -124,11 +124,12 @@ std::string GLFragmentDecompilerThread::Format(const std::string& code)
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC0>), this, src0) },
-		{ "$1", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC1>), this, src1) },
-		{ "$2", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC2>), this, src2) },
-		{ "$t", std::bind(std::mem_fn(&GLFragmentDecompilerThread::AddTex), this) },
-		{ "$m", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetMask), this) },
+		{ "$0", [this]{ return GetSRC<SRC0>(src0); } },
+		{ "$1", [this]{ return GetSRC<SRC1>(src1); } },
+		{ "$2", [this]{ return GetSRC<SRC2>(src2); } },
+		{ "$t", [this]{ return AddTex(); } },
+		{ "$m", [this]{ return GetMask(); } },
+
 		{ "$ifcond ", [this]() -> std::string
 		{
 			const std::string& cond = GetCond();
@@ -136,8 +137,9 @@ std::string GLFragmentDecompilerThread::Format(const std::string& code)
 			return "if(" + cond + ") ";
 		}
 		},
-		{ "$cond", std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetCond), this) },
-		{ "$c", std::bind(std::mem_fn(&GLFragmentDecompilerThread::AddConst), this) }
+
+		{ "$cond", [this]{ return GetCond(); } },
+		{ "$c", [this]{ return AddConst(); } }
 	};
 
 	return fmt::replace_all(code, repl_list);
@@ -375,21 +377,21 @@ void GLFragmentDecompilerThread::Task()
 
 	while (true)
 	{
-		for (auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-			finded != m_end_offsets.end();
-			finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
+		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
+			found != m_end_offsets.end();
+			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
-			m_end_offsets.erase(finded);
+			m_end_offsets.erase(found);
 			m_code_level--;
 			AddCode("}");
 			m_loop_count--;
 		}
 
-		for (auto finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-			finded != m_else_offsets.end();
-			finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
+		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
+			found != m_else_offsets.end();
+			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
-			m_else_offsets.erase(finded);
+			m_else_offsets.erase(found);
 			m_code_level--;
 			AddCode("}");
 			AddCode("else");

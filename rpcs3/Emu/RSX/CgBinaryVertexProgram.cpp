@@ -174,23 +174,25 @@ std::string CgBinaryDisasm::FormatDisasm(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
-		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", std::bind(std::mem_fn(&CgBinaryDisasm::GetSRCDisasm), this, 0) },
-		{ "$1", std::bind(std::mem_fn(&CgBinaryDisasm::GetSRCDisasm), this, 1) },
-		{ "$2", std::bind(std::mem_fn(&CgBinaryDisasm::GetSRCDisasm), this, 2) },
-		{ "$s", std::bind(std::mem_fn(&CgBinaryDisasm::GetSRCDisasm), this, 2) },
-		{ "$am", std::bind(std::mem_fn(&CgBinaryDisasm::AddAddrMaskDisasm), this) },
-		{ "$a", std::bind(std::mem_fn(&CgBinaryDisasm::AddAddrRegDisasm), this) },
-		{ "$t", std::bind(std::mem_fn(&CgBinaryDisasm::GetTexDisasm), this) },
-		{ "$fa", [this]()->std::string { return std::to_string(GetAddrDisasm()); } },
-		{ "$ifcond ", [this]() -> std::string
+		{ "$$",  []() -> std::string { return "$"; } },
+		{ "$0",  [this]{ return GetSRCDisasm(0); } },
+		{ "$1",  [this]{ return GetSRCDisasm(1); } },
+		{ "$2",  [this]{ return GetSRCDisasm(2); } },
+		{ "$s",  [this]{ return GetSRCDisasm(2); } },
+		{ "$am", [this]{ return AddAddrMaskDisasm(); } },
+		{ "$a",  [this]{ return AddAddrRegDisasm(); } },
+		{ "$t",  [this]{ return GetTexDisasm(); } },
+		{ "$fa", [this]{ return std::to_string(GetAddrDisasm()); } },
+
+		{ "$ifcond ", [this]
 		{
-			const std::string& cond = GetCondDisasm();
-			if (cond == "true") return "";
+			std::string cond = GetCondDisasm();
+			if (cond == "true") cond.clear();
 			return cond;
 		}
 		},
-		{ "$cond", std::bind(std::mem_fn(&CgBinaryDisasm::GetCondDisasm), this) }
+
+		{ "$cond", [this]{ return GetCondDisasm(); } },
 	};
 
 	return fmt::replace_all(code, repl_list);

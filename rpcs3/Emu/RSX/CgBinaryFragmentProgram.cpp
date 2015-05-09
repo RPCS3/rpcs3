@@ -138,14 +138,14 @@ std::string CgBinaryDisasm::FormatDisAsm(const std::string& code)
 {
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
-		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", std::bind(std::mem_fn(&CgBinaryDisasm::GetSrcDisAsm<SRC0>), this, src0) },
-		{ "$1", std::bind(std::mem_fn(&CgBinaryDisasm::GetSrcDisAsm<SRC1>), this, src1) },
-		{ "$2", std::bind(std::mem_fn(&CgBinaryDisasm::GetSrcDisAsm<SRC2>), this, src2) },
-		{ "$t", std::bind(std::mem_fn(&CgBinaryDisasm::AddTexDisAsm), this) },
-		{ "$m", std::bind(std::mem_fn(&CgBinaryDisasm::GetMask), this) },
-		{ "$cond", std::bind(std::mem_fn(&CgBinaryDisasm::GetCondDisAsm), this) },
-		{ "$c", std::bind(std::mem_fn(&CgBinaryDisasm::AddConstDisAsm), this) }
+		{ "$$",    []() -> std::string { return "$"; } },
+		{ "$0",    [this]{ return GetSrcDisAsm<SRC0>(src0); } },
+		{ "$1",    [this]{ return GetSrcDisAsm<SRC1>(src1); } },
+		{ "$2",    [this]{ return GetSrcDisAsm<SRC2>(src2); } },
+		{ "$t",    [this]{ return AddTexDisAsm(); } },
+		{ "$m",    [this]{ return GetMask(); } },
+		{ "$cond", [this]{ return GetCondDisAsm(); } },
+		{ "$c",    [this]{ return AddConstDisAsm(); } },
 	};
 
 	return fmt::replace_all(code, repl_list);
@@ -241,27 +241,27 @@ void CgBinaryDisasm::TaskFP()
 
 	while (true)
 	{
-		for (auto finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-			finded != m_end_offsets.end();
-			finded = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
+		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
+			found != m_end_offsets.end();
+			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
 		{
-			m_end_offsets.erase(finded);
+			m_end_offsets.erase(found);
 			m_arb_shader += "ENDIF;\n";
 		}
 
-		for (auto finded = std::find(m_loop_end_offsets.begin(), m_loop_end_offsets.end(), m_size);
-			finded != m_loop_end_offsets.end();
-			finded = std::find(m_loop_end_offsets.begin(), m_loop_end_offsets.end(), m_size))
+		for (auto found = std::find(m_loop_end_offsets.begin(), m_loop_end_offsets.end(), m_size);
+			found != m_loop_end_offsets.end();
+			found = std::find(m_loop_end_offsets.begin(), m_loop_end_offsets.end(), m_size))
 		{
-			m_loop_end_offsets.erase(finded);
+			m_loop_end_offsets.erase(found);
 			m_arb_shader += "ENDLOOP;\n";
 		}
 
-		for (auto finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-			finded != m_else_offsets.end();
-			finded = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
+		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
+			found != m_else_offsets.end();
+			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
 		{
-			m_else_offsets.erase(finded);
+			m_else_offsets.erase(found);
 			m_arb_shader += "ELSE;\n";
 		}
 

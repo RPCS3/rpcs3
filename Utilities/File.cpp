@@ -20,6 +20,7 @@ std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 	if (!MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size))
 	{
 		LOG_ERROR(GENERAL, "ConvertUTF8ToWChar(source='%s') failed: 0x%llx", source, GET_API_ERROR);
+		throw __FUNCTION__;
 	}
 
 	return buffer;
@@ -27,17 +28,28 @@ std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 
 std::string ConvertWCharToUTF8(const wchar_t* source)
 {
-	const int size = WideCharToMultiByte(CP_UTF8, 0, source, -1 /* NTS */, NULL, 0, NULL, NULL); // size
-
-	if (size < 1) throw std::length_error(__FUNCTION__); // ???
+	const int length = lstrlenW(source); // source length
 
 	std::string result;
 
-	result.resize(size - 1);
-
-	if (!WideCharToMultiByte(CP_UTF8, 0, source, -1 /* NTS */, &result.front(), size, NULL, NULL))
+	if (length == 0)
 	{
-		LOG_ERROR(GENERAL, "ConvertWCharToUTF8() failed: 0x%llx", GET_API_ERROR);
+		return result;
+	}
+
+	const int size = WideCharToMultiByte(CP_UTF8, 0, source, length, NULL, 0, NULL, NULL); // output size
+
+	if (size <= 0)
+	{
+		LOG_ERROR(GENERAL, "ConvertWCharToUTF8(length=%d) failed: 0x%llx", length, GET_API_ERROR);
+		throw __FUNCTION__;
+	}
+
+	result.resize(size);
+
+	if (!WideCharToMultiByte(CP_UTF8, 0, source, length, &result.front(), size, NULL, NULL))
+	{
+		throw __FUNCTION__;
 	}
 
 	return result;

@@ -577,7 +577,7 @@ namespace loader
 				{
 					if (phdr.p_memsz)
 					{
-						if (!vm::alloc(vm::cast(phdr.p_vaddr.addr()), vm::cast(phdr.p_memsz, "phdr.p_memsz"), vm::main))
+						if (!vm::alloc(phdr.p_vaddr.addr(), phdr.p_memsz, vm::main))
 						{
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, phdr.p_vaddr.addr(), phdr.p_memsz);
 
@@ -606,7 +606,7 @@ namespace loader
 						{
 							m_stream->Seek(handler::get_stream_offset() + phdr.p_offset);
 							m_stream->Read(phdr.p_vaddr.get_ptr(), phdr.p_filesz);
-							hook_ppu_funcs(vm::ptr<u32>::make(phdr.p_vaddr.addr()), vm::cast(phdr.p_filesz) / 4);
+							hook_ppu_funcs(vm::ptr<u32>::make(phdr.p_vaddr.addr()), phdr.p_filesz / 4);
 						}
 					}
 					break;
@@ -614,10 +614,7 @@ namespace loader
 
 				case 0x00000007: //TLS
 				{
-					Emu.SetTLSData(
-						vm::cast(phdr.p_vaddr.addr(), "TLS: phdr.p_vaddr"),
-						vm::cast(phdr.p_filesz.value(), "TLS: phdr.p_filesz"),
-						vm::cast(phdr.p_memsz.value(), "TLS: phdr.p_memsz"));
+					Emu.SetTLSData(phdr.p_vaddr.addr(), phdr.p_filesz, phdr.p_memsz);
 					break;
 				}
 

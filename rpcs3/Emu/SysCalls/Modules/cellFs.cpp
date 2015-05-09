@@ -598,10 +598,10 @@ s32 cellFsStRead(u32 fd, vm::ptr<u8> buf, u64 size, vm::ptr<u64> rsize)
 	const u64 copied = file->st_copied.load();
 	const u32 position = vm::cast(file->st_buffer + copied % file->st_ringbuf_size);
 	const u64 total_read = file->st_total_read.load();
-	const u32 copy_size = vm::cast(*rsize = std::min<u64>(size, total_read - copied));
+	const u64 copy_size = (*rsize = std::min<u64>(size, total_read - copied)); // write rsize
 	
 	// copy data
-	const u32 first_size = std::min<u32>(copy_size, file->st_ringbuf_size - (position - file->st_buffer));
+	const u64 first_size = std::min<u64>(copy_size, file->st_ringbuf_size - (position - file->st_buffer));
 	memcpy(buf.get_ptr(), vm::get_ptr(position), first_size);
 	memcpy((buf + first_size).get_ptr(), vm::get_ptr(file->st_buffer), copy_size - first_size);
 
@@ -723,7 +723,7 @@ s32 cellFsStReadWaitCallback(u32 fd, u64 size, fs_st_cb_t func)
 		return CELL_FS_ENXIO;
 	}
 
-	if (!file->st_callback.compare_and_swap_test({}, { vm::cast(size, "size"), func }))
+	if (!file->st_callback.compare_and_swap_test({}, { size, func }))
 	{
 		return CELL_FS_EIO;
 	}
@@ -940,7 +940,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_t("FS AIO Read Thread", std::bind(fsAio, aio, false, xid, func)).detach();
+	thread_t("FS AIO Read Thread", [=]{ fsAio(aio, false, xid, func); }).detach();
 
 	return CELL_OK;
 }
@@ -958,7 +958,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	thread_t("FS AIO Write Thread", std::bind(fsAio, aio, true, xid, func)).detach();
+	thread_t("FS AIO Write Thread", [=]{ fsAio(aio, true, xid, func); }).detach();
 
 	return CELL_OK;
 }

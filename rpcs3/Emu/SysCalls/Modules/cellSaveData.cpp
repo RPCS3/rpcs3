@@ -19,51 +19,6 @@ SaveDataDialogInstance::SaveDataDialogInstance()
 {
 }
 
-// Auxiliary Classes
-class SortSaveDataEntry
-{
-	const u32 m_type;
-	const u32 m_order;
-
-public:
-	SortSaveDataEntry(u32 type, u32 order)
-		: m_type(type)
-		, m_order(order)
-	{
-	}
-
-	bool operator()(const SaveDataEntry& entry1, const SaveDataEntry& entry2) const
-	{
-		if (m_order == CELL_SAVEDATA_SORTORDER_DESCENT)
-		{
-			if (m_type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-			{
-				return entry1.mtime >= entry2.mtime;
-			}
-
-			if (m_type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-			{
-				return entry1.subtitle >= entry2.subtitle;
-			}
-		}
-
-		if (m_order == CELL_SAVEDATA_SORTORDER_ASCENT)
-		{
-			if (m_type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-			{
-				return entry1.mtime < entry2.mtime;
-			}
-
-			if (m_type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-			{
-				return entry1.subtitle < entry2.subtitle;
-			}
-		}
-
-		return true;
-	}
-};
-
 enum : u32
 {
 	SAVEDATA_OP_AUTO_SAVE = 0,
@@ -182,7 +137,37 @@ __noinline s32 savedata_op(
 		}
 
 		// Sort the entries
-		std::sort(save_entries.begin(), save_entries.end(), SortSaveDataEntry(setList->sortType, setList->sortOrder));
+		{
+			const u32 order = setList->sortOrder;
+			const u32 type = setList->sortType;
+
+			if (order > CELL_SAVEDATA_SORTORDER_ASCENT || type > CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+			{
+				// error
+			}
+
+			std::sort(save_entries.begin(), save_entries.end(), [=](const SaveDataEntry& entry1, const SaveDataEntry& entry2)
+			{
+				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+				{
+					return entry1.mtime >= entry2.mtime;
+				}
+				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				{
+					return entry1.subtitle >= entry2.subtitle;
+				}
+				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+				{
+					return entry1.mtime < entry2.mtime;
+				}
+				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				{
+					return entry1.subtitle < entry2.subtitle;
+				}
+
+				return true;
+			});
+		}
 
 		// Fill the listGet->dirList array
 		auto dir_list = listGet->dirList.get_ptr();
