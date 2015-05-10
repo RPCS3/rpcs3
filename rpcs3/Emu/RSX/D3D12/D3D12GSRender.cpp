@@ -39,8 +39,12 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
+	// Create a global command allocator
+	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
+
 	m_frame = GetGSFrame();
 
+	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};
 	swapChain.BufferCount = 2;
 	swapChain.Windowed = true;
@@ -52,11 +56,25 @@ D3D12GSRender::D3D12GSRender()
 	swapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
 	check(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
+	m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer[0]));
+	m_swapChain->GetBuffer(1, IID_PPV_ARGS(&m_backBuffer[1]));
+
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = 1;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	D3D12_RENDER_TARGET_VIEW_DESC rttDesc = {};
+	rttDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	rttDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[0]));
+	m_device->CreateRenderTargetView(m_backBuffer[0], &rttDesc, m_backbufferAsRendertarget[0]->GetCPUDescriptorHandleForHeapStart());
+	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[1]));
+	m_device->CreateRenderTargetView(m_backBuffer[1], &rttDesc, m_backbufferAsRendertarget[1]->GetCPUDescriptorHandleForHeapStart());
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
 	// NOTE: Should be released only if no command are in flight !
+	m_commandAllocator->Release();
 	m_commandQueueGraphic->Release();
 	m_commandQueueCopy->Release();
 	m_device->Release();
@@ -251,14 +269,71 @@ void D3D12GSRender::OnReset()
 
 void D3D12GSRender::ExecCMD(u32 cmd)
 {
+	assert(cmd == NV4097_CLEAR_SURFACE);
+	ID3D12GraphicsCommandList *commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+
+	D3D12_RESOURCE_BARRIER transition = {};
+	transition.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	transition.Transition.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+	commandList->ResourceBarrier(1, &transition);
+
+/*	if (m_set_color_mask)
+	{
+		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
+		checkForGlError("glColorMask");
+	}
+
+	if (m_set_scissor_horizontal && m_set_scissor_vertical)
+	{
+		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		checkForGlError("glScissor");
+	}
+
+	GLbitfield f = 0;*/
+
+	if (m_clear_surface_mask & 0x1)
+	{
+//		commandList->ClearDepthStencilView()
+//		glClearDepth(m_clear_surface_z / (float)0xffffff);
+	}
+
+/*	if (m_clear_surface_mask & 0x2)
+	{
+		glClearStencil(m_clear_surface_s);
+		checkForGlError("glClearStencil");
+
+		f |= GL_STENCIL_BUFFER_BIT;
+	}*/
+
+	if (m_clear_surface_mask & 0xF0)
+	{
+		float clearColor[] =
+		{
+			m_clear_surface_color_r / 255.0f,
+			m_clear_surface_color_g / 255.0f,
+			m_clear_surface_color_b / 255.0f,
+			m_clear_surface_color_a / 255.0f
+		};
+		commandList->ClearRenderTargetView(m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+	}
+
+	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+
+	commandList->ResourceBarrier(1, &transition);
+
+	check(commandList->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
 void D3D12GSRender::ExecCMD()
 {
-	ID3D12CommandAllocator *commandAllocator;
-	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator));
 	ID3D12CommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+//	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 
 
 	//return;
@@ -621,5 +696,15 @@ void D3D12GSRender::ExecCMD()
 void D3D12GSRender::Flip()
 {
 	check(m_swapChain->Present(1, 0));
+	// Wait execution is over
+	// TODO: It's suboptimal, we should use 2 command allocator
+	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+	HANDLE gfxqueuecompletion = CreateEvent(0, 0, 0, 0);
+	fence->SetEventOnCompletion(1, gfxqueuecompletion);
+	m_commandQueueGraphic->Signal(fence.Get(), 1);
+	WaitForSingleObject(gfxqueuecompletion, INFINITE);
+	CloseHandle(gfxqueuecompletion);
+	m_commandAllocator->Reset();
 }
 #endif

@@ -65,7 +65,11 @@ private:
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
+	ID3D12CommandAllocator *m_commandAllocator;
 	struct IDXGISwapChain3 *m_swapChain;
+	ID3D12Resource* m_backBuffer[2];
+
+	ID3D12DescriptorHeap *m_backbufferAsRendertarget[2];
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
 
