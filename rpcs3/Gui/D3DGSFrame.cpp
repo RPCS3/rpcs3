@@ -1,4 +1,5 @@
 #include "stdafx_gui.h"
+#if defined(DX12_SUPPORT)
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "D3DGSFrame.h"
@@ -98,3 +99,4 @@ HWND D3DGSFrame::getHandle() const
 {
 	return canvas->GetHandle();
 }
+#endif

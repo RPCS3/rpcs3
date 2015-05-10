@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#if defined(DX12_SUPPORT)
 #include "D3D12GSRender.h"
 #include <wrl/client.h>
 #include <dxgi1_4.h>
@@ -621,3 +622,4 @@ void D3D12GSRender::Flip()
 {
 	check(m_swapChain->Present(1, 0));
 }
+#endif

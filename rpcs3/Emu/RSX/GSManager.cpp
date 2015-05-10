@@ -37,7 +37,7 @@ void GSManager::Init()
 	default:
 	case 0: m_render = new NullGSRender(); break;
 	case 1: m_render = new GLGSRender(); break;
-#ifdef WIN32
+#if defined(DX12_SUPPORT)
 	case 2: m_render = new D3D12GSRender(); break;
 #endif
 	}

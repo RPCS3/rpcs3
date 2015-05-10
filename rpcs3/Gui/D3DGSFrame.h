@@ -1,4 +1,6 @@
 #pragma once
+
+#if defined(DX12_SUPPORT)
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #include "Gui/GSFrame.h"
 #include "wx/window.h"
@@ -30,3 +32,5 @@ struct D3DGSFrame : public GSFrame, public GSFrameBase2
 private:
 	virtual void OnSize(wxSizeEvent& event);
 };
+
+#endif

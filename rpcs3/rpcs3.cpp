@@ -138,10 +138,12 @@ bool Rpcs3App::OnInit()
 		return new GLGSFrame();
 	});
 
+#if defined(DX12_SUPPORT)
 	SetGetD3DGSFrameCallback([]() ->GSFrameBase2*
 	{
 		return new D3DGSFrame();
 	});
+#endif
 
 	g_msg_dialog.reset(new MsgDialogFrame);
 	g_savedata_dialog.reset(new SaveDataDialogFrame);

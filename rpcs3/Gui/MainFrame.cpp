@@ -474,7 +474,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
-#ifdef WIN32
+#if defined(DX12_SUPPORT)
 	cbox_gs_render->Append("D3D12");
 #endif
 
