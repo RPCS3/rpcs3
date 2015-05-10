@@ -11,10 +11,10 @@
 #include "Emu/RSX/GSRender.h"
 
 #include "D3D12RenderTargetSets.h"
+#include "D3D12PipelineState.h"
 
 #pragma comment (lib, "d3d12.lib")
 #pragma comment (lib, "dxgi.lib")
-#pragma comment (lib, "d3dcompiler.lib")
 
 class GSFrameBase2
 {
@@ -47,7 +47,7 @@ private:
 	//  std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
-	//  GLProgram m_program;
+	D3D12PipelineState *m_PSO;
 	int m_fp_buf_num;
 	int m_vp_buf_num;
 	//  GLProgramBuffer m_prog_buffer;
@@ -60,7 +60,6 @@ private:
 
 	//  GLvao m_vao;
 	//  GLvbo m_vbo;
-	//  GLrbo m_rbo;
 	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
@@ -86,6 +85,8 @@ public:
 
 private:
 	virtual void Close() override;
+
+	bool LoadProgram();
 	/*  void EnableVertexData(bool indexed_draw = false);
 		void DisableVertexData();
 		void InitVertexData();
@@ -93,7 +94,7 @@ private:
 
 		void Enable(bool enable, const u32 cap);
 
-		bool LoadProgram();
+
 		void WriteBuffers();
 		void WriteDepthBuffer();
 		void WriteColorBuffers();

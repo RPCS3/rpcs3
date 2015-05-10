@@ -18,7 +18,7 @@ static void check(HRESULT hr)
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_fbo(nullptr)
+	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
 {
 	// Enable d3d debug layer
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -132,7 +132,6 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 	m_inflightCommandList.push_back(commandList);
 
-
 /*	if (m_set_color_mask)
 	{
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
@@ -143,9 +142,7 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	{
 		glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		checkForGlError("glScissor");
-	}
-
-	GLbitfield f = 0;*/
+	}*/
 
 	// TODO: Merge depth and stencil clear when possible
 	if (m_clear_surface_mask & 0x1)
@@ -191,26 +188,36 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 			default:
 				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 		}
-
 	}
-
-//	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-//	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-//	commandList->ResourceBarrier(1, &transition);
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
+
+bool D3D12GSRender::LoadProgram()
+{
+	if (!m_cur_fragment_prog)
+	{
+		LOG_WARNING(RSX, "LoadProgram: m_cur_shader_prog == NULL");
+		return false;
+	}
+
+	m_cur_fragment_prog->ctrl = m_shader_ctrl;
+
+	if (!m_cur_vertex_prog)
+	{
+		LOG_WARNING(RSX, "LoadProgram: m_cur_vertex_prog == NULL");
+		return false;
+	}
+
+	m_PSO = new D3D12PipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
+	return true;
+}
+
 void D3D12GSRender::ExecCMD()
 {
-	ID3D12CommandList *commandList;
-//	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-
-
-	//return;
-/*  if (!LoadProgram())
+	if (!LoadProgram())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
@@ -219,7 +226,10 @@ void D3D12GSRender::ExecCMD()
 
 	InitDrawBuffers();
 
-	if (m_set_color_mask)
+	ID3D12CommandList *commandList;
+//	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+
+/*	if (m_set_color_mask)
 	{
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
 		checkForGlError("glColorMask");
@@ -261,11 +271,6 @@ void D3D12GSRender::ExecCMD()
 	Enable(m_set_restart_index, GL_PRIMITIVE_RESTART);
 	Enable(m_set_line_stipple, GL_LINE_STIPPLE);
 	Enable(m_set_polygon_stipple, GL_POLYGON_STIPPLE);
-
-	if (!is_intel_vendor)
-	{
-		Enable(m_set_depth_bounds_test, GL_DEPTH_BOUNDS_TEST_EXT);
-	}
 
 	if (m_set_clip_plane)
 	{
