@@ -26,6 +26,7 @@
 #include "Gui/SaveDataDialog.h"
 
 #include "Gui/GLGSFrame.h"
+#include "Gui/D3DGSFrame.h"
 #include <wx/stdpaths.h>
 
 #ifdef _WIN32
@@ -135,6 +136,11 @@ bool Rpcs3App::OnInit()
 	SetGetGSFrameCallback([]() -> GSFrameBase*
 	{
 		return new GLGSFrame();
+	});
+
+	SetGetD3DGSFrameCallback([]() ->GSFrameBase2*
+	{
+		return new D3DGSFrame();
 	});
 
 	g_msg_dialog.reset(new MsgDialogFrame);

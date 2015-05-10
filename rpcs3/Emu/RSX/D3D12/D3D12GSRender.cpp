@@ -3,6 +3,13 @@
 #include <wrl/client.h>
 #include <dxgi1_4.h>
 
+GetGSFrameCb2 GetGSFrame = nullptr;
+
+void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
+{
+	GetGSFrame = value;
+}
+
 static void check(HRESULT hr)
 {
 	if (hr != 0)
@@ -30,6 +37,9 @@ D3D12GSRender::D3D12GSRender()
 	graphicQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
+
+	GSFrameBase2 *tmp = GetGSFrame();
+	tmp->Show();
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -47,15 +57,15 @@ void D3D12GSRender::Close()
 
 void D3D12GSRender::InitDrawBuffers()
 {
-	//  if (!m_fbo.IsCreated() || RSXThread::m_width != last_width || RSXThread::m_height != last_height || last_depth_format != m_surface_depth_format)
+	if (!m_fbo.IsCreated() || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
 	{
-		/*
+		
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
-		last_width = RSXThread::m_width;
-		last_height = RSXThread::m_height;
-		last_depth_format = m_surface_depth_format;
+		m_lastWidth = RSXThread::m_width;
+		m_lastHeight = RSXThread::m_height;
+		m_lastDepth = m_surface_depth_format;
 
-		m_fbo.Create();
+/*		m_fbo.Create();
 		checkForGlError("m_fbo.Create");
 		m_fbo.Bind();
 

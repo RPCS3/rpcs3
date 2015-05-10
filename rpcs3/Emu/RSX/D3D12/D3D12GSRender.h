@@ -16,6 +16,28 @@
 #pragma comment (lib, "dxgi.lib")
 #pragma comment (lib, "d3dcompiler.lib")
 
+class GSFrameBase2
+{
+public:
+	GSFrameBase2() {}
+	GSFrameBase2(const GSFrameBase2&) = delete;
+	virtual void Close() = 0;
+
+	virtual bool IsShown() = 0;
+	virtual void Hide() = 0;
+	virtual void Show() = 0;
+
+	virtual void* GetNewContext() = 0;
+	virtual void SetCurrent(void* ctx) = 0;
+	virtual void DeleteContext(void* ctx) = 0;
+	virtual void Flip(void* ctx) = 0;
+
+};
+
+typedef GSFrameBase2*(*GetGSFrameCb2)();
+
+void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
+
 
 class D3D12GSRender //TODO: find out why this used to inherit from wxWindow
 	: //public wxWindow
@@ -43,6 +65,8 @@ private:
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
+
+	size_t m_lastWidth, m_lastHeight, m_lastDepth;
 
 	void* m_context;
 
