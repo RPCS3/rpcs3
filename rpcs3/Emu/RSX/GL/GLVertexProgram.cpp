@@ -297,13 +297,13 @@ namespace gl
 				case RSX_VEC_OPCODE_ARL: op(instr("ARL"), arg_dst(), arg(src[0])); break;
 				case RSX_VEC_OPCODE_FRC: op(instr("FRC"), arg_dst(), arg(src[0])); break;
 				case RSX_VEC_OPCODE_FLR: op(instr("FLR"), arg_dst(), arg(src[0])); break;
-				case RSX_VEC_OPCODE_SEQ: op(instr("SEQ"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SEQ: op(instr("SEQ"), arg_dst(), arg(src[0]), arg(src[1])); break;
 				case RSX_VEC_OPCODE_SFL: op(instr("SFL"), arg_dst(), arg(src[0])); break;
-				case RSX_VEC_OPCODE_SGT: op(instr("SGT"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SGT: op(instr("SGT"), arg_dst(), arg(src[0]), arg(src[1])); break;
 				case RSX_VEC_OPCODE_SLE: op(instr("SLE"), arg_dst(), arg(src[0]), arg(src[1])); break;
 				case RSX_VEC_OPCODE_SNE: op(instr("SNE"), arg_dst(), arg(src[0]), arg(src[1])); break;
-				case RSX_VEC_OPCODE_STR: op(instr("STR"), arg_dst(), arg(src[0]), arg(src[1])); break;
-				case RSX_VEC_OPCODE_SSG: op(instr("SSG"), arg_dst(), arg(src[0]), arg(src[1])); break;
+				case RSX_VEC_OPCODE_STR: op(instr("STR"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_SSG: op(instr("SSG"), arg_dst(), arg(src[0])); break;
 				case RSX_VEC_OPCODE_TXL: op(instr("TXL"), arg_dst(), texture(), arg(src[0]), predeclared_variable("2D")); break;
 
 				default:
