@@ -61,7 +61,7 @@ private:
 	//  GLvao m_vao;
 	//  GLvbo m_vbo;
 	//  GLrbo m_rbo;
-	D3D12RenderTargetSets m_fbo;
+	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;

@@ -18,7 +18,7 @@ static void check(HRESULT hr)
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender()
+	: GSRender(), m_fbo(nullptr)
 {
 	// Enable d3d debug layer
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -93,7 +93,7 @@ void D3D12GSRender::Close()
 
 void D3D12GSRender::InitDrawBuffers()
 {
-	if (!m_fbo.IsCreated() || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
+	if (m_fbo == nullptr || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
 	{
 		
 		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
@@ -101,158 +101,8 @@ void D3D12GSRender::InitDrawBuffers()
 		m_lastHeight = RSXThread::m_height;
 		m_lastDepth = m_surface_depth_format;
 
-/*		m_fbo.Create();
-		checkForGlError("m_fbo.Create");
-		m_fbo.Bind();
-
-		m_rbo.Create(4 + 1);
-		checkForGlError("m_rbo.Create");
-
-		for (int i = 0; i < 4; ++i)
-		{
-			m_rbo.Bind(i);
-			m_rbo.Storage(GL_RGBA, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_RGBA)");
-		}
-
-		m_rbo.Bind(4);
-
-		switch (m_surface_depth_format)
-		{
-		case 0:
-		{
-			// case 0 found in BLJM60410-[Suzukaze no Melt - Days in the Sanctuary]
-			// [E : RSXThread]: Bad depth format! (0)
-			// [E : RSXThread]: glEnable: opengl error 0x0506
-			// [E : RSXThread]: glDrawArrays: opengl error 0x0506
-			m_rbo.Storage(GL_DEPTH_COMPONENT, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT)");
-			break;
-		}
-
-		case CELL_GCM_SURFACE_Z16:
-		{
-			m_rbo.Storage(GL_DEPTH_COMPONENT16, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH_COMPONENT16)");
-
-			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-			break;
-		}
-
-
-		case CELL_GCM_SURFACE_Z24S8:
-		{
-			m_rbo.Storage(GL_DEPTH24_STENCIL8, RSXThread::m_width, RSXThread::m_height);
-			checkForGlError("m_rbo.Storage(GL_DEPTH24_STENCIL8)");
-
-			m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-			m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
-			checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
-
-			break;
-
-		}
-
-
-		default:
-		{
-			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
-			assert(0);
-			break;
-		}
-		}
-
-		for (int i = 0; i < 4; ++i)
-		{
-			m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0 + i, m_rbo.GetId(i));
-			checkForGlError(fmt::Format("m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT%d)", i));
-		}
-		*/
-		//m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT, m_rbo.GetId(4));
-		//checkForGlError("m_fbo.Renderbuffer(GL_DEPTH_ATTACHMENT)");
-
-		//if (m_surface_depth_format == 2)
-		//{
-		//	m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT, m_rbo.GetId(4));
-		//	checkForGlError("m_fbo.Renderbuffer(GL_STENCIL_ATTACHMENT)");
-		//}
+		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight);
 	}
-	/*
-	if (!m_set_surface_clip_horizontal)
-	{
-		m_surface_clip_x = 0;
-		m_surface_clip_w = RSXThread::m_width;
-	}
-
-	if (!m_set_surface_clip_vertical)
-	{
-		m_surface_clip_y = 0;
-		m_surface_clip_h = RSXThread::m_height;
-	}
-
-	m_fbo.Bind();
-
-	static const GLenum draw_buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-
-	switch (m_surface_color_target)
-	{
-	case CELL_GCM_SURFACE_TARGET_NONE: break;
-
-	case CELL_GCM_SURFACE_TARGET_0:
-	{
-		glDrawBuffer(draw_buffers[0]);
-		checkForGlError("glDrawBuffer(0)");
-		break;
-	}
-
-	case CELL_GCM_SURFACE_TARGET_1:
-	{
-		glDrawBuffer(draw_buffers[1]);
-		checkForGlError("glDrawBuffer(1)");
-		break;
-	}
-
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-	{
-		glDrawBuffers(2, draw_buffers);
-		checkForGlError("glDrawBuffers(2)");
-		break;
-	}
-
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-	{
-		glDrawBuffers(3, draw_buffers);
-		checkForGlError("glDrawBuffers(3)");
-		break;
-	}
-
-	case CELL_GCM_SURFACE_TARGET_MRT3:
-	{
-		glDrawBuffers(4, draw_buffers);
-		checkForGlError("glDrawBuffers(4)");
-		break;
-	}
-
-	default:
-	{
-		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
-		break;
-	}
-
-	}
-
-	if (m_read_buffer)
-	{
-		u32 format = GL_BGRA;
-		CellGcmDisplayInfo* buffers = vm::get_ptr<CellGcmDisplayInfo>(m_gcm_buffers_addr);
-		u32 addr = GetAddress(buffers[m_gcm_current_buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 width = buffers[m_gcm_current_buffer].width;
-		u32 height = buffers[m_gcm_current_buffer].height;
-		glDrawPixels(width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, vm::get_ptr(addr));
-	}*/
 }
 
 void D3D12GSRender::OnInit()
@@ -275,17 +125,13 @@ void D3D12GSRender::OnReset()
 void D3D12GSRender::ExecCMD(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
+
+	InitDrawBuffers();
+
 	ID3D12GraphicsCommandList *commandList;
 	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 	m_inflightCommandList.push_back(commandList);
 
-	D3D12_RESOURCE_BARRIER transition = {};
-	transition.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	transition.Transition.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
-	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-	commandList->ResourceBarrier(1, &transition);
 
 /*	if (m_set_color_mask)
 	{
@@ -301,19 +147,12 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 
 	GLbitfield f = 0;*/
 
+	// TODO: Merge depth and stencil clear when possible
 	if (m_clear_surface_mask & 0x1)
-	{
-//		commandList->ClearDepthStencilView()
-//		glClearDepth(m_clear_surface_z / (float)0xffffff);
-	}
+		commandList->ClearDepthStencilView(m_fbo->getDSVCPUHandle(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)0xffffff, 0, 0, nullptr);
 
-/*	if (m_clear_surface_mask & 0x2)
-	{
-		glClearStencil(m_clear_surface_s);
-		checkForGlError("glClearStencil");
-
-		f |= GL_STENCIL_BUFFER_BIT;
-	}*/
+	if (m_clear_surface_mask & 0x2)
+		commandList->ClearDepthStencilView(m_fbo->getDSVCPUHandle(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
 
 	if (m_clear_surface_mask & 0xF0)
 	{
@@ -324,13 +163,41 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 			m_clear_surface_color_b / 255.0f,
 			m_clear_surface_color_a / 255.0f
 		};
-		commandList->ClearRenderTargetView(m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart(), clearColor, 0, nullptr);
+		switch (m_surface_color_target)
+		{
+			case CELL_GCM_SURFACE_TARGET_NONE: break;
+
+			case CELL_GCM_SURFACE_TARGET_0:
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
+				break;
+			case CELL_GCM_SURFACE_TARGET_1:
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				break;
+			case CELL_GCM_SURFACE_TARGET_MRT1:
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				break;
+			case CELL_GCM_SURFACE_TARGET_MRT2:
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(2), clearColor, 0, nullptr);
+				break;
+			case CELL_GCM_SURFACE_TARGET_MRT3:
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(2), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(3), clearColor, 0, nullptr);
+				break;
+			default:
+				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+		}
+
 	}
 
-	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+//	transition.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+//	transition.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
-	commandList->ResourceBarrier(1, &transition);
+//	commandList->ResourceBarrier(1, &transition);
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
@@ -701,6 +568,47 @@ void D3D12GSRender::ExecCMD()
 
 void D3D12GSRender::Flip()
 {
+	ID3D12GraphicsCommandList *commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	m_inflightCommandList.push_back(commandList);
+
+	switch (m_surface_color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_0:
+	case CELL_GCM_SURFACE_TARGET_1:
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+	{
+		D3D12_RESOURCE_BARRIER barriers[2] = {};
+		barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barriers[0].Transition.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+
+		barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barriers[1].Transition.pResource = m_fbo->getRenderTargetTexture(0);
+		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+		commandList->ResourceBarrier(2, barriers);
+		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
+		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		src.SubresourceIndex = 0, dst.SubresourceIndex = 0;
+		src.pResource = m_fbo->getRenderTargetTexture(0), dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
+		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
+
+		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+		commandList->ResourceBarrier(2, barriers);
+		commandList->Close();
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
+	}
+	}
+
 	check(m_swapChain->Present(1, 0));
 	// Wait execution is over
 	// TODO: It's suboptimal, we should use 2 command allocator
