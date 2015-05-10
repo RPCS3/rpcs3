@@ -38,8 +38,19 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
-	GSFrameBase2 *tmp = GetGSFrame();
-	tmp->Show();
+	m_frame = GetGSFrame();
+
+	DXGI_SWAP_CHAIN_DESC swapChain = {};
+	swapChain.BufferCount = 2;
+	swapChain.Windowed = true;
+	swapChain.OutputWindow = m_frame->getHandle();
+	swapChain.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swapChain.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChain.SampleDesc.Count = 1;
+	swapChain.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	swapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+
+	check(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -48,12 +59,13 @@ D3D12GSRender::~D3D12GSRender()
 	m_commandQueueGraphic->Release();
 	m_commandQueueCopy->Release();
 	m_device->Release();
+	m_swapChain->Release();
 }
 
 void D3D12GSRender::Close()
 {
+	m_frame->Hide();
 }
-
 
 void D3D12GSRender::InitDrawBuffers()
 {
@@ -221,6 +233,7 @@ void D3D12GSRender::InitDrawBuffers()
 
 void D3D12GSRender::OnInit()
 {
+	m_frame->Show();
 }
 
 void D3D12GSRender::OnInitThread()
@@ -606,4 +619,5 @@ void D3D12GSRender::ExecCMD()
 
 void D3D12GSRender::Flip()
 {
+	check(m_swapChain->Present(1, 0));
 }

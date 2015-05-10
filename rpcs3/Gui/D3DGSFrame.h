@@ -24,7 +24,8 @@ struct D3DGSFrame : public GSFrame, public GSFrameBase2
 
 	wxWindow* GetCanvas() const { return canvas; }
 
-	virtual void SetViewport(int x, int y, u32 w, u32 h);
+	virtual void SetViewport(int x, int y, u32 w, u32 h) override;
+	virtual HWND getHandle() const override;
 
 private:
 	virtual void OnSize(wxSizeEvent& event);

@@ -31,7 +31,7 @@ public:
 	virtual void SetCurrent(void* ctx) = 0;
 	virtual void DeleteContext(void* ctx) = 0;
 	virtual void Flip(void* ctx) = 0;
-
+	virtual HWND getHandle() const = 0;
 };
 
 typedef GSFrameBase2*(*GetGSFrameCb2)();
@@ -65,13 +65,14 @@ private:
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
+	struct IDXGISwapChain3 *m_swapChain;
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
 
 	void* m_context;
 
 public:
-	//  GSFrameBase* m_frame;
+	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 

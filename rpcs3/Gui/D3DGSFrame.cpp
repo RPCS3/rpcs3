@@ -93,3 +93,8 @@ void D3DGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 	glViewport(vx + x, vy + y, viewport.GetWidth(), viewport.GetHeight());
 	*/
 }
+
+HWND D3DGSFrame::getHandle() const
+{
+	return canvas->GetHandle();
+}
