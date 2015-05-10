@@ -276,7 +276,8 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+	m_inflightCommandList.push_back(commandList);
 
 	D3D12_RESOURCE_BARRIER transition = {};
 	transition.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -711,5 +712,8 @@ void D3D12GSRender::Flip()
 	WaitForSingleObject(gfxqueuecompletion, INFINITE);
 	CloseHandle(gfxqueuecompletion);
 	m_commandAllocator->Reset();
+	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
+		gfxCommandList->Release();
+	m_inflightCommandList.clear();
 }
 #endif

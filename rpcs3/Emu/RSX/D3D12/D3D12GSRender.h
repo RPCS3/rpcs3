@@ -66,6 +66,7 @@ private:
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
 	ID3D12CommandAllocator *m_commandAllocator;
+	std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 	struct IDXGISwapChain3 *m_swapChain;
 	ID3D12Resource* m_backBuffer[2];
 
