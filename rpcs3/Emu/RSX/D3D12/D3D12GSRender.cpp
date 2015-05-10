@@ -77,12 +77,17 @@ D3D12GSRender::~D3D12GSRender()
 	m_commandAllocator->Release();
 	m_commandQueueGraphic->Release();
 	m_commandQueueCopy->Release();
-	m_device->Release();
+	m_backbufferAsRendertarget[0]->Release();
+	m_backbufferAsRendertarget[1]->Release();
+	m_backBuffer[0]->Release();
+	m_backBuffer[1]->Release();
 	m_swapChain->Release();
+	m_device->Release();
 }
 
 void D3D12GSRender::Close()
 {
+	Stop();
 	m_frame->Hide();
 }
 
