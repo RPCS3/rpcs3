@@ -1650,7 +1650,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		break;
 	}
 
-	case NV4097_SET_FOG_PARAMS:
+	case_range(2, NV4097_SET_FOG_PARAMS, 4);
 	{
 		m_set_fog_params = true;
 		m_fog_param0 = (float&)value;
