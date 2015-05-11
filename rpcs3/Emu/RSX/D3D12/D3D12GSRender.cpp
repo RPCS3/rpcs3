@@ -211,7 +211,7 @@ bool D3D12GSRender::LoadProgram()
 		return false;
 	}
 
-	m_PSO = new D3D12PipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
+	m_PSO = getGraphicPipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
 	return true;
 }
 
@@ -226,7 +226,7 @@ void D3D12GSRender::ExecCMD()
 
 	InitDrawBuffers();
 
-	ID3D12CommandList *commandList;
+//	ID3D12CommandList *commandList;
 //	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 
 /*	if (m_set_color_mask)

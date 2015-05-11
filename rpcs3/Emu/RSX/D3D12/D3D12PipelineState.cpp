@@ -41,6 +41,7 @@ public:
 	Shader() : bytecode(nullptr) {}
 	~Shader() {}
 
+	u32 Id;
 	Microsoft::WRL::ComPtr<ID3DBlob> bytecode;
 	std::vector<u8> RSXBinary;
 
@@ -198,12 +199,20 @@ struct FragmentProgramCompare
 
 typedef std::unordered_map<void *, Shader, HashVertexProgram, VertexProgramCompare> binary2VS;
 typedef std::unordered_map<void *, Shader, HashFragmentProgram, FragmentProgramCompare> binary2FS;
-static int tmp = 0;
+
 class ProgramBuffer
 {
 public:
 	binary2VS cacheVS;
 	binary2FS cacheFS;
+
+	// Key is vertex << 32 | fragment ids
+	std::unordered_map<u64, ID3D12PipelineState *> cachePSO;
+
+	size_t currentShaderId;
+
+	ProgramBuffer() : currentShaderId(0)
+	{}
 
 	bool SearchFp(const RSXFragmentProgram& rsx_fp, Shader& shader)
 	{
@@ -227,78 +236,45 @@ public:
 		return false;
 	}
 
-/*	ID3D12PipelineState *GetProg(u32 fp, u32 vp) const
+	ID3D12PipelineState *GetProg(u32 fp, u32 vp) const
 	{
-		if (fp == vp)
-		{*/
-			/*
-			LOG_NOTICE(RSX, "Get program (%d):", fp);
-			LOG_NOTICE(RSX, "*** prog id = %d", m_buf[fp].prog_id);
-			LOG_NOTICE(RSX, "*** vp id = %d", m_buf[fp].vp_id);
-			LOG_NOTICE(RSX, "*** fp id = %d", m_buf[fp].fp_id);
+		u64 key = vp << 32 | fp;
+		std::unordered_map<u64, ID3D12PipelineState *>::const_iterator It = cachePSO.find(key);
+		if (It == cachePSO.end())
+			return nullptr;
+		return It->second;
+	}
 
-			LOG_NOTICE(RSX, "*** vp shader = \n%s", m_buf[fp].vp_shader.wx_str());
-			LOG_NOTICE(RSX, "*** fp shader = \n%s", m_buf[fp].fp_shader.wx_str());
-			*/
-/*			return m_buf[fp].prog_id;
-		}
-
-		for (u32 i = 0; i<m_buf.size(); ++i)
-		{
-			if (i == fp || i == vp) continue;*/
-
-//			if (CmpVP(vp, i) && CmpFP(fp, i))
-//			{
-				/*
-				LOG_NOTICE(RSX, "Get program (%d):", i);
-				LOG_NOTICE(RSX, "*** prog id = %d", m_buf[i].prog_id);
-				LOG_NOTICE(RSX, "*** vp id = %d", m_buf[i].vp_id);
-				LOG_NOTICE(RSX, "*** fp id = %d", m_buf[i].fp_id);
-
-				LOG_NOTICE(RSX, "*** vp shader = \n%s", m_buf[i].vp_shader.wx_str());
-				LOG_NOTICE(RSX, "*** fp shader = \n%s", m_buf[i].fp_shader.wx_str());
-				*/
-/*				return m_buf[i].prog_id;
-			}
-		}
-
-		return 0;
-	}*/
-
-	void AddVertexProgram(const Shader& vp, RSXVertexProgram& rsx_vp)
+	void AddVertexProgram(Shader& vp, RSXVertexProgram& rsx_vp)
 	{
 		size_t actualVPSize = rsx_vp.data.size() * 4;
 		void *fpShadowCopy = malloc(actualVPSize);
 		memcpy(fpShadowCopy, rsx_vp.data.data(), actualVPSize);
+		vp.Id = currentShaderId++;
 		cacheVS.insert(std::make_pair(fpShadowCopy, vp));
 	}
 
-	void AddFragmentProgram(const Shader& fp, RSXFragmentProgram& rsx_fp)
+	void AddFragmentProgram(Shader& fp, RSXFragmentProgram& rsx_fp)
 	{
 		size_t actualFPSize = getFPBinarySize(vm::get_ptr<u8>(rsx_fp.addr));
 		void *fpShadowCopy = malloc(actualFPSize);
 		memcpy(fpShadowCopy, vm::get_ptr<u8>(rsx_fp.addr), actualFPSize);
+		fp.Id = currentShaderId++;
 		cacheFS.insert(std::make_pair(fpShadowCopy, fp));
 	}
 
-	void Add(ID3D12PipelineState *prog, Shader& fp, RSXFragmentProgram& rsx_fp, Shader& vp, RSXVertexProgram& rsx_vp)
+	void Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp)
 	{
-/*		LOG_NOTICE(RSX, "Add program (%d):", m_buf.size());
-		LOG_NOTICE(RSX, "*** prog id = %x", prog);
-		LOG_NOTICE(RSX, "*** vp id = %d", vp.id);
-		LOG_NOTICE(RSX, "*** fp id = %d", fp.id);
-		LOG_NOTICE(RSX, "*** vp data size = %d", rsx_vp.data.size() * 4);
-		LOG_NOTICE(RSX, "*** fp data size = %d", rsx_fp.size);
-
-		LOG_NOTICE(RSX, "*** vp shader = \n%s", vp.shader.c_str());
-		LOG_NOTICE(RSX, "*** fp shader = \n%s", fp.shader.c_str());*/
+		u64 key = vp.Id << 32 | fp.Id;
+		cachePSO.insert(std::make_pair(key, prog));
 	}
 };
 
 static ProgramBuffer g_cachedProgram;
 
-D3D12PipelineState::D3D12PipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader)
+ID3D12PipelineState *getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader)
 {
+	ID3D12PipelineState *result = nullptr;
 	Shader m_vertex_prog, m_fragment_prog;
 	bool m_fp_buf_num = g_cachedProgram.SearchFp(*fragmentShader, m_fragment_prog);
 	bool m_vp_buf_num = g_cachedProgram.SearchVp(*vertexShader, m_vertex_prog);
@@ -325,13 +301,12 @@ D3D12PipelineState::D3D12PipelineState(ID3D12Device *device, RSXVertexProgram *v
 //		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
 	}
 
-//	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)
-	{
-//		m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
-	}
+	if (m_fp_buf_num && m_vp_buf_num)
+		result = g_cachedProgram.GetProg(m_fragment_prog.Id, m_vertex_prog.Id);
 
-	if (false)//m_program.id)
+	if (result != nullptr)
 	{
+		return result;
 /*		// RSX Debugger: Check if this program was modified and update it
 		if (Ini.GSLogPrograms.GetValue())
 		{
@@ -364,22 +339,21 @@ D3D12PipelineState::D3D12PipelineState(ID3D12Device *device, RSXVertexProgram *v
 	}
 	else
 	{
+		LOG_WARNING(RSX, "Add program :");
+		LOG_WARNING(RSX, "*** vp id = %d", m_vertex_prog.Id);
+		LOG_WARNING(RSX, "*** fp id = %d", m_fragment_prog.Id);
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
-/*		graphicPipelineStateDesc.VS.BytecodeLength = m_vertex_prog.bytecode->GetBufferSize();
+		graphicPipelineStateDesc.VS.BytecodeLength = m_vertex_prog.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.VS.pShaderBytecode = m_vertex_prog.bytecode->GetBufferPointer();
 		graphicPipelineStateDesc.PS.BytecodeLength = m_fragment_prog.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = m_fragment_prog.bytecode->GetBufferPointer();
-		device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&m_pipelineStateObject));*/
-		g_cachedProgram.Add(m_pipelineStateObject, m_fragment_prog, *fragmentShader, m_vertex_prog, *vertexShader);
-		/*m_program.Create(m_vertex_prog.id, m_fragment_prog.id);
-		checkForGlError("m_program.Create");
-		m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
-		checkForGlError("m_prog_buffer.Add");
-		m_program.Use();
+		device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result));
+		g_cachedProgram.Add(result, m_fragment_prog, m_vertex_prog);
 
 		// RSX Debugger
-		if (Ini.GSLogPrograms.GetValue())
+		/*if (Ini.GSLogPrograms.GetValue())
 		{
 			RSXDebuggerProgram program;
 			program.id = m_program.id;
@@ -390,11 +364,6 @@ D3D12PipelineState::D3D12PipelineState(ID3D12Device *device, RSXVertexProgram *v
 			m_debug_programs.push_back(program);
 		}*/
 	}
-}
-
-D3D12PipelineState::~D3D12PipelineState()
-{
-
 }
 
 
