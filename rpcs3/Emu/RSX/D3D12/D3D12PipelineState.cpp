@@ -162,6 +162,50 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 		graphicPipelineStateDesc.VS.pShaderBytecode = m_vertex_prog.bytecode->GetBufferPointer();
 		graphicPipelineStateDesc.PS.BytecodeLength = m_fragment_prog.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = m_fragment_prog.bytecode->GetBufferPointer();
+
+		// Sensible default value
+		static D3D12_RASTERIZER_DESC CD3D12_RASTERIZER_DESC =
+		{
+			D3D12_FILL_MODE_SOLID,
+			D3D12_CULL_MODE_BACK,
+			FALSE,
+			D3D12_DEFAULT_DEPTH_BIAS,
+			D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+			D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+			TRUE,
+			FALSE,
+			FALSE,
+			0,
+			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
+		};
+
+		static D3D12_DEPTH_STENCIL_DESC CD3D12_DEPTH_STENCIL_DESC =
+		{
+			TRUE,
+			D3D12_DEPTH_WRITE_MASK_ALL,
+			D3D12_COMPARISON_FUNC_LESS_EQUAL,
+			FALSE,
+			D3D12_DEFAULT_STENCIL_READ_MASK,
+			D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		};
+
+		static D3D12_BLEND_DESC CD3D12_BLEND_DESC =
+		{
+			FALSE,
+			FALSE,
+			{
+				FALSE,FALSE,
+				D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+			D3D12_LOGIC_OP_NOOP,
+			D3D12_COLOR_WRITE_ENABLE_ALL,
+			}
+		};
+
+		graphicPipelineStateDesc.BlendState = CD3D12_BLEND_DESC;
+		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
+		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
+
 		device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result));
 		Add(result, m_fragment_prog, m_vertex_prog);
 
