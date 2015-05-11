@@ -194,6 +194,267 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
+// Where are these type defined ???
+static
+DXGI_FORMAT getFormat(u8 type, u8 size)
+{
+	/*static const u32 gl_types[] =
+	{
+		GL_SHORT,
+		GL_FLOAT,
+		GL_HALF_FLOAT,
+		GL_UNSIGNED_BYTE,
+		GL_SHORT,
+		GL_FLOAT, // Needs conversion
+		GL_UNSIGNED_BYTE,
+	};
+
+	static const bool gl_normalized[] =
+	{
+		GL_TRUE,
+		GL_FALSE,
+		GL_FALSE,
+		GL_TRUE,
+		GL_FALSE,
+		GL_TRUE,
+		GL_FALSE,
+	};*/
+	static const DXGI_FORMAT typeX1[] =
+	{
+		DXGI_FORMAT_R16_SNORM,
+		DXGI_FORMAT_R32_FLOAT,
+		DXGI_FORMAT_R16_FLOAT,
+		DXGI_FORMAT_R8_UNORM,
+		DXGI_FORMAT_R16_SINT,
+		DXGI_FORMAT_R32_FLOAT,
+		DXGI_FORMAT_R8_UINT
+	};
+	static const DXGI_FORMAT typeX2[] =
+	{
+		DXGI_FORMAT_R16G16_SNORM,
+		DXGI_FORMAT_R32G32_FLOAT,
+		DXGI_FORMAT_R16G16_FLOAT,
+		DXGI_FORMAT_R8G8_UNORM,
+		DXGI_FORMAT_R16G16_SINT,
+		DXGI_FORMAT_R32G32_FLOAT,
+		DXGI_FORMAT_R8G8_UINT
+	};
+	static const DXGI_FORMAT typeX3[] =
+	{
+		DXGI_FORMAT_R16G16B16A16_SNORM,
+		DXGI_FORMAT_R32G32B32_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		DXGI_FORMAT_R16G16B16A16_SINT,
+		DXGI_FORMAT_R32G32B32_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UINT
+	};
+	static const DXGI_FORMAT typeX4[] =
+	{
+		DXGI_FORMAT_R16G16B16A16_SNORM,
+		DXGI_FORMAT_R32G32B32A32_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		DXGI_FORMAT_R16G16B16A16_SINT,
+		DXGI_FORMAT_R32G32B32A32_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UINT
+	};
+
+	switch (size)
+	{
+	case 1:
+		return typeX1[type];
+	case 2:
+		return typeX2[type];
+	case 3:
+		return typeX3[type];
+	case 4:
+		return typeX4[type];
+	}
+}
+
+void D3D12GSRender::EnableVertexData(bool indexed_draw)
+{
+	static u32 offset_list[m_vertex_count];
+	u32 cur_offset = 0;
+
+	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
+
+	for (u32 i = 0; i < m_vertex_count; ++i)
+	{
+		offset_list[i] = cur_offset;
+
+		if (!m_vertex_data[i].IsEnabled()) continue;
+		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
+		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
+		const u32 pos = m_vdata.size();
+
+		cur_offset += data_size;
+		m_vdata.resize(m_vdata.size() + data_size);
+		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
+	}
+
+/*	m_vao.Create();
+	m_vao.Bind();
+	checkForGlError("initializing vao");
+
+	m_vbo.Create(indexed_draw ? 2 : 1);
+	m_vbo.Bind(0);
+	m_vbo.SetData(m_vdata.data(), m_vdata.size());*/
+
+	if (indexed_draw)
+	{
+		// TODO: Use default heap and upload data
+		D3D12_HEAP_PROPERTIES heapProp = {};
+		heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+		D3D12_RESOURCE_DESC resDesc = {};
+		resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resDesc.Width = (UINT)m_indexed_array.m_data.size();
+		resDesc.Height = 1;
+		resDesc.DepthOrArraySize = 1;
+		resDesc.SampleDesc.Count = 1;
+		check(m_device->CreateCommittedResource(
+			&heapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_indexBuffer)
+			));
+		void *indexBufferMap;
+		check(m_indexBuffer->Map(0, nullptr, (void**)indexBufferMap));
+		memcpy(indexBufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
+		m_indexBuffer->Unmap(0, nullptr);
+
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
+		indexBufferView.SizeInBytes = (UINT)m_indexed_array.m_data.size();
+		indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+	}
+
+#if	DUMP_VERTEX_DATA
+	rFile dump("VertexDataArray.dump", rFile::write);
+#endif
+
+	m_IASet.clear();
+
+	for (u32 i = 0; i < m_vertex_count; ++i)
+	{
+		if (!m_vertex_data[i].IsEnabled()) continue;
+
+#if	DUMP_VERTEX_DATA
+		dump.Write(wxString::Format("VertexData[%d]:\n", i));
+		switch (m_vertex_data[i].type)
+		{
+		case CELL_GCM_VERTEX_S1:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
+			{
+				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_F:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 4)
+			{
+				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
+				if (!(((j + 4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_SF:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
+			{
+				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_UB:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
+			{
+				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
+				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_S32K:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
+			{
+				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
+				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+			// case CELL_GCM_VERTEX_CMP:
+
+		case CELL_GCM_VERTEX_UB256:
+			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
+			{
+				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
+				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
+			}
+			break;
+
+		default:
+			LOG_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
+			return;
+		}
+
+		dump.Write("\n");
+#endif
+
+		if (m_vertex_data[i].type < 1 || m_vertex_data[i].type > 7)
+		{
+			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", m_vertex_data[i].type);
+		}
+
+		D3D12_INPUT_ELEMENT_DESC IAElement = {};
+/*		if (!m_vertex_data[i].addr)
+		{
+			switch (m_vertex_data[i].type)
+			{
+			case CELL_GCM_VERTEX_S32K:
+			case CELL_GCM_VERTEX_S1:
+				switch (m_vertex_data[i].size)
+				{
+				case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
+				}
+				break;
+
+			case CELL_GCM_VERTEX_F:
+				switch (m_vertex_data[i].size)
+				{
+				case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
+				case 2: glVertexAttrib2fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
+				}
+				break;
+
+			case CELL_GCM_VERTEX_CMP:
+			case CELL_GCM_VERTEX_UB:
+				glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
+				break;
+			}
+
+			checkForGlError("glVertexAttrib");
+		}
+		else*/
+		{
+			IAElement.SemanticName = "TEXCOORD";
+			IAElement.SemanticIndex = i;
+			IAElement.Format = getFormat(m_vertex_data[i].type - 1, m_vertex_data[i].size);
+
+			IAElement.AlignedByteOffset = offset_list[i];
+		}
+		m_IASet.push_back(IAElement);
+	}
+}
+
 
 bool D3D12GSRender::LoadProgram()
 {
@@ -211,12 +472,25 @@ bool D3D12GSRender::LoadProgram()
 		return false;
 	}
 
-	m_PSO = cachePSO.getGraphicPipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog, m_IASet);
 	return true;
 }
 
 void D3D12GSRender::ExecCMD()
 {
+	if (m_indexed_array.m_count)
+	{
+		//		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
+	}
+
+	if (m_indexed_array.m_count || m_draw_array_count)
+	{
+		EnableVertexData(m_indexed_array.m_count ? true : false);
+
+		//		InitVertexData();
+		//		InitFragmentData();
+	}
+
 	if (!LoadProgram())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
@@ -520,24 +794,9 @@ void D3D12GSRender::ExecCMD()
 		m_program.SetVTex(i);
 		m_gl_vertex_textures[i].Init(m_vertex_textures[i]);
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
-	}
+	}*/
 
-	m_vao.Bind();
-
-	if (m_indexed_array.m_count)
-	{
-		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
-	}
-
-	if (m_indexed_array.m_count || m_draw_array_count)
-	{
-		EnableVertexData(m_indexed_array.m_count ? true : false);
-
-		InitVertexData();
-		InitFragmentData();
-	}
-
-	if (m_indexed_array.m_count)
+/*	if (m_indexed_array.m_count)
 	{
 		switch (m_indexed_array.m_type)
 		{

@@ -12,6 +12,7 @@
 
 #include "D3D12RenderTargetSets.h"
 #include "D3D12PipelineState.h"
+#include "D3D12Buffer.h"
 
 #pragma comment (lib, "d3d12.lib")
 #pragma comment (lib, "dxgi.lib")
@@ -39,18 +40,14 @@ typedef GSFrameBase2*(*GetGSFrameCb2)();
 void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
 
 
-class D3D12GSRender //TODO: find out why this used to inherit from wxWindow
-	: //public wxWindow
-	/*,*/ public GSRender
+class D3D12GSRender : public GSRender
 {
 private:
-	//  std::vector<u8> m_vdata;
+	std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
-	PipelineStateObjectCache cachePSO;
+	PipelineStateObjectCache m_cachePSO;
 	ID3D12PipelineState *m_PSO;
-	int m_fp_buf_num;
-	int m_vp_buf_num;
 	//  GLProgramBuffer m_prog_buffer;
 
 	//  GLFragmentProgram m_fragment_prog;
@@ -59,6 +56,8 @@ private:
 	//  GLTexture m_gl_textures[m_textures_count];
 	//  GLTexture m_gl_vertex_textures[m_textures_count];
 
+	ID3D12Resource *m_indexBuffer;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	//  GLvao m_vao;
 	//  GLvbo m_vbo;
 	D3D12RenderTargetSets *m_fbo;
@@ -73,9 +72,6 @@ private:
 	ID3D12DescriptorHeap *m_backbufferAsRendertarget[2];
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
-
-	void* m_context;
-
 public:
 	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
@@ -88,8 +84,8 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
-	/*  void EnableVertexData(bool indexed_draw = false);
-		void DisableVertexData();
+	void EnableVertexData(bool indexed_draw = false);
+	/*void DisableVertexData();
 		void InitVertexData();
 		void InitFragmentData();
 

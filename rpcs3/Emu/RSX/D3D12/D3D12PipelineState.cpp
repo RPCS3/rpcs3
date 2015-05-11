@@ -57,7 +57,8 @@ bool PipelineStateObjectCache::SearchVp(const RSXVertexProgram& rsx_vp, Shader& 
 
 ID3D12PipelineState *PipelineStateObjectCache::GetProg(u32 fp, u32 vp) const
 {
-	u64 key = vp << 32 | fp;
+	u64 vpLong = vp;
+	u64 key = vpLong << 32 | fp;
 	std::unordered_map<u64, ID3D12PipelineState *>::const_iterator It = cachePSO.find(key);
 	if (It == cachePSO.end())
 		return nullptr;
@@ -69,7 +70,7 @@ void PipelineStateObjectCache::AddVertexProgram(Shader& vp, RSXVertexProgram& rs
 	size_t actualVPSize = rsx_vp.data.size() * 4;
 	void *fpShadowCopy = malloc(actualVPSize);
 	memcpy(fpShadowCopy, rsx_vp.data.data(), actualVPSize);
-	vp.Id = currentShaderId++;
+	vp.Id = (u32)currentShaderId++;
 	cacheVS.insert(std::make_pair(fpShadowCopy, vp));
 }
 
@@ -78,17 +79,18 @@ void PipelineStateObjectCache::AddFragmentProgram(Shader& fp, RSXFragmentProgram
 	size_t actualFPSize = getFPBinarySize(vm::get_ptr<u8>(rsx_fp.addr));
 	void *fpShadowCopy = malloc(actualFPSize);
 	memcpy(fpShadowCopy, vm::get_ptr<u8>(rsx_fp.addr), actualFPSize);
-	fp.Id = currentShaderId++;
+	fp.Id = (u32)currentShaderId++;
 	cacheFS.insert(std::make_pair(fpShadowCopy, fp));
 }
 
 void PipelineStateObjectCache::Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp)
 {
-	u64 key = vp.Id << 32 | fp.Id;
+	u64 vpLong = vp.Id;
+	u64 key = vpLong << 32 | fp.Id;
 	cachePSO.insert(std::make_pair(key, prog));
 }
 
-ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader)
+ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
 {
 	ID3D12PipelineState *result = nullptr;
 	Shader m_vertex_prog, m_fragment_prog;
@@ -199,9 +201,9 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 			{
 				FALSE,FALSE,
 				D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
+				D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+				D3D12_LOGIC_OP_NOOP,
+				D3D12_COLOR_WRITE_ENABLE_ALL,
 			}
 		};
 
@@ -214,8 +216,8 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 		graphicPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		graphicPipelineStateDesc.DSVFormat = DXGI_FORMAT_D16_UNORM;
 
-//		graphicPipelineStateDesc.InputLayout.pInputElementDescs = VTXLayout::getInputAssemblyLayout();
-//		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)VTXLayout::getInputAssemblySize();
+		graphicPipelineStateDesc.InputLayout.pInputElementDescs = IASet.data();
+		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)IASet.size();
 		graphicPipelineStateDesc.SampleDesc.Count = 1;
 		graphicPipelineStateDesc.SampleMask = UINT_MAX;
 		graphicPipelineStateDesc.NodeMask = 1;
@@ -235,6 +237,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 			m_debug_programs.push_back(program);
 		}*/
 	}
+	return result;
 }
 
 
@@ -245,7 +248,7 @@ void Shader::Compile(SHADER_TYPE st)
 	static const char VSstring[] =
 		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"
 		"[RootSignature(RS)]\n"
-		"float4 main(float4 pos : POSITION) : SV_POSITION\n"
+		"float4 main(float4 pos : TEXCOORD0) : SV_POSITION\n"
 		"{\n"
 		"	return pos;\n"
 		"}";
