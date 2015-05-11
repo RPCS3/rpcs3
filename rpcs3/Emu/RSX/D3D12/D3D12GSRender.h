@@ -52,6 +52,7 @@ private:
 	//  GLTexture m_gl_textures[m_textures_count];
 	//  GLTexture m_gl_vertex_textures[m_textures_count];
 
+	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	D3D12RenderTargetSets *m_fbo;

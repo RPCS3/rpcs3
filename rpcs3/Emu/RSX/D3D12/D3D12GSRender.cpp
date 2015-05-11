@@ -318,6 +318,11 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 	memcpy(bufferMap, m_vdata.data(), m_vdata.size());
 	m_vertexBuffer->Unmap(0, nullptr);
 
+	m_vertexBufferView = {};
+	m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+	m_vertexBufferView.SizeInBytes = (UINT)m_vdata.size();
+	m_vertexBufferView.StrideInBytes = (UINT)cur_offset;
+
 	if (indexed_draw)
 	{
 		D3D12_RESOURCE_DESC resDesc = {};
@@ -492,6 +497,10 @@ bool D3D12GSRender::LoadProgram()
 
 void D3D12GSRender::ExecCMD()
 {
+	ID3D12GraphicsCommandList *commandList;
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	m_inflightCommandList.push_back(commandList);
+
 	if (m_indexed_array.m_count)
 	{
 		//		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
@@ -500,7 +509,7 @@ void D3D12GSRender::ExecCMD()
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
 		EnableVertexData(m_indexed_array.m_count ? true : false);
-
+		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		//		InitVertexData();
 		//		InitFragmentData();
 	}
@@ -511,11 +520,80 @@ void D3D12GSRender::ExecCMD()
 		Emu.Pause();
 		return;
 	}
+	commandList->SetPipelineState(m_PSO);
 
 	InitDrawBuffers();
+	switch (m_surface_color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_NONE: break;
+	case CELL_GCM_SURFACE_TARGET_0:
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		break;
+	case CELL_GCM_SURFACE_TARGET_1:
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, nullptr);
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		break;
+	default:
+		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+	}
+	D3D12_VIEWPORT viewport =
+	{
+		0.f,
+		0.f,
+		RSXThread::m_width,
+		RSXThread::m_height,
+		-1.f,
+		1.f
+	};
+	commandList->RSSetViewports(1, &viewport);
+	D3D12_RECT box =
+	{
+		0, 0,
+		RSXThread::m_width, RSXThread::m_height,
+	};
+	commandList->RSSetScissorRects(1, &box);
 
-//	ID3D12CommandList *commandList;
-//	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	if (m_indexed_array.m_count)
+	{
+/*		switch (m_indexed_array.m_type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			commandList->DrawIndexedInstanced
+			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
+			checkForGlError("glDrawElements #4");
+			break;
+
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
+			checkForGlError("glDrawElements #2");
+			break;
+
+		default:
+			LOG_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
+			break;
+		}
+
+		DisableVertexData();
+		m_indexed_array.Reset();*/
+	}
+
+	if (m_draw_array_count)
+	{
+		//LOG_WARNING(RSX,"glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
+		commandList->DrawInstanced(m_draw_array_first, 1, m_draw_array_count, 0);
+	}
+	check(commandList->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 
 /*	if (m_set_color_mask)
 	{
@@ -810,38 +888,7 @@ void D3D12GSRender::ExecCMD()
 		checkForGlError(fmt::Format("m_gl_vertex_textures[%d].Init", i));
 	}*/
 
-/*	if (m_indexed_array.m_count)
-	{
-		switch (m_indexed_array.m_type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
-			checkForGlError("glDrawElements #4");
-			break;
-
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
-			checkForGlError("glDrawElements #2");
-			break;
-
-		default:
-			LOG_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
-			break;
-		}
-
-		DisableVertexData();
-		m_indexed_array.Reset();
-	}
-
-	if (m_draw_array_count)
-	{
-		//LOG_WARNING(RSX,"glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
-		glDrawArrays(m_draw_mode - 1, 0, m_draw_array_count);
-		checkForGlError("glDrawArrays");
-		DisableVertexData();
-	}
-
-	WriteBuffers();*/
+//	WriteBuffers();
 }
 
 void D3D12GSRender::Flip()
