@@ -30,6 +30,9 @@ size_t getFPBinarySize(void *ptr)
 PipelineStateObjectCache::PipelineStateObjectCache() : currentShaderId(0)
 {}
 
+PipelineStateObjectCache::~PipelineStateObjectCache()
+{}
+
 bool PipelineStateObjectCache::SearchFp(const RSXFragmentProgram& rsx_fp, Shader& shader)
 {
 	binary2FS::const_iterator It = cacheFS.find(vm::get_ptr<void>(rsx_fp.addr));

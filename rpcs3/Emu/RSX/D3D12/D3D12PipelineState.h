@@ -138,6 +138,10 @@ struct FragmentProgramCompare
 typedef std::unordered_map<void *, Shader, HashVertexProgram, VertexProgramCompare> binary2VS;
 typedef std::unordered_map<void *, Shader, HashFragmentProgram, FragmentProgramCompare> binary2FS;
 
+/**
+ * Cache for shader blobs and Pipeline state object
+ * The class is responsible for creating the object so the state only has to call getGraphicPipelineState
+ */
 class PipelineStateObjectCache
 {
 private:
@@ -155,6 +159,7 @@ private:
 	void Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp);
 public:
 	PipelineStateObjectCache();
+	~PipelineStateObjectCache();
 	ID3D12PipelineState *getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader);
 };
 
