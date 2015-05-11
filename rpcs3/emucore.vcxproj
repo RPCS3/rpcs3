@@ -42,8 +42,6 @@
     <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12GSRender.cpp" />
-    <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp" />
-    <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_dbg.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\sys_fs.cpp" />
@@ -502,7 +500,6 @@
     <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
-    <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GL\GLBuffers.h" />
@@ -629,9 +626,6 @@
     <ClInclude Include="restore_new.h" />
     <ClInclude Include="Emu\Cell\PPULLVMRecompiler.h" />
     <ClInclude Include="stdafx.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="Emu\RSX\D3D12\DefaultPixelShader.hlsl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>
