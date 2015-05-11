@@ -89,20 +89,6 @@ union qword
 	u32 word[4];
 };
 
-size_t getVPBinarySize(void *ptr)
-{
-	const qword *instBuffer = (const qword*)ptr;
-	size_t instIndex = 0;
-	while (true)
-	{
-		const qword& inst = instBuffer[instIndex];
-		bool end = inst.word[0] & 0x1;
-		if (end)
-			return (instIndex + 1) * 4;
-		instIndex++;
-	}
-}
-
 size_t getFPBinarySize(void *ptr)
 {
 	const qword *instBuffer = (const qword*)ptr;
@@ -174,6 +160,7 @@ struct VertexProgramCompare
 		const qword *instBuffer1 = (const qword*)binary1;
 		const qword *instBuffer2 = (const qword*)binary2;
 		size_t instIndex = 0;
+		return true;
 		while (true)
 		{
 			const qword& inst1 = instBuffer1[instIndex];
@@ -280,13 +267,9 @@ public:
 
 	void AddVertexProgram(const Shader& vp, RSXVertexProgram& rsx_vp)
 	{
-		size_t actualVPSize = getVPBinarySize(rsx_vp.data.data());
+		size_t actualVPSize = rsx_vp.data.size() * 4;
 		void *fpShadowCopy = malloc(actualVPSize);
 		memcpy(fpShadowCopy, rsx_vp.data.data(), actualVPSize);
-		int* tmpint = (int*)fpShadowCopy;
-		if (tmp++)
-			LOG_WARNING(RSX, "vp:%x %x %x %x\n", tmpint[0], tmpint[1], tmpint[2], tmpint[3]);
-
 		cacheVS.insert(std::make_pair(fpShadowCopy, vp));
 	}
 
