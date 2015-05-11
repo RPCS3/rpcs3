@@ -250,7 +250,7 @@ void Shader::Compile(SHADER_TYPE st)
 		"[RootSignature(RS)]\n"
 		"float4 main(float4 pos : TEXCOORD0) : SV_POSITION\n"
 		"{\n"
-		"	return pos;\n"
+		"	return float4(pos.x, pos.y, 0., 1.);\n"
 		"}";
 	static const char FSstring[] =
 		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"

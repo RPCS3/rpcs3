@@ -90,16 +90,11 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool ind
 	u32 offset_list[g_vertexCount];
 	u32 cur_offset = 0;
 
-	const u32 data_offset = indexedDraw ? 0 : 1;// m_draw_array_first;
-
 	for (u32 i = 0; i < g_vertexCount; ++i)
 	{
-		offset_list[i] = cur_offset;
-
 		if (!vertexData[i].IsEnabled()) continue;
 		const size_t item_size = vertexData[i].GetTypeSize() * vertexData[i].size;
-		const size_t data_size = vertexData[i].data.size() - data_offset * item_size;
-		cur_offset += data_size;
+		offset_list[i] = item_size;
 	}
 
 #if	DUMP_VERTEX_DATA
@@ -215,9 +210,8 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool ind
 		{
 			IAElement.SemanticName = "TEXCOORD";
 			IAElement.SemanticIndex = i;
+			IAElement.InputSlot = i;
 			IAElement.Format = getFormat(vertexData[i].type - 1, vertexData[i].size);
-
-			IAElement.AlignedByteOffset = offset_list[i];
 		}
 		result.push_back(IAElement);
 	}
