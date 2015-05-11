@@ -152,9 +152,9 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 	}
 	else
 	{
-		LOG_WARNING(RSX, "Add program :");
+/*		LOG_WARNING(RSX, "Add program :");
 		LOG_WARNING(RSX, "*** vp id = %d", m_vertex_prog.Id);
-		LOG_WARNING(RSX, "*** fp id = %d", m_fragment_prog.Id);
+		LOG_WARNING(RSX, "*** fp id = %d", m_fragment_prog.Id);*/
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
@@ -205,6 +205,17 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 		graphicPipelineStateDesc.BlendState = CD3D12_BLEND_DESC;
 		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
+		graphicPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+		graphicPipelineStateDesc.NumRenderTargets = 1;
+		graphicPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		graphicPipelineStateDesc.DSVFormat = DXGI_FORMAT_D16_UNORM;
+
+//		graphicPipelineStateDesc.InputLayout.pInputElementDescs = VTXLayout::getInputAssemblyLayout();
+//		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)VTXLayout::getInputAssemblySize();
+		graphicPipelineStateDesc.SampleDesc.Count = 1;
+		graphicPipelineStateDesc.SampleMask = UINT_MAX;
+		graphicPipelineStateDesc.NodeMask = 1;
 
 		device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result));
 		Add(result, m_fragment_prog, m_vertex_prog);
@@ -229,11 +240,15 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 void Shader::Compile(SHADER_TYPE st)
 {
 	static const char VSstring[] =
-		"float4 main(float4 pos : POSITION) : SV_POSITION"
-		"{"
-		"	return pos;"
+		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"
+		"[RootSignature(RS)]\n"
+		"float4 main(float4 pos : POSITION) : SV_POSITION\n"
+		"{\n"
+		"	return pos;\n"
 		"}";
 	static const char FSstring[] =
+		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"
+		"[RootSignature(RS)]\n"
 		"float4 main() : SV_TARGET"
 		"{"
 		"return float4(1.0f, 1.0f, 1.0f, 1.0f);"
