@@ -37,7 +37,7 @@ struct RSXVertexData
 	bool IsEnabled() const { return size > 0; }
 	void Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex);
 
-	u32 GetTypeSize();
+	u32 GetTypeSize() const;
 };
 
 struct RSXIndexArrayData

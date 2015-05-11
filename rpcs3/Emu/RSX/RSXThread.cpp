@@ -118,7 +118,7 @@ void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex = 0
 	}
 }
 
-u32 RSXVertexData::GetTypeSize()
+u32 RSXVertexData::GetTypeSize() const
 {
 	switch (type)
 	{
