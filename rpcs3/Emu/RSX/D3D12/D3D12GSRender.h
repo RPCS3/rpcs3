@@ -43,7 +43,7 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
 class D3D12GSRender : public GSRender
 {
 private:
-	u32 vertexBufferSize[32];
+	size_t vertexBufferSize[32];
 	std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 

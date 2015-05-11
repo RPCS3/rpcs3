@@ -319,7 +319,7 @@ void D3D12GSRender::ExecCMD()
 
 			assert((m_draw_array_first + m_draw_array_count) * item_size <= vertexBufferSize[i]);
 		}
-		commandList->IASetVertexBuffers(0, vertexBufferViews.size(), vertexBufferViews.data());
+		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
 		//		InitVertexData();
 		//		InitFragmentData();
 	}
@@ -358,8 +358,8 @@ void D3D12GSRender::ExecCMD()
 	{
 		0.f,
 		0.f,
-		RSXThread::m_width,
-		RSXThread::m_height,
+		(float)RSXThread::m_width,
+		(float)RSXThread::m_height,
 		-1.f,
 		1.f
 	};
@@ -367,7 +367,7 @@ void D3D12GSRender::ExecCMD()
 	D3D12_RECT box =
 	{
 		0, 0,
-		RSXThread::m_width, RSXThread::m_height,
+		(LONG)RSXThread::m_width, (LONG)RSXThread::m_height,
 	};
 	commandList->RSSetScissorRects(1, &box);
 
