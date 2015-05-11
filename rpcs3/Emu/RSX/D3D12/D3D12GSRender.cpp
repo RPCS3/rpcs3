@@ -211,7 +211,7 @@ bool D3D12GSRender::LoadProgram()
 		return false;
 	}
 
-	m_PSO = getGraphicPipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
+	m_PSO = cachePSO.getGraphicPipelineState(m_device, m_cur_vertex_prog, m_cur_fragment_prog);
 	return true;
 }
 

@@ -47,6 +47,7 @@ private:
 	//  std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
+	PipelineStateObjectCache cachePSO;
 	ID3D12PipelineState *m_PSO;
 	int m_fp_buf_num;
 	int m_vp_buf_num;
