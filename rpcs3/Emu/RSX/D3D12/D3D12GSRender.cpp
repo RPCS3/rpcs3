@@ -293,27 +293,41 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 		m_vdata.resize(m_vdata.size() + data_size);
 		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
 	}
+	// TODO: Use default heap and upload data
+	D3D12_HEAP_PROPERTIES heapProp = {};
+	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+	D3D12_RESOURCE_DESC resDesc = {};
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	resDesc.Width = (UINT)m_vdata.size();
+	resDesc.Height = 1;
+	resDesc.DepthOrArraySize = 1;
+	resDesc.SampleDesc.Count = 1;
+	resDesc.MipLevels = 1;
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	check(m_device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_vertexBuffer)
+		));
+	void *bufferMap;
 
-/*	m_vao.Create();
-	m_vao.Bind();
-	checkForGlError("initializing vao");
-
-	m_vbo.Create(indexed_draw ? 2 : 1);
-	m_vbo.Bind(0);
-	m_vbo.SetData(m_vdata.data(), m_vdata.size());*/
+	check(m_vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
+	memcpy(bufferMap, m_vdata.data(), m_vdata.size());
+	m_vertexBuffer->Unmap(0, nullptr);
 
 	if (indexed_draw)
 	{
-		// TODO: Use default heap and upload data
-		D3D12_HEAP_PROPERTIES heapProp = {};
-		heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-
 		D3D12_RESOURCE_DESC resDesc = {};
 		resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		resDesc.Width = (UINT)m_indexed_array.m_data.size();
 		resDesc.Height = 1;
 		resDesc.DepthOrArraySize = 1;
 		resDesc.SampleDesc.Count = 1;
+		resDesc.MipLevels = 1;
+		resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 		check(m_device->CreateCommittedResource(
 			&heapProp,
 			D3D12_HEAP_FLAG_NONE,
@@ -322,9 +336,9 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 			nullptr,
 			IID_PPV_ARGS(&m_indexBuffer)
 			));
-		void *indexBufferMap;
-		check(m_indexBuffer->Map(0, nullptr, (void**)indexBufferMap));
-		memcpy(indexBufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
+
+		check(m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+		memcpy(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
 		m_indexBuffer->Unmap(0, nullptr);
 
 		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};

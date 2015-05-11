@@ -48,18 +48,12 @@ private:
 
 	PipelineStateObjectCache m_cachePSO;
 	ID3D12PipelineState *m_PSO;
-	//  GLProgramBuffer m_prog_buffer;
-
-	//  GLFragmentProgram m_fragment_prog;
-	//  GLVertexProgram m_vertex_prog;
 
 	//  GLTexture m_gl_textures[m_textures_count];
 	//  GLTexture m_gl_vertex_textures[m_textures_count];
 
-	ID3D12Resource *m_indexBuffer;
+	ID3D12Resource *m_indexBuffer, *m_vertexBuffer;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
-	//  GLvao m_vao;
-	//  GLvbo m_vbo;
 	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
@@ -88,9 +82,6 @@ private:
 	/*void DisableVertexData();
 		void InitVertexData();
 		void InitFragmentData();
-
-		void Enable(bool enable, const u32 cap);
-
 
 		void WriteBuffers();
 		void WriteDepthBuffer();
