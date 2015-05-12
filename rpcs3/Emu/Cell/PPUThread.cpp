@@ -242,14 +242,14 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 
 	assert(argc == 0);
 
-	envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
+	envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::location::main));
 	*envp = 0;
-	argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
+	argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::location::main));
 
 	for (auto &arg : values)
 	{
 		u32 arg_size = align(u32(arg.size() + 1), stack_align);
-		u32 arg_addr = vm::alloc(arg_size, vm::main);
+		u32 arg_addr = vm::alloc(arg_size, vm::location::main);
 
 		std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
 

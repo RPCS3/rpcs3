@@ -427,7 +427,7 @@ void RSXThread::update_reg(u32 reg, u32 value)
 		}
 
 		u32 pos = m_vertex_data[row].data.size();
-		m_vertex_data[row].data.resize(pos + sizeof(f32) * col);
+		m_vertex_data[row].data.resize(pos + sizeof(f32));
 		(u32&)m_vertex_data[row].data[pos] = value;
 
 		//LOG_WARNING(RSX, "NV4097_SET_VERTEX_DATA2F_M: index = %d, v0 = %f, v1 = %f", index, v0, v1);

@@ -2,6 +2,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/IdManager.h"
 
 #include "sys_rsx.h"
 
@@ -75,10 +76,15 @@ s32 sys_rsx_device_close()
  * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16. 
  * @param a7 (IN): E.g. Immediate value passed in cellGcmSys is 8.
  */
-s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u32> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
+s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<void, 2> mem, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
 {
 	sys_rsx.Todo("sys_rsx_memory_allocate(mem_handle_addr=0x%x, local_mem_addr=0x%x, size=0x%x, flags=0x%x, a5=%d, a6=%d, a7=%d)",
-		mem_handle.addr(), mem_addr.addr(), size, flags, a5, a6, a7);
+		mem_handle.addr(), mem, size, flags, a5, a6, a7);
+
+	u32 address = vm::alloc(size, vm::location::gpu);
+	*mem = vm::bptr<void>::make(be_t<u32>::make(address));
+	*mem_handle = 0x5A5A5A5A ^ Emu.GetIdManager().GetNewID(std::make_shared<u32>(address));
+
 	return CELL_OK;
 }
 
@@ -89,6 +95,16 @@ s32 sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u32> mem_addr, u32 
 s32 sys_rsx_memory_free(u32 mem_handle)
 {
 	sys_rsx.Todo("sys_rsx_memory_free(mem_handle=%d)", mem_handle);
+
+	u32 id = 0x5A5A5A5A ^ mem_handle;
+	std::shared_ptr<u32> address;
+	if (!Emu.GetIdManager().GetIDData(id, address))
+	{
+		return CELL_ESRCH;
+	}
+
+	vm::dealloc(*address, vm::location::gpu);
+	Emu.GetIdManager().RemoveID<u32>(id);
 	return CELL_OK;
 }
 

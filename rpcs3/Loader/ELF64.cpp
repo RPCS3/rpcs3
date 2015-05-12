@@ -105,7 +105,7 @@ namespace loader
 						segment.size = phdr.p_memsz;
 						segment.size_file = phdr.p_filesz;
 
-						segment.begin.set(vm::alloc(segment.size, vm::main));
+						segment.begin.set(vm::alloc(segment.size, vm::location::main));
 
 						if (!segment.begin)
 						{
@@ -538,7 +538,7 @@ namespace loader
 				*ptr++ = BCTRL();
 			};
 
-			auto entry = vm::ptr<u32>::make(vm::alloc(56 + branch_size * (start_funcs.size() + 1), vm::main));
+			auto entry = vm::ptr<u32>::make(vm::alloc(56 + branch_size * (start_funcs.size() + 1), vm::location::main));
 
 			const auto OPD = entry;
 
@@ -594,7 +594,7 @@ namespace loader
 				{
 					if (phdr.p_memsz)
 					{
-						if (!vm::alloc(vm::cast(phdr.p_vaddr.addr()), vm::cast(phdr.p_memsz, "phdr.p_memsz"), vm::main))
+						if (!vm::alloc(vm::cast(phdr.p_vaddr.addr()), vm::cast(phdr.p_memsz, "phdr.p_memsz"), vm::location::main))
 						{
 							LOG_ERROR(LOADER, "%s(): AllocFixed(0x%llx, 0x%llx) failed", __FUNCTION__, phdr.p_vaddr.addr(), phdr.p_memsz);
 

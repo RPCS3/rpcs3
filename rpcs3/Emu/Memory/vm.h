@@ -8,11 +8,12 @@ namespace vm
 	extern void* g_base_addr; // base address of ps3/psv virtual memory for common access
 	extern void* g_priv_addr; // base address of ps3/psv virtual memory for privileged access
 
-	enum memory_location : uint
+	enum class location : uint
 	{
 		main,
 		user_space,
 		stack,
+		gpu,
 
 		memory_location_count
 	};
@@ -60,9 +61,9 @@ namespace vm
 
 	bool map(u32 addr, u32 size, u32 flags);
 	bool unmap(u32 addr, u32 size = 0, u32 flags = 0);
-	u32 alloc(u32 size, memory_location location = user_space);
-	u32 alloc(u32 addr, u32 size, memory_location location = user_space);
-	void dealloc(u32 addr, memory_location location = user_space);
+	u32 alloc(u32 size, location location = location::user_space);
+	u32 alloc(u32 addr, u32 size, location location = location::user_space);
+	void dealloc(u32 addr, location location = location::user_space);
 	
 	template<typename T = void>
 	T* const get_ptr(u32 addr)
@@ -327,9 +328,9 @@ namespace vm
 		}
 	};
 
-	extern location_info g_locations[memory_location_count];
+	extern location_info g_locations[(int)location::memory_location_count];
 
-	template<memory_location location = main>
+	template<location location = location::main>
 	location_info& get()
 	{
 		assert(location < memory_location_count);

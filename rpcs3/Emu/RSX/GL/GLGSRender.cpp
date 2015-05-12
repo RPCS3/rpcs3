@@ -70,7 +70,7 @@ int GLTexture::GetGlWrap(int wrap)
 	case CELL_GCM_TEXTURE_MIRROR: return GL_MIRRORED_REPEAT;
 	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return GL_CLAMP_TO_EDGE;
 	case CELL_GCM_TEXTURE_BORDER: return GL_CLAMP_TO_BORDER;
-	case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP_TO_EDGE;
+	case CELL_GCM_TEXTURE_CLAMP: return GL_CLAMP;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return GL_MIRROR_CLAMP_EXT;
@@ -896,6 +896,21 @@ void GLGSRender::DisableVertexData()
 	m_vao.Unbind();
 }
 
+struct color_swizzle
+{
+	gl::texture::channel a = gl::texture::channel::a;
+	gl::texture::channel r = gl::texture::channel::r;
+	gl::texture::channel g = gl::texture::channel::g;
+	gl::texture::channel b = gl::texture::channel::b;
+
+	color_swizzle() = default;
+	color_swizzle(gl::texture::channel a, gl::texture::channel r, gl::texture::channel g, gl::texture::channel b)
+		: a(a), r(r), g(g), b(b)
+	{
+
+	}
+};
+
 struct color_format
 {
 	gl::texture::type type;
@@ -903,6 +918,7 @@ struct color_format
 	bool swap_bytes;
 	int channel_count;
 	int channel_size;
+	color_swizzle swizzle;
 };
 
 color_format surface_color_format_to_gl(int color_format)
@@ -916,6 +932,10 @@ color_format surface_color_format_to_gl(int color_format)
 	case CELL_GCM_SURFACE_A8R8G8B8:
 		return{ gl::texture::type::uint_8_8_8_8, gl::texture::format::bgra, false, 4, 1 };
 
+	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
+		return{ gl::texture::type::uint_8_8_8_8, gl::texture::format::bgra, false, 4, 1,
+		{ gl::texture::channel::one, gl::texture::channel::r, gl::texture::channel::g, gl::texture::channel::b } };
+
 	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
 		return{ gl::texture::type::f16, gl::texture::format::rgba, true, 4, 2 };
 
@@ -926,7 +946,6 @@ color_format surface_color_format_to_gl(int color_format)
 	case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5:
 	case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5:
 	case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8:
-	case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
 	case CELL_GCM_SURFACE_G8B8:
 	case CELL_GCM_SURFACE_F_X32:
 	case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8:
@@ -972,7 +991,7 @@ bool GLGSRender::LoadProgram()
 		gl::gpu_program::enable(gl::gpu_program::target::fragment);
 		gl::gpu_program fragment_program(gl::gpu_program::target::fragment, fragment_program_source);
 		fragment_program.bind();
-		if (glGetError() != GL_NO_ERROR)
+		//if (glGetError() != GL_NO_ERROR)
 		{
 			LOG_ERROR(RSX, fragment_program_source.c_str());
 			LOG_ERROR(RSX, fragment_program.error().c_str());
@@ -985,7 +1004,7 @@ bool GLGSRender::LoadProgram()
 		vertex_program.create(gl::gpu_program::target::vertex, vertex_program_source);
 		vertex_program.bind();
 
-		if (glGetError() != GL_NO_ERROR)
+		//if (glGetError() != GL_NO_ERROR)
 		{
 			LOG_ERROR(RSX, vertex_program_source.c_str());
 			LOG_ERROR(RSX, vertex_program.error().c_str());
@@ -1240,7 +1259,8 @@ void GLGSRender::InitFBO()
 			m_textures_color[i].config()
 				.size(m_width, m_height)
 				.type(format.type)
-				.format(format.format);
+				.format(format.format)
+				.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a);
 
 			m_textures_color[i].pixel_settings()
 				.swap_bytes(format.swap_bytes);
@@ -1748,6 +1768,12 @@ void GLGSRender::ExecCMD()
 void GLGSRender::Flip(int buffer)
 {
 	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_BLEND);
+	glDisable(GL_LOGIC_OP);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_DITHER);
 
 	RSXThread::m_width = m_gcm_buffers[buffer].width;
 	RSXThread::m_height = m_gcm_buffers[buffer].height;

@@ -26,7 +26,7 @@ void LoadSpuImage(vfsStream& stream, u32& spu_ep, u32 addr)
 u32 LoadSpuImage(vfsStream& stream, u32& spu_ep)
 {
 	const u32 alloc_size = 256 * 1024;
-	u32 spu_offset = (u32)vm::alloc(alloc_size, vm::main);
+	u32 spu_offset = (u32)vm::alloc(alloc_size, vm::location::main);
 
 	LoadSpuImage(stream, spu_ep, spu_offset);
 	return spu_offset;

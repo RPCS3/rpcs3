@@ -33,6 +33,7 @@ namespace gl
 				if (d1.const_src < m_min_constant_id || d1.const_src > m_max_constant_id)
 				{
 					result = constant(0);
+					LOG_ERROR(RSX, "out of constant bounds in label%d: %d[%d-%d]", m_label, d1.const_src, m_min_constant_id, m_max_constant_id);
 				}
 				else
 				{
@@ -71,7 +72,7 @@ namespace gl
 			return result;
 		}
 
-		gpu4_program_context::argument decompiler::arg_dst()
+		gpu4_program_context::argument decompiler::arg_dst(bool is_address)
 		{
 			if (is_sca)
 			{
@@ -85,21 +86,23 @@ namespace gl
 			}
 
 			gpu_program_builder<>::variable_t result;
-			if (d3.dst == 0x1f)
+
+			if (!is_address)
 			{
-				result = variable("TEMP", "R" + std::to_string(d0.dst_tmp));
-			}
-			else
-			{
-				if (d0.vec_result)
+				if (d3.dst == 0x1f)
 				{
-					result = variable("TEMP", "oR" + std::to_string(d3.dst));
+					result = variable("TEMP", "R" + std::to_string(d0.dst_tmp));
 				}
 				else
 				{
-					result = variable("ADDRESS", "A" + std::to_string(d3.dst));
+					result = variable("TEMP", "oR" + std::to_string(d3.dst));
 				}
 			}
+			else
+			{
+				result = variable("ADDRESS", "A" + std::to_string(d0.addr_reg_sel_1));
+			}
+
 
 			std::string mask;
 			if (d3.vec_writemask_x) mask += "x";
@@ -108,6 +111,11 @@ namespace gl
 			if (d3.vec_writemask_w) mask += "w";
 
 			return result.mask(mask);
+		}
+
+		gpu4_program_context::argument decompiler::label()
+		{
+			return predeclared_variable(fmt::format("label%u", (d2.iaddrh << 3) | d3.iaddrl));
 		}
 
 		gpu4_program_context::argument decompiler::condition()
@@ -148,7 +156,7 @@ namespace gl
 				mask = std::string(1, mask[0]);
 			}
 
-			return predeclared_variable(cond_string_table[d0.cond]).mask(mask);
+			return predeclared_variable(cond_string_table[d0.cond] + std::to_string(d0.cond_reg_sel_1)).mask(mask);
 		}
 
 		gpu4_program_context::argument decompiler::texture()
@@ -172,11 +180,16 @@ namespace gl
 			}
 		}
 
-		std::string decompiler::instr(const std::string& instruction)
+		std::string decompiler::instr(std::string instruction)
 		{
 			if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
 			{
-				return instruction + (d0.cond_reg_sel_1 ? "1" : "");
+				instruction += "C" + std::to_string(d0.cond_reg_sel_1);
+			}
+
+			if (d0.staturate)
+			{
+				instruction += "_SAT";
 			}
 
 			return instruction;
@@ -191,13 +204,19 @@ namespace gl
 			}
 			else
 			{
-				auto find_fn = [](std::pair<u32, color4> a, std::pair<u32, color4> b)
-				{
-					return a.first < b.first;
-				};
+				std::unordered_set<u32> not_null_constants;
 
-				m_min_constant_id = std::min_element(constants.begin(), constants.end(), find_fn)->first;
-				m_max_constant_id = std::max_element(constants.begin(), constants.end(), find_fn)->first;
+				for (auto begin = constants.begin(); begin != constants.end(); ++begin)
+				{
+					if (begin->second != color4{})
+						not_null_constants.insert(begin->first);
+				}
+
+				if (!not_null_constants.empty())
+				{
+					m_min_constant_id = *std::min_element(not_null_constants.begin(), not_null_constants.end());
+					m_max_constant_id = *std::max_element(not_null_constants.begin(), not_null_constants.end());
+				}
 			}
 
 			std::string constants_initialization = "{\n";
@@ -232,7 +251,8 @@ namespace gl
 
 			gpu_program_builder<>::op("MOV", variable("TEMP", "oR0"), constant(0.f, 0.f, 0.f, 1.f));
 
-			for (int i = start; i < 512; ++i)
+			m_label = 0;
+			for (int i = start; i < 512; ++i, ++m_label)
 			{
 				d0.HEX = m_data[i * 4 + 0];
 				d1.HEX = m_data[i * 4 + 1];
@@ -249,6 +269,7 @@ namespace gl
 				src[1].abs = d0.src1_abs;
 				src[2].abs = d0.src2_abs;
 
+				m_need_label = true;
 				is_sca = true;
 				switch (d1.sca_opcode)
 				{
@@ -260,10 +281,10 @@ namespace gl
 				case RSX_SCA_OPCODE_EXP: sca_op(instr("EXP"), arg_dst(), arg(src[2])); break;
 				case RSX_SCA_OPCODE_LOG: sca_op(instr("LOG"), arg_dst(), arg(src[2])); break;
 				case RSX_SCA_OPCODE_LIT: op(instr("LIT"), arg_dst(), arg(src[2])); break;
-				case RSX_SCA_OPCODE_BRA: op(instr("BRA"), arg(src[2])); break;
-				case RSX_SCA_OPCODE_BRI: op(instr("BRI"), arg(src[2])); break;
-				case RSX_SCA_OPCODE_CAL: op(instr("CAL"), arg(src[2])); break;
-				case RSX_SCA_OPCODE_CLI: op(instr("CLI"), arg(src[2])); break;
+				//case RSX_SCA_OPCODE_BRA: op(instr("BRA"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_BRI: op(instr("BRA"), label()); break;
+				//case RSX_SCA_OPCODE_CAL: op(instr("CAL"), arg(src[2])); break;
+				case RSX_SCA_OPCODE_CLI: op(instr("CAL"), label()); break;
 				case RSX_SCA_OPCODE_RET: op("RET"); break;
 				case RSX_SCA_OPCODE_LG2: sca_op(instr("LG2"), arg_dst(), arg(src[2])); break;
 				case RSX_SCA_OPCODE_EX2: sca_op(instr("EX2"), arg_dst(), arg(src[2])); break;

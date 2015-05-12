@@ -105,6 +105,16 @@ struct position_base
 	{
 	}
 	*/
+
+	bool operator == (const position_base& rhs) const
+	{
+		return x == rhs.x && y == rhs.y;
+	}
+
+	bool operator != (const position_base& rhs) const
+	{
+		return x != rhs.x || y != rhs.y;
+	}
 };
 
 template<typename T>
@@ -121,6 +131,16 @@ struct size_base
 	{
 	}
 	*/
+
+	bool operator == (const size_base& rhs) const
+	{
+		return width == rhs.width && height == rhs.height;
+	}
+
+	bool operator != (const size_base& rhs) const
+	{
+		return width != rhs.width || height != rhs.height;
+	}
 };
 
 template<typename T>
@@ -159,6 +179,16 @@ struct coord_base
 			return false;
 
 		return true;
+	}
+
+	bool operator == (const coord_base& rhs) const
+	{
+		return position == rhs.position && size == rhs.size;
+	}
+
+	bool operator != (const coord_base& rhs) const
+	{
+		return position != rhs.position || size != rhs.size;
 	}
 };
 
@@ -203,6 +233,16 @@ struct area_base
 	area_base flipped_horizontal() const
 	{
 		return{ x2, y1, x1, y2 };
+	}
+
+	bool operator == (const area_base& rhs) const
+	{
+		return x1 == rhs.x1 && x2 == rhs.x2 && y1 == rhs.y1 && y2 == rhs.y2;
+	}
+
+	bool operator != (const area_base& rhs) const
+	{
+		return !(*this == rhs);
 	}
 };
 
@@ -319,6 +359,16 @@ struct color4_base
 		, w(w)
 	{
 	}
+
+	bool operator == (const color4_base& rhs) const
+	{
+		return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
+	}
+
+	bool operator != (const color4_base& rhs) const
+	{
+		return !(*this == rhs);
+	}
 };
 
 template<typename T>
@@ -346,6 +396,16 @@ struct color3_base
 		, z(z)
 	{
 	}
+
+	bool operator == (const color3_base& rhs) const
+	{
+		return r == rhs.r && g == rhs.g && b == rhs.b;
+	}
+
+	bool operator != (const color3_base& rhs) const
+	{
+		return !(*this == rhs);
+	}
 };
 
 template<typename T>
@@ -372,6 +432,16 @@ struct color2_base
 		, y(y)
 	{
 	}
+
+	bool operator == (const color2_base& rhs) const
+	{
+		return r == rhs.r && g == rhs.g;
+	}
+
+	bool operator != (const color2_base& rhs) const
+	{
+		return !(*this == rhs);
+	}
 };
 
 template<typename T>
@@ -386,6 +456,16 @@ struct color1_base
 	color1_base(T x = {})
 		: x(x)
 	{
+	}
+
+	bool operator == (const color1_base& rhs) const
+	{
+		return r == rhs.r &&;
+	}
+
+	bool operator != (const color1_base& rhs) const
+	{
+		return !(*this == rhs);
 	}
 };
 
