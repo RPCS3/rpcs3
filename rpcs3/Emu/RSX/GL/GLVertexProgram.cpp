@@ -71,7 +71,7 @@ namespace gl
 			return result;
 		}
 
-		gpu4_program_context::argument decompiler::arg_dst()
+		gpu4_program_context::argument decompiler::arg_dst(bool is_address)
 		{
 			if (is_sca)
 			{
@@ -85,21 +85,23 @@ namespace gl
 			}
 
 			gpu_program_builder<>::variable_t result;
-			if (d3.dst == 0x1f)
+
+			if (!is_address)
 			{
-				result = variable("TEMP", "R" + std::to_string(d0.dst_tmp));
-			}
-			else
-			{
-				if (d0.vec_result)
+				if (d3.dst == 0x1f)
 				{
-					result = variable("TEMP", "oR" + std::to_string(d3.dst));
+					result = variable("TEMP", "R" + std::to_string(d0.dst_tmp));
 				}
 				else
 				{
-					result = variable("ADDRESS", "A" + std::to_string(d3.dst));
+					result = variable("TEMP", "oR" + std::to_string(d3.dst));
 				}
 			}
+			else
+			{
+				result = variable("ADDRESS", "A" + std::to_string(d0.addr_reg_sel_1));
+			}
+
 
 			std::string mask;
 			if (d3.vec_writemask_x) mask += "x";

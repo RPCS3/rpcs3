@@ -27,7 +27,7 @@ namespace gl
 
 		private:
 			gpu4_program_context::argument arg(SRC src);
-			gpu4_program_context::argument arg_dst();
+			gpu4_program_context::argument arg_dst(bool is_address = false);
 			gpu4_program_context::argument condition();
 			gpu4_program_context::argument texture();
 
