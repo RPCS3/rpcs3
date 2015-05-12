@@ -240,9 +240,6 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 	return result;
 }
 
-
-#endif
-
 void Shader::Compile(SHADER_TYPE st)
 {
 	static const char VSstring[] =
@@ -275,3 +272,6 @@ void Shader::Compile(SHADER_TYPE st)
 		break;
 	}
 }
+
+
+#endif
