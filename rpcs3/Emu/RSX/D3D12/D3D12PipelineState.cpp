@@ -90,7 +90,7 @@ void PipelineStateObjectCache::Add(ID3D12PipelineState *prog, Shader& fp, Shader
 	cachePSO.insert(std::make_pair(key, prog));
 }
 
-ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
+ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, ID3D12RootSignature *rootSignature, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
 {
 	ID3D12PipelineState *result = nullptr;
 	Shader m_vertex_prog, m_fragment_prog;
@@ -163,10 +163,18 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
-		graphicPipelineStateDesc.VS.BytecodeLength = m_vertex_prog.bytecode->GetBufferSize();
-		graphicPipelineStateDesc.VS.pShaderBytecode = m_vertex_prog.bytecode->GetBufferPointer();
-		graphicPipelineStateDesc.PS.BytecodeLength = m_fragment_prog.bytecode->GetBufferSize();
-		graphicPipelineStateDesc.PS.pShaderBytecode = m_fragment_prog.bytecode->GetBufferPointer();
+		if (m_vertex_prog.bytecode != nullptr)
+		{
+			graphicPipelineStateDesc.VS.BytecodeLength = m_vertex_prog.bytecode->GetBufferSize();
+			graphicPipelineStateDesc.VS.pShaderBytecode = m_vertex_prog.bytecode->GetBufferPointer();
+		}
+		if (m_fragment_prog.bytecode != nullptr)
+		{
+			graphicPipelineStateDesc.PS.BytecodeLength = m_fragment_prog.bytecode->GetBufferSize();
+			graphicPipelineStateDesc.PS.pShaderBytecode = m_fragment_prog.bytecode->GetBufferPointer();
+		}
+
+		graphicPipelineStateDesc.pRootSignature = rootSignature;
 
 		// Sensible default value
 		static D3D12_RASTERIZER_DESC CD3D12_RASTERIZER_DESC =
@@ -240,22 +248,44 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 	return result;
 }
 
+#define TO_STRING(x) #x
+
 void Shader::Compile(SHADER_TYPE st)
 {
-	static const char VSstring[] =
-		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"
-		"[RootSignature(RS)]\n"
-		"float4 main(float4 pos : TEXCOORD0) : SV_POSITION\n"
-		"{\n"
-		"	return float4(pos.x, pos.y, 0., 1.);\n"
-		"}";
-	static const char FSstring[] =
-		"#define RS \"RootFlags( ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)\"\n"
-		"[RootSignature(RS)]\n"
-		"float4 main() : SV_TARGET"
-		"{"
-		"return float4(1.0f, 1.0f, 1.0f, 1.0f);"
-		"}";
+	static const char VSstring[] = TO_STRING(
+		cbuffer CONSTANT : register(b0)
+		{
+			float4x4 scaleOffsetMat;
+		};
+
+		struct vertex {
+			float4 pos : TEXCOORD0;
+			float4 color : TEXCOORD3;
+		};
+
+		struct pixel {
+			float4 pos : SV_POSITION;
+			float4 color : TEXCOORD0;
+		};
+
+		pixel main(vertex In)
+		{
+			pixel Out;
+			Out.pos = mul(float4(In.pos.x, In.pos.y, 0., 1.), scaleOffsetMat);
+			Out.color = In.color;
+			return Out;
+		});
+
+	static const char FSstring[] = TO_STRING(
+		struct pixel {
+			float4 pos : SV_POSITION;
+			float4 color : TEXCOORD0;
+		};
+		float4 main(pixel In) : SV_TARGET
+		{
+		return In.color;
+		});
+
 	HRESULT hr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 	switch (st)

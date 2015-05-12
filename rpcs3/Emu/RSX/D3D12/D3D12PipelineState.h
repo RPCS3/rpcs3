@@ -161,7 +161,7 @@ public:
 	PipelineStateObjectCache();
 	~PipelineStateObjectCache();
 	// Note: the last param is not taken into account if the PSO is not regenerated
-	ID3D12PipelineState *getGraphicPipelineState(ID3D12Device *device, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet);
+	ID3D12PipelineState *getGraphicPipelineState(ID3D12Device *device, ID3D12RootSignature *rootSignature, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet);
 };
 
 

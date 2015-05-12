@@ -43,17 +43,21 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
 class D3D12GSRender : public GSRender
 {
 private:
-	size_t vertexBufferSize[32];
+	size_t m_vertexBufferSize[32];
 	std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
 	PipelineStateObjectCache m_cachePSO;
 	ID3D12PipelineState *m_PSO;
+	ID3D12RootSignature *m_rootSignature;
 
 	//  GLTexture m_gl_textures[m_textures_count];
 	//  GLTexture m_gl_vertex_textures[m_textures_count];
 
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
+	ID3D12Resource *m_constantsBuffer;
+	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
+	size_t m_constantsBufferOffset, m_constantsBufferIndex;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
@@ -80,9 +84,9 @@ private:
 
 	bool LoadProgram();
 	void EnableVertexData(bool indexed_draw = false);
+	void FillVertexShaderConstantsBuffer();
+	void FillPixelShaderConstantsBuffer();
 	/*void DisableVertexData();
-		void InitVertexData();
-		void InitFragmentData();
 
 		void WriteBuffers();
 		void WriteDepthBuffer();
