@@ -511,19 +511,19 @@ namespace vm
 		return Memory.Unmap(addr);
 	}
 
-	u32 alloc(u32 addr, u32 size, memory_location location)
+	u32 alloc(u32 addr, u32 size, location location)
 	{
-		return g_locations[location].fixed_allocator(addr, size);
+		return g_locations[(int)location].fixed_allocator(addr, size);
 	}
 
-	u32 alloc(u32 size, memory_location location)
+	u32 alloc(u32 size, location location)
 	{
-		return g_locations[location].allocator(size);
+		return g_locations[(int)location].allocator(size);
 	}
 
-	void dealloc(u32 addr, memory_location location)
+	void dealloc(u32 addr, location location)
 	{
-		return g_locations[location].deallocator(addr);
+		return g_locations[(int)location].deallocator(addr);
 	}
 
 	u32 get_addr(const void* real_pointer)
@@ -592,6 +592,19 @@ namespace vm
 			Memory.StackMem.Free(addr);
 		}
 
+		u32 gpu_alloc(u32 size)
+		{
+			return Memory.RSXFBMem.AllocAlign(size, 1);
+		}
+		u32 gpu_fixed_alloc(u32 addr, u32 size)
+		{
+			return Memory.RSXFBMem.AllocFixed(addr, size) ? addr : 0;
+		}
+		void gpu_dealloc(u32 addr)
+		{
+			Memory.RSXFBMem.Free(addr);
+		}
+
 		void init()
 		{
 			Memory.Init(Memory_PS3);
@@ -614,11 +627,12 @@ namespace vm
 		}
 	}
 
-	location_info g_locations[memory_location_count] =
+	location_info g_locations[(int)location::memory_location_count] =
 	{
 		{ 0x00010000, 0x1FFF0000, ps3::main_alloc, ps3::main_fixed_alloc, ps3::main_dealloc },
 		{ 0x20000000, 0x10000000, ps3::user_space_alloc, ps3::user_space_fixed_alloc, ps3::user_space_dealloc },
 		{ 0xD0000000, 0x10000000, ps3::stack_alloc, ps3::stack_fixed_alloc, ps3::stack_dealloc },
+		{ 0xC0000000, 0x10000000, ps3::gpu_alloc, ps3::gpu_fixed_alloc, ps3::gpu_dealloc },
 	};
 
 	void close()

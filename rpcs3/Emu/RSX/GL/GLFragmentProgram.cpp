@@ -18,7 +18,6 @@ namespace gl
 			gpu_program_builder::context.extensions.push_back("ARB_draw_buffers");
 		}
 
-			
 		gpu4_program_context::argument decompiler::condition()
 		{
 			if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
@@ -229,7 +228,7 @@ namespace gl
 				if (src1.scale)
 				{
 					std::string instruction;
-					int value = 0;
+					char value = 0;
 					switch (src1.scale)
 					{
 					case 0: break;
@@ -248,10 +247,13 @@ namespace gl
 						instruction += "_SAT";
 
 					auto arg_dst = arg(dst);
+					auto arg_src = arg_dst;
+					arg_src.mask(gl::gpu4_program_context::mask_t{});
+					op(instr(instruction), arg_dst, arg_src, constant(value).mask("x"));
 
+					/*
 					std::string mask = ((gpu4_program_context::mask_t)arg_dst.get_mask()).symplify().get();
-
-					for (size_t i = 0; i < mask.length() - 1/*skip dot*/; ++i)
+					for (size_t i = 0; i < mask.length() - 1; ++i)
 					{
 						gpu4_program_context::argument arg = arg_dst;
 						auto arg_dst_swizzle = arg.mask(std::string(1, swizzle_mask[i]));
@@ -259,6 +261,7 @@ namespace gl
 						op(instr(instruction), arg_dst_swizzle, arg_dst_swizzle,
 							constant(value).mask(std::string(1, swizzle_mask[i])));
 					}
+					*/
 				}
 
 				if (dst.end)
@@ -287,6 +290,18 @@ namespace gl
 				gpu_program_builder<>::op((control & 0x40 ? "MOVR" : "MOVH"), predeclared_variable("result.depth"),
 					variable("TEMP", control & 0x40 ? "R1" : "H2").mask("z"));
 			}
+
+			auto operations_tmp = std::move(context.operations);
+
+			for (auto &v : context.variables)
+			{
+				if (v.type.name == "TEMP")
+				{
+					gpu_program_builder<>::op("MOV", variable(v.type.name, v.name), constant(0.0f));
+				}
+			}
+
+			context.operations.insert(context.operations.end(), operations_tmp.begin(), operations_tmp.end());
 			link();
 			m_shader = context.make();
 

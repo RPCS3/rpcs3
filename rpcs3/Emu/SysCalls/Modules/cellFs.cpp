@@ -352,7 +352,7 @@ s32 cellFsStReadInit(u32 fd, vm::ptr<const CellFsRingBuffer> ringbuf)
 
 	const u64 alloc_size = align(file->st_ringbuf_size, file->st_ringbuf_size < 1024 * 1024 ? 64 * 1024 : 1024 * 1024);
 
-	file->st_buffer = vm::alloc(static_cast<u32>(alloc_size), vm::main);
+	file->st_buffer = vm::alloc(static_cast<u32>(alloc_size), vm::location::main);
 	file->st_read_size = 0;
 	file->st_total_read = 0;
 	file->st_copied = 0;
@@ -378,7 +378,7 @@ s32 cellFsStReadFinish(u32 fd)
 		return CELL_FS_ENXIO;
 	}
 
-	vm::dealloc(file->st_buffer, vm::main);
+	vm::dealloc(file->st_buffer, vm::location::main);
 
 	return CELL_OK;
 }
