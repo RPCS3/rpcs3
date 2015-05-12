@@ -294,7 +294,7 @@ namespace gl
 				case RSX_VEC_OPCODE_MAX: op(instr("MAX"), arg_dst(), arg(src[0]), arg(src[1])); break;
 				case RSX_VEC_OPCODE_SLT: op(instr("SLT"), arg_dst(), arg(src[0]), arg(src[1])); break;
 				case RSX_VEC_OPCODE_SGE: op(instr("SGE"), arg_dst(), arg(src[0]), arg(src[1])); break;
-				case RSX_VEC_OPCODE_ARL: op(instr("ARL"), arg_dst(), arg(src[0])); break;
+				case RSX_VEC_OPCODE_ARL: op(instr("ARL"), arg_dst(true), arg(src[0])); break;
 				case RSX_VEC_OPCODE_FRC: op(instr("FRC"), arg_dst(), arg(src[0])); break;
 				case RSX_VEC_OPCODE_FLR: op(instr("FLR"), arg_dst(), arg(src[0])); break;
 				case RSX_VEC_OPCODE_SEQ: op(instr("SEQ"), arg_dst(), arg(src[0]), arg(src[1])); break;
