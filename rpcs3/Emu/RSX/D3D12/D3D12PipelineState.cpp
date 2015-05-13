@@ -58,11 +58,9 @@ bool PipelineStateObjectCache::SearchVp(const RSXVertexProgram& rsx_vp, Shader& 
 	return false;
 }
 
-ID3D12PipelineState *PipelineStateObjectCache::GetProg(u32 fp, u32 vp) const
+ID3D12PipelineState *PipelineStateObjectCache::GetProg(const PSOKey &key) const
 {
-	u64 vpLong = vp;
-	u64 key = vpLong << 32 | fp;
-	std::unordered_map<u64, ID3D12PipelineState *>::const_iterator It = m_cachePSO.find(key);
+	std::unordered_map<PSOKey, ID3D12PipelineState *, PSOKeyHash, PSOKeyCompare>::const_iterator It = m_cachePSO.find(key);
 	if (It == m_cachePSO.end())
 		return nullptr;
 	return It->second;
@@ -86,14 +84,18 @@ void PipelineStateObjectCache::AddFragmentProgram(Shader& fp, RSXFragmentProgram
 	m_cacheFS.insert(std::make_pair(fpShadowCopy, fp));
 }
 
-void PipelineStateObjectCache::Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp)
+void PipelineStateObjectCache::Add(ID3D12PipelineState *prog, const PSOKey& PSOKey)
 {
-	u64 vpLong = vp.Id;
-	u64 key = vpLong << 32 | fp.Id;
-	m_cachePSO.insert(std::make_pair(key, prog));
+	m_cachePSO.insert(std::make_pair(PSOKey, prog));
 }
 
-ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, ID3D12RootSignature *rootSignature, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
+ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
+	ID3D12Device *device,
+	ID3D12RootSignature *rootSignature,
+	RSXVertexProgram *vertexShader,
+	RSXFragmentProgram *fragmentShader,
+	const PipelineProperties &pipelineProperties,
+	const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
 {
 	ID3D12PipelineState *result = nullptr;
 	Shader m_vertex_prog, m_fragment_prog;
@@ -123,7 +125,9 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 	}
 
 	if (m_fp_buf_num && m_vp_buf_num)
-		result = GetProg(m_fragment_prog.Id, m_vertex_prog.Id);
+	{
+		result = GetProg({ m_vertex_prog.Id, m_fragment_prog.Id, pipelineProperties });
+	}
 
 	if (result != nullptr)
 	{
@@ -221,7 +225,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 		graphicPipelineStateDesc.BlendState = CD3D12_BLEND_DESC;
 		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
-		graphicPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;
 
 		graphicPipelineStateDesc.NumRenderTargets = 1;
 		graphicPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -234,7 +238,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 		graphicPipelineStateDesc.NodeMask = 1;
 
 		device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result));
-		Add(result, m_fragment_prog, m_vertex_prog);
+		Add(result, {m_vertex_prog.Id, m_fragment_prog.Id, pipelineProperties });
 
 		// RSX Debugger
 		/*if (Ini.GSLogPrograms.GetValue())

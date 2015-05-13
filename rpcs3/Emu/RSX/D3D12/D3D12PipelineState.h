@@ -13,6 +13,11 @@ enum class SHADER_TYPE
 	SHADER_TYPE_FRAGMENT
 };
 
+struct PipelineProperties
+{
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology;
+};
+
 /** Storage for a shader
 *   Embeds the D3DBlob corresponding to
 */
@@ -139,6 +144,31 @@ struct FragmentProgramCompare
 typedef std::unordered_map<void *, Shader, HashVertexProgram, VertexProgramCompare> binary2VS;
 typedef std::unordered_map<void *, Shader, HashFragmentProgram, FragmentProgramCompare> binary2FS;
 
+struct PSOKey
+{
+	u32 vpIdx;
+	u32 fpIdx;
+	PipelineProperties properties;
+};
+
+struct PSOKeyHash
+{
+	size_t operator()(const PSOKey &key) const
+	{
+		size_t hashValue = 0;
+		hashValue ^= std::hash<unsigned>()(key.vpIdx);
+		return hashValue;
+	}
+};
+
+struct PSOKeyCompare
+{
+	size_t operator()(const PSOKey &key1, const PSOKey &key2) const
+	{
+		return (key1.vpIdx == key2.vpIdx) && (key1.fpIdx == key2.fpIdx) && (key1.properties.Topology == key2.properties.Topology);
+	}
+};
+
 /**
  * Cache for shader blobs and Pipeline state object
  * The class is responsible for creating the object so the state only has to call getGraphicPipelineState
@@ -149,20 +179,27 @@ private:
 	size_t m_currentShaderId;
 	binary2VS m_cacheVS;
 	binary2FS m_cacheFS;
-	// Key is vertex << 32 | fragment ids
-	std::unordered_map<u64, ID3D12PipelineState *> m_cachePSO;
+
+	std::unordered_map<PSOKey, ID3D12PipelineState *, PSOKeyHash, PSOKeyCompare> m_cachePSO;
 
 	bool SearchFp(const RSXFragmentProgram& rsx_fp, Shader& shader);
 	bool SearchVp(const RSXVertexProgram& rsx_vp, Shader& shader);
-	ID3D12PipelineState *GetProg(u32 fp, u32 vp) const;
+	ID3D12PipelineState *GetProg(const PSOKey &psoKey) const;
 	void AddVertexProgram(Shader& vp, RSXVertexProgram& rsx_vp);
 	void AddFragmentProgram(Shader& fp, RSXFragmentProgram& rsx_fp);
-	void Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp);
+	void Add(ID3D12PipelineState *prog, const PSOKey& PSOKey);
 public:
 	PipelineStateObjectCache();
 	~PipelineStateObjectCache();
 	// Note: the last param is not taken into account if the PSO is not regenerated
-	ID3D12PipelineState *getGraphicPipelineState(ID3D12Device *device, ID3D12RootSignature *rootSignature, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet);
+	ID3D12PipelineState *getGraphicPipelineState(
+		ID3D12Device *device,
+		ID3D12RootSignature *rootSignature,
+		RSXVertexProgram *vertexShader,
+		RSXFragmentProgram *fragmentShader,
+		const PipelineProperties &pipelineProperties,
+		const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet
+	);
 };
 
 

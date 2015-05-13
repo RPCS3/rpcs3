@@ -457,7 +457,10 @@ bool D3D12GSRender::LoadProgram()
 		return false;
 	}
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, m_IASet);
+	PipelineProperties prop = {};
+	prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, prop, m_IASet);
 	return m_PSO != nullptr;
 }
 
