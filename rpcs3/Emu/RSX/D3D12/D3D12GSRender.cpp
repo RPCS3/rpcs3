@@ -23,6 +23,7 @@ D3D12GSRender::D3D12GSRender()
 	memset(m_vertexBufferSize, 0, sizeof(m_vertexBufferSize));
 	m_constantsBufferOffset = 0;
 	m_constantsBufferIndex = 0;
+	m_currentScaleOffsetBufferIndex = 0;
 	// Enable d3d debug layer
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
@@ -113,24 +114,51 @@ D3D12GSRender::D3D12GSRender()
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	check(m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
 
+	// Scale offset buffer
+	// Separate constant buffer
+	check(m_device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_scaleOffsetBuffer)
+		));
+	descriptorHeapDesc = {};
+	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	descriptorHeapDesc.NumDescriptors = 1000; // For safety
+	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	check(m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
+
+
 	// Common root signature
-	D3D12_DESCRIPTOR_RANGE descriptorRange = {};
-	descriptorRange.BaseShaderRegister = 0;
-	descriptorRange.NumDescriptors = 1;
-	descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	D3D12_ROOT_PARAMETER RP = {};
-	RP.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP.DescriptorTable.pDescriptorRanges = &descriptorRange;
-	RP.DescriptorTable.NumDescriptorRanges = 1;
+	D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+	// Scale Offset data
+	descriptorRange[0].BaseShaderRegister = 0;
+	descriptorRange[0].NumDescriptors = 1;
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	// Constants
+	descriptorRange[1].BaseShaderRegister = 1;
+	descriptorRange[1].NumDescriptors = 1;
+	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	D3D12_ROOT_PARAMETER RP[2] = {};
+	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
+	RP[0].DescriptorTable.NumDescriptorRanges = 1;
+	RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
+	RP[1].DescriptorTable.NumDescriptorRanges = 1;
 
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootSignatureDesc.NumParameters = 1;
-	rootSignatureDesc.pParameters = &RP;
+	rootSignatureDesc.NumParameters = 2;
+	rootSignatureDesc.pParameters = RP;
 
 	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
-	check(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, nullptr));
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+	check(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
 	m_device->CreateRootSignature(0,
 		rootSignatureBlob->GetBufferPointer(),
@@ -311,7 +339,7 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 	}
 }
 
-void D3D12GSRender::FillVertexShaderConstantsBuffer()
+void D3D12GSRender::setScaleOffset()
 {
 	float scaleOffsetMat[16] =
 	{
@@ -320,14 +348,6 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
-	size_t currentoffset = 0;
-	void *constantsBufferMap;
-	// TODO: Use finer range
-	D3D12_RANGE range = {
-		m_constantsBufferOffset,
-		1024 * 1024 - m_constantsBufferOffset
-	};
-	check(m_constantsBuffer->Map(0, &range, &constantsBufferMap));
 
 	// Scale
 	scaleOffsetMat[0] = (float&)methodRegisters[NV4097_SET_VIEWPORT_SCALE + (0x4 * 0)] / (RSXThread::m_width / RSXThread::m_width_scale);
@@ -342,31 +362,49 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
 	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
 
-	memcpy((char*)constantsBufferMap + m_constantsBufferOffset + currentoffset, scaleOffsetMat, 16 * sizeof(float));
-	currentoffset += 16 * sizeof(float);
+	void *scaleOffsetMap;
+	size_t offset = m_currentScaleOffsetBufferIndex * 256;
+	D3D12_RANGE range = {
+		offset,
+		1024 * 1024 - offset
+	};
+	check(m_scaleOffsetBuffer->Map(0, &range, &scaleOffsetMap));
+	memcpy((char*)scaleOffsetMap + offset, scaleOffsetMat, 16 * sizeof(float));
+	m_scaleOffsetBuffer->Unmap(0, &range);
 
-	size_t bufferSize = currentoffset;
+	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
+	constantBufferViewDesc.BufferLocation = m_scaleOffsetBuffer->GetGPUVirtualAddress() + offset;
+	constantBufferViewDesc.SizeInBytes = (UINT)256;
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
+}
+
+void D3D12GSRender::FillVertexShaderConstantsBuffer()
+{
+	size_t bufferSize = 0;
+
+	void *constantsBufferMap;
+	check(m_constantsBuffer->Map(0, nullptr, &constantsBufferMap));
 
 	for (const RSXTransformConstant& c : m_transform_constants)
 	{
-		size_t offset = c.id * 4 * sizeof(float) + currentoffset;
+		size_t offset = c.id * 4 * sizeof(float);
 		float vector[] = { c.x, c.y, c.z, c.w };
-		memcpy((char*)constantsBufferMap + m_constantsBufferOffset + offset, vector, 4 * sizeof(float));
+		memcpy((char*)constantsBufferMap + offset, vector, 4 * sizeof(float));
 		size_t bufferSizeCandidate = offset + 4 * sizeof(float);
 		bufferSize = bufferSizeCandidate > bufferSize ? bufferSizeCandidate : bufferSize;
 	}
-	m_constantsBuffer->Unmap(0, &range);
+	m_constantsBuffer->Unmap(0, nullptr);
 	// Align to 256 byte
 	bufferSize = (bufferSize + 255) & ~255;
 
-
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsBuffer->GetGPUVirtualAddress() + m_constantsBufferOffset;
+	constantBufferViewDesc.BufferLocation = m_constantsBuffer->GetGPUVirtualAddress();
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsBufferOffset += bufferSize;
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
@@ -447,11 +485,19 @@ void D3D12GSRender::ExecCMD()
 			assert((m_draw_array_first + m_draw_array_count) * item_size <= m_vertexBufferSize[i]);
 		}
 		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
+
+		setScaleOffset();
+		commandList->SetDescriptorHeaps(1, &m_scaleOffsetDescriptorHeap);
+		D3D12_GPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+		Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		commandList->SetGraphicsRootDescriptorTable(0, Handle);
+		m_currentScaleOffsetBufferIndex++;
+
 		FillVertexShaderConstantsBuffer();
 		commandList->SetDescriptorHeaps(1, &m_constantsBufferDescriptorsHeap);
-		D3D12_GPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+		Handle = m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
 		Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		commandList->SetGraphicsRootDescriptorTable(0, Handle);
+		commandList->SetGraphicsRootDescriptorTable(1, Handle);
 		m_constantsBufferIndex++;
 
 		FillPixelShaderConstantsBuffer();
@@ -894,5 +940,6 @@ void D3D12GSRender::Flip()
 	memset(m_vertexBufferSize, 0, sizeof(m_vertexBufferSize));
 	m_constantsBufferOffset = 0;
 	m_constantsBufferIndex = 0;
+	m_currentScaleOffsetBufferIndex = 0;
 }
 #endif
