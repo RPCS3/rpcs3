@@ -21,7 +21,7 @@ D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
 {
 	memset(m_vertexBufferSize, 0, sizeof(m_vertexBufferSize));
-	m_constantsBufferOffset = 0;
+	m_constantsBufferSize = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	// Enable d3d debug layer
@@ -391,8 +391,6 @@ void D3D12GSRender::setScaleOffset()
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
 {
-	size_t bufferSize = 0;
-
 	void *constantsBufferMap;
 	check(m_constantsBuffer->Map(0, nullptr, &constantsBufferMap));
 
@@ -402,15 +400,15 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 		float vector[] = { c.x, c.y, c.z, c.w };
 		memcpy((char*)constantsBufferMap + offset, vector, 4 * sizeof(float));
 		size_t bufferSizeCandidate = offset + 4 * sizeof(float);
-		bufferSize = bufferSizeCandidate > bufferSize ? bufferSizeCandidate : bufferSize;
+		m_constantsBufferSize = bufferSizeCandidate > m_constantsBufferSize ? bufferSizeCandidate : m_constantsBufferSize;
 	}
 	m_constantsBuffer->Unmap(0, nullptr);
-	// Align to 256 byte
-	bufferSize = (bufferSize + 255) & ~255;
+	// make it multiple of 256 bytes
+	m_constantsBufferSize = (m_constantsBufferSize + 255) & ~255;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsBuffer->GetGPUVirtualAddress();
-	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
+	constantBufferViewDesc.SizeInBytes = (UINT)m_constantsBufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
@@ -947,7 +945,7 @@ void D3D12GSRender::Flip()
 		gfxCommandList->Release();
 	m_inflightCommandList.clear();
 	memset(m_vertexBufferSize, 0, sizeof(m_vertexBufferSize));
-	m_constantsBufferOffset = 0;
+	m_constantsBufferSize = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 }

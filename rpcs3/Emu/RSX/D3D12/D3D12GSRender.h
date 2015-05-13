@@ -56,7 +56,7 @@ private:
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
 	ID3D12Resource *m_constantsBuffer;
 	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
-	size_t m_constantsBufferOffset, m_constantsBufferIndex;
+	size_t m_constantsBufferSize, m_constantsBufferIndex;
 
 	ID3D12Resource *m_scaleOffsetBuffer;
 	ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
