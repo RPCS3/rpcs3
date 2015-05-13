@@ -409,7 +409,7 @@ bool D3D12GSRender::LoadProgram()
 	}
 
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, m_IASet);
-	return true;
+	return m_PSO != nullptr;
 }
 
 void D3D12GSRender::ExecCMD()
