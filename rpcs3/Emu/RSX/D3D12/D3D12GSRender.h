@@ -44,7 +44,6 @@ class D3D12GSRender : public GSRender
 {
 private:
 	size_t m_vertexBufferSize[32];
-	std::vector<u8> m_vdata;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
 	PipelineStateObjectCache m_cachePSO;
