@@ -11,7 +11,6 @@
 
 D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height)
 {
-
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.NumDescriptors = 1;
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -80,8 +79,8 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 		D3D12_RESOURCE_DESC resourceDesc = {};
 		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		resourceDesc.Width = width;
-		resourceDesc.Height = height;
+		resourceDesc.Width = (UINT)width;
+		resourceDesc.Height = (UINT)height;
 		resourceDesc.DepthOrArraySize = 1;
 		resourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		resourceDesc.SampleDesc.Count = 1;
@@ -118,7 +117,11 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 
 D3D12RenderTargetSets::~D3D12RenderTargetSets()
 {
-
+	for (unsigned i = 0; i < 4; i++)
+		m_rtts[i]->Release();
+	m_rttDescriptorHeap->Release();
+	m_depthStencilTexture->Release();
+	m_depthStencilDescriptorHeap->Release();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3D12RenderTargetSets::getRTTCPUHandle(u8 baseFBO) const

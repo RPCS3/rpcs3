@@ -174,6 +174,15 @@ D3D12GSRender::~D3D12GSRender()
 	m_commandQueueCopy->Release();
 	m_backbufferAsRendertarget[0]->Release();
 	m_backbufferAsRendertarget[1]->Release();
+	m_constantsBufferDescriptorsHeap->Release();
+	m_scaleOffsetDescriptorHeap->Release();
+	m_constantsBuffer->Release();
+	m_scaleOffsetBuffer->Release();
+	for (unsigned i = 0; i < 32; i++)
+		m_vertexBuffer[i]->Release();
+	if (m_fbo)
+		delete m_fbo;
+	m_rootSignature->Release();
 	m_backBuffer[0]->Release();
 	m_backBuffer[1]->Release();
 	m_swapChain->Release();

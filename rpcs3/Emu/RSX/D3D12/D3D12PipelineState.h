@@ -4,6 +4,7 @@
 #include <d3d12.h>
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
+#include <wrl/client.h>
 
 
 enum class SHADER_TYPE
@@ -22,7 +23,7 @@ public:
 	~Shader() {}
 
 	u32 Id;
-	ID3DBlob *bytecode;
+	Microsoft::WRL::ComPtr<ID3DBlob> bytecode;
 
 	/**
 	* Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
@@ -145,11 +146,11 @@ typedef std::unordered_map<void *, Shader, HashFragmentProgram, FragmentProgramC
 class PipelineStateObjectCache
 {
 private:
-	size_t currentShaderId;
-	binary2VS cacheVS;
-	binary2FS cacheFS;
+	size_t m_currentShaderId;
+	binary2VS m_cacheVS;
+	binary2FS m_cacheFS;
 	// Key is vertex << 32 | fragment ids
-	std::unordered_map<u64, ID3D12PipelineState *> cachePSO;
+	std::unordered_map<u64, ID3D12PipelineState *> m_cachePSO;
 
 	bool SearchFp(const RSXFragmentProgram& rsx_fp, Shader& shader);
 	bool SearchVp(const RSXVertexProgram& rsx_vp, Shader& shader);

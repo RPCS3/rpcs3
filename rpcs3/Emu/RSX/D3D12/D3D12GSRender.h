@@ -57,6 +57,11 @@ private:
 	ID3D12Resource *m_constantsBuffer;
 	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 	size_t m_constantsBufferOffset, m_constantsBufferIndex;
+
+	ID3D12Resource *m_scaleOffsetBuffer;
+	ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
+	size_t m_currentScaleOffsetBufferIndex;
+
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
@@ -83,6 +88,7 @@ private:
 
 	bool LoadProgram();
 	void EnableVertexData(bool indexed_draw = false);
+	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
 	/*void DisableVertexData();

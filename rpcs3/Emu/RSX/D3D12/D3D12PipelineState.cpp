@@ -27,16 +27,19 @@ size_t getFPBinarySize(void *ptr)
 }
 
 
-PipelineStateObjectCache::PipelineStateObjectCache() : currentShaderId(0)
+PipelineStateObjectCache::PipelineStateObjectCache() : m_currentShaderId(0)
 {}
 
 PipelineStateObjectCache::~PipelineStateObjectCache()
-{}
+{
+	for (auto pair : m_cachePSO)
+		pair.second->Release();
+}
 
 bool PipelineStateObjectCache::SearchFp(const RSXFragmentProgram& rsx_fp, Shader& shader)
 {
-	binary2FS::const_iterator It = cacheFS.find(vm::get_ptr<void>(rsx_fp.addr));
-	if (It != cacheFS.end())
+	binary2FS::const_iterator It = m_cacheFS.find(vm::get_ptr<void>(rsx_fp.addr));
+	if (It != m_cacheFS.end())
 	{
 		shader = It->second;
 		return true;
@@ -46,8 +49,8 @@ bool PipelineStateObjectCache::SearchFp(const RSXFragmentProgram& rsx_fp, Shader
 
 bool PipelineStateObjectCache::SearchVp(const RSXVertexProgram& rsx_vp, Shader& shader)
 {
-	binary2VS::const_iterator It = cacheVS.find((void*)rsx_vp.data.data());
-	if (It != cacheVS.end())
+	binary2VS::const_iterator It = m_cacheVS.find((void*)rsx_vp.data.data());
+	if (It != m_cacheVS.end())
 	{
 		shader = It->second;
 		return true;
@@ -59,8 +62,8 @@ ID3D12PipelineState *PipelineStateObjectCache::GetProg(u32 fp, u32 vp) const
 {
 	u64 vpLong = vp;
 	u64 key = vpLong << 32 | fp;
-	std::unordered_map<u64, ID3D12PipelineState *>::const_iterator It = cachePSO.find(key);
-	if (It == cachePSO.end())
+	std::unordered_map<u64, ID3D12PipelineState *>::const_iterator It = m_cachePSO.find(key);
+	if (It == m_cachePSO.end())
 		return nullptr;
 	return It->second;
 }
@@ -70,8 +73,8 @@ void PipelineStateObjectCache::AddVertexProgram(Shader& vp, RSXVertexProgram& rs
 	size_t actualVPSize = rsx_vp.data.size() * 4;
 	void *fpShadowCopy = malloc(actualVPSize);
 	memcpy(fpShadowCopy, rsx_vp.data.data(), actualVPSize);
-	vp.Id = (u32)currentShaderId++;
-	cacheVS.insert(std::make_pair(fpShadowCopy, vp));
+	vp.Id = (u32)m_currentShaderId++;
+	m_cacheVS.insert(std::make_pair(fpShadowCopy, vp));
 }
 
 void PipelineStateObjectCache::AddFragmentProgram(Shader& fp, RSXFragmentProgram& rsx_fp)
@@ -79,15 +82,15 @@ void PipelineStateObjectCache::AddFragmentProgram(Shader& fp, RSXFragmentProgram
 	size_t actualFPSize = getFPBinarySize(vm::get_ptr<u8>(rsx_fp.addr));
 	void *fpShadowCopy = malloc(actualFPSize);
 	memcpy(fpShadowCopy, vm::get_ptr<u8>(rsx_fp.addr), actualFPSize);
-	fp.Id = (u32)currentShaderId++;
-	cacheFS.insert(std::make_pair(fpShadowCopy, fp));
+	fp.Id = (u32)m_currentShaderId++;
+	m_cacheFS.insert(std::make_pair(fpShadowCopy, fp));
 }
 
 void PipelineStateObjectCache::Add(ID3D12PipelineState *prog, Shader& fp, Shader& vp)
 {
 	u64 vpLong = vp.Id;
 	u64 key = vpLong << 32 | fp.Id;
-	cachePSO.insert(std::make_pair(key, prog));
+	m_cachePSO.insert(std::make_pair(key, prog));
 }
 
 ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Device *device, ID3D12RootSignature *rootSignature, RSXVertexProgram *vertexShader, RSXFragmentProgram *fragmentShader, const std::vector<D3D12_INPUT_ELEMENT_DESC> &IASet)
@@ -253,9 +256,13 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(ID3D12Dev
 void Shader::Compile(SHADER_TYPE st)
 {
 	static const char VSstring[] = TO_STRING(
-		cbuffer CONSTANT : register(b0)
+		cbuffer SCALE_OFFSET : register(b0)
 		{
 			float4x4 scaleOffsetMat;
+		};
+
+		cbuffer CONSTANT : register(b1)
+		{
 			float4 vc[468];
 		};
 
