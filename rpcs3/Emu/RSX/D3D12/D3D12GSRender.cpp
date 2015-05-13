@@ -458,7 +458,38 @@ bool D3D12GSRender::LoadProgram()
 	}
 
 	PipelineProperties prop = {};
-	prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	/*
+	#define GL_POINTS                         0x0000
+	#define GL_LINES                          0x0001
+	#define GL_LINE_LOOP                      0x0002
+	#define GL_LINE_STRIP                     0x0003
+	#define GL_TRIANGLES                      0x0004
+	#define GL_TRIANGLE_STRIP                 0x0005
+	#define GL_TRIANGLE_FAN                   0x0006
+	#define GL_QUADS                          0x0007
+	#define GL_QUAD_STRIP                     0x0008
+	#define GL_POLYGON                        0x0009
+	*/
+	switch (m_draw_mode - 1)
+	{
+	case 0:
+		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+		break;
+	case 1:
+	case 2:
+	case 3:
+		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		break;
+	case 4:
+	case 5:
+	case 6:
+		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		break;
+	default:
+//		LOG_ERROR(RSX, "Unsupported primitive type");
+		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		break;
+	}
 
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, prop, m_IASet);
 	return m_PSO != nullptr;
@@ -560,7 +591,46 @@ void D3D12GSRender::ExecCMD()
 	};
 	commandList->RSSetScissorRects(1, &box);
 
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	/*
+	#define GL_POINTS                         0x0000
+	#define GL_LINES                          0x0001
+	#define GL_LINE_LOOP                      0x0002
+	#define GL_LINE_STRIP                     0x0003
+	#define GL_TRIANGLES                      0x0004
+	#define GL_TRIANGLE_STRIP                 0x0005
+	#define GL_TRIANGLE_FAN                   0x0006
+	#define GL_QUADS                          0x0007
+	#define GL_QUAD_STRIP                     0x0008
+	#define GL_POLYGON                        0x0009
+	*/
+	switch (m_draw_mode - 1)
+	{
+	case 0:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+		break;
+	case 1:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		break;
+	case 2:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
+		break;
+	case 3:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
+		break;
+	case 4:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		break;
+	case 5:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		break;
+	case 6:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ);
+		break;
+	default:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ);
+//		LOG_ERROR(RSX, "Unsupported primitive type");
+		break;
+	}
 
 	if (m_indexed_array.m_count)
 	{
