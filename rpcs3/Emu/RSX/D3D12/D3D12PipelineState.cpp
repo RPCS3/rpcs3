@@ -277,7 +277,7 @@ void Shader::Compile(SHADER_TYPE st)
 			pos.z = dot(pos, vc[258]);
 			pos.y = dot(pos, vc[257]);
 			pos.x = dot(pos, vc[256]);
-			pos.z = 0;
+			pos.z = -pos.z;
 			Out.pos = mul(pos, scaleOffsetMat);
 			Out.color = In.color;
 			return Out;
