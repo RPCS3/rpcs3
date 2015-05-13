@@ -256,6 +256,7 @@ void Shader::Compile(SHADER_TYPE st)
 		cbuffer CONSTANT : register(b0)
 		{
 			float4x4 scaleOffsetMat;
+			float4 vc[468];
 		};
 
 		struct vertex {
@@ -271,7 +272,13 @@ void Shader::Compile(SHADER_TYPE st)
 		pixel main(vertex In)
 		{
 			pixel Out;
-			Out.pos = mul(float4(In.pos.x, In.pos.y, 0., 1.), scaleOffsetMat);
+			float4 pos = In.pos;
+			pos.w = dot(pos, vc[259]);
+			pos.z = dot(pos, vc[258]);
+			pos.y = dot(pos, vc[257]);
+			pos.x = dot(pos, vc[256]);
+			pos.z = 0;
+			Out.pos = mul(pos, scaleOffsetMat);
 			Out.color = In.color;
 			return Out;
 		});

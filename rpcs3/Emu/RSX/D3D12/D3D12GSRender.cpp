@@ -345,24 +345,28 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	memcpy((char*)constantsBufferMap + m_constantsBufferOffset + currentoffset, scaleOffsetMat, 16 * sizeof(float));
 	currentoffset += 16 * sizeof(float);
 
+	size_t bufferSize = currentoffset;
+
 	for (const RSXTransformConstant& c : m_transform_constants)
 	{
+		size_t offset = c.id * 4 * sizeof(float) + currentoffset;
 		float vector[] = { c.x, c.y, c.z, c.w };
-		memcpy((char*)constantsBufferMap + m_constantsBufferOffset + currentoffset, vector, 4 * sizeof(float));
-		currentoffset += 4 * sizeof(float);
+		memcpy((char*)constantsBufferMap + m_constantsBufferOffset + offset, vector, 4 * sizeof(float));
+		size_t bufferSizeCandidate = offset + 4 * sizeof(float);
+		bufferSize = bufferSizeCandidate > bufferSize ? bufferSizeCandidate : bufferSize;
 	}
 	m_constantsBuffer->Unmap(0, &range);
 	// Align to 256 byte
-	currentoffset = (currentoffset + 255) & ~255;
+	bufferSize = (bufferSize + 255) & ~255;
 
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsBuffer->GetGPUVirtualAddress() + m_constantsBufferOffset;
-	constantBufferViewDesc.SizeInBytes = (UINT)currentoffset;
+	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsBufferOffset += currentoffset;
+	m_constantsBufferOffset += bufferSize;
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
