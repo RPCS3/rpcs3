@@ -5,6 +5,13 @@
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 
+static std::string typeName[] =
+{
+	"float",
+	"float2",
+	"float3",
+	"float4"
+};
 
 std::string VertexDecompiler::GetMask(bool is_sca)
 {
@@ -45,13 +52,13 @@ std::string VertexDecompiler::GetDST(bool isSca)
 	switch (isSca ? 0x1f : d3.dst)
 	{
 	case 0x1f:
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
+		ret += m_parr.AddParam(PARAM_NONE, typeName[3], std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
 		break;
 
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? "vec4(0.0f, 0.0f, 0.0f, 1.0f)" : "vec4(0.0)");
+		ret += m_parr.AddParam(PARAM_NONE, typeName[3], std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? typeName[3] + "(0.0f, 0.0f, 0.0f, 1.0f)" : typeName[3] + "(0.0, 0.0, 0.0, 0.0)");
 		break;
 	}
 
@@ -75,21 +82,21 @@ std::string VertexDecompiler::GetSRC(const u32 n)
 	switch (src[n].reg_type)
 	{
 	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", "tmp" + std::to_string(src[n].tmp_src));
+		ret += m_parr.AddParam(PARAM_NONE, typeName[3], "tmp" + std::to_string(src[n].tmp_src));
 		break;
 	case 2: //input
 		if (d1.input_src < (sizeof(reg_table) / sizeof(reg_table[0])))
 		{
-			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src], d1.input_src);
+			ret += m_parr.AddParam(PARAM_IN, typeName[3], reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
-			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
+			ret += m_parr.AddParam(PARAM_IN, typeName[3], "in_unk", d1.input_src);
 		}
 		break;
 	case 3: //const
-		m_parr.AddParam(PARAM_UNIFORM, "vec4", std::string("vc[468]"));
+		m_parr.AddParam(PARAM_UNIFORM, typeName[3], std::string("vc[468]"));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
 
@@ -154,7 +161,7 @@ void VertexDecompiler::SetDST(bool is_sca, std::string value)
 
 	if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
 	{
-		dest = m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(d0.cond_reg_sel_1), "vec4(0.0)") + mask;
+		dest = m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(d0.cond_reg_sel_1), typeName[3] + "(0.0)") + mask;
 	}
 	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
 	{
@@ -312,7 +319,7 @@ void VertexDecompiler::AddCodeCond(const std::string& dst, const std::string& sr
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = vec4(" + src + ").x;");
+		AddCode("if (" + cond + ".x) " + dst + " = " + typeName[3] + "(" + src + ").x;");
 	}
 	else
 	{
@@ -437,7 +444,7 @@ std::string VertexDecompiler::BuildCode()
 
 	insertInputs(OS, m_parr.params[PARAM_IN]);
 	OS << std::endl;
-	insertOutputs(OS, m_parr.params[PARAM_OUT]);
+	insertOutputs(OS, m_parr.params[PARAM_NONE]);
 	OS << std::endl;
 	insertConstants(OS, m_parr.params[PARAM_UNIFORM]);
 	OS << std::endl;
@@ -471,7 +478,7 @@ void VertexDecompiler::insertInputs(std::stringstream & OS, const std::vector<Pa
 
 void VertexDecompiler::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "cbuffer CONSTANT_BUFFER" << std::endl;
+	OS << "cbuffer CONSTANT_BUFFER : register(b1)" << std::endl;
 	OS << "{" << std::endl;
 	for (const ParamType PT : constants)
 	{
@@ -485,11 +492,15 @@ void VertexDecompiler::insertOutputs(std::stringstream & OS, const std::vector<P
 {
 	OS << "struct PixelInput" << std::endl;
 	OS << "{" << std::endl;
-	OS << "	float4 position : SV_POSITION;" << std::endl;
+	OS << "	float4 dst_reg0 : SV_POSITION;" << std::endl;
+	size_t outputIndex = 0;
 	for (const ParamType PT : outputs)
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
+		{
+			if (PI.name == "dst_reg0") continue;
+			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << outputIndex++ << ";" << std::endl;
+		}
 	}
 	OS << "};" << std::endl;
 }
@@ -532,14 +543,20 @@ static const reg_info reg_table[] =
 
 void VertexDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "PixelInput main(VertexInput)" << std::endl;
+	OS << "PixelInput main(VertexInput In)" << std::endl;
 	OS << "{" << std::endl;
 
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
-			OS << "	vec4 " << i.src_reg << ";" << std::endl;
+		if (m_parr.HasParam(PARAM_NONE, typeName[3], i.src_reg))
+			OS << "	float4 " << i.src_reg << ";" << std::endl;
+	}
+
+	for (const ParamType PT : m_parr.params[PARAM_IN])
+	{
+		for (const ParamItem &PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
 }
 
@@ -550,10 +567,12 @@ void VertexDecompiler::insertMainEnd(std::stringstream & OS)
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
+		if (m_parr.HasParam(PARAM_NONE, typeName[3], i.src_reg))
 			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
 	}
-	OS << "	Out.position = mul(dst_reg0, scaleOffsetMat);" << std::endl;
+	// TODO: Find why I need to do this
+	OS << "	Out.dst_reg0.z *= -1.;" << std::endl;
+	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);" << std::endl;
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
@@ -688,7 +707,7 @@ std::string VertexDecompiler::Decompile()
 		case RSX_SCA_OPCODE_RSQ: SetDSTSca("inversesqrt(abs($s))"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
-		case RSX_SCA_OPCODE_LIT: SetDSTSca("vec4(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
+		case RSX_SCA_OPCODE_LIT: SetDSTSca(typeName[3] + "(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
 		case RSX_SCA_OPCODE_BRA:
 		{
 			AddCode("$if ($cond)");
@@ -782,7 +801,7 @@ std::string VertexDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
 		case RSX_VEC_OPCODE_DP3: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break;
 		case RSX_VEC_OPCODE_DPH: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break;
-		case RSX_VEC_OPCODE_DP4: SetDSTVec("vec4(dot($0, $1))"); break;
+		case RSX_VEC_OPCODE_DP4: SetDSTVec(typeName[3] + "(dot($0, $1), dot($0, $1), dot($0, $1), dot($0, $1))"); break;
 		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
 		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;

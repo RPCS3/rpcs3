@@ -108,7 +108,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 	{
 		LOG_WARNING(RSX, "FP not found in buffer!");
 		//		Decompile(*fragmentShader);
-		m_fragment_prog.Compile(SHADER_TYPE::SHADER_TYPE_FRAGMENT);
+		m_fragment_prog.Compile("", SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 		AddFragmentProgram(m_fragment_prog, *fragmentShader);
 
 		// TODO: This shouldn't use current dir
@@ -120,7 +120,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 		LOG_WARNING(RSX, "VP not found in buffer!");
 		VertexDecompiler VS(vertexShader->data);
 		std::string shaderCode = VS.Decompile();
-		m_vertex_prog.Compile(SHADER_TYPE::SHADER_TYPE_VERTEX);
+		m_vertex_prog.Compile(shaderCode, SHADER_TYPE::SHADER_TYPE_VERTEX);
 		AddVertexProgram(m_vertex_prog, *vertexShader);
 
 		// TODO: This shouldn't use current dir
@@ -260,51 +260,16 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 
 #define TO_STRING(x) #x
 
-void Shader::Compile(SHADER_TYPE st)
+void Shader::Compile(const std::string &code, SHADER_TYPE st)
 {
-	static const char VSstring[] = TO_STRING(
-		cbuffer SCALE_OFFSET : register(b0)
-		{
-			float4x4 scaleOffsetMat;
-		};
-
-		cbuffer CONSTANT : register(b1)
-		{
-			float4 vc[468];
-		};
-
-		struct vertex {
-			float4 pos : TEXCOORD0;
-			float4 color : TEXCOORD3;
-		};
-
-		struct pixel {
-			float4 pos : SV_POSITION;
-			float4 color : TEXCOORD0;
-		};
-
-		pixel main(vertex In)
-		{
-			pixel Out;
-			float4 pos = In.pos;
-			pos.w = dot(pos, vc[259]);
-			pos.z = dot(pos, vc[258]);
-			pos.y = dot(pos, vc[257]);
-			pos.x = dot(pos, vc[256]);
-			pos.z = -pos.z;
-			Out.pos = mul(pos, scaleOffsetMat);
-			Out.color = In.color;
-			return Out;
-		});
-
 	static const char FSstring[] = TO_STRING(
 		struct pixel {
-			float4 pos : SV_POSITION;
-			float4 color : TEXCOORD0;
+			float4 dst_reg0 : SV_POSITION;
+			float4 dst_reg1 : TEXCOORD0;
 		};
 		float4 main(pixel In) : SV_TARGET
 		{
-		return In.color;
+			return In.dst_reg1;
 		});
 
 	HRESULT hr;
@@ -312,7 +277,7 @@ void Shader::Compile(SHADER_TYPE st)
 	switch (st)
 	{
 	case SHADER_TYPE::SHADER_TYPE_VERTEX:
-		hr = D3DCompile(VSstring, sizeof(VSstring), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
+		hr = D3DCompile(code.c_str(), code.size(), "test", nullptr, nullptr, "main", "vs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
 		if (hr != S_OK)
 			LOG_ERROR(RSX, "VS build failed:%s", errorBlob->GetBufferPointer());
 		break;

@@ -37,7 +37,7 @@ public:
 	//	void Decompile(RSXFragmentProgram& prog)
 
 	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
-	void Compile(SHADER_TYPE st);
+	void Compile(const std::string &code, SHADER_TYPE st);
 };
 
 // Based on
