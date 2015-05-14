@@ -258,6 +258,8 @@ protected:
 	virtual void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs);
 	virtual void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants);
 	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs);
+	virtual void insertMainStart(std::stringstream &OS);
+	virtual void insertMainEnd(std::stringstream &OS);
 public:
 	VertexDecompiler(std::vector<u32>& data);
 	std::string Decompile();

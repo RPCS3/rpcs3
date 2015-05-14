@@ -390,71 +390,9 @@ std::string VertexDecompiler::BuildFuncBody(const FuncInfo& func)
 
 std::string VertexDecompiler::BuildCode()
 {
-	struct reg_info
-	{
-		std::string name;
-		bool need_declare;
-		std::string src_reg;
-		std::string src_reg_mask;
-		bool need_cast;
-	};
-
-	static const reg_info reg_table[] =
-	{
-		{ "gl_Position", false, "dst_reg0", "", false },
-		{ "diff_color", true, "dst_reg1", "", false },
-		{ "spec_color", true, "dst_reg2", "", false },
-		{ "front_diff_color", true, "dst_reg3", "", false },
-		{ "front_spec_color", true, "dst_reg4", "", false },
-		{ "fogc", true, "dst_reg5", ".x", true },
-		{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
-		{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
-		{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
-		{ "gl_PointSize", false, "dst_reg6", ".x", false },
-		{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
-		{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
-		{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
-		{ "tc0", true, "dst_reg7", "", false },
-		{ "tc1", true, "dst_reg8", "", false },
-		{ "tc2", true, "dst_reg9", "", false },
-		{ "tc3", true, "dst_reg10", "", false },
-		{ "tc4", true, "dst_reg11", "", false },
-		{ "tc5", true, "dst_reg12", "", false },
-		{ "tc6", true, "dst_reg13", "", false },
-		{ "tc7", true, "dst_reg14", "", false },
-		{ "tc8", true, "dst_reg15", "", false },
-		{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
-	};
 
 	std::string f;
-
-	for (auto &i : reg_table)
-	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
-		{
-			if (i.need_declare)
-			{
-				m_parr.AddParam(PARAM_OUT, "vec4", i.name);
-			}
-
-			if (i.need_cast)
-			{
-				f += "\t" + i.name + " = vec4(" + i.src_reg + i.src_reg_mask + ");\n";
-			}
-			else
-			{
-				f += "\t" + i.name + " = " + i.src_reg + i.src_reg_mask + ";\n";
-			}
-		}
-	}
-
-	std::string p;
 	std::string fp;
-
-	for (int i = m_funcs.size() - 1; i > 0; --i)
-	{
-		fp += fmt::Format("void %s();\n", m_funcs[i].name.c_str());
-	}
 
 	f = fmt::Format("void %s()\n{\n\t%s();\n%s\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
 		m_funcs[0].name.c_str(), m_funcs[1].name.c_str(), f.c_str());
@@ -504,9 +442,9 @@ std::string VertexDecompiler::BuildCode()
 	insertConstants(OS, m_parr.params[PARAM_UNIFORM]);
 	OS << std::endl;
 
-
-	OS << fp.c_str() << std::endl;
-	OS << f.c_str() << std::endl;
+	insertMainStart(OS);
+	OS << main_body.c_str() << std::endl;
+	insertMainEnd(OS);
 
 	return OS.str();
 }
@@ -554,6 +492,70 @@ void VertexDecompiler::insertOutputs(std::stringstream & OS, const std::vector<P
 			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
+}
+
+struct reg_info
+{
+	std::string name;
+	bool need_declare;
+	std::string src_reg;
+	std::string src_reg_mask;
+	bool need_cast;
+};
+
+static const reg_info reg_table[] =
+{
+	{ "gl_Position", false, "dst_reg0", "", false },
+	{ "diff_color", true, "dst_reg1", "", false },
+	{ "spec_color", true, "dst_reg2", "", false },
+	{ "front_diff_color", true, "dst_reg3", "", false },
+	{ "front_spec_color", true, "dst_reg4", "", false },
+	{ "fogc", true, "dst_reg5", ".x", true },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y", false },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z", false },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w", false },
+	{ "gl_PointSize", false, "dst_reg6", ".x", false },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y", false },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z", false },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w", false },
+	{ "tc0", true, "dst_reg7", "", false },
+	{ "tc1", true, "dst_reg8", "", false },
+	{ "tc2", true, "dst_reg9", "", false },
+	{ "tc3", true, "dst_reg10", "", false },
+	{ "tc4", true, "dst_reg11", "", false },
+	{ "tc5", true, "dst_reg12", "", false },
+	{ "tc6", true, "dst_reg13", "", false },
+	{ "tc7", true, "dst_reg14", "", false },
+	{ "tc8", true, "dst_reg15", "", false },
+	{ "tc9", true, "dst_reg6", "", false }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
+};
+
+void VertexDecompiler::insertMainStart(std::stringstream & OS)
+{
+	OS << "PixelInput main(VertexInput)" << std::endl;
+	OS << "{" << std::endl;
+
+	// Declare inside main function
+	for (auto &i : reg_table)
+	{
+		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
+			OS << "	vec4 " << i.src_reg << ";" << std::endl;
+	}
+}
+
+
+void VertexDecompiler::insertMainEnd(std::stringstream & OS)
+{
+	OS << "	PixelInput Out;" << std::endl;
+	// Declare inside main function
+	for (auto &i : reg_table)
+	{
+		if (m_parr.HasParam(PARAM_NONE, "vec4", i.src_reg))
+			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
+	}
+	OS << "	Out.position = mul(dst_reg0, scaleOffsetMat);" << std::endl;
+	OS << "	return Out;" << std::endl;
+	OS << "}" << std::endl;
 }
 
 VertexDecompiler::VertexDecompiler(std::vector<u32>& data) :
