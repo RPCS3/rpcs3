@@ -6,6 +6,14 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
+static std::string typeName[] =
+{
+	"float",
+	"float2",
+	"float3",
+	"float4"
+};
+
 FragmentDecompiler::FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
 	m_addr(addr),
 	m_size(size),
@@ -48,7 +56,7 @@ void FragmentDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		if (dst.set_cond)
 		{
-			AddCode("$ifcond " + m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + code + ";");
+			AddCode("$ifcond " + m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + code + ";");
 		}
 		else
 		{
@@ -65,7 +73,7 @@ void FragmentDecompiler::SetDst(std::string code, bool append_mask)
 
 	if (dst.set_cond)
 	{
-		AddCode(m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
+		AddCode(m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
 	}
 }
 
@@ -93,24 +101,24 @@ std::string FragmentDecompiler::GetMask()
 
 std::string FragmentDecompiler::AddReg(u32 index, int fp16)
 {
-	return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0)");
+	return m_parr.AddParam(PARAM_NONE, typeName[3], std::string(fp16 ? "h" : "r") + std::to_string(index), typeName[3] + "(0.0)");
 }
 
 bool FragmentDecompiler::HasReg(u32 index, int fp16)
 {
-	return m_parr.HasParam(PARAM_NONE, "vec4",
+	return m_parr.HasParam(PARAM_NONE, typeName[3],
 		std::string(fp16 ? "h" : "r") + std::to_string(index));
 }
 
 std::string FragmentDecompiler::AddCond()
 {
-	return m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_reg_index));
+	return m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_reg_index));
 }
 
 std::string FragmentDecompiler::AddConst()
 {
 	std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	if (m_parr.HasParam(PARAM_UNIFORM, "vec4", name))
+	if (m_parr.HasParam(PARAM_UNIFORM, typeName[3], name))
 	{
 		return name;
 	}
@@ -122,8 +130,8 @@ std::string FragmentDecompiler::AddConst()
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
-	return m_parr.AddParam(PARAM_UNIFORM, "vec4", name,
-		std::string("vec4(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
+	return m_parr.AddParam(PARAM_UNIFORM, typeName[3], name,
+		std::string(typeName[3] + "(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
 		+ ", " + std::to_string((float&)z) + ", " + std::to_string((float&)w) + ")");
 }
 
@@ -201,7 +209,7 @@ std::string FragmentDecompiler::GetCond()
 		cond = "equal";
 	}
 
-	return "any(" + cond + "(" + AddCond() + swizzle + ", vec4(0.0)))";
+	return "any(" + cond + "(" + AddCond() + swizzle + ", " + typeName[3] +"(0.0)))";
 }
 
 void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
@@ -252,7 +260,7 @@ void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& 
 		cond = "equal";
 	}
 
-	cond = cond + "(" + AddCond() + swizzle + ", vec4(0.0))";
+	cond = cond + "(" + AddCond() + swizzle + ", " + typeName[3] + "(0.0))";
 
 	ShaderVar dst_var(dst);
 	dst_var.symplify();
@@ -261,7 +269,7 @@ void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& 
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = vec4(" + src + ").x;");
+		AddCode("if (" + cond + ".x) " + dst + " = " + typeName[3] + "(" + src + ").x;");
 	}
 	else
 	{
@@ -299,12 +307,12 @@ template<typename T> std::string FragmentDecompiler::GetSRC(T src)
 		default:
 			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
 			{
-				ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[dst.src_attr_reg_num]);
+				ret += m_parr.AddParam(PARAM_IN, typeName[3], reg_table[dst.src_attr_reg_num]);
 			}
 			else
 			{
 				LOG_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
-				ret += m_parr.AddParam(PARAM_IN, "vec4", "unk");
+				ret += m_parr.AddParam(PARAM_IN, typeName[3], "unk");
 				Emu.Pause();
 			}
 			break;
@@ -351,22 +359,60 @@ std::string FragmentDecompiler::BuildCode()
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", table[i].second))
-			AddCode(m_parr.AddParam(PARAM_OUT, "vec4", table[i].first, i) + " = " + table[i].second + ";");
+		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
+			AddCode(m_parr.AddParam(PARAM_OUT, typeName[3], table[i].first, i) + " = " + table[i].second + ";");
 	}
 
 	if (m_ctrl & 0xe) main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h2.z;\n";
 
-	std::string p;
+	std::stringstream OS;
+	insertHeader(OS);
+	insertIntputs(OS);
+	insertMainStart(OS);
+	OS << main << std::endl;
+	insertMainEnd(OS);
 
-	for (auto& param : m_parr.params) {
-//		p += param.Format();
+	return OS.str();
+}
+
+void FragmentDecompiler::insertHeader(std::stringstream & OS)
+{
+	OS << "// Nothing" << std::endl;
+}
+
+void FragmentDecompiler::insertIntputs(std::stringstream & OS)
+{
+	OS << "struct PSInput" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4 dst_reg0 : SV_POSITION;" << std::endl;
+	size_t index = 0;
+	for (ParamType PT : m_parr.params[PARAM_IN])
+	{
+		for (ParamItem PI : PT.items)
+		{
+			OS << "	" << PT.type << " " << PI.name << " : TEXCOORD" << index << ";" << std::endl;
+			index++;
+		}
 	}
+	OS << "};" << std::endl;
+}
 
-	return std::string("#version 420\n"
-		"\n"
-		+ p + "\n"
-		"void main()\n{\n" + main + "}\n");
+void FragmentDecompiler::insertMainStart(std::stringstream & OS)
+{
+	OS << "float4 main(PSInput In) : SV_TARGET" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4 r0;" << std::endl;
+	for (ParamType PT : m_parr.params[PARAM_IN])
+	{
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+	}
+}
+
+void FragmentDecompiler::insertMainEnd(std::stringstream & OS)
+{
+	OS << "	return r0;" << std::endl;
+	OS << "}" << std::endl;
 }
 
 std::string FragmentDecompiler::Decompile()

@@ -2,6 +2,7 @@
 #if defined(DX12_SUPPORT)
 #include "ShaderParam.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
+#include <sstream>
 
 class FragmentDecompiler
 {
@@ -35,6 +36,11 @@ class FragmentDecompiler
 	std::string BuildCode();
 
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
+protected:
+	virtual void insertHeader(std::stringstream &OS);
+	virtual void insertIntputs(std::stringstream &OS);
+	virtual void insertMainStart(std::stringstream &OS);
+	virtual void insertMainEnd(std::stringstream &OS);
 public:
 	FragmentDecompiler(u32 addr, u32& size, u32 ctrl);
 	std::string Decompile();

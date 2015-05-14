@@ -109,11 +109,11 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 		LOG_WARNING(RSX, "FP not found in buffer!");
 		FragmentDecompiler FS(fragmentShader->addr, fragmentShader->size, fragmentShader->offset);
 		const std::string &shader = FS.Decompile();
-		m_fragment_prog.Compile("", SHADER_TYPE::SHADER_TYPE_FRAGMENT);
+		m_fragment_prog.Compile(shader, SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 		AddFragmentProgram(m_fragment_prog, *fragmentShader);
 
 		// TODO: This shouldn't use current dir
-		fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
+		fs::file("./FragmentProgram.hlsl", o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
 	}
 
 	if (!m_vp_buf_num)
@@ -125,7 +125,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 		AddVertexProgram(m_vertex_prog, *vertexShader);
 
 		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(shaderCode.c_str(), shaderCode.size());
+		fs::file("./VertexProgram.hlsl", o_write | o_create | o_trunc).write(shaderCode.c_str(), shaderCode.size());
 	}
 
 	if (m_fp_buf_num && m_vp_buf_num)
@@ -262,18 +262,7 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 #define TO_STRING(x) #x
 
 void Shader::Compile(const std::string &code, SHADER_TYPE st)
-{
-	static const char FSstring[] = TO_STRING(
-		struct pixel {
-			float4 dst_reg0 : SV_POSITION;
-			float4 dst_reg1 : TEXCOORD0;
-		};
-		float4 main(pixel In) : SV_TARGET
-		{
-			return In.dst_reg1;
-		});
-
-	HRESULT hr;
+{	HRESULT hr;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 	switch (st)
 	{
@@ -283,7 +272,7 @@ void Shader::Compile(const std::string &code, SHADER_TYPE st)
 			LOG_ERROR(RSX, "VS build failed:%s", errorBlob->GetBufferPointer());
 		break;
 	case SHADER_TYPE::SHADER_TYPE_FRAGMENT:
-		hr = D3DCompile(FSstring, sizeof(FSstring), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
+		hr = D3DCompile(code.c_str(), code.size(), "test", nullptr, nullptr, "main", "ps_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
 		if (hr != S_OK)
 			LOG_ERROR(RSX, "FS build failed:%s", errorBlob->GetBufferPointer());
 		break;
