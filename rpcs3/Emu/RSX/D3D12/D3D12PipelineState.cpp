@@ -2,7 +2,6 @@
 #if defined (DX12_SUPPORT)
 
 #include "D3D12PipelineState.h"
-#include "D3D12ProgramDisassembler.h"
 #include "Emu/Memory/vm.h"
 #include "Utilities/Log.h"
 #include <wrl/client.h>

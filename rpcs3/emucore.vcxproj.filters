@@ -974,6 +974,15 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\ShaderParam.cpp">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\D3D12\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
@@ -1847,6 +1856,12 @@
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\ShaderParam.h">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\VertexProgramDecompiler.h">
