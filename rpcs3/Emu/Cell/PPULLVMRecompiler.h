@@ -13,7 +13,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/ExecutionEngine/JIT.h"
 #include "llvm/PassManager.h"
 
 namespace ppu_recompiler_llvm {
