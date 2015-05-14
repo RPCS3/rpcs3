@@ -410,14 +410,14 @@ std::string VertexDecompiler::BuildCode()
 		lvl -= m_instructions[i].close_scopes;
 		if (lvl < 1) lvl = 1;
 		//assert(lvl >= 1);
-		for (uint j = 0; j < m_instructions[i].put_close_scopes; ++j)
+		for (int j = 0; j < m_instructions[i].put_close_scopes; ++j)
 		{
 			--lvl;
 			if (lvl < 1) lvl = 1;
 			main_body.append(lvl, '\t') += "}\n";
 		}
 
-		for (uint j = 0; j < m_instructions[i].do_count; ++j)
+		for (int j = 0; j < m_instructions[i].do_count; ++j)
 		{
 			main_body.append(lvl, '\t') += "do\n";
 			main_body.append(lvl, '\t') += "{\n";

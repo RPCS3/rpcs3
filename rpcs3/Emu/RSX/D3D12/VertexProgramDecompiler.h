@@ -81,9 +81,8 @@ struct ParamArray
 		}
 		else
 		{
-			const u32 num = params[flag].size();
 			params[flag].emplace_back(flag, type);
-			params[flag][num].items.emplace_back(name, -1, value);
+			params[flag].back().items.emplace_back(name, -1, value);
 		}
 
 		return name;
@@ -99,9 +98,8 @@ struct ParamArray
 		}
 		else
 		{
-			const u32 num = params[flag].size();
 			params[flag].emplace_back(flag, type);
-			params[flag][num].items.emplace_back(name, location);
+			params[flag].back().items.emplace_back(name, location);
 		}
 
 		return name;
@@ -136,7 +134,7 @@ public:
 		}
 	}
 
-	int get_vector_size() const
+	size_t get_vector_size() const
 	{
 		return swizzles[swizzles.size() - 1].length();
 	}
