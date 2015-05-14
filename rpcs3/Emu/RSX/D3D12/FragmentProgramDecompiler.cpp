@@ -14,6 +14,19 @@ static std::string typeName[] =
 	"float4"
 };
 
+enum FUNCTION {
+	FUNCTION_SATURATE,
+	FUNCTION_DP2,
+	FUNCTION_FRACT,
+};
+
+static std::string functionName[] =
+{
+	"saturate",
+	"float4(dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy))",
+	"frac($0)",
+};
+
 FragmentDecompiler::FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
 	m_addr(addr),
 	m_size(size),
@@ -47,7 +60,7 @@ void FragmentDecompiler::SetDst(std::string code, bool append_mask)
 
 	if (dst.saturate)
 	{
-		code = "clamp(" + code + ", 0.0, 1.0)";
+		code = functionName[FUNCTION_SATURATE] + "(" + code + ")";
 	}
 
 	code += (append_mask ? "$m" : "");
@@ -237,30 +250,30 @@ void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& 
 
 	if (src0.exec_if_gr && src0.exec_if_eq)
 	{
-		cond = "greaterThanEqual";
+		cond = ">=";
 	}
 	else if (src0.exec_if_lt && src0.exec_if_eq)
 	{
-		cond = "lessThanEqual";
+		cond = "<=";
 	}
 	else if (src0.exec_if_gr && src0.exec_if_lt)
 	{
-		cond = "notEqual";
+		cond = "!=";
 	}
 	else if (src0.exec_if_gr)
 	{
-		cond = "greaterThan";
+		cond = ">";
 	}
 	else if (src0.exec_if_lt)
 	{
-		cond = "lessThan";
+		cond = "<";
 	}
 	else //if(src0.exec_if_eq)
 	{
-		cond = "equal";
+		cond = "==";
 	}
 
-	cond = cond + "(" + AddCond() + swizzle + ", " + typeName[3] + "(0.0))";
+	cond = "(" + AddCond() + swizzle + " " + cond + " " + typeName[3] + "(0., 0., 0., 0.))";
 
 	ShaderVar dst_var(dst);
 	dst_var.symplify();
@@ -269,7 +282,7 @@ void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& 
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + typeName[3] + "(" + src + ").x;");
+		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
 	}
 	else
 	{
@@ -349,26 +362,18 @@ template<typename T> std::string FragmentDecompiler::GetSRC(T src)
 std::string FragmentDecompiler::BuildCode()
 {
 	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
-	const std::pair<std::string, std::string> table[] =
-	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
-	};
-
-	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
-	{
-		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
-			AddCode(m_parr.AddParam(PARAM_OUT, typeName[3], table[i].first, i) + " = " + table[i].second + ";");
-	}
 
 	if (m_ctrl & 0xe) main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h2.z;\n";
 
 	std::stringstream OS;
 	insertHeader(OS);
+	OS << std::endl;
 	insertConstants(OS);
+	OS << std::endl;
 	insertIntputs(OS);
+	OS << std::endl;
+	insertOutputs(OS);
+	OS << std::endl;
 	insertMainStart(OS);
 	OS << main << std::endl;
 	insertMainEnd(OS);
@@ -378,7 +383,7 @@ std::string FragmentDecompiler::BuildCode()
 
 void FragmentDecompiler::insertHeader(std::stringstream & OS)
 {
-	OS << "// Nothing" << std::endl;
+	OS << "// Header" << std::endl;
 }
 
 void FragmentDecompiler::insertIntputs(std::stringstream & OS)
@@ -404,6 +409,26 @@ void FragmentDecompiler::insertIntputs(std::stringstream & OS)
 	OS << "};" << std::endl;
 }
 
+void FragmentDecompiler::insertOutputs(std::stringstream & OS)
+{
+	OS << "struct PixelOutput" << std::endl;
+	OS << "{" << std::endl;
+	const std::pair<std::string, std::string> table[] =
+	{
+		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+	};
+
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	{
+		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
+			OS << "	" << typeName[3] << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
+	}
+	OS << "};" << std::endl;
+}
+
 void FragmentDecompiler::insertConstants(std::stringstream & OS)
 {
 	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
@@ -418,19 +443,38 @@ void FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 void FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "float4 main(PixelInput In) : SV_TARGET" << std::endl;
+	OS << "PixelOutput main(PixelInput In)" << std::endl;
 	OS << "{" << std::endl;
-	OS << "	float4 r0;" << std::endl;
 	for (ParamType PT : m_parr.params[PARAM_IN])
 	{
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
+	// Declare output
+	for (ParamType PT : m_parr.params[PARAM_NONE])
+	{
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
+	}
 }
 
 void FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
-	OS << "	return r0;" << std::endl;
+	const std::pair<std::string, std::string> table[] =
+	{
+		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+	};
+
+	OS << "	PixelOutput Out;" << std::endl;
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	{
+		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
+			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
+	}
+	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
 
@@ -491,7 +535,7 @@ std::string FragmentDecompiler::Decompile()
 			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
 			case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
 			case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1))"); break;
-			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
+			case RSX_FP_OPCODE_DP2: SetDst(functionName[FUNCTION_DP2]); break;
 			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
 			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
 			case RSX_FP_OPCODE_DP2A: SetDst("vec4($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
@@ -532,7 +576,7 @@ std::string FragmentDecompiler::Decompile()
 			case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); break; // TODO: Is this in the right category?
 			case RSX_FP_OPCODE_EX2: SetDst("exp2($0)"); break;
 			case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
-			case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
+			case RSX_FP_OPCODE_FRC: SetDst(functionName[FUNCTION_FRACT]); break;
 			case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); break;
 			case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
 			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
