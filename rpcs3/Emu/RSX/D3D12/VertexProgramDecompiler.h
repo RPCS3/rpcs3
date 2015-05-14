@@ -1,8 +1,8 @@
 #pragma once
 #if defined(DX12_SUPPORT)
 #include "Emu/RSX/RSXVertexProgram.h"
-#include <set>
 #include <vector>
+#include <sstream>
 
 enum ParamFlag
 {
@@ -11,30 +11,27 @@ enum ParamFlag
 	PARAM_UNIFORM,
 	PARAM_CONST,
 	PARAM_NONE,
+	PARAM_COUNT,
 };
 
-struct GLParamItem
+struct ParamItem
 {
 	std::string name;
-	std::string location;
 	std::string value;
+	int location;
 
-	GLParamItem(const std::string& _name, int _location, const std::string& _value = "")
+	ParamItem(const std::string& _name, int _location, const std::string& _value = "")
 		: name(_name)
-		, value(_value)
-	{
-		if (_location > -1)
-			location = "layout (location = " + std::to_string(_location) + ") ";
-		else
-			location = "";
-	}
+		, value(_value),
+		location(_location)
+	{ }
 };
 
 struct ParamType
 {
 	const ParamFlag flag;
 	std::string type;
-	std::vector<GLParamItem> items;
+	std::vector<ParamItem> items;
 
 	ParamType(const ParamFlag _flag, const std::string& _type)
 		: flag(_flag)
@@ -51,63 +48,32 @@ struct ParamType
 
 		return false;
 	}
-
-	std::string Format()
-	{
-		std::string ret = "";
-
-		for (u32 n = 0; n<items.size(); ++n)
-		{
-			ret += items[n].location + type + " " + items[n].name;
-			if (!items[n].value.empty())
-			{
-				ret += " = " + items[n].value;
-			}
-			ret += ";\n";
-		}
-
-		return ret;
-	}
 };
 
 struct ParamArray
 {
-	std::vector<ParamType> params;
+	std::vector<ParamType> params[PARAM_COUNT];
 
-	ParamType* SearchParam(const std::string& type)
+	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
 	{
-		for (u32 i = 0; i<params.size(); ++i)
+		for (u32 i = 0; i<params[flag].size(); ++i)
 		{
-			if (params[i].type.compare(type) == 0)
-				return &params[i];
+			if (params[flag][i].type.compare(type) == 0)
+				return &params[flag][i];
 		}
 
 		return nullptr;
 	}
 
-	std::string GetParamFlag(const ParamFlag flag)
-	{
-		switch (flag)
-		{
-		case PARAM_OUT:     return "out ";
-		case PARAM_IN:      return "in ";
-		case PARAM_UNIFORM: return "uniform ";
-		case PARAM_CONST:   return "const ";
-		default:            return "";
-		}
-	}
-
 	bool HasParam(const ParamFlag flag, std::string type, const std::string& name)
 	{
-		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		ParamType* t = SearchParam(flag, type);
 		return t && t->SearchName(name);
 	}
 
 	std::string AddParam(const ParamFlag flag, std::string type, const std::string& name, const std::string& value)
 	{
-		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		ParamType* t = SearchParam(flag, type);
 
 		if (t)
 		{
@@ -115,9 +81,9 @@ struct ParamArray
 		}
 		else
 		{
-			const u32 num = params.size();
-			params.emplace_back(flag, type);
-			params[num].items.emplace_back(name, -1, value);
+			const u32 num = params[flag].size();
+			params[flag].emplace_back(flag, type);
+			params[flag][num].items.emplace_back(name, -1, value);
 		}
 
 		return name;
@@ -125,8 +91,7 @@ struct ParamArray
 
 	std::string AddParam(const ParamFlag flag, std::string type, const std::string& name, int location = -1)
 	{
-		type = GetParamFlag(flag) + type;
-		ParamType* t = SearchParam(type);
+		ParamType* t = SearchParam(flag, type);
 
 		if (t)
 		{
@@ -134,9 +99,9 @@ struct ParamArray
 		}
 		else
 		{
-			const u32 num = params.size();
-			params.emplace_back(flag, type);
-			params[num].items.emplace_back(name, location);
+			const u32 num = params[flag].size();
+			params[flag].emplace_back(flag, type);
+			params[flag][num].items.emplace_back(name, location);
 		}
 
 		return name;
@@ -288,9 +253,13 @@ struct VertexDecompiler
 	std::string BuildFuncBody(const FuncInfo& func);
 	std::string BuildCode();
 
+protected:
+	virtual void insertHeader(std::stringstream &OS);
+	virtual void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs);
+	virtual void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants);
+	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs);
 public:
-	std::string m_shader;
 	VertexDecompiler(std::vector<u32>& data);
-	void Decompile();
+	std::string Decompile();
 };
 #endif

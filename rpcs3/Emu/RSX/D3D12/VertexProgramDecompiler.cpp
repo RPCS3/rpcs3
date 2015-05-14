@@ -449,11 +449,6 @@ std::string VertexDecompiler::BuildCode()
 	}
 
 	std::string p;
-
-	for (auto& param : m_parr.params) {
-		p += param.Format();
-	}
-
 	std::string fp;
 
 	for (int i = m_funcs.size() - 1; i > 0; --i)
@@ -499,15 +494,66 @@ std::string VertexDecompiler::BuildCode()
 		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
 
-	static const std::string& prot =
-		"#version 420\n"
-		"\n"
-		"uniform mat4 scaleOffsetMat = mat4(1.0);\n"
-		"%s\n"
-		"%s\n"
-		"%s";
+	std::stringstream OS;
+	insertHeader(OS);
 
-	return fmt::Format(prot.c_str(), p.c_str(), fp.c_str(), f.c_str());
+	insertInputs(OS, m_parr.params[PARAM_IN]);
+	OS << std::endl;
+	insertOutputs(OS, m_parr.params[PARAM_OUT]);
+	OS << std::endl;
+	insertConstants(OS, m_parr.params[PARAM_UNIFORM]);
+	OS << std::endl;
+
+
+	OS << fp.c_str() << std::endl;
+	OS << f.c_str() << std::endl;
+
+	return OS.str();
+}
+
+void VertexDecompiler::insertHeader(std::stringstream &OS)
+{
+	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "};" << std::endl;
+}
+
+void VertexDecompiler::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
+{
+	OS << "struct VertexInput" << std::endl;
+	OS << "{" << std::endl;
+	for (const ParamType PT : inputs)
+	{
+		for (const ParamItem &PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
+	}
+	OS << "};" << std::endl;
+}
+
+void VertexDecompiler::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
+{
+	OS << "cbuffer CONSTANT_BUFFER" << std::endl;
+	OS << "{" << std::endl;
+	for (const ParamType PT : constants)
+	{
+		for (const ParamItem &PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+	}
+	OS << "};" << std::endl;
+}
+
+void VertexDecompiler::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
+{
+	OS << "struct PixelInput" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4 position : SV_POSITION;" << std::endl;
+	for (const ParamType PT : outputs)
+	{
+		for (const ParamItem &PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << PI.location << ";" << std::endl;
+	}
+	OS << "};" << std::endl;
 }
 
 VertexDecompiler::VertexDecompiler(std::vector<u32>& data) :
@@ -522,9 +568,10 @@ VertexDecompiler::VertexDecompiler(std::vector<u32>& data) :
 	//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 }
 
-void VertexDecompiler::Decompile()
+std::string VertexDecompiler::Decompile()
 {
-	m_parr.params.clear();
+	for (unsigned i = 0; i < PARAM_COUNT; i++)
+		m_parr.params[i].clear();
 	m_instr_count = 0;
 
 	for (int i = 0; i < m_max_instr_count; ++i)
@@ -769,7 +816,7 @@ void VertexDecompiler::Decompile()
 		AddCode("}");
 	}
 
-	m_shader = BuildCode();
+	std::string result = BuildCode();
 
 	m_jump_lvls.clear();
 	m_body.clear();
@@ -777,6 +824,7 @@ void VertexDecompiler::Decompile()
 	{
 		m_funcs.erase(m_funcs.begin() + 2, m_funcs.end());
 	}
+	return result;
 }
 
 #endif

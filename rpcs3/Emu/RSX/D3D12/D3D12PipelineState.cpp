@@ -119,12 +119,12 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 	{
 		LOG_WARNING(RSX, "VP not found in buffer!");
 		VertexDecompiler VS(vertexShader->data);
-		VS.Decompile();
+		std::string shaderCode = VS.Decompile();
 		m_vertex_prog.Compile(SHADER_TYPE::SHADER_TYPE_VERTEX);
 		AddVertexProgram(m_vertex_prog, *vertexShader);
 
 		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(VS.m_shader.c_str(), VS.m_shader.size());
+		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(shaderCode.c_str(), shaderCode.size());
 	}
 
 	if (m_fp_buf_num && m_vp_buf_num)
