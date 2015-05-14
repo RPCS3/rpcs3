@@ -383,18 +383,24 @@ void FragmentDecompiler::insertHeader(std::stringstream & OS)
 
 void FragmentDecompiler::insertIntputs(std::stringstream & OS)
 {
-	OS << "struct PSInput" << std::endl;
+	OS << "struct PixelInput" << std::endl;
 	OS << "{" << std::endl;
-	OS << "	float4 dst_reg0 : SV_POSITION;" << std::endl;
-	size_t index = 0;
-	for (ParamType PT : m_parr.params[PARAM_IN])
-	{
-		for (ParamItem PI : PT.items)
-		{
-			OS << "	" << PT.type << " " << PI.name << " : TEXCOORD" << index << ";" << std::endl;
-			index++;
-		}
-	}
+	OS << "	float4 Position : SV_POSITION;" << std::endl;
+	OS << "	float4 diff_color : COLOR0;" << std::endl;
+	OS << "	float4 spec_color : COLOR1;" << std::endl;
+	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
+	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
+	OS << "	float fogc : FOG;" << std::endl;
+	OS << "	float4 dummy : COLOR4;" << std::endl;
+	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
+	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
+	OS << "	float4 tc2 : TEXCOORD2;" << std::endl;
+	OS << "	float4 tc3 : TEXCOORD3;" << std::endl;
+	OS << "	float4 tc4 : TEXCOORD4;" << std::endl;
+	OS << "	float4 tc5 : TEXCOORD5;" << std::endl;
+	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
+	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
+	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
 	OS << "};" << std::endl;
 }
 
@@ -412,7 +418,7 @@ void FragmentDecompiler::insertConstants(std::stringstream & OS)
 
 void FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
-	OS << "float4 main(PSInput In) : SV_TARGET" << std::endl;
+	OS << "float4 main(PixelInput In) : SV_TARGET" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4 r0;" << std::endl;
 	for (ParamType PT : m_parr.params[PARAM_IN])

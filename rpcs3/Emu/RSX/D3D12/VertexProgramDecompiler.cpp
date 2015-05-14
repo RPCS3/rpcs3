@@ -479,15 +479,21 @@ void VertexDecompiler::insertOutputs(std::stringstream & OS, const std::vector<P
 	OS << "struct PixelInput" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4 dst_reg0 : SV_POSITION;" << std::endl;
-	size_t outputIndex = 0;
-	for (const ParamType PT : outputs)
-	{
-		for (const ParamItem &PI : PT.items)
-		{
-			if (PI.name == "dst_reg0") continue;
-			OS << "	" << PT.type << " " << PI.name << ": TEXCOORD" << outputIndex++ << ";" << std::endl;
-		}
-	}
+	OS << "	float4 dst_reg1 : COLOR0;" << std::endl;
+	OS << "	float4 dst_reg2 : COLOR1;" << std::endl;
+	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
+	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
+	OS << "	float dst_reg5 : FOG;" << std::endl;
+	OS << "	float4 dst_reg6 : COLOR4;" << std::endl;
+	OS << "	float4 dst_reg7 : TEXCOORD0;" << std::endl;
+	OS << "	float4 dst_reg8 : TEXCOORD1;" << std::endl;
+	OS << "	float4 dst_reg9 : TEXCOORD2;" << std::endl;
+	OS << "	float4 dst_reg10 : TEXCOORD3;" << std::endl;
+	OS << "	float4 dst_reg11 : TEXCOORD4;" << std::endl;
+	OS << "	float4 dst_reg12 : TEXCOORD5;" << std::endl;
+	OS << "	float4 dst_reg13 : TEXCOORD6;" << std::endl;
+	OS << "	float4 dst_reg14 : TEXCOORD7;" << std::endl;
+	OS << "	float4 dst_reg15 : TEXCOORD8;" << std::endl;
 	OS << "};" << std::endl;
 }
 

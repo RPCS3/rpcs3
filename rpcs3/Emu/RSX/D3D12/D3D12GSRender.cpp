@@ -24,6 +24,7 @@ D3D12GSRender::D3D12GSRender()
 	m_constantsBufferSize = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
+	constantsFragmentSize = 0;
 	// Enable d3d debug layer
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
@@ -432,16 +433,15 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	for (const RSXTransformConstant& c : m_fragment_constants)
 	{
 		u32 id = c.id - m_cur_fragment_prog->offset;
-
-		float vector[] = { c.x, c.y, c.z, c.w };
-		memcpy(constantsBufferMap, vector, 4 * sizeof(float));
-		index++;
 	}
+	float vector[] = { 0.,1.,0.,0. };
+//	memcpy((char*)constantsBufferMap, vector, 4 * sizeof(float));
+	index++;
 	m_constantsFragmentBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = m_constantsFragmentBuffer->GetGPUVirtualAddress();
-	constantBufferViewDesc.SizeInBytes = (UINT) index * 4 * sizeof(float);
+	constantBufferViewDesc.SizeInBytes = (UINT)256;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
@@ -1030,5 +1030,6 @@ void D3D12GSRender::Flip()
 	m_constantsBufferSize = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
+	constantsFragmentSize = 0;
 }
 #endif
