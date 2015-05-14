@@ -8,6 +8,7 @@
 #include <d3dcompiler.h>
 #include <unordered_map>
 #include "VertexProgramDecompiler.h"
+#include "FragmentProgramDecompiler.h"
 #include "Utilities/File.h"
 
 #pragma comment (lib, "d3dcompiler.lib")
@@ -106,12 +107,13 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 	if (!m_fp_buf_num)
 	{
 		LOG_WARNING(RSX, "FP not found in buffer!");
-		//		Decompile(*fragmentShader);
+		FragmentDecompiler FS(fragmentShader->addr, fragmentShader->size, fragmentShader->offset);
+		const std::string &shader = FS.Decompile();
 		m_fragment_prog.Compile("", SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 		AddFragmentProgram(m_fragment_prog, *fragmentShader);
 
 		// TODO: This shouldn't use current dir
-		//fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(m_fragment_prog.shader.c_str(), m_fragment_prog.shader.size());
+		fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
 	}
 
 	if (!m_vp_buf_num)

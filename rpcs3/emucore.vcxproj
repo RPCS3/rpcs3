@@ -45,6 +45,7 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12GSRender.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12PipelineState.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\D3D12RenderTargetSets.cpp" />
+    <ClCompile Include="Emu\RSX\D3D12\FragmentProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\ShaderParam.cpp" />
     <ClCompile Include="Emu\RSX\D3D12\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
@@ -508,6 +509,7 @@
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12PipelineState.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12RenderTargetSets.h" />
+    <ClInclude Include="Emu\RSX\D3D12\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\D3D12\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
