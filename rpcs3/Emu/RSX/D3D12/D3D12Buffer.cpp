@@ -94,7 +94,7 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool ind
 	{
 		if (!vertexData[i].IsEnabled()) continue;
 		const size_t item_size = vertexData[i].GetTypeSize() * vertexData[i].size;
-		offset_list[i] = item_size;
+		offset_list[i] = (u32)item_size;
 	}
 
 #if	DUMP_VERTEX_DATA
@@ -211,7 +211,7 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool ind
 		{
 			IAElement.SemanticName = "TEXCOORD";
 			IAElement.SemanticIndex = i;
-			IAElement.InputSlot = inputSlot;
+			IAElement.InputSlot = (UINT)inputSlot;
 			IAElement.Format = getFormat(vertexData[i].type - 1, vertexData[i].size);
 			inputSlot++;
 		}
