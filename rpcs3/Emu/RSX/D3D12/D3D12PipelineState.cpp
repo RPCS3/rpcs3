@@ -8,6 +8,8 @@
 #include <wrl/client.h>
 #include <d3dcompiler.h>
 #include <unordered_map>
+#include "VertexProgramDecompiler.h"
+#include "Utilities/File.h"
 
 #pragma comment (lib, "d3dcompiler.lib")
 
@@ -116,12 +118,13 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 	if (!m_vp_buf_num)
 	{
 		LOG_WARNING(RSX, "VP not found in buffer!");
-		//		m_vertex_prog.Decompile(*vertexShader);
+		VertexDecompiler VS(vertexShader->data);
+		VS.Decompile();
 		m_vertex_prog.Compile(SHADER_TYPE::SHADER_TYPE_VERTEX);
 		AddVertexProgram(m_vertex_prog, *vertexShader);
 
 		// TODO: This shouldn't use current dir
-//		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
+		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(VS.m_shader.c_str(), VS.m_shader.size());
 	}
 
 	if (m_fp_buf_num && m_vp_buf_num)

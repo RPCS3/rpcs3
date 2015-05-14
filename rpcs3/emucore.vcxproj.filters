@@ -974,6 +974,9 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12Buffer.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\VertexProgramDecompiler.cpp">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1844,6 +1847,9 @@
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\VertexProgramDecompiler.h">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
   </ItemGroup>
