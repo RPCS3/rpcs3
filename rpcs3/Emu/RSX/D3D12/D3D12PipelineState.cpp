@@ -168,9 +168,9 @@ ID3D12PipelineState *PipelineStateObjectCache::getGraphicPipelineState(
 	}
 	else
 	{
-		LOG_WARNING(RSX, "Add program :");
-		LOG_WARNING(RSX, "*** vp id = %d", m_vertex_prog.Id);
-		LOG_WARNING(RSX, "*** fp id = %d", m_fragment_prog.Id);
+//		LOG_WARNING(RSX, "Add program :");
+//		LOG_WARNING(RSX, "*** vp id = %d", m_vertex_prog.Id);
+//		LOG_WARNING(RSX, "*** fp id = %d", m_fragment_prog.Id);
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 

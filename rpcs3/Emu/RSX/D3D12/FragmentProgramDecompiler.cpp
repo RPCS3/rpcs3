@@ -367,6 +367,7 @@ std::string FragmentDecompiler::BuildCode()
 
 	std::stringstream OS;
 	insertHeader(OS);
+	insertConstants(OS);
 	insertIntputs(OS);
 	insertMainStart(OS);
 	OS << main << std::endl;
@@ -393,6 +394,18 @@ void FragmentDecompiler::insertIntputs(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << " : TEXCOORD" << index << ";" << std::endl;
 			index++;
 		}
+	}
+	OS << "};" << std::endl;
+}
+
+void FragmentDecompiler::insertConstants(std::stringstream & OS)
+{
+	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
+	OS << "{" << std::endl;
+	for (ParamType PT : m_parr.params[PARAM_UNIFORM])
+	{
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
 }

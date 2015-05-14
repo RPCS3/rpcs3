@@ -39,6 +39,7 @@ class FragmentDecompiler
 protected:
 	virtual void insertHeader(std::stringstream &OS);
 	virtual void insertIntputs(std::stringstream &OS);
+	virtual void insertConstants(std::stringstream &OS);
 	virtual void insertMainStart(std::stringstream &OS);
 	virtual void insertMainEnd(std::stringstream &OS);
 public:

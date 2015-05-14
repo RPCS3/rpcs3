@@ -54,7 +54,7 @@ private:
 	//  GLTexture m_gl_vertex_textures[m_textures_count];
 
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
-	ID3D12Resource *m_constantsBuffer;
+	ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
 	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 	size_t m_constantsBufferSize, m_constantsBufferIndex;
 
