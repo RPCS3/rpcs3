@@ -1031,5 +1031,6 @@ void D3D12GSRender::Flip()
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	constantsFragmentSize = 0;
+	m_frame->Flip(nullptr);
 }
 #endif
