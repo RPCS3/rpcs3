@@ -397,13 +397,6 @@ std::string VertexDecompiler::BuildFuncBody(const FuncInfo& func)
 
 std::string VertexDecompiler::BuildCode()
 {
-
-	std::string f;
-	std::string fp;
-
-	f = fmt::Format("void %s()\n{\n\t%s();\n%s\tgl_Position = gl_Position * scaleOffsetMat;\n}\n",
-		m_funcs[0].name.c_str(), m_funcs[1].name.c_str(), f.c_str());
-
 	std::string main_body;
 	for (uint i = 0, lvl = 1; i < m_instr_count; i++)
 	{
@@ -430,13 +423,6 @@ std::string VertexDecompiler::BuildCode()
 		}
 
 		lvl += m_instructions[i].open_scopes;
-	}
-
-	f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[1].name.c_str(), main_body.c_str());
-
-	for (uint i = 2; i<m_funcs.size(); ++i)
-	{
-		f += fmt::Format("\nvoid %s()\n{\n%s}\n", m_funcs[i].name.c_str(), BuildFuncBody(m_funcs[i]).c_str());
 	}
 
 	std::stringstream OS;
