@@ -415,10 +415,10 @@ void FragmentDecompiler::insertOutputs(std::stringstream & OS)
 	OS << "{" << std::endl;
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", "r0" },
+		{ "ocol1", "r2" },
+		{ "ocol2", "r3" },
+		{ "ocol3", "r4" },
 	};
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
@@ -469,10 +469,10 @@ void FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+		{ "ocol0", "r0" },
+		{ "ocol1", "r2" },
+		{ "ocol2", "r3" },
+		{ "ocol3", "r4" },
 	};
 
 	OS << "	PixelOutput Out;" << std::endl;
