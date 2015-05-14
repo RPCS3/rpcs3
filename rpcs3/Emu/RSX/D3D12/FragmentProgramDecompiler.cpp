@@ -368,14 +368,16 @@ std::string FragmentDecompiler::BuildCode()
 	std::stringstream OS;
 	insertHeader(OS);
 	OS << std::endl;
-	insertConstants(OS);
+
 	OS << std::endl;
 	insertIntputs(OS);
 	OS << std::endl;
 	insertOutputs(OS);
 	OS << std::endl;
 	insertMainStart(OS);
+	insertConstants(OS);
 	OS << main << std::endl;
+
 	insertMainEnd(OS);
 
 	return OS.str();
