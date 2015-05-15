@@ -26,16 +26,20 @@ D3D12GSRender::D3D12GSRender()
 	m_currentScaleOffsetBufferIndex = 0;
 	constantsFragmentSize = 0;
 	// Enable d3d debug layer
+#ifdef DEBUG
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
 	debugInterface->EnableDebugLayer();
+#endif
 
-	// Create adapter
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
-	IDXGIAdapter* warpAdapter;
-	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
-	check(D3D12CreateDevice(warpAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	// Create adapter
+	IDXGIAdapter* adaptater = nullptr;
+#ifdef DEBUG
+	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
+#endif
+	check(D3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
@@ -1015,7 +1019,7 @@ void D3D12GSRender::Flip()
 	}
 	}
 
-	check(m_swapChain->Present(1, 0));
+	check(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Wait execution is over
 	// TODO: It's suboptimal, we should use 2 command allocator
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
