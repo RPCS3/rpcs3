@@ -181,8 +181,8 @@ void GLTexture::Init(RSXTexture& tex)
 			src = (u32*)pixels;
 			dst = (u32*)unswizzledPixels;
 
-			log2width = log(tex.GetWidth()) / log(2);
-			log2height = log(tex.GetHeight()) / log(2);
+			log2width = (u32)(logf(tex.GetWidth()) / logf(2.f));
+			log2height = (u32)(logf(tex.GetHeight()) / logf(2.f));
 
 			for (int i = 0; i < tex.GetHeight(); i++)
 			{
@@ -696,7 +696,7 @@ void DrawCursorObj::Draw()
 
 	if (m_update_texture)
 	{
-		glUniform2f(m_program.GetLocation("in_tc"), m_width, m_height);
+		glUniform2f(m_program.GetLocation("in_tc"), (GLfloat)m_width, (GLfloat)m_height);
 		checkForGlError("DrawCursorObj : glUniform2f");
 		if (!m_tex_id)
 		{
@@ -715,7 +715,7 @@ void DrawCursorObj::Draw()
 
 	if (m_update_pos)
 	{
-		glUniform4f(m_program.GetLocation("in_pos"), m_pos_x, m_pos_y, m_pos_z, 1.0f);
+		glUniform4f(m_program.GetLocation("in_pos"), (GLfloat)m_pos_x, (GLfloat)m_pos_y, (GLfloat)m_pos_z, 1.0f);
 		checkForGlError("DrawCursorObj : glUniform4f");
 	}
 
@@ -864,9 +864,9 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 		if (!m_vertex_data[i].IsEnabled()) continue;
 		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
 		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
-		const u32 pos = m_vdata.size();
+		const u32 pos = (u32)m_vdata.size();
 
-		cur_offset += data_size;
+		cur_offset += (u32)data_size;
 		m_vdata.resize(m_vdata.size() + data_size);
 		memcpy(&m_vdata[pos], &m_vertex_data[i].data[data_offset * item_size], data_size);
 	}
@@ -877,12 +877,12 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 	m_vbo.Create(indexed_draw ? 2 : 1);
 	m_vbo.Bind(0);
-	m_vbo.SetData(m_vdata.data(), m_vdata.size());
+	m_vbo.SetData(m_vdata.data(), (u32)m_vdata.size());
 
 	if (indexed_draw)
 	{
 		m_vbo.Bind(GL_ELEMENT_ARRAY_BUFFER, 1);
-		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
+		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, m_indexed_array.m_data.data(), (u32)m_indexed_array.m_data.size());
 	}
 
 	checkForGlError("initializing vbo");
@@ -1024,7 +1024,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 
 			glEnableVertexAttribArray(i);
 			checkForGlError("glEnableVertexAttribArray");
-			glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>(offset_list[i]));
+			glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, reinterpret_cast<void*>((u64)offset_list[i]));
 			checkForGlError("glVertexAttribPointer");
 		}
 	}
@@ -1736,7 +1736,7 @@ void GLGSRender::ExecCMD()
 			if (!i.size)
 				continue;
 
-			u32 vertex_size = i.data.size() / (i.size * i.GetTypeSize());
+			u32 vertex_size = (u32)(i.data.size() / (i.size * i.GetTypeSize()));
 
 			if (min_vertex_size > vertex_size)
 				min_vertex_size = vertex_size;

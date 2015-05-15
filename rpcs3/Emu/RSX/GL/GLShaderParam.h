@@ -112,7 +112,7 @@ struct GLParamArray
 		}
 		else
 		{
-			const u32 num = params.size();
+			const u32 num = (u32)params.size();
 			params.emplace_back(flag, type);
 			params[num].items.emplace_back(name, -1, value);
 		}
@@ -131,7 +131,7 @@ struct GLParamArray
 		}
 		else
 		{
-			const u32 num = params.size();
+			const u32 num = (u32)params.size();
 			params.emplace_back(flag, type);
 			params[num].items.emplace_back(name, location);
 		}
@@ -170,7 +170,7 @@ public:
 
 	int get_vector_size() const
 	{
-		return swizzles[swizzles.size() - 1].length();
+		return (int)swizzles[swizzles.size() - 1].length();
 	}
 
 	ShaderVar& symplify()
