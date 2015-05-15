@@ -1,22 +1,25 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLBuffers.h"
-#include "GLProgramBuffer.h"
-
-#pragma comment(lib, "opengl32.lib")
 
 #define RSX_DEBUG 1
 
-extern GLenum g_last_gl_error;
-void printGlError(GLenum err, const char* situation);
-void printGlError(GLenum err, const std::string& situation);
-u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
+
+#include "GLProgramBuffer.h"
+
+#pragma comment(lib, "opengl32.lib")
 
 #if RSX_DEBUG
 #define checkForGlError(sit) if((g_last_gl_error = glGetError()) != GL_NO_ERROR) printGlError(g_last_gl_error, sit)
 #else
 #define checkForGlError(sit)
 #endif
+
+extern GLenum g_last_gl_error;
+void printGlError(GLenum err, const char* situation);
+void printGlError(GLenum err, const std::string& situation);
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
+
 
 class GLTexture
 {

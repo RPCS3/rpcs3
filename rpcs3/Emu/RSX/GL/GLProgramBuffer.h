@@ -1,29 +1,66 @@
 #pragma once
 #include "GLProgram.h"
+#include "../Common/ProgramStateCache.h"
+#include "Utilities/File.h"
 
-struct GLBufferInfo
+struct GLTraits
 {
-	u32 prog_id;
-	u32 fp_id;
-	u32 vp_id;
-	std::vector<u8> fp_data;
-	std::vector<u32> vp_data;
-	std::string fp_shader;
-	std::string vp_shader;
+	typedef GLVertexProgram VertexProgramData;
+	typedef GLFragmentProgram FragmentProgramData;
+	typedef GLProgram PipelineData;
+	typedef void* PipelineProperties;
+	typedef void* ExtraData;
+
+	static
+	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
+	{
+		fragmentProgramData.Decompile(*RSXFP);
+		fragmentProgramData.Compile();
+		GLuint res = glGetError();
+		//checkForGlError("m_fragment_prog.Compile");
+
+		// TODO: This shouldn't use current dir
+		fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(fragmentProgramData.shader.c_str(), fragmentProgramData.shader.size());
+	}
+
+	static
+	void RecompileVertexProgram(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID)
+	{
+		vertexProgramData.Decompile(*RSXVP);
+		vertexProgramData.Compile();
+		GLuint res = glGetError();
+		//checkForGlError("m_vertex_prog.Compile");
+
+		// TODO: This shouldn't use current dir
+		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(vertexProgramData.shader.c_str(), vertexProgramData.shader.size());
+	}
+
+	static
+	PipelineData *BuildProgram(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData)
+	{
+		GLProgram *result = new GLProgram();
+		result->Create(vertexProgramData.id, fragmentProgramData.id);
+		GLuint res = glGetError();
+		//checkForGlError("m_program.Create");
+		result->Use();
+
+		LOG_NOTICE(RSX, "*** prog id = %d", result->id);
+		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);
+		LOG_NOTICE(RSX, "*** fp id = %d", fragmentProgramData.id);
+
+		LOG_NOTICE(RSX, "*** vp shader = \n%s", vertexProgramData.shader.c_str());
+		LOG_NOTICE(RSX, "*** fp shader = \n%s", fragmentProgramData.shader.c_str());
+
+		return result;
+	}
+
+	static
+	void DeleteProgram(PipelineData *ptr)
+	{
+		ptr->Delete();
+	}
 };
 
-struct GLProgramBuffer
+class GLProgramBuffer : public ProgramStateCache<GLTraits>
 {
-	std::vector<GLBufferInfo> m_buf;
-
-	int SearchFp(const RSXFragmentProgram& rsx_fp, GLFragmentProgram& gl_fp);
-	int SearchVp(const RSXVertexProgram& rsx_vp, GLVertexProgram& gl_vp);
-
-	bool CmpVP(const u32 a, const u32 b) const;
-	bool CmpFP(const u32 a, const u32 b) const;
-
-	u32 GetProg(u32 fp, u32 vp) const;
-
-	void Add(GLProgram& prog, GLFragmentProgram& gl_fp, RSXFragmentProgram& rsx_fp, GLVertexProgram& gl_vp, RSXVertexProgram& rsx_vp);
-	void Clear();
 };
