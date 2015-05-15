@@ -505,7 +505,7 @@ bool D3D12GSRender::LoadProgram()
 		break;
 	}
 	prop.IASet = m_IASet;
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
 	return m_PSO != nullptr;
 }
 
