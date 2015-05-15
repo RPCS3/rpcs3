@@ -11,6 +11,8 @@
 #include "FragmentProgramDecompiler.h"
 #include "Utilities/File.h"
 
+#include <stdlib.h>
+
 #pragma comment (lib, "d3dcompiler.lib")
 
 namespace ProgramHashUtil
@@ -23,10 +25,21 @@ namespace ProgramHashUtil
 		while (true)
 		{
 			const qword& inst = instBuffer[instIndex];
+			bool isSRC0Constant = ((inst.word[1] >> 8) & 0x3) == 2;
+			bool isSRC1Constant = ((inst.word[2] >> 8) & 0x3) == 2;
+			bool isSRC2Constant = ((inst.word[3] >> 8) & 0x3) == 2;
 			bool end = (inst.word[0] >> 8) & 0x1;
-			if (end)
-				return (instIndex + 1) * 4 * 4;
+
+			if (isSRC0Constant || isSRC1Constant || isSRC2Constant)
+			{
+				instIndex += 2;
+				if (end)
+					return instIndex * 4 * 4;
+				continue;
+			}
 			instIndex++;
+			if (end)
+				return (instIndex) * 4 * 4;
 		}
 	}
 };

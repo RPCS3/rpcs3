@@ -101,8 +101,16 @@ namespace ProgramHashUtil
 		}
 	};
 
-	struct FragmentHashUtil
+	struct FragmentProgramUtil
 	{
+		/**
+		 * returns true if the given source Operand is a constant
+		 */
+		static bool isConstant(u32 sourceOperand)
+		{
+			return ((sourceOperand >> 8) & 0x3) == 2;
+		}
+
 		/**
 		* RSX fragment program constants are inlined inside shader code.
 		* This function takes an instruction from a fragment program and
@@ -114,16 +122,11 @@ namespace ProgramHashUtil
 		static qword fragmentMaskConstant(const qword &initialQword)
 		{
 			qword result = initialQword;
-			u64 dword0Mask = 0, dword1Mask = 0;;
-			// Check if there is a constant and mask word if there is
-			SRC0 s0 = { initialQword.word[1] };
-			SRC1 s1 = { initialQword.word[2] };
-			SRC2 s2 = { initialQword.word[3] };
-			if (s0.reg_type == 2)
+			if (isConstant(initialQword.word[1]))
 				result.word[1] = 0;
-			if (s1.reg_type == 2)
+			if (isConstant(initialQword.word[2]))
 				result.word[2] = 0;
-			if (s2.reg_type == 2)
+			if (isConstant(initialQword.word[3]))
 				result.word[3] = 0;
 			return result;
 		}
@@ -143,13 +146,17 @@ namespace ProgramHashUtil
 				bool end = (inst.word[0] >> 8) & 0x1;
 				if (end)
 					return hash;
-				const qword& maskedInst = FragmentHashUtil::fragmentMaskConstant(inst);
-
+				const qword& maskedInst = FragmentProgramUtil::fragmentMaskConstant(inst);
 				hash ^= maskedInst.dword[0];
 				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 				hash ^= maskedInst.dword[1];
 				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 				instIndex++;
+				// Skip constants
+				if (FragmentProgramUtil::isConstant(inst.word[1]) ||
+					FragmentProgramUtil::isConstant(inst.word[2]) ||
+					FragmentProgramUtil::isConstant(inst.word[3]))
+					instIndex++;
 			}
 			return 0;
 		}
@@ -170,12 +177,17 @@ namespace ProgramHashUtil
 				if (end)
 					return true;
 
-				const qword& maskedInst1 = FragmentHashUtil::fragmentMaskConstant(inst1);
-				const qword& maskedInst2 = FragmentHashUtil::fragmentMaskConstant(inst2);
+				const qword& maskedInst1 = FragmentProgramUtil::fragmentMaskConstant(inst1);
+				const qword& maskedInst2 = FragmentProgramUtil::fragmentMaskConstant(inst2);
 
 				if (maskedInst1.dword[0] != maskedInst2.dword[0] || maskedInst1.dword[1] != maskedInst2.dword[1])
 					return false;
 				instIndex++;
+				// Skip constants
+				if (FragmentProgramUtil::isConstant(inst1.word[1]) ||
+					FragmentProgramUtil::isConstant(inst1.word[2]) ||
+					FragmentProgramUtil::isConstant(inst1.word[3]))
+					instIndex++;
 			}
 		}
 	};
