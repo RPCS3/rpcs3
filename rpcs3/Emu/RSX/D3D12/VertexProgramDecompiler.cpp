@@ -52,13 +52,13 @@ std::string VertexDecompiler::GetDST(bool isSca)
 	switch (isSca ? 0x1f : d3.dst)
 	{
 	case 0x1f:
-		ret += m_parr.AddParam(PARAM_NONE, typeName[3], std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
+		ret += m_parr.AddParam(PF_PARAM_NONE, typeName[3], std::string("tmp") + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp));
 		break;
 
 	default:
 		if (d3.dst > 15)
 			LOG_ERROR(RSX, fmt::Format("dst index out of range: %u", d3.dst));
-		ret += m_parr.AddParam(PARAM_NONE, typeName[3], std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? typeName[3] + "(0.0f, 0.0f, 0.0f, 1.0f)" : typeName[3] + "(0.0, 0.0, 0.0, 0.0)");
+		ret += m_parr.AddParam(PF_PARAM_NONE, typeName[3], std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? typeName[3] + "(0.0f, 0.0f, 0.0f, 1.0f)" : typeName[3] + "(0.0, 0.0, 0.0, 0.0)");
 		break;
 	}
 
@@ -82,21 +82,21 @@ std::string VertexDecompiler::GetSRC(const u32 n)
 	switch (src[n].reg_type)
 	{
 	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, typeName[3], "tmp" + std::to_string(src[n].tmp_src));
+		ret += m_parr.AddParam(PF_PARAM_NONE, typeName[3], "tmp" + std::to_string(src[n].tmp_src));
 		break;
 	case 2: //input
 		if (d1.input_src < (sizeof(reg_table) / sizeof(reg_table[0])))
 		{
-			ret += m_parr.AddParam(PARAM_IN, typeName[3], reg_table[d1.input_src], d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, typeName[3], reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			LOG_ERROR(RSX, "Bad input src num: %d", fmt::by_value(d1.input_src));
-			ret += m_parr.AddParam(PARAM_IN, typeName[3], "in_unk", d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, typeName[3], "in_unk", d1.input_src);
 		}
 		break;
 	case 3: //const
-		m_parr.AddParam(PARAM_UNIFORM, typeName[3], std::string("vc[468]"));
+		m_parr.AddParam(PF_PARAM_UNIFORM, typeName[3], std::string("vc[468]"));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
 
@@ -161,7 +161,7 @@ void VertexDecompiler::SetDST(bool is_sca, std::string value)
 
 	if (d0.cond_update_enable_0 && d0.cond_update_enable_1)
 	{
-		dest = m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(d0.cond_reg_sel_1), typeName[3] + "(0.0)") + mask;
+		dest = m_parr.AddParam(PF_PARAM_NONE, typeName[3], "cc" + std::to_string(d0.cond_reg_sel_1), typeName[3] + "(0.0)") + mask;
 	}
 	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
 	{
@@ -197,7 +197,7 @@ std::string VertexDecompiler::GetFunc()
 
 std::string VertexDecompiler::GetTex()
 {
-	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(/*?.tex_num*/0));
+	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("vtex") + std::to_string(/*?.tex_num*/0));
 }
 
 std::string VertexDecompiler::Format(const std::string& code)
@@ -312,7 +312,7 @@ void VertexDecompiler::AddCodeCond(const std::string& dst, const std::string& sr
 
 	std::string cond = fmt::Format("%s(cc%d%s, vec4(0.0))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str());
 
-	ShaderVar dst_var(dst);
+	ShaderVariable dst_var(dst);
 	dst_var.symplify();
 
 	//const char *c_mask = f;
@@ -340,7 +340,7 @@ std::string VertexDecompiler::AddAddrMask()
 std::string VertexDecompiler::AddAddrReg()
 {
 	static const char f[] = { 'x', 'y', 'z', 'w' };
-	return m_parr.AddParam(PARAM_NONE, "ivec4", "a" + std::to_string(d0.addr_reg_sel_1), "ivec4(0)") + AddAddrMask();
+	return m_parr.AddParam(PF_PARAM_NONE, "ivec4", "a" + std::to_string(d0.addr_reg_sel_1), "ivec4(0)") + AddAddrMask();
 }
 
 u32 VertexDecompiler::GetAddr()
@@ -428,11 +428,11 @@ std::string VertexDecompiler::BuildCode()
 	std::stringstream OS;
 	insertHeader(OS);
 
-	insertInputs(OS, m_parr.params[PARAM_IN]);
+	insertInputs(OS, m_parr.params[PF_PARAM_IN]);
 	OS << std::endl;
-	insertOutputs(OS, m_parr.params[PARAM_NONE]);
+	insertOutputs(OS, m_parr.params[PF_PARAM_NONE]);
 	OS << std::endl;
-	insertConstants(OS, m_parr.params[PARAM_UNIFORM]);
+	insertConstants(OS, m_parr.params[PF_PARAM_UNIFORM]);
 	OS << std::endl;
 
 	insertMainStart(OS);
@@ -541,11 +541,11 @@ void VertexDecompiler::insertMainStart(std::stringstream & OS)
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PARAM_NONE, typeName[3], i.src_reg))
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], i.src_reg))
 			OS << "	float4 " << i.src_reg << ";" << std::endl;
 	}
 
-	for (const ParamType PT : m_parr.params[PARAM_IN])
+	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem &PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
@@ -559,7 +559,7 @@ void VertexDecompiler::insertMainEnd(std::stringstream & OS)
 	// Declare inside main function
 	for (auto &i : reg_table)
 	{
-		if (m_parr.HasParam(PARAM_NONE, typeName[3], i.src_reg))
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], i.src_reg))
 			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
 	}
 	// TODO: Find why I need to do this
@@ -583,7 +583,7 @@ VertexDecompiler::VertexDecompiler(std::vector<u32>& data) :
 
 std::string VertexDecompiler::Decompile()
 {
-	for (unsigned i = 0; i < PARAM_COUNT; i++)
+	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
 		m_parr.params[i].clear();
 	m_instr_count = 0;
 

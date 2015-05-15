@@ -5,12 +5,12 @@
 
 enum ParamFlag
 {
-	PARAM_IN,
-	PARAM_OUT,
-	PARAM_UNIFORM,
-	PARAM_CONST,
-	PARAM_NONE,
-	PARAM_COUNT,
+	PF_PARAM_IN,
+	PF_PARAM_OUT,
+	PF_PARAM_UNIFORM,
+	PF_PARAM_CONST,
+	PF_PARAM_NONE,
+	PF_PARAM_COUNT,
 };
 
 struct ParamItem
@@ -51,7 +51,7 @@ struct ParamType
 
 struct ParamArray
 {
-	std::vector<ParamType> params[PARAM_COUNT];
+	std::vector<ParamType> params[PF_PARAM_COUNT];
 
 	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
 	{
@@ -105,14 +105,14 @@ struct ParamArray
 	}
 };
 
-class ShaderVar
+class ShaderVariable
 {
 public:
 	std::string name;
 	std::vector<std::string> swizzles;
 
-	ShaderVar() = default;
-	ShaderVar(const std::string& var)
+	ShaderVariable() = default;
+	ShaderVariable(const std::string& var)
 	{
 		auto var_blocks = fmt::split(var, { "." });
 
@@ -138,7 +138,7 @@ public:
 		return swizzles[swizzles.size() - 1].length();
 	}
 
-	ShaderVar& symplify()
+	ShaderVariable& symplify()
 	{
 		std::unordered_map<char, char> swizzle;
 

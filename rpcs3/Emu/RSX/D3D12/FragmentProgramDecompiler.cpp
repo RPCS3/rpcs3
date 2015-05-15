@@ -69,7 +69,7 @@ void FragmentDecompiler::SetDst(std::string code, bool append_mask)
 	{
 		if (dst.set_cond)
 		{
-			AddCode("$ifcond " + m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + code + ";");
+			AddCode("$ifcond " + m_parr.AddParam(PF_PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + code + ";");
 		}
 		else
 		{
@@ -86,7 +86,7 @@ void FragmentDecompiler::SetDst(std::string code, bool append_mask)
 
 	if (dst.set_cond)
 	{
-		AddCode(m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
+		AddCode(m_parr.AddParam(PF_PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
 	}
 }
 
@@ -114,24 +114,24 @@ std::string FragmentDecompiler::GetMask()
 
 std::string FragmentDecompiler::AddReg(u32 index, int fp16)
 {
-	return m_parr.AddParam(PARAM_NONE, typeName[3], std::string(fp16 ? "h" : "r") + std::to_string(index), typeName[3] + "(0.0)");
+	return m_parr.AddParam(PF_PARAM_NONE, typeName[3], std::string(fp16 ? "h" : "r") + std::to_string(index), typeName[3] + "(0.0)");
 }
 
 bool FragmentDecompiler::HasReg(u32 index, int fp16)
 {
-	return m_parr.HasParam(PARAM_NONE, typeName[3],
+	return m_parr.HasParam(PF_PARAM_NONE, typeName[3],
 		std::string(fp16 ? "h" : "r") + std::to_string(index));
 }
 
 std::string FragmentDecompiler::AddCond()
 {
-	return m_parr.AddParam(PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_reg_index));
+	return m_parr.AddParam(PF_PARAM_NONE, typeName[3], "cc" + std::to_string(src0.cond_reg_index));
 }
 
 std::string FragmentDecompiler::AddConst()
 {
 	std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	if (m_parr.HasParam(PARAM_UNIFORM, typeName[3], name))
+	if (m_parr.HasParam(PF_PARAM_UNIFORM, typeName[3], name))
 	{
 		return name;
 	}
@@ -143,14 +143,14 @@ std::string FragmentDecompiler::AddConst()
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
-	return m_parr.AddParam(PARAM_UNIFORM, typeName[3], name,
+	return m_parr.AddParam(PF_PARAM_UNIFORM, typeName[3], name,
 		std::string(typeName[3] + "(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
 		+ ", " + std::to_string((float&)z) + ", " + std::to_string((float&)w) + ")");
 }
 
 std::string FragmentDecompiler::AddTex()
 {
-	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
+	return m_parr.AddParam(PF_PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
 }
 
 std::string FragmentDecompiler::Format(const std::string& code)
@@ -275,7 +275,7 @@ void FragmentDecompiler::AddCodeCond(const std::string& dst, const std::string& 
 
 	cond = "(" + AddCond() + swizzle + " " + cond + " " + typeName[3] + "(0., 0., 0., 0.))";
 
-	ShaderVar dst_var(dst);
+	ShaderVariable dst_var(dst);
 	dst_var.symplify();
 
 	//const char *c_mask = f;
@@ -320,12 +320,12 @@ template<typename T> std::string FragmentDecompiler::GetSRC(T src)
 		default:
 			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
 			{
-				ret += m_parr.AddParam(PARAM_IN, typeName[3], reg_table[dst.src_attr_reg_num]);
+				ret += m_parr.AddParam(PF_PARAM_IN, typeName[3], reg_table[dst.src_attr_reg_num]);
 			}
 			else
 			{
 				LOG_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
-				ret += m_parr.AddParam(PARAM_IN, typeName[3], "unk");
+				ret += m_parr.AddParam(PF_PARAM_IN, typeName[3], "unk");
 				Emu.Pause();
 			}
 			break;
@@ -425,7 +425,7 @@ void FragmentDecompiler::insertOutputs(std::stringstream & OS)
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
 			OS << "	" << typeName[3] << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
@@ -443,7 +443,7 @@ void FragmentDecompiler::insertConstants(std::stringstream & OS)
 	}
 	OS << "};" << std::endl;*/
 
-	for (ParamType PT : m_parr.params[PARAM_UNIFORM])
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		for (ParamItem PI : PT.items)
 			OS << PT.type << " " << PI.name << " = " << PI.value << ";" << std::endl;
@@ -454,13 +454,13 @@ void FragmentDecompiler::insertMainStart(std::stringstream & OS)
 {
 	OS << "PixelOutput main(PixelInput In)" << std::endl;
 	OS << "{" << std::endl;
-	for (ParamType PT : m_parr.params[PARAM_IN])
+	for (ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
 	// Declare output
-	for (ParamType PT : m_parr.params[PARAM_NONE])
+	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
@@ -480,7 +480,7 @@ void FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "	PixelOutput Out;" << std::endl;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PARAM_NONE, typeName[3], table[i].second))
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
 			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
 	}
 	OS << "	return Out;" << std::endl;

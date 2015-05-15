@@ -471,7 +471,7 @@ bool D3D12GSRender::LoadProgram()
 		return false;
 	}
 
-	PipelineProperties prop = {};
+	D3D12PipelineProperties prop = {};
 	/*
 	#define GL_POINTS                         0x0000
 	#define GL_LINES                          0x0001
@@ -504,8 +504,8 @@ bool D3D12GSRender::LoadProgram()
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		break;
 	}
-
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, prop, m_IASet);
+	prop.IASet = m_IASet;
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_device, m_rootSignature, m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
 	return m_PSO != nullptr;
 }
 
