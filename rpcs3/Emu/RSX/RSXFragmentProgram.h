@@ -71,7 +71,7 @@ enum
 	RSX_FP_OPCODE_RET        = 0x45  // Return
 };
 
-static union OPDEST
+union OPDEST
 {
 	u32 HEX;
 
@@ -93,9 +93,11 @@ static union OPDEST
 		u32 no_dest          : 1;
 		u32 saturate         : 1; // _sat
 	};
-} dst;
+};
 
-static union SRC0
+static OPDEST dst;
+
+union SRC0
 {
 	u32 HEX;
 
@@ -120,9 +122,11 @@ static union SRC0
 		u32 cond_mod_reg_index : 1;
 		u32 cond_reg_index     : 1;
 	};
-} src0;
+};
 
-static union SRC1
+static SRC0 src0;
+
+union SRC1
 {
 	u32 HEX;
 
@@ -158,9 +162,11 @@ static union SRC1
 		u32                  : 1;
 		u32 increment        : 8; // Increment value for LOOP
 	};
-} src1;
+};
 
-static union SRC2
+static SRC1 src1;
+
+union SRC2
 {
 	u32 HEX;
 
@@ -181,7 +187,9 @@ static union SRC2
 		u32 use_index_reg    : 1;
 		u32 perspective_corr : 1;
 	};
-} src2;
+};
+
+static SRC2 src2;
 
 static const char* rsx_fp_input_attr_regs[] =
 {
