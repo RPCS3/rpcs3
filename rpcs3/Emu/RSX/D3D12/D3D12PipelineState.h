@@ -40,109 +40,150 @@ public:
 	void Compile(const std::string &code, SHADER_TYPE st);
 };
 
-// Based on
-// https://github.com/AlexAltea/nucleus/blob/master/nucleus/gpu/rsx_pgraph.cpp
-union qword
-{
-	u64 dword[2];
-	u32 word[4];
-};
 
-struct HashVertexProgram
+
+namespace ProgramHashUtil
 {
-	size_t operator()(const void *program) const
+	// Based on
+	// https://github.com/AlexAltea/nucleus/blob/master/nucleus/gpu/rsx_pgraph.cpp
+	union qword
 	{
-		// 64-bit Fowler/Noll/Vo FNV-1a hash code
-		size_t hash = 0xCBF29CE484222325ULL;
-		const qword *instbuffer = (const qword*)program;
-		size_t instIndex = 0;
-		bool end = false;
-		return 0;
-		while (true)
-		{
-			const qword inst = instbuffer[instIndex];
-			bool end = inst.word[0] >> 31;
-			if (end)
-				return hash;
-			hash ^= inst.dword[0];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			hash ^= inst.dword[1];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			instIndex++;
-		}
-		return 0;
-	}
-};
+		u64 dword[2];
+		u32 word[4];
+	};
 
-struct HashFragmentProgram
-{
-	size_t operator()(const void *program) const
+	struct HashVertexProgram
 	{
-		// 64-bit Fowler/Noll/Vo FNV-1a hash code
-		size_t hash = 0xCBF29CE484222325ULL;
-		const qword *instbuffer = (const qword*)program;
-		size_t instIndex = 0;
-		while (true)
+		size_t operator()(const void *program) const
 		{
-			const qword& inst = instbuffer[instIndex];
-			bool end = (inst.word[0] >> 8) & 0x1;
-			if (end)
-				return hash;
-			hash ^= inst.dword[0];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			hash ^= inst.dword[1];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			instIndex++;
+			// 64-bit Fowler/Noll/Vo FNV-1a hash code
+			size_t hash = 0xCBF29CE484222325ULL;
+			const qword *instbuffer = (const qword*)program;
+			size_t instIndex = 0;
+			bool end = false;
+			return 0;
+			while (true)
+			{
+				const qword inst = instbuffer[instIndex];
+				bool end = inst.word[0] >> 31;
+				if (end)
+					return hash;
+				hash ^= inst.dword[0];
+				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+				hash ^= inst.dword[1];
+				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+				instIndex++;
+			}
+			return 0;
 		}
-		return 0;
-	}
-};
+	};
 
-struct VertexProgramCompare
-{
-	bool operator()(const void *binary1, const void *binary2) const
+
+	struct VertexProgramCompare
 	{
-		const qword *instBuffer1 = (const qword*)binary1;
-		const qword *instBuffer2 = (const qword*)binary2;
-		size_t instIndex = 0;
-		return true;
-		while (true)
+		bool operator()(const void *binary1, const void *binary2) const
 		{
-			const qword& inst1 = instBuffer1[instIndex];
-			const qword& inst2 = instBuffer2[instIndex];
-			bool end = (inst1.word[0] >> 31) && (inst2.word[0] >> 31);
-			if (end)
-				return true;
-			if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
-				return false;
-			instIndex++;
+			const qword *instBuffer1 = (const qword*)binary1;
+			const qword *instBuffer2 = (const qword*)binary2;
+			size_t instIndex = 0;
+			return true;
+			while (true)
+			{
+				const qword& inst1 = instBuffer1[instIndex];
+				const qword& inst2 = instBuffer2[instIndex];
+				bool end = (inst1.word[0] >> 31) && (inst2.word[0] >> 31);
+				if (end)
+					return true;
+				if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
+					return false;
+				instIndex++;
+			}
 		}
-	}
-};
+	};
 
-struct FragmentProgramCompare
-{
-	bool operator()(const void *binary1, const void *binary2) const
+	struct FragmentHashUtil
 	{
-		const qword *instBuffer1 = (const qword*)binary1;
-		const qword *instBuffer2 = (const qword*)binary2;
-		size_t instIndex = 0;
-		while (true)
+		/**
+		* RSX fragment program constants are inlined inside shader code.
+		* This function takes an instruction from a fragment program and
+		* returns an equivalent instruction where inlined constants
+		* are masked.
+		* This allows to hash/compare fragment programs even if their
+		* inlined constants are modified inbetween
+		*/
+		static qword fragmentMaskConstant(const qword &initialQword)
 		{
-			const qword& inst1 = instBuffer1[instIndex];
-			const qword& inst2 = instBuffer2[instIndex];
-			bool end = ((inst1.word[0] >> 8) & 0x1) && ((inst2.word[0] >> 8) & 0x1);
-			if (end)
-				return true;
-			if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
-				return false;
-			instIndex++;
+			qword result = initialQword;
+			u64 dword0Mask = 0, dword1Mask = 0;;
+			// Check if there is a constant and mask word if there is
+			SRC0 s0 = { initialQword.word[1] };
+			SRC1 s1 = { initialQword.word[2] };
+			SRC2 s2 = { initialQword.word[3] };
+			if (s0.reg_type == 2)
+				result.word[1] = 0;
+			if (s1.reg_type == 2)
+				result.word[2] = 0;
+			if (s2.reg_type == 2)
+				result.word[3] = 0;
+			return result;
 		}
-	}
-};
+	};
 
-typedef std::unordered_map<void *, Shader, HashVertexProgram, VertexProgramCompare> binary2VS;
-typedef std::unordered_map<void *, Shader, HashFragmentProgram, FragmentProgramCompare> binary2FS;
+	struct HashFragmentProgram
+	{
+		size_t operator()(const void *program) const
+		{
+			// 64-bit Fowler/Noll/Vo FNV-1a hash code
+			size_t hash = 0xCBF29CE484222325ULL;
+			const qword *instbuffer = (const qword*)program;
+			size_t instIndex = 0;
+			while (true)
+			{
+				const qword& inst = instbuffer[instIndex];
+				bool end = (inst.word[0] >> 8) & 0x1;
+				if (end)
+					return hash;
+				const qword& maskedInst = FragmentHashUtil::fragmentMaskConstant(inst);
+
+				hash ^= maskedInst.dword[0];
+				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+				hash ^= maskedInst.dword[1];
+				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+				instIndex++;
+			}
+			return 0;
+		}
+	};
+
+	struct FragmentProgramCompare
+	{
+		bool operator()(const void *binary1, const void *binary2) const
+		{
+			const qword *instBuffer1 = (const qword*)binary1;
+			const qword *instBuffer2 = (const qword*)binary2;
+			size_t instIndex = 0;
+			while (true)
+			{
+				const qword& inst1 = instBuffer1[instIndex];
+				const qword& inst2 = instBuffer2[instIndex];
+				bool end = ((inst1.word[0] >> 8) & 0x1) && ((inst2.word[0] >> 8) & 0x1);
+				if (end)
+					return true;
+
+				const qword& maskedInst1 = FragmentHashUtil::fragmentMaskConstant(inst1);
+				const qword& maskedInst2 = FragmentHashUtil::fragmentMaskConstant(inst2);
+
+				if (maskedInst1.dword[0] != maskedInst2.dword[0] || maskedInst1.dword[1] != maskedInst2.dword[1])
+					return false;
+				instIndex++;
+			}
+		}
+	};
+
+}
+
+typedef std::unordered_map<void *, Shader, ProgramHashUtil::HashVertexProgram, ProgramHashUtil::VertexProgramCompare> binary2VS;
+typedef std::unordered_map<void *, Shader, ProgramHashUtil::HashFragmentProgram, ProgramHashUtil::FragmentProgramCompare> binary2FS;
 
 struct PSOKey
 {

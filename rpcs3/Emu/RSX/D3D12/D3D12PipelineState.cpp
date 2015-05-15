@@ -13,20 +13,23 @@
 
 #pragma comment (lib, "d3dcompiler.lib")
 
-
-size_t getFPBinarySize(void *ptr)
+namespace ProgramHashUtil
 {
-	const qword *instBuffer = (const qword*)ptr;
-	size_t instIndex = 0;
-	while (true)
+
+	size_t getFPBinarySize(void *ptr)
 	{
-		const qword& inst = instBuffer[instIndex];
-		bool end = (inst.word[0] >> 8) & 0x1;
-		if (end)
-			return (instIndex + 1) * 4;
-		instIndex++;
+		const qword *instBuffer = (const qword*)ptr;
+		size_t instIndex = 0;
+		while (true)
+		{
+			const qword& inst = instBuffer[instIndex];
+			bool end = (inst.word[0] >> 8) & 0x1;
+			if (end)
+				return (instIndex + 1) * 4 * 4;
+			instIndex++;
+		}
 	}
-}
+};
 
 
 PipelineStateObjectCache::PipelineStateObjectCache() : m_currentShaderId(0)
@@ -79,7 +82,7 @@ void PipelineStateObjectCache::AddVertexProgram(Shader& vp, RSXVertexProgram& rs
 
 void PipelineStateObjectCache::AddFragmentProgram(Shader& fp, RSXFragmentProgram& rsx_fp)
 {
-	size_t actualFPSize = getFPBinarySize(vm::get_ptr<u8>(rsx_fp.addr));
+	size_t actualFPSize = ProgramHashUtil::getFPBinarySize(vm::get_ptr<u8>(rsx_fp.addr));
 	void *fpShadowCopy = malloc(actualFPSize);
 	memcpy(fpShadowCopy, vm::get_ptr<u8>(rsx_fp.addr), actualFPSize);
 	fp.Id = (u32)m_currentShaderId++;
