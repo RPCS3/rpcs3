@@ -7,7 +7,6 @@
 class FragmentDecompiler
 {
 	std::string main;
-	ParamArray m_parr;
 	u32 m_addr;
 	u32& m_size;
 	u32 m_const_index;
@@ -44,6 +43,7 @@ protected:
 	virtual void insertMainStart(std::stringstream &OS);
 	virtual void insertMainEnd(std::stringstream &OS);
 public:
+	ParamArray m_parr;
 	FragmentDecompiler(u32 addr, u32& size, u32 ctrl);
 	std::string Decompile();
 };

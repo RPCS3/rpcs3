@@ -431,15 +431,24 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
 {
+	// Get constant from fragment program
+	const std::vector<size_t> &fragmentOffset = m_cachePSO.getFragmentConstantOffsetsCache(m_cur_fragment_prog);
+
 	size_t offset = 0;
 	void *constantsBufferMap;
 	check(m_constantsFragmentBuffer->Map(0, nullptr, &constantsBufferMap));
-	for (const RSXTransformConstant& c : m_fragment_constants)
+	for (size_t offsetInFP : fragmentOffset)
 	{
-		u32 id = c.id - m_cur_fragment_prog->offset;
-		float vector[] = { c.x, c.y, c.z, c.w };
-		memcpy((char*)constantsBufferMap + constantsFragmentSize + offset, vector, 4 * sizeof(float));
-		offset += 4 * sizeof(float);
+		auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+
+		u32 c0 = (data[0] >> 16 | data[0] << 16);
+		u32 c1 = (data[1] >> 16 | data[1] << 16);
+		u32 c2 = (data[2] >> 16 | data[2] << 16);
+		u32 c3 = (data[3] >> 16 | data[3] << 16);
+
+		u32 vector[] = { c0, c1, c2, c3 };
+		memcpy((char*)constantsBufferMap + constantsFragmentSize + offset, vector, 4 * sizeof(u32));
+		offset += 4 * sizeof(u32);
 	}
 	m_constantsFragmentBuffer->Unmap(0, nullptr);
 	// Multiple of 256
@@ -540,24 +549,6 @@ void D3D12GSRender::ExecCMD()
 			assert((m_draw_array_first + m_draw_array_count) * item_size <= m_vertexBufferSize[i]);
 		}
 		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
-
-		setScaleOffset();
-		commandList->SetDescriptorHeaps(1, &m_scaleOffsetDescriptorHeap);
-		D3D12_GPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-		Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		commandList->SetGraphicsRootDescriptorTable(0, Handle);
-		m_currentScaleOffsetBufferIndex++;
-
-		size_t currentBufferIndex = m_constantsBufferIndex;
-		FillVertexShaderConstantsBuffer();
-		m_constantsBufferIndex++;
-		FillPixelShaderConstantsBuffer();
-		m_constantsBufferIndex++;
-
-		commandList->SetDescriptorHeaps(1, &m_constantsBufferDescriptorsHeap);
-		Handle = m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
-		Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		commandList->SetGraphicsRootDescriptorTable(1, Handle);
 	}
 
 	if (!LoadProgram())
@@ -566,6 +557,25 @@ void D3D12GSRender::ExecCMD()
 		Emu.Pause();
 		return;
 	}
+
+	// Constants
+	setScaleOffset();
+	commandList->SetDescriptorHeaps(1, &m_scaleOffsetDescriptorHeap);
+	D3D12_GPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	commandList->SetGraphicsRootDescriptorTable(0, Handle);
+	m_currentScaleOffsetBufferIndex++;
+
+	size_t currentBufferIndex = m_constantsBufferIndex;
+	FillVertexShaderConstantsBuffer();
+	m_constantsBufferIndex++;
+	FillPixelShaderConstantsBuffer();
+	m_constantsBufferIndex++;
+
+	commandList->SetDescriptorHeaps(1, &m_constantsBufferDescriptorsHeap);
+	Handle = m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	commandList->SetGraphicsRootDescriptorTable(1, Handle);
 	commandList->SetPipelineState(m_PSO);
 
 	InitDrawBuffers();

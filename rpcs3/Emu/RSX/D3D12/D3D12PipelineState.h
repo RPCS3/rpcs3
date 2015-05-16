@@ -65,6 +65,15 @@ struct D3D12Traits
 		const std::string &shader = FS.Decompile();
 		fragmentProgramData.Compile(shader, Shader::SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 
+		for (const ParamType& PT : FS.m_parr.params[PF_PARAM_UNIFORM])
+		{
+			for (const ParamItem PI : PT.items)
+			{
+				size_t offset = atoi(PI.name.c_str() + 2);
+				fragmentProgramData.FragmentConstantOffsetCache.push_back(offset);
+			}
+		}
+
 		// TODO: This shouldn't use current dir
 		fs::file("./FragmentProgram.hlsl", o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
 		fragmentProgramData.Id = (u32)ID;
