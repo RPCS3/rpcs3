@@ -431,7 +431,6 @@ void FragmentDecompiler::insertOutputs(std::stringstream & OS)
 
 void FragmentDecompiler::insertConstants(std::stringstream & OS)
 {
-	// TODO : Avoid constant recompilation and properly use constant buffer
 	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -440,12 +439,6 @@ void FragmentDecompiler::insertConstants(std::stringstream & OS)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
-
-/*	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
-	{
-		for (ParamItem PI : PT.items)
-			OS << PT.type << " " << PI.name << " = " << PI.value << ";" << std::endl;
-	}*/
 }
 
 void FragmentDecompiler::insertMainStart(std::stringstream & OS)
