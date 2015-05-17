@@ -97,16 +97,15 @@ struct D3D12Traits
 		ID3D12PipelineState *result;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
-		if (vertexProgramData.bytecode != nullptr)
-		{
-			graphicPipelineStateDesc.VS.BytecodeLength = vertexProgramData.bytecode->GetBufferSize();
-			graphicPipelineStateDesc.VS.pShaderBytecode = vertexProgramData.bytecode->GetBufferPointer();
-		}
-		if (fragmentProgramData.bytecode != nullptr)
-		{
-			graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
-			graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
-		}
+		if (vertexProgramData.bytecode == nullptr)
+			return nullptr;
+		graphicPipelineStateDesc.VS.BytecodeLength = vertexProgramData.bytecode->GetBufferSize();
+		graphicPipelineStateDesc.VS.pShaderBytecode = vertexProgramData.bytecode->GetBufferPointer();
+
+		if (fragmentProgramData.bytecode == nullptr)
+			return nullptr;
+		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
+		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
 		graphicPipelineStateDesc.pRootSignature = extraData.second;
 
