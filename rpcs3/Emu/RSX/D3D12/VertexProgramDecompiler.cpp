@@ -542,7 +542,7 @@ void VertexDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
 	}
 
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
@@ -802,7 +802,7 @@ std::string VertexDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SLT: SetDSTVec("vec4(lessThan($0, $1))"); break;
 		case RSX_VEC_OPCODE_SGE: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break;
 		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = ivec4($0)$am;");  break;
-		case RSX_VEC_OPCODE_FRC: SetDSTVec("fract($0)"); break;
+		case RSX_VEC_OPCODE_FRC: SetDSTVec("frac($0)"); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
 		case RSX_VEC_OPCODE_SEQ: SetDSTVec("vec4(equal($0, $1))"); break;
 		case RSX_VEC_OPCODE_SFL: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break;

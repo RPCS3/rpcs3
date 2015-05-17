@@ -568,9 +568,9 @@ std::string FragmentDecompiler::Decompile()
 			{
 			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
 			case RSX_FP_OPCODE_COS: SetDst("cos($0)"); break;
-			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
-			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
-			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
+			case RSX_FP_OPCODE_DP2: SetDst("dot($0.xy, $1.xy).xxxx"); break;
+			case RSX_FP_OPCODE_DP3: SetDst("dot($0.xyz, $1.xyz).xxxx"); break;
+			case RSX_FP_OPCODE_DP4: SetDst("dot($0, $1).xxxx"); break;
 			case RSX_FP_OPCODE_DP2A: SetDst("vec4($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
 			case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); break;
 			case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); break; // TODO: Is this in the right category?
@@ -616,7 +616,7 @@ std::string FragmentDecompiler::Decompile()
 			case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
 			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
 			case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); break;
-			case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)");  break;
+			case RSX_FP_OPCODE_TEX: SetDst("float4(0., 0., 0., 0.);//texture($t, $0.xy)");  break;
 			case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); break;
 			case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); break; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
 			case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); break;
