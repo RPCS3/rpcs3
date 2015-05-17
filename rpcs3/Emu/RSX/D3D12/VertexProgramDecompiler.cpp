@@ -291,12 +291,12 @@ void VertexDecompiler::AddCodeCond(const std::string& dst, const std::string& sr
 	static const char* cond_string_table[(lt | gt | eq) + 1] =
 	{
 		"error",
-		"lessThan",
-		"equal",
-		"lessThanEqual",
-		"greaterThan",
-		"notEqual",
-		"greaterThanEqual",
+		"<",
+		"==",
+		"<=",
+		">",
+		"!=",
+		">=",
 		"error"
 	};
 
@@ -310,7 +310,7 @@ void VertexDecompiler::AddCodeCond(const std::string& dst, const std::string& sr
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
 
-	std::string cond = fmt::Format("%s(cc%d%s, vec4(0.0))", cond_string_table[d0.cond], d0.cond_reg_sel_1, swizzle.c_str());
+	std::string cond = fmt::Format("(cc%d%s %s float4(0., 0., 0., 0.))", d0.cond_reg_sel_1, swizzle.c_str(), cond_string_table[d0.cond]);
 
 	ShaderVariable dst_var(dst);
 	dst_var.symplify();
@@ -319,7 +319,7 @@ void VertexDecompiler::AddCodeCond(const std::string& dst, const std::string& sr
 
 	if (dst_var.swizzles[0].length() == 1)
 	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + typeName[3] + "(" + src + ").x;");
+		AddCode("if (" + cond + ".x) " + dst + " = " + typeName[3] + "(" + src + ".xxxx).x;");
 	}
 	else
 	{
@@ -539,10 +539,10 @@ void VertexDecompiler::insertMainStart(std::stringstream & OS)
 	OS << "{" << std::endl;
 
 	// Declare inside main function
-	for (auto &i : reg_table)
+	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], i.src_reg))
-			OS << "	float4 " << i.src_reg << ";" << std::endl;
+		for (const ParamItem &PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
 
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
@@ -550,6 +550,8 @@ void VertexDecompiler::insertMainStart(std::stringstream & OS)
 		for (const ParamItem &PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
 	}
+
+
 }
 
 
@@ -696,7 +698,7 @@ std::string VertexDecompiler::Decompile()
 		case RSX_SCA_OPCODE_MOV: SetDSTSca("$s"); break;
 		case RSX_SCA_OPCODE_RCP: SetDSTSca("(1.0 / $s)"); break;
 		case RSX_SCA_OPCODE_RCC: SetDSTSca("clamp(1.0 / $s, 5.42101e-20, 1.884467e19)"); break;
-		case RSX_SCA_OPCODE_RSQ: SetDSTSca("inversesqrt(abs($s))"); break;
+		case RSX_SCA_OPCODE_RSQ: SetDSTSca("1.F / sqrt($s)"); break;
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT: SetDSTSca(typeName[3] + "(1.0, $s.x, ($s.x > 0.0 ? exp($s.w * log2($s.y)) : 0.0), 1.0)"); break;
@@ -791,9 +793,9 @@ std::string VertexDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
 		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
 		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
-		case RSX_VEC_OPCODE_DP3: SetDSTVec("vec4(dot($0.xyz, $1.xyz))"); break;
-		case RSX_VEC_OPCODE_DPH: SetDSTVec("vec4(dot(vec4($0.xyz, 1.0), $1))"); break;
-		case RSX_VEC_OPCODE_DP4: SetDSTVec(typeName[3] + "(dot($0, $1), dot($0, $1), dot($0, $1), dot($0, $1))"); break;
+		case RSX_VEC_OPCODE_DP3: SetDSTVec("dot($0.xyz, $1.xyz).xxxx"); break;
+		case RSX_VEC_OPCODE_DPH: SetDSTVec("dot(float4($0.xyz, 1.0), $1).xxxx"); break;
+		case RSX_VEC_OPCODE_DP4: SetDSTVec("dot($0, $1).xxxx"); break;
 		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
 		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
