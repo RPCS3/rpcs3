@@ -112,6 +112,15 @@ D3D12GSRender::D3D12GSRender()
 		&resDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
+		IID_PPV_ARGS(&m_indexBuffer)
+	));
+
+	check(m_device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
 		IID_PPV_ARGS(&m_constantsVertexBuffer)
 		));
 
@@ -402,6 +411,43 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 		indexBufferView.SizeInBytes = (UINT)m_indexed_array.m_data.size();
 		indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();*/
 	}
+
+	switch (m_draw_mode - 1)
+	{
+	default:
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+		m_forcedIndexBuffer = false;
+	case 7:
+		m_forcedIndexBuffer = true;
+	}
+
+	if (m_forcedIndexBuffer)
+	{
+		unsigned short *bufferMap;
+		check(m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+
+		memcpy(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
+		m_indexBufferCount = 0;
+		// QUADS
+		for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+		{
+			// First triangle
+			bufferMap[6 * i] = 4 * i;
+			bufferMap[6 * i + 1] = 4 * i + 1;
+			bufferMap[6 * i + 2] = 4 * i + 2;
+			bufferMap[6 * i + 3] = 4 * i + 1;
+			bufferMap[6 * i + 4] = 4 * i + 2;
+			bufferMap[6 * i + 5] = 4 * i + 3;
+			m_indexBufferCount += 6;
+		}
+		m_indexBuffer->Unmap(0, nullptr);
+	}
 }
 
 void D3D12GSRender::setScaleOffset()
@@ -590,6 +636,14 @@ void D3D12GSRender::ExecCMD()
 			assert((m_draw_array_first + m_draw_array_count) * item_size <= m_vertexBufferSize[i]);
 		}
 		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
+		if (m_forcedIndexBuffer)
+		{
+			D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
+			indexBufferView.SizeInBytes = (UINT)m_indexBufferCount * sizeof(unsigned short);
+			indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+			commandList->IASetIndexBuffer(&indexBufferView);
+		}
 	}
 
 	if (!LoadProgram())
@@ -777,6 +831,8 @@ void D3D12GSRender::ExecCMD()
 	#define GL_QUAD_STRIP                     0x0008
 	#define GL_POLYGON                        0x0009
 	*/
+
+	bool requireIndexBuffer = false;
 	switch (m_draw_mode - 1)
 	{
 	case 0:
@@ -800,10 +856,18 @@ void D3D12GSRender::ExecCMD()
 	case 6:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ);
 		break;
+	case 7:
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		requireIndexBuffer = true;
 	default:
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 //		LOG_ERROR(RSX, "Unsupported primitive type");
 		break;
+	}
+
+	if (m_forcedIndexBuffer)
+	{
+		commandList->DrawIndexedInstanced((UINT)m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
 	}
 
 	if (m_indexed_array.m_count)

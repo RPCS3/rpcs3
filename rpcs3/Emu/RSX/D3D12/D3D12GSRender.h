@@ -56,6 +56,9 @@ private:
 	ID3D12DescriptorHeap *m_samplerDescriptorHeap;
 	size_t m_currentTextureIndex;
 
+
+	bool m_forcedIndexBuffer;
+	size_t m_indexBufferCount;
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
 	ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
 	size_t constantsFragmentSize;
