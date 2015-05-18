@@ -435,10 +435,24 @@ void FragmentDecompiler::insertConstants(std::stringstream & OS)
 	OS << "{" << std::endl;
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
+		if (PT.type == "sampler2D")
+			continue;
 		for (ParamItem PI : PT.items)
 			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
 	}
-	OS << "};" << std::endl;
+	OS << "};" << std::endl << std::endl;
+	size_t textureIndex = 0;
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type != "sampler2D")
+			continue;
+		for (ParamItem PI : PT.items)
+		{
+			OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+			OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			textureIndex++;
+		}
+	}
 }
 
 void FragmentDecompiler::insertMainStart(std::stringstream & OS)
@@ -616,7 +630,7 @@ std::string FragmentDecompiler::Decompile()
 			case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
 			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
 			case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); break;
-			case RSX_FP_OPCODE_TEX: SetDst("float4(0., 0., 0., 0.);//texture($t, $0.xy)");  break;
+			case RSX_FP_OPCODE_TEX: SetDst("$t.Sample($tsampler, $0.xy)");  break;
 			case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); break;
 			case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); break; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
 			case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); break;

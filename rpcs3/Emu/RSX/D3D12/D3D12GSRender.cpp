@@ -626,7 +626,7 @@ void D3D12GSRender::ExecCMD()
 	{
 		if (!m_textures[i].IsEnabled()) continue;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> Texture, vramTexture;
+		ID3D12Resource *Texture, *vramTexture;
 		size_t textureSize = m_textures[i].GetWidth() * m_textures[i].GetHeight() * 4;
 		D3D12_RESOURCE_DESC textureDesc = {};
 		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -672,9 +672,9 @@ void D3D12GSRender::ExecCMD()
 		m_currentStorageOffset += textureSize;
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-		dst.pResource = vramTexture.Get();
+		dst.pResource = vramTexture;
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.pResource = Texture.Get();
+		src.pResource = Texture;
 		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		src.PlacedFootprint.Footprint.Depth = 1;
 		src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
@@ -686,7 +686,7 @@ void D3D12GSRender::ExecCMD()
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.pResource = vramTexture.Get();
+		barrier.Transition.pResource = vramTexture;
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
 		commandList->ResourceBarrier(1, &barrier);
@@ -698,11 +698,14 @@ void D3D12GSRender::ExecCMD()
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		m_device->CreateShaderResourceView(vramTexture.Get(), &srvDesc, Handle);
+		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
 		// TODO : Correctly define sampler
 		D3D12_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		Handle = m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateSampler(&samplerDesc, Handle);
