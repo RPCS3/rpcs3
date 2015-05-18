@@ -422,7 +422,7 @@ void D3D12GSRender::setScaleOffset()
 	// Offset
 	scaleOffsetMat[3] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 0)] - (RSXThread::m_width / RSXThread::m_width_scale);
 	scaleOffsetMat[7] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 1)] - (RSXThread::m_height / RSXThread::m_height_scale);
-	scaleOffsetMat[11] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)] - 1 / 2.0f;
+	scaleOffsetMat[11] = (float&)methodRegisters[NV4097_SET_VIEWPORT_OFFSET + (0x4 * 2)];
 
 	scaleOffsetMat[3] /= RSXThread::m_width / RSXThread::m_width_scale;
 	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
@@ -726,23 +726,24 @@ void D3D12GSRender::ExecCMD()
 	m_currentTextureIndex += usedTexture;
 
 	InitDrawBuffers();
+
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 	case CELL_GCM_SURFACE_TARGET_0:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
 		break;
 	case CELL_GCM_SURFACE_TARGET_1:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, nullptr);
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, &m_fbo->getDSVCPUHandle());
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, nullptr);
+		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
 		break;
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
