@@ -431,8 +431,10 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 	case 5:
 	case 6:
 		m_forcedIndexBuffer = false;
+		break;
 	case 7:
 		m_forcedIndexBuffer = true;
+		break;
 	}
 
 	if (m_forcedIndexBuffer)
@@ -449,7 +451,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 			bufferMap[6 * i] = 4 * i;
 			bufferMap[6 * i + 1] = 4 * i + 1;
 			bufferMap[6 * i + 2] = 4 * i + 2;
-			bufferMap[6 * i + 3] = 4 * i + 1;
+			bufferMap[6 * i + 3] = 4 * i;
 			bufferMap[6 * i + 4] = 4 * i + 2;
 			bufferMap[6 * i + 5] = 4 * i + 3;
 			m_indexBufferCount += 6;
@@ -861,9 +863,9 @@ void D3D12GSRender::ExecCMD()
 	}
 
 	if (m_forcedIndexBuffer)
-	{
 		commandList->DrawIndexedInstanced((UINT)m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
-	}
+	else if (m_draw_array_count)
+		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
 	if (m_indexed_array.m_count)
 	{
@@ -889,11 +891,7 @@ void D3D12GSRender::ExecCMD()
 		m_indexed_array.Reset();*/
 	}
 
-	if (m_draw_array_count)
-	{
-		//LOG_WARNING(RSX,"glDrawArrays(%d,%d,%d)", m_draw_mode - 1, m_draw_array_first, m_draw_array_count);
-		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
-	}
+
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 
