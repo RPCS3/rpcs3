@@ -67,6 +67,7 @@ struct D3D12Traits
 
 		for (const ParamType& PT : FS.m_parr.params[PF_PARAM_UNIFORM])
 		{
+			if (PT.type == "sampler2D") continue;
 			for (const ParamItem PI : PT.items)
 			{
 				size_t offset = atoi(PI.name.c_str() + 2);

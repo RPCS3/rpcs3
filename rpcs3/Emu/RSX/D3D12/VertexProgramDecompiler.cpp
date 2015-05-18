@@ -565,7 +565,7 @@ void VertexDecompiler::insertMainEnd(std::stringstream & OS)
 			OS << "	Out." << i.src_reg << " = " << i.src_reg << ";" << std::endl;
 	}
 	// TODO: Find why I need to do this
-	OS << "	Out.dst_reg0.z *= -1.;" << std::endl;
+//	OS << "	Out.dst_reg0.z *= -1.;" << std::endl;
 	OS << "	Out.dst_reg0 = mul(Out.dst_reg0, scaleOffsetMat);" << std::endl;
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
