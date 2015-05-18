@@ -28,17 +28,17 @@ D3D12GSRender::D3D12GSRender()
 	m_currentStorageOffset = 0;
 	m_currentTextureIndex = 0;
 	// Enable d3d debug layer
-//#ifdef DEBUG
+#ifdef _DEBUG
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
 	debugInterface->EnableDebugLayer();
-//#endif
+#endif
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
 	IDXGIAdapter* adaptater = nullptr;
-#ifdef DEBUG
+#ifdef _DEBUG
 	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
 #endif
 	check(D3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
@@ -649,17 +649,7 @@ void D3D12GSRender::ExecCMD()
 		auto pixels = vm::get_ptr<const u8>(texaddr);
 		void *textureData;
 		check(Texture->Map(0, nullptr, (void**)&textureData));
-		std::vector<u8> texdata;
-		texdata.resize(textureSize);
 		memcpy(textureData, pixels, textureSize);
-		memcpy(texdata.data(), pixels, textureSize);
-		for (unsigned i = 0; i < textureSize / 4; i++)
-		{
-//			((char*)textureData)[4 * i] = ((char*)textureData)[4 * i + 1];// *(i % 2);
-//			((char*)textureData)[4 * i + 1] = 255 *(i % 2);
-//			((char*)textureData)[4 * i + 2] = ((char*)textureData)[4 * i + 1];// *(i % 2);
-//			((char*)textureData)[4 * i + 3] = ((char*)textureData)[4 * i + 1];// *(i % 2);
-		}
 		Texture->Unmap(0, nullptr);
 
 		D3D12_RESOURCE_DESC vramTextureDesc = {};
@@ -705,7 +695,7 @@ void D3D12GSRender::ExecCMD()
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
+		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
