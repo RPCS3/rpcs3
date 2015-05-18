@@ -44,6 +44,8 @@
 /bin/rpcs3.iobj
 /bin/FragmentProgram.txt
 /bin/VertexProgram.txt
+/bin/FragmentProgram.hlsl
+/bin/VertexProgram.hlsl
 /bin/BreakPoints.dat
 /bin/textures
 /bin/*.lib
