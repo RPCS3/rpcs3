@@ -363,8 +363,9 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
-void D3D12GSRender::EnableVertexData(bool indexed_draw)
+std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool indexed_draw)
 {
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
 	m_IASet = getIALayout(m_device, indexed_draw, m_vertex_data);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
@@ -378,10 +379,17 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 		// TODO: Use default heap and upload data
 		void *bufferMap;
 		check(m_vertexBuffer[i]->Map(0, nullptr, (void**)&bufferMap));
-		memcpy((char*)bufferMap + data_offset * item_size, &m_vertex_data[i].data[data_offset * item_size], data_size);
+		memcpy((char*)bufferMap + m_vertexBufferSize[i] + data_offset * item_size, &m_vertex_data[i].data[data_offset * item_size], data_size);
 		m_vertexBuffer[i]->Unmap(0, nullptr);
-		size_t newOffset = (data_offset + data_size) * item_size;
-		m_vertexBufferSize[i] = newOffset > m_vertexBufferSize[i] ? newOffset : m_vertexBufferSize[i];
+
+		size_t subBufferSize = (data_offset + data_size) * item_size;
+
+		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
+		vertexBufferView.BufferLocation = m_vertexBuffer[i]->GetGPUVirtualAddress() + m_vertexBufferSize[i];
+		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
+		vertexBufferView.StrideInBytes = (UINT)item_size;
+		result.push_back(vertexBufferView);
+		m_vertexBufferSize[i] += subBufferSize;
 	}
 
 	if (indexed_draw)
@@ -448,6 +456,7 @@ void D3D12GSRender::EnableVertexData(bool indexed_draw)
 		}
 		m_indexBuffer->Unmap(0, nullptr);
 	}
+	return result;
 }
 
 void D3D12GSRender::setScaleOffset()
@@ -620,21 +629,7 @@ void D3D12GSRender::ExecCMD()
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
-		EnableVertexData(m_indexed_array.m_count ? true : false);
-		std::vector<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews;
-		for (u32 i = 0; i < m_vertex_count; ++i)
-		{
-			if (!m_vertex_data[i].IsEnabled()) continue;
-			const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
-			D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
-
-			vertexBufferView.BufferLocation = m_vertexBuffer[i]->GetGPUVirtualAddress();
-			vertexBufferView.SizeInBytes = (UINT)m_vertexBufferSize[i];
-			vertexBufferView.StrideInBytes = (UINT)item_size;
-			vertexBufferViews.push_back(vertexBufferView);
-
-			assert((m_draw_array_first + m_draw_array_count) * item_size <= m_vertexBufferSize[i]);
-		}
+		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = EnableVertexData(m_indexed_array.m_count ? true : false);
 		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
 		if (m_forcedIndexBuffer)
 		{

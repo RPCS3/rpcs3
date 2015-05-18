@@ -94,7 +94,7 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
-	void EnableVertexData(bool indexed_draw = false);
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> EnableVertexData(bool indexed_draw = false);
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
