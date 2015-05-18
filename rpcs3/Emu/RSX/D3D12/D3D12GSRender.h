@@ -50,8 +50,11 @@ private:
 	ID3D12PipelineState *m_PSO;
 	ID3D12RootSignature *m_rootSignature;
 
-	//  GLTexture m_gl_textures[m_textures_count];
-	//  GLTexture m_gl_vertex_textures[m_textures_count];
+	ID3D12Heap *m_uploadTextureHeap, *m_textureStorage;
+	size_t m_currentStorageOffset;
+	ID3D12DescriptorHeap *m_textureDescriptorsHeap;
+	ID3D12DescriptorHeap *m_samplerDescriptorHeap;
+	size_t m_currentTextureIndex;
 
 	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
 	ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;

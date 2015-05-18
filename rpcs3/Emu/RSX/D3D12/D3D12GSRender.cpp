@@ -25,12 +25,14 @@ D3D12GSRender::D3D12GSRender()
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	constantsFragmentSize = 0;
+	m_currentStorageOffset = 0;
+	m_currentTextureIndex = 0;
 	// Enable d3d debug layer
-#ifdef DEBUG
+//#ifdef DEBUG
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
 	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
 	debugInterface->EnableDebugLayer();
-#endif
+//#endif
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
@@ -146,7 +148,7 @@ D3D12GSRender::D3D12GSRender()
 
 
 	// Common root signature
-	D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+	D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
 	// Scale Offset data
 	descriptorRange[0].BaseShaderRegister = 0;
 	descriptorRange[0].NumDescriptors = 1;
@@ -155,7 +157,15 @@ D3D12GSRender::D3D12GSRender()
 	descriptorRange[1].BaseShaderRegister = 1;
 	descriptorRange[1].NumDescriptors = 2;
 	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	D3D12_ROOT_PARAMETER RP[2] = {};
+	// Textures
+	descriptorRange[2].BaseShaderRegister = 0;
+	descriptorRange[2].NumDescriptors = 1;
+	descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	// Samplers
+	descriptorRange[3].BaseShaderRegister = 0;
+	descriptorRange[3].NumDescriptors = 1;
+	descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+	D3D12_ROOT_PARAMETER RP[4] = {};
 	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
@@ -164,10 +174,18 @@ D3D12GSRender::D3D12GSRender()
 	RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
 	RP[1].DescriptorTable.NumDescriptorRanges = 1;
+	RP[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
+	RP[2].DescriptorTable.NumDescriptorRanges = 1;
+	RP[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[3].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
+	RP[3].DescriptorTable.NumDescriptorRanges = 1;
 
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
 	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootSignatureDesc.NumParameters = 2;
+	rootSignatureDesc.NumParameters = 4;
 	rootSignatureDesc.pParameters = RP;
 
 	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
@@ -178,6 +196,25 @@ D3D12GSRender::D3D12GSRender()
 		rootSignatureBlob->GetBufferPointer(),
 		rootSignatureBlob->GetBufferSize(),
 		IID_PPV_ARGS(&m_rootSignature));
+
+	// Texture
+	D3D12_HEAP_DESC heapDescription = {};
+	heapDescription.SizeInBytes = 256 * 256 * 256;
+	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	check(m_device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
+
+	heapDescription.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+	check(m_device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
+
+	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
+	textureDescriptorDesc.NumDescriptors = 1000; // For safety
+	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	check(m_device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
+
+	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+	check(m_device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -197,6 +234,10 @@ D3D12GSRender::~D3D12GSRender()
 		m_vertexBuffer[i]->Release();
 	if (m_fbo)
 		delete m_fbo;
+	m_textureDescriptorsHeap->Release();
+	m_textureStorage->Release();
+	m_uploadTextureHeap->Release();
+	m_samplerDescriptorHeap->Release();
 	m_rootSignature->Release();
 	m_backBuffer[0]->Release();
 	m_backBuffer[1]->Release();
@@ -577,6 +618,109 @@ void D3D12GSRender::ExecCMD()
 	Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	commandList->SetGraphicsRootDescriptorTable(1, Handle);
 	commandList->SetPipelineState(m_PSO);
+
+
+	size_t usedTexture = 0;
+
+	for (u32 i = 0; i < m_textures_count; ++i)
+	{
+		if (!m_textures[i].IsEnabled()) continue;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> Texture, vramTexture;
+		size_t textureSize = m_textures[i].GetWidth() * m_textures[i].GetHeight() * 4;
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		textureDesc.Width = textureSize;
+		textureDesc.Height = 1;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.MipLevels = 1;
+		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		check(m_device->CreatePlacedResource(
+			m_uploadTextureHeap,
+			m_currentStorageOffset,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&Texture)
+			));
+
+		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
+		auto pixels = vm::get_ptr<const u8>(texaddr);
+		void *textureData;
+		check(Texture->Map(0, nullptr, (void**)&textureData));
+		memcpy(textureData, pixels, textureSize);
+		Texture->Unmap(0, nullptr);
+
+		D3D12_RESOURCE_DESC vramTextureDesc = {};
+		vramTextureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		vramTextureDesc.Width = m_textures[i].GetWidth();
+		vramTextureDesc.Height = m_textures[i].GetHeight();
+		vramTextureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		vramTextureDesc.DepthOrArraySize = 1;
+		vramTextureDesc.SampleDesc.Count = 1;
+		vramTextureDesc.MipLevels = 1;
+		check(m_device->CreatePlacedResource(
+			m_textureStorage,
+			m_currentStorageOffset,
+			&vramTextureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&vramTexture)
+			));
+
+		m_currentStorageOffset += textureSize;
+
+		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+		dst.pResource = vramTexture.Get();
+		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		src.pResource = Texture.Get();
+		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		src.PlacedFootprint.Footprint.Depth = 1;
+		src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
+		src.PlacedFootprint.Footprint.Height = m_textures[i].GetHeight();
+		src.PlacedFootprint.Footprint.RowPitch = m_textures[i].GetWidth() * 4;
+		src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Transition.pResource = vramTexture.Get();
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+		commandList->ResourceBarrier(1, &barrier);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_device->CreateShaderResourceView(vramTexture.Get(), &srvDesc, Handle);
+
+		// TODO : Correctly define sampler
+		D3D12_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		Handle = m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_device->CreateSampler(&samplerDesc, Handle);
+
+		usedTexture++;
+	}
+
+	Handle = m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	commandList->SetDescriptorHeaps(1, &m_textureDescriptorsHeap);
+	commandList->SetGraphicsRootDescriptorTable(2, Handle);
+
+	Handle = m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	commandList->SetDescriptorHeaps(1, &m_samplerDescriptorHeap);
+	commandList->SetGraphicsRootDescriptorTable(3, Handle);
+
+	m_currentTextureIndex += usedTexture;
 
 	InitDrawBuffers();
 	switch (m_surface_color_target)
@@ -1048,6 +1192,8 @@ void D3D12GSRender::Flip()
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	constantsFragmentSize = 0;
+	m_currentStorageOffset = 0;
+	m_currentTextureIndex = 0;
 	m_frame->Flip(nullptr);
 }
 #endif
