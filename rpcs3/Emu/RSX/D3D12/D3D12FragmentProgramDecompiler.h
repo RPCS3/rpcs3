@@ -8,6 +8,9 @@
 class D3D12FragmentDecompiler : public FragmentProgramDecompiler
 {
 protected:
+	virtual std::string getFloatTypeName(size_t elementCount) override;
+	virtual std::string getFunction(enum class FUNCTION) override;
+
 	virtual void insertHeader(std::stringstream &OS) override;
 	virtual void insertIntputs(std::stringstream &OS) override;
 	virtual void insertOutputs(std::stringstream &OS) override;

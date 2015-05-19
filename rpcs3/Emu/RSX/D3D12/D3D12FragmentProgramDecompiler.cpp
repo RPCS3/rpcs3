@@ -6,25 +6,42 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 
-static std::string typeName[] =
-{
-	"float",
-	"float2",
-	"float3",
-	"float4"
-};
-
-static std::string functionName[] =
-{
-	"saturate",
-	"float4(dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy))",
-	"frac($0)",
-};
-
 D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
 	FragmentProgramDecompiler(addr, size, ctrl)
 {
 
+}
+
+std::string D3D12FragmentDecompiler::getFloatTypeName(size_t elementCount)
+{
+	switch (elementCount)
+	{
+	default:
+		abort();
+	case 1:
+		return "float";
+	case 2:
+		return "float2";
+	case 3:
+		return "float3";
+	case 4:
+		return "float4";
+	}
+}
+
+std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
+{
+	switch (f)
+	{
+	default:
+		abort();
+	case FUNCTION::FUNCTION_SATURATE:
+		return "saturate";
+	case FUNCTION::FUNCTION_DP2:
+		return "dot($0.xy, $1.xy).xxxx";
+	case FUNCTION::FUNCTION_FRACT:
+		return "frac($0)";
+	}
 }
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
@@ -69,8 +86,8 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
-			OS << "	" << typeName[3] << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
+		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
+			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
 }
@@ -131,7 +148,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 	OS << "	PixelOutput Out;" << std::endl;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
+		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
 	}
 	OS << "	return Out;" << std::endl;
