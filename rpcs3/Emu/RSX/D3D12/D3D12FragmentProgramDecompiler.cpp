@@ -35,8 +35,6 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 	{
 	default:
 		abort();
-	case FUNCTION::FUNCTION_SATURATE:
-		return "saturate";
 	case FUNCTION::FUNCTION_DP2:
 		return "dot($0.xy, $1.xy).xxxx";
 	case FUNCTION::FUNCTION_DP2A:
@@ -70,6 +68,11 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 	case FUNCTION::FUNCTION_DFDY:
 		return "ddy($0)";
 	}
+}
+
+std::string D3D12FragmentDecompiler::saturate(const std::string & code)
+{
+	return "saturate(" + code + ")";
 }
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
