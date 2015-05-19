@@ -43,20 +43,8 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 		return "dot($0.xyz, $1.xyz).xxxx";
 	case FUNCTION::FUNCTION_DP4:
 		return "dot($0, $1).xxxx";
-	case FUNCTION::FUNCTION_SEQ:
-		return "($0 == $1).xxxx";
 	case FUNCTION::FUNCTION_SFL:
 		return "float4(0., 0., 0., 0.)";
-	case FUNCTION::FUNCTION_SGE:
-		return "($0 >= $1).xxxx";
-	case FUNCTION::FUNCTION_SGT:
-		return "($0 > $1).xxxx";
-	case FUNCTION::FUNCTION_SLE:
-		return "($0 <= $1).xxxx";
-	case FUNCTION::FUNCTION_SLT:
-		return "($0 < $1).xxxx";
-	case FUNCTION::FUNCTION_SNE:
-		return "($0 != $1).xxxx";
 	case FUNCTION::FUNCTION_STR:
 		return "float4(1., 1., 1., 1.)";
 	case FUNCTION::FUNCTION_FRACT:
@@ -73,6 +61,27 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 std::string D3D12FragmentDecompiler::saturate(const std::string & code)
 {
 	return "saturate(" + code + ")";
+}
+
+std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+{
+	switch (f)
+	{
+	default:
+		abort();
+	case COMPARE::FUNCTION_SEQ:
+		return "(" + Op0 + " == " + Op1 + ".xxxx";
+	case COMPARE::FUNCTION_SGE:
+		return "(" + Op0 + " >= " + Op1 +").xxxx";
+	case COMPARE::FUNCTION_SGT:
+		return "(" + Op0 + " > " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SLE:
+		return "(" + Op0 + " <= " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SLT:
+		return "(" + Op0 + " < " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SNE:
+		return "(" + Op0 + " != " + Op1 + ").xxxx";
+	}
 }
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
