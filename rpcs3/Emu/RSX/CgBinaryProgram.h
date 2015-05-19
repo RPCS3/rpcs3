@@ -332,6 +332,7 @@ public:
 
 		else
 		{
+			GLParamArray param_array;
 			auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
 			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", (u32)prog.binaryFormatRevision);
