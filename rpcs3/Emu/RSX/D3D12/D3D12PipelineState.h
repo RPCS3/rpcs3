@@ -4,8 +4,8 @@
 #include <d3d12.h>
 #include <wrl/client.h>
 #include "../Common/ProgramStateCache.h"
-#include "VertexProgramDecompiler.h"
-#include "FragmentProgramDecompiler.h"
+#include "D3D12VertexProgramDecompiler.h"
+#include "D3D12FragmentProgramDecompiler.h"
 #include "Utilities/File.h"
 
 
@@ -61,7 +61,7 @@ struct D3D12Traits
 	static
 	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
 	{
-		FragmentDecompiler FS(RSXFP->addr, RSXFP->size, RSXFP->offset);
+		D3D12FragmentDecompiler FS(RSXFP->addr, RSXFP->size, RSXFP->offset);
 		const std::string &shader = FS.Decompile();
 		fragmentProgramData.Compile(shader, Shader::SHADER_TYPE::SHADER_TYPE_FRAGMENT);
 

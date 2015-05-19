@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #if defined(DX12_SUPPORT)
-#include "VertexProgramDecompiler.h"
+#include "D3D12VertexProgramDecompiler.h"
 
 #include "Utilities/Log.h"
 #include "Emu/System.h"

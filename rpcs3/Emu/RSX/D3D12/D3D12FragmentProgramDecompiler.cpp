@@ -1,0 +1,141 @@
+#include "stdafx.h"
+#if defined(DX12_SUPPORT)
+#include "D3D12FragmentProgramDecompiler.h"
+
+#include "Utilities/Log.h"
+#include "Emu/Memory/Memory.h"
+#include "Emu/System.h"
+
+static std::string typeName[] =
+{
+	"float",
+	"float2",
+	"float3",
+	"float4"
+};
+
+static std::string functionName[] =
+{
+	"saturate",
+	"float4(dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy), dot($0.xy, $1.xy))",
+	"frac($0)",
+};
+
+D3D12FragmentDecompiler::D3D12FragmentDecompiler(u32 addr, u32& size, u32 ctrl) :
+	FragmentProgramDecompiler(addr, size, ctrl)
+{
+
+}
+
+void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
+{
+	OS << "// Header" << std::endl;
+}
+
+void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
+{
+	OS << "struct PixelInput" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4 Position : SV_POSITION;" << std::endl;
+	OS << "	float4 diff_color : COLOR0;" << std::endl;
+	OS << "	float4 spec_color : COLOR1;" << std::endl;
+	OS << "	float4 dst_reg3 : COLOR2;" << std::endl;
+	OS << "	float4 dst_reg4 : COLOR3;" << std::endl;
+	OS << "	float fogc : FOG;" << std::endl;
+	OS << "	float4 dummy : COLOR4;" << std::endl;
+	OS << "	float4 tc0 : TEXCOORD0;" << std::endl;
+	OS << "	float4 tc1 : TEXCOORD1;" << std::endl;
+	OS << "	float4 tc2 : TEXCOORD2;" << std::endl;
+	OS << "	float4 tc3 : TEXCOORD3;" << std::endl;
+	OS << "	float4 tc4 : TEXCOORD4;" << std::endl;
+	OS << "	float4 tc5 : TEXCOORD5;" << std::endl;
+	OS << "	float4 tc6 : TEXCOORD6;" << std::endl;
+	OS << "	float4 tc7 : TEXCOORD7;" << std::endl;
+	OS << "	float4 tc8 : TEXCOORD8;" << std::endl;
+	OS << "};" << std::endl;
+}
+
+void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
+{
+	OS << "struct PixelOutput" << std::endl;
+	OS << "{" << std::endl;
+	const std::pair<std::string, std::string> table[] =
+	{
+		{ "ocol0", "r0" },
+		{ "ocol1", "r2" },
+		{ "ocol2", "r3" },
+		{ "ocol3", "r4" },
+	};
+
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
+			OS << "	" << typeName[3] << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
+	}
+	OS << "};" << std::endl;
+}
+
+void D3D12FragmentDecompiler::insertConstants(std::stringstream & OS)
+{
+	OS << "cbuffer CONSTANT : register(b2)" << std::endl;
+	OS << "{" << std::endl;
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type == "sampler2D")
+			continue;
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << ";" << std::endl;
+	}
+	OS << "};" << std::endl << std::endl;
+	size_t textureIndex = 0;
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type != "sampler2D")
+			continue;
+		for (ParamItem PI : PT.items)
+		{
+			OS << "Texture2D " << PI.name << " : register(t" << textureIndex << ");" << std::endl;
+			OS << "sampler " << PI.name << "sampler : register(s" << textureIndex << ");" << std::endl;
+			textureIndex++;
+		}
+	}
+}
+
+void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
+{
+	OS << "PixelOutput main(PixelInput In)" << std::endl;
+	OS << "{" << std::endl;
+	for (ParamType PT : m_parr.params[PF_PARAM_IN])
+	{
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << " = In." << PI.name << ";" << std::endl;
+	}
+	// Declare output
+	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
+	{
+		for (ParamItem PI : PT.items)
+			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 0.);" << std::endl;
+	}
+}
+
+void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
+{
+	const std::pair<std::string, std::string> table[] =
+	{
+		{ "ocol0", "r0" },
+		{ "ocol1", "r2" },
+		{ "ocol2", "r3" },
+		{ "ocol3", "r4" },
+	};
+
+	OS << "	PixelOutput Out;" << std::endl;
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, typeName[3], table[i].second))
+			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
+	}
+	OS << "	return Out;" << std::endl;
+	OS << "}" << std::endl;
+}
+
+#endif

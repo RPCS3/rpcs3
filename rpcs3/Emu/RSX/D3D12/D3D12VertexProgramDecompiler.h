@@ -3,7 +3,7 @@
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
 #include <sstream>
-#include "ShaderParam.h"
+#include "../Common/ShaderParam.h"
 
 struct VertexDecompiler
 {
