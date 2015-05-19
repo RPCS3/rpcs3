@@ -1,56 +1,34 @@
 #pragma once
-#include "GLShaderParam.h"
+#include "../Common/FragmentProgramDecompiler.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Utilities/Thread.h"
+#include "OpenGL.h"
 
-struct GLFragmentDecompilerThread : public ThreadBase
+struct GLFragmentDecompilerThread : public ThreadBase, public FragmentProgramDecompiler
 {
-	std::string main;
 	std::string& m_shader;
-	GLParamArray& m_parr;
-	u32 m_addr;
-	u32& m_size;
-	u32 m_const_index;
-	u32 m_offset;
-	u32 m_location;
-	u32 m_ctrl;
-	u32 m_loop_count;
-	int m_code_level;
-	std::vector<u32> m_end_offsets;
-	std::vector<u32> m_else_offsets;
-
-	GLFragmentDecompilerThread(std::string& shader, GLParamArray& parr, u32 addr, u32& size, u32 ctrl)
-		: ThreadBase("Fragment Shader Decompiler Thread")
+	ParamArray& m_parrDummy;
+public:
+	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, u32 addr, u32& size, u32 ctrl)
+		: ThreadBase("Fragment Shader Decompiler Thread"), FragmentProgramDecompiler(addr, size, ctrl)
 		, m_shader(shader)
-		, m_parr(parr)
-		, m_addr(addr)
-		, m_size(size) 
-		, m_const_index(0)
-		, m_location(0)
-		, m_ctrl(ctrl)
-	{
-		m_size = 0;
-	}
+		, m_parrDummy(parr)
+	{}
 
-	std::string GetMask();
+	void Task();
 
-	void SetDst(std::string code, bool append_mask = true);
-	void AddCode(const std::string& code);
-	std::string AddReg(u32 index, int fp16);
-	bool HasReg(u32 index, int fp16);
-	std::string AddCond();
-	std::string AddConst();
-	std::string AddTex();
-	std::string Format(const std::string& code);
+protected:
+	virtual std::string getFloatTypeName(size_t elementCount) override;
+	virtual std::string getFunction(FUNCTION) override;
+	virtual std::string saturate(const std::string &code) override;
+	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
-	void AddCodeCond(const std::string& dst, const std::string& src);
-	std::string GetCond();
-	template<typename T> std::string GetSRC(T src);
-	std::string BuildCode();
-
-	virtual void Task();
-
-	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
+	virtual void insertHeader(std::stringstream &OS) override;
+	virtual void insertIntputs(std::stringstream &OS) override;
+	virtual void insertOutputs(std::stringstream &OS) override;
+	virtual void insertConstants(std::stringstream &OS) override;
+	virtual void insertMainStart(std::stringstream &OS) override;
+	virtual void insertMainEnd(std::stringstream &OS) override;
 };
 
 /** Storage for an Fragment Program in the process of of recompilation.
@@ -62,7 +40,7 @@ public:
 	GLFragmentProgram();
 	~GLFragmentProgram();
 
-	GLParamArray parr;
+	ParamArray parr;
 	u32 id;
 	std::string shader;
 	std::vector<size_t> FragmentConstantOffsetCache;

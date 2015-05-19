@@ -430,7 +430,6 @@
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
-    <ClInclude Include="Emu\RSX\GL\GLShaderParam.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
     <ClInclude Include="Emu\RSX\GSManager.h" />

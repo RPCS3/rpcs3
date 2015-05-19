@@ -1345,9 +1345,6 @@
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GL\GLShaderParam.h">
-      <Filter>Emu\GPU\RSX\GL</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
