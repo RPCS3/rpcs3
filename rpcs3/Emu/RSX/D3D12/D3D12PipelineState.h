@@ -83,7 +83,7 @@ struct D3D12Traits
 	static
 	void RecompileVertexProgram(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID)
 	{
-		VertexDecompiler VS(RSXVP->data);
+		D3D12VertexProgramDecompiler VS(RSXVP->data);
 		std::string shaderCode = VS.Decompile();
 		vertexProgramData.Compile(shaderCode, Shader::SHADER_TYPE::SHADER_TYPE_VERTEX);
 
