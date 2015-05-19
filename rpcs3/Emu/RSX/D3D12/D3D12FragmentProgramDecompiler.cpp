@@ -63,6 +63,12 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 		return "float4(1., 1., 1., 1.)";
 	case FUNCTION::FUNCTION_FRACT:
 		return "frac($0)";
+	case FUNCTION::FUNCTION_TEXTURE_SAMPLE:
+		return "$t.Sample($tsampler, $0.xy)";
+	case FUNCTION::FUNCTION_DFDX:
+		return "ddx($0)";
+	case FUNCTION::FUNCTION_DFDY:
+		return "ddy($0)";
 	}
 }
 
