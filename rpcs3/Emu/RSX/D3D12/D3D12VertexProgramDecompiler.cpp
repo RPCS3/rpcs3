@@ -51,6 +51,27 @@ std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 	}
 }
 
+std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+{
+	switch (f)
+	{
+	default:
+		abort();
+	case COMPARE::FUNCTION_SEQ:
+		return "(" + Op0 + " == " + Op1 + ".xxxx";
+	case COMPARE::FUNCTION_SGE:
+		return "(" + Op0 + " >= " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SGT:
+		return "(" + Op0 + " > " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SLE:
+		return "(" + Op0 + " <= " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SLT:
+		return "(" + Op0 + " < " + Op1 + ").xxxx";
+	case COMPARE::FUNCTION_SNE:
+		return "(" + Op0 + " != " + Op1 + ").xxxx";
+	}
+}
+
 void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 {
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
