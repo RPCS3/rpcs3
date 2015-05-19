@@ -39,6 +39,28 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 		return "saturate";
 	case FUNCTION::FUNCTION_DP2:
 		return "dot($0.xy, $1.xy).xxxx";
+	case FUNCTION::FUNCTION_DP2A:
+		return "";
+	case FUNCTION::FUNCTION_DP3:
+		return "dot($0.xyz, $1.xyz).xxxx";
+	case FUNCTION::FUNCTION_DP4:
+		return "dot($0, $1).xxxx";
+	case FUNCTION::FUNCTION_SEQ:
+		return "($0 == $1).xxxx";
+	case FUNCTION::FUNCTION_SFL:
+		return "float4(0., 0., 0., 0.)";
+	case FUNCTION::FUNCTION_SGE:
+		return "($0 >= $1).xxxx";
+	case FUNCTION::FUNCTION_SGT:
+		return "($0 > $1).xxxx";
+	case FUNCTION::FUNCTION_SLE:
+		return "($0 <= $1).xxxx";
+	case FUNCTION::FUNCTION_SLT:
+		return "($0 < $1).xxxx";
+	case FUNCTION::FUNCTION_SNE:
+		return "($0 != $1).xxxx";
+	case FUNCTION::FUNCTION_STR:
+		return "float4(1., 1., 1., 1.)";
 	case FUNCTION::FUNCTION_FRACT:
 		return "frac($0)";
 	}
