@@ -412,7 +412,7 @@ void GLFragmentDecompilerThread::Task()
 			{
 			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
 			case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
-			case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1))"); break;
+			case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); break;
 			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
 			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
 			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
@@ -445,7 +445,7 @@ void GLFragmentDecompilerThread::Task()
 			switch (opcode)
 			{
 			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
-			case RSX_FP_OPCODE_COS: SetDst("cos($0)"); break;
+			case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); break;
 			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
 			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
 			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
@@ -473,7 +473,7 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_SFL: SetDst("vec4(0.0)"); break;
 			case RSX_FP_OPCODE_SGE: SetDst("vec4(greaterThanEqual($0, $1))"); break;
 			case RSX_FP_OPCODE_SGT: SetDst("vec4(greaterThan($0, $1))"); break;
-			case RSX_FP_OPCODE_SIN: SetDst("sin($0)"); break;
+			case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); break;
 			case RSX_FP_OPCODE_SLE: SetDst("vec4(lessThanEqual($0, $1))"); break;
 			case RSX_FP_OPCODE_SLT: SetDst("vec4(lessThan($0, $1))"); break;
 			case RSX_FP_OPCODE_SNE: SetDst("vec4(notEqual($0, $1))"); break;
