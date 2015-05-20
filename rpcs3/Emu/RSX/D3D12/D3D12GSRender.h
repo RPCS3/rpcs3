@@ -43,7 +43,7 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
 class D3D12GSRender : public GSRender
 {
 private:
-	size_t m_vertexBufferSize[32];
+
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
 	PipelineStateObjectCache m_cachePSO;
@@ -58,8 +58,11 @@ private:
 
 
 	bool m_forcedIndexBuffer;
+	size_t m_currentVertexBuffersHeapOffset;
+	std::vector<ID3D12Resource *> m_inflightVertexBuffers;
+	ID3D12Heap *m_vertexBuffersHeap;
 	size_t m_indexBufferCount;
-	ID3D12Resource *m_indexBuffer, *m_vertexBuffer[m_vertex_count];
+	ID3D12Resource *m_indexBuffer;
 	ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
 	size_t constantsFragmentSize;
 	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
