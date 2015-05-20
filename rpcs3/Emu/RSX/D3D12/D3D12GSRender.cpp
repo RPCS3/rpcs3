@@ -87,7 +87,7 @@ D3D12GSRender::D3D12GSRender()
 
 	D3D12_RESOURCE_DESC resDesc = {};
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	resDesc.Width = (UINT)1024 * 1024;
+	resDesc.Width = (UINT)1024 * 1024 * 16;
 	resDesc.Height = 1;
 	resDesc.DepthOrArraySize = 1;
 	resDesc.SampleDesc.Count = 1;
@@ -208,7 +208,7 @@ D3D12GSRender::D3D12GSRender()
 
 	// Texture
 	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 256 * 256 * 256;
+	heapDescription.SizeInBytes = 256 * 256 * 256 * 16;
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	check(m_device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
 
@@ -676,7 +676,6 @@ void D3D12GSRender::ExecCMD()
 	for (u32 i = 0; i < m_textures_count; ++i)
 	{
 		if (!m_textures[i].IsEnabled()) continue;
-
 		ID3D12Resource *Texture, *vramTexture;
 		size_t textureSize = m_textures[i].GetWidth() * m_textures[i].GetHeight() * 4;
 		D3D12_RESOURCE_DESC textureDesc = {};
@@ -721,6 +720,7 @@ void D3D12GSRender::ExecCMD()
 			));
 
 		m_currentStorageOffset += textureSize;
+		m_currentStorageOffset = (m_currentStorageOffset + 65536 - 1) & ~65535;
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		dst.pResource = vramTexture;
