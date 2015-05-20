@@ -15,7 +15,7 @@ class D3D12RenderTargetSets
 	ID3D12DescriptorHeap *m_rttDescriptorHeap;
 	ID3D12DescriptorHeap *m_depthStencilDescriptorHeap;
 public:
-	D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height);
+	D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth);
 	~D3D12RenderTargetSets();
 	/**
 	 * Return the base descriptor address for the give surface target.

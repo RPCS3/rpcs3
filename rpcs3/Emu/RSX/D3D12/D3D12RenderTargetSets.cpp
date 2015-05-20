@@ -9,7 +9,7 @@
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"
 
-D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height)
+D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.NumDescriptors = 1;
@@ -19,6 +19,9 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 	descriptorHeapDesc.NumDescriptors = 4;
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_rttDescriptorHeap));
+
+	D3D12_CLEAR_VALUE clearDepthValue = {};
+	clearDepthValue.DepthStencil.Depth = clearDepth;
 
 	// Every resource are committed for simplicity, later we could use heap
 	D3D12_HEAP_PROPERTIES heapProp = {};
@@ -37,9 +40,11 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 		break;
 	case CELL_GCM_SURFACE_Z16:
 		resourceDesc.Format = DXGI_FORMAT_R16_TYPELESS;
+		clearDepthValue.Format = DXGI_FORMAT_D16_UNORM;
 		break;
 	case CELL_GCM_SURFACE_Z24S8:
 		resourceDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+		clearDepthValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		break;
 	default:
 		LOG_ERROR(RSX, "Bad depth format! (%d)", surfaceDepthFormat);
@@ -51,7 +56,7 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		nullptr, // TODO: Assign sensible default clearvalue here
+		&clearDepthValue,
 		IID_PPV_ARGS(&m_depthStencilTexture)
 		);
 	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
@@ -72,6 +77,12 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 	depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	device->CreateDepthStencilView(m_depthStencilTexture, &depthStencilViewDesc, m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
+	D3D12_CLEAR_VALUE clearColorValue = {};
+	clearColorValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clearColorValue.Color[0] = clearColor[0];
+	clearColorValue.Color[1] = clearColor[1];
+	clearColorValue.Color[2] = clearColor[2];
+	clearColorValue.Color[3] = clearColor[3];
 	g_RTTIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_rttDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (int i = 0; i < 4; ++i)
@@ -90,7 +101,7 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 			D3D12_HEAP_FLAG_NONE,
 			&resourceDesc,
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			nullptr, // TODO: Assign sensible default clearvalue here
+			&clearColorValue,
 			IID_PPV_ARGS(&m_rtts[i])
 			);
 

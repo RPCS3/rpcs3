@@ -264,8 +264,15 @@ void D3D12GSRender::InitDrawBuffers()
 		m_lastWidth = RSXThread::m_width;
 		m_lastHeight = RSXThread::m_height;
 		m_lastDepth = m_surface_depth_format;
+		float clearColor[] =
+		{
+			m_clear_surface_color_r / 255.0f,
+			m_clear_surface_color_g / 255.0f,
+			m_clear_surface_color_b / 255.0f,
+			m_clear_surface_color_a / 255.0f
+		};
 
-		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight);
+		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight, clearColor, 1.f);
 	}
 }
 
