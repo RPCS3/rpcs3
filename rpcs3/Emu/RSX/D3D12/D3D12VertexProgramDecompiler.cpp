@@ -58,7 +58,7 @@ std::string D3D12VertexProgramDecompiler::compareFunction(COMPARE f, const std::
 	default:
 		abort();
 	case COMPARE::FUNCTION_SEQ:
-		return "(" + Op0 + " == " + Op1 + ".xxxx";
+		return "(" + Op0 + " == " + Op1 + ").xxxx";
 	case COMPARE::FUNCTION_SGE:
 		return "(" + Op0 + " >= " + Op1 + ").xxxx";
 	case COMPARE::FUNCTION_SGT:
