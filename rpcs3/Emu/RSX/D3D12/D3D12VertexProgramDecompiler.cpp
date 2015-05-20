@@ -31,7 +31,7 @@ std::string D3D12VertexProgramDecompiler::getFunction(enum class FUNCTION f)
 	case FUNCTION::FUNCTION_DP2:
 		return "dot($0.xy, $1.xy).xxxx";
 	case FUNCTION::FUNCTION_DP2A:
-		return "";
+		return "(dot($0.xy, $1.xy) + $2.x).xxxx";
 	case FUNCTION::FUNCTION_DP3:
 		return "dot($0.xyz, $1.xyz).xxxx";
 	case FUNCTION::FUNCTION_DP4:
@@ -172,7 +172,7 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = " << PI.value << ";" << std::endl;
+			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 1.);" << std::endl;
 	}
 
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
