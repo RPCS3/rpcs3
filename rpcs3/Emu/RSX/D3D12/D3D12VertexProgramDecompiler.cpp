@@ -172,7 +172,12 @@ void D3D12VertexProgramDecompiler::insertMainStart(std::stringstream & OS)
 	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << " = float4(0., 0., 0., 1.);" << std::endl;
+		{
+			OS << "	" << PT.type << " " << PI.name;
+			if (!PI.value.empty())
+				OS << " = " << PI.value;
+			OS << ";" << std::endl;
+		}
 	}
 
 	for (const ParamType PT : m_parr.params[PF_PARAM_IN])
