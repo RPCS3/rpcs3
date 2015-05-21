@@ -524,7 +524,8 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
 			case RSX_FP_OPCODE_IFE:
 				AddCode("if($cond)");
-				m_else_offsets.push_back(src1.else_offset << 2);
+				if (src2.end_offset != src1.else_offset)
+					m_else_offsets.push_back(src1.else_offset << 2);
 				m_end_offsets.push_back(src2.end_offset << 2);
 				AddCode("{");
 				m_code_level++;
