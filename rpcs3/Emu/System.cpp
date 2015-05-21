@@ -265,10 +265,7 @@ void Emulator::Load()
 
 	if (m_elf_path.empty())
 	{
-		if (!GetVFS().GetDeviceLocal(m_path, m_elf_path))
-		{
-			m_elf_path = "/host_root/" + m_path; // should be probably app_home
-		}
+		GetVFS().GetDeviceLocal(m_path, m_elf_path);
 
 		LOG_NOTICE(LOADER, "Elf path: %s", m_elf_path);
 	}

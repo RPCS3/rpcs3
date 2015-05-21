@@ -386,30 +386,30 @@ vfsDevice* VFS::GetDevice(const std::string& ps3_path, std::string& path) const
 
 vfsDevice* VFS::GetDeviceLocal(const std::string& local_path, std::string& path) const
 {
-	size_t max_eq = 0;
+	int max_eq = -1;
 	int max_i = -1;
 
 	std::vector<std::string> local_path_blocks = simplify_path_blocks(local_path);
 
 	for (u32 i = 0; i < m_devices.size(); ++i)
 	{
-		std::vector<std::string> dev_local_path_blocks_blocks = simplify_path_blocks(m_devices[i]->GetLocalPath());
+		std::vector<std::string> dev_local_path_blocks = simplify_path_blocks(m_devices[i]->GetLocalPath());
 
-		if (local_path_blocks.size() < dev_local_path_blocks_blocks.size())
+		if (local_path_blocks.size() < dev_local_path_blocks.size())
 			continue;
 
-		size_t eq = 0;
-		for (; eq < dev_local_path_blocks_blocks.size(); ++eq)
-		{
-			if (strcmp(local_path_blocks[eq].c_str(), dev_local_path_blocks_blocks[eq].c_str()))
-			{
-				break;
-			}
-		}
+		int dev_blocks = dev_local_path_blocks.size();
 
-		if (eq > max_eq)
+		bool prefix_equal = std::equal(
+			std::begin(dev_local_path_blocks),
+			std::end(dev_local_path_blocks),
+			std::begin(local_path_blocks),
+			[](const std::string& a, const std::string& b){ return strcmp(a.c_str(), b.c_str()) == 0; }
+		);
+		
+		if (prefix_equal && dev_blocks > max_eq)
 		{
-			max_eq = eq;
+			max_eq = dev_blocks;
 			max_i = i;
 		}
 	}
