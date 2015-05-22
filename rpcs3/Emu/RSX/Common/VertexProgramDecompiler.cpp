@@ -654,7 +654,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
 		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
 		case RSX_VEC_OPCODE_DP3: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP3)); break;
-		case RSX_VEC_OPCODE_DPH: SetDSTVec("dot(float4($0.xyz, 1.0), $1).xxxx"); break;
+		case RSX_VEC_OPCODE_DPH: SetDSTVec(getFunction(FUNCTION::FUNCTION_DPH)); break;
 		case RSX_VEC_OPCODE_DP4: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP4)); break;
 		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
 		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;

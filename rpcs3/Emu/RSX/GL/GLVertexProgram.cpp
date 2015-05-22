@@ -35,6 +35,8 @@ std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 		return "vec4(dot($0.xyz, $1.xyz))";
 	case FUNCTION::FUNCTION_DP4:
 		return "vec4(dot($0, $1))";
+	case FUNCTION::FUNCTION_DPH:
+		return "vec4(dot(vec4($0.xyz, 1.0), $1))";
 	case FUNCTION::FUNCTION_SFL:
 		return "vec4(0., 0., 0., 0.)";
 	case FUNCTION::FUNCTION_STR:
