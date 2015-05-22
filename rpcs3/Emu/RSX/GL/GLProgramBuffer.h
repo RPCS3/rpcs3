@@ -16,7 +16,6 @@ struct GLTraits
 	{
 		fragmentProgramData.Decompile(*RSXFP);
 		fragmentProgramData.Compile();
-		GLuint res = glGetError();
 		//checkForGlError("m_fragment_prog.Compile");
 
 		// TODO: This shouldn't use current dir
@@ -28,7 +27,6 @@ struct GLTraits
 	{
 		vertexProgramData.Decompile(*RSXVP);
 		vertexProgramData.Compile();
-		GLuint res = glGetError();
 		//checkForGlError("m_vertex_prog.Compile");
 
 		// TODO: This shouldn't use current dir
@@ -40,7 +38,6 @@ struct GLTraits
 	{
 		GLProgram *result = new GLProgram();
 		result->Create(vertexProgramData.id, fragmentProgramData.id);
-		GLuint res = glGetError();
 		//checkForGlError("m_program.Create");
 		result->Use();
 
