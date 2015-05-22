@@ -5,10 +5,10 @@
 
 //first parameter is of type Log::LogType and text is of type std::string
 
-#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::Success, text, ##__VA_ARGS__)
-#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::Notice,  text, ##__VA_ARGS__) 
-#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::Warning, text, ##__VA_ARGS__) 
-#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::Error,   text, ##__VA_ARGS__)
+#define LOG_SUCCESS(logType, text, ...)           log_message(logType, Log::LogSeveritySuccess, text, ##__VA_ARGS__)
+#define LOG_NOTICE(logType, text, ...)            log_message(logType, Log::LogSeverityNotice,  text, ##__VA_ARGS__) 
+#define LOG_WARNING(logType, text, ...)           log_message(logType, Log::LogSeverityWarning, text, ##__VA_ARGS__) 
+#define LOG_ERROR(logType, text, ...)             log_message(logType, Log::LogSeverityError,   text, ##__VA_ARGS__)
 
 namespace Log
 {
@@ -50,10 +50,10 @@ namespace Log
 
 	enum LogSeverity : u32
 	{
-		Notice = 0,
-		Warning,
-		Success,
-		Error,
+		LogSeverityNotice = 0,
+		LogSeverityWarning,
+		LogSeveritySuccess,
+		LogSeverityError,
 	};
 
 	struct LogMessage
