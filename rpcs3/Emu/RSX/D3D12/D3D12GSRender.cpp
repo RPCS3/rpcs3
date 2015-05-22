@@ -40,10 +40,10 @@ void D3D12GSRender::ResourceStorage::Reset()
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
+	m_queueCompletion = 0;
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
-
 
 	// Create heap for vertex buffers
 	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
@@ -135,6 +135,27 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
 }
 
+void D3D12GSRender::ResourceStorage::Release()
+{
+	// NOTE: Should be released only if no command are in flight !
+	m_backbufferAsRendertarget->Release();
+	m_constantsBufferDescriptorsHeap->Release();
+	m_scaleOffsetDescriptorHeap->Release();
+	m_constantsVertexBuffer->Release();
+	m_constantsFragmentBuffer->Release();
+	m_scaleOffsetBuffer->Release();
+	m_vertexBuffersHeap->Release();
+	m_backBuffer->Release();
+	for (auto tmp : m_inflightVertexBuffers)
+		tmp->Release();
+	m_textureDescriptorsHeap->Release();
+	m_textureStorage->Release();
+	m_uploadTextureHeap->Release();
+	m_samplerDescriptorHeap->Release();
+	for (auto tmp : m_inflightCommandList)
+		tmp->Release();
+	m_commandAllocator->Release();
+}
 
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
@@ -249,31 +270,15 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
-	// NOTE: Should be released only if no command are in flight !
-/*	m_commandAllocator->Release();
+	m_perFrameStorage[0].Release();
+	m_perFrameStorage[1].Release();
 	m_commandQueueGraphic->Release();
 	m_commandQueueCopy->Release();
-	m_backbufferAsRendertarget[0]->Release();
-	m_backbufferAsRendertarget[1]->Release();
-	m_constantsBufferDescriptorsHeap->Release();
-	m_scaleOffsetDescriptorHeap->Release();
-	m_constantsVertexBuffer->Release();
-	m_constantsFragmentBuffer->Release();
-	m_scaleOffsetBuffer->Release();
-	m_vertexBuffersHeap->Release();
 	if (m_fbo)
 		delete m_fbo;
-	for (auto tmp : m_inflightVertexBuffers)
-		tmp->Release();
-	m_textureDescriptorsHeap->Release();
-	m_textureStorage->Release();
-	m_uploadTextureHeap->Release();
-	m_samplerDescriptorHeap->Release();
 	m_rootSignature->Release();
-	m_backBuffer[0]->Release();
-	m_backBuffer[1]->Release();
 	m_swapChain->Release();
-	m_device->Release();*/
+	m_device->Release();
 }
 
 D3D12GSRender::ResourceStorage &D3D12GSRender::getCurrentResourceStorage()
@@ -1217,16 +1222,20 @@ void D3D12GSRender::Flip()
 	}
 
 	check(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
-	// Wait execution is over
-	// TODO: It's suboptimal, we should use 2 command allocator
+	// Add an event signaling queue completion
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-	HANDLE gfxqueuecompletion = CreateEvent(0, 0, 0, 0);
-	fence->SetEventOnCompletion(1, gfxqueuecompletion);
+	getCurrentResourceStorage().m_queueCompletion = CreateEvent(0, 0, 0, 0);
+	fence->SetEventOnCompletion(1, getCurrentResourceStorage().m_queueCompletion);
 	m_commandQueueGraphic->Signal(fence.Get(), 1);
-	WaitForSingleObject(gfxqueuecompletion, INFINITE);
-	CloseHandle(gfxqueuecompletion);
-	getNonCurrentResourceStorage().Reset();
+
+	// Wait execution is over
+	if (getNonCurrentResourceStorage().m_queueCompletion)
+	{
+		WaitForSingleObject(getNonCurrentResourceStorage().m_queueCompletion, INFINITE);
+		CloseHandle(getNonCurrentResourceStorage().m_queueCompletion);
+		getNonCurrentResourceStorage().Reset();
+	}
 	m_currentResourceStorageIndex = 1 - m_currentResourceStorageIndex;
 
 	m_frame->Flip(nullptr);

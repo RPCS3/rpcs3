@@ -83,8 +83,12 @@ private:
 		ID3D12Resource* m_backBuffer;
 		ID3D12DescriptorHeap *m_backbufferAsRendertarget;
 
+		// Fence
+		HANDLE m_queueCompletion;
+
 		void Reset();
 		void Init(ID3D12Device *device);
+		void Release();
 	};
 
 	ResourceStorage m_perFrameStorage[2];
