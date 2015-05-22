@@ -557,17 +557,35 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	check(m_constantsFragmentBuffer->Map(0, nullptr, &constantsBufferMap));
 	for (size_t offsetInFP : fragmentOffset)
 	{
-		auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+		u32 vector[4];
+		// Is it assigned by color register in command buffer ?
+		if (!m_fragment_constants.empty() && offsetInFP == m_fragment_constants.front().id - m_cur_fragment_prog->offset)
+		{
+			const RSXTransformConstant& c = m_fragment_constants.front();
+			vector[0] = (u32&)c.x;
+			vector[1] = (u32&)c.y;
+			vector[2] = (u32&)c.z;
+			vector[3] = (u32&)c.w;
+		}
+		else
+		{
+			auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
 
-		u32 c0 = (data[0] >> 16 | data[0] << 16);
-		u32 c1 = (data[1] >> 16 | data[1] << 16);
-		u32 c2 = (data[2] >> 16 | data[2] << 16);
-		u32 c3 = (data[3] >> 16 | data[3] << 16);
+			u32 c0 = (data[0] >> 16 | data[0] << 16);
+			u32 c1 = (data[1] >> 16 | data[1] << 16);
+			u32 c2 = (data[2] >> 16 | data[2] << 16);
+			u32 c3 = (data[3] >> 16 | data[3] << 16);
 
-		u32 vector[] = { c0, c1, c2, c3 };
+			vector[0] = c0;
+			vector[1] = c1;
+			vector[2] = c2;
+			vector[3] = c3;
+		}
+
 		memcpy((char*)constantsBufferMap + constantsFragmentSize + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
+
 	m_constantsFragmentBuffer->Unmap(0, nullptr);
 	// Multiple of 256
 	offset = (offset + 255) & ~255;
