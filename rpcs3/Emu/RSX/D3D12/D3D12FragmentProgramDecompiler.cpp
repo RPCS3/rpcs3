@@ -38,7 +38,7 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 	case FUNCTION::FUNCTION_DP2:
 		return "dot($0.xy, $1.xy).xxxx";
 	case FUNCTION::FUNCTION_DP2A:
-		return "";
+		return "(dot($0.xy, $1.xy) + $2.x).xxxx";
 	case FUNCTION::FUNCTION_DP3:
 		return "dot($0.xyz, $1.xyz).xxxx";
 	case FUNCTION::FUNCTION_DP4:
