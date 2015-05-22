@@ -6,7 +6,7 @@
 #include "Utilities/Timer.h"
 
 D3DGSFrame::D3DGSFrame()
-	: GSFrame(nullptr, "GSFrame[OpenGL]")
+	: GSFrame(nullptr, "GSFrame[DirectX 12]")
 	, m_frames(0)
 {
 	canvas = new wxWindow(this, wxID_ANY);

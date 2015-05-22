@@ -475,7 +475,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_gs_render->Append("Null");
 	cbox_gs_render->Append("OpenGL");
 #if defined(DX12_SUPPORT)
-	cbox_gs_render->Append("D3D12");
+	cbox_gs_render->Append("DirectX 12");
 #endif
 
 	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
