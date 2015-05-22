@@ -50,6 +50,7 @@ private:
 	ID3D12PipelineState *m_PSO;
 	ID3D12RootSignature *m_rootSignature;
 
+	ID3D12CommandAllocator *m_textureUploadCommandAllocator;
 	ID3D12Heap *m_uploadTextureHeap, *m_textureStorage;
 	size_t m_currentStorageOffset;
 	ID3D12DescriptorHeap *m_textureDescriptorsHeap;
@@ -101,6 +102,10 @@ private:
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
+	/**
+	 * returns the number of texture uploaded
+	 */
+	size_t UploadTextures();
 	/*void DisableVertexData();
 
 		void WriteBuffers();
