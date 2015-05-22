@@ -14,9 +14,11 @@ struct D3D12PipelineProperties
 {
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
+	D3D12_BLEND_DESC Blend;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
+		// TODO: blend and IASet equality
 		return Topology == in.Topology;
 	}
 };
@@ -136,20 +138,7 @@ struct D3D12Traits
 			D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		};
 
-		static D3D12_BLEND_DESC CD3D12_BLEND_DESC =
-		{
-			FALSE,
-			FALSE,
-			{
-				FALSE,FALSE,
-				D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-			}
-		};
-
-		graphicPipelineStateDesc.BlendState = CD3D12_BLEND_DESC;
+		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
 		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;

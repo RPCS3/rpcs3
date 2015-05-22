@@ -4,6 +4,9 @@
 #include <wrl/client.h>
 #include <dxgi1_4.h>
 
+// Some constants are the same between RSX and GL
+#include <GL\GL.h>
+
 GetGSFrameCb2 GetGSFrame = nullptr;
 
 void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
@@ -589,6 +592,32 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
 }
 
+static
+D3D12_BLEND_OP getBlendOp()
+{
+	return D3D12_BLEND_OP_ADD;
+}
+
+static
+D3D12_BLEND getBlendFactor(u16 glFactor)
+{
+	switch (glFactor)
+	{
+	default: LOG_WARNING(RSX, "Unsupported Blend Op %d", glFactor);
+	case GL_ZERO: return D3D12_BLEND_ZERO;
+	case GL_ONE: return D3D12_BLEND_ONE;
+	case GL_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
+	case GL_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
+	case GL_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
+	case GL_ONE_MINUS_DST_COLOR: D3D12_BLEND_INV_DEST_COLOR;
+	case GL_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
+	case GL_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
+	case GL_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
+	case GL_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
+	case GL_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+	}
+}
+
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
 {
 	// Get constant from fragment program
@@ -691,7 +720,47 @@ bool D3D12GSRender::LoadProgram()
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		break;
 	}
+
+	static D3D12_BLEND_DESC CD3D12_BLEND_DESC =
+	{
+		FALSE,
+		FALSE,
+		{
+			FALSE,FALSE,
+			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL,
+		}
+	};
+	prop.Blend = CD3D12_BLEND_DESC;
+
+	if (m_set_blend_equation)
+	{
+//		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
+//		checkForGlError("glBlendEquationSeparate");
+	}
+
+	if (m_set_blend_sfactor && m_set_blend_dfactor)
+	{
+		prop.Blend.RenderTarget[0].BlendEnable = true;
+		prop.Blend.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		prop.Blend.RenderTarget[0].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
+		prop.Blend.RenderTarget[0].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
+		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
+		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
+		prop.Blend.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	}
+
+	if (m_set_blend_color)
+	{
+//		glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
+//		checkForGlError("glBlendColor");
+	}
+
 	prop.IASet = m_IASet;
+
+
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
 	return m_PSO != nullptr;
 }
@@ -802,19 +871,6 @@ void D3D12GSRender::ExecCMD()
 		(LONG)RSXThread::m_width, (LONG)RSXThread::m_height,
 	};
 	commandList->RSSetScissorRects(1, &box);
-
-	/*
-	#define GL_POINTS                         0x0000
-	#define GL_LINES                          0x0001
-	#define GL_LINE_LOOP                      0x0002
-	#define GL_LINE_STRIP                     0x0003
-	#define GL_TRIANGLES                      0x0004
-	#define GL_TRIANGLE_STRIP                 0x0005
-	#define GL_TRIANGLE_FAN                   0x0006
-	#define GL_QUADS                          0x0007
-	#define GL_QUAD_STRIP                     0x0008
-	#define GL_POLYGON                        0x0009
-	*/
 
 	bool requireIndexBuffer = false;
 	switch (m_draw_mode - 1)
