@@ -19,7 +19,7 @@ size_t D3D12GSRender::UploadTextures()
 
 		// Upload at each iteration to take advantage of overlapping transfer
 		ID3D12GraphicsCommandList *commandList;
-		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
 		ID3D12Resource *Texture, *vramTexture;
 		size_t textureSize = m_textures[i].GetWidth() * m_textures[i].GetHeight() * 4;
@@ -32,8 +32,8 @@ size_t D3D12GSRender::UploadTextures()
 		textureDesc.MipLevels = 1;
 		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 		check(m_device->CreatePlacedResource(
-			m_uploadTextureHeap,
-			m_currentStorageOffset,
+			getCurrentResourceStorage().m_uploadTextureHeap,
+			getCurrentResourceStorage().m_currentStorageOffset,
 			&textureDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -56,16 +56,16 @@ size_t D3D12GSRender::UploadTextures()
 		vramTextureDesc.SampleDesc.Count = 1;
 		vramTextureDesc.MipLevels = 1;
 		check(m_device->CreatePlacedResource(
-			m_textureStorage,
-			m_currentStorageOffset,
+			getCurrentResourceStorage().m_textureStorage,
+			getCurrentResourceStorage().m_currentStorageOffset,
 			&vramTextureDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
 			IID_PPV_ARGS(&vramTexture)
 			));
 
-		m_currentStorageOffset += textureSize;
-		m_currentStorageOffset = (m_currentStorageOffset + 65536 - 1) & ~65535;
+		getCurrentResourceStorage().m_currentStorageOffset += textureSize;
+		getCurrentResourceStorage().m_currentStorageOffset = (getCurrentResourceStorage().m_currentStorageOffset + 65536 - 1) & ~65535;
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		dst.pResource = vramTexture;
@@ -92,8 +92,8 @@ size_t D3D12GSRender::UploadTextures()
 		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
 		// TODO : Correctly define sampler
@@ -102,8 +102,8 @@ size_t D3D12GSRender::UploadTextures()
 		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		Handle = m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateSampler(&samplerDesc, Handle);
 
 		commandList->Close();

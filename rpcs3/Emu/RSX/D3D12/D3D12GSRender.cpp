@@ -17,8 +17,8 @@ static void check(HRESULT hr)
 		abort();
 }
 
-D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
+
+void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_currentVertexBuffersHeapOffset = 0;
 	m_constantsBufferSize = 0;
@@ -27,6 +27,119 @@ D3D12GSRender::D3D12GSRender()
 	constantsFragmentSize = 0;
 	m_currentStorageOffset = 0;
 	m_currentTextureIndex = 0;
+
+	m_commandAllocator->Reset();
+	m_textureUploadCommandAllocator->Reset();
+	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
+		gfxCommandList->Release();
+	m_inflightCommandList.clear();
+	for (ID3D12Resource *vertexBuffer : m_inflightVertexBuffers)
+		vertexBuffer->Release();
+	m_inflightVertexBuffers.clear();
+}
+
+void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
+{
+	// Create a global command allocator
+	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
+	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
+
+
+	// Create heap for vertex buffers
+	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
+	// 16 MB wide
+	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 16;
+	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexBuffersHeap)));
+
+
+	D3D12_HEAP_PROPERTIES heapProp = {};
+	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	D3D12_RESOURCE_DESC resDesc = {};
+	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	resDesc.Width = (UINT)1024 * 1024;
+	resDesc.Height = 1;
+	resDesc.DepthOrArraySize = 1;
+	resDesc.SampleDesc.Count = 1;
+	resDesc.MipLevels = 1;
+	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	check(device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_indexBuffer)
+		));
+
+	check(device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_constantsVertexBuffer)
+		));
+
+	check(device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_constantsFragmentBuffer)
+		));
+
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	descriptorHeapDesc.NumDescriptors = 1000; // For safety
+	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
+
+	// Scale offset buffer
+	// Separate constant buffer
+	check(device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&m_scaleOffsetBuffer)
+		));
+	descriptorHeapDesc = {};
+	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	descriptorHeapDesc.NumDescriptors = 1000; // For safety
+	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
+
+	// Texture
+	D3D12_HEAP_DESC heapDescription = {};
+	heapDescription.SizeInBytes = 256 * 256 * 256 * 16;
+	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
+
+	heapDescription.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
+
+	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
+	textureDescriptorDesc.NumDescriptors = 1000; // For safety
+	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
+
+	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
+}
+
+
+D3D12GSRender::D3D12GSRender()
+	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
+{
+
 	// Enable d3d debug layer
 #ifdef _DEBUG
 	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
@@ -38,7 +151,7 @@ D3D12GSRender::D3D12GSRender()
 	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
 	IDXGIAdapter* adaptater = nullptr;
-	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
+//	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
 	check(D3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
@@ -47,10 +160,6 @@ D3D12GSRender::D3D12GSRender()
 	graphicQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	check(m_device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&m_commandQueueCopy)));
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
-
-	// Create a global command allocator
-	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
-	m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
 
 	m_frame = GetGSFrame();
 
@@ -66,8 +175,8 @@ D3D12GSRender::D3D12GSRender()
 	swapChain.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
 	check(dxgiFactory->CreateSwapChain(m_commandQueueGraphic, &swapChain, (IDXGISwapChain**)&m_swapChain));
-	m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_backBuffer[0]));
-	m_swapChain->GetBuffer(1, IID_PPV_ARGS(&m_backBuffer[1]));
+	m_swapChain->GetBuffer(0, IID_PPV_ARGS(&m_perFrameStorage[0].m_backBuffer));
+	m_swapChain->GetBuffer(1, IID_PPV_ARGS(&m_perFrameStorage[1].m_backBuffer));
 
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 	heapDesc.NumDescriptors = 1;
@@ -75,81 +184,10 @@ D3D12GSRender::D3D12GSRender()
 	D3D12_RENDER_TARGET_VIEW_DESC rttDesc = {};
 	rttDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	rttDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[0]));
-	m_device->CreateRenderTargetView(m_backBuffer[0], &rttDesc, m_backbufferAsRendertarget[0]->GetCPUDescriptorHandleForHeapStart());
-	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[1]));
-	m_device->CreateRenderTargetView(m_backBuffer[1], &rttDesc, m_backbufferAsRendertarget[1]->GetCPUDescriptorHandleForHeapStart());
-
-	// Create heap for vertex buffers
-	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
-	// 16 MB wide
-	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 16;
-	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	check(m_device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexBuffersHeap)));
-
-
-	D3D12_HEAP_PROPERTIES heapProp = {};
-	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-	D3D12_RESOURCE_DESC resDesc = {};
-	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	resDesc.Width = (UINT) 1024 * 1024;
-	resDesc.Height = 1;
-	resDesc.DepthOrArraySize = 1;
-	resDesc.SampleDesc.Count = 1;
-	resDesc.MipLevels = 1;
-	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-	check(m_device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_indexBuffer)
-	));
-
-	check(m_device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_constantsVertexBuffer)
-		));
-
-	check(m_device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_constantsFragmentBuffer)
-		));
-
-	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	descriptorHeapDesc.NumDescriptors = 1000; // For safety
-	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	check(m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
-
-	// Scale offset buffer
-	// Separate constant buffer
-	check(m_device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_scaleOffsetBuffer)
-		));
-	descriptorHeapDesc = {};
-	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	descriptorHeapDesc.NumDescriptors = 1000; // For safety
-	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	check(m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
-
+	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_perFrameStorage[0].m_backbufferAsRendertarget));
+	m_device->CreateRenderTargetView(m_perFrameStorage[0].m_backBuffer, &rttDesc, m_perFrameStorage[0].m_backbufferAsRendertarget->GetCPUDescriptorHandleForHeapStart());
+	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_perFrameStorage[1].m_backbufferAsRendertarget));
+	m_device->CreateRenderTargetView(m_perFrameStorage[1].m_backBuffer, &rttDesc, m_perFrameStorage[1].m_backbufferAsRendertarget->GetCPUDescriptorHandleForHeapStart());
 
 	// Common root signature
 	D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
@@ -201,30 +239,18 @@ D3D12GSRender::D3D12GSRender()
 		rootSignatureBlob->GetBufferSize(),
 		IID_PPV_ARGS(&m_rootSignature));
 
-	// Texture
-	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 256 * 256 * 256 * 16;
-	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	check(m_device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
+	m_perFrameStorage[0].Init(m_device);
+	m_perFrameStorage[0].Reset();
+	m_perFrameStorage[1].Init(m_device);
+	m_perFrameStorage[1].Reset();
 
-	heapDescription.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-	check(m_device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
-
-	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
-	textureDescriptorDesc.NumDescriptors = 1000; // For safety
-	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	check(m_device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
-
-	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-	check(m_device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
+	m_currentResourceStorageIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
 	// NOTE: Should be released only if no command are in flight !
-	m_commandAllocator->Release();
+/*	m_commandAllocator->Release();
 	m_commandQueueGraphic->Release();
 	m_commandQueueCopy->Release();
 	m_backbufferAsRendertarget[0]->Release();
@@ -247,7 +273,17 @@ D3D12GSRender::~D3D12GSRender()
 	m_backBuffer[0]->Release();
 	m_backBuffer[1]->Release();
 	m_swapChain->Release();
-	m_device->Release();
+	m_device->Release();*/
+}
+
+D3D12GSRender::ResourceStorage &D3D12GSRender::getCurrentResourceStorage()
+{
+	return m_perFrameStorage[m_currentResourceStorageIndex];
+}
+
+D3D12GSRender::ResourceStorage &D3D12GSRender::getNonCurrentResourceStorage()
+{
+	return m_perFrameStorage[1 - m_currentResourceStorageIndex];
 }
 
 void D3D12GSRender::Close()
@@ -301,8 +337,8 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	InitDrawBuffers();
 
 	ID3D12GraphicsCommandList *commandList;
-	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
-	m_inflightCommandList.push_back(commandList);
+	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 /*	if (m_set_color_mask)
 	{
@@ -390,8 +426,8 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		vertexBufferDesc.MipLevels = 1;
 		vertexBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 		check(m_device->CreatePlacedResource(
-			m_vertexBuffersHeap,
-			m_currentVertexBuffersHeapOffset,
+			getCurrentResourceStorage().m_vertexBuffersHeap,
+			getCurrentResourceStorage().m_currentVertexBuffersHeapOffset,
 			&vertexBufferDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -401,7 +437,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		check(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
 		memcpy((char*)bufferMap + data_offset * item_size, &m_vertex_data[i].data[data_offset * item_size], data_size);
 		vertexBuffer->Unmap(0, nullptr);
-		m_inflightVertexBuffers.push_back(vertexBuffer);
+		getCurrentResourceStorage().m_inflightVertexBuffers.push_back(vertexBuffer);
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
@@ -410,7 +446,7 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		result.push_back(vertexBufferView);
 
 		// 65536 alignment
-		m_currentVertexBuffersHeapOffset += (subBufferSize + 65536 - 1) & ~65535;
+		getCurrentResourceStorage().m_currentVertexBuffersHeapOffset += (subBufferSize + 65536 - 1) & ~65535;
 	}
 
 	if (indexed_draw)
@@ -461,10 +497,10 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 	if (m_forcedIndexBuffer)
 	{
 		unsigned short *bufferMap;
-		check(m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+		check(getCurrentResourceStorage().m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
 
 		memcpy(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
-		m_indexBufferCount = 0;
+		getCurrentResourceStorage().m_indexBufferCount = 0;
 		// QUADS
 		for (unsigned i = 0; i < m_draw_array_count / 4; i++)
 		{
@@ -475,9 +511,9 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 			bufferMap[6 * i + 3] = 4 * i;
 			bufferMap[6 * i + 4] = 4 * i + 2;
 			bufferMap[6 * i + 5] = 4 * i + 3;
-			m_indexBufferCount += 6;
+			getCurrentResourceStorage().m_indexBufferCount += 6;
 		}
-		m_indexBuffer->Unmap(0, nullptr);
+		getCurrentResourceStorage().m_indexBuffer->Unmap(0, nullptr);
 	}
 	return result;
 }
@@ -506,27 +542,27 @@ void D3D12GSRender::setScaleOffset()
 	scaleOffsetMat[7] /= RSXThread::m_height / RSXThread::m_height_scale;
 
 	void *scaleOffsetMap;
-	size_t offset = m_currentScaleOffsetBufferIndex * 256;
+	size_t offset = getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * 256;
 	D3D12_RANGE range = {
 		offset,
 		1024 * 1024 - offset
 	};
-	check(m_scaleOffsetBuffer->Map(0, &range, &scaleOffsetMap));
+	check(getCurrentResourceStorage().m_scaleOffsetBuffer->Map(0, &range, &scaleOffsetMap));
 	memcpy((char*)scaleOffsetMap + offset, scaleOffsetMat, 16 * sizeof(float));
-	m_scaleOffsetBuffer->Unmap(0, &range);
+	getCurrentResourceStorage().m_scaleOffsetBuffer->Unmap(0, &range);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_scaleOffsetBuffer->GetGPUVirtualAddress() + offset;
+	constantBufferViewDesc.BufferLocation = getCurrentResourceStorage().m_scaleOffsetBuffer->GetGPUVirtualAddress() + offset;
 	constantBufferViewDesc.SizeInBytes = (UINT)256;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
 }
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
 {
 	void *constantsBufferMap;
-	check(m_constantsVertexBuffer->Map(0, nullptr, &constantsBufferMap));
+	check(getCurrentResourceStorage().m_constantsVertexBuffer->Map(0, nullptr, &constantsBufferMap));
 
 	for (const RSXTransformConstant& c : m_transform_constants)
 	{
@@ -534,17 +570,17 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 		float vector[] = { c.x, c.y, c.z, c.w };
 		memcpy((char*)constantsBufferMap + offset, vector, 4 * sizeof(float));
 		size_t bufferSizeCandidate = offset + 4 * sizeof(float);
-		m_constantsBufferSize = bufferSizeCandidate > m_constantsBufferSize ? bufferSizeCandidate : m_constantsBufferSize;
+		getCurrentResourceStorage().m_constantsBufferSize = bufferSizeCandidate > getCurrentResourceStorage().m_constantsBufferSize ? bufferSizeCandidate : getCurrentResourceStorage().m_constantsBufferSize;
 	}
-	m_constantsVertexBuffer->Unmap(0, nullptr);
+	getCurrentResourceStorage().m_constantsVertexBuffer->Unmap(0, nullptr);
 	// make it multiple of 256 bytes
-	m_constantsBufferSize = (m_constantsBufferSize + 255) & ~255;
+	getCurrentResourceStorage().m_constantsBufferSize = (getCurrentResourceStorage().m_constantsBufferSize + 255) & ~255;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsVertexBuffer->GetGPUVirtualAddress();
-	constantBufferViewDesc.SizeInBytes = (UINT)m_constantsBufferSize;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	constantBufferViewDesc.BufferLocation = getCurrentResourceStorage().m_constantsVertexBuffer->GetGPUVirtualAddress();
+	constantBufferViewDesc.SizeInBytes = (UINT)getCurrentResourceStorage().m_constantsBufferSize;
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
 }
 
@@ -555,7 +591,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 
 	size_t offset = 0;
 	void *constantsBufferMap;
-	check(m_constantsFragmentBuffer->Map(0, nullptr, &constantsBufferMap));
+	check(getCurrentResourceStorage().m_constantsFragmentBuffer->Map(0, nullptr, &constantsBufferMap));
 	for (size_t offsetInFP : fragmentOffset)
 	{
 		u32 vector[4];
@@ -583,21 +619,21 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 			vector[3] = c3;
 		}
 
-		memcpy((char*)constantsBufferMap + constantsFragmentSize + offset, vector, 4 * sizeof(u32));
+		memcpy((char*)constantsBufferMap + getCurrentResourceStorage().constantsFragmentSize + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
 
-	m_constantsFragmentBuffer->Unmap(0, nullptr);
+	getCurrentResourceStorage().m_constantsFragmentBuffer->Unmap(0, nullptr);
 	// Multiple of 256
 	offset = (offset + 255) & ~255;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = m_constantsFragmentBuffer->GetGPUVirtualAddress() + constantsFragmentSize;
+	constantBufferViewDesc.BufferLocation = getCurrentResourceStorage().m_constantsFragmentBuffer->GetGPUVirtualAddress() + getCurrentResourceStorage().constantsFragmentSize;
 	constantBufferViewDesc.SizeInBytes = (UINT)offset;
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	constantsFragmentSize += offset;
+	getCurrentResourceStorage().constantsFragmentSize += offset;
 }
 
 
@@ -658,8 +694,8 @@ bool D3D12GSRender::LoadProgram()
 void D3D12GSRender::ExecCMD()
 {
 	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-	m_inflightCommandList.push_back(commandList);
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 	commandList->SetGraphicsRootSignature(m_rootSignature);
 
@@ -675,8 +711,8 @@ void D3D12GSRender::ExecCMD()
 		if (m_forcedIndexBuffer)
 		{
 			D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-			indexBufferView.SizeInBytes = (UINT)m_indexBufferCount * sizeof(unsigned short);
-			indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+			indexBufferView.SizeInBytes = (UINT)getCurrentResourceStorage().m_indexBufferCount * sizeof(unsigned short);
+			indexBufferView.BufferLocation = getCurrentResourceStorage().m_indexBuffer->GetGPUVirtualAddress();
 			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 			commandList->IASetIndexBuffer(&indexBufferView);
 		}
@@ -691,36 +727,36 @@ void D3D12GSRender::ExecCMD()
 
 	// Constants
 	setScaleOffset();
-	commandList->SetDescriptorHeaps(1, &m_scaleOffsetDescriptorHeap);
-	D3D12_GPU_DESCRIPTOR_HANDLE Handle = m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_scaleOffsetDescriptorHeap);
+	D3D12_GPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	commandList->SetGraphicsRootDescriptorTable(0, Handle);
-	m_currentScaleOffsetBufferIndex++;
+	getCurrentResourceStorage().m_currentScaleOffsetBufferIndex++;
 
-	size_t currentBufferIndex = m_constantsBufferIndex;
+	size_t currentBufferIndex = getCurrentResourceStorage().m_constantsBufferIndex;
 	FillVertexShaderConstantsBuffer();
-	m_constantsBufferIndex++;
+	getCurrentResourceStorage().m_constantsBufferIndex++;
 	FillPixelShaderConstantsBuffer();
-	m_constantsBufferIndex++;
+	getCurrentResourceStorage().m_constantsBufferIndex++;
 
-	commandList->SetDescriptorHeaps(1, &m_constantsBufferDescriptorsHeap);
-	Handle = m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_constantsBufferDescriptorsHeap);
+	Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
 	Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	commandList->SetGraphicsRootDescriptorTable(1, Handle);
 	commandList->SetPipelineState(m_PSO);
 
 	size_t usedTexture = UploadTextures();
-	Handle = m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	commandList->SetDescriptorHeaps(1, &m_textureDescriptorsHeap);
+	Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_textureDescriptorsHeap);
 	commandList->SetGraphicsRootDescriptorTable(2, Handle);
 
-	Handle = m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-	commandList->SetDescriptorHeaps(1, &m_samplerDescriptorHeap);
+	Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	Handle.ptr += getCurrentResourceStorage().m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	commandList->SetDescriptorHeaps(1, &getCurrentResourceStorage().m_samplerDescriptorHeap);
 	commandList->SetGraphicsRootDescriptorTable(3, Handle);
 
-	m_currentTextureIndex += usedTexture;
+	getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
 
 	InitDrawBuffers();
 
@@ -809,7 +845,7 @@ void D3D12GSRender::ExecCMD()
 	}
 
 	if (m_forcedIndexBuffer)
-		commandList->DrawIndexedInstanced((UINT)m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
@@ -1140,8 +1176,8 @@ void D3D12GSRender::ExecCMD()
 void D3D12GSRender::Flip()
 {
 	ID3D12GraphicsCommandList *commandList;
-	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-	m_inflightCommandList.push_back(commandList);
+	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
+	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 	switch (m_surface_color_target)
 	{
@@ -1153,7 +1189,7 @@ void D3D12GSRender::Flip()
 	{
 		D3D12_RESOURCE_BARRIER barriers[2] = {};
 		barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barriers[0].Transition.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		barriers[0].Transition.pResource = getCurrentResourceStorage().m_backBuffer;
 		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 
@@ -1166,7 +1202,7 @@ void D3D12GSRender::Flip()
 		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.SubresourceIndex = 0, dst.SubresourceIndex = 0;
-		src.pResource = m_fbo->getRenderTargetTexture(0), dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		src.pResource = m_fbo->getRenderTargetTexture(0), dst.pResource = getCurrentResourceStorage().m_backBuffer;
 		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
@@ -1190,21 +1226,9 @@ void D3D12GSRender::Flip()
 	m_commandQueueGraphic->Signal(fence.Get(), 1);
 	WaitForSingleObject(gfxqueuecompletion, INFINITE);
 	CloseHandle(gfxqueuecompletion);
-	m_commandAllocator->Reset();
-	m_textureUploadCommandAllocator->Reset();
-	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
-		gfxCommandList->Release();
-	m_inflightCommandList.clear();
-	for (ID3D12Resource *vertexBuffer : m_inflightVertexBuffers)
-		vertexBuffer->Release();
-	m_inflightVertexBuffers.clear();
-	m_currentVertexBuffersHeapOffset = 0;
-	m_constantsBufferSize = 0;
-	m_constantsBufferIndex = 0;
-	m_currentScaleOffsetBufferIndex = 0;
-	constantsFragmentSize = 0;
-	m_currentStorageOffset = 0;
-	m_currentTextureIndex = 0;
+	getNonCurrentResourceStorage().Reset();
+	m_currentResourceStorageIndex = 1 - m_currentResourceStorageIndex;
+
 	m_frame->Flip(nullptr);
 }
 #endif

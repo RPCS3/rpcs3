@@ -50,42 +50,59 @@ private:
 	ID3D12PipelineState *m_PSO;
 	ID3D12RootSignature *m_rootSignature;
 
-	ID3D12CommandAllocator *m_textureUploadCommandAllocator;
-	ID3D12Heap *m_uploadTextureHeap, *m_textureStorage;
-	size_t m_currentStorageOffset;
-	ID3D12DescriptorHeap *m_textureDescriptorsHeap;
-	ID3D12DescriptorHeap *m_samplerDescriptorHeap;
-	size_t m_currentTextureIndex;
+	struct ResourceStorage
+	{
+		ID3D12CommandAllocator *m_commandAllocator;
+		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 
+		// Vertex storage
+		size_t m_currentVertexBuffersHeapOffset;
+		std::vector<ID3D12Resource *> m_inflightVertexBuffers;
+		ID3D12Heap *m_vertexBuffersHeap;
+		size_t m_indexBufferCount;
+		ID3D12Resource *m_indexBuffer;
+
+		// Constants storage
+		ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
+		size_t constantsFragmentSize;
+		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
+		size_t m_constantsBufferSize, m_constantsBufferIndex;
+		ID3D12Resource *m_scaleOffsetBuffer;
+		ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
+		size_t m_currentScaleOffsetBufferIndex;
+
+		// Texture storage
+		ID3D12CommandAllocator *m_textureUploadCommandAllocator;
+		ID3D12Heap *m_uploadTextureHeap, *m_textureStorage;
+		size_t m_currentStorageOffset;
+		ID3D12DescriptorHeap *m_textureDescriptorsHeap;
+		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
+		size_t m_currentTextureIndex;
+
+		//BackBuffers
+		ID3D12Resource* m_backBuffer;
+		ID3D12DescriptorHeap *m_backbufferAsRendertarget;
+
+		void Reset();
+		void Init(ID3D12Device *device);
+	};
+
+	ResourceStorage m_perFrameStorage[2];
 
 	bool m_forcedIndexBuffer;
-	size_t m_currentVertexBuffersHeapOffset;
-	std::vector<ID3D12Resource *> m_inflightVertexBuffers;
-	ID3D12Heap *m_vertexBuffersHeap;
-	size_t m_indexBufferCount;
-	ID3D12Resource *m_indexBuffer;
-	ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
-	size_t constantsFragmentSize;
-	ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
-	size_t m_constantsBufferSize, m_constantsBufferIndex;
-
-	ID3D12Resource *m_scaleOffsetBuffer;
-	ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
-	size_t m_currentScaleOffsetBufferIndex;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
-	ID3D12CommandAllocator *m_commandAllocator;
-	std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
-	struct IDXGISwapChain3 *m_swapChain;
-	ID3D12Resource* m_backBuffer[2];
 
-	ID3D12DescriptorHeap *m_backbufferAsRendertarget[2];
+	struct IDXGISwapChain3 *m_swapChain;
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
+	size_t m_currentResourceStorageIndex;
+	ResourceStorage& getCurrentResourceStorage();
+	ResourceStorage& getNonCurrentResourceStorage();
 public:
 	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
