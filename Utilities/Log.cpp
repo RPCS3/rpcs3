@@ -57,7 +57,7 @@ LogChannel::LogChannel() : LogChannel("unknown")
 LogChannel::LogChannel(const std::string& name) :
 	  name(name)
 	, mEnabled(true)
-	, mLogLevel(Warning)
+	, mLogLevel(LogSeverityWarning)
 {}
 
 void LogChannel::log(const LogMessage &msg)
@@ -186,16 +186,16 @@ void LogManager::log(LogMessage msg)
 		std::string prefix;
 		switch (msg.mServerity)
 		{
-		case Success:
+		case LogSeveritySuccess:
 			prefix = "S ";
 			break;
-		case Notice:
+		case LogSeverityNotice:
 			prefix = "! ";
 			break;
-		case Warning:
+		case LogSeverityWarning:
 			prefix = "W ";
 			break;
-		case Error:
+		case LogSeverityError:
 			prefix = "E ";
 			break;
 		}
@@ -265,12 +265,12 @@ void log_message(Log::LogType type, Log::LogSeverity sev, std::string text)
 	else
 	{
 		rMessageBox(text,
-			sev == Notice ? "Notice" :
-			sev == Warning ? "Warning" :
-			sev == Success ? "Success" :
-			sev == Error ? "Error" : "Unknown",
-			sev == Notice ? rICON_INFORMATION :
-			sev == Warning ? rICON_EXCLAMATION :
-			sev == Error ? rICON_ERROR : rICON_INFORMATION);
+			sev == LogSeverityNotice ? "Notice" :
+			sev == LogSeverityWarning ? "Warning" :
+			sev == LogSeveritySuccess ? "Success" :
+			sev == LogSeverityError ? "Error" : "Unknown",
+			sev == LogSeverityNotice ? rICON_INFORMATION :
+			sev == LogSeverityWarning ? rICON_EXCLAMATION :
+			sev == LogSeverityError ? rICON_ERROR : rICON_INFORMATION);
 	}
 }

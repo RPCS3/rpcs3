@@ -1089,6 +1089,28 @@ void GLGSRender::InitFragmentData()
 		return;
 	}
 
+	// Get constant from fragment program
+	const std::vector<size_t> &fragmentOffset = m_prog_buffer.getFragmentConstantOffsetsCache(m_cur_fragment_prog);
+	for (size_t offsetInFP : fragmentOffset)
+	{
+		auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
+
+		u32 c0 = (data[0] >> 16 | data[0] << 16);
+		u32 c1 = (data[1] >> 16 | data[1] << 16);
+		u32 c2 = (data[2] >> 16 | data[2] << 16);
+		u32 c3 = (data[3] >> 16 | data[3] << 16);
+		const std::string name = fmt::Format("fc%u", offsetInFP);
+		const int l = m_program.GetLocation(name);
+		checkForGlError("glGetUniformLocation " + name);
+
+		float f0 = (float&)c0;
+		float f1 = (float&)c1;
+		float f2 = (float&)c2;
+		float f3 = (float&)c3;
+		glUniform4f(l, f0, f1, f2, f3);
+		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, f0, f1, f2, f3));
+	}
+
 	for (const RSXTransformConstant& c : m_fragment_constants)
 	{
 		u32 id = c.id - m_cur_fragment_prog->offset;
@@ -1102,6 +1124,7 @@ void GLGSRender::InitFragmentData()
 		glUniform4f(l, c.x, c.y, c.z, c.w);
 		checkForGlError("glUniform4f " + name + fmt::Format(" %u [%f %f %f %f]", l, c.x, c.y, c.z, c.w));
 	}
+
 
 	//if (m_fragment_constants.GetCount())
 	//	LOG_NOTICE(HLE, "");
@@ -1123,88 +1146,9 @@ bool GLGSRender::LoadProgram()
 		return false;
 	}
 
-	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_fragment_prog, m_fragment_prog);
-	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog, m_vertex_prog);
-
-	if (m_fp_buf_num == -1)
-	{
-		LOG_WARNING(RSX, "FP not found in buffer!");
-		m_fragment_prog.Decompile(*m_cur_fragment_prog);
-		m_fragment_prog.Compile();
-		checkForGlError("m_fragment_prog.Compile");
-
-		// TODO: This shouldn't use current dir
-		fs::file("./FragmentProgram.txt", o_write | o_create | o_trunc).write(m_fragment_prog.shader.c_str(), m_fragment_prog.shader.size());
-	}
-
-	if (m_vp_buf_num == -1)
-	{
-		LOG_WARNING(RSX, "VP not found in buffer!");
-		m_vertex_prog.Decompile(*m_cur_vertex_prog);
-		m_vertex_prog.Compile();
-		checkForGlError("m_vertex_prog.Compile");
-
-		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.txt", o_write | o_create | o_trunc).write(m_vertex_prog.shader.c_str(), m_vertex_prog.shader.size());
-	}
-
-	if (m_fp_buf_num != -1 && m_vp_buf_num != -1)
-	{
-		m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
-	}
-
-	if (m_program.id)
-	{
-		// RSX Debugger: Check if this program was modified and update it
-		if (Ini.GSLogPrograms.GetValue())
-		{
-			for (auto& program : m_debug_programs)
-			{
-				if (program.id == m_program.id && program.modified)
-				{
-					// TODO: This isn't working perfectly. Is there any better/shorter way to update the program
-					m_vertex_prog.shader = program.vp_shader;
-					m_fragment_prog.shader = program.fp_shader;
-					m_vertex_prog.Wait();
-					m_vertex_prog.Compile();
-					checkForGlError("m_vertex_prog.Compile");
-					m_fragment_prog.Wait();
-					m_fragment_prog.Compile();
-					checkForGlError("m_fragment_prog.Compile");
-					glAttachShader(m_program.id, m_vertex_prog.id);
-					glAttachShader(m_program.id, m_fragment_prog.id);
-					glLinkProgram(m_program.id);
-					checkForGlError("glLinkProgram");
-					glDetachShader(m_program.id, m_vertex_prog.id);
-					glDetachShader(m_program.id, m_fragment_prog.id);
-					program.vp_id = m_vertex_prog.id;
-					program.fp_id = m_fragment_prog.id;
-					program.modified = false;
-				}
-			}
-		}
-		m_program.Use();
-	}
-	else
-	{
-		m_program.Create(m_vertex_prog.id, m_fragment_prog.id);
-		checkForGlError("m_program.Create");
-		m_prog_buffer.Add(m_program, m_fragment_prog, *m_cur_fragment_prog, m_vertex_prog, *m_cur_vertex_prog);
-		checkForGlError("m_prog_buffer.Add");
-		m_program.Use();
-
-		// RSX Debugger
-		if (Ini.GSLogPrograms.GetValue())
-		{
-			RSXDebuggerProgram program;
-			program.id = m_program.id;
-			program.vp_id = m_vertex_prog.id;
-			program.fp_id = m_fragment_prog.id;
-			program.vp_shader = m_vertex_prog.shader;
-			program.fp_shader = m_fragment_prog.shader;
-			m_debug_programs.push_back(program);
-		}
-	}
+	GLProgram *result = m_prog_buffer.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, nullptr, nullptr);
+	m_program.id = result->id;
+	m_program.Use();
 
 	return true;
 }
@@ -1477,7 +1421,6 @@ void GLGSRender::OnExitThread()
 	m_fbo.Delete();
 	m_vbo.Delete();
 	m_vao.Delete();
-	m_prog_buffer.Clear();
 }
 
 void GLGSRender::OnReset()

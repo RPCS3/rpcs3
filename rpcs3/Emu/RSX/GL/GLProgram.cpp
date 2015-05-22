@@ -38,7 +38,6 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 		Delete();
 
 	id = glCreateProgram();
-
 	glAttachShader(id, vp);
 	glAttachShader(id, fp);
 
