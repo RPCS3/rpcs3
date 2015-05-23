@@ -1427,12 +1427,16 @@ void D3D12GSRender::WriteDepthBuffer()
 		char *ptrAsChar = (char*)ptr;
 		float *writeDestPtr;
 		check(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
+		// TODO : this should be done by the gpu
 		for (unsigned row = 0; row < RSXThread::m_height; row++)
 		{
 			for (unsigned i = 0; i < RSXThread::m_width; i++)
 			{
 				unsigned char c = (unsigned char) (writeDestPtr[row * rowPitch / 4 + i] * 255.);
-				ptrAsChar[(row * RSXThread::m_width + i)] = c;
+				ptrAsChar[4 * (row * RSXThread::m_width + i)] = c;
+				ptrAsChar[4 * (row * RSXThread::m_width + i) + 1] = c;
+				ptrAsChar[4 * (row * RSXThread::m_width + i) + 2] = c;
+				ptrAsChar[4 * (row * RSXThread::m_width + i) + 3] = c;
 			}
 		}
 
