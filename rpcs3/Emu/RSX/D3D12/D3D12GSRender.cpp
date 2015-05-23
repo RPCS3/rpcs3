@@ -105,6 +105,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	D3D12_HEAP_DESC heapDescription = {};
 	heapDescription.SizeInBytes = 256 * 256 * 256 * 16;
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
 
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
