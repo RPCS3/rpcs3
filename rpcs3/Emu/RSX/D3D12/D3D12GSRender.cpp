@@ -1383,6 +1383,13 @@ void D3D12GSRender::WriteDepthBuffer()
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
 
+		D3D12_RESOURCE_BARRIER barrier = {};
+		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+		barrier.Transition.pResource = m_fbo->getDepthStencilTexture();
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		downloadCommandList->ResourceBarrier(1, &barrier);
+
 		size_t rowPitch = RSXThread::m_width * sizeof(float);
 		rowPitch = (rowPitch + 255) & ~255;
 
@@ -1396,8 +1403,13 @@ void D3D12GSRender::WriteDepthBuffer()
 		src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
 		src.PlacedFootprint.Footprint.Height = RSXThread::m_height;
 		src.PlacedFootprint.Footprint.Width = RSXThread::m_width;
-		src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		downloadCommandList->ResourceBarrier(1, &barrier);
+
 		downloadCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
 
@@ -1419,7 +1431,7 @@ void D3D12GSRender::WriteDepthBuffer()
 		{
 			for (unsigned i = 0; i < RSXThread::m_width; i++)
 			{
-				unsigned char c = writeDestPtr[row * rowPitch / 4 + i] * 255.;
+				unsigned char c = (unsigned char) writeDestPtr[row * rowPitch / 4 + i] * 255.;
 				ptrAsChar[row * RSXThread::m_width + i] = c;
 			}
 		}
