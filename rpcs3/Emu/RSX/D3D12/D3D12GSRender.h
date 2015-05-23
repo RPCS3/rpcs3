@@ -55,19 +55,20 @@ private:
 		ID3D12CommandAllocator *m_commandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 
+		std::vector<ID3D12Resource *> m_inflightResources;
+
 		// Vertex storage
 		size_t m_currentVertexBuffersHeapOffset;
-		std::vector<ID3D12Resource *> m_inflightVertexBuffers;
 		ID3D12Heap *m_vertexBuffersHeap;
 		size_t m_indexBufferCount;
 		ID3D12Resource *m_indexBuffer;
 
 		// Constants storage
-		ID3D12Resource *m_constantsVertexBuffer, *m_constantsFragmentBuffer;
-		size_t constantsFragmentSize;
+		ID3D12Resource *m_constantsVertexBuffer;
+		ID3D12Heap *m_constantsBuffersHeap;
+		size_t m_constantsBuffersHeapFreeSpace;
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 		size_t m_constantsBufferSize, m_constantsBufferIndex;
-		ID3D12Resource *m_scaleOffsetBuffer;
 		ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
 		size_t m_currentScaleOffsetBufferIndex;
 
