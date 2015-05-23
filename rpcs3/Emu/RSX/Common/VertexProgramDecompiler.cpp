@@ -659,17 +659,17 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(distance($0, $1))"); break;
 		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
-		case RSX_VEC_OPCODE_SLT: SetDSTVec("vec4(lessThan($0, $1))"); break;
-		case RSX_VEC_OPCODE_SGE: SetDSTVec("vec4(greaterThanEqual($0, $1))"); break;
+		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_ARL: AddCode("$ifcond $a = ivec4($0)$am;");  break;
 		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
-		case RSX_VEC_OPCODE_SEQ: SetDSTVec("vec4(equal($0, $1))"); break;
-		case RSX_VEC_OPCODE_SFL: SetDSTVec("vec4(equal($0, vec4(0.0)))"); break;
-		case RSX_VEC_OPCODE_SGT: SetDSTVec("vec4(greaterThan($0, $1))"); break;
-		case RSX_VEC_OPCODE_SLE: SetDSTVec("vec4(lessThanEqual($0, $1))"); break;
-		case RSX_VEC_OPCODE_SNE: SetDSTVec("vec4(notEqual($0, $1))"); break;
-		case RSX_VEC_OPCODE_STR: SetDSTVec("vec4(equal($0, vec4(1.0)))"); break;
+		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SFL: SetDSTVec(getFunction(FUNCTION::FUNCTION_SFL)); break;
+		case RSX_VEC_OPCODE_SGT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SLE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::FUNCTION_STR)); break;
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
 		case RSX_VEC_OPCODE_TXL: SetDSTVec("texture($t, $0.xy)"); break;
 
