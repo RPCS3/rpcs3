@@ -91,7 +91,8 @@ size_t D3D12GSRender::UploadTextures()
 
 		getCurrentResourceStorage().m_currentStorageOffset += textureSize;
 		getCurrentResourceStorage().m_currentStorageOffset = (getCurrentResourceStorage().m_currentStorageOffset + 65536 - 1) & ~65535;
-
+		getCurrentResourceStorage().m_inflightResources.push_back(Texture);
+		getCurrentResourceStorage().m_inflightResources.push_back(vramTexture);
 
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
