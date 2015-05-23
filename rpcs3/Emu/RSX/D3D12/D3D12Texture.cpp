@@ -103,7 +103,7 @@ size_t D3D12GSRender::UploadTextures()
 		src.PlacedFootprint.Footprint.Depth = 1;
 		src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
 		src.PlacedFootprint.Footprint.Height = m_textures[i].GetHeight();
-		src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		src.PlacedFootprint.Footprint.Format = dxgiFormat;
 
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
@@ -136,6 +136,7 @@ size_t D3D12GSRender::UploadTextures()
 
 		commandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
+		getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
 		usedTexture++;
 	}
