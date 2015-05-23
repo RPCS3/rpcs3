@@ -9,6 +9,7 @@ struct D3DGSFrame : public GSFrame, public GSFrameBase2
 {
 	wxWindow* canvas;
 	u32 m_frames;
+	wxString AdaptaterName;
 
 	D3DGSFrame();
 	~D3DGSFrame();
@@ -28,6 +29,7 @@ struct D3DGSFrame : public GSFrame, public GSFrameBase2
 
 	virtual void SetViewport(int x, int y, u32 w, u32 h) override;
 	virtual HWND getHandle() const override;
+	virtual void SetAdaptaterName(const wchar_t *) override;
 
 private:
 	virtual void OnSize(wxSizeEvent& event);

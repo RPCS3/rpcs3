@@ -19,6 +19,11 @@ D3DGSFrame::~D3DGSFrame()
 {
 }
 
+void D3DGSFrame::SetAdaptaterName(const wchar_t *name)
+{
+	AdaptaterName = name;
+}
+
 void D3DGSFrame::Close()
 {
 	GSFrame::Close();
@@ -63,7 +68,7 @@ void D3DGSFrame::Flip(void* context)
 //	canvas->SwapBuffers();
 	m_frames++;
 
-	const std::string sub_title = Emu.GetTitle() + (Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ");
+	const std::string sub_title = Emu.GetTitle() + (Emu.GetTitleID().length() ? " [" + Emu.GetTitleID() + "] | " : " | ") + AdaptaterName.ToStdString() + " | ";
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{

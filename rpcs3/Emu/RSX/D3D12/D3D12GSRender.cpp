@@ -145,19 +145,29 @@ void D3D12GSRender::ResourceStorage::Release()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
 {
-
-	// Enable d3d debug layer
-#ifdef _DEBUG
-	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
-	D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
-	debugInterface->EnableDebugLayer();
-#endif
+	if (Ini.GSDebugOutputEnable.GetValue())
+	{
+		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
+		D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
+		debugInterface->EnableDebugLayer();
+	}
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 	check(CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)));
 	// Create adapter
 	IDXGIAdapter* adaptater = nullptr;
-//	check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
+	switch (Ini.GSD3DAdaptater.GetValue())
+	{
+	case 0: // WARP
+		check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adaptater)));
+		break;
+	case 1: // Default
+		dxgiFactory->EnumAdapters(0, &adaptater);
+		break;
+	default: // Adaptater 0, 1, ...
+		dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue() - 2,&adaptater);
+		break;
+	}
 	check(D3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
@@ -168,6 +178,9 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateCommandQueue(&graphicQueueDesc, IID_PPV_ARGS(&m_commandQueueGraphic)));
 
 	m_frame = GetGSFrame();
+	DXGI_ADAPTER_DESC adaptaterDesc;
+	adaptater->GetDesc(&adaptaterDesc);
+	m_frame->SetAdaptaterName(adaptaterDesc.Description);
 
 	// Create swap chain and put them in a descriptor heap as rendertarget
 	DXGI_SWAP_CHAIN_DESC swapChain = {};

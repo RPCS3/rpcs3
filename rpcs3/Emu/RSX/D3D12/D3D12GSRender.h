@@ -33,6 +33,7 @@ public:
 	virtual void DeleteContext(void* ctx) = 0;
 	virtual void Flip(void* ctx) = 0;
 	virtual HWND getHandle() const = 0;
+	virtual void SetAdaptaterName(const wchar_t *) = 0;
 };
 
 typedef GSFrameBase2*(*GetGSFrameCb2)();
