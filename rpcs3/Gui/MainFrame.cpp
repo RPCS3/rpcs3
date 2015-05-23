@@ -365,7 +365,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 	static const u32 width = 452;
-	static const u32 height = 460;
+	static const u32 height = 520;
 
 	// Settings panels
 	wxNotebook* nb_config = new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
@@ -399,6 +399,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Graphics
 	wxStaticBoxSizer* s_round_gs_render = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Render"));
+	wxStaticBoxSizer* s_round_gs_d3d_adaptater = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("D3D Adaptater"));
 	wxStaticBoxSizer* s_round_gs_res    = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default resolution"));
 	wxStaticBoxSizer* s_round_gs_aspect = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Default aspect ratio"));
 	wxStaticBoxSizer* s_round_gs_frame_limit = new wxStaticBoxSizer(wxVERTICAL, p_graphics, _("Frame limit"));
@@ -426,6 +427,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_cpu_decoder      = new wxComboBox(p_core, wxID_ANY);
 	wxComboBox* cbox_spu_decoder      = new wxComboBox(p_core, wxID_ANY);
 	wxComboBox* cbox_gs_render        = new wxComboBox(p_graphics, wxID_ANY);
+	wxComboBox* cbox_gs_d3d_adaptater = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_resolution    = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_aspect        = new wxComboBox(p_graphics, wxID_ANY);
 	wxComboBox* cbox_gs_frame_limit   = new wxComboBox(p_graphics, wxID_ANY);
@@ -447,6 +449,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
 	wxCheckBox* chbox_gs_read_color       = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffer");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
+	wxCheckBox* chbox_gs_debug_output     = new wxCheckBox(p_graphics, wxID_ANY, "Debug Output");
 	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
 	wxCheckBox* chbox_audio_conv          = new wxCheckBox(p_audio, wxID_ANY, "Convert to 16 bit");
@@ -477,6 +480,12 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 #if defined(DX12_SUPPORT)
 	cbox_gs_render->Append("DirectX 12");
 #endif
+
+	cbox_gs_d3d_adaptater->Append("WARP");
+	cbox_gs_d3d_adaptater->Append("default");
+	cbox_gs_d3d_adaptater->Append("renderer 0");
+	cbox_gs_d3d_adaptater->Append("renderer 1");
+	cbox_gs_d3d_adaptater->Append("renderer 2");
 
 	for(int i = 1; i < WXSIZEOF(ResolutionTable); ++i)
 	{
@@ -608,6 +617,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
 	chbox_gs_read_color      ->SetValue(Ini.GSReadColorBuffer.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
+	chbox_gs_debug_output    ->SetValue(Ini.GSDebugOutputEnable.GetValue());
 	chbox_gs_3dmonitor       ->SetValue(Ini.GS3DTV.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
 	chbox_audio_conv         ->SetValue(Ini.AudioConvertToU16.GetValue());
@@ -630,6 +640,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_cpu_decoder     ->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() : 0);
 	cbox_spu_decoder     ->SetSelection(Ini.SPUDecoderMode.GetValue() ? Ini.SPUDecoderMode.GetValue() : 0);
 	cbox_gs_render       ->SetSelection(Ini.GSRenderMode.GetValue());
+	cbox_gs_d3d_adaptater->SetSelection(Ini.GSD3DAdaptater.GetValue());
 	cbox_gs_resolution   ->SetSelection(ResolutionIdToNum(Ini.GSResolution.GetValue()) - 1);
 	cbox_gs_aspect       ->SetSelection(Ini.GSAspectRatio.GetValue() - 1);
 	cbox_gs_frame_limit  ->SetSelection(Ini.GSFrameLimit.GetValue());
@@ -650,6 +661,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Rendering
 	s_round_gs_render->Add(cbox_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_round_gs_d3d_adaptater->Add(cbox_gs_d3d_adaptater, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_res->Add(cbox_gs_resolution, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_aspect->Add(cbox_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_round_gs_frame_limit->Add(cbox_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -679,6 +691,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Graphics
 	s_subpanel_graphics->Add(s_round_gs_render, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(s_round_gs_d3d_adaptater, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_res, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
@@ -687,6 +700,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_debug_output, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_3dmonitor, wxSizerFlags().Border(wxALL, 5).Expand());
 
 	// Input - Output
@@ -748,6 +762,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.HookStFunc.SetValue(chbox_core_hook_stfunc->GetValue());
 		Ini.LoadLibLv2.SetValue(chbox_core_load_liblv2->GetValue());
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
+		Ini.GSD3DAdaptater.SetValue(cbox_gs_d3d_adaptater->GetSelection());
 		Ini.GSResolution.SetValue(ResolutionNumToId(cbox_gs_resolution->GetSelection() + 1));
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSFrameLimit.SetValue(cbox_gs_frame_limit->GetSelection());
@@ -756,6 +771,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
 		Ini.GSReadColorBuffer.SetValue(chbox_gs_read_color->GetValue());
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
+		Ini.GSDebugOutputEnable.SetValue(chbox_gs_debug_output->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.KeyboardHandlerMode.SetValue(cbox_keyboard_handler->GetSelection());
