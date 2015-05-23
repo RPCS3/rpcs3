@@ -447,7 +447,7 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_PKB: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKB"); break;
 			case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); break;
 			case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
-			case RSX_FP_OPCODE_SFL: SetDst(getFloatTypeName(4) + "(" + getFunction(FUNCTION::FUNCTION_SFL)); break;
+			case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); break;
 			case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
 			case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); break;
 			case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); break;
