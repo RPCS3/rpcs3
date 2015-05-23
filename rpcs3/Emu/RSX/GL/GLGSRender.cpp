@@ -1655,15 +1655,14 @@ void GLGSRender::ExecCMD(u32 cmd)
 
 void GLGSRender::ExecCMD()
 {
-	//return;
+	InitDrawBuffers();
+
 	if (!LoadProgram())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
 		return;
 	}
-
-	InitDrawBuffers();
 
 	if (m_set_color_mask)
 	{
