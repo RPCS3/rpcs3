@@ -1396,7 +1396,8 @@ void GLGSRender::OnInitThread()
 	
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-
+	glEnable(GL_SCISSOR_TEST);
+	
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
 	glGenBuffers(6, g_pbo); // 4 for color buffers + 1 for depth buffer + 1 for flip()
@@ -1415,7 +1416,8 @@ void GLGSRender::OnExitThread()
 
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-
+	glDisable(GL_SCISSOR_TEST);
+	
 	m_program.Delete();
 	m_rbo.Delete();
 	m_fbo.Delete();
@@ -1655,15 +1657,14 @@ void GLGSRender::ExecCMD(u32 cmd)
 
 void GLGSRender::ExecCMD()
 {
-	//return;
+	InitDrawBuffers();
+
 	if (!LoadProgram())
 	{
 		LOG_ERROR(RSX, "LoadProgram failed.");
 		Emu.Pause();
 		return;
 	}
-
-	InitDrawBuffers();
 
 	if (m_set_color_mask)
 	{
