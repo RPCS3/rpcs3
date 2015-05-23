@@ -1,83 +1,30 @@
 #pragma once
-#include "GLShaderParam.h"
+#include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Utilities/Thread.h"
-#include <set>
+#include "OpenGL.h"
 
-struct GLVertexDecompilerThread : public ThreadBase
+struct GLVertexDecompilerThread : public ThreadBase, public VertexProgramDecompiler
 {
-	struct FuncInfo
+	std::string &m_shader;
+protected:
+	virtual std::string getFloatTypeName(size_t elementCount) override;
+	virtual std::string getFunction(FUNCTION) override;
+	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+
+	virtual void insertHeader(std::stringstream &OS) override;
+	virtual void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
+	virtual void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants) override;
+	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
+	virtual void insertMainStart(std::stringstream &OS) override;
+	virtual void insertMainEnd(std::stringstream &OS) override;
+public:
+	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, ParamArray& parr)
+		: ThreadBase("Vertex Shader Decompiler Thread"), VertexProgramDecompiler(data), m_shader(shader)
 	{
-		u32 offset;
-		std::string name;
-	};
-
-	struct Instruction
-	{
-		std::vector<std::string> body;
-		int open_scopes;
-		int close_scopes;
-		int put_close_scopes;
-		int do_count;
-
-		void reset()
-		{
-			body.clear();
-			put_close_scopes = open_scopes = close_scopes = do_count = 0;
-		}
-	};
-
-	static const size_t m_max_instr_count = 512;
-	Instruction m_instructions[m_max_instr_count];
-	Instruction* m_cur_instr;
-	size_t m_instr_count;
-
-	std::set<int> m_jump_lvls;
-	std::vector<std::string> m_body;
-	std::vector<FuncInfo> m_funcs;
-
-	//wxString main;
-	std::string& m_shader;
-	std::vector<u32>& m_data;
-	GLParamArray& m_parr;
-
-	GLVertexDecompilerThread(std::vector<u32>& data, std::string& shader, GLParamArray& parr)
-		: ThreadBase("Vertex Shader Decompiler Thread")
-		, m_data(data)
-		, m_shader(shader)
-		, m_parr(parr)
-	{
-		m_funcs.emplace_back();
-		m_funcs[0].offset = 0;
-		m_funcs[0].name = "main";
-		m_funcs.emplace_back();
-		m_funcs[1].offset = 0;
-		m_funcs[1].name = "func0";
-		//m_cur_func->body = "\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n";
 	}
 
-	std::string GetMask(bool is_sca);
-	std::string GetVecMask();
-	std::string GetScaMask();
-	std::string GetDST(bool is_sca = false);
-	std::string GetSRC(const u32 n);
-	std::string GetFunc();
-	std::string GetTex();
-	std::string GetCond();
-	std::string AddAddrMask();
-	std::string AddAddrReg();
-	u32 GetAddr();
-	std::string Format(const std::string& code);
-
-	void AddCodeCond(const std::string& dst, const std::string& src);
-	void AddCode(const std::string& code);
-	void SetDST(bool is_sca, std::string value);
-	void SetDSTVec(const std::string& code);
-	void SetDSTSca(const std::string& code);
-	std::string BuildFuncBody(const FuncInfo& func);
-	std::string BuildCode();
-
-	virtual void Task();
+	virtual void Task() override;
 };
 
 class GLVertexProgram
@@ -86,7 +33,7 @@ public:
 	GLVertexProgram();
 	~GLVertexProgram();
 
-	GLParamArray parr;
+	ParamArray parr;
 	u32 id;
 	std::string shader;
 

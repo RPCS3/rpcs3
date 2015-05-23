@@ -4,332 +4,44 @@
 #include "Emu/System.h"
 #include "GLFragmentProgram.h"
 
-void GLFragmentDecompilerThread::SetDst(std::string code, bool append_mask)
+#include "GLCommonDecompiler.h"
+
+std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
-	if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
+	return getFloatTypeNameImpl(elementCount);
+}
 
-	switch (src1.scale)
+std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
+{
+	return getFunctionImpl(f);
+}
+
+std::string GLFragmentDecompilerThread::saturate(const std::string & code)
+{
+	return "clamp(" + code + ", 0., 1.)";
+}
+
+std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+{
+	return compareFunctionImpl(f, Op0, Op1);
+}
+
+void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
+{
+	OS << "#version 420" << std::endl;
+}
+
+void GLFragmentDecompilerThread::insertIntputs(std::stringstream & OS)
+{
+	for (ParamType PT : m_parr.params[PF_PARAM_IN])
 	{
-	case 0: break;
-	case 1: code = "(" + code + " * 2.0)"; break;
-	case 2: code = "(" + code + " * 4.0)"; break;
-	case 3: code = "(" + code + " * 8.0)"; break;
-	case 5: code = "(" + code + " / 2.0)"; break;
-	case 6: code = "(" + code + " / 4.0)"; break;
-	case 7: code = "(" + code + " / 8.0)"; break;
-
-	default:
-		LOG_ERROR(RSX, "Bad scale: %d", fmt::by_value(src1.scale));
-		Emu.Pause();
-		break;
-	}
-
-	if (dst.saturate)
-	{
-		code = "clamp(" + code + ", 0.0, 1.0)";
-	}
-
-	code += (append_mask ? "$m" : "");
-
-	if (dst.no_dest)
-	{
-		if (dst.set_cond)
-		{
-			AddCode("$ifcond " + m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + code + ";");
-		}
-		else
-		{
-			AddCode("$ifcond " + code + ";");
-		}
-
-		return;
-	}
-
-	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
-
-	AddCodeCond(Format(dest), code);
-	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
-
-	if (dst.set_cond)
-	{
-		AddCode(m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
+		for (ParamItem PI : PT.items)
+			OS << "in " << PT.type << " " << PI.name << ";" << std::endl;
 	}
 }
 
-void GLFragmentDecompilerThread::AddCode(const std::string& code)
+void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 {
-	main.append(m_code_level, '\t') += Format(code) + "\n";
-}
-
-std::string GLFragmentDecompilerThread::GetMask()
-{
-	std::string ret;
-
-	static const char dst_mask[4] =
-	{
-		'x', 'y', 'z', 'w',
-	};
-
-	if (dst.mask_x) ret += dst_mask[0];
-	if (dst.mask_y) ret += dst_mask[1];
-	if (dst.mask_z) ret += dst_mask[2];
-	if (dst.mask_w) ret += dst_mask[3];
-
-	return ret.empty() || strncmp(ret.c_str(), dst_mask, 4) == 0 ? "" : ("." + ret);
-}
-
-std::string GLFragmentDecompilerThread::AddReg(u32 index, int fp16)
-{
-	return m_parr.AddParam(PARAM_NONE, "vec4", std::string(fp16 ? "h" : "r") + std::to_string(index), "vec4(0.0)");
-}
-
-bool GLFragmentDecompilerThread::HasReg(u32 index, int fp16)
-{
-	return m_parr.HasParam(PARAM_NONE, "vec4",
-		std::string(fp16 ? "h" : "r") + std::to_string(index));
-}
-
-std::string GLFragmentDecompilerThread::AddCond()
-{
-	return m_parr.AddParam(PARAM_NONE, "vec4", "cc" + std::to_string(src0.cond_reg_index));
-}
-
-std::string GLFragmentDecompilerThread::AddConst()
-{
-	std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	if (m_parr.HasParam(PARAM_UNIFORM, "vec4", name))
-	{
-		return name;
-	}
-
-	auto data = vm::ptr<u32>::make(m_addr + m_size + 4 * sizeof(u32));
-
-	m_offset = 2 * 4 * sizeof(u32);
-	u32 x = 0;//GetData(data[0]);
-	u32 y = 0;//GetData(data[1]);
-	u32 z = 0;//GetData(data[2]);
-	u32 w = 0;//GetData(data[3]);
-	return m_parr.AddParam(PARAM_UNIFORM, "vec4", name,
-		std::string("vec4(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
-		+ ", " + std::to_string((float&)z) + ", " + std::to_string((float&)w) + ")");
-}
-
-std::string GLFragmentDecompilerThread::AddTex()
-{
-	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", std::string("tex") + std::to_string(dst.tex_num));
-}
-
-std::string GLFragmentDecompilerThread::Format(const std::string& code)
-{
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
-	{
-		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", [this]{ return GetSRC<SRC0>(src0); } },
-		{ "$1", [this]{ return GetSRC<SRC1>(src1); } },
-		{ "$2", [this]{ return GetSRC<SRC2>(src2); } },
-		{ "$t", [this]{ return AddTex(); } },
-		{ "$m", [this]{ return GetMask(); } },
-
-		{ "$ifcond ", [this]() -> std::string
-		{
-			const std::string& cond = GetCond();
-			if (cond == "true") return "";
-			return "if(" + cond + ") ";
-		}
-		},
-
-		{ "$cond", [this]{ return GetCond(); } },
-		{ "$c", [this]{ return AddConst(); } }
-	};
-
-	return fmt::replace_all(code, repl_list);
-}
-
-std::string GLFragmentDecompilerThread::GetCond()
-{
-	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
-	{
-		return "true";
-	}
-	else if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
-	{
-		return "false";
-	}
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle, cond;
-	swizzle += f[src0.cond_swizzle_x];
-	swizzle += f[src0.cond_swizzle_y];
-	swizzle += f[src0.cond_swizzle_z];
-	swizzle += f[src0.cond_swizzle_w];
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	if (src0.exec_if_gr && src0.exec_if_eq)
-	{
-		cond = "greaterThanEqual";
-	}
-	else if (src0.exec_if_lt && src0.exec_if_eq)
-	{
-		cond = "lessThanEqual";
-	}
-	else if (src0.exec_if_gr && src0.exec_if_lt)
-	{
-		cond = "notEqual";
-	}
-	else if (src0.exec_if_gr)
-	{
-		cond = "greaterThan";
-	}
-	else if (src0.exec_if_lt)
-	{
-		cond = "lessThan";
-	}
-	else //if(src0.exec_if_eq)
-	{
-		cond = "equal";
-	}
-
-	return "any(" + cond + "(" + AddCond() + swizzle + ", vec4(0.0)))";
-}
-
-void GLFragmentDecompilerThread::AddCodeCond(const std::string& dst, const std::string& src)
-{
-	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
-	{
-		AddCode(dst + " = " + src + ";");
-		return;
-	}
-
-	if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
-	{
-		AddCode("//" + dst + " = " + src + ";");
-		return;
-	}
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle, cond;
-	swizzle += f[src0.cond_swizzle_x];
-	swizzle += f[src0.cond_swizzle_y];
-	swizzle += f[src0.cond_swizzle_z];
-	swizzle += f[src0.cond_swizzle_w];
-	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-
-	if (src0.exec_if_gr && src0.exec_if_eq)
-	{
-		cond = "greaterThanEqual";
-	}
-	else if (src0.exec_if_lt && src0.exec_if_eq)
-	{
-		cond = "lessThanEqual";
-	}
-	else if (src0.exec_if_gr && src0.exec_if_lt)
-	{
-		cond = "notEqual";
-	}
-	else if (src0.exec_if_gr)
-	{
-		cond = "greaterThan";
-	}
-	else if (src0.exec_if_lt)
-	{
-		cond = "lessThan";
-	}
-	else //if(src0.exec_if_eq)
-	{
-		cond = "equal";
-	}
-
-	cond = cond + "(" + AddCond() + swizzle + ", vec4(0.0))";
-
-	ShaderVar dst_var(dst);
-	dst_var.symplify();
-
-	//const char *c_mask = f;
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		AddCode("if (" + cond + ".x) " + dst + " = vec4(" + src + ").x;");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
-		}
-	}
-}
-
-template<typename T> std::string GLFragmentDecompilerThread::GetSRC(T src)
-{
-	std::string ret;
-
-	switch (src.reg_type)
-	{
-	case 0: //tmp
-		ret += AddReg(src.tmp_reg_index, src.fp16);
-		break;
-
-	case 1: //input
-	{
-		static const std::string reg_table[] =
-		{
-			"gl_Position",
-			"diff_color", "spec_color",
-			"fogc",
-			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
-			"ssa"
-		};
-
-		switch (dst.src_attr_reg_num)
-		{
-		case 0x00: ret += reg_table[0]; break;
-		default:
-			if (dst.src_attr_reg_num < sizeof(reg_table) / sizeof(reg_table[0]))
-			{
-				ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[dst.src_attr_reg_num]);
-			}
-			else
-			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", fmt::by_value(dst.src_attr_reg_num));
-				ret += m_parr.AddParam(PARAM_IN, "vec4", "unk");
-				Emu.Pause();
-			}
-			break;
-		}
-	}
-	break;
-
-	case 2: //const
-		ret += AddConst();
-		break;
-
-	default:
-		LOG_ERROR(RSX, "Bad src type %d", fmt::by_value(src.reg_type));
-		Emu.Pause();
-		break;
-	}
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-
-	std::string swizzle = "";
-	swizzle += f[src.swizzle_x];
-	swizzle += f[src.swizzle_y];
-	swizzle += f[src.swizzle_z];
-	swizzle += f[src.swizzle_w];
-
-	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
-
-	if (src.abs) ret = "abs(" + ret + ")";
-	if (src.neg) ret = "-" + ret;
-
-	return ret;
-}
-
-std::string GLFragmentDecompilerThread::BuildCode()
-{
-	//main += fmt::Format("\tgl_FragColor = %c0;\n", m_ctrl & 0x40 ? 'r' : 'h');
 	const std::pair<std::string, std::string> table[] =
 	{
 		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
@@ -340,280 +52,70 @@ std::string GLFragmentDecompilerThread::BuildCode()
 
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
-		if (m_parr.HasParam(PARAM_NONE, "vec4", table[i].second))
-			AddCode(m_parr.AddParam(PARAM_OUT, "vec4", table[i].first, i) + " = " + table[i].second + ";");
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+			OS << "out vec4 " << table[i].first << ";" << std::endl;
+	}
+}
+
+void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
+{
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type != "sampler2D")
+			continue;
+		for (ParamItem PI : PT.items)
+			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+
 	}
 
-	if (m_ctrl & 0xe) main += m_ctrl & 0x40 ? "\tgl_FragDepth = r1.z;\n" : "\tgl_FragDepth = h2.z;\n";
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (PT.type == "sampler2D")
+			continue;
+		for (ParamItem PI : PT.items)
+			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+	}
+}
 
-	std::string p;
+void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
+{
+	OS << "void main ()" << std::endl;
+	OS << "{" << std::endl;
 
-	for (auto& param : m_parr.params) {
-		p += param.Format();
+	for (ParamType PT : m_parr.params[PF_PARAM_NONE])
+	{
+		for (ParamItem PI : PT.items)
+		{
+			OS << "	" << PT.type << " " << PI.name;
+			if (!PI.value.empty())
+				OS << " = " << PI.value;
+			OS << ";" << std::endl;
+		}
+	}
+}
+
+void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
+{
+	const std::pair<std::string, std::string> table[] =
+	{
+		{ "ocol0", m_ctrl & 0x40 ? "r0" : "h0" },
+		{ "ocol1", m_ctrl & 0x40 ? "r2" : "h4" },
+		{ "ocol2", m_ctrl & 0x40 ? "r3" : "h6" },
+		{ "ocol3", m_ctrl & 0x40 ? "r4" : "h8" },
+	};
+
+	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
+	{
+		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+			OS << "	" << table[i].first << " = " << table[i].second << ";" << std::endl;
 	}
 
-	return std::string("#version 420\n"
-		"\n"
-		+ p + "\n"
-		"void main()\n{\n" + main + "}\n");
+	OS << "};" << std::endl;
 }
 
 void GLFragmentDecompilerThread::Task()
 {
-	auto data = vm::ptr<u32>::make(m_addr);
-	m_size = 0;
-	m_location = 0;
-	m_loop_count = 0;
-	m_code_level = 1;
-
-	enum
-	{
-		FORCE_NONE,
-		FORCE_SCT,
-		FORCE_SCB,
-	};
-
-	int forced_unit = FORCE_NONE;
-
-	while (true)
-	{
-		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-			found != m_end_offsets.end();
-			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
-		{
-			m_end_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			m_loop_count--;
-		}
-
-		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-			found != m_else_offsets.end();
-			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
-		{
-			m_else_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			AddCode("else");
-			AddCode("{");
-			m_code_level++;
-		}
-
-		dst.HEX = GetData(data[0]);
-		src0.HEX = GetData(data[1]);
-		src1.HEX = GetData(data[2]);
-		src2.HEX = GetData(data[3]);
-
-		m_offset = 4 * sizeof(u32);
-
-		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
-
-		auto SCT = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
-			case RSX_FP_OPCODE_DIV: SetDst("($0 / $1)"); break;
-			case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt($1).xxxx)"); break;
-			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
-			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
-			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
-			case RSX_FP_OPCODE_DP2A: SetDst("vec4($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
-			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
-			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
-			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
-			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
-			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_RCP: SetDst("1 / $0"); break;
-			case RSX_FP_OPCODE_RSQ: SetDst("inversesqrt(abs($0))"); break;
-			case RSX_FP_OPCODE_SEQ: SetDst("vec4(equal($0, $1))"); break;
-			case RSX_FP_OPCODE_SFL: SetDst("vec4(0.0)"); break;
-			case RSX_FP_OPCODE_SGE: SetDst("vec4(greaterThanEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_SGT: SetDst("vec4(greaterThan($0, $1))"); break;
-			case RSX_FP_OPCODE_SLE: SetDst("vec4(lessThanEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_SLT: SetDst("vec4(lessThan($0, $1))"); break;
-			case RSX_FP_OPCODE_SNE: SetDst("vec4(notEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_STR: SetDst("vec4(1.0)"); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		auto SCB = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); break;
-			case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); break;
-			case RSX_FP_OPCODE_DP2: SetDst("vec4(dot($0.xy, $1.xy))"); break;
-			case RSX_FP_OPCODE_DP3: SetDst("vec4(dot($0.xyz, $1.xyz))"); break;
-			case RSX_FP_OPCODE_DP4: SetDst("vec4(dot($0, $1))"); break;
-			case RSX_FP_OPCODE_DP2A: SetDst("vec4($0.x * $1.x + $0.y * $1.y + $2.x)"); break;
-			case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); break;
-			case RSX_FP_OPCODE_REFL: LOG_ERROR(RSX, "Unimplemented SCB instruction: REFL"); break; // TODO: Is this in the right category?
-			case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); break;
-			case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); break;
-			case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
-			case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); break;
-			case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
-			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
-			case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); break;
-			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
-			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
-			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
-			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
-			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_PK2: SetDst("packSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_PK4: SetDst("packSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_PK16: LOG_ERROR(RSX, "Unimplemented SCB instruction: PK16"); break;
-			case RSX_FP_OPCODE_PKB: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKB"); break;
-			case RSX_FP_OPCODE_PKG: LOG_ERROR(RSX, "Unimplemented SCB instruction: PKG"); break;
-			case RSX_FP_OPCODE_SEQ: SetDst("vec4(equal($0, $1))"); break;
-			case RSX_FP_OPCODE_SFL: SetDst("vec4(0.0)"); break;
-			case RSX_FP_OPCODE_SGE: SetDst("vec4(greaterThanEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_SGT: SetDst("vec4(greaterThan($0, $1))"); break;
-			case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); break;
-			case RSX_FP_OPCODE_SLE: SetDst("vec4(lessThanEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_SLT: SetDst("vec4(lessThan($0, $1))"); break;
-			case RSX_FP_OPCODE_SNE: SetDst("vec4(notEqual($0, $1))"); break;
-			case RSX_FP_OPCODE_STR: SetDst("vec4(1.0)"); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		auto TEX_SRB = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_DDX: SetDst("dFdx($0)"); break;
-			case RSX_FP_OPCODE_DDY: SetDst("dFdy($0)"); break;
-			case RSX_FP_OPCODE_NRM: SetDst("normalize($0)"); break;
-			case RSX_FP_OPCODE_BEM: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: BEM"); break;
-			case RSX_FP_OPCODE_TEX: SetDst("texture($t, $0.xy)");  break;
-			case RSX_FP_OPCODE_TEXBEM: SetDst("texture($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_TXP: SetDst("textureProj($t, $0.xyz, $1.x)"); break; //TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478) and The Simpsons Arcade Game (NPUB30563))
-			case RSX_FP_OPCODE_TXPBEM: SetDst("textureProj($t, $0.xyz, $1.x)"); break;
-			case RSX_FP_OPCODE_TXD: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: TXD"); break;
-			case RSX_FP_OPCODE_TXB: SetDst("texture($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_TXL: SetDst("textureLod($t, $0.xy, $1.x)"); break;
-			case RSX_FP_OPCODE_UP2: SetDst("unpackSnorm2x16($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8($0)"); break; // TODO: More testing (Sonic The Hedgehog (NPUB-30442/NPEB-00478))
-			case RSX_FP_OPCODE_UP16: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UP16"); break;
-			case RSX_FP_OPCODE_UPB: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPB"); break;
-			case RSX_FP_OPCODE_UPG: LOG_ERROR(RSX, "Unimplemented TEX_SRB instruction: UPG"); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		auto SIP = [&]()
-		{
-			switch (opcode)
-			{
-			case RSX_FP_OPCODE_BRK: SetDst("break"); break;
-			case RSX_FP_OPCODE_CAL: LOG_ERROR(RSX, "Unimplemented SIP instruction: CAL"); break;
-			case RSX_FP_OPCODE_FENCT: forced_unit = FORCE_SCT; break;
-			case RSX_FP_OPCODE_FENCB: forced_unit = FORCE_SCB; break;
-			case RSX_FP_OPCODE_IFE:
-				AddCode("if($cond)");
-				if (src2.end_offset != src1.else_offset)
-					m_else_offsets.push_back(src1.else_offset << 2);
-				m_end_offsets.push_back(src2.end_offset << 2);
-				AddCode("{");
-				m_code_level++;
-				break;
-			case RSX_FP_OPCODE_LOOP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
-				break;
-			case RSX_FP_OPCODE_REP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::Format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::Format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
-				break;
-			case RSX_FP_OPCODE_RET: SetDst("return"); break;
-
-			default:
-				return false;
-			}
-
-			return true;
-		};
-
-		switch (opcode)
-		{
-		case RSX_FP_OPCODE_NOP: break;
-		case RSX_FP_OPCODE_KIL: SetDst("discard", false); break;
-
-		default:
-			if (forced_unit == FORCE_NONE)
-			{
-				if (SIP()) break;
-				if (SCT()) break;
-				if (TEX_SRB()) break;
-				if (SCB()) break;
-			}
-			else if (forced_unit == FORCE_SCT)
-			{
-				forced_unit = FORCE_NONE;
-				if (SCT()) break;
-			}
-			else if (forced_unit == FORCE_SCB)
-			{
-				forced_unit = FORCE_NONE;
-				if (SCB()) break;
-			}
-
-			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, forced_unit);
-			break;
-		}
-
-		m_size += m_offset;
-
-		if (dst.end) break;
-
-		assert(m_offset % sizeof(u32) == 0);
-		data += m_offset / sizeof(u32);
-	}
-
-	// flush m_code_level
-	m_code_level = 1;
-	m_shader = BuildCode();
-	main.clear();
-//	m_parr.params.clear();
+	m_shader = Decompile();
 }
 
 GLFragmentProgram::GLFragmentProgram()
@@ -651,6 +153,14 @@ void GLFragmentProgram::Decompile(RSXFragmentProgram& prog)
 {
 	GLFragmentDecompilerThread decompiler(shader, parr, prog.addr, prog.size, prog.ctrl);
 	decompiler.Task();
+	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
+	{
+		for (const ParamItem PI : PT.items)
+		{
+			size_t offset = atoi(PI.name.c_str() + 2);
+			FragmentConstantOffsetCache.push_back(offset);
+		}
+	}
 }
 
 void GLFragmentProgram::DecompileAsync(RSXFragmentProgram& prog)
@@ -707,25 +217,10 @@ void GLFragmentProgram::Compile()
 		LOG_NOTICE(RSX, shader.c_str()); // Log the text of the shader that failed to compile
 		Emu.Pause(); // Pause the emulator, we can't really continue from here
 	}
-	for (const GLParamType& PT : parr.params)
-	{
-		if (PT.flag != PARAM_UNIFORM) continue;
-		for (const GLParamItem PI : PT.items)
-		{
-			size_t offset = atoi(PI.name.c_str() + 2);
-			FragmentConstantOffsetCache.push_back(offset);
-		}
-	}
 }
 
 void GLFragmentProgram::Delete()
 {
-	for (auto& param : parr.params) {
-		param.items.clear();
-		param.type.clear();
-	}
-
-	parr.params.clear();
 	shader.clear();
 
 	if (id)

@@ -273,7 +273,7 @@ public:
 
 	void BuildShaderBody()
 	{
-		GLParamArray param_array;
+		ParamArray param_array;
 
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
 
