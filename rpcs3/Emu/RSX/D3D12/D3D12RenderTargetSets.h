@@ -24,5 +24,6 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE getRTTCPUHandle(u8 baseFBO) const;
 	D3D12_CPU_DESCRIPTOR_HANDLE getDSVCPUHandle() const;
 	ID3D12Resource *getRenderTargetTexture(u8 Id) const;
+	ID3D12Resource *getDepthStencilTexture() const;
 };
 #endif

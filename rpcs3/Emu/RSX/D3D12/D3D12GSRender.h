@@ -131,7 +131,6 @@ private:
 	/*void DisableVertexData();
 
 		void WriteBuffers();
-		void WriteDepthBuffer();
 		void WriteColorBuffers();
 		void WriteColorBufferA();
 		void WriteColorBufferB();
@@ -140,7 +139,7 @@ private:
 
 		void DrawObjects();*/
 	void InitDrawBuffers();
-
+	void WriteDepthBuffer();
 protected:
 	virtual void OnInit() override;
 	virtual void OnInitThread() override;

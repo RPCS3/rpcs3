@@ -150,4 +150,8 @@ ID3D12Resource * D3D12RenderTargetSets::getRenderTargetTexture(u8 Id) const
 {
 	return m_rtts[Id];
 }
+ID3D12Resource * D3D12RenderTargetSets::getDepthStencilTexture() const
+{
+	return m_depthStencilTexture;
+}
 #endif

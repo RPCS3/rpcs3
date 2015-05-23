@@ -303,6 +303,7 @@ void D3D12GSRender::InitDrawBuffers()
 	}
 }
 
+
 void D3D12GSRender::OnInit()
 {
 	m_frame->Show();
@@ -983,6 +984,8 @@ void D3D12GSRender::ExecCMD()
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 
+	WriteDepthBuffer();
+
 /*	if (m_set_color_mask)
 	{
 		glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
@@ -1340,5 +1343,89 @@ void D3D12GSRender::Flip()
 	m_currentResourceStorageIndex = 1 - m_currentResourceStorageIndex;
 
 	m_frame->Flip(nullptr);
+}
+
+
+void D3D12GSRender::WriteDepthBuffer()
+{
+		if (!m_set_context_dma_z)
+			return;
+
+		u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+
+		auto ptr = vm::get_ptr<void>(address);
+
+		D3D12_HEAP_PROPERTIES heapProp = {};
+		heapProp.Type = D3D12_HEAP_TYPE_READBACK;
+		D3D12_RESOURCE_DESC resdesc = {};
+		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resdesc.Width = RSXThread::m_width * RSXThread::m_height * 4 * 2; // * 2 for safety
+		resdesc.Height = 1;
+		resdesc.DepthOrArraySize = 1;
+		resdesc.SampleDesc.Count = 1;
+		resdesc.MipLevels = 1;
+		resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		ID3D12Resource *writeDest;
+		check(
+			m_device->CreateCommittedResource(
+				&heapProp,
+				D3D12_HEAP_FLAG_NONE,
+				&resdesc,
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(&writeDest)
+				)
+			);
+
+		ID3D12GraphicsCommandList *downloadCommandList;
+		check(
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
+			);
+
+		size_t rowPitch = RSXThread::m_width * sizeof(float);
+		rowPitch = (rowPitch + 255) & ~255;
+
+		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		dst.pResource = m_fbo->getDepthStencilTexture();
+		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		src.pResource = writeDest;
+		src.PlacedFootprint.Offset = 0;
+		src.PlacedFootprint.Footprint.Depth = 1;
+		src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
+		src.PlacedFootprint.Footprint.Height = RSXThread::m_height;
+		src.PlacedFootprint.Footprint.Width = RSXThread::m_width;
+		src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+		downloadCommandList->Close();
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
+
+		//Wait for result
+		ID3D12Fence *fence;
+		check(
+			m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+			);
+		HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
+		fence->SetEventOnCompletion(1, handle);
+		m_commandQueueGraphic->Signal(fence, 1);
+		WaitForSingleObject(handle, INFINITE);
+		CloseHandle(handle);
+
+		char *ptrAsChar = (char*)ptr;
+		float *writeDestPtr;
+		check(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
+		for (unsigned row = 0; row < RSXThread::m_height; row++)
+		{
+			for (unsigned i = 0; i < RSXThread::m_width; i++)
+			{
+				unsigned char c = writeDestPtr[row * rowPitch / 4 + i] * 255.;
+				ptrAsChar[row * RSXThread::m_width + i] = c;
+			}
+		}
+
+		writeDest->Release();
+		fence->Release();
+		downloadCommandList->Release();
 }
 #endif
