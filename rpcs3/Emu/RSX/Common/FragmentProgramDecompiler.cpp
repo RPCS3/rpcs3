@@ -399,8 +399,8 @@ std::string FragmentProgramDecompiler::Decompile()
 			case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); break;
 			case RSX_FP_OPCODE_MOV: SetDst("$0"); break;
 			case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); break;
-			case RSX_FP_OPCODE_RCP: SetDst("1 / $0"); break;
-			case RSX_FP_OPCODE_RSQ: SetDst("inversesqrt(abs($0))"); break;
+			case RSX_FP_OPCODE_RCP: SetDst("1.0 / $0"); break;
+			case RSX_FP_OPCODE_RSQ: SetDst("1.f / sqrt($0)"); break;
 			case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
 			case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); break;
 			case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
