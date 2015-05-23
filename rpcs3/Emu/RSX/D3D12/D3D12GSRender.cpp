@@ -3,6 +3,7 @@
 #include "D3D12GSRender.h"
 #include <wrl/client.h>
 #include <dxgi1_4.h>
+#include <d3dcompiler.h>
 
 // Some constants are the same between RSX and GL
 #include <GL\GL.h>
@@ -143,6 +144,61 @@ void D3D12GSRender::ResourceStorage::Release()
 	m_commandAllocator->Release();
 }
 
+// 32 bits float to U8 unorm CS
+#define STRINGIFY(x) #x
+const char *shaderCode = STRINGIFY(
+Texture2D<float> InputTexture : register(t0); \n
+RWTexture2D<float> OutputTexture : register(u0);\n
+
+[numthreads(1, 1, 1)]\n
+void main(uint3 Id : SV_DispatchThreadID)\n
+{ \n
+	OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0));\n
+}
+);
+
+static void compileF32toU8CS()
+{
+	ID3DBlob *bytecode;
+	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+	HRESULT hr = D3DCompile(shaderCode, strlen(shaderCode), "test", nullptr, nullptr, "main", "cs_5_0", 0, 0, &bytecode, errorBlob.GetAddressOf());
+	if (hr != S_OK)
+	{
+		const char *tmp = (const char*)errorBlob->GetBufferPointer();
+		LOG_ERROR(RSX, tmp);
+	}
+	D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+	// Textures
+	descriptorRange[0].BaseShaderRegister = 0;
+	descriptorRange[0].NumDescriptors = 1;
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRange[1].BaseShaderRegister = 0;
+	descriptorRange[1].NumDescriptors = 1;
+	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	D3D12_ROOT_PARAMETER RP[2] = {};
+	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
+	RP[0].DescriptorTable.NumDescriptorRanges = 1;
+	RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
+	RP[1].DescriptorTable.NumDescriptorRanges = 1;
+
+	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+	rootSignatureDesc.NumParameters = 2;
+	rootSignatureDesc.pParameters = RP;
+
+	ID3DBlob *rootSignatureBlob;
+
+	hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
+	if (hr != S_OK)
+	{
+		const char *tmp = (const char*)errorBlob->GetBufferPointer();
+		LOG_ERROR(RSX, tmp);
+	}
+}
+
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
 {
@@ -265,6 +321,7 @@ D3D12GSRender::D3D12GSRender()
 	m_perFrameStorage[1].Reset();
 
 	m_currentResourceStorageIndex = m_swapChain->GetCurrentBackBufferIndex();
+	compileF32toU8CS();
 }
 
 D3D12GSRender::~D3D12GSRender()
