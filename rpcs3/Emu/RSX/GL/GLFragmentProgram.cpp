@@ -459,7 +459,7 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_FRC: SetDst("fract($0)"); break;
 			case RSX_FP_OPCODE_LIT: SetDst("vec4(1.0, $0.x, ($0.x > 0.0 ? exp($0.w * log2($0.y)) : 0.0), 1.0)"); break;
 			case RSX_FP_OPCODE_LIF: SetDst("vec4(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); break;
-			case RSX_FP_OPCODE_LRP: LOG_ERROR(RSX, "Unimplemented SCB instruction: LRP"); break; // TODO: Is this in the right category?
+			case RSX_FP_OPCODE_LRP: SetDst("vec4($0 * $1 + (1 - $0) * $2)"); break;
 			case RSX_FP_OPCODE_LG2: SetDst("log2($0.xxxx)"); break;
 			case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); break;
 			case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); break;
@@ -527,7 +527,9 @@ void GLFragmentDecompilerThread::Task()
 			case RSX_FP_OPCODE_IFE:
 				AddCode("if($cond)");
 				if (src2.end_offset != src1.else_offset)
+				{
 					m_else_offsets.push_back(src1.else_offset << 2);
+				}
 				m_end_offsets.push_back(src2.end_offset << 2);
 				AddCode("{");
 				m_code_level++;
