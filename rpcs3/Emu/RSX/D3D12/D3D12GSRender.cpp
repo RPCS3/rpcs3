@@ -1394,16 +1394,16 @@ void D3D12GSRender::WriteDepthBuffer()
 		rowPitch = (rowPitch + 255) & ~255;
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dst.pResource = m_fbo->getDepthStencilTexture();
-		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		src.pResource = writeDest;
-		src.PlacedFootprint.Offset = 0;
-		src.PlacedFootprint.Footprint.Depth = 1;
-		src.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
-		src.PlacedFootprint.Footprint.Height = RSXThread::m_height;
-		src.PlacedFootprint.Footprint.Width = RSXThread::m_width;
-		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
+		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		src.pResource = m_fbo->getDepthStencilTexture();
+		dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		dst.pResource = writeDest;
+		dst.PlacedFootprint.Offset = 0;
+		dst.PlacedFootprint.Footprint.Depth = 1;
+		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
+		dst.PlacedFootprint.Footprint.Height = RSXThread::m_height;
+		dst.PlacedFootprint.Footprint.Width = RSXThread::m_width;
+		dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -1431,8 +1431,8 @@ void D3D12GSRender::WriteDepthBuffer()
 		{
 			for (unsigned i = 0; i < RSXThread::m_width; i++)
 			{
-				unsigned char c = (unsigned char) writeDestPtr[row * rowPitch / 4 + i] * 255.;
-				ptrAsChar[row * RSXThread::m_width + i] = c;
+				unsigned char c = (unsigned char) (writeDestPtr[row * rowPitch / 4 + i] * 255.);
+				ptrAsChar[(row * RSXThread::m_width + i)] = c;
 			}
 		}
 
