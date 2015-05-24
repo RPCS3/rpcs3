@@ -480,16 +480,18 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	switch (m_draw_mode - 1)
 	{
 	default:
-	case 0:
-	case 1:
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-	case 6:
+	case GL_POINTS:
+	case GL_LINES:
+	case GL_LINE_LOOP:
+	case GL_LINE_STRIP:
+	case GL_TRIANGLES:
+	case GL_TRIANGLE_STRIP:
+	case GL_TRIANGLE_FAN:
+	case GL_QUAD_STRIP:
+	case GL_POLYGON:
 		m_forcedIndexBuffer = false;
 		break;
-	case 7:
+	case GL_QUADS:
 		m_forcedIndexBuffer = true;
 		break;
 	}
@@ -809,33 +811,24 @@ bool D3D12GSRender::LoadProgram()
 	}
 
 	D3D12PipelineProperties prop = {};
-	/*
-	#define GL_POINTS                         0x0000
-	#define GL_LINES                          0x0001
-	#define GL_LINE_LOOP                      0x0002
-	#define GL_LINE_STRIP                     0x0003
-	#define GL_TRIANGLES                      0x0004
-	#define GL_TRIANGLE_STRIP                 0x0005
-	#define GL_TRIANGLE_FAN                   0x0006
-	#define GL_QUADS                          0x0007
-	#define GL_QUAD_STRIP                     0x0008
-	#define GL_POLYGON                        0x0009
-	*/
 	switch (m_draw_mode - 1)
 	{
-	case 0:
+	case GL_POINTS:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
 		break;
-	case 1:
-	case 2:
-	case 3:
+	case GL_LINES:
+	case GL_LINE_LOOP:
+	case GL_LINE_STRIP:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 		break;
-	case 4:
-	case 5:
-	case 6:
+	case GL_TRIANGLES:
+	case GL_TRIANGLE_STRIP:
+	case GL_TRIANGLE_FAN:
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		break;
+	case GL_QUADS:
+	case GL_QUAD_STRIP:
+	case GL_POLYGON:
 	default:
 //		LOG_ERROR(RSX, "Unsupported primitive type");
 		prop.Topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -1004,30 +997,32 @@ void D3D12GSRender::ExecCMD()
 	bool requireIndexBuffer = false;
 	switch (m_draw_mode - 1)
 	{
-	case 0:
+	case GL_POINTS:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
 		break;
-	case 1:
+	case GL_LINES:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 		break;
-	case 2:
+	case GL_LINE_LOOP:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ);
 		break;
-	case 3:
+	case GL_LINE_STRIP:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
 		break;
-	case 4:
+	case GL_TRIANGLES:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		break;
-	case 5:
+	case GL_TRIANGLE_STRIP:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		break;
-	case 6:
+	case GL_TRIANGLE_FAN:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ);
 		break;
-	case 7:
+	case GL_QUADS:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		requireIndexBuffer = true;
+	case GL_QUAD_STRIP:
+	case GL_POLYGON:
 	default:
 		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 //		LOG_ERROR(RSX, "Unsupported primitive type");
@@ -1042,7 +1037,7 @@ void D3D12GSRender::ExecCMD()
 		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
 	// Indexed triangles
 	else if (m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced(m_indexed_array.m_count, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced(m_indexed_array.m_data.size() / 2, 1, 0, (UINT)m_draw_array_first, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
