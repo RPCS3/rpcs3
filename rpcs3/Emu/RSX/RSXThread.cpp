@@ -1332,6 +1332,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
+	case NV4097_SET_STENCIL_OP_ZFAIL:
+	{
+		m_set_stencil_zfail = true;
+		m_stencil_zfail = ARGS(0);
+		break;
+	}
+	
+	case NV4097_SET_STENCIL_OP_ZPASS:
+	{
+		m_set_stencil_zpass = true;
+		m_stencil_zpass = ARGS(0);
+		break;
+	}
+
 	case NV4097_SET_BACK_STENCIL_MASK:
 	{
 		m_set_back_stencil_mask = true;
