@@ -109,6 +109,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
+	m_indexBuffer->Release();
 	m_backbufferAsRendertarget->Release();
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
@@ -124,6 +125,7 @@ void D3D12GSRender::ResourceStorage::Release()
 	for (auto tmp : m_inflightCommandList)
 		tmp->Release();
 	m_commandAllocator->Release();
+	m_textureUploadCommandAllocator->Release();
 }
 
 // 32 bits float to U8 unorm CS
