@@ -1,7 +1,7 @@
 #pragma once
 #if defined(DX12_SUPPORT)
 
-#include <d3d12.h>
+#include "D3D12.h"
 #include "rpcs3/Ini.h"
 #include "Utilities/rPlatform.h" // only for rImage
 #include "Utilities/File.h"

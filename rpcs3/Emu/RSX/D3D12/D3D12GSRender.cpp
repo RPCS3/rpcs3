@@ -15,13 +15,6 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 	GetGSFrame = value;
 }
 
-static void check(HRESULT hr)
-{
-	if (hr != 0)
-		abort();
-}
-
-
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_currentVertexBuffersHeapOffset = 0;
@@ -622,7 +615,7 @@ void D3D12GSRender::setScaleOffset()
 
 	void *scaleOffsetMap;
 	check(scaleOffsetBuffer->Map(0, nullptr, &scaleOffsetMap));
-	memcpy((char*)scaleOffsetMap, scaleOffsetMat, 16 * sizeof(float));
+	streamToBuffer(scaleOffsetMap, scaleOffsetMat, 16 * sizeof(float));
 	scaleOffsetBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
@@ -669,7 +662,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	check(constantsBuffer->Map(0, nullptr, &constantsBufferMap));
-	memcpy(constantsBufferMap, vertexConstantShadowCopy, 512 * 4 * sizeof(float));
+	streamToBuffer(constantsBufferMap, vertexConstantShadowCopy, 512 * 4 * sizeof(float));
 	constantsBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
@@ -769,7 +762,7 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 			vector[3] = c3;
 		}
 
-		memcpy((char*)constantsBufferMap + offset, vector, 4 * sizeof(u32));
+		streamToBuffer((char*)constantsBufferMap + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
 

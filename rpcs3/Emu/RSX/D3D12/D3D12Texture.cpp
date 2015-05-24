@@ -3,12 +3,6 @@
 #include "D3D12GSRender.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
 
-static void check(HRESULT hr)
-{
-	if (hr != 0)
-		abort();
-}
-
 size_t D3D12GSRender::UploadTextures()
 {
 	size_t usedTexture = 0;
@@ -67,9 +61,7 @@ size_t D3D12GSRender::UploadTextures()
 		rowPitch = (rowPitch + 255) & ~255;
 		// Upload with correct rowpitch
 		for (unsigned row = 0; row < m_textures[i].GetHeight(); row++)
-		{
-			memcpy((char*)textureData + row * rowPitch, pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
-		}
+			streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
 		Texture->Unmap(0, nullptr);
 
 		D3D12_RESOURCE_DESC vramTextureDesc = {};

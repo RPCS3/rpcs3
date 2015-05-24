@@ -505,6 +505,7 @@
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h" />
+    <ClInclude Include="Emu\RSX\D3D12\D3D12.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12Buffer.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\D3D12\D3D12GSRender.h" />
