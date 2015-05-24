@@ -70,17 +70,17 @@ std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::strin
 	default:
 		abort();
 	case COMPARE::FUNCTION_SEQ:
-		return "(" + Op0 + " == " + Op1 + ").xxxx";
+		return "(" + Op0 + " == " + Op1 + ")";
 	case COMPARE::FUNCTION_SGE:
-		return "(" + Op0 + " >= " + Op1 +").xxxx";
+		return "(" + Op0 + " >= " + Op1 +")";
 	case COMPARE::FUNCTION_SGT:
-		return "(" + Op0 + " > " + Op1 + ").xxxx";
+		return "(" + Op0 + " > " + Op1 + ")";
 	case COMPARE::FUNCTION_SLE:
-		return "(" + Op0 + " <= " + Op1 + ").xxxx";
+		return "(" + Op0 + " <= " + Op1 + ")";
 	case COMPARE::FUNCTION_SLT:
-		return "(" + Op0 + " < " + Op1 + ").xxxx";
+		return "(" + Op0 + " < " + Op1 + ")";
 	case COMPARE::FUNCTION_SNE:
-		return "(" + Op0 + " != " + Op1 + ").xxxx";
+		return "(" + Op0 + " != " + Op1 + ")";
 	}
 }
 
