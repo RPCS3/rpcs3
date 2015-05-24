@@ -543,9 +543,9 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 				bufferMap[6 * i + 1] = indexList[4 * i + 1];
 				bufferMap[6 * i + 2] = indexList[4 * i + 2];
 				// Second triangle
-				bufferMap[6 * i + 3] = indexList[4 * i];
-				bufferMap[6 * i + 4] = indexList[4 * i + 2];
-				bufferMap[6 * i + 5] = indexList[4 * i + 3];
+				bufferMap[6 * i + 3] = indexList[4 * i + 2];
+				bufferMap[6 * i + 4] = indexList[4 * i + 3];
+				bufferMap[6 * i + 5] = indexList[4 * i];
 				forcedIndexCount += 6;
 			}
 		}
@@ -911,9 +911,7 @@ void D3D12GSRender::ExecCMD()
 	commandList->SetGraphicsRootSignature(m_rootSignature);
 
 	if (m_indexed_array.m_count)
-	{
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
-	}
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
@@ -1050,7 +1048,7 @@ void D3D12GSRender::ExecCMD()
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
-
+	m_indexed_array.Reset();
 	WriteDepthBuffer();
 
 /*	if (m_set_color_mask)
