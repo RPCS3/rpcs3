@@ -59,10 +59,9 @@ private:
 		std::vector<ID3D12Resource *> m_inflightResources;
 
 		// Vertex storage
-		size_t m_currentVertexBuffersHeapOffset;
-		ID3D12Heap *m_vertexBuffersHeap;
+		size_t m_vertexIndexBuffersHeapFreeSpace;
+		ID3D12Heap *m_vertexIndexBuffersHeap;
 		size_t m_indexBufferCount;
-		ID3D12Resource *m_indexBuffer;
 
 		// Constants storage
 		ID3D12Heap *m_constantsBuffersHeap;
@@ -121,7 +120,7 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> EnableVertexData(bool indexed_draw = false);
+	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> EnableVertexData(bool indexed_draw = false);
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();

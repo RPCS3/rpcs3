@@ -17,7 +17,7 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 
 void D3D12GSRender::ResourceStorage::Reset()
 {
-	m_currentVertexBuffersHeapOffset = 0;
+	m_vertexIndexBuffersHeapFreeSpace = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	m_constantsBuffersHeapFreeSpace = 0;
@@ -44,50 +44,28 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	// Create heap for vertex and constants buffers
 	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
 	// 16 MB wide
-	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 16;
+	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 256;
 	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexBuffersHeap)));
+	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexIndexBuffersHeap)));
 	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_constantsBuffersHeap)));
-
-
-	D3D12_HEAP_PROPERTIES heapProp = {};
-	heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-	D3D12_RESOURCE_DESC resDesc = {};
-	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	resDesc.Width = (UINT)1024 * 1024;
-	resDesc.Height = 1;
-	resDesc.DepthOrArraySize = 1;
-	resDesc.SampleDesc.Count = 1;
-	resDesc.MipLevels = 1;
-	resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-	check(device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&m_indexBuffer)
-		));
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	descriptorHeapDesc.NumDescriptors = 1000; // For safety
+	descriptorHeapDesc.NumDescriptors = 10000; // For safety
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_constantsBufferDescriptorsHeap)));
 
 
 	descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	descriptorHeapDesc.NumDescriptors = 1000; // For safety
+	descriptorHeapDesc.NumDescriptors = 10000; // For safety
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
 
 	// Texture
 	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 256 * 256 * 256 * 16;
+	heapDescription.SizeInBytes = 1024 * 1024 * 256;
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
@@ -97,7 +75,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
-	textureDescriptorDesc.NumDescriptors = 1000; // For safety
+	textureDescriptorDesc.NumDescriptors = 2048; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
@@ -109,12 +87,11 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
-	m_indexBuffer->Release();
 	m_backbufferAsRendertarget->Release();
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
 	m_constantsBuffersHeap->Release();
-	m_vertexBuffersHeap->Release();
+	m_vertexIndexBuffersHeap->Release();
 	m_backBuffer->Release();
 	for (auto tmp : m_inflightResources)
 		tmp->Release();
@@ -451,9 +428,9 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
-std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool indexed_draw)
+std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool indexed_draw)
 {
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> result;
+	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> result;
 	m_IASet = getIALayout(m_device, indexed_draw, m_vertex_data);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
@@ -464,6 +441,9 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
 		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
 		size_t subBufferSize = (data_offset + data_size) * item_size;
+		// 65536 alignment
+		size_t bufferHeapOffset = getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace;
+		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
 
 		ID3D12Resource *vertexBuffer;
 		D3D12_RESOURCE_DESC vertexBufferDesc = {};
@@ -475,8 +455,8 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		vertexBufferDesc.MipLevels = 1;
 		vertexBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 		check(m_device->CreatePlacedResource(
-			getCurrentResourceStorage().m_vertexBuffersHeap,
-			getCurrentResourceStorage().m_currentVertexBuffersHeapOffset,
+			getCurrentResourceStorage().m_vertexIndexBuffersHeap,
+			bufferHeapOffset,
 			&vertexBufferDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -492,40 +472,11 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
 		vertexBufferView.StrideInBytes = (UINT)item_size;
-		result.push_back(vertexBufferView);
-
-		// 65536 alignment
-		getCurrentResourceStorage().m_currentVertexBuffersHeapOffset += (subBufferSize + 65536 - 1) & ~65535;
+		result.first.push_back(vertexBufferView);
+		getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
 	}
 
-	if (indexed_draw)
-	{
-/*		D3D12_RESOURCE_DESC resDesc = {};
-		resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resDesc.Width = (UINT)m_indexed_array.m_data.size();
-		resDesc.Height = 1;
-		resDesc.DepthOrArraySize = 1;
-		resDesc.SampleDesc.Count = 1;
-		resDesc.MipLevels = 1;
-		resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		check(m_device->CreateCommittedResource(
-			&heapProp,
-			D3D12_HEAP_FLAG_NONE,
-			&resDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_indexBuffer)
-			));
-
-		check(m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
-		memcpy(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
-		m_indexBuffer->Unmap(0, nullptr);
-
-		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-		indexBufferView.SizeInBytes = (UINT)m_indexed_array.m_data.size();
-		indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();*/
-	}
-
+	// Only handle quads now
 	switch (m_draw_mode - 1)
 	{
 	default:
@@ -543,26 +494,86 @@ std::vector<D3D12_VERTEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool index
 		break;
 	}
 
-	if (m_forcedIndexBuffer)
+	if (indexed_draw || m_forcedIndexBuffer)
 	{
-		unsigned short *bufferMap;
-		check(getCurrentResourceStorage().m_indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+		size_t subBufferSize;
+		if (indexed_draw && !m_forcedIndexBuffer)
+			subBufferSize = m_indexed_array.m_data.size();
+		else if (indexed_draw && m_forcedIndexBuffer)
+			subBufferSize = 6 * m_indexed_array.m_data.size() / 4;
+		else
+			subBufferSize = 2 * m_draw_array_count * 6 / 4;
+		// 65536 alignment
+		size_t bufferHeapOffset = getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace;
+		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
 
-		memcpy(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size());
-		getCurrentResourceStorage().m_indexBufferCount = 0;
-		// QUADS
-		for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+
+		D3D12_RESOURCE_DESC resDesc = {};
+		resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resDesc.Width = (UINT)subBufferSize;
+		resDesc.Height = 1;
+		resDesc.DepthOrArraySize = 1;
+		resDesc.SampleDesc.Count = 1;
+		resDesc.MipLevels = 1;
+		resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		ID3D12Resource *indexBuffer;
+		check(m_device->CreatePlacedResource(
+			getCurrentResourceStorage().m_vertexIndexBuffersHeap,
+			D3D12_HEAP_FLAG_NONE,
+			&resDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&indexBuffer)
+			));
+
+		unsigned short *bufferMap;
+		check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
+		size_t forcedIndexCount = 0;
+		if (indexed_draw && !m_forcedIndexBuffer)
+			memcpy(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
+		else if (indexed_draw && m_forcedIndexBuffer)
 		{
-			// First triangle
-			bufferMap[6 * i] = 4 * i;
-			bufferMap[6 * i + 1] = 4 * i + 1;
-			bufferMap[6 * i + 2] = 4 * i + 2;
-			bufferMap[6 * i + 3] = 4 * i;
-			bufferMap[6 * i + 4] = 4 * i + 2;
-			bufferMap[6 * i + 5] = 4 * i + 3;
-			getCurrentResourceStorage().m_indexBufferCount += 6;
+			size_t indexcount = m_indexed_array.m_data.size() / 2;
+			unsigned short *indexList = (unsigned short*)m_indexed_array.m_data.data();
+			for (unsigned i = 0; i < indexcount / 4; i++)
+			{
+				// First triangle
+				bufferMap[6 * i] = indexList[4 * i];
+				bufferMap[6 * i + 1] = indexList[4 * i + 1];
+				bufferMap[6 * i + 2] = indexList[4 * i + 2];
+				// Second triangle
+				bufferMap[6 * i + 3] = indexList[4 * i];
+				bufferMap[6 * i + 4] = indexList[4 * i + 2];
+				bufferMap[6 * i + 5] = indexList[4 * i + 3];
+				forcedIndexCount += 6;
+			}
 		}
-		getCurrentResourceStorage().m_indexBuffer->Unmap(0, nullptr);
+		else
+		{
+			for (unsigned i = 0; i < m_draw_array_count / 4; i++)
+			{
+				// First triangle
+				bufferMap[6 * i] = 4 * i;
+				bufferMap[6 * i + 1] = 4 * i + 1;
+				bufferMap[6 * i + 2] = 4 * i + 2;
+				// Second triangle
+				bufferMap[6 * i + 3] = 4 * i;
+				bufferMap[6 * i + 4] = 4 * i + 2;
+				bufferMap[6 * i + 5] = 4 * i + 3;
+				forcedIndexCount += 6;
+			}
+		}
+		indexBuffer->Unmap(0, nullptr);
+		getCurrentResourceStorage().m_inflightResources.push_back(indexBuffer);
+		getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
+		getCurrentResourceStorage().m_indexBufferCount = forcedIndexCount;
+
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
+		indexBufferView.SizeInBytes = (UINT)subBufferSize;
+		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
+		indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		result.second = indexBufferView;
 	}
 	return result;
 }
@@ -901,21 +912,15 @@ void D3D12GSRender::ExecCMD()
 
 	if (m_indexed_array.m_count)
 	{
-		//		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
+		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
 	}
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
-		const std::vector<D3D12_VERTEX_BUFFER_VIEW> &vertexBufferViews = EnableVertexData(m_indexed_array.m_count ? true : false);
-		commandList->IASetVertexBuffers(0, (UINT)vertexBufferViews.size(), vertexBufferViews.data());
-		if (m_forcedIndexBuffer)
-		{
-			D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
-			indexBufferView.SizeInBytes = (UINT)getCurrentResourceStorage().m_indexBufferCount * sizeof(unsigned short);
-			indexBufferView.BufferLocation = getCurrentResourceStorage().m_indexBuffer->GetGPUVirtualAddress();
-			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-			commandList->IASetIndexBuffer(&indexBufferView);
-		}
+		const std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> &vertexIndexBufferViews = EnableVertexData(m_indexed_array.m_count ? true : false);
+		commandList->IASetVertexBuffers(0, (UINT)vertexIndexBufferViews.first.size(), vertexIndexBufferViews.first.data());
+		if (m_forcedIndexBuffer || m_indexed_array.m_count)
+			commandList->IASetIndexBuffer(&vertexIndexBufferViews.second);
 	}
 
 	if (!LoadProgram())
@@ -1031,35 +1036,17 @@ void D3D12GSRender::ExecCMD()
 		break;
 	}
 
-	if (m_forcedIndexBuffer)
+	// Indexed quad
+	if (m_forcedIndexBuffer && m_indexed_array.m_count)
+		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, 0, 0);
+	// Non indexed quad
+	else if (m_forcedIndexBuffer && !m_indexed_array.m_count)
 		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
+	// Indexed triangles
+	else if (m_indexed_array.m_count)
+		commandList->DrawIndexedInstanced(m_indexed_array.m_count, 1, 0, (UINT)m_draw_array_first, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
-
-	if (m_indexed_array.m_count)
-	{
-/*		switch (m_indexed_array.m_type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			commandList->DrawIndexedInstanced
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
-			checkForGlError("glDrawElements #4");
-			break;
-
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			glDrawElements(m_draw_mode - 1, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
-			checkForGlError("glDrawElements #2");
-			break;
-
-		default:
-			LOG_ERROR(RSX, "Bad indexed array type (%d)", m_indexed_array.m_type);
-			break;
-		}
-
-		DisableVertexData();
-		m_indexed_array.Reset();*/
-	}
-
 
 	check(commandList->Close());
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
