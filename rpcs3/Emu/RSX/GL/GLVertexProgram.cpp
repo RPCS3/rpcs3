@@ -85,7 +85,12 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg) && i.need_declare)
-			OS << "out vec4 " << i.name << ";" << std::endl;
+		{
+			if (i.name == "fogc")
+				OS << "out float " << i.name << ";" << std::endl;
+			else
+				OS << "out vec4 " << i.name << ";" << std::endl;
+		}
 	}
 }
 
@@ -113,7 +118,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	for (auto &i : reg_table)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", i.src_reg))
-			OS << "	" << i.name << " = " << i.src_reg << ";" << std::endl;
+			OS << "	" << i.name << " = " << i.src_reg << i.src_reg_mask << ";" << std::endl;
 	}
 	OS << "	gl_Position = gl_Position * scaleOffsetMat;" << std::endl;
 	OS << "}" << std::endl;
