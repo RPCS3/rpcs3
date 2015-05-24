@@ -280,7 +280,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	// NV4097
-	case 0x0003fead:
+	case GCM_FLIP_COMMAND:
 	{
 		Flip();
 
