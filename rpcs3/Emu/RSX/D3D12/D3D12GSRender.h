@@ -65,11 +65,10 @@ private:
 		ID3D12Resource *m_indexBuffer;
 
 		// Constants storage
-		ID3D12Resource *m_constantsVertexBuffer;
 		ID3D12Heap *m_constantsBuffersHeap;
 		size_t m_constantsBuffersHeapFreeSpace;
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
-		size_t m_constantsBufferSize, m_constantsBufferIndex;
+		size_t m_constantsBufferIndex;
 		ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
 		size_t m_currentScaleOffsetBufferIndex;
 
@@ -113,6 +112,7 @@ public:
 	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
+	float *vertexConstantShadowCopy;
 
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
