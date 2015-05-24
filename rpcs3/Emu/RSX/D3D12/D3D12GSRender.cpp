@@ -574,7 +574,18 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 		indexBufferView.SizeInBytes = (UINT)subBufferSize;
 		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
-		indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		switch (m_indexed_array.m_type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			break;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+			break;
+		}
+		if (m_forcedIndexBuffer)
+			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+
 		result.second = indexBufferView;
 	}
 	return result;
@@ -1037,7 +1048,7 @@ void D3D12GSRender::ExecCMD()
 		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
 	// Indexed triangles
 	else if (m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced(m_indexed_array.m_data.size() / 2, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced(m_indexed_array.m_data.size() / 4, 1, 0, (UINT)m_draw_array_first, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
