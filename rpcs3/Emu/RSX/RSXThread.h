@@ -9,14 +9,6 @@
 #include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 
-enum Method
-{
-	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
-	CELL_GCM_METHOD_FLAG_JUMP          = 0x20000000,
-	CELL_GCM_METHOD_FLAG_CALL          = 0x00000002,
-	CELL_GCM_METHOD_FLAG_RETURN        = 0x00020000,
-};
-
 extern u32 methodRegisters[0xffff];
 u32 GetAddress(u32 offset, u32 location);
 

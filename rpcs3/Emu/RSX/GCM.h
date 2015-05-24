@@ -647,7 +647,48 @@ enum
 	NV3089_IMAGE_IN                          = 0x0000C40C,
 
 	GCM_SET_USER_COMMAND                     = 0x0000EB00,
+	GCM_FLIP_COMMAND                         = 0x0000FEAD,
 };
+
+enum Method
+{
+	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
+	CELL_GCM_METHOD_FLAG_JUMP = 0x20000000,
+	CELL_GCM_METHOD_FLAG_CALL = 0x00000002,
+	CELL_GCM_METHOD_FLAG_RETURN = 0x00020000,
+};
+
+template<typename ...T>
+static std::initializer_list<u32> make_rsx_command(u32 start_register, T... values)
+{
+	return{ start_register | (sizeof...(values) << 18), values... };
+}
+
+static u32 make_rsx_jump(u32 offset)
+{
+	return CELL_GCM_METHOD_FLAG_JUMP | offset;
+}
+
+template<typename ...T>
+static size_t make_rsx_command(vm::ptr<u32>& dst, u32 start_register, T... values)
+{
+	std::initializer_list<u32> commands = make_rsx_command(start_register, values...);
+
+	for (auto &&command : commands)
+	{
+		vm::write32(dst.addr(), command);
+		dst++;
+	}
+
+	return commands.size();
+}
+
+static size_t make_rsx_jump(vm::ptr<u32>& dst, u32 offset)
+{
+	vm::write32(dst.addr(), make_rsx_jump(offset));
+	dst++;
+	return 1;
+}
 
 static const std::string GetMethodName(const u32 id)
 {

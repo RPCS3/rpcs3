@@ -280,7 +280,7 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 	}
 
 	// NV4097
-	case 0x0003fead:
+	case GCM_FLIP_COMMAND:
 	{
 		Flip();
 
@@ -1329,6 +1329,20 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				m_stencil_zpass = ARGS(2);
 			}
 		}
+		break;
+	}
+
+	case NV4097_SET_STENCIL_OP_ZFAIL:
+	{
+		m_set_stencil_zfail = true;
+		m_stencil_zfail = ARGS(0);
+		break;
+	}
+	
+	case NV4097_SET_STENCIL_OP_ZPASS:
+	{
+		m_set_stencil_zpass = true;
+		m_stencil_zpass = ARGS(0);
 		break;
 	}
 
