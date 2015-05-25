@@ -169,15 +169,16 @@ std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
 		size_t elementCount = m_vertex_data[i].data.size() / (m_vertex_data[i].size * m_vertex_data[i].GetTypeSize());
 		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementCount * m_vertex_data[i].stride);
 		bool isMerged = false;
+		size_t stride = m_vertex_data[i].stride;
 		for (VertexBufferFormat &vbf : Result)
 		{
-			if (overlaps(vbf.range, range))
+			if (overlaps(vbf.range, range) && vbf.stride == stride)
 			{
 				// Extend buffer if necessary
 				vbf.range.first = MIN2(vbf.range.first, range.first);
 				vbf.range.second = MAX2(vbf.range.second, range.second);
 				vbf.elementCount = MAX2(vbf.elementCount, elementCount);
-				assert(vbf.stride == m_vertex_data[i].stride);
+
 				vbf.attributeId.push_back(i);
 				isMerged = true;
 				break;
