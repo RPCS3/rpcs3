@@ -320,17 +320,23 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	{
 		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
 		size_t indexSize;
-		switch (m_indexed_array.m_type)
-		{
-		default: // If it's not indexed draw, use 16 bits unsigned short
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+
+		if (!indexed_draw)
 			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-			indexSize = 2;
-			break;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			indexSize = 4;
-			break;
+		else
+		{
+			switch (m_indexed_array.m_type)
+			{
+			default: abort();
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+				indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+				indexSize = 2;
+				break;
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+				indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+				indexSize = 4;
+				break;
+			}
 		}
 
 		if (indexed_draw && !m_forcedIndexBuffer)
@@ -347,7 +353,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		ID3D12Resource *indexBuffer;
 		check(m_device->CreatePlacedResource(
 			getCurrentResourceStorage().m_vertexIndexBuffersHeap,
-			D3D12_HEAP_FLAG_NONE,
+			bufferHeapOffset,
 			&getBufferResourceDesc(subBufferSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -392,9 +398,6 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 
 		indexBufferView.SizeInBytes = (UINT)subBufferSize;
 		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
-
-		if (m_forcedIndexBuffer)
-			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 
 		result.second = indexBufferView;
 	}
