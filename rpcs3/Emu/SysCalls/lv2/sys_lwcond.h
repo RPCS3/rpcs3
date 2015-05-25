@@ -32,7 +32,7 @@ struct lwcond_t
 		: name(name)
 		, signaled1(0)
 		, signaled2(0)
-		, waiters(0)
+		//, waiters(0)
 	{
 	}
 };

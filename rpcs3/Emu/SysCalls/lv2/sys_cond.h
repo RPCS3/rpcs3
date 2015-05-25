@@ -30,7 +30,7 @@ struct cond_t
 		: mutex(mutex)
 		, name(name)
 		, signaled(0)
-		, waiters(0)
+		//, waiters(0)
 	{
 	}
 };

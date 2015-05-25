@@ -397,7 +397,7 @@ s32 sceKernelCreateEventFlag(vm::psv::ptr<const char> pName, u32 attr, u32 initP
 {
 	sceLibKernel.Error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
-	if (s32 id = g_psv_ef_list.add(new psv_event_flag_t(pName.get_ptr(), attr, initPattern), 0))
+	if (s32 id = g_psv_ef_list.create(pName.get_ptr(), attr, initPattern))
 	{
 		return id;
 	}
@@ -461,7 +461,7 @@ s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount,
 {
 	sceLibKernel.Error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
-	if (s32 id = g_psv_sema_list.add(new psv_sema_t(pName.get_ptr(), attr, initCount, maxCount), 0))
+	if (s32 id = g_psv_sema_list.create(pName.get_ptr(), attr, initCount, maxCount))
 	{
 		return id;
 	}
@@ -473,7 +473,7 @@ s32 sceKernelDeleteSema(s32 semaId)
 {
 	sceLibKernel.Error("sceKernelDeleteSema(semaId=0x%x)", semaId);
 
-	ref_t<psv_sema_t> sema = g_psv_sema_list.get(semaId);
+	const auto sema = g_psv_sema_list.get(semaId);
 
 	if (!sema)
 	{
@@ -502,7 +502,7 @@ s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
 {
 	sceLibKernel.Error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
 
-	ref_t<psv_sema_t> sema = g_psv_sema_list.get(semaId);
+	const auto sema = g_psv_sema_list.get(semaId);
 
 	if (!sema)
 	{
@@ -545,7 +545,7 @@ s32 sceKernelCreateMutex(vm::psv::ptr<const char> pName, u32 attr, s32 initCount
 {
 	sceLibKernel.Error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
-	if (s32 id = g_psv_mutex_list.add(new psv_mutex_t(pName.get_ptr(), attr, initCount), 0))
+	if (s32 id = g_psv_mutex_list.create(pName.get_ptr(), attr, initCount))
 	{
 		return id;
 	}
@@ -646,7 +646,7 @@ s32 sceKernelCreateCond(vm::psv::ptr<const char> pName, u32 attr, s32 mutexId, v
 {
 	sceLibKernel.Error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
-	if (s32 id = g_psv_cond_list.add(new psv_cond_t(pName.get_ptr(), attr, mutexId), 0))
+	if (s32 id = g_psv_cond_list.create(pName.get_ptr(), attr, mutexId))
 	{
 		return id;
 	}
