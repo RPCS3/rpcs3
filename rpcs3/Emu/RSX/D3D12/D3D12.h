@@ -19,7 +19,7 @@ size_t powerOf2Align(size_t unalignedVal, size_t powerOf2)
 {
 	// check that powerOf2 is power of 2
 	assert(!(powerOf2 & (powerOf2 - 1)));
-	return (unalignedVal + powerOf2 - 1) & ~powerOf2;
+	return (unalignedVal + powerOf2 - 1) & ~(powerOf2 - 1);
 }
 
 /**
