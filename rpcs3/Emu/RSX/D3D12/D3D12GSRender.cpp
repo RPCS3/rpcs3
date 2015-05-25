@@ -41,7 +41,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	// Create heap for vertex and constants buffers
 	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
 	// 16 MB wide
-	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 256;
+	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 16;
 	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexIndexBuffersHeap)));
@@ -62,7 +62,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 
 	// Texture
 	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 1024 * 1024 * 256;
+	heapDescription.SizeInBytes = 1024 * 1024 * 64;
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
@@ -72,7 +72,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
-	textureDescriptorDesc.NumDescriptors = 2048; // For safety
+	textureDescriptorDesc.NumDescriptors = 1024; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
