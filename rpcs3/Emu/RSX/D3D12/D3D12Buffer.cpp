@@ -86,138 +86,30 @@ DXGI_FORMAT getFormat(u8 type, u8 size)
 	}
 }
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool indexedDraw, const RSXVertexData *vertexData)
+struct VertexBufferFormat
+{
+	std::pair<size_t, size_t> range;
+	std::vector<size_t> attributeId;
+	size_t elementCount;
+	size_t stride;
+};
+
+std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *vertexData)
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
-	u32 offset_list[g_vertexCount];
-	u32 cur_offset = 0;
 
-	for (u32 i = 0; i < g_vertexCount; ++i)
+	for (size_t inputSlot = 0; inputSlot < vertexBufferFormat.size(); inputSlot++)
 	{
-		if (!vertexData[i].IsEnabled()) continue;
-		const size_t item_size = vertexData[i].GetTypeSize() * vertexData[i].size;
-		offset_list[i] = (u32)item_size;
-	}
-
-#if	DUMP_VERTEX_DATA
-	rFile dump("VertexDataArray.dump", rFile::write);
-#endif
-
-	size_t inputSlot = 0;
-	for (u32 i = 0; i < g_vertexCount; ++i)
-	{
-		if (!vertexData[i].IsEnabled()) continue;
-
-#if	DUMP_VERTEX_DATA
-		dump.Write(wxString::Format("VertexData[%d]:\n", i));
-		switch (m_vertex_data[i].type)
+		for (size_t attributeId : vertexBufferFormat[inputSlot].attributeId)
 		{
-		case CELL_GCM_VERTEX_S1:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
-			{
-				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
-				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_F:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 4)
-			{
-				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
-				if (!(((j + 4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_SF:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
-			{
-				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
-				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_UB:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
-			{
-				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
-				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-		case CELL_GCM_VERTEX_S32K:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); j += 2)
-			{
-				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
-				if (!(((j + 2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-			// case CELL_GCM_VERTEX_CMP:
-
-		case CELL_GCM_VERTEX_UB256:
-			for (u32 j = 0; j < m_vertex_data[i].data.size(); ++j)
-			{
-				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
-				if (!((j + 1) % m_vertex_data[i].size)) dump.Write("\n");
-			}
-			break;
-
-		default:
-			LOG_ERROR(HLE, "Bad cv type! %d", m_vertex_data[i].type);
-			return;
-		}
-
-		dump.Write("\n");
-#endif
-
-		if (vertexData[i].type < 1 || vertexData[i].type > 7)
-		{
-			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", vertexData[i].type);
-		}
-
-		D3D12_INPUT_ELEMENT_DESC IAElement = {};
-		/*		if (!m_vertex_data[i].addr)
-		{
-		switch (m_vertex_data[i].type)
-		{
-		case CELL_GCM_VERTEX_S32K:
-		case CELL_GCM_VERTEX_S1:
-		switch (m_vertex_data[i].size)
-		{
-		case 1: glVertexAttrib1s(i, (GLshort&)m_vertex_data[i].data[0]); break;
-		case 2: glVertexAttrib2sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-		case 3: glVertexAttrib3sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-		case 4: glVertexAttrib4sv(i, (GLshort*)&m_vertex_data[i].data[0]); break;
-		}
-		break;
-
-		case CELL_GCM_VERTEX_F:
-		switch (m_vertex_data[i].size)
-		{
-		case 1: glVertexAttrib1f(i, (GLfloat&)m_vertex_data[i].data[0]); break;
-		case 2: glVertexAttrib2fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-		case 3: glVertexAttrib3fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-		case 4: glVertexAttrib4fv(i, (GLfloat*)&m_vertex_data[i].data[0]); break;
-		}
-		break;
-
-		case CELL_GCM_VERTEX_CMP:
-		case CELL_GCM_VERTEX_UB:
-		glVertexAttrib4ubv(i, (GLubyte*)&m_vertex_data[i].data[0]);
-		break;
-		}
-
-		checkForGlError("glVertexAttrib");
-		}
-		else*/
-		{
+			D3D12_INPUT_ELEMENT_DESC IAElement = {};
 			IAElement.SemanticName = "TEXCOORD";
-			IAElement.SemanticIndex = i;
+			IAElement.SemanticIndex = (UINT)attributeId;
 			IAElement.InputSlot = (UINT)inputSlot;
-			IAElement.Format = getFormat(vertexData[i].type - 1, vertexData[i].size);
-			inputSlot++;
+			IAElement.Format = getFormat(vertexData[attributeId].type - 1, vertexData[attributeId].size);
+			IAElement.AlignedByteOffset = (UINT)(vertexData[attributeId].addr - vertexBufferFormat[inputSlot].range.first);
+			result.push_back(IAElement);
 		}
-		result.push_back(IAElement);
 	}
 	return result;
 }
@@ -256,22 +148,64 @@ D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
 
 // D3D12GS member handling buffers
 
+
+
+#define MIN2(x, y) ((x) < (y)) ? (x) : (y)
+#define MAX2(x, y) ((x) > (y)) ? (x) : (y)
+
+static
+bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, size_t> &range2)
+{
+	return !(range1.second < range2.first || range2.second < range1.first);
+}
+
+static
+std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
+{
+	std::vector<VertexBufferFormat> Result;
+	for (size_t i = 0; i < 32; ++i)
+	{
+		if (!m_vertex_data[i].IsEnabled()) continue;
+		size_t elementCount = m_vertex_data[i].data.size() / (m_vertex_data[i].size * m_vertex_data[i].GetTypeSize());
+		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementCount * m_vertex_data[i].stride);
+		bool isMerged = false;
+		for (VertexBufferFormat &vbf : Result)
+		{
+			if (overlaps(vbf.range, range))
+			{
+				// Extend buffer if necessary
+				vbf.range.first = MIN2(vbf.range.first, range.first);
+				vbf.range.second = MAX2(vbf.range.second, range.second);
+				vbf.elementCount = MAX2(vbf.elementCount, elementCount);
+				assert(vbf.stride == m_vertex_data[i].stride);
+				vbf.attributeId.push_back(i);
+				isMerged = true;
+				break;
+			}
+		}
+		if (isMerged)
+			continue;
+		VertexBufferFormat newRange = { range, std::vector<size_t>{ i }, elementCount, m_vertex_data[i].stride };
+		Result.emplace_back(newRange);
+	}
+	return Result;
+}
+
 std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool indexed_draw)
 {
 	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> result;
-	m_IASet = getIALayout(m_device, indexed_draw, m_vertex_data);
+	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);
+	m_IASet = getIALayout(m_device, vertexBufferFormat, m_vertex_data);
 
 	const u32 data_offset = indexed_draw ? 0 : m_draw_array_first;
 
-	for (u32 i = 0; i < m_vertex_count; ++i)
+	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
 	{
-		if (!m_vertex_data[i].IsEnabled()) continue;
-		const size_t item_size = m_vertex_data[i].GetTypeSize() * m_vertex_data[i].size;
-		const size_t data_size = m_vertex_data[i].data.size() - data_offset * item_size;
-		size_t subBufferSize = (data_offset + data_size) * item_size;
+		const VertexBufferFormat &vbf = vertexBufferFormat[buffer];
 		// 65536 alignment
 		size_t bufferHeapOffset = getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace;
 		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
+		size_t subBufferSize = vbf.range.second - vbf.range.first;
 
 		ID3D12Resource *vertexBuffer;
 		check(m_device->CreatePlacedResource(
@@ -284,14 +218,51 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			));
 		void *bufferMap;
 		check(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
-		memcpy((char*)bufferMap + data_offset * item_size, &m_vertex_data[i].data[data_offset * item_size], data_size);
+
+		for (unsigned vertex = 0; vertex < vbf.elementCount; vertex++)
+		{
+			for (size_t attributeId : vbf.attributeId)
+			{
+				size_t baseOffset = m_vertex_data[attributeId].addr - vbf.range.first;
+				size_t tsize = m_vertex_data[attributeId].GetTypeSize();
+				size_t size = m_vertex_data[attributeId].size;
+				auto src = vm::get_ptr<const u8>(m_vertex_data[attributeId].addr + vbf.stride * vertex);
+				char* dst = (char*)bufferMap + baseOffset + vbf.stride * vertex;
+
+				switch (tsize)
+				{
+				case 1:
+				{
+					memcpy(dst, src, size);
+					break;
+				}
+
+				case 2:
+				{
+					const u16* c_src = (const u16*)src;
+					u16* c_dst = (u16*)dst;
+					for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
+					break;
+				}
+
+				case 4:
+				{
+					const u32* c_src = (const u32*)src;
+					u32* c_dst = (u32*)dst;
+					for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
+					break;
+				}
+				}
+			}
+		}
+
 		vertexBuffer->Unmap(0, nullptr);
 		getCurrentResourceStorage().m_inflightResources.push_back(vertexBuffer);
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
-		vertexBufferView.StrideInBytes = (UINT)item_size;
+		vertexBufferView.StrideInBytes = (UINT)vbf.stride;
 		result.first.push_back(vertexBufferView);
 		getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
 	}
