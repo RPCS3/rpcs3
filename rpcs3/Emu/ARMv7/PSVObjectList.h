@@ -30,7 +30,7 @@ class psv_object_list_t // Class for managing object data
 
 	void error(s32 uid)
 	{
-		throw fmt::format("Invalid UID requested (type=0x%x, uid=0x%x)", type, uid);
+		throw fmt::format("Invalid UID requested (type=0x%x, uid=0x%x)", uid_class, uid);
 	}
 
 public:
