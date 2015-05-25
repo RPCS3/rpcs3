@@ -322,7 +322,10 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		size_t indexSize;
 
 		if (!indexed_draw)
+		{
 			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+			indexSize = 2;
+		}
 		else
 		{
 			switch (m_indexed_array.m_type)
