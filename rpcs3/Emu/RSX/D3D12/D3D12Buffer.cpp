@@ -486,7 +486,7 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	check(constantsBuffer->Map(0, nullptr, &constantsBufferMap));
-	streamToBuffer(constantsBufferMap, vertexConstantShadowCopy, 512 * 4 * sizeof(float));
+	streamBuffer(constantsBufferMap, vertexConstantShadowCopy, 512 * 4 * sizeof(float));
 	constantsBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
