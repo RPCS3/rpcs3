@@ -14,6 +14,9 @@
 #include "D3D12PipelineState.h"
 #include "D3D12Buffer.h"
 
+// Some constants are the same between RSX and GL
+#include <GL\GL.h>
+
 #pragma comment (lib, "d3d12.lib")
 #pragma comment (lib, "dxgi.lib")
 
