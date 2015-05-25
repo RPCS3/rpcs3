@@ -41,7 +41,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	// Create heap for vertex and constants buffers
 	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
 	// 16 MB wide
-	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 16;
+	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 128;
 	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexIndexBuffersHeap)));

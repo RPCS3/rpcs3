@@ -348,7 +348,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			indexCount = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
 		else
 			indexCount = m_draw_array_count * 6 / 4;
-		size_t subBufferSize = indexCount * indexSize;
+		size_t subBufferSize = powerOf2Align(indexCount * indexSize, 64);
 		// 65536 alignment
 		size_t bufferHeapOffset = getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace;
 		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
@@ -366,7 +366,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		void *bufferMap;
 		check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
 		if (indexed_draw && !m_forcedIndexBuffer)
-			memcpy(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
+			streamBuffer(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
 		else if (indexed_draw && m_forcedIndexBuffer)
 		{
 			switch (m_indexed_array.m_type)
