@@ -128,6 +128,9 @@ private:
 	 * returns the number of texture uploaded
 	 */
 	size_t UploadTextures();
+	size_t GetMaxAniso(size_t aniso);
+	D3D12_TEXTURE_ADDRESS_MODE GetWrap(size_t wrap);
+
 	/*void DisableVertexData();
 
 		void WriteBuffers();

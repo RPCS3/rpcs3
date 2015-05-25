@@ -3,6 +3,52 @@
 #include "D3D12GSRender.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
 
+static D3D12_COMPARISON_FUNC ComparisonFunc[] =
+{
+	D3D12_COMPARISON_FUNC_NEVER,
+	D3D12_COMPARISON_FUNC_LESS,
+	D3D12_COMPARISON_FUNC_EQUAL,
+	D3D12_COMPARISON_FUNC_LESS_EQUAL,
+	D3D12_COMPARISON_FUNC_GREATER,
+	D3D12_COMPARISON_FUNC_NOT_EQUAL,
+	D3D12_COMPARISON_FUNC_GREATER_EQUAL,
+	D3D12_COMPARISON_FUNC_ALWAYS
+};
+
+size_t D3D12GSRender::GetMaxAniso(size_t aniso)
+{
+	switch (aniso)
+	{
+	case CELL_GCM_TEXTURE_MAX_ANISO_1: return 1;
+	case CELL_GCM_TEXTURE_MAX_ANISO_2: return 2;
+	case CELL_GCM_TEXTURE_MAX_ANISO_4: return 4;
+	case CELL_GCM_TEXTURE_MAX_ANISO_6: return 6;
+	case CELL_GCM_TEXTURE_MAX_ANISO_8: return 8;
+	case CELL_GCM_TEXTURE_MAX_ANISO_10: return 10;
+	case CELL_GCM_TEXTURE_MAX_ANISO_12: return 12;
+	case CELL_GCM_TEXTURE_MAX_ANISO_16: return 16;
+	}
+
+	return 1;
+}
+
+D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
+{
+	switch (wrap)
+	{
+	case CELL_GCM_TEXTURE_WRAP: return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case CELL_GCM_TEXTURE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case CELL_GCM_TEXTURE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case CELL_GCM_TEXTURE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	case CELL_GCM_TEXTURE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+	}
+
+	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+}
+
 size_t D3D12GSRender::UploadTextures()
 {
 	size_t usedTexture = 0;
@@ -119,9 +165,15 @@ size_t D3D12GSRender::UploadTextures()
 		// TODO : Correctly define sampler
 		D3D12_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressU = GetWrap(m_textures[i].GetWrapS());
+		samplerDesc.AddressV = GetWrap(m_textures[i].GetWrapT());
+		samplerDesc.AddressW = GetWrap(m_textures[i].GetWrapR());
+		samplerDesc.ComparisonFunc = ComparisonFunc[m_textures[i].GetZfunc()];
+		samplerDesc.MaxAnisotropy = GetMaxAniso(m_textures[i].GetMaxAniso());
+		samplerDesc.MipLODBias = m_textures[i].GetBias();
+		samplerDesc.BorderColor[4] = m_textures[i].GetBorderColor();
+		samplerDesc.MinLOD = m_textures[i].GetMinLOD() >> 8;
+		samplerDesc.MaxLOD = m_textures[i].GetMaxLOD() >> 8;
 		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateSampler(&samplerDesc, Handle);
