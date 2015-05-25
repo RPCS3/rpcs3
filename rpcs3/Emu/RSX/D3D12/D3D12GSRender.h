@@ -64,7 +64,6 @@ private:
 		// Vertex storage
 		size_t m_vertexIndexBuffersHeapFreeSpace;
 		ID3D12Heap *m_vertexIndexBuffersHeap;
-		size_t m_indexBufferCount;
 
 		// Constants storage
 		ID3D12Heap *m_constantsBuffersHeap;
@@ -97,6 +96,7 @@ private:
 	ResourceStorage m_perFrameStorage[2];
 
 	bool m_forcedIndexBuffer;
+	size_t indexCount;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
 	D3D12RenderTargetSets *m_fbo;

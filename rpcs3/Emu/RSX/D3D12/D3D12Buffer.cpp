@@ -222,6 +222,24 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, bool ind
 	return result;
 }
 
+template<typename IndexType, typename DstType, typename SrcType>
+void expandIndexedQuads(DstType *dst, const SrcType *src, size_t indexCount)
+{
+	IndexType *typedDst = reinterpret_cast<IndexType *>(dst);
+	const IndexType *typedSrc = reinterpret_cast<const IndexType *>(src);
+	for (unsigned i = 0; i < indexCount / 4; i++)
+	{
+		// First triangle
+		typedDst[6 * i] = typedSrc[4 * i];
+		typedDst[6 * i + 1] = typedSrc[4 * i + 1];
+		typedDst[6 * i + 2] = typedSrc[4 * i + 2];
+		// Second triangle
+		typedDst[6 * i + 3] = typedSrc[4 * i + 2];
+		typedDst[6 * i + 4] = typedSrc[4 * i + 3];
+		typedDst[6 * i + 5] = typedSrc[4 * i];
+	}
+}
+
 static
 D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
 {
@@ -300,13 +318,28 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 
 	if (indexed_draw || m_forcedIndexBuffer)
 	{
-		size_t subBufferSize;
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
+		size_t indexSize;
+		switch (m_indexed_array.m_type)
+		{
+		default: // If it's not indexed draw, use 16 bits unsigned short
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+			indexSize = 2;
+			break;
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+			indexSize = 4;
+			break;
+		}
+
 		if (indexed_draw && !m_forcedIndexBuffer)
-			subBufferSize = m_indexed_array.m_data.size();
+			indexCount = m_indexed_array.m_data.size() / indexSize;
 		else if (indexed_draw && m_forcedIndexBuffer)
-			subBufferSize = 6 * m_indexed_array.m_data.size() / 4;
+			indexCount = 6 * m_indexed_array.m_data.size() / (4 * indexSize);
 		else
-			subBufferSize = 2 * m_draw_array_count * 6 / 4;
+			indexCount = m_draw_array_count * 6 / 4;
+		size_t subBufferSize = indexCount * indexSize;
 		// 65536 alignment
 		size_t bufferHeapOffset = getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace;
 		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
@@ -321,60 +354,45 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			IID_PPV_ARGS(&indexBuffer)
 			));
 
-		unsigned short *bufferMap;
+		void *bufferMap;
 		check(indexBuffer->Map(0, nullptr, (void**)&bufferMap));
-		size_t forcedIndexCount = 0;
 		if (indexed_draw && !m_forcedIndexBuffer)
 			memcpy(bufferMap, m_indexed_array.m_data.data(), subBufferSize);
 		else if (indexed_draw && m_forcedIndexBuffer)
 		{
-			size_t indexcount = m_indexed_array.m_data.size() / 2;
-			unsigned short *indexList = (unsigned short*)m_indexed_array.m_data.data();
-			for (unsigned i = 0; i < indexcount / 4; i++)
+			switch (m_indexed_array.m_type)
 			{
-				// First triangle
-				bufferMap[6 * i] = indexList[4 * i];
-				bufferMap[6 * i + 1] = indexList[4 * i + 1];
-				bufferMap[6 * i + 2] = indexList[4 * i + 2];
-				// Second triangle
-				bufferMap[6 * i + 3] = indexList[4 * i + 2];
-				bufferMap[6 * i + 4] = indexList[4 * i + 3];
-				bufferMap[6 * i + 5] = indexList[4 * i];
-				forcedIndexCount += 6;
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+				expandIndexedQuads<unsigned int>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 4);
+				break;
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+				expandIndexedQuads<unsigned short>(bufferMap, m_indexed_array.m_data.data(), m_indexed_array.m_data.size() / 2);
+				break;
 			}
 		}
 		else
 		{
+			unsigned short *typedDst = static_cast<unsigned short *>(bufferMap);
 			for (unsigned i = 0; i < m_draw_array_count / 4; i++)
 			{
 				// First triangle
-				bufferMap[6 * i] = 4 * i;
-				bufferMap[6 * i + 1] = 4 * i + 1;
-				bufferMap[6 * i + 2] = 4 * i + 2;
+				typedDst[6 * i] = 4 * i;
+				typedDst[6 * i + 1] = 4 * i + 1;
+				typedDst[6 * i + 2] = 4 * i + 2;
 				// Second triangle
-				bufferMap[6 * i + 3] = 4 * i;
-				bufferMap[6 * i + 4] = 4 * i + 2;
-				bufferMap[6 * i + 5] = 4 * i + 3;
-				forcedIndexCount += 6;
+				typedDst[6 * i + 3] = 4 * i + 2;
+				typedDst[6 * i + 4] = 4 * i + 3;
+				typedDst[6 * i + 5] = 4 * i;
 			}
 		}
 		indexBuffer->Unmap(0, nullptr);
 		getCurrentResourceStorage().m_inflightResources.push_back(indexBuffer);
 		getCurrentResourceStorage().m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
-		getCurrentResourceStorage().m_indexBufferCount = forcedIndexCount;
 
-		D3D12_INDEX_BUFFER_VIEW indexBufferView = {};
+
 		indexBufferView.SizeInBytes = (UINT)subBufferSize;
 		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
-		switch (m_indexed_array.m_type)
-		{
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-			indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-			break;
-		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-			break;
-		}
+
 		if (m_forcedIndexBuffer)
 			indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 

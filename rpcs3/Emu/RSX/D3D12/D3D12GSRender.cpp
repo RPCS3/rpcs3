@@ -688,13 +688,13 @@ void D3D12GSRender::ExecCMD()
 
 	// Indexed quad
 	if (m_forcedIndexBuffer && m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, 0, 0);
+		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, 0, 0);
 	// Non indexed quad
 	else if (m_forcedIndexBuffer && !m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)getCurrentResourceStorage().m_indexBufferCount, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, (UINT)m_draw_array_first, 0);
 	// Indexed triangles
 	else if (m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced(m_indexed_array.m_data.size() / 4, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced((UINT)m_indexed_array.m_data.size() / 4, 1, 0, (UINT)m_draw_array_first, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
