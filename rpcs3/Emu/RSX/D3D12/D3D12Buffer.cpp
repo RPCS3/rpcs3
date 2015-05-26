@@ -167,9 +167,12 @@ std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
 	{
 		if (!m_vertex_data[i].IsEnabled()) continue;
 		size_t elementCount = m_vertex_data[i].data.size() / (m_vertex_data[i].size * m_vertex_data[i].GetTypeSize());
-		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementCount * m_vertex_data[i].stride);
-		bool isMerged = false;
+		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = m_vertex_data[i].stride;
+		size_t elementSize = m_vertex_data[i].GetTypeSize();
+		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementSize + (elementCount - 1) * stride);
+		bool isMerged = false;
+
 		for (VertexBufferFormat &vbf : Result)
 		{
 			if (overlaps(vbf.range, range) && vbf.stride == stride)
@@ -186,7 +189,7 @@ std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
 		}
 		if (isMerged)
 			continue;
-		VertexBufferFormat newRange = { range, std::vector<size_t>{ i }, elementCount, m_vertex_data[i].stride };
+		VertexBufferFormat newRange = { range, std::vector<size_t>{ i }, elementCount, stride };
 		Result.emplace_back(newRange);
 	}
 	return Result;
