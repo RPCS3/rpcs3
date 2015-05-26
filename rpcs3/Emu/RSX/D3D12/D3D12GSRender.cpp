@@ -615,23 +615,24 @@ void D3D12GSRender::ExecCMD()
 
 	InitDrawBuffers();
 
+	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = m_set_depth_test ? &m_fbo->getDSVCPUHandle() : nullptr;
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 	case CELL_GCM_SURFACE_TARGET_0:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
 		break;
 	case CELL_GCM_SURFACE_TARGET_1:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, &m_fbo->getDSVCPUHandle());
+		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, DepthStencilHandle);
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
+		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
+		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, &m_fbo->getDSVCPUHandle());
+		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
 		break;
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
