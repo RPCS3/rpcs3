@@ -60,6 +60,7 @@ private:
 	struct ResourceStorage
 	{
 		ID3D12CommandAllocator *m_commandAllocator;
+		ID3D12CommandAllocator *m_downloadCommandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 
 		std::vector<ID3D12Resource *> m_inflightResources;

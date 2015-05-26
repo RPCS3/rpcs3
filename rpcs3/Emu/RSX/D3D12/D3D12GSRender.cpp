@@ -25,6 +25,7 @@ void D3D12GSRender::ResourceStorage::Reset()
 
 	m_commandAllocator->Reset();
 	m_textureUploadCommandAllocator->Reset();
+	m_downloadCommandAllocator->Reset();
 	for (ID3D12GraphicsCommandList *gfxCommandList : m_inflightCommandList)
 		gfxCommandList->Release();
 	m_inflightCommandList.clear();
@@ -39,6 +40,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
+	check(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_downloadCommandAllocator)));
 
 	// Create heap for vertex and constants buffers
 	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
@@ -102,6 +104,7 @@ void D3D12GSRender::ResourceStorage::Release()
 		tmp->Release();
 	m_commandAllocator->Release();
 	m_textureUploadCommandAllocator->Release();
+	m_downloadCommandAllocator->Release();
 }
 
 // 32 bits float to U8 unorm CS
@@ -1102,8 +1105,16 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 /*	if (!Ini.GSDumpDepthBuffer.GetValue())
 		return;*/
+
+	ID3D12Fence *fence;
+	check(
+		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		);
+	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
+	fence->SetEventOnCompletion(1, handle);
+
 	ID3D12Resource *writeDest, *depthConverted;
-	ID3D12GraphicsCommandList *downloadCommandList;
+	ID3D12GraphicsCommandList *convertCommandList, *downloadCommandList;
 	ID3D12DescriptorHeap *descriptorHeap;
 	size_t rowPitch = RSXThread::m_width;
 	rowPitch = (rowPitch + 255) & ~255;
@@ -1155,7 +1166,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			);
 
 		check(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&convertCommandList))
 			);
 
 		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
@@ -1198,13 +1209,13 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		barrier.Transition.pResource = m_fbo->getDepthStencilTexture();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-		downloadCommandList->ResourceBarrier(1, &barrier);
+		convertCommandList->ResourceBarrier(1, &barrier);
 
-		downloadCommandList->SetPipelineState(m_convertPSO);
-		downloadCommandList->SetComputeRootSignature(m_convertRootSignature);
-		downloadCommandList->SetDescriptorHeaps(1, &descriptorHeap);
-		downloadCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		downloadCommandList->Dispatch(RSXThread::m_width / 8, RSXThread::m_height / 8, 1);
+		convertCommandList->SetPipelineState(m_convertPSO);
+		convertCommandList->SetComputeRootSignature(m_convertRootSignature);
+		convertCommandList->SetDescriptorHeaps(1, &descriptorHeap);
+		convertCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		convertCommandList->Dispatch(RSXThread::m_width / 8, RSXThread::m_height / 8, 1);
 
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -1218,14 +1229,27 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			barrier,
 			uavbarrier,
 		};
-		downloadCommandList->ResourceBarrier(2, barriers);
+		convertCommandList->ResourceBarrier(2, barriers);
 
-		// Copy
 		barrier.Transition.pResource = depthConverted;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		downloadCommandList->ResourceBarrier(1, &barrier);
+		convertCommandList->ResourceBarrier(1, &barrier);
 
+		convertCommandList->Close();
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
+
+		ID3D12Fence *convertDownloadFence;
+		check(
+			m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&convertDownloadFence))
+			);
+		m_commandQueueGraphic->Signal(convertDownloadFence, 1);
+
+		check(
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, getCurrentResourceStorage().m_downloadCommandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
+			);
+
+		// Copy
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.pResource = depthConverted;
@@ -1240,17 +1264,14 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
 		downloadCommandList->Close();
-		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
+		m_commandQueueCopy->Wait(convertDownloadFence, 1);
+		m_commandQueueCopy->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
+		//Wait for result
+		m_commandQueueCopy->Signal(fence, 1);
+		convertDownloadFence->Release();
 	}
-
-	//Wait for result
-	ID3D12Fence *fence;
-	check(
-		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
-		);
-	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
-	fence->SetEventOnCompletion(1, handle);
-	m_commandQueueGraphic->Signal(fence, 1);
+	else
+		m_commandQueueGraphic->Signal(fence, 1);
 
 	std::thread valueChangerThread([=]() {
 		WaitForSingleObject(handle, INFINITE);
@@ -1281,6 +1302,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			descriptorHeap->Release();
 			fence->Release();
 			downloadCommandList->Release();
+			convertCommandList->Release();
 		}
 
 		vm::write32(m_label_addr + offset, value);
