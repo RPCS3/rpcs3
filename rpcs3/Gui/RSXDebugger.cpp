@@ -836,6 +836,178 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		u32 index = 0;
 		switch(cmd & 0x3ffff)
 		{
+		case NV406E_SEMAPHORE_OFFSET:
+			DISASM("Semaphore offset 0x%x", (u32)args[0]);
+			break;
+
+		case NV406E_SEMAPHORE_ACQUIRE:
+			DISASM("Semaphore acquire at 0x%x", (u32)args[0]);
+			break;
+
+		case NV406E_SEMAPHORE_RELEASE:
+			DISASM("Semaphore release value 0x%x", (u32)args[0]);
+			break;
+
+		case NV4097_SET_SURFACE_FORMAT:
+			DISASM("Set surface format");
+			break;
+
+		case NV4097_SET_SURFACE_COLOR_TARGET:
+			DISASM("Set surface color target");
+			break;
+
+		case NV4097_SET_SHADER_WINDOW:
+			DISASM("Set shader windows");
+			break;
+
+		case NV4097_SET_DEPTH_TEST_ENABLE:
+			DISASM("Set depth test enable");
+			break;
+
+		case NV4097_SET_DEPTH_FUNC:
+			DISASM("Set depth func");
+			break;
+
+		case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
+			DISASM("Set ZSTENCIL clear value");
+			break;
+
+		case NV4097_CLEAR_SURFACE:
+			DISASM("Clear surface");
+			break;
+
+		case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
+			DISASM("Set transform constant load");
+			break;
+
+		case NV4097_SET_VERTEX_DATA_ARRAY_FORMAT:
+			DISASM("Set vertex data array format");
+			break;
+
+		case NV4097_SET_VERTEX_DATA_ARRAY_OFFSET:
+			DISASM("Set vertex data array offset");
+			break;
+
+		case NV4097_SET_SHADER_PROGRAM:
+			DISASM("Set shader program");
+			break;
+
+		case NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK:
+			DISASM("Set vertex attrib output mask");
+			break;
+
+		case NV4097_SET_TEX_COORD_CONTROL:
+			DISASM("Set tex coord control");
+			break;
+
+		case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
+			DISASM("Set transform program load");
+			break;
+
+		case NV4097_SET_TRANSFORM_PROGRAM:
+			DISASM("Set transform program");
+			break;
+
+		case NV4097_SET_VERTEX_ATTRIB_INPUT_MASK:
+			DISASM("Set vertex attrib input mask");
+			break;
+
+		case NV4097_SET_TRANSFORM_TIMEOUT:
+			DISASM("Set transform timeout");
+			break;
+
+		case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
+			DISASM("Invalidate vertex cache file");
+			break;
+
+		case NV4097_SET_SHADER_CONTROL:
+			DISASM("Set shader control");
+			break;
+
+		case NV4097_SET_SEMAPHORE_OFFSET:
+			DISASM("Set semaphore offset 0x%x", (u32)args[0]);
+			break;
+
+		case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
+			DISASM("Back end write semaphore release %x", (u32)args[0]);
+			break;
+
+		case NV4097_SET_COLOR_MASK_MRT:
+			DISASM("Set color mask MRT");
+			break;
+
+		case NV4097_SET_TEXTURE_IMAGE_RECT:
+			DISASM("Set texture image rect");
+			break;
+
+		case NV4097_SET_TEXTURE_CONTROL3:
+			DISASM("Set texture control 3");
+			break;
+
+		case NV4097_SET_TEXTURE_CONTROL1:
+			DISASM("Set texture control 1");
+			break;
+
+		case NV4097_SET_TEXTURE_CONTROL0:
+			DISASM("Set texture control 0");
+			break;
+
+		case NV4097_SET_TEXTURE_ADDRESS:
+			DISASM("Set texture address");
+			break;
+
+		case NV4097_SET_TEXTURE_FILTER:
+			DISASM("Set texture filter");
+			break;
+
+		case NV4097_SET_BLEND_FUNC_SFACTOR:
+			DISASM("Set blend func sfactor");
+			break;
+
+		case NV4097_SET_FRONT_POLYGON_MODE:
+			DISASM("Set front polygon mode");
+			break;
+
+		case NV4097_SET_VIEWPORT_HORIZONTAL:
+			DISASM("Set viewport horizontal");
+			break;
+
+		case NV4097_SET_CLIP_MIN:
+			DISASM("Set clip min");
+			break;
+
+		case NV4097_SET_VIEWPORT_OFFSET:
+			DISASM("Set viewport offset");
+			break;
+
+		case NV4097_SET_SCISSOR_HORIZONTAL:
+			DISASM("Set scissor horizontal");
+			break;
+
+		case NV4097_INVALIDATE_L2:
+			DISASM("Invalidate L2");
+			break;
+
+		case NV4097_INVALIDATE_VERTEX_FILE:
+			DISASM("Invalidate vertex file");
+			break;
+
+		case NV4097_SET_BEGIN_END:
+			DISASM("Set BEGIN END");
+			break;
+
+		case NV4097_DRAW_ARRAYS:
+			DISASM("Draw arrays");
+			break;
+
+		case NV4097_SET_WINDOW_OFFSET:
+			DISASM("Set window offset");
+			break;
+
+		case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
+			DISASM("Set surface clip horizontal");
+			break;
+
 		case 0x3fead:
 			DISASM("Flip and change current buffer: %d", (u32)args[0]);
 		break;
