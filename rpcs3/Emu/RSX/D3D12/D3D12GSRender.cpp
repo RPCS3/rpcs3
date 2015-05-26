@@ -1300,7 +1300,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			writeDest->Release();
 			depthConverted->Release();
 			descriptorHeap->Release();
-			fence->Release();
 			downloadCommandList->Release();
 			convertCommandList->Release();
 		}
