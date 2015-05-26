@@ -25,7 +25,7 @@ enum GCMEnumTypes
 
 RSXDebugger::RSXDebugger(wxWindow* parent) 
 	: wxFrame(parent, wxID_ANY, "RSX Debugger", wxDefaultPosition, wxSize(700, 450))
-	, m_item_count(23)
+	, m_item_count(37)
 	, m_addr(0x0)
 	, m_cur_texture(0)
 	, exit(false)
@@ -77,7 +77,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	s_controls->Add(s_controls_breaks);
 
 	//Tabs
-	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(482,475));
+	wxNotebook* nb_rsx = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(732, 732));
 	wxPanel* p_commands  = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_flags     = new wxPanel(nb_rsx, wxID_ANY);
 	wxPanel* p_programs  = new wxPanel(nb_rsx, wxID_ANY);
@@ -93,12 +93,12 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	nb_rsx->AddPage(p_settings,  wxT("Settings"));
 
 	//Tabs: Lists
-	m_list_commands  = new wxListView(p_commands,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
-	m_list_flags     = new wxListView(p_flags,     wxID_ANY, wxPoint(1,3), wxSize(470,444));
-	m_list_programs  = new wxListView(p_programs,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
-	m_list_lightning = new wxListView(p_lightning, wxID_ANY, wxPoint(1,3), wxSize(470,444));
-	m_list_texture   = new wxListView(p_texture,   wxID_ANY, wxPoint(1,3), wxSize(470,444));
-	m_list_settings  = new wxListView(p_settings,  wxID_ANY, wxPoint(1,3), wxSize(470,444));
+	m_list_commands  = new wxListView(p_commands,  wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_flags     = new wxListView(p_flags,     wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_programs  = new wxListView(p_programs,  wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_lightning = new wxListView(p_lightning, wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_texture   = new wxListView(p_texture,   wxID_ANY, wxPoint(1,3), wxSize(720, 720));
+	m_list_settings  = new wxListView(p_settings,  wxID_ANY, wxPoint(1,3), wxSize(720, 720));
 	
 	//Tabs: List Style
 	m_list_commands ->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
@@ -111,7 +111,7 @@ RSXDebugger::RSXDebugger(wxWindow* parent)
 	//Tabs: List Columns
 	m_list_commands->InsertColumn(0, "Address", 0, 80);
 	m_list_commands->InsertColumn(1, "Value", 0, 80);
-	m_list_commands->InsertColumn(2, "Command", 0, 250);
+	m_list_commands->InsertColumn(2, "Command", 0, 500);
 	m_list_commands->InsertColumn(3, "Count", 0, 40);
 	m_list_flags->InsertColumn(0, "Name", 0, 170);
 	m_list_flags->InsertColumn(1, "Value", 0, 270);
