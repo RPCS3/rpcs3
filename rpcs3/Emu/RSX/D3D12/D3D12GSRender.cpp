@@ -1162,4 +1162,46 @@ void D3D12GSRender::WriteDepthBuffer()
 	fence->Release();
 	downloadCommandList->Release();
 }
+
+
+void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
+{
+	ID3D12Fence *fence;
+	check(
+		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		);
+	HANDLE handle = CreateEvent(0, FALSE, FALSE, 0);
+	fence->SetEventOnCompletion(1, handle);
+	m_commandQueueGraphic->Signal(fence, 1);
+
+	std::thread valueChangerThread([=]() {
+		WaitForSingleObject(handle, INFINITE);
+		CloseHandle(handle);
+		fence->Release();
+		vm::write32(m_label_addr + offset, value);
+	});
+	valueChangerThread.detach();
+}
+
+void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
+{
+
+	ID3D12Fence *fence;
+	check(
+		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
+		);
+	m_commandQueueGraphic->Wait(fence, 1);
+
+	std::thread valueChangerThread([=]() {
+		while (true)
+		{
+			u32 val = vm::read32(m_label_addr + offset);
+			if (val == value) break;
+		}
+		fence->Signal(1);
+		fence->Release();
+	}
+	);
+	valueChangerThread.join();
+}
 #endif
