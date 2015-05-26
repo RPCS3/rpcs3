@@ -837,15 +837,15 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 		switch(cmd & 0x3ffff)
 		{
 		case NV406E_SEMAPHORE_OFFSET:
-			DISASM("Semaphore offset 0x%x", (u32)args[0]);
+			DISASM("PFIFO: Semaphore offset 0x%x", (u32)args[0]);
 			break;
 
 		case NV406E_SEMAPHORE_ACQUIRE:
-			DISASM("Semaphore acquire at 0x%x", (u32)args[0]);
+			DISASM("PFIFO: Semaphore acquire at 0x%x", (u32)args[0]);
 			break;
 
 		case NV406E_SEMAPHORE_RELEASE:
-			DISASM("Semaphore release value 0x%x", (u32)args[0]);
+			DISASM("PFIFO: Semaphore release value 0x%x", (u32)args[0]);
 			break;
 
 		case NV4097_SET_SURFACE_FORMAT:
@@ -925,11 +925,11 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			break;
 
 		case NV4097_SET_SEMAPHORE_OFFSET:
-			DISASM("Set semaphore offset 0x%x", (u32)args[0]);
+			DISASM("PGRAPH: Set semaphore offset 0x%x", (u32)args[0]);
 			break;
 
 		case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-			DISASM("Back end write semaphore release %x", (u32)args[0]);
+			DISASM("PGRAPH: Back end write semaphore release %x", (u32)args[0]);
 			break;
 
 		case NV4097_SET_COLOR_MASK_MRT:
