@@ -170,7 +170,7 @@ std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
 		// If there is a single element, stride is 0, use the size of element instead
 		size_t stride = m_vertex_data[i].stride;
 		size_t elementSize = m_vertex_data[i].GetTypeSize();
-		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementSize + (elementCount - 1) * stride);
+		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementSize + elementCount * stride);
 		bool isMerged = false;
 
 		for (VertexBufferFormat &vbf : Result)
