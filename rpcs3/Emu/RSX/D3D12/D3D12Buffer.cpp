@@ -227,6 +227,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		{
 			for (size_t attributeId : vbf.attributeId)
 			{
+				if (!m_vertex_data[attributeId].addr) continue;
 				size_t baseOffset = m_vertex_data[attributeId].addr - vbf.range.first;
 				size_t tsize = m_vertex_data[attributeId].GetTypeSize();
 				size_t size = m_vertex_data[attributeId].size;
