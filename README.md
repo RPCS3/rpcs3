@@ -45,8 +45,8 @@ cmake [-G generator] [-DBUILD_SHARED_LIBS=ON|OFF] ..
 
 # Recent Release #
 
-[yaml-cpp 0.5.2](TODO) has been released! This is a bug fix release.
+[yaml-cpp 0.5.2](https://github.com/jbeder/yaml-cpp/releases/tag/release-0.5.2) has been released! This is a bug fix release.
 
-[yaml-cpp 0.3.0](TODO) is still available if you want the old API.
+[yaml-cpp 0.3.0](https://github.com/jbeder/yaml-cpp/releases/tag/release-0.3.0) is still available if you want the old API.
 
 **The old API will continue to be supported, and will still receive bugfixes!** The 0.3.x and 0.4.x versions will be old API releases, and 0.5.x and above will all be new API releases.
