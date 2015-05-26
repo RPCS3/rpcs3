@@ -113,7 +113,7 @@ const char *shaderCode = STRINGIFY(
 	[numthreads(8, 8, 1)]\n
 	void main(uint3 Id : SV_DispatchThreadID)\n
 { \n
-	OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0)) * 255.f;\n
+	OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0));\n
 }
 );
 
@@ -1167,7 +1167,20 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			);
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		switch (m_surface_depth_format)
+		{
+		case 0:
+			break;
+		case CELL_GCM_SURFACE_Z16:
+			srvDesc.Format = DXGI_FORMAT_R16_UNORM;
+			break;
+		case CELL_GCM_SURFACE_Z24S8:
+			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			break;
+		default:
+			LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+			assert(0);
+		}
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
