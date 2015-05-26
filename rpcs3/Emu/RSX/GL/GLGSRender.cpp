@@ -2143,6 +2143,21 @@ void GLGSRender::Flip()
 
 }
 
+void GLGSRender::semaphorePGRAPHTextureReadRelease(u32 offset, u32 value)
+{
+	vm::write32(m_label_addr + offset, value);
+}
+
+void GLGSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
+{
+	vm::write32(m_label_addr + offset, value);
+}
+
+void GLGSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
+{
+
+}
+
 u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
 {
 	u32 offset = 0;

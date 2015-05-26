@@ -46,4 +46,16 @@ private:
 	virtual void Close()
 	{
 	}
+
+	virtual void semaphorePGRAPHTextureReadRelease(u32 offset, u32 value) override
+	{
+	}
+
+	virtual void semaphorePGRAPHBackendRelease(u32 offset, u32 value) override
+	{
+	}
+
+	virtual void semaphorePFIFOAcquire(u32 offset, u32 value) override
+	{
+	}
 };
