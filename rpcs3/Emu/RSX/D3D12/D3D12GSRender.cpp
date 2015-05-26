@@ -4,6 +4,8 @@
 #include <wrl/client.h>
 #include <dxgi1_4.h>
 #include <d3dcompiler.h>
+#include <thread>
+#include <chrono>
 
 GetGSFrameCb2 GetGSFrame = nullptr;
 
@@ -1185,7 +1187,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 {
-
 	ID3D12Fence *fence;
 	check(
 		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
@@ -1197,11 +1198,12 @@ void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 		{
 			u32 val = vm::read32(m_label_addr + offset);
 			if (val == value) break;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 		fence->Signal(1);
 		fence->Release();
 	}
 	);
-	valueChangerThread.join();
+	valueChangerThread.detach();
 }
 #endif
