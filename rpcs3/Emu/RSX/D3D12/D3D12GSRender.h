@@ -54,6 +54,9 @@ private:
 	ID3D12PipelineState *m_PSO;
 	ID3D12RootSignature *m_rootSignature;
 
+	ID3D12PipelineState *m_convertPSO;
+	ID3D12RootSignature *m_convertRootSignature;
+
 	struct ResourceStorage
 	{
 		ID3D12CommandAllocator *m_commandAllocator;

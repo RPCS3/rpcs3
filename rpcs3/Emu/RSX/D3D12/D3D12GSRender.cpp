@@ -107,17 +107,22 @@ void D3D12GSRender::ResourceStorage::Release()
 // 32 bits float to U8 unorm CS
 #define STRINGIFY(x) #x
 const char *shaderCode = STRINGIFY(
-Texture2D<float> InputTexture : register(t0); \n
-RWTexture2D<float> OutputTexture : register(u0);\n
+	Texture2D<float> InputTexture : register(t0); \n
+	RWTexture2D<float> OutputTexture : register(u0);\n
 
-[numthreads(1, 1, 1)]\n
-void main(uint3 Id : SV_DispatchThreadID)\n
+	[numthreads(8, 8, 1)]\n
+	void main(uint3 Id : SV_DispatchThreadID)\n
 { \n
-	OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0));\n
+	OutputTexture[Id.xy] = InputTexture.Load(uint3(Id.xy, 0)) * 255.f;\n
 }
 );
 
-static void compileF32toU8CS()
+/**
+ * returns bytecode and root signature of a Compute Shader converting texture from 
+ * one format to another
+ */
+static
+std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 {
 	ID3DBlob *bytecode;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
@@ -135,18 +140,15 @@ static void compileF32toU8CS()
 	descriptorRange[1].BaseShaderRegister = 0;
 	descriptorRange[1].NumDescriptors = 1;
 	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	descriptorRange[1].OffsetInDescriptorsFromTableStart = 1;
 	D3D12_ROOT_PARAMETER RP[2] = {};
 	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
-	RP[0].DescriptorTable.NumDescriptorRanges = 1;
-	RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
-	RP[1].DescriptorTable.NumDescriptorRanges = 1;
+	RP[0].DescriptorTable.NumDescriptorRanges = 2;
 
 	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.NumParameters = 2;
+	rootSignatureDesc.NumParameters = 1;
 	rootSignatureDesc.pParameters = RP;
 
 	ID3DBlob *rootSignatureBlob;
@@ -157,6 +159,8 @@ static void compileF32toU8CS()
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
 		LOG_ERROR(RSX, tmp);
 	}
+
+	return std::make_pair(bytecode, rootSignatureBlob);
 }
 
 D3D12GSRender::D3D12GSRender()
@@ -281,13 +285,31 @@ D3D12GSRender::D3D12GSRender()
 	m_perFrameStorage[1].Reset();
 
 	m_currentResourceStorageIndex = m_swapChain->GetCurrentBackBufferIndex();
-	compileF32toU8CS();
-
 	vertexConstantShadowCopy = new float[512 * 4];
+
+	// Convert shader
+	auto p = compileF32toU8CS();
+	check(
+		m_device->CreateRootSignature(0, p.second->GetBufferPointer(), p.second->GetBufferSize(), IID_PPV_ARGS(&m_convertRootSignature))
+		);
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC computePipelineStateDesc = {};
+	computePipelineStateDesc.CS.BytecodeLength = p.first->GetBufferSize();
+	computePipelineStateDesc.CS.pShaderBytecode = p.first->GetBufferPointer();
+	computePipelineStateDesc.pRootSignature = m_convertRootSignature;
+
+	check(
+		m_device->CreateComputePipelineState(&computePipelineStateDesc, IID_PPV_ARGS(&m_convertPSO))
+		);
+
+	p.first->Release();
+	p.second->Release();
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
+	m_convertPSO->Release();
+	m_convertRootSignature->Release();
 	m_perFrameStorage[0].Release();
 	m_perFrameStorage[1].Release();
 	m_commandQueueGraphic->Release();
@@ -615,7 +637,7 @@ void D3D12GSRender::ExecCMD()
 
 	InitDrawBuffers();
 
-	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = m_set_depth_test ? &m_fbo->getDSVCPUHandle() : nullptr;
+	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = &m_fbo->getDSVCPUHandle();
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
@@ -1080,17 +1102,41 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 /*	if (!Ini.GSDumpDepthBuffer.GetValue())
 		return;*/
-	ID3D12Resource *writeDest;
+	ID3D12Resource *writeDest, *depthConverted;
 	ID3D12GraphicsCommandList *downloadCommandList;
-	size_t rowPitch = RSXThread::m_width * sizeof(float);
+	ID3D12DescriptorHeap *descriptorHeap;
+	size_t rowPitch = RSXThread::m_width;
 	rowPitch = (rowPitch + 255) & ~255;
 	if (m_set_context_dma_z)
 	{
 		D3D12_HEAP_PROPERTIES heapProp = {};
-		heapProp.Type = D3D12_HEAP_TYPE_READBACK;
+		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 		D3D12_RESOURCE_DESC resdesc = {};
+		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		resdesc.Width = RSXThread::m_width;
+		resdesc.Height = RSXThread::m_height;
+		resdesc.DepthOrArraySize = 1;
+		resdesc.SampleDesc.Count = 1;
+		resdesc.MipLevels = 1;
+		resdesc.Format = DXGI_FORMAT_R8_UNORM;
+		resdesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+		check(
+			m_device->CreateCommittedResource(
+				&heapProp,
+				D3D12_HEAP_FLAG_NONE,
+				&resdesc,
+				D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+				nullptr,
+				IID_PPV_ARGS(&depthConverted)
+				)
+			);
+
+		heapProp = {};
+		heapProp.Type = D3D12_HEAP_TYPE_READBACK;
+		resdesc = {};
 		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resdesc.Width = RSXThread::m_width * RSXThread::m_height * 4 * 2; // * 2 for safety
+		resdesc.Width = RSXThread::m_width * RSXThread::m_height * 2; // * 2 for safety
 		resdesc.Height = 1;
 		resdesc.DepthOrArraySize = 1;
 		resdesc.SampleDesc.Count = 1;
@@ -1112,29 +1158,73 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
 
+		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+		descriptorHeapDesc.NumDescriptors = 2;
+		descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		check(
+			m_device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap))
+			);
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		m_device->CreateShaderResourceView(m_fbo->getDepthStencilTexture(), &srvDesc, Handle);
+		Handle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format = DXGI_FORMAT_R8_UNORM;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		m_device->CreateUnorderedAccessView(depthConverted, nullptr, &uavDesc, Handle);
+
+
+		// Convert
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barrier.Transition.pResource = m_fbo->getDepthStencilTexture();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+		downloadCommandList->ResourceBarrier(1, &barrier);
+
+		downloadCommandList->SetPipelineState(m_convertPSO);
+		downloadCommandList->SetComputeRootSignature(m_convertRootSignature);
+		downloadCommandList->SetDescriptorHeaps(1, &descriptorHeap);
+		downloadCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		downloadCommandList->Dispatch(RSXThread::m_width / 8, RSXThread::m_height / 8, 1);
+
+		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		// Flush UAV
+		D3D12_RESOURCE_BARRIER uavbarrier = {};
+		uavbarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavbarrier.UAV.pResource = depthConverted;
+
+		D3D12_RESOURCE_BARRIER barriers[] =
+		{
+			barrier,
+			uavbarrier,
+		};
+		downloadCommandList->ResourceBarrier(2, barriers);
+
+		// Copy
+		barrier.Transition.pResource = depthConverted;
+		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
 		downloadCommandList->ResourceBarrier(1, &barrier);
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.pResource = m_fbo->getDepthStencilTexture();
+		src.pResource = depthConverted;
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		dst.pResource = writeDest;
 		dst.PlacedFootprint.Offset = 0;
 		dst.PlacedFootprint.Footprint.Depth = 1;
-		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R32_FLOAT;
+		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8_UNORM;
 		dst.PlacedFootprint.Footprint.Height = RSXThread::m_height;
 		dst.PlacedFootprint.Footprint.Width = RSXThread::m_width;
 		dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		downloadCommandList->ResourceBarrier(1, &barrier);
 
 		downloadCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
@@ -1159,14 +1249,14 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 			auto ptr = vm::get_ptr<void>(address);
 			char *ptrAsChar = (char*)ptr;
-			float *writeDestPtr;
+			unsigned char *writeDestPtr;
 			check(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 			// TODO : this should be done by the gpu
 			for (unsigned row = 0; row < RSXThread::m_height; row++)
 			{
 				for (unsigned i = 0; i < RSXThread::m_width; i++)
 				{
-					unsigned char c = (unsigned char)(writeDestPtr[row * rowPitch / 4 + i] * 255.);
+					unsigned char c = writeDestPtr[row * rowPitch + i];
 					ptrAsChar[4 * (row * RSXThread::m_width + i)] = c;
 					ptrAsChar[4 * (row * RSXThread::m_width + i) + 1] = c;
 					ptrAsChar[4 * (row * RSXThread::m_width + i) + 2] = c;
@@ -1174,6 +1264,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				}
 			}
 			writeDest->Release();
+			depthConverted->Release();
+			descriptorHeap->Release();
 			fence->Release();
 			downloadCommandList->Release();
 		}
