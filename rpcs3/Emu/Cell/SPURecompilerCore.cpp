@@ -1413,14 +1413,16 @@ void SPURecompiler::CDX(u32 rt, u32 ra, u32 rb)
 	{
 		c.add(*addr, cpu_dword(GPR[ra]._u32[3]));
 	}
-	c.not_(*addr);
-	c.and_(*addr, 0x8);
+	c.test(*addr, 0x8);
 	const XmmLink& vr = XmmAlloc(rt);
-	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+	Label p1(c), p2(c);
+	c.jnz(p1);
+	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
+	c.jmp(p2);
+	c.bind(p1);
+	c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
+	c.bind(p2);
 	XmmFinalize(vr, rt);
-	XmmInvalidate(rt);
-	c.mov(*qw0, 0x0001020304050607ull);
-	c.mov(qword_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), *qw0);
 	LOG_OPCODE();
 }
 
@@ -1610,14 +1612,16 @@ void SPURecompiler::CDD(u32 rt, u32 ra, s32 i7)
 	{
 		c.mov(*addr, cpu_dword(GPR[ra]._u32[3]));
 		c.add(*addr, i7);
-		c.not_(*addr);
-		c.and_(*addr, 0x8);
+		c.test(*addr, 0x8);
 		const XmmLink& vr = XmmAlloc(rt);
-		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f))));
+		Label p1(c), p2(c);
+		c.jnz(p1);
+		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x00010203, 0x04050607, 0x18191a1b, 0x1c1d1e1f))));
+		c.jmp(p2);
+		c.bind(p1);
+		c.movdqa(vr.get(), XmmConst(u128::fromV(_mm_set_epi32(0x10111213, 0x14151617, 0x00010203, 0x04050607))));
+		c.bind(p2);
 		XmmFinalize(vr, rt);
-		XmmInvalidate(rt);
-		c.mov(*qw0, 0x0001020304050607ull);
-		c.mov(qword_ptr(*cpu_var, *addr, 0, cpu_offset(GPR[rt])), *qw0);
 	}
 	LOG_OPCODE();
 }
