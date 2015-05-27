@@ -47,15 +47,15 @@ struct sys_lwmutex_t
 
 	union
 	{
-		atomic_t<sync_var_t> lock_var;
+		atomic_be_t<sync_var_t> lock_var;
 
 		struct
 		{
-			atomic_t<u32> owner;
-			atomic_t<u32> waiter;
+			atomic_be_t<u32> owner;
+			atomic_be_t<u32> waiter;
 		};
 
-		atomic_t<u64> all_info;
+		atomic_be_t<u64> all_info;
 	};
 	
 	be_t<u32> attribute;
@@ -64,7 +64,7 @@ struct sys_lwmutex_t
 	be_t<u32> pad;
 };
 
-struct lwmutex_t
+struct lv2_lwmutex_t
 {
 	const u32 protocol;
 	const u64 name;
@@ -76,7 +76,7 @@ struct lwmutex_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	lwmutex_t(u32 protocol, u64 name)
+	lv2_lwmutex_t(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
 		, signaled(0)
@@ -84,6 +84,8 @@ struct lwmutex_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_lwmutex_t, 0x95); // SYS_LWMUTEX_OBJECT
 
 // Aux
 void lwmutex_create(sys_lwmutex_t& lwmutex, bool recursive, u32 protocol, u64 name);

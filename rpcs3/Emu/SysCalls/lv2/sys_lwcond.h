@@ -17,7 +17,7 @@ struct sys_lwcond_t
 	be_t<u32> lwcond_queue; // lwcond pseudo-id
 };
 
-struct lwcond_t
+struct lv2_lwcond_t
 {
 	const u64 name;
 
@@ -28,7 +28,7 @@ struct lwcond_t
 	std::condition_variable cv;
 	std::unordered_set<u32> waiters;
 
-	lwcond_t(u64 name)
+	lv2_lwcond_t(u64 name)
 		: name(name)
 		, signaled1(0)
 		, signaled2(0)
@@ -36,6 +36,8 @@ struct lwcond_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_lwcond_t, 0x97); // SYS_LWCOND_OBJECT
 
 // Aux
 void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name);

@@ -39,7 +39,7 @@ s32 sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, u32 a
 	else
 	{
 		// Check memory container.
-		const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+		const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 		if (!ct)
 		{

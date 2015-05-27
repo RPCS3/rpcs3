@@ -15,7 +15,7 @@ struct sys_rwlock_attribute_t
 	};
 };
 
-struct rwlock_t
+struct lv2_rwlock_t
 {
 	const u32 protocol;
 	const u64 name;
@@ -29,7 +29,7 @@ struct rwlock_t
 	std::atomic<u32> rwaiters;
 	std::atomic<u32> wwaiters;
 
-	rwlock_t(u32 protocol, u64 name)
+	lv2_rwlock_t(u32 protocol, u64 name)
 		: protocol(protocol)
 		, name(name)
 		, readers(0)
@@ -39,6 +39,8 @@ struct rwlock_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_rwlock_t, 0x88); // SYS_RWLOCK_OBJECT
 
 // SysCalls
 s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);

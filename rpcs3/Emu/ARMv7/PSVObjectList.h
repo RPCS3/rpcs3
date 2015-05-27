@@ -49,7 +49,7 @@ public:
 	}
 
 	// share object with UID specified
-	__forceinline std::shared_ptr<T> get(s32 uid)
+	inline std::shared_ptr<T> get(s32 uid)
 	{
 		if (!check(uid))
 		{
@@ -61,7 +61,7 @@ public:
 		return m_data[psv_uid_t::make(uid).number];
 	}
 
-	__forceinline std::shared_ptr<T> operator [](s32 uid)
+	inline std::shared_ptr<T> operator [](s32 uid)
 	{
 		return this->get(uid);
 	}

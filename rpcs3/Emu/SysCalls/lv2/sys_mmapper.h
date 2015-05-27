@@ -19,6 +19,8 @@ struct mmapper_info
 	}
 };
 
+REG_ID_TYPE(mmapper_info, 0x08); // SYS_MEM_OBJECT
+
 // SysCalls
 s32 sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
 s32 sys_mmapper_allocate_fixed_address();

@@ -69,7 +69,7 @@ struct event_t
 	}
 };
 
-struct event_queue_t
+struct lv2_event_queue_t
 {
 	const u32 protocol;
 	const s32 type;
@@ -84,7 +84,7 @@ struct event_queue_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
+	lv2_event_queue_t(u32 protocol, s32 type, u64 name, u64 key, s32 size)
 		: protocol(protocol)
 		, type(type)
 		, name(name)
@@ -108,24 +108,24 @@ struct event_queue_t
 	}
 };
 
-struct event_port_t
+REG_ID_TYPE(lv2_event_queue_t, 0x8D); // SYS_EVENT_QUEUE_OBJECT
+
+struct lv2_event_port_t
 {
 	const s32 type; // port type, must be SYS_EVENT_PORT_LOCAL
 	const u64 name; // passed as event source (generated from id and process id if not set)
-	std::weak_ptr<event_queue_t> queue; // event queue this port is connected to
+	std::weak_ptr<lv2_event_queue_t> queue; // event queue this port is connected to
 
-	event_port_t(s32 type, u64 name)
+	lv2_event_port_t(s32 type, u64 name)
 		: type(type)
 		, name(name)
 	{
 	}
 };
 
-class PPUThread;
+REG_ID_TYPE(lv2_event_port_t, 0x0E); // SYS_EVENT_PORT_OBJECT
 
-// Aux
-u32 event_port_create(u64 name);
-u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size);
+class PPUThread;
 
 // SysCalls
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size);

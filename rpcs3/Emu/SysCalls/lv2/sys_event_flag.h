@@ -27,7 +27,7 @@ struct sys_event_flag_attr
 	};
 };
 
-struct event_flag_t
+struct lv2_event_flag_t
 {
 	const u32 protocol;
 	const s32 type;
@@ -40,7 +40,7 @@ struct event_flag_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
+	lv2_event_flag_t(u64 pattern, u32 protocol, s32 type, u64 name)
 		: flags(pattern)
 		, protocol(protocol)
 		, type(type)
@@ -50,6 +50,8 @@ struct event_flag_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_event_flag_t, 0x98); // SYS_EVENT_FLAG_OBJECT
 
 s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u64 init);
 s32 sys_event_flag_destroy(u32 id);

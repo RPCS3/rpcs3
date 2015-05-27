@@ -2,175 +2,143 @@
 
 #define ID_MANAGER_INCLUDED
 
-enum IDType
+// ID type
+enum : u32
 {
-	// Special objects
-	TYPE_MEM,
-	TYPE_MUTEX,
-	TYPE_COND,
-	TYPE_RWLOCK,
-	TYPE_INTR_TAG,
-	TYPE_INTR_SERVICE_HANDLE,
-	TYPE_EVENT_QUEUE,
-	TYPE_EVENT_PORT,
-	TYPE_TRACE,
-	TYPE_SPUIMAGE,
-	TYPE_PRX,
-	TYPE_SPUPORT,
-	TYPE_LWMUTEX,
-	TYPE_TIMER,
-	TYPE_SEMAPHORE,
-	TYPE_FS_FILE,
-	TYPE_FS_DIR,
-	TYPE_LWCOND,
-	TYPE_EVENT_FLAG,
-
-	// Any other objects
-	TYPE_OTHER,
+	ID_TYPE_NONE = 0,
 };
 
-class ID final
+// Helper template to detect type
+template<typename T> struct ID_type
 {
-	const std::type_info& m_info;
-	std::shared_ptr<void> m_data;
-	IDType m_type;
+	//static_assert(sizeof(T) == 0, "ID type not registered (use REG_ID_TYPE)");
 
+	static const u32 type = ID_TYPE_NONE; // default type
+};
+
+class ID_data_t final
+{
 public:
-	template<typename T> ID(std::shared_ptr<T>& data, const IDType type)
-		: m_info(typeid(T))
-		, m_data(data)
-		, m_type(type)
+	const std::shared_ptr<void> data;
+	const std::type_info& info;
+	const u32 type;
+
+	template<typename T, typename... Args> ID_data_t(u32 type, Args&&... args) // doesn't work
+		: data(std::make_shared<T>(args...))
+		, info(typeid(T))
+		, type(type)
 	{
 	}
 
-	ID()
-		: m_info(typeid(void))
-		, m_data(nullptr)
-		, m_type(TYPE_OTHER)
+	template<typename T> ID_data_t(const std::shared_ptr<T>& data, u32 type)
+		: data(data)
+		, info(typeid(T))
+		, type(type)
 	{
 	}
 
-	ID(const ID& right) = delete;
+	ID_data_t(const ID_data_t& right) = delete;
 
-	ID(ID&& right)
-		: m_info(right.m_info)
-		, m_data(right.m_data)
-		, m_type(right.m_type)
+	ID_data_t& operator =(const ID_data_t& right) = delete;
+
+	ID_data_t(ID_data_t&& right)
+		: data(right.data)
+		, info(right.info)
+		, type(right.type)
 	{
-		right.m_data = nullptr;
-		right.m_type = TYPE_OTHER;
 	}
 
-	ID& operator=(ID&& other) = delete;
-
-	const std::type_info& GetInfo() const
-	{
-		return m_info;
-	}
-
-	template<typename T> std::shared_ptr<T> GetData() const
-	{
-		return std::static_pointer_cast<T>(m_data);
-	}
-
-	IDType GetType() const
-	{
-		return m_type;
-	}
+	ID_data_t& operator =(ID_data_t&& other) = delete;
 };
 
-class IdManager
+class ID_manager
 {
-	static const u32 s_first_id = 1;
-	static const u32 s_max_id = -1;
-
-	std::unordered_map<u32, ID> m_id_map;
-	std::set<u32> m_types[TYPE_OTHER];
 	std::mutex m_mutex;
 
-	u32 m_cur_id = s_first_id;
+	std::unordered_map<u32, ID_data_t> m_id_map;
+	u32 m_cur_id = 1; // first ID
 
 public:
-	template<typename T> bool CheckID(const u32 id)
+	// check if ID exists and has specified type
+	template<typename T> bool check_id(const u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto f = m_id_map.find(id);
 
-		return f != m_id_map.end() && f->second.GetInfo() == typeid(T);
+		return f != m_id_map.end() && f->second.info == typeid(T);
 	}
 
-	void Clear()
+	// must be called from the constructor called through make() to get further ID of current object
+	u32 get_cur_id()
+	{
+		// if called correctly from make(), the mutex is locked
+		// if called illegally, the mutex is unlocked with high probability (wrong ID is returned otherwise)
+
+		if (m_mutex.try_lock())
+		{
+			// schedule unlocking
+			std::lock_guard<std::mutex> lock(m_mutex, std::adopt_lock);
+
+			throw "Invalid get_cur_id() usage";
+		}
+
+		return m_cur_id;
+	}
+
+	void clear()
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		m_id_map.clear();
-		m_cur_id = s_first_id;
+		m_cur_id = 1; // first ID
 	}
 	
-	template<typename T> u32 GetNewID(std::shared_ptr<T>& data, const IDType type = TYPE_OTHER)
+	// add new ID using existing std::shared_ptr (not recommended, use make() instead)
+	template<typename T> u32 add(const std::shared_ptr<T>& data, u32 type = ID_type<T>::type)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		m_id_map.emplace(m_cur_id, ID(data, type));
-
-		if (type < TYPE_OTHER)
-		{
-			m_types[type].insert(m_cur_id);
-		}
+		m_id_map.emplace(m_cur_id, ID_data_t(data, type));
 
 		return m_cur_id++;
 	}
 
-	template<typename T> std::shared_ptr<T> GetIDData(const u32 id)
+	// add new ID of specified type with specified constructor arguments (passed to std::make_shared<>)
+	template<typename T, typename... Args> u32 make(Args&&... args)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		const u32 type = ID_type<T>::type;
+
+		m_id_map.emplace(m_cur_id, ID_data_t(std::make_shared<T>(args...), type));
+
+		return m_cur_id++;
+	}
+
+	template<typename T> std::shared_ptr<T> get(u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto f = m_id_map.find(id);
 
-		if (f == m_id_map.end() || f->second.GetInfo() != typeid(T))
+		if (f == m_id_map.end() || f->second.info != typeid(T))
 		{
 			return nullptr;
 		}
 
-		return f->second.GetData<T>();
+		return std::static_pointer_cast<T>(f->second.data);
 	}
 
-	bool HasID(const u32 id)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		return m_id_map.find(id) != m_id_map.end();
-	}
-
-	IDType GetIDType(const u32 id)
+	template<typename T> bool remove(u32 id)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
 		auto item = m_id_map.find(id);
 
-		if (item == m_id_map.end())
-		{
-			return TYPE_OTHER;
-		}
-
-		return item->second.GetType();
-	}
-
-	template<typename T> bool RemoveID(const u32 id)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-
-		auto item = m_id_map.find(id);
-
-		if (item == m_id_map.end() || item->second.GetInfo() != typeid(T))
+		if (item == m_id_map.end() || item->second.info != typeid(T))
 		{
 			return false;
-		}
-
-		if (item->second.GetType() < TYPE_OTHER)
-		{
-			m_types[item->second.GetType()].erase(id);
 		}
 
 		m_id_map.erase(item);
@@ -178,34 +146,37 @@ public:
 		return true;
 	}
 
-	u32 GetTypeCount(IDType type)
+	u32 get_count_by_type(u32 type)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		if (type < TYPE_OTHER)
+		u32 result = 0;
+
+		for (auto& v : m_id_map)
 		{
-			return (u32)m_types[type].size();
+			if (v.second.type == type)
+			{
+				result++;
+			}
 		}
-		else
-		{
-			assert(!"Invalid ID type");
-			return 0;
-		}
+
+		return result;
 	}
 
-	std::set<u32> GetTypeIDs(IDType type)
+	std::set<u32> get_IDs_by_type(u32 type)
 	{
-		// you cannot simply return reference to existing set
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		if (type < TYPE_OTHER)
+		std::set<u32> result;
+
+		for (auto& v : m_id_map)
 		{
-			return m_types[type];
+			if (v.second.type == type)
+			{
+				result.insert(v.first);
+			}
 		}
-		else
-		{
-			assert(!"Invalid ID type");
-			return std::set<u32>{};
-		}
+
+		return result;
 	}
 };

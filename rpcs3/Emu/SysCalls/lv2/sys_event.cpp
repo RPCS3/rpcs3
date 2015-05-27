@@ -13,15 +13,6 @@
 
 SysCallBase sys_event("sys_event");
 
-u32 event_queue_create(u32 protocol, s32 type, u64 name_u64, u64 event_queue_key, s32 size)
-{
-	std::shared_ptr<event_queue_t> queue(new event_queue_t(protocol, type, name_u64, event_queue_key, size));
-
-	Emu.GetEventManager().RegisterKey(queue, event_queue_key);
-
-	return Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
-}
-
 s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
@@ -49,14 +40,14 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
-	std::shared_ptr<event_queue_t> queue(new event_queue_t(protocol, type, attr->name_u64, event_queue_key, size));
+	const auto queue = Emu.GetEventManager().MakeEventQueue(protocol, type, attr->name_u64, event_queue_key, size);
 
-	if (!Emu.GetEventManager().RegisterKey(queue, event_queue_key))
+	if (!queue)
 	{
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = Emu.GetIdManager().GetNewID(queue, TYPE_EVENT_QUEUE);
+	*equeue_id = Emu.GetIdManager().add(queue);
 	
 	return CELL_OK;
 }
@@ -67,7 +58,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 
 	LV2_LOCK;
 
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(equeue_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(equeue_id);
 
 	if (!queue)
 	{
@@ -95,7 +86,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	}
 
 	Emu.GetEventManager().UnregisterKey(queue->key);
-	Emu.GetIdManager().RemoveID<event_queue_t>(equeue_id);
+	Emu.GetIdManager().remove<lv2_event_queue_t>(equeue_id);
 
 	return CELL_OK;
 }
@@ -106,7 +97,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 
 	LV2_LOCK;
 
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(equeue_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(equeue_id);
 
 	if (!queue)
 	{
@@ -146,7 +137,7 @@ s32 sys_event_queue_receive(PPUThread& CPU, u32 equeue_id, vm::ptr<sys_event_t> 
 
 	LV2_LOCK;
 
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(equeue_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(equeue_id);
 
 	if (!queue)
 	{
@@ -203,7 +194,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 
 	LV2_LOCK;
 
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(equeue_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(equeue_id);
 
 	if (!queue)
 	{
@@ -213,13 +204,6 @@ s32 sys_event_queue_drain(u32 equeue_id)
 	queue->events.clear();
 
 	return CELL_OK;
-}
-
-u32 event_port_create(u64 name)
-{
-	std::shared_ptr<event_port_t> eport(new event_port_t(SYS_EVENT_PORT_LOCAL, name));
-	
-	return Emu.GetIdManager().GetNewID(eport, TYPE_EVENT_PORT);
 }
 
 s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
@@ -232,9 +216,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<event_port_t> eport(new event_port_t(port_type, name));
-
-	*eport_id = Emu.GetIdManager().GetNewID(eport, TYPE_EVENT_PORT);
+	*eport_id = Emu.GetIdManager().make<lv2_event_port_t>(port_type, name);
 
 	return CELL_OK;
 }
@@ -245,7 +227,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 
 	LV2_LOCK;
 
-	const auto port = Emu.GetIdManager().GetIDData<event_port_t>(eport_id);
+	const auto port = Emu.GetIdManager().get<lv2_event_port_t>(eport_id);
 
 	if (!port)
 	{
@@ -257,7 +239,7 @@ s32 sys_event_port_destroy(u32 eport_id)
 		return CELL_EISCONN;
 	}
 
-	Emu.GetIdManager().RemoveID<event_port_t>(eport_id);
+	Emu.GetIdManager().remove<lv2_event_port_t>(eport_id);
 
 	return CELL_OK;
 }
@@ -268,8 +250,8 @@ s32 sys_event_port_connect_local(u32 eport_id, u32 equeue_id)
 
 	LV2_LOCK;
 
-	const auto port = Emu.GetIdManager().GetIDData<event_port_t>(eport_id);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(equeue_id);
+	const auto port = Emu.GetIdManager().get<lv2_event_port_t>(eport_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(equeue_id);
 
 	if (!port || !queue)
 	{
@@ -297,7 +279,7 @@ s32 sys_event_port_disconnect(u32 eport_id)
 
 	LV2_LOCK;
 
-	const auto port = Emu.GetIdManager().GetIDData<event_port_t>(eport_id);
+	const auto port = Emu.GetIdManager().get<lv2_event_port_t>(eport_id);
 
 	if (!port)
 	{
@@ -324,7 +306,7 @@ s32 sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	LV2_LOCK;
 
-	const auto port = Emu.GetIdManager().GetIDData<event_port_t>(eport_id);
+	const auto port = Emu.GetIdManager().get<lv2_event_port_t>(eport_id);
 
 	if (!port)
 	{

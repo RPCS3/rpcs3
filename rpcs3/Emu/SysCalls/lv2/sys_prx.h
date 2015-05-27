@@ -114,18 +114,20 @@ struct sys_prx_unload_module_option_t
 };
 
 // Auxiliary data types
-struct sys_prx_t
+struct lv2_prx_t
 {
 	u32 size;
 	u32 address;
 	std::string path;
 	bool isStarted;
 
-	sys_prx_t()
+	lv2_prx_t()
 		: isStarted(false)
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_prx_t, 0x23); // SYS_PRX_OBJECT
 
 // SysCalls
 s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);

@@ -173,7 +173,7 @@ class squeue_t
 		};
 	};
 
-	atomic_le_t<squeue_sync_var_t> m_sync;
+	atomic<squeue_sync_var_t> m_sync;
 
 	mutable std::mutex m_rcv_mutex;
 	mutable std::mutex m_wcv_mutex;

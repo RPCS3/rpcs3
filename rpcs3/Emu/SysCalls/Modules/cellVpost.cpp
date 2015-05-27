@@ -27,22 +27,12 @@ s32 cellVpostQueryAttr(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<CellVp
 	return CELL_OK;
 }
 
-u32 vpostOpen(VpostInstance* data)
-{
-	std::shared_ptr<VpostInstance> data_ptr(data);
-	u32 id = Emu.GetIdManager().GetNewID(data_ptr);
-
-	cellVpost.Notice("*** Vpost instance created (to_rgba=%d): id = %d", data->to_rgba, id);
-
-	return id;
-}
-
 s32 cellVpostOpen(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const CellVpostResource> resource, vm::ptr<u32> handle)
 {
 	cellVpost.Warning("cellVpostOpen(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
-	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = Emu.GetIdManager().make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
 	return CELL_OK;
 }
 
@@ -51,7 +41,7 @@ s32 cellVpostOpenEx(vm::ptr<const CellVpostCfgParam> cfgParam, vm::ptr<const Cel
 	cellVpost.Warning("cellVpostOpenEx(cfgParam=*0x%x, resource=*0x%x, handle=*0x%x)", cfgParam, resource, handle);
 
 	// TODO: check values
-	*handle = vpostOpen(new VpostInstance(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV));
+	*handle = Emu.GetIdManager().make<VpostInstance>(cfgParam->outPicFmt == CELL_VPOST_PIC_FMT_OUT_RGBA_ILV);
 	return CELL_OK;
 }
 
@@ -59,14 +49,14 @@ s32 cellVpostClose(u32 handle)
 {
 	cellVpost.Warning("cellVpostClose(handle=0x%x)", handle);
 
-	const auto vpost = Emu.GetIdManager().GetIDData<VpostInstance>(handle);
+	const auto vpost = Emu.GetIdManager().get<VpostInstance>(handle);
 
 	if (!vpost)
 	{
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
 	}
 
-	Emu.GetIdManager().RemoveID<VpostInstance>(handle);	
+	Emu.GetIdManager().remove<VpostInstance>(handle);	
 	return CELL_OK;
 }
 
@@ -74,7 +64,7 @@ s32 cellVpostExec(u32 handle, vm::ptr<const u8> inPicBuff, vm::ptr<const CellVpo
 {
 	cellVpost.Log("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
 
-	const auto vpost = Emu.GetIdManager().GetIDData<VpostInstance>(handle);
+	const auto vpost = Emu.GetIdManager().get<VpostInstance>(handle);
 
 	if (!vpost)
 	{

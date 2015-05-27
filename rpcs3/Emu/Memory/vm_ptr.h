@@ -6,11 +6,10 @@ struct ARMv7Context;
 namespace vm
 {
 	template<typename T, int lvl = 1, typename AT = u32>
-	class _ptr_base
+	struct _ptr_base
 	{
 		AT m_addr;
 
-	public:
 		typedef typename std::remove_cv<T>::type type;
 		static const u32 address_size = sizeof(AT);
 
@@ -103,11 +102,10 @@ namespace vm
 	};
 	
 	template<typename T, typename AT>
-	class _ptr_base<T, 1, AT>
+	struct _ptr_base<T, 1, AT>
 	{
 		AT m_addr;
 		
-	public:
 		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 		typedef typename std::remove_cv<T>::type type;
@@ -228,11 +226,10 @@ namespace vm
 	};
 
 	template<typename AT>
-	class _ptr_base<void, 1, AT>
+	struct _ptr_base<void, 1, AT>
 	{
 		AT m_addr;
 		
-	public:
 		AT addr() const
 		{
 			return m_addr;
@@ -291,11 +288,10 @@ namespace vm
 	};
 
 	template<typename AT>
-	class _ptr_base<const void, 1, AT>
+	struct _ptr_base<const void, 1, AT>
 	{
 		AT m_addr;
 
-	public:
 		AT addr() const
 		{
 			return m_addr;
@@ -347,11 +343,10 @@ namespace vm
 	};
 
 	template<typename AT, typename RT, typename ...T>
-	class _ptr_base<RT(T...), 1, AT>
+	struct _ptr_base<RT(T...), 1, AT>
 	{
 		AT m_addr;
 
-	public:
 		typedef RT(type)(T...);
 
 		RT operator()(PPUThread& CPU, T... args) const; // defined in CB_FUNC.h, call using specified PPU thread context
@@ -402,39 +397,47 @@ namespace vm
 	};
 
 	template<typename AT, typename RT, typename ...T>
-	class _ptr_base<RT(*)(T...), 1, AT>
+	struct _ptr_base<RT(*)(T...), 1, AT>
 	{
 		AT m_addr;
 
-	public:
 		static_assert(!sizeof(AT), "vm::_ptr_base<> error: use RT(T...) format for functions instead of RT(*)(T...)");
 	};
 
+	// Native endianness pointer to LE data
+	template<typename T, int lvl = 1, typename AT = u32> using ptrl = _ptr_base<typename to_le_t<T>::type, lvl, AT>;
+
+	// Native endianness pointer to BE data
+	template<typename T, int lvl = 1, typename AT = u32> using ptrb = _ptr_base<typename to_be_t<T>::type, lvl, AT>;
+
 	// BE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> using bptrl = _ptr_base<T, lvl, typename to_be_t<AT>::type>;
+	template<typename T, int lvl = 1, typename AT = u32> using bptrl = _ptr_base<typename to_le_t<T>::type, lvl, typename to_be_t<AT>::type>;
 
 	// BE pointer to BE data
 	template<typename T, int lvl = 1, typename AT = u32> using bptrb = _ptr_base<typename to_be_t<T>::type, lvl, typename to_be_t<AT>::type>;
 
-	// LE pointer to BE data
-	template<typename T, int lvl = 1, typename AT = u32> using lptrb = _ptr_base<typename to_be_t<T>::type, lvl, AT>;
-
 	// LE pointer to LE data
-	template<typename T, int lvl = 1, typename AT = u32> using lptrl = _ptr_base<T, lvl, AT>;
+	template<typename T, int lvl = 1, typename AT = u32> using lptrl = _ptr_base<typename to_le_t<T>::type, lvl, typename to_le_t<AT>::type>;
+
+	// LE pointer to BE data
+	template<typename T, int lvl = 1, typename AT = u32> using lptrb = _ptr_base<typename to_be_t<T>::type, lvl, typename to_le_t<AT>::type>;
 
 	namespace ps3
 	{
-		// default pointer for HLE functions (LE pointer to BE data)
-		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrb<T, lvl, AT>;
+		// default pointer for PS3 HLE functions (Native endianness pointer to BE data)
+		template<typename T, int lvl = 1, typename AT = u32> using ptr = ptrb<T, lvl, AT>;
 
-		// default pointer for HLE structures (BE pointer to BE data)
+		// default pointer for PS3 HLE structures (BE pointer to BE data)
 		template<typename T, int lvl = 1, typename AT = u32> using bptr = bptrb<T, lvl, AT>;
 	}
 
 	namespace psv
 	{
-		// default pointer for HLE functions & structures (LE pointer to LE data)
-		template<typename T, int lvl = 1, typename AT = u32> using ptr = lptrl<T, lvl, AT>;
+		// default pointer for PSV HLE functions (Native endianness pointer to LE data)
+		template<typename T, int lvl = 1, typename AT = u32> using ptr = ptrl<T, lvl, AT>;
+
+		// default pointer for PSV HLE structures (LE pointer to LE data)
+		template<typename T, int lvl = 1, typename AT = u32> using lptr = lptrl<T, lvl, AT>;
 	}
 
 	// PS3 emulation is main now, so lets it be as default

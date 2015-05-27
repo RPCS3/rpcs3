@@ -109,9 +109,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		return CELL_FS_ENOENT;
 	}
 	
-	std::shared_ptr<fs_file_t> file_handler(new fs_file_t(file, mode, flags));
-
-	*fd = Emu.GetIdManager().GetNewID(file_handler, TYPE_FS_FILE);
+	*fd = Emu.GetIdManager().make<lv2_file_t>(file, mode, flags);
 
 	return CELL_OK;
 }
@@ -120,7 +118,7 @@ s32 sys_fs_read(u32 fd, vm::ptr<void> buf, u64 nbytes, vm::ptr<u64> nread)
 {
 	sys_fs.Log("sys_fs_read(fd=0x%x, buf=0x%x, nbytes=0x%llx, nread=0x%x)", fd, buf, nbytes, nread);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file || file->flags & CELL_FS_O_WRONLY)
 	{
@@ -138,7 +136,7 @@ s32 sys_fs_write(u32 fd, vm::ptr<const void> buf, u64 nbytes, vm::ptr<u64> nwrit
 {
 	sys_fs.Log("sys_fs_write(fd=0x%x, buf=*0x%x, nbytes=0x%llx, nwrite=*0x%x)", fd, buf, nbytes, nwrite);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -158,7 +156,7 @@ s32 sys_fs_close(u32 fd)
 {
 	sys_fs.Log("sys_fs_close(fd=0x%x)", fd);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file)
 	{
@@ -167,7 +165,7 @@ s32 sys_fs_close(u32 fd)
 
 	// TODO: return CELL_FS_EBUSY if locked
 
-	Emu.GetIdManager().RemoveID<fs_file_t>(fd);
+	Emu.GetIdManager().remove<lv2_file_t>(fd);
 
 	return CELL_OK;
 }
@@ -177,7 +175,7 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 	sys_fs.Warning("sys_fs_opendir(path=*0x%x, fd=*0x%x)", path, fd);
 	sys_fs.Warning("*** path = '%s'", path.get_ptr());
 
-	std::shared_ptr<vfsDirBase> directory(Emu.GetVFS().OpenDir(path.get_ptr()));
+	std::shared_ptr<lv2_dir_t> directory(Emu.GetVFS().OpenDir(path.get_ptr()));
 
 	if (!directory || !directory->IsOpened())
 	{
@@ -185,7 +183,7 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 		return CELL_FS_ENOENT;
 	}
 
-	*fd = Emu.GetIdManager().GetNewID(directory, TYPE_FS_DIR);
+	*fd = Emu.GetIdManager().add(directory);
 
 	return CELL_OK;
 }
@@ -194,7 +192,7 @@ s32 sys_fs_readdir(u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	sys_fs.Warning("sys_fs_readdir(fd=0x%x, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
 
-	const auto directory = Emu.GetIdManager().GetIDData<vfsDirBase>(fd);
+	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(fd);
 
 	if (!directory)
 	{
@@ -222,14 +220,14 @@ s32 sys_fs_closedir(u32 fd)
 {
 	sys_fs.Log("sys_fs_closedir(fd=0x%x)", fd);
 
-	const auto directory = Emu.GetIdManager().GetIDData<vfsDirBase>(fd);
+	const auto directory = Emu.GetIdManager().get<lv2_dir_t>(fd);
 
 	if (!directory)
 	{
 		return CELL_FS_EBADF;
 	}
 
-	Emu.GetIdManager().RemoveID<vfsDirBase>(fd);
+	Emu.GetIdManager().remove<lv2_dir_t>(fd);
 
 	return CELL_OK;
 }
@@ -271,7 +269,7 @@ s32 sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 {
 	sys_fs.Warning("sys_fs_fstat(fd=0x%x, sb=*0x%x)", fd, sb);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file)
 	{
@@ -420,7 +418,7 @@ s32 sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 		return CELL_FS_EINVAL;
 	}
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file)
 	{
@@ -438,7 +436,7 @@ s32 sys_fs_fget_block_size(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_
 {
 	sys_fs.Todo("sys_fs_fget_block_size(fd=0x%x, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, arg5=*0x%x)", fd, sector_size, block_size, arg4, arg5);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file)
 	{
@@ -486,7 +484,7 @@ s32 sys_fs_ftruncate(u32 fd, u64 size)
 {
 	sys_fs.Warning("sys_fs_ftruncate(fd=0x%x, size=0x%llx)", fd, size);
 
-	const auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+	const auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{

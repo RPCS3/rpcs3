@@ -1,26 +1,26 @@
 #pragma once
 
-//Process Local Object
-enum
+// Process Local Object Type
+enum : u32
 {
-	SYS_MEM_OBJECT                   = (0x08UL),
-	SYS_MUTEX_OBJECT                 = (0x85UL),
-	SYS_COND_OBJECT                  = (0x86UL),
-	SYS_RWLOCK_OBJECT                = (0x88UL),
-	SYS_INTR_TAG_OBJECT              = (0x0AUL),
-	SYS_INTR_SERVICE_HANDLE_OBJECT   = (0x0BUL),
-	SYS_EVENT_QUEUE_OBJECT           = (0x8DUL),
-	SYS_EVENT_PORT_OBJECT            = (0x0EUL),
-	SYS_TRACE_OBJECT                 = (0x21UL),
-	SYS_SPUIMAGE_OBJECT              = (0x22UL),
-	SYS_PRX_OBJECT                   = (0x23UL),
-	SYS_SPUPORT_OBJECT               = (0x24UL),
-	SYS_LWMUTEX_OBJECT               = (0x95UL),
-	SYS_TIMER_OBJECT                 = (0x11UL),
-	SYS_SEMAPHORE_OBJECT             = (0x96UL),
-	SYS_FS_FD_OBJECT                 = (0x73UL),
-	SYS_LWCOND_OBJECT                = (0x97UL),
-	SYS_EVENT_FLAG_OBJECT            = (0x98UL),
+	SYS_MEM_OBJECT                   = 0x08,
+	SYS_MUTEX_OBJECT                 = 0x85,
+	SYS_COND_OBJECT                  = 0x86,
+	SYS_RWLOCK_OBJECT                = 0x88,
+	SYS_INTR_TAG_OBJECT              = 0x0A,
+	SYS_INTR_SERVICE_HANDLE_OBJECT   = 0x0B,
+	SYS_EVENT_QUEUE_OBJECT           = 0x8D,
+	SYS_EVENT_PORT_OBJECT            = 0x0E,
+	SYS_TRACE_OBJECT                 = 0x21,
+	SYS_SPUIMAGE_OBJECT              = 0x22,
+	SYS_PRX_OBJECT                   = 0x23,
+	SYS_SPUPORT_OBJECT               = 0x24,
+	SYS_LWMUTEX_OBJECT               = 0x95,
+	SYS_TIMER_OBJECT                 = 0x11,
+	SYS_SEMAPHORE_OBJECT             = 0x96,
+	SYS_FS_FD_OBJECT                 = 0x73,
+	SYS_LWCOND_OBJECT                = 0x97,
+	SYS_EVENT_FLAG_OBJECT            = 0x98,
 };
 
 // Auxiliary functions

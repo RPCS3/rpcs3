@@ -216,12 +216,10 @@ next:
 	}
 }
 
-u32 adecOpen(AudioDecoder* adec_ptr)
+void adecOpen(u32 adec_id) // TODO: call from the constructor
 {
-	std::shared_ptr<AudioDecoder> sptr(adec_ptr);
-	AudioDecoder& adec = *adec_ptr;
-
-	u32 adec_id = Emu.GetIdManager().GetNewID(sptr);
+	const auto sptr = Emu.GetIdManager().get<AudioDecoder>(adec_id);
+	AudioDecoder& adec = *sptr;
 
 	adec.id = adec_id;
 
@@ -234,9 +232,9 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 	adec.adecCb->InitRegs();
 	adec.adecCb->DoRun();
 
-	thread_t t(fmt::format("AudioDecoder[0x%x] Thread", adec_id), [adec_ptr, sptr]()
+	thread_t t(fmt::format("AudioDecoder[0x%x] Thread", adec_id), [sptr]()
 	{
-		AudioDecoder& adec = *adec_ptr;
+		AudioDecoder& adec = *sptr;
 		AdecTask& task = adec.task;
 
 		while (true)
@@ -478,8 +476,6 @@ u32 adecOpen(AudioDecoder* adec_ptr)
 
 		adec.is_finished = true;
 	});
-
-	return adec_id;
 }
 
 bool adecCheckType(AudioCodecType type)
@@ -536,7 +532,7 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	adecOpen(*handle = Emu.GetIdManager().make<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -550,7 +546,7 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	*handle = adecOpen(new AudioDecoder(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
+	adecOpen(*handle = Emu.GetIdManager().make<AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg));
 
 	return CELL_OK;
 }
@@ -564,7 +560,7 @@ s32 cellAdecClose(u32 handle)
 {
 	cellAdec.Warning("cellAdecClose(handle=0x%x)", handle);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{
@@ -585,7 +581,7 @@ s32 cellAdecClose(u32 handle)
 	}
 
 	if (adec->adecCb) Emu.GetCPU().RemoveThread(adec->adecCb->GetId());
-	Emu.GetIdManager().RemoveID<AudioDecoder>(handle);
+	Emu.GetIdManager().remove<AudioDecoder>(handle);
 	return CELL_OK;
 }
 
@@ -593,7 +589,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 {
 	cellAdec.Warning("cellAdecStartSeq(handle=0x%x, param=*0x%x)", handle, param);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{
@@ -646,7 +642,7 @@ s32 cellAdecEndSeq(u32 handle)
 {
 	cellAdec.Warning("cellAdecEndSeq(handle=0x%x)", handle);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{
@@ -661,7 +657,7 @@ s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
 	cellAdec.Log("cellAdecDecodeAu(handle=0x%x, auInfo=*0x%x)", handle, auInfo);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{
@@ -684,7 +680,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
 	cellAdec.Log("cellAdecGetPcm(handle=0x%x, outBuffer=*0x%x)", handle, outBuffer);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{
@@ -800,7 +796,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::ptr<vm::bptr<CellAdecPcmItem>> pcmItem)
 {
 	cellAdec.Log("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
-	const auto adec = Emu.GetIdManager().GetIDData<AudioDecoder>(handle);
+	const auto adec = Emu.GetIdManager().get<AudioDecoder>(handle);
 
 	if (!adec)
 	{

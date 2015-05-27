@@ -108,7 +108,7 @@ u32 spu_thread_initialize(u32 group_id, u32 spu_num, vm::ptr<sys_spu_image> img,
 	spu.SetName(name);
 	spu.m_custom_task = task;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(group_id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
 
 	spu.tg = group;
 	group->threads[spu_num] = t;
@@ -140,7 +140,7 @@ s32 sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_num, vm
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(group_id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(group_id);
 
 	if (!group)
 	{
@@ -221,9 +221,7 @@ u32 spu_thread_group_create(const std::string& name, u32 num, s32 prio, s32 type
 		sys_spu.Todo("Unsupported SPU Thread Group type (0x%x)", type);
 	}
 
-	std::shared_ptr<spu_group_t> group(new spu_group_t(name, num, prio, type, container));
-
-	return Emu.GetIdManager().GetNewID(group);
+	return Emu.GetIdManager().make<spu_group_t>(name, num, prio, type, container);
 }
 
 s32 sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
@@ -247,7 +245,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -274,7 +272,7 @@ s32 sys_spu_thread_group_destroy(u32 id)
 	}
 
 	group->state = SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED; // hack
-	Emu.GetIdManager().RemoveID<spu_group_t>(id);
+	Emu.GetIdManager().remove<spu_group_t>(id);
 
 	return CELL_OK;
 }
@@ -285,7 +283,7 @@ s32 sys_spu_thread_group_start(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -348,7 +346,7 @@ s32 sys_spu_thread_group_suspend(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -403,7 +401,7 @@ s32 sys_spu_thread_group_resume(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -450,7 +448,7 @@ s32 sys_spu_thread_group_yield(u32 id)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -475,7 +473,7 @@ s32 sys_spu_thread_group_terminate(u32 id, s32 value)
 
 	// seems the id can be either SPU Thread Group or SPU Thread
 	auto thread = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
-	auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group && !thread)
 	{
@@ -540,7 +538,7 @@ s32 sys_spu_thread_group_join(u32 id, vm::ptr<u32> cause, vm::ptr<u32> status)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -778,8 +776,8 @@ s32 sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(eq);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
 
 	if (!group || !queue)
 	{
@@ -834,7 +832,7 @@ s32 sys_spu_thread_group_disconnect_event(u32 id, u32 et)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{
@@ -898,7 +896,7 @@ s32 sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
 	LV2_LOCK;
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(eq);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
 
 	if (!t || !queue)
 	{
@@ -965,7 +963,7 @@ s32 sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num)
 	LV2_LOCK;
 
 	const auto t = Emu.GetCPU().GetThread(id, CPU_THREAD_SPU);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(spuq);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(spuq);
 
 	if (!t || !queue)
 	{
@@ -1038,8 +1036,8 @@ s32 sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, vm::
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(eq);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(eq);
 
 	if (!group || !queue)
 	{
@@ -1113,7 +1111,7 @@ s32 sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 
 	LV2_LOCK;
 
-	const auto group = Emu.GetIdManager().GetIDData<spu_group_t>(id);
+	const auto group = Emu.GetIdManager().get<spu_group_t>(id);
 
 	if (!group)
 	{

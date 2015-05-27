@@ -388,10 +388,9 @@ union _CRT_ALIGN(16) u128
 	}
 };
 
-#ifndef InterlockedCompareExchange
-static __forceinline u128 InterlockedCompareExchange(volatile u128* dest, u128 exch, u128 comp)
+static __forceinline u128 __sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
-#if defined(__GNUG__)
+#if !defined(_MSC_VER)
 	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
 	return (u128&)res;
 #else
@@ -399,60 +398,51 @@ static __forceinline u128 InterlockedCompareExchange(volatile u128* dest, u128 e
 	return comp;
 #endif
 }
-#endif
 
-static __forceinline bool InterlockedCompareExchangeTest(volatile u128* dest, u128 exch, u128 comp)
+static __forceinline bool __sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
-#if defined(__GNUG__)
+#if !defined(_MSC_VER)
 	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
 #else
 	return _InterlockedCompareExchange128((volatile long long*)dest, exch._u64[1], exch._u64[0], (long long*)&comp) != 0;
 #endif
 }
 
-#ifndef InterlockedExchange
-static __forceinline u128 InterlockedExchange(volatile u128* dest, u128 value)
+static __forceinline u128 __sync_lock_test_and_set(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (InterlockedCompareExchangeTest(dest, value, old)) return old;
+		if (__sync_bool_compare_and_swap(dest, old, value)) return old;
 	}
 }
-#endif
 
-#ifndef InterlockedOr
-static __forceinline u128 InterlockedOr(volatile u128* dest, u128 value)
+static __forceinline u128 __sync_fetch_and_or(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (InterlockedCompareExchangeTest(dest, old | value, old)) return old;
+		if (__sync_bool_compare_and_swap(dest, old, value | old)) return old;
 	}
 }
-#endif
 
-#ifndef InterlockedAnd
-static __forceinline u128 InterlockedAnd(volatile u128* dest, u128 value)
+static __forceinline u128 __sync_fetch_and_and(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (InterlockedCompareExchangeTest(dest, old & value, old)) return old;
+		if (__sync_bool_compare_and_swap(dest, old, value & old)) return old;
 	}
 }
-#endif
 
-#ifndef InterlockedXor
-static __forceinline u128 InterlockedXor(volatile u128* dest, u128 value)
+static __forceinline u128 __sync_fetch_and_xor(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (InterlockedCompareExchangeTest(dest, old ^ value, old)) return old;
+		if (__sync_bool_compare_and_swap(dest, old, value ^ old)) return old;
 	}
 }
-#endif
 
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
@@ -926,3 +916,7 @@ __forceinline void convert_le_be(Tto& dst, Tfrom&& src)
 {
 	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }
+
+template<typename T> using le_t = T;
+
+template<typename T> struct to_le_t { using type = T; };

@@ -18,7 +18,7 @@ struct sys_timer_information_t
 // "timer_t" conflicts with some definition
 struct lv2_timer_t
 {
-	std::weak_ptr<event_queue_t> port; // event queue
+	std::weak_ptr<lv2_event_queue_t> port; // event queue
 	u64 source; // event source
 	u64 data1; // event arg 1
 	u64 data2; // event arg 2
@@ -36,6 +36,8 @@ struct lv2_timer_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_timer_t, 0x11); // SYS_TIMER_OBJECT
 
 s32 sys_timer_create(vm::ptr<u32> timer_id);
 s32 sys_timer_destroy(u32 timer_id);

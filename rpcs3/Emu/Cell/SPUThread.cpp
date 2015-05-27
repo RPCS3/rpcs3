@@ -760,7 +760,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(data);
+				const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(data);
 
 				if (!ef)
 				{
@@ -806,7 +806,7 @@ void SPUThread::set_ch_value(u32 ch, u32 value)
 
 				LV2_LOCK;
 
-				const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(data);
+				const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(data);
 
 				if (!ef)
 				{
@@ -1054,7 +1054,7 @@ void SPUThread::stop_and_signal(u32 code)
 
 		LV2_LOCK;
 
-		std::shared_ptr<event_queue_t> queue;
+		std::shared_ptr<lv2_event_queue_t> queue;
 
 		for (auto& v : this->spuq)
 		{

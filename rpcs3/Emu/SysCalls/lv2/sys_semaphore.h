@@ -15,7 +15,7 @@ struct sys_semaphore_attribute_t
 	};
 };
 
-struct semaphore_t
+struct lv2_sema_t
 {
 	const u32 protocol;
 	const s32 max;
@@ -27,7 +27,7 @@ struct semaphore_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	semaphore_t(u32 protocol, s32 max, u64 name, s32 value)
+	lv2_sema_t(u32 protocol, s32 max, u64 name, s32 value)
 		: protocol(protocol)
 		, max(max)
 		, name(name)
@@ -37,8 +37,7 @@ struct semaphore_t
 	}
 };
 
-// Aux
-u32 semaphore_create(s32 initial_val, s32 max_val, u32 protocol, u64 name_u64);
+REG_ID_TYPE(lv2_sema_t, 0x96); // SYS_SEMAPHORE_OBJECT
 
 // SysCalls
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val);

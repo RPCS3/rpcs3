@@ -75,7 +75,7 @@ namespace vm
 	void* g_base_addr = (atexit(finalize), initialize());
 	void* g_priv_addr;
 
-	std::array<atomic_le_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
+	std::array<atomic<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
 
 	class reservation_mutex_t
 	{

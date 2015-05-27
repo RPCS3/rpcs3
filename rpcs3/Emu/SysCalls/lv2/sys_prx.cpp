@@ -32,7 +32,7 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	}
 
 	// Create the PRX object and return its id
-	std::shared_ptr<sys_prx_t> prx(new sys_prx_t());
+	std::shared_ptr<lv2_prx_t> prx(new lv2_prx_t());
 	prx->size = (u32)f.GetSize();
 	prx->address = (u32)Memory.Alloc(prx->size, 4);
 	prx->path = (const char*)path;
@@ -40,8 +40,7 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	// Load the PRX into memory
 	f.Read(vm::get_ptr(prx->address), prx->size);
 
-	u32 id = Emu.GetIdManager().GetNewID(prx, TYPE_PRX);
-	return id;
+	return Emu.GetIdManager().add(prx);
 }
 
 s32 sys_prx_load_module_on_memcontainer()
@@ -67,7 +66,7 @@ s32 sys_prx_start_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u
 	sys_prx.Todo("sys_prx_start_module(id=0x%x, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
-	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -85,7 +84,7 @@ s32 sys_prx_stop_module(s32 id, u32 args, u32 argp_addr, vm::ptr<u32> modres, u6
 	sys_prx.Todo("sys_prx_stop_module(id=0x%x, args=%d, argp_addr=0x%x, modres_addr=0x%x, flags=0x%llx, pOpt=0x%x)",
 		id, args, argp_addr, modres.addr(), flags, pOpt.addr());
 
-	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -103,7 +102,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	sys_prx.Todo("sys_prx_unload_module(id=0x%x, flags=0x%llx, pOpt=0x%x)", id, flags, pOpt.addr());
 
 	// Get the PRX, free the used memory and delete the object and its ID
-	const auto prx = Emu.GetIdManager().GetIDData<sys_prx_t>(id);
+	const auto prx = Emu.GetIdManager().get<lv2_prx_t>(id);
 
 	if (!prx)
 	{
@@ -111,7 +110,7 @@ s32 sys_prx_unload_module(s32 id, u64 flags, vm::ptr<sys_prx_unload_module_optio
 	}
 
 	Memory.Free(prx->address);
-	Emu.GetIdManager().RemoveID<sys_prx_t>(id);
+	Emu.GetIdManager().remove<lv2_prx_t>(id);
 	
 	return CELL_OK;
 }

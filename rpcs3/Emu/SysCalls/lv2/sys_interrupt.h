@@ -2,10 +2,17 @@
 
 class PPUThread;
 
-struct interrupt_handler_t
+struct lv2_int_handler_t
 {
 	std::shared_ptr<CPUThread> handler;
+
+	lv2_int_handler_t(const std::shared_ptr<CPUThread>& handler)
+		: handler(handler)
+	{
+	}
 };
+
+REG_ID_TYPE(lv2_int_handler_t, 0x0B); // SYS_INTR_SERVICE_HANDLE_OBJECT
 
 // SysCalls
 s32 sys_interrupt_tag_destroy(u32 intrtag);

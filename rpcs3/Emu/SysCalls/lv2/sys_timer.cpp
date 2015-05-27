@@ -18,7 +18,7 @@ s32 sys_timer_create(vm::ptr<u32> timer_id)
 
 	std::shared_ptr<lv2_timer_t> timer(new lv2_timer_t);
 
-	thread_t(fmt::format("Timer[0x%x] Thread", (*timer_id = Emu.GetIdManager().GetNewID(timer, TYPE_TIMER))), [timer]()
+	thread_t(fmt::format("Timer[0x%x] Thread", (*timer_id = Emu.GetIdManager().add(timer))), [timer]() // TODO: call from the constructor
 	{
 		LV2_LOCK;
 
@@ -62,7 +62,7 @@ s32 sys_timer_destroy(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -74,7 +74,7 @@ s32 sys_timer_destroy(u32 timer_id)
 		return CELL_EISCONN;
 	}
 
-	Emu.GetIdManager().RemoveID<lv2_timer_t>(timer_id);
+	Emu.GetIdManager().remove<lv2_timer_t>(timer_id);
 
 	return CELL_OK;
 }
@@ -85,7 +85,7 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 
 	LV2_LOCK;
 	
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -108,7 +108,7 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -160,7 +160,7 @@ s32 sys_timer_stop(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
@@ -178,8 +178,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
-	const auto queue = Emu.GetIdManager().GetIDData<event_queue_t>(queue_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
+	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(queue_id);
 
 	if (!timer || !queue)
 	{
@@ -205,7 +205,7 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 
 	LV2_LOCK;
 
-	const auto timer = Emu.GetIdManager().GetIDData<lv2_timer_t>(timer_id);
+	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
