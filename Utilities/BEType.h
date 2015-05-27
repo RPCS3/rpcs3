@@ -388,7 +388,7 @@ union _CRT_ALIGN(16) u128
 	}
 };
 
-static __forceinline u128 __sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static __forceinline u128 sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
 #if !defined(_MSC_VER)
 	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
@@ -399,7 +399,7 @@ static __forceinline u128 __sync_val_compare_and_swap(volatile u128* dest, u128 
 #endif
 }
 
-static __forceinline bool __sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static __forceinline bool sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
 #if !defined(_MSC_VER)
 	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
@@ -408,39 +408,39 @@ static __forceinline bool __sync_bool_compare_and_swap(volatile u128* dest, u128
 #endif
 }
 
-static __forceinline u128 __sync_lock_test_and_set(volatile u128* dest, u128 value)
+static __forceinline u128 sync_lock_test_and_set(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (__sync_bool_compare_and_swap(dest, old, value)) return old;
+		if (sync_bool_compare_and_swap(dest, old, value)) return old;
 	}
 }
 
-static __forceinline u128 __sync_fetch_and_or(volatile u128* dest, u128 value)
+static __forceinline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (__sync_bool_compare_and_swap(dest, old, value | old)) return old;
+		if (sync_bool_compare_and_swap(dest, old, value | old)) return old;
 	}
 }
 
-static __forceinline u128 __sync_fetch_and_and(volatile u128* dest, u128 value)
+static __forceinline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (__sync_bool_compare_and_swap(dest, old, value & old)) return old;
+		if (sync_bool_compare_and_swap(dest, old, value & old)) return old;
 	}
 }
 
-static __forceinline u128 __sync_fetch_and_xor(volatile u128* dest, u128 value)
+static __forceinline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
 		const u128 old = *(u128*)dest;
-		if (__sync_bool_compare_and_swap(dest, old, value ^ old)) return old;
+		if (sync_bool_compare_and_swap(dest, old, value ^ old)) return old;
 	}
 }
 

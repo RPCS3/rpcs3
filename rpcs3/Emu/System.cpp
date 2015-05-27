@@ -326,7 +326,7 @@ void Emulator::Pause()
 	if (!IsRunning()) return;
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (__sync_bool_compare_and_swap((volatile u32*)&m_status, Running, Paused))
+	if (sync_bool_compare_and_swap((volatile u32*)&m_status, Running, Paused))
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
 
