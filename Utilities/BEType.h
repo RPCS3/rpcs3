@@ -444,6 +444,17 @@ static __forceinline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 	}
 }
 
+#if !defined(_MSC_VER)
+#define sync_val_compare_and_swap __sync_val_compare_and_swap
+#define sync_bool_compare_and_swap __sync_bool_compare_and_swap
+#define sync_lock_test_and_set __sync_lock_test_and_set
+#define sync_fetch_and_add __sync_fetch_and_add
+#define sync_fetch_and_sub __sync_fetch_and_sub
+#define sync_fetch_and_or __sync_fetch_and_or
+#define sync_fetch_and_and __sync_fetch_and_and
+#define sync_fetch_and_xor __sync_fetch_and_xor
+#endif
+
 #define re16(val) _byteswap_ushort(val)
 #define re32(val) _byteswap_ulong(val)
 #define re64(val) _byteswap_uint64(val)

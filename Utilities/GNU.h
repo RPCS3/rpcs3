@@ -78,15 +78,6 @@ int clock_gettime(int foo, struct timespec *ts);
 
 #endif /* __APPLE__ */
 
-#define sync_val_compare_and_swap __sync_val_compare_and_swap
-#define sync_bool_compare_and_swap __sync_bool_compare_and_swap
-#define sync_lock_test_and_set __sync_lock_test_and_set
-#define sync_fetch_and_add __sync_fetch_and_add
-#define sync_fetch_and_sub __sync_fetch_and_sub
-#define sync_fetch_and_or __sync_fetch_and_or
-#define sync_fetch_and_and __sync_fetch_and_and
-#define sync_fetch_and_xor __sync_fetch_and_xor
-
 #endif /* __GNUG__ */
 
 #if defined(_MSC_VER)
