@@ -76,7 +76,8 @@ public:
 	// read data with memory barrier
 	__forceinline const type read_sync() const volatile
 	{
-		return from_subtype(sync_val_compare_and_swap(const_cast<subtype*>(&sub_data), 0, 0));
+		const subtype zero = {};
+		return from_subtype(sync_val_compare_and_swap(const_cast<subtype*>(&sub_data), zero, zero));
 	}
 
 	// atomically replace data with exch, return previous data value
@@ -126,7 +127,8 @@ public:
 	// perform atomic operation on data with additional memory barrier
 	template<typename FT> __forceinline void atomic_op_sync(const FT atomic_proc) volatile
 	{
-		subtype old = sync_val_compare_and_swap(&sub_data, 0, 0);
+		const subtype zero = {};
+		subtype old = sync_val_compare_and_swap(&sub_data, zero, zero);
 		while (true)
 		{
 			subtype _new = old;
@@ -140,7 +142,8 @@ public:
 	// perform atomic operation on data with additional memory barrier and special exit condition (if intermediate result != proceed_value)
 	template<typename RT, typename FT> __forceinline RT atomic_op_sync(const RT proceed_value, const FT atomic_proc) volatile
 	{
-		subtype old = sync_val_compare_and_swap(&sub_data, 0, 0);
+		const subtype zero = {};
+		subtype old = sync_val_compare_and_swap(&sub_data, zero, zero);
 		while (true)
 		{
 			subtype _new = old;

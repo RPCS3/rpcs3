@@ -93,27 +93,27 @@ template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>
 	return __sync_lock_test_and_set(dest, value);
 }
 
-template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_add(volatile T* dest, T value)
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_fetch_and_add(volatile T* dest, T value)
 {
 	return __sync_lock_fetch_and_add(dest, value);
 }
 
-template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_sub(volatile T* dest, T value)
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_fetch_and_sub(volatile T* dest, T value)
 {
 	return __sync_lock_fetch_and_sub(dest, value);
 }
 
-template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_or(volatile T* dest, T value)
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_fetch_and_or(volatile T* dest, T value)
 {
 	return __sync_lock_fetch_and_or(dest, value);
 }
 
-template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_and(volatile T* dest, T value)
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_fetch_and_and(volatile T* dest, T value)
 {
 	return __sync_lock_fetch_and_and(dest, value);
 }
 
-template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_xor(volatile T* dest, T value)
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_fetch_and_xor(volatile T* dest, T value)
 {
 	return __sync_lock_fetch_and_xor(dest, value);
 }
