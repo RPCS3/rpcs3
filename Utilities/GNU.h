@@ -78,6 +78,46 @@ int clock_gettime(int foo, struct timespec *ts);
 
 #endif /* __APPLE__ */
 
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_val_compare_and_swap(volatile T* dest, T comp, T exch)
+{
+	return __sync_val_compare_and_swap(dest, comp, exch);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, bool>::type sync_bool_compare_and_swap(volatile T* dest, T comp, T exch)
+{
+	return __sync_bool_compare_and_swap(dest, comp, exch);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_test_and_set(volatile T* dest, T value)
+{
+	return __sync_lock_test_and_set(dest, value);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_add(volatile T* dest, T value)
+{
+	return __sync_lock_fetch_and_add(dest, value);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_sub(volatile T* dest, T value)
+{
+	return __sync_lock_fetch_and_sub(dest, value);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_or(volatile T* dest, T value)
+{
+	return __sync_lock_fetch_and_or(dest, value);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_and(volatile T* dest, T value)
+{
+	return __sync_lock_fetch_and_and(dest, value);
+}
+
+template<typename T> static inline typename std::enable_if<std::is_arithmetic<T>::value, T>::type sync_lock_fetch_and_xor(volatile T* dest, T value)
+{
+	return __sync_lock_fetch_and_xor(dest, value);
+}
+
 #endif /* __GNUG__ */
 
 #if defined(_MSC_VER)
