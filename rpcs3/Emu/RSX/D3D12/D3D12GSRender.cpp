@@ -679,7 +679,7 @@ void D3D12GSRender::ExecCMD()
 	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_samplerDescriptorHeap);
 	commandList->SetGraphicsRootDescriptorTable(3, Handle);
 
-	m_perFrameStorage.m_currentTextureIndex += 16;
+	m_perFrameStorage.m_currentTextureIndex += usedTexture;
 
 	InitDrawBuffers();
 
@@ -1241,12 +1241,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 
 		// Convert
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.pResource = m_fbo->getDepthStencilTexture();
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-		convertCommandList->ResourceBarrier(1, &barrier);
+		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_fbo->getDepthStencilTexture(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		convertCommandList->SetPipelineState(m_convertPSO);
 		convertCommandList->SetComputeRootSignature(m_convertRootSignature);
@@ -1254,8 +1249,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		convertCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
 		convertCommandList->Dispatch(RSXThread::m_width / 8, RSXThread::m_height / 8, 1);
 
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		// Flush UAV
 		D3D12_RESOURCE_BARRIER uavbarrier = {};
 		uavbarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -1263,15 +1256,11 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		D3D12_RESOURCE_BARRIER barriers[] =
 		{
-			barrier,
+			getResourceBarrierTransition(m_fbo->getDepthStencilTexture(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE),
 			uavbarrier,
 		};
 		convertCommandList->ResourceBarrier(2, barriers);
-
-		barrier.Transition.pResource = depthConverted;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-		convertCommandList->ResourceBarrier(1, &barrier);
+		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(depthConverted, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
 		convertCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);

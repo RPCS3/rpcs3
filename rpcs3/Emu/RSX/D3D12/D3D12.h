@@ -89,4 +89,15 @@ D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_F
 	return result;
 }
 
+inline
+D3D12_RESOURCE_BARRIER getResourceBarrierTransition(ID3D12Resource *res, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter)
+{
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = res;
+	barrier.Transition.StateBefore = stateBefore;
+	barrier.Transition.StateAfter = stateAfter;
+	return barrier;
+}
+
 #endif
