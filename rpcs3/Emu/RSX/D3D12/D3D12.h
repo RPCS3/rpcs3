@@ -80,8 +80,8 @@ D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_F
 	D3D12_RESOURCE_DESC result;
 	result = {};
 	result.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	result.Width = width;
-	result.Height = height;
+	result.Width = (UINT)width;
+	result.Height = (UINT)height;
 	result.Format = dxgiFormat;
 	result.DepthOrArraySize = 1;
 	result.SampleDesc.Count = 1;
