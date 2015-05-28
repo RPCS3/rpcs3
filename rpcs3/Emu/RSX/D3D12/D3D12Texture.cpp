@@ -67,7 +67,33 @@ size_t D3D12GSRender::UploadTextures()
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		switch (format)
 		{
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_DEPTH24_D8:
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		default:
+			LOG_ERROR(RSX, "Unimplemented Texture format");
+			break;
+		case CELL_GCM_TEXTURE_A8R8G8B8:
 			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 			pixelSize = 4;
 			break;
@@ -79,19 +105,11 @@ size_t D3D12GSRender::UploadTextures()
 
 		ID3D12Resource *Texture, *vramTexture;
 		size_t textureSize = w * h * 4;
-		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		textureDesc.Width = textureSize;
-		textureDesc.Height = 1;
-		textureDesc.DepthOrArraySize = 1;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.MipLevels = 1;
-		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 		check(m_device->CreatePlacedResource(
 			m_perFrameStorage.m_uploadTextureHeap,
 			m_perFrameStorage.m_currentStorageOffset,
-			&textureDesc,
+			&getBufferResourceDesc(textureSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&Texture)
@@ -107,21 +125,13 @@ size_t D3D12GSRender::UploadTextures()
 		rowPitch = (rowPitch + 255) & ~255;
 		// Upload with correct rowpitch
 		for (unsigned row = 0; row < m_textures[i].GetHeight(); row++)
-			streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
+				streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
 		Texture->Unmap(0, nullptr);
 
-		D3D12_RESOURCE_DESC vramTextureDesc = {};
-		vramTextureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		vramTextureDesc.Width = m_textures[i].GetWidth();
-		vramTextureDesc.Height = m_textures[i].GetHeight();
-		vramTextureDesc.Format = dxgiFormat;
-		vramTextureDesc.DepthOrArraySize = 1;
-		vramTextureDesc.SampleDesc.Count = 1;
-		vramTextureDesc.MipLevels = 1;
 		check(m_device->CreatePlacedResource(
 			m_perFrameStorage.m_textureStorage,
 			m_perFrameStorage.m_currentStorageOffset,
-			&vramTextureDesc,
+			&getTexture2DResourceDesc(m_textures[i].GetWidth(), m_textures[i].GetHeight(), dxgiFormat),
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
 			IID_PPV_ARGS(&vramTexture)
