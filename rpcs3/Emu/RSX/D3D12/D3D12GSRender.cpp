@@ -1177,7 +1177,7 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t rowPi
 	void *srcBuffer;
 	check(res->Map(0, nullptr, &srcBuffer));
 	for (unsigned row = 0; row < height; row++)
-		memcpy((char*)dstAddress + row * width, ((char*)srcBuffer) + row * rowPitch, width);
+		memcpy((char*)dstAddress + row * width * 4, (char*)srcBuffer + row * rowPitch, width * 4);
 	res->Unmap(0, nullptr);
 	res->Release();
 }
