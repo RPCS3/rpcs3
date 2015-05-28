@@ -169,6 +169,8 @@ size_t D3D12GSRender::UploadTextures()
 		// Upload with correct rowpitch
 		for (unsigned row = 0; row < heightInBlocks; row++)
 		{
+			size_t m_texture_pitch = m_textures[i].m_pitch;
+			if (!m_texture_pitch) m_texture_pitch = rowPitch;
 			if (format == CELL_GCM_TEXTURE_A8R8G8B8 && is_swizzled)
 			{
 				u32 *src, *dst;
@@ -186,7 +188,7 @@ size_t D3D12GSRender::UploadTextures()
 				}
 			}
 			else
-				streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
+				streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
 		}
 		Texture->Unmap(0, nullptr);
 
@@ -229,7 +231,7 @@ size_t D3D12GSRender::UploadTextures()
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
 		srvDesc.Texture2D.MipLevels = 1;
-		static const int RemapValue[4] =
+		const int RemapValue[4] =
 		{
 			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
 			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
