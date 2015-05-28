@@ -1132,6 +1132,56 @@ void D3D12GSRender::WriteDepthBuffer()
 {
 }
 
+static
+ID3D12Resource *writeColorBuffer(ID3D12Device *device, ID3D12Resource *RTT, ID3D12GraphicsCommandList *cmdlist, size_t rowPitch, size_t width, size_t height)
+{
+	ID3D12Resource *Result;
+
+	D3D12_HEAP_PROPERTIES heapProp = {};
+	heapProp.Type = D3D12_HEAP_TYPE_READBACK;
+	D3D12_RESOURCE_DESC resdesc = getBufferResourceDesc(rowPitch * height);
+
+
+	check(
+		device->CreateCommittedResource(
+			&heapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resdesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&Result)
+			)
+		);
+
+	cmdlist->ResourceBarrier(1, &getResourceBarrierTransition(RTT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+	D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+	src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	src.pResource = RTT;
+	dst.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	dst.pResource = Result;
+	dst.PlacedFootprint.Offset = 0;
+	dst.PlacedFootprint.Footprint.Depth = 1;
+	dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	dst.PlacedFootprint.Footprint.Height = (UINT)height;
+	dst.PlacedFootprint.Footprint.Width = (UINT)width;
+	dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
+	cmdlist->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+	cmdlist->ResourceBarrier(1, &getResourceBarrierTransition(RTT, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	return Result;
+}
+
+static
+void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t rowPitch, size_t width, size_t height)
+{
+	void *srcBuffer;
+	check(res->Map(0, nullptr, &srcBuffer));
+	for (unsigned row = 0; row < height; row++)
+		memcpy((char*)dstAddress + row * width, ((char*)srcBuffer) + row * rowPitch, width);
+	res->Unmap(0, nullptr);
+	res->Release();
+}
+
 
 void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 {
@@ -1151,22 +1201,18 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	fence->SetEventOnCompletion(1, handle);
 
 	ID3D12Resource *writeDest, *depthConverted;
-	ID3D12GraphicsCommandList *convertCommandList, *downloadCommandList;
+	ID3D12GraphicsCommandList *convertCommandList;
 	ID3D12DescriptorHeap *descriptorHeap;
-	size_t rowPitch = RSXThread::m_width;
-	rowPitch = (rowPitch + 255) & ~255;
+	size_t depthRowPitch = RSXThread::m_width;
+	depthRowPitch = (depthRowPitch + 255) & ~255;
+
+	bool needTransfer = m_set_context_dma_z || m_set_context_dma_color_a || m_set_context_dma_color_b || m_set_context_dma_color_c || m_set_context_dma_color_d;
+
 	if (m_set_context_dma_z)
 	{
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-		D3D12_RESOURCE_DESC resdesc = {};
-		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		resdesc.Width = RSXThread::m_width;
-		resdesc.Height = RSXThread::m_height;
-		resdesc.DepthOrArraySize = 1;
-		resdesc.SampleDesc.Count = 1;
-		resdesc.MipLevels = 1;
-		resdesc.Format = DXGI_FORMAT_R8_UNORM;
+		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(RSXThread::m_width, RSXThread::m_height, DXGI_FORMAT_R8_UNORM);
 		resdesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		check(
@@ -1182,14 +1228,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-		resdesc = {};
-		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resdesc.Width = RSXThread::m_width * RSXThread::m_height * 2; // * 2 for safety
-		resdesc.Height = 1;
-		resdesc.DepthOrArraySize = 1;
-		resdesc.SampleDesc.Count = 1;
-		resdesc.MipLevels = 1;
-		resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		resdesc = getBufferResourceDesc(depthRowPitch * RSXThread::m_height);
 
 		check(
 			m_device->CreateCommittedResource(
@@ -1239,7 +1278,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 		m_device->CreateUnorderedAccessView(depthConverted, nullptr, &uavDesc, Handle);
 
-
 		// Convert
 		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_fbo->getDepthStencilTexture(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
@@ -1264,11 +1302,18 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		convertCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
+	}
 
+	ID3D12GraphicsCommandList *downloadCommandList;
+	if (needTransfer)
+	{
 		check(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
+	}
 
+	if (m_set_context_dma_z)
+	{
 		// Copy
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
@@ -1280,16 +1325,52 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8_UNORM;
 		dst.PlacedFootprint.Footprint.Height = RSXThread::m_height;
 		dst.PlacedFootprint.Footprint.Width = RSXThread::m_width;
-		dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
+		dst.PlacedFootprint.Footprint.RowPitch = (UINT)depthRowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+	}
 
+	size_t colorRowPitch = RSXThread::m_width * 4;
+	colorRowPitch = (colorRowPitch + 255) & ~255;
+	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
+	switch (m_surface_color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_NONE:
+		break;
+
+	case CELL_GCM_SURFACE_TARGET_0:
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(0), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		break;
+
+	case CELL_GCM_SURFACE_TARGET_1:
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(1), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		break;
+
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(0), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(1), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		break;
+
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(0), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(1), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(2), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		break;
+
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(0), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(1), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(2), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		if (m_context_dma_color_b) rtt3 = writeColorBuffer(m_device, m_fbo->getRenderTargetTexture(3), downloadCommandList, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		break;
+	}
+	if (needTransfer)
+	{
 		downloadCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
-		//Wait for result
-		m_commandQueueGraphic->Signal(fence, 1);
 	}
-	else
-		m_commandQueueGraphic->Signal(fence, 1);
+
+	//Wait for result
+	m_commandQueueGraphic->Signal(fence, 1);
 
 	std::thread valueChangerThread([=]() {
 		WaitForSingleObject(handle, INFINITE);
@@ -1308,7 +1389,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				for (unsigned i = 0; i < RSXThread::m_width; i++)
 				{
-					unsigned char c = writeDestPtr[row * rowPitch + i];
+					unsigned char c = writeDestPtr[row * depthRowPitch + i];
 					ptrAsChar[4 * (row * RSXThread::m_width + i)] = c;
 					ptrAsChar[4 * (row * RSXThread::m_width + i) + 1] = c;
 					ptrAsChar[4 * (row * RSXThread::m_width + i) + 2] = c;
@@ -1318,9 +1399,75 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			writeDest->Release();
 			depthConverted->Release();
 			descriptorHeap->Release();
-			downloadCommandList->Release();
 			convertCommandList->Release();
 		}
+
+		switch (m_surface_color_target)
+		{
+		case CELL_GCM_SURFACE_TARGET_NONE:
+			break;
+
+		case CELL_GCM_SURFACE_TARGET_0:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		}
+			break;
+
+		case CELL_GCM_SURFACE_TARGET_1:
+		{
+			u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		}
+			break;
+
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		}
+			break;
+
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		}
+			break;
+
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+		{
+			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+			void *dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+			dstAddress = vm::get_ptr<void>(address);
+			copyToCellRamAndRelease(dstAddress, rtt3, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+		}
+			break;
+		}
+
+		if (needTransfer)
+			downloadCommandList->Release();
 
 		vm::write32(m_label_addr + offset, value);
 	});
