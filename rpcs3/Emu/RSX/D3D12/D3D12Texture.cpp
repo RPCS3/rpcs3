@@ -188,7 +188,7 @@ size_t D3D12GSRender::UploadTextures()
 
 				for (int j = 0; j <  m_textures[i].GetWidth(); j++)
 				{
-					dst[(row * rowPitch) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 			else
@@ -271,7 +271,7 @@ size_t D3D12GSRender::UploadTextures()
 		samplerDesc.MinLOD = m_textures[i].GetMinLOD() >> 8;
 		samplerDesc.MaxLOD = m_textures[i].GetMaxLOD() >> 8;
 		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		m_device->CreateSampler(&samplerDesc, Handle);
 
 		commandList->Close();
