@@ -40,14 +40,14 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 	default: sys_event.Error("sys_event_queue_create(): unknown type (0x%x)", type); return CELL_EINVAL;
 	}
 
-	const auto queue = Emu.GetEventManager().MakeEventQueue(protocol, type, attr->name_u64, event_queue_key, size);
+	auto queue = Emu.GetEventManager().MakeEventQueue(protocol, type, attr->name_u64, event_queue_key, size);
 
 	if (!queue)
 	{
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = Emu.GetIdManager().add(queue);
+	*equeue_id = Emu.GetIdManager().add(std::move(queue));
 	
 	return CELL_OK;
 }

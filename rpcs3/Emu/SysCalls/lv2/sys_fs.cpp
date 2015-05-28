@@ -183,7 +183,7 @@ s32 sys_fs_opendir(vm::ptr<const char> path, vm::ptr<u32> fd)
 		return CELL_FS_ENOENT;
 	}
 
-	*fd = Emu.GetIdManager().add(directory);
+	*fd = Emu.GetIdManager().add(std::move(directory));
 
 	return CELL_OK;
 }

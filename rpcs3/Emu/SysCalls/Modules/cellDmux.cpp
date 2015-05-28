@@ -998,9 +998,9 @@ s32 cellDmuxEnableEs(u32 handle, vm::ptr<const CellCodecEsFilterId> esFilterId, 
 
 	// TODO: check esFilterId, esResourceInfo, esCb and esSpecificInfo correctly
 
-	std::shared_ptr<ElementaryStream> es(new ElementaryStream(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
+	auto es = std::make_shared<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
-		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo));
+		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo);
 
 	u32 id = Emu.GetIdManager().add(es);
 	es->id = id;

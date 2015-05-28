@@ -29,14 +29,14 @@ s32 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
 
 s32 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8> port, s32 size, u64 name_u64)
 {
-	const auto queue = Emu.GetEventManager().MakeEventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
+	auto queue = Emu.GetEventManager().MakeEventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
 
 	if (!queue) // rough
 	{
 		return CELL_EAGAIN;
 	}
 
-	queue_id = Emu.GetIdManager().add(queue);
+	queue_id = Emu.GetIdManager().add(std::move(queue));
 
 	if (s32 res = spursAttachLv2EventQueue(spurs, queue_id, port, 1, true))
 	{

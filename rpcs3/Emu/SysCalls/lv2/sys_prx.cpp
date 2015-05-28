@@ -32,7 +32,7 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	}
 
 	// Create the PRX object and return its id
-	std::shared_ptr<lv2_prx_t> prx(new lv2_prx_t());
+	std::shared_ptr<lv2_prx_t> prx = std::make_shared<lv2_prx_t>();
 	prx->size = (u32)f.GetSize();
 	prx->address = (u32)Memory.Alloc(prx->size, 4);
 	prx->path = (const char*)path;
@@ -40,7 +40,7 @@ s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_loa
 	// Load the PRX into memory
 	f.Read(vm::get_ptr(prx->address), prx->size);
 
-	return Emu.GetIdManager().add(prx);
+	return Emu.GetIdManager().add(std::move(prx));
 }
 
 s32 sys_prx_load_module_on_memcontainer()

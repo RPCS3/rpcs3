@@ -39,7 +39,7 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 {
 	cellJpgDec.Warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
-	std::shared_ptr<CellJpgDecSubHandle> current_subHandle(new CellJpgDecSubHandle);
+	auto current_subHandle = std::make_shared<CellJpgDecSubHandle>();
 
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
@@ -63,7 +63,7 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
-	*subHandle = Emu.GetIdManager().add(current_subHandle);
+	*subHandle = Emu.GetIdManager().add(std::move(current_subHandle));
 
 	return CELL_OK;
 }

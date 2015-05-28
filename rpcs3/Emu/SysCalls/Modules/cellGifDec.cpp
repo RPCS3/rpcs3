@@ -34,7 +34,7 @@ s32 cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 {
 	cellGifDec.Warning("cellGifDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
-	std::shared_ptr<CellGifDecSubHandle> current_subHandle(new CellGifDecSubHandle);
+	auto current_subHandle = std::make_shared<CellGifDecSubHandle>();
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
@@ -57,7 +57,7 @@ s32 cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	*subHandle = Emu.GetIdManager().add(current_subHandle);
+	*subHandle = Emu.GetIdManager().add(std::move(current_subHandle));
 
 	return CELL_OK;
 }

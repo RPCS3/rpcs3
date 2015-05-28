@@ -23,15 +23,8 @@ public:
 	const std::type_info& info;
 	const u32 type;
 
-	template<typename T, typename... Args> ID_data_t(u32 type, Args&&... args) // doesn't work
-		: data(std::make_shared<T>(args...))
-		, info(typeid(T))
-		, type(type)
-	{
-	}
-
-	template<typename T> ID_data_t(const std::shared_ptr<T>& data, u32 type)
-		: data(data)
+	template<typename T> force_inline ID_data_t(std::shared_ptr<T> data, u32 type)
+		: data(std::move(data))
 		, info(typeid(T))
 		, type(type)
 	{
@@ -42,7 +35,7 @@ public:
 	ID_data_t& operator =(const ID_data_t& right) = delete;
 
 	ID_data_t(ID_data_t&& right)
-		: data(right.data)
+		: data(std::move(const_cast<std::shared_ptr<void>&>(right.data)))
 		, info(right.info)
 		, type(right.type)
 	{
@@ -95,11 +88,11 @@ public:
 	}
 	
 	// add new ID using existing std::shared_ptr (not recommended, use make() instead)
-	template<typename T> u32 add(const std::shared_ptr<T>& data, u32 type = ID_type<T>::type)
+	template<typename T> u32 add(std::shared_ptr<T> data, u32 type = ID_type<T>::type)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
 
-		m_id_map.emplace(m_cur_id, ID_data_t(data, type));
+		m_id_map.emplace(m_cur_id, ID_data_t(std::move(data), type));
 
 		return m_cur_id++;
 	}
