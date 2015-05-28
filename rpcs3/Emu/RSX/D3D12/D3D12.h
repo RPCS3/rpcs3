@@ -60,4 +60,33 @@ void streamBuffer(void* dst, void* src, size_t sizeInBytes)
 	}
 }
 
+inline
+D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
+{
+	D3D12_RESOURCE_DESC BufferDesc = {};
+	BufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	BufferDesc.Width = (UINT)sizeInByte;
+	BufferDesc.Height = 1;
+	BufferDesc.DepthOrArraySize = 1;
+	BufferDesc.SampleDesc.Count = 1;
+	BufferDesc.MipLevels = 1;
+	BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	return BufferDesc;
+}
+
+inline
+D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_FORMAT dxgiFormat)
+{
+	D3D12_RESOURCE_DESC result;
+	result = {};
+	result.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	result.Width = width;
+	result.Height = height;
+	result.Format = dxgiFormat;
+	result.DepthOrArraySize = 1;
+	result.SampleDesc.Count = 1;
+	result.MipLevels = 1;
+	return result;
+}
+
 #endif

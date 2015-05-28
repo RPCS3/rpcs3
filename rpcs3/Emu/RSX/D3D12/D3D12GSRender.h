@@ -104,6 +104,9 @@ private:
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;
 
+	// Used to fill unused texture slot
+	ID3D12Resource *m_dummyTexture;
+
 	struct IDXGISwapChain3 *m_swapChain;
 	//BackBuffers
 	ID3D12Resource* m_backBuffer[2];

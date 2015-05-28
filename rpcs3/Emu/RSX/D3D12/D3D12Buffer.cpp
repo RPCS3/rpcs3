@@ -132,19 +132,7 @@ void expandIndexedQuads(DstType *dst, const SrcType *src, size_t indexCount)
 	}
 }
 
-static
-D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
-{
-	D3D12_RESOURCE_DESC BufferDesc = {};
-	BufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	BufferDesc.Width = (UINT)sizeInByte;
-	BufferDesc.Height = 1;
-	BufferDesc.DepthOrArraySize = 1;
-	BufferDesc.SampleDesc.Count = 1;
-	BufferDesc.MipLevels = 1;
-	BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	return BufferDesc;
-}
+
 
 // D3D12GS member handling buffers
 

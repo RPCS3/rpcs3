@@ -303,10 +303,23 @@ D3D12GSRender::D3D12GSRender()
 
 	p.first->Release();
 	p.second->Release();
+
+	D3D12_HEAP_PROPERTIES hp = {};
+	hp.Type = D3D12_HEAP_TYPE_DEFAULT;
+	check(
+		m_device->CreateCommittedResource(
+			&hp,
+			D3D12_HEAP_FLAG_NONE,
+			&getTexture2DResourceDesc(2, 2, DXGI_FORMAT_R8G8B8A8_UNORM),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_dummyTexture))
+			);
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
+	m_dummyTexture->Release();
 	m_convertPSO->Release();
 	m_convertRootSignature->Release();
 	m_perFrameStorage.Release();
@@ -634,6 +647,28 @@ void D3D12GSRender::ExecCMD()
 	commandList->SetPipelineState(m_PSO);
 
 	size_t usedTexture = UploadTextures();
+	// Drivers don't like undefined texture descriptors
+	for (; usedTexture < 16; usedTexture++)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, Handle);
+
+		D3D12_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		m_device->CreateSampler(&samplerDesc, Handle);
+	}
+
 	Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
 	Handle.ptr += m_perFrameStorage.m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_textureDescriptorsHeap);
@@ -644,7 +679,7 @@ void D3D12GSRender::ExecCMD()
 	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_samplerDescriptorHeap);
 	commandList->SetGraphicsRootDescriptorTable(3, Handle);
 
-	m_perFrameStorage.m_currentTextureIndex += usedTexture;
+	m_perFrameStorage.m_currentTextureIndex += 16;
 
 	InitDrawBuffers();
 
