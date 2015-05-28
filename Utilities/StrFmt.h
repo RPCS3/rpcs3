@@ -95,7 +95,7 @@ namespace fmt
 	T by_value(T x) { return x; }
 
 	//wrapper to deal with advance sprintf formating options with automatic length finding
-	template<typename... Args> printf_alike(1, 2) std::string Format(const char* fmt, Args... parameters)
+	template<typename... Args> std::string Format(const char* fmt, Args... parameters)
 	{
 		size_t length = 256;
 		std::string str;
@@ -265,7 +265,7 @@ namespace fmt
 	vm::psv::ref (fmt::unveil) (vm_ref.h)
 	
 	*/
-	template<typename... Args> force_inline safe_buffers printf_alike(1, 2) std::string format(const char* fmt, Args... args)
+	template<typename... Args> force_inline safe_buffers std::string format(const char* fmt, Args... args)
 	{
 		return Format(fmt, do_unveil(args)...);
 	}

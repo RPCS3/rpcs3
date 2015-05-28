@@ -21,12 +21,6 @@
 #endif
 
 #if defined(_MSC_VER)
-#define printf_alike(x, y)
-#else
-#define printf_alike(x, y) __attribute__((format(printf, x, y)))
-#endif
-
-#if defined(_MSC_VER)
 #define force_inline __forceinline
 #else
 #define force_inline __attribute__((always_inline))

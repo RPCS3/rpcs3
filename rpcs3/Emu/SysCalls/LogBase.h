@@ -35,12 +35,12 @@ public:
 
 	virtual const std::string& GetName() const = 0;
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Notice(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Notice(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogNotice, fmt, fmt::do_unveil(args)...);
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Log(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Log(const char* fmt, Args... args) const
 	{
 		if (CheckLogging())
 		{
@@ -48,27 +48,27 @@ public:
 		}
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Success(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Success(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogSuccess, fmt, fmt::do_unveil(args)...);
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Warning(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Warning(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogWarning, fmt, fmt::do_unveil(args)...);
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Error(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Error(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogError, fmt, fmt::do_unveil(args)...);
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Fatal(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Fatal(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogFatal, fmt, fmt::do_unveil(args)...);
 	}
 
-	template<typename... Args> force_inline printf_alike(2, 3) void Todo(const char* fmt, Args... args) const
+	template<typename... Args> force_inline void Todo(const char* fmt, Args... args) const
 	{
 		LogPrepare(LogTodo, fmt, fmt::do_unveil(args)...);
 	}

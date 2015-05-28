@@ -129,7 +129,7 @@ static struct { inline operator Log::LogType() { return Log::LogType::TTY; } } T
 void log_message(Log::LogType type, Log::LogSeverity sev, const char* text);
 void log_message(Log::LogType type, Log::LogSeverity sev, std::string text);
 
-template<typename... Args> never_inline printf_alike(3, 4) void log_message(Log::LogType type, Log::LogSeverity sev, const char* fmt, Args... args)
+template<typename... Args> never_inline void log_message(Log::LogType type, Log::LogSeverity sev, const char* fmt, Args... args)
 {
 	log_message(type, sev, fmt::Format(fmt, fmt::do_unveil(args)...));
 }
