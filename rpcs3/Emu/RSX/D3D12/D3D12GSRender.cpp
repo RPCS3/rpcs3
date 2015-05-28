@@ -1265,14 +1265,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		convertCommandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&convertCommandList);
 
-		ID3D12Fence *convertDownloadFence;
 		check(
-			m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&convertDownloadFence))
-			);
-		m_commandQueueGraphic->Signal(convertDownloadFence, 1);
-
-		check(
-			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, m_perFrameStorage.m_downloadCommandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
+			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&downloadCommandList))
 			);
 
 		// Copy
@@ -1290,11 +1284,9 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 
 		downloadCommandList->Close();
-		m_commandQueueCopy->Wait(convertDownloadFence, 1);
-		m_commandQueueCopy->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&downloadCommandList);
 		//Wait for result
-		m_commandQueueCopy->Signal(fence, 1);
-		convertDownloadFence->Release();
+		m_commandQueueGraphic->Signal(fence, 1);
 	}
 	else
 		m_commandQueueGraphic->Signal(fence, 1);
