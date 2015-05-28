@@ -95,7 +95,7 @@ size_t D3D12GSRender::UploadTextures()
 		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
 		DXGI_FORMAT dxgiFormat;
-		size_t pixelSize;
+		size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
 		switch (format)
@@ -103,7 +103,6 @@ size_t D3D12GSRender::UploadTextures()
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		case CELL_GCM_TEXTURE_G8B8:
@@ -128,16 +127,30 @@ size_t D3D12GSRender::UploadTextures()
 			break;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-			pixelSize = 4;
+			blockSizeInByte = 4;
+			blockWidthInPixel = 1, blockHeightInPixel = 1;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+			dxgiFormat = DXGI_FORMAT_BC1_UNORM;
+			blockSizeInByte = 8;
+			blockWidthInPixel = 4, blockHeightInPixel = 4;
 			break;
 		case CELL_GCM_TEXTURE_B8:
 			dxgiFormat = DXGI_FORMAT_R8_UNORM;
-			pixelSize = 1;
+			blockSizeInByte = 1;
+			blockWidthInPixel = 1, blockHeightInPixel = 1;
 			break;
 		}
 
+		size_t heightInBlocks = (m_textures[i].GetHeight() + blockHeightInPixel - 1) / blockHeightInPixel;
+		size_t widthInBlocks = (m_textures[i].GetWidth() + blockWidthInPixel - 1) / blockWidthInPixel;
+		// Multiple of 256
+		size_t rowPitch = blockSizeInByte * widthInBlocks;
+		rowPitch = (rowPitch + 255) & ~255;
+
+
 		ID3D12Resource *Texture, *vramTexture;
-		size_t textureSize = w * h * 4;
+		size_t textureSize = rowPitch * heightInBlocks;
 
 		check(m_device->CreatePlacedResource(
 			m_perFrameStorage.m_uploadTextureHeap,
@@ -153,13 +166,10 @@ size_t D3D12GSRender::UploadTextures()
 		void *textureData;
 		check(Texture->Map(0, nullptr, (void**)&textureData));
 
-		// Multiple of 256
-		size_t rowPitch = m_textures[i].GetWidth() * pixelSize;
-		rowPitch = (rowPitch + 255) & ~255;
 		// Upload with correct rowpitch
-		for (unsigned row = 0; row < m_textures[i].GetHeight(); row++)
+		for (unsigned row = 0; row < heightInBlocks; row++)
 		{
-			if (is_swizzled)
+			if (format == CELL_GCM_TEXTURE_A8R8G8B8 && is_swizzled)
 			{
 				u32 *src, *dst;
 				u32 log2width, log2height;
