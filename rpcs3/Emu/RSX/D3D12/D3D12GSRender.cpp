@@ -66,7 +66,7 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 
 	// Texture
 	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 1024 * 1024 * 64;
+	heapDescription.SizeInBytes = 1024 * 1024 * 512;
 	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
@@ -243,11 +243,11 @@ D3D12GSRender::D3D12GSRender()
 	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
 	// Textures
 	descriptorRange[2].BaseShaderRegister = 0;
-	descriptorRange[2].NumDescriptors = 1;
+	descriptorRange[2].NumDescriptors = 16;
 	descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	// Samplers
 	descriptorRange[3].BaseShaderRegister = 0;
-	descriptorRange[3].NumDescriptors = 1;
+	descriptorRange[3].NumDescriptors = 16;
 	descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 	D3D12_ROOT_PARAMETER RP[4] = {};
 	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -559,10 +559,27 @@ bool D3D12GSRender::LoadProgram()
 		LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
 		assert(0);
 	}
-;
+
+	switch (m_surface_color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_0:
+	case CELL_GCM_SURFACE_TARGET_1:
+		prop.numMRT = 1;
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+		prop.numMRT = 2;
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+		prop.numMRT = 3;
+		break;
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+		prop.numMRT = 4;
+		break;
+	default:
+		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
+	}
 
 	prop.IASet = m_IASet;
-
 
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
 	return m_PSO != nullptr;

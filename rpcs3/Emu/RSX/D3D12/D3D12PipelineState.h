@@ -16,11 +16,12 @@ struct D3D12PipelineProperties
 	DXGI_FORMAT DepthStencilFormat;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
 	D3D12_BLEND_DESC Blend;
+	unsigned numMRT : 3;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
 		// TODO: blend and IASet equality
-		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat;
+		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
 	}
 };
 
@@ -144,8 +145,9 @@ struct D3D12Traits
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
 		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;
 
-		graphicPipelineStateDesc.NumRenderTargets = 1;
-		graphicPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		graphicPipelineStateDesc.NumRenderTargets = pipelineProperties.numMRT;
+		for (unsigned i = 0; i < pipelineProperties.numMRT; i++)
+			graphicPipelineStateDesc.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		graphicPipelineStateDesc.DSVFormat = pipelineProperties.DepthStencilFormat;
 
 		graphicPipelineStateDesc.InputLayout.pInputElementDescs = pipelineProperties.IASet.data();
