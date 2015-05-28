@@ -3,6 +3,38 @@
 #include "D3D12GSRender.h"
 // For clarity this code deals with texture but belongs to D3D12GSRender class
 
+
+static
+u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+{
+	u32 offset = 0;
+	u32 shift_count = 0;
+	while (log2_width | log2_height | log2_depth) {
+		if (log2_width)
+		{
+			offset |= (x & 0x01) << shift_count;
+			x >>= 1;
+			++shift_count;
+			--log2_width;
+		}
+		if (log2_height)
+		{
+			offset |= (y & 0x01) << shift_count;
+			y >>= 1;
+			++shift_count;
+			--log2_height;
+		}
+		if (log2_depth)
+		{
+			offset |= (z & 0x01) << shift_count;
+			z >>= 1;
+			++shift_count;
+			--log2_depth;
+		}
+	}
+	return offset;
+}
+
 static D3D12_COMPARISON_FUNC ComparisonFunc[] =
 {
 	D3D12_COMPARISON_FUNC_NEVER,
@@ -65,6 +97,7 @@ size_t D3D12GSRender::UploadTextures()
 		DXGI_FORMAT dxgiFormat;
 		size_t pixelSize;
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
 		switch (format)
 		{
 		case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -125,7 +158,26 @@ size_t D3D12GSRender::UploadTextures()
 		rowPitch = (rowPitch + 255) & ~255;
 		// Upload with correct rowpitch
 		for (unsigned row = 0; row < m_textures[i].GetHeight(); row++)
+		{
+			if (is_swizzled)
+			{
+				u32 *src, *dst;
+				u32 log2width, log2height;
+
+				src = (u32*)pixels;
+				dst = (u32*)textureData;
+
+				log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
+				log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
+
+				for (int j = 0; j <  m_textures[i].GetWidth(); j++)
+				{
+					dst[(row * rowPitch) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+				}
+			}
+			else
 				streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_textures[i].m_pitch, m_textures[i].m_pitch);
+		}
 		Texture->Unmap(0, nullptr);
 
 		check(m_device->CreatePlacedResource(
@@ -167,7 +219,25 @@ size_t D3D12GSRender::UploadTextures()
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
 		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
+		static const int RemapValue[4] =
+		{
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
+		};
+		if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
+		{
+			u8 remap_a = m_textures[i].GetRemap() & 0x3;
+			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
+			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
+			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
+
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(RemapValue[remap_a], RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b]);
+		}
+		else
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(RemapValue[0], RemapValue[1], RemapValue[2], RemapValue[3]);
+
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
