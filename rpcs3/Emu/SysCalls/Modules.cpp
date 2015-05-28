@@ -15,9 +15,19 @@ std::vector<StaticFunc> g_ppu_func_subs;
 
 u32 add_ppu_func(ModuleFunc func)
 {
+	if (g_ppu_func_list.empty())
+	{
+		// prevent relocations if the array growths, must be sizeof(ModuleFunc) * 0x8000 ~~ about 1 MB of memory
+		g_ppu_func_list.reserve(0x8000);
+	}
+
 	for (auto& f : g_ppu_func_list)
 	{
-		assert(f.id != func.id);
+		if (f.id == func.id)
+		{
+			// TODO: if NIDs overlap or if the same function is added twice
+			assert(!"add_ppu_func(): NID already exists");
+		}
 	}
 
 	g_ppu_func_list.push_back(func);
@@ -93,14 +103,55 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 {
 	if (auto func = get_ppu_func_by_index(index))
 	{
-		auto old_last_syscall = CPU.m_last_syscall;
-		CPU.m_last_syscall = func->id;
-
+		// save RTOC if necessary
 		if (index & EIF_SAVE_RTOC)
 		{
-			// save RTOC if necessary
 			vm::write64(vm::cast(CPU.GPR[1] + 0x28), CPU.GPR[2]);
 		}
+
+		// save old syscall/NID value
+		auto old_last_syscall = CPU.m_last_syscall;
+
+		// branch directly to the LLE function
+		if (index & EIF_USE_BRANCH)
+		{
+			// for example, FastCall2 can't work with functions which do user level context switch
+
+			if (old_last_syscall)
+			{
+				throw "Unfortunately, this function cannot be called from the callback.";
+			}
+
+			if (!func->lle_func)
+			{
+				throw "Wrong usage: LLE function not set.";
+			}
+
+			if (func->flags & MFF_FORCED_HLE)
+			{
+				throw "Wrong usage: Forced HLE enabled.";
+			}
+
+			if (Ini.HLELogging.GetValue())
+			{
+				LOG_NOTICE(HLE, "Branch to LLE function: %s", SysCalls::GetFuncName(func->id));
+			}
+
+			if (index & EIF_PERFORM_BLR)
+			{
+				throw "TODO: Branch with link";
+				// CPU.LR = CPU.PC + 4;
+			}
+
+			const auto data = vm::get_ptr<be_t<u32>>(func->lle_func.addr());
+			CPU.SetBranch(data[0]);
+			CPU.GPR[2] = data[1]; // set rtoc
+
+			return;
+		}
+		
+		// change current syscall/NID value
+		CPU.m_last_syscall = func->id;
 
 		if (func->lle_func && !(func->flags & MFF_FORCED_HLE))
 		{
@@ -427,6 +478,15 @@ bool patch_ppu_import(u32 addr, u32 index)
 
 	using namespace PPU_instr;
 
+	if (index >= g_ppu_func_list.size())
+	{
+		return false;
+	}
+
+	const u32 imm = (g_ppu_func_list[index].flags & MFF_NO_RETURN) && !(g_ppu_func_list[index].flags & MFF_FORCED_HLE)
+		? index | EIF_USE_BRANCH
+		: index | EIF_PERFORM_BLR;
+
 	// check different patterns:
 
 	if (vm::check_addr(addr, 32) &&
@@ -439,7 +499,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		data[6] == MTCTR(r0) &&
 		data[7] == BCTR())
 	{
-		vm::write32(addr, HACK(index | EIF_SAVE_RTOC | EIF_PERFORM_BLR));
+		vm::write32(addr, HACK(imm | EIF_SAVE_RTOC));
 		return true;
 	}
 
@@ -467,7 +527,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 			sub[0xd] == MTLR(r0) &&
 			sub[0xe] == BLR())
 		{
-			vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+			vm::write32(addr, HACK(imm));
 			return true;
 		}
 	}
@@ -490,7 +550,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		data[0xe] == MTLR(r0) &&
 		data[0xf] == BLR())
 	{
-		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		vm::write32(addr, HACK(imm));
 		return true;
 	}
 
@@ -511,7 +571,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		data[0xd] == MTLR(r0) &&
 		data[0xe] == BLR())
 	{
-		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		vm::write32(addr, HACK(imm));
 		return true;
 	}
 
@@ -531,7 +591,7 @@ bool patch_ppu_import(u32 addr, u32 index)
 		data[0xc] == LD(r2, r1, 0x28) &&
 		data[0xd] == BLR())
 	{
-		vm::write32(addr, HACK(index | EIF_PERFORM_BLR));
+		vm::write32(addr, HACK(imm));
 		return true;
 	}
 
