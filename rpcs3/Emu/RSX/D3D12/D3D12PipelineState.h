@@ -17,11 +17,12 @@ struct D3D12PipelineProperties
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
 	D3D12_BLEND_DESC Blend;
 	unsigned numMRT : 3;
+	bool depthEnabled : 1;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
 		// TODO: blend and IASet equality
-		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
+		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && depthEnabled == in.depthEnabled;
 	}
 };
 
@@ -144,6 +145,8 @@ struct D3D12Traits
 		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
 		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;
+
+		graphicPipelineStateDesc.DepthStencilState.DepthEnable = pipelineProperties.depthEnabled;
 
 		graphicPipelineStateDesc.NumRenderTargets = pipelineProperties.numMRT;
 		for (unsigned i = 0; i < pipelineProperties.numMRT; i++)

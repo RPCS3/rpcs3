@@ -579,6 +579,8 @@ bool D3D12GSRender::LoadProgram()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
 
+	prop.depthEnabled = m_set_depth_test;
+
 	prop.IASet = m_IASet;
 
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
