@@ -95,8 +95,7 @@ namespace fmt
 	T by_value(T x) { return x; }
 
 	//wrapper to deal with advance sprintf formating options with automatic length finding
-	template<typename  ... Args>
-	std::string Format(const char* fmt, Args ... parameters)
+	template<typename... Args> std::string Format(const char* fmt, Args... parameters) printf_alike(1, 2)
 	{
 		size_t length = 256;
 		std::string str;
@@ -139,7 +138,7 @@ namespace fmt
 
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
-					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + std::string(src.c_str() + pos + comp_length);
+					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + src.substr(pos + comp_length);
 					pos += list[i].second.length() - 1;
 					break;
 				}
@@ -163,7 +162,7 @@ namespace fmt
 
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
-					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + std::string(src.c_str() + pos + comp_length);
+					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + src.substr(pos + comp_length);
 					pos += list[i].second().length() - 1;
 					break;
 				}
@@ -182,7 +181,7 @@ namespace fmt
 	{
 		typedef T result_type;
 
-		__forceinline static result_type get_value(const T& arg)
+		force_inline static result_type get_value(const T& arg)
 		{
 			return arg;
 		}
@@ -193,7 +192,7 @@ namespace fmt
 	{
 		typedef const char* result_type;
 
-		__forceinline static result_type get_value(const char* arg)
+		force_inline static result_type get_value(const char* arg)
 		{
 			return arg;
 		}
@@ -204,7 +203,7 @@ namespace fmt
 	{
 		typedef const char* result_type;
 
-		__forceinline static result_type get_value(const char(&arg)[N])
+		force_inline static result_type get_value(const char(&arg)[N])
 		{
 			return arg;
 		}
@@ -215,7 +214,7 @@ namespace fmt
 	{
 		typedef const char* result_type;
 
-		__forceinline static result_type get_value(const std::string& arg)
+		force_inline static result_type get_value(const std::string& arg)
 		{
 			return arg.c_str();
 		}
@@ -226,7 +225,7 @@ namespace fmt
 	{
 		typedef typename std::underlying_type<T>::type result_type;
 
-		__forceinline static result_type get_value(const T& arg)
+		force_inline static result_type get_value(const T& arg)
 		{
 			return static_cast<result_type>(arg);
 		}
@@ -237,14 +236,14 @@ namespace fmt
 	{
 		typedef typename unveil<T>::result_type result_type;
 
-		__forceinline static result_type get_value(const be_t<T, T2>& arg)
+		force_inline static result_type get_value(const be_t<T, T2>& arg)
 		{
 			return unveil<T>::get_value(arg.value());
 		}
 	};
 
 	template<typename T>
-	__forceinline typename unveil<T>::result_type do_unveil(const T& arg)
+	force_inline typename unveil<T>::result_type do_unveil(const T& arg)
 	{
 		return unveil<T>::get_value(arg);
 	}
@@ -266,8 +265,7 @@ namespace fmt
 	vm::psv::ref (fmt::unveil) (vm_ref.h)
 	
 	*/
-	template<typename... Args>
-	__forceinline __safebuffers std::string format(const char* fmt, Args... args)
+	template<typename... Args> force_inline safe_buffers std::string format(const char* fmt, Args... args) printf_alike(1, 2)
 	{
 		return Format(fmt, do_unveil(args)...);
 	}

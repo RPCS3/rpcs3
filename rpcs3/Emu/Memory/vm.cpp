@@ -91,7 +91,7 @@ namespace vm
 
 		bool do_notify;
 
-		__noinline void lock()
+		never_inline void lock()
 		{
 			NamedThreadBase* owner = GetCurrentNamedThread();
 			NamedThreadBase* old = nullptr;
@@ -113,7 +113,7 @@ namespace vm
 			do_notify = true;
 		}
 
-		__noinline void unlock()
+		never_inline void unlock()
 		{
 			NamedThreadBase* owner = GetCurrentNamedThread();
 

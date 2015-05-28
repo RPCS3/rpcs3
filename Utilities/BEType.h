@@ -2,7 +2,7 @@
 
 #define IS_LE_MACHINE
 
-union _CRT_ALIGN(16) u128
+union u128
 {
 	u64 _u64[2];
 	s64 _s64[2];
@@ -107,12 +107,12 @@ union _CRT_ALIGN(16) u128
 			{
 			}
 
-			__forceinline operator bool() const
+			force_inline operator bool() const
 			{
 				return (data & mask) != 0;
 			}
 
-			__forceinline bit_element& operator = (const bool right)
+			force_inline bit_element& operator = (const bool right)
 			{
 				if (right)
 				{
@@ -125,7 +125,7 @@ union _CRT_ALIGN(16) u128
 				return *this;
 			}
 
-			__forceinline bit_element& operator = (const bit_element& right)
+			force_inline bit_element& operator = (const bit_element& right)
 			{
 				if (right)
 				{
@@ -249,77 +249,77 @@ union _CRT_ALIGN(16) u128
 		return ret;
 	}
 
-	static __forceinline u128 add8(const u128& left, const u128& right)
+	static force_inline u128 add8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 add16(const u128& left, const u128& right)
+	static force_inline u128 add16(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi16(left.vi, right.vi));
 	}
 
-	static __forceinline u128 add32(const u128& left, const u128& right)
+	static force_inline u128 add32(const u128& left, const u128& right)
 	{
 		return fromV(_mm_add_epi32(left.vi, right.vi));
 	}
 
-	static __forceinline u128 addfs(const u128& left, const u128& right)
+	static force_inline u128 addfs(const u128& left, const u128& right)
 	{
 		return fromF(_mm_add_ps(left.vf, right.vf));
 	}
 
-	static __forceinline u128 addfd(const u128& left, const u128& right)
+	static force_inline u128 addfd(const u128& left, const u128& right)
 	{
 		return fromD(_mm_add_pd(left.vd, right.vd));
 	}
 
-	static __forceinline u128 sub8(const u128& left, const u128& right)
+	static force_inline u128 sub8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 sub16(const u128& left, const u128& right)
+	static force_inline u128 sub16(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi16(left.vi, right.vi));
 	}
 
-	static __forceinline u128 sub32(const u128& left, const u128& right)
+	static force_inline u128 sub32(const u128& left, const u128& right)
 	{
 		return fromV(_mm_sub_epi32(left.vi, right.vi));
 	}
 
-	static __forceinline u128 subfs(const u128& left, const u128& right)
+	static force_inline u128 subfs(const u128& left, const u128& right)
 	{
 		return fromF(_mm_sub_ps(left.vf, right.vf));
 	}
 
-	static __forceinline u128 subfd(const u128& left, const u128& right)
+	static force_inline u128 subfd(const u128& left, const u128& right)
 	{
 		return fromD(_mm_sub_pd(left.vd, right.vd));
 	}
 
-	static __forceinline u128 maxu8(const u128& left, const u128& right)
+	static force_inline u128 maxu8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_max_epu8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 minu8(const u128& left, const u128& right)
+	static force_inline u128 minu8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_min_epu8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 eq8(const u128& left, const u128& right)
+	static force_inline u128 eq8(const u128& left, const u128& right)
 	{
 		return fromV(_mm_cmpeq_epi8(left.vi, right.vi));
 	}
 
-	static __forceinline u128 eq16(const u128& left, const u128& right)
+	static force_inline u128 eq16(const u128& left, const u128& right)
 	{
 		return fromV(_mm_cmpeq_epi16(left.vi, right.vi));
 	}
 
-	static __forceinline u128 eq32(const u128& left, const u128& right)
+	static force_inline u128 eq32(const u128& left, const u128& right)
 	{
 		return fromV(_mm_cmpeq_epi32(left.vi, right.vi));
 	}
@@ -334,17 +334,17 @@ union _CRT_ALIGN(16) u128
 		return (_u64[0] != right._u64[0]) || (_u64[1] != right._u64[1]);
 	}
 
-	__forceinline u128 operator | (const u128& right) const
+	force_inline u128 operator | (const u128& right) const
 	{
 		return fromV(_mm_or_si128(vi, right.vi));
 	}
 
-	__forceinline u128 operator & (const u128& right) const
+	force_inline u128 operator & (const u128& right) const
 	{
 		return fromV(_mm_and_si128(vi, right.vi));
 	}
 
-	__forceinline u128 operator ^ (const u128& right) const
+	force_inline u128 operator ^ (const u128& right) const
 	{
 		return fromV(_mm_xor_si128(vi, right.vi));
 	}
@@ -354,18 +354,18 @@ union _CRT_ALIGN(16) u128
 		return from64(~_u64[0], ~_u64[1]);
 	}
 
-	__forceinline bool is_any_1() const // check if any bit is 1
+	force_inline bool is_any_1() const // check if any bit is 1
 	{
 		return _u64[0] || _u64[1];
 	}
 
-	__forceinline bool is_any_0() const // check if any bit is 0
+	force_inline bool is_any_0() const // check if any bit is 0
 	{
 		return ~_u64[0] || ~_u64[1];
 	}
 
 	// result = (~left) & (right)
-	static __forceinline u128 andnot(const u128& left, const u128& right)
+	static force_inline u128 andnot(const u128& left, const u128& right)
 	{
 		return fromV(_mm_andnot_si128(left.vi, right.vi));
 	}
@@ -379,7 +379,7 @@ union _CRT_ALIGN(16) u128
 
 	std::string to_xyzw() const;
 
-	static __forceinline u128 byteswap(const u128 val)
+	static force_inline u128 byteswap(const u128 val)
 	{
 		u128 ret;
 		ret._u64[0] = _byteswap_uint64(val._u64[1]);
@@ -388,7 +388,9 @@ union _CRT_ALIGN(16) u128
 	}
 };
 
-static __forceinline u128 sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static_assert(__alignof(u128) == 16 && sizeof(u128) == 16, "Wrong u128 size or alignment");
+
+static force_inline u128 sync_val_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
 #if !defined(_MSC_VER)
 	auto res = __sync_val_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
@@ -399,7 +401,7 @@ static __forceinline u128 sync_val_compare_and_swap(volatile u128* dest, u128 co
 #endif
 }
 
-static __forceinline bool sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
+static force_inline bool sync_bool_compare_and_swap(volatile u128* dest, u128 comp, u128 exch)
 {
 #if !defined(_MSC_VER)
 	return __sync_bool_compare_and_swap((volatile __int128_t*)dest, (__int128_t&)comp, (__int128_t&)exch);
@@ -408,7 +410,7 @@ static __forceinline bool sync_bool_compare_and_swap(volatile u128* dest, u128 c
 #endif
 }
 
-static __forceinline u128 sync_lock_test_and_set(volatile u128* dest, u128 value)
+static force_inline u128 sync_lock_test_and_set(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
@@ -417,7 +419,7 @@ static __forceinline u128 sync_lock_test_and_set(volatile u128* dest, u128 value
 	}
 }
 
-static __forceinline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
+static force_inline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
@@ -426,7 +428,7 @@ static __forceinline u128 sync_fetch_and_or(volatile u128* dest, u128 value)
 	}
 }
 
-static __forceinline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
+static force_inline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
@@ -435,7 +437,7 @@ static __forceinline u128 sync_fetch_and_and(volatile u128* dest, u128 value)
 	}
 }
 
-static __forceinline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
+static force_inline u128 sync_fetch_and_xor(volatile u128* dest, u128 value)
 {
 	while (true)
 	{
@@ -453,12 +455,12 @@ template<typename T, int size = sizeof(T)> struct se_t;
 
 template<typename T> struct se_t<T, 1>
 {
-	static __forceinline u8 to_be(const T& src)
+	static force_inline u8 to_be(const T& src)
 	{
 		return (u8&)src;
 	}
 
-	static __forceinline T from_be(const u8 src)
+	static force_inline T from_be(const u8 src)
 	{
 		return (T&)src;
 	}
@@ -466,12 +468,12 @@ template<typename T> struct se_t<T, 1>
 
 template<typename T> struct se_t<T, 2>
 {
-	static __forceinline u16 to_be(const T& src)
+	static force_inline u16 to_be(const T& src)
 	{
 		return _byteswap_ushort((u16&)src);
 	}
 
-	static __forceinline T from_be(const u16 src)
+	static force_inline T from_be(const u16 src)
 	{
 		const u16 res = _byteswap_ushort(src);
 		return (T&)res;
@@ -480,12 +482,12 @@ template<typename T> struct se_t<T, 2>
 
 template<typename T> struct se_t<T, 4>
 {
-	static __forceinline u32 to_be(const T& src)
+	static force_inline u32 to_be(const T& src)
 	{
 		return _byteswap_ulong((u32&)src);
 	}
 
-	static __forceinline T from_be(const u32 src)
+	static force_inline T from_be(const u32 src)
 	{
 		const u32 res = _byteswap_ulong(src);
 		return (T&)res;
@@ -494,12 +496,12 @@ template<typename T> struct se_t<T, 4>
 
 template<typename T> struct se_t<T, 8>
 {
-	static __forceinline u64 to_be(const T& src)
+	static force_inline u64 to_be(const T& src)
 	{
 		return _byteswap_uint64((u64&)src);
 	}
 
-	static __forceinline T from_be(const u64 src)
+	static force_inline T from_be(const u64 src)
 	{
 		const u64 res = _byteswap_uint64(src);
 		return (T&)res;
@@ -508,12 +510,12 @@ template<typename T> struct se_t<T, 8>
 
 template<typename T> struct se_t<T, 16>
 {
-	static __forceinline u128 to_be(const T& src)
+	static force_inline u128 to_be(const T& src)
 	{
 		return u128::byteswap((u128&)src);
 	}
 
-	static __forceinline T from_be(const u128& src)
+	static force_inline T from_be(const u128& src)
 	{
 		const u128 res = u128::byteswap(src);
 		return (T&)res;
@@ -603,7 +605,7 @@ private:
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
 	{
-		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		static force_inline be_t<Tto>& func(Tfrom& be_value)
 		{
 			Tto res = be_value;
 			return (be_t<Tto>&)res;
@@ -613,7 +615,7 @@ private:
 	template<typename Tto, typename Tfrom>
 	struct _convert<Tto, Tfrom, 1>
 	{
-		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		static force_inline be_t<Tto>& func(Tfrom& be_value)
 		{
 			Tto res = se_t<Tto, sizeof(Tto)>::func(se_t<Tfrom, sizeof(Tfrom)>::func(be_value));
 			return (be_t<Tto>&)res;
@@ -623,7 +625,7 @@ private:
 	template<typename Tto, typename Tfrom>
 	struct _convert<Tto, Tfrom, 2>
 	{
-		static __forceinline be_t<Tto>& func(Tfrom& be_value)
+		static force_inline be_t<Tto>& func(Tfrom& be_value)
 		{
 			Tto res = be_value >> ((sizeof(Tfrom)-sizeof(Tto)) * 8);
 			return (be_t<Tto>&)res;
@@ -673,7 +675,7 @@ public:
 	}
 
 	//get value in current machine byte ordering
-	__forceinline type value() const
+	force_inline type value() const
 	{
 #ifdef IS_LE_MACHINE
 		return ToLE();
@@ -906,13 +908,13 @@ struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
 };
 
 template<typename Tto, typename Tfrom>
-__forceinline Tto convert_le_be(Tfrom&& value)
+force_inline Tto convert_le_be(Tfrom&& value)
 {
 	return convert_le_be_t<Tto, Tfrom>::func(value);
 }
 
 template<typename Tto, typename Tfrom>
-__forceinline void convert_le_be(Tto& dst, Tfrom&& src)
+force_inline void convert_le_be(Tto& dst, Tfrom&& src)
 {
 	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }

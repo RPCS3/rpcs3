@@ -190,10 +190,10 @@ public:
 	void SavePoints(const std::string& path);
 	void LoadPoints(const std::string& path);
 
-	__forceinline bool IsRunning() const { return m_status == Running; }
-	__forceinline bool IsPaused()  const { return m_status == Paused; }
-	__forceinline bool IsStopped() const { return m_status == Stopped; }
-	__forceinline bool IsReady()   const { return m_status == Ready; }
+	force_inline bool IsRunning() const { return m_status == Running; }
+	force_inline bool IsPaused()  const { return m_status == Paused; }
+	force_inline bool IsStopped() const { return m_status == Stopped; }
+	force_inline bool IsReady()   const { return m_status == Ready; }
 };
 
 using lv2_lock_type = std::unique_lock<std::mutex>;

@@ -50,7 +50,7 @@ public:
 		}
 	}
 
-	__forceinline spu_inter_func_t operator [] (u32 opcode) const
+	force_inline spu_inter_func_t operator [] (u32 opcode) const
 	{
 		return funcs[opcode >> 21];
 	}

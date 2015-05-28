@@ -56,22 +56,22 @@ namespace vm
 		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * address_size); }
 		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * address_size); }
 
-		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
-		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
-		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
-		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
-		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
-		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
-		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
-		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		force_inline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		force_inline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		force_inline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		force_inline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		force_inline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		force_inline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
-		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
+		force_inline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator *() const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr));
 		}
 
-		__forceinline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
+		force_inline _ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>& operator [](AT index) const
 		{
 			return vm::get_ref<_ptr_base<T, lvl - 1, std::conditional<is_be_t<T>::value, typename to_be_t<AT>::type, AT>>>(vm::cast(m_addr + sizeof(AT)* index));
 		}
@@ -110,12 +110,12 @@ namespace vm
 		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
 		typedef typename std::remove_cv<T>::type type;
 
-		__forceinline static const u32 data_size()
+		force_inline static const u32 data_size()
 		{
 			return sizeof(T);
 		}
 
-		__forceinline T* const operator -> () const
+		force_inline T* const operator -> () const
 		{
 			return vm::get_ptr<T>(vm::cast(m_addr));
 		}
@@ -163,29 +163,29 @@ namespace vm
 		_ptr_base operator - (typename	remove_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
 		_ptr_base operator - (typename		to_be_t<AT>::type count) const { return make(m_addr - count * data_size()); }
 
-		__forceinline T& operator *() const
+		force_inline T& operator *() const
 		{
 			return vm::get_ref<T>(vm::cast(m_addr));
 		}
 
-		__forceinline T& operator [](typename remove_be_t<AT>::type index) const
+		force_inline T& operator [](typename remove_be_t<AT>::type index) const
 		{
 			return vm::get_ref<T>(vm::cast(m_addr + data_size() * index));
 		}
 
-		__forceinline T& operator [](typename to_be_t<AT>::forced_type index) const
+		force_inline T& operator [](typename to_be_t<AT>::forced_type index) const
 		{
 			return vm::get_ref<T>(vm::cast(m_addr + data_size() * index));
 		}
 
-		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
-		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
-		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
-		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
-		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
-		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
-		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
-		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		force_inline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		force_inline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		force_inline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		force_inline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		force_inline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		force_inline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 		explicit operator T*() const { return get_ptr(); }
 		
@@ -255,14 +255,14 @@ namespace vm
 			return get_ptr();
 		}
 
-		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
-		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
-		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
-		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
-		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
-		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
-		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
-		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		force_inline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		force_inline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		force_inline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		force_inline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		force_inline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		force_inline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
@@ -317,14 +317,14 @@ namespace vm
 			return get_ptr();
 		}
 
-		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
-		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
-		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
-		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
-		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
-		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
-		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
-		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		force_inline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		force_inline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		force_inline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		force_inline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		force_inline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		force_inline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
@@ -365,14 +365,14 @@ namespace vm
 			m_addr = value;
 		}
 
-		__forceinline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
-		__forceinline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
-		__forceinline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
-		__forceinline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
-		__forceinline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
-		__forceinline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
-		__forceinline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
-		__forceinline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
+		force_inline bool operator <(const _ptr_base& right) const { return m_addr < right.m_addr; }
+		force_inline bool operator <=(const _ptr_base& right) const { return m_addr <= right.m_addr; }
+		force_inline bool operator >(const _ptr_base& right) const { return m_addr > right.m_addr; }
+		force_inline bool operator >=(const _ptr_base& right) const { return m_addr >= right.m_addr; }
+		force_inline bool operator ==(const _ptr_base& right) const { return m_addr == right.m_addr; }
+		force_inline bool operator !=(const _ptr_base& right) const { return m_addr != right.m_addr; }
+		force_inline bool operator ==(const nullptr_t& right) const { return m_addr == 0; }
+		force_inline bool operator !=(const nullptr_t& right) const { return m_addr != 0; }
 		explicit operator bool() const { return m_addr != 0; }
 
 		template<typename AT2>
@@ -465,7 +465,7 @@ namespace fmt
 	{
 		typedef typename unveil<AT>::result_type result_type;
 
-		__forceinline static result_type get_value(const vm::_ptr_base<T, lvl, AT>& arg)
+		force_inline static result_type get_value(const vm::_ptr_base<T, lvl, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -480,12 +480,12 @@ struct cast_ppu_gpr;
 template<typename T, int lvl, typename AT>
 struct cast_ppu_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
-	__forceinline static u64 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
+	force_inline static u64 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
 		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u64 reg)
+	force_inline static vm::_ptr_base<T, lvl, AT> from_gpr(const u64 reg)
 	{
 		return vm::_ptr_base<T, lvl, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
@@ -499,12 +499,12 @@ struct cast_armv7_gpr;
 template<typename T, int lvl, typename AT>
 struct cast_armv7_gpr<vm::_ptr_base<T, lvl, AT>, false>
 {
-	__forceinline static u32 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
+	force_inline static u32 to_gpr(const vm::_ptr_base<T, lvl, AT>& value)
 	{
 		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ptr_base<T, lvl, AT> from_gpr(const u32 reg)
+	force_inline static vm::_ptr_base<T, lvl, AT> from_gpr(const u32 reg)
 	{
 		return vm::_ptr_base<T, lvl, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}

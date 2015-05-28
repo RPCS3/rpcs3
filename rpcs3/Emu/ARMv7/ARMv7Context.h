@@ -176,7 +176,7 @@ struct ARMv7Context
 	}
 
 	template<typename... T>
-	__noinline void fmt_debug_str(const char* fmt, T... args)
+	never_inline void fmt_debug_str(const char* fmt, T... args)
 	{
 		debug_str = fmt::format(fmt, args...);
 	}
@@ -189,12 +189,12 @@ struct cast_armv7_gpr
 
 	typedef typename std::underlying_type<T>::type underlying_type;
 
-	__forceinline static u32 to_gpr(const T& value)
+	force_inline static u32 to_gpr(const T& value)
 	{
 		return cast_armv7_gpr<underlying_type>::to_gpr(static_cast<underlying_type>(value));
 	}
 
-	__forceinline static T from_gpr(const u32 reg)
+	force_inline static T from_gpr(const u32 reg)
 	{
 		return static_cast<T>(cast_armv7_gpr<underlying_type>::from_gpr(reg));
 	}
@@ -203,12 +203,12 @@ struct cast_armv7_gpr
 template<>
 struct cast_armv7_gpr<u8, false>
 {
-	__forceinline static u32 to_gpr(const u8& value)
+	force_inline static u32 to_gpr(const u8& value)
 	{
 		return value;
 	}
 
-	__forceinline static u8 from_gpr(const u32 reg)
+	force_inline static u8 from_gpr(const u32 reg)
 	{
 		return static_cast<u8>(reg);
 	}
@@ -217,12 +217,12 @@ struct cast_armv7_gpr<u8, false>
 template<>
 struct cast_armv7_gpr<u16, false>
 {
-	__forceinline static u32 to_gpr(const u16& value)
+	force_inline static u32 to_gpr(const u16& value)
 	{
 		return value;
 	}
 
-	__forceinline static u16 from_gpr(const u32 reg)
+	force_inline static u16 from_gpr(const u32 reg)
 	{
 		return static_cast<u16>(reg);
 	}
@@ -231,12 +231,12 @@ struct cast_armv7_gpr<u16, false>
 template<>
 struct cast_armv7_gpr<u32, false>
 {
-	__forceinline static u32 to_gpr(const u32& value)
+	force_inline static u32 to_gpr(const u32& value)
 	{
 		return value;
 	}
 
-	__forceinline static u32 from_gpr(const u32 reg)
+	force_inline static u32 from_gpr(const u32 reg)
 	{
 		return reg;
 	}
@@ -245,12 +245,12 @@ struct cast_armv7_gpr<u32, false>
 template<>
 struct cast_armv7_gpr<s8, false>
 {
-	__forceinline static u32 to_gpr(const s8& value)
+	force_inline static u32 to_gpr(const s8& value)
 	{
 		return value;
 	}
 
-	__forceinline static s8 from_gpr(const u32 reg)
+	force_inline static s8 from_gpr(const u32 reg)
 	{
 		return static_cast<s8>(reg);
 	}
@@ -259,12 +259,12 @@ struct cast_armv7_gpr<s8, false>
 template<>
 struct cast_armv7_gpr<s16, false>
 {
-	__forceinline static u32 to_gpr(const s16& value)
+	force_inline static u32 to_gpr(const s16& value)
 	{
 		return value;
 	}
 
-	__forceinline static s16 from_gpr(const u32 reg)
+	force_inline static s16 from_gpr(const u32 reg)
 	{
 		return static_cast<s16>(reg);
 	}
@@ -273,12 +273,12 @@ struct cast_armv7_gpr<s16, false>
 template<>
 struct cast_armv7_gpr<s32, false>
 {
-	__forceinline static u32 to_gpr(const s32& value)
+	force_inline static u32 to_gpr(const s32& value)
 	{
 		return value;
 	}
 
-	__forceinline static s32 from_gpr(const u32 reg)
+	force_inline static s32 from_gpr(const u32 reg)
 	{
 		return static_cast<s32>(reg);
 	}
@@ -287,25 +287,25 @@ struct cast_armv7_gpr<s32, false>
 template<>
 struct cast_armv7_gpr<bool, false>
 {
-	__forceinline static u32 to_gpr(const bool& value)
+	force_inline static u32 to_gpr(const bool& value)
 	{
 		return value;
 	}
 
-	__forceinline static bool from_gpr(const u32& reg)
+	force_inline static bool from_gpr(const u32& reg)
 	{
 		return reinterpret_cast<const bool&>(reg);
 	}
 };
 
 template<typename T>
-__forceinline u32 cast_to_armv7_gpr(const T& value)
+force_inline u32 cast_to_armv7_gpr(const T& value)
 {
 	return cast_armv7_gpr<T>::to_gpr(value);
 }
 
 template<typename T>
-__forceinline T cast_from_armv7_gpr(const u32 reg)
+force_inline T cast_from_armv7_gpr(const u32 reg)
 {
 	return cast_armv7_gpr<T>::from_gpr(reg);
 }

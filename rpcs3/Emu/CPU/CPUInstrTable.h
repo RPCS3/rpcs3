@@ -1,6 +1,6 @@
 #pragma once
 
-template<uint size, typename T> __forceinline static T sign(const T value)
+template<uint size, typename T> force_inline static T sign(const T value)
 {
 	static_assert(size > 0 && size < sizeof(T) * 8, "Bad sign size");
 

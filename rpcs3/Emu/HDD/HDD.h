@@ -82,7 +82,7 @@ class vfsHDDFile
 
 	void WriteEntry(u64 block, const vfsHDD_Entry& data, const std::string& name);
 
-	__forceinline u32 GetMaxNameLen() const
+	force_inline u32 GetMaxNameLen() const
 	{
 		return m_hdd_info.block_size - sizeof(vfsHDD_Entry);
 	}
@@ -149,7 +149,7 @@ class vfsHDD : public vfsFileBase
 public:
 	vfsHDD(vfsDevice* device, const std::string& hdd_path);
 
-	__forceinline u32 GetMaxNameLen() const
+	force_inline u32 GetMaxNameLen() const
 	{
 		return m_hdd_info.block_size - sizeof(vfsHDD_Entry);
 	}

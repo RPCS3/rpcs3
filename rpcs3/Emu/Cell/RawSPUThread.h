@@ -9,7 +9,7 @@ enum : u32
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 };
 
-__forceinline static u32 GetRawSPURegAddrByNum(int num, int offset)
+force_inline static u32 GetRawSPURegAddrByNum(int num, int offset)
 {
 	return RAW_SPU_OFFSET * num + RAW_SPU_BASE_ADDR + RAW_SPU_PROB_OFFSET + offset;
 }

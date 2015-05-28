@@ -52,7 +52,7 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
-template<typename T> __forceinline T align(const T addr, int align)
+template<typename T> force_inline T align(const T addr, int align)
 {
 	return (addr + (align - 1)) & ~(align - 1);
 }

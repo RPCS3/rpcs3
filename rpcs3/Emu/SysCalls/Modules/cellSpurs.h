@@ -528,7 +528,7 @@ struct CellSpurs
 		} c;
 	};
 
-	__forceinline atomic_be_t<u8>& wklState(const u32 wid)
+	force_inline atomic_be_t<u8>& wklState(const u32 wid)
 	{
 		if (wid & 0x10)
 		{
@@ -540,12 +540,12 @@ struct CellSpurs
 		}
 	}
 
-	__forceinline vm::ptr<sys_lwmutex_t> get_lwmutex()
+	force_inline vm::ptr<sys_lwmutex_t> get_lwmutex()
 	{
 		return vm::ptr<sys_lwmutex_t>::make(vm::get_addr(&m.mutex));
 	}
 
-	__forceinline vm::ptr<sys_lwcond_t> get_lwcond()
+	force_inline vm::ptr<sys_lwcond_t> get_lwcond()
 	{
 		return vm::ptr<sys_lwcond_t>::make(vm::get_addr(&m.cond));
 	}

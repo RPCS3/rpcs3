@@ -338,7 +338,7 @@ struct g_spu_imm_table_t
 			}
 		}
 
-		__forceinline __m128 operator [] (s32 scale) const
+		force_inline __m128 operator [] (s32 scale) const
 		{
 			return m_data[scale + 155];
 		}

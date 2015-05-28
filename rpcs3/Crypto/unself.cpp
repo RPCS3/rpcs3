@@ -13,121 +13,121 @@
 #include <wx/zstream.h>
 #pragma warning(pop)
 
-__forceinline u8 Read8(vfsStream& f)
+force_inline u8 Read8(vfsStream& f)
 {
 	u8 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u16 Read16(vfsStream& f)
+force_inline u16 Read16(vfsStream& f)
 {
 	be_t<u16> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u32 Read32(vfsStream& f)
+force_inline u32 Read32(vfsStream& f)
 {
 	be_t<u32> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u64 Read64(vfsStream& f)
+force_inline u64 Read64(vfsStream& f)
 {
 	be_t<u64> ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u16 Read16LE(vfsStream& f)
+force_inline u16 Read16LE(vfsStream& f)
 {
 	u16 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u32 Read32LE(vfsStream& f)
+force_inline u32 Read32LE(vfsStream& f)
 {
 	u32 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline u64 Read64LE(vfsStream& f)
+force_inline u64 Read64LE(vfsStream& f)
 {
 	u64 ret;
 	f.Read(&ret, sizeof(ret));
 	return ret;
 }
 
-__forceinline void Write8(vfsStream& f, const u8 data)
+force_inline void Write8(vfsStream& f, const u8 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write8(const fs::file& f, const u8 data)
+force_inline void Write8(const fs::file& f, const u8 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-__forceinline void Write16LE(vfsStream& f, const u16 data)
+force_inline void Write16LE(vfsStream& f, const u16 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write16LE(const fs::file& f, const u16 data)
+force_inline void Write16LE(const fs::file& f, const u16 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-__forceinline void Write32LE(vfsStream& f, const u32 data)
+force_inline void Write32LE(vfsStream& f, const u32 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write32LE(const fs::file& f, const u32 data)
+force_inline void Write32LE(const fs::file& f, const u32 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-__forceinline void Write64LE(vfsStream& f, const u64 data)
+force_inline void Write64LE(vfsStream& f, const u64 data)
 {
 	f.Write(&data, sizeof(data));
 }
 
-__forceinline void Write64LE(const fs::file& f, const u64 data)
+force_inline void Write64LE(const fs::file& f, const u64 data)
 {
 	f.write(&data, sizeof(data));
 }
 
-__forceinline void Write16(vfsStream& f, const u16 data)
+force_inline void Write16(vfsStream& f, const u16 data)
 {
 	Write16LE(f, re16(data));
 }
 
-__forceinline void Write16(const fs::file& f, const u16 data)
+force_inline void Write16(const fs::file& f, const u16 data)
 {
 	Write16LE(f, re16(data));
 }
 
-__forceinline void Write32(vfsStream& f, const u32 data)
+force_inline void Write32(vfsStream& f, const u32 data)
 {
 	Write32LE(f, re32(data));
 }
 
-__forceinline void Write32(const fs::file& f, const u32 data)
+force_inline void Write32(const fs::file& f, const u32 data)
 {
 	Write32LE(f, re32(data));
 }
 
-__forceinline void Write64(vfsStream& f, const u64 data)
+force_inline void Write64(vfsStream& f, const u64 data)
 {
 	Write64LE(f, re64(data));
 }
 
-__forceinline void Write64(const fs::file& f, const u64 data)
+force_inline void Write64(const fs::file& f, const u64 data)
 {
 	Write64LE(f, re64(data));
 }

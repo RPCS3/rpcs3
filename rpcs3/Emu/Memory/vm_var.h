@@ -425,7 +425,7 @@ namespace vm
 			return m_addr;
 		}
 		
-		__forceinline uint count() const
+		force_inline uint count() const
 		{
 			return _count;
 		}

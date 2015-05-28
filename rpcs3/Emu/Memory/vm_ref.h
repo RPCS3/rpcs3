@@ -109,7 +109,7 @@ namespace fmt
 	{
 		typedef typename unveil<AT>::result_type result_type;
 
-		__forceinline static result_type get_value(const vm::_ref_base<T, AT>& arg)
+		force_inline static result_type get_value(const vm::_ref_base<T, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -124,12 +124,12 @@ struct cast_ppu_gpr;
 template<typename T, typename AT>
 struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
+	force_inline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
+	force_inline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
 	{
 		return vm::_ref_base<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
@@ -143,12 +143,12 @@ struct cast_armv7_gpr;
 template<typename T, typename AT>
 struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
+	force_inline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
+	force_inline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
 	{
 		return vm::_ref_base<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
