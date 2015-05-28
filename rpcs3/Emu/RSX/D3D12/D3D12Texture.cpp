@@ -60,7 +60,7 @@ size_t D3D12GSRender::UploadTextures()
 
 		// Upload at each iteration to take advantage of overlapping transfer
 		ID3D12GraphicsCommandList *commandList;
-		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
 		DXGI_FORMAT dxgiFormat;
 		size_t pixelSize;
@@ -89,8 +89,8 @@ size_t D3D12GSRender::UploadTextures()
 		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 		check(m_device->CreatePlacedResource(
-			getCurrentResourceStorage().m_uploadTextureHeap,
-			getCurrentResourceStorage().m_currentStorageOffset,
+			m_perFrameStorage.m_uploadTextureHeap,
+			m_perFrameStorage.m_currentStorageOffset,
 			&textureDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -119,18 +119,18 @@ size_t D3D12GSRender::UploadTextures()
 		vramTextureDesc.SampleDesc.Count = 1;
 		vramTextureDesc.MipLevels = 1;
 		check(m_device->CreatePlacedResource(
-			getCurrentResourceStorage().m_textureStorage,
-			getCurrentResourceStorage().m_currentStorageOffset,
+			m_perFrameStorage.m_textureStorage,
+			m_perFrameStorage.m_currentStorageOffset,
 			&vramTextureDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
 			IID_PPV_ARGS(&vramTexture)
 			));
 
-		getCurrentResourceStorage().m_currentStorageOffset += textureSize;
-		getCurrentResourceStorage().m_currentStorageOffset = (getCurrentResourceStorage().m_currentStorageOffset + 65536 - 1) & ~65535;
-		getCurrentResourceStorage().m_inflightResources.push_back(Texture);
-		getCurrentResourceStorage().m_inflightResources.push_back(vramTexture);
+		m_perFrameStorage.m_currentStorageOffset += textureSize;
+		m_perFrameStorage.m_currentStorageOffset = (m_perFrameStorage.m_currentStorageOffset + 65536 - 1) & ~65535;
+		m_perFrameStorage.m_inflightResources.push_back(Texture);
+		m_perFrameStorage.m_inflightResources.push_back(vramTexture);
 
 
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
@@ -158,8 +158,8 @@ size_t D3D12GSRender::UploadTextures()
 		srvDesc.Format = dxgiFormat;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3, D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
 		// TODO : Correctly define sampler
@@ -174,13 +174,13 @@ size_t D3D12GSRender::UploadTextures()
 		samplerDesc.BorderColor[4] = m_textures[i].GetBorderColor();
 		samplerDesc.MinLOD = m_textures[i].GetMinLOD() >> 8;
 		samplerDesc.MaxLOD = m_textures[i].GetMaxLOD() >> 8;
-		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateSampler(&samplerDesc, Handle);
 
 		commandList->Close();
 		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
-		getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
+		m_perFrameStorage.m_inflightCommandList.push_back(commandList);
 
 		usedTexture++;
 	}

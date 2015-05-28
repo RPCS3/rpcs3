@@ -85,10 +85,6 @@ private:
 		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
 		size_t m_currentTextureIndex;
 
-		//BackBuffers
-		ID3D12Resource* m_backBuffer;
-		ID3D12DescriptorHeap *m_backbufferAsRendertarget;
-
 		// Fence
 		HANDLE m_queueCompletion;
 
@@ -97,7 +93,7 @@ private:
 		void Release();
 	};
 
-	ResourceStorage m_perFrameStorage[2];
+	ResourceStorage m_perFrameStorage;
 
 	bool m_forcedIndexBuffer;
 	size_t indexCount;
@@ -109,11 +105,11 @@ private:
 	ID3D12CommandQueue *m_commandQueueGraphic;
 
 	struct IDXGISwapChain3 *m_swapChain;
+	//BackBuffers
+	ID3D12Resource* m_backBuffer[2];
+	ID3D12DescriptorHeap *m_backbufferAsRendertarget[2];
 
 	size_t m_lastWidth, m_lastHeight, m_lastDepth;
-	size_t m_currentResourceStorageIndex;
-	ResourceStorage& getCurrentResourceStorage();
-	ResourceStorage& getNonCurrentResourceStorage();
 public:
 	GSFrameBase2 *m_frame;
 	u32 m_draw_frames;
