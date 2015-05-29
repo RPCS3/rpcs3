@@ -14,12 +14,10 @@ SysCallBase sys_lwmutex("sys_lwmutex");
 
 void lwmutex_create(sys_lwmutex_t& lwmutex, bool recursive, u32 protocol, u64 name)
 {
-	std::shared_ptr<lwmutex_t> mutex(new lwmutex_t(protocol, name));
-
 	lwmutex.lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex.attribute = protocol | (recursive ? SYS_SYNC_RECURSIVE : SYS_SYNC_NOT_RECURSIVE);
 	lwmutex.recursive_count = 0;
-	lwmutex.sleep_queue = Emu.GetIdManager().GetNewID(mutex, TYPE_LWMUTEX);
+	lwmutex.sleep_queue = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, name);
 }
 
 s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
@@ -39,9 +37,7 @@ s32 _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmut
 		sys_lwmutex.Error("_sys_lwmutex_create(): unknown parameters (arg4=0x%x, arg6=0x%x)", arg4, arg6);
 	}
 
-	std::shared_ptr<lwmutex_t> mutex(new lwmutex_t(protocol, name));
-
-	*lwmutex_id = Emu.GetIdManager().GetNewID(mutex, TYPE_LWMUTEX);
+	*lwmutex_id = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, name);
 
 	return CELL_OK;
 }
@@ -52,7 +48,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -64,7 +60,7 @@ s32 _sys_lwmutex_destroy(u32 lwmutex_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID<lwmutex_t>(lwmutex_id);
+	Emu.GetIdManager().remove<lv2_lwmutex_t>(lwmutex_id);
 
 	return CELL_OK;
 }
@@ -77,7 +73,7 @@ s32 _sys_lwmutex_lock(u32 lwmutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -117,7 +113,7 @@ s32 _sys_lwmutex_trylock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{
@@ -140,7 +136,7 @@ s32 _sys_lwmutex_unlock(u32 lwmutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!mutex)
 	{

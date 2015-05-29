@@ -201,9 +201,9 @@ enum
 
 struct CellGcmControl
 {
-	atomic_t<u32> put;
-	atomic_t<u32> get;
-	atomic_t<u32> ref;
+	atomic_be_t<u32> put;
+	atomic_be_t<u32> get;
+	atomic_be_t<u32> ref;
 };
 
 struct CellGcmConfig

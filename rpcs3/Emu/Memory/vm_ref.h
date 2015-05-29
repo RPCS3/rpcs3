@@ -60,31 +60,40 @@ namespace vm
 		}
 	};
 
-	//BE reference to LE data
-	template<typename T, typename AT = u32> using brefl = _ref_base<T, typename to_be_t<AT>::type>;
+	// Native endianness reference to LE data
+	template<typename T, typename AT = u32> using refl = _ref_base<typename to_le_t<T>::type, AT>;
 
-	//BE reference to BE data
+	// Native endianness reference to BE data
+	template<typename T, typename AT = u32> using refb = _ref_base<typename to_be_t<T>::type, AT>;
+
+	// BE reference to LE data
+	template<typename T, typename AT = u32> using brefl = _ref_base<typename to_le_t<T>::type, typename to_be_t<AT>::type>;
+
+	// BE reference to BE data
 	template<typename T, typename AT = u32> using brefb = _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>;
 
-	//LE reference to BE data
-	template<typename T, typename AT = u32> using lrefb = _ref_base<typename to_be_t<T>::type, AT>;
+	// LE reference to LE data
+	template<typename T, typename AT = u32> using lrefl = _ref_base<typename to_le_t<T>::type, typename to_le_t<AT>::type>;
 
-	//LE reference to LE data
-	template<typename T, typename AT = u32> using lrefl = _ref_base<T, AT>;
+	// LE reference to BE data
+	template<typename T, typename AT = u32> using lrefb = _ref_base<typename to_be_t<T>::type, typename to_le_t<AT>::type>;
 
 	namespace ps3
 	{
-		//default reference for HLE functions (LE reference to BE data)
-		template<typename T, typename AT = u32> using ref = lrefb<T, AT>;
+		// default reference for PS3 HLE functions (Native endianness reference to BE data)
+		template<typename T, typename AT = u32> using ref = refb<T, AT>;
 
-		//default reference for HLE structures (BE reference to BE data)
+		// default reference for PS3 HLE structures (BE reference to BE data)
 		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
 	}
 
 	namespace psv
 	{
-		//default reference for HLE functions & structures (LE reference to LE data)
-		template<typename T, typename AT = u32> using ref = lrefl<T, AT>;
+		// default reference for PSV HLE functions (Native endianness reference to LE data)
+		template<typename T, typename AT = u32> using ref = refl<T, AT>;
+
+		// default reference for PSV HLE structures (LE reference to LE data)
+		template<typename T, typename AT = u32> using lref = lrefl<T, AT>;
 	}
 
 	//PS3 emulation is main now, so lets it be as default
@@ -100,7 +109,7 @@ namespace fmt
 	{
 		typedef typename unveil<AT>::result_type result_type;
 
-		__forceinline static result_type get_value(const vm::_ref_base<T, AT>& arg)
+		force_inline static result_type get_value(const vm::_ref_base<T, AT>& arg)
 		{
 			return unveil<AT>::get_value(arg.addr());
 		}
@@ -115,12 +124,12 @@ struct cast_ppu_gpr;
 template<typename T, typename AT>
 struct cast_ppu_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
+	force_inline static u64 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_ppu_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
+	force_inline static vm::_ref_base<T, AT> from_gpr(const u64 reg)
 	{
 		return vm::_ref_base<T, AT>::make(cast_ppu_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}
@@ -134,12 +143,12 @@ struct cast_armv7_gpr;
 template<typename T, typename AT>
 struct cast_armv7_gpr<vm::_ref_base<T, AT>, false>
 {
-	__forceinline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
+	force_inline static u32 to_gpr(const vm::_ref_base<T, AT>& value)
 	{
 		return cast_armv7_gpr<AT, std::is_enum<AT>::value>::to_gpr(value.addr());
 	}
 
-	__forceinline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
+	force_inline static vm::_ref_base<T, AT> from_gpr(const u32 reg)
 	{
 		return vm::_ref_base<T, AT>::make(cast_armv7_gpr<AT, std::is_enum<AT>::value>::from_gpr(reg));
 	}

@@ -136,8 +136,8 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.mtime = to_time_t(attrs.ftLastWriteTime);
 	info.ctime = to_time_t(attrs.ftCreationTime);
 #else
-	struct stat64 file_info;
-	if (stat64(path.c_str(), &file_info) < 0)
+	struct stat file_info;
+	if (stat(path.c_str(), &file_info) < 0)
 	{
 		return false;
 	}
@@ -174,8 +174,8 @@ bool fs::is_file(const std::string& file)
 
 	return (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0;
 #else
-	struct stat64 file_info;
-	if (stat64(file.c_str(), &file_info) < 0)
+	struct stat file_info;
+	if (stat(file.c_str(), &file_info) < 0)
 	{
 		return false;
 	}
@@ -195,8 +195,8 @@ bool fs::is_dir(const std::string& dir)
 
 	return (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
-	struct stat64 file_info;
-	if (stat64(dir.c_str(), &file_info) < 0)
+	struct stat file_info;
+	if (stat(dir.c_str(), &file_info) < 0)
 	{
 		return false;
 	}
@@ -364,7 +364,7 @@ bool fs::truncate_file(const std::string& file, u64 length)
 #ifdef _WIN32
 	if (!::truncate_file(file, length))
 #else
-	if (truncate64(file.c_str(), length))
+	if (::truncate(file.c_str(), length))
 #endif
 	{
 		LOG_WARNING(GENERAL, "Error resizing file '%s' to 0x%llx: 0x%llx", file, length, GET_API_ERROR);
@@ -480,7 +480,7 @@ bool fs::file::trunc(u64 size) const
 
 	return true; // TODO
 #else
-	return !ftruncate64(m_fd, size);
+	return !::ftruncate(m_fd, size);
 #endif
 }
 
@@ -501,8 +501,8 @@ bool fs::file::stat(stat_t& info) const
 	info.mtime = to_time_t(basic_info.ChangeTime);
 	info.ctime = to_time_t(basic_info.CreationTime);
 #else
-	struct stat64 file_info;
-	if (fstat64(m_fd, &file_info) < 0)
+	struct stat file_info;
+	if (fstat(m_fd, &file_info) < 0)
 	{
 		return false;
 	}
@@ -580,7 +580,7 @@ u64 fs::file::seek(u64 offset, u32 mode) const
 
 	return pos.QuadPart;
 #else
-	return lseek64(m_fd, offset, mode);
+	return ::lseek(m_fd, offset, mode);
 #endif
 }
 
@@ -595,8 +595,8 @@ u64 fs::file::size() const
 
 	return size.QuadPart;
 #else
-	struct stat64 file_info;
-	if (fstat64(m_fd, &file_info) < 0)
+	struct stat file_info;
+	if (::fstat(m_fd, &file_info) < 0)
 	{
 		return -1;
 	}
@@ -766,8 +766,8 @@ bool fs::dir::get_next(std::string& name, stat_t& info)
 #else
 	const auto found = ::readdir((DIR*)m_dd);
 
-	struct stat64 file_info;
-	if (!found || fstatat64(::dirfd((DIR*)m_dd), found->d_name, &file_info, 0) < 0)
+	struct stat file_info;
+	if (!found || ::fstatat(::dirfd((DIR*)m_dd), found->d_name, &file_info, 0) < 0)
 	{
 		return false;
 	}

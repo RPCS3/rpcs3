@@ -34,12 +34,12 @@ std::shared_ptr<CPUThread> CPUThreadManager::AddThread(CPUThreadType type)
 	{
 	case CPU_THREAD_PPU:
 	{
-		new_thread.reset(new PPUThread());
+		new_thread = std::make_shared<PPUThread>();
 		break;
 	}
 	case CPU_THREAD_SPU:
 	{
-		new_thread.reset(new SPUThread());
+		new_thread = std::make_shared<SPUThread>();
 		break;
 	}
 	case CPU_THREAD_RAW_SPU:
@@ -48,7 +48,7 @@ std::shared_ptr<CPUThread> CPUThreadManager::AddThread(CPUThreadType type)
 		{
 			if (!m_raw_spu[i])
 			{
-				new_thread.reset(new RawSPUThread());
+				new_thread = std::make_shared<RawSPUThread>();
 				new_thread->index = i;
 				
 				m_raw_spu[i] = new_thread;
@@ -67,7 +67,7 @@ std::shared_ptr<CPUThread> CPUThreadManager::AddThread(CPUThreadType type)
 
 	if (new_thread)
 	{
-		new_thread->SetId(Emu.GetIdManager().GetNewID(new_thread));
+		new_thread->SetId(Emu.GetIdManager().add(new_thread));
 
 		m_threads.push_back(new_thread);
 		SendDbgCommand(DID_CREATE_THREAD, new_thread.get());
@@ -106,13 +106,13 @@ void CPUThreadManager::RemoveThread(u32 id)
 	}
 
 	// Removing the ID should trigger the actual deletion of the thread
-	Emu.GetIdManager().RemoveID<CPUThread>(id);
+	Emu.GetIdManager().remove<CPUThread>(id);
 	Emu.CheckStatus();
 }
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id)
 {
-	return Emu.GetIdManager().GetIDData<CPUThread>(id);
+	return Emu.GetIdManager().get<CPUThread>(id);
 }
 
 std::shared_ptr<CPUThread> CPUThreadManager::GetThread(u32 id, CPUThreadType type)

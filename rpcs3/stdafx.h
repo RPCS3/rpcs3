@@ -52,7 +52,7 @@ typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;
 
-template<typename T> __forceinline T align(const T addr, int align)
+template<typename T> force_inline T align(const T addr, int align)
 {
 	return (addr + (align - 1)) & ~(align - 1);
 }
@@ -61,7 +61,10 @@ template<typename T> __forceinline T align(const T addr, int align)
 #include "Utilities/StrFmt.h"
 
 #include "Emu/Memory/atomic.h"
-#include "Emu/Memory/refcnt.h"
+
+template<typename T> struct ID_type;
+
+#define REG_ID_TYPE(t, id) template<> struct ID_type<t> { static const u32 type = id; }
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

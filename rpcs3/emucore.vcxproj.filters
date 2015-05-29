@@ -1543,9 +1543,6 @@
     <ClInclude Include="Emu\Memory\atomic.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Memory\refcnt.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\SysCalls\lv2\sys_fs.h">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClInclude>

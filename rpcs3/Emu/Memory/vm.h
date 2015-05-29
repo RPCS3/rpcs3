@@ -90,14 +90,14 @@ namespace vm
 
 	u32 get_addr(const void* real_pointer);
 
-	__noinline void error(const u64 addr, const char* func);
+	never_inline void error(const u64 addr, const char* func);
 
 	template<typename T>
 	struct cast_ptr
 	{
 		static_assert(std::is_same<T, u32>::value, "Unsupported vm::cast() type");
 
-		__forceinline static u32 cast(const T& addr, const char* func)
+		force_inline static u32 cast(const T& addr, const char* func)
 		{
 			return 0;
 		}
@@ -106,7 +106,7 @@ namespace vm
 	template<>
 	struct cast_ptr<u32>
 	{
-		__forceinline static u32 cast(const u32 addr, const char* func)
+		force_inline static u32 cast(const u32 addr, const char* func)
 		{
 			return addr;
 		}
@@ -115,7 +115,7 @@ namespace vm
 	template<>
 	struct cast_ptr<u64>
 	{
-		__forceinline static u32 cast(const u64 addr, const char* func)
+		force_inline static u32 cast(const u64 addr, const char* func)
 		{
 			const u32 res = static_cast<u32>(addr);
 			if (res != addr)
@@ -130,14 +130,14 @@ namespace vm
 	template<typename T, typename T2>
 	struct cast_ptr<be_t<T, T2>>
 	{
-		__forceinline static u32 cast(const be_t<T, T2>& addr, const char* func)
+		force_inline static u32 cast(const be_t<T, T2>& addr, const char* func)
 		{
 			return cast_ptr<T>::cast(addr.value(), func);
 		}
 	};
 
 	template<typename T>
-	__forceinline static u32 cast(const T& addr, const char* func = "vm::cast")
+	force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
 	{
 		return cast_ptr<T>::cast(addr, func);
 	}
@@ -298,9 +298,15 @@ namespace vm
 		u32 alloc_offset;
 
 		template<typename T = char>
-		ptr<T> alloc(u32 count) const
+		ptr<T> alloc(u32 count = 1) const
 		{
 			return ptr<T>::make(allocator(count * sizeof(T)));
+		}
+
+		template<typename T = char>
+		ptr<T> fixed_alloc(u32 addr, u32 count = 1) const
+		{
+			return ptr<T>::make(fixed_allocator(addr, count * sizeof(T)));
 		}
 	};
 

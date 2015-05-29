@@ -145,6 +145,8 @@ struct CellFsUtimbuf
 
 #pragma pack(pop)
 
+struct vfsStream;
+
 // Stream Support Status (st_status)
 enum : u32
 {
@@ -163,7 +165,7 @@ struct fs_st_cb_rec_t
 	u32 pad;
 };
 
-struct fs_file_t
+struct lv2_file_t
 {
 	const std::shared_ptr<vfsStream> file;
 	const s32 mode;
@@ -172,7 +174,7 @@ struct fs_file_t
 	std::mutex mutex;
 	std::condition_variable cv;
 
-	atomic_le_t<u32> st_status;
+	atomic<u32> st_status;
 	
 	u64 st_ringbuf_size;
 	u64 st_block_size;
@@ -186,9 +188,9 @@ struct fs_file_t
 	std::atomic<u64> st_total_read;
 	std::atomic<u64> st_copied;
 
-	atomic_le_t<fs_st_cb_rec_t> st_callback;
+	atomic<fs_st_cb_rec_t> st_callback;
 
-	fs_file_t(std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
+	lv2_file_t(const std::shared_ptr<vfsStream>& file, s32 mode, s32 flags)
 		: file(file)
 		, mode(mode)
 		, flags(flags)
@@ -197,6 +199,14 @@ struct fs_file_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_file_t, 0x73); // SYS_FS_FD_OBJECT
+
+class vfsDirBase;
+
+using lv2_dir_t = vfsDirBase;
+
+REG_ID_TYPE(lv2_dir_t, 0x73); // SYS_FS_FD_OBJECT
 
 // SysCalls
 s32 sys_fs_test(u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> arg5, u32 arg6);

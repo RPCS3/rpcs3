@@ -19,7 +19,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
+	const auto mutex = std::move(Emu.GetIdManager().get<lv2_mutex_t>(mutex_id));
 
 	if (!mutex)
 	{
@@ -37,9 +37,7 @@ s32 sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribu
 		throw __FUNCTION__;
 	}
 
-	std::shared_ptr<cond_t> cond(new cond_t(mutex, attr->name_u64));
-
-	*cond_id = Emu.GetIdManager().GetNewID(cond, TYPE_COND);
+	*cond_id = Emu.GetIdManager().make<lv2_cond_t>(mutex, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -50,7 +48,7 @@ s32 sys_cond_destroy(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<cond_t>(cond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_cond_t>(cond_id);
 
 	if (!cond)
 	{
@@ -67,7 +65,7 @@ s32 sys_cond_destroy(u32 cond_id)
 		throw __FUNCTION__;
 	}
 
-	Emu.GetIdManager().RemoveID<cond_t>(cond_id);
+	Emu.GetIdManager().remove<lv2_cond_t>(cond_id);
 
 	return CELL_OK;
 }
@@ -78,7 +76,7 @@ s32 sys_cond_signal(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<cond_t>(cond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_cond_t>(cond_id);
 
 	if (!cond)
 	{
@@ -101,7 +99,7 @@ s32 sys_cond_signal_all(u32 cond_id)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<cond_t>(cond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_cond_t>(cond_id);
 
 	if (!cond)
 	{
@@ -124,14 +122,14 @@ s32 sys_cond_signal_to(u32 cond_id, u32 thread_id)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<cond_t>(cond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_cond_t>(cond_id);
 
 	if (!cond)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!Emu.GetIdManager().CheckID<CPUThread>(thread_id))
+	if (!Emu.GetIdManager().check_id<CPUThread>(thread_id))
 	{
 		return CELL_ESRCH;
 	}
@@ -158,7 +156,7 @@ s32 sys_cond_wait(PPUThread& CPU, u32 cond_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<cond_t>(cond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_cond_t>(cond_id);
 
 	if (!cond)
 	{

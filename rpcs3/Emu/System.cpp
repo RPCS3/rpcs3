@@ -49,7 +49,7 @@ Emulator::Emulator()
 	, m_pad_manager(new PadManager())
 	, m_keyboard_manager(new KeyboardManager())
 	, m_mouse_manager(new MouseManager())
-	, m_id_manager(new IdManager())
+	, m_id_manager(new ID_manager())
 	, m_gs_manager(new GSManager())
 	, m_audio_manager(new AudioManager())
 	, m_callback_manager(new CallbackManager())
@@ -326,7 +326,7 @@ void Emulator::Pause()
 	if (!IsRunning()) return;
 	SendDbgCommand(DID_PAUSE_EMU);
 
-	if (InterlockedCompareExchange((volatile u32*)&m_status, Paused, Running) == Running)
+	if (sync_bool_compare_and_swap((volatile u32*)&m_status, Running, Paused))
 	{
 		SendDbgCommand(DID_PAUSED_EMU);
 
@@ -396,7 +396,7 @@ void Emulator::Stop()
 	GetAudioManager().Close();
 	GetEventManager().Clear();
 	GetCPU().Close();
-	GetIdManager().Clear();
+	GetIdManager().clear();
 	GetPadManager().Close();
 	GetKeyboardManager().Close();
 	GetMouseManager().Close();

@@ -112,12 +112,10 @@ s32 sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attri
 	default: sysPrxForUser.Error("sys_lwmutex_create(): invalid protocol (0x%x)", protocol); return CELL_EINVAL;
 	}
 
-	std::shared_ptr<lwmutex_t> lw(new lwmutex_t(protocol, attr->name_u64));
-
 	lwmutex->lock_var = { { lwmutex::free, lwmutex::zero } };
 	lwmutex->attribute = attr->recursive | attr->protocol;
 	lwmutex->recursive_count = 0;
-	lwmutex->sleep_queue = Emu.GetIdManager().GetNewID(lw, TYPE_LWMUTEX);
+	lwmutex->sleep_queue = Emu.GetIdManager().make<lv2_lwmutex_t>(protocol, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -362,9 +360,7 @@ s32 sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmut
 {
 	sysPrxForUser.Warning("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
-	std::shared_ptr<lwcond_t> cond(new lwcond_t(attr->name_u64));
-
-	lwcond->lwcond_queue = Emu.GetIdManager().GetNewID(cond, TYPE_LWCOND);
+	lwcond->lwcond_queue = Emu.GetIdManager().make<lv2_lwcond_t>(attr->name_u64);
 	lwcond->lwmutex = lwmutex;
 
 	return CELL_OK;
@@ -770,16 +766,14 @@ u32 _sys_heap_create_heap(vm::ptr<const char> name, u32 arg2, u32 arg3, u32 arg4
 {
 	sysPrxForUser.Warning("_sys_heap_create_heap(name=*0x%x, arg2=0x%x, arg3=0x%x, arg4=0x%x)", name, arg2, arg3, arg4);
 
-	std::shared_ptr<HeapInfo> heap(new HeapInfo(name.get_ptr()));
-
-	return Emu.GetIdManager().GetNewID(heap);
+	return Emu.GetIdManager().make<HeapInfo>(name.get_ptr());
 }
 
 s32 _sys_heap_delete_heap(u32 heap)
 {
 	sysPrxForUser.Warning("_sys_heap_delete_heap(heap=0x%x)", heap);
 
-	Emu.GetIdManager().RemoveID<HeapInfo>(heap);
+	Emu.GetIdManager().remove<HeapInfo>(heap);
 
 	return CELL_OK;
 }
@@ -1169,7 +1163,7 @@ s32 sys_process_get_paramsfo(vm::ptr<char> buffer)
 	return _sys_process_get_paramsfo(buffer);
 }
 
-void sys_spinlock_initialize(vm::ptr<atomic_t<u32>> lock)
+void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.Log("sys_spinlock_initialize(lock=*0x%x)", lock);
 
@@ -1177,7 +1171,7 @@ void sys_spinlock_initialize(vm::ptr<atomic_t<u32>> lock)
 	lock->exchange(be_t<u32>::make(0));
 }
 
-void sys_spinlock_lock(vm::ptr<atomic_t<u32>> lock)
+void sys_spinlock_lock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.Log("sys_spinlock_lock(lock=*0x%x)", lock);
 
@@ -1194,7 +1188,7 @@ void sys_spinlock_lock(vm::ptr<atomic_t<u32>> lock)
 	}
 }
 
-s32 sys_spinlock_trylock(vm::ptr<atomic_t<u32>> lock)
+s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.Log("sys_spinlock_trylock(lock=*0x%x)", lock);
 
@@ -1207,7 +1201,7 @@ s32 sys_spinlock_trylock(vm::ptr<atomic_t<u32>> lock)
 	return CELL_OK;
 }
 
-void sys_spinlock_unlock(vm::ptr<atomic_t<u32>> lock)
+void sys_spinlock_unlock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.Log("sys_spinlock_unlock(lock=*0x%x)", lock);
 
@@ -1263,7 +1257,7 @@ void sys_ppu_thread_exit(PPUThread& CPU, u64 val)
 
 std::mutex g_once_mutex;
 
-void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_t<u32>> once_ctrl, vm::ptr<void()> init)
+void sys_ppu_thread_once(PPUThread& CPU, vm::ptr<atomic_be_t<u32>> once_ctrl, vm::ptr<void()> init)
 {
 	sysPrxForUser.Warning("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 

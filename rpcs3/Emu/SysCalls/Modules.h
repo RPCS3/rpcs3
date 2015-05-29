@@ -9,6 +9,7 @@ class Module;
 enum : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // always call HLE function
+	MFF_NO_RETURN  = (1 << 1), // uses EIF_USE_BRANCH flag with LLE, ignored with MFF_FORCED_HLE
 };
 
 // flags passed with index
@@ -16,8 +17,9 @@ enum : u32
 {
 	EIF_SAVE_RTOC   = (1 << 25), // save RTOC in [SP+0x28] before calling HLE/LLE function
 	EIF_PERFORM_BLR = (1 << 24), // do BLR after calling HLE/LLE function
+	EIF_USE_BRANCH  = (1 << 23), // do only branch, LLE must be set, last_syscall must be zero
 
-	EIF_FLAGS = 0x3000000, // all flags
+	EIF_FLAGS = 0x3800000, // all flags
 };
 
 struct ModuleFunc
@@ -121,6 +123,7 @@ bool patch_ppu_import(u32 addr, u32 index);
 
 #define REG_FUNC(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), 0, &module, #name, bind_func(name)))
 #define REG_FUNC_FH(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_FORCED_HLE, &module, #name, bind_func(name)))
+#define REG_FUNC_NR(module, name) add_ppu_func(ModuleFunc(get_function_id(#name), MFF_NO_RETURN, &module, #name, bind_func(name)))
 
 #define REG_UNNAMED(module, nid) add_ppu_func(ModuleFunc(0x##nid, 0, &module, "_nid_"#nid, bind_func(_nid_##nid)))
 

@@ -28,9 +28,9 @@ bool EventManager::CheckKey(u64 key)
 	return eq_map.find(key) != eq_map.end();
 }
 
-bool EventManager::RegisterKey(std::shared_ptr<event_queue_t>& data, u64 key)
+bool EventManager::RegisterKey(const std::shared_ptr<lv2_event_queue_t>& data)
 {
-	if (!key)
+	if (!data->key)
 	{
 		// always ok
 		return true;
@@ -38,12 +38,12 @@ bool EventManager::RegisterKey(std::shared_ptr<event_queue_t>& data, u64 key)
 
 	std::lock_guard<std::mutex> lock(m_lock);
 
-	if (eq_map.find(key) != eq_map.end())
+	if (eq_map.find(data->key) != eq_map.end())
 	{
 		return false;
 	}
 
-	eq_map[key] = data;
+	eq_map[data->key] = data;
 
 	return true;
 }
@@ -68,7 +68,7 @@ bool EventManager::UnregisterKey(u64 key)
 	return false;
 }
 
-std::shared_ptr<event_queue_t> EventManager::GetEventQueue(u64 key)
+std::shared_ptr<lv2_event_queue_t> EventManager::GetEventQueue(u64 key)
 {
 	if (!key)
 	{

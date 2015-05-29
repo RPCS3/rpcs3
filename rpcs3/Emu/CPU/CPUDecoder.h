@@ -354,17 +354,17 @@ public:
 		}
 	}
 
-	__forceinline const std::string& GetName() const
+	force_inline const std::string& GetName() const
 	{
 		return m_name;
 	}
 
-	__forceinline const uint GetArgCount() const
+	force_inline const uint GetArgCount() const
 	{
 		return m_args_count;
 	}
 
-	__forceinline const CodeFieldBase& GetArg(uint index) const
+	force_inline const CodeFieldBase& GetArg(uint index) const
 	{
 		assert(index < m_args_count);
 		return *m_args[index];

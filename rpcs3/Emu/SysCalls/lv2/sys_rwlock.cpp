@@ -36,9 +36,7 @@ s32 sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> a
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<rwlock_t> rwlock(new rwlock_t(attr->protocol, attr->name_u64));
-
-	*rw_lock_id = Emu.GetIdManager().GetNewID(rwlock, TYPE_RWLOCK);
+	*rw_lock_id = Emu.GetIdManager().make<lv2_rwlock_t>(attr->protocol, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -49,7 +47,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -61,7 +59,7 @@ s32 sys_rwlock_destroy(u32 rw_lock_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID<rwlock_t>(rw_lock_id);
+	Emu.GetIdManager().remove<lv2_rwlock_t>(rw_lock_id);
 
 	return CELL_OK;
 }
@@ -74,7 +72,7 @@ s32 sys_rwlock_rlock(u32 rw_lock_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -113,7 +111,7 @@ s32 sys_rwlock_tryrlock(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -136,7 +134,7 @@ s32 sys_rwlock_runlock(u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -164,7 +162,7 @@ s32 sys_rwlock_wlock(PPUThread& CPU, u32 rw_lock_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -208,7 +206,7 @@ s32 sys_rwlock_trywlock(PPUThread& CPU, u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{
@@ -236,7 +234,7 @@ s32 sys_rwlock_wunlock(PPUThread& CPU, u32 rw_lock_id)
 
 	LV2_LOCK;
 
-	const auto rwlock = Emu.GetIdManager().GetIDData<rwlock_t>(rw_lock_id);
+	const auto rwlock = Emu.GetIdManager().get<lv2_rwlock_t>(rw_lock_id);
 
 	if (!rwlock)
 	{

@@ -17,7 +17,7 @@ struct sys_mutex_attribute_t
 	};
 };
 
-struct mutex_t
+struct lv2_mutex_t
 {
 	const bool recursive;
 	const u32 protocol;
@@ -31,7 +31,7 @@ struct mutex_t
 	std::condition_variable cv;
 	std::atomic<u32> waiters;
 
-	mutex_t(bool recursive, u32 protocol, u64 name)
+	lv2_mutex_t(bool recursive, u32 protocol, u64 name)
 		: recursive(recursive)
 		, protocol(protocol)
 		, name(name)
@@ -41,6 +41,8 @@ struct mutex_t
 	{
 	}
 };
+
+REG_ID_TYPE(lv2_mutex_t, 0x85); // SYS_MUTEX_OBJECT
 
 class PPUThread;
 

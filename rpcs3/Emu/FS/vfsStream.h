@@ -19,14 +19,14 @@ struct vfsStream
 
 	virtual u64 Write(const void* src, u64 count) = 0;
 
-	template<typename T> __forceinline bool SWrite(const T& data, u64 count = sizeof(T))
+	template<typename T> force_inline bool SWrite(const T& data, u64 count = sizeof(T))
 	{
 		return Write(&data, count) == count;
 	}
 
 	virtual u64 Read(void* dst, u64 count) = 0;
 
-	template<typename T> __forceinline bool SRead(T& data, u64 count = sizeof(T))
+	template<typename T> force_inline bool SRead(T& data, u64 count = sizeof(T))
 	{
 		return Read(&data, count) == count;
 	}

@@ -157,9 +157,9 @@ struct spu_group_t
 	std::atomic<u32> join_state; // flags used to detect exit cause
 	std::condition_variable join_cv; // used to signal waiting PPU thread
 
-	std::weak_ptr<event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::weak_ptr<event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::weak_ptr<event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	std::weak_ptr<lv2_event_queue_t> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::weak_ptr<lv2_event_queue_t> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::weak_ptr<lv2_event_queue_t> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	spu_group_t(std::string name, u32 num, s32 prio, s32 type, u32 ct)
 		: name(name)

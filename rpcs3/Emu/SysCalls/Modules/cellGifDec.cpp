@@ -34,7 +34,7 @@ s32 cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 {
 	cellGifDec.Warning("cellGifDecOpen(mainHandle=0x%x, subHandle=*0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
-	std::shared_ptr<CellGifDecSubHandle> current_subHandle(new CellGifDecSubHandle);
+	auto current_subHandle = std::make_shared<CellGifDecSubHandle>();
 	current_subHandle->fd = 0;
 	current_subHandle->src = *src;
 
@@ -48,16 +48,16 @@ s32 cellGifDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellGifDecSrc
 	{
 		// Get file descriptor and size
 		std::shared_ptr<vfsStream> file_s(Emu.GetVFS().OpenFile(src->fileName.get_ptr(), vfsRead));
-		std::shared_ptr<fs_file_t> file(new fs_file_t(file_s, 0, 0));
-		if (!file) return CELL_GIFDEC_ERROR_OPEN_FILE;
-		current_subHandle->fd = Emu.GetIdManager().GetNewID(file, TYPE_FS_FILE);
-		current_subHandle->fileSize = file->file->GetSize();
+		if (!file_s) return CELL_GIFDEC_ERROR_OPEN_FILE;
+
+		current_subHandle->fd = Emu.GetIdManager().make<lv2_file_t>(file_s, 0, 0);
+		current_subHandle->fileSize = file_s->GetSize();
 		break;
 	}
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellGifDecSubHandle struct.
-	*subHandle = Emu.GetIdManager().GetNewID(current_subHandle);
+	*subHandle = Emu.GetIdManager().add(std::move(current_subHandle));
 
 	return CELL_OK;
 }
@@ -66,7 +66,7 @@ s32 cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 {
 	cellGifDec.Warning("cellGifDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
-	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellGifDecSubHandle>(subHandle);
+	const auto subHandle_data = Emu.GetIdManager().get<CellGifDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -88,7 +88,7 @@ s32 cellGifDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellGifDecInfo> 
 
 	case se32(CELL_GIFDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
 		file->file->Read(buffer.begin(), buffer.size());
 		break;
@@ -120,7 +120,7 @@ s32 cellGifDecSetParameter(u32 mainHandle, u32 subHandle, vm::ptr<const CellGifD
 {
 	cellGifDec.Warning("cellGifDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
-	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellGifDecSubHandle>(subHandle);
+	const auto subHandle_data = Emu.GetIdManager().get<CellGifDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -154,7 +154,7 @@ s32 cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
-	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellGifDecSubHandle>(subHandle);
+	const auto subHandle_data = Emu.GetIdManager().get<CellGifDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -176,7 +176,7 @@ s32 cellGifDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::pt
 
 	case se32(CELL_GIFDEC_FILE):
 	{
-		auto file = Emu.GetIdManager().GetIDData<fs_file_t>(fd);
+		auto file = Emu.GetIdManager().get<lv2_file_t>(fd);
 		file->file->Seek(0);
 		file->file->Read(gif.ptr(), gif.size());
 		break;
@@ -273,15 +273,15 @@ s32 cellGifDecClose(u32 mainHandle, u32 subHandle)
 {
 	cellGifDec.Warning("cellGifDecClose(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
 
-	const auto subHandle_data = Emu.GetIdManager().GetIDData<CellGifDecSubHandle>(subHandle);
+	const auto subHandle_data = Emu.GetIdManager().get<CellGifDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
 		return CELL_GIFDEC_ERROR_FATAL;
 	}
 
-	Emu.GetIdManager().RemoveID<fs_file_t>(subHandle_data->fd);
-	Emu.GetIdManager().RemoveID<CellGifDecSubHandle>(subHandle);
+	Emu.GetIdManager().remove<lv2_file_t>(subHandle_data->fd);
+	Emu.GetIdManager().remove<CellGifDecSubHandle>(subHandle);
 
 	return CELL_OK;
 }

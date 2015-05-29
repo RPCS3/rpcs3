@@ -2004,19 +2004,10 @@ void Compiler::BC(u32 bo, u32 bi, s32 bd, u32 aa, u32 lk) {
 }
 
 void Compiler::HACK(u32 index) {
-    if (index & EIF_SAVE_RTOC) {
-        auto addr_i64 = (Value *)m_ir_builder->getInt64(0x28);
-        auto ra_i64 = GetGpr(1);
-        addr_i64 = m_ir_builder->CreateAdd(ra_i64, addr_i64);
-
-        WriteMemory(addr_i64, GetGpr(2, 64));
-    }
-    Call<void>("execute_ppu_func_by_index", &execute_ppu_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & ~EIF_FLAGS));
-    if (index & EIF_PERFORM_BLR) {
-        auto lr_i64 = GetLr();
-        lr_i64 = m_ir_builder->CreateAnd(lr_i64, ~0x3ULL);
-        auto lr_i32 = m_ir_builder->CreateTrunc(lr_i64, m_ir_builder->getInt32Ty());
-        CreateBranch(nullptr, lr_i32, false, true);
+    Call<void>("execute_ppu_func_by_index", &execute_ppu_func_by_index, m_state.args[CompileTaskState::Args::State], m_ir_builder->getInt32(index & EIF_USE_BRANCH ? index : index & ~EIF_PERFORM_BLR));
+    if (index & EIF_PERFORM_BLR || index & EIF_USE_BRANCH) {
+        auto lr_i32 = index & EIF_USE_BRANCH ? GetPc() : m_ir_builder->CreateTrunc(m_ir_builder->CreateAnd(GetLr(), ~0x3ULL), m_ir_builder->getInt32Ty());
+        CreateBranch(nullptr, lr_i32, false, (index & EIF_USE_BRANCH) == 0);
     }
     // copied from Compiler::SC()
     //auto ret_i1   = Call<bool>("PollStatus", m_poll_status_function, m_state.args[CompileTaskState::Args::State]);
@@ -6089,9 +6080,10 @@ BranchType ppu_recompiler_llvm::GetBranchTypeFromInstruction(u32 instruction) {
         } else if (field2 == 528) {
             type = lk ? BranchType::FunctionCall : BranchType::LocalBranch;
         }
-    } else if (field1 == 1 && (instruction & EIF_PERFORM_BLR)) {
-        type = BranchType::Return;
+    } else if (field1 == 1 && (instruction & EIF_PERFORM_BLR)) { // classify HACK instruction
+        type = instruction & EIF_USE_BRANCH ? BranchType::FunctionCall : BranchType::Return;
+    } else if (field1 == 1 && (instruction & EIF_USE_BRANCH)) {
+        type = BranchType::LocalBranch;
     }
-    
     return type;
 }

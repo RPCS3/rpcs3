@@ -15,19 +15,15 @@ SysCallBase sys_lwcond("sys_lwcond");
 
 void lwcond_create(sys_lwcond_t& lwcond, sys_lwmutex_t& lwmutex, u64 name)
 {
-	std::shared_ptr<lwcond_t> cond(new lwcond_t(name));
-
 	lwcond.lwmutex.set(vm::get_addr(&lwmutex));
-	lwcond.lwcond_queue = Emu.GetIdManager().GetNewID(cond, TYPE_LWCOND);
+	lwcond.lwcond_queue = Emu.GetIdManager().make<lv2_lwcond_t>(name);
 }
 
 s32 _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
 	sys_lwcond.Warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);
 
-	std::shared_ptr<lwcond_t> cond(new lwcond_t(name));
-
-	*lwcond_id = Emu.GetIdManager().GetNewID(cond, TYPE_LWCOND);
+	*lwcond_id = Emu.GetIdManager().make<lv2_lwcond_t>(name);
 
 	return CELL_OK;
 }
@@ -38,7 +34,7 @@ s32 _sys_lwcond_destroy(u32 lwcond_id)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<lwcond_t>(lwcond_id);
+	const auto cond = Emu.GetIdManager().get<lv2_lwcond_t>(lwcond_id);
 
 	if (!cond)
 	{
@@ -50,7 +46,7 @@ s32 _sys_lwcond_destroy(u32 lwcond_id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID<lwcond_t>(lwcond_id);
+	Emu.GetIdManager().remove<lv2_lwcond_t>(lwcond_id);
 
 	return CELL_OK;
 }
@@ -61,8 +57,8 @@ s32 _sys_lwcond_signal(u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mod
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<lwcond_t>(lwcond_id);
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto cond = Emu.GetIdManager().get<lv2_lwcond_t>(lwcond_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!cond || (lwmutex_id && !mutex))
 	{
@@ -122,8 +118,8 @@ s32 _sys_lwcond_signal_all(u32 lwcond_id, u32 lwmutex_id, u32 mode)
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<lwcond_t>(lwcond_id);
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto cond = Emu.GetIdManager().get<lv2_lwcond_t>(lwcond_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!cond || (lwmutex_id && !mutex))
 	{
@@ -169,8 +165,8 @@ s32 _sys_lwcond_queue_wait(PPUThread& CPU, u32 lwcond_id, u32 lwmutex_id, u64 ti
 
 	LV2_LOCK;
 
-	const auto cond = Emu.GetIdManager().GetIDData<lwcond_t>(lwcond_id);
-	const auto mutex = Emu.GetIdManager().GetIDData<lwmutex_t>(lwmutex_id);
+	const auto cond = Emu.GetIdManager().get<lv2_lwcond_t>(lwcond_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_lwmutex_t>(lwmutex_id);
 
 	if (!cond || !mutex)
 	{

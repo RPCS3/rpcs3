@@ -4,7 +4,7 @@
 #include "Emu/Cell/SPUContext.h"
 #include "MFC.h"
 
-struct event_queue_t;
+struct lv2_event_queue_t;
 struct spu_group_t;
 
 // SPU Channels
@@ -137,7 +137,7 @@ union spu_channel_t
 		u32 value;
 	};
 
-	atomic_t<sync_var_t> sync_var; // atomic variable
+	atomic<sync_var_t> sync_var; // atomic variable
 
 public:
 	bool push(u32 value)
@@ -223,8 +223,8 @@ struct spu_channel_4_t
 		u32 value2;
 	};
 
-	atomic_le_t<sync_var_t> sync_var;
-	atomic_le_t<u32> value3;
+	atomic<sync_var_t> sync_var;
+	atomic<u32> value3;
 
 public:
 	void clear()
@@ -280,10 +280,10 @@ public:
 
 struct spu_interrupt_tag_t
 {
-	atomic_le_t<u64> mask;
-	atomic_le_t<u64> stat;
+	atomic<u64> mask;
+	atomic<u64> stat;
 
-	atomic_le_t<s32> assigned;
+	atomic<s32> assigned;
 
 	std::mutex handler_mutex;
 	std::condition_variable cond;
@@ -338,7 +338,7 @@ struct g_spu_imm_table_t
 			}
 		}
 
-		__forceinline __m128 operator [] (s32 scale) const
+		force_inline __m128 operator [] (s32 scale) const
 		{
 			return m_data[scale + 155];
 		}
@@ -527,22 +527,22 @@ public:
 	spu_channel_t ch_snr2; // SPU Signal Notification Register 2
 
 	u32 ch_event_mask;
-	atomic_le_t<u32> ch_event_stat;
+	atomic<u32> ch_event_stat;
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
 
-	atomic_le_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
-	atomic_le_t<u32> status; // SPU Status register
-	atomic_le_t<u32> npc; // SPU Next Program Counter register
+	atomic<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	atomic<u32> status; // SPU Status register
+	atomic<u32> npc; // SPU Next Program Counter register
 
 	spu_interrupt_tag_t int0; // SPU Class 0 Interrupt Management
 	spu_interrupt_tag_t int2; // SPU Class 2 Interrupt Management
 
 	std::weak_ptr<spu_group_t> tg; // SPU Thread Group
 
-	std::array<std::pair<u32, std::weak_ptr<event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
-	std::weak_ptr<event_queue_t> spup[64]; // SPU Ports
+	std::array<std::pair<u32, std::weak_ptr<lv2_event_queue_t>>, 32> spuq; // Event Queue Keys for SPU Thread
+	std::weak_ptr<lv2_event_queue_t> spup[64]; // SPU Ports
 
 	void write_snr(bool number, u32 value)
 	{

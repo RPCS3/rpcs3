@@ -14,7 +14,7 @@ class CPUThreadManager;
 class PadManager;
 class KeyboardManager;
 class MouseManager;
-class IdManager;
+class ID_manager;
 class GSManager;
 class AudioManager;
 class CallbackManager;
@@ -84,7 +84,7 @@ class Emulator
 	PadManager* m_pad_manager;
 	KeyboardManager* m_keyboard_manager;
 	MouseManager* m_mouse_manager;
-	IdManager* m_id_manager;
+	ID_manager* m_id_manager;
 	GSManager* m_gs_manager;
 	AudioManager* m_audio_manager;
 	CallbackManager* m_callback_manager;
@@ -141,7 +141,7 @@ public:
 	PadManager&       GetPadManager()      { return *m_pad_manager; }
 	KeyboardManager&  GetKeyboardManager() { return *m_keyboard_manager; }
 	MouseManager&     GetMouseManager()    { return *m_mouse_manager; }
-	IdManager&        GetIdManager()       { return *m_id_manager; }
+	ID_manager&       GetIdManager()       { return *m_id_manager; }
 	GSManager&        GetGSManager()       { return *m_gs_manager; }
 	AudioManager&     GetAudioManager()    { return *m_audio_manager; }
 	CallbackManager&  GetCallbackManager() { return *m_callback_manager; }
@@ -190,10 +190,10 @@ public:
 	void SavePoints(const std::string& path);
 	void LoadPoints(const std::string& path);
 
-	__forceinline bool IsRunning() const { return m_status == Running; }
-	__forceinline bool IsPaused()  const { return m_status == Paused; }
-	__forceinline bool IsStopped() const { return m_status == Stopped; }
-	__forceinline bool IsReady()   const { return m_status == Ready; }
+	force_inline bool IsRunning() const { return m_status == Running; }
+	force_inline bool IsPaused()  const { return m_status == Paused; }
+	force_inline bool IsStopped() const { return m_status == Stopped; }
+	force_inline bool IsReady()   const { return m_status == Ready; }
 };
 
 using lv2_lock_type = std::unique_lock<std::mutex>;

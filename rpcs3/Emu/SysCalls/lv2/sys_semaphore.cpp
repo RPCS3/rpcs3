@@ -12,13 +12,6 @@
 
 SysCallBase sys_semaphore("sys_semaphore");
 
-u32 semaphore_create(s32 initial_val, s32 max_val, u32 protocol, u64 name_u64)
-{
-	std::shared_ptr<semaphore_t> sem(new semaphore_t(protocol, max_val, name_u64, initial_val));
-
-	return Emu.GetIdManager().GetNewID(sem, TYPE_SEMAPHORE);
-}
-
 s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
 	sys_semaphore.Warning("sys_semaphore_create(sem=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem, attr, initial_val, max_val);
@@ -50,7 +43,7 @@ s32 sys_semaphore_create(vm::ptr<u32> sem, vm::ptr<sys_semaphore_attribute_t> at
 		return CELL_EINVAL;
 	}
 
-	*sem = semaphore_create(initial_val, max_val, protocol, attr->name_u64);
+	*sem = Emu.GetIdManager().make<lv2_sema_t>(initial_val, max_val, protocol, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -61,7 +54,7 @@ s32 sys_semaphore_destroy(u32 sem)
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
+	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
 
 	if (!semaphore)
 	{
@@ -73,7 +66,7 @@ s32 sys_semaphore_destroy(u32 sem)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID<semaphore_t>(sem);
+	Emu.GetIdManager().remove<lv2_sema_t>(sem);
 
 	return CELL_OK;
 }
@@ -86,7 +79,7 @@ s32 sys_semaphore_wait(u32 sem, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
+	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
 
 	if (!semaphore)
 	{
@@ -125,7 +118,7 @@ s32 sys_semaphore_trywait(u32 sem)
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
+	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
 
 	if (!semaphore)
 	{
@@ -148,7 +141,7 @@ s32 sys_semaphore_post(u32 sem, s32 count)
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
+	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
 
 	if (!semaphore)
 	{
@@ -189,7 +182,7 @@ s32 sys_semaphore_get_value(u32 sem, vm::ptr<s32> count)
 
 	LV2_LOCK;
 
-	const auto semaphore = Emu.GetIdManager().GetIDData<semaphore_t>(sem);
+	const auto semaphore = Emu.GetIdManager().get<lv2_sema_t>(sem);
 
 	if (!semaphore)
 	{

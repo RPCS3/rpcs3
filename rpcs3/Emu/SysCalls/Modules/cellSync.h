@@ -39,11 +39,11 @@ union CellSyncMutex
 
 	struct
 	{
-		atomic_t<u16> release_count;
-		atomic_t<u16> acquire_count;
+		atomic_be_t<u16> release_count;
+		atomic_be_t<u16> acquire_count;
 	};
 
-	atomic_t<sync_t> sync_var;
+	atomic_be_t<sync_t> sync_var;
 };
 
 static_assert(sizeof(CellSyncMutex) == 4, "CellSyncMutex: wrong size");
@@ -56,7 +56,7 @@ struct CellSyncBarrier
 		be_t<s16> m_count;
 	};
 
-	atomic_t<data_t> data;
+	atomic_be_t<data_t> data;
 };
 
 static_assert(sizeof(CellSyncBarrier) == 4, "CellSyncBarrier: wrong size");
@@ -69,7 +69,7 @@ struct CellSyncRwm
 		be_t<u16> m_writers;
 	};
 
-	atomic_t<data_t> data;
+	atomic_be_t<data_t> data;
 	be_t<u32> m_size;
 	vm::bptr<void, 1, u64> m_buffer;
 };
@@ -84,7 +84,7 @@ struct CellSyncQueue
 		be_t<u32> m_v2;
 	};
 
-	atomic_t<data_t> data;
+	atomic_be_t<data_t> data;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
 	vm::bptr<u8, 1, u64> m_buffer;
@@ -143,14 +143,14 @@ struct CellSyncLFQueue
 
 	union // 0x0
 	{
-		atomic_t<pop1_t> pop1;
-		atomic_t<pop3_t> pop3;
+		atomic_be_t<pop1_t> pop1;
+		atomic_be_t<pop3_t> pop3;
 	};
 
 	union // 0x8
 	{
-		atomic_t<push1_t> push1;
-		atomic_t<push3_t> push3;
+		atomic_be_t<push1_t> push1;
+		atomic_be_t<push3_t> push3;
 	};
 
 	be_t<u32> m_size;              // 0x10
@@ -159,10 +159,10 @@ struct CellSyncLFQueue
 	u8 m_bs[4];                    // 0x20
 	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;                // 0x28
-	atomic_t<u32> init;            // 0x2C
-	atomic_t<push2_t> push2;       // 0x30
+	atomic_be_t<u32> init;         // 0x2C
+	atomic_be_t<push2_t> push2;    // 0x30
 	be_t<u16> m_hs1[15];           // 0x32
-	atomic_t<pop2_t> pop2;         // 0x50
+	atomic_be_t<pop2_t> pop2;      // 0x50
 	be_t<u16> m_hs2[15];           // 0x52
 	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;                // 0x78

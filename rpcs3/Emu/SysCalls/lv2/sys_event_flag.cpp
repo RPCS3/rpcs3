@@ -47,9 +47,7 @@ s32 sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attr> attr, u6
 	default: sys_event_flag.Error("sys_event_flag_create(): unknown type (0x%x)", attr->type); return CELL_EINVAL;
 	}
 
-	std::shared_ptr<event_flag_t> ef(new event_flag_t(init, protocol, type, attr->name_u64));
-
-	*id = Emu.GetIdManager().GetNewID(ef, TYPE_EVENT_FLAG);
+	*id = Emu.GetIdManager().make<lv2_event_flag_t>(init, protocol, type, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -60,7 +58,7 @@ s32 sys_event_flag_destroy(u32 id)
 
 	LV2_LOCK;
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -72,7 +70,7 @@ s32 sys_event_flag_destroy(u32 id)
 		return CELL_EBUSY;
 	}
 
-	Emu.GetIdManager().RemoveID<event_flag_t>(id);
+	Emu.GetIdManager().remove<lv2_event_flag_t>(id);
 
 	return CELL_OK;
 }
@@ -105,7 +103,7 @@ s32 sys_event_flag_wait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 t
 	default: return CELL_EINVAL;
 	}
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -212,7 +210,7 @@ s32 sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result)
 	default: return CELL_EINVAL;
 	}
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -252,7 +250,7 @@ s32 sys_event_flag_set(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -280,7 +278,7 @@ s32 sys_event_flag_clear(u32 id, u64 bitptn)
 
 	LV2_LOCK;
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -308,7 +306,7 @@ s32 sys_event_flag_cancel(u32 id, vm::ptr<u32> num)
 		*num = 0;
 	}
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{
@@ -344,7 +342,7 @@ s32 sys_event_flag_get(u32 id, vm::ptr<u64> flags)
 		return CELL_EFAULT;
 	}
 
-	const auto ef = Emu.GetIdManager().GetIDData<event_flag_t>(id);
+	const auto ef = Emu.GetIdManager().get<lv2_event_flag_t>(id);
 
 	if (!ef)
 	{

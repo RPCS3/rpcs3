@@ -75,7 +75,7 @@ namespace vm
 	void* g_base_addr = (atexit(finalize), initialize());
 	void* g_priv_addr;
 
-	std::array<atomic_le_t<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
+	std::array<atomic<u8>, 0x100000000ull / 4096> g_page_info = {}; // information about every page
 
 	class reservation_mutex_t
 	{
@@ -91,7 +91,7 @@ namespace vm
 
 		bool do_notify;
 
-		__noinline void lock()
+		never_inline void lock()
 		{
 			NamedThreadBase* owner = GetCurrentNamedThread();
 			NamedThreadBase* old = nullptr;
@@ -113,7 +113,7 @@ namespace vm
 			do_notify = true;
 		}
 
-		__noinline void unlock()
+		never_inline void unlock()
 		{
 			NamedThreadBase* owner = GetCurrentNamedThread();
 

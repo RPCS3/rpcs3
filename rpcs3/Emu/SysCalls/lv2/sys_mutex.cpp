@@ -41,9 +41,7 @@ s32 sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 		return CELL_EINVAL;
 	}
 
-	std::shared_ptr<mutex_t> mutex(new mutex_t(recursive, protocol, attr->name_u64));
-
-	*mutex_id = Emu.GetIdManager().GetNewID(mutex, TYPE_MUTEX);
+	*mutex_id = Emu.GetIdManager().make<lv2_mutex_t>(recursive, protocol, attr->name_u64);
 
 	return CELL_OK;
 }
@@ -54,7 +52,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(mutex_id);
 
 	if (!mutex)
 	{
@@ -77,7 +75,7 @@ s32 sys_mutex_destroy(u32 mutex_id)
 		return CELL_EPERM;
 	}
 
-	Emu.GetIdManager().RemoveID<mutex_t>(mutex_id);
+	Emu.GetIdManager().remove<lv2_mutex_t>(mutex_id);
 
 	return CELL_OK;
 }
@@ -90,7 +88,7 @@ s32 sys_mutex_lock(PPUThread& CPU, u32 mutex_id, u64 timeout)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(mutex_id);
 
 	if (!mutex)
 	{
@@ -148,7 +146,7 @@ s32 sys_mutex_trylock(PPUThread& CPU, u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(mutex_id);
 
 	if (!mutex)
 	{
@@ -190,7 +188,7 @@ s32 sys_mutex_unlock(PPUThread& CPU, u32 mutex_id)
 
 	LV2_LOCK;
 
-	const auto mutex = Emu.GetIdManager().GetIDData<mutex_t>(mutex_id);
+	const auto mutex = Emu.GetIdManager().get<lv2_mutex_t>(mutex_id);
 
 	if (!mutex)
 	{

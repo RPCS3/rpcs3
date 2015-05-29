@@ -26,13 +26,13 @@ public:
 	static const u32 shift = 31 - to;
 	static const u32 mask = ((1ULL << ((to - from) + 1)) - 1) << shift;
 	
-	static __forceinline void encode(u32& data, u32 value)
+	static force_inline void encode(u32& data, u32 value)
 	{
 		data &= ~mask;
 		data |= (value << shift) & mask;
 	}
 
-	static __forceinline u32 decode(u32 data)
+	static force_inline u32 decode(u32 data)
 	{
 		return (data & mask) >> shift;
 	}
@@ -64,13 +64,13 @@ public:
 	static const u32 shift2 = 31 - to2;
 	static const u32 mask2 = ((1 << ((to2 - from2) + 1)) - 1) << shift2;
 	
-	static __forceinline void encode(u32& data, u32 value)
+	static force_inline void encode(u32& data, u32 value)
 	{
 		data &= ~(CodeField<from1, to1>::mask | mask2);
 		data |= ((value << CodeField<from1, to1>::shift) & CodeField<from1, to1>::mask) | (((value >> offset) << shift2) & mask2);
 	}
 
-	static __forceinline u32 decode(u32 data)
+	static force_inline u32 decode(u32 data)
 	{
 		return ((data & CodeField<from1, to1>::mask) >> CodeField<from1, to1>::shift) | (((data & mask2) >> shift2) << offset);
 	}
@@ -96,7 +96,7 @@ public:
 
 	static const int size = _size;
 
-	static __forceinline u32 decode(u32 data)
+	static force_inline u32 decode(u32 data)
 	{
 		return sign<size>((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift);
 	}
@@ -117,12 +117,12 @@ public:
 	{
 	}
 
-	static __forceinline u32 decode(u32 data)
+	static force_inline u32 decode(u32 data)
 	{
 		return ((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift) << offset;
 	}
 
-	static __forceinline void encode(u32& data, u32 value)
+	static force_inline void encode(u32& data, u32 value)
 	{
 		data &= ~CodeField<from, to>::mask;
 		data |= ((value >> offset) << CodeField<from, to>::shift) & CodeField<from, to>::mask;
@@ -149,12 +149,12 @@ public:
 	{
 	}
 
-	static __forceinline u32 decode(u32 data)
+	static force_inline u32 decode(u32 data)
 	{
 		return sign<size>((data & CodeField<from, to>::mask) >> CodeField<from, to>::shift) << offset;
 	}
 
-	static __forceinline void encode(u32& data, u32 value)
+	static force_inline void encode(u32& data, u32 value)
 	{
 		data &= ~CodeField<from, to>::mask;
 		data |= ((value >> offset) << CodeField<from, to>::shift) & CodeField<from, to>::mask;

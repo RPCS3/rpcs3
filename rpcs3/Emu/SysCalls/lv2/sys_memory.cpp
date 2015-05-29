@@ -45,7 +45,7 @@ s32 sys_memory_allocate_from_container(u32 size, u32 cid, u32 flags, u32 alloc_a
 	sys_memory.Log("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%x)", size, cid, flags);
 
 	// Check if this container ID is valid.
-	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
@@ -124,11 +124,7 @@ s32 sys_memory_container_create(vm::ptr<u32> cid, u32 yield_size)
 		return CELL_ENOMEM;
 
 	// Wrap the allocated memory in a memory container.
-	std::shared_ptr<MemoryContainerInfo> ct(new MemoryContainerInfo(addr, yield_size));
-	u32 id = Emu.GetIdManager().GetNewID(ct, TYPE_MEM);
-	*cid = id;
-
-	sys_memory.Warning("*** memory_container created(addr=0x%llx): id = %d", addr, id);
+	*cid = Emu.GetIdManager().make<MemoryContainerInfo>(addr, yield_size);
 
 	return CELL_OK;
 }
@@ -138,7 +134,7 @@ s32 sys_memory_container_destroy(u32 cid)
 	sys_memory.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
 	// Check if this container ID is valid.
-	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{
@@ -147,7 +143,7 @@ s32 sys_memory_container_destroy(u32 cid)
 
 	// Release the allocated memory and remove the ID.
 	Memory.Free(ct->addr);
-	Emu.GetIdManager().RemoveID<MemoryContainerInfo>(cid);
+	Emu.GetIdManager().remove<MemoryContainerInfo>(cid);
 
 	return CELL_OK;
 }
@@ -157,7 +153,7 @@ s32 sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 	sys_memory.Warning("sys_memory_container_get_size(mem_info_addr=0x%x, cid=0x%x)", mem_info.addr(), cid);
 
 	// Check if this container ID is valid.
-	const auto ct = Emu.GetIdManager().GetIDData<MemoryContainerInfo>(cid);
+	const auto ct = Emu.GetIdManager().get<MemoryContainerInfo>(cid);
 
 	if (!ct)
 	{

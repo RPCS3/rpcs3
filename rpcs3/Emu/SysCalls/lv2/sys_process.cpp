@@ -206,81 +206,78 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
-	sys_process.Todo("sys_process_get_number_of_object(object=%d, nump_addr=0x%x)",
-		object, nump.addr());
+	sys_process.Error("sys_process_get_number_of_object(object=0x%x, nump=*0x%x)", object, nump);
 
 	switch(object)
 	{
-	case SYS_MEM_OBJECT:                  *nump = Emu.GetIdManager().GetTypeCount(TYPE_MEM);                 break;
-	case SYS_MUTEX_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_MUTEX);               break;
-	case SYS_COND_OBJECT:                 *nump = Emu.GetIdManager().GetTypeCount(TYPE_COND);                break;
-	case SYS_RWLOCK_OBJECT:               *nump = Emu.GetIdManager().GetTypeCount(TYPE_RWLOCK);              break;
-	case SYS_INTR_TAG_OBJECT:             *nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_TAG);            break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:  *nump = Emu.GetIdManager().GetTypeCount(TYPE_INTR_SERVICE_HANDLE); break;
-	case SYS_EVENT_QUEUE_OBJECT:          *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_QUEUE);         break;
-	case SYS_EVENT_PORT_OBJECT:           *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_PORT);          break;
-	case SYS_TRACE_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_TRACE);               break;
-	case SYS_SPUIMAGE_OBJECT:             *nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUIMAGE);            break;
-	case SYS_PRX_OBJECT:                  *nump = Emu.GetIdManager().GetTypeCount(TYPE_PRX);                 break;
-	case SYS_SPUPORT_OBJECT:              *nump = Emu.GetIdManager().GetTypeCount(TYPE_SPUPORT);             break;
-	case SYS_LWMUTEX_OBJECT:              *nump = Emu.GetIdManager().GetTypeCount(TYPE_LWMUTEX);             break;
-	case SYS_TIMER_OBJECT:                *nump = Emu.GetIdManager().GetTypeCount(TYPE_TIMER);               break;
-	case SYS_SEMAPHORE_OBJECT:            *nump = Emu.GetIdManager().GetTypeCount(TYPE_SEMAPHORE);           break;
-	case SYS_LWCOND_OBJECT:               *nump = Emu.GetIdManager().GetTypeCount(TYPE_LWCOND);              break;
-	case SYS_EVENT_FLAG_OBJECT:           *nump = Emu.GetIdManager().GetTypeCount(TYPE_EVENT_FLAG);          break;
+	case SYS_MEM_OBJECT:
+	case SYS_MUTEX_OBJECT:
+	case SYS_COND_OBJECT:
+	case SYS_RWLOCK_OBJECT:
+	case SYS_INTR_TAG_OBJECT:
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:
+	case SYS_EVENT_QUEUE_OBJECT:
+	case SYS_EVENT_PORT_OBJECT:
+	case SYS_TRACE_OBJECT:
+	case SYS_SPUIMAGE_OBJECT:
+	case SYS_PRX_OBJECT:
+	case SYS_SPUPORT_OBJECT:
+	case SYS_LWMUTEX_OBJECT:
+	case SYS_TIMER_OBJECT:
+	case SYS_SEMAPHORE_OBJECT:
 	case SYS_FS_FD_OBJECT:
-		*nump = Emu.GetIdManager().GetTypeCount(TYPE_FS_FILE) + Emu.GetIdManager().GetTypeCount(TYPE_FS_DIR);
-		break;
-
-	default:      
-		return CELL_EINVAL;
+	case SYS_LWCOND_OBJECT:
+	case SYS_EVENT_FLAG_OBJECT:
+	{
+		*nump = Emu.GetIdManager().get_count_by_type(object);
+		return CELL_OK;
+	}	
 	}
 
-	return CELL_OK;
+	return CELL_EINVAL;
 }
 
 s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
 {
-	sys_process.Todo("sys_process_get_id(object=%d, buffer_addr=0x%x, size=%d, set_size_addr=0x%x)",
-		object, buffer.addr(), size, set_size.addr());
+	sys_process.Error("sys_process_get_id(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
 
-	switch(object)
+	switch (object)
 	{
+	case SYS_MEM_OBJECT:
+	case SYS_MUTEX_OBJECT:
+	case SYS_COND_OBJECT:
+	case SYS_RWLOCK_OBJECT:
+	case SYS_INTR_TAG_OBJECT:
+	case SYS_INTR_SERVICE_HANDLE_OBJECT:
+	case SYS_EVENT_QUEUE_OBJECT:
+	case SYS_EVENT_PORT_OBJECT:
+	case SYS_TRACE_OBJECT:
+	case SYS_SPUIMAGE_OBJECT:
+	case SYS_PRX_OBJECT:
+	case SYS_SPUPORT_OBJECT:
+	case SYS_LWMUTEX_OBJECT:
+	case SYS_TIMER_OBJECT:
+	case SYS_SEMAPHORE_OBJECT:
+	case SYS_FS_FD_OBJECT:
+	case SYS_LWCOND_OBJECT:
+	case SYS_EVENT_FLAG_OBJECT:
+	{
+		const auto objects = Emu.GetIdManager().get_IDs_by_type(object);
 
-#define ADD_OBJECTS(type) { \
-	u32 i=0; \
-	const auto objects = Emu.GetIdManager().GetTypeIDs(type); \
-	for(auto id=objects.begin(); i<size && id!=objects.end(); id++, i++) \
-		buffer[i] = *id; \
-	*set_size = i; \
+		u32 i = 0;
+
+		for (auto id = objects.begin(); i < size && id != objects.end(); id++, i++)
+		{
+			buffer[i] = *id;
+		}
+
+		*set_size = i;
+
+		return CELL_OK;
+	}
 	}
 
-	case SYS_MEM_OBJECT:                  ADD_OBJECTS(TYPE_MEM);                 break;
-	case SYS_MUTEX_OBJECT:                ADD_OBJECTS(TYPE_MUTEX);               break;
-	case SYS_COND_OBJECT:                 ADD_OBJECTS(TYPE_COND);                break;
-	case SYS_RWLOCK_OBJECT:               ADD_OBJECTS(TYPE_RWLOCK);              break;
-	case SYS_INTR_TAG_OBJECT:             ADD_OBJECTS(TYPE_INTR_TAG);            break;
-	case SYS_INTR_SERVICE_HANDLE_OBJECT:  ADD_OBJECTS(TYPE_INTR_SERVICE_HANDLE); break;
-	case SYS_EVENT_QUEUE_OBJECT:          ADD_OBJECTS(TYPE_EVENT_QUEUE);         break;
-	case SYS_EVENT_PORT_OBJECT:           ADD_OBJECTS(TYPE_EVENT_PORT);          break;
-	case SYS_TRACE_OBJECT:                ADD_OBJECTS(TYPE_TRACE);               break;
-	case SYS_SPUIMAGE_OBJECT:             ADD_OBJECTS(TYPE_SPUIMAGE);            break;
-	case SYS_PRX_OBJECT:                  ADD_OBJECTS(TYPE_PRX);                 break;
-	case SYS_SPUPORT_OBJECT:              ADD_OBJECTS(TYPE_SPUPORT);             break;
-	case SYS_LWMUTEX_OBJECT:              ADD_OBJECTS(TYPE_LWMUTEX);             break;
-	case SYS_TIMER_OBJECT:                ADD_OBJECTS(TYPE_TIMER);               break;
-	case SYS_SEMAPHORE_OBJECT:            ADD_OBJECTS(TYPE_SEMAPHORE);           break;
-	case SYS_FS_FD_OBJECT:                ADD_OBJECTS(TYPE_FS_FILE);/*TODO:DIR*/ break;
-	case SYS_LWCOND_OBJECT:               ADD_OBJECTS(TYPE_LWCOND);              break;
-	case SYS_EVENT_FLAG_OBJECT:           ADD_OBJECTS(TYPE_EVENT_FLAG);          break;
-
-#undef ADD_OBJECTS
-
-	default:      
-		return CELL_EINVAL;
-	}
-
-	return CELL_OK;
+	return CELL_EINVAL;
 }
 
 s32 process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)

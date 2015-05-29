@@ -56,12 +56,12 @@ namespace psv_func_detail
 	{
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_GENERAL");
 
-		__forceinline static T get_arg(ARMv7Context& context)
+		force_inline static T get_arg(ARMv7Context& context)
 		{
 			return cast_from_armv7_gpr<T>(context.GPR[g_count - 1]);
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		force_inline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 			context.GPR[g_count - 1] = cast_to_armv7_gpr<T>(arg);
 		}
@@ -73,12 +73,12 @@ namespace psv_func_detail
 		// first u64 argument is passed in r0-r1, second one is passed in r2-r3 (if g_count = 3)
 		static_assert(g_count == 1 || g_count == 3, "Wrong u64 argument position");
 
-		__forceinline static u64 get_arg(ARMv7Context& context)
+		force_inline static u64 get_arg(ARMv7Context& context)
 		{
 			return context.GPR_D[g_count >> 1];
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, u64 arg)
+		force_inline static void put_arg(ARMv7Context& context, u64 arg)
 		{
 			context.GPR_D[g_count >> 1] = arg;
 		}
@@ -89,12 +89,12 @@ namespace psv_func_detail
 	{
 		static_assert(g_count == 1 || g_count == 3, "Wrong s64 argument position");
 
-		__forceinline static s64 get_arg(ARMv7Context& context)
+		force_inline static s64 get_arg(ARMv7Context& context)
 		{
 			return context.GPR_D[g_count >> 1];
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, s64 arg)
+		force_inline static void put_arg(ARMv7Context& context, s64 arg)
 		{
 			context.GPR_D[g_count >> 1] = arg;
 		}
@@ -106,11 +106,11 @@ namespace psv_func_detail
 		static_assert(f_count <= 0, "TODO: Unsupported argument type (float)");
 		static_assert(sizeof(T) <= 8, "Invalid function argument type for ARG_FLOAT");
 
-		__forceinline static T get_arg(ARMv7Context& context)
+		force_inline static T get_arg(ARMv7Context& context)
 		{
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		force_inline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -121,11 +121,11 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported argument type (vector)");
 		static_assert(std::is_same<T, u128>::value, "Invalid function argument type for ARG_VECTOR");
 
-		__forceinline static T get_arg(ARMv7Context& context)
+		force_inline static T get_arg(ARMv7Context& context)
 		{
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		force_inline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 		}
 	};
@@ -137,13 +137,13 @@ namespace psv_func_detail
 		static_assert(v_count <= 0, "TODO: Unsupported stack argument type (vector)");
 		static_assert(sizeof(T) <= 4, "Invalid function argument type for ARG_STACK");
 
-		__forceinline static T get_arg(ARMv7Context& context)
+		force_inline static T get_arg(ARMv7Context& context)
 		{
 			// TODO: check
 			return cast_from_armv7_gpr<T>(vm::psv::read32(context.SP + sizeof(u32) * (g_count - 5)));
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, const T& arg)
+		force_inline static void put_arg(ARMv7Context& context, const T& arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -156,13 +156,13 @@ namespace psv_func_detail
 	template<int g_count, int f_count, int v_count>
 	struct bind_arg<u64, ARG_STACK, g_count, f_count, v_count>
 	{
-		__forceinline static u64 get_arg(ARMv7Context& context)
+		force_inline static u64 get_arg(ARMv7Context& context)
 		{
 			// TODO: check
 			return vm::psv::read64(context.SP + sizeof(u32) * (g_count - 5));
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, u64 arg)
+		force_inline static void put_arg(ARMv7Context& context, u64 arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -175,13 +175,13 @@ namespace psv_func_detail
 	template<int g_count, int f_count, int v_count>
 	struct bind_arg<s64, ARG_STACK, g_count, f_count, v_count>
 	{
-		__forceinline static s64 get_arg(ARMv7Context& context)
+		force_inline static s64 get_arg(ARMv7Context& context)
 		{
 			// TODO: check
 			return vm::psv::read64(context.SP + sizeof(u32) * (g_count - 5));
 		}
 
-		__forceinline static void put_arg(ARMv7Context& context, s64 arg)
+		force_inline static void put_arg(ARMv7Context& context, s64 arg)
 		{
 			// TODO: check
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
@@ -199,12 +199,12 @@ namespace psv_func_detail
 		static_assert(type == ARG_GENERAL, "Wrong use of bind_result template");
 		static_assert(sizeof(T) <= 4, "Invalid function result type for ARG_GENERAL");
 
-		__forceinline static T get_result(ARMv7Context& context)
+		force_inline static T get_result(ARMv7Context& context)
 		{
 			return cast_from_armv7_gpr<T>(context.GPR[0]);
 		}
 
-		__forceinline static void put_result(ARMv7Context& context, const T& result)
+		force_inline static void put_result(ARMv7Context& context, const T& result)
 		{
 			context.GPR[0] = cast_to_armv7_gpr<T>(result);
 		}
@@ -213,12 +213,12 @@ namespace psv_func_detail
 	template<>
 	struct bind_result<u64, ARG_GENERAL>
 	{
-		__forceinline static u64 get_result(ARMv7Context& context)
+		force_inline static u64 get_result(ARMv7Context& context)
 		{
 			return context.GPR_D[0];
 		}
 
-		__forceinline static void put_result(ARMv7Context& context, u64 result)
+		force_inline static void put_result(ARMv7Context& context, u64 result)
 		{
 			context.GPR_D[0] = result;
 		}
@@ -227,12 +227,12 @@ namespace psv_func_detail
 	template<>
 	struct bind_result<s64, ARG_GENERAL>
 	{
-		__forceinline static s64 get_result(ARMv7Context& context)
+		force_inline static s64 get_result(ARMv7Context& context)
 		{
 			return context.GPR_D[0];
 		}
 
-		__forceinline static void put_result(ARMv7Context& context, s64 result)
+		force_inline static void put_result(ARMv7Context& context, s64 result)
 		{
 			context.GPR_D[0] = result;
 		}
@@ -243,7 +243,7 @@ namespace psv_func_detail
 	//{
 	//	static_assert(sizeof(T) <= 8, "Invalid function result type for ARG_FLOAT");
 
-	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
+	//	static force_inline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
@@ -253,7 +253,7 @@ namespace psv_func_detail
 	//{
 	//	static_assert(std::is_same<T, u128>::value, "Invalid function result type for ARG_VECTOR");
 
-	//	static __forceinline void put_result(ARMv7Context& context, const T& result)
+	//	static force_inline void put_result(ARMv7Context& context, const T& result)
 	//	{
 	//	}
 	//};
@@ -289,7 +289,7 @@ namespace psv_func_detail
 	template <typename RT, typename F, typename Tuple, bool Done, int Total, int... N>
 	struct call_impl
 	{
-		static __forceinline RT call(F f, Tuple && t)
+		static force_inline RT call(F f, Tuple && t)
 		{
 			return call_impl<RT, F, Tuple, Total == 1 + sizeof...(N), Total, N..., sizeof...(N)>::call(f, std::forward<Tuple>(t));
 		}
@@ -298,28 +298,28 @@ namespace psv_func_detail
 	template <typename RT, typename F, typename Tuple, int Total, int... N>
 	struct call_impl<RT, F, Tuple, true, Total, N...>
 	{
-		static __forceinline RT call(F f, Tuple && t)
+		static force_inline RT call(F f, Tuple && t)
 		{
 			return f(std::get<N>(std::forward<Tuple>(t))...);
 		}
 	};
 
 	template <typename RT, typename F, typename Tuple>
-	__forceinline RT call(F f, Tuple && t)
+	force_inline RT call(F f, Tuple && t)
 	{
 		typedef typename std::decay<Tuple>::type ttype;
 		return psv_func_detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 	}
 
 	template<int g_count, int f_count, int v_count>
-	__forceinline std::tuple<> get_func_args(ARMv7Context& context)
+	force_inline std::tuple<> get_func_args(ARMv7Context& context)
 	{
 		// terminator
 		return std::tuple<>();
 	}
 
 	template<int g_count, int f_count, int v_count, typename T, typename... A>
-	__forceinline std::tuple<T, A...> get_func_args(ARMv7Context& context)
+	force_inline std::tuple<T, A...> get_func_args(ARMv7Context& context)
 	{
 		typedef arg_type<T, g_count, f_count, v_count> type;
 		const arg_class t = type::value;
@@ -332,14 +332,14 @@ namespace psv_func_detail
 	}
 
 	template<int g_count, int f_count, int v_count>
-	__forceinline static bool put_func_args(ARMv7Context& context)
+	force_inline static bool put_func_args(ARMv7Context& context)
 	{
 		// terminator
 		return false;
 	}
 
 	template<int g_count, int f_count, int v_count, typename T1, typename... T>
-	__forceinline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
+	force_inline static bool put_func_args(ARMv7Context& context, T1 arg, T... args)
 	{
 		typedef arg_type<T1, g_count, f_count, v_count> type;
 		const arg_class t = type::value;
@@ -404,7 +404,7 @@ namespace psv_func_detail
 	template<typename RT, typename... T>
 	struct func_caller
 	{
-		__forceinline static RT call(ARMv7Context& context, u32 addr, T... args)
+		force_inline static RT call(ARMv7Context& context, u32 addr, T... args)
 		{
 			func_caller<void, T...>::call(context, addr, args...);
 
@@ -415,7 +415,7 @@ namespace psv_func_detail
 	template<typename... T>
 	struct func_caller<void, T...>
 	{
-		__forceinline static void call(ARMv7Context& context, u32 addr, T... args)
+		force_inline static void call(ARMv7Context& context, u32 addr, T... args)
 		{
 			if (put_func_args<0, 0, 0, T...>(context, args...))
 			{
@@ -464,7 +464,7 @@ enum psv_special_function_index : u16
 // Do not call directly
 u32 add_psv_func(psv_func data);
 // Do not call directly
-template<typename RT, typename... T> __forceinline void call_psv_func(ARMv7Context& context, RT(*func)(T...))
+template<typename RT, typename... T> force_inline void call_psv_func(ARMv7Context& context, RT(*func)(T...))
 {
 	psv_func_detail::func_binder<RT, T...>::do_call(context, func);
 }

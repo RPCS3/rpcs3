@@ -21,22 +21,16 @@ union psv_uid_t
 	}
 };
 
-template<typename T, u32 type>
+template<typename T, u32 uid_class>
 class psv_object_list_t // Class for managing object data
 {
-public:
-	typedef refcounter_t<T> rc_type;
-	typedef ref_t<T> ref_type;
-
-	static const u32 max = 0x8000;
-
-private:
-	std::array<rc_type, max> m_data;
+	std::array<std::shared_ptr<T>, 0x8000> m_data;
 	std::atomic<u32> m_hint; // guessing next free position
+	std::mutex m_mutex;
 
 	void error(s32 uid)
 	{
-		throw fmt::format("Invalid UID requested (type=0x%x, uid=0x%x)", type, uid);
+		throw fmt::format("Invalid UID requested (type=0x%x, uid=0x%x)", uid_class, uid);
 	}
 
 public:
@@ -45,17 +39,8 @@ public:
 	{
 	}
 
-	psv_object_list_t(const psv_object_list_t&) = delete;
-	psv_object_list_t(psv_object_list_t&&) = delete;
-
-	psv_object_list_t& operator =(const psv_object_list_t&) = delete;
-	psv_object_list_t& operator =(psv_object_list_t&&) = delete;
-
-public:
-	static const u32 uid_class = type;
-
 	// check if UID is potentially valid (will return true even if the object doesn't exist)
-	bool check(s32 uid)
+	inline static bool check(s32 uid)
 	{
 		const psv_uid_t id = psv_uid_t::make(uid);
 
@@ -64,29 +49,35 @@ public:
 	}
 
 	// share object with UID specified
-	ref_type get(s32 uid)
+	inline std::shared_ptr<T> get(s32 uid)
 	{
 		if (!check(uid))
 		{
-			return ref_type();
+			return nullptr;
 		}
 
-		return &m_data[psv_uid_t::make(uid).number];
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		return m_data[psv_uid_t::make(uid).number];
 	}
 
-	ref_type operator [](s32 uid)
+	inline std::shared_ptr<T> operator [](s32 uid)
 	{
-		return get(uid);
+		return this->get(uid);
 	}
 
-	// generate UID for newly created object (will return zero if the limit exceeded)
-	s32 add(T* data, s32 error_code)
+	// create new object and generate UID for it, or do nothing and return zero (if limit reached)
+	template<typename... Args> s32 create(Args&&... args)
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		for (u32 i = 0, j = m_hint; i < m_data.size(); i++, j = (j + 1) % m_data.size())
 		{
 			// find an empty position and copy the pointer
-			if (m_data[j].try_set(data))
+			if (!m_data[j])
 			{
+				m_data[j] = std::make_shared<T>(args...); // construct object with specified arguments
+
 				m_hint = (j + 1) % m_data.size(); // guess next position
 
 				psv_uid_t id = psv_uid_t::make(1); // make UID
@@ -97,8 +88,7 @@ public:
 			}
 		}
 
-		delete data;
-		return error_code;
+		return 0;
 	}
 
 	// remove object with specified UID
@@ -109,19 +99,29 @@ public:
 			return false;
 		}
 
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		const u32 pos = psv_uid_t::make(uid).number;
 
 		m_hint = std::min<u32>(pos, m_hint);
 
-		return m_data[pos].try_remove();
+		if (!m_data[pos])
+		{
+			return false;
+		}
+
+		m_data[pos].reset();
+		return true;
 	}
 
 	// remove all objects
 	void clear()
 	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		for (auto& v : m_data)
 		{
-			v.try_remove();
+			v.reset();
 		}
 
 		m_hint = 0;

@@ -3,6 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/CB_FUNC.h"
+#include "Emu/IdManager.h"
+#include "Emu/Event.h"
 
 #include "Emu/CPU/CPUThreadManager.h"
 #include "Emu/Cell/SPUThread.h"
@@ -27,16 +29,20 @@ s32 _cellSpursSendSignal(vm::ptr<CellSpursTaskset> taskset, u32 taskID);
 
 s32 spursCreateLv2EventQueue(vm::ptr<CellSpurs> spurs, u32& queue_id, vm::ptr<u8> port, s32 size, u64 name_u64)
 {
-	queue_id = event_queue_create(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
-	if (!queue_id)
+	auto queue = Emu.GetEventManager().MakeEventQueue(SYS_SYNC_FIFO, SYS_PPU_QUEUE, name_u64, 0, size);
+
+	if (!queue) // rough
 	{
-		return CELL_EAGAIN; // rough
+		return CELL_EAGAIN;
 	}
+
+	queue_id = Emu.GetIdManager().add(std::move(queue));
 
 	if (s32 res = spursAttachLv2EventQueue(spurs, queue_id, port, 1, true))
 	{
 		assert(!"spursAttachLv2EventQueue() failed");
 	}
+
 	return CELL_OK;
 }
 
@@ -105,7 +111,7 @@ s32 spursInit(
 	u32 sem;
 	for (u32 i = 0; i < 0x10; i++)
 	{
-		sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+		sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
 		assert(sem && ~sem); // should rollback if semaphore creation failed and return the error
 		spurs->m.wklF1[i].sem = sem;
 	}
@@ -113,12 +119,12 @@ s32 spursInit(
 	{
 		for (u32 i = 0; i < 0x10; i++)
 		{
-			sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+			sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
 			assert(sem && ~sem);
 			spurs->m.wklF2[i].sem = sem;
 		}
 	}
-	sem = semaphore_create(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
+	sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
 	assert(sem && ~sem);
 	spurs->m.semPrv = sem;
 	spurs->m.unk11 = -1;
@@ -186,7 +192,7 @@ s32 spursInit(
 	}
 	spurs->m.queue = queue;
 
-	u32 port = event_port_create(0);
+	u32 port = Emu.GetIdManager().make<lv2_event_port_t>(SYS_EVENT_PORT_LOCAL, 0);
 	assert(port && ~port);
 	spurs->m.port = port;
 

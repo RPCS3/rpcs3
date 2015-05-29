@@ -33,7 +33,7 @@ enum : u32
 	SAVEDATA_OP_FIXED_DELETE = 14,
 };
 
-__noinline s32 savedata_op(
+never_inline s32 savedata_op(
 	PPUThread& CPU,
 	u32 operation,
 	u32 version,
@@ -61,7 +61,8 @@ __noinline s32 savedata_op(
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
-	std::string base_dir = "/dev_hdd0/home/00000001/savedata/"; // TODO: Get the path of the current or specified user
+	// path of the specified user (00000001 by default)
+	const std::string base_dir = fmt::format("/dev_hdd0/home/%08d/savedata/", userId ? userId : 1u);
 
 	vm::stackvar<CellSaveDataCBResult> result(CPU);
 
@@ -498,7 +499,7 @@ __noinline s32 savedata_op(
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
-	while (true)
+	while (funcFile)
 	{
 		funcFile(CPU, result, fileGet, fileSet);
 
@@ -785,10 +786,10 @@ s32 cellSaveDataUserListSave(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserListSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserListSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_LIST_SAVE, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListLoad(
@@ -803,10 +804,10 @@ s32 cellSaveDataUserListLoad(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserListLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserListLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcList, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_LIST_LOAD, version, vm::null, 0, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedSave(
@@ -821,10 +822,10 @@ s32 cellSaveDataUserFixedSave(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserFixedSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserFixedSave(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_FIXED_SAVE, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedLoad(
@@ -839,10 +840,10 @@ s32 cellSaveDataUserFixedLoad(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserFixedLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserFixedLoad(version=%d, userId=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_FIXED_LOAD, version, vm::null, 0, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserAutoSave(
@@ -857,10 +858,10 @@ s32 cellSaveDataUserAutoSave(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserAutoSave(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserAutoSave(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserAutoLoad(
@@ -875,10 +876,10 @@ s32 cellSaveDataUserAutoLoad(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserAutoLoad(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserAutoLoad(version=%d, userId=%d, dirName=*0x%x, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, dirName, errDialog, setBuf, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListAutoSave(
@@ -894,10 +895,10 @@ s32 cellSaveDataUserListAutoSave(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserListAutoSave(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserListAutoSave(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserListAutoLoad(
@@ -913,10 +914,10 @@ s32 cellSaveDataUserListAutoLoad(
 	u32 container,
 	vm::ptr<void> userdata)
 {
-	cellSysutil.Todo("cellSaveDataUserListAutoLoad(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
+	cellSysutil.Error("cellSaveDataUserListAutoLoad(version=%d, userId=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, userId, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return CELL_OK;
+	return savedata_op(CPU, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 6, userdata, userId, vm::null);
 }
 
 s32 cellSaveDataUserFixedDelete(
@@ -937,7 +938,7 @@ s32 cellSaveDataUserFixedDelete(
 
 void cellSaveDataEnableOverlay(s32 enable)
 {
-	cellSysutil.Todo("cellSaveDataEnableOverlay(enable=%d)", enable);
+	cellSysutil.Error("cellSaveDataEnableOverlay(enable=%d)", enable);
 
 	return;
 }

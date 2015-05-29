@@ -118,7 +118,7 @@ struct waiter_map_t
 	bool is_stopped(u64 signal_id);
 
 	// wait until waiter_func() returns true, signal_id is an arbitrary number
-	template<typename S, typename WT> __forceinline __safebuffers void wait_op(const S& signal_id, const WT waiter_func)
+	template<typename S, typename WT> force_inline safe_buffers void wait_op(const S& signal_id, const WT waiter_func)
 	{
 		// generate hash
 		const auto hash = std::hash<S>()(signal_id) % size;
@@ -141,7 +141,7 @@ struct waiter_map_t
 	}
 
 	// signal all threads waiting on waiter_op() with the same signal_id (signaling only hints those threads that corresponding conditions are *probably* met)
-	template<typename S> __forceinline void notify(const S& signal_id)
+	template<typename S> force_inline void notify(const S& signal_id)
 	{
 		// generate hash
 		const auto hash = std::hash<S>()(signal_id) % size;
@@ -173,7 +173,7 @@ class squeue_t
 		};
 	};
 
-	atomic_le_t<squeue_sync_var_t> m_sync;
+	atomic<squeue_sync_var_t> m_sync;
 
 	mutable std::mutex m_rcv_mutex;
 	mutable std::mutex m_wcv_mutex;
@@ -258,12 +258,12 @@ public:
 		return push(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	__forceinline bool push(const T& data)
+	force_inline bool push(const T& data)
 	{
 		return push(data, SQUEUE_NEVER_EXIT);
 	}
 
-	__forceinline bool try_push(const T& data)
+	force_inline bool try_push(const T& data)
 	{
 		return push(data, SQUEUE_ALWAYS_EXIT);
 	}
@@ -326,12 +326,12 @@ public:
 		return pop(data, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	__forceinline bool pop(T& data)
+	force_inline bool pop(T& data)
 	{
 		return pop(data, SQUEUE_NEVER_EXIT);
 	}
 
-	__forceinline bool try_pop(T& data)
+	force_inline bool try_pop(T& data)
 	{
 		return pop(data, SQUEUE_ALWAYS_EXIT);
 	}
@@ -388,12 +388,12 @@ public:
 		return peek(data, start_pos, [do_exit](){ return do_exit && *do_exit; });
 	}
 
-	__forceinline bool peek(T& data, u32 start_pos = 0)
+	force_inline bool peek(T& data, u32 start_pos = 0)
 	{
 		return peek(data, start_pos, SQUEUE_NEVER_EXIT);
 	}
 
-	__forceinline bool try_peek(T& data, u32 start_pos = 0)
+	force_inline bool try_peek(T& data, u32 start_pos = 0)
 	{
 		return peek(data, start_pos, SQUEUE_ALWAYS_EXIT);
 	}

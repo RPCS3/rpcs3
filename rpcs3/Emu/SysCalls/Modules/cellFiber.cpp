@@ -293,57 +293,57 @@ int cellFiberPpuUtilWorkerControlInitializeWithAttribute()
 
 Module cellFiber("cellFiber", []()
 {
-	REG_FUNC(cellFiber, _cellFiberPpuInitialize);
+	REG_FUNC_NR(cellFiber, _cellFiberPpuInitialize);
 
-	REG_FUNC(cellFiber, _cellFiberPpuSchedulerAttributeInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuInitializeScheduler);
-	REG_FUNC(cellFiber, cellFiberPpuFinalizeScheduler);
-	REG_FUNC(cellFiber, cellFiberPpuRunFibers);
-	REG_FUNC(cellFiber, cellFiberPpuCheckFlags);
-	REG_FUNC(cellFiber, cellFiberPpuHasRunnableFiber);
+	REG_FUNC_NR(cellFiber, _cellFiberPpuSchedulerAttributeInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuInitializeScheduler);
+	REG_FUNC_NR(cellFiber, cellFiberPpuFinalizeScheduler);
+	REG_FUNC_NR(cellFiber, cellFiberPpuRunFibers);
+	REG_FUNC_NR(cellFiber, cellFiberPpuCheckFlags);
+	REG_FUNC_NR(cellFiber, cellFiberPpuHasRunnableFiber);
 
-	REG_FUNC(cellFiber, _cellFiberPpuAttributeInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuCreateFiber);
-	REG_FUNC(cellFiber, cellFiberPpuExit);
-	REG_FUNC(cellFiber, cellFiberPpuYield);
-	REG_FUNC(cellFiber, cellFiberPpuJoinFiber);
-	REG_FUNC(cellFiber, cellFiberPpuSelf);
-	REG_FUNC(cellFiber, cellFiberPpuSendSignal);
-	REG_FUNC(cellFiber, cellFiberPpuWaitSignal);
-	REG_FUNC(cellFiber, cellFiberPpuWaitFlag);
-	REG_FUNC(cellFiber, cellFiberPpuGetScheduler);
-	REG_FUNC(cellFiber, cellFiberPpuSetPriority);
-	REG_FUNC(cellFiber, cellFiberPpuCheckStackLimit);
+	REG_FUNC_NR(cellFiber, _cellFiberPpuAttributeInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuCreateFiber);
+	REG_FUNC_NR(cellFiber, cellFiberPpuExit);
+	REG_FUNC_NR(cellFiber, cellFiberPpuYield);
+	REG_FUNC_NR(cellFiber, cellFiberPpuJoinFiber);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSelf);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSendSignal);
+	REG_FUNC_NR(cellFiber, cellFiberPpuWaitSignal);
+	REG_FUNC_NR(cellFiber, cellFiberPpuWaitFlag);
+	REG_FUNC_NR(cellFiber, cellFiberPpuGetScheduler);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSetPriority);
+	REG_FUNC_NR(cellFiber, cellFiberPpuCheckStackLimit);
 
-	REG_FUNC(cellFiber, _cellFiberPpuContextAttributeInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuContextInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuContextFinalize);
-	REG_FUNC(cellFiber, cellFiberPpuContextRun);
-	REG_FUNC(cellFiber, cellFiberPpuContextSwitch);
-	REG_FUNC(cellFiber, cellFiberPpuContextSelf);
-	REG_FUNC(cellFiber, cellFiberPpuContextReturnToThread);
-	REG_FUNC(cellFiber, cellFiberPpuContextCheckStackLimit);
+	REG_FUNC_NR(cellFiber, _cellFiberPpuContextAttributeInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextFinalize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextRun);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextSwitch);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextSelf);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextReturnToThread);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextCheckStackLimit);
 
-	REG_FUNC(cellFiber, cellFiberPpuContextRunScheduler);
-	REG_FUNC(cellFiber, cellFiberPpuContextEnterScheduler);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextRunScheduler);
+	REG_FUNC_NR(cellFiber, cellFiberPpuContextEnterScheduler);
 
-	REG_FUNC(cellFiber, cellFiberPpuSchedulerTraceInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuSchedulerTraceFinalize);
-	REG_FUNC(cellFiber, cellFiberPpuSchedulerTraceStart);
-	REG_FUNC(cellFiber, cellFiberPpuSchedulerTraceStop);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSchedulerTraceInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSchedulerTraceFinalize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSchedulerTraceStart);
+	REG_FUNC_NR(cellFiber, cellFiberPpuSchedulerTraceStop);
 
-	REG_FUNC(cellFiber, _cellFiberPpuUtilWorkerControlAttributeInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlRunFibers);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlInitialize);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlSetPollingMode);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlJoinFiber);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlDisconnectEventQueue);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlSendSignal);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlFinalize);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlWakeup);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlCreateFiber);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlShutdown);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlCheckFlags);
-	REG_FUNC(cellFiber, cellFiberPpuUtilWorkerControlInitializeWithAttribute);
+	REG_FUNC_NR(cellFiber, _cellFiberPpuUtilWorkerControlAttributeInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlRunFibers);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlInitialize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlSetPollingMode);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlJoinFiber);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlDisconnectEventQueue);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlSendSignal);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlConnectEventQueueToSpurs);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlFinalize);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlWakeup);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlCreateFiber);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlShutdown);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlCheckFlags);
+	REG_FUNC_NR(cellFiber, cellFiberPpuUtilWorkerControlInitializeWithAttribute);
 });
