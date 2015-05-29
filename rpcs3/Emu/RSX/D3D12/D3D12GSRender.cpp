@@ -36,7 +36,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
-	m_queueCompletion = 0;
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
@@ -345,6 +344,57 @@ void D3D12GSRender::Close()
 
 void D3D12GSRender::InitDrawBuffers()
 {
+	// FBO location has changed, previous data might be copied
+	if (m_fbo != nullptr)
+	{
+		// TODO : move to texture heap
+		u32 address_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+		if (m_fbo->m_address_color_a != address_a)
+		{
+			LOG_WARNING(RSX, "Copy draw buffer A");
+			Microsoft::WRL::ComPtr<ID3D12Resource> Texture;
+			D3D12_HEAP_PROPERTIES hp = {};
+			hp.Type = D3D12_HEAP_TYPE_DEFAULT;
+			check(
+				m_device->CreateCommittedResource(
+					&hp,
+					D3D12_HEAP_FLAG_NONE,
+					&getTexture2DResourceDesc(RSXThread::m_width, RSXThread::m_height, DXGI_FORMAT_R8G8B8A8_UNORM),
+					D3D12_RESOURCE_STATE_COPY_DEST,
+					nullptr,
+					IID_PPV_ARGS(&Texture)
+					)
+				);
+
+			ID3D12GraphicsCommandList *copycmdlist;
+			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
+
+			copycmdlist->ResourceBarrier(1, &getResourceBarrierTransition(m_fbo->getRenderTargetTexture(0), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+			D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+			dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			dst.pResource = Texture.Get();
+			src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			src.pResource = m_fbo->getRenderTargetTexture(0);
+
+			copycmdlist->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+			D3D12_RESOURCE_BARRIER barriers[2] =
+			{
+				getResourceBarrierTransition(m_fbo->getRenderTargetTexture(0), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET),
+				getResourceBarrierTransition(Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ),
+			};
+			copycmdlist->ResourceBarrier(2, barriers);
+			check(copycmdlist->Close());
+
+			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
+
+			m_texturesRTTs[address_a] = Texture;
+			m_fbo->m_address_color_a = address_a;
+		}
+
+	}
+
 	if (m_fbo == nullptr || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
 	{
 		
@@ -361,6 +411,11 @@ void D3D12GSRender::InitDrawBuffers()
 		};
 
 		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight, clearColor, 1.f);
+		m_fbo->m_address_color_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+		m_fbo->m_address_color_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+		m_fbo->m_address_color_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+		m_fbo->m_address_color_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+		m_fbo->m_address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	}
 }
 
@@ -602,6 +657,8 @@ bool D3D12GSRender::LoadProgram()
 
 void D3D12GSRender::ExecCMD()
 {
+	InitDrawBuffers();
+
 	ID3D12GraphicsCommandList *commandList;
 	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	m_perFrameStorage.m_inflightCommandList.push_back(commandList);
@@ -680,8 +737,6 @@ void D3D12GSRender::ExecCMD()
 	commandList->SetGraphicsRootDescriptorTable(3, Handle);
 
 	m_perFrameStorage.m_currentTextureIndex += usedTexture;
-
-	InitDrawBuffers();
 
 	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = &m_fbo->getDSVCPUHandle();
 	switch (m_surface_color_target)
@@ -1123,6 +1178,7 @@ void D3D12GSRender::Flip()
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 	m_perFrameStorage.Reset();
+	m_texturesRTTs.clear();
 
 	m_frame->Flip(nullptr);
 }

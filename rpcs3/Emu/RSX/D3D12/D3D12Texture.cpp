@@ -90,13 +90,13 @@ size_t D3D12GSRender::UploadTextures()
 		if (!m_textures[i].IsEnabled()) continue;
 		size_t w = m_textures[i].GetWidth(), h = m_textures[i].GetHeight();
 
-		// Upload at each iteration to take advantage of overlapping transfer
-		ID3D12GraphicsCommandList *commandList;
-		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
+		u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 
 		DXGI_FORMAT dxgiFormat;
 		size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+
 		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
 		switch (format)
 		{
@@ -146,90 +146,104 @@ size_t D3D12GSRender::UploadTextures()
 			break;
 		}
 
-		size_t heightInBlocks = (m_textures[i].GetHeight() + blockHeightInPixel - 1) / blockHeightInPixel;
-		size_t widthInBlocks = (m_textures[i].GetWidth() + blockWidthInPixel - 1) / blockWidthInPixel;
-		// Multiple of 256
-		size_t rowPitch = blockSizeInByte * widthInBlocks;
-		rowPitch = (rowPitch + 255) & ~255;
-
-
-		ID3D12Resource *Texture, *vramTexture;
-		size_t textureSize = rowPitch * heightInBlocks;
-
-		check(m_device->CreatePlacedResource(
-			m_perFrameStorage.m_uploadTextureHeap,
-			m_perFrameStorage.m_currentStorageOffset,
-			&getBufferResourceDesc(textureSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&Texture)
-			));
-
-		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
-		auto pixels = vm::get_ptr<const u8>(texaddr);
-		void *textureData;
-		check(Texture->Map(0, nullptr, (void**)&textureData));
-
-		// Upload with correct rowpitch
-		for (unsigned row = 0; row < heightInBlocks; row++)
+		ID3D12Resource *vramTexture;
+		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator It = m_texturesRTTs.find(address);
+		if (It != m_texturesRTTs.end())
 		{
-			size_t m_texture_pitch = m_textures[i].m_pitch;
-			if (!m_texture_pitch) m_texture_pitch = rowPitch;
-			if (format == CELL_GCM_TEXTURE_A8R8G8B8 && is_swizzled)
-			{
-				u32 *src, *dst;
-				u32 log2width, log2height;
-
-				src = (u32*)pixels;
-				dst = (u32*)textureData;
-
-				log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
-				log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
-
-				for (int j = 0; j <  m_textures[i].GetWidth(); j++)
-				{
-					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
-				}
-			}
-			else
-				streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+			vramTexture = It->second.Get();
 		}
-		Texture->Unmap(0, nullptr);
+		else
+		{
+			// Upload at each iteration to take advantage of overlapping transfer
+			ID3D12GraphicsCommandList *commandList;
+			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
-		check(m_device->CreatePlacedResource(
-			m_perFrameStorage.m_textureStorage,
-			m_perFrameStorage.m_currentStorageOffset,
-			&getTexture2DResourceDesc(m_textures[i].GetWidth(), m_textures[i].GetHeight(), dxgiFormat),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&vramTexture)
-			));
+			size_t heightInBlocks = (m_textures[i].GetHeight() + blockHeightInPixel - 1) / blockHeightInPixel;
+			size_t widthInBlocks = (m_textures[i].GetWidth() + blockWidthInPixel - 1) / blockWidthInPixel;
+			// Multiple of 256
+			size_t rowPitch = blockSizeInByte * widthInBlocks;
+			rowPitch = (rowPitch + 255) & ~255;
 
-		m_perFrameStorage.m_currentStorageOffset += textureSize;
-		m_perFrameStorage.m_currentStorageOffset = (m_perFrameStorage.m_currentStorageOffset + 65536 - 1) & ~65535;
-		m_perFrameStorage.m_inflightResources.push_back(Texture);
-		m_perFrameStorage.m_inflightResources.push_back(vramTexture);
+			ID3D12Resource *Texture;
+			size_t textureSize = rowPitch * heightInBlocks;
 
+			check(m_device->CreatePlacedResource(
+				m_perFrameStorage.m_uploadTextureHeap,
+				m_perFrameStorage.m_currentStorageOffset,
+				&getBufferResourceDesc(textureSize),
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&Texture)
+				));
 
-		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-		dst.pResource = vramTexture;
-		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.pResource = Texture;
-		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		src.PlacedFootprint.Footprint.Depth = 1;
-		src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
-		src.PlacedFootprint.Footprint.Height = m_textures[i].GetHeight();
-		src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
-		src.PlacedFootprint.Footprint.Format = dxgiFormat;
+			auto pixels = vm::get_ptr<const u8>(texaddr);
+			void *textureData;
+			check(Texture->Map(0, nullptr, (void**)&textureData));
 
-		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+			// Upload with correct rowpitch
+			for (unsigned row = 0; row < heightInBlocks; row++)
+			{
+				size_t m_texture_pitch = m_textures[i].m_pitch;
+				if (!m_texture_pitch) m_texture_pitch = rowPitch;
+				if (format == CELL_GCM_TEXTURE_A8R8G8B8 && is_swizzled)
+				{
+					u32 *src, *dst;
+					u32 log2width, log2height;
 
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.pResource = vramTexture;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-		commandList->ResourceBarrier(1, &barrier);
+					src = (u32*)pixels;
+					dst = (u32*)textureData;
+
+					log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
+					log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
+
+					for (int j = 0; j < m_textures[i].GetWidth(); j++)
+					{
+						dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					}
+				}
+				else
+					streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+			}
+			Texture->Unmap(0, nullptr);
+
+			check(m_device->CreatePlacedResource(
+				m_perFrameStorage.m_textureStorage,
+				m_perFrameStorage.m_currentStorageOffset,
+				&getTexture2DResourceDesc(m_textures[i].GetWidth(), m_textures[i].GetHeight(), dxgiFormat),
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(&vramTexture)
+				));
+
+			m_perFrameStorage.m_currentStorageOffset += textureSize;
+			m_perFrameStorage.m_currentStorageOffset = (m_perFrameStorage.m_currentStorageOffset + 65536 - 1) & ~65535;
+			m_perFrameStorage.m_inflightResources.push_back(Texture);
+			m_perFrameStorage.m_inflightResources.push_back(vramTexture);
+
+			D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+			dst.pResource = vramTexture;
+			dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+			src.pResource = Texture;
+			src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+			src.PlacedFootprint.Footprint.Depth = 1;
+			src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
+			src.PlacedFootprint.Footprint.Height = m_textures[i].GetHeight();
+			src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
+			src.PlacedFootprint.Footprint.Format = dxgiFormat;
+
+			commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Transition.pResource = vramTexture;
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+			commandList->ResourceBarrier(1, &barrier);
+
+			commandList->Close();
+			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
+			m_perFrameStorage.m_inflightCommandList.push_back(commandList);
+		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -273,10 +287,6 @@ size_t D3D12GSRender::UploadTextures()
 		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		m_device->CreateSampler(&samplerDesc, Handle);
-
-		commandList->Close();
-		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
-		m_perFrameStorage.m_inflightCommandList.push_back(commandList);
 
 		usedTexture++;
 	}

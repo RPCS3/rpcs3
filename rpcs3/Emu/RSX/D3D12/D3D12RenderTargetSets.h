@@ -25,5 +25,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE getDSVCPUHandle() const;
 	ID3D12Resource *getRenderTargetTexture(u8 Id) const;
 	ID3D12Resource *getDepthStencilTexture() const;
+
+	u32 m_address_color_a, m_address_color_b, m_address_color_c, m_address_color_d, m_address_z;
 };
 #endif
