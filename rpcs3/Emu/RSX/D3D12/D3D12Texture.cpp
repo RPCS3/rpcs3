@@ -91,7 +91,6 @@ size_t D3D12GSRender::UploadTextures()
 		size_t w = m_textures[i].GetWidth(), h = m_textures[i].GetHeight();
 
 		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
-		u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 
 		DXGI_FORMAT dxgiFormat;
 		size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
@@ -147,7 +146,7 @@ size_t D3D12GSRender::UploadTextures()
 		}
 
 		ID3D12Resource *vramTexture;
-		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator It = m_texturesRTTs.find(address);
+		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator It = m_texturesRTTs.find(texaddr);
 		if (It != m_texturesRTTs.end())
 		{
 			vramTexture = It->second.Get();
