@@ -27,6 +27,8 @@ enum CellVideoOutResolutionId
 	CELL_VIDEO_OUT_RESOLUTION_720       = 2,
 	CELL_VIDEO_OUT_RESOLUTION_480       = 4,
 	CELL_VIDEO_OUT_RESOLUTION_576       = 5,
+	CELL_VIDEO_OUT_RESOLUTION_3840x2160 = 8,
+	CELL_VIDEO_OUT_RESOLUTION_2560x1440 = 9,
 	CELL_VIDEO_OUT_RESOLUTION_1600x1080 = 10,
 	CELL_VIDEO_OUT_RESOLUTION_1440x1080 = 11,
 	CELL_VIDEO_OUT_RESOLUTION_1280x1080 = 12,
@@ -234,10 +236,12 @@ static const CellVideoOutResolution ResolutionTable[] =
 	{ be_t<u16>::make(1280), be_t<u16>::make(720) },      //2 - 2
 	{ be_t<u16>::make(720), be_t<u16>::make(480) },       //4 - 3
 	{ be_t<u16>::make(720), be_t<u16>::make(576) },       //5 - 4
-	{ be_t<u16>::make(1600), be_t<u16>::make(1080) },     //10 - 5
-	{ be_t<u16>::make(1440), be_t<u16>::make(1080) },     //11 - 6
-	{ be_t<u16>::make(1280), be_t<u16>::make(1080) },     //12 - 7
-	{ be_t<u16>::make(960), be_t<u16>::make(1080) },      //13 - 8
+	{ be_t<u16>::make(3840), be_t<u16>::make(2160) },     //8 - 5
+	{ be_t<u16>::make(2560), be_t<u16>::make(1440) },     //9 - 6
+	{ be_t<u16>::make(1600), be_t<u16>::make(1080) },     //10 - 7
+	{ be_t<u16>::make(1440), be_t<u16>::make(1080) },     //11 - 8
+	{ be_t<u16>::make(1280), be_t<u16>::make(1080) },     //12 - 9
+	{ be_t<u16>::make(960), be_t<u16>::make(1080) },      //13 - 10
 };
 
 inline static u32 ResolutionIdToNum(u32 id)
@@ -252,12 +256,12 @@ inline static u32 ResolutionIdToNum(u32 id)
 		4, //5
 		0, //6
 		0, //7
-		0, //8
-		0, //9
-		5, //10
-		6, //11
-		7, //12
-		8, //13
+		5, //8
+		6, //9
+		7, //10
+		8, //11
+		9, //12
+		10, //13
 	};
 
 	return id <= 13 ? res[id] : 0;
@@ -272,11 +276,13 @@ inline static u32 ResolutionNumToId(u32 num)
 		2,  //2
 		4,  //3
 		5,  //4
-		10, //5
-		11, //6
-		12, //7
-		13, //8
+		8,  //5
+		9,  //6
+		10, //7
+		11, //8
+		12, //9
+		13, //10
 	};
 
-	return num <= 8 ? res[num] : 0;
+	return num <= 10 ? res[num] : 0;
 }
