@@ -389,10 +389,9 @@ void D3D12GSRender::InitDrawBuffers()
 
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
 
-			m_texturesRTTs[address_a] = Texture;
+			m_texturesRTTs[m_fbo->m_address_color_a] = Texture;
 			m_fbo->m_address_color_a = address_a;
 		}
-
 	}
 
 	if (m_fbo == nullptr || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
