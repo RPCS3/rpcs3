@@ -318,6 +318,7 @@ D3D12GSRender::D3D12GSRender()
 
 D3D12GSRender::~D3D12GSRender()
 {
+	m_texturesRTTs.clear();
 	m_dummyTexture->Release();
 	m_convertPSO->Release();
 	m_convertRootSignature->Release();
@@ -391,6 +392,7 @@ void D3D12GSRender::InitDrawBuffers()
 
 			m_texturesRTTs[m_fbo->m_address_color_a] = Texture;
 			m_fbo->m_address_color_a = address_a;
+			m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
 		}
 	}
 
