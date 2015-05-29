@@ -343,57 +343,97 @@ void D3D12GSRender::Close()
 	m_frame->Hide();
 }
 
+static
+void copyFBO(ID3D12Device* device, ID3D12Resource *rtt, ID3D12GraphicsCommandList *cmdList,
+	std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> > &texturesRTTs,
+	u32 &currentFBOAddress, u32 newAddress, size_t width, size_t height)
+{
+	// TODO : move to texture heap
+	Microsoft::WRL::ComPtr<ID3D12Resource> Texture;
+	D3D12_HEAP_PROPERTIES hp = {};
+	hp.Type = D3D12_HEAP_TYPE_DEFAULT;
+	check(
+		device->CreateCommittedResource(
+			&hp,
+			D3D12_HEAP_FLAG_NONE,
+			&getTexture2DResourceDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM),
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&Texture)
+			)
+		);
+
+	cmdList->ResourceBarrier(1, &getResourceBarrierTransition(rtt, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+	D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+	dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	dst.pResource = Texture.Get();
+	src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	src.pResource = rtt;
+
+	cmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+	D3D12_RESOURCE_BARRIER barriers[2] =
+	{
+		getResourceBarrierTransition(rtt, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET),
+		getResourceBarrierTransition(Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ),
+	};
+	cmdList->ResourceBarrier(2, barriers);
+
+	texturesRTTs[currentFBOAddress] = Texture;
+}
+
 void D3D12GSRender::InitDrawBuffers()
 {
 	// FBO location has changed, previous data might be copied
 	if (m_fbo != nullptr)
 	{
-		// TODO : move to texture heap
+		ID3D12GraphicsCommandList *copycmdlist;
+		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
+		m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
+
 		u32 address_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-		if (m_fbo->m_address_color_a != address_a)
+		u32 address_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+		u32 address_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+		u32 address_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+		switch (m_fbo->m_target_type)
 		{
-			LOG_WARNING(RSX, "Copy draw buffer A");
-			Microsoft::WRL::ComPtr<ID3D12Resource> Texture;
-			D3D12_HEAP_PROPERTIES hp = {};
-			hp.Type = D3D12_HEAP_TYPE_DEFAULT;
-			check(
-				m_device->CreateCommittedResource(
-					&hp,
-					D3D12_HEAP_FLAG_NONE,
-					&getTexture2DResourceDesc(RSXThread::m_width, RSXThread::m_height, DXGI_FORMAT_R8G8B8A8_UNORM),
-					D3D12_RESOURCE_STATE_COPY_DEST,
-					nullptr,
-					IID_PPV_ARGS(&Texture)
-					)
-				);
-
-			ID3D12GraphicsCommandList *copycmdlist;
-			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
-
-			copycmdlist->ResourceBarrier(1, &getResourceBarrierTransition(m_fbo->getRenderTargetTexture(0), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
-
-			D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-			dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			dst.pResource = Texture.Get();
-			src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			src.pResource = m_fbo->getRenderTargetTexture(0);
-
-			copycmdlist->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-			D3D12_RESOURCE_BARRIER barriers[2] =
-			{
-				getResourceBarrierTransition(m_fbo->getRenderTargetTexture(0), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET),
-				getResourceBarrierTransition(Texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ),
-			};
-			copycmdlist->ResourceBarrier(2, barriers);
-			check(copycmdlist->Close());
-
-			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
-
-			m_texturesRTTs[m_fbo->m_address_color_a] = Texture;
-			m_fbo->m_address_color_a = address_a;
-			m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
+		case CELL_GCM_SURFACE_TARGET_0:
+			if (m_fbo->m_address_color_a != address_a)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
+			break;
+		case CELL_GCM_SURFACE_TARGET_1:
+			if (m_fbo->m_address_color_b != address_b)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+			if (m_fbo->m_address_color_a != address_a)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_b != address_b)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+			if (m_fbo->m_address_color_a != address_a)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_b != address_b)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_c != address_c)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(2), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_c, address_c, RSXThread::m_width, RSXThread::m_height);
+			break;
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+			if (m_fbo->m_address_color_a != address_a)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_b != address_b)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_c != address_c)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(2), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_c, address_c, RSXThread::m_width, RSXThread::m_height);
+			if (m_fbo->m_address_color_d != address_d)
+				copyFBO(m_device, m_fbo->getRenderTargetTexture(3), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_d, address_d, RSXThread::m_width, RSXThread::m_height);
+			break;
 		}
+
+		check(copycmdlist->Close());
+		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
 	}
 
 	if (m_fbo == nullptr || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
@@ -412,12 +452,13 @@ void D3D12GSRender::InitDrawBuffers()
 		};
 
 		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight, clearColor, 1.f);
-		m_fbo->m_address_color_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-		m_fbo->m_address_color_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-		m_fbo->m_address_color_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-		m_fbo->m_address_color_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-		m_fbo->m_address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 	}
+	m_fbo->m_address_color_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+	m_fbo->m_address_color_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+	m_fbo->m_address_color_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+	m_fbo->m_address_color_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+	m_fbo->m_address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+	m_fbo->m_target_type = m_surface_color_target;
 }
 
 

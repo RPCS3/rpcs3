@@ -27,5 +27,6 @@ public:
 	ID3D12Resource *getDepthStencilTexture() const;
 
 	u32 m_address_color_a, m_address_color_b, m_address_color_c, m_address_color_d, m_address_z;
+	u32 m_target_type;
 };
 #endif
