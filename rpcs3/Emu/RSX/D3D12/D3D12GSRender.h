@@ -95,6 +95,16 @@ private:
 
 	ResourceStorage m_perFrameStorage;
 
+
+	struct ReadbackHeap
+	{
+		ID3D12Heap *m_heap;
+		std::atomic<int> m_putPos, // Start of free space
+			m_getPos; // End of free space
+	};
+
+	ReadbackHeap m_readbackResources;
+
 	bool m_forcedIndexBuffer;
 	size_t indexCount;
 

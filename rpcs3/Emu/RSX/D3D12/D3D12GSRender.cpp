@@ -314,10 +314,19 @@ D3D12GSRender::D3D12GSRender()
 			nullptr,
 			IID_PPV_ARGS(&m_dummyTexture))
 			);
+
+	D3D12_HEAP_DESC hd = {};
+	hd.SizeInBytes = 1024 * 1024 * 128;
+	hd.Properties.Type = D3D12_HEAP_TYPE_READBACK;
+	hd.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+	check(m_device->CreateHeap(&hd, IID_PPV_ARGS(&m_readbackResources.m_heap)));
+	m_readbackResources.m_putPos = 0;
+	m_readbackResources.m_getPos = 1024 * 1024 * 128 - 1;
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
+	m_readbackResources.m_heap->Release();
 	m_texturesRTTs.clear();
 	m_dummyTexture->Release();
 	m_convertPSO->Release();
@@ -1352,20 +1361,28 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				)
 			);
 
+		size_t heapOffset = m_readbackResources.m_putPos.load();
+		heapOffset = powerOf2Align(heapOffset, 65536);
+		size_t sizeInByte = depthRowPitch * RSXThread::m_height;
+
+		if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
+			heapOffset = 0;
+
 		heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-		resdesc = getBufferResourceDesc(depthRowPitch * RSXThread::m_height);
+		resdesc = getBufferResourceDesc(sizeInByte);
 
 		check(
-			m_device->CreateCommittedResource(
-				&heapProp,
-				D3D12_HEAP_FLAG_NONE,
+			m_device->CreatePlacedResource(
+				m_readbackResources.m_heap,
+				heapOffset,
 				&resdesc,
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				IID_PPV_ARGS(&writeDest)
 				)
 			);
+		m_readbackResources.m_putPos.store(heapOffset + sizeInByte);
 
 		check(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&convertCommandList))
