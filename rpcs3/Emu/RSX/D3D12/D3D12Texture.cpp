@@ -146,10 +146,15 @@ size_t D3D12GSRender::UploadTextures()
 		}
 
 		ID3D12Resource *vramTexture;
-		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator It = m_texturesRTTs.find(texaddr);
-		if (It != m_texturesRTTs.end())
+		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator ItRTT = m_texturesRTTs.find(texaddr);
+		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
+		if (ItRTT != m_texturesRTTs.end())
 		{
-			vramTexture = It->second.Get();
+			vramTexture = ItRTT->second.Get();
+		}
+		else if (ItCache != m_texturesCache.end())
+		{
+			vramTexture = ItCache->second;
 		}
 		else
 		{
@@ -242,6 +247,7 @@ size_t D3D12GSRender::UploadTextures()
 			commandList->Close();
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 			m_perFrameStorage.m_inflightCommandList.push_back(commandList);
+			m_texturesCache[texaddr] = vramTexture;
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

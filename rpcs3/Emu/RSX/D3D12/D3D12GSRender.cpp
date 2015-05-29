@@ -1248,6 +1248,7 @@ void D3D12GSRender::Flip()
 	CloseHandle(handle);
 	m_perFrameStorage.Reset();
 	m_texturesRTTs.clear();
+	m_texturesCache.clear();
 
 	m_frame->Flip(nullptr);
 }

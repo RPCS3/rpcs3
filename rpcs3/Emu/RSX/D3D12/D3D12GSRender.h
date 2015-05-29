@@ -49,6 +49,8 @@ class D3D12GSRender : public GSRender
 private:
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> > m_texturesRTTs;
+
+	std::unordered_map<u32, ID3D12Resource*> m_texturesCache;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
 	PipelineStateObjectCache m_cachePSO;
