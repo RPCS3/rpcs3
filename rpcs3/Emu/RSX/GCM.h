@@ -134,6 +134,23 @@ enum
 	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP_TO_EDGE = 6,
 	CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER        = 7,
 	CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP         = 8,
+
+	// Logic Op
+	CELL_GCM_CLEAR         = 1,
+	CELL_GCM_AND           = 2,
+	CELL_GCM_AND_REVERSE   = 3,
+	CELL_GCM_COPY          = 4,
+	CELL_GCM_AND_INVERTED  = 5,
+	CELL_GCM_NOOP          = 6,
+	CELL_GCM_XOR           = 7,
+	CELL_GCM_OR            = 8,
+	CELL_GCM_NOR           = 9,
+	CELL_GCM_EQUIV         = 10,
+	CELL_GCM_INVERT        = 11,
+	CELL_GCM_OR_REVERSE    = 12,
+	CELL_GCM_COPY_INVERTED = 13,
+	CELL_GCM_OR_INVERTED   = 14,
+	CELL_GCM_NAND          = 15,
 };
 
 // GCM Surface

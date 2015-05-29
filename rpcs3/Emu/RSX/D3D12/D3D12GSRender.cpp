@@ -551,14 +551,12 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
-static
-D3D12_BLEND_OP getBlendOp()
+static D3D12_BLEND_OP getBlendOp()
 {
 	return D3D12_BLEND_OP_ADD;
 }
 
-static
-D3D12_BLEND getBlendFactor(u16 glFactor)
+static D3D12_BLEND getBlendFactor(u16 glFactor)
 {
 	switch (glFactor)
 	{
@@ -574,6 +572,29 @@ D3D12_BLEND getBlendFactor(u16 glFactor)
 	case GL_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
 	case GL_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
 	case GL_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+	}
+}
+
+static D3D12_LOGIC_OP getLogicOp(u32 op)
+{
+	switch (op)
+	{
+	default: LOG_WARNING(RSX, "Unsupported Logic Op %d", op);
+	case CELL_GCM_CLEAR: return D3D12_LOGIC_OP_CLEAR;
+	case CELL_GCM_AND: return D3D12_LOGIC_OP_AND;
+	case CELL_GCM_AND_REVERSE: return D3D12_LOGIC_OP_AND_REVERSE;
+	case CELL_GCM_COPY: return D3D12_LOGIC_OP_COPY;
+	case CELL_GCM_AND_INVERTED: return D3D12_LOGIC_OP_AND_INVERTED;
+	case CELL_GCM_NOOP: return D3D12_LOGIC_OP_NOOP;
+	case CELL_GCM_XOR: return D3D12_LOGIC_OP_XOR;
+	case CELL_GCM_OR: return D3D12_LOGIC_OP_OR;
+	case CELL_GCM_NOR: return D3D12_LOGIC_OP_NOR;
+	case CELL_GCM_EQUIV: return D3D12_LOGIC_OP_EQUIV;
+	case CELL_GCM_INVERT: return D3D12_LOGIC_OP_INVERT;
+	case CELL_GCM_OR_REVERSE: return D3D12_LOGIC_OP_OR_REVERSE;
+	case CELL_GCM_COPY_INVERTED: return D3D12_LOGIC_OP_COPY_INVERTED;
+	case CELL_GCM_OR_INVERTED: return D3D12_LOGIC_OP_OR_INVERTED;
+	case CELL_GCM_NAND: return D3D12_LOGIC_OP_NAND;
 	}
 }
 
@@ -647,6 +668,12 @@ bool D3D12GSRender::LoadProgram()
 		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
 		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
 		prop.Blend.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	}
+
+	if (m_set_logic_op)
+	{
+		prop.Blend.RenderTarget[0].LogicOpEnable = true;
+		prop.Blend.RenderTarget[0].LogicOp = getLogicOp(m_logic_op);
 	}
 
 	if (m_set_blend_color)
