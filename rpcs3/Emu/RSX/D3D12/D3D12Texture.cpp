@@ -116,6 +116,8 @@ size_t D3D12GSRender::UploadTextures()
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		default:
@@ -150,6 +152,16 @@ size_t D3D12GSRender::UploadTextures()
 			dxgiFormat = DXGI_FORMAT_R8_UNORM;
 			blockSizeInByte = 1;
 			blockWidthInPixel = 1, blockHeightInPixel = 1;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: 
+			dxgiFormat = DXGI_FORMAT_G8R8_G8B8_UNORM;
+			blockSizeInByte = 4;
+			blockWidthInPixel = 2, blockHeightInPixel = 2;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			dxgiFormat = DXGI_FORMAT_R8G8_B8G8_UNORM;
+			blockSizeInByte = 4;
+			blockWidthInPixel = 2, blockHeightInPixel = 2;
 			break;
 		}
 
