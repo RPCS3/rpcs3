@@ -102,8 +102,6 @@ size_t D3D12GSRender::UploadTextures()
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		case CELL_GCM_TEXTURE_G8B8:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
@@ -121,7 +119,7 @@ size_t D3D12GSRender::UploadTextures()
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		default:
-			LOG_ERROR(RSX, "Unimplemented Texture format");
+			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
 			break;
 		case CELL_GCM_TEXTURE_D8R8G8B8:
 			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -136,6 +134,16 @@ size_t D3D12GSRender::UploadTextures()
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 			dxgiFormat = DXGI_FORMAT_BC1_UNORM;
 			blockSizeInByte = 8;
+			blockWidthInPixel = 4, blockHeightInPixel = 4;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+			dxgiFormat = DXGI_FORMAT_BC2_UNORM;
+			blockSizeInByte = 16;
+			blockWidthInPixel = 4, blockHeightInPixel = 4;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+			dxgiFormat = DXGI_FORMAT_BC3_UNORM;
+			blockSizeInByte = 16;
 			blockWidthInPixel = 4, blockHeightInPixel = 4;
 			break;
 		case CELL_GCM_TEXTURE_B8:
