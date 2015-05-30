@@ -95,6 +95,14 @@ private:
 
 	ResourceStorage m_perFrameStorage;
 
+	struct UAVHeap
+	{
+		ID3D12Heap *m_heap;
+		std::atomic<int> m_putPos, // Start of free space
+			m_getPos; // End of free space
+	};
+
+	UAVHeap m_UAVHeap;
 
 	struct ReadbackHeap
 	{
