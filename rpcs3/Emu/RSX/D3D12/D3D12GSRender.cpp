@@ -1381,6 +1381,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				IID_PPV_ARGS(&depthConverted)
 				)
 			);
+		m_UAVHeap.m_putPos.store(heapOffset + sizeInByte);
 
 		heapOffset = m_readbackResources.m_putPos.load();
 		heapOffset = powerOf2Align(heapOffset, 65536);
