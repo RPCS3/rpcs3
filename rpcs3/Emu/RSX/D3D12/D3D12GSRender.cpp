@@ -165,7 +165,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 }
 
 D3D12GSRender::D3D12GSRender()
-	: GSRender(), m_fbo(nullptr), m_PSO(nullptr)
+	: GSRender(), m_PSO(nullptr)
 {
 	if (Ini.GSDebugOutputEnable.GetValue())
 	{
@@ -328,6 +328,8 @@ D3D12GSRender::D3D12GSRender()
 	check(m_device->CreateHeap(&hd, IID_PPV_ARGS(&m_UAVHeap.m_heap)));
 	m_UAVHeap.m_putPos = 0;
 	m_UAVHeap.m_getPos = 1024 * 1024 * 128 - 1;
+
+	m_rtts.Init(m_device);
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -345,8 +347,7 @@ D3D12GSRender::~D3D12GSRender()
 	m_backBuffer[0]->Release();
 	m_backbufferAsRendertarget[1]->Release();
 	m_backBuffer[1]->Release();
-	if (m_fbo)
-		delete m_fbo;
+	m_rtts.Release();
 	m_rootSignature->Release();
 	m_swapChain->Release();
 	m_device->Release();
@@ -402,79 +403,152 @@ void copyFBO(ID3D12Device* device, ID3D12Resource *rtt, ID3D12GraphicsCommandLis
 void D3D12GSRender::InitDrawBuffers()
 {
 	// FBO location has changed, previous data might be copied
-	if (m_fbo != nullptr)
+	u32 address_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+	u32 address_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+	u32 address_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+	u32 address_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+	u32 address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
+
+	ID3D12GraphicsCommandList *copycmdlist;
+	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
+	m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
+
+	// Make previous RTTs sampleable
+	for (unsigned i = 0; i < 4; i++)
 	{
-		ID3D12GraphicsCommandList *copycmdlist;
-		check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
-		m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
-
-		u32 address_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-		u32 address_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-		u32 address_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-		u32 address_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-		switch (m_fbo->m_target_type)
-		{
-		case CELL_GCM_SURFACE_TARGET_0:
-			if (m_fbo->m_address_color_a != address_a)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
-			break;
-		case CELL_GCM_SURFACE_TARGET_1:
-			if (m_fbo->m_address_color_b != address_b)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
-			break;
-		case CELL_GCM_SURFACE_TARGET_MRT1:
-			if (m_fbo->m_address_color_a != address_a)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_b != address_b)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
-			break;
-		case CELL_GCM_SURFACE_TARGET_MRT2:
-			if (m_fbo->m_address_color_a != address_a)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_b != address_b)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_c != address_c)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(2), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_c, address_c, RSXThread::m_width, RSXThread::m_height);
-			break;
-		case CELL_GCM_SURFACE_TARGET_MRT3:
-			if (m_fbo->m_address_color_a != address_a)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(0), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_a, address_a, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_b != address_b)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(1), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_b, address_b, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_c != address_c)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(2), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_c, address_c, RSXThread::m_width, RSXThread::m_height);
-			if (m_fbo->m_address_color_d != address_d)
-				copyFBO(m_device, m_fbo->getRenderTargetTexture(3), copycmdlist, m_texturesRTTs, m_fbo->m_address_color_d, address_d, RSXThread::m_width, RSXThread::m_height);
-			break;
-		}
-
-		check(copycmdlist->Close());
-		m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
+		if (m_rtts.m_currentlyBoundRenderTargets[i] == nullptr)
+			continue;
+		copycmdlist->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundRenderTargets[i], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		m_rtts.m_renderTargets[m_rtts.m_currentlyBoundRenderTargetsAddress[i]] = m_rtts.m_currentlyBoundRenderTargets[i];
 	}
 
-	if (m_fbo == nullptr || RSXThread::m_width != m_lastWidth || RSXThread::m_height != m_lastHeight || m_lastDepth != m_surface_depth_format)
-	{
-		
-		LOG_WARNING(RSX, "New FBO (%dx%d)", RSXThread::m_width, RSXThread::m_height);
-		m_lastWidth = RSXThread::m_width;
-		m_lastHeight = RSXThread::m_height;
-		m_lastDepth = m_surface_depth_format;
-		float clearColor[] =
-		{
-			m_clear_surface_color_r / 255.0f,
-			m_clear_surface_color_g / 255.0f,
-			m_clear_surface_color_b / 255.0f,
-			m_clear_surface_color_a / 255.0f
-		};
+	memset(m_rtts.m_currentlyBoundRenderTargetsAddress, 0, 4 * sizeof(u32));
+	memset(m_rtts.m_currentlyBoundRenderTargets, 0, 4 * sizeof(ID3D12Resource *));
+	m_rtts.m_currentlyBoundDepthStencil = nullptr;
+	m_rtts.m_currentlyBoundDepthStencilAddress = 0;
 
-		m_fbo = new D3D12RenderTargetSets(m_device, (u8)m_lastDepth, m_lastWidth, m_lastHeight, clearColor, 1.f);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+	size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	switch (m_surface_color_target)
+	{
+	case CELL_GCM_SURFACE_TARGET_0:
+	{
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0,address_a, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
+		break;
 	}
-	m_fbo->m_address_color_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-	m_fbo->m_address_color_b = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-	m_fbo->m_address_color_c = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-	m_fbo->m_address_color_d = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-	m_fbo->m_address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
-	m_fbo->m_target_type = m_surface_color_target;
+	case CELL_GCM_SURFACE_TARGET_1:
+	{
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
+		break;
+	}
+	case CELL_GCM_SURFACE_TARGET_MRT1:
+	{
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
+	}
+	break;
+	case CELL_GCM_SURFACE_TARGET_MRT2:
+	{
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
+		break;
+	}
+	case CELL_GCM_SURFACE_TARGET_MRT3:
+	{
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1,address_b, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
+		Handle.ptr += g_RTTIncrement;
+		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, RSXThread::m_width, RSXThread::m_height,
+			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
+		rttViewDesc = {};
+		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		m_device->CreateRenderTargetView(rttD, &rttViewDesc, Handle);
+		break;
+	}
+	}
+
+	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device, copycmdlist, address_z, RSXThread::m_width, RSXThread::m_height, m_surface_depth_format, 1., 0);
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
+	switch (m_surface_depth_format)
+	{
+	case 0:
+		break;
+	case CELL_GCM_SURFACE_Z16:
+		depthStencilViewDesc.Format = DXGI_FORMAT_D16_UNORM;
+		break;
+	case CELL_GCM_SURFACE_Z24S8:
+		depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		break;
+	default:
+		LOG_ERROR(RSX, "Bad depth format! (%d)", m_surface_depth_format);
+		assert(0);
+	}
+	depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	m_device->CreateDepthStencilView(ds, &depthStencilViewDesc, m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	check(copycmdlist->Close());
+	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&copycmdlist);
 }
 
 
@@ -519,10 +593,10 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 
 	// TODO: Merge depth and stencil clear when possible
 	if (m_clear_surface_mask & 0x1)
-		commandList->ClearDepthStencilView(m_fbo->getDSVCPUHandle(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)0xffffff, 0, 0, nullptr);
+		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)0xffffff, 0, 0, nullptr);
 
 	if (m_clear_surface_mask & 0x2)
-		commandList->ClearDepthStencilView(m_fbo->getDSVCPUHandle(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
+		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
 
 	if (m_clear_surface_mask & 0xF0)
 	{
@@ -533,30 +607,37 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 			m_clear_surface_color_b / 255.0f,
 			m_clear_surface_color_a / 255.0f
 		};
+
+		D3D12_CPU_DESCRIPTOR_HANDLE handle = m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 		switch (m_surface_color_target)
 		{
 			case CELL_GCM_SURFACE_TARGET_NONE: break;
 
 			case CELL_GCM_SURFACE_TARGET_0:
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
-				break;
 			case CELL_GCM_SURFACE_TARGET_1:
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT1:
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT2:
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(2), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 				break;
 			case CELL_GCM_SURFACE_TARGET_MRT3:
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(0), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(1), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(2), clearColor, 0, nullptr);
-				commandList->ClearRenderTargetView(m_fbo->getRTTCPUHandle(3), clearColor, 0, nullptr);
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+				handle.ptr += g_RTTIncrement;
+				commandList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
 				break;
 			default:
 				LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
@@ -823,28 +904,30 @@ void D3D12GSRender::ExecCMD()
 
 	m_perFrameStorage.m_currentTextureIndex += usedTexture;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = &m_fbo->getDSVCPUHandle();
+	size_t numRTT;
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_NONE: break;
 	case CELL_GCM_SURFACE_TARGET_0:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
-		break;
 	case CELL_GCM_SURFACE_TARGET_1:
-		commandList->OMSetRenderTargets(1, &m_fbo->getRTTCPUHandle(1), true, DepthStencilHandle);
+		numRTT = 1;
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		commandList->OMSetRenderTargets(2, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
+		numRTT = 2;
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		commandList->OMSetRenderTargets(3, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
+		numRTT = 3;
 		break;
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		commandList->OMSetRenderTargets(4, &m_fbo->getRTTCPUHandle(0), true, DepthStencilHandle);
+		numRTT = 4;
 		break;
 	default:
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE *DepthStencilHandle = &m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	commandList->OMSetRenderTargets(numRTT, &m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart(), true, DepthStencilHandle);
+
 	D3D12_VIEWPORT viewport =
 	{
 		0.f,
@@ -1231,7 +1314,7 @@ void D3D12GSRender::Flip()
 		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 
 		barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barriers[1].Transition.pResource = m_fbo->getRenderTargetTexture(0);
+		barriers[1].Transition.pResource = m_rtts.m_currentlyBoundRenderTargets[0];
 		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
 
@@ -1239,7 +1322,7 @@ void D3D12GSRender::Flip()
 		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.SubresourceIndex = 0, dst.SubresourceIndex = 0;
-		src.pResource = m_fbo->getRenderTargetTexture(0), dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		src.pResource = m_rtts.m_currentlyBoundRenderTargets[0], dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
 		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
@@ -1263,8 +1346,8 @@ void D3D12GSRender::Flip()
 	WaitForSingleObject(handle, INFINITE);
 	CloseHandle(handle);
 	m_perFrameStorage.Reset();
-	m_texturesRTTs.clear();
 	m_texturesCache.clear();
+	m_texturesRTTs.clear();
 
 	m_frame->Flip(nullptr);
 }
@@ -1433,7 +1516,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		m_device->CreateShaderResourceView(m_fbo->getDepthStencilTexture(), &srvDesc, Handle);
+		m_device->CreateShaderResourceView(m_rtts.m_currentlyBoundDepthStencil, &srvDesc, Handle);
 		Handle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 		uavDesc.Format = DXGI_FORMAT_R8_UNORM;
@@ -1441,7 +1524,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		m_device->CreateUnorderedAccessView(depthConverted, nullptr, &uavDesc, Handle);
 
 		// Convert
-		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_fbo->getDepthStencilTexture(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+		convertCommandList->ResourceBarrier(1, &getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		convertCommandList->SetPipelineState(m_convertPSO);
 		convertCommandList->SetComputeRootSignature(m_convertRootSignature);
@@ -1456,7 +1539,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		D3D12_RESOURCE_BARRIER barriers[] =
 		{
-			getResourceBarrierTransition(m_fbo->getDepthStencilTexture(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE),
+			getResourceBarrierTransition(m_rtts.m_currentlyBoundDepthStencil, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE),
 			uavbarrier,
 		};
 		convertCommandList->ResourceBarrier(2, barriers);
@@ -1498,29 +1581,29 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_0:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_fbo->getRenderTargetTexture(0), downloadCommandList);
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_1:
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_fbo->getRenderTargetTexture(1), downloadCommandList);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT1:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_fbo->getRenderTargetTexture(0), downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_fbo->getRenderTargetTexture(1), downloadCommandList);
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT2:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_fbo->getRenderTargetTexture(0), downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_fbo->getRenderTargetTexture(1), downloadCommandList);
-		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_fbo->getRenderTargetTexture(2), downloadCommandList);
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
 		break;
 
 	case CELL_GCM_SURFACE_TARGET_MRT3:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_fbo->getRenderTargetTexture(0), downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_fbo->getRenderTargetTexture(1), downloadCommandList);
-		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_fbo->getRenderTargetTexture(2), downloadCommandList);
-		if (m_context_dma_color_b) rtt3 = writeColorBuffer(m_fbo->getRenderTargetTexture(3), downloadCommandList);
+		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+		if (m_context_dma_color_b) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
+		if (m_context_dma_color_b) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], downloadCommandList);
 		break;
 	}
 	if (needTransfer)

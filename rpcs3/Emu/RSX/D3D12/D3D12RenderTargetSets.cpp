@@ -9,7 +9,106 @@
 #include "Emu/System.h"
 #include "Emu/RSX/GSRender.h"
 
-D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth)
+#include "D3D12.h"
+
+ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,
+	size_t width, size_t height, float clearColorR, float clearColorG, float clearColorB, float clearColorA)
+{
+	ID3D12Resource* rtt;
+	auto It = m_renderTargets.find(address);
+	// TODO: Check if sizes match
+	if (It != m_renderTargets.end())
+	{
+		rtt = It->second;
+		cmdList->ResourceBarrier(1, &getResourceBarrierTransition(rtt, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	}
+	else
+	{
+		LOG_WARNING(RSX, "Creating RTT");
+		D3D12_CLEAR_VALUE clearColorValue = {};
+		clearColorValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearColorValue.Color[0] = clearColorR;
+		clearColorValue.Color[1] = clearColorG;
+		clearColorValue.Color[2] = clearColorB;
+		clearColorValue.Color[3] = clearColorA;
+
+		D3D12_HEAP_PROPERTIES heapProp = {};
+		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+		device->CreateCommittedResource(
+			&heapProp,
+			D3D12_HEAP_FLAG_NONE,
+			&resourceDesc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			&clearColorValue,
+			IID_PPV_ARGS(&rtt)
+			);
+		m_renderTargets[address] = rtt;
+	}
+	m_currentlyBoundRenderTargetsAddress[slot] = address;
+	m_currentlyBoundRenderTargets[slot] = rtt;
+	return rtt;
+}
+
+ID3D12Resource * RenderTargets::bindAddressAsDepthStencil(ID3D12Device * device, ID3D12GraphicsCommandList * cmdList, u32 address, size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear)
+{
+	ID3D12Resource* ds;
+	auto It = m_depthStencil.find(address);
+	// TODO: Check if sizes and surface depth format match
+
+	if (It != m_depthStencil.end())
+	{
+		ds = It->second;
+		cmdList->ResourceBarrier(1, &getResourceBarrierTransition(ds, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	}
+	else
+	{
+		D3D12_CLEAR_VALUE clearDepthValue = {};
+		clearDepthValue.DepthStencil.Depth = depthClear;
+
+		D3D12_HEAP_PROPERTIES heapProp = {};
+		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+		DXGI_FORMAT dxgiFormat;
+		switch (surfaceDepthFormat)
+		{
+		case 0:
+		break;
+		case CELL_GCM_SURFACE_Z16:
+			dxgiFormat = DXGI_FORMAT_R16_TYPELESS;
+			clearDepthValue.Format = DXGI_FORMAT_D16_UNORM;
+		break;
+		case CELL_GCM_SURFACE_Z24S8:
+			dxgiFormat = DXGI_FORMAT_R24G8_TYPELESS;
+			clearDepthValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		break;
+		default:
+		LOG_ERROR(RSX, "Bad depth format! (%d)", surfaceDepthFormat);
+		assert(0);
+		}
+
+		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat);
+		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+		device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&clearDepthValue,
+		IID_PPV_ARGS(&ds)
+		);
+		m_depthStencil[address] = ds;
+	}
+	m_currentlyBoundDepthStencil = ds;
+	m_currentlyBoundDepthStencilAddress = address;
+	return ds;
+}
+
+void RenderTargets::Init(ID3D12Device *device)//, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.NumDescriptors = 1;
@@ -18,140 +117,21 @@ D3D12RenderTargetSets::D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDep
 
 	descriptorHeapDesc.NumDescriptors = 4;
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_rttDescriptorHeap));
+	device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_renderTargetsDescriptorsHeap));
 
-	D3D12_CLEAR_VALUE clearDepthValue = {};
-	clearDepthValue.DepthStencil.Depth = clearDepth;
-
-	// Every resource are committed for simplicity, later we could use heap
-	D3D12_HEAP_PROPERTIES heapProp = {};
-	heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-	D3D12_RESOURCE_DESC resourceDesc = {};
-	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-	resourceDesc.Width = (UINT)width;
-	resourceDesc.Height = (UINT)height;
-	resourceDesc.SampleDesc.Count = 1;
-	resourceDesc.DepthOrArraySize = 1;
-
-	switch (surfaceDepthFormat)
-	{
-	case 0:
-		break;
-	case CELL_GCM_SURFACE_Z16:
-		resourceDesc.Format = DXGI_FORMAT_R16_TYPELESS;
-		clearDepthValue.Format = DXGI_FORMAT_D16_UNORM;
-		break;
-	case CELL_GCM_SURFACE_Z24S8:
-		resourceDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-		clearDepthValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		break;
-	default:
-		LOG_ERROR(RSX, "Bad depth format! (%d)", surfaceDepthFormat);
-		assert(0);
-	}
-
-	device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&resourceDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&clearDepthValue,
-		IID_PPV_ARGS(&m_depthStencilTexture)
-		);
-	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
-	switch (surfaceDepthFormat)
-	{
-	case 0:
-		break;
-	case CELL_GCM_SURFACE_Z16:
-		depthStencilViewDesc.Format = DXGI_FORMAT_D16_UNORM;
-		break;
-	case CELL_GCM_SURFACE_Z24S8:
-		depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		break;
-	default:
-		LOG_ERROR(RSX, "Bad depth format! (%d)", surfaceDepthFormat);
-		assert(0);
-	}
-	depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	device->CreateDepthStencilView(m_depthStencilTexture, &depthStencilViewDesc, m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-	D3D12_CLEAR_VALUE clearColorValue = {};
-	clearColorValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	clearColorValue.Color[0] = clearColor[0];
-	clearColorValue.Color[1] = clearColor[1];
-	clearColorValue.Color[2] = clearColor[2];
-	clearColorValue.Color[3] = clearColor[3];
-	g_RTTIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_rttDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	for (int i = 0; i < 4; ++i)
-	{
-		D3D12_RESOURCE_DESC resourceDesc = {};
-		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-		resourceDesc.Width = (UINT)width;
-		resourceDesc.Height = (UINT)height;
-		resourceDesc.DepthOrArraySize = 1;
-		resourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		resourceDesc.SampleDesc.Count = 1;
-
-		device->CreateCommittedResource(
-			&heapProp,
-			D3D12_HEAP_FLAG_NONE,
-			&resourceDesc,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			&clearColorValue,
-			IID_PPV_ARGS(&m_rtts[i])
-			);
-
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-		device->CreateRenderTargetView(m_rtts[i], &rttViewDesc, Handle);
-		Handle.ptr += g_RTTIncrement;
-	}
-
-	/*if (!m_set_surface_clip_horizontal)
-	{
-		m_surface_clip_x = 0;
-		m_surface_clip_w = RSXThread::m_width;
-	}
-
-	if (!m_set_surface_clip_vertical)
-	{
-		m_surface_clip_y = 0;
-		m_surface_clip_h = RSXThread::m_height;
-	}*/
+	memset(m_currentlyBoundRenderTargetsAddress, 0, 4 * sizeof(u32));
+	memset(m_currentlyBoundRenderTargets, 0, 4 * sizeof(ID3D12Resource*));
+	m_currentlyBoundDepthStencil = nullptr;
+	m_currentlyBoundDepthStencilAddress = 0;
 }
 
-D3D12RenderTargetSets::~D3D12RenderTargetSets()
+void RenderTargets::Release()
 {
-	for (unsigned i = 0; i < 4; i++)
-		m_rtts[i]->Release();
-	m_rttDescriptorHeap->Release();
-	m_depthStencilTexture->Release();
+	for (auto tmp : m_renderTargets)
+		tmp.second->Release();
 	m_depthStencilDescriptorHeap->Release();
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12RenderTargetSets::getRTTCPUHandle(u8 baseFBO) const
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_rttDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Handle.ptr += baseFBO * g_RTTIncrement;
-	return Handle;
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12RenderTargetSets::getDSVCPUHandle() const
-{
-	return m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-}
-ID3D12Resource * D3D12RenderTargetSets::getRenderTargetTexture(u8 Id) const
-{
-	return m_rtts[Id];
-}
-ID3D12Resource * D3D12RenderTargetSets::getDepthStencilTexture() const
-{
-	return m_depthStencilTexture;
+	m_renderTargetsDescriptorsHeap->Release();
+	for (auto tmp : m_depthStencil)
+		tmp.second->Release();
 }
 #endif

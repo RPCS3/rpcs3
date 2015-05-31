@@ -166,11 +166,11 @@ size_t D3D12GSRender::UploadTextures()
 		}
 
 		ID3D12Resource *vramTexture;
-		std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> >::const_iterator ItRTT = m_texturesRTTs.find(texaddr);
+		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
-		if (ItRTT != m_texturesRTTs.end())
+		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
-			vramTexture = ItRTT->second.Get();
+			vramTexture = ItRTT->second;
 		}
 		else if (ItCache != m_texturesCache.end())
 		{

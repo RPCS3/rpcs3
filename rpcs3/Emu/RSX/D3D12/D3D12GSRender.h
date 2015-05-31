@@ -48,7 +48,7 @@ class D3D12GSRender : public GSRender
 {
 private:
 	// Copy of RTT to be used as texture
-	std::unordered_map<u32, Microsoft::WRL::ComPtr<ID3D12Resource> > m_texturesRTTs;
+	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
 
 	std::unordered_map<u32, ID3D12Resource*> m_texturesCache;
 	//  std::vector<PostDrawObj> m_post_draw_objs;
@@ -116,8 +116,9 @@ private:
 	bool m_forcedIndexBuffer;
 	size_t indexCount;
 
+	RenderTargets m_rtts;
+
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_IASet;
-	D3D12RenderTargetSets *m_fbo;
 	ID3D12Device* m_device;
 	ID3D12CommandQueue *m_commandQueueCopy;
 	ID3D12CommandQueue *m_commandQueueGraphic;

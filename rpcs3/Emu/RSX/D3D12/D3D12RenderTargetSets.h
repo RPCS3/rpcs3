@@ -3,30 +3,29 @@
 #if defined(DX12_SUPPORT)
 #include <d3d12.h>
 
-/**
- * Class that embeds a RenderTargetDescriptor view and eventually a DepthStencil Descriptor View.
- * Used to imitate OpenGL FrameBuffer concept.
- */
-class D3D12RenderTargetSets
+struct RenderTargets
 {
-	size_t g_RTTIncrement;
-	ID3D12Resource *m_depthStencilTexture;
-	ID3D12Resource *m_rtts[4];
-	ID3D12DescriptorHeap *m_rttDescriptorHeap;
+	std::unordered_map<u32, ID3D12Resource *> m_renderTargets;
+	ID3D12Resource *m_currentlyBoundRenderTargets[4];
+	u32 m_currentlyBoundRenderTargetsAddress[4];
+	std::unordered_map<u32, ID3D12Resource *> m_depthStencil;
+	ID3D12Resource *m_currentlyBoundDepthStencil;
+	u32 m_currentlyBoundDepthStencilAddress;
+	ID3D12DescriptorHeap *m_renderTargetsDescriptorsHeap;
 	ID3D12DescriptorHeap *m_depthStencilDescriptorHeap;
-public:
-	D3D12RenderTargetSets(ID3D12Device *device, u8 surfaceDepthFormat, size_t width, size_t height, float clearColor[4], float clearDepth);
-	~D3D12RenderTargetSets();
-	/**
-	 * Return the base descriptor address for the give surface target.
-	 * All rtt's view descriptor are contigous.
-	 */
-	D3D12_CPU_DESCRIPTOR_HANDLE getRTTCPUHandle(u8 baseFBO) const;
-	D3D12_CPU_DESCRIPTOR_HANDLE getDSVCPUHandle() const;
-	ID3D12Resource *getRenderTargetTexture(u8 Id) const;
-	ID3D12Resource *getDepthStencilTexture() const;
 
-	u32 m_address_color_a, m_address_color_b, m_address_color_c, m_address_color_d, m_address_z;
-	u32 m_target_type;
+	/**
+	 * If render target already exists at address, issue state change operation on cmdList.
+	 * Otherwise create one with width, height, clearColor info.
+	 * returns the corresponding render target resource.
+	 */
+	ID3D12Resource *bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,
+		size_t width, size_t height, float clearColorR, float clearColorG, float clearColorB, float clearColorA);
+
+	ID3D12Resource *bindAddressAsDepthStencil(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, u32 address,
+		size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear);
+
+	void Init(ID3D12Device *device);
+	void Release();
 };
 #endif
