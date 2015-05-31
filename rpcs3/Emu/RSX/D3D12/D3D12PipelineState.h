@@ -81,8 +81,9 @@ struct D3D12Traits
 		}
 
 		// TODO: This shouldn't use current dir
-		fs::file("./FragmentProgram.hlsl", o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
-		fragmentProgramData.Id = (u32)ID;
+		std::string filename = "./FragmentProgram" + std::to_string(ID) + ".hlsl";
+		fs::file(filename, o_write | o_create | o_trunc).write(shader.c_str(), shader.size());
+		fragmentProgramData.id = (u32)ID;
 	}
 
 	static
@@ -93,8 +94,9 @@ struct D3D12Traits
 		vertexProgramData.Compile(shaderCode, Shader::SHADER_TYPE::SHADER_TYPE_VERTEX);
 
 		// TODO: This shouldn't use current dir
-		fs::file("./VertexProgram.hlsl", o_write | o_create | o_trunc).write(shaderCode.c_str(), shaderCode.size());
-		vertexProgramData.Id = (u32)ID;
+		std::string filename = "./VertexProgram" + std::to_string(ID) + ".hlsl";
+		fs::file(filename, o_write | o_create | o_trunc).write(shaderCode.c_str(), shaderCode.size());
+		vertexProgramData.id = (u32)ID;
 	}
 
 	static
