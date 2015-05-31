@@ -492,15 +492,22 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	{
 		u32 vector[4];
 		// Is it assigned by color register in command buffer ?
-		if (!m_fragment_constants.empty() && offsetInFP == m_fragment_constants.front().id - m_cur_fragment_prog->offset)
+		// TODO : we loop every iteration, we might do better...
+		bool isCommandBufferSetConstant = false;
+		for (const RSXTransformConstant& c : m_fragment_constants)
 		{
-			const RSXTransformConstant& c = m_fragment_constants.front();
-			vector[0] = (u32&)c.x;
-			vector[1] = (u32&)c.y;
-			vector[2] = (u32&)c.z;
-			vector[3] = (u32&)c.w;
+			size_t fragmentId = c.id - m_cur_fragment_prog->offset;
+			if (fragmentId == offsetInFP)
+			{
+				isCommandBufferSetConstant = true;
+				vector[0] = (u32&)c.x;
+				vector[1] = (u32&)c.y;
+				vector[2] = (u32&)c.z;
+				vector[3] = (u32&)c.w;
+				break;
+			}
 		}
-		else
+		if (!isCommandBufferSetConstant)
 		{
 			auto data = vm::ptr<u32>::make(m_cur_fragment_prog->addr + (u32)offsetInFP);
 
