@@ -61,11 +61,11 @@ AboutDialog::AboutDialog(wxWindow *parent)
 	Connect(b_id_forum, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(AboutDialog::OpenForum));
 
 	s_panel_buttons->AddSpacer(12);
-	s_panel_buttons->Add(new wxButton(this, wxID_OK), wxLEFT, 0, 5);
-	s_panel_buttons->AddSpacer(218);
 	s_panel_buttons->Add(b_website, wxLEFT, 0, 5);
 	s_panel_buttons->AddSpacer(5);
 	s_panel_buttons->Add(b_forum, wxLEFT, 0, 5);
+	s_panel_buttons->AddSpacer(218);
+	s_panel_buttons->Add(new wxButton(this, wxID_OK), wxLEFT, 0, 5);
 	s_panel_buttons->AddSpacer(12);
 
 	//Panels
