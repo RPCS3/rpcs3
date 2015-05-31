@@ -304,11 +304,11 @@ size_t D3D12GSRender::UploadTextures()
 		samplerDesc.AddressV = GetWrap(m_textures[i].GetWrapT());
 		samplerDesc.AddressW = GetWrap(m_textures[i].GetWrapR());
 		samplerDesc.ComparisonFunc = ComparisonFunc[m_textures[i].GetZfunc()];
-		samplerDesc.MaxAnisotropy = GetMaxAniso(m_textures[i].GetMaxAniso());
+		samplerDesc.MaxAnisotropy = (UINT)GetMaxAniso(m_textures[i].GetMaxAniso());
 		samplerDesc.MipLODBias = m_textures[i].GetBias();
-		samplerDesc.BorderColor[4] = m_textures[i].GetBorderColor();
-		samplerDesc.MinLOD = m_textures[i].GetMinLOD() >> 8;
-		samplerDesc.MaxLOD = m_textures[i].GetMaxLOD() >> 8;
+		samplerDesc.BorderColor[4] = (FLOAT)m_textures[i].GetBorderColor();
+		samplerDesc.MinLOD = (FLOAT)(m_textures[i].GetMinLOD() >> 8);
+		samplerDesc.MaxLOD = (FLOAT)(m_textures[i].GetMaxLOD() >> 8);
 		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		m_device->CreateSampler(&samplerDesc, Handle);

@@ -98,7 +98,7 @@ private:
 	struct UAVHeap
 	{
 		ID3D12Heap *m_heap;
-		std::atomic<int> m_putPos, // Start of free space
+		std::atomic<size_t> m_putPos, // Start of free space
 			m_getPos; // End of free space
 	};
 
@@ -107,7 +107,7 @@ private:
 	struct ReadbackHeap
 	{
 		ID3D12Heap *m_heap;
-		std::atomic<int> m_putPos, // Start of free space
+		std::atomic<size_t> m_putPos, // Start of free space
 			m_getPos; // End of free space
 	};
 
