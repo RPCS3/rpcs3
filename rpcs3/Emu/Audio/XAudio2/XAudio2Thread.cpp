@@ -15,7 +15,6 @@ void XAudio2Thread::Init()
 {
 	HRESULT hr = S_OK;
 
-#if (FORCED_WINVER < 0x0602)
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
@@ -23,7 +22,6 @@ void XAudio2Thread::Init()
 		Emu.Pause();
 		return;
 	}
-#endif
 
 	hr = XAudio2Create(&m_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
@@ -53,9 +51,7 @@ void XAudio2Thread::Quit()
 	m_xaudio2_instance->Release();
 	m_xaudio2_instance = nullptr;
 
-#if (FORCED_WINVER < 0x0602)
 	CoUninitialize();
-#endif
 }
 
 void XAudio2Thread::Play()
