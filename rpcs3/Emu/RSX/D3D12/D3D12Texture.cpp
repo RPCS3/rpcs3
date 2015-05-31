@@ -168,9 +168,11 @@ size_t D3D12GSRender::UploadTextures()
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
+		bool isRenderTarget = false;
 		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
 			vramTexture = ItRTT->second;
+			isRenderTarget = true;
 		}
 		else if (ItCache != m_texturesCache.end())
 		{
@@ -274,24 +276,99 @@ size_t D3D12GSRender::UploadTextures()
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
 		srvDesc.Texture2D.MipLevels = 1;
-		const int RemapValue[4] =
+
+		switch (format)
 		{
-			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
-			D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
-		};
-		if (format != CELL_GCM_TEXTURE_B8 && format != CELL_GCM_TEXTURE_X16 && format != CELL_GCM_TEXTURE_X32_FLOAT)
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_DEPTH24_D8:
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		default:
+			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+			break;
+		case CELL_GCM_TEXTURE_D8R8G8B8:
 		{
+			const int RemapValue[4] =
+			{
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
+			};
+
 			u8 remap_a = m_textures[i].GetRemap() & 0x3;
 			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
 			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
 			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
 
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(RemapValue[remap_a], RemapValue[remap_r], RemapValue[remap_g], RemapValue[remap_b]);
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				RemapValue[remap_a],
+				RemapValue[remap_r],
+				RemapValue[remap_g],
+				RemapValue[remap_b]);
+			break;
 		}
-		else
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(RemapValue[0], RemapValue[1], RemapValue[2], RemapValue[3]);
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+		{
+			const int RemapValue[4] =
+			{
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
+			};
+
+			u8 remap_a = m_textures[i].GetRemap() & 0x3;
+			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
+			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
+			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
+			if (isRenderTarget)
+				srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			else
+				srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+					RemapValue[remap_a],
+					RemapValue[remap_r],
+					RemapValue[remap_g],
+					RemapValue[remap_b]);
+
+			break;
+		}
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			break;
+		case CELL_GCM_TEXTURE_B8:
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			break;
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			break;
+		}
 
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
