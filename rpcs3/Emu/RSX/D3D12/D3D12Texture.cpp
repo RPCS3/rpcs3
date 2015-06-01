@@ -250,8 +250,8 @@ size_t D3D12GSRender::UploadTextures()
 			}
 			Texture->Unmap(0, nullptr);
 
-			assert(m_textureData.canAlloc(textureSize));
-			size_t heapOffset2 = m_textureData.alloc(textureSize);
+			assert(m_textureData.canAlloc(textureSize * 2));
+			size_t heapOffset2 = m_textureData.alloc(textureSize * 2);
 
 			check(m_device->CreatePlacedResource(
 				m_textureData.m_heap,
@@ -261,7 +261,7 @@ size_t D3D12GSRender::UploadTextures()
 				nullptr,
 				IID_PPV_ARGS(&vramTexture)
 				));
-			m_textureData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize, vramTexture));
+			m_textureData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize * 2, vramTexture));
 
 			D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
 			dst.pResource = vramTexture;
