@@ -238,7 +238,7 @@ size_t D3D12GSRender::UploadTextures()
 
 					for (int j = 0; j < m_textures[i].GetWidth(); j++)
 					{
-						u16 tmp = src[row * m_texture_pitch + j];
+						u16 tmp = src[row * m_texture_pitch / 2 + j];
 						dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
 					}
 				}
