@@ -14,6 +14,66 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 	GetGSFrame = value;
 }
 
+void DataHeap::Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type)
+{
+	m_size = heapSize;
+	D3D12_HEAP_DESC heapDesc = {};
+	heapDesc.SizeInBytes = m_size;
+	heapDesc.Properties.Type = type;
+	heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+	check(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&m_heap)));
+	m_putPos = 0;
+	m_getPos = m_size - 1;
+}
+
+
+bool DataHeap::canAlloc(size_t size)
+{
+	size_t putPos = m_putPos.load(), getPos = m_getPos.load();
+	size_t allocSize = powerOf2Align(size, 65536);
+	if (putPos + allocSize < m_size)
+	{
+		// range before get
+		if (putPos + allocSize < getPos)
+			return true;
+		// range after get
+		if (putPos > getPos)
+			return true;
+		return false;
+	}
+	else
+	{
+		// ..]....[..get..
+		if (putPos < getPos)
+			return false;
+		// ..get..]...[...
+		// Actually all resources extending beyond heap space starts at 0
+		if (allocSize > getPos)
+			return false;
+		return true;
+	}
+}
+
+size_t DataHeap::alloc(size_t size)
+{
+	assert(canAlloc(size));
+	size_t putPos = m_putPos.load();
+	if (putPos + size < m_size)
+	{
+		m_putPos += powerOf2Align(size, 65536);
+		return putPos;
+	}
+	else
+	{
+		m_putPos.store(powerOf2Align(size, 65536));
+		return 0;
+	}
+}
+
+void DataHeap::Release()
+{
+}
+
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_vertexIndexBuffersHeapFreeSpace = 0;
@@ -334,10 +394,13 @@ D3D12GSRender::D3D12GSRender()
 	m_UAVHeap.m_getPos = 1024 * 1024 * 128 - 1;
 
 	m_rtts.Init(m_device);
+
+	m_constantsData.Init(m_device, 1024 * 1024, D3D12_HEAP_TYPE_UPLOAD);
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
+	m_constantsData.Release();
 	m_UAVHeap.m_heap->Release();
 	m_readbackResources.m_heap->Release();
 	m_texturesRTTs.clear();
@@ -869,6 +932,13 @@ void D3D12GSRender::Flip()
 	m_perFrameStorage.Reset();
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
+
+	for (auto tmp : m_constantsData.m_resourceStoredSinceLastSync)
+	{
+		std::get<2>(tmp)->Release();
+		m_constantsData.m_getPos.store(std::get<0>(tmp));
+	}
+	m_constantsData.m_resourceStoredSinceLastSync.clear();
 
 	m_frame->Flip(nullptr);
 }
