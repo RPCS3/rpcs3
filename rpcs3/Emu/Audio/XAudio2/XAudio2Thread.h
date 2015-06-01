@@ -14,6 +14,7 @@ private:
 
 public:
 	virtual ~XAudio2Thread();
+	XAudio2Thread();
 
 	virtual void Init();
 	virtual void Quit();

@@ -11,6 +11,10 @@ XAudio2Thread::~XAudio2Thread()
 	if (m_source_voice) Quit();
 }
 
+XAudio2Thread::XAudio2Thread() : m_xaudio2_instance(nullptr), m_master_voice(nullptr), m_source_voice(nullptr)
+{
+}
+
 void XAudio2Thread::Init()
 {
 	HRESULT hr = S_OK;
