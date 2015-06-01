@@ -149,7 +149,7 @@ inline const T Node::as() const {
 template <typename T, typename S>
 inline const T Node::as(const S& fallback) const {
   if (!m_isValid)
-    throw InvalidNode();
+    return fallback;
   return as_if<T, S>(*this)(fallback);
 }
 
@@ -282,26 +282,26 @@ inline std::size_t Node::size() const {
 
 inline const_iterator Node::begin() const {
   if (!m_isValid)
-    throw InvalidNode();
+    return const_iterator();
   return m_pNode ? const_iterator(m_pNode->begin(), m_pMemory)
                  : const_iterator();
 }
 
 inline iterator Node::begin() {
   if (!m_isValid)
-    throw InvalidNode();
+    return iterator();
   return m_pNode ? iterator(m_pNode->begin(), m_pMemory) : iterator();
 }
 
 inline const_iterator Node::end() const {
   if (!m_isValid)
-    throw InvalidNode();
+    return const_iterator();
   return m_pNode ? const_iterator(m_pNode->end(), m_pMemory) : const_iterator();
 }
 
 inline iterator Node::end() {
   if (!m_isValid)
-    throw InvalidNode();
+    return iterator();
   return m_pNode ? iterator(m_pNode->end(), m_pMemory) : iterator();
 }
 
