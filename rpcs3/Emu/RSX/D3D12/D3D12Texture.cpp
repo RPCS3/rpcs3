@@ -231,6 +231,17 @@ size_t D3D12GSRender::UploadTextures()
 						dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 					}
 				}
+				else if (format == CELL_GCM_TEXTURE_R5G6B5)
+				{
+					unsigned short *dst = (unsigned short *)textureData,
+						*src = (unsigned short *)pixels;
+
+					for (int j = 0; j < m_textures[i].GetWidth(); j++)
+					{
+						u16 tmp = src[row * m_texture_pitch + j];
+						dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+					}
+				}
 				else
 					streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
 			}
