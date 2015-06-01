@@ -52,7 +52,7 @@ struct DataHeap
 		m_getPos; // End of free space
 	std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_resourceStoredSinceLastSync;
 
-	void Init(ID3D12Device *, size_t, D3D12_HEAP_TYPE);
+	void Init(ID3D12Device *, size_t, D3D12_HEAP_TYPE, D3D12_HEAP_FLAGS);
 	/**
 	* Does alloc cross get position ?
 	*/
@@ -94,8 +94,6 @@ private:
 
 		// Texture storage
 		ID3D12CommandAllocator *m_textureUploadCommandAllocator;
-		ID3D12Heap *m_uploadTextureHeap, *m_textureStorage;
-		size_t m_currentStorageOffset;
 		ID3D12DescriptorHeap *m_textureDescriptorsHeap;
 		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
 		size_t m_currentTextureIndex;
@@ -111,6 +109,9 @@ private:
 	DataHeap m_constantsData;
 	// Vertex storage
 	DataHeap m_vertexIndexData;
+	// Texture storage
+	DataHeap m_textureUploadData;
+	DataHeap m_textureData;
 
 	struct UAVHeap
 	{

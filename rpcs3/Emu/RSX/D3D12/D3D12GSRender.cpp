@@ -14,13 +14,13 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 	GetGSFrame = value;
 }
 
-void DataHeap::Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type)
+void DataHeap::Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
 {
 	m_size = heapSize;
 	D3D12_HEAP_DESC heapDesc = {};
 	heapDesc.SizeInBytes = m_size;
 	heapDesc.Properties.Type = type;
-	heapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+	heapDesc.Flags = flags;
 	check(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&m_heap)));
 	m_putPos = 0;
 	m_getPos = m_size - 1;
@@ -83,7 +83,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
-	m_currentStorageOffset = 0;
 	m_currentTextureIndex = 0;
 
 	m_commandAllocator->Reset();
@@ -117,17 +116,6 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	check(device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_scaleOffsetDescriptorHeap)));
 
-	// Texture
-	D3D12_HEAP_DESC heapDescription = {};
-	heapDescription.SizeInBytes = 1024 * 1024 * 256;
-	heapDescription.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_uploadTextureHeap)));
-
-	heapDescription.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapDescription.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
-
 	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
 	textureDescriptorDesc.NumDescriptors = 10000; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -148,8 +136,6 @@ void D3D12GSRender::ResourceStorage::Release()
 	for (auto tmp : m_inflightResources)
 		tmp->Release();
 	m_textureDescriptorsHeap->Release();
-	m_textureStorage->Release();
-	m_uploadTextureHeap->Release();
 	m_samplerDescriptorHeap->Release();
 	for (auto tmp : m_inflightCommandList)
 		tmp->Release();
@@ -387,14 +373,18 @@ D3D12GSRender::D3D12GSRender()
 
 	m_rtts.Init(m_device);
 
-	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD);
-	m_vertexIndexData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD);
+	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_vertexIndexData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_textureUploadData.Init(m_device, 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_textureData.Init(m_device, 1024 * 1024 * 256, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
 	m_constantsData.Release();
 	m_vertexIndexData.Release();
+	m_textureUploadData.Release();
+	m_textureData.Release();
 	m_UAVHeap.m_heap->Release();
 	m_readbackResources.m_heap->Release();
 	m_texturesRTTs.clear();
@@ -939,6 +929,18 @@ void D3D12GSRender::Flip()
 		m_vertexIndexData.m_getPos = std::get<0>(tmp);
 	}
 	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
+	for (auto tmp : m_textureUploadData.m_resourceStoredSinceLastSync)
+	{
+		std::get<2>(tmp)->Release();
+		m_textureUploadData.m_getPos = std::get<0>(tmp);
+	}
+	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
+	for (auto tmp : m_textureData.m_resourceStoredSinceLastSync)
+	{
+		std::get<2>(tmp)->Release();
+		m_textureData.m_getPos = std::get<0>(tmp);
+	}
+	m_textureData.m_resourceStoredSinceLastSync.clear();
 
 	m_frame->Flip(nullptr);
 }
