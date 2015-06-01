@@ -54,8 +54,9 @@ private:
 	//  std::vector<PostDrawObj> m_post_draw_objs;
 
 	PipelineStateObjectCache m_cachePSO;
-	ID3D12PipelineState *m_PSO;
-	ID3D12RootSignature *m_rootSignature;
+	std::pair<ID3D12PipelineState *, size_t> *m_PSO;
+	// m_rootSignatures[N] is RS with N texture/sample
+	ID3D12RootSignature *m_rootSignatures[17];
 
 	ID3D12PipelineState *m_convertPSO;
 	ID3D12RootSignature *m_convertRootSignature;

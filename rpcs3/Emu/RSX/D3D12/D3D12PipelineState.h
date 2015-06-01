@@ -44,6 +44,7 @@ public:
 	u32 Id;
 	Microsoft::WRL::ComPtr<ID3DBlob> bytecode;
 	std::vector<size_t> FragmentConstantOffsetCache;
+	size_t m_textureCount;
 
 	/**
 	* Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
@@ -59,9 +60,9 @@ struct D3D12Traits
 {
 	typedef Shader VertexProgramData;
 	typedef Shader FragmentProgramData;
-	typedef ID3D12PipelineState PipelineData;
+	typedef std::pair<ID3D12PipelineState *, size_t> PipelineData;
 	typedef D3D12PipelineProperties PipelineProperties;
-	typedef std::pair<ID3D12Device *, ID3D12RootSignature *> ExtraData;
+	typedef std::pair<ID3D12Device *, ID3D12RootSignature **> ExtraData;
 
 	static
 	void RecompileFragmentProgram(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID)
@@ -69,12 +70,16 @@ struct D3D12Traits
 		D3D12FragmentDecompiler FS(RSXFP->addr, RSXFP->size, RSXFP->offset);
 		const std::string &shader = FS.Decompile();
 		fragmentProgramData.Compile(shader, Shader::SHADER_TYPE::SHADER_TYPE_FRAGMENT);
-
+		fragmentProgramData.m_textureCount = 0;
 		for (const ParamType& PT : FS.m_parr.params[PF_PARAM_UNIFORM])
 		{
-			if (PT.type == "sampler2D") continue;
 			for (const ParamItem PI : PT.items)
 			{
+				if (PT.type == "sampler2D")
+				{
+					fragmentProgramData.m_textureCount++;
+					continue;
+				}
 				size_t offset = atoi(PI.name.c_str() + 2);
 				fragmentProgramData.FragmentConstantOffsetCache.push_back(offset);
 			}
@@ -102,7 +107,8 @@ struct D3D12Traits
 	static
 	PipelineData *BuildProgram(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData)
 	{
-		ID3D12PipelineState *result;
+
+		std::pair<ID3D12PipelineState *, size_t> *result = new std::pair<ID3D12PipelineState *, size_t>();
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicPipelineStateDesc = {};
 
 		if (vertexProgramData.bytecode == nullptr)
@@ -115,7 +121,8 @@ struct D3D12Traits
 		graphicPipelineStateDesc.PS.BytecodeLength = fragmentProgramData.bytecode->GetBufferSize();
 		graphicPipelineStateDesc.PS.pShaderBytecode = fragmentProgramData.bytecode->GetBufferPointer();
 
-		graphicPipelineStateDesc.pRootSignature = extraData.second;
+		graphicPipelineStateDesc.pRootSignature = extraData.second[fragmentProgramData.m_textureCount];
+		result->second = fragmentProgramData.m_textureCount;
 
 		// Sensible default value
 		static D3D12_RASTERIZER_DESC CD3D12_RASTERIZER_DESC =
@@ -161,14 +168,15 @@ struct D3D12Traits
 		graphicPipelineStateDesc.SampleMask = UINT_MAX;
 		graphicPipelineStateDesc.NodeMask = 1;
 
-		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result));
+		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result->first));
 		return result;
 	}
 
 	static
 	void DeleteProgram(PipelineData *ptr)
 	{
-		ptr->Release();
+		ptr->first->Release();
+		delete ptr;
 	}
 };
 

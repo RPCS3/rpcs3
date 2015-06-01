@@ -75,11 +75,12 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	check(device->CreateHeap(&heapDescription, IID_PPV_ARGS(&m_textureStorage)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC textureDescriptorDesc = {};
-	textureDescriptorDesc.NumDescriptors = 2048; // For safety
+	textureDescriptorDesc.NumDescriptors = 10000; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	textureDescriptorDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_textureDescriptorsHeap)));
 
+	textureDescriptorDesc.NumDescriptors = 2048; // For safety
 	textureDescriptorDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	check(device->CreateDescriptorHeap(&textureDescriptorDesc, IID_PPV_ARGS(&m_samplerDescriptorHeap)));
 }
@@ -230,55 +231,58 @@ D3D12GSRender::D3D12GSRender()
 	m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_backbufferAsRendertarget[1]));
 	m_device->CreateRenderTargetView(m_backBuffer[1], &rttDesc, m_backbufferAsRendertarget[1]->GetCPUDescriptorHandleForHeapStart());
 
-	// Common root signature
-	D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
-	// Scale Offset data
-	descriptorRange[0].BaseShaderRegister = 0;
-	descriptorRange[0].NumDescriptors = 1;
-	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	// Constants
-	descriptorRange[1].BaseShaderRegister = 1;
-	descriptorRange[1].NumDescriptors = 2;
-	descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	// Textures
-	descriptorRange[2].BaseShaderRegister = 0;
-	descriptorRange[2].NumDescriptors = 16;
-	descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	// Samplers
-	descriptorRange[3].BaseShaderRegister = 0;
-	descriptorRange[3].NumDescriptors = 16;
-	descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-	D3D12_ROOT_PARAMETER RP[4] = {};
-	RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
-	RP[0].DescriptorTable.NumDescriptorRanges = 1;
-	RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
-	RP[1].DescriptorTable.NumDescriptorRanges = 1;
-	RP[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
-	RP[2].DescriptorTable.NumDescriptorRanges = 1;
-	RP[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	RP[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	RP[3].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
-	RP[3].DescriptorTable.NumDescriptorRanges = 1;
+	// Common root signatures
+	for (unsigned textureCount = 0; textureCount < 17; textureCount++)
+	{
+		D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
+		// Scale Offset data
+		descriptorRange[0].BaseShaderRegister = 0;
+		descriptorRange[0].NumDescriptors = 1;
+		descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		// Constants
+		descriptorRange[1].BaseShaderRegister = 1;
+		descriptorRange[1].NumDescriptors = 2;
+		descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		// Textures
+		descriptorRange[2].BaseShaderRegister = 0;
+		descriptorRange[2].NumDescriptors = textureCount;
+		descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		// Samplers
+		descriptorRange[3].BaseShaderRegister = 0;
+		descriptorRange[3].NumDescriptors = textureCount;
+		descriptorRange[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+		D3D12_ROOT_PARAMETER RP[4] = {};
+		RP[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RP[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		RP[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
+		RP[0].DescriptorTable.NumDescriptorRanges = 1;
+		RP[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RP[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		RP[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
+		RP[1].DescriptorTable.NumDescriptorRanges = 1;
+		RP[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RP[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		RP[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
+		RP[2].DescriptorTable.NumDescriptorRanges = 1;
+		RP[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		RP[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		RP[3].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
+		RP[3].DescriptorTable.NumDescriptorRanges = 1;
 
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-	rootSignatureDesc.NumParameters = 4;
-	rootSignatureDesc.pParameters = RP;
+		D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+		rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		rootSignatureDesc.NumParameters = (textureCount > 0) ? 4 : 2;
+		rootSignatureDesc.pParameters = RP;
 
-	Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
-	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-	check(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
+		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+		check(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
-	m_device->CreateRootSignature(0,
-		rootSignatureBlob->GetBufferPointer(),
-		rootSignatureBlob->GetBufferSize(),
-		IID_PPV_ARGS(&m_rootSignature));
+		m_device->CreateRootSignature(0,
+			rootSignatureBlob->GetBufferPointer(),
+			rootSignatureBlob->GetBufferSize(),
+			IID_PPV_ARGS(&m_rootSignatures[textureCount]));
+	}
 
 	m_perFrameStorage.Init(m_device);
 	m_perFrameStorage.Reset();
@@ -348,7 +352,8 @@ D3D12GSRender::~D3D12GSRender()
 	m_backbufferAsRendertarget[1]->Release();
 	m_backBuffer[1]->Release();
 	m_rtts.Release();
-	m_rootSignature->Release();
+	for (unsigned i = 0; i < 17; i++)
+		m_rootSignatures[i]->Release();
 	m_swapChain->Release();
 	m_device->Release();
 	delete[] vertexConstantShadowCopy;
@@ -625,7 +630,7 @@ bool D3D12GSRender::LoadProgram()
 
 	prop.IASet = m_IASet;
 
-	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignature));
+	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignatures));
 	return m_PSO != nullptr;
 }
 
@@ -636,8 +641,6 @@ void D3D12GSRender::ExecCMD()
 	ID3D12GraphicsCommandList *commandList;
 	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	m_perFrameStorage.m_inflightCommandList.push_back(commandList);
-
-	commandList->SetGraphicsRootSignature(m_rootSignature);
 
 	if (m_indexed_array.m_count)
 		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
@@ -657,6 +660,8 @@ void D3D12GSRender::ExecCMD()
 		return;
 	}
 
+	commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second]);
+
 	// Constants
 	setScaleOffset();
 	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_scaleOffsetDescriptorHeap);
@@ -675,42 +680,45 @@ void D3D12GSRender::ExecCMD()
 	Handle = m_perFrameStorage.m_constantsBufferDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
 	Handle.ptr += currentBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	commandList->SetGraphicsRootDescriptorTable(1, Handle);
-	commandList->SetPipelineState(m_PSO);
+	commandList->SetPipelineState(m_PSO->first);
 
-	size_t usedTexture = UploadTextures();
-	// Drivers don't like undefined texture descriptors
-	for (; usedTexture < 16; usedTexture++)
+	if (m_PSO->second > 0)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, Handle);
+		size_t usedTexture = UploadTextures();
+		// Drivers don't like undefined texture descriptors
+	/*	for (; usedTexture < 16; usedTexture++)
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			srvDesc.Texture2D.MipLevels = 1;
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+			Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			m_device->CreateShaderResourceView(m_dummyTexture, &srvDesc, Handle);
 
-		D3D12_SAMPLER_DESC samplerDesc = {};
-		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		m_device->CreateSampler(&samplerDesc, Handle);
+			D3D12_SAMPLER_DESC samplerDesc = {};
+			samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+			Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+			Handle.ptr += (usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+			m_device->CreateSampler(&samplerDesc, Handle);
+		}*/
+
+		Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
+		Handle.ptr += m_perFrameStorage.m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_textureDescriptorsHeap);
+		commandList->SetGraphicsRootDescriptorTable(2, Handle);
+
+		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+		Handle.ptr += m_perFrameStorage.m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_samplerDescriptorHeap);
+		commandList->SetGraphicsRootDescriptorTable(3, Handle);
+
+		m_perFrameStorage.m_currentTextureIndex += usedTexture;
 	}
-
-	Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_perFrameStorage.m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_textureDescriptorsHeap);
-	commandList->SetGraphicsRootDescriptorTable(2, Handle);
-
-	Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	Handle.ptr += m_perFrameStorage.m_currentTextureIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-	commandList->SetDescriptorHeaps(1, &m_perFrameStorage.m_samplerDescriptorHeap);
-	commandList->SetGraphicsRootDescriptorTable(3, Handle);
-
-	m_perFrameStorage.m_currentTextureIndex += usedTexture;
 
 	size_t numRTT;
 	switch (m_surface_color_target)
