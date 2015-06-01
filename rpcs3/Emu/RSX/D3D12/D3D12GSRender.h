@@ -48,7 +48,7 @@ struct DataHeap
 {
 	ID3D12Heap *m_heap;
 	size_t m_size;
-	std::atomic<size_t> m_putPos, // Start of free space
+	size_t m_putPos, // Start of free space
 		m_getPos; // End of free space
 	std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_resourceStoredSinceLastSync;
 

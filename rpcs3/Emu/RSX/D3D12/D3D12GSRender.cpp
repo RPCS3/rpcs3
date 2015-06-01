@@ -29,7 +29,7 @@ void DataHeap::Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type)
 
 bool DataHeap::canAlloc(size_t size)
 {
-	size_t putPos = m_putPos.load(), getPos = m_getPos.load();
+	size_t putPos = m_putPos, getPos = m_getPos;
 	size_t allocSize = powerOf2Align(size, 65536);
 	if (putPos + allocSize < m_size)
 	{
@@ -57,7 +57,7 @@ bool DataHeap::canAlloc(size_t size)
 size_t DataHeap::alloc(size_t size)
 {
 	assert(canAlloc(size));
-	size_t putPos = m_putPos.load();
+	size_t putPos = m_putPos;
 	if (putPos + size < m_size)
 	{
 		m_putPos += powerOf2Align(size, 65536);
@@ -65,13 +65,18 @@ size_t DataHeap::alloc(size_t size)
 	}
 	else
 	{
-		m_putPos.store(powerOf2Align(size, 65536));
+		m_putPos = powerOf2Align(size, 65536);
 		return 0;
 	}
 }
 
 void DataHeap::Release()
 {
+	m_heap->Release();
+	for (auto tmp : m_resourceStoredSinceLastSync)
+	{
+		std::get<2>(tmp)->Release();
+	}
 }
 
 void D3D12GSRender::ResourceStorage::Reset()
@@ -395,7 +400,7 @@ D3D12GSRender::D3D12GSRender()
 
 	m_rtts.Init(m_device);
 
-	m_constantsData.Init(m_device, 1024 * 1024, D3D12_HEAP_TYPE_UPLOAD);
+	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD);
 }
 
 D3D12GSRender::~D3D12GSRender()
@@ -936,7 +941,7 @@ void D3D12GSRender::Flip()
 	for (auto tmp : m_constantsData.m_resourceStoredSinceLastSync)
 	{
 		std::get<2>(tmp)->Release();
-		m_constantsData.m_getPos.store(std::get<0>(tmp));
+		m_constantsData.m_getPos = std::get<0>(tmp);
 	}
 	m_constantsData.m_resourceStoredSinceLastSync.clear();
 
