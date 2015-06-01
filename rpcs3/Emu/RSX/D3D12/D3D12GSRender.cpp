@@ -84,7 +84,6 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_vertexIndexBuffersHeapFreeSpace = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
-	m_constantsBuffersHeapFreeSpace = 0;
 	m_currentStorageOffset = 0;
 	m_currentTextureIndex = 0;
 
@@ -113,7 +112,6 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
 	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexIndexBuffersHeap)));
-	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_constantsBuffersHeap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -156,7 +154,6 @@ void D3D12GSRender::ResourceStorage::Release()
 
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
-	m_constantsBuffersHeap->Release();
 	m_vertexIndexBuffersHeap->Release();
 	for (auto tmp : m_inflightResources)
 		tmp->Release();

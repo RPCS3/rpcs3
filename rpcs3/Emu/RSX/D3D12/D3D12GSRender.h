@@ -91,8 +91,6 @@ private:
 		ID3D12Heap *m_vertexIndexBuffersHeap;
 
 		// Constants storage
-		ID3D12Heap *m_constantsBuffersHeap;
-		size_t m_constantsBuffersHeapFreeSpace;
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 		size_t m_constantsBufferIndex;
 		ID3D12DescriptorHeap *m_scaleOffsetDescriptorHeap;
@@ -113,6 +111,7 @@ private:
 
 	ResourceStorage m_perFrameStorage;
 
+	// Constants storage
 	DataHeap m_constantsData;
 
 	struct UAVHeap
