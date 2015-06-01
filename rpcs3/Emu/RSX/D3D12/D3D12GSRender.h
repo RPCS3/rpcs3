@@ -86,10 +86,6 @@ private:
 
 		std::vector<ID3D12Resource *> m_inflightResources;
 
-		// Vertex storage
-		size_t m_vertexIndexBuffersHeapFreeSpace;
-		ID3D12Heap *m_vertexIndexBuffersHeap;
-
 		// Constants storage
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
 		size_t m_constantsBufferIndex;
@@ -113,6 +109,8 @@ private:
 
 	// Constants storage
 	DataHeap m_constantsData;
+	// Vertex storage
+	DataHeap m_vertexIndexData;
 
 	struct UAVHeap
 	{

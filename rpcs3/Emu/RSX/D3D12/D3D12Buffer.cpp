@@ -194,15 +194,15 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
 	{
 		const VertexBufferFormat &vbf = vertexBufferFormat[buffer];
-		// 65536 alignment
-		size_t bufferHeapOffset = m_perFrameStorage.m_vertexIndexBuffersHeapFreeSpace;
-		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
+
 		size_t subBufferSize = vbf.range.second - vbf.range.first;
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
 		ID3D12Resource *vertexBuffer;
 		check(m_device->CreatePlacedResource(
-			m_perFrameStorage.m_vertexIndexBuffersHeap,
-			bufferHeapOffset,
+			m_vertexIndexData.m_heap,
+			heapOffset,
 			&getBufferResourceDesc(subBufferSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -250,14 +250,13 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		}
 
 		vertexBuffer->Unmap(0, nullptr);
-		m_perFrameStorage.m_inflightResources.push_back(vertexBuffer);
+		m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, vertexBuffer));
 
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView = {};
 		vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 		vertexBufferView.SizeInBytes = (UINT)subBufferSize;
 		vertexBufferView.StrideInBytes = (UINT)vbf.stride;
 		result.first.push_back(vertexBufferView);
-		m_perFrameStorage.m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
 	}
 
 	// Only handle quads now
@@ -313,14 +312,14 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 		else
 			indexCount = m_draw_array_count * 6 / 4;
 		size_t subBufferSize = powerOf2Align(indexCount * indexSize, 64);
-		// 65536 alignment
-		size_t bufferHeapOffset = m_perFrameStorage.m_vertexIndexBuffersHeapFreeSpace;
-		bufferHeapOffset = (bufferHeapOffset + 65536 - 1) & ~65535;
+
+		assert(m_vertexIndexData.canAlloc(subBufferSize));
+		size_t heapOffset = m_vertexIndexData.alloc(subBufferSize);
 
 		ID3D12Resource *indexBuffer;
 		check(m_device->CreatePlacedResource(
-			m_perFrameStorage.m_vertexIndexBuffersHeap,
-			bufferHeapOffset,
+			m_vertexIndexData.m_heap,
+			heapOffset,
 			&getBufferResourceDesc(subBufferSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
@@ -359,9 +358,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 			}
 		}
 		indexBuffer->Unmap(0, nullptr);
-		m_perFrameStorage.m_inflightResources.push_back(indexBuffer);
-		m_perFrameStorage.m_vertexIndexBuffersHeapFreeSpace = bufferHeapOffset + subBufferSize;
-
+		m_vertexIndexData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, subBufferSize, indexBuffer));
 
 		indexBufferView.SizeInBytes = (UINT)subBufferSize;
 		indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();

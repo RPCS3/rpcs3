@@ -81,7 +81,6 @@ void DataHeap::Release()
 
 void D3D12GSRender::ResourceStorage::Reset()
 {
-	m_vertexIndexBuffersHeapFreeSpace = 0;
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	m_currentStorageOffset = 0;
@@ -104,14 +103,6 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
 	check(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&m_downloadCommandAllocator)));
-
-	// Create heap for vertex and constants buffers
-	D3D12_HEAP_DESC vertexBufferHeapDesc = {};
-	// 16 MB wide
-	vertexBufferHeapDesc.SizeInBytes = 1024 * 1024 * 128;
-	vertexBufferHeapDesc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-	vertexBufferHeapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	check(device->CreateHeap(&vertexBufferHeapDesc, IID_PPV_ARGS(&m_vertexIndexBuffersHeap)));
 
 	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
 	descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -154,7 +145,6 @@ void D3D12GSRender::ResourceStorage::Release()
 
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
-	m_vertexIndexBuffersHeap->Release();
 	for (auto tmp : m_inflightResources)
 		tmp->Release();
 	m_textureDescriptorsHeap->Release();
@@ -398,11 +388,13 @@ D3D12GSRender::D3D12GSRender()
 	m_rtts.Init(m_device);
 
 	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD);
+	m_vertexIndexData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD);
 }
 
 D3D12GSRender::~D3D12GSRender()
 {
 	m_constantsData.Release();
+	m_vertexIndexData.Release();
 	m_UAVHeap.m_heap->Release();
 	m_readbackResources.m_heap->Release();
 	m_texturesRTTs.clear();
@@ -941,6 +933,12 @@ void D3D12GSRender::Flip()
 		m_constantsData.m_getPos = std::get<0>(tmp);
 	}
 	m_constantsData.m_resourceStoredSinceLastSync.clear();
+	for (auto tmp : m_vertexIndexData.m_resourceStoredSinceLastSync)
+	{
+		std::get<2>(tmp)->Release();
+		m_vertexIndexData.m_getPos = std::get<0>(tmp);
+	}
+	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
 
 	m_frame->Flip(nullptr);
 }
