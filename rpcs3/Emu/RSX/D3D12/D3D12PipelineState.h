@@ -41,7 +41,7 @@ public:
 	Shader() : bytecode(nullptr) {}
 	~Shader() {}
 
-	u32 Id;
+	u32 id;
 	Microsoft::WRL::ComPtr<ID3DBlob> bytecode;
 	std::vector<size_t> FragmentConstantOffsetCache;
 	size_t m_textureCount;
