@@ -8,7 +8,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/MC/MCDisassembler.h"
 
-//#define PPU_LLVM_RECOMPILER_UNIT_TESTS 1
+#include <sstream>
+
+//#define PPU_LLVM_RECOMPILER_UNIT_TESTS 1           // Uncomment to enable tests
+//#define PPU_LLVM_RECOMPILER_UNIT_TESTS_VERBOSE 1   // Uncomment to print everything (even for passed tests)
 
 using namespace llvm;
 using namespace ppu_recompiler_llvm;
@@ -152,7 +155,7 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
         std::string ret;
 
         for (int i = 0; i < 32; i++) {
-            ret += fmt::Format("GPR[%02d] = 0x%016llx FPR[%02d] = %16g (0x%016llx) VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, FPR[i]._u64, i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
+            ret += fmt::Format("GPR[%02d] = 0x%016llx  FPR[%02d] = %16g (0x%016llx)  VPR[%02d] = 0x%s [%s]\n", i, GPR[i], i, FPR[i]._double, FPR[i]._u64, i, VPR[i].to_hex().c_str(), VPR[i].to_xyzw().c_str());
         }
 
         for (int i = 0; i < 8; i++) {
@@ -185,6 +188,62 @@ VerifyInstructionAgainstInterpreter(fmt::Format("%s.%d", #fn, tc).c_str(), &Comp
 };
 
 #ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
+static std::string StateDiff(PPUState const & recomp, PPUState const & interp) {
+    std::string ret;
+
+    for (int i = 0; i < 32; i++) {
+        if (recomp.GPR[i] != interp.GPR[i]) {
+            ret += fmt::Format("recomp: GPR[%02d] = 0x%016llx interp: GPR[%02d] = 0x%016llx\n", i, recomp.GPR[i], i, interp.GPR[i]);
+        }
+        if (recomp.FPR[i]._u64 != interp.FPR[i]._u64) {
+            ret += fmt::Format("recomp: FPR[%02d] = %16g (0x%016llx) interp: FPR[%02d] = %16g (0x%016llx)\n", i, recomp.FPR[i]._double, recomp.FPR[i]._u64, i, interp.FPR[i]._double, interp.FPR[i]._u64);
+        }
+        if (recomp.VPR[i] != interp.VPR[i]) {
+            ret += fmt::Format("recomp: VPR[%02d] = 0x%s [%s]\n", i, recomp.VPR[i].to_hex().c_str(), recomp.VPR[i].to_xyzw().c_str());
+            ret += fmt::Format("interp: VPR[%02d] = 0x%s [%s]\n", i, interp.VPR[i].to_hex().c_str(), interp.VPR[i].to_xyzw().c_str());
+        }
+    }
+
+    for (int i = 0; i < 8; i++) {
+        if (recomp.SPRG[i] != interp.SPRG[i])
+            ret += fmt::Format("recomp: SPRG[%d] = 0x%016llx interp: SPRG[%d] = 0x%016llx\n", i, recomp.SPRG[i], i, interp.SPRG[i]);
+    }
+
+    if (recomp.CR.CR != interp.CR.CR) {
+        ret += fmt::Format("recomp: CR      = 0x%08x\n", recomp.CR.CR);
+        ret += fmt::Format("interp: CR      = 0x%08x\n", interp.CR.CR);
+    }
+    if (recomp.LR != interp.LR) {
+        ret += fmt::Format("recomp: LR = 0x%016llx\n", recomp.LR);
+        ret += fmt::Format("interp: LR = 0x%016llx\n", interp.LR);
+    }
+    if (recomp.CTR != interp.CTR) {
+        ret += fmt::Format("recomp: CTR = 0x%016llx\n", recomp.CTR);
+        ret += fmt::Format("interp: CTR = 0x%016llx\n", interp.CTR);
+    }
+    if (recomp.TB != interp.TB) {
+        ret += fmt::Format("recomp: TB = 0x%016llx\n", recomp.TB);
+        ret += fmt::Format("interp: TB = 0x%016llx\n", interp.TB);
+    }
+
+    if (recomp.XER.XER != interp.XER.XER) {
+        ret += fmt::Format("recomp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", recomp.XER.XER, fmt::by_value(recomp.XER.CA), fmt::by_value(recomp.XER.OV), fmt::by_value(recomp.XER.SO));
+        ret += fmt::Format("interp: XER     = 0x%016llx [CA=%d | OV=%d | SO=%d]\n", interp.XER.XER, fmt::by_value(interp.XER.CA), fmt::by_value(interp.XER.OV), fmt::by_value(interp.XER.SO));
+    }
+
+    for (int i = 0; i < (sizeof(recomp.mem_block) / 8); i++) {
+        if (recomp.mem_block[i] != interp.mem_block[i]) {
+            ret += fmt::Format("recomp: mem_block[%d] = 0x%016llx\n", i, recomp.mem_block[i]);
+            ret += fmt::Format("interp: mem_block[%d] = 0x%016llx\n", i, interp.mem_block[i]);
+        }
+    }
+
+    return ret;
+    }
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
+
+
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS
 static PPUThread      * s_ppu_state   = nullptr;
 static PPUInterpreter * s_interpreter = nullptr;
 #endif // PPU_LLVM_RECOMPILER_UNIT_TESTS
@@ -209,8 +268,11 @@ void Compiler::VerifyInstructionAgainstInterpreter(const char * name, void (Comp
 
         if (interp_output_state.ToString() != recomp_output_state.ToString()) {
             msg = std::string("Input state:\n") + input_state.ToString() +
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS_VERBOSE
                   std::string("\nOutput state:\n") + recomp_output_state.ToString() +
-                  std::string("\nInterpreter output state:\n") + interp_output_state.ToString();
+                  std::string("\nInterpreter output state:\n") + interp_output_state.ToString() +
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS_VERBOSE
+                  std::string("\nState diff:\n") + StateDiff(recomp_output_state, interp_output_state);
             return false;
         }
 
@@ -241,16 +303,20 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
 
     m_ir_builder->CreateRet(m_ir_builder->getInt32(0));
 
+    std::stringstream logmsg;
+
     // Print the IR
     std::string        ir;
     raw_string_ostream ir_ostream(ir);
     m_state.function->print(ir_ostream);
-    m_recompilation_engine.Log() << "LLVM IR:" << ir;
+    //m_recompilation_engine.Log() << "LLVM IR:" << ir;
+    logmsg << "LLVM IR:" << ir;
 
     std::string        verify_results;
     raw_string_ostream verify_results_ostream(verify_results);
     if (verifyFunction(*m_state.function, &verify_results_ostream)) {
-        m_recompilation_engine.Log() << "Verification Failed:\n" << verify_results << '\n';
+    //	m_recompilation_engine.Log() << "Verification Failed:\n" << verify_results << '\n';
+        logmsg << "Verification Failed:\n" << verify_results << '\n';
         return;
     }
 
@@ -260,7 +326,8 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     // Print the optimized IR
     ir = "";
     m_state.function->print(ir_ostream);
-    m_recompilation_engine.Log() << "Optimized LLVM IR:" << ir;
+    //m_recompilation_engine.Log() << "Optimized LLVM IR:" << ir;
+    logmsg << "Optimized LLVM IR:" << ir;
 
     // Generate the function
     MachineCodeInfo mci;
@@ -269,12 +336,14 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     // Disassemble the generated function
     auto disassembler = LLVMCreateDisasm(sys::getProcessTriple().c_str(), nullptr, 0, nullptr, nullptr);
 
-    m_recompilation_engine.Log() << "Disassembly:\n";
+    //m_recompilation_engine.Log() << "Disassembly:\n";
+    logmsg << "Disassembly:\n";
     for (uint64_t pc = 0; pc < mci.size();) {
         char str[1024];
 
         auto size = LLVMDisasmInstruction(disassembler, (uint8_t *)mci.address() + pc, mci.size() - pc, (uint64_t)((uint8_t *)mci.address() + pc), str, sizeof(str));
-        m_recompilation_engine.Log() << ((uint8_t *)mci.address() + pc) << ':' << str << '\n';
+        //m_recompilation_engine.Log() << ((uint8_t *)mci.address() + pc) << ':' << str << '\n';
+		logmsg << "0x" << static_cast<void *>((uint8_t *)mci.address() + pc) << ':' << str << '\n';
         pc += size;
     }
 
@@ -289,9 +358,13 @@ void Compiler::RunTest(const char * name, std::function<void()> test_case, std::
     std::string msg;
     bool        pass = check_result(msg);
     if (pass) {
-        m_recompilation_engine.Log() << "Test " << name << " passed\n" << msg << "\n";
+#ifdef PPU_LLVM_RECOMPILER_UNIT_TESTS_VERBOSE
+        m_recompilation_engine.Log() << logmsg.str() << "Test " << name << " passed\n" << msg << "\n";
+#else
+        m_recompilation_engine.Log() << "Test " << name << " passed\n";
+#endif // PPU_LLVM_RECOMPILER_UNIT_TESTS_VERBOSE
     } else {
-        m_recompilation_engine.Log() << "Test " << name << " failed\n" << msg << "\n";
+        m_recompilation_engine.Log() << logmsg.str() << "Test " << name << " failed\n" << msg << "\n";
     }
 
     m_execution_engine->freeMachineCodeForFunction(m_state.function);
