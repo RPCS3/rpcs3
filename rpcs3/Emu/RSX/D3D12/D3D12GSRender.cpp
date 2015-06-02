@@ -85,6 +85,15 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_currentScaleOffsetBufferIndex = 0;
 	m_currentTextureIndex = 0;
 
+	for (auto tmp : m_inUseConstantsBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseVertexIndexBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseTextureUploadBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseTexture2D)
+		std::get<2>(tmp)->Release();
+
 	m_commandAllocator->Reset();
 	m_textureUploadCommandAllocator->Reset();
 	m_downloadCommandAllocator->Reset();
@@ -131,6 +140,14 @@ void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
+	for (auto tmp : m_inUseConstantsBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseVertexIndexBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseTextureUploadBuffers)
+		std::get<2>(tmp)->Release();
+	for (auto tmp : m_inUseTexture2D)
+		std::get<2>(tmp)->Release();
 
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
@@ -896,7 +913,6 @@ void D3D12GSRender::Flip()
 	m_commandQueueGraphic->Signal(fence.Get(), 1);
 
 	// Flush
-	getCurrentResourceStorage().Reset();
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
 
@@ -906,25 +922,14 @@ void D3D12GSRender::Flip()
 		CloseHandle(getNonCurrentResourceStorage().m_frameFinished);
 
 		for (auto tmp : getNonCurrentResourceStorage().m_inUseConstantsBuffers)
-		{
-			std::get<2>(tmp)->Release();
 			m_constantsData.m_getPos = std::get<0>(tmp);
-		}
 		for (auto tmp : getNonCurrentResourceStorage().m_inUseVertexIndexBuffers)
-		{
-			std::get<2>(tmp)->Release();
 			m_vertexIndexData.m_getPos = std::get<0>(tmp);
-		}
 		for (auto tmp : getNonCurrentResourceStorage().m_inUseTextureUploadBuffers)
-		{
-			std::get<2>(tmp)->Release();
 			m_textureUploadData.m_getPos = std::get<0>(tmp);
-		}
 		for (auto tmp : getNonCurrentResourceStorage().m_inUseTexture2D)
-		{
-			std::get<2>(tmp)->Release();
 			m_textureData.m_getPos = std::get<0>(tmp);
-		}
+		getNonCurrentResourceStorage().Reset();
 	}
 
 	getNonCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
