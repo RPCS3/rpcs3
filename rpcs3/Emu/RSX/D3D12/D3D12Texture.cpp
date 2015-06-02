@@ -246,7 +246,7 @@ size_t D3D12GSRender::UploadTextures()
 					}
 				}
 				else
-					streamToBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+					streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
 			}
 			Texture->Unmap(0, nullptr);
 

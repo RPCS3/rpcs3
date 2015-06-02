@@ -31,8 +31,9 @@ void streamToBuffer(void* dst, void* src, size_t sizeInBytes)
 {
 	for (unsigned i = 0; i < sizeInBytes / 16; i++)
 	{
-		__m128i *srcPtr = (__m128i*) ((char*)src + i * 16);
-		_mm_stream_si128((__m128i*)((char*)dst + i * 16), *srcPtr);
+
+		const __m128i &srcPtr = _mm_loadu_si128((__m128i*) ((char*)src + i * 16));
+		_mm_stream_si128((__m128i*)((char*)dst + i * 16), srcPtr);
 	}
 }
 
@@ -44,20 +45,24 @@ inline
 void streamBuffer(void* dst, void* src, size_t sizeInBytes)
 {
 	// Assume 64 bytes cache line
-	assert(powerOf2Align(sizeInBytes, 64));
-	for (unsigned i = 0; i < sizeInBytes / 64; i++)
+	unsigned offset = 0;
+	bool isAligned = !((size_t)src & 15);
+	for (; (offset + 64) < sizeInBytes; offset += 64)
 	{
-		char *line = (char*)src + i * 64;
-		_mm_prefetch(line, _MM_HINT_NTA);
-		__m128i *srcPtr = (__m128i*) (line);
-		_mm_stream_si128((__m128i*)((char*)dst + i * 64), *srcPtr);
-		srcPtr = (__m128i*) (line + 16);
-		_mm_stream_si128((__m128i*)((char*)dst + i * 64 + 16), *srcPtr);
-		srcPtr = (__m128i*) (line + 32);
-		_mm_stream_si128((__m128i*)((char*)dst + i * 64 + 32), *srcPtr);
-		srcPtr = (__m128i*) (line + 48);
-		_mm_stream_si128((__m128i*)((char*)dst + i * 64 + 48), *srcPtr);
+		char *line = (char*)src + offset;
+		char *dstline = (char*)dst + offset;
+		// prefetch next line
+		_mm_prefetch(line + 16, _MM_HINT_NTA);
+		__m128i srcPtr = isAligned ? _mm_load_si128((__m128i *)line) : _mm_loadu_si128((__m128i *)line);
+		_mm_stream_si128((__m128i*)dstline, srcPtr);
+		srcPtr = isAligned ? _mm_load_si128((__m128i *)(line + 16)) : _mm_loadu_si128((__m128i *)(line + 16));
+		_mm_stream_si128((__m128i*)(dstline + 16), srcPtr);
+		srcPtr = isAligned ? _mm_load_si128((__m128i *)(line + 32)) : _mm_loadu_si128((__m128i *)(line + 32));
+		_mm_stream_si128((__m128i*)(dstline + 32), srcPtr);
+		srcPtr = isAligned ? _mm_load_si128((__m128i *)(line + 48)) : _mm_loadu_si128((__m128i *)(line + 48));
+		_mm_stream_si128((__m128i*)(dstline + 48), srcPtr);
 	}
+	memcpy((char*)dst + offset, (char*)src + offset, sizeInBytes - offset);
 }
 
 inline
