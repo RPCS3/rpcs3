@@ -186,7 +186,7 @@ size_t D3D12GSRender::UploadTextures()
 		{
 			// Upload at each iteration to take advantage of overlapping transfer
 			ID3D12GraphicsCommandList *commandList;
-			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
 			size_t heightInBlocks = (m_textures[i].GetHeight() + blockHeightInPixel - 1) / blockHeightInPixel;
 			size_t widthInBlocks = (m_textures[i].GetWidth() + blockWidthInPixel - 1) / blockWidthInPixel;
@@ -285,7 +285,7 @@ size_t D3D12GSRender::UploadTextures()
 
 			commandList->Close();
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
-			m_perFrameStorage.m_inflightCommandList.push_back(commandList);
+			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 			m_texturesCache[texaddr] = vramTexture;
 		}
 
@@ -389,8 +389,8 @@ size_t D3D12GSRender::UploadTextures()
 			break;
 		}
 
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_perFrameStorage.m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
 		// TODO : Correctly define sampler
@@ -405,8 +405,8 @@ size_t D3D12GSRender::UploadTextures()
 		samplerDesc.BorderColor[4] = (FLOAT)m_textures[i].GetBorderColor();
 		samplerDesc.MinLOD = (FLOAT)(m_textures[i].GetMinLOD() >> 8);
 		samplerDesc.MaxLOD = (FLOAT)(m_textures[i].GetMaxLOD() >> 8);
-		Handle = m_perFrameStorage.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Handle.ptr += (m_perFrameStorage.m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+		Handle = getCurrentResourceStorage().m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 		m_device->CreateSampler(&samplerDesc, Handle);
 
 		usedTexture++;

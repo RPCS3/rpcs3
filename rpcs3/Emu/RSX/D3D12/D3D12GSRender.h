@@ -80,11 +80,17 @@ private:
 
 	struct ResourceStorage
 	{
+		HANDLE m_frameFinished;
 		ID3D12CommandAllocator *m_commandAllocator;
 		ID3D12CommandAllocator *m_downloadCommandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;
 
 		std::vector<ID3D12Resource *> m_inflightResources;
+
+		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseConstantsBuffers;
+		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseVertexIndexBuffers;
+		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseTextureUploadBuffers;
+		std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_inUseTexture2D;
 
 		// Constants storage
 		ID3D12DescriptorHeap *m_constantsBufferDescriptorsHeap;
@@ -103,7 +109,9 @@ private:
 		void Release();
 	};
 
-	ResourceStorage m_perFrameStorage;
+	ResourceStorage m_perFrameStorage[2];
+	ResourceStorage &getCurrentResourceStorage();
+	ResourceStorage &getNonCurrentResourceStorage();
 
 	// Constants storage
 	DataHeap m_constantsData;

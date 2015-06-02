@@ -22,8 +22,8 @@ void D3D12GSRender::InitDrawBuffers()
 	u32 address_z = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 
 	ID3D12GraphicsCommandList *copycmdlist;
-	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_perFrameStorage.m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
-	m_perFrameStorage.m_inflightCommandList.push_back(copycmdlist);
+	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&copycmdlist)));
+	getCurrentResourceStorage().m_inflightCommandList.push_back(copycmdlist);
 
 	// Make previous RTTs sampleable
 	for (unsigned i = 0; i < 4; i++)
