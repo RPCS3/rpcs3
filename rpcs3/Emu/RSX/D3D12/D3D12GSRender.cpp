@@ -908,37 +908,37 @@ void D3D12GSRender::Flip()
 	// Add an event signaling queue completion
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-	getCurrentResourceStorage().m_frameFinished = CreateEvent(0, 0, 0, 0);
-	fence->SetEventOnCompletion(1, getCurrentResourceStorage().m_frameFinished);
+	getNonCurrentResourceStorage().m_frameFinished = CreateEvent(0, 0, 0, 0);
+	fence->SetEventOnCompletion(1, getNonCurrentResourceStorage().m_frameFinished);
 	m_commandQueueGraphic->Signal(fence.Get(), 1);
 
 	// Flush
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
 
-	if (getNonCurrentResourceStorage().m_frameFinished)
+	if (getCurrentResourceStorage().m_frameFinished)
 	{
-		WaitForSingleObject(getNonCurrentResourceStorage().m_frameFinished, INFINITE);
-		CloseHandle(getNonCurrentResourceStorage().m_frameFinished);
+		WaitForSingleObject(getCurrentResourceStorage().m_frameFinished, INFINITE);
+		CloseHandle(getCurrentResourceStorage().m_frameFinished);
 
-		for (auto tmp : getNonCurrentResourceStorage().m_inUseConstantsBuffers)
+		for (auto tmp : getCurrentResourceStorage().m_inUseConstantsBuffers)
 			m_constantsData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getNonCurrentResourceStorage().m_inUseVertexIndexBuffers)
+		for (auto tmp : getCurrentResourceStorage().m_inUseVertexIndexBuffers)
 			m_vertexIndexData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getNonCurrentResourceStorage().m_inUseTextureUploadBuffers)
+		for (auto tmp : getCurrentResourceStorage().m_inUseTextureUploadBuffers)
 			m_textureUploadData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getNonCurrentResourceStorage().m_inUseTexture2D)
+		for (auto tmp : getCurrentResourceStorage().m_inUseTexture2D)
 			m_textureData.m_getPos = std::get<0>(tmp);
-		getNonCurrentResourceStorage().Reset();
+		getCurrentResourceStorage().Reset();
 	}
 
-	getNonCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
+	getCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
 	m_constantsData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
+	getCurrentResourceStorage().m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
 	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
+	getCurrentResourceStorage().m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
 	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
+	getCurrentResourceStorage().m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
 	m_textureData.m_resourceStoredSinceLastSync.clear();
 
 	m_frame->Flip(nullptr);
