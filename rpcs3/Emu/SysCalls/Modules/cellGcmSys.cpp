@@ -97,7 +97,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 			return vm::null;
 		}
 		// TODO: It seems m_report_main_addr is not initialized
-		return vm::ptr<CellGcmReportData>::make(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
+		return vm::ptr<CellGcmReportData>::make(Emu.GetGSManager().GetRender().report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys.Error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
@@ -196,7 +196,7 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 			return 0;
 		}
 		// TODO: It seems m_report_main_addr is not initialized
-		return vm::read64(Emu.GetGSManager().GetRender().m_report_main_addr + index * 0x10);
+		return vm::read64(Emu.GetGSManager().GetRender().report_main_addr + index * 0x10);
 	}
 
 	cellGcmSys.Error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
@@ -246,7 +246,7 @@ s32 cellGcmBindTile(u8 index)
 {
 	cellGcmSys.Warning("cellGcmBindTile(index=%d)", index);
 
-	if (index >= RSXThread::m_tiles_count)
+	if (index >= rsx::thread::m_tiles_count)
 	{
 		cellGcmSys.Error("cellGcmBindTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -262,7 +262,7 @@ s32 cellGcmBindZcull(u8 index)
 {
 	cellGcmSys.Warning("cellGcmBindZcull(index=%d)", index);
 
-	if (index >= RSXThread::m_zculls_count)
+	if (index >= rsx::thread::m_zculls_count)
 	{
 		cellGcmSys.Error("cellGcmBindZcull : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -285,7 +285,7 @@ s32 cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 
 s32 cellGcmGetFlipStatus()
 {
-	s32 status = Emu.GetGSManager().GetRender().m_flip_status;
+	s32 status = Emu.GetGSManager().GetRender().flip_status;
 
 	cellGcmSys.Log("cellGcmGetFlipStatus() -> %d", status);
 
@@ -378,15 +378,15 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	ctrl.ref.write_relaxed(be_t<u32>::make(-1));
 
 	auto& render = Emu.GetGSManager().GetRender();
-	render.m_ctxt_addr = context.addr();
-	render.m_gcm_buffers_addr = (u32)Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo));
-	render.m_zculls_addr = (u32)Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
-	render.m_tiles_addr = (u32)Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
-	render.m_gcm_buffers_count = 0;
-	render.m_gcm_current_buffer = 0;
-	render.m_main_mem_addr = 0;
-	render.m_label_addr = gcm_info.label_addr;
-	render.Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
+	render.ctxt_addr = context.addr();
+	render.gcm_buffers.set((u32)Memory.Alloc(sizeof(CellGcmDisplayInfo) * 8, sizeof(CellGcmDisplayInfo)));
+	render.zculls_addr = (u32)Memory.Alloc(sizeof(CellGcmZcullInfo) * 8, sizeof(CellGcmZcullInfo));
+	render.tiles_addr = (u32)Memory.Alloc(sizeof(CellGcmTileInfo) * 15, sizeof(CellGcmTileInfo));
+	render.gcm_buffers_count = 0;
+	render.gcm_current_buffer = 0;
+	render.main_mem_addr = 0;
+	render.label_addr = gcm_info.label_addr;
+	render.init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
 
 	return CELL_OK;
 }
@@ -395,7 +395,7 @@ s32 cellGcmResetFlipStatus()
 {
 	cellGcmSys.Log("cellGcmResetFlipStatus()");
 
-	Emu.GetGSManager().GetRender().m_flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+	Emu.GetGSManager().GetRender().flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
 
 	return CELL_OK;
 }
@@ -409,7 +409,7 @@ s32 cellGcmSetDebugOutputLevel(s32 level)
 	case CELL_GCM_DEBUG_LEVEL0:
 	case CELL_GCM_DEBUG_LEVEL1:
 	case CELL_GCM_DEBUG_LEVEL2:
-		Emu.GetGSManager().GetRender().m_debug_level = level;
+		Emu.GetGSManager().GetRender().debug_level = level;
 		break;
 
 	default: return CELL_EINVAL;
@@ -427,15 +427,15 @@ s32 cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 		return CELL_EINVAL;
 	}
 
-	auto buffers = vm::get_ptr<CellGcmDisplayInfo>(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+	auto buffers = vm::get_ptr<CellGcmDisplayInfo>(Emu.GetGSManager().GetRender().gcm_buffers.addr());
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
 	buffers[id].width = width;
 	buffers[id].height = height;
 
-	if (id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count) {
-		Emu.GetGSManager().GetRender().m_gcm_buffers_count = id + 1;
+	if (id + 1 > Emu.GetGSManager().GetRender().gcm_buffers_count) {
+		Emu.GetGSManager().GetRender().gcm_buffers_count = id + 1;
 	}
 
 	return CELL_OK;
@@ -445,7 +445,7 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_flip_handler = handler;
+	Emu.GetGSManager().GetRender().flip_handler = handler;
 }
 
 s32 cellGcmSetFlipMode(u32 mode)
@@ -457,7 +457,7 @@ s32 cellGcmSetFlipMode(u32 mode)
 	case CELL_GCM_DISPLAY_HSYNC:
 	case CELL_GCM_DISPLAY_VSYNC:
 	case CELL_GCM_DISPLAY_HSYNC_WITH_NOISE:
-		Emu.GetGSManager().GetRender().m_flip_mode = mode;
+		Emu.GetGSManager().GetRender().flip_mode = mode;
 		break;
 
 	default:
@@ -471,7 +471,7 @@ void cellGcmSetFlipStatus()
 {
 	cellGcmSys.Warning("cellGcmSetFlipStatus()");
 
-	Emu.GetGSManager().GetRender().m_flip_status = 0;
+	Emu.GetGSManager().GetRender().flip_status = 0;
 }
 
 s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
@@ -536,11 +536,11 @@ s32 cellGcmSetSecondVFrequency(u32 freq)
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		Emu.GetGSManager().GetRender().m_frequency_mode = freq; Emu.GetGSManager().GetRender().m_fps_limit = 59.94; break;
+		Emu.GetGSManager().GetRender().frequency_mode = freq; Emu.GetGSManager().GetRender().fps_limit = 59.94; break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
-		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys.Todo("Unimplemented display frequency: Scanout"); break;
+		Emu.GetGSManager().GetRender().frequency_mode = freq; cellGcmSys.Todo("Unimplemented display frequency: Scanout"); break;
 	case CELL_GCM_DISPLAY_FREQUENCY_DISABLE:
-		Emu.GetGSManager().GetRender().m_frequency_mode = freq; cellGcmSys.Todo("Unimplemented display frequency: Disabled"); break;
+		Emu.GetGSManager().GetRender().frequency_mode = freq; cellGcmSys.Todo("Unimplemented display frequency: Disabled"); break;
 	default: cellGcmSys.Error("Improper display frequency specified!"); return CELL_OK;
 	}
 
@@ -552,7 +552,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	cellGcmSys.Warning("cellGcmSetTileInfo(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
 
-	if (index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
+	if (index >= rsx::thread::m_tiles_count || base >= 800 || bank >= 4)
 	{
 		cellGcmSys.Error("cellGcmSetTileInfo : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -584,7 +584,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.m_base = base;
 	tile.m_bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 
@@ -592,14 +592,14 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.Warning("cellGcmSetUserHandler(handler_addr=0x%x)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_user_handler = handler;
+	Emu.GetGSManager().GetRender().user_handler = handler;
 }
 
 void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.Warning("cellGcmSetVBlankHandler(handler_addr=0x%x)", handler.addr());
 
-	Emu.GetGSManager().GetRender().m_vblank_handler = handler;
+	Emu.GetGSManager().GetRender().vblank_handler = handler;
 }
 
 s32 cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
@@ -615,7 +615,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	cellGcmSys.Todo("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
-	if (index >= RSXThread::m_zculls_count)
+	if (index >= rsx::thread::m_zculls_count)
 	{
 		cellGcmSys.Error("cellGcmSetZcull : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -634,7 +634,7 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 	zcull.m_sRef = sRef;
 	zcull.m_sMask = sMask;
 
-	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().m_zculls_addr)[index] = zcull.Pack();
+	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.Pack();
 	return CELL_OK;
 }
 
@@ -642,7 +642,7 @@ s32 cellGcmUnbindTile(u8 index)
 {
 	cellGcmSys.Warning("cellGcmUnbindTile(index=%d)", index);
 
-	if (index >= RSXThread::m_tiles_count)
+	if (index >= rsx::thread::m_tiles_count)
 	{
 		cellGcmSys.Error("cellGcmUnbindTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -673,26 +673,26 @@ s32 cellGcmUnbindZcull(u8 index)
 u32 cellGcmGetTileInfo()
 {
 	cellGcmSys.Warning("cellGcmGetTileInfo()");
-	return Emu.GetGSManager().GetRender().m_tiles_addr;
+	return Emu.GetGSManager().GetRender().tiles_addr;
 }
 
 u32 cellGcmGetZcullInfo()
 {
 	cellGcmSys.Warning("cellGcmGetZcullInfo()");
-	return Emu.GetGSManager().GetRender().m_zculls_addr;
+	return Emu.GetGSManager().GetRender().zculls_addr;
 }
 
 u32 cellGcmGetDisplayInfo()
 {
-	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
-	return Emu.GetGSManager().GetRender().m_gcm_buffers_addr;
+	cellGcmSys.Warning("cellGcmGetDisplayInfo() = 0x%x", Emu.GetGSManager().GetRender().gcm_buffers.addr());
+	return Emu.GetGSManager().GetRender().gcm_buffers.addr();
 }
 
 s32 cellGcmGetCurrentDisplayBufferId(u32 id_addr)
 {
 	cellGcmSys.Warning("cellGcmGetCurrentDisplayBufferId(id_addr=0x%x)", id_addr);
 
-	vm::write32(id_addr, Emu.GetGSManager().GetRender().m_gcm_current_buffer);
+	vm::write32(id_addr, Emu.GetGSManager().GetRender().gcm_current_buffer);
 
 	return CELL_OK;
 }
@@ -719,7 +719,7 @@ u64 cellGcmGetLastFlipTime()
 {
 	cellGcmSys.Log("cellGcmGetLastFlipTime()");
 
-	return Emu.GetGSManager().GetRender().m_last_flip_time;
+	return Emu.GetGSManager().GetRender().last_flip_time;
 }
 
 s32 cellGcmGetLastSecondVTime()
@@ -732,7 +732,7 @@ u64 cellGcmGetVBlankCount()
 {
 	cellGcmSys.Log("cellGcmGetVBlankCount()");
 
-	return Emu.GetGSManager().GetRender().m_vblank_count;
+	return Emu.GetGSManager().GetRender().vblank_count;
 }
 
 s32 cellGcmInitSystemMode(u64 mode)
@@ -870,7 +870,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		{
 			offsetTable.ioAddress[(ea >> 20) + i] = (io >> 20) + i;
 			offsetTable.eaAddress[(io >> 20) + i] = (ea >> 20) + i;
-			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = is_strict;
+			Emu.GetGSManager().GetRender().strict_ordering[(io >> 20) + i] = is_strict;
 		}
 	}
 	else
@@ -932,7 +932,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		{
 			offsetTable.ioAddress[(ea >> 20) + i] = (u16)((io >> 20) + i);
 			offsetTable.eaAddress[(io >> 20) + i] = (u16)((ea >> 20) + i);
-			Emu.GetGSManager().GetRender().m_strict_ordering[(io >> 20) + i] = false;
+			Emu.GetGSManager().GetRender().strict_ordering[(io >> 20) + i] = false;
 		}
 
 		*offset = io;
@@ -943,7 +943,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 	}
 
-	Emu.GetGSManager().GetRender().m_main_mem_addr = Emu.GetGSManager().GetRender().m_ioAddress;
+	Emu.GetGSManager().GetRender().main_mem_addr = Emu.GetGSManager().GetRender().ioAddress;
 
 	return CELL_OK;
 }
@@ -1083,7 +1083,7 @@ s32 cellGcmSetCursorImageOffset(u32 offset)
 void cellGcmSetDefaultCommandBuffer()
 {
 	cellGcmSys.Warning("cellGcmSetDefaultCommandBuffer()");
-	vm::write32(Emu.GetGSManager().GetRender().m_ctxt_addr, gcm_info.context_addr);
+	vm::write32(Emu.GetGSManager().GetRender().ctxt_addr, gcm_info.context_addr);
 }
 
 //------------------------------------------------------------------------
@@ -1113,7 +1113,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		index, location, offset, size, pitch, comp, base, bank);
 
 	// Copied form cellGcmSetTileInfo
-	if(index >= RSXThread::m_tiles_count || base >= 800 || bank >= 4)
+	if (index >= rsx::thread::m_tiles_count || base >= 800 || bank >= 4)
 	{
 		cellGcmSys.Error("cellGcmSetTile : CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
@@ -1145,7 +1145,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.m_base = base;
 	tile.m_bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().m_tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
 	return CELL_OK;
 }
 

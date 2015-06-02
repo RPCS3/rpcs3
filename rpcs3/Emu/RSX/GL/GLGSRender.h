@@ -18,7 +18,6 @@
 extern GLenum g_last_gl_error;
 void printGlError(GLenum err, const char* situation);
 void printGlError(GLenum err, const std::string& situation);
-u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
 
 class GLTexture
@@ -54,16 +53,11 @@ public:
 		return (v << 2) | (v >> 4);
 	}
 
-	void Init(RSXTexture& tex);
-
-	void Save(RSXTexture& tex, const std::string& name);
-
-	void Save(RSXTexture& tex);
-
+	void Init(rsx::texture& tex);
+	void Save(rsx::texture& tex, const std::string& name);
+	void Save(rsx::texture& tex);
 	void Bind();
-
 	void Unbind();
-
 	void Delete();
 };
 
@@ -104,11 +98,8 @@ public:
 	virtual void Draw();
 
 	virtual void InitializeShaders();
-
 	void SetTexture(void* pixels, int width, int height);
-
 	void SetPosition(float x, float y, float z = 0.0f);
-
 	void InitializeLocations();
 };
 
@@ -190,11 +181,10 @@ private:
 	void InitDrawBuffers();
 
 protected:
-	virtual void OnInit();
-	virtual void OnInitThread();
-	virtual void OnExitThread();
-	virtual void OnReset();
-	virtual void ExecCMD(u32 cmd);
-	virtual void ExecCMD();
-	virtual void Flip();
+	void oninit() override;
+	void oninit_thread() override;
+	void onexit_thread() override;
+	void onreset() override;
+	bool domethod(u32 id, u32 arg) override;
+	void flip(int buffer) override;
 };

@@ -1,7 +1,7 @@
 #pragma once
 #include "Emu/RSX/RSXThread.h"
 
-struct GSRender : public RSXThread
+struct GSRender : public rsx::thread
 {
 	virtual ~GSRender()
 	{

@@ -9,7 +9,7 @@
 #include "cellResc.h"
 
 extern Module cellResc;
-
+/*
 extern s32 cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent);
 extern s32 cellGcmSetFlipMode(u32 mode);
 extern void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler);
@@ -756,13 +756,13 @@ int cellRescSetDisplayMode(u32 displayMode)
 	s_rescInternalInstance->m_dstPitch = s_rescInternalInstance->m_pRescDsts->pitch;
 	s_rescInternalInstance->m_dstBufInterval = s_rescInternalInstance->m_dstPitch * roundup(s_rescInternalInstance->m_dstHeight, s_rescInternalInstance->m_pRescDsts->heightAlign);
 
-	/*if (IsPalInterpolate()) {
-		if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE_PAL];
-		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR_PAL];
-	} else {
-		if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE];
-		else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
-	}*/
+	//if (IsPalInterpolate()) {
+	//	if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE_PAL];
+	//	else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR_PAL];
+	//} else {
+	//	if(IsInterlace()) m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_INTERLACE];
+	//	else			  m_pCFragmentShader = m_pCFragmentShaderArray[RESC_SHADER_DEFAULT_BILINEAR];
+	//}
 
 	vm::var<CellVideoOutConfiguration> videocfg;
 	videocfg->resolutionId = RescBufferMode2SysutilResolutionId(s_rescInternalInstance->m_dstMode);
@@ -1247,10 +1247,11 @@ int cellRescCreateInterlaceTable(u32 ea_addr, float srcH, CellRescTableElement d
 		return retValue;
 	}
 }
-
+*/
 
 Module cellResc("cellResc", []()
 {
+	/*
 	s_rescInternalInstance = new CCellRescInternal();
 
 	cellResc.on_stop = []()
@@ -1280,4 +1281,5 @@ Module cellResc("cellResc", []()
 	REG_FUNC(cellResc, cellRescVideoOutResolutionId2RescBufferMode);
 	REG_FUNC(cellResc, cellRescSetVBlankHandler);
 	REG_FUNC(cellResc, cellRescCreateInterlaceTable);
+	*/
 });
