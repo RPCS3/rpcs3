@@ -141,8 +141,8 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	GLTexture m_gl_textures[m_textures_count];
-	GLTexture m_gl_vertex_textures[m_textures_count];
+	GLTexture m_gl_textures[rsx::limits::textures_count];
+	GLTexture m_gl_vertex_textures[rsx::limits::textures_count];
 
 	GLvao m_vao;
 	GLvbo m_vbo;
@@ -161,24 +161,17 @@ public:
 	virtual ~GLGSRender();
 
 private:
-	void EnableVertexData(bool indexed_draw = false);
-	void DisableVertexData();
-	void InitVertexData();
-	void InitFragmentData();
-
-	void Enable(bool enable, const u32 cap);
+	static void Enable(bool enable, const u32 cap);
 	virtual void Close();
-	bool LoadProgram();
-	void WriteBuffers();
-	void WriteDepthBuffer();
-	void WriteColorBuffers();
-	void WriteColorBufferA();
-	void WriteColorBufferB();
-	void WriteColorBufferC();
-	void WriteColorBufferD();
 
-	void DrawObjects();
-	void InitDrawBuffers();
+public:
+	void load_vertex_data();
+	void load_fragment_data();
+	void load_indexes();
+
+	bool load_program();
+	void read_buffers();
+	void write_buffers();
 
 protected:
 	void oninit() override;

@@ -55,6 +55,84 @@ typedef int64_t s64;
 typedef float f32;
 typedef double f64;
 
+#pragma pack(push, 2)
+struct f16
+{
+	u16 data;
+
+	static f16 make_from_f32(f32 value)
+	{
+		u8 *tmp = (u8*)&value;
+		u32 bits = ((u32)tmp[0] << 24) | ((u32)tmp[1] << 16) | ((u32)tmp[2] << 8) | (u32)tmp[3];
+
+		if (bits == 0)
+		{
+			return{ 0 };
+		}
+
+		s32 e = ((bits & 0x7f800000) >> 23) - 127 + 15;
+
+		if (e < 0)
+		{
+			return{ 0 };
+		}
+
+		if (e > 31)
+		{
+			e = 31;
+		}
+
+		u32 s = bits & 0x80000000;
+		u32 m = bits & 0x007fffff;
+
+		return{ ((s >> 16) & 0x8000) | ((e << 10) & 0x7c00) | ((m >> 13) & 0x03ff) };
+	}
+
+	static f16 make_from_u16(u16 value)
+	{
+		return{ value };
+	}
+
+	f16& sign(u16 value)
+	{
+		data &= ~0x8000;
+		data |= value << 15;
+		return *this;
+	}
+
+	bool sign() const
+	{
+		return data >> 15 ? true : false;
+	}
+
+	f16& exp(u16 value)
+	{
+		data &= ~0x7c00;
+		data |= (value << 10) & 0x7c00;
+		return *this;
+	}
+
+	u16 exp() const
+	{
+		return (data & 0x7c00) >> 10;
+	}
+
+	f16& mant(u16 value)
+	{
+		data &= ~0x03ff;
+		data |= value & 0x03ff;
+		return *this;
+	}
+
+	u16 mant() const
+	{
+		return data & 0x03ff;
+	}
+};
+
+static_assert(sizeof(f16) == 2, "bad f16 implemantation");
+#pragma pack(pop)
+
 template<typename T> force_inline T align(const T addr, int align)
 {
 	return (addr + (align - 1)) & ~(align - 1);

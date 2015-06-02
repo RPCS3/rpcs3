@@ -12,29 +12,129 @@
 
 namespace rsx
 {
+	namespace limits
+	{
+		enum
+		{
+			textures_count = 16,
+			vertex_count = 16,
+			fragment_count = 32,
+			tiles_count = 15,
+			zculls_count = 8
+		};
+	}
+
+#pragma pack(push, 4)
+	//TODO
+	union method_registers_t
+	{
+		u8 _u8[0x10000];
+		u32 _u32[0x10000 >> 2];
+
+		struct
+		{
+			u8 pad[NV4097_SET_TEXTURE_OFFSET - 4];
+
+			struct texture_t
+			{
+				u32 offset;
+
+				union format_t
+				{
+					u32 _u32;
+
+					struct
+					{
+						u32: 1;
+						u32 location : 1;
+						u32 cubemap : 1;
+						u32 border_type : 1;
+						u32 dimension : 4;
+						u32 format : 8;
+						u32 mipmap : 16;
+					};
+				} format;
+
+				union address_t
+				{
+					u32 _u32;
+
+					struct
+					{
+						u32 wrap_s : 4;
+						u32 aniso_bias : 4;
+						u32 wrap_t : 4;
+						u32 unsigned_remap : 4;
+						u32 wrap_r : 4;
+						u32 gamma : 4;
+						u32 signed_remap : 4;
+						u32 zfunc : 4;
+					};
+				} address;
+
+				u32 control0;
+				u32 control1;
+				u32 filter;
+				u32 image_rect;
+				u32 border_color;
+			} textures[limits::textures_count];
+		};
+
+		u32& operator[](int index)
+		{
+			return _u32[index >> 2];
+		}
+	};
+#pragma pack(pop)
+
 	extern u32 method_registers[0x10000 >> 2];
 
 	u32 get_address(u32 offset, u32 location);
 	u32 linear_to_swizzle(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth);
 
-	struct RSXVertexData
-	{
-		u32 frequency;
-		u32 stride;
-		u32 size;
-		u32 type;
-		u32 addr;
-		u32 constant_count;
+	u32 get_vertex_type_size(u32 type);
 
+	struct vertex_data_t
+	{
 		std::vector<u8> data;
 
-		RSXVertexData();
+		void load(u32 start, u32 count);
+	};
 
-		void Reset();
-		bool IsEnabled() const { return size > 0; }
-		void Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex);
+	struct vertex_data_array_t
+	{
+		vertex_data_t vertex_data[limits::vertex_count];
 
-		u32 GetTypeSize();
+		vertex_data_t& operator[](int index)
+		{
+			return vertex_data[index];
+		}
+
+		//returns first - data, second - offsets, third - vertex_data indexes
+		std::tuple<std::vector<u8>, std::vector<u32>, std::vector<int>> load(u32 first, u32 count)
+		{
+			std::vector<u8> result_data;
+			std::vector<u32> offsets;
+			std::vector<int> indexes;
+
+			for (int i = 0; i < limits::vertex_count; ++i)
+			{
+				vertex_data[i].load(first, count);
+
+				if (vertex_data[i].data.empty())
+					continue;
+
+				u32 offset = result_data.size();
+				u32 size = vertex_data[i].data.size();
+
+				offsets.push_back(offset);
+				indexes.push_back(i);
+				result_data.resize(offset + size);
+				memcpy(result_data.data() + offset, vertex_data[i].data.data(), size);
+			}
+
+			return std::make_tuple(result_data, offsets, indexes);
+		}
 	};
 
 	struct index_array_info_t
@@ -57,13 +157,6 @@ namespace rsx
 
 	class thread : public ThreadBase
 	{
-	public:
-		static const uint m_textures_count = 16;
-		static const uint m_vertex_count = 16;
-		static const uint m_fragment_count = 32;
-		static const uint m_tiles_count = 15;
-		static const uint m_zculls_count = 8;
-
 	protected:
 		std::stack<u32> m_call_stack;
 		CellGcmControl* m_ctrl;
@@ -71,20 +164,20 @@ namespace rsx
 	public:
 		Timer timer_sync;
 
-		GcmTileInfo m_tiles[m_tiles_count];
-		GcmZcullInfo m_zculls[m_zculls_count];
+		GcmTileInfo m_tiles[limits::tiles_count];
+		GcmZcullInfo m_zculls[limits::zculls_count];
 
-		rsx::texture m_textures[m_textures_count];
-		rsx::vertex_texture m_vertex_textures[m_textures_count];
+		rsx::texture m_textures[limits::textures_count];
+		rsx::vertex_texture m_vertex_textures[limits::textures_count];
 
-		RSXVertexData m_vertex_data[m_vertex_count];
+		vertex_data_array_t vertex_data_array;
 		index_array_info_t index_array;
 		std::unordered_map<u32, color4_base<f32>> m_fragment_constants;
 		std::unordered_map<u32, color4_base<f32>> m_transform_constants;
 
 		u32 m_shader_ctrl, m_cur_fragment_prog_num;
 		u32 m_vertex_program_data[512 * 4] = {};
-		RSXFragmentProgram m_fragment_progs[m_fragment_count];
+		RSXFragmentProgram m_fragment_progs[limits::fragment_count];
 		RSXFragmentProgram* m_cur_fragment_prog;
 		//RSXVertexProgram m_vertex_progs[m_vertex_count];
 		//RSXVertexProgram* m_cur_vertex_prog;
@@ -148,16 +241,6 @@ namespace rsx
 		virtual ~thread() {}
 
 	public:
-		void LoadVertexData(u32 first, u32 count)
-		{
-			for (u32 i = 0; i < m_vertex_count; ++i)
-			{
-				if (!m_vertex_data[i].IsEnabled()) continue;
-
-				//m_vertex_data[i].Load(first, count, m_vertex_data_base_offset, m_vertex_data_base_index);
-			}
-		}
-
 		void begin();
 		void end();
 

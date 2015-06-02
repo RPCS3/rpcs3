@@ -81,9 +81,52 @@ namespace rsx
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
+		template<u32 index, int count, typename type>
+		__forceinline void set_vertex_data_impl(thread* rsx, u32 arg)
+		{
+			auto& entry = rsx->vertex_data_array[index / (count * sizeof(type))];
+		}
+
 		template<u32 index>
 		__forceinline void set_vertex_data4ub_m(thread* rsx, u32 arg)
 		{
+			set_vertex_data_impl<index, 4, u8>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data1f_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 1, f32>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data2f_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 2, f32>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data3f_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 3, f32>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data4f_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 4, f32>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data2s_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 2, u16>(rsx, arg);
+		}
+
+		template<u32 index>
+		__forceinline void set_vertex_data4s_m(thread* rsx, u32 arg)
+		{
+			set_vertex_data_impl<index, 4, u16>(rsx, arg);
 		}
 
 		__forceinline void draw_arrays(thread* rsx, u32 arg)
@@ -608,67 +651,7 @@ namespace rsx
 		return res;
 	}
 
-	RSXVertexData::RSXVertexData()
-		: frequency(0)
-		, stride(0)
-		, size(0)
-		, type(0)
-		, addr(0)
-		, data()
-	{
-	}
-
-	void RSXVertexData::Reset()
-	{
-		frequency = 0;
-		stride = 0;
-		size = 0;
-		type = 0;
-		addr = 0;
-		data.clear();
-	}
-
-	void RSXVertexData::Load(u32 start, u32 count, u32 baseOffset, u32 baseIndex)
-	{
-		if (!addr) return;
-
-		const u32 tsize = GetTypeSize();
-
-		data.resize((start + count) * tsize * size);
-
-		for (u32 i = start; i < start + count; ++i)
-		{
-			auto src = vm::get_ptr<const u8>(addr + baseOffset + stride * (i + baseIndex));
-			u8* dst = &data[i * tsize * size];
-
-			switch (tsize)
-			{
-			case 1:
-			{
-				memcpy(dst, src, size);
-				break;
-			}
-
-			case 2:
-			{
-				const u16* c_src = (const u16*)src;
-				u16* c_dst = (u16*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = re16(*c_src++);
-				break;
-			}
-
-			case 4:
-			{
-				const u32* c_src = (const u32*)src;
-				u32* c_dst = (u32*)dst;
-				for (u32 j = 0; j < size; ++j) *c_dst++ = re32(*c_src++);
-				break;
-			}
-			}
-		}
-	}
-
-	u32 RSXVertexData::GetTypeSize()
+	u32 get_vertex_type_size(u32 type)
 	{
 		switch (type)
 		{
@@ -682,7 +665,71 @@ namespace rsx
 
 		default:
 			LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
+			assert(0);
 			return 1;
+		}
+	}
+
+	void vertex_data_t::load(u32 first, u32 count)
+	{
+		u32 format = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT];
+
+		if (!format)
+			return;
+
+		u32 offset = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET];
+		u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+		u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+
+		u32 addr = get_address(offset & 0x7fffffff, offset >> 31);
+		u8 size = (format >> 4) & 0xf;
+		u8 type = format & 0xf;
+		u8 stride = (format >> 8) & 0xff;
+		u16 frequency = format >> 16;
+
+		u32 type_size = get_vertex_type_size(type);
+		u32 full_size = (first + count) * type_size * size;
+
+		if (frequency)
+		{
+			LOG_ERROR(RSX, "%s: frequency is not null (%d)", __FUNCTION__, frequency);
+		}
+
+		data.resize(full_size);
+
+		for (u32 i = first; i < first + count; ++i)
+		{
+			auto src = vm::get_ptr<const u8>(addr + base_offset + stride * (i + base_index));
+			u8* dst = &data[i * type_size * size];
+
+			switch (type_size)
+			{
+			case 1:
+				memcpy(dst, src, size);
+				break;
+
+			case 2:
+			{
+				auto* c_src = (const be_t<u16>*)src;
+				u16* c_dst = (u16*)dst;
+				for (u32 j = 0; j < size; ++j)
+				{
+					*c_dst++ = *c_src++;
+				}
+				break;
+			}
+
+			case 4:
+			{
+				auto* c_src = (const be_t<u32>*)src;
+				u32* c_dst = (u32*)dst;
+				for (u32 j = 0; j < size; ++j)
+				{
+					*c_dst++ = *c_src++;
+				}
+				break;
+			}
+			}
 		}
 	}
 
@@ -693,11 +740,6 @@ namespace rsx
 
 	void thread::end()
 	{
-		for (auto &vdata : m_vertex_data)
-		{
-			vdata.data.clear();
-		}
-
 		index_array.clear();
 		m_fragment_constants.clear();
 		m_transform_constants.clear();
