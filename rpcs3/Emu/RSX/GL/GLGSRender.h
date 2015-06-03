@@ -92,7 +92,11 @@ private:
 	};
 
 	surface_info m_surface;
-	gl::fbo m_draw_fbo;
+
+public:
+	gl::fbo draw_fbo;
+
+private:
 	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
 	gl::texture m_draw_tex_depth_stencil;
 

@@ -100,9 +100,10 @@ public:
 	IniEntry<u8> GSAspectRatio;
 	IniEntry<u8> GSFrameLimit;
 	IniEntry<bool> GSLogPrograms;
-	IniEntry<bool> GSDumpColorBuffers;
-	IniEntry<bool> GSDumpDepthBuffer;
-	IniEntry<bool> GSReadColorBuffer;
+	IniEntry<bool> GSWriteColorBuffers;
+	IniEntry<bool> GSWriteDepthBuffer;
+	IniEntry<bool> GSReadColorBuffers;
+	IniEntry<bool> GSReadDepthBuffer;
 	IniEntry<bool> GSVSyncEnable;
 	IniEntry<bool> GS3DTV;
 
@@ -181,9 +182,10 @@ public:
 		GSAspectRatio.Init("GS_AspectRatio", path);
 		GSFrameLimit.Init("GS_FrameLimit", path);
 		GSLogPrograms.Init("GS_LogPrograms", path);
-		GSDumpColorBuffers.Init("GS_DumpColorBuffers", path);
-		GSDumpDepthBuffer.Init("GS_DumpDepthBuffer", path);
-		GSReadColorBuffer.Init("GS_GSReadColorBuffer", path);
+		GSWriteColorBuffers.Init("GS_WriteColorBuffers", path);
+		GSWriteDepthBuffer.Init("GS_WriteDepthBuffer", path);
+		GSReadColorBuffers.Init("GS_GSReadColorBuffers", path);
+		GSReadDepthBuffer.Init("GS_GSReadDepthBuffer", path);
 		GSVSyncEnable.Init("GS_VSyncEnable", path);
 		GS3DTV.Init("GS_3DTV", path);
 
@@ -258,9 +260,10 @@ public:
 		GSAspectRatio.Load(2);
 		GSFrameLimit.Load(0);
 		GSLogPrograms.Load(false);
-		GSDumpColorBuffers.Load(false);
-		GSDumpDepthBuffer.Load(false);
-		GSReadColorBuffer.Load(false);
+		GSWriteColorBuffers.Load(true);
+		GSWriteDepthBuffer.Load(false);
+		GSReadColorBuffers.Load(false);
+		GSReadDepthBuffer.Load(false);
 		GSVSyncEnable.Load(false);
 		GS3DTV.Load(false);
 
@@ -335,9 +338,10 @@ public:
 		GSAspectRatio.Save();
 		GSFrameLimit.Save();
 		GSLogPrograms.Save();
-		GSDumpColorBuffers.Save();
-		GSDumpDepthBuffer.Save();
-		GSReadColorBuffer.Save();
+		GSWriteColorBuffers.Save();
+		GSWriteDepthBuffer.Save();
+		GSReadColorBuffers.Save();
+		GSReadDepthBuffer.Save();
 		GSVSyncEnable.Save();
 		GS3DTV.Save();
 

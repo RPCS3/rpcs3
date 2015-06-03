@@ -414,9 +414,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_sys_lang         = new wxComboBox(p_system, wxID_ANY);
 
 	wxCheckBox* chbox_gs_log_prog         = new wxCheckBox(p_graphics, wxID_ANY, "Log vertex/fragment programs");
-	wxCheckBox* chbox_gs_dump_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
-	wxCheckBox* chbox_gs_dump_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
-	wxCheckBox* chbox_gs_read_color       = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffer");
+	wxCheckBox* chbox_gs_write_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Write Depth Buffer");
+	wxCheckBox* chbox_gs_write_color       = new wxCheckBox(p_graphics, wxID_ANY, "Write Color Buffers");
+	wxCheckBox* chbox_gs_read_color       = new wxCheckBox(p_graphics, wxID_ANY, "Read Color Buffers");
+	wxCheckBox* chbox_gs_read_depth       = new wxCheckBox(p_graphics, wxID_ANY, "Read Depth Buffer");
 	wxCheckBox* chbox_gs_vsync            = new wxCheckBox(p_graphics, wxID_ANY, "VSync");
 	wxCheckBox* chbox_gs_3dmonitor        = new wxCheckBox(p_graphics, wxID_ANY, "3D Monitor");
 	wxCheckBox* chbox_audio_dump          = new wxCheckBox(p_audio, wxID_ANY, "Dump to file");
@@ -515,9 +516,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	// Get values from .ini
 	chbox_gs_log_prog        ->SetValue(Ini.GSLogPrograms.GetValue());
-	chbox_gs_dump_depth      ->SetValue(Ini.GSDumpDepthBuffer.GetValue());
-	chbox_gs_dump_color      ->SetValue(Ini.GSDumpColorBuffers.GetValue());
-	chbox_gs_read_color      ->SetValue(Ini.GSReadColorBuffer.GetValue());
+	chbox_gs_write_depth     ->SetValue(Ini.GSWriteDepthBuffer.GetValue());
+	chbox_gs_write_color     ->SetValue(Ini.GSWriteColorBuffers.GetValue());
+	chbox_gs_read_color      ->SetValue(Ini.GSReadColorBuffers.GetValue());
+	chbox_gs_read_depth      ->SetValue(Ini.GSReadDepthBuffer.GetValue());
 	chbox_gs_vsync           ->SetValue(Ini.GSVSyncEnable.GetValue());
 	chbox_gs_3dmonitor       ->SetValue(Ini.GS3DTV.GetValue());
 	chbox_audio_dump         ->SetValue(Ini.AudioDumpToFile.GetValue());
@@ -583,9 +585,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_subpanel_graphics->Add(s_round_gs_aspect, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(s_round_gs_frame_limit, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_log_prog, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics->Add(chbox_gs_dump_depth, wxSizerFlags().Border(wxALL, 5).Expand());
-	s_subpanel_graphics->Add(chbox_gs_dump_color, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_write_depth, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_write_color, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_read_color, wxSizerFlags().Border(wxALL, 5).Expand());
+	s_subpanel_graphics->Add(chbox_gs_read_depth, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_vsync, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_subpanel_graphics->Add(chbox_gs_3dmonitor, wxSizerFlags().Border(wxALL, 5).Expand());
 
@@ -649,9 +652,10 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.GSAspectRatio.SetValue(cbox_gs_aspect->GetSelection() + 1);
 		Ini.GSFrameLimit.SetValue(cbox_gs_frame_limit->GetSelection());
 		Ini.GSLogPrograms.SetValue(chbox_gs_log_prog->GetValue());
-		Ini.GSDumpDepthBuffer.SetValue(chbox_gs_dump_depth->GetValue());
-		Ini.GSDumpColorBuffers.SetValue(chbox_gs_dump_color->GetValue());
-		Ini.GSReadColorBuffer.SetValue(chbox_gs_read_color->GetValue());
+		Ini.GSWriteDepthBuffer.SetValue(chbox_gs_write_depth->GetValue());
+		Ini.GSWriteColorBuffers.SetValue(chbox_gs_write_color->GetValue());
+		Ini.GSReadColorBuffers.SetValue(chbox_gs_read_color->GetValue());
+		Ini.GSReadDepthBuffer.SetValue(chbox_gs_read_depth->GetValue());
 		Ini.GSVSyncEnable.SetValue(chbox_gs_vsync->GetValue());
 		Ini.GS3DTV.SetValue(chbox_gs_3dmonitor->GetValue());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
