@@ -80,7 +80,8 @@ private:
 
 	struct ResourceStorage
 	{
-		HANDLE m_frameFinished;
+		ID3D12Fence* m_frameFinishedFence;
+		HANDLE m_frameFinishedHandle;
 		ID3D12CommandAllocator *m_commandAllocator;
 		ID3D12CommandAllocator *m_downloadCommandAllocator;
 		std::list<ID3D12GraphicsCommandList *> m_inflightCommandList;

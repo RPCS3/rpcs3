@@ -107,7 +107,7 @@ void D3D12GSRender::ResourceStorage::Reset()
 
 void D3D12GSRender::ResourceStorage::Init(ID3D12Device *device)
 {
-	m_frameFinished = 0;
+	m_frameFinishedHandle = 0;
 	// Create a global command allocator
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
 	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_textureUploadCommandAllocator));
@@ -928,20 +928,21 @@ void D3D12GSRender::Flip()
 
 	check(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
-	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
-	getNonCurrentResourceStorage().m_frameFinished = CreateEvent(0, 0, 0, 0);
-	fence->SetEventOnCompletion(1, getNonCurrentResourceStorage().m_frameFinished);
-	m_commandQueueGraphic->Signal(fence.Get(), 1);
+
+	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&getNonCurrentResourceStorage().m_frameFinishedFence));
+	getNonCurrentResourceStorage().m_frameFinishedHandle = CreateEvent(0, 0, 0, 0);
+	getNonCurrentResourceStorage().m_frameFinishedFence->SetEventOnCompletion(1, getNonCurrentResourceStorage().m_frameFinishedHandle);
+	m_commandQueueGraphic->Signal(getNonCurrentResourceStorage().m_frameFinishedFence, 1);
 
 	// Flush
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
 
-	if (getCurrentResourceStorage().m_frameFinished)
+	if (getCurrentResourceStorage().m_frameFinishedHandle)
 	{
-		WaitForSingleObject(getCurrentResourceStorage().m_frameFinished, INFINITE);
-		CloseHandle(getCurrentResourceStorage().m_frameFinished);
+		WaitForSingleObject(getCurrentResourceStorage().m_frameFinishedHandle, INFINITE);
+		CloseHandle(getCurrentResourceStorage().m_frameFinishedHandle);
+		getCurrentResourceStorage().m_frameFinishedFence->Release();
 
 		for (auto tmp : getCurrentResourceStorage().m_inUseConstantsBuffers)
 			m_constantsData.m_getPos = std::get<0>(tmp);
