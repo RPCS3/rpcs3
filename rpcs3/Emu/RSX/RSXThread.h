@@ -111,10 +111,10 @@ namespace rsx
 		}
 
 		//returns first - data, second - offsets, third - vertex_data indexes
-		std::tuple<std::vector<u8>, std::vector<u32>, std::vector<int>> load(u32 first, u32 count)
+		std::tuple<std::vector<u8>, std::vector<size_t>, std::vector<int>> load(u32 first, u32 count)
 		{
 			std::vector<u8> result_data;
-			std::vector<u32> offsets;
+			std::vector<size_t> offsets;
 			std::vector<int> indexes;
 
 			for (int i = 0; i < limits::vertex_count; ++i)
@@ -124,8 +124,8 @@ namespace rsx
 				if (vertex_data[i].data.empty())
 					continue;
 
-				u32 offset = result_data.size();
-				u32 size = vertex_data[i].data.size();
+				size_t offset = result_data.size();
+				size_t size = vertex_data[i].data.size();
 
 				offsets.push_back(offset);
 				indexes.push_back(i);

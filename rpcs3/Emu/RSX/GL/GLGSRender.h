@@ -61,48 +61,6 @@ public:
 	void Delete();
 };
 
-class PostDrawObj
-{
-protected:
-	GLFragmentProgram m_fp;
-	GLVertexProgram m_vp;
-	GLProgram m_program;
-	GLfbo m_fbo;
-	GLrbo m_rbo;
-
-public:
-	virtual void Draw();
-
-	virtual void InitializeShaders() = 0;
-	virtual void InitializeLocations() = 0;
-
-	void Initialize();
-};
-
-class DrawCursorObj : public PostDrawObj
-{
-	u32 m_tex_id;
-	void* m_pixels;
-	u32 m_width, m_height;
-	double m_pos_x, m_pos_y, m_pos_z;
-	bool m_update_texture, m_update_pos;
-
-public:
-	DrawCursorObj() : PostDrawObj()
-		, m_tex_id(0)
-		, m_update_texture(false)
-		, m_update_pos(false)
-	{
-	}
-
-	virtual void Draw();
-
-	virtual void InitializeShaders();
-	void SetTexture(void* pixels, int width, int height);
-	void SetPosition(float x, float y, float z = 0.0f);
-	void InitializeLocations();
-};
-
 class GSFrameBase
 {
 public:
@@ -125,34 +83,19 @@ typedef GSFrameBase*(*GetGSFrameCb)();
 
 void SetGetGSFrameCallback(GetGSFrameCb value);
 
-class GLGSRender //TODO: find out why this used to inherit from wxWindow
-	: //public wxWindow
-	/*,*/ public GSRender
+class GLGSRender : public GSRender
 {
 private:
-	std::vector<u8> m_vdata;
-	std::vector<PostDrawObj> m_post_draw_objs;
-
-	GLProgram m_program;
-	int m_fp_buf_num;
-	int m_vp_buf_num;
-	GLProgramBuffer m_prog_buffer;
-
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
 	GLTexture m_gl_textures[rsx::limits::textures_count];
 	GLTexture m_gl_vertex_textures[rsx::limits::textures_count];
 
-	GLvao m_vao;
-	GLvbo m_vbo;
-	GLrbo m_rbo;
-	GLfbo m_fbo;
-
-	void* m_context;
+	void* m_context = nullptr;
 
 public:
-	GSFrameBase* m_frame;
+	GSFrameBase* m_frame = nullptr;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 	bool is_intel_vendor;

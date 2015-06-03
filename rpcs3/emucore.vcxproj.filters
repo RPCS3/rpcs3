@@ -878,6 +878,9 @@
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\gl_helpers.cpp">
+      <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1571,6 +1574,9 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h">
+      <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\gl_helpers.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
     </ClInclude>
   </ItemGroup>

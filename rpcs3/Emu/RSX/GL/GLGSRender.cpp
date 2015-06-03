@@ -181,8 +181,8 @@ void GLTexture::Init(rsx::texture& tex)
 			src = (u32*)pixels;
 			dst = (u32*)unswizzledPixels;
 
-			log2width = log(tex.width()) / log(2);
-			log2height = log(tex.height()) / log(2);
+			log2width = (u32)log2(tex.width());
+			log2height = (u32)log2(tex.height());
 
 			for (int i = 0; i < tex.height(); i++)
 			{
@@ -636,158 +636,7 @@ void GLTexture::Delete()
 	}
 }
 
-void PostDrawObj::Draw()
-{
-	static bool s_is_initialized = false;
-
-	if (!s_is_initialized)
-	{
-		s_is_initialized = true;
-		Initialize();
-	}
-	else
-	{
-		m_program.Use();
-	}
-}
-
-void PostDrawObj::Initialize()
-{
-	InitializeShaders();
-	m_fp.Compile();
-	m_vp.Compile();
-	m_program.Create(m_vp.id, m_fp.id);
-	m_program.Use();
-	InitializeLocations();
-}
-
-void DrawCursorObj::Draw()
-{
-	checkForGlError("PostDrawObj : Unknown error.");
-
-	PostDrawObj::Draw();
-	checkForGlError("PostDrawObj::Draw");
-
-	if (!m_fbo.IsCreated())
-	{
-		m_fbo.Create();
-		checkForGlError("DrawCursorObj : m_fbo.Create");
-		m_fbo.Bind();
-		checkForGlError("DrawCursorObj : m_fbo.Bind");
-
-		m_rbo.Create();
-		checkForGlError("DrawCursorObj : m_rbo.Create");
-		m_rbo.Bind();
-		checkForGlError("DrawCursorObj : m_rbo.Bind");
-		m_rbo.Storage(GL_RGBA, m_width, m_height);
-		checkForGlError("DrawCursorObj : m_rbo.Storage");
-
-		m_fbo.Renderbuffer(GL_COLOR_ATTACHMENT0, m_rbo.GetId());
-		checkForGlError("DrawCursorObj : m_fbo.Renderbuffer");
-	}
-
-	m_fbo.Bind();
-	checkForGlError("DrawCursorObj : m_fbo.Bind");
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	checkForGlError("DrawCursorObj : glDrawBuffer");
-
-	m_program.Use();
-	checkForGlError("DrawCursorObj : m_program.Use");
-
-	if (m_update_texture)
-	{
-		glUniform2f(m_program.GetLocation("in_tc"), m_width, m_height);
-		checkForGlError("DrawCursorObj : glUniform2f");
-		if (!m_tex_id)
-		{
-			glGenTextures(1, &m_tex_id);
-			checkForGlError("DrawCursorObj : glGenTextures");
-		}
-
-		glActiveTexture(GL_TEXTURE0);
-		checkForGlError("DrawCursorObj : glActiveTexture");
-		glBindTexture(GL_TEXTURE_2D, m_tex_id);
-		checkForGlError("DrawCursorObj : glBindTexture");
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_pixels);
-		checkForGlError("DrawCursorObj : glTexImage2D");
-		m_program.SetTex(0);
-	}
-
-	if (m_update_pos)
-	{
-		glUniform4f(m_program.GetLocation("in_pos"), m_pos_x, m_pos_y, m_pos_z, 1.0f);
-		checkForGlError("DrawCursorObj : glUniform4f");
-	}
-
-	glDrawArrays(GL_QUADS, 0, 4);
-	checkForGlError("DrawCursorObj : glDrawArrays");
-
-	m_fbo.Bind(GL_READ_FRAMEBUFFER);
-	checkForGlError("DrawCursorObj : m_fbo.Bind(GL_READ_FRAMEBUFFER)");
-	GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0);
-	checkForGlError("DrawCursorObj : GLfbo::Bind(GL_DRAW_FRAMEBUFFER, 0)");
-	GLfbo::Blit(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	checkForGlError("DrawCursorObj : GLfbo::Blit");
-	m_fbo.Bind();
-	checkForGlError("DrawCursorObj : m_fbo.Bind");
-}
-
-void DrawCursorObj::InitializeShaders()
-{
-	m_vp.shader =
-		"#version 420\n"
-		"\n"
-		"uniform vec4 in_pos;\n"
-		"uniform vec2 in_tc;\n"
-		"out vec2 tc;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	tc = in_tc;\n"
-		"	gl_Position = in_pos;\n"
-		"}\n";
-
-	m_fp.shader = 
-		"#version 420\n"
-		"\n"
-		"in vec2 tc;\n"
-		"layout (binding = 0) uniform sampler2D tex0;\n"
-		"layout (location = 0) out vec4 res;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	res = texture(tex0, tc);\n"
-		"}\n";
-}
-
-void DrawCursorObj::SetTexture(void* pixels, int width, int height)
-{
-	m_pixels = pixels;
-	m_width = width;
-	m_height = height;
-
-	m_update_texture = true;
-}
-
-void DrawCursorObj::SetPosition(float x, float y, float z)
-{
-	m_pos_x = x;
-	m_pos_y = y;
-	m_pos_z = z;
-	m_update_pos = true;
-}
-
-void DrawCursorObj::InitializeLocations()
-{
-	//LOG_WARNING(RSX, "tex0 location = 0x%x", m_program.GetLocation("tex0"));
-}
-
 GLGSRender::GLGSRender()
-	: GSRender()
-	, m_frame(nullptr)
-	, m_fp_buf_num(-1)
-	, m_vp_buf_num(-1)
-	, m_context(nullptr)
 {
 	m_frame = GetGSFrame();
 }
@@ -850,11 +699,6 @@ void GLGSRender::oninit_thread()
 	glGenTextures(1, &g_depth_tex);
 	glGenTextures(1, &g_flip_tex);
 	glGenBuffers(6, g_pbo); // 4 for color buffers + 1 for depth buffer + 1 for flip()
-
-#ifdef _WIN32
-	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
-#endif
-
 }
 
 void GLGSRender::onexit_thread()
@@ -864,25 +708,10 @@ void GLGSRender::onexit_thread()
 	glDeleteBuffers(6, g_pbo);
 
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
-
-	m_program.Delete();
-	m_rbo.Delete();
-	m_fbo.Delete();
-	m_vbo.Delete();
-	m_vao.Delete();
 }
 
 void GLGSRender::onreset()
 {
-	m_program.UnUse();
-
-	if (m_vbo.IsCreated())
-	{
-		m_vbo.UnBind();
-		m_vbo.Delete();
-	}
-
-	m_vao.Delete();
 }
 
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
