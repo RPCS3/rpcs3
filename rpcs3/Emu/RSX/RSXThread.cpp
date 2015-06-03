@@ -907,8 +907,6 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			//LOG_WARNING(RSX, "NV4097_DRAW_ARRAYS: %d - %d", first, _count);
 
-			LoadVertexData(first, _count);
-
 			if (first < m_draw_array_first)
 			{
 				m_draw_array_first = first;
