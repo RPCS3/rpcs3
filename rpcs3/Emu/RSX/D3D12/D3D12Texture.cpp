@@ -250,6 +250,9 @@ size_t D3D12GSRender::UploadTextures()
 			}
 			Texture->Unmap(0, nullptr);
 
+			size_t powerOf2Height = log2(heightInBlocks) + 1;
+			textureSize = rowPitch * powerOf2Height;
+
 			assert(m_textureData.canAlloc(textureSize * 2));
 			size_t heapOffset2 = m_textureData.alloc(textureSize * 2);
 
