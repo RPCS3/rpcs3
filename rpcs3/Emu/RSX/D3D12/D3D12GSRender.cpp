@@ -160,6 +160,8 @@ void D3D12GSRender::ResourceStorage::Release()
 	m_commandAllocator->Release();
 	m_textureUploadCommandAllocator->Release();
 	m_downloadCommandAllocator->Release();
+	CloseHandle(m_frameFinishedHandle);
+	m_frameFinishedFence->Release();
 }
 
 // 32 bits float to U8 unorm CS
