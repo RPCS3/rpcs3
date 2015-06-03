@@ -617,6 +617,24 @@ void GLGSRender::oninit_thread()
 void GLGSRender::onexit_thread()
 {
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
+
+	if (m_program)
+		m_program.remove();
+
+	if (draw_fbo)
+		draw_fbo.remove();
+
+	for (auto &tex : m_draw_tex_color)
+		if (tex) tex.remove();
+
+	if (m_draw_tex_depth_stencil)
+		m_draw_tex_depth_stencil.remove();
+
+	if (m_flip_fbo)
+		m_flip_fbo.remove();
+
+	if (m_flip_tex_color)
+		m_flip_tex_color.remove();
 }
 
 void GLGSRender::onreset()
@@ -1097,25 +1115,54 @@ void GLGSRender::flip(int buffer)
 	u32 buffer_width = gcm_buffers[buffer].width;
 	u32 buffer_height = gcm_buffers[buffer].height;
 	u32 buffer_pitch = gcm_buffers[buffer].pitch;
+	u32 buffer_address = rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+	bool skip_read = false;
 
-	if (!m_flip_tex_color || m_flip_tex_color.width() != buffer_width || m_flip_tex_color.height() != buffer_height)
+	if (draw_fbo && !Ini.GSWriteColorBuffers.GetValue())
 	{
-		m_flip_tex_color.recreate(gl::texture::target::texture2D);
+		for (uint i = 0; i < rsx::limits::color_buffers_count; ++i)
+		{
+			u32 color_address = rsx::get_address(rsx::method_registers[mr_color_offset[i]], rsx::method_registers[mr_color_dma[i]]);
 
-		glcheck(m_flip_tex_color.config()
-			.size(buffer_width, buffer_height)
-			.type(gl::texture::type::uint_8_8_8_8)
-			.format(gl::texture::format::bgra));
-
-		glcheck(m_flip_fbo.recreate());
-		glcheck(m_flip_fbo.color = m_flip_tex_color);
+			if (color_address == buffer_address)
+			{
+				skip_read = true;
+				glcheck(draw_fbo.draw(draw_fbo.color[i]));
+				break;
+			}
+		}
 	}
 
-	glcheck(m_flip_fbo.draw(m_flip_fbo.color));
+	if (!skip_read)
+	{
+		if (!m_flip_tex_color || m_flip_tex_color.size() != sizei{ buffer_width, buffer_height })
+		{
+			m_flip_tex_color.recreate(gl::texture::target::texture2D);
 
-	glcheck(m_flip_tex_color.copy_from(
-		vm::get_ptr(rsx::get_address(gcm_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL)),
-		gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)));
+			glcheck(m_flip_tex_color.config()
+				.size(buffer_width, buffer_height)
+				.type(gl::texture::type::uint_8_8_8_8)
+				.format(gl::texture::format::bgra));
+
+			glcheck(m_flip_fbo.recreate());
+			glcheck(m_flip_fbo.color = m_flip_tex_color);
+		}
+
+		glcheck(m_flip_fbo.draw(m_flip_fbo.color));
+
+		m_flip_fbo.bind();
+
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_STENCIL_TEST);
+		glDisable(GL_BLEND);
+		glDisable(GL_LOGIC_OP);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DITHER);
+
+		glcheck(m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
+			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)));
+	}
 
 	area screen_area = coordi({}, { buffer_width, buffer_height });
 
@@ -1147,7 +1194,14 @@ void GLGSRender::flip(int buffer)
 		aspect_ratio.size = m_frame->GetClientSize();
 	}
 
-	glcheck(m_flip_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical()));
+	if (!skip_read)
+	{
+		glcheck(m_flip_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical()));
+	}
+	else
+	{
+		glcheck(draw_fbo.blit(gl::screen, screen_area, area(aspect_ratio).flipped_vertical()));
+	}
 
 	m_frame->Flip(m_context);
 }
