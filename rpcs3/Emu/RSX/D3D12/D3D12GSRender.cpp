@@ -706,12 +706,34 @@ void D3D12GSRender::ExecCMD()
 {
 	InitDrawBuffers();
 
+	// Init vertex count
+	// TODO: Very hackish, clean this
+	if (m_indexed_array.m_count)
+	{
+		for (u32 i = 0; i < m_vertex_count; ++i)
+		{
+			if (!m_vertex_data[i].IsEnabled()) continue;
+			if (!m_vertex_data[i].addr) continue;
+
+			const u32 tsize = m_vertex_data[i].GetTypeSize();
+			m_vertex_data[i].data.resize((m_indexed_array.index_min + m_indexed_array.index_max - m_indexed_array.index_min + 1) * tsize * m_vertex_data[i].size);
+		}
+	}
+	else
+	{
+		for (u32 i = 0; i < m_vertex_count; ++i)
+		{
+			if (!m_vertex_data[i].IsEnabled()) continue;
+			if (!m_vertex_data[i].addr) continue;
+
+			const u32 tsize = m_vertex_data[i].GetTypeSize();
+			m_vertex_data[i].data.resize((m_draw_array_first + m_draw_array_count) * tsize * m_vertex_data[i].size);
+		}
+	}
+
 	ID3D12GraphicsCommandList *commandList;
 	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
-
-	if (m_indexed_array.m_count)
-		LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
