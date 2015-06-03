@@ -21,6 +21,7 @@ struct GLGSFrame : public GSFrame, public GSFrameBase
 	virtual void SetCurrent(void* ctx) override;
 	virtual void DeleteContext(void* ctx) override;
 	virtual void Flip(void* context) override;
+	virtual sizei GetClientSize() override;
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 

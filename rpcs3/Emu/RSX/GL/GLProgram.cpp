@@ -23,7 +23,6 @@ int GLProgram::GetLocation(const std::string& name)
 	m_locations[pos].name = name;
 
 	m_locations[pos].loc = glGetUniformLocation(id, name.c_str());
-	checkForGlError(fmt::Format("glGetUniformLocation(0x%x, %s)", id, name.c_str()));
 	return m_locations[pos].loc;
 }
 
@@ -62,6 +61,8 @@ void GLProgram::Create(const u32 vp, const u32 fp)
 	}
 	//else LOG_NOTICE(HLE, "Program linked!");
 
+	glValidateProgram(id);
+
 	glGetProgramiv(id, GL_VALIDATE_STATUS, &linkStatus);
 	if (linkStatus != GL_TRUE)
 	{
@@ -90,21 +91,18 @@ void GLProgram::Use()
 {
 	if (id != 0)
 		glUseProgram(id);
-	checkForGlError("glUseProgram");
 }
 
 void GLProgram::SetTex(u32 index)
 {
 	int loc = GetLocation(fmt::Format("tex%u", index));
 	glProgramUniform1i(id, loc, index);
-	checkForGlError(fmt::Format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
 void GLProgram::SetVTex(u32 index)
 {
 	int loc = GetLocation(fmt::Format("vtex%u", index));
 	glProgramUniform1i(id, loc, index);
-	checkForGlError(fmt::Format("SetVTex(%u - %d - %d)", id, index, loc));
 }
 
 void GLProgram::Delete()

@@ -9,7 +9,7 @@ GLGSFrame::GLGSFrame()
 	, m_frames(0)
 {
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
-	canvas->SetSize(GetClientSize());
+	canvas->SetSize(GSFrame::GetClientSize());
 
 	canvas->Bind(wxEVT_LEFT_DCLICK, &GSFrame::OnLeftDclick, this);
 }
@@ -73,9 +73,16 @@ void GLGSFrame::Flip(void* context)
 	}
 }
 
+sizei GLGSFrame::GetClientSize()
+{
+	auto size = canvas->GetClientSize();
+
+	return{ size.GetWidth(), size.GetHeight() };
+}
+
 void GLGSFrame::OnSize(wxSizeEvent& event)
 {
-	if (canvas) canvas->SetSize(GetClientSize());
+	if (canvas) canvas->SetSize(GSFrame::GetClientSize());
 	event.Skip();
 }
 

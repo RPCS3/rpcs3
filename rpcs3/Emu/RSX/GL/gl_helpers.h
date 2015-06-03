@@ -4,6 +4,28 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "Emu/RSX/types.h"
 
+#ifdef _DEBUG
+#define glcheck(X) \
+	glGetError(); /*flush errors*/ \
+	X; \
+	if (GLenum err = glGetError())\
+	{\
+		std::string error; \
+		switch(err) \
+		{ \
+		case GL_INVALID_OPERATION:      error = "invalid operation";      break; \
+		case GL_INVALID_ENUM:           error = "invalid enum";           break; \
+		case GL_INVALID_VALUE:          error = "invalid value";          break; \
+		case GL_OUT_OF_MEMORY:          error = "out of memory";          break; \
+		case GL_INVALID_FRAMEBUFFER_OPERATION:  error = "invalid framebuffer operation";  break; \
+		default: error = "unknown error"; break; \
+		} \
+		throw std::runtime_error(fmt::format("OpenGL error: %s. file '%s' function '%s' line %d '" #X "'", error.c_str(), __FILE__, __FUNCTION__, __LINE__));\
+	}
+#else
+#define glcheck(X) X
+#endif
+
 namespace gl
 {
 	class exception : public std::exception
@@ -232,7 +254,8 @@ namespace gl
 
 		~buffer()
 		{
-			remove();
+			if (created())
+				remove();
 		}
 
 		class save_binding_state
@@ -268,13 +291,28 @@ namespace gl
 			}
 		};
 
-		void create()
+		void recreate()
 		{
 			if (created())
 			{
 				remove();
 			}
 
+			create();
+		}
+
+		void recreate(GLsizeiptr size, const void* data = nullptr)
+		{
+			if (created())
+			{
+				remove();
+			}
+
+			create(size, data);
+		}
+
+		void create()
+		{
 			glGenBuffers(1, &m_id);
 		}
 
@@ -399,7 +437,7 @@ namespace gl
 			entry& operator = (const buffer& buf)
 			{
 				m_parent.bind();
-				buf.bind(target);
+				buf.bind(BindId);
 
 				return *this;
 			}
@@ -577,7 +615,7 @@ namespace gl
 			always = GL_ALWAYS
 		};
 
-		enum class texture_target
+		enum class target
 		{
 			texture1D = GL_TEXTURE_1D,
 			texture2D = GL_TEXTURE_2D,
@@ -612,17 +650,17 @@ namespace gl
 			save_binding_state(const texture& new_binding)
 			{
 				GLenum pname;
-				switch (new_binding.target())
+				switch (new_binding.get_target())
 				{
-				case texture_target::texture1D: pname = GL_TEXTURE_1D_BINDING_EXT; break;
-				case texture_target::texture2D: pname = GL_TEXTURE_2D_BINDING_EXT; break;
-				case texture_target::texture3D: pname = GL_TEXTURE_3D_BINDING_EXT; break;
+				case target::texture1D: pname = GL_TEXTURE_1D_BINDING_EXT; break;
+				case target::texture2D: pname = GL_TEXTURE_2D_BINDING_EXT; break;
+				case target::texture3D: pname = GL_TEXTURE_3D_BINDING_EXT; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
 				
 				new_binding.bind();
-				m_target = (GLenum)new_binding.target();
+				m_target = (GLenum)new_binding.get_target();
 			}
 
 			~save_binding_state()
@@ -708,38 +746,38 @@ namespace gl
 						}
 					}
 
-					glCompressedTexImage2D((GLenum)m_parent->target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
+					glCompressedTexImage2D((GLenum)m_parent->get_target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, compressed_image_size, m_pixels);
 				}
 				else
 				{
-					glTexImage2D((GLenum)m_parent->target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
+					glTexImage2D((GLenum)m_parent->get_target(), m_level, (GLint)m_internal_format, m_width, m_height, 0, (GLint)m_format, (GLint)m_type, m_pixels);
 				}
 
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
-				glTexParameteri((GLenum)m_parent->target(), GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LEVEL, m_max_level);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_GENERATE_MIPMAP, m_generate_mipmap ? GL_TRUE : GL_FALSE);
 
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_S, (GLint)m_wrap_s);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_T, (GLint)m_wrap_t);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_WRAP_R, (GLint)m_wrap_r);
 
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_MODE, (GLint)m_compare_mode);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_COMPARE_FUNC, (GLint)m_compare_func);
 
-				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MIN_LOD, m_max_lod);
-				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MAX_LOD, m_min_lod);
-				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_LOD_BIAS, m_lod);
+				glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_LOD, m_max_lod);
+				glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_LOD, m_min_lod);
+				glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_LOD_BIAS, m_lod);
 
-				glTexParameterfv((GLenum)m_parent->target(), GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
+				glTexParameterfv((GLenum)m_parent->get_target(), GL_TEXTURE_BORDER_COLOR, m_border_color.rgba);
 
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MIN_FILTER, (GLint)m_min_filter);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_MAG_FILTER, (GLint)m_mag_filter);
 
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
-				glTexParameteri((GLenum)m_parent->target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_R, (GLint)m_swizzle_r);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_G, (GLint)m_swizzle_g);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_B, (GLint)m_swizzle_b);
+				glTexParameteri((GLenum)m_parent->get_target(), GL_TEXTURE_SWIZZLE_A, (GLint)m_swizzle_a);
 
-				glTexParameterf((GLenum)m_parent->target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
+				glTexParameterf((GLenum)m_parent->get_target(), GL_TEXTURE_MAX_ANISOTROPY_EXT, m_aniso);
 			}
 
 			void apply()
@@ -903,15 +941,15 @@ namespace gl
 		};
 
 	private:
-		texture_target m_target = texture_target::texture2D;
+		target m_target = target::texture2D;
 
 	public:
-		texture_target target() const
+		target get_target() const
 		{
 			return m_target;
 		}
 
-		void set_target(texture_target target)
+		void set_target(target target)
 		{
 			m_target = target;
 		}
@@ -940,15 +978,28 @@ namespace gl
 			return m_level;
 		}
 
-		void create()
+		void recreate()
 		{
 			if (created())
 				remove();
 
+			create();
+		}
+
+		void recreate(target target_)
+		{
+			if (created())
+				remove();
+
+			create(target_);
+		}
+
+		void create()
+		{
 			glGenTextures(1, &m_id);
 		}
 
-		void create(texture_target target_)
+		void create(target target_)
 		{
 			set_target(target_);
 			create();
@@ -990,7 +1041,7 @@ namespace gl
 
 		void bind() const
 		{
-			glBindTexture((GLenum)target(), id());
+			glBindTexture((GLenum)get_target(), id());
 		}
 
 		settings config()
@@ -1027,7 +1078,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_WIDTH, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_WIDTH, &result);
 			return (int)result;
 		}
 
@@ -1035,7 +1086,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_HEIGHT, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_HEIGHT, &result);
 			return (int)result;
 		}
 
@@ -1043,7 +1094,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_DEPTH, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_DEPTH, &result);
 			return (int)result;
 		}
 
@@ -1061,7 +1112,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_INTERNAL_FORMAT, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_INTERNAL_FORMAT, &result);
 			return (texture::format)result;
 		}
 
@@ -1069,7 +1120,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), (GLenum)channel, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), (GLenum)channel, &result);
 			return (texture::channel_type)result;
 		}
 
@@ -1095,7 +1146,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_COMPRESSED, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_COMPRESSED, &result);
 			return (bool)result;
 		}
 
@@ -1103,23 +1154,29 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			GLint result;
-			glGetTexLevelParameteriv((GLenum)target(), level(), GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &result);
+			glGetTexLevelParameteriv((GLenum)get_target(), level(), GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &result);
 			return (int)result;
 		}
 
 		texture() = default;
 
-		texture(texture_target target, GLuint id = 0)
+		texture(target target_, GLuint id = 0)
 		{
-			m_target = target;
+			m_target = target_;
 			set_id(id);
+		}
+
+		~texture()
+		{
+			if (created())
+				remove();
 		}
 
 		void copy_from(const void* src, texture::format format, texture::type type, gl::pixel_unpack_settings pixel_settings)
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
-			glTexSubImage2D((GLenum)target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
+			glTexSubImage2D((GLenum)get_target(), level(), 0, 0, width(), height(), (GLenum)format, (GLenum)type, src);
 		}
 
 		void copy_from(const buffer& buf, texture::format format, texture::type type, gl::pixel_unpack_settings pixel_settings)
@@ -1142,7 +1199,7 @@ namespace gl
 		{
 			save_binding_state save(*this);
 			pixel_settings.apply();
-			glGetTexImage((GLenum)target(), level(), (GLenum)format, (GLenum)type, dst);
+			glGetTexImage((GLenum)get_target(), level(), (GLenum)format, (GLenum)type, dst);
 		}
 
 		void copy_to(const buffer& buf, texture::format format, texture::type type, gl::pixel_pack_settings pixel_settings)
@@ -1176,7 +1233,8 @@ namespace gl
 
 		~rbo()
 		{
-			remove();
+			if (created())
+				remove();
 		}
 
 		class save_binding_state
@@ -1196,13 +1254,24 @@ namespace gl
 			}
 		};
 
-		void create()
+		void recreate()
 		{
 			if (created())
-			{
 				remove();
-			}
 
+			create();
+		}
+
+		void recreate(texture::format format, u32 width, u32 height)
+		{
+			if (created())
+				remove();
+
+			create(format, width, height);
+		}
+
+		void create()
+		{
 			glGenRenderbuffers(1, &m_id);
 		}
 
@@ -1264,7 +1333,8 @@ namespace gl
 
 		~fbo()
 		{
-			remove();
+			if (created())
+				remove();
 		}
 
 		class save_binding_state
@@ -1316,21 +1386,34 @@ namespace gl
 				return m_id;
 			}
 
+			fbo &parent()
+			{
+				return m_parent;
+			}
+
+			const fbo &parent() const
+			{
+				return m_parent;
+			}
+
 			void operator = (const rbo& rhs)
 			{
-				save_binding_state save(m_parent);
+				//save_binding_state save(m_parent);
+				m_parent.bind();
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, m_id, GL_RENDERBUFFER, rhs.id());
 			}
 
 			void operator = (const texture& rhs)
 			{
-				save_binding_state save(m_parent);
+				//save_binding_state save(m_parent);
 
-				switch (rhs.target())
+				m_parent.bind();
+
+				switch (rhs.get_target())
 				{
-				case texture::texture_target::texture1D: glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level()); break;
-				case texture::texture_target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
-				case texture::texture_target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
+				case texture::target::texture1D: glFramebufferTexture1D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_1D, rhs.id(), rhs.level()); break;
+				case texture::target::texture2D: glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), rhs.level()); break;
+				case texture::target::texture3D: glFramebufferTexture3D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_3D, rhs.id(), rhs.level(), 0); break;
 				}
 			}
 		};
@@ -1370,6 +1453,14 @@ namespace gl
 			read_frame_buffer = GL_READ_FRAMEBUFFER,
 			draw_frame_buffer = GL_DRAW_FRAMEBUFFER
 		};
+
+		void recreate()
+		{
+			if (created())
+				remove();
+
+			create();
+		}
 
 		void create();
 		void bind() const;
@@ -1481,101 +1572,7 @@ namespace gl
 		}
 	};
 
-	static const fbo screen{};
-
-	class vertex_attrib_array
-	{
-	public:
-		class entry
-		{
-			bool m_normalize = false;
-			int m_stride = 0;
-			std::vector<u8> m_data;
-			int m_element_size = 0;
-
-		public:
-			void set_data(const void *data, int element_size, int size, bool normalize = false, int stride = 0)
-			{
-				m_data.resize(size);
-				memcpy(m_data.data(), data, size);
-
-				m_normalize = normalize;
-				m_stride = stride;
-				m_element_size = element_size;
-			}
-
-			bool normalize() const
-			{
-				return m_normalize;
-			}
-
-			void set_normalize(bool value)
-			{
-				m_normalize = value;
-			}
-
-			int element_size() const
-			{
-				return m_element_size;
-			}
-
-			size_t size() const
-			{
-				return m_data.size();
-			}
-
-			int stride() const
-			{
-				return m_stride;
-			}
-
-			void set_stride(int value)
-			{
-				m_stride = value;
-			}
-
-			const void* data() const
-			{
-				return m_data.data();
-			}
-
-			template<typename T>
-			void operator += (const T& value)
-			{
-				if (m_element_size && m_element_size != sizeof(T))
-					throw std::runtime_error("redefinition vertex_attrib_array element size");
-
-				m_element_size = sizeof(T);
-				size_t position = m_data.size();
-				m_data.resize(position + sizeof(T));
-				(T&)m_data[position] = value;
-			}
-
-			void clear()
-			{
-				m_data.clear();
-			}
-		};
-
-	private:
-		mutable std::unordered_map<int, entry> m_entries;
-
-	public:
-		entry operator[](int index) const
-		{
-			return m_entries[index];
-		}
-
-		std::unordered_map<int, entry>& entries() const
-		{
-			return m_entries;
-		}
-
-		void clear()
-		{
-			m_entries.clear();
-		}
-	};
+	extern const fbo screen;
 
 	namespace glsl
 	{
@@ -1588,10 +1585,10 @@ namespace gl
 			}
 		};
 
-		class compile_exception : public exception
+		class validation_exception : public exception
 		{
 		public:
-			explicit compile_exception(const std::string& what_arg)
+			explicit validation_exception(const std::string& what_arg)
 			{
 				m_what = "compilation failed: '" + what_arg + "'";
 			}
@@ -1624,7 +1621,16 @@ namespace gl
 
 			~shader()
 			{
-				remove();
+				if (created())
+					remove();
+			}
+
+			void recreate(type type_)
+			{
+				if (created())
+					remove();
+
+				create(type_);
 			}
 
 			void create(type type_)
@@ -1804,7 +1810,16 @@ namespace gl
 
 			~program()
 			{
-				remove();
+				if (created())
+					remove();
+			}
+
+			void recreate()
+			{
+				if (created())
+					remove();
+
+				create();
 			}
 
 			void create()
@@ -1833,11 +1848,55 @@ namespace gl
 			void link()
 			{
 				glLinkProgram(m_id);
+
+				GLint status = GL_FALSE;
+				glGetProgramiv(m_id, GL_LINK_STATUS, &status);
+
+				if (status != GL_TRUE)
+				{
+					GLint length = 0;
+					glGetProgramiv(m_id, GL_INFO_LOG_LENGTH, &length);
+
+					std::string error_msg;
+					if (length)
+					{
+						std::unique_ptr<GLchar[]> buf(new char[length + 1]);
+						glGetProgramInfoLog(m_id, length, NULL, buf.get());
+						error_msg = buf.get();
+					}
+
+					throw link_exception(error_msg);
+				}
+			}
+
+			void validate()
+			{
+				glValidateProgram(m_id);
+
+				GLint status = GL_FALSE;
+				glGetProgramiv(m_id, GL_VALIDATE_STATUS, &status);
+
+				if (status != GL_TRUE)
+				{
+					GLint length = 0;
+					glGetProgramiv(m_id, GL_INFO_LOG_LENGTH, &length);
+
+					std::string error_msg;
+					if (length)
+					{
+						std::unique_ptr<GLchar[]> buf(new char[length + 1]);
+						glGetProgramInfoLog(m_id, length, NULL, buf.get());
+						error_msg = buf.get();
+					}
+
+					throw validation_exception(error_msg);
+				}
 			}
 
 			void make()
 			{
 				link();
+				validate();
 			}
 
 			uint id() const

@@ -132,9 +132,16 @@ bool Rpcs3App::OnInit()
 		return new NullPadHandler();
 	});
 
-	SetGetGSFrameCallback([]() -> GSFrameBase*
+	SetGetGSFrameCallback([](GSFrameType type) -> GSFrameBase*
 	{
-		return new GLGSFrame();
+		switch (type)
+		{
+		case GSFrameType::OpenGLFrame:
+			return new GLGSFrame();
+
+		default:
+			throw std::logic_error("SetGetGSFrameCallback: bad frame type");
+		}
 	});
 
 	g_msg_dialog.reset(new MsgDialogFrame);

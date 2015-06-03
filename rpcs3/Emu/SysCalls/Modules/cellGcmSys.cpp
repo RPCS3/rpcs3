@@ -252,8 +252,8 @@ s32 cellGcmBindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
-	tile.m_binded = true;
+	auto& tile = Emu.GetGSManager().GetRender().tiles[index];
+	tile.binded = true;
 
 	return CELL_OK;
 }
@@ -268,8 +268,8 @@ s32 cellGcmBindZcull(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
-	zcull.m_binded = true;
+	auto& zcull = Emu.GetGSManager().GetRender().zculls[index];
+	zcull.binded = true;
 
 	return CELL_OK;
 }
@@ -476,13 +476,20 @@ void cellGcmSetFlipStatus()
 
 s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 {
-	cellGcmSys.Log("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
+	cellGcmSys.Todo("cellGcmSetPrepareFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
 
 	if(id > 7)
 	{
 		cellGcmSys.Error("cellGcmSetPrepareFlip : CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
+
+	return id;
+}
+
+s32 cellGcmSetFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
+{
+	cellGcmSys.Log("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
 
 	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
 
@@ -505,11 +512,10 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 	}
 
 	current = ctxt->current;
-	vm::write32(current, 0x3fead | (1 << 18));
-	vm::write32(current + 4, id);
-	ctxt->current += 8;
+	auto vcurrent = vm::ptr<u32>::make(current);
+	ctxt->current += rsx::make_command(vcurrent, GCM_FLIP_COMMAND, id) * sizeof(u32);
 
-	if(ctxt.addr() == gcm_info.context_addr)
+	if (ctxt.addr() == gcm_info.context_addr)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		ctrl.put.atomic_op([](be_t<u32>& value)
@@ -518,15 +524,7 @@ s32 cellGcmSetPrepareFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
 		});
 	}
 
-	return id;
-}
-
-s32 cellGcmSetFlip(vm::ptr<CellGcmContextData> ctxt, u32 id)
-{
-	cellGcmSys.Log("cellGcmSetFlip(ctx=0x%x, id=0x%x)", ctxt.addr(), id);
-
-	s32 res = cellGcmSetPrepareFlip(ctxt, id);
-	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+	return CELL_OK;
 }
 
 s32 cellGcmSetSecondVFrequency(u32 freq)
@@ -575,16 +573,16 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 		cellGcmSys.Error("cellGcmSetTileInfo: bad compression mode! (%d)", comp);
 	}
 
-	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
-	tile.m_location = location;
-	tile.m_offset = offset;
-	tile.m_size = size;
-	tile.m_pitch = pitch;
-	tile.m_comp = comp;
-	tile.m_base = base;
-	tile.m_bank = bank;
+	auto& tile = Emu.GetGSManager().GetRender().tiles[index];
+	tile.location = location;
+	tile.offset = offset;
+	tile.size = size;
+	tile.pitch = pitch;
+	tile.comp = comp;
+	tile.base = base;
+	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
@@ -621,20 +619,20 @@ s32 cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, 
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
-	zcull.m_offset = offset;
-	zcull.m_width = width; 
-	zcull.m_height = height;
-	zcull.m_cullStart = cullStart;
-	zcull.m_zFormat = zFormat;
-	zcull.m_aaFormat = aaFormat;
-	zcull.m_zcullDir = zCullDir;
-	zcull.m_zcullFormat = zCullFormat;
-	zcull.m_sFunc = sFunc;
-	zcull.m_sRef = sRef;
-	zcull.m_sMask = sMask;
+	auto& zcull = Emu.GetGSManager().GetRender().zculls[index];
+	zcull.offset = offset;
+	zcull.width = width; 
+	zcull.height = height;
+	zcull.cullStart = cullStart;
+	zcull.zFormat = zFormat;
+	zcull.aaFormat = aaFormat;
+	zcull.zcullDir = zCullDir;
+	zcull.zcullFormat = zCullFormat;
+	zcull.sFunc = sFunc;
+	zcull.sRef = sRef;
+	zcull.sMask = sMask;
 
-	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.Pack();
+	vm::get_ptr<CellGcmZcullInfo>(Emu.GetGSManager().GetRender().zculls_addr)[index] = zcull.pack();
 	return CELL_OK;
 }
 
@@ -648,8 +646,8 @@ s32 cellGcmUnbindTile(u8 index)
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
-	tile.m_binded = false;
+	auto& tile = Emu.GetGSManager().GetRender().tiles[index];
+	tile.binded = false;
 
 	return CELL_OK;
 }
@@ -664,8 +662,8 @@ s32 cellGcmUnbindZcull(u8 index)
 		return CELL_EINVAL;
 	}
 
-	auto& zcull = Emu.GetGSManager().GetRender().m_zculls[index];
-	zcull.m_binded = false;
+	auto& zcull = Emu.GetGSManager().GetRender().zculls[index];
+	zcull.binded = false;
 
 	return CELL_OK;
 }
@@ -1094,7 +1092,7 @@ s32 _cellGcmSetFlipCommand(vm::ptr<CellGcmContextData> ctx, u32 id)
 {
 	cellGcmSys.Log("cellGcmSetFlipCommand(ctx_addr=0x%x, id=0x%x)", ctx.addr(), id);
 
-	return cellGcmSetPrepareFlip(ctx, id);
+	return cellGcmSetFlip(ctx, id);
 }
 
 s32 _cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
@@ -1102,9 +1100,9 @@ s32 _cellGcmSetFlipCommandWithWaitLabel(vm::ptr<CellGcmContextData> ctx, u32 id,
 	cellGcmSys.Log("cellGcmSetFlipCommandWithWaitLabel(ctx_addr=0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)",
 		ctx.addr(), id, label_index, label_value);
 
-	s32 res = cellGcmSetPrepareFlip(ctx, id);
+	s32 res = _cellGcmSetFlipCommand(ctx, id);
 	vm::write32(gcm_info.label_addr + 0x10 * label_index, label_value);
-	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+	return res;
 }
 
 s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
@@ -1136,16 +1134,16 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		cellGcmSys.Error("cellGcmSetTile: bad compression mode! (%d)", comp);
 	}
 
-	auto& tile = Emu.GetGSManager().GetRender().m_tiles[index];
-	tile.m_location = location;
-	tile.m_offset = offset;
-	tile.m_size = size;
-	tile.m_pitch = pitch;
-	tile.m_comp = comp;
-	tile.m_base = base;
-	tile.m_bank = bank;
+	auto& tile = Emu.GetGSManager().GetRender().tiles[index];
+	tile.location = location;
+	tile.offset = offset;
+	tile.size = size;
+	tile.pitch = pitch;
+	tile.comp = comp;
+	tile.base = base;
+	tile.bank = bank;
 
-	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.Pack();
+	vm::get_ptr<CellGcmTileInfo>(Emu.GetGSManager().GetRender().tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 

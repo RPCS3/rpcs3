@@ -45,8 +45,19 @@ namespace rsx
 	u32 method_registers[0x10000 >> 2];
 	rsx_method_t methods[0x10000 >> 2] = { nullptr };
 
+	template<typename Type> struct vertex_data_type_from_element_type;
+	template<> struct vertex_data_type_from_element_type<float> { enum { type = CELL_GCM_VERTEX_F }; };
+	template<> struct vertex_data_type_from_element_type<f16> { enum { type = CELL_GCM_VERTEX_SF }; };
+	template<> struct vertex_data_type_from_element_type<u8> { enum { type = CELL_GCM_VERTEX_UB }; };
+	template<> struct vertex_data_type_from_element_type<u16> { enum { type = CELL_GCM_VERTEX_S1 }; };
+
 	namespace nv406e
 	{
+		__forceinline void set_reference(thread* rsx, u32 arg)
+		{
+			rsx->ctrl->ref.exchange(be_t<u32>::make(arg));
+		}
+
 		__forceinline void semaphore_acquire(thread* rsx, u32 arg)
 		{
 			//TODO: dma
@@ -81,57 +92,75 @@ namespace rsx
 				(arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff));
 		}
 
-		template<u32 index, int count, typename type>
+		//fire only when all data passed to rsx cmd buffer
+		template<u32 id, u32 index, int count, typename type>
 		__forceinline void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
-			auto& entry = rsx->vertex_data_array[index / (count * sizeof(type))];
+			static const size_t element_size = (count * sizeof(type));
+			static const size_t element_size_in_words = element_size / sizeof(u32);
+
+			auto& entry = rsx->vertex_data_array[index];
+
+			//find begin of data
+			size_t begin = id + index * element_size_in_words;
+
+			size_t position = entry.data.size();
+			entry.data.resize(position + element_size);
+
+			entry.size = count;
+			entry.type = vertex_data_type_from_element_type<type>::type;
+
+			memcpy(entry.data.data() + position, method_registers + begin, element_size);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data4ub_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 4, u8>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, u8>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data1f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 1, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data2f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 2, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 2, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data3f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 3, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 3, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data4f_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 4, f32>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 4, f32>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data2s_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 2, u16>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, u16>(rsx, arg);
 		}
 
 		template<u32 index>
 		__forceinline void set_vertex_data4s_m(thread* rsx, u32 arg)
 		{
-			set_vertex_data_impl<index, 4, u16>(rsx, arg);
+			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 		}
 
 		__forceinline void draw_arrays(thread* rsx, u32 arg)
 		{
+			const u32 first = arg & 0xffffff;
+			const u32 count = (arg >> 24) + 1;
 
+			//rsx->vertex_data_array.load(first, count);
 		}
 
 		__forceinline void draw_index_array(thread* rsx, u32 arg)
@@ -171,7 +200,27 @@ namespace rsx
 		template<u32 index>
 		__forceinline void set_transform_constant(thread* rsx, u32 arg)
 		{
+			u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 
+			static const size_t count = 4;
+			static const size_t size = count * sizeof(f32);
+
+			memcpy(rsx->transform_constants[load].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
+
+			load += count;
+		}
+
+		template<u32 index>
+		__forceinline void set_transform_program(thread* rsx, u32 arg)
+		{
+			u32& load = method_registers[NV4097_SET_TRANSFORM_PROGRAM_LOAD];
+
+			static const size_t count = 4;
+			static const size_t size = count * sizeof(u32);
+
+			memcpy(rsx->transform_program + load, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
+
+			load += count;
 		}
 
 		__forceinline void set_begin_end(thread* rsx, u32 arg)
@@ -295,7 +344,6 @@ namespace rsx
 							((u32*)swizzled_pixels)[linear_to_swizzle(x, y, 0, sw_width, sw_height, 0)] = ((u32*)linear_pixels)[y * sw_height + x];
 							break;
 						}
-
 					}
 				}
 
@@ -511,8 +559,24 @@ namespace rsx
 			methods[id] = wrapper<id, T, impl_func>;
 		}
 
-		template<int id, rsx_impl_method_t impl_func = nullptr>  static void bind() { bind_impl<id, rsx_impl_method_t, impl_func>(); }
-		template<int id, rsx_method_t impl_func>       static void bind() { bind_impl<id, rsx_method_t, impl_func>(); }
+		template<int id, typename T, T impl_func>
+		static void bind_cpu_only_impl()
+		{
+			if (methods[id])
+			{
+				throw std::logic_error(fmt::format("redefinition rsx method implementation(cpu only) (0x%04x)", id));
+			}
+
+			methods[id] = call_impl_func<impl_func>;
+		}
+
+		template<int id, rsx_impl_method_t impl_func>       static void bind() { bind_impl<id, rsx_impl_method_t, impl_func>(); }
+		template<int id, rsx_method_t impl_func = nullptr>  static void bind() { bind_impl<id, rsx_method_t, impl_func>(); }
+
+		//do not try process on gpu
+		template<int id, rsx_impl_method_t impl_func>      static void bind_cpu_only() { bind_cpu_only_impl<id, rsx_impl_method_t, impl_func>(); }
+		//do not try process on gpu
+		template<int id, rsx_method_t impl_func = nullptr> static void bind_cpu_only() { bind_cpu_only_impl<id, rsx_method_t, impl_func>(); }
 
 #define bind_2(index, offset, step, func) \
 		bind<offset, func<index>>(); \
@@ -553,6 +617,7 @@ namespace rsx
 		__rsx_methods_t()
 		{
 			// NV406E
+			bind_cpu_only<NV406E_SET_REFERENCE, nv406e::set_reference>();
 			bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
 			bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
 
@@ -565,9 +630,17 @@ namespace rsx
 			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 			//bind<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 			bind_16(0, NV4097_SET_VERTEX_DATA4UB_M, 1, nv4097::set_vertex_data4ub_m);
-			bind_32(0, NV4097_SET_TRANSFORM_CONSTANT, 1, nv4097::set_transform_constant);
-			bind_32(0, NV308A_COLOR, 1, nv308a::color);
-			//bind_512(0, NV4097_SET_TRANSFORM_PROGRAM, 1, nv4097::set_transform_constant);
+			bind_16(0, NV4097_SET_VERTEX_DATA1F_M, 1, nv4097::set_vertex_data1f_m);
+			bind_16(0, NV4097_SET_VERTEX_DATA2F_M + 1, 2, nv4097::set_vertex_data2f_m);
+			bind_16(0, NV4097_SET_VERTEX_DATA3F_M + 2, 3, nv4097::set_vertex_data3f_m);
+			bind_16(0, NV4097_SET_VERTEX_DATA4F_M + 3, 4, nv4097::set_vertex_data4f_m);
+			bind_16(0, NV4097_SET_VERTEX_DATA2S_M, 1, nv4097::set_vertex_data2s_m);
+			bind_16(0, NV4097_SET_VERTEX_DATA4S_M + 1, 2, nv4097::set_vertex_data4s_m);
+			bind_8(0, NV4097_SET_TRANSFORM_CONSTANT + 3, 4, nv4097::set_transform_constant);
+			bind_128(0, NV4097_SET_TRANSFORM_PROGRAM + 3, 4, nv4097::set_transform_program);
+
+			//NV308A
+			bind_512(0, NV308A_COLOR, 1, nv308a::color);
 
 			//NV3089
 			bind<NV3089_IMAGE_IN, nv3089::image_in>();
@@ -576,7 +649,7 @@ namespace rsx
 			bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
 
 			// custom methods
-			methods[GCM_FLIP_COMMAND] = flip_command;
+			bind_cpu_only<GCM_FLIP_COMMAND, flip_command>();
 		}
 	} __rsx_methods;
 
@@ -741,9 +814,8 @@ namespace rsx
 	void thread::end()
 	{
 		index_array.clear();
-		m_fragment_constants.clear();
-		m_transform_constants.clear();
-		m_cur_fragment_prog_num = 0;
+		fragment_constants.clear();
+		transform_constants.clear();
 
 		onreset();
 	}
@@ -795,8 +867,8 @@ namespace rsx
 
 			inc = 1;
 
-			u32 get = m_ctrl->get.read_sync();
-			u32 put = m_ctrl->put.read_sync();
+			u32 get = ctrl->get.read_sync();
+			u32 put = ctrl->put.read_sync();
 
 			if (put == get || !Emu.IsRunning())
 			{
@@ -819,7 +891,7 @@ namespace rsx
 			{
 				u32 offs = cmd & 0x1fffffff;
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				m_ctrl->get.exchange(be_t<u32>::make(offs));
+				ctrl->get.exchange(be_t<u32>::make(offs));
 				continue;
 			}
 			if (cmd & CELL_GCM_METHOD_FLAG_CALL)
@@ -827,7 +899,7 @@ namespace rsx
 				m_call_stack.push(get + 4);
 				u32 offs = cmd & ~3;
 				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				m_ctrl->get.exchange(be_t<u32>::make(offs));
+				ctrl->get.exchange(be_t<u32>::make(offs));
 				continue;
 			}
 			if (cmd == CELL_GCM_METHOD_FLAG_RETURN)
@@ -835,7 +907,7 @@ namespace rsx
 				u32 get = m_call_stack.top();
 				m_call_stack.pop();
 				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				m_ctrl->get.exchange(be_t<u32>::make(get));
+				ctrl->get.exchange(be_t<u32>::make(get));
 				continue;
 			}
 			if (cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -846,7 +918,7 @@ namespace rsx
 
 			if (cmd == 0) //nop
 			{
-				m_ctrl->get.atomic_op([](be_t<u32>& value)
+				ctrl->get.atomic_op([](be_t<u32>& value)
 				{
 					value += 4;
 				});
@@ -860,7 +932,7 @@ namespace rsx
 
 			if (cmd & 0x3)
 			{
-				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", GetMethodName(first_cmd).c_str(), first_cmd, cmd & 0xffff);
+				LOG_WARNING(Log::RSX, "unaligned command: %s (0x%x from 0x%x)", get_method_name(first_cmd).c_str(), first_cmd, cmd & 0xffff);
 			}
 
 			for (u32 i = 0; i < count; i++)
@@ -870,7 +942,7 @@ namespace rsx
 
 				if (Ini.RSXLogging.GetValue())
 				{
-					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", GetMethodName(reg).c_str(), reg, value);
+					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 				}
 
 				if (auto method = methods[reg])
@@ -879,10 +951,15 @@ namespace rsx
 				method_registers[reg] = value;
 			}
 
-			m_ctrl->get.atomic_op([count](be_t<u32>& value)
+			ctrl->get.atomic_op([count](be_t<u32>& value)
 			{
 				value += (count + 1) * 4;
 			});
+		}
+		catch (const std::exception& e)
+		{
+			LOG_ERROR(RSX, "Exception: %s", e.what());
+			Emu.Pause();
 		}
 		catch (const std::string& e)
 		{
@@ -902,14 +979,10 @@ namespace rsx
 
 	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 	{
-		m_ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
+		ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
 		this->ioAddress = ioAddress;
 		this->ioSize = ioSize;
-		this->ctrlAddress = ctrlAddress;
 		local_mem_addr = localAddress;
-
-		m_cur_fragment_prog = nullptr;
-		m_cur_fragment_prog_num = 0;
 
 		m_used_gcm_commands.clear();
 

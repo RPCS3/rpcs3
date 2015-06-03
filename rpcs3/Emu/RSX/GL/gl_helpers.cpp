@@ -3,13 +3,10 @@
 
 namespace gl
 {
+	const fbo screen{};
+
 	void fbo::create()
 	{
-		if (created())
-		{
-			remove();
-		}
-
 		glGenFramebuffers(1, &m_id);
 	}
 
@@ -35,11 +32,6 @@ namespace gl
 
 	void fbo::remove()
 	{
-		if (!created())
-		{
-			return;
-		}
-
 		glDeleteFramebuffers(1, &m_id);
 		m_id = 0;
 	}

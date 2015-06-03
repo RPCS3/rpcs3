@@ -20,7 +20,8 @@ namespace rsx
 			vertex_count = 16,
 			fragment_count = 32,
 			tiles_count = 15,
-			zculls_count = 8
+			zculls_count = 8,
+			color_buffers_count = 4
 		};
 	}
 
@@ -97,7 +98,10 @@ namespace rsx
 	struct vertex_data_t
 	{
 		std::vector<u8> data;
+		u32 size;
+		u32 type;
 
+		//load data from vertex data array, if specified
 		void load(u32 start, u32 count);
 	};
 
@@ -159,31 +163,27 @@ namespace rsx
 	{
 	protected:
 		std::stack<u32> m_call_stack;
-		CellGcmControl* m_ctrl;
 
 	public:
+		CellGcmControl* ctrl = nullptr;
+
 		Timer timer_sync;
 
-		GcmTileInfo m_tiles[limits::tiles_count];
-		GcmZcullInfo m_zculls[limits::zculls_count];
+		GcmTileInfo tiles[limits::tiles_count];
+		GcmZcullInfo zculls[limits::zculls_count];
 
 		rsx::texture m_textures[limits::textures_count];
 		rsx::vertex_texture m_vertex_textures[limits::textures_count];
 
 		vertex_data_array_t vertex_data_array;
 		index_array_info_t index_array;
-		std::unordered_map<u32, color4_base<f32>> m_fragment_constants;
-		std::unordered_map<u32, color4_base<f32>> m_transform_constants;
+		std::unordered_map<u32, color4_base<f32>> fragment_constants;
+		std::unordered_map<u32, color4_base<f32>> transform_constants;
 
-		u32 m_shader_ctrl, m_cur_fragment_prog_num;
-		u32 m_vertex_program_data[512 * 4] = {};
-		RSXFragmentProgram m_fragment_progs[limits::fragment_count];
-		RSXFragmentProgram* m_cur_fragment_prog;
-		//RSXVertexProgram m_vertex_progs[m_vertex_count];
-		//RSXVertexProgram* m_cur_vertex_prog;
+		u32 transform_program[512 * 4] = {};
 
 	public:
-		u32 ioAddress, ioSize, ctrlAddress;
+		u32 ioAddress, ioSize;
 		int flip_status;
 		int flip_mode;
 		int debug_level;
@@ -218,14 +218,9 @@ namespace rsx
 
 	public:
 		std::set<u32> m_used_gcm_commands;
-		bool m_draw_mode = false;
 
 	protected:
-		thread()
-			: ThreadBase("RSXThread")
-			, m_ctrl(nullptr)
-			, m_shader_ctrl(0x40)
-			, m_draw_mode(0)
+		thread() : ThreadBase("RSXThread")
 		{
 			flip_handler.set(0);
 			vblank_handler.set(0);
@@ -241,8 +236,8 @@ namespace rsx
 		virtual ~thread() {}
 
 	public:
-		void begin();
-		void end();
+		virtual void begin();
+		virtual void end();
 
 		virtual void oninit() = 0;
 		virtual void oninit_thread() = 0;
