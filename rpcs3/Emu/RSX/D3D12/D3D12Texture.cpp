@@ -192,11 +192,10 @@ size_t D3D12GSRender::UploadTextures()
 			ID3D12GraphicsCommandList *commandList;
 			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
-			size_t heightInBlocks = (m_textures[i].GetHeight() + blockHeightInPixel - 1) / blockHeightInPixel;
-			size_t widthInBlocks = (m_textures[i].GetWidth() + blockWidthInPixel - 1) / blockWidthInPixel;
+			size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
+			size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
 			// Multiple of 256
-			size_t rowPitch = blockSizeInByte * widthInBlocks;
-			rowPitch = (rowPitch + 255) & ~255;
+			size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
 
 			ID3D12Resource *Texture;
 			size_t textureSize = rowPitch * heightInBlocks;
@@ -220,7 +219,7 @@ size_t D3D12GSRender::UploadTextures()
 			// Upload with correct rowpitch
 			for (unsigned row = 0; row < heightInBlocks; row++)
 			{
-				size_t m_texture_pitch = m_textures[i].m_pitch;
+				size_t m_texture_pitch = powerOf2Align(w * blockSizeInByte, 4);
 				if (!m_texture_pitch) m_texture_pitch = rowPitch;
 				switch (format)
 				{
@@ -276,7 +275,7 @@ size_t D3D12GSRender::UploadTextures()
 			check(m_device->CreatePlacedResource(
 				m_textureData.m_heap,
 				heapOffset2,
-				&getTexture2DResourceDesc(m_textures[i].GetWidth(), m_textures[i].GetHeight(), dxgiFormat),
+				&getTexture2DResourceDesc(w, h, dxgiFormat),
 				D3D12_RESOURCE_STATE_COPY_DEST,
 				nullptr,
 				IID_PPV_ARGS(&vramTexture)
@@ -289,8 +288,8 @@ size_t D3D12GSRender::UploadTextures()
 			src.pResource = Texture;
 			src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 			src.PlacedFootprint.Footprint.Depth = 1;
-			src.PlacedFootprint.Footprint.Width = m_textures[i].GetWidth();
-			src.PlacedFootprint.Footprint.Height = m_textures[i].GetHeight();
+			src.PlacedFootprint.Footprint.Width = w;
+			src.PlacedFootprint.Footprint.Height = h;
 			src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 			src.PlacedFootprint.Footprint.Format = dxgiFormat;
 
