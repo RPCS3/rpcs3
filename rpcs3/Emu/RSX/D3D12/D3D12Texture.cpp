@@ -100,7 +100,6 @@ size_t D3D12GSRender::UploadTextures()
 		switch (format)
 		{
 		case CELL_GCM_TEXTURE_A1R5G5B5:
-		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_G8B8:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
@@ -121,6 +120,11 @@ size_t D3D12GSRender::UploadTextures()
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		default:
 			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+			break;
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+			dxgiFormat = DXGI_FORMAT_B4G4R4A4_UNORM;
+			blockSizeInByte = 2;
+			blockWidthInPixel = 1, blockHeightInPixel = 1;
 			break;
 		case CELL_GCM_TEXTURE_R5G6B5:
 			dxgiFormat = DXGI_FORMAT_B5G6R5_UNORM;
@@ -218,35 +222,48 @@ size_t D3D12GSRender::UploadTextures()
 			{
 				size_t m_texture_pitch = m_textures[i].m_pitch;
 				if (!m_texture_pitch) m_texture_pitch = rowPitch;
-				if (format == CELL_GCM_TEXTURE_A8R8G8B8 && is_swizzled)
+				switch (format)
 				{
-					u32 *src, *dst;
-					u32 log2width, log2height;
-
-					src = (u32*)pixels;
-					dst = (u32*)textureData;
-
-					log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
-					log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
-
-					for (int j = 0; j < m_textures[i].GetWidth(); j++)
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				{
+					if (is_swizzled)
 					{
-						dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+						u32 *src, *dst;
+						u32 log2width, log2height;
+
+						src = (u32*)pixels;
+						dst = (u32*)textureData;
+
+						log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
+						log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
+
+						for (int j = 0; j < m_textures[i].GetWidth(); j++)
+						{
+							dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+						}
 					}
+					else
+						streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+					break;
 				}
-				else if (format == CELL_GCM_TEXTURE_R5G6B5)
+				case CELL_GCM_TEXTURE_A4R4G4B4:
+				case CELL_GCM_TEXTURE_R5G6B5:
 				{
-					unsigned short *dst = (unsigned short *)textureData,
-						*src = (unsigned short *)pixels;
+					unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
 
 					for (int j = 0; j < m_textures[i].GetWidth(); j++)
 					{
 						u16 tmp = src[row * m_texture_pitch / 2 + j];
 						dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
 					}
+					break;
 				}
-				else
+				default:
+				{
 					streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+					break;
+				}
+				}
 			}
 			Texture->Unmap(0, nullptr);
 
@@ -300,7 +317,6 @@ size_t D3D12GSRender::UploadTextures()
 		switch (format)
 		{
 		case CELL_GCM_TEXTURE_A1R5G5B5:
-		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_G8B8:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
@@ -322,6 +338,7 @@ size_t D3D12GSRender::UploadTextures()
 		default:
 			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
 			break;
+		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
