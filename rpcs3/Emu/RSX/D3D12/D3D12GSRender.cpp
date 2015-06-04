@@ -84,6 +84,8 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_constantsBufferIndex = 0;
 	m_currentScaleOffsetBufferIndex = 0;
 	m_currentTextureIndex = 0;
+	m_frameFinishedFence = nullptr;
+	m_frameFinishedHandle = 0;
 
 	for (auto tmp : m_inUseConstantsBuffers)
 		std::get<2>(tmp)->Release();
@@ -160,8 +162,10 @@ void D3D12GSRender::ResourceStorage::Release()
 	m_commandAllocator->Release();
 	m_textureUploadCommandAllocator->Release();
 	m_downloadCommandAllocator->Release();
-	CloseHandle(m_frameFinishedHandle);
-	m_frameFinishedFence->Release();
+	if (m_frameFinishedHandle)
+		CloseHandle(m_frameFinishedHandle);
+	if (m_frameFinishedFence)
+		m_frameFinishedFence->Release();
 }
 
 // 32 bits float to U8 unorm CS
