@@ -81,6 +81,215 @@ D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
 	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 }
 
+/**
+ * Create a texture residing in default heap and generate uploads commands in commandList,
+ * using a temporary texture buffer.
+ */
+static
+ID3D12Resource *uploadSingleTexture(
+	const RSXTexture &texture,
+	ID3D12Device *device,
+	ID3D12GraphicsCommandList *commandList,
+	DataHeap &textureBuffersHeap,
+	DataHeap &textureHeap)
+{
+	ID3D12Resource *vramTexture;
+	size_t w = texture.GetWidth(), h = texture.GetHeight();
+	DXGI_FORMAT dxgiFormat;
+	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
+	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+
+	const u32 texaddr = GetAddress(texture.GetOffset(), texture.GetLocation());
+
+	bool is_swizzled = !(texture.GetFormat() & CELL_GCM_TEXTURE_LN);
+	switch (format)
+	{
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+	case CELL_GCM_TEXTURE_G8B8:
+	case CELL_GCM_TEXTURE_R6G5B5:
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+	case CELL_GCM_TEXTURE_DEPTH16:
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+	case CELL_GCM_TEXTURE_X16:
+	case CELL_GCM_TEXTURE_Y16_X16:
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+	default:
+		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		break;
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+		dxgiFormat = DXGI_FORMAT_B4G4R4A4_UNORM;
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_R5G6B5:
+		dxgiFormat = DXGI_FORMAT_B5G6R5_UNORM;
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_A8R8G8B8:
+		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		dxgiFormat = DXGI_FORMAT_BC1_UNORM;
+		blockSizeInByte = 8;
+		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		break;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		dxgiFormat = DXGI_FORMAT_BC2_UNORM;
+		blockSizeInByte = 16;
+		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		break;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		dxgiFormat = DXGI_FORMAT_BC3_UNORM;
+		blockSizeInByte = 16;
+		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		break;
+	case CELL_GCM_TEXTURE_B8:
+		dxgiFormat = DXGI_FORMAT_R8_UNORM;
+		blockSizeInByte = 1;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		dxgiFormat = DXGI_FORMAT_G8R8_G8B8_UNORM;
+		blockSizeInByte = 4;
+		blockWidthInPixel = 2, blockHeightInPixel = 2;
+		break;
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		dxgiFormat = DXGI_FORMAT_R8G8_B8G8_UNORM;
+		blockSizeInByte = 4;
+		blockWidthInPixel = 2, blockHeightInPixel = 2;
+		break;
+	}
+
+	size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
+	size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
+	// Multiple of 256
+	size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
+
+	ID3D12Resource *Texture;
+	size_t textureSize = rowPitch * heightInBlocks;
+	assert(textureBuffersHeap.canAlloc(textureSize));
+	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
+
+	check(device->CreatePlacedResource(
+		textureBuffersHeap.m_heap,
+		heapOffset,
+		&getBufferResourceDesc(textureSize),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&Texture)
+		));
+	textureBuffersHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, textureSize, Texture));
+
+	auto pixels = vm::get_ptr<const u8>(texaddr);
+	void *textureData;
+	check(Texture->Map(0, nullptr, (void**)&textureData));
+
+	// Upload with correct rowpitch
+	for (unsigned row = 0; row < heightInBlocks; row++)
+	{
+		size_t m_texture_pitch = powerOf2Align(w * blockSizeInByte, 4);
+		if (!m_texture_pitch) m_texture_pitch = rowPitch;
+		switch (format)
+		{
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+		{
+			if (is_swizzled)
+			{
+				u32 *src, *dst;
+				u32 log2width, log2height;
+
+				src = (u32*)pixels;
+				dst = (u32*)textureData;
+
+				log2width = (u32)(logf(w) / logf(2.f));
+				log2height = (u32)(logf(h) / logf(2.f));
+
+				for (int j = 0; j < w; j++)
+				{
+					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
+				}
+			}
+			else
+				streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+			break;
+		}
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		{
+			unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
+
+			for (int j = 0; j < w; j++)
+			{
+				u16 tmp = src[row * m_texture_pitch / 2 + j];
+				dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+			}
+			break;
+		}
+		default:
+		{
+			streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+			break;
+		}
+		}
+	}
+	Texture->Unmap(0, nullptr);
+
+	size_t powerOf2Height = log2(heightInBlocks) + 1;
+	textureSize = rowPitch * (1 << powerOf2Height);
+
+	assert(textureHeap.canAlloc(textureSize));
+	size_t heapOffset2 = textureHeap.alloc(textureSize);
+
+	check(device->CreatePlacedResource(
+		textureHeap.m_heap,
+		heapOffset2,
+		&getTexture2DResourceDesc(w, h, dxgiFormat),
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&vramTexture)
+		));
+	textureHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize, vramTexture));
+
+	D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+	dst.pResource = vramTexture;
+	dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	src.pResource = Texture;
+	src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	src.PlacedFootprint.Footprint.Depth = 1;
+	src.PlacedFootprint.Footprint.Width = w;
+	src.PlacedFootprint.Footprint.Height = h;
+	src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
+	src.PlacedFootprint.Footprint.Format = dxgiFormat;
+
+	commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = vramTexture;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+	commandList->ResourceBarrier(1, &barrier);
+	return vramTexture;
+}
+
 size_t D3D12GSRender::UploadTextures()
 {
 	size_t usedTexture = 0;
@@ -192,115 +401,7 @@ size_t D3D12GSRender::UploadTextures()
 			ID3D12GraphicsCommandList *commandList;
 			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
-			size_t heightInBlocks = (h + blockHeightInPixel - 1) / blockHeightInPixel;
-			size_t widthInBlocks = (w + blockWidthInPixel - 1) / blockWidthInPixel;
-			// Multiple of 256
-			size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
-
-			ID3D12Resource *Texture;
-			size_t textureSize = rowPitch * heightInBlocks;
-			assert(m_textureUploadData.canAlloc(textureSize));
-			size_t heapOffset = m_textureUploadData.alloc(textureSize);
-
-			check(m_device->CreatePlacedResource(
-				m_textureUploadData.m_heap,
-				heapOffset,
-				&getBufferResourceDesc(textureSize),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&Texture)
-				));
-			m_textureUploadData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, textureSize, Texture));
-
-			auto pixels = vm::get_ptr<const u8>(texaddr);
-			void *textureData;
-			check(Texture->Map(0, nullptr, (void**)&textureData));
-
-			// Upload with correct rowpitch
-			for (unsigned row = 0; row < heightInBlocks; row++)
-			{
-				size_t m_texture_pitch = powerOf2Align(w * blockSizeInByte, 4);
-				if (!m_texture_pitch) m_texture_pitch = rowPitch;
-				switch (format)
-				{
-				case CELL_GCM_TEXTURE_A8R8G8B8:
-				{
-					if (is_swizzled)
-					{
-						u32 *src, *dst;
-						u32 log2width, log2height;
-
-						src = (u32*)pixels;
-						dst = (u32*)textureData;
-
-						log2width = (u32)(logf(m_textures[i].GetWidth()) / logf(2.f));
-						log2height = (u32)(logf(m_textures[i].GetHeight()) / logf(2.f));
-
-						for (int j = 0; j < m_textures[i].GetWidth(); j++)
-						{
-							dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
-						}
-					}
-					else
-						streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
-					break;
-				}
-				case CELL_GCM_TEXTURE_A4R4G4B4:
-				case CELL_GCM_TEXTURE_R5G6B5:
-				{
-					unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
-
-					for (int j = 0; j < m_textures[i].GetWidth(); j++)
-					{
-						u16 tmp = src[row * m_texture_pitch / 2 + j];
-						dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
-					}
-					break;
-				}
-				default:
-				{
-					streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
-					break;
-				}
-				}
-			}
-			Texture->Unmap(0, nullptr);
-
-			size_t powerOf2Height = log2(heightInBlocks) + 1;
-			textureSize = rowPitch * (1 << powerOf2Height);
-
-			assert(m_textureData.canAlloc(textureSize));
-			size_t heapOffset2 = m_textureData.alloc(textureSize);
-
-			check(m_device->CreatePlacedResource(
-				m_textureData.m_heap,
-				heapOffset2,
-				&getTexture2DResourceDesc(w, h, dxgiFormat),
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&vramTexture)
-				));
-			m_textureData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize, vramTexture));
-
-			D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-			dst.pResource = vramTexture;
-			dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-			src.pResource = Texture;
-			src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-			src.PlacedFootprint.Footprint.Depth = 1;
-			src.PlacedFootprint.Footprint.Width = w;
-			src.PlacedFootprint.Footprint.Height = h;
-			src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
-			src.PlacedFootprint.Footprint.Format = dxgiFormat;
-
-			commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-
-			D3D12_RESOURCE_BARRIER barrier = {};
-			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			barrier.Transition.pResource = vramTexture;
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
-			commandList->ResourceBarrier(1, &barrier);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device, commandList, m_textureUploadData, m_textureData);
 
 			commandList->Close();
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
