@@ -29,9 +29,9 @@ size_t powerOf2Align(size_t unalignedVal, size_t powerOf2)
 inline
 void streamToBuffer(void* dst, void* src, size_t sizeInBytes)
 {
-	for (unsigned i = 0; i < sizeInBytes / 16; i++)
+#pragma omp parallel for
+	for (int i = 0; i < sizeInBytes / 16; i++)
 	{
-
 		const __m128i &srcPtr = _mm_loadu_si128((__m128i*) ((char*)src + i * 16));
 		_mm_stream_si128((__m128i*)((char*)dst + i * 16), srcPtr);
 	}
@@ -45,9 +45,10 @@ inline
 void streamBuffer(void* dst, void* src, size_t sizeInBytes)
 {
 	// Assume 64 bytes cache line
-	unsigned offset = 0;
+	int offset = 0;
 	bool isAligned = !((size_t)src & 15);
-	for (; (offset + 64) < sizeInBytes; offset += 64)
+	#pragma omp parallel for
+	for (offset = 0; offset < sizeInBytes - 64; offset += 64)
 	{
 		char *line = (char*)src + offset;
 		char *dstline = (char*)dst + offset;

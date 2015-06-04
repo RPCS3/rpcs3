@@ -222,10 +222,9 @@ ID3D12Resource *uploadSingleTexture(
 				log2width = (u32)(logf(w) / logf(2.f));
 				log2height = (u32)(logf(h) / logf(2.f));
 
+				#pragma omp parallel for
 				for (int j = 0; j < w; j++)
-				{
 					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
-				}
 			}
 			else
 				streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
