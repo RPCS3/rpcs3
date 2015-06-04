@@ -531,27 +531,42 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 	m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**) &commandList);
 }
 
-static D3D12_BLEND_OP getBlendOp()
+static D3D12_BLEND_OP getBlendOp(u16 op)
 {
-	return D3D12_BLEND_OP_ADD;
+	switch (op)
+	{
+	case CELL_GCM_FUNC_ADD: return D3D12_BLEND_OP_ADD;
+	case CELL_GCM_FUNC_SUBTRACT: return D3D12_BLEND_OP_SUBTRACT;
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return D3D12_BLEND_OP_REV_SUBTRACT;
+	case CELL_GCM_MIN: return D3D12_BLEND_OP_MIN;
+	case CELL_GCM_MAX: return D3D12_BLEND_OP_MAX;
+	case CELL_GCM_FUNC_ADD_SIGNED:
+	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
+		LOG_WARNING(RSX, "Unsupported Blend Op %d", op);
+	}
 }
 
-static D3D12_BLEND getBlendFactor(u16 glFactor)
+static D3D12_BLEND getBlendFactor(u16 factor)
 {
-	switch (glFactor)
+	switch (factor)
 	{
-	default: LOG_WARNING(RSX, "Unsupported Blend Op %d", glFactor);
-	case GL_ZERO: return D3D12_BLEND_ZERO;
-	case GL_ONE: return D3D12_BLEND_ONE;
-	case GL_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
-	case GL_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
-	case GL_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
-	case GL_ONE_MINUS_DST_COLOR: D3D12_BLEND_INV_DEST_COLOR;
-	case GL_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
-	case GL_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
-	case GL_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
-	case GL_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
-	case GL_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+	case CELL_GCM_ZERO: return D3D12_BLEND_ZERO;
+	case CELL_GCM_ONE: return D3D12_BLEND_ONE;
+	case CELL_GCM_SRC_COLOR: return D3D12_BLEND_SRC_COLOR;
+	case CELL_GCM_ONE_MINUS_SRC_COLOR: return D3D12_BLEND_INV_SRC_COLOR;
+	case CELL_GCM_SRC_ALPHA: return D3D12_BLEND_SRC_ALPHA;
+	case CELL_GCM_ONE_MINUS_SRC_ALPHA: return D3D12_BLEND_INV_SRC_ALPHA;
+	case CELL_GCM_DST_ALPHA: return D3D12_BLEND_DEST_ALPHA;
+	case CELL_GCM_ONE_MINUS_DST_ALPHA: return D3D12_BLEND_INV_DEST_ALPHA;
+	case CELL_GCM_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
+	case CELL_GCM_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
+	case CELL_GCM_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+	case CELL_GCM_CONSTANT_COLOR:
+	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
+	case CELL_GCM_CONSTANT_ALPHA:
+	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
+		LOG_WARNING(RSX, "Unsupported Blend Factor %d", factor);
 	}
 }
 
@@ -633,21 +648,23 @@ bool D3D12GSRender::LoadProgram()
 	};
 	prop.Blend = CD3D12_BLEND_DESC;
 
+	if (m_set_blend)
+	{
+		prop.Blend.RenderTarget[0].BlendEnable = true;
+	}
+
 	if (m_set_blend_equation)
 	{
-//		glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
-//		checkForGlError("glBlendEquationSeparate");
+		prop.Blend.RenderTarget[0].BlendOp = getBlendOp(m_blend_equation_rgb);
+		prop.Blend.RenderTarget[0].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
 	}
 
 	if (m_set_blend_sfactor && m_set_blend_dfactor)
 	{
-		prop.Blend.RenderTarget[0].BlendEnable = true;
-		prop.Blend.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 		prop.Blend.RenderTarget[0].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
 		prop.Blend.RenderTarget[0].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
 		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
 		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
-		prop.Blend.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 	}
 
 	if (m_set_logic_op)
