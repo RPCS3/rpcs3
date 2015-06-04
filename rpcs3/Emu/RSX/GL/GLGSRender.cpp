@@ -188,7 +188,7 @@ void GLTexture::Init(RSXTexture& tex)
 			{
 				for (int j = 0; j < tex.GetWidth(); j++)
 				{
-					dst[(i*tex.GetHeight()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+					dst[(i*tex.GetWidth()) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
 				}
 			}
 		}
