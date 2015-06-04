@@ -239,7 +239,7 @@ size_t D3D12GSRender::UploadTextures()
 
 						for (int j = 0; j < m_textures[i].GetWidth(); j++)
 						{
-							dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, i, 0, log2width, log2height, 0)];
+							dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
 						}
 					}
 					else
