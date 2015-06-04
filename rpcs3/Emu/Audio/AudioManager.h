@@ -35,6 +35,7 @@ class AudioManager
 	AudioThread* m_audio_out;
 public:
 	AudioManager();
+	~AudioManager();
 
 	void Init();
 	void Close();
