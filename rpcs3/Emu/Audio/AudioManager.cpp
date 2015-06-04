@@ -9,6 +9,11 @@ AudioManager::AudioManager() : m_audio_out(nullptr)
 {
 }
 
+AudioManager::~AudioManager()
+{
+	Close();
+}
+
 void AudioManager::Init()
 {
 	if (m_audio_out) return;

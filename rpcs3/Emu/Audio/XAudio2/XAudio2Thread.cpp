@@ -8,7 +8,7 @@
 
 XAudio2Thread::~XAudio2Thread()
 {
-	if (m_source_voice) Quit();
+	Quit();
 }
 
 XAudio2Thread::XAudio2Thread() : m_xaudio2_instance(nullptr), m_master_voice(nullptr), m_source_voice(nullptr)
@@ -46,14 +46,23 @@ void XAudio2Thread::Init()
 
 void XAudio2Thread::Quit()
 {
-	Stop();
-	m_source_voice->DestroyVoice();
-	m_source_voice = nullptr;
-	m_master_voice->DestroyVoice();
-	m_master_voice = nullptr;
-	m_xaudio2_instance->StopEngine();
-	m_xaudio2_instance->Release();
-	m_xaudio2_instance = nullptr;
+	if (m_source_voice != nullptr) 
+	{
+		Stop();
+		m_source_voice->DestroyVoice();
+		m_source_voice = nullptr;
+	}
+	if (m_master_voice != nullptr)
+	{
+		m_master_voice->DestroyVoice();
+		m_master_voice = nullptr;
+	}
+	if (m_xaudio2_instance != nullptr)
+	{
+		m_xaudio2_instance->StopEngine();
+		m_xaudio2_instance->Release();
+		m_xaudio2_instance = nullptr;
+	}
 
 	CoUninitialize();
 }
