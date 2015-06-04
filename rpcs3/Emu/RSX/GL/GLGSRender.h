@@ -64,34 +64,7 @@ private:
 	//TODO: program cache
 	gl::glsl::program m_program;
 
-	struct surface_info
-	{
-		u8 log2height;
-		u8 log2width;
-		u8 antialias;
-		u8 depth_format;
-		u8 color_format;
-
-		u32 width;
-		u32 height;
-		u32 format;
-
-		void unpack(u32 surface_format)
-		{
-			format = surface_format;
-
-			log2height = surface_format >> 24;
-			log2width = (surface_format >> 16) & 0xff;
-			antialias = (surface_format >> 12) & 0xf;
-			depth_format = (surface_format >> 5) & 0x7;
-			color_format = surface_format & 0x1f;
-
-			width = 1 << (u32(log2width) + 1);
-			height = 1 << (u32(log2width) + 1);
-		}
-	};
-
-	surface_info m_surface;
+	rsx::surface_info m_surface;
 
 public:
 	gl::fbo draw_fbo;
@@ -119,10 +92,6 @@ private:
 	virtual void Close();
 
 public:
-	void load_vertex_data();
-	void load_fragment_data();
-	void load_indexes();
-
 	bool load_program();
 	void init_buffers();
 	void read_buffers();

@@ -448,8 +448,6 @@ void GLTexture::Init(rsx::texture& tex)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_tex_mag_filter[tex.mag_filter()]);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, GetMaxAniso(tex.max_aniso()));
 
-	
-
 	//Unbind();
 
 	if (is_swizzled && format == CELL_GCM_TEXTURE_A8R8G8B8)
@@ -626,7 +624,8 @@ void GLGSRender::begin()
 	enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 	if (enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
 	{
-		glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
+		//TODO: NV4097_SET_ALPHA_REF must be converted to f32
+		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
 	}
 
 	if (enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND, GL_COLOR_ATTACHMENT0))
@@ -672,7 +671,6 @@ void GLGSRender::begin()
 
 	if (enable(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE], GL_STENCIL_TEST))
 	{
-		//NV4097_SET_STENCIL_MASK
 		glcheck(glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]));
 		glcheck(glStencilFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC], rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF],
 			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]));
@@ -711,7 +709,7 @@ void GLGSRender::begin()
 	glcheck(glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]));
 
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
-	glcheck(glLineWidth((line_width >> 3) + (line_width & 7) / 8.));
+	glcheck(glLineWidth((line_width >> 3) + (line_width & 7) / 8.f));
 	enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
 
 	//TODO
@@ -795,6 +793,85 @@ void GLGSRender::begin()
 
 void GLGSRender::end()
 {
+	if (!draw_fbo || (vertex_array_draw_info.empty() && vertex_index_array.entries.empty()))
+	{
+		rsx::thread::end();
+		return;
+	}
+
+	if (!vertex_array_draw_info.empty() && !vertex_index_array.entries.empty())
+	{
+		LOG_WARNING(RSX, "vertex_array_draw_info & vertex_index_array is not null");
+	}
+
+	static const u32 gl_types[] =
+	{
+		GL_SHORT,
+		GL_FLOAT,
+		GL_HALF_FLOAT,
+		GL_UNSIGNED_BYTE,
+		GL_SHORT,
+		GL_FLOAT, // Needs conversion
+		GL_UNSIGNED_BYTE,
+	};
+
+	static const bool gl_normalized[] =
+	{
+		GL_TRUE,
+		GL_FALSE,
+		GL_FALSE,
+		GL_TRUE,
+		GL_FALSE,
+		GL_TRUE,
+		GL_FALSE,
+	};
+
+	for (auto &info : vertex_array_draw_info)
+	{
+		load_vertex_data(info.first, info.count);
+	}
+
+	for (auto &info : vertex_index_array.entries)
+	{
+		load_vertex_data(info.first, info.count);
+	}
+
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	{
+		auto &vertex_info = vertex_arrays_info[index];
+
+		if (!vertex_info.size)
+		{
+			//disabled
+			continue;
+		}
+
+		auto &vertex_data = vertex_arrays[index];
+
+		if (vertex_info.type < 1 || vertex_info.type > 7)
+		{
+			LOG_ERROR(RSX, "GLGSRender::EnableVertexData: Bad vertex data type (%d)!", vertex_info.type);
+			continue;
+		}
+
+		u32 gltype = gl_types[vertex_info.type - 1];
+		bool normalized = gl_normalized[vertex_info.type - 1];
+
+		glcheck(glEnableVertexAttribArray(index));
+		glcheck(glVertexAttribPointer(index, vertex_info.size, gltype, normalized, 0, vertex_data.data.data()));
+	}
+
+	u32 draw_mode = rsx::method_registers[NV4097_SET_BEGIN_END] - 1;
+	for (auto &info : vertex_array_draw_info)
+	{
+		glcheck(glDrawArrays(draw_mode, info.first, info.count));
+	}
+
+	for (auto &info : vertex_index_array.entries)
+	{
+		glcheck(glDrawElements(draw_mode, info.first, info.count, vertex_index_array.data.data()));
+	}
+
 	write_buffers();
 
 	rsx::thread::end();
@@ -924,21 +1001,6 @@ bool GLGSRender::domethod(u32 cmd, u32 arg)
 
 	found->second(arg, this);
 	return true;
-}
-
-void GLGSRender::load_vertex_data()
-{
-
-}
-
-void GLGSRender::load_fragment_data()
-{
-
-}
-
-void GLGSRender::load_indexes()
-{
-
 }
 
 bool GLGSRender::load_program()

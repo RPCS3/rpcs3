@@ -95,53 +95,7 @@ namespace rsx
 
 	u32 get_vertex_type_size(u32 type);
 
-	struct vertex_data_t
-	{
-		std::vector<u8> data;
-		u32 size;
-		u32 type;
-
-		//load data from vertex data array, if specified
-		void load(u32 start, u32 count);
-	};
-
-	struct vertex_data_array_t
-	{
-		vertex_data_t vertex_data[limits::vertex_count];
-
-		vertex_data_t& operator[](int index)
-		{
-			return vertex_data[index];
-		}
-
-		//returns first - data, second - offsets, third - vertex_data indexes
-		std::tuple<std::vector<u8>, std::vector<size_t>, std::vector<int>> load(u32 first, u32 count)
-		{
-			std::vector<u8> result_data;
-			std::vector<size_t> offsets;
-			std::vector<int> indexes;
-
-			for (int i = 0; i < limits::vertex_count; ++i)
-			{
-				vertex_data[i].load(first, count);
-
-				if (vertex_data[i].data.empty())
-					continue;
-
-				size_t offset = result_data.size();
-				size_t size = vertex_data[i].data.size();
-
-				offsets.push_back(offset);
-				indexes.push_back(i);
-				result_data.resize(offset + size);
-				memcpy(result_data.data() + offset, vertex_data[i].data.data(), size);
-			}
-
-			return std::make_tuple(result_data, offsets, indexes);
-		}
-	};
-
-	struct index_array_info_t
+	struct vertex_array_t
 	{
 		struct entry
 		{
@@ -156,6 +110,49 @@ namespace rsx
 		{
 			data.clear(); //check it
 			entries.clear();
+		}
+	};
+
+	struct surface_info
+	{
+		u8 log2height;
+		u8 log2width;
+		u8 antialias;
+		u8 depth_format;
+		u8 color_format;
+
+		u32 width;
+		u32 height;
+		u32 format;
+
+		void unpack(u32 surface_format)
+		{
+			format = surface_format;
+
+			log2height = surface_format >> 24;
+			log2width = (surface_format >> 16) & 0xff;
+			antialias = (surface_format >> 12) & 0xf;
+			depth_format = (surface_format >> 5) & 0x7;
+			color_format = surface_format & 0x1f;
+
+			width = 1 << (u32(log2width) + 1);
+			height = 1 << (u32(log2width) + 1);
+		}
+	};
+
+	struct data_array_format_info
+	{
+		u16 frequency = 0;
+		u8 stride = 0;
+		u8 size = 0;
+		u8 type = CELL_GCM_VERTEX_F;
+
+		void unpack(u32 data_array_format)
+		{
+			frequency = data_array_format >> 16;
+			stride = (data_array_format >> 8) & 0xff;
+			size = (data_array_format >> 4) & 0xf;
+			type = data_array_format & 0xf;
 		}
 	};
 
@@ -175,12 +172,18 @@ namespace rsx
 		rsx::texture m_textures[limits::textures_count];
 		rsx::vertex_texture m_vertex_textures[limits::textures_count];
 
-		vertex_data_array_t vertex_data_array;
-		index_array_info_t index_array;
+		vertex_array_t vertex_index_array;
+
+		data_array_format_info vertex_arrays_info[limits::vertex_count];
+		vertex_array_t vertex_arrays[limits::vertex_count];
+		std::vector<vertex_array_t::entry> vertex_array_draw_info;
+
 		std::unordered_map<u32, color4_base<f32>> fragment_constants;
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
 
 		u32 transform_program[512 * 4] = {};
+
+		void load_vertex_data(u32 first, u32 count);
 
 	public:
 		u32 ioAddress, ioSize;

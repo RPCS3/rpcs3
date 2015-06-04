@@ -99,16 +99,20 @@ namespace rsx
 			static const size_t element_size = (count * sizeof(type));
 			static const size_t element_size_in_words = element_size / sizeof(u32);
 
-			auto& entry = rsx->vertex_data_array[index];
+			auto& info = rsx->vertex_arrays_info[index];
+
+			info.type = vertex_data_type_from_element_type<type>::type;
+			info.size = count;
+			info.frequency = 0;
+			info.stride = 0;
+
+			auto& entry = rsx->vertex_arrays[index];
 
 			//find begin of data
 			size_t begin = id + index * element_size_in_words;
 
 			size_t position = entry.data.size();
 			entry.data.resize(position + element_size);
-
-			entry.size = count;
-			entry.type = vertex_data_type_from_element_type<type>::type;
 
 			memcpy(entry.data.data() + position, method_registers + begin, element_size);
 		}
@@ -155,12 +159,18 @@ namespace rsx
 			set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, u16>(rsx, arg);
 		}
 
+		template<u32 index>
+		__forceinline void set_vertex_data_array_format(thread* rsx, u32 arg)
+		{
+			rsx->vertex_arrays_info[index].unpack(arg);
+		}
+
 		__forceinline void draw_arrays(thread* rsx, u32 arg)
 		{
-			const u32 first = arg & 0xffffff;
-			const u32 count = (arg >> 24) + 1;
+			u32 first = arg & 0xffffff;
+			u32 count = (arg >> 24) + 1;
 
-			//rsx->vertex_data_array.load(first, count);
+			rsx->vertex_array_draw_info.push_back({ first, count });
 		}
 
 		__forceinline void draw_index_array(thread* rsx, u32 arg)
@@ -168,33 +178,35 @@ namespace rsx
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
+			rsx->vertex_index_array.entries.push_back({ first, count });
+
 			u32 address = get_address(method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
 			u32 type = method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
 			u32 type_size = type == 0 ? 4 : 2;
 			u32 packet_size = (first + count) * type_size;
 
-			if (rsx->index_array.data.size() < packet_size)
+			if (rsx->vertex_index_array.data.size() < packet_size)
 			{
-				rsx->index_array.data.resize(packet_size);
+				rsx->vertex_index_array.data.resize(packet_size);
 			}
 
-			if (type == 0)
+			switch (type)
 			{
-				for (u32 i = first; i < count; ++i)
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+				for (u32 i = first; i < first + count; ++i)
 				{
-					(u32&)rsx->index_array.data[i * 4] = vm::read32(address + i * 4);
+					(u32&)rsx->vertex_index_array.data[i * sizeof(u32)] = vm::read32(address + i * sizeof(u32));
 				}
-			}
-			else
-			{
-				for (u32 i = first; i < count; ++i)
-				{
-					(u16&)rsx->index_array.data[i * 2] = vm::read16(address + i * 2);
-				}
-			}
+				break;
 
-			rsx->index_array.entries.push_back({ first, count });
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+				for (u32 i = first; i < first + count; ++i)
+				{
+					(u16&)rsx->vertex_index_array.data[i * sizeof(u16)] = vm::read16(address + i * sizeof(u16));
+				}
+				break;
+			}
 		}
 
 		template<u32 index>
@@ -205,9 +217,7 @@ namespace rsx
 			static const size_t count = 4;
 			static const size_t size = count * sizeof(f32);
 
-			memcpy(rsx->transform_constants[load].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
-
-			load += count;
+			memcpy(rsx->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
 		}
 
 		template<u32 index>
@@ -629,6 +639,7 @@ namespace rsx
 			bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
 			bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
 			//bind<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
+			bind_16(0, NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, nv4097::set_vertex_data_array_format);
 			bind_16(0, NV4097_SET_VERTEX_DATA4UB_M, 1, nv4097::set_vertex_data4ub_m);
 			bind_16(0, NV4097_SET_VERTEX_DATA1F_M, 1, nv4097::set_vertex_data1f_m);
 			bind_16(0, NV4097_SET_VERTEX_DATA2F_M + 1, 2, nv4097::set_vertex_data2f_m);
@@ -734,7 +745,7 @@ namespace rsx
 		case CELL_GCM_VERTEX_UB:    return 1;
 		case CELL_GCM_VERTEX_S32K:  return 2;
 		case CELL_GCM_VERTEX_CMP:   return 4;
-		case CELL_GCM_VERTEX_UB256: return 1;
+		case CELL_GCM_VERTEX_UB256: return 4;
 
 		default:
 			LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
@@ -743,65 +754,80 @@ namespace rsx
 		}
 	}
 
-	void vertex_data_t::load(u32 first, u32 count)
+	void thread::load_vertex_data(u32 first, u32 count)
 	{
-		u32 format = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT];
-
-		if (!format)
-			return;
-
-		u32 offset = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET];
-		u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
-		u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
-
-		u32 addr = get_address(offset & 0x7fffffff, offset >> 31);
-		u8 size = (format >> 4) & 0xf;
-		u8 type = format & 0xf;
-		u8 stride = (format >> 8) & 0xff;
-		u16 frequency = format >> 16;
-
-		u32 type_size = get_vertex_type_size(type);
-		u32 full_size = (first + count) * type_size * size;
-
-		if (frequency)
+		for (int index = 0; index < limits::vertex_count; ++index)
 		{
-			LOG_ERROR(RSX, "%s: frequency is not null (%d)", __FUNCTION__, frequency);
-		}
+			auto &info = vertex_arrays_info[index];
 
-		data.resize(full_size);
-
-		for (u32 i = first; i < first + count; ++i)
-		{
-			auto src = vm::get_ptr<const u8>(addr + base_offset + stride * (i + base_index));
-			u8* dst = &data[i * type_size * size];
-
-			switch (type_size)
+			if (!info.size)
 			{
-			case 1:
-				memcpy(dst, src, size);
-				break;
-
-			case 2:
-			{
-				auto* c_src = (const be_t<u16>*)src;
-				u16* c_dst = (u16*)dst;
-				for (u32 j = 0; j < size; ++j)
-				{
-					*c_dst++ = *c_src++;
-				}
-				break;
+				//disabled
+				continue;
 			}
 
-			case 4:
+			auto &data = vertex_arrays[index];
+
+			if (!data.data.empty())
 			{
-				auto* c_src = (const be_t<u32>*)src;
-				u32* c_dst = (u32*)dst;
-				for (u32 j = 0; j < size; ++j)
-				{
-					*c_dst++ = *c_src++;
-				}
-				break;
+				//not a vertex array
+				continue;
 			}
+
+			if (info.frequency)
+			{
+				LOG_ERROR(RSX, "%s: frequency is not null (%d, index=%d)", __FUNCTION__, info.frequency, index);
+			}
+
+			u32 offset = method_registers[NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + index];
+			u32 address = get_address(offset & 0x7fffffff, offset >> 31);
+
+			u32 type_size = get_vertex_type_size(info.type);
+			u32 packet_size = (first + count) * type_size * info.size;
+
+			if (data.data.size() < packet_size)
+			{
+				data.data.resize(packet_size);
+			}
+
+			u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+			u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+
+			for (u32 i = first; i < first + count; ++i)
+			{
+				auto src = vm::get_ptr<const u8>(address + base_offset + info.stride * (i + base_index));
+				u8* dst = data.data.data() + i * type_size * info.size;
+
+				switch (type_size)
+				{
+				case 1:
+					memcpy(dst, src, info.size);
+					break;
+
+				case 2:
+				{
+					auto* c_src = (const be_t<u16>*)src;
+					u16* c_dst = (u16*)dst;
+
+					for (u32 j = 0; j < info.size; ++j)
+					{
+						*c_dst++ = *c_src++;
+					}
+					break;
+				}
+
+				case 4:
+				{
+					auto* c_src = (const be_t<u32>*)src;
+					u32* c_dst = (u32*)dst;
+
+					for (u32 j = 0; j < info.size; ++j)
+					{
+						*c_dst++ = *c_src++;
+					}
+					break;
+				}
+				}
 			}
 		}
 	}
@@ -813,7 +839,12 @@ namespace rsx
 
 	void thread::end()
 	{
-		index_array.clear();
+		vertex_array_draw_info.clear();
+
+		vertex_index_array.clear();
+		for (auto &vertex_array : vertex_arrays)
+			vertex_array.clear();
+
 		fragment_constants.clear();
 		transform_constants.clear();
 
