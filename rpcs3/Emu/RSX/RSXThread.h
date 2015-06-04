@@ -225,12 +225,6 @@ namespace rsx
 			flip_handler.set(0);
 			vblank_handler.set(0);
 			user_handler.set(0);
-
-			// Construct Textures
-			for (int i = 0; i < 16; i++)
-			{
-				m_textures[i].init(i);
-			}
 		}
 
 		virtual ~thread() {}

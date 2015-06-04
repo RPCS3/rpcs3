@@ -114,7 +114,8 @@ public:
 	virtual ~GLGSRender();
 
 private:
-	static void Enable(bool enable, const u32 cap);
+	static u32 enable(u32 enable, u32 cap);
+	static u32 enable(u32 enable, u32 cap, u32 index);
 	virtual void Close();
 
 public:

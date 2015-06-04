@@ -986,6 +986,68 @@ namespace rsx
 
 		m_used_gcm_commands.clear();
 
+		//setup method registers
+		memset(rsx::method_registers, 0, sizeof(rsx::method_registers));
+
+		rsx::method_registers[NV4097_SET_COLOR_MASK] = CELL_GCM_COLOR_MASK_R | CELL_GCM_COLOR_MASK_G | CELL_GCM_COLOR_MASK_B | CELL_GCM_COLOR_MASK_A;
+		rsx::method_registers[NV4097_SET_SCISSOR_HORIZONTAL] = (4096 << 16) | 0;
+		rsx::method_registers[NV4097_SET_SCISSOR_VERTICAL] = (4096 << 16) | 0;
+
+		rsx::method_registers[NV4097_SET_ALPHA_FUNC] = CELL_GCM_ALWAYS;
+		rsx::method_registers[NV4097_SET_ALPHA_REF] = 0;
+
+		rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR] = (CELL_GCM_ONE << 16) | CELL_GCM_ONE;
+		rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR] = (CELL_GCM_ZERO << 16) | CELL_GCM_ZERO;
+		rsx::method_registers[NV4097_SET_BLEND_COLOR] = 0;
+		rsx::method_registers[NV4097_SET_BLEND_COLOR2] = 0;
+		rsx::method_registers[NV4097_SET_BLEND_EQUATION] = (CELL_GCM_FUNC_ADD << 16) | CELL_GCM_FUNC_ADD;
+
+		rsx::method_registers[NV4097_SET_STENCIL_MASK] = 0xff;
+		rsx::method_registers[NV4097_SET_STENCIL_FUNC] = CELL_GCM_ALWAYS;
+		rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF] = 0x00;
+		rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK] = 0xff;
+		rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		rsx::method_registers[NV4097_SET_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
+
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_MASK] = 0xff;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC] = CELL_GCM_ALWAYS;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_REF] = 0x00;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_FUNC_MASK] = 0xff;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_FAIL] = CELL_GCM_KEEP;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZFAIL] = CELL_GCM_KEEP;
+		rsx::method_registers[NV4097_SET_BACK_STENCIL_OP_ZPASS] = CELL_GCM_KEEP;
+
+		rsx::method_registers[NV4097_SET_SHADE_MODE] = CELL_GCM_SMOOTH;
+
+		rsx::method_registers[NV4097_SET_LOGIC_OP] = CELL_GCM_COPY;
+
+		(f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN] = 0.f;
+		(f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX] = 1.f;
+
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MIN] = 0.f;
+		(f32&)rsx::method_registers[NV4097_SET_CLIP_MAX] = 1.f;
+
+		rsx::method_registers[NV4097_SET_LINE_WIDTH] = 1 << 3;
+
+		rsx::method_registers[NV4097_SET_FOG_MODE] = CELL_GCM_FOG_MODE_EXP;
+
+		rsx::method_registers[NV4097_SET_DEPTH_FUNC] = CELL_GCM_LESS;
+		rsx::method_registers[NV4097_SET_DEPTH_MASK] = CELL_GCM_TRUE;
+		(f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = 0.f;
+		(f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_BIAS] = 0.f;
+		rsx::method_registers[NV4097_SET_FRONT_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+		rsx::method_registers[NV4097_SET_BACK_POLYGON_MODE] = CELL_GCM_POLYGON_MODE_FILL;
+		rsx::method_registers[NV4097_SET_CULL_FACE] = CELL_GCM_BACK;
+		rsx::method_registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
+		rsx::method_registers[NV4097_SET_RESTART_INDEX] = -1;
+
+		// Construct Textures
+		for (int i = 0; i < 16; i++)
+		{
+			m_textures[i].init(i);
+		}
+
 		oninit();
 		ThreadBase::Start();
 	}
