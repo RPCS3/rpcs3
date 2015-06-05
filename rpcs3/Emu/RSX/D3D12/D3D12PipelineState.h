@@ -37,7 +37,11 @@ struct D3D12PipelineProperties
 			if (a.SemanticIndex != b.SemanticIndex)
 				return false;
 		}
-		// TODO: blend and depth stencil
+
+		if (memcmp(&DepthStencil, &in.DepthStencil, sizeof(D3D12_DEPTH_STENCIL_DESC)))
+			return false;
+		if (memcmp(&Blend, &in.Blend, sizeof(D3D12_BLEND_DESC)))
+			return false;
 		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
 	}
 };
