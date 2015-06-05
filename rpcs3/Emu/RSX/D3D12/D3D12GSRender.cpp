@@ -1162,9 +1162,6 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	// Except when a semaphore is written by RSX
 
 
-/*	if (!Ini.GSDumpDepthBuffer.GetValue())
-		return;*/
-
 	ID3D12Fence *fence;
 	check(
 		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
@@ -1178,9 +1175,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	size_t depthRowPitch = RSXThread::m_width;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
-	bool needTransfer = m_set_context_dma_z || m_set_context_dma_color_a || m_set_context_dma_color_b || m_set_context_dma_color_c || m_set_context_dma_color_d;
+	bool needTransfer = (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
+		((m_set_context_dma_color_a || m_set_context_dma_color_b || m_set_context_dma_color_c || m_set_context_dma_color_d) && Ini.GSDumpColorBuffers.GetValue());
 
-	if (m_set_context_dma_z)
+	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -1296,7 +1294,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			);
 	}
 
-	if (m_set_context_dma_z)
+	if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 	{
 		// Copy
 		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
@@ -1314,36 +1312,39 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	}
 
 	ID3D12Resource *rtt0, *rtt1, *rtt2, *rtt3;
-	switch (m_surface_color_target)
+	if (Ini.GSDumpColorBuffers.GetValue())
 	{
-	case CELL_GCM_SURFACE_TARGET_NONE:
-		break;
+		switch (m_surface_color_target)
+		{
+		case CELL_GCM_SURFACE_TARGET_NONE:
+			break;
 
-	case CELL_GCM_SURFACE_TARGET_0:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-		break;
+		case CELL_GCM_SURFACE_TARGET_0:
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			break;
 
-	case CELL_GCM_SURFACE_TARGET_1:
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-		break;
+		case CELL_GCM_SURFACE_TARGET_1:
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			break;
 
-	case CELL_GCM_SURFACE_TARGET_MRT1:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
-		break;
+		case CELL_GCM_SURFACE_TARGET_MRT1:
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+			break;
 
-	case CELL_GCM_SURFACE_TARGET_MRT2:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
-		if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
-		break;
+		case CELL_GCM_SURFACE_TARGET_MRT2:
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
+			break;
 
-	case CELL_GCM_SURFACE_TARGET_MRT3:
-		if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
-		if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
-		if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
-		if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], downloadCommandList);
-		break;
+		case CELL_GCM_SURFACE_TARGET_MRT3:
+			if (m_context_dma_color_a) rtt0 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[0], downloadCommandList);
+			if (m_context_dma_color_b) rtt1 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[1], downloadCommandList);
+			if (m_context_dma_color_c) rtt2 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[2], downloadCommandList);
+			if (m_context_dma_color_d) rtt3 = writeColorBuffer(m_rtts.m_currentlyBoundRenderTargets[3], downloadCommandList);
+			break;
+		}
 	}
 	if (needTransfer)
 	{
@@ -1359,7 +1360,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		CloseHandle(handle);
 		fence->Release();
 
-		if (m_set_context_dma_z)
+		if (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue())
 		{
 			u32 address = GetAddress(m_surface_offset_z, m_context_dma_z - 0xfeed0000);
 			auto ptr = vm::get_ptr<void>(address);
@@ -1387,68 +1388,71 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		size_t colorRowPitch = RSXThread::m_width * 4;
 		colorRowPitch = (colorRowPitch + 255) & ~255;
 
-		switch (m_surface_color_target)
+		if (Ini.GSDumpColorBuffers.GetValue())
 		{
-		case CELL_GCM_SURFACE_TARGET_NONE:
+			switch (m_surface_color_target)
+			{
+			case CELL_GCM_SURFACE_TARGET_NONE:
+				break;
+
+			case CELL_GCM_SURFACE_TARGET_0:
+			{
+				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+				void *dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			}
 			break;
 
-		case CELL_GCM_SURFACE_TARGET_0:
-		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-		}
+			case CELL_GCM_SURFACE_TARGET_1:
+			{
+				u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+				void *dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			}
 			break;
 
-		case CELL_GCM_SURFACE_TARGET_1:
-		{
-			u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-		}
+			case CELL_GCM_SURFACE_TARGET_MRT1:
+			{
+				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+				void *dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			}
 			break;
 
-		case CELL_GCM_SURFACE_TARGET_MRT1:
-		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-		}
+			case CELL_GCM_SURFACE_TARGET_MRT2:
+			{
+				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+				void *dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			}
 			break;
 
-		case CELL_GCM_SURFACE_TARGET_MRT2:
-		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-		}
+			case CELL_GCM_SURFACE_TARGET_MRT3:
+			{
+				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
+				void *dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
+				dstAddress = vm::get_ptr<void>(address);
+				copyToCellRamAndRelease(dstAddress, rtt3, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+			}
 			break;
-
-		case CELL_GCM_SURFACE_TARGET_MRT3:
-		{
-			u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
-			void *dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-			address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
-			dstAddress = vm::get_ptr<void>(address);
-			copyToCellRamAndRelease(dstAddress, rtt3, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
-		}
-			break;
+			}
 		}
 
 		if (needTransfer)
