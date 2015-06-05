@@ -21,7 +21,23 @@ struct D3D12PipelineProperties
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
-		// TODO: blend and IASet equality
+		if (IASet.size() != in.IASet.size())
+			return false;
+		for (unsigned i = 0; i < IASet.size(); i++)
+		{
+			const D3D12_INPUT_ELEMENT_DESC &a = IASet[i], &b = in.IASet[i];
+			if (a.AlignedByteOffset != b.AlignedByteOffset)
+				return false;
+			if (a.Format != b.Format)
+				return false;
+			if (a.InputSlot != b.InputSlot)
+				return false;
+			if (a.InstanceDataStepRate != b.InstanceDataStepRate)
+				return false;
+			if (a.SemanticIndex != b.SemanticIndex)
+				return false;
+		}
+		// TODO: blend
 		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && depthEnabled == in.depthEnabled;
 	}
 };
