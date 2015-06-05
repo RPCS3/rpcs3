@@ -639,6 +639,29 @@ static D3D12_COMPARISON_FUNC getStencilFunc(u32 op)
 	}
 }
 
+static D3D12_COMPARISON_FUNC getDepthFunc(u32 op)
+{
+	switch (op)
+	{
+	case GL_NEVER:
+		return D3D12_COMPARISON_FUNC_NEVER;
+	case GL_LESS:
+		return D3D12_COMPARISON_FUNC_LESS;
+	case GL_LEQUAL:
+		return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case GL_GREATER:
+		return D3D12_COMPARISON_FUNC_GREATER;
+	case GL_GEQUAL:
+		return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case GL_EQUAL:
+		return D3D12_COMPARISON_FUNC_EQUAL;
+	case GL_NOTEQUAL:
+		return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case GL_ALWAYS:
+		return D3D12_COMPARISON_FUNC_ALWAYS;
+	}
+}
+
 bool D3D12GSRender::LoadProgram()
 {
 	if (!m_cur_fragment_prog)
@@ -761,7 +784,7 @@ bool D3D12GSRender::LoadProgram()
 
 	prop.DepthStencil.DepthEnable = m_set_depth_test;
 	prop.DepthStencil.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	prop.DepthStencil.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	prop.DepthStencil.DepthFunc = getDepthFunc(m_depth_func);
 	prop.DepthStencil.StencilEnable = m_set_stencil_test;
 	prop.DepthStencil.StencilReadMask = m_stencil_func_mask;
 	prop.DepthStencil.StencilWriteMask = m_set_stencil_mask;
