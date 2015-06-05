@@ -200,6 +200,7 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 report_main_addr;
 		u32 label_addr;
+		u32 draw_mode;
 
 		u32 local_mem_addr, main_mem_addr;
 		bool strict_ordering[0x1000];
@@ -239,13 +240,13 @@ namespace rsx
 		virtual void oninit() = 0;
 		virtual void oninit_thread() = 0;
 		virtual void onexit_thread() = 0;
-		virtual void onreset() = 0;
 		virtual bool domethod(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;
 
-		void Task();
+		void Task() override;
 
 	public:
+		void reset();
 		void init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 
 		u32 ReadIO32(u32 addr);

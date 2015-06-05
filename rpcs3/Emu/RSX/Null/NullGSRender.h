@@ -26,10 +26,6 @@ private:
 	{
 	}
 
-	void onreset() override
-	{
-	}
-
 	bool domethod(u32 cmd, u32 value) override
 	{
 		return false;

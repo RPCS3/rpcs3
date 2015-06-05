@@ -6,7 +6,7 @@
 
 #ifdef _DEBUG
 #define glcheck(X) \
-	glGetError(); /*flush errors*/ \
+	/*glGetError(); flush errors*/ \
 	X; \
 	if (GLenum err = glGetError())\
 	{\
@@ -1602,7 +1602,7 @@ namespace gl
 			enum class type
 			{
 				fragment = GL_FRAGMENT_SHADER,
-				vertext = GL_VERTEX_SHADER,
+				vertex = GL_VERTEX_SHADER,
 				geometry = GL_GEOMETRY_SHADER
 			};
 
@@ -1727,19 +1727,28 @@ namespace gl
 				void operator = (const glm::dmat2& rhs) const { glProgramUniformMatrix2dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
 				void operator = (const glm::mat3& rhs) const { glProgramUniformMatrix3fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
 				void operator = (const glm::dmat3& rhs) const { glProgramUniformMatrix3dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
-				void operator = (const glm::mat4& rhs) const { glProgramUniformMatrix4fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
+				void operator = (const glm::mat4& rhs) const
+				{
+					glProgramUniformMatrix4fv(program, location, 1, GL_FALSE, glm::value_ptr(rhs));
+				}
 				void operator = (const glm::dmat4& rhs) const { glProgramUniformMatrix4dv(program, location, 1, GL_FALSE, glm::value_ptr(rhs)); }
 			};
 
 			class uniforms_t
 			{
-				GLuint program;
+				program& m_program;
 				std::unordered_map<std::string, GLint> locations;
 				int active_texture = 0;
 
 			public:
-				uniforms_t(GLuint program) : program(program)
+				uniforms_t(program* program) : m_program(*program)
 				{
+				}
+
+				void clear()
+				{
+					locations.clear();
+					active_texture = 0;
 				}
 
 				GLint location(const std::string &name)
@@ -1751,7 +1760,7 @@ namespace gl
 						return finded->second;
 					}
 
-					int result = glGetUniformLocation(program, name.c_str());
+					int result = glGetUniformLocation(m_program.id(), name.c_str());
 					locations[name] = result;
 
 					return result;
@@ -1785,14 +1794,14 @@ namespace gl
 
 				uniform_t operator[](int location)
 				{
-					return{ program, location };
+					return{ m_program.id(), location };
 				}
 
 				uniform_t operator[](const std::string &name)
 				{
-					return{ program, location(name) };
+					return{ m_program.id(), location(name) };
 				}
-			};
+			} uniforms{ this };
 
 			class attribs_t
 			{
@@ -1814,23 +1823,25 @@ namespace gl
 					remove();
 			}
 
-			void recreate()
+			program& recreate()
 			{
 				if (created())
 					remove();
 
-				create();
+				return create();
 			}
 
-			void create()
+			program& create()
 			{
 				m_id = glCreateProgram();
+				return *this;
 			}
 
 			void remove()
 			{
 				glDeleteProgram(m_id);
 				m_id = 0;
+				uniforms.clear();
 			}
 
 			static program get_current_program()
@@ -1919,15 +1930,17 @@ namespace gl
 				return created();
 			}
 
-			void operator += (const shader& rhs)
+			program& operator += (const shader& rhs)
 			{
 				glAttachShader(m_id, rhs.id());
+				return *this;
 			}
 
-			void operator += (std::initializer_list<shader> shaders)
+			program& operator += (std::initializer_list<shader> shaders)
 			{
 				for (auto &shader : shaders)
 					*this += shader;
+				return *this;
 			}
 		};
 	};

@@ -74,26 +74,6 @@ namespace ProgramHashUtil
 			return ((sourceOperand >> 8) & 0x3) == 2;
 		}
 
-		/**
-		* RSX fragment program constants are inlined inside shader code.
-		* This function takes an instruction from a fragment program and
-		* returns an equivalent instruction where inlined constants
-		* are masked.
-		* This allows to hash/compare fragment programs even if their
-		* inlined constants are modified inbetween
-		*/
-		static qword fragmentMaskConstant(const qword &initialQword)
-		{
-			qword result = initialQword;
-			if (isConstant(initialQword.word[1]))
-				result.word[1] = 0;
-			if (isConstant(initialQword.word[2]))
-				result.word[2] = 0;
-			if (isConstant(initialQword.word[3]))
-				result.word[3] = 0;
-			return result;
-		}
-
 		static
 		size_t getFPBinarySize(void *ptr)
 		{
@@ -105,18 +85,18 @@ namespace ProgramHashUtil
 				bool isSRC0Constant = isConstant(inst.word[1]);
 				bool isSRC1Constant = isConstant(inst.word[2]);
 				bool isSRC2Constant = isConstant(inst.word[3]);
+
+				instIndex++;
+
 				bool end = (inst.word[0] >> 8) & 0x1;
 
 				if (isSRC0Constant || isSRC1Constant || isSRC2Constant)
 				{
-					instIndex += 2;
-					if (end)
-						return instIndex * 4 * 4;
-					continue;
+					instIndex++;
 				}
-				instIndex++;
+
 				if (end)
-					return (instIndex)* 4 * 4;
+					return instIndex * 4 * 4;
 			}
 		}
 	};
@@ -132,13 +112,9 @@ namespace ProgramHashUtil
 			while (true)
 			{
 				const qword& inst = instbuffer[instIndex];
-				bool end = (inst.word[0] >> 8) & 0x1;
-				if (end)
-					return hash;
-				const qword& maskedInst = FragmentProgramUtil::fragmentMaskConstant(inst);
-				hash ^= maskedInst.dword[0];
+				hash ^= inst.dword[0];
 				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-				hash ^= maskedInst.dword[1];
+				hash ^= inst.dword[1];
 				hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
 				instIndex++;
 				// Skip constants
@@ -146,6 +122,11 @@ namespace ProgramHashUtil
 					FragmentProgramUtil::isConstant(inst.word[2]) ||
 					FragmentProgramUtil::isConstant(inst.word[3]))
 					instIndex++;
+
+				bool end = (inst.word[0] >> 8) & 0x1;
+
+				if (end)
+					return hash;
 			}
 			return 0;
 		}
@@ -162,16 +143,15 @@ namespace ProgramHashUtil
 			{
 				const qword& inst1 = instBuffer1[instIndex];
 				const qword& inst2 = instBuffer2[instIndex];
-				bool end = ((inst1.word[0] >> 8) & 0x1) && ((inst2.word[0] >> 8) & 0x1);
-				if (end)
+
+				if (inst1.dword[0] != inst2.dword[0] || inst1.dword[1] != inst2.dword[1])
+					return false;
+
+				if ((inst1.word[0] >> 8) & 0x1)
 					return true;
 
-				const qword& maskedInst1 = FragmentProgramUtil::fragmentMaskConstant(inst1);
-				const qword& maskedInst2 = FragmentProgramUtil::fragmentMaskConstant(inst2);
-
-				if (maskedInst1.dword[0] != maskedInst2.dword[0] || maskedInst1.dword[1] != maskedInst2.dword[1])
-					return false;
 				instIndex++;
+
 				// Skip constants
 				if (FragmentProgramUtil::isConstant(inst1.word[1]) ||
 					FragmentProgramUtil::isConstant(inst1.word[2]) ||
@@ -289,10 +269,18 @@ public:
 	ProgramStateCache() : m_currentShaderId(0) {}
 	~ProgramStateCache()
 	{
+		clear();
+	}
+
+	void clear()
+	{
 		for (auto pair : m_cachePSO)
 			BackendTraits::DeleteProgram(pair.second);
 		for (auto pair : m_cacheFS)
 			free(pair.first);
+
+		m_cachePSO.clear();
+		m_cacheFS.clear();
 	}
 
 	typename BackendTraits::PipelineData *getGraphicPipelineState(

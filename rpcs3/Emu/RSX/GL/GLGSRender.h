@@ -70,6 +70,8 @@ public:
 	gl::fbo draw_fbo;
 
 private:
+	GLProgramBuffer m_prog_buffer;
+
 	gl::texture m_draw_tex_color[rsx::limits::color_buffers_count];
 	gl::texture m_draw_tex_depth_stencil;
 
@@ -104,7 +106,6 @@ protected:
 	void oninit() override;
 	void oninit_thread() override;
 	void onexit_thread() override;
-	void onreset() override;
 	bool domethod(u32 id, u32 arg) override;
 	void flip(int buffer) override;
 };

@@ -73,6 +73,12 @@ namespace fs
 
 		u64 read(void* buffer, u64 count) const;
 		u64 write(const void* buffer, u64 count) const;
+
+		u64 write(const std::string& string) const
+		{
+			return write(string.c_str(), string.length());
+		}
+
 		u64 seek(u64 offset, u32 mode = from_begin) const;
 		u64 size() const;
 	};

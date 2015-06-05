@@ -53,12 +53,20 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << "out vec4 " << table[i].first << ";" << std::endl;
+			OS << fmt::format("layout(location = %d) out vec4 ", i)  "out vec4 "<< table[i].first << ";" << std::endl;
 	}
 }
 
 void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
+	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		for (const ParamItem& PI : PT.items)
+			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
+	}
+
+	/*
+	//???
 	for (ParamType PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler2D")
@@ -75,6 +83,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (ParamItem PI : PT.items)
 			OS << "uniform " << PT.type << " " << PI.name << ";" << std::endl;
 	}
+	*/
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)

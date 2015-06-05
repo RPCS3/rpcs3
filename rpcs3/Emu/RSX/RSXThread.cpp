@@ -183,7 +183,7 @@ namespace rsx
 			u32 address = get_address(method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
 			u32 type = method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
-			u32 type_size = type == 0 ? 4 : 2;
+			u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
 			u32 packet_size = (first + count) * type_size;
 
 			if (rsx->vertex_index_array.data.size() < packet_size)
@@ -210,14 +210,14 @@ namespace rsx
 		}
 
 		template<u32 index>
-		__forceinline void set_transform_constant(thread* rsx, u32 arg)
+		__forceinline void set_transform_constant(thread* rsxthr, u32 arg)
 		{
 			u32& load = method_registers[NV4097_SET_TRANSFORM_CONSTANT_LOAD];
 
 			static const size_t count = 4;
 			static const size_t size = count * sizeof(f32);
 
-			memcpy(rsx->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
+			memcpy(rsxthr->transform_constants[load++].rgba, method_registers + NV4097_SET_TRANSFORM_CONSTANT + index * count, size);
 		}
 
 		template<u32 index>
@@ -228,9 +228,7 @@ namespace rsx
 			static const size_t count = 4;
 			static const size_t size = count * sizeof(u32);
 
-			memcpy(rsx->transform_program + load, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
-
-			load += count;
+			memcpy(rsx->transform_program + load++ * count, method_registers + NV4097_SET_TRANSFORM_PROGRAM + index * count, size);
 		}
 
 		__forceinline void set_begin_end(thread* rsx, u32 arg)
@@ -834,7 +832,7 @@ namespace rsx
 
 	void thread::begin()
 	{
-		//?
+		draw_mode = method_registers[NV4097_SET_BEGIN_END];
 	}
 
 	void thread::end()
@@ -847,8 +845,6 @@ namespace rsx
 
 		fragment_constants.clear();
 		transform_constants.clear();
-
-		onreset();
 	}
 
 	void thread::Task()
@@ -857,6 +853,7 @@ namespace rsx
 		LOG_NOTICE(RSX, "RSX thread started");
 
 		oninit_thread();
+		reset();
 
 		last_flip_time = get_system_time() - 1000000;
 
@@ -976,10 +973,16 @@ namespace rsx
 					LOG_NOTICE(Log::RSX, "%s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
 				}
 
+				method_registers[reg] = value;
+
 				if (auto method = methods[reg])
 					method(this, value);
 
-				method_registers[reg] = value;
+				if (rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] != 0xffffffff)
+				{
+					LOG_NOTICE(Log::RSX, "NV4097_SET_ZSTENCIL_CLEAR_VALUE: %s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
+					rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
+				}
 			}
 
 			ctrl->get.atomic_op([count](be_t<u32>& value)
@@ -1008,15 +1011,8 @@ namespace rsx
 		onexit_thread();
 	}
 
-	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+	void thread::reset()
 	{
-		ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
-		this->ioAddress = ioAddress;
-		this->ioSize = ioSize;
-		local_mem_addr = localAddress;
-
-		m_used_gcm_commands.clear();
-
 		//setup method registers
 		memset(rsx::method_registers, 0, sizeof(rsx::method_registers));
 
@@ -1073,11 +1069,26 @@ namespace rsx
 		rsx::method_registers[NV4097_SET_FRONT_FACE] = CELL_GCM_CCW;
 		rsx::method_registers[NV4097_SET_RESTART_INDEX] = -1;
 
+		rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] = (4096 << 16) | 0;
+		rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL] = (4096 << 16) | 0;
+
+		rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
+
 		// Construct Textures
 		for (int i = 0; i < 16; i++)
 		{
 			m_textures[i].init(i);
 		}
+	}
+
+	void thread::init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
+	{
+		ctrl = vm::get_ptr<CellGcmControl>(ctrlAddress);
+		this->ioAddress = ioAddress;
+		this->ioSize = ioSize;
+		local_mem_addr = localAddress;
+
+		m_used_gcm_commands.clear();
 
 		oninit();
 		ThreadBase::Start();

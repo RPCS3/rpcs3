@@ -591,7 +591,6 @@ void GLGSRender::Close()
 void GLGSRender::begin()
 {
 	rsx::thread::begin();
-
 	if (!load_program())
 	{
 		//no program - no drawing
@@ -600,13 +599,13 @@ void GLGSRender::begin()
 
 	init_buffers();
 
-	draw_fbo.bind();
-
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
 
-	glcheck(glColorMask(color_mask & CELL_GCM_COLOR_MASK_R, color_mask & CELL_GCM_COLOR_MASK_G,
-		color_mask & CELL_GCM_COLOR_MASK_B, color_mask & CELL_GCM_COLOR_MASK_A));
-
+	//glcheck(glColorMask(color_mask & CELL_GCM_COLOR_MASK_R, color_mask & CELL_GCM_COLOR_MASK_G,
+	//	color_mask & CELL_GCM_COLOR_MASK_B, color_mask & CELL_GCM_COLOR_MASK_A));
+	glcheck(glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]));
+	glcheck(glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]));
+	
 	//scissor test is always enabled
 	glEnable(GL_SCISSOR_TEST);
 
@@ -619,7 +618,19 @@ void GLGSRender::begin()
 
 	glcheck(glScissor(scissor_x, scissor_y, scissor_w, scissor_h));
 
-	enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST);
+	if (enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
+	{
+		//glcheck(glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]));
+		//glcheck(glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]));
+	}
+
+	if (enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT))
+	{
+		glcheck(glDepthBoundsEXT((f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN], (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX]));
+	}
+
+	glcheck(glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]));
+	glcheck(glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]));
 
 	enable(rsx::method_registers[NV4097_SET_DITHER_ENABLE], GL_DITHER);
 	if (enable(rsx::method_registers[NV4097_SET_ALPHA_TEST_ENABLE], GL_ALPHA_TEST))
@@ -628,7 +639,7 @@ void GLGSRender::begin()
 		//glcheck(glAlphaFunc(rsx::method_registers[NV4097_SET_ALPHA_FUNC], rsx::method_registers[NV4097_SET_ALPHA_REF]));
 	}
 
-	if (enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND, GL_COLOR_ATTACHMENT0))
+	if (enable(rsx::method_registers[NV4097_SET_BLEND_ENABLE], GL_BLEND))
 	{
 		u32 sfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_SFACTOR];
 		u32 dfactor = rsx::method_registers[NV4097_SET_BLEND_FUNC_DFACTOR];
@@ -668,10 +679,9 @@ void GLGSRender::begin()
 
 		glcheck(glBlendEquationSeparate(equation_rgb, equation_a));
 	}
-
+	
 	if (enable(rsx::method_registers[NV4097_SET_STENCIL_TEST_ENABLE], GL_STENCIL_TEST))
 	{
-		glcheck(glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]));
 		glcheck(glStencilFunc(rsx::method_registers[NV4097_SET_STENCIL_FUNC], rsx::method_registers[NV4097_SET_STENCIL_FUNC_REF],
 			rsx::method_registers[NV4097_SET_STENCIL_FUNC_MASK]));
 		glcheck(glStencilOp(rsx::method_registers[NV4097_SET_STENCIL_OP_FAIL], rsx::method_registers[NV4097_SET_STENCIL_OP_ZFAIL],
@@ -701,13 +711,6 @@ void GLGSRender::begin()
 		glcheck(glLogicOp(rsx::method_registers[NV4097_SET_LOGIC_OP]));
 	}
 
-	if (enable(rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE], GL_DEPTH_BOUNDS_TEST_EXT))
-	{
-		glcheck(glDepthBoundsEXT((f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MIN], (f32&)rsx::method_registers[NV4097_SET_DEPTH_BOUNDS_MAX]));
-	}
-
-	glcheck(glDepthRange((f32&)rsx::method_registers[NV4097_SET_CLIP_MIN], (f32&)rsx::method_registers[NV4097_SET_CLIP_MAX]));
-
 	u32 line_width = rsx::method_registers[NV4097_SET_LINE_WIDTH];
 	glcheck(glLineWidth((line_width >> 3) + (line_width & 7) / 8.f));
 	enable(rsx::method_registers[NV4097_SET_LINE_SMOOTH_ENABLE], GL_LINE_SMOOTH);
@@ -716,18 +719,12 @@ void GLGSRender::begin()
 	//NV4097_SET_ANISO_SPREAD
 
 	//TODO
-	glcheck(glFogi(GL_FOG_MODE, rsx::method_registers[NV4097_SET_FOG_MODE]));
+	//glcheck(glFogi(GL_FOG_MODE, rsx::method_registers[NV4097_SET_FOG_MODE]));
 	//NV4097_SET_FOG_PARAMS
 
 	glcheck(enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_POINT_ENABLE], GL_POLYGON_OFFSET_POINT));
 	glcheck(enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_LINE_ENABLE], GL_POLYGON_OFFSET_LINE));
 	glcheck(enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_FILL_ENABLE], GL_POLYGON_OFFSET_FILL));
-
-	if (enable(rsx::method_registers[NV4097_SET_DEPTH_TEST_ENABLE], GL_DEPTH_TEST))
-	{
-		glcheck(glDepthFunc(rsx::method_registers[NV4097_SET_DEPTH_FUNC]));
-		glcheck(glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]));
-	}
 
 	glcheck(glPolygonOffset((f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR],
 		(f32&)rsx::method_registers[NV4097_SET_POLYGON_OFFSET_BIAS]));
@@ -804,6 +801,9 @@ void GLGSRender::end()
 		LOG_WARNING(RSX, "vertex_array_draw_info & vertex_index_array is not null");
 	}
 
+	draw_fbo.bind();
+	m_program.use();
+
 	static const u32 gl_types[] =
 	{
 		GL_SHORT,
@@ -836,6 +836,96 @@ void GLGSRender::end()
 		load_vertex_data(info.first, info.count);
 	}
 
+	//merge all vertex arrays
+	std::vector<u8> vertex_arrays_data;
+	size_t vertex_arrays_offsets[rsx::limits::vertex_count];
+
+#if	DUMP_VERTEX_DATA
+	fs::file dump("VertexDataArray.dump", o_create | o_write);
+#endif
+
+	for (int index = 0; index < rsx::limits::vertex_count; ++index)
+	{
+		size_t position = vertex_arrays_data.size();
+		vertex_arrays_offsets[index] = position;
+
+		if (vertex_arrays[index].data.empty())
+			continue;
+
+		size_t size = vertex_arrays[index].data.size();
+		vertex_arrays_data.resize(position + size);
+
+#if	DUMP_VERTEX_DATA
+		auto &vertex_info = vertex_arrays_info[index];
+		dump.write(fmt::format("VertexData[%d]:\n", index));
+		switch (vertex_info.type)
+		{
+		case CELL_GCM_VERTEX_S1:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); j += 2)
+			{
+				dump.write(fmt::format("%d\n", *(u16*)&vertex_arrays[index].data[j]));
+				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_F:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); j += 4)
+			{
+				dump.write(fmt::Format("%.01f\n", *(float*)&vertex_arrays[index].data[j]));
+				if (!(((j + 4) / 4) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_SF:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); j += 2)
+			{
+				dump.write(fmt::Format("%.01f\n", *(float*)&vertex_arrays[index].data[j]));
+				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_UB:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); ++j)
+			{
+				dump.write(fmt::Format("%d\n", vertex_arrays[index].data[j]));
+				if (!((j + 1) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+
+		case CELL_GCM_VERTEX_S32K:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); j += 2)
+			{
+				dump.write(fmt::Format("%d\n", *(u16*)&vertex_arrays[index].data[j]));
+				if (!(((j + 2) / 2) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+
+			// case CELL_GCM_VERTEX_CMP:
+
+		case CELL_GCM_VERTEX_UB256:
+			for (u32 j = 0; j < vertex_arrays[index].data.size(); ++j)
+			{
+				dump.write(fmt::Format("%d\n", vertex_arrays[index].data[j]));
+				if (!((j + 1) % vertex_info.size)) dump.write("\n");
+			}
+			break;
+		}
+
+		dump.write("\n");
+#endif
+
+		memcpy(vertex_arrays_data.data() + position, vertex_arrays[index].data.data(), size);
+	}
+
+	gl::vao vao;
+	vao.create();
+
+	gl::buffer vbo;
+	vbo.create(vertex_arrays_data.size(), vertex_arrays_data.data());
+
+	vao.array_buffer = vbo;
+	vao.bind();
+
 	for (int index = 0; index < rsx::limits::vertex_count; ++index)
 	{
 		auto &vertex_info = vertex_arrays_info[index];
@@ -845,8 +935,6 @@ void GLGSRender::end()
 			//disabled
 			continue;
 		}
-
-		auto &vertex_data = vertex_arrays[index];
 
 		if (vertex_info.type < 1 || vertex_info.type > 7)
 		{
@@ -858,18 +946,20 @@ void GLGSRender::end()
 		bool normalized = gl_normalized[vertex_info.type - 1];
 
 		glcheck(glEnableVertexAttribArray(index));
-		glcheck(glVertexAttribPointer(index, vertex_info.size, gltype, normalized, 0, vertex_data.data.data()));
+		glcheck(glVertexAttribPointer(index, vertex_info.size, gltype, normalized, 0, (void*)vertex_arrays_offsets[index]));
 	}
 
-	u32 draw_mode = rsx::method_registers[NV4097_SET_BEGIN_END] - 1;
 	for (auto &info : vertex_array_draw_info)
 	{
-		glcheck(glDrawArrays(draw_mode, info.first, info.count));
+		glcheck(glDrawArrays(draw_mode - 1, info.first, info.count));
 	}
+
+	u32 indexed_type = rsx::method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
 
 	for (auto &info : vertex_index_array.entries)
 	{
-		glcheck(glDrawElements(draw_mode, info.first, info.count, vertex_index_array.data.data()));
+		glcheck(glDrawElements(draw_mode - 1, info.count,
+			(indexed_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT), vertex_index_array.data.data()));
 	}
 
 	write_buffers();
@@ -893,7 +983,7 @@ void GLGSRender::oninit_thread()
 	gl::init();
 
 	is_intel_vendor = strstr((const char*)glGetString(GL_VENDOR), "Intel");
-	
+
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 }
 
@@ -920,10 +1010,6 @@ void GLGSRender::onexit_thread()
 		m_flip_tex_color.remove();
 }
 
-void GLGSRender::onreset()
-{
-}
-
 void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 {
 	u16 clear_x = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL];
@@ -931,10 +1017,7 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 	u16 clear_w = rsx::method_registers[NV4097_SET_CLEAR_RECT_HORIZONTAL] >> 16;
 	u16 clear_h = rsx::method_registers[NV4097_SET_CLEAR_RECT_VERTICAL] >> 16;
 
-	if (clear_w || clear_h)
-	{
-		glViewport(clear_x, clear_y, clear_w, clear_h);
-	}
+	//glScissor(clear_x, clear_y, clear_w, clear_h);
 
 	GLbitfield mask = 0;
 
@@ -947,7 +1030,6 @@ void nv4097_clear_surface(u32 arg, GLGSRender* renderer)
 
 		glDepthMask(GL_TRUE);
 		glClearDepth(double(clear_depth) / max_depth_value);
-
 		mask |= GLenum(gl::buffers::depth);
 	}
 
@@ -1005,6 +1087,105 @@ bool GLGSRender::domethod(u32 cmd, u32 arg)
 
 bool GLGSRender::load_program()
 {
+#if 1
+	RSXVertexProgram vertex_program;
+	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+	vertex_program.data.reserve((512 - transform_program_start) * 4);
+
+	for (int i = transform_program_start; i < 512; ++i)
+	{
+		vertex_program.data.resize((i - transform_program_start) * 4 + 4);
+		memcpy(vertex_program.data.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+
+		D3 d3;
+		d3.HEX = transform_program[i * 4 + 3];
+
+		if (d3.end)
+			break;
+	}
+
+	RSXFragmentProgram fragment_program;
+	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+	fragment_program.offset = shader_program & ~0x3;
+	fragment_program.addr = rsx::get_address(fragment_program.offset, (shader_program & 0x3) - 1);
+	fragment_program.ctrl = rsx::method_registers[NV4097_SET_SHADER_CONTROL];
+
+	glcheck(GLProgram *result = m_prog_buffer.getGraphicPipelineState(&vertex_program, &fragment_program, nullptr, nullptr));
+	m_program.set_id(result->id);
+	glcheck(m_program.use());
+
+#else
+	std::vector<u32> vertex_program;
+	u32 transform_program_start = rsx::method_registers[NV4097_SET_TRANSFORM_PROGRAM_START];
+	vertex_program.reserve((512 - transform_program_start) * 4);
+
+	for (int i = transform_program_start; i < 512; ++i)
+	{
+		vertex_program.resize((i - transform_program_start) * 4 + 4);
+		memcpy(vertex_program.data() + (i - transform_program_start) * 4, transform_program + i * 4, 4 * sizeof(u32));
+
+		D3 d3;
+		d3.HEX = transform_program[i * 4 + 3];
+
+		if (d3.end)
+			break;
+	}
+
+	u32 shader_program = rsx::method_registers[NV4097_SET_SHADER_PROGRAM];
+
+	std::string fp_shader; ParamArray fp_parr; u32 fp_size;
+	GLFragmentDecompilerThread decompile_fp(fp_shader, fp_parr,
+		rsx::get_address(shader_program & ~0x3, (shader_program & 0x3) - 1), fp_size, rsx::method_registers[NV4097_SET_SHADER_CONTROL]);
+
+	std::string vp_shader; ParamArray vp_parr;
+	GLVertexDecompilerThread decompile_vp(vertex_program, vp_shader, vp_parr);
+	decompile_fp.Task();
+	decompile_vp.Task();
+
+	LOG_NOTICE(RSX, "fp: %s", fp_shader.c_str());
+	LOG_NOTICE(RSX, "vp: %s", vp_shader.c_str());
+
+	static bool first = true;
+	gl::glsl::shader fp(gl::glsl::shader::type::fragment, fp_shader);
+	gl::glsl::shader vp(gl::glsl::shader::type::vertex, vp_shader);
+
+	(m_program.recreate() += {fp.compile(), vp.compile()}).make();
+#endif
+
+	f32 viewport_x = f32(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
+	f32 viewport_y = f32(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] & 0xffff);
+	f32 viewport_w = f32(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] >> 16);
+	f32 viewport_h = f32(rsx::method_registers[NV4097_SET_VIEWPORT_VERTICAL] >> 16);
+
+	f32 viewport_offset_x = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 0];
+	f32 viewport_offset_y = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 1];
+	f32 viewport_offset_z = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 2];
+	f32 viewport_offset_w = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_OFFSET + 3];
+
+	f32 viewport_scale_x = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 0];
+	f32 viewport_scale_y = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 1];
+	f32 viewport_scale_z = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 2];
+	f32 viewport_scale_w = (f32&)rsx::method_registers[NV4097_SET_VIEWPORT_SCALE + 3];
+
+	glm::mat4 scaleOffsetMat(1.f);
+
+	//Scale
+	scaleOffsetMat[0][0] = viewport_scale_x / (viewport_w / 2.f);
+	scaleOffsetMat[1][1] = viewport_scale_y / (viewport_h / 2.f);
+	scaleOffsetMat[2][2] = viewport_scale_z;
+
+	// Offset
+	scaleOffsetMat[0][3] = viewport_offset_x / (viewport_w / 2.f) - 1.f;
+	scaleOffsetMat[1][3] = viewport_offset_y / (viewport_h / 2.f) - 1.f;
+	scaleOffsetMat[2][3] = viewport_offset_z - .5f;
+
+	glcheck(m_program.uniforms["scaleOffsetMat"] = scaleOffsetMat);
+
+	for (auto &constant : transform_constants)
+	{
+		glcheck(m_program.uniforms[fmt::format("vc[%u]", constant.first)] = constant.second);
+	}
+
 	return true;
 }
 
@@ -1087,19 +1268,20 @@ void GLGSRender::init_buffers()
 {
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
 
-	/*
 	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
 	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
 
 	u32 clip_width = clip_horizontal >> 16;
 	u32 clip_height = clip_vertical >> 16;
-	u32 clip_x = clip_vertical;
-	u32 clip_y = clip_horizontal;
-	*/
+	u32 clip_x = clip_horizontal;
+	u32 clip_y = clip_vertical;
 
 	if (!draw_fbo || m_surface.format != surface_format)
 	{
 		m_surface.unpack(surface_format);
+		m_surface.width = clip_width;
+		m_surface.height = clip_height;
+
 		draw_fbo.recreate();
 		m_draw_tex_depth_stencil.recreate(gl::texture::target::texture2D);
 
@@ -1423,7 +1605,6 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_BLEND);
 		glDisable(GL_LOGIC_OP);
 		glDisable(GL_CULL_FACE);
-		glDisable(GL_DITHER);
 
 		glcheck(m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
 			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)));
