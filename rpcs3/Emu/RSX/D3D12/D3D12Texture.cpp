@@ -81,6 +81,72 @@ D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
 	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 }
 
+static
+DXGI_FORMAT getDXGIFormat(int format)
+{
+	switch (format)
+	{
+
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+	default:
+		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
+		return DXGI_FORMAT();
+	case CELL_GCM_TEXTURE_B8:
+		return DXGI_FORMAT_R8_UNORM;
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+		return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case CELL_GCM_TEXTURE_A4R4G4B4:
+		return DXGI_FORMAT_B4G4R4A4_UNORM;
+	case CELL_GCM_TEXTURE_R5G6B5:
+		return DXGI_FORMAT_B5G6R5_UNORM;
+	case CELL_GCM_TEXTURE_A8R8G8B8:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		return DXGI_FORMAT_BC1_UNORM;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		return DXGI_FORMAT_BC2_UNORM;
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		return DXGI_FORMAT_BC3_UNORM;
+	case CELL_GCM_TEXTURE_G8B8:
+		return DXGI_FORMAT_G8R8_G8B8_UNORM;
+	case CELL_GCM_TEXTURE_R6G5B5:
+		// Not native
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+		return DXGI_FORMAT_R32_UINT;
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	case CELL_GCM_TEXTURE_DEPTH16:
+		return DXGI_FORMAT_R16_UNORM;
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		return DXGI_FORMAT_R16_FLOAT;
+	case CELL_GCM_TEXTURE_X16:
+		return DXGI_FORMAT_R16_UNORM;
+	case CELL_GCM_TEXTURE_Y16_X16:
+		return DXGI_FORMAT_R16G16_UNORM;
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+		return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		return DXGI_FORMAT_R16G16B16A16_FLOAT;
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		return DXGI_FORMAT_R32G32B32A32_FLOAT;
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+		return DXGI_FORMAT_B5G5R5A1_UNORM;
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		return DXGI_FORMAT_G8R8_G8B8_UNORM;
+	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		return DXGI_FORMAT_R8G8_B8G8_UNORM;
+	}
+}
+
 /**
  * Create a texture residing in default heap and generate uploads commands in commandList,
  * using a temporary texture buffer.
@@ -95,30 +161,16 @@ ID3D12Resource *uploadSingleTexture(
 {
 	ID3D12Resource *vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();
-	DXGI_FORMAT dxgiFormat;
+
 	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	DXGI_FORMAT dxgiFormat = getDXGIFormat(format);
 
 	const u32 texaddr = GetAddress(texture.GetOffset(), texture.GetLocation());
 
 	bool is_swizzled = !(texture.GetFormat() & CELL_GCM_TEXTURE_LN);
 	switch (format)
 	{
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-	case CELL_GCM_TEXTURE_G8B8:
-	case CELL_GCM_TEXTURE_R6G5B5:
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-	case CELL_GCM_TEXTURE_DEPTH16:
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-	case CELL_GCM_TEXTURE_X16:
-	case CELL_GCM_TEXTURE_Y16_X16:
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
@@ -126,53 +178,104 @@ ID3D12Resource *uploadSingleTexture(
 	default:
 		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
 		break;
+	case CELL_GCM_TEXTURE_B8:
+		blockSizeInByte = 1;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_A1R5G5B5:
+		blockSizeInByte = 2;
+		blockHeightInPixel = 1, blockWidthInPixel = 1;
+		break;
 	case CELL_GCM_TEXTURE_A4R4G4B4:
-		dxgiFormat = DXGI_FORMAT_B4G4R4A4_UNORM;
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
 		break;
 	case CELL_GCM_TEXTURE_R5G6B5:
-		dxgiFormat = DXGI_FORMAT_B5G6R5_UNORM;
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
 		break;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-		blockSizeInByte = 4;
-		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		break;
 	case CELL_GCM_TEXTURE_A8R8G8B8:
-		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		dxgiFormat = DXGI_FORMAT_BC1_UNORM;
 		blockSizeInByte = 8;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		dxgiFormat = DXGI_FORMAT_BC2_UNORM;
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		dxgiFormat = DXGI_FORMAT_BC3_UNORM;
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
 		break;
-	case CELL_GCM_TEXTURE_B8:
-		dxgiFormat = DXGI_FORMAT_R8_UNORM;
-		blockSizeInByte = 1;
+	case CELL_GCM_TEXTURE_G8B8:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_R6G5B5:
+		// Not native
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_DEPTH24_D8:
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_DEPTH16:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_X16:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_Y16_X16:
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_R5G5B5A1:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		blockSizeInByte = 8;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		blockSizeInByte = 16;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_X32_FLOAT:
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_D1R5G5B5:
+		blockSizeInByte = 2;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		blockSizeInByte = 4;
+		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		break;
+	case CELL_GCM_TEXTURE_D8R8G8B8:
+		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		dxgiFormat = DXGI_FORMAT_G8R8_G8B8_UNORM;
 		blockSizeInByte = 4;
 		blockWidthInPixel = 2, blockHeightInPixel = 2;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		dxgiFormat = DXGI_FORMAT_R8G8_B8G8_UNORM;
 		blockSizeInByte = 4;
 		blockWidthInPixel = 2, blockHeightInPixel = 2;
 		break;
@@ -300,86 +403,9 @@ size_t D3D12GSRender::UploadTextures()
 
 		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
 
-		DXGI_FORMAT dxgiFormat;
-		size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-
+		DXGI_FORMAT dxgiFormat = getDXGIFormat(format);
 		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
-		switch (format)
-		{
-		case CELL_GCM_TEXTURE_A1R5G5B5:
-		case CELL_GCM_TEXTURE_G8B8:
-		case CELL_GCM_TEXTURE_R6G5B5:
-		case CELL_GCM_TEXTURE_DEPTH24_D8:
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		case CELL_GCM_TEXTURE_DEPTH16:
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		case CELL_GCM_TEXTURE_X16:
-		case CELL_GCM_TEXTURE_Y16_X16:
-		case CELL_GCM_TEXTURE_R5G5B5A1:
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		case CELL_GCM_TEXTURE_X32_FLOAT:
-		case CELL_GCM_TEXTURE_D1R5G5B5:
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		default:
-			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-			break;
-		case CELL_GCM_TEXTURE_A4R4G4B4:
-			dxgiFormat = DXGI_FORMAT_B4G4R4A4_UNORM;
-			blockSizeInByte = 2;
-			blockWidthInPixel = 1, blockHeightInPixel = 1;
-			break;
-		case CELL_GCM_TEXTURE_R5G6B5:
-			dxgiFormat = DXGI_FORMAT_B5G6R5_UNORM;
-			blockSizeInByte = 2;
-			blockWidthInPixel = 1, blockHeightInPixel = 1;
-			break;
-		case CELL_GCM_TEXTURE_D8R8G8B8:
-			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-			blockSizeInByte = 4;
-			blockWidthInPixel = 1, blockHeightInPixel = 1;
-			break;
-		case CELL_GCM_TEXTURE_A8R8G8B8:
-			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-			blockSizeInByte = 4;
-			blockWidthInPixel = 1, blockHeightInPixel = 1;
-			break;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-			dxgiFormat = DXGI_FORMAT_BC1_UNORM;
-			blockSizeInByte = 8;
-			blockWidthInPixel = 4, blockHeightInPixel = 4;
-			break;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-			dxgiFormat = DXGI_FORMAT_BC2_UNORM;
-			blockSizeInByte = 16;
-			blockWidthInPixel = 4, blockHeightInPixel = 4;
-			break;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-			dxgiFormat = DXGI_FORMAT_BC3_UNORM;
-			blockSizeInByte = 16;
-			blockWidthInPixel = 4, blockHeightInPixel = 4;
-			break;
-		case CELL_GCM_TEXTURE_B8:
-			dxgiFormat = DXGI_FORMAT_R8_UNORM;
-			blockSizeInByte = 1;
-			blockWidthInPixel = 1, blockHeightInPixel = 1;
-			break;
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: 
-			dxgiFormat = DXGI_FORMAT_G8R8_G8B8_UNORM;
-			blockSizeInByte = 4;
-			blockWidthInPixel = 2, blockHeightInPixel = 2;
-			break;
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			dxgiFormat = DXGI_FORMAT_R8G8_B8G8_UNORM;
-			blockSizeInByte = 4;
-			blockWidthInPixel = 2, blockHeightInPixel = 2;
-			break;
-		}
 
 		ID3D12Resource *vramTexture;
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
@@ -415,21 +441,6 @@ size_t D3D12GSRender::UploadTextures()
 
 		switch (format)
 		{
-		case CELL_GCM_TEXTURE_A1R5G5B5:
-		case CELL_GCM_TEXTURE_G8B8:
-		case CELL_GCM_TEXTURE_R6G5B5:
-		case CELL_GCM_TEXTURE_DEPTH24_D8:
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		case CELL_GCM_TEXTURE_DEPTH16:
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		case CELL_GCM_TEXTURE_X16:
-		case CELL_GCM_TEXTURE_Y16_X16:
-		case CELL_GCM_TEXTURE_R5G5B5A1:
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		case CELL_GCM_TEXTURE_X32_FLOAT:
-		case CELL_GCM_TEXTURE_D1R5G5B5:
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
@@ -437,32 +448,18 @@ size_t D3D12GSRender::UploadTextures()
 		default:
 			LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
 			break;
+		case CELL_GCM_TEXTURE_B8:
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
+			break;
+		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
-		case CELL_GCM_TEXTURE_D8R8G8B8:
-		{
-			const int RemapValue[4] =
-			{
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
-			};
-
-			u8 remap_a = m_textures[i].GetRemap() & 0x3;
-			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
-			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
-			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
-
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-				RemapValue[remap_a],
-				RemapValue[remap_r],
-				RemapValue[remap_g],
-				RemapValue[remap_b]);
-			break;
-		}
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		{
 			const int RemapValue[4] =
@@ -491,14 +488,45 @@ size_t D3D12GSRender::UploadTextures()
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_DEPTH24_D8:
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
-		case CELL_GCM_TEXTURE_B8:
-			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		{
+			const int RemapValue[4] =
+			{
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
+				D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0
+			};
+
+			u8 remap_a = m_textures[i].GetRemap() & 0x3;
+			u8 remap_r = (m_textures[i].GetRemap() >> 2) & 0x3;
+			u8 remap_g = (m_textures[i].GetRemap() >> 4) & 0x3;
+			u8 remap_b = (m_textures[i].GetRemap() >> 6) & 0x3;
+
+			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
+				RemapValue[remap_a],
+				RemapValue[remap_r],
+				RemapValue[remap_g],
+				RemapValue[remap_b]);
+			break;
+		}
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
