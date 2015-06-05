@@ -597,6 +597,48 @@ static D3D12_LOGIC_OP getLogicOp(u32 op)
 	}
 }
 
+static D3D12_STENCIL_OP getStencilOp(u32 op)
+{
+	switch (op)
+	{
+	case GL_KEEP:
+		return D3D12_STENCIL_OP_KEEP;
+	case GL_ZERO:
+		return D3D12_STENCIL_OP_ZERO;
+	case GL_REPLACE:
+		return D3D12_STENCIL_OP_REPLACE;
+	case GL_INCR:
+		return D3D12_STENCIL_OP_INCR;
+	case GL_DECR:
+		return D3D12_STENCIL_OP_DECR;
+	case GL_INVERT:
+		return D3D12_STENCIL_OP_INVERT;
+	}
+}
+
+static D3D12_COMPARISON_FUNC getStencilFunc(u32 op)
+{
+	switch (op)
+	{
+	case GL_NEVER:
+		return D3D12_COMPARISON_FUNC_NEVER;
+	case GL_LESS:
+		return D3D12_COMPARISON_FUNC_LESS;
+	case GL_LEQUAL:
+		return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case GL_GREATER:
+		return D3D12_COMPARISON_FUNC_GREATER;
+	case GL_GEQUAL:
+		return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case GL_EQUAL:
+		return D3D12_COMPARISON_FUNC_EQUAL;
+	case GL_NOTEQUAL:
+		return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case GL_ALWAYS:
+		return D3D12_COMPARISON_FUNC_ALWAYS;
+	}
+}
+
 bool D3D12GSRender::LoadProgram()
 {
 	if (!m_cur_fragment_prog)
@@ -717,7 +759,32 @@ bool D3D12GSRender::LoadProgram()
 		LOG_ERROR(RSX, "Bad surface color target: %d", m_surface_color_target);
 	}
 
-	prop.depthEnabled = m_set_depth_test;
+	prop.DepthStencil.DepthEnable = m_set_depth_test;
+	prop.DepthStencil.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	prop.DepthStencil.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	prop.DepthStencil.StencilEnable = m_set_stencil_test;
+	prop.DepthStencil.StencilReadMask = m_stencil_func_mask;
+	prop.DepthStencil.StencilWriteMask = m_set_stencil_mask;
+	prop.DepthStencil.FrontFace.StencilPassOp = getStencilOp(m_stencil_zpass);
+	prop.DepthStencil.FrontFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
+	prop.DepthStencil.FrontFace.StencilFailOp = getStencilOp(m_stencil_fail);
+	prop.DepthStencil.FrontFace.StencilFunc = getStencilFunc(m_stencil_func);
+
+	if (m_set_two_sided_stencil_test_enable)
+	{
+		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_stencil_fail);
+		prop.DepthStencil.BackFace.StencilFunc = getStencilFunc(m_stencil_func);
+		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_stencil_zpass);
+		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
+	}
+	else
+	{
+		prop.DepthStencil.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+		prop.DepthStencil.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		prop.DepthStencil.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		prop.DepthStencil.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	}
+
 
 	prop.IASet = m_IASet;
 
@@ -774,6 +841,7 @@ void D3D12GSRender::ExecCMD()
 	}
 
 	commandList->SetGraphicsRootSignature(m_rootSignatures[m_PSO->second]);
+	commandList->OMSetStencilRef(m_stencil_func_ref);
 
 	// Constants
 	setScaleOffset();

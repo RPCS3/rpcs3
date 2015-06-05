@@ -17,7 +17,7 @@ struct D3D12PipelineProperties
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
 	D3D12_BLEND_DESC Blend;
 	unsigned numMRT : 3;
-	bool depthEnabled : 1;
+	D3D12_DEPTH_STENCIL_DESC DepthStencil;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
@@ -37,8 +37,8 @@ struct D3D12PipelineProperties
 			if (a.SemanticIndex != b.SemanticIndex)
 				return false;
 		}
-		// TODO: blend
-		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && depthEnabled == in.depthEnabled;
+		// TODO: blend and depth stencil
+		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
 	}
 };
 
@@ -156,22 +156,10 @@ struct D3D12Traits
 			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
 		};
 
-		static D3D12_DEPTH_STENCIL_DESC CD3D12_DEPTH_STENCIL_DESC =
-		{
-			TRUE,
-			D3D12_DEPTH_WRITE_MASK_ALL,
-			D3D12_COMPARISON_FUNC_LESS_EQUAL,
-			FALSE,
-			D3D12_DEFAULT_STENCIL_READ_MASK,
-			D3D12_DEFAULT_STENCIL_WRITE_MASK,
-		};
-
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
-		graphicPipelineStateDesc.DepthStencilState = CD3D12_DEPTH_STENCIL_DESC;
+		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;
 		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
 		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;
-
-		graphicPipelineStateDesc.DepthStencilState.DepthEnable = pipelineProperties.depthEnabled;
 
 		graphicPipelineStateDesc.NumRenderTargets = pipelineProperties.numMRT;
 		for (unsigned i = 0; i < pipelineProperties.numMRT; i++)
