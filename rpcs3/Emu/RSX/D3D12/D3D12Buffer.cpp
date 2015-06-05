@@ -109,6 +109,8 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 			IAElement.InputSlot = (UINT)inputSlot;
 			IAElement.Format = getFormat(vertexData.type - 1, vertexData.size);
 			IAElement.AlignedByteOffset = (UINT)(vertexData.addr - vertexBufferFormat[inputSlot].range.first);
+			IAElement.InputSlotClass = (vertexData.addr > 0) ? D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+			IAElement.InstanceDataStepRate = (vertexData.addr > 0) ? 0 : 0;
 			result.push_back(IAElement);
 		}
 	}
