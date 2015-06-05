@@ -94,7 +94,7 @@ struct VertexBufferFormat
 	size_t stride;
 };
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *vertexData)
+std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const std::vector<VertexBufferFormat> &vertexBufferFormat, const RSXVertexData *m_vertex_data)
 {
 	std::vector<D3D12_INPUT_ELEMENT_DESC> result;
 
@@ -102,12 +102,13 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> getIALayout(ID3D12Device *device, const st
 	{
 		for (size_t attributeId : vertexBufferFormat[inputSlot].attributeId)
 		{
+			const RSXVertexData &vertexData = m_vertex_data[attributeId];
 			D3D12_INPUT_ELEMENT_DESC IAElement = {};
 			IAElement.SemanticName = "TEXCOORD";
 			IAElement.SemanticIndex = (UINT)attributeId;
 			IAElement.InputSlot = (UINT)inputSlot;
-			IAElement.Format = getFormat(vertexData[attributeId].type - 1, vertexData[attributeId].size);
-			IAElement.AlignedByteOffset = (UINT)(vertexData[attributeId].addr - vertexBufferFormat[inputSlot].range.first);
+			IAElement.Format = getFormat(vertexData.type - 1, vertexData.size);
+			IAElement.AlignedByteOffset = (UINT)(vertexData.addr - vertexBufferFormat[inputSlot].range.first);
 			result.push_back(IAElement);
 		}
 	}
@@ -148,17 +149,19 @@ bool overlaps(const std::pair<size_t, size_t> &range1, const std::pair<size_t, s
 }
 
 static
-std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
+std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_data)
 {
 	std::vector<VertexBufferFormat> Result;
 	for (size_t i = 0; i < 32; ++i)
 	{
-		if (!m_vertex_data[i].IsEnabled()) continue;
-		size_t elementCount = m_vertex_data[i].data.size() / (m_vertex_data[i].size * m_vertex_data[i].GetTypeSize());
+		const RSXVertexData &vertexData = m_vertex_data[i];
+		if (!vertexData.IsEnabled()) continue;
+
+		size_t elementCount = vertexData.data.size() / (vertexData.size * vertexData.GetTypeSize());
 		// If there is a single element, stride is 0, use the size of element instead
-		size_t stride = m_vertex_data[i].stride;
-		size_t elementSize = m_vertex_data[i].GetTypeSize();
-		std::pair<size_t, size_t> range = std::make_pair(m_vertex_data[i].addr, m_vertex_data[i].addr + elementSize + elementCount * stride);
+		size_t stride = vertexData.stride;
+		size_t elementSize = vertexData.GetTypeSize();
+		std::pair<size_t, size_t> range = std::make_pair(vertexData.addr, vertexData.addr + elementSize * vertexData.size + (elementCount - 1) * stride - 1);
 		bool isMerged = false;
 
 		for (VertexBufferFormat &vbf : Result)
@@ -189,7 +192,7 @@ std::vector<VertexBufferFormat> FormatVertexData(RSXVertexData *m_vertex_data)
 static
 ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap &vertexIndexHeap)
 {
-	size_t subBufferSize = vbf.range.second - vbf.range.first;
+	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	assert(vertexIndexHeap.canAlloc(subBufferSize));
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
@@ -260,7 +263,7 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
 	{
 		const VertexBufferFormat &vbf = vertexBufferFormat[buffer];
-		size_t subBufferSize = vbf.range.second - vbf.range.first;
+		size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 
 		ID3D12Resource *vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
 
