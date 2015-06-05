@@ -1608,6 +1608,11 @@ namespace gl
 
 			shader() = default;
 
+			shader(GLuint id)
+			{
+				set_id(id);
+			}
+
 			shader(type type_)
 			{
 				create(type_);
@@ -1766,7 +1771,7 @@ namespace gl
 					return result;
 				}
 
-				int texture(const std::string &name, int active_texture, const ::gl::texture& texture)
+				int texture(const std::string &name, int active_texture, const gl::texture& texture)
 				{
 					glActiveTexture(GL_TEXTURE0 + active_texture);
 					texture.bind();
@@ -1775,7 +1780,7 @@ namespace gl
 					return active_texture;
 				}
 
-				int texture(const std::string &name, const ::gl::texture& tex)
+				int texture(const std::string &name, const gl::texture& tex)
 				{
 					int atex;
 					auto finded = locations.find(name);
@@ -1917,6 +1922,7 @@ namespace gl
 
 			void set_id(uint id)
 			{
+				uniforms.clear();
 				m_id = id;
 			}
 
@@ -1943,5 +1949,83 @@ namespace gl
 				return *this;
 			}
 		};
+
+		class shader_view : public shader
+		{
+		public:
+			shader_view(GLuint id) : shader(id)
+			{
+			}
+
+			~shader_view()
+			{
+				set_id(0);
+			}
+		};
+
+		class program_view : public program
+		{
+		public:
+			program_view(GLuint id) : program(id)
+			{
+			}
+
+			~program_view()
+			{
+				set_id(0);
+			}
+		};
+	}
+
+	class texture_view : public texture
+	{
+	public:
+		texture_view(texture::target target_, GLuint id) : texture(target_, id)
+		{
+		}
+
+		~texture_view()
+		{
+			set_id(0);
+		}
+	};
+
+	class fbo_view : public fbo
+	{
+	public:
+		fbo_view(GLuint id) : fbo_view(id)
+		{
+		}
+
+		~fbo_view()
+		{
+			set_id(0);
+		}
+	};
+
+	class rbo_view : public rbo
+	{
+	public:
+		rbo_view(GLuint id) : rbo_view(id)
+		{
+		}
+
+		~rbo_view()
+		{
+			set_id(0);
+		}
+	};
+
+	class buffer_view : public buffer
+	{
+	public:
+		buffer_view(GLuint id) : buffer_view(id)
+		{
+		}
+
+		~buffer_view()
+		{
+			set_id(0);
+		}
 	};
 }

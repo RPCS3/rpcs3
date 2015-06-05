@@ -241,6 +241,55 @@ namespace rsx
 
 			rsx->end();
 		}
+
+		__forceinline void get_report(thread* rsx, u32 arg)
+		{
+			u8 type = arg >> 24;
+			u32 offset = arg & 0xffffff;
+
+			u32 value;
+			switch (type)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+			case CELL_GCM_ZCULL_STATS:
+			case CELL_GCM_ZCULL_STATS1:
+			case CELL_GCM_ZCULL_STATS2:
+			case CELL_GCM_ZCULL_STATS3:
+				value = 0;
+				LOG_WARNING(RSX, "NV4097_GET_REPORT: Unimplemented type %d", type);
+				break;
+
+			default:
+				value = 0;
+				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
+				break;
+			}
+
+			// NOTE: DMA broken, implement proper lpar mapping (sys_rsx)
+			//dma_write64(dma_report, offset + 0x0, rsx->timestamp());
+			//dma_write32(dma_report, offset + 0x8, value);
+			//dma_write32(dma_report, offset + 0xc, 0);
+
+			vm::write64(rsx->local_mem_addr + offset + 0x0, rsx->timestamp());
+			vm::write32(rsx->local_mem_addr + offset + 0x8, value);
+			vm::write32(rsx->local_mem_addr + offset + 0xc, 0);
+		}
+
+		__forceinline void clear_report_value(thread* rsx, u32 arg)
+		{
+			switch (arg)
+			{
+			case CELL_GCM_ZPASS_PIXEL_CNT:
+				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZPASS_PIXEL_CNT");
+				break;
+			case CELL_GCM_ZCULL_STATS:
+				LOG_WARNING(RSX, "TODO: NV4097_CLEAR_REPORT_VALUE: ZCULL_STATS");
+				break;
+			default:
+				LOG_ERROR(RSX, "NV4097_CLEAR_REPORT_VALUE: Bad type: %d", arg);
+				break;
+			}
+		}
 	}
 
 	namespace nv308a
@@ -647,6 +696,8 @@ namespace rsx
 			bind_16(0, NV4097_SET_VERTEX_DATA4S_M + 1, 2, nv4097::set_vertex_data4s_m);
 			bind_8(0, NV4097_SET_TRANSFORM_CONSTANT + 3, 4, nv4097::set_transform_constant);
 			bind_128(0, NV4097_SET_TRANSFORM_PROGRAM + 3, 4, nv4097::set_transform_program);
+			bind_cpu_only<NV4097_GET_REPORT, nv4097::get_report>();
+			bind_cpu_only<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
 
 			//NV308A
 			bind_512(0, NV308A_COLOR, 1, nv308a::color);
@@ -977,12 +1028,6 @@ namespace rsx
 
 				if (auto method = methods[reg])
 					method(this, value);
-
-				if (rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] != 0xffffffff)
-				{
-					LOG_NOTICE(Log::RSX, "NV4097_SET_ZSTENCIL_CLEAR_VALUE: %s(0x%x) = 0x%x", get_method_name(reg).c_str(), reg, value);
-					rsx::method_registers[NV4097_SET_ZSTENCIL_CLEAR_VALUE] = 0xffffffff;
-				}
 			}
 
 			ctrl->get.atomic_op([count](be_t<u32>& value)
@@ -1009,6 +1054,12 @@ namespace rsx
 		LOG_NOTICE(RSX, "RSX thread ended");
 
 		onexit_thread();
+	}
+
+	u64 thread::timestamp() const
+	{
+		// Get timestamp, and convert it from microseconds to nanoseconds
+		return get_system_time() * 1000;
 	}
 
 	void thread::reset()
@@ -1077,7 +1128,7 @@ namespace rsx
 		// Construct Textures
 		for (int i = 0; i < 16; i++)
 		{
-			m_textures[i].init(i);
+			textures[i].init(i);
 		}
 	}
 

@@ -315,13 +315,13 @@ void RSXDebugger::OnClickBuffer(wxMouseEvent& event)
 	if (event.GetId() == p_buffer_colorD->GetId()) SHOW_BUFFER(3);
 	if (event.GetId() == p_buffer_tex->GetId())
 	{
-		u8 location = render.m_textures[m_cur_texture].location();
-		if(location <= 1 && vm::check_addr(rsx::get_address(render.m_textures[m_cur_texture].offset(), location))
-			&& render.m_textures[m_cur_texture].width() && render.m_textures[m_cur_texture].height())
+		u8 location = render.textures[m_cur_texture].location();
+		if (location <= 1 && vm::check_addr(rsx::get_address(render.textures[m_cur_texture].offset(), location))
+			&& render.textures[m_cur_texture].width() && render.textures[m_cur_texture].height())
 			MemoryViewerPanel::ShowImage(this,
-				rsx::get_address(render.m_textures[m_cur_texture].offset(), location), 1,
-				render.m_textures[m_cur_texture].width(),
-				render.m_textures[m_cur_texture].height(), false);
+			rsx::get_address(render.textures[m_cur_texture].offset(), location), 1,
+				render.textures[m_cur_texture].width(),
+				render.textures[m_cur_texture].height(), false);
 	}
 
 #undef SHOW_BUFFER
@@ -452,15 +452,15 @@ void RSXDebugger::GetBuffers()
 	}
 
 	// Draw Texture
-	if(!render.m_textures[m_cur_texture].enabled())
+	if (!render.textures[m_cur_texture].enabled())
 		return;
 
-	u32 offset = render.m_textures[m_cur_texture].offset();
+	u32 offset = render.textures[m_cur_texture].offset();
 
 	if(!offset)
 		return;
 
-	u8 location = render.m_textures[m_cur_texture].location();
+	u8 location = render.textures[m_cur_texture].location();
 
 	if(location > 1)
 		return;
@@ -472,8 +472,8 @@ void RSXDebugger::GetBuffers()
 
 	unsigned char* TexBuffer = vm::get_ptr<unsigned char>(TexBuffer_addr);
 
-	u32 width  = render.m_textures[m_cur_texture].width();
-	u32 height = render.m_textures[m_cur_texture].height();
+	u32 width = render.textures[m_cur_texture].width();
+	u32 height = render.textures[m_cur_texture].height();
 	unsigned char* buffer = (unsigned char*)malloc(width * height * 3);
 	memcpy(buffer, TexBuffer, width * height * 3);
 
@@ -552,29 +552,29 @@ void RSXDebugger::GetTexture()
 
 	for(uint i=0; i<rsx::limits::textures_count; ++i)
 	{
-		if(render.m_textures[i].enabled())
+		if (render.textures[i].enabled())
 		{
 			m_list_texture->InsertItem(i, wxString::Format("%d", i));
-			u8 location = render.m_textures[i].location();
+			u8 location = render.textures[i].location();
 			if(location > 1)
 			{
 				m_list_texture->SetItem(i, 1,
-					wxString::Format("Bad address (offset=0x%x, location=%d)", render.m_textures[i].offset(), location));
+					wxString::Format("Bad address (offset=0x%x, location=%d)", render.textures[i].offset(), location));
 			}
 			else
 			{
-				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", rsx::get_address(render.m_textures[i].offset(), location)));
+				m_list_texture->SetItem(i, 1, wxString::Format("0x%x", rsx::get_address(render.textures[i].offset(), location)));
 			}
 
-			m_list_texture->SetItem(i, 2, render.m_textures[i].cubemap() ? "True" : "False");
-			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.m_textures[i].dimension()));
-			m_list_texture->SetItem(i, 4, render.m_textures[i].enabled() ? "True" : "False");
-			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.m_textures[i].format()));
-			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.m_textures[i].mipmap()));
-			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.m_textures[i].pitch()));
+			m_list_texture->SetItem(i, 2, render.textures[i].cubemap() ? "True" : "False");
+			m_list_texture->SetItem(i, 3, wxString::Format("%dD", render.textures[i].dimension()));
+			m_list_texture->SetItem(i, 4, render.textures[i].enabled() ? "True" : "False");
+			m_list_texture->SetItem(i, 5, wxString::Format("0x%x", render.textures[i].format()));
+			m_list_texture->SetItem(i, 6, wxString::Format("0x%x", render.textures[i].mipmap()));
+			m_list_texture->SetItem(i, 7, wxString::Format("0x%x", render.textures[i].pitch()));
 			m_list_texture->SetItem(i, 8, wxString::Format("%dx%d",
-				render.m_textures[i].width(),
-				render.m_textures[i].height()));
+				render.textures[i].width(),
+				render.textures[i].height()));
 
 			m_list_texture->SetItemBackgroundColour(i, wxColour(m_cur_texture == i ? "Wheat" : "White"));
 		}

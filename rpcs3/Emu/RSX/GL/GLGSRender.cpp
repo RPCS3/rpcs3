@@ -68,10 +68,8 @@ float GLTexture::GetMaxAniso(int aniso)
 
 void GLTexture::Init(rsx::texture& tex)
 {
-	if (tex.location() > 1)
-	{
-		return;
-	}
+	if (!m_id)
+		Create();
 
 	Bind();
 
@@ -537,6 +535,11 @@ void GLTexture::Delete()
 	}
 }
 
+u32 GLTexture::id() const
+{
+	return m_id;
+}
+
 GLGSRender::GLGSRender()
 {
 	m_frame = GetGSFrame(GSFrameType::OpenGLFrame);
@@ -804,6 +807,17 @@ void GLGSRender::end()
 	draw_fbo.bind();
 	m_program.use();
 
+	//setup textures
+	for (int i = 0; i < rsx::limits::textures_count; ++i)
+	{
+		if (!textures[i].enabled())
+			continue;
+
+		glcheck(m_gl_textures[i].Init(textures[i]));
+		glcheck(m_program.uniforms.texture("tex" + std::to_string(i), i, gl::texture_view(gl::texture::target::texture2D, m_gl_textures[i].id())));
+	}
+
+	//initialize vertex attributes
 	static const u32 gl_types[] =
 	{
 		GL_SHORT,
@@ -1607,7 +1621,7 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_CULL_FACE);
 
 		glcheck(m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
-			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)));
+			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8/*, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)*/));
 	}
 
 	area screen_area = coordi({}, { buffer_width, buffer_height });
@@ -1650,4 +1664,12 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_frame->Flip(m_context);
+}
+
+
+u64 GLGSRender::timestamp() const
+{
+	GLint64 result;
+	glGetInteger64v(GL_TIMESTAMP, &result);
+	return result;
 }

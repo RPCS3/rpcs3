@@ -116,7 +116,7 @@ namespace rsx
 
 	bool texture::enabled() const
 	{
-		return ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 32)] >> 31) & 0x1);
+		return location() <= 1 && ((method_registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 32)] >> 31) & 0x1);
 	}
 
 	u16  texture::min_lod() const

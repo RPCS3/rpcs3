@@ -48,6 +48,8 @@ public:
 	void Bind();
 	void Unbind();
 	void Delete();
+
+	u32 id() const;
 };
 
 class GLGSRender : public GSRender
@@ -57,7 +59,7 @@ private:
 	GLVertexProgram m_vertex_prog;
 
 	GLTexture m_gl_textures[rsx::limits::textures_count];
-	GLTexture m_gl_vertex_textures[rsx::limits::textures_count];
+	GLTexture m_gl_vertex_textures[rsx::limits::vertex_textures_count];
 
 	void* m_context = nullptr;
 
@@ -108,4 +110,5 @@ protected:
 	void onexit_thread() override;
 	bool domethod(u32 id, u32 arg) override;
 	void flip(int buffer) override;
+	u64 timestamp() const override;
 };

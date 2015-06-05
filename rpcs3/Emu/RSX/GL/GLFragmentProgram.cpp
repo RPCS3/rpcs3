@@ -53,7 +53,7 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
-			OS << fmt::format("layout(location = %d) out vec4 ", i)  "out vec4 "<< table[i].first << ";" << std::endl;
+			OS << fmt::format("layout(location = %d) out vec4 ", i)  << table[i].first << ";" << std::endl;
 	}
 }
 

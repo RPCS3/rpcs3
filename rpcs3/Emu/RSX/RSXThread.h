@@ -17,6 +17,7 @@ namespace rsx
 		enum
 		{
 			textures_count = 16,
+			vertex_textures_count = 4,
 			vertex_count = 16,
 			fragment_count = 32,
 			tiles_count = 15,
@@ -169,8 +170,8 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		rsx::texture m_textures[limits::textures_count];
-		rsx::vertex_texture m_vertex_textures[limits::textures_count];
+		rsx::texture textures[limits::textures_count];
+		rsx::vertex_texture vertex_textures[limits::vertex_textures_count];
 
 		vertex_array_t vertex_index_array;
 
@@ -242,6 +243,7 @@ namespace rsx
 		virtual void onexit_thread() = 0;
 		virtual bool domethod(u32 cmd, u32 value) { return false; }
 		virtual void flip(int buffer) = 0;
+		virtual u64 timestamp() const;
 
 		void Task() override;
 
