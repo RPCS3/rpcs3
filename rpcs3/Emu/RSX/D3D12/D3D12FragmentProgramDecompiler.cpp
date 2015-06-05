@@ -43,6 +43,8 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 		return "dot($0.xyz, $1.xyz).xxxx";
 	case FUNCTION::FUNCTION_DP4:
 		return "dot($0, $1).xxxx";
+	case FUNCTION::FUNCTION_DPH:
+		return "dot(float4($0.xyz, 1.0), $1).xxxx";
 	case FUNCTION::FUNCTION_SFL:
 		return "float4(0., 0., 0., 0.)";
 	case FUNCTION::FUNCTION_STR:
