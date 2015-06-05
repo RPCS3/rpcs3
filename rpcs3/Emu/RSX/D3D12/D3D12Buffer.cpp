@@ -213,7 +213,11 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	{
 		for (size_t attributeId : vbf.attributeId)
 		{
-			if (!vertexData[attributeId].addr) continue;
+			if (!vertexData[attributeId].addr)
+			{
+				memcpy(bufferMap, vertexData[attributeId].data.data(), vertexData[attributeId].data.size());
+				continue;
+			}
 			size_t baseOffset = vertexData[attributeId].addr - vbf.range.first;
 			size_t tsize = vertexData[attributeId].GetTypeSize();
 			size_t size = vertexData[attributeId].size;
