@@ -187,17 +187,17 @@ ID3D12Resource *uploadSingleTexture(
 	case CELL_GCM_TEXTURE_A1R5G5B5:
 		blockSizeInByte = 2;
 		blockHeightInPixel = 1, blockWidthInPixel = 1;
-		srcPitch = w * 4;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		srcPitch = w * 4;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_R5G6B5:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		srcPitch = w * 4;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		blockSizeInByte = 4;
@@ -228,7 +228,7 @@ ID3D12Resource *uploadSingleTexture(
 		// Not native
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
-		srcPitch = w * 4;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_DEPTH24_D8:
 		blockSizeInByte = 4;
