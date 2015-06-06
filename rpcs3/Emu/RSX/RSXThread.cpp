@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/RSX/RSXDMA.h"
+#include "Emu/RSX/sysutil_video.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
@@ -20,45 +21,6 @@ extern "C"
 #define CMD_DEBUG 0
 
 u32 methodRegisters[0xffff];
-
-void RSXThread::NativeRescale(float width, float height)
-{
-	switch (Ini.GSResolution.GetValue())
-	{
-	case 1: // 1920x1080 window size
-	{
-		m_width_scale = 1920 / width  * 2.0f;
-		m_height_scale = 1080 / height * 2.0f;
-		m_width = 1920;
-		m_height = 1080;
-		break;
-	}
-	case 2: // 1280x720 window size
-	{
-		m_width_scale = 1280 / width * 2.0f;
-		m_height_scale = 720 / height * 2.0f;
-		m_width = 1280;
-		m_height = 720;
-		break;
-	}
-	case 4: // 720x480 window size
-	{
-		m_width_scale = 720 / width * 2.0f;
-		m_height_scale = 480 / height * 2.0f;
-		m_width = 720;
-		m_height = 480;
-		break;
-	}
-	case 5: // 720x576 window size
-	{
-		m_width_scale = 720 / width * 2.0f;
-		m_height_scale = 576 / height * 2.0f;
-		m_width = 720;
-		m_height = 576;
-		break;
-	}
-	}
-}
 
 u32 GetAddress(u32 offset, u32 location)
 {
@@ -1497,7 +1459,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		m_width = buffers[m_gcm_current_buffer].width;
 		m_height = buffers[m_gcm_current_buffer].height;
 
-		NativeRescale((float)m_width, (float)m_height);
+		CellVideoOutResolution res = ResolutionTable[ResolutionIdToNum(Ini.GSResolution.GetValue())];
+		m_width_scale = (float)res.width / m_width  * 2.0f;
+		m_height_scale = (float)res.height / m_height * 2.0f;
+		m_width = (u32)res.width;
+		m_height = (u32)res.height;
+
 		break;
 	}
 
