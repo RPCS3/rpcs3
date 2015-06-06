@@ -369,6 +369,17 @@ ID3D12Resource *uploadSingleTexture(
 			}
 			break;
 		}
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		{
+			unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
+
+			for (int j = 0; j < w * 4; j++)
+			{
+				uint64_t tmp = src[row * w * 4 + j];
+				dst[row * w  * 4 + j] = (tmp >> 8) | (tmp << 8);
+			}
+			break;
+		}
 		default:
 		{
 			streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * srcPitch, srcPitch);
