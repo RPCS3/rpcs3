@@ -847,6 +847,8 @@ bool D3D12GSRender::LoadProgram()
 		break;
 	}
 
+	prop.SampleMask = m_color_mask_r | (m_color_mask_g << 1) | (m_color_mask_b << 2) | (m_color_mask_a << 3);
+
 	prop.IASet = m_IASet;
 
 	m_PSO = m_cachePSO.getGraphicPipelineState(m_cur_vertex_prog, m_cur_fragment_prog, prop, std::make_pair(m_device, m_rootSignatures));

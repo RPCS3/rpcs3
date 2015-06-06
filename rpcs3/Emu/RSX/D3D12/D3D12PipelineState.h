@@ -19,6 +19,7 @@ struct D3D12PipelineProperties
 	unsigned numMRT : 3;
 	D3D12_DEPTH_STENCIL_DESC DepthStencil;
 	D3D12_RASTERIZER_DESC Rasterization;
+	UINT SampleMask;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
@@ -45,7 +46,7 @@ struct D3D12PipelineProperties
 			return false;
 		if (memcmp(&Rasterization, &in.Rasterization, sizeof(D3D12_RASTERIZER_DESC)))
 			return false;
-		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
+		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && SampleMask == in.SampleMask;
 	}
 };
 
@@ -160,7 +161,7 @@ struct D3D12Traits
 		graphicPipelineStateDesc.InputLayout.pInputElementDescs = pipelineProperties.IASet.data();
 		graphicPipelineStateDesc.InputLayout.NumElements = (UINT)pipelineProperties.IASet.size();
 		graphicPipelineStateDesc.SampleDesc.Count = 1;
-		graphicPipelineStateDesc.SampleMask = UINT_MAX;
+		graphicPipelineStateDesc.SampleMask = pipelineProperties.SampleMask;
 		graphicPipelineStateDesc.NodeMask = 1;
 
 		extraData.first->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&result->first));
