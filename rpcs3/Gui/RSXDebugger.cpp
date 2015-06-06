@@ -1070,7 +1070,24 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			break;
 
 		case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
-			DISASM("Set surface clip horizontal");
+		{
+			const u32 a0 = (u32)args[0];
+
+			u32 clip_x = a0;
+			u32 clip_w = a0 >> 16;
+
+			if (count == 2)
+			{
+				const u32 a1 = (u32)args[1];
+				u32 clip_y = a1;
+				u32 clip_h = a1 >> 16;
+				DISASM("Set surface clip horizontal : %d %d", clip_w, clip_h);
+			}
+			else
+				DISASM("Set surface clip horizontal : %d", clip_w);
+			break;
+		}
+
 			break;
 
 		case 0x3fead:
