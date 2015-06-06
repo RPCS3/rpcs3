@@ -14,6 +14,7 @@ struct D3D12PipelineProperties
 {
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology;
 	DXGI_FORMAT DepthStencilFormat;
+	DXGI_FORMAT RenderTargetsFormat;
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IASet;
 	D3D12_BLEND_DESC Blend;
 	unsigned numMRT : 3;
@@ -46,7 +47,7 @@ struct D3D12PipelineProperties
 			return false;
 		if (memcmp(&Rasterization, &in.Rasterization, sizeof(D3D12_RASTERIZER_DESC)))
 			return false;
-		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && SampleMask == in.SampleMask;
+		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT && SampleMask == in.SampleMask && RenderTargetsFormat == in.RenderTargetsFormat;
 	}
 };
 
@@ -155,7 +156,7 @@ struct D3D12Traits
 
 		graphicPipelineStateDesc.NumRenderTargets = pipelineProperties.numMRT;
 		for (unsigned i = 0; i < pipelineProperties.numMRT; i++)
-			graphicPipelineStateDesc.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
+			graphicPipelineStateDesc.RTVFormats[i] = pipelineProperties.RenderTargetsFormat;
 		graphicPipelineStateDesc.DSVFormat = pipelineProperties.DepthStencilFormat;
 
 		graphicPipelineStateDesc.InputLayout.pInputElementDescs = pipelineProperties.IASet.data();

@@ -45,97 +45,78 @@ void D3D12GSRender::InitDrawBuffers()
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_rtts.m_renderTargetsDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	size_t g_RTTIncrement = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
+	DXGI_FORMAT dxgiFormat;
+	switch (m_surface_color_format)
+	{
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		break;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		dxgiFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		break;
+	}
+	D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
+	rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	rttViewDesc.Format = dxgiFormat;
+
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_1:
 	{
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 	}
 	break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		break;
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h,
+		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h, m_surface_color_format,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
-		rttViewDesc = {};
-		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttD, &rttViewDesc, Handle);
 		break;
 	}
@@ -166,7 +147,7 @@ void D3D12GSRender::InitDrawBuffers()
 }
 
 ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,
-	size_t width, size_t height, float clearColorR, float clearColorG, float clearColorB, float clearColorA)
+	size_t width, size_t height, u8 surfaceColorFormat, float clearColorR, float clearColorG, float clearColorB, float clearColorA)
 {
 	ID3D12Resource* rtt;
 	auto It = m_renderTargets.find(address);
@@ -179,8 +160,18 @@ ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, 
 	else
 	{
 		LOG_WARNING(RSX, "Creating RTT");
+		DXGI_FORMAT dxgiFormat;
+		switch (surfaceColorFormat)
+		{
+		case CELL_GCM_SURFACE_A8R8G8B8:
+			dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+			break;
+		case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+			dxgiFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+			break;
+		}
 		D3D12_CLEAR_VALUE clearColorValue = {};
-		clearColorValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		clearColorValue.Format = dxgiFormat;
 		clearColorValue.Color[0] = clearColorR;
 		clearColorValue.Color[1] = clearColorG;
 		clearColorValue.Color[2] = clearColorB;
@@ -189,7 +180,7 @@ ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, 
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat);
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 		device->CreateCommittedResource(

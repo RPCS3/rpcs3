@@ -20,7 +20,7 @@ struct RenderTargets
 	 * returns the corresponding render target resource.
 	 */
 	ID3D12Resource *bindAddressAsRenderTargets(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, size_t slot, u32 address,
-		size_t width, size_t height, float clearColorR, float clearColorG, float clearColorB, float clearColorA);
+		size_t width, size_t height, u8 surfaceColorFormat, float clearColorR, float clearColorG, float clearColorB, float clearColorA);
 
 	ID3D12Resource *bindAddressAsDepthStencil(ID3D12Device *device, ID3D12GraphicsCommandList *cmdList, u32 address,
 		size_t width, size_t height, u8 surfaceDepthFormat, float depthClear, u8 stencilClear);

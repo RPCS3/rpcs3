@@ -792,6 +792,16 @@ bool D3D12GSRender::LoadProgram()
 		assert(0);
 	}
 
+	switch (m_surface_color_format)
+	{
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		prop.RenderTargetsFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		break;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		prop.RenderTargetsFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		break;
+	}
+
 	switch (m_surface_color_target)
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
@@ -1166,8 +1176,19 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 {
 	ID3D12Resource *Result;
 	size_t w = m_surface_clip_w, h = m_surface_clip_h;
-	size_t rowPitch = w * 4;
-	rowPitch = (rowPitch + 255) & ~255;
+	DXGI_FORMAT dxgiFormat;
+	size_t rowPitch;
+	switch (m_surface_color_format)
+	{
+	case CELL_GCM_SURFACE_A8R8G8B8:
+		dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+		rowPitch = powerOf2Align(w * 4, 256);
+		break;
+	case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+		dxgiFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		rowPitch = powerOf2Align(w * 8, 256);
+		break;
+	}
 
 	D3D12_HEAP_PROPERTIES heapProp = {};
 	heapProp.Type = D3D12_HEAP_TYPE_READBACK;
@@ -1201,7 +1222,7 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	dst.pResource = Result;
 	dst.PlacedFootprint.Offset = 0;
 	dst.PlacedFootprint.Footprint.Depth = 1;
-	dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	dst.PlacedFootprint.Footprint.Format = dxgiFormat;
 	dst.PlacedFootprint.Footprint.Height = (UINT)h;
 	dst.PlacedFootprint.Footprint.Width = (UINT)w;
 	dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
@@ -1216,7 +1237,7 @@ void copyToCellRamAndRelease(void *dstAddress, ID3D12Resource *res, size_t rowPi
 	void *srcBuffer;
 	check(res->Map(0, nullptr, &srcBuffer));
 	for (unsigned row = 0; row < height; row++)
-		memcpy((char*)dstAddress + row * width * 4, (char*)srcBuffer + row * rowPitch, width * 4);
+		memcpy((char*)dstAddress + row * rowPitch, (char*)srcBuffer + row * rowPitch, rowPitch);
 	res->Unmap(0, nullptr);
 	res->Release();
 }
@@ -1452,8 +1473,16 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			convertCommandList->Release();
 		}
 
-		size_t colorRowPitch = m_surface_clip_w * 4;
-		colorRowPitch = (colorRowPitch + 255) & ~255;
+		size_t colorRowPitch;
+		switch (m_surface_color_format)
+		{
+		case CELL_GCM_SURFACE_A8R8G8B8:
+			colorRowPitch = powerOf2Align(m_surface_clip_w * 4, 256);
+			break;
+		case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+			colorRowPitch = powerOf2Align(m_surface_clip_w * 8, 256);
+			break;
+		}
 
 		if (Ini.GSDumpColorBuffers.GetValue())
 		{
