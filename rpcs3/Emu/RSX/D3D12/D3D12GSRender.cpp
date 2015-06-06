@@ -783,11 +783,11 @@ bool D3D12GSRender::LoadProgram()
 	}
 
 	prop.DepthStencil.DepthEnable = m_set_depth_test;
-	prop.DepthStencil.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	prop.DepthStencil.DepthWriteMask = m_depth_mask ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 	prop.DepthStencil.DepthFunc = getDepthFunc(m_depth_func);
 	prop.DepthStencil.StencilEnable = m_set_stencil_test;
 	prop.DepthStencil.StencilReadMask = m_stencil_func_mask;
-	prop.DepthStencil.StencilWriteMask = m_set_stencil_mask;
+	prop.DepthStencil.StencilWriteMask = m_stencil_mask;
 	prop.DepthStencil.FrontFace.StencilPassOp = getStencilOp(m_stencil_zpass);
 	prop.DepthStencil.FrontFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
 	prop.DepthStencil.FrontFace.StencilFailOp = getStencilOp(m_stencil_fail);
@@ -795,10 +795,10 @@ bool D3D12GSRender::LoadProgram()
 
 	if (m_set_two_sided_stencil_test_enable)
 	{
-		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_stencil_fail);
-		prop.DepthStencil.BackFace.StencilFunc = getStencilFunc(m_stencil_func);
-		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_stencil_zpass);
-		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
+		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_back_stencil_fail);
+		prop.DepthStencil.BackFace.StencilFunc = getStencilFunc(m_back_stencil_func);
+		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_back_stencil_zpass);
+		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_back_stencil_zfail);
 	}
 	else
 	{
