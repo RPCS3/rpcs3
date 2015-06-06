@@ -847,7 +847,10 @@ bool D3D12GSRender::LoadProgram()
 		break;
 	}
 
-	prop.SampleMask = m_color_mask_r | (m_color_mask_g << 1) | (m_color_mask_b << 2) | (m_color_mask_a << 3);
+	if (m_set_color_mask)
+		prop.SampleMask = m_color_mask_r | (m_color_mask_g << 1) | (m_color_mask_b << 2) | (m_color_mask_a << 3);
+	else
+		prop.SampleMask = UINT_MAX;
 
 	prop.IASet = m_IASet;
 
