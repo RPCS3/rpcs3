@@ -700,12 +700,37 @@ bool D3D12GSRender::LoadProgram()
 	if (m_set_blend)
 	{
 		prop.Blend.RenderTarget[0].BlendEnable = true;
+
+		if (m_set_blend_mrt1)
+			prop.Blend.RenderTarget[1].BlendEnable = true;
+		if (m_set_blend_mrt2)
+			prop.Blend.RenderTarget[2].BlendEnable = true;
+		if (m_set_blend_mrt3)
+			prop.Blend.RenderTarget[3].BlendEnable = true;
 	}
 
 	if (m_set_blend_equation)
 	{
 		prop.Blend.RenderTarget[0].BlendOp = getBlendOp(m_blend_equation_rgb);
 		prop.Blend.RenderTarget[0].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+
+		if (m_set_blend_mrt1)
+		{
+			prop.Blend.RenderTarget[1].BlendOp = getBlendOp(m_blend_equation_rgb);
+			prop.Blend.RenderTarget[1].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+		}
+
+		if (m_set_blend_mrt2)
+		{
+			prop.Blend.RenderTarget[2].BlendOp = getBlendOp(m_blend_equation_rgb);
+			prop.Blend.RenderTarget[2].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+		}
+
+		if (m_set_blend_mrt3)
+		{
+			prop.Blend.RenderTarget[3].BlendOp = getBlendOp(m_blend_equation_rgb);
+			prop.Blend.RenderTarget[3].BlendOpAlpha = getBlendOp(m_blend_equation_alpha);
+		}
 	}
 
 	if (m_set_blend_sfactor && m_set_blend_dfactor)
@@ -714,6 +739,30 @@ bool D3D12GSRender::LoadProgram()
 		prop.Blend.RenderTarget[0].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
 		prop.Blend.RenderTarget[0].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
 		prop.Blend.RenderTarget[0].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
+
+		if (m_set_blend_mrt1)
+		{
+			prop.Blend.RenderTarget[1].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
+			prop.Blend.RenderTarget[1].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
+			prop.Blend.RenderTarget[1].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
+			prop.Blend.RenderTarget[1].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
+		}
+
+		if (m_set_blend_mrt2)
+		{
+			prop.Blend.RenderTarget[2].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
+			prop.Blend.RenderTarget[2].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
+			prop.Blend.RenderTarget[2].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
+			prop.Blend.RenderTarget[2].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
+		}
+
+		if (m_set_blend_mrt3)
+		{
+			prop.Blend.RenderTarget[3].SrcBlend = getBlendFactor(m_blend_sfactor_rgb);
+			prop.Blend.RenderTarget[3].DestBlend = getBlendFactor(m_blend_dfactor_rgb);
+			prop.Blend.RenderTarget[3].SrcBlendAlpha = getBlendFactor(m_blend_sfactor_alpha);
+			prop.Blend.RenderTarget[3].DestBlendAlpha = getBlendFactor(m_blend_dfactor_alpha);
+		}
 	}
 
 	if (m_set_logic_op)
