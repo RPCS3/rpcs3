@@ -161,33 +161,59 @@ int cellSailDescriptorSetParameter()
 	return CELL_OK;
 }
 
-int cellSailSoundAdapterInitialize()
+int cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, const vm::ptr<CellSailSoundAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Error("cellSailSoundAdapterInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x, pArg=0x%x)", pSelf.addr(), pCallbacks.addr(), pArg.addr());
+
+	pSelf->callbacks = pCallbacks;
+	pSelf->arg = pArg;
+	pSelf->initialized = true;
+
 	return CELL_OK;
 }
 
-int cellSailSoundAdapterFinalize()
+int cellSailSoundAdapterFinalize(vm::ptr<CellSailSoundAdapter> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Warning("cellSailSoundAdapterFinalize(pSelf_addr=0x%x)", pSelf.addr());
+
+	if (pSelf->registered)
+		return CELL_SAIL_ERROR_INVALID_STATE;
+
+	Memory.Free(pSelf.addr()); // Is it right to free the sound adapter?
+
 	return CELL_OK;
 }
 
-int cellSailSoundAdapterSetPreferredFormat()
+int cellSailSoundAdapterSetPreferredFormat(vm::ptr<CellSailSoundAdapter> pSelf, const vm::ptr<CellSailAudioFormat> pFormat)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Warning("cellSailSoundAdapterSetPreferredFormat(pSelf_addr=0x%x, pFormat_addr=0x%x)", pSelf.addr(), pFormat.addr());
+
+	pSelf->format = pFormat;
+
 	return CELL_OK;
 }
 
-int cellSailSoundAdapterGetFrame()
+int cellSailSoundAdapterGetFrame(vm::ptr<CellSailSoundAdapter> pSelf, u32 samples, vm::ptr<CellSailSoundFrameInfo> pInfo)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailSoundAdapterGetFrame(pSelf_addr=0x%x, samples=%d, pInfo_addr=0x%x)", pSelf.addr(), samples, pInfo.addr());
+
+	if (!pSelf->initialized)
+		return CELL_SAIL_ERROR_INVALID_STATE;
+
+	if (samples > 2048)
+		return CELL_SAIL_ERROR_INVALID_ARG;
+
+	pInfo->tag = 0xDEFECA7E;
+
 	return CELL_OK;
 }
 
-int cellSailSoundAdapterGetFormat()
+int cellSailSoundAdapterGetFormat(vm::ptr<CellSailSoundAdapter> pSelf, vm::ptr<CellSailAudioFormat> pFormat)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailSoundAdapterGetFormat(pSelf_addr=0x%x, pFormat_addr=0x%x)", pSelf.addr(), pFormat.addr());
+
+	pFormat = pSelf->format; // I think this should be *pFormat = ...; instead?
+
 	return CELL_OK;
 }
 
@@ -530,9 +556,12 @@ int cellSailPlayerInitialize2(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailMem
 	return CELL_OK;
 }
 
-int cellSailPlayerFinalize()
+int cellSailPlayerFinalize(vm::ptr<CellSailPlayer> pSelf)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Todo("cellSailPlayerFinalize(pSelf_addr=0x%x)", pSelf.addr());
+
+	pSelf->adapter->registered = false;
+
 	return CELL_OK;
 }
 
@@ -548,9 +577,17 @@ int cellSailPlayerGetRegisteredProtocols()
 	return CELL_OK;
 }
 
-int cellSailPlayerSetSoundAdapter()
+int cellSailPlayerSetSoundAdapter(vm::ptr<CellSailPlayer> pSelf, s32 index, vm::ptr<CellSailSoundAdapter> pAdapter)
 {
-	UNIMPLEMENTED_FUNC(cellSail);
+	cellSail.Warning("cellSailPlayerSetSoundAdapter(pSelf_addr=0x%x, index=%d, pAdapter_addr=0x%x)", pSelf.addr(), index, pAdapter.addr());
+
+	if (index < 0 || index > pSelf->attribute->maxAudioStreamNum)
+		return CELL_SAIL_ERROR_INVALID_ARG;
+
+	pSelf->adapter = pAdapter;
+	pAdapter->index = index;
+	pAdapter->registered = true;
+
 	return CELL_OK;
 }
 
@@ -656,16 +693,16 @@ int cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType
 				vfsFile f;
 				if (f.Open(path)) {
 					u64 size = f.GetSize();
-					u32 buf_ = Memory.Alloc(size, 1);
-					auto bufPtr = vm::ptr<const PamfHeader>::make(buf_);
+					u32 buffer = Memory.Alloc(size, 1);
+					auto bufPtr = vm::ptr<const PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
 					assert(f.Read(buf, size) == size);
 					u32 sp_ = Memory.Alloc(sizeof(CellPamfReader), 1);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
-					u32 r = cellPamfReaderInitialize(sp, bufPtr, size, 0);
+					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 
-					descriptor->internalData[0] = buf_;
-					descriptor->internalData[1] = sp_;
+					descriptor->buffer = buffer;
+					descriptor->sp_ = sp_;
 				}
 				else
 					cellSail.Warning("Couldn't open PAMF: %s", uri.c_str());
@@ -944,7 +981,7 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailSourceNotifyStreamOut);
 	REG_FUNC(cellSail, cellSailSourceNotifySessionError);
 	REG_FUNC(cellSail, cellSailSourceNotifyMediaStateChanged);
-	//cellSail.AddFunc(, cellSailSourceCheck);
+	REG_FUNC(cellSail, cellSailSourceCheck);
 	REG_FUNC(cellSail, cellSailSourceNotifyOpenCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStartCompleted);
 	REG_FUNC(cellSail, cellSailSourceNotifyStopCompleted);
@@ -961,7 +998,7 @@ Module cellSail("cellSail", []()
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackInfo);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReferenceCount);
 	REG_FUNC(cellSail, cellSailMp4TrackGetTrackReference);
-	//cellSail.AddFunc(, cellSailMp4ConvertTimeScale);
+	REG_FUNC(cellSail, cellSailMp4ConvertTimeScale);
 
 	REG_FUNC(cellSail, cellSailAviMovieGetMovieInfo);
 	REG_FUNC(cellSail, cellSailAviMovieGetStreamByIndex);

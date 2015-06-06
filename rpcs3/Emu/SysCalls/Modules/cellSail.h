@@ -716,8 +716,16 @@ struct CellSailSoundFrameInfo
 
 struct CellSailSoundAdapter
 {
-	be_t<u64> internalData[32];
+	bool initialized = false;
+	bool registered = false;
+	vm::ptr<CellSailSoundAdapterFuncs> callbacks;
+	vm::ptr<u32> arg;
+	be_t<s32> index;
+	vm::ptr<CellSailAudioFormat> format;
+	be_t<u64> internalData[29];
 };
+
+static_assert(sizeof(CellSailSoundAdapter) == 0x100, "Invalid CellSailSoundAdapter size");
 
 struct CellSailGraphicsAdapterFuncs
 {
@@ -742,6 +750,8 @@ struct CellSailGraphicsAdapter
 	be_t<u64> internalData[32];
 };
 
+static_assert(sizeof(CellSailGraphicsAdapter) == 0x100, "Invalid CellSailGraphicsAdapter size");
+
 struct CellSailAuInfo
 {
 	be_t<u32> pAu;
@@ -757,6 +767,8 @@ struct CellSailAuReceiver
 {
 	be_t<u64> internalData[64];
 };
+
+static_assert(sizeof(CellSailAuReceiver) == 0x200, "Invalid CellSailAuReceiver size");
 
 struct CellSailRendererAudioFuncs
 {
@@ -782,6 +794,8 @@ struct CellSailRendererAudio
 	be_t<u64> internalData[32];
 };
 
+static_assert(sizeof(CellSailRendererAudio) == 0x100, "Invalid CellSailRendererAudio size");
+
 struct CellSailRendererVideoFuncs
 {
 	CellSailRendererVideoFuncMakeup pMakeup;
@@ -805,6 +819,8 @@ struct CellSailRendererVideo
 {
 	be_t<u64> internalData[32];
 };
+
+static_assert(sizeof(CellSailRendererVideo) == 0x100, "Invalid CellSailRendererVideo size");
 
 struct CellSailSourceFuncs
 {
@@ -853,8 +869,8 @@ struct CellSailMp4DateTime
 	be_t<u16> day;
 	be_t<u16> month;
 	be_t<u16> year;
-	//be_t<u16> reserved0;
-	//be_t<u16> reserved1;
+	be_t<u16> reserved0;
+	be_t<u16> reserved1;
 };
 
 struct CellSailMp4Movie
@@ -869,13 +885,15 @@ struct CellSailMp4MovieInfo
 	be_t<u32> trackCount;
 	be_t<u32> movieTimeScale;
 	be_t<u32> movieDuration;
-	//be_t<u32> reserved[16];
+	be_t<u32> reserved[16];
 };
 
 struct CellSailMp4Track
 {
 	be_t<u64> internalData[6];
 };
+
+static_assert(sizeof(CellSailMp4Track) == 0x30, "Invalid CellSailMp4Track size");
 
 struct CellSailMp4TrackInfo
 {
@@ -891,13 +909,15 @@ struct CellSailMp4TrackInfo
 	be_t<u16> language;
 	be_t<u16> reserved2;
 	be_t<u16> mediaType;
-	//be_t<u32> reserved3[3];
+	be_t<u32> reserved3[3];
 };
 
 struct CellSailAviMovie
 {
 	be_t<u64> internalData[16];
 };
+
+static_assert(sizeof(CellSailAviMovie) == 0x80, "Invalid CellSailAviMovie size");
 
 struct CellSailAviMovieInfo
 {
@@ -911,8 +931,8 @@ struct CellSailAviMovieInfo
 	be_t<u32> scale;
 	be_t<u32> rate;
 	be_t<u32> length;
-	//be_t<u32> reserved1;
-	//be_t<u32> reserved2;
+	be_t<u32> reserved1;
+	be_t<u32> reserved2;
 };
 
 struct CellSailAviMainHeader
@@ -927,7 +947,7 @@ struct CellSailAviMainHeader
 	be_t<u32> suggestedBufferSize;
 	be_t<u32> width;
 	be_t<u32> height;
-	//be_t<u32> reserved[4];
+	be_t<u32> reserved[4];
 };
 
 struct CellSailAviExtendedHeader
@@ -1038,7 +1058,9 @@ struct CellSailDescriptor
 	bool autoSelection;
 	bool registered;
 	be_t<s32> streamType;
-	be_t<u64> internalData[31];
+	be_t<u32> buffer;
+	be_t<u32> sp_;
+	be_t<u64> internalData[30];
 };
 
 static_assert(sizeof(CellSailDescriptor) == 0x100, "Invalid CellSailDescriptor size");
@@ -1105,7 +1127,8 @@ struct CellSailPlayer
 	be_t<s32> descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
 	bool paused = true;
-	be_t<u64> internalData[26];
+	vm::ptr<CellSailSoundAdapter> adapter;
+	be_t<u64> internalData[25];
 };
 
 static_assert(sizeof(CellSailPlayer) == 0x100, "Invalid CellSailPlayer size");
