@@ -1003,8 +1003,8 @@ void D3D12GSRender::ExecCMD()
 	{
 		0.f,
 		0.f,
-		(float)RSXThread::m_width,
-		(float)RSXThread::m_height,
+		(float)m_surface_clip_w,
+		(float)m_surface_clip_h,
 		-1.f,
 		1.f
 	};
@@ -1012,7 +1012,7 @@ void D3D12GSRender::ExecCMD()
 	D3D12_RECT box =
 	{
 		0, 0,
-		(LONG)RSXThread::m_width, (LONG)RSXThread::m_height,
+		(LONG)m_surface_clip_w, (LONG)m_surface_clip_h,
 	};
 	commandList->RSSetScissorRects(1, &box);
 
@@ -1098,7 +1098,7 @@ void D3D12GSRender::Flip()
 		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		src.SubresourceIndex = 0, dst.SubresourceIndex = 0;
 		src.pResource = m_rtts.m_currentlyBoundRenderTargets[0], dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
-		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
+		D3D12_BOX box = { 0, 0, 0, m_surface_clip_w, m_surface_clip_h, 1 };
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
 		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -1165,15 +1165,16 @@ D3D12GSRender::ResourceStorage& D3D12GSRender::getNonCurrentResourceStorage()
 ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12GraphicsCommandList * cmdlist)
 {
 	ID3D12Resource *Result;
-	size_t rowPitch = RSXThread::m_width * 4;
+	size_t w = m_surface_clip_w, h = m_surface_clip_h;
+	size_t rowPitch = w * 4;
 	rowPitch = (rowPitch + 255) & ~255;
 
 	D3D12_HEAP_PROPERTIES heapProp = {};
 	heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-	D3D12_RESOURCE_DESC resdesc = getBufferResourceDesc(rowPitch * RSXThread::m_height);
+	D3D12_RESOURCE_DESC resdesc = getBufferResourceDesc(rowPitch * h);
 
 	size_t heapOffset = powerOf2Align(m_readbackResources.m_putPos.load(), 65536);
-	size_t sizeInByte = rowPitch * RSXThread::m_height;
+	size_t sizeInByte = rowPitch * h;
 
 	if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
 		heapOffset = 0;
@@ -1201,8 +1202,8 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	dst.PlacedFootprint.Offset = 0;
 	dst.PlacedFootprint.Footprint.Depth = 1;
 	dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	dst.PlacedFootprint.Footprint.Height = (UINT)RSXThread::m_height;
-	dst.PlacedFootprint.Footprint.Width = (UINT)RSXThread::m_width;
+	dst.PlacedFootprint.Footprint.Height = (UINT)h;
+	dst.PlacedFootprint.Footprint.Width = (UINT)w;
 	dst.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 	cmdlist->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 	cmdlist->ResourceBarrier(1, &getResourceBarrierTransition(RTT, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -1238,7 +1239,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	ID3D12Resource *writeDest, *depthConverted;
 	ID3D12GraphicsCommandList *convertCommandList;
 	ID3D12DescriptorHeap *descriptorHeap;
-	size_t depthRowPitch = RSXThread::m_width;
+	size_t depthRowPitch = m_surface_clip_w;
 	depthRowPitch = (depthRowPitch + 255) & ~255;
 
 	bool needTransfer = (m_set_context_dma_z && Ini.GSDumpDepthBuffer.GetValue()) ||
@@ -1248,12 +1249,12 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	{
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(RSXThread::m_width, RSXThread::m_height, DXGI_FORMAT_R8_UNORM);
+		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(m_surface_clip_w, m_surface_clip_h, DXGI_FORMAT_R8_UNORM);
 		resdesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		size_t heapOffset = m_readbackResources.m_putPos.load();
 		heapOffset = powerOf2Align(heapOffset, 65536);
-		size_t sizeInByte = RSXThread::m_width * RSXThread::m_height;
+		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h;
 		if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
 			heapOffset = 0;
 
@@ -1271,7 +1272,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		heapOffset = m_readbackResources.m_putPos.load();
 		heapOffset = powerOf2Align(heapOffset, 65536);
-		sizeInByte = depthRowPitch * RSXThread::m_height;
+		sizeInByte = depthRowPitch * m_surface_clip_h;
 
 		if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
 			heapOffset = 0;
@@ -1333,7 +1334,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		convertCommandList->SetComputeRootSignature(m_convertRootSignature);
 		convertCommandList->SetDescriptorHeaps(1, &descriptorHeap);
 		convertCommandList->SetComputeRootDescriptorTable(0, descriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		convertCommandList->Dispatch(RSXThread::m_width / 8, RSXThread::m_height / 8, 1);
+		convertCommandList->Dispatch(m_surface_clip_w / 8, m_surface_clip_h / 8, 1);
 
 		// Flush UAV
 		D3D12_RESOURCE_BARRIER uavbarrier = {};
@@ -1371,8 +1372,8 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		dst.PlacedFootprint.Offset = 0;
 		dst.PlacedFootprint.Footprint.Depth = 1;
 		dst.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8_UNORM;
-		dst.PlacedFootprint.Footprint.Height = RSXThread::m_height;
-		dst.PlacedFootprint.Footprint.Width = RSXThread::m_width;
+		dst.PlacedFootprint.Footprint.Height = m_surface_clip_h;
+		dst.PlacedFootprint.Footprint.Width = m_surface_clip_w;
 		dst.PlacedFootprint.Footprint.RowPitch = (UINT)depthRowPitch;
 		downloadCommandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
 	}
@@ -1434,15 +1435,15 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			unsigned char *writeDestPtr;
 			check(writeDest->Map(0, nullptr, (void**)&writeDestPtr));
 			// TODO : this should be done by the gpu
-			for (unsigned row = 0; row < RSXThread::m_height; row++)
+			for (unsigned row = 0; row < m_surface_clip_h; row++)
 			{
-				for (unsigned i = 0; i < RSXThread::m_width; i++)
+				for (unsigned i = 0; i < m_surface_clip_w; i++)
 				{
 					unsigned char c = writeDestPtr[row * depthRowPitch + i];
-					ptrAsChar[4 * (row * RSXThread::m_width + i)] = c;
-					ptrAsChar[4 * (row * RSXThread::m_width + i) + 1] = c;
-					ptrAsChar[4 * (row * RSXThread::m_width + i) + 2] = c;
-					ptrAsChar[4 * (row * RSXThread::m_width + i) + 3] = c;
+					ptrAsChar[4 * (row * m_surface_clip_w + i)] = c;
+					ptrAsChar[4 * (row * m_surface_clip_w + i) + 1] = c;
+					ptrAsChar[4 * (row * m_surface_clip_w + i) + 2] = c;
+					ptrAsChar[4 * (row * m_surface_clip_w + i) + 3] = c;
 				}
 			}
 			writeDest->Release();
@@ -1451,7 +1452,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			convertCommandList->Release();
 		}
 
-		size_t colorRowPitch = RSXThread::m_width * 4;
+		size_t colorRowPitch = m_surface_clip_w * 4;
 		colorRowPitch = (colorRowPitch + 255) & ~255;
 
 		if (Ini.GSDumpColorBuffers.GetValue())
@@ -1465,7 +1466,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 			}
 			break;
 
@@ -1473,7 +1474,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				u32 address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 			}
 			break;
 
@@ -1481,10 +1482,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 			}
 			break;
 
@@ -1492,13 +1493,13 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 			}
 			break;
 
@@ -1506,16 +1507,16 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			{
 				u32 address = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
 				void *dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt0, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_b, m_context_dma_color_b - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt1, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_c, m_context_dma_color_c - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt2, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 				address = GetAddress(m_surface_offset_d, m_context_dma_color_d - 0xfeed0000);
 				dstAddress = vm::get_ptr<void>(address);
-				copyToCellRamAndRelease(dstAddress, rtt3, colorRowPitch, RSXThread::m_width, RSXThread::m_height);
+				copyToCellRamAndRelease(dstAddress, rtt3, colorRowPitch, m_surface_clip_w, m_surface_clip_h);
 			}
 			break;
 			}

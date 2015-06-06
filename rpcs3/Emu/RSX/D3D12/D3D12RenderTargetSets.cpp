@@ -49,7 +49,7 @@ void D3D12GSRender::InitDrawBuffers()
 	{
 	case CELL_GCM_SURFACE_TARGET_0:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -59,7 +59,7 @@ void D3D12GSRender::InitDrawBuffers()
 	}
 	case CELL_GCM_SURFACE_TARGET_1:
 	{
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_b, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -69,14 +69,14 @@ void D3D12GSRender::InitDrawBuffers()
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT1:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -86,21 +86,21 @@ void D3D12GSRender::InitDrawBuffers()
 	break;
 	case CELL_GCM_SURFACE_TARGET_MRT2:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -110,28 +110,28 @@ void D3D12GSRender::InitDrawBuffers()
 	}
 	case CELL_GCM_SURFACE_TARGET_MRT3:
 	{
-		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttA = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 0, address_a, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		D3D12_RENDER_TARGET_VIEW_DESC rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttA, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttB = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 1, address_b, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttB, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttC = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 2, address_c, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rttViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		m_device->CreateRenderTargetView(rttC, &rttViewDesc, Handle);
 		Handle.ptr += g_RTTIncrement;
-		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, RSXThread::m_width, RSXThread::m_height,
+		ID3D12Resource *rttD = m_rtts.bindAddressAsRenderTargets(m_device, copycmdlist, 3, address_d, m_surface_clip_w, m_surface_clip_h,
 			m_clear_surface_color_r / 255.0f, m_clear_surface_color_g / 255.0f, m_clear_surface_color_b / 255.0f, m_clear_surface_color_a / 255.0f);
 		rttViewDesc = {};
 		rttViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -141,7 +141,7 @@ void D3D12GSRender::InitDrawBuffers()
 	}
 	}
 
-	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device, copycmdlist, address_z, RSXThread::m_width, RSXThread::m_height, m_surface_depth_format, 1., 0);
+	ID3D12Resource *ds = m_rtts.bindAddressAsDepthStencil(m_device, copycmdlist, address_z, m_surface_clip_w, m_surface_clip_h, m_surface_depth_format, 1., 0);
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
 	switch (m_surface_depth_format)
