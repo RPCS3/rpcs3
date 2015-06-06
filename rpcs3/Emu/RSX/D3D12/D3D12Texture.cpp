@@ -169,6 +169,7 @@ ID3D12Resource *uploadSingleTexture(
 	const u32 texaddr = GetAddress(texture.GetOffset(), texture.GetLocation());
 
 	bool is_swizzled = !(texture.GetFormat() & CELL_GCM_TEXTURE_LN);
+	size_t srcPitch;
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
@@ -181,103 +182,128 @@ ID3D12Resource *uploadSingleTexture(
 	case CELL_GCM_TEXTURE_B8:
 		blockSizeInByte = 1;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w;
 		break;
 	case CELL_GCM_TEXTURE_A1R5G5B5:
 		blockSizeInByte = 2;
 		blockHeightInPixel = 1, blockWidthInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_R5G6B5:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_A8R8G8B8:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		blockSizeInByte = 8;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		srcPitch = w * 8;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
+		srcPitch = w * 8;
 		break;
 	case CELL_GCM_TEXTURE_G8B8:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_R6G5B5:
 		// Not native
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_DEPTH24_D8:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_DEPTH16:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_X16:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_Y16_X16:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_R5G5B5A1:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		blockSizeInByte = 8;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 8;
 		break;
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		blockSizeInByte = 16;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 16;
 		break;
 	case CELL_GCM_TEXTURE_X32_FLOAT:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_D1R5G5B5:
 		blockSizeInByte = 2;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 2;
 		break;
 	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_D8R8G8B8:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 1, blockHeightInPixel = 1;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 2, blockHeightInPixel = 2;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		blockSizeInByte = 4;
 		blockWidthInPixel = 2, blockHeightInPixel = 2;
+		srcPitch = w * 4;
 		break;
 	}
 
@@ -308,8 +334,6 @@ ID3D12Resource *uploadSingleTexture(
 	// Upload with correct rowpitch
 	for (unsigned row = 0; row < heightInBlocks; row++)
 	{
-		size_t m_texture_pitch = powerOf2Align(w * blockSizeInByte, 4);
-		if (!m_texture_pitch) m_texture_pitch = rowPitch;
 		switch (format)
 		{
 		case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -330,7 +354,7 @@ ID3D12Resource *uploadSingleTexture(
 					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
 			}
 			else
-				streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+				streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * srcPitch, srcPitch);
 			break;
 		}
 		case CELL_GCM_TEXTURE_A4R4G4B4:
@@ -340,14 +364,14 @@ ID3D12Resource *uploadSingleTexture(
 
 			for (int j = 0; j < w; j++)
 			{
-				u16 tmp = src[row * m_texture_pitch / 2 + j];
+				u16 tmp = src[row * srcPitch / 2 + j];
 				dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
 			}
 			break;
 		}
 		default:
 		{
-			streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * m_texture_pitch, m_texture_pitch);
+			streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * srcPitch, srcPitch);
 			break;
 		}
 		}
