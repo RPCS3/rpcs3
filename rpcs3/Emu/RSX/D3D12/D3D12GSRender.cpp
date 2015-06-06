@@ -802,12 +802,50 @@ bool D3D12GSRender::LoadProgram()
 	}
 	else
 	{
-		prop.DepthStencil.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
-		prop.DepthStencil.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		prop.DepthStencil.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		prop.DepthStencil.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		prop.DepthStencil.BackFace.StencilPassOp = getStencilOp(m_stencil_zpass);
+		prop.DepthStencil.BackFace.StencilDepthFailOp = getStencilOp(m_stencil_zfail);
+		prop.DepthStencil.BackFace.StencilFailOp = getStencilOp(m_stencil_fail);
+		prop.DepthStencil.BackFace.StencilFunc = getStencilFunc(m_stencil_func);
 	}
 
+	// Sensible default value
+	static D3D12_RASTERIZER_DESC CD3D12_RASTERIZER_DESC =
+	{
+		D3D12_FILL_MODE_SOLID,
+		D3D12_CULL_MODE_NONE,
+		FALSE,
+		D3D12_DEFAULT_DEPTH_BIAS,
+		D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+		D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		TRUE,
+		FALSE,
+		FALSE,
+		0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
+	};
+	prop.Rasterization = CD3D12_RASTERIZER_DESC;
+	switch (m_set_cull_face)
+	{
+	case GL_FRONT:
+		prop.Rasterization.CullMode = D3D12_CULL_MODE_FRONT;
+		break;
+	case GL_BACK:
+		prop.Rasterization.CullMode = D3D12_CULL_MODE_BACK;
+		break;
+	default:
+		prop.Rasterization.CullMode = D3D12_CULL_MODE_NONE;
+		break;
+	}
+
+	switch (m_front_face)
+	{
+	case GL_CW:
+		prop.Rasterization.FrontCounterClockwise = FALSE;
+		break;
+	case GL_CCW:
+		prop.Rasterization.FrontCounterClockwise = TRUE;
+		break;
+	}
 
 	prop.IASet = m_IASet;
 

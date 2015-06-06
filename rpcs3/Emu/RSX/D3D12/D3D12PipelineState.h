@@ -18,6 +18,7 @@ struct D3D12PipelineProperties
 	D3D12_BLEND_DESC Blend;
 	unsigned numMRT : 3;
 	D3D12_DEPTH_STENCIL_DESC DepthStencil;
+	D3D12_RASTERIZER_DESC Rasterization;
 
 	bool operator==(const D3D12PipelineProperties &in) const
 	{
@@ -41,6 +42,8 @@ struct D3D12PipelineProperties
 		if (memcmp(&DepthStencil, &in.DepthStencil, sizeof(D3D12_DEPTH_STENCIL_DESC)))
 			return false;
 		if (memcmp(&Blend, &in.Blend, sizeof(D3D12_BLEND_DESC)))
+			return false;
+		if (memcmp(&Rasterization, &in.Rasterization, sizeof(D3D12_RASTERIZER_DESC)))
 			return false;
 		return Topology == in.Topology && DepthStencilFormat == in.DepthStencilFormat && numMRT == in.numMRT;
 	}
@@ -144,25 +147,9 @@ struct D3D12Traits
 		graphicPipelineStateDesc.pRootSignature = extraData.second[fragmentProgramData.m_textureCount];
 		result->second = fragmentProgramData.m_textureCount;
 
-		// Sensible default value
-		static D3D12_RASTERIZER_DESC CD3D12_RASTERIZER_DESC =
-		{
-			D3D12_FILL_MODE_SOLID,
-			D3D12_CULL_MODE_NONE,
-			FALSE,
-			D3D12_DEFAULT_DEPTH_BIAS,
-			D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
-			D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-			TRUE,
-			FALSE,
-			FALSE,
-			0,
-			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
-		};
-
 		graphicPipelineStateDesc.BlendState = pipelineProperties.Blend;
 		graphicPipelineStateDesc.DepthStencilState = pipelineProperties.DepthStencil;
-		graphicPipelineStateDesc.RasterizerState = CD3D12_RASTERIZER_DESC;
+		graphicPipelineStateDesc.RasterizerState = pipelineProperties.Rasterization;
 		graphicPipelineStateDesc.PrimitiveTopologyType = pipelineProperties.Topology;
 
 		graphicPipelineStateDesc.NumRenderTargets = pipelineProperties.numMRT;
