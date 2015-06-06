@@ -849,7 +849,72 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			break;
 
 		case NV4097_SET_SURFACE_FORMAT:
-			DISASM("Set surface format");
+		{
+			const u32 a0 = (u32)args[0];
+			const u32 surface_format = a0 & 0x1f;
+			const u32 surface_depth_format = (a0 >> 5) & 0x7;
+
+			const char *depth_type_name, *color_type_name;
+			switch (surface_depth_format)
+			{
+			case CELL_GCM_SURFACE_Z16:
+				depth_type_name = "CELL_GCM_SURFACE_Z16";
+				break;
+			case CELL_GCM_SURFACE_Z24S8:
+				depth_type_name = "CELL_GCM_SURFACE_Z24S8";
+				break;
+			default: depth_type_name = "";
+				break;
+			}
+			switch (surface_format)
+			{
+			case CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5:
+				color_type_name = "CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5";
+				break;
+			case CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5:
+				color_type_name = "CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5";
+				break;
+			case CELL_GCM_SURFACE_R5G6B5:
+				color_type_name = "CELL_GCM_SURFACE_R5G6B5";
+				break;
+			case CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8:
+				color_type_name = "CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8";
+				break;
+			case CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8:
+				color_type_name = "CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8";
+				break;
+			case CELL_GCM_SURFACE_A8R8G8B8:
+				color_type_name = "CELL_GCM_SURFACE_A8R8G8B8";
+				break;
+			case CELL_GCM_SURFACE_B8:
+				color_type_name = "CELL_GCM_SURFACE_B8";
+				break;
+			case CELL_GCM_SURFACE_G8B8:
+				color_type_name = "CELL_GCM_SURFACE_G8B8";
+				break;
+			case CELL_GCM_SURFACE_F_W16Z16Y16X16:
+				color_type_name = "CELL_GCM_SURFACE_F_W16Z16Y16X16";
+				break;
+			case CELL_GCM_SURFACE_F_W32Z32Y32X32:
+				color_type_name = "CELL_GCM_SURFACE_F_W32Z32Y32X32";
+				break;
+			case CELL_GCM_SURFACE_F_X32:
+				color_type_name = "CELL_GCM_SURFACE_F_X32";
+				break;
+			case CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8:
+				color_type_name = "CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8";
+				break;
+			case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8:
+				color_type_name = "CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8";
+				break;
+			case CELL_GCM_SURFACE_A8B8G8R8:
+				color_type_name = "CELL_GCM_SURFACE_A8B8G8R8";
+				break;
+			default: color_type_name = "";
+				break;
+			}
+			DISASM("Set surface format : C %s Z %s", color_type_name, depth_type_name);
+		}
 			break;
 
 		case NV4097_SET_SURFACE_COLOR_TARGET:
