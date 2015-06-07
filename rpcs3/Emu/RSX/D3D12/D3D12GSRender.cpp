@@ -95,6 +95,10 @@ void D3D12GSRender::ResourceStorage::Reset()
 		std::get<2>(tmp)->Release();
 	for (auto tmp : m_inUseTexture2D)
 		std::get<2>(tmp)->Release();
+	m_inUseConstantsBuffers.clear();
+	m_inUseVertexIndexBuffers.clear();
+	m_inUseTextureUploadBuffers.clear();
+	m_inUseTexture2D.clear();
 
 	m_commandAllocator->Reset();
 	m_textureUploadCommandAllocator->Reset();
@@ -1132,6 +1136,14 @@ void D3D12GSRender::Flip()
 	// Flush
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
+	getNonCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
+	m_constantsData.m_resourceStoredSinceLastSync.clear();
+	getNonCurrentResourceStorage().m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
+	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
+	getNonCurrentResourceStorage().m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
+	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
+	getNonCurrentResourceStorage().m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
+	m_textureData.m_resourceStoredSinceLastSync.clear();
 
 	if (getCurrentResourceStorage().m_frameFinishedHandle)
 	{
@@ -1149,15 +1161,6 @@ void D3D12GSRender::Flip()
 			m_textureData.m_getPos = std::get<0>(tmp);
 		getCurrentResourceStorage().Reset();
 	}
-
-	getCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
-	m_constantsData.m_resourceStoredSinceLastSync.clear();
-	getCurrentResourceStorage().m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
-	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
-	getCurrentResourceStorage().m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
-	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
-	getCurrentResourceStorage().m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
-	m_textureData.m_resourceStoredSinceLastSync.clear();
 
 	m_frame->Flip(nullptr);
 }
