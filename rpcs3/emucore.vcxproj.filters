@@ -986,6 +986,9 @@
     <ClCompile Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\D3D12\D3D12CommonDecompiler.cpp">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\D3D12\D3D12Texture.cpp">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClCompile>
@@ -1868,6 +1871,9 @@
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12VertexProgramDecompiler.h">
+      <Filter>Emu\GPU\RSX\D3D12</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\D3D12\D3D12CommonDecompiler.h">
       <Filter>Emu\GPU\RSX\D3D12</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\D3D12\D3D12Texture.h">
