@@ -147,6 +147,7 @@ namespace rsx
 		u8 stride = 0;
 		u8 size = 0;
 		u8 type = CELL_GCM_VERTEX_F;
+		bool array = false;
 
 		void unpack(u32 data_array_format)
 		{

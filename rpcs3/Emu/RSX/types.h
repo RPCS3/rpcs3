@@ -11,15 +11,23 @@ struct ignore
 
 class any
 {
-	void *m_data = nullptr;
-	int m_size = 0;
-	size_t m_type_hash = 0;
+	void *m_data;
+	int m_size;
+	const std::type_info& m_type_info;
+	std::function<void()> m_destruct;
 
 public:
 	template<typename T>
-	any(const T& data)
+	any(const T& data) : m_type_info(typeid(T))
 	{
-		assign(data);
+		m_data = new char[sizeof(T)];
+		memcpy(m_data, &data, sizeof(T));
+		m_size = sizeof(T);
+
+		m_destruct = [=]()
+		{
+			delete *(T*)m_data;
+		};
 	}
 	
 	~any()
@@ -34,22 +42,14 @@ public:
 		return this;
 	}
 
-	template<typename T>
-	void reset(const T& data)
-	{
-		delete m_data;
-
-		m_data = new char[sizeof(T)];
-		memcpy(m_data, &data, sizeof(T));
-		m_size = sizeof(T);
-		m_type_hash = typeid(T).hash_code();
-	}
-	
 	void clear()
 	{
-		delete m_data;
-		m_data = nullptr;
-		m_type_hash = 0;
+		if (m_destruct)
+		{
+			m_destruct();
+			m_data = nullptr;
+		}
+
 		m_size = 0;
 	}
 
@@ -57,7 +57,7 @@ public:
 	operator T&()
 	{
 		assert(sizeof(T) == m_size);
-		assert(typeid(T).hash_code() == m_type_hash);
+		assert(typeid(T) == m_type_info);
 		return *(T*)m_data;
 	}
 	
@@ -65,14 +65,14 @@ public:
 	operator T() const
 	{
 		assert(sizeof(T) == m_size);
-		assert(typeid(T).hash_code() == m_type_hash);
+		assert(typeid(T) == m_type_info);
 		return *(T*)m_data;
 	}
 	
 	template<typename T>
 	bool test() const
 	{
-		return sizeof(T) == m_size && typeid(T).hash_code() == m_type_hash;
+		return typeid(T) == m_type_info;
 	}
 
 	int size() const
@@ -86,9 +86,9 @@ public:
 		return (T*)m_data;
 	}
 
-	size_t hash_code() const
+	const std::type_info& type_info() const
 	{
-		return m_type_hash;
+		return m_type_info;
 	}
 };
 

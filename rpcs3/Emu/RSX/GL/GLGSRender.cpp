@@ -603,9 +603,12 @@ void GLGSRender::begin()
 	init_buffers();
 
 	u32 color_mask = rsx::method_registers[NV4097_SET_COLOR_MASK];
+	bool color_mask_b = rsx::method_registers[NV4097_SET_COLOR_MASK] & 0xff;
+	bool color_mask_g = (rsx::method_registers[NV4097_SET_COLOR_MASK]) >> 8;
+	bool color_mask_r = (rsx::method_registers[NV4097_SET_COLOR_MASK]) >> 16;
+	bool color_mask_a = rsx::method_registers[NV4097_SET_COLOR_MASK] >> 24;
 
-	//glcheck(glColorMask(color_mask & CELL_GCM_COLOR_MASK_R, color_mask & CELL_GCM_COLOR_MASK_G,
-	//	color_mask & CELL_GCM_COLOR_MASK_B, color_mask & CELL_GCM_COLOR_MASK_A));
+	glcheck(glColorMask(color_mask_r, color_mask_g, color_mask_b, color_mask_a));
 	glcheck(glDepthMask(rsx::method_registers[NV4097_SET_DEPTH_MASK]));
 	glcheck(glStencilMask(rsx::method_registers[NV4097_SET_STENCIL_MASK]));
 	
@@ -722,7 +725,17 @@ void GLGSRender::begin()
 	//NV4097_SET_ANISO_SPREAD
 
 	//TODO
-	//glcheck(glFogi(GL_FOG_MODE, rsx::method_registers[NV4097_SET_FOG_MODE]));
+	/*
+	glcheck(glFogi(GL_FOG_MODE, rsx::method_registers[NV4097_SET_FOG_MODE]));
+	f32 fog_p0 = (f32&)rsx::method_registers[NV4097_SET_FOG_PARAMS + 0];
+	f32 fog_p1 = (f32&)rsx::method_registers[NV4097_SET_FOG_PARAMS + 1];
+
+	f32 fog_start = (2 * fog_p0 - (fog_p0 - 2) / fog_p1) / (fog_p0 - 1);
+	f32 fog_end = (2 * fog_p0 - 1 / fog_p1) / (fog_p0 - 1);
+
+	glFogf(GL_FOG_START, fog_start);
+	glFogf(GL_FOG_END, fog_end);
+	*/
 	//NV4097_SET_FOG_PARAMS
 
 	glcheck(enable(rsx::method_registers[NV4097_SET_POLY_OFFSET_POINT_ENABLE], GL_POLYGON_OFFSET_POINT));
@@ -791,8 +804,96 @@ void GLGSRender::begin()
 	}
 }
 
+template<typename T, int count>
+struct apply_attrib_t;
+
+template<typename T>
+struct apply_attrib_t<T, 1>
+{
+	static void func(gl::glsl::program& program, int index, const T* data)
+	{
+		program.attribs[index] = data[0];
+	}
+};
+
+template<typename T>
+struct apply_attrib_t<T, 2>
+{
+	static void func(gl::glsl::program& program, int index, const T* data)
+	{
+		program.attribs[index] = color2_base<T>{ data[0], data[1] };
+	}
+};
+
+template<typename T>
+struct apply_attrib_t<T, 3>
+{
+	static void func(gl::glsl::program& program, int index, const T* data)
+	{
+		program.attribs[index] = color3_base<T>{ data[0], data[1], data[3] };
+	}
+};
+template<typename T>
+struct apply_attrib_t<T, 4>
+{
+	static void func(gl::glsl::program& program, int index, const T* data)
+	{
+		program.attribs[index] = color4_base<T>{ data[0], data[1], data[3], data[4] };
+	}
+};
+
+
+template<typename T, int count>
+void apply_attrib_array(gl::glsl::program& program, int index, const std::vector<u8>& data)
+{
+	size_t offset = 0;
+
+	while (offset < data.size())
+	{
+		apply_attrib_t<T, count>::func(program, index, (T*)(data.data() + offset));
+
+		offset += count * sizeof(T);
+	}
+}
+
 void GLGSRender::end()
 {
+	if (vertex_array_draw_info.empty() && vertex_index_array.entries.empty())
+	{
+		bool has_array = false;
+
+		for (int i = 0; i < rsx::limits::vertex_count; ++i)
+		{
+			if (vertex_arrays_info[i].array)
+			{
+				has_array = true;
+				break;
+			}
+		}
+
+		if (!has_array)
+		{
+			size_t min_count = ~0;
+
+			for (int i = 0; i < rsx::limits::vertex_count; ++i)
+			{
+				if (!vertex_arrays_info[i].size)
+					continue;
+
+				size_t count = vertex_arrays[i].data.size() /
+					rsx::get_vertex_type_size(vertex_arrays_info[i].type) * vertex_arrays_info[i].size;
+
+				if (count < min_count)
+					min_count = count;
+			}
+
+			if (min_count && min_count < ~0)
+			{
+				vertex_array_draw_info.push_back({ 0, min_count });
+			}
+		}
+	}
+
 	if (!draw_fbo || (vertex_array_draw_info.empty() && vertex_index_array.entries.empty()))
 	{
 		rsx::thread::end();
@@ -818,26 +919,30 @@ void GLGSRender::end()
 	}
 
 	//initialize vertex attributes
-	static const u32 gl_types[] =
+	static const gl::buffer_pointer::type gl_types[] =
 	{
-		GL_SHORT,
-		GL_FLOAT,
-		GL_HALF_FLOAT,
-		GL_UNSIGNED_BYTE,
-		GL_SHORT,
-		GL_FLOAT, // Needs conversion
-		GL_UNSIGNED_BYTE,
+		gl::buffer_pointer::type::f32,
+
+		gl::buffer_pointer::type::s16,
+		gl::buffer_pointer::type::f32,
+		gl::buffer_pointer::type::f16,
+		gl::buffer_pointer::type::u8,
+		gl::buffer_pointer::type::s16,
+		gl::buffer_pointer::type::f32, // Needs conversion
+		gl::buffer_pointer::type::u8
 	};
 
 	static const bool gl_normalized[] =
 	{
-		GL_TRUE,
-		GL_FALSE,
-		GL_FALSE,
-		GL_TRUE,
-		GL_FALSE,
-		GL_TRUE,
-		GL_FALSE,
+		false,
+
+		true,
+		false,
+		false,
+		true,
+		false,
+		true,
+		false
 	};
 
 	for (auto &info : vertex_array_draw_info)
@@ -956,11 +1061,33 @@ void GLGSRender::end()
 			continue;
 		}
 
-		u32 gltype = gl_types[vertex_info.type - 1];
-		bool normalized = gl_normalized[vertex_info.type - 1];
+		if (true || vertex_info.array)
+		{
+			glcheck(m_program.attribs[index] =
+				(vao + vertex_arrays_offsets[index])
+				.config(gl_types[vertex_info.type], vertex_info.size, gl_normalized[vertex_info.type]));
+		}
+		else
+		{
+			auto &vertex_data = vertex_arrays[index].data;
 
-		glcheck(glEnableVertexAttribArray(index));
-		glcheck(glVertexAttribPointer(index, vertex_info.size, gltype, normalized, 0, (void*)vertex_arrays_offsets[index]));
+			switch (vertex_info.type)
+			{
+			case CELL_GCM_VERTEX_F:
+				switch (vertex_info.size)
+				{
+				case 1: apply_attrib_array<f32, 1>(m_program, index, vertex_data); break;
+				case 2: apply_attrib_array<f32, 2>(m_program, index, vertex_data); break;
+				case 3: apply_attrib_array<f32, 3>(m_program, index, vertex_data); break;
+				case 4: apply_attrib_array<f32, 4>(m_program, index, vertex_data); break;
+				}
+				break;
+
+			default:
+				LOG_ERROR(RSX, "bad non array vertex data format (type = %d, size = %d)", vertex_info.type, vertex_info.size);
+				break;
+			}
+		}
 	}
 
 	for (auto &info : vertex_array_draw_info)
@@ -1163,7 +1290,7 @@ bool GLGSRender::load_program()
 	gl::glsl::shader fp(gl::glsl::shader::type::fragment, fp_shader);
 	gl::glsl::shader vp(gl::glsl::shader::type::vertex, vp_shader);
 
-	(m_program.recreate() += {fp.compile(), vp.compile()}).make();
+	(m_program.recreate() += { fp.compile(), vp.compile() }).make();
 #endif
 
 	f32 viewport_x = f32(rsx::method_registers[NV4097_SET_VIEWPORT_HORIZONTAL] & 0xffff);
@@ -1282,8 +1409,8 @@ void GLGSRender::init_buffers()
 {
 	u32 surface_format = rsx::method_registers[NV4097_SET_SURFACE_FORMAT];
 
-	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
-	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
+	u32 clip_horizontal = rsx::method_registers[NV4097_SET_SURFACE_CLIP_HORIZONTAL];
+	u32 clip_vertical = rsx::method_registers[NV4097_SET_SURFACE_CLIP_VERTICAL];
 
 	u32 clip_width = clip_horizontal >> 16;
 	u32 clip_height = clip_vertical >> 16;
@@ -1296,6 +1423,8 @@ void GLGSRender::init_buffers()
 		m_surface.width = clip_width;
 		m_surface.height = clip_height;
 
+		LOG_WARNING(RSX, "surface: %dx%d", clip_width, clip_height);
+
 		draw_fbo.recreate();
 		m_draw_tex_depth_stencil.recreate(gl::texture::target::texture2D);
 
@@ -1305,7 +1434,7 @@ void GLGSRender::init_buffers()
 		{
 			m_draw_tex_color[i].recreate(gl::texture::target::texture2D);
 			glcheck(m_draw_tex_color[i].config()
-				.size(m_surface.width, m_surface.height)
+				.size({ m_surface.width, m_surface.height })
 				.type(format.type)
 				.format(format.format)
 				.swizzle(format.swizzle.r, format.swizzle.g, format.swizzle.b, format.swizzle.a));
@@ -1321,7 +1450,7 @@ void GLGSRender::init_buffers()
 		case CELL_GCM_SURFACE_Z16:
 		{
 			glcheck(m_draw_tex_depth_stencil.config()
-				.size(m_surface.width, m_surface.height)
+				.size({ m_surface.width, m_surface.height })
 				.type(gl::texture::type::ushort)
 				.format(gl::texture::format::depth)
 				.internal_format(gl::texture::format::depth16));
@@ -1333,7 +1462,7 @@ void GLGSRender::init_buffers()
 		case CELL_GCM_SURFACE_Z24S8:
 		{
 			glcheck(m_draw_tex_depth_stencil.config()
-				.size(m_surface.width, m_surface.height)
+				.size({ m_surface.width, m_surface.height })
 				.type(gl::texture::type::uint_24_8)
 				.format(gl::texture::format::depth_stencil)
 				.internal_format(gl::texture::format::depth24_stencil8));
@@ -1601,7 +1730,7 @@ void GLGSRender::flip(int buffer)
 			m_flip_tex_color.recreate(gl::texture::target::texture2D);
 
 			glcheck(m_flip_tex_color.config()
-				.size(buffer_width, buffer_height)
+				.size({ buffer_width, buffer_height })
 				.type(gl::texture::type::uint_8_8_8_8)
 				.format(gl::texture::format::bgra));
 
@@ -1621,7 +1750,7 @@ void GLGSRender::flip(int buffer)
 		glDisable(GL_CULL_FACE);
 
 		glcheck(m_flip_tex_color.copy_from(vm::get_ptr(buffer_address),
-			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8/*, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)*/));
+			gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, gl::pixel_unpack_settings().row_length(buffer_pitch / 4)));
 	}
 
 	area screen_area = coordi({}, { buffer_width, buffer_height });
