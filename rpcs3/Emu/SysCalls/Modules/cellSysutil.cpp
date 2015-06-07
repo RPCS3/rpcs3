@@ -470,6 +470,19 @@ int cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u3
 	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 }
 
+// Uncomment, once support for pointer argument type is available
+int cellAudioOutGetAvailableDeviceInfo(u32 count/*, CellAudioOutDeviceInfo2 info[]*/)
+{
+	cellSysutil.Todo("cellAudioOutGetAvailableDeviceInfo(count=%d, info=?)", count);
+
+	if (count >= 1)
+	{
+		//info[0].state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
+	}
+
+	return 1; // TODO: We currently assume that there always is one audio device connected
+}
+
 int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
 {
 	cellSysutil.Warning("cellAudioOutGetState(audioOut=0x%x, deviceIndex=0x%x, state_addr=0x%x)", audioOut, deviceIndex, state.addr());
@@ -677,8 +690,8 @@ int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
-	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
-	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
+	strncpy_s(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
+	strncpy_s(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
 	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
 	Emu.GetVFS().CreateDir(std::string(param->getCachePath));
 
@@ -795,6 +808,7 @@ Module cellSysutil("cellSysutil", []()
 
 	REG_FUNC(cellSysutil, cellAudioOutGetState);
 	REG_FUNC(cellSysutil, cellAudioOutConfigure);
+	REG_FUNC(cellSysutil, cellAudioOutGetAvailableDeviceInfo);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability2);
 	REG_FUNC(cellSysutil, cellAudioOutGetDeviceInfo);

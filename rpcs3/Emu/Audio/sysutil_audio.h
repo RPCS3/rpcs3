@@ -199,7 +199,7 @@ struct CellAudioOutSoundMode2
 
 struct CellAudioOutDeviceInfo2
 { 
-	u8 portType; 
+	u8 portType;
 	u8 availableModeCount; 
 	u8 state; 
 	u8 deviceNumber; 
