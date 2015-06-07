@@ -61,9 +61,23 @@ struct DataHeap
 	void Release();
 };
 
+struct GarbageCollectionThread
+{
+	std::mutex m_mutex;
+	std::condition_variable cv;
+	std::queue<std::function<void()> > m_queue;
+	std::thread m_worker;
+
+	GarbageCollectionThread();
+	~GarbageCollectionThread();
+	void pushWork(std::function<void()>&& f);
+	void waitForCompletion();
+};
+
 class D3D12GSRender : public GSRender
 {
 private:
+	GarbageCollectionThread m_GC;
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
 

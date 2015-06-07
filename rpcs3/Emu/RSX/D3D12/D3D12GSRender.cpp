@@ -79,6 +79,44 @@ void DataHeap::Release()
 	}
 }
 
+GarbageCollectionThread::GarbageCollectionThread()
+{
+	m_worker = std::thread([this]() {
+		while (true)
+		{
+			std::unique_lock<std::mutex> lock(m_mutex);
+			if (m_queue.empty())
+				cv.wait(lock);
+			m_queue.front()();
+			m_queue.pop();
+		}
+	});
+	m_worker.detach();
+}
+
+GarbageCollectionThread::~GarbageCollectionThread()
+{
+}
+
+void GarbageCollectionThread::pushWork(std::function<void()>&& f)
+{
+	std::unique_lock<std::mutex> lock(m_mutex);
+	m_queue.push(f);
+	cv.notify_all();
+}
+
+void GarbageCollectionThread::waitForCompletion()
+{
+	pushWork([]() {});
+	while (true)
+	{
+		std::this_thread::yield();
+		std::unique_lock<std::mutex> lock(m_mutex);
+		if (m_queue.empty())
+			return;
+	}
+}
+
 void D3D12GSRender::ResourceStorage::Reset()
 {
 	m_constantsBufferIndex = 0;
@@ -1128,40 +1166,45 @@ void D3D12GSRender::Flip()
 	check(m_swapChain->Present(Ini.GSVSyncEnable.GetValue() ? 1 : 0, 0));
 	// Add an event signaling queue completion
 
-	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&getNonCurrentResourceStorage().m_frameFinishedFence));
-	getNonCurrentResourceStorage().m_frameFinishedHandle = CreateEvent(0, 0, 0, 0);
-	getNonCurrentResourceStorage().m_frameFinishedFence->SetEventOnCompletion(1, getNonCurrentResourceStorage().m_frameFinishedHandle);
-	m_commandQueueGraphic->Signal(getNonCurrentResourceStorage().m_frameFinishedFence, 1);
+	ResourceStorage &storage = getNonCurrentResourceStorage();
+
+	m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&storage.m_frameFinishedFence));
+	storage.m_frameFinishedHandle = CreateEvent(0, 0, 0, 0);
+	storage.m_frameFinishedFence->SetEventOnCompletion(1, storage.m_frameFinishedHandle);
+	m_commandQueueGraphic->Signal(storage.m_frameFinishedFence, 1);
 
 	// Flush
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
-	getNonCurrentResourceStorage().m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
+
+	storage.m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
 	m_constantsData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
+	storage.m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
 	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
+	storage.m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
 	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
-	getNonCurrentResourceStorage().m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
+	storage.m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
 	m_textureData.m_resourceStoredSinceLastSync.clear();
 
-	if (getCurrentResourceStorage().m_frameFinishedHandle)
+	m_GC.pushWork([&]()
 	{
-		WaitForSingleObject(getCurrentResourceStorage().m_frameFinishedHandle, INFINITE);
-		CloseHandle(getCurrentResourceStorage().m_frameFinishedHandle);
-		getCurrentResourceStorage().m_frameFinishedFence->Release();
+		WaitForSingleObject(storage.m_frameFinishedHandle, INFINITE);
+		CloseHandle(storage.m_frameFinishedHandle);
+		storage.m_frameFinishedFence->Release();
 
-		for (auto tmp : getCurrentResourceStorage().m_inUseConstantsBuffers)
+		for (auto tmp : storage.m_inUseConstantsBuffers)
 			m_constantsData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getCurrentResourceStorage().m_inUseVertexIndexBuffers)
+		for (auto tmp : storage.m_inUseVertexIndexBuffers)
 			m_vertexIndexData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getCurrentResourceStorage().m_inUseTextureUploadBuffers)
+		for (auto tmp : storage.m_inUseTextureUploadBuffers)
 			m_textureUploadData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : getCurrentResourceStorage().m_inUseTexture2D)
+		for (auto tmp : storage.m_inUseTexture2D)
 			m_textureData.m_getPos = std::get<0>(tmp);
-		getCurrentResourceStorage().Reset();
-	}
+		storage.Reset();
+	});
 
+	while (getCurrentResourceStorage().m_frameFinishedHandle)
+		std::this_thread::yield();
 	m_frame->Flip(nullptr);
 }
 
@@ -1446,7 +1489,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	//Wait for result
 	m_commandQueueGraphic->Signal(fence, 1);
 
-	std::thread valueChangerThread([=]() {
+	m_GC.pushWork([=]() {
 		WaitForSingleObject(handle, INFINITE);
 		CloseHandle(handle);
 		fence->Release();
@@ -1561,28 +1604,17 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		vm::write32(m_label_addr + offset, value);
 	});
-	valueChangerThread.detach();
+
+	m_GC.waitForCompletion();
 }
 
 void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 {
-	ID3D12Fence *fence;
-	check(
-		m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence))
-		);
-	m_commandQueueGraphic->Wait(fence, 1);
-
-	std::thread valueChangerThread([=]() {
-		while (true)
-		{
-			u32 val = vm::read32(m_label_addr + offset);
-			if (val == value) break;
-			std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		}
-		fence->Signal(1);
-		fence->Release();
+	while (true)
+	{
+		u32 val = vm::read32(m_label_addr + offset);
+		if (val == value) break;
+		std::this_thread::yield();
 	}
-	);
-	valueChangerThread.detach();
 }
 #endif
