@@ -72,10 +72,19 @@ void D3D12FragmentDecompiler::insertOutputs(std::stringstream & OS)
 		{ "ocol3", "r4" },
 	};
 
+	const std::pair<std::string, std::string> table2[] =
+	{
+		{ "ocol0", "h0" },
+		{ "ocol1", "h2" },
+		{ "ocol2", "h3" },
+		{ "ocol3", "h4" },
+	};
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 			OS << "	" << "float4" << " " << table[i].first << " : SV_TARGET" << i << ";" << std::endl;
+		else if (m_parr.HasParam(PF_PARAM_NONE, "float4", table2[i].second))
+			OS << "	" << "float4" << " " << table2[i].first << " : SV_TARGET" << i << ";" << std::endl;
 	}
 	OS << "};" << std::endl;
 }
@@ -133,11 +142,21 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		{ "ocol3", "r4" },
 	};
 
+	const std::pair<std::string, std::string> table2[] =
+	{
+		{ "ocol0", "h0" },
+		{ "ocol1", "h2" },
+		{ "ocol2", "h3" },
+		{ "ocol3", "h4" },
+	};
+
 	OS << "	PixelOutput Out;" << std::endl;
 	for (int i = 0; i < sizeof(table) / sizeof(*table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "float4", table[i].second))
 			OS << "	Out." << table[i].first << " = " << table[i].second << ";" << std::endl;
+		else if (m_parr.HasParam(PF_PARAM_NONE, "float4", table2[i].second))
+			OS << "	Out." << table2[i].first << " = " << table2[i].second << ";" << std::endl;
 	}
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
