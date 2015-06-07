@@ -1017,8 +1017,8 @@ void D3D12GSRender::ExecCMD()
 	{
 		0.f,
 		0.f,
-		(float)m_surface_clip_w,
-		(float)m_surface_clip_h,
+		(float)RSXThread::m_width,
+		(float)RSXThread::m_height,
 		-1.f,
 		1.f
 	};
