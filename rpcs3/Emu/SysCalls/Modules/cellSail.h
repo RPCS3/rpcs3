@@ -719,10 +719,10 @@ struct CellSailSoundAdapter
 	bool initialized = false;
 	bool registered = false;
 	vm::ptr<CellSailSoundAdapterFuncs> callbacks;
-	vm::ptr<u32> arg;
+	be_t<u32> arg;
 	be_t<s32> index;
-	vm::ptr<CellSailAudioFormat> format;
-	be_t<u64> internalData[29];
+	CellSailAudioFormat format;
+	be_t<u64> internalData[27];
 };
 
 static_assert(sizeof(CellSailSoundAdapter) == 0x100, "Invalid CellSailSoundAdapter size");
@@ -747,7 +747,13 @@ struct CellSailGraphicsFrameInfo
 
 struct CellSailGraphicsAdapter
 {
-	be_t<u64> internalData[32];
+	bool initialized = false;
+	bool registered = false;
+	vm::ptr<CellSailGraphicsAdapterFuncs> callbacks;
+	be_t<u32> arg;
+	CellSailVideoFormat format;
+	be_t<s32> index;
+	be_t<u64> internalData[25];
 };
 
 static_assert(sizeof(CellSailGraphicsAdapter) == 0x100, "Invalid CellSailGraphicsAdapter size");
@@ -1127,7 +1133,8 @@ struct CellSailPlayer
 	be_t<s32> descriptors;
 	vm::ptr<CellSailDescriptor> registeredDescriptors[2];
 	bool paused = true;
-	vm::ptr<CellSailSoundAdapter> adapter;
+	vm::ptr<CellSailSoundAdapter> sAdapter;
+	vm::ptr<CellSailGraphicsAdapter> gAdapter;
 	be_t<u64> internalData[25];
 };
 
