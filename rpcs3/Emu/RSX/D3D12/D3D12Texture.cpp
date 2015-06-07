@@ -147,6 +147,54 @@ DXGI_FORMAT getDXGIFormat(int format)
 	}
 }
 
+static D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
+{
+	D3D12_FILTER_TYPE min, mag, mip;
+	switch (minFilter)
+	{
+	case 1: //GL_NEAREST
+		min = D3D12_FILTER_TYPE_POINT;
+		mip = D3D12_FILTER_TYPE_POINT;
+		break;
+	case 2: // GL_LINEAR
+		min = D3D12_FILTER_TYPE_LINEAR;
+		mip = D3D12_FILTER_TYPE_POINT;
+		break;
+	case 3: //GL_NEAREST_MIPMAP_NEAREST
+		min = D3D12_FILTER_TYPE_POINT;
+		mip = D3D12_FILTER_TYPE_POINT;
+		break;
+	case 4: // GL_LINEAR_MIPMAP_NEAREST
+		min = D3D12_FILTER_TYPE_LINEAR;
+		mip = D3D12_FILTER_TYPE_POINT;
+		break;
+	case 5: // GL_NEAREST_MIPMAP_LINEAR
+		min = D3D12_FILTER_TYPE_POINT;
+		mip = D3D12_FILTER_TYPE_LINEAR;
+		break;
+	case 6: //GL_LINEAR_MIPMAP_LINEAR
+		min = D3D12_FILTER_TYPE_LINEAR;
+		mip = D3D12_FILTER_TYPE_LINEAR;
+		break;
+	default:
+		LOG_ERROR(RSX, "Unknow min filter %x", minFilter);
+	}
+
+	switch (magFilter)
+	{
+	case 1: // GL_NEAREST
+		mag = D3D12_FILTER_TYPE_POINT;
+		break;
+	case 2: // GL_LINEAR
+		mag = D3D12_FILTER_TYPE_LINEAR;
+		break;
+	default:
+		LOG_ERROR(RSX, "Unknow mag filter %x", magFilter);
+	}
+
+	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
+}
+
 /**
  * Create a texture residing in default heap and generate uploads commands in commandList,
  * using a temporary texture buffer.
@@ -575,9 +623,8 @@ size_t D3D12GSRender::UploadTextures()
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
 
-		// TODO : Correctly define sampler
 		D3D12_SAMPLER_DESC samplerDesc = {};
-		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+		samplerDesc.Filter = getSamplerFilter(m_textures[i].GetMinFilter(), m_textures[i].GetMagFilter());
 		samplerDesc.AddressU = GetWrap(m_textures[i].GetWrapS());
 		samplerDesc.AddressV = GetWrap(m_textures[i].GetWrapT());
 		samplerDesc.AddressW = GetWrap(m_textures[i].GetWrapR());
