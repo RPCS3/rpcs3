@@ -342,7 +342,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 	static const u32 width = 425;
-	static const u32 height = 460;
+	static const u32 height = 480;
 
 	// Settings panels
 	wxNotebook* nb_config = new wxNotebook(&diag, wxID_ANY, wxPoint(6,6), wxSize(width, height));
