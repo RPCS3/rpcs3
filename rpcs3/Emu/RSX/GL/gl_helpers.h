@@ -5,7 +5,7 @@
 #include "Emu/RSX/types.h"
 
 #ifdef _DEBUG
-#define glcheck(X) \
+#define glcheck(X) {\
 	/*glGetError(); flush errors*/ \
 	X; \
 	if (GLenum err = glGetError())\
@@ -21,7 +21,7 @@
 		default: error = "unknown error"; break; \
 		} \
 		throw std::runtime_error(fmt::format("OpenGL error: %s. file '%s' function '%s' line %d '" #X "'", error.c_str(), __FILE__, __FUNCTION__, __LINE__));\
-	}
+	}}
 #else
 #define glcheck(X) X
 #endif

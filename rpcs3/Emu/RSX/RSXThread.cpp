@@ -112,10 +112,10 @@ namespace rsx
 			//find begin of data
 			size_t begin = id + index * element_size_in_words;
 
-			size_t position = entry.data.size();
-			entry.data.resize(position + element_size);
+			size_t position = entry.size();
+			entry.resize(position + element_size);
 
-			memcpy(entry.data.data() + position, method_registers + begin, element_size);
+			memcpy(entry.data() + position, method_registers + begin, element_size);
 		}
 
 		template<u32 index>
@@ -173,7 +173,7 @@ namespace rsx
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->vertex_array_draw_info.push_back({ first, count });
+			rsx->load_vertex_data(first, count);
 		}
 
 		__forceinline void draw_index_array(thread* rsx, u32 arg)
@@ -181,35 +181,8 @@ namespace rsx
 			u32 first = arg & 0xffffff;
 			u32 count = (arg >> 24) + 1;
 
-			rsx->vertex_index_array.entries.push_back({ first, count });
-
-			u32 address = get_address(method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
-			u32 type = method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
-
-			u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
-			u32 packet_size = (first + count) * type_size;
-
-			if (rsx->vertex_index_array.data.size() < packet_size)
-			{
-				rsx->vertex_index_array.data.resize(packet_size);
-			}
-
-			switch (type)
-			{
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
-				for (u32 i = first; i < first + count; ++i)
-				{
-					(u32&)rsx->vertex_index_array.data[i * sizeof(u32)] = vm::read32(address + i * sizeof(u32));
-				}
-				break;
-
-			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
-				for (u32 i = first; i < first + count; ++i)
-				{
-					(u16&)rsx->vertex_index_array.data[i * sizeof(u16)] = vm::read16(address + i * sizeof(u16));
-				}
-				break;
-			}
+			rsx->load_vertex_data(first, count);
+			rsx->load_vertex_index_data(first, count);
 		}
 
 		template<u32 index>
@@ -243,6 +216,7 @@ namespace rsx
 			}
 
 			rsx->end();
+			rsx->vertex_draw_count = 0;
 		}
 
 		__forceinline void get_report(thread* rsx, u32 arg)
@@ -791,13 +765,13 @@ namespace rsx
 	{
 		switch (type)
 		{
-		case CELL_GCM_VERTEX_S1:    return 2;
-		case CELL_GCM_VERTEX_F:     return 4;
-		case CELL_GCM_VERTEX_SF:    return 2;
-		case CELL_GCM_VERTEX_UB:    return 1;
-		case CELL_GCM_VERTEX_S32K:  return 2;
-		case CELL_GCM_VERTEX_CMP:   return 4;
-		case CELL_GCM_VERTEX_UB256: return 4;
+		case CELL_GCM_VERTEX_S1:    return sizeof(u16);
+		case CELL_GCM_VERTEX_F:     return sizeof(f32);
+		case CELL_GCM_VERTEX_SF:    return sizeof(f16);
+		case CELL_GCM_VERTEX_UB:    return sizeof(u8);
+		case CELL_GCM_VERTEX_S32K:  return sizeof(u32);
+		case CELL_GCM_VERTEX_CMP:   return sizeof(u32);
+		case CELL_GCM_VERTEX_UB256: return sizeof(u8) * 4;
 
 		default:
 			LOG_ERROR(RSX, "RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", type);
@@ -808,23 +782,18 @@ namespace rsx
 
 	void thread::load_vertex_data(u32 first, u32 count)
 	{
+		vertex_draw_count += count;
+
 		for (int index = 0; index < limits::vertex_count; ++index)
 		{
 			auto &info = vertex_arrays_info[index];
 
-			if (!info.size)
+			if (!info.array) // disabled or not a vertex array
 			{
-				//disabled
 				continue;
 			}
 
 			auto &data = vertex_arrays[index];
-
-			if (!data.data.empty())
-			{
-				//not a vertex array
-				continue;
-			}
 
 			if (info.frequency)
 			{
@@ -835,20 +804,18 @@ namespace rsx
 			u32 address = get_address(offset & 0x7fffffff, offset >> 31);
 
 			u32 type_size = get_vertex_type_size(info.type);
-			u32 packet_size = (first + count) * type_size * info.size;
+			u32 element_size = type_size * info.size;
 
-			if (data.data.size() < packet_size)
-			{
-				data.data.resize(packet_size);
-			}
+			u32 dst_position = (u32)data.size();
+			data.resize(dst_position + count * element_size);
 
 			u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
 			u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
 
-			for (u32 i = first; i < first + count; ++i)
+			for (u32 i = 0; i < count; ++i)
 			{
-				auto src = vm::get_ptr<const u8>(address + base_offset + info.stride * (i + base_index));
-				u8* dst = data.data.data() + i * type_size * info.size;
+				auto src = vm::get_ptr<const u8>(address + base_offset + info.stride * (first + i + base_index));
+				u8* dst = data.data() + dst_position + i * element_size;
 
 				switch (type_size)
 				{
@@ -884,6 +851,36 @@ namespace rsx
 		}
 	}
 
+	void thread::load_vertex_index_data(u32 first, u32 count)
+	{
+		u32 address = get_address(method_registers[NV4097_SET_INDEX_ARRAY_ADDRESS], method_registers[NV4097_SET_INDEX_ARRAY_DMA] & 0xf);
+		u32 type = method_registers[NV4097_SET_INDEX_ARRAY_DMA] >> 4;
+
+		u32 type_size = type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 ? sizeof(u32) : sizeof(u16);
+		u32 dst_offset = (u32)vertex_index_array.size();
+		vertex_index_array.resize(dst_offset + count * type_size);
+
+		u32 base_offset = method_registers[NV4097_SET_VERTEX_DATA_BASE_OFFSET];
+		u32 base_index = method_registers[NV4097_SET_VERTEX_DATA_BASE_INDEX];
+
+		switch (type)
+		{
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
+			for (u32 i = 0; i < count; ++i)
+			{
+				(u32&)vertex_index_array[dst_offset + i * sizeof(u32)] = vm::read32(address + (first + i) * sizeof(u32));
+			}
+			break;
+
+		case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
+			for (u32 i = 0; i < count; ++i)
+			{
+				(u16&)vertex_index_array[dst_offset + i * sizeof(u16)] = vm::read16(address + (first + i) * sizeof(u16));
+			}
+			break;
+		}
+	}
+
 	void thread::begin()
 	{
 		draw_mode = method_registers[NV4097_SET_BEGIN_END];
@@ -891,8 +888,6 @@ namespace rsx
 
 	void thread::end()
 	{
-		vertex_array_draw_info.clear();
-
 		vertex_index_array.clear();
 		for (auto &vertex_array : vertex_arrays)
 			vertex_array.clear();

@@ -96,24 +96,6 @@ namespace rsx
 
 	u32 get_vertex_type_size(u32 type);
 
-	struct vertex_array_t
-	{
-		struct entry
-		{
-			u32 first;
-			u32 count;
-		};
-
-		std::vector<u8> data;
-		std::vector<entry> entries;
-
-		void clear()
-		{
-			data.clear(); //check it
-			entries.clear();
-		}
-	};
-
 	struct surface_info
 	{
 		u8 log2height;
@@ -174,11 +156,10 @@ namespace rsx
 		rsx::texture textures[limits::textures_count];
 		rsx::vertex_texture vertex_textures[limits::vertex_textures_count];
 
-		vertex_array_t vertex_index_array;
-
 		data_array_format_info vertex_arrays_info[limits::vertex_count];
-		vertex_array_t vertex_arrays[limits::vertex_count];
-		std::vector<vertex_array_t::entry> vertex_array_draw_info;
+		std::vector<u8> vertex_arrays[limits::vertex_count];
+		std::vector<u8> vertex_index_array;
+		u32 vertex_draw_count = 0;
 
 		std::unordered_map<u32, color4_base<f32>> fragment_constants;
 		std::unordered_map<u32, color4_base<f32>> transform_constants;
@@ -186,6 +167,7 @@ namespace rsx
 		u32 transform_program[512 * 4] = {};
 
 		void load_vertex_data(u32 first, u32 count);
+		void load_vertex_index_data(u32 first, u32 count);
 
 	public:
 		u32 ioAddress, ioSize;
