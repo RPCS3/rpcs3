@@ -35,7 +35,8 @@ u32 LinearToSwizzleAddress(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height,
 	return offset;
 }
 
-static D3D12_COMPARISON_FUNC ComparisonFunc[] =
+static
+D3D12_COMPARISON_FUNC getSamplerCompFunc[] =
 {
 	D3D12_COMPARISON_FUNC_NEVER,
 	D3D12_COMPARISON_FUNC_LESS,
@@ -47,7 +48,8 @@ static D3D12_COMPARISON_FUNC ComparisonFunc[] =
 	D3D12_COMPARISON_FUNC_ALWAYS
 };
 
-size_t D3D12GSRender::GetMaxAniso(size_t aniso)
+static
+size_t getSamplerMaxAniso(size_t aniso)
 {
 	switch (aniso)
 	{
@@ -64,7 +66,8 @@ size_t D3D12GSRender::GetMaxAniso(size_t aniso)
 	return 1;
 }
 
-D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
+static
+D3D12_TEXTURE_ADDRESS_MODE getSamplerWrap(size_t wrap)
 {
 	switch (wrap)
 	{
@@ -82,45 +85,48 @@ D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
 }
 
 
-static D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
+
+static
+D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
 {
 	D3D12_FILTER_TYPE min, mag, mip;
 	switch (minFilter)
 	{
-	case 1: //GL_NEAREST
+	case CELL_GCM_TEXTURE_NEAREST:
 		min = D3D12_FILTER_TYPE_POINT;
 		mip = D3D12_FILTER_TYPE_POINT;
 		break;
-	case 2: // GL_LINEAR
+	case CELL_GCM_TEXTURE_LINEAR:
 		min = D3D12_FILTER_TYPE_LINEAR;
 		mip = D3D12_FILTER_TYPE_POINT;
 		break;
-	case 3: //GL_NEAREST_MIPMAP_NEAREST
+	case CELL_GCM_TEXTURE_NEAREST_NEAREST:
 		min = D3D12_FILTER_TYPE_POINT;
 		mip = D3D12_FILTER_TYPE_POINT;
 		break;
-	case 4: // GL_LINEAR_MIPMAP_NEAREST
+	case CELL_GCM_TEXTURE_LINEAR_NEAREST:
 		min = D3D12_FILTER_TYPE_LINEAR;
 		mip = D3D12_FILTER_TYPE_POINT;
 		break;
-	case 5: // GL_NEAREST_MIPMAP_LINEAR
+	case CELL_GCM_TEXTURE_NEAREST_LINEAR:
 		min = D3D12_FILTER_TYPE_POINT;
 		mip = D3D12_FILTER_TYPE_LINEAR;
 		break;
-	case 6: //GL_LINEAR_MIPMAP_LINEAR
+	case CELL_GCM_TEXTURE_LINEAR_LINEAR:
 		min = D3D12_FILTER_TYPE_LINEAR;
 		mip = D3D12_FILTER_TYPE_LINEAR;
 		break;
+	case CELL_GCM_TEXTURE_CONVOLUTION_MIN:
 	default:
 		LOG_ERROR(RSX, "Unknow min filter %x", minFilter);
 	}
 
 	switch (magFilter)
 	{
-	case 1: // GL_NEAREST
+	case CELL_GCM_TEXTURE_NEAREST:
 		mag = D3D12_FILTER_TYPE_POINT;
 		break;
-	case 2: // GL_LINEAR
+	case CELL_GCM_TEXTURE_LINEAR:
 		mag = D3D12_FILTER_TYPE_LINEAR;
 		break;
 	default:
@@ -560,11 +566,11 @@ size_t D3D12GSRender::UploadTextures()
 
 		D3D12_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = getSamplerFilter(m_textures[i].GetMinFilter(), m_textures[i].GetMagFilter());
-		samplerDesc.AddressU = GetWrap(m_textures[i].GetWrapS());
-		samplerDesc.AddressV = GetWrap(m_textures[i].GetWrapT());
-		samplerDesc.AddressW = GetWrap(m_textures[i].GetWrapR());
-		samplerDesc.ComparisonFunc = ComparisonFunc[m_textures[i].GetZfunc()];
-		samplerDesc.MaxAnisotropy = (UINT)GetMaxAniso(m_textures[i].GetMaxAniso());
+		samplerDesc.AddressU = getSamplerWrap(m_textures[i].GetWrapS());
+		samplerDesc.AddressV = getSamplerWrap(m_textures[i].GetWrapT());
+		samplerDesc.AddressW = getSamplerWrap(m_textures[i].GetWrapR());
+		samplerDesc.ComparisonFunc = getSamplerCompFunc[m_textures[i].GetZfunc()];
+		samplerDesc.MaxAnisotropy = (UINT)getSamplerMaxAniso(m_textures[i].GetMaxAniso());
 		samplerDesc.MipLODBias = m_textures[i].GetBias();
 		samplerDesc.BorderColor[4] = (FLOAT)m_textures[i].GetBorderColor();
 		samplerDesc.MinLOD = (FLOAT)(m_textures[i].GetMinLOD() >> 8);
