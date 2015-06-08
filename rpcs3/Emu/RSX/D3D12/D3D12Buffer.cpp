@@ -195,6 +195,9 @@ static
 ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
+	// Make multiple of stride
+	if (vbf.stride)
+		subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
 	assert(vertexIndexHeap.canAlloc(subBufferSize));
 	size_t heapOffset = vertexIndexHeap.alloc(subBufferSize);
 
@@ -209,7 +212,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 		));
 	void *bufferMap;
 	check(vertexBuffer->Map(0, nullptr, (void**)&bufferMap));
-
+	memset(bufferMap, -1, subBufferSize);
 	#pragma omp parallel for
 	for (int vertex = 0; vertex < vbf.elementCount; vertex++)
 	{
@@ -269,7 +272,10 @@ std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12G
 	for (size_t buffer = 0; buffer < vertexBufferFormat.size(); buffer++)
 	{
 		const VertexBufferFormat &vbf = vertexBufferFormat[buffer];
+		// Make multiple of stride
 		size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
+		if (vbf.stride)
+			subBufferSize = ((subBufferSize + vbf.stride - 1) / vbf.stride) * vbf.stride;
 
 		ID3D12Resource *vertexBuffer = createVertexBuffer(vbf, m_vertex_data, m_device, m_vertexIndexData);
 
