@@ -938,29 +938,31 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			if (first < m_indexed_array.m_first) m_indexed_array.m_first = first;
 
-			for (u32 i=first; i<_count; ++i)
+			int pos = (int)m_indexed_array.m_data.size();
+
+			switch (m_indexed_array.m_type)
+			{
+			case 0:
+				m_indexed_array.m_data.resize(pos + 4 * _count);
+				break;
+			case 1:
+				m_indexed_array.m_data.resize(pos + 2 * _count);
+				break;
+			}
+
+			for (u32 i=first; i< first + _count; ++i)
 			{
 				u32 index;
 				switch(m_indexed_array.m_type)
 				{
 				case 0:
-				{
-					int pos = (int)m_indexed_array.m_data.size();
-					m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 4);
 					index = vm::read32(m_indexed_array.m_addr + i * 4);
-					*(u32*)&m_indexed_array.m_data[pos] = index;
-					//LOG_WARNING(RSX, "index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
-				}
+					*(u32*)&m_indexed_array.m_data[i * 4] = index;
 					break;
 
 				case 1:
-				{
-					int pos = (int)m_indexed_array.m_data.size();
-					m_indexed_array.m_data.resize(m_indexed_array.m_data.size() + 2);
 					index = vm::read16(m_indexed_array.m_addr + i * 2);
-					//LOG_WARNING(RSX, "index 2: %d", index);
-					*(u16*)&m_indexed_array.m_data[pos] = index;
-				}
+					*(u16*)&m_indexed_array.m_data[i * 2] = index;
 					break;
 				}
 
