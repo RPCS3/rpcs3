@@ -4,6 +4,8 @@
 #include <d3d12.h>
 #include <cassert>
 #include "utilities/Log.h"
+#include "Emu/Memory/vm.h"
+#include "Emu/RSX/GCM.h"
 
 inline
 void check(HRESULT hr)
@@ -119,6 +121,7 @@ inline D3D12_BLEND_OP getBlendOp(u16 op)
 	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return D3D12_BLEND_OP_REV_SUBTRACT;
 	case CELL_GCM_MIN: return D3D12_BLEND_OP_MIN;
 	case CELL_GCM_MAX: return D3D12_BLEND_OP_MAX;
+	default:
 	case CELL_GCM_FUNC_ADD_SIGNED:
 	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
@@ -145,6 +148,7 @@ inline D3D12_BLEND getBlendFactor(u16 factor)
 	case CELL_GCM_DST_COLOR: return D3D12_BLEND_DEST_COLOR;
 	case CELL_GCM_ONE_MINUS_DST_COLOR: return D3D12_BLEND_INV_DEST_COLOR;
 	case CELL_GCM_SRC_ALPHA_SATURATE: return D3D12_BLEND_SRC_ALPHA_SAT;
+	default:
 	case CELL_GCM_CONSTANT_COLOR:
 	case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
 	case CELL_GCM_CONSTANT_ALPHA:
@@ -194,6 +198,7 @@ inline D3D12_STENCIL_OP getStencilOp(u32 op)
 	case CELL_GCM_REPLACE: return D3D12_STENCIL_OP_REPLACE;
 	case CELL_GCM_INCR: return D3D12_STENCIL_OP_INCR;
 	case CELL_GCM_DECR: return D3D12_STENCIL_OP_DECR;
+	default:
 	case CELL_GCM_INCR_WRAP:
 	case CELL_GCM_DECR_WRAP:
 		LOG_WARNING(RSX, "Unsupported Stencil Op %d", op);
@@ -216,6 +221,9 @@ inline D3D12_COMPARISON_FUNC getCompareFunc(u32 op)
 	case CELL_GCM_NOTEQUAL: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
 	case CELL_GCM_GEQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	case CELL_GCM_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
+	default:
+		LOG_WARNING(RSX, "Unsupported Compare Op %d", op);
+		return D3D12_COMPARISON_FUNC();
 	}
 }
 
