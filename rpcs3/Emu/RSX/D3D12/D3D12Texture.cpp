@@ -81,71 +81,6 @@ D3D12_TEXTURE_ADDRESS_MODE D3D12GSRender::GetWrap(size_t wrap)
 	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 }
 
-static
-DXGI_FORMAT getDXGIFormat(int format)
-{
-	switch (format)
-	{
-
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-	default:
-		LOG_ERROR(RSX, "Unimplemented Texture format : %x", format);
-		return DXGI_FORMAT();
-	case CELL_GCM_TEXTURE_B8:
-		return DXGI_FORMAT_R8_UNORM;
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-		return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_A4R4G4B4:
-		return DXGI_FORMAT_B4G4R4A4_UNORM;
-	case CELL_GCM_TEXTURE_R5G6B5:
-		return DXGI_FORMAT_B5G6R5_UNORM;
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return DXGI_FORMAT_BC1_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		return DXGI_FORMAT_BC2_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return DXGI_FORMAT_BC3_UNORM;
-	case CELL_GCM_TEXTURE_G8B8:
-		return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case CELL_GCM_TEXTURE_R6G5B5:
-		// Not native
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-		return DXGI_FORMAT_R32_UINT;
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		return DXGI_FORMAT_R32_FLOAT;
-	case CELL_GCM_TEXTURE_DEPTH16:
-		return DXGI_FORMAT_R16_UNORM;
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		return DXGI_FORMAT_R16_FLOAT;
-	case CELL_GCM_TEXTURE_X16:
-		return DXGI_FORMAT_R16_UNORM;
-	case CELL_GCM_TEXTURE_Y16_X16:
-		return DXGI_FORMAT_R16G16_UNORM;
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-		return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return DXGI_FORMAT_R16G16B16A16_FLOAT;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		return DXGI_FORMAT_R32G32B32A32_FLOAT;
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-		return DXGI_FORMAT_R32_FLOAT;
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-		return DXGI_FORMAT_B5G5R5A1_UNORM;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return DXGI_FORMAT_R8G8_B8G8_UNORM;
-	}
-}
 
 static D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
 {
@@ -212,7 +147,7 @@ ID3D12Resource *uploadSingleTexture(
 
 	size_t blockSizeInByte, blockWidthInPixel, blockHeightInPixel;
 	int format = texture.GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	DXGI_FORMAT dxgiFormat = getDXGIFormat(format);
+	DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
 
 	const u32 texaddr = GetAddress(texture.GetOffset(), texture.GetLocation());
 
@@ -487,7 +422,7 @@ size_t D3D12GSRender::UploadTextures()
 		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
 
 		int format = m_textures[i].GetFormat() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		DXGI_FORMAT dxgiFormat = getDXGIFormat(format);
+		DXGI_FORMAT dxgiFormat = getTextureDXGIFormat(format);
 		bool is_swizzled = !(m_textures[i].GetFormat() & CELL_GCM_TEXTURE_LN);
 
 		ID3D12Resource *vramTexture;
