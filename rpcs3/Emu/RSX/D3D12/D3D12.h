@@ -222,7 +222,7 @@ inline D3D12_COMPARISON_FUNC getCompareFunc(u32 op)
 	case CELL_GCM_GEQUAL: return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	case CELL_GCM_ALWAYS: return D3D12_COMPARISON_FUNC_ALWAYS;
 	default:
-		LOG_WARNING(RSX, "Unsupported Compare Op %d", op);
+		LOG_WARNING(RSX, "Unsupported Compare Function %d", op);
 		return D3D12_COMPARISON_FUNC();
 	}
 }
