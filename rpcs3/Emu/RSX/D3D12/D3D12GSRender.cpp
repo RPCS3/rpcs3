@@ -749,7 +749,7 @@ void D3D12GSRender::ExecCMD()
 		commandList->DrawIndexedInstanced((UINT)indexCount, 1, 0, (UINT)m_draw_array_first, 0);
 	// Indexed triangles
 	else if (m_indexed_array.m_count)
-		commandList->DrawIndexedInstanced((UINT)m_indexed_array.m_data.size() / 4, 1, 0, (UINT)m_draw_array_first, 0);
+		commandList->DrawIndexedInstanced((UINT)m_indexed_array.m_data.size() / ((m_indexed_array.m_type == CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16) ? 2 : 4), 1, 0, 0, 0);
 	else if (m_draw_array_count)
 		commandList->DrawInstanced(m_draw_array_count, 1, m_draw_array_first, 0);
 
