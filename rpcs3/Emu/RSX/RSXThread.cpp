@@ -1174,6 +1174,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 		break;
 	}
 
+	case NV4097_SET_NO_PARANOID_TEXTURE_FETCHES:
+	{
+		// Nothing to do here
+		break;
+	}
+
 	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
 	{
 		// Nothing to do here
