@@ -26,6 +26,7 @@ void D3D12VertexProgramDecompiler::insertHeader(std::stringstream &OS)
 	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
 	OS << "{" << std::endl;
 	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float alphaRef;" << std::endl;
 	OS << "};" << std::endl;
 }
 

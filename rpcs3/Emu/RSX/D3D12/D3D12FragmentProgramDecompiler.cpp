@@ -34,7 +34,11 @@ std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::strin
 
 void D3D12FragmentDecompiler::insertHeader(std::stringstream & OS)
 {
-	OS << "// Header" << std::endl;
+	OS << "cbuffer SCALE_OFFSET : register(b0)" << std::endl;
+	OS << "{" << std::endl;
+	OS << "	float4x4 scaleOffsetMat;" << std::endl;
+	OS << "	float alphaRef;" << std::endl;
+	OS << "};" << std::endl;
 }
 
 void D3D12FragmentDecompiler::insertIntputs(std::stringstream & OS)
@@ -158,6 +162,7 @@ void D3D12FragmentDecompiler::insertMainEnd(std::stringstream & OS)
 		else if (m_parr.HasParam(PF_PARAM_NONE, "float4", table2[i].second))
 			OS << "	Out." << table2[i].first << " = " << table2[i].second << ";" << std::endl;
 	}
+	OS << "	if (Out.ocol0.a <= alphaRef) discard;" << std::endl;
 	OS << "	return Out;" << std::endl;
 	OS << "}" << std::endl;
 }
