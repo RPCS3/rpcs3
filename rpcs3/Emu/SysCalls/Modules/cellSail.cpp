@@ -161,12 +161,12 @@ s32 cellSailDescriptorSetParameter()
 	return CELL_OK;
 }
 
-s32 cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, const vm::ptr<CellSailSoundAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
+s32 cellSailSoundAdapterInitialize(vm::ptr<CellSailSoundAdapter> pSelf, vm::ptr<const CellSailSoundAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
 {
 	cellSail.Warning("cellSailSoundAdapterInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x, pArg=0x%x)", pSelf.addr(), pCallbacks.addr(), pArg.addr());
 
 	pSelf->callbacks = pCallbacks;
-	pSelf->arg = be_t<u32>::make(pArg.addr());
+	pSelf->arg = pArg;
 	pSelf->initialized = true;
 	pSelf->registered = false;
 
@@ -233,12 +233,12 @@ s32 cellSailSoundAdapterPtsToTimePosition()
 	return CELL_OK;
 }
 
-s32 cellSailGraphicsAdapterInitialize(vm::ptr<CellSailGraphicsAdapter> pSelf, const vm::ptr<CellSailGraphicsAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
+s32 cellSailGraphicsAdapterInitialize(vm::ptr<CellSailGraphicsAdapter> pSelf, vm::ptr<const CellSailGraphicsAdapterFuncs> pCallbacks, vm::ptr<u32> pArg)
 {
 	cellSail.Warning("cellSailGraphicsAdapterInitialize(pSelf_addr=0x%x, pCallbacks_addr=0x%x, pArg_addr=0x%x)", pSelf.addr(), pCallbacks.addr(), pArg.addr());
 
 	pSelf->callbacks = pCallbacks;
-	pSelf->arg = be_t<u32>::make(pArg.addr());
+	pSelf->arg = pArg;
 	pSelf->initialized = true;
 	pSelf->registered = false;
 

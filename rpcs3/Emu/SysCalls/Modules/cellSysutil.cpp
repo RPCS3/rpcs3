@@ -690,12 +690,24 @@ int cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	//TODO: implement
 	char id[CELL_SYSCACHE_ID_SIZE];
-	strncpy_s(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
-	strncpy_s(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
+	strncpy(id, param->cacheId, CELL_SYSCACHE_ID_SIZE);
+	strncpy(param->getCachePath, ("/dev_hdd1/cache/" + std::string(id) + "/").c_str(), CELL_SYSCACHE_PATH_MAX);
 	param->getCachePath[CELL_SYSCACHE_PATH_MAX - 1] = '\0';
 	Emu.GetVFS().CreateDir(std::string(param->getCachePath));
 
 	return CELL_SYSCACHE_RET_OK_RELAYED;
+}
+
+int cellSysutilRegisterCallbackDispatcher()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+int cellSysutilPacketWrite()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 bool bgm_playback_enabled = true;
@@ -826,8 +838,8 @@ Module cellSysutil("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysCacheMount);
 	REG_FUNC(cellSysutil, cellSysCacheClear);
 
-	//REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
-	//REG_FUNC(cellSysutil, cellSysutilPacketWrite);
+	REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
+	REG_FUNC(cellSysutil, cellSysutilPacketWrite);
 
 	REG_FUNC(cellSysutil, cellWebBrowserEstimate2);
 });

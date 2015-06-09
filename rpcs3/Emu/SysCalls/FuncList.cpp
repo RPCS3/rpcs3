@@ -1652,6 +1652,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 0x4c191088: return "cellSailDescriptorGetUri";
 	case 0x4cc54f8e: return "cellSailFutureInitialize";
 	case 0x4fa5ad09: return "cellSailPlayerReopenEsAudio";
+	case 0x519f8940: return "cellSailSourceCheck";
 	case 0x51ecf361: return "cellSailFutureIsDone";
 	case 0x54c53688: return "cellSailSourceNotifyInputEos";
 	case 0x5783a454: return "cellSailMp4MovieGetMovieInfo";
@@ -1723,6 +1724,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 0xee724c99: return "cellSailSourceFinalize";
 	case 0xee94b99b: return "cellSailDescriptorSetParameter";
 	case 0xeec22809: return "cellSailSoundAdapterUpdateAvSync";
+	case 0xf0927ee5: return "cellSailMp4ConvertTimeScale";
 	case 0xf1446a40: return "cellSailPlayerSetEsVideoMuted";
 	case 0xf25f197d: return "cellSailSoundAdapterGetFormat";
 	case 0xf289f0cd: return "cellSailSourceNotifySessionError";
@@ -2222,6 +2224,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 0x7fb3c6a5: return "cellWebBrowserConfig2";
 	case 0x7fcfc915: return "cellOskDialogLoadAsync";
 	case 0x83668b8e: return "cellWebBrowserConfig";
+	case 0x886d0747: return "cellSysutilRegisterCallbackDispatcher";
 	case 0x887572d5: return "cellVideoOutGetState";
 	case 0x8a4cb646: return "cellWebBrowserCreateWithConfig";
 	case 0x8a5dbb58: return "cellWebComponentCreate";
@@ -2243,6 +2246,7 @@ std::string SysCalls::GetFuncName(const u64 fid)
 	case 0x9dfdad46: return "cellAudioOutUnregisterCallback";
 	case 0x9fb97b10: return "cellWebBrowserNavigate2";
 	case 0xa11552f6: return "cellSysutilGetBgmPlaybackStatus";
+	case 0xa2720df2: return "cellSysutilPacketWrite";
 	case 0xa322db75: return "cellVideoOutGetResolutionAvailability";
 	case 0xa36335a5: return "cellSysutilDisableBgmPlaybackEx";
 	case 0xa4dd11cc: return "cellWebBrowserConfigGetHeapSize";

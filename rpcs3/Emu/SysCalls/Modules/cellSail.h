@@ -718,8 +718,8 @@ struct CellSailSoundAdapter
 {
 	bool initialized;
 	bool registered;
-	vm::ptr<CellSailSoundAdapterFuncs> callbacks;
-	be_t<u32> arg;
+	vm::ptr<const CellSailSoundAdapterFuncs> callbacks;
+	vm::ptr<u32> arg;
 	be_t<s32> index;
 	CellSailAudioFormat format;
 	be_t<u64> internalData[27];
@@ -749,8 +749,8 @@ struct CellSailGraphicsAdapter
 {
 	bool initialized;
 	bool registered;
-	vm::ptr<CellSailGraphicsAdapterFuncs> callbacks;
-	be_t<u32> arg;
+	vm::ptr<const CellSailGraphicsAdapterFuncs> callbacks;
+	vm::ptr<u32> arg;
 	CellSailVideoFormat format;
 	be_t<s32> index;
 	be_t<u64> internalData[25];
