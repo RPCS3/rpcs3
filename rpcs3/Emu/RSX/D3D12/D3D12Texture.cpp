@@ -201,12 +201,12 @@ ID3D12Resource *uploadSingleTexture(
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		srcPitch = w * 8;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		blockSizeInByte = 16;
 		blockWidthInPixel = 4, blockHeightInPixel = 4;
-		srcPitch = w * 8;
+		srcPitch = w * 4;
 		break;
 	case CELL_GCM_TEXTURE_G8B8:
 		blockSizeInByte = 2;
