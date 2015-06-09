@@ -457,14 +457,16 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 		memcpy((char*)vertexConstantShadowCopy + offset, vector, 4 * sizeof(float));
 	}
 
-	assert(m_constantsData.canAlloc(512 * 4 * sizeof(float)));
-	size_t heapOffset = m_constantsData.alloc(512 * 4 * sizeof(float));
+	size_t bufferSize = 512 * 4 * sizeof(float);
+
+	assert(m_constantsData.canAlloc(bufferSize));
+	size_t heapOffset = m_constantsData.alloc(bufferSize);
 
 	ID3D12Resource *constantsBuffer;
 	check(m_device->CreatePlacedResource(
 		m_constantsData.m_heap,
 		heapOffset,
-		&getBufferResourceDesc(512 * 4 * sizeof(float)),
+		&getBufferResourceDesc(bufferSize),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&constantsBuffer)
@@ -472,16 +474,16 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 
 	void *constantsBufferMap;
 	check(constantsBuffer->Map(0, nullptr, &constantsBufferMap));
-	streamBuffer(constantsBufferMap, vertexConstantShadowCopy, 512 * 4 * sizeof(float));
+	streamBuffer(constantsBufferMap, vertexConstantShadowCopy, bufferSize);
 	constantsBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
 	constantBufferViewDesc.BufferLocation = constantsBuffer->GetGPUVirtualAddress();
-	constantBufferViewDesc.SizeInBytes = 512 * 4 * sizeof(float);
+	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, 512 * 4 * sizeof(float), constantsBuffer));
+	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, constantsBuffer));
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
