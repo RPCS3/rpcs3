@@ -541,7 +541,7 @@ int cellFontDeleteGlyph()
 
 int cellFontExtend(u32 a1, u32 a2, u32 a3)
 {
-	cellFont.Warning("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
+	cellFont.Todo("cellFontExtend(a1=0x%x, a2=0x%x, a3=0x%x)", a1, a2, a3);
 	//In a test I did: a1=0xcfe00000, a2=0x0, a3=(pointer to something)
 	if (a1 == 0xcfe00000)
 		{
