@@ -937,10 +937,10 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 
 			switch (m_indexed_array.m_type)
 			{
-			case 0:
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 				m_indexed_array.m_data.resize(pos + 4 * _count);
 				break;
-			case 1:
+			case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 				m_indexed_array.m_data.resize(pos + 2 * _count);
 				break;
 			}
@@ -950,12 +950,12 @@ void RSXThread::DoCmd(const u32 fcmd, const u32 cmd, const u32 args_addr, const 
 				u32 index;
 				switch(m_indexed_array.m_type)
 				{
-				case 0:
+				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32:
 					index = vm::read32(m_indexed_array.m_addr + i * 4);
 					*(u32*)&m_indexed_array.m_data[i * 4] = index;
 					break;
 
-				case 1:
+				case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16:
 					index = vm::read16(m_indexed_array.m_addr + i * 2);
 					*(u16*)&m_indexed_array.m_data[i * 2] = index;
 					break;
