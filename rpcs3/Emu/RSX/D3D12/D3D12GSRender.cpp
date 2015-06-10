@@ -522,7 +522,10 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 
 	// TODO: Merge depth and stencil clear when possible
 	if (m_clear_surface_mask & 0x1)
-		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)0xffffff, 0, 0, nullptr);
+	{
+		u32 max_depth_value = m_surface_depth_format == CELL_GCM_SURFACE_Z16 ? 0x0000ffff : 0x00ffffff;
+		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, m_clear_surface_z / (float)max_depth_value, 0, 0, nullptr);
+	}
 
 	if (m_clear_surface_mask & 0x2)
 		commandList->ClearDepthStencilView(m_rtts.m_depthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_STENCIL, 0.f, m_clear_surface_s, 0, nullptr);
@@ -807,9 +810,12 @@ void D3D12GSRender::Flip()
 
 		commandList->ResourceBarrier(2, barriers);
 		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
-		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.SubresourceIndex = 0, dst.SubresourceIndex = 0;
-		src.pResource = m_rtts.m_currentlyBoundRenderTargets[0], dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
+		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		src.SubresourceIndex = 0;
+		src.pResource = m_rtts.m_currentlyBoundRenderTargets[0], 
+		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		dst.SubresourceIndex = 0;
+		dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
 		D3D12_BOX box = { 0, 0, 0, m_surface_clip_w, m_surface_clip_h, 1 };
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
