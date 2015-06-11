@@ -14,71 +14,6 @@ void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
 	GetGSFrame = value;
 }
 
-void DataHeap::Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
-{
-	m_size = heapSize;
-	D3D12_HEAP_DESC heapDesc = {};
-	heapDesc.SizeInBytes = m_size;
-	heapDesc.Properties.Type = type;
-	heapDesc.Flags = flags;
-	check(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&m_heap)));
-	m_putPos = 0;
-	m_getPos = m_size - 1;
-}
-
-
-bool DataHeap::canAlloc(size_t size)
-{
-	size_t putPos = m_putPos, getPos = m_getPos;
-	size_t allocSize = powerOf2Align(size, 65536);
-	if (putPos + allocSize < m_size)
-	{
-		// range before get
-		if (putPos + allocSize < getPos)
-			return true;
-		// range after get
-		if (putPos > getPos)
-			return true;
-		return false;
-	}
-	else
-	{
-		// ..]....[..get..
-		if (putPos < getPos)
-			return false;
-		// ..get..]...[...
-		// Actually all resources extending beyond heap space starts at 0
-		if (allocSize > getPos)
-			return false;
-		return true;
-	}
-}
-
-size_t DataHeap::alloc(size_t size)
-{
-	assert(canAlloc(size));
-	size_t putPos = m_putPos;
-	if (putPos + size < m_size)
-	{
-		m_putPos += powerOf2Align(size, 65536);
-		return putPos;
-	}
-	else
-	{
-		m_putPos = powerOf2Align(size, 65536);
-		return 0;
-	}
-}
-
-void DataHeap::Release()
-{
-	m_heap->Release();
-	for (auto tmp : m_resourceStoredSinceLastSync)
-	{
-		std::get<2>(tmp)->Release();
-	}
-}
-
 GarbageCollectionThread::GarbageCollectionThread()
 {
 	m_worker = std::thread([this]() {
@@ -441,7 +376,7 @@ D3D12GSRender::D3D12GSRender()
 
 	m_rtts.Init(m_device);
 
-	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_constantsData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_NONE);
 	m_vertexIndexData.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 	m_textureUploadData.Init(m_device, 1024 * 1024 * 256, D3D12_HEAP_TYPE_UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
 	m_textureData.Init(m_device, 1024 * 1024 * 512, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);

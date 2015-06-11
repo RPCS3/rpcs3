@@ -43,22 +43,118 @@ typedef GSFrameBase2*(*GetGSFrameCb2)();
 
 void SetGetD3DGSFrameCallback(GetGSFrameCb2 value);
 
+template<typename T>
+struct InitHeap
+{
+	static T* Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags);
+};
 
+template<>
+struct InitHeap<ID3D12Heap>
+{
+	static ID3D12Heap* Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
+	{
+		ID3D12Heap *result;
+		D3D12_HEAP_DESC heapDesc = {};
+		heapDesc.SizeInBytes = heapSize;
+		heapDesc.Properties.Type = type;
+		heapDesc.Flags = flags;
+		check(device->CreateHeap(&heapDesc, IID_PPV_ARGS(&result)));
+		return result;
+	}
+};
+
+template<>
+struct InitHeap<ID3D12Resource>
+{
+	static ID3D12Resource* Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
+	{
+		ID3D12Resource *result;
+		D3D12_HEAP_PROPERTIES heapProperties = {};
+		heapProperties.Type = type;
+		check(device->CreateCommittedResource(&heapProperties,
+			flags,
+			&getBufferResourceDesc(heapSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&result))
+			);
+
+		return result;
+	}
+};
+
+template<typename T, size_t Alignment>
 struct DataHeap
 {
-	ID3D12Heap *m_heap;
+	T *m_heap;
 	size_t m_size;
 	size_t m_putPos, // Start of free space
 		m_getPos; // End of free space
 	std::vector<std::tuple<size_t, size_t, ID3D12Resource *> > m_resourceStoredSinceLastSync;
 
-	void Init(ID3D12Device *, size_t, D3D12_HEAP_TYPE, D3D12_HEAP_FLAGS);
+	void Init(ID3D12Device *device, size_t heapSize, D3D12_HEAP_TYPE type, D3D12_HEAP_FLAGS flags)
+	{
+		m_size = heapSize;
+		m_heap = InitHeap<T>::Init(device, heapSize, type, flags);
+		m_putPos = 0;
+		m_getPos = m_size - 1;
+	}
+
 	/**
 	* Does alloc cross get position ?
 	*/
-	bool canAlloc(size_t size);
-	size_t alloc(size_t size);
-	void Release();
+	bool canAlloc(size_t size)
+	{
+		size_t putPos = m_putPos, getPos = m_getPos;
+		size_t allocSize = powerOf2Align(size, Alignment);
+		if (putPos + allocSize < m_size)
+		{
+			// range before get
+			if (putPos + allocSize < getPos)
+				return true;
+			// range after get
+			if (putPos > getPos)
+				return true;
+			return false;
+		}
+		else
+		{
+			// ..]....[..get..
+			if (putPos < getPos)
+				return false;
+			// ..get..]...[...
+			// Actually all resources extending beyond heap space starts at 0
+			if (allocSize > getPos)
+				return false;
+			return true;
+		}
+	}
+
+	size_t alloc(size_t size)
+	{
+		assert(canAlloc(size));
+		size_t putPos = m_putPos;
+		if (putPos + size < m_size)
+		{
+			m_putPos += powerOf2Align(size, Alignment);
+			return putPos;
+		}
+		else
+		{
+			m_putPos = powerOf2Align(size, Alignment);
+			return 0;
+		}
+	}
+
+	void Release()
+	{
+		m_heap->Release();
+		for (auto tmp : m_resourceStoredSinceLastSync)
+		{
+			std::get<2>(tmp)->Release();
+		}
+	}
 };
 
 struct GarbageCollectionThread
@@ -129,12 +225,12 @@ private:
 	ResourceStorage &getNonCurrentResourceStorage();
 
 	// Constants storage
-	DataHeap m_constantsData;
+	DataHeap<ID3D12Resource, 256> m_constantsData;
 	// Vertex storage
-	DataHeap m_vertexIndexData;
+	DataHeap<ID3D12Heap, 65536> m_vertexIndexData;
 	// Texture storage
-	DataHeap m_textureUploadData;
-	DataHeap m_textureData;
+	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
+	DataHeap<ID3D12Heap, 65536> m_textureData;
 
 	struct UAVHeap
 	{

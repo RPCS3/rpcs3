@@ -145,8 +145,8 @@ ID3D12Resource *uploadSingleTexture(
 	const RSXTexture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap &textureBuffersHeap,
-	DataHeap &textureHeap)
+	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap,
+	DataHeap<ID3D12Heap, 65536> &textureHeap)
 {
 	ID3D12Resource *vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();

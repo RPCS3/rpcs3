@@ -192,7 +192,7 @@ std::vector<VertexBufferFormat> FormatVertexData(const RSXVertexData *m_vertex_d
  * Create a new vertex buffer with attributes from vbf using vertexIndexHeap as storage heap.
  */
 static
-ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap &vertexIndexHeap)
+ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVertexData *vertexData, ID3D12Device *device, DataHeap<ID3D12Heap, 65536> &vertexIndexHeap)
 {
 	size_t subBufferSize = vbf.range.second - vbf.range.first + 1;
 	// Make multiple of stride
@@ -423,31 +423,23 @@ void D3D12GSRender::setScaleOffset()
 
 	// Scale offset buffer
 	// Separate constant buffer
-	ID3D12Resource *scaleOffsetBuffer;
-	check(m_device->CreatePlacedResource(
-		m_constantsData.m_heap,
-		heapOffset,
-		&getBufferResourceDesc(256),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&scaleOffsetBuffer)
-		));
+	D3D12_RANGE range = { heapOffset, heapOffset + 256 };
 
 	void *scaleOffsetMap;
-	check(scaleOffsetBuffer->Map(0, nullptr, &scaleOffsetMap));
-	streamToBuffer(scaleOffsetMap, scaleOffsetMat, 16 * sizeof(float));
+	check(m_constantsData.m_heap->Map(0, &range, &scaleOffsetMap));
+	streamToBuffer((char*)scaleOffsetMap + heapOffset, scaleOffsetMat, 16 * sizeof(float));
 	int isAlphaTested = m_set_alpha_test;
-	streamToBuffer((char*)scaleOffsetMap + 16 * sizeof(float), &isAlphaTested, sizeof(int));
-	streamToBuffer((char*)scaleOffsetMap + 17 * sizeof(float), &m_alpha_ref, sizeof(float));
-	scaleOffsetBuffer->Unmap(0, nullptr);
+	streamToBuffer((char*)scaleOffsetMap + heapOffset + 16 * sizeof(float), &isAlphaTested, sizeof(int));
+	streamToBuffer((char*)scaleOffsetMap + heapOffset + 17 * sizeof(float), &m_alpha_ref, sizeof(float));
+	m_constantsData.m_heap->Unmap(0, &range);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = scaleOffsetBuffer->GetGPUVirtualAddress();
+	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)256;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_scaleOffsetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_currentScaleOffsetBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, 256, scaleOffsetBuffer));
+//	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, 256, scaleOffsetBuffer));
 }
 
 void D3D12GSRender::FillVertexShaderConstantsBuffer()
@@ -464,28 +456,20 @@ void D3D12GSRender::FillVertexShaderConstantsBuffer()
 	assert(m_constantsData.canAlloc(bufferSize));
 	size_t heapOffset = m_constantsData.alloc(bufferSize);
 
-	ID3D12Resource *constantsBuffer;
-	check(m_device->CreatePlacedResource(
-		m_constantsData.m_heap,
-		heapOffset,
-		&getBufferResourceDesc(bufferSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&constantsBuffer)
-		));
+	D3D12_RANGE range = { heapOffset, heapOffset + bufferSize };
 
 	void *constantsBufferMap;
-	check(constantsBuffer->Map(0, nullptr, &constantsBufferMap));
-	streamBuffer(constantsBufferMap, vertexConstantShadowCopy, bufferSize);
-	constantsBuffer->Unmap(0, nullptr);
+	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
+	streamBuffer((char*)constantsBufferMap + heapOffset, vertexConstantShadowCopy, bufferSize);
+	m_constantsData.m_heap->Unmap(0, &range);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = constantsBuffer->GetGPUVirtualAddress();
+	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, constantsBuffer));
+//	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, constantsBuffer));
 }
 
 void D3D12GSRender::FillPixelShaderConstantsBuffer()
@@ -499,19 +483,11 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 	assert(m_constantsData.canAlloc(bufferSize));
 	size_t heapOffset = m_constantsData.alloc(bufferSize);
 
-	ID3D12Resource *constantsBuffer;
-	check(m_device->CreatePlacedResource(
-		m_constantsData.m_heap,
-		heapOffset,
-		&getBufferResourceDesc(bufferSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&constantsBuffer)
-		));
+	D3D12_RANGE range = { heapOffset, heapOffset + bufferSize };
 
 	size_t offset = 0;
 	void *constantsBufferMap;
-	check(constantsBuffer->Map(0, nullptr, &constantsBufferMap));
+	check(m_constantsData.m_heap->Map(0, &range, &constantsBufferMap));
 	for (size_t offsetInFP : fragmentOffset)
 	{
 		u32 vector[4];
@@ -546,19 +522,18 @@ void D3D12GSRender::FillPixelShaderConstantsBuffer()
 			vector[3] = c3;
 		}
 
-		streamToBuffer((char*)constantsBufferMap + offset, vector, 4 * sizeof(u32));
+		streamToBuffer((char*)constantsBufferMap + heapOffset + offset, vector, 4 * sizeof(u32));
 		offset += 4 * sizeof(u32);
 	}
-
-	constantsBuffer->Unmap(0, nullptr);
+	m_constantsData.m_heap->Unmap(0, &range);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
-	constantBufferViewDesc.BufferLocation = constantsBuffer->GetGPUVirtualAddress();
+	constantBufferViewDesc.BufferLocation = m_constantsData.m_heap->GetGPUVirtualAddress() + heapOffset;
 	constantBufferViewDesc.SizeInBytes = (UINT)bufferSize;
 	D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_constantsBufferDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 	Handle.ptr += getCurrentResourceStorage().m_constantsBufferIndex * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	m_device->CreateConstantBufferView(&constantBufferViewDesc, Handle);
-	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, constantsBuffer));
+//	m_constantsData.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, bufferSize, constantsBuffer));
 }
 
 
