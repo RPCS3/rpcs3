@@ -152,7 +152,7 @@ struct DataHeap
 		m_heap->Release();
 		for (auto tmp : m_resourceStoredSinceLastSync)
 		{
-			std::get<2>(tmp)->Release();
+			SAFE_RELEASE(std::get<2>(tmp));
 		}
 	}
 };
