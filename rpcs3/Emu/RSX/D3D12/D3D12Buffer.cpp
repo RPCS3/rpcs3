@@ -436,7 +436,9 @@ void D3D12GSRender::setScaleOffset()
 	void *scaleOffsetMap;
 	check(scaleOffsetBuffer->Map(0, nullptr, &scaleOffsetMap));
 	streamToBuffer(scaleOffsetMap, scaleOffsetMat, 16 * sizeof(float));
-	streamToBuffer((char*)scaleOffsetMap + 16 * sizeof(float), &m_alpha_ref, sizeof(float));
+	int isAlphaTested = m_set_alpha_test;
+	streamToBuffer((char*)scaleOffsetMap + 16 * sizeof(float), &isAlphaTested, sizeof(int));
+	streamToBuffer((char*)scaleOffsetMap + 17 * sizeof(float), &m_alpha_ref, sizeof(float));
 	scaleOffsetBuffer->Unmap(0, nullptr);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC constantBufferViewDesc = {};
