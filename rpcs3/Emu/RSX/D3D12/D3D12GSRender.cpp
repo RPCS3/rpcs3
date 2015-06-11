@@ -61,13 +61,13 @@ void D3D12GSRender::ResourceStorage::Reset()
 	m_frameFinishedHandle = 0;
 
 	for (auto tmp : m_inUseConstantsBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseVertexIndexBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseTextureUploadBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseTexture2D)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	m_inUseConstantsBuffers.clear();
 	m_inUseVertexIndexBuffers.clear();
 	m_inUseTextureUploadBuffers.clear();
@@ -120,13 +120,13 @@ void D3D12GSRender::ResourceStorage::Release()
 {
 	// NOTE: Should be released only if no command are in flight !
 	for (auto tmp : m_inUseConstantsBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseVertexIndexBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseTextureUploadBuffers)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 	for (auto tmp : m_inUseTexture2D)
-		std::get<2>(tmp)->Release();
+		SAFE_RELEASE(std::get<2>(tmp));
 
 	m_constantsBufferDescriptorsHeap->Release();
 	m_scaleOffsetDescriptorHeap->Release();
