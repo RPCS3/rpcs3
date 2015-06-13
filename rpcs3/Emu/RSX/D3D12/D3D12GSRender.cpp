@@ -663,10 +663,13 @@ void D3D12GSRender::ExecCMD()
 		1.f
 	};
 	commandList->RSSetViewports(1, &viewport);
+
 	D3D12_RECT box =
 	{
-		0, 0,
-		(LONG)m_surface_clip_w, (LONG)m_surface_clip_h,
+		0, 
+		0,
+		(LONG)RSXThread::m_width, 
+		(LONG)RSXThread::m_height,
 	};
 	commandList->RSSetScissorRects(1, &box);
 
@@ -755,7 +758,7 @@ void D3D12GSRender::Flip()
 		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 		dst.SubresourceIndex = 0;
 		dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
-		D3D12_BOX box = { 0, 0, 0, m_surface_clip_w, m_surface_clip_h, 1 };
+		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
 		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
 		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
