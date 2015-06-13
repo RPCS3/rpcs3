@@ -441,7 +441,7 @@ size_t D3D12GSRender::UploadTextures()
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
 		bool isRenderTarget = false;
-		if (ItRTT != m_rtts.m_renderTargets.end())
+/*		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
@@ -450,7 +450,7 @@ size_t D3D12GSRender::UploadTextures()
 		{
 			vramTexture = ItCache->second;
 		}
-		else
+		else*/
 		{
 			// Upload at each iteration to take advantage of overlapping transfer
 			ID3D12GraphicsCommandList *commandList;
@@ -480,9 +480,9 @@ size_t D3D12GSRender::UploadTextures()
 			break;
 		case CELL_GCM_TEXTURE_B8:
 			srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
-				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0);
 			break;
 		case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -565,7 +565,6 @@ size_t D3D12GSRender::UploadTextures()
 			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 		}
-
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle = getCurrentResourceStorage().m_textureDescriptorsHeap->GetCPUDescriptorHandleForHeapStart();
 		Handle.ptr += (getCurrentResourceStorage().m_currentTextureIndex + usedTexture) * m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		m_device->CreateShaderResourceView(vramTexture, &srvDesc, Handle);
