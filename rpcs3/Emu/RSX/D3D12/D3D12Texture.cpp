@@ -441,7 +441,7 @@ size_t D3D12GSRender::UploadTextures()
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItRTT = m_rtts.m_renderTargets.find(texaddr);
 		std::unordered_map<u32, ID3D12Resource* >::const_iterator ItCache = m_texturesCache.find(texaddr);
 		bool isRenderTarget = false;
-/*		if (ItRTT != m_rtts.m_renderTargets.end())
+		if (ItRTT != m_rtts.m_renderTargets.end())
 		{
 			vramTexture = ItRTT->second;
 			isRenderTarget = true;
@@ -450,7 +450,7 @@ size_t D3D12GSRender::UploadTextures()
 		{
 			vramTexture = ItCache->second;
 		}
-		else*/
+		else
 		{
 			// Upload at each iteration to take advantage of overlapping transfer
 			ID3D12GraphicsCommandList *commandList;
