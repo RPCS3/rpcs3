@@ -5,49 +5,65 @@ namespace vm
 	template<typename T, typename AT = u32>
 	struct _ref_base
 	{
-		const AT m_addr;
-
-		using type = T;
+		AT m_addr;
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
-
-		//template<typename CT> operator std::enable_if_t<std::is_convertible<T, CT>::value, CT>()
-		//{
-		//	return get_ref<T>(m_addr);
-		//}
-		
-		// temporarily, because SFINAE doesn't work for some reason:
-
-		operator to_ne_t<T>() const
-		{
-			return get_ref<T>(m_addr);
-		}
-
-		operator T() const
-		{
-			return get_ref<T>(m_addr);
-		}
 
 		AT addr() const
 		{
 			return m_addr;
 		}
 
-		static _ref_base make(const AT& addr)
+		template<typename AT2 = AT> static _ref_base make(const AT2& addr)
 		{
-			return{ addr };
+			return{ convert_le_be<AT>(addr) };
 		}
 
-		template<typename CT> const _ref_base& operator =(const _ref_base<T, CT>& right) const
+		T& get_ref() const
 		{
-			get_ref<T>(m_addr) = right;
+			return vm::get_ref<T>(vm::cast(m_addr));
+		}
+
+		T& priv_ref() const
+		{
+			return vm::priv_ref<T>(vm::cast(m_addr));
+		}
+
+		// conversion operator
+		//template<typename CT> operator std::enable_if_t<std::is_convertible<T, CT>::value, CT>()
+		//{
+		//	return get_ref();
+		//}
+
+		// temporarily, because SFINAE doesn't work for some reason:
+
+		operator to_ne_t<T>() const
+		{
+			return get_ref();
+		}
+
+		operator T() const
+		{
+			return get_ref();
+		}
+
+		// copy assignment operator
+		_ref_base& operator =(const _ref_base& right)
+		{
+			get_ref() = right.get_ref();
+			return *this;
+		}
+
+		template<typename CT, typename AT2> std::enable_if_t<std::is_assignable<T&, CT>::value, const _ref_base&> operator =(const _ref_base<CT, AT2>& right) const
+		{
+			get_ref() = right.get_ref();
 			return *this;
 		}
 
 		template<typename CT> std::enable_if_t<std::is_assignable<T&, CT>::value, const _ref_base&> operator =(const CT& right) const
 		{
-			get_ref<T>(m_addr) = right;
+			get_ref() = right;
 			return *this;
 		}
 	};
@@ -90,7 +106,7 @@ namespace vm
 
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
-};
+}
 
 // external specialization for is_be_t<>
 

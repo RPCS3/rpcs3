@@ -787,6 +787,7 @@ template<typename T> struct to_be<volatile T>
 	using type = volatile to_be_t<std::remove_volatile_t<T>>;
 };
 
+template<> struct to_be<u128> { using type = u128; };
 template<> struct to_be<void> { using type = void; };
 template<> struct to_be<bool> { using type = bool; };
 template<> struct to_be<char> { using type = char; };
@@ -907,6 +908,7 @@ template<typename T> struct to_le<volatile T>
 	using type = volatile to_le_t<std::remove_volatile_t<T>>;
 };
 
+template<> struct to_le<u128> { using type = u128; };
 template<> struct to_le<void> { using type = void; };
 template<> struct to_le<bool> { using type = bool; };
 template<> struct to_le<char> { using type = char; };

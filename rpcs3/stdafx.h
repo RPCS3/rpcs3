@@ -57,6 +57,8 @@ template<typename T> force_inline T align(const T addr, int align)
 	return (addr + (align - 1)) & ~(align - 1);
 }
 
+template<typename T> using func_def = T; // workaround for MSVC bug
+
 #include "Utilities/BEType.h"
 #include "Utilities/StrFmt.h"
 
