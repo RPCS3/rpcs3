@@ -7,6 +7,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GCM.h"
 
+#pragma comment (lib, "dxgi.lib")
 
 #define SAFE_RELEASE(x) if (x) x->Release();
 

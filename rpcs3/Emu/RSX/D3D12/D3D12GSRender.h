@@ -17,9 +17,6 @@
 // Some constants are the same between RSX and GL
 #include <GL\GL.h>
 
-#pragma comment (lib, "d3d12.lib")
-#pragma comment (lib, "dxgi.lib")
-
 class GSFrameBase2
 {
 public:

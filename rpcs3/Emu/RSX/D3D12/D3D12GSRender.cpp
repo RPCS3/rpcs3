@@ -7,6 +7,25 @@
 #include <thread>
 #include <chrono>
 
+PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice;
+PFN_D3D12_GET_DEBUG_INTERFACE wrapD3D12GetDebugInterface;
+PFN_D3D12_SERIALIZE_ROOT_SIGNATURE wrapD3D12SerializeRootSignature;
+
+static HMODULE D3D12Module;
+
+static void loadD3D12FunctionPointers()
+{
+	D3D12Module = LoadLibrary(L"d3d12.dll");
+	wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
+	wrapD3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(D3D12Module, "D3D12GetDebugInterface");
+	wrapD3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(D3D12Module, "D3D12SerializeRootSignature");
+}
+
+static void unloadD3D12FunctionPointers()
+{
+	FreeLibrary(D3D12Module);
+}
+
 GetGSFrameCb2 GetGSFrame = nullptr;
 
 void SetGetD3DGSFrameCallback(GetGSFrameCb2 value)
@@ -194,7 +213,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 
 	ID3DBlob *rootSignatureBlob;
 
-	hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
+	hr = wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob);
 	if (hr != S_OK)
 	{
 		const char *tmp = (const char*)errorBlob->GetBufferPointer();
@@ -207,10 +226,11 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_PSO(nullptr)
 {
+	loadD3D12FunctionPointers();
 	if (Ini.GSDebugOutputEnable.GetValue())
 	{
 		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
-		D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
+		wrapD3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface));
 		debugInterface->EnableDebugLayer();
 	}
 
@@ -230,7 +250,7 @@ D3D12GSRender::D3D12GSRender()
 		dxgiFactory->EnumAdapters(Ini.GSD3DAdaptater.GetValue() - 2,&adaptater);
 		break;
 	}
-	check(D3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
+	check(wrapD3D12CreateDevice(adaptater, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
 	// Queues
 	D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {}, graphicQueueDesc = {};
@@ -315,7 +335,7 @@ D3D12GSRender::D3D12GSRender()
 
 		Microsoft::WRL::ComPtr<ID3DBlob> rootSignatureBlob;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-		check(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
+		check(wrapD3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &rootSignatureBlob, &errorBlob));
 
 		m_device->CreateRootSignature(0,
 			rootSignatureBlob->GetBufferPointer(),
@@ -408,6 +428,7 @@ D3D12GSRender::~D3D12GSRender()
 	m_swapChain->Release();
 	m_device->Release();
 	delete[] vertexConstantShadowCopy;
+	unloadD3D12FunctionPointers();
 }
 
 void D3D12GSRender::Close()
