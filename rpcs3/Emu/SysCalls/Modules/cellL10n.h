@@ -1,9 +1,4 @@
-#include "stdafx.h"
-
-// Requires GCC 4.10 apparently..
-#ifdef _MSC_VER
-#include <codecvt>
-#endif
+#pragma once
 
 // L10nResult
 enum

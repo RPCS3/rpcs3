@@ -897,8 +897,19 @@ s32 sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
 	sysPrxForUser.Warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
 	// TODO: use segment info
+
+	const auto stamp0 = get_system_time();
+
 	memcpy(vm::get_ptr<void>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), vm::get_ptr<void>(img->addr), 256 * 1024);
+
+	const auto stamp1 = get_system_time();
+
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point | be_t<u32>::make(1));
+
+	const auto stamp2 = get_system_time();
+
+	LOG_ERROR(GENERAL, "memcpy() latency: %lldus", (stamp1 - stamp0));
+	LOG_ERROR(GENERAL, "MMIO latency: %lldus", (stamp2 - stamp1));
 
 	return CELL_OK;
 }

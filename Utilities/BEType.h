@@ -556,52 +556,49 @@ template<u64 _value> struct const_se_t<u64, _value, 8>
 		((_value << 56) & 0xff00000000000000);
 };
 
-template<typename T, size_t size = sizeof(T)>
-struct be_storage_t
+template<typename T, size_t size = sizeof(T)> struct be_storage
 {
-	static_assert(!size, "Bad be_storage_t type");
+	static_assert(!size, "Bad be_storage_t<> type");
 };
 
-template<typename T>
-struct be_storage_t<T, 1>
-{
-	typedef u8 type;
-};
-
-template<typename T>
-struct be_storage_t<T, 2>
+template<typename T> struct be_storage<T, 2>
 {
 	typedef u16 type;
 };
 
-template<typename T>
-struct be_storage_t<T, 4>
+template<typename T> struct be_storage<T, 4>
 {
 	typedef u32 type;
 };
 
-template<typename T>
-struct be_storage_t<T, 8>
+template<typename T> struct be_storage<T, 8>
 {
 	typedef u64 type;
 };
 
-template<typename T>
-struct be_storage_t<T, 16>
+template<typename T> struct be_storage<T, 16>
 {
 	typedef u128 type;
 };
 
-template<typename T, typename T2 = T>
-class be_t
-{
-public:
-	typedef typename std::remove_cv<T>::type type;
-	typedef typename be_storage_t<T2>::type stype;
+template<typename T> using be_storage_t = typename be_storage<T>::type;
 
-private:
+template<typename T>
+struct be_t
+{
+	using type = std::remove_cv_t<T>;
+	using stype = be_storage_t<type>;
+
 	stype m_data;
 
+	static_assert(!std::is_class<type>::value, "be_t<> error: invalid type (class or structure)");
+	static_assert(!std::is_union<type>::value || std::is_same<type, u128>::value, "be_t<> error: invalid type (union)");
+	static_assert(!std::is_pointer<type>::value, "be_t<> error: invalid type (pointer)");
+	static_assert(!std::is_reference<type>::value, "be_t<> error: invalid type (reference)");
+	static_assert(!std::is_array<type>::value, "be_t<> error: invalid type (array)");
+	static_assert(__alignof(type) == __alignof(stype), "be_t<> error: unexpected alignment");
+
+private:
 	template<typename Tto, typename Tfrom, int mode>
 	struct _convert
 	{
@@ -639,7 +636,7 @@ private:
 
 	type ToLE() const
 	{
-		return se_t<type, sizeof(T2)>::from_be(m_data);
+		return se_t<type, sizeof(stype)>::from_be(m_data);
 	}
 
 	void FromBE(const stype& value)
@@ -649,13 +646,12 @@ private:
 
 	void FromLE(const type& value)
 	{
-		m_data = se_t<type, sizeof(T2)>::to_be(value);
+		m_data = se_t<type, sizeof(stype)>::to_be(value);
 	}
 
-public:
 	static be_t MakeFromLE(const type& value)
 	{
-		stype data = se_t<type, sizeof(T2)>::to_be(value);
+		stype data = se_t<type, sizeof(stype)>::to_be(value);
 		return (be_t&)data;
 	}
 
@@ -664,6 +660,7 @@ public:
 		return (be_t&)value;
 	}
 
+public:
 	//make be_t from current machine byte ordering
 	static be_t make(const type& value)
 	{
@@ -689,37 +686,44 @@ public:
 		return ToBE();
 	}
 	
-	be_t& operator = (const be_t& value) = default;
+	be_t& operator =(const be_t& value) = default;
 
-	be_t& operator = (const type& value)
+	template<typename CT> std::enable_if_t<std::is_assignable<type&, CT>::value, be_t&> operator =(const CT& value)
 	{
-		m_data = se_t<type, sizeof(T2)>::to_be(value);
+		m_data = se_t<type, sizeof(stype)>::to_be(value);
 
 		return *this;
 	}
+
+	//template<typename CT> operator std::enable_if_t<std::is_convertible<type, CT>::value, CT>() const
+	//{
+	//	return value();
+	//}
 
 	operator type() const
 	{
 		return value();
 	}
 
-	template<typename T1>
-	operator const be_t<T1>() const
+	// conversion to another be_t type
+	template<typename T1> operator be_t<T1>() const
 	{
 		return be_t<T1>::make(value());
+
+		// TODO (complicated cases like int-float conversions are not handled correctly)
 		//return _convert<T1, T, ((sizeof(T1) > sizeof(T)) ? 1 : (sizeof(T1) < sizeof(T) ? 2 : 0))>::func(m_data);
 	}
 
-	template<typename T1> be_t& operator += (T1 right) { return *this = T(*this) + right; }
-	template<typename T1> be_t& operator -= (T1 right) { return *this = T(*this) - right; }
-	template<typename T1> be_t& operator *= (T1 right) { return *this = T(*this) * right; }
-	template<typename T1> be_t& operator /= (T1 right) { return *this = T(*this) / right; }
-	template<typename T1> be_t& operator %= (T1 right) { return *this = T(*this) % right; }
-	template<typename T1> be_t& operator &= (T1 right) { return *this = T(*this) & right; }
-	template<typename T1> be_t& operator |= (T1 right) { return *this = T(*this) | right; }
-	template<typename T1> be_t& operator ^= (T1 right) { return *this = T(*this) ^ right; }
-	template<typename T1> be_t& operator <<= (T1 right) { return *this = T(*this) << right; }
-	template<typename T1> be_t& operator >>= (T1 right) { return *this = T(*this) >> right; }
+	template<typename T1> be_t& operator += (T1 right) { return *this = value() + right; }
+	template<typename T1> be_t& operator -= (T1 right) { return *this = value() - right; }
+	template<typename T1> be_t& operator *= (T1 right) { return *this = value() * right; }
+	template<typename T1> be_t& operator /= (T1 right) { return *this = value() / right; }
+	template<typename T1> be_t& operator %= (T1 right) { return *this = value() % right; }
+	template<typename T1> be_t& operator &= (T1 right) { return *this = value() & right; }
+	template<typename T1> be_t& operator |= (T1 right) { return *this = value() | right; }
+	template<typename T1> be_t& operator ^= (T1 right) { return *this = value() ^ right; }
+	template<typename T1> be_t& operator <<= (T1 right) { return *this = value() << right; }
+	template<typename T1> be_t& operator >>= (T1 right) { return *this = value() >> right; }
 
 	template<typename T1> be_t& operator += (const be_t<T1>& right) { return *this = ToLE() + right.ToLE(); }
 	template<typename T1> be_t& operator -= (const be_t<T1>& right) { return *this = ToLE() - right.ToLE(); }
@@ -730,9 +734,9 @@ public:
 	template<typename T1> be_t& operator |= (const be_t<T1>& right) { return *this = ToBE() | right.ToBE(); }
 	template<typename T1> be_t& operator ^= (const be_t<T1>& right) { return *this = ToBE() ^ right.ToBE(); }
 
-	template<typename T1> be_t operator & (const be_t<T1>& right) const { be_t<T> res; res.FromBE(ToBE() & right.ToBE()); return res; }
-	template<typename T1> be_t operator | (const be_t<T1>& right) const { be_t<T> res; res.FromBE(ToBE() | right.ToBE()); return res; }
-	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { be_t<T> res; res.FromBE(ToBE() ^ right.ToBE()); return res; }
+	template<typename T1> be_t operator & (const be_t<T1>& right) const { be_t res; res.FromBE(ToBE() & right.ToBE()); return res; }
+	template<typename T1> be_t operator | (const be_t<T1>& right) const { be_t res; res.FromBE(ToBE() | right.ToBE()); return res; }
+	template<typename T1> be_t operator ^ (const be_t<T1>& right) const { be_t res; res.FromBE(ToBE() ^ right.ToBE()); return res; }
 
 	template<typename T1> bool operator == (T1 right) const { return (T1)ToLE() == right; }
 	template<typename T1> bool operator != (T1 right) const { return !(*this == right); }
@@ -754,114 +758,40 @@ public:
 	be_t& operator-- () { *this -= 1; return *this; }
 };
 
-template<typename T, typename T2 = T>
-struct is_be_t : public std::integral_constant<bool, false> {};
-
-template<typename T, typename T2>
-struct is_be_t<be_t<T, T2>, T2> : public std::integral_constant<bool, true> {};
-
-template<typename T, typename T2 = T>
-struct remove_be_t
+template<typename T> struct is_be_t : public std::integral_constant<bool, false>
 {
-	typedef T type;
 };
 
-template<typename T, typename T2>
-struct remove_be_t<be_t<T, T2>>
+template<typename T> struct is_be_t<be_t<T>> : public std::integral_constant<bool, true>
 {
-	typedef T type;
 };
 
-template<typename T, typename T2 = T>
-class to_be_t
+// to_be_t helper struct
+template<typename T> struct to_be
 {
-	template<typename TT, typename TT2, bool is_need_swap>
-	struct _be_type_selector
-	{
-		typedef TT type;
-	};
-
-	template<typename TT, typename TT2>
-	struct _be_type_selector<TT, TT2, true>
-	{
-		typedef be_t<TT, TT2> type;
-	};
-
-public:
-	//true if need swap endianes for be
-	static const bool value = std::is_arithmetic<T>::value || std::is_enum<T>::value;
-
-	//be_t<T, size> if need swap endianes, T otherwise
-	typedef typename _be_type_selector< T, T2, value >::type type;
-
-	typedef typename _be_type_selector< T, T2, !is_be_t<T, T2>::value >::type forced_type;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value, be_t<T>, T>;
 };
 
-template<typename T, typename T2>
-class to_be_t<T, const T2>
+// be_t<T> if possible, T otherwise
+template<typename T> using to_be_t = typename to_be<T>::type;
+
+template<typename T> struct to_be<const T>
 {
-public:
-	static const bool value = to_be_t<T, T2>::value;
-	typedef const typename to_be_t<T, T2>::type type;
-	typedef const typename to_be_t<T, T2>::forced_type forced_type;
+	// move const qualifier
+	using type = const to_be_t<std::remove_const_t<T>>;
 };
 
-template<typename T>
-class to_be_t<T, void>
+template<typename T> struct to_be<volatile T>
 {
-public:
-	static const bool value = false;
-	typedef void type;
-	typedef void forced_type;
+	// move volatile qualifier
+	using type = volatile to_be_t<std::remove_volatile_t<T>>;
 };
 
-template<typename T>
-class to_be_t<T, u8>
-{
-public:
-	static const bool value = false;
-	typedef u8 type;
-	typedef u8 forced_type;
-};
-
-template<typename T>
-class to_be_t<T, s8>
-{
-public:
-	static const bool value = false;
-	typedef s8 type;
-	typedef s8 forced_type;
-};
-
-template<typename T>
-class to_be_t<T, char>
-{
-public:
-	static const bool value = false;
-	typedef char type;
-	typedef char forced_type;
-};
-
-template<typename T>
-class to_be_t<T, bool>
-{
-public:
-	static const bool value = false;
-	typedef bool type;
-	typedef bool forced_type;
-};
-
-template<typename T, typename T2 = T>
-struct invert_be_t
-{
-	typedef typename to_be_t<T, T2>::type type;
-};
-
-template<typename T, typename T2>
-struct invert_be_t<be_t<T, T2>>
-{
-	typedef T type;
-};
+template<> struct to_be<void> { using type = void; };
+template<> struct to_be<bool> { using type = bool; };
+template<> struct to_be<char> { using type = char; };
+template<> struct to_be<u8> { using type = u8; };
+template<> struct to_be<s8> { using type = s8; };
 
 template<typename T, typename T1, T1 value> struct _se : public const_se_t<T, value> {};
 template<typename T, typename T1, T1 value> struct _se<be_t<T>, T1, value> : public const_se_t<T, value> {};
@@ -880,28 +810,28 @@ struct convert_le_be_t
 	}
 };
 
-template<typename Tt, typename Tt1, typename Tfrom>
-struct convert_le_be_t<be_t<Tt, Tt1>, Tfrom>
+template<typename Tt, typename Tfrom>
+struct convert_le_be_t<be_t<Tt>, Tfrom>
 {
-	static be_t<Tt, Tt1> func(Tfrom value)
+	static be_t<Tt> func(Tfrom value)
 	{
-		return be_t<Tt, Tt1>::make(value);
+		return be_t<Tt>::make(value);
 	}
 };
 
-template<typename Tt, typename Tt1, typename Tf, typename Tf1>
-struct convert_le_be_t<be_t<Tt, Tt1>, be_t<Tf, Tf1>>
+template<typename Tt, typename Tf>
+struct convert_le_be_t<be_t<Tt>, be_t<Tf>>
 {
-	static be_t<Tt, Tt1> func(be_t<Tf, Tf1> value)
+	static be_t<Tt> func(be_t<Tf> value)
 	{
 		return value;
 	}
 };
 
-template<typename Tto, typename Tf, typename Tf1>
-struct convert_le_be_t<Tto, be_t<Tf, Tf1>>
+template<typename Tto, typename Tf>
+struct convert_le_be_t<Tto, be_t<Tf>>
 {
-	static Tto func(be_t<Tf, Tf1> value)
+	static Tto func(be_t<Tf> value)
 	{
 		return value.value();
 	}
@@ -919,6 +849,85 @@ force_inline void convert_le_be(Tto& dst, Tfrom src)
 	dst = convert_le_be_t<Tto, Tfrom>::func(src);
 }
 
-template<typename T> using le_t = T;
+template<typename T> struct le_t
+{
+	using type = std::remove_cv_t<T>;
+	using stype = be_storage_t<type>;
 
-template<typename T> struct to_le_t { using type = T; };
+	stype m_data;
+
+	type value() const
+	{
+		return reinterpret_cast<const type&>(m_data);
+	}
+
+	le_t& operator =(const le_t& value) = default;
+
+	template<typename CT> std::enable_if_t<std::is_assignable<type&, CT>::value, le_t&> operator =(const CT& value)
+	{
+		m_data = reinterpret_cast<const stype&>(value);
+
+		return *this;
+	}
+
+	//template<typename CT> operator std::enable_if_t<std::is_convertible<type, CT>::value, CT>() const
+	//{
+	//	return value();
+	//}
+
+	operator type() const
+	{
+		return value();
+	}
+
+	// conversion to another le_t type
+	//template<typename T1> operator const le_t<T1>() const
+	//{
+	//	return le_t<T1>::make(value());
+	//}
+};
+
+template<typename T> struct to_le
+{
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value, le_t<T>, T>;
+};
+
+// le_t<T> if possible, T otherwise
+template<typename T> using to_le_t = typename to_le<T>::type;
+
+template<typename T> struct to_le<const T>
+{
+	// move const qualifier
+	using type = const to_le_t<std::remove_const_t<T>>;
+};
+
+template<typename T> struct to_le<volatile T>
+{
+	// move volatile qualifier
+	using type = volatile to_le_t<std::remove_volatile_t<T>>;
+};
+
+template<> struct to_le<void> { using type = void; };
+template<> struct to_le<bool> { using type = bool; };
+template<> struct to_le<char> { using type = char; };
+template<> struct to_le<u8> { using type = u8; };
+template<> struct to_le<s8> { using type = s8; };
+
+// to_ne_t helper struct
+template<typename T> struct to_ne
+{
+	using type = T;
+};
+
+// restore native endianness for T: returns T for be_t<T> or le_t<T>, T otherwise
+template<typename T> using to_ne_t = typename to_ne<T>::type;
+
+template<typename T> struct to_ne<be_t<T>>
+{
+	using type = T;
+};
+
+template<typename T> struct to_ne<le_t<T>>
+{
+	using type = T;
+};

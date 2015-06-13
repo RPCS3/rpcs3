@@ -1,46 +1,41 @@
 #pragma once
 
-template<typename T, size_t size = sizeof(T)>
-struct _to_atomic_subtype
+template<typename T, size_t size = sizeof(T)> struct _to_atomic_subtype
 {
 	static_assert(size == 1 || size == 2 || size == 4 || size == 8 || size == 16, "Invalid atomic type");
 };
 
-template<typename T>
-struct _to_atomic_subtype<T, 1>
+template<typename T> struct _to_atomic_subtype<T, 1>
 {
-	using type = uint8_t;
+	using type = u8;
 };
 
-template<typename T>
-struct _to_atomic_subtype<T, 2>
+template<typename T> struct _to_atomic_subtype<T, 2>
 {
-	using type = uint16_t;
+	using type = u16;
 };
 
-template<typename T>
-struct _to_atomic_subtype<T, 4>
+template<typename T> struct _to_atomic_subtype<T, 4>
 {
-	using type = uint32_t;
+	using type = u32;
 };
 
-template<typename T>
-struct _to_atomic_subtype<T, 8>
+template<typename T> struct _to_atomic_subtype<T, 8>
 {
-	using type = uint64_t;
+	using type = u64;
 };
 
-template<typename T>
-struct _to_atomic_subtype<T, 16>
+template<typename T> struct _to_atomic_subtype<T, 16>
 {
 	using type = u128;
 };
 
-template<typename T>
-union _atomic_base
+template<typename T> using atomic_subtype_t = typename _to_atomic_subtype<T>::type;
+
+template<typename T> union _atomic_base
 {
-	using type = typename std::remove_cv<T>::type;
-	using subtype = typename _to_atomic_subtype<type, sizeof(type)>::type;
+	using type = std::remove_cv_t<T>;
+	using subtype = atomic_subtype_t<type>;
 
 	type data; // unsafe direct access
 	subtype sub_data; // unsafe direct access to substitute type
@@ -197,8 +192,8 @@ public:
 
 // Helper definitions
 
-template<typename T, typename T2 = T> using if_arithmetic_le_t = const typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, le_t<T>>::type;
-template<typename T, typename T2 = T> using if_arithmetic_be_t = const typename std::enable_if<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>::type;
+template<typename T, typename T2 = T> using if_arithmetic_le_t = std::enable_if_t<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, le_t<T>>;
+template<typename T, typename T2 = T> using if_arithmetic_be_t = std::enable_if_t<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>;
 
 template<typename T> inline static if_arithmetic_le_t<T> operator ++(_atomic_base<le_t<T>>& left)
 {
@@ -304,6 +299,6 @@ template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operat
 
 template<typename T> using atomic = _atomic_base<T>; // Atomic Type with native endianness (for emulator memory)
 
-template<typename T> using atomic_be_t = _atomic_base<typename to_be_t<T>::type>; // Atomic BE Type (for PS3 virtual memory)
+template<typename T> using atomic_be_t = _atomic_base<to_be_t<T>>; // Atomic BE Type (for PS3 virtual memory)
 
-template<typename T> using atomic_le_t = _atomic_base<typename to_le_t<T>::type>; // Atomic LE Type (for PSV virtual memory)
+template<typename T> using atomic_le_t = _atomic_base<to_le_t<T>>; // Atomic LE Type (for PSV virtual memory)

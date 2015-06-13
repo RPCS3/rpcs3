@@ -24,8 +24,6 @@ enum
 	CELL_SEARCH_ERROR_GENERIC               = 0x8002C8FF,
 };
 
-typedef be_t<s32> CellSearchId;
-
 // Constants
 enum
 {
@@ -173,7 +171,7 @@ struct CellSearchContentId
 
 struct CellSearchResultParam
 {
-	be_t<CellSearchId> searchId;
+	be_t<s32> searchId;
 	be_t<u32> resultNum;
 };
 
@@ -271,7 +269,7 @@ struct CellSearchVideoSceneInfo
 	be_t<CellSearchSceneType> sceneType;
 	be_t<s64> startTime_ms;
 	be_t<s64> endTime_ms;
-	be_t<CellSearchContentId> videoId;
+	CellSearchContentId videoId;
 	char title[CELL_SEARCH_TITLE_LEN_MAX + 1];
 	char reserved[3];
 	char tags[CELL_SEARCH_TAG_NUM_MAX][CELL_SEARCH_TAG_LEN_MAX];

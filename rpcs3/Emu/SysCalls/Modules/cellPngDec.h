@@ -6,11 +6,8 @@ enum : u32
 	PNGDEC_CODEC_VERSION = 0x00420000,
 };
 
-struct PngDecoder;
-struct PngStream;
-
-typedef vm::ptr<PngDecoder> CellPngDecMainHandle;
-typedef vm::ptr<PngStream> CellPngDecSubHandle;
+using CellPngDecMainHandle = vm::ptr<struct PngDecoder>;
+using CellPngDecSubHandle = vm::ptr<struct PngStream>;
 
 // Return Codes
 enum
@@ -28,7 +25,7 @@ enum
 };
 
 // Consts
-enum CellPngDecColorSpace : u32
+enum CellPngDecColorSpace : s32
 {
 	CELL_PNGDEC_GRAYSCALE       = 1,
 	CELL_PNGDEC_RGB             = 2,
@@ -38,62 +35,62 @@ enum CellPngDecColorSpace : u32
 	CELL_PNGDEC_ARGB            = 20,
 };
 
-enum CellPngDecSpuThreadEna : u32
+enum CellPngDecSpuThreadEna : s32
 {
 	CELL_PNGDEC_SPU_THREAD_DISABLE = 0,
 	CELL_PNGDEC_SPU_THREAD_ENABLE  = 1,
 };
 
-enum CellPngDecStreamSrcSel : u32
+enum CellPngDecStreamSrcSel : s32
 {
 	CELL_PNGDEC_FILE   = 0,
 	CELL_PNGDEC_BUFFER = 1,
 };
 
-enum CellPngDecInterlaceMode : u32
+enum CellPngDecInterlaceMode : s32
 {
 	CELL_PNGDEC_NO_INTERLACE = 0,
 	CELL_PNGDEC_ADAM7_INTERLACE = 1,
 };
 
-enum CellPngDecOutputMode : u32
+enum CellPngDecOutputMode : s32
 {
 	CELL_PNGDEC_TOP_TO_BOTTOM = 0,
 	CELL_PNGDEC_BOTTOM_TO_TOP = 1,
 };
 
-enum CellPngDecPackFlag : u32
+enum CellPngDecPackFlag : s32
 {
 	CELL_PNGDEC_1BYTE_PER_NPIXEL = 0,
 	CELL_PNGDEC_1BYTE_PER_1PIXEL = 1,
 };
 
-enum CellPngDecAlphaSelect : u32
+enum CellPngDecAlphaSelect : s32
 {
 	CELL_PNGDEC_STREAM_ALPHA = 0,
 	CELL_PNGDEC_FIX_ALPHA    = 1,
 };
 
-enum CellPngDecCommand : u32
+enum CellPngDecCommand : s32
 {
 	CELL_PNGDEC_CONTINUE = 0,
 	CELL_PNGDEC_STOP     = 1,
 };
 
-enum CellPngDecDecodeStatus : u32
+enum CellPngDecDecodeStatus : s32
 {
 	CELL_PNGDEC_DEC_STATUS_FINISH = 0,
 	CELL_PNGDEC_DEC_STATUS_STOP   = 1,
 };
 
-// Callbacks
+// Callbacks for memory management
 typedef vm::ptr<void>(CellPngDecCbControlMalloc)(u32 size, vm::ptr<void> cbCtrlMallocArg);
 typedef s32(CellPngDecCbControlFree)(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
 
 // Structs
 struct CellPngDecThreadInParam
 {
-	be_t<CellPngDecSpuThreadEna> spuThreadEnable;
+	be_t<s32> spuThreadEnable; // CellPngDecSpuThreadEna
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> spuThreadPriority;
 	vm::bptr<CellPngDecCbControlMalloc> cbCtrlMallocFunc;
@@ -104,7 +101,7 @@ struct CellPngDecThreadInParam
 
 struct CellPngDecExtThreadInParam
 {
-	be_t<u32> spurs_addr; // it could be vm::bptr<CellSpurs>, but nobody will use SPURS in HLE implementation
+	vm::bptr<struct CellSpurs> spurs;
 	u8 priority[8];
 	be_t<u32> maxContention;
 };
@@ -121,13 +118,13 @@ struct CellPngDecExtThreadOutParam
 
 struct CellPngDecSrc
 {
-	be_t<CellPngDecStreamSrcSel> srcSelect;
+	be_t<s32> srcSelect; // CellPngDecStreamSrcSel
 	vm::bptr<const char> fileName;
 	be_t<s64> fileOffset;
 	be_t<u32> fileSize;
 	vm::bptr<void> streamPtr;
 	be_t<u32> streamSize;
-	be_t<CellPngDecSpuThreadEna> spuThreadEnable;
+	be_t<s32> spuThreadEnable; // CellGifDecSpuThreadEna
 };
 
 struct CellPngDecOpnInfo
@@ -140,20 +137,20 @@ struct CellPngDecInfo
 	be_t<u32> imageWidth;
 	be_t<u32> imageHeight;
 	be_t<u32> numComponents;
-	be_t<CellPngDecColorSpace> colorSpace;
+	be_t<s32> colorSpace; // CellPngDecColorSpace
 	be_t<u32> bitDepth;
-	be_t<CellPngDecInterlaceMode> interlaceMethod;
+	be_t<s32> interlaceMethod; // CellPngDecInterlaceMode
 	be_t<u32> chunkInformation;
 };
 
 struct CellPngDecInParam
 {
-	vm::bptr<volatile CellPngDecCommand> commandPtr;
-	be_t<CellPngDecOutputMode> outputMode;
-	be_t<CellPngDecColorSpace> outputColorSpace;
+	vm::bptr<volatile s32> commandPtr; // CellPngDecCommand
+	be_t<s32> outputMode; // CellPngDecOutputMode
+	be_t<s32> outputColorSpace; // CellPngDecColorSpace
 	be_t<u32> outputBitDepth;
-	be_t<CellPngDecPackFlag> outputPackFlag;
-	be_t<CellPngDecAlphaSelect> outputAlphaSelect;
+	be_t<s32> outputPackFlag; // CellPngDecPackFlag
+	be_t<s32> outputAlphaSelect; // CellPngDecAlphaSelect
 	be_t<u32> outputColorAlpha;
 };
 
@@ -164,8 +161,8 @@ struct CellPngDecOutParam
 	be_t<u32> outputHeight;
 	be_t<u32> outputComponents;
 	be_t<u32> outputBitDepth;
-	be_t<CellPngDecOutputMode> outputMode;
-	be_t<CellPngDecColorSpace> outputColorSpace;
+	be_t<s32> outputMode; // CellPngDecOutputMode
+	be_t<s32> outputColorSpace; // CellPngDecOutputMode
 	be_t<u32> useMemorySpace;
 };
 
@@ -179,14 +176,17 @@ struct CellPngDecDataOutInfo
 	be_t<u32> chunkInformation;
 	be_t<u32> numText;
 	be_t<u32> numUnknownChunk;
-	be_t<CellPngDecDecodeStatus> status;
+	be_t<s32> status; // CellPngDecDecodeStatus
 };
 
 // Functions
-s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam);
+s32 cellPngDecCreate(
+	vm::ptr<CellPngDecMainHandle> mainHandle,
+	vm::ptr<const CellPngDecThreadInParam> threadInParam,
+	vm::ptr<CellPngDecThreadOutParam> threadOutParam);
 
 s32 cellPngDecExtCreate(
-	vm::ptr<u32> mainHandle,
+	vm::ptr<CellPngDecMainHandle> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> threadInParam,
 	vm::ptr<CellPngDecThreadOutParam> threadOutParam,
 	vm::ptr<const CellPngDecExtThreadInParam> extThreadInParam,
@@ -194,11 +194,14 @@ s32 cellPngDecExtCreate(
 
 s32 cellPngDecOpen(
 	CellPngDecMainHandle mainHandle,
-	vm::ptr<u32> subHandle,
+	vm::ptr<CellPngDecSubHandle> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo);
 
-s32 cellPngDecReadHeader(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngDecInfo> info);
+s32 cellPngDecReadHeader(
+	CellPngDecMainHandle mainHandle,
+	CellPngDecSubHandle subHandle,
+	vm::ptr<CellPngDecInfo> info);
 
 s32 cellPngDecSetParameter(
 	CellPngDecMainHandle mainHandle,
@@ -217,11 +220,123 @@ s32 cellPngDecClose(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHand
 
 s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle);
 
-s32 cellPngDecGetTextChunk(
+// Defines for decoding partial streams
+enum CellPngDecBufferMode : s32
+{
+	CELL_PNGDEC_LINE_MODE = 1,
+};
+
+enum CellPngDecSpuMode : s32
+{
+	CELL_PNGDEC_RECEIVE_EVENT    = 0,
+	CELL_PNGDEC_TRYRECEIVE_EVENT = 1,
+};
+
+// Structs for decoding partial streams
+struct CellPngDecStrmInfo
+{
+	be_t<u32> decodedStrmSize;
+};
+
+struct CellPngDecStrmParam
+{
+	vm::bptr<void> strmPtr;
+	be_t<u32> strmSize;
+};
+
+struct CellPngDecDispInfo
+{
+	be_t<u64> outputFrameWidthByte;
+	be_t<u32> outputFrameHeight;
+	be_t<u64> outputStartXByte;
+	be_t<u32> outputStartY;
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputHeight;
+	be_t<u32> outputBitDepth;
+	be_t<u32> outputComponents;
+	be_t<u32> nextOutputStartY;
+	be_t<u32> scanPassCount;
+	vm::bptr<void> outputImage;
+};
+
+struct CellPngDecDispParam
+{
+	vm::bptr<void> nextOutputImage;
+};
+
+struct CellPngDecOpnParam
+{
+	be_t<u32> selectChunk;
+};
+
+struct CellPngDecExtInfo
+{
+	be_t<u64> reserved;
+};
+
+struct CellPngDecExtInParam
+{
+	be_t<s32> bufferMode; // CellPngDecBufferMode
+	be_t<u32> outputCounts;
+	be_t<s32> spuMode; // CellPngDecSpuMode
+};
+
+struct CellPngDecExtOutParam
+{
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputHeight;
+};
+
+// Callbacks for decoding partial streams
+typedef s32(CellPngDecCbControlStream)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
+typedef s32(CellPngDecCbControlDisp)(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
+
+struct CellPngDecCbCtrlStrm
+{
+	vm::bptr<CellPngDecCbControlStream> cbCtrlStrmFunc;
+	vm::bptr<void> cbCtrlStrmArg;
+};
+
+struct CellPngDecCbCtrlDisp
+{
+	vm::bptr<CellPngDecCbControlDisp> cbCtrlDispFunc;
+	vm::bptr<void> cbCtrlDispArg;
+};
+
+// Functions for decoding partial streams
+s32 cellPngDecExtOpen(
+	CellPngDecMainHandle mainHandle,
+	vm::ptr<CellPngDecSubHandle> subHandle,
+	vm::ptr<const CellPngDecSrc> src,
+	vm::ptr<CellPngDecOpnInfo> openInfo,
+	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
+	vm::ptr<const CellPngDecOpnParam> opnParam);
+
+s32 cellPngDecExtReadHeader(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
-	vm::ptr<u32> textInfoNum,
-	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo);
+	vm::ptr<CellPngDecInfo> info,
+	vm::ptr<CellPngDecExtInfo> extInfo);
+
+s32 cellPngDecExtSetParameter(
+	CellPngDecMainHandle mainHandle,
+	CellPngDecSubHandle subHandle,
+	vm::ptr<const CellPngDecInParam> inParam,
+	vm::ptr<CellPngDecOutParam> outParam,
+	vm::ptr<const CellPngDecExtInParam> extInParam,
+	vm::ptr<CellPngDecExtOutParam> extOutParam);
+
+s32 cellPngDecExtDecodeData(
+	CellPngDecMainHandle mainHandle,
+	CellPngDecSubHandle subHandle,
+	vm::ptr<u8> data,
+	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
+	vm::ptr<CellPngDecDataOutInfo> dataOutInfo,
+	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp,
+	vm::ptr<CellPngDecDispParam> dispParam);
+
+// Functions for accessing ancillary chunks
+s32 cellPngDecGetTextChunk(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<u32> textInfoNum, vm::ptr<vm::bptr<CellPngTextInfo>> textInfo);
 
 s32 cellPngDecGetPLTE(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPLTE> plte);
 
@@ -253,128 +368,7 @@ s32 cellPngDecGetcHRM(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHa
 
 s32 cellPngDecGetpCAL(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<CellPngPCAL> pcal);
 
-s32 cellPngDecGetUnknownChunks(
-	CellPngDecMainHandle mainHandle,
-	CellPngDecSubHandle subHandle,
-	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
-	vm::ptr<u32> unknownChunkNumber);
-
-
-enum CellPngDecBufferMode
-{
-	CELL_PNGDEC_LINE_MODE = 1,
-};
-
-enum CellPngDecSpuMode
-{
-	CELL_PNGDEC_RECEIVE_EVENT    = 0,
-	CELL_PNGDEC_TRYRECEIVE_EVENT = 1,
-};
-
-// Structs
-struct CellPngDecStrmInfo
-{
-	be_t<u32> decodedStrmSize;
-};
-
-struct CellPngDecStrmParam
-{
-	vm::bptr<void> strmPtr;
-	be_t<u32> strmSize;
-};
-
-typedef s32(CellPngDecCbControlStream)(vm::ptr<CellPngDecStrmInfo> strmInfo, vm::ptr<CellPngDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
-
-struct CellPngDecDispInfo
-{
-	be_t<u64> outputFrameWidthByte;
-	be_t<u32> outputFrameHeight;
-	be_t<u64> outputStartXByte;
-	be_t<u32> outputStartY;
-	be_t<u64> outputWidthByte;
-	be_t<u32> outputHeight;
-	be_t<u32> outputBitDepth;
-	be_t<u32> outputComponents;
-	be_t<u32> nextOutputStartY;
-	be_t<u32> scanPassCount;
-	vm::bptr<void> outputImage;
-};
-
-struct CellPngDecDispParam
-{
-	vm::bptr<void> nextOutputImage;
-};
-
-// Callback
-typedef s32(CellPngDecCbControlDisp)(vm::ptr<CellPngDecDispInfo> dispInfo, vm::ptr<CellPngDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
-
-// Structs
-struct CellPngDecOpnParam
-{
-	be_t<u32> selectChunk;
-};
-
-struct CellPngDecCbCtrlStrm
-{
-	vm::bptr<CellPngDecCbControlStream> cbCtrlStrmFunc;
-	be_t<vm::ptr<void>> cbCtrlStrmArg;
-};
-
-struct CellPngDecExtInfo
-{
-	be_t<u64> reserved;
-};
-
-struct CellPngDecExtInParam
-{
-	be_t<CellPngDecBufferMode> bufferMode;
-	be_t<u32> outputCounts;
-	be_t<CellPngDecSpuMode> spuMode;
-};
-
-struct CellPngDecExtOutParam
-{
-	be_t<u64> outputWidthByte;
-	be_t<u32> outputHeight;
-};
-
-struct CellPngDecCbCtrlDisp
-{
-	vm::bptr<CellPngDecCbControlDisp> cbCtrlDispFunc;
-	be_t<vm::ptr<void>> cbCtrlDispArg;
-};
-
-// Functions
-s32 cellPngDecExtOpen(
-	CellPngDecMainHandle mainHandle,
-	vm::ptr<u32> subHandle,
-	vm::ptr<const CellPngDecSrc> src,
-	vm::ptr<CellPngDecOpnInfo> openInfo,
-	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
-	vm::ptr<const CellPngDecOpnParam> opnParam);
-
-s32 cellPngDecExtReadHeader(
-	CellPngDecMainHandle mainHandle,
-	CellPngDecSubHandle subHandle,
-	vm::ptr<CellPngDecInfo> info,
-	vm::ptr<CellPngDecExtInfo> extInfo);
-
-s32 cellPngDecExtSetParameter(
-	CellPngDecMainHandle mainHandle,
-	CellPngDecSubHandle subHandle,
-	vm::ptr<const CellPngDecInParam> inParam,
-	vm::ptr<CellPngDecOutParam> outParam,
-	vm::ptr<const CellPngDecExtInParam> extInParam,
-	vm::ptr<CellPngDecExtOutParam> extOutParam);
-
-s32 cellPngDecExtDecodeData(
-	CellPngDecMainHandle mainHandle,
-	CellPngDecSubHandle subHandle,
-	vm::ptr<u8> data,
-	vm::ptr<const CellPngDecDataCtrlParam> dataCtrlParam,
-	vm::ptr<CellPngDecDataOutInfo> dataOutInfo,
-	vm::ptr<const CellPngDecCbCtrlDisp> cbCtrlDisp,
-	vm::ptr<CellPngDecDispParam> dispParam);
+s32 cellPngDecGetUnknownChunks(CellPngDecMainHandle mainHandle, CellPngDecSubHandle subHandle, vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk, vm::ptr<u32> unknownChunkNumber);
 
 // Custom structs
 struct PngDecoder

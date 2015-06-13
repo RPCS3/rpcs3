@@ -3,26 +3,30 @@
 namespace vm
 {
 	template<typename T, typename AT = u32>
-	class _ref_base
+	struct _ref_base
 	{
-	protected:
-		AT m_addr;
+		const AT m_addr;
 
-	public:
-		typedef T type;
+		using type = T;
+
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
-		typedef typename remove_be_t<T>::type le_type;
-		typedef typename to_be_t<T>::type be_type;
 
-		operator T&()
+		//template<typename CT> operator std::enable_if_t<std::is_convertible<T, CT>::value, CT>()
+		//{
+		//	return get_ref<T>(m_addr);
+		//}
+		
+		// temporarily, because SFINAE doesn't work for some reason:
+
+		operator to_ne_t<T>() const
 		{
 			return get_ref<T>(m_addr);
 		}
 
-		operator const T&() const
+		operator T() const
 		{
-			return get_ref<const T>(m_addr);
+			return get_ref<T>(m_addr);
 		}
 
 		AT addr() const
@@ -32,28 +36,16 @@ namespace vm
 
 		static _ref_base make(const AT& addr)
 		{
-			return reinterpret_cast<_ref_base&>(addr);
+			return{ addr };
 		}
 
-		_ref_base& operator = (le_type right)
+		template<typename CT> const _ref_base& operator =(const _ref_base<T, CT>& right) const
 		{
 			get_ref<T>(m_addr) = right;
 			return *this;
 		}
 
-		const _ref_base& operator = (le_type right) const
-		{
-			get_ref<T>(m_addr) = right;
-			return *this;
-		}
-
-		_ref_base& operator = (be_type right)
-		{
-			get_ref<T>(m_addr) = right;
-			return *this;
-		}
-
-		const _ref_base& operator = (be_type right) const
+		template<typename CT> std::enable_if_t<std::is_assignable<T&, CT>::value, const _ref_base&> operator =(const CT& right) const
 		{
 			get_ref<T>(m_addr) = right;
 			return *this;
@@ -61,22 +53,22 @@ namespace vm
 	};
 
 	// Native endianness reference to LE data
-	template<typename T, typename AT = u32> using refl = _ref_base<typename to_le_t<T>::type, AT>;
+	template<typename T, typename AT = u32> using refl = _ref_base<to_le_t<T>, AT>;
 
 	// Native endianness reference to BE data
-	template<typename T, typename AT = u32> using refb = _ref_base<typename to_be_t<T>::type, AT>;
+	template<typename T, typename AT = u32> using refb = _ref_base<to_be_t<T>, AT>;
 
 	// BE reference to LE data
-	template<typename T, typename AT = u32> using brefl = _ref_base<typename to_le_t<T>::type, typename to_be_t<AT>::type>;
+	template<typename T, typename AT = u32> using brefl = _ref_base<to_le_t<T>, to_be_t<AT>>;
 
 	// BE reference to BE data
-	template<typename T, typename AT = u32> using brefb = _ref_base<typename to_be_t<T>::type, typename to_be_t<AT>::type>;
+	template<typename T, typename AT = u32> using brefb = _ref_base<to_be_t<T>, to_be_t<AT>>;
 
 	// LE reference to LE data
-	template<typename T, typename AT = u32> using lrefl = _ref_base<typename to_le_t<T>::type, typename to_le_t<AT>::type>;
+	template<typename T, typename AT = u32> using lrefl = _ref_base<to_le_t<T>, to_le_t<AT>>;
 
 	// LE reference to BE data
-	template<typename T, typename AT = u32> using lrefb = _ref_base<typename to_be_t<T>::type, typename to_le_t<AT>::type>;
+	template<typename T, typename AT = u32> using lrefb = _ref_base<to_be_t<T>, to_le_t<AT>>;
 
 	namespace ps3
 	{
@@ -98,7 +90,38 @@ namespace vm
 
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
-}
+};
+
+// external specialization for is_be_t<>
+
+template<typename T, typename AT>
+struct is_be_t<vm::_ref_base<T, AT>> : public std::integral_constant<bool, is_be_t<AT>::value>
+{
+};
+
+// external specialization for to_ne_t<>
+
+template<typename T, typename AT>
+struct to_ne<vm::_ref_base<T, AT>>
+{
+	using type = vm::_ref_base<T, to_ne_t<AT>>;
+};
+
+// external specialization for to_be_t<>
+
+template<typename T, typename AT>
+struct to_be<vm::_ref_base<T, AT>>
+{
+	using type = vm::_ref_base<T, to_be_t<AT>>;
+};
+
+// external specialization for to_le_t<> (not used)
+
+template<typename T, typename AT>
+struct to_le<vm::_ref_base<T, AT>>
+{
+	using type = vm::_ref_base<T, to_le_t<AT>>;
+};
 
 namespace fmt
 {
@@ -107,7 +130,7 @@ namespace fmt
 	template<typename T, typename AT>
 	struct unveil<vm::_ref_base<T, AT>, false>
 	{
-		typedef typename unveil<AT>::result_type result_type;
+		using result_type = typename unveil<AT>::result_type;
 
 		force_inline static result_type get_value(const vm::_ref_base<T, AT>& arg)
 		{

@@ -872,8 +872,8 @@ struct CellSpursTaskInfo
 	const be_t<u32> eaElf_addr; //void *eaElf
 	const be_t<u32> eaContext_addr; //void *eaContext
 	be_t<u32> sizeContext;
-	be_t<u8> state;
-	be_t<u8> hasSignal;
+	u8 state;
+	u8 hasSignal;
 	const be_t<u32> CellSpursTaskExitCode_addr;
 	u8 guid[8];
 	//be_t<u8> reserved[];
