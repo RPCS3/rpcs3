@@ -563,22 +563,22 @@ template<typename T, size_t size = sizeof(T)> struct be_storage
 
 template<typename T> struct be_storage<T, 2>
 {
-	typedef u16 type;
+	using type = u16;
 };
 
 template<typename T> struct be_storage<T, 4>
 {
-	typedef u32 type;
+	using type = u32;
 };
 
 template<typename T> struct be_storage<T, 8>
 {
-	typedef u64 type;
+	using type = u64;
 };
 
 template<typename T> struct be_storage<T, 16>
 {
-	typedef u128 type;
+	using type = u128;
 };
 
 template<typename T> using be_storage_t = typename be_storage<T>::type;
@@ -587,7 +587,7 @@ template<typename T>
 struct be_t
 {
 	using type = std::remove_cv_t<T>;
-	using stype = be_storage_t<type>;
+	using stype = be_storage_t<std::remove_cv_t<T>>;
 
 	stype m_data;
 
@@ -853,7 +853,7 @@ force_inline void convert_le_be(Tto& dst, Tfrom src)
 template<typename T> struct le_t
 {
 	using type = std::remove_cv_t<T>;
-	using stype = be_storage_t<type>;
+	using stype = be_storage_t<std::remove_cv_t<T>>;
 
 	stype m_data;
 

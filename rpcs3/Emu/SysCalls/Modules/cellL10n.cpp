@@ -8,36 +8,49 @@
 #include <iconv.h>
 #endif
 
+//#include <codecvt>
 #include "cellL10n.h"
-#include <codecvt>
-#include <stdio.h>
-#include <stdlib.h>
 
 extern Module cellL10n;
 
 s32 UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char> utf8, vm::ref<u32> utf8_len)
 {
-	cellL10n.Warning("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
+	cellL10n.Todo("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
-	std::u16string wstr;
-	wstr.resize(utf16_len);
+	const u32 max_len = utf8_len; utf8_len = 0;
 
-	for (auto& wc : wstr)
+	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
 	{
-		wc = *utf16++;
+		const char16_t ch = utf16[i];
+
+		// increase required length (TODO)
+		len = len + 1;
+
+		// validate character (TODO)
+		if (false)
+		{
+			utf16_len = utf16_len - i;
+			return SRCIllegal;
+		}
+
+		if (utf8)
+		{
+			if (len > max_len)
+			{
+				utf16_len = utf16_len - i;
+				return DSTExhausted;
+			}
+
+			if (ch <= 0x7f)
+			{
+				*utf8++ = static_cast<char>(ch);
+			}
+			else
+			{
+				*utf8++ = '?'; // TODO
+			}
+		}
 	}
-
-	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-	std::string str = convert.to_bytes(wstr);
-
-	if (utf8_len < str.size())
-	{
-		utf8_len = str.size();
-		return DSTExhausted;
-	}
-
-	utf8_len = str.size();
-	memcpy(utf8.get_ptr(), str.c_str(), str.size());
 
 	return ConversionOK;
 }
