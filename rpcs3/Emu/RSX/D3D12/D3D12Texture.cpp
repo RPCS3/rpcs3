@@ -335,8 +335,8 @@ ID3D12Resource *uploadSingleTexture(
 				src = (u32*)pixels;
 				dst = (u32*)textureData;
 
-				log2width = (u32)(logf(w) / logf(2.f));
-				log2height = (u32)(logf(h) / logf(2.f));
+				log2width = (u32)(logf((float)w) / logf(2.f));
+				log2height = (u32)(logf((float)h) / logf(2.f));
 
 				#pragma omp parallel for
 				for (int j = 0; j < w; j++)
@@ -364,8 +364,14 @@ ID3D12Resource *uploadSingleTexture(
 
 			for (int j = 0; j < w * 4; j++)
 			{
-				uint64_t tmp = src[row * w * 4 + j];
+				unsigned short tmp = src[row * w * 4 + j];
 				dst[row * w  * 4 + j] = (tmp >> 8) | (tmp << 8);
+				tmp = src[row * w * 4 + j + 1];
+				dst[row * w * 4 + j + 1] = (tmp >> 8) | (tmp << 8);
+				tmp = src[row * w * 4 + j + 2];
+				dst[row * w * 4 + j + 2] = (tmp >> 8) | (tmp << 8);
+				tmp = src[row * w * 4 + j + 3];
+				dst[row * w * 4 + j + 3] = (tmp >> 8) | (tmp << 8);
 			}
 			break;
 		}
@@ -378,8 +384,8 @@ ID3D12Resource *uploadSingleTexture(
 	}
 	Texture->Unmap(0, nullptr);
 
-	size_t powerOf2Height = log2(heightInBlocks) + 1;
-	textureSize = rowPitch * (1 << powerOf2Height);
+	size_t powerOf2Height = (size_t)log2f((float)heightInBlocks) + 1;
+	textureSize = rowPitch * (1i64 << powerOf2Height);
 
 	assert(textureHeap.canAlloc(textureSize));
 	size_t heapOffset2 = textureHeap.alloc(textureSize);
@@ -400,8 +406,8 @@ ID3D12Resource *uploadSingleTexture(
 	src.pResource = Texture;
 	src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	src.PlacedFootprint.Footprint.Depth = 1;
-	src.PlacedFootprint.Footprint.Width = w;
-	src.PlacedFootprint.Footprint.Height = h;
+	src.PlacedFootprint.Footprint.Width = (UINT)w;
+	src.PlacedFootprint.Footprint.Height = (UINT)h;
 	src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
 	src.PlacedFootprint.Footprint.Format = dxgiFormat;
 

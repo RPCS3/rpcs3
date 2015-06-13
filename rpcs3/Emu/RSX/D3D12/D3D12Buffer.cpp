@@ -83,6 +83,9 @@ DXGI_FORMAT getFormat(u8 type, u8 size)
 		return typeX3[type];
 	case 4:
 		return typeX4[type];
+	default:
+		LOG_ERROR(RSX, "Wrong size for vertex attrib : %d", size);
+		return DXGI_FORMAT();
 	}
 }
 
@@ -223,10 +226,10 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 				memcpy(bufferMap, vertexData[attributeId].data.data(), vertexData[attributeId].data.size());
 				continue;
 			}
-			size_t baseOffset = vertexData[attributeId].addr - vbf.range.first;
+			size_t baseOffset = (size_t)vertexData[attributeId].addr - vbf.range.first;
 			size_t tsize = vertexData[attributeId].GetTypeSize();
 			size_t size = vertexData[attributeId].size;
-			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + vbf.stride * vertex);
+			auto src = vm::get_ptr<const u8>(vertexData[attributeId].addr + (int)vbf.stride * vertex);
 			char* dst = (char*)bufferMap + baseOffset + vbf.stride * vertex;
 
 			switch (tsize)

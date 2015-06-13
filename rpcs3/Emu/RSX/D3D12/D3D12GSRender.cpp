@@ -1221,7 +1221,7 @@ void D3D12GSRender::semaphorePFIFOAcquire(u32 offset, u32 value)
 		u32 val = vm::read32(m_label_addr + offset);
 		if (val == value) break;
 		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
-		int elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
+		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
 		if (elapsedTime > 0)
 			LOG_ERROR(RSX, "Has wait for more than a second for semaphore acquire");
 		std::this_thread::yield();
