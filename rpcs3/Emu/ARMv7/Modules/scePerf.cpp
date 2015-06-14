@@ -245,7 +245,7 @@ u32 scePerfGetTimebaseFrequency()
 	return 1;
 }
 
-s32 _sceRazorCpuInit(vm::psv::ptr<const void> pBufferBase, u32 bufferSize, u32 numPerfCounters, vm::psv::ptr<vm::psv::ptr<u32>> psceRazorVars)
+s32 _sceRazorCpuInit(vm::psv::ptr<const void> pBufferBase, u32 bufferSize, u32 numPerfCounters, vm::psv::pptr<u32> psceRazorVars)
 {
 	throw __FUNCTION__;
 }

@@ -19,7 +19,7 @@ s32 sceSasInitWithGrain(vm::psv::ptr<const char> config, u32 grain, vm::psv::ptr
 	throw __FUNCTION__;
 }
 
-s32 sceSasExit(vm::psv::ptr<vm::psv::ptr<void>> outBuffer, vm::psv::ptr<u32> outBufferSize)
+s32 sceSasExit(vm::psv::pptr<void> outBuffer, vm::psv::ptr<u32> outBufferSize)
 {
 	throw __FUNCTION__;
 }

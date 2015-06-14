@@ -787,7 +787,7 @@ s32 sceFiosIOFilterAdd(s32 index, SceFiosIOFilterCallback pFilterCallback, vm::p
 	throw __FUNCTION__;
 }
 
-s32 sceFiosIOFilterGetInfo(s32 index, vm::psv::ptr<SceFiosIOFilterCallback> pOutFilterCallback, vm::psv::ptr<vm::psv::ptr<void>> pOutFilterContext)
+s32 sceFiosIOFilterGetInfo(s32 index, vm::psv::ptr<SceFiosIOFilterCallback> pOutFilterCallback, vm::psv::pptr<void> pOutFilterContext)
 {
 	throw __FUNCTION__;
 }

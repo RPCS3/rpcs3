@@ -25,7 +25,7 @@ s32 sceKernelFreeMemBlock(s32 uid)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetMemBlockBase(s32 uid, vm::psv::ptr<vm::psv::ptr<void>> ppBase)
+s32 sceKernelGetMemBlockBase(s32 uid, vm::psv::pptr<void> ppBase)
 {
 	throw __FUNCTION__;
 }

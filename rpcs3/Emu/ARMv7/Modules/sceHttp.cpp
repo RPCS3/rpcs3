@@ -33,7 +33,7 @@ enum SceHttpAuthType : s32
 	SCE_HTTP_AUTH_RESERVED2
 };
 
-typedef vm::psv::ptr<s32(s32 request, SceHttpAuthType authType, vm::psv::ptr<const char> realm, vm::psv::ptr<char> username, vm::psv::ptr<char> password, s32 needEntity, vm::psv::ptr<vm::psv::ptr<u8>> entityBody, vm::psv::ptr<u32> entitySize, vm::psv::ptr<s32> save, vm::psv::ptr<void> userArg)> SceHttpAuthInfoCallback;
+typedef vm::psv::ptr<s32(s32 request, SceHttpAuthType authType, vm::psv::ptr<const char> realm, vm::psv::ptr<char> username, vm::psv::ptr<char> password, s32 needEntity, vm::psv::pptr<u8> entityBody, vm::psv::ptr<u32> entitySize, vm::psv::ptr<s32> save, vm::psv::ptr<void> userArg)> SceHttpAuthInfoCallback;
 
 typedef vm::psv::ptr<s32(s32 request, s32 statusCode, vm::psv::ptr<s32> method, vm::psv::ptr<const char> location, vm::psv::ptr<void> userArg)> SceHttpRedirectCallback;
 
@@ -71,7 +71,7 @@ struct SceHttpsData
 
 struct SceHttpsCaList
 {
-	vm::psv::ptr<vm::psv::ptr<SceSslCert>> caCerts;
+	vm::psv::lpptr<SceSslCert> caCerts;
 	s32 caNum;
 };
 
@@ -167,7 +167,7 @@ s32 sceHttpGetStatusCode(s32 reqId, vm::psv::ptr<s32> statusCode)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpGetAllResponseHeaders(s32 reqId, vm::psv::ptr<vm::psv::ptr<char>> header, vm::psv::ptr<u32> headerSize)
+s32 sceHttpGetAllResponseHeaders(s32 reqId, vm::psv::pptr<char> header, vm::psv::ptr<u32> headerSize)
 {
 	throw __FUNCTION__;
 }
@@ -187,12 +187,12 @@ s32 sceHttpRemoveRequestHeader(s32 id, vm::psv::ptr<const char> name)
 	throw __FUNCTION__;
 }
 
-s32 sceHttpParseResponseHeader(vm::psv::ptr<const char> header, u32 headerLen, vm::psv::ptr<const char> fieldStr, vm::psv::ptr<vm::psv::ptr<const char>> fieldValue, vm::psv::ptr<u32> valueLen)
+s32 sceHttpParseResponseHeader(vm::psv::ptr<const char> header, u32 headerLen, vm::psv::ptr<const char> fieldStr, vm::psv::pptr<const char> fieldValue, vm::psv::ptr<u32> valueLen)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceHttpParseStatusLine(vm::psv::ptr<const char> statusLine, u32 lineLen, vm::psv::ptr<s32> httpMajorVer, vm::psv::ptr<s32> httpMinorVer, vm::psv::ptr<s32> responseCode, vm::psv::ptr<vm::psv::ptr<const char>> reasonPhrase, vm::psv::ptr<u32> phraseLen)
+s32 sceHttpParseStatusLine(vm::psv::ptr<const char> statusLine, u32 lineLen, vm::psv::ptr<s32> httpMajorVer, vm::psv::ptr<s32> httpMinorVer, vm::psv::ptr<s32> responseCode, vm::psv::pptr<const char> reasonPhrase, vm::psv::ptr<u32> phraseLen)
 {
 	throw __FUNCTION__;
 }
@@ -312,7 +312,7 @@ s32 sceHttpSetCookieSendCallback(s32 id, SceHttpCookieSendCallback cbfunc, vm::p
 	throw __FUNCTION__;
 }
 
-s32 sceHttpsLoadCert(s32 caCertNum, vm::psv::ptr<vm::psv::ptr<const SceHttpsData>> caList, vm::psv::ptr<const SceHttpsData> cert, vm::psv::ptr<const SceHttpsData> privKey)
+s32 sceHttpsLoadCert(s32 caCertNum, vm::psv::pptr<const SceHttpsData> caList, vm::psv::ptr<const SceHttpsData> cert, vm::psv::ptr<const SceHttpsData> privKey)
 {
 	throw __FUNCTION__;
 }
