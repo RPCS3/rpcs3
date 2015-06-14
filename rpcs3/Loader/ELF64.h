@@ -40,8 +40,8 @@ namespace loader
 				be_t<u32> p_type;
 				be_t<u32> p_flags;
 				be_t<u64> p_offset;
-				bptr<void, 1, u64> p_vaddr;
-				bptr<void, 1, u64> p_paddr;
+				bptr<void, u64> p_vaddr;
+				bptr<void, u64> p_paddr;
 				be_t<u64> p_filesz;
 				be_t<u64> p_memsz;
 				be_t<u64> p_align;
@@ -52,7 +52,7 @@ namespace loader
 				be_t<u32> sh_name;
 				be_t<u32> sh_type;
 				be_t<u64> sh_flags;
-				bptr<void, 1, u64> sh_addr;
+				bptr<void, u64> sh_addr;
 				be_t<u64> sh_offset;
 				be_t<u64> sh_size;
 				be_t<u32> sh_link;

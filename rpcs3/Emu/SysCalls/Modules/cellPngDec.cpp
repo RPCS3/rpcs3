@@ -517,7 +517,7 @@ s32 cellPngDecExtDecodeData(
 s32 cellPngDecGetUnknownChunks(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
-	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
+	vm::pptr<CellPngUnknownChunk> unknownChunk,
 	vm::ptr<u32> unknownChunkNumber)
 {
 	UNIMPLEMENTED_FUNC(cellPngDec);
@@ -618,7 +618,7 @@ s32 cellPngDecGetTextChunk(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u32> textInfoNum,
-	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo)
+	vm::pptr<CellPngTextInfo> textInfo)
 {
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;

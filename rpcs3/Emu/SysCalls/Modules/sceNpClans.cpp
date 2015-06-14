@@ -377,7 +377,7 @@ int sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, u32 clanId,
 	if (!sceNpClansInstance.m_bSceNpClansInitialized)
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 
-	if (data != 0)
+	if (data)
 		return SCE_NP_CLANS_ERROR_NOT_SUPPORTED;
 
 	//todo

@@ -80,7 +80,7 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 
 	if (argv_addr)
 	{
-		auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
+		auto argvp = vm::pptr<const char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -94,7 +94,7 @@ void sys_game_process_exitspawn(vm::ptr<const char> path, u32 argv_addr, u32 env
 
 	if (envp_addr)
 	{
-		auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
+		auto envp = vm::pptr<const char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());
@@ -154,7 +154,7 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 	if (argv_addr)
 	{
-		auto argvp = vm::ptr<vm::bptr<const char>>::make(argv_addr);
+		auto argvp = vm::pptr<const char>::make(argv_addr);
 		while (argvp && *argvp)
 		{
 			argv.push_back(argvp[0].get_ptr());
@@ -169,7 +169,7 @@ void sys_game_process_exitspawn2(vm::ptr<const char> path, u32 argv_addr, u32 en
 
 	if (envp_addr)
 	{
-		auto envp = vm::ptr<vm::bptr<const char>>::make(envp_addr);
+		auto envp = vm::pptr<const char>::make(envp_addr);
 		while (envp && *envp)
 		{
 			env.push_back(envp[0].get_ptr());

@@ -888,6 +888,14 @@ template<typename T> struct le_t
 	//}
 };
 
+template<typename T> struct is_le_t : public std::integral_constant<bool, false>
+{
+};
+
+template<typename T> struct is_le_t<le_t<T>> : public std::integral_constant<bool, true>
+{
+};
+
 template<typename T> struct to_le
 {
 	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value, le_t<T>, T>;

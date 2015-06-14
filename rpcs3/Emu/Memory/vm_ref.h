@@ -9,6 +9,8 @@ namespace vm
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
+		static_assert(!std::is_function<T>::value, "vm::_ref_base<> error: invalid type (function)");
+		static_assert(!std::is_void<T>::value, "vm::_ref_base<> error: invalid type (void)");
 
 		AT addr() const
 		{
@@ -98,24 +100,31 @@ namespace vm
 	namespace psv
 	{
 		// default reference for PSV HLE functions (Native endianness reference to LE data)
-		template<typename T, typename AT = u32> using ref = refl<T, AT>;
+		template<typename T> using ref = refl<T>;
 
 		// default reference for PSV HLE structures (LE reference to LE data)
-		template<typename T, typename AT = u32> using lref = lrefl<T, AT>;
+		template<typename T> using lref = lrefl<T>;
 	}
 
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
 }
 
-// external specialization for is_be_t<>
+// external specialization for is_be_t<> (true if AT's endianness is BE)
 
 template<typename T, typename AT>
 struct is_be_t<vm::_ref_base<T, AT>> : public std::integral_constant<bool, is_be_t<AT>::value>
 {
 };
 
-// external specialization for to_ne_t<>
+// external specialization for is_le_t<> (true if AT's endianness is LE)
+
+template<typename T, typename AT>
+struct is_le_t<vm::_ref_base<T, AT>> : public std::integral_constant<bool, is_le_t<AT>::value>
+{
+};
+
+// external specialization for to_ne_t<> (change AT's endianness to native)
 
 template<typename T, typename AT>
 struct to_ne<vm::_ref_base<T, AT>>
@@ -123,7 +132,7 @@ struct to_ne<vm::_ref_base<T, AT>>
 	using type = vm::_ref_base<T, to_ne_t<AT>>;
 };
 
-// external specialization for to_be_t<>
+// external specialization for to_be_t<> (change AT's endianness to BE)
 
 template<typename T, typename AT>
 struct to_be<vm::_ref_base<T, AT>>
@@ -131,7 +140,7 @@ struct to_be<vm::_ref_base<T, AT>>
 	using type = vm::_ref_base<T, to_be_t<AT>>;
 };
 
-// external specialization for to_le_t<> (not used)
+// external specialization for to_le_t<> (change AT's endianness to LE)
 
 template<typename T, typename AT>
 struct to_le<vm::_ref_base<T, AT>>

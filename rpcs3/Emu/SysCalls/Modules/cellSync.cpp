@@ -1811,7 +1811,7 @@ s32 cellSyncLFQueueDepth(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> depth)
 	return CELL_OK;
 }
 
-s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::ptr<vm::bptr<void>> ppSignal)
+s32 _cellSyncLFQueueGetSignalAddress(vm::ptr<const CellSyncLFQueue> queue, vm::pptr<void> ppSignal)
 {
 	cellSync.Log("_cellSyncLFQueueGetSignalAddress(queue=*0x%x, ppSignal=**0x%x)", queue, ppSignal);
 

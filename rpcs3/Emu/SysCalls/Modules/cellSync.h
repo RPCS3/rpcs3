@@ -71,7 +71,7 @@ struct CellSyncRwm
 
 	atomic_be_t<data_t> data;
 	be_t<u32> m_size;
-	vm::bptr<void, 1, u64> m_buffer;
+	vm::bptr<void, u64> m_buffer;
 };
 
 static_assert(sizeof(CellSyncRwm) == 16, "CellSyncRwm: wrong size");
@@ -87,7 +87,7 @@ struct CellSyncQueue
 	atomic_be_t<data_t> data;
 	be_t<u32> m_size;
 	be_t<u32> m_depth;
-	vm::bptr<u8, 1, u64> m_buffer;
+	vm::bptr<u8, u64> m_buffer;
 	be_t<u64> reserved;
 };
 
@@ -155,7 +155,7 @@ struct CellSyncLFQueue
 
 	be_t<u32> m_size;              // 0x10
 	be_t<u32> m_depth;             // 0x14
-	vm::bptr<u8, 1, u64> m_buffer; // 0x18
+	vm::bptr<u8, u64> m_buffer; // 0x18
 	u8 m_bs[4];                    // 0x20
 	be_t<CellSyncQueueDirection> m_direction; // 0x24
 	be_t<u32> m_v1;                // 0x28
@@ -164,7 +164,7 @@ struct CellSyncLFQueue
 	be_t<u16> m_hs1[15];           // 0x32
 	atomic_be_t<pop2_t> pop2;      // 0x50
 	be_t<u16> m_hs2[15];           // 0x52
-	vm::bptr<void, 1, u64> m_eaSignal; // 0x70
+	vm::bptr<void, u64> m_eaSignal; // 0x70
 	be_t<u32> m_v2;                // 0x78
 	be_t<u32> m_eq_id;             // 0x7C
 

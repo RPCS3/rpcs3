@@ -87,7 +87,7 @@ struct sys_prx_relocation_info_t
 	u8 index_value;
 	u8 index_addr;
 	be_t<u32> type;
-	vm::bptr<void, 1, u64> ptr;
+	vm::bptr<void, u64> ptr;
 };
 
 
@@ -102,14 +102,14 @@ struct sys_prx_start_module_option_t
 {
 	be_t<u64> size;
 	be_t<u64> put;
-	vm::bptr<s32(int argc, vm::ptr<void> argv), 1, u64> entry_point;
+	vm::bptr<s32(int argc, vm::ptr<void> argv), u64> entry_point;
 };
 
 struct sys_prx_stop_module_option_t
 {
 	be_t<u64> size;
 	be_t<u64> put;
-	vm::bptr<s32(int argc, vm::ptr<void> argv), 1, u64> entry_point;
+	vm::bptr<s32(int argc, vm::ptr<void> argv), u64> entry_point;
 };
 
 struct sys_prx_unload_module_option_t
@@ -135,7 +135,7 @@ REG_ID_TYPE(lv2_prx_t, 0x23); // SYS_PRX_OBJECT
 
 // SysCalls
 s32 sys_prx_load_module(vm::ptr<const char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
-s32 sys_prx_load_module_list(s32 count, vm::ptr<const char, 2> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
+s32 sys_prx_load_module_list(s32 count, vm::pptr<const char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
 s32 sys_prx_load_module_on_memcontainer();
 s32 sys_prx_load_module_by_fd();
 s32 sys_prx_load_module_on_memcontainer_by_fd();

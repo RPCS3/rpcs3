@@ -1263,7 +1263,7 @@ s32 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 	return CELL_OK;
 }
 
-s32 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::ptr<vm::bptr<CellSpursWorkloadFlag>> flag)
+s32 cellSpursGetWorkloadFlag(vm::ptr<CellSpurs> spurs, vm::pptr<CellSpursWorkloadFlag> flag)
 {
 	cellSpurs.Warning("%s(spurs_addr=0x%x, flag_addr=0x%x)", __FUNCTION__, spurs.addr(), flag.addr());
 
@@ -2736,7 +2736,7 @@ s32 cellSpursTasksetSetExceptionEventHandler(vm::ptr<CellSpursTaskset> taskset, 
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	if (taskset->m.exception_handler != 0)
+	if (taskset->m.exception_handler)
 	{
 		return CELL_SPURS_TASK_ERROR_BUSY;
 	}
@@ -2996,7 +2996,7 @@ s32 spursTraceInitialize(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursTraceInfo> b
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
 
-	if (spurs->m.traceBuffer != 0)
+	if (spurs->m.traceBuffer)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}

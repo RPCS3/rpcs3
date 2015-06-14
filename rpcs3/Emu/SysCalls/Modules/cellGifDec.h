@@ -153,7 +153,7 @@ struct CellGifDecDataCtrlParam
 	be_t<u64> outputBytesPerLine;
 };
 
-//Custom structs
+// Custom structs
 struct GifDecoder
 {
 };
