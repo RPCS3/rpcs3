@@ -340,15 +340,16 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 
 	psoDesc.pRootSignature = m_rootSignature;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
 	check(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_PSO)));
 
 
 	float quadVertex[16] = {
-		-1., -1., 0., 0.,
-		-1., 1., 0., 1.,
-		1., 1., 1., 1.,
-		1., -1., 1., 0.,
+		-1., -1., 0., 1.,
+		-1., 1., 0., 0.,
+		1., -1., 1., 1.,
+		1., 1., 1., 0.,
 	};
 
 	D3D12_HEAP_PROPERTIES heapProp = {};
@@ -935,27 +936,68 @@ void D3D12GSRender::Flip()
 		barriers[0].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barriers[0].Transition.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
 		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
 		barriers[1].Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		barriers[1].Transition.pResource = m_rtts.m_currentlyBoundRenderTargets[0];
 		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
 
 		commandList->ResourceBarrier(2, barriers);
-		D3D12_TEXTURE_COPY_LOCATION src = {}, dst = {};
-		src.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		src.SubresourceIndex = 0;
-		src.pResource = m_rtts.m_currentlyBoundRenderTargets[0], 
-		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-		dst.SubresourceIndex = 0;
-		dst.pResource = m_backBuffer[m_swapChain->GetCurrentBackBufferIndex()];
-		D3D12_BOX box = { 0, 0, 0, RSXThread::m_width, RSXThread::m_height, 1 };
-		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, &box);
 
-		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+		D3D12_VIEWPORT viewport =
+		{
+			0.f,
+			0.f,
+			(float)RSXThread::m_width,
+			(float)RSXThread::m_height,
+			0.f,
+			1.f
+		};
+		commandList->RSSetViewports(1, &viewport);
+
+		D3D12_RECT box =
+		{
+			0,
+			0,
+			(LONG)RSXThread::m_width,
+			(LONG)RSXThread::m_height,
+		};
+		commandList->RSSetScissorRects(1, &box);
+		commandList->SetGraphicsRootSignature(m_outputScalingPass.m_rootSignature);
+		commandList->SetPipelineState(m_outputScalingPass.m_PSO);
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		// FIXME: Not always true
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		m_device->CreateShaderResourceView(m_rtts.m_currentlyBoundRenderTargets[0], &srvDesc, m_outputScalingPass.m_textureDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		D3D12_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		m_device->CreateSampler(&samplerDesc, m_outputScalingPass.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_textureDescriptorHeap);
+		commandList->SetGraphicsRootDescriptorTable(0, m_outputScalingPass.m_textureDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_samplerDescriptorHeap);
+		commandList->SetGraphicsRootDescriptorTable(1, m_outputScalingPass.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart();
+		commandList->OMSetRenderTargets(1, &Handle, true, nullptr);
+		D3D12_VERTEX_BUFFER_VIEW vbv = {};
+		vbv.BufferLocation = m_outputScalingPass.m_vertexBuffer->GetGPUVirtualAddress();
+		vbv.StrideInBytes = 4 * sizeof(float);
+		vbv.SizeInBytes = 16 * sizeof(float);
+		commandList->IASetVertexBuffers(0, 1, &vbv);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		commandList->DrawInstanced(4, 1, 0, 0);
+
+		barriers[0].Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barriers[0].Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+		barriers[1].Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
 		barriers[1].Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		commandList->ResourceBarrier(2, barriers);
 		commandList->Close();
