@@ -227,7 +227,7 @@ std::pair<ID3DBlob *, ID3DBlob *> compileF32toU8CS()
 void D3D12GSRender::Shader::Init(ID3D12Device *device)
 {
 	const char *fsCode = STRINGIFY(
-		Texture2D<float> InputTexture : register(t0); \n
+		Texture2D InputTexture : register(t0); \n
 		sampler bilinearSampler : register(s0); \n
 
 		struct PixelInput \n
