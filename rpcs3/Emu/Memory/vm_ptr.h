@@ -45,17 +45,15 @@ namespace vm
 			return get_ptr();
 		}
 
-		template<int X = 0> std::add_lvalue_reference_t<T> operator [](u32 index) const
+		std::add_lvalue_reference_t<T> operator [](u32 index) const
 		{
+			static_assert(!std::is_void<T>::value, "vm::_ptr_base<> error: operator[] is not available for void pointers");
+
 			return vm::get_ref<T>(vm::cast(m_addr + sizeof32(T) * index));
 		}
 
-		template<typename AT2> operator _ptr_base<T, AT2>() const
-		{
-			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
-		}
-
-		template<typename AT2> operator std::enable_if_t<!std::is_const<T>::value, _ptr_base<const T, AT2>>() const
+		// enable only the conversions which are originally possible between pointer types
+		template<typename T2, typename AT2, typename dummy = std::enable_if_t<std::is_convertible<T*, T2*>::value>> operator _ptr_base<T2, AT2>() const
 		{
 			return{ convert_le_be<AT2>(vm::cast(m_addr)) };
 		}
@@ -69,6 +67,8 @@ namespace vm
 		{
 			return m_addr != 0;
 		}
+
+		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
 	template<typename AT, typename RT, typename ...T>
@@ -123,6 +123,8 @@ namespace vm
 		{
 			return m_addr != 0;
 		}
+
+		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
 	template<typename AT, typename RT, typename ...T>
@@ -201,16 +203,21 @@ namespace vm
 		std::is_void<T2>::value ||
 		std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
 		RT>;
+
+	// helper SFINAE type for vm::_ptr_base pointer arithmetic operators and indirection (disabled for void and function pointers)
+	template<typename T, typename RT> using if_arithmetical_t = std::enable_if_t<
+		!std::is_void<T>::value && !std::is_function<T>::value,
+		RT>;
 }
 
 // indirection operator for vm::_ptr_base
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, T&> operator *(const vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> vm::if_arithmetical_t<T, T&> operator *(const vm::_ptr_base<T, AT>& ptr)
 {
 	return vm::get_ref<T>(vm::cast(ptr.m_addr));
 }
 
 // postfix increment operator for vm::_ptr_base
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>> operator ++(vm::_ptr_base<T, AT>& ptr, int)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator ++(vm::_ptr_base<T, AT>& ptr, int)
 {
 	const AT result = ptr.m_addr;
 	ptr.m_addr += sizeof32(T);
@@ -218,14 +225,14 @@ template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::
 }
 
 // prefix increment operator for vm::_ptr_base
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>&> operator ++(vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator ++(vm::_ptr_base<T, AT>& ptr)
 {
 	ptr.m_addr += sizeof32(T);
 	return ptr;
 }
 
 // postfix decrement operator for vm::_ptr_base
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>> operator --(vm::_ptr_base<T, AT>& ptr, int)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator --(vm::_ptr_base<T, AT>& ptr, int)
 {
 	const AT result = ptr.m_addr;
 	ptr.m_addr -= sizeof32(T);
@@ -233,34 +240,34 @@ template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::
 }
 
 // prefix decrement operator for vm::_ptr_base
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>&> operator --(vm::_ptr_base<T, AT>& ptr)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator --(vm::_ptr_base<T, AT>& ptr)
 {
 	ptr.m_addr -= sizeof32(T);
 	return ptr;
 }
 
 // addition assignment operator for vm::_ptr_base (pointer += integer)
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>&> operator +=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator +=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	ptr.m_addr += count * sizeof32(T);
 	return ptr;
 }
 
 // subtraction assignment operator for vm::_ptr_base (pointer -= integer)
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>&> operator -=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>&> operator -=(vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	ptr.m_addr -= count * sizeof32(T);
 	return ptr;
 }
 
 // addition operator for vm::_ptr_base (pointer + integer)
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>> operator +(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator +(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	return{ convert_le_be<AT>(ptr.m_addr + count * sizeof32(T)) };
 }
 
 // subtraction operator for vm::_ptr_base (pointer - integer)
-template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::_ptr_base<T, AT>> operator -(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
+template<typename T, typename AT> vm::if_arithmetical_t<T, vm::_ptr_base<T, AT>> operator -(const vm::_ptr_base<T, AT>& ptr, to_ne_t<AT> count)
 {
 	return{ convert_le_be<AT>(ptr.m_addr - count * sizeof32(T)) };
 }
@@ -269,6 +276,8 @@ template<typename T, typename AT> std::enable_if_t<!std::is_void<T>::value, vm::
 template<typename T1, typename AT1, typename T2, typename AT2> std::enable_if_t<
 	!std::is_void<T1>::value &&
 	!std::is_void<T2>::value &&
+	!std::is_function<T1>::value &&
+	!std::is_function<T2>::value &&
 	std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
 	u32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {

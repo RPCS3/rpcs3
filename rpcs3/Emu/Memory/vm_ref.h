@@ -32,23 +32,21 @@ namespace vm
 			return vm::priv_ref<T>(vm::cast(m_addr));
 		}
 
-		// conversion operator
-		//template<typename CT> operator std::enable_if_t<std::is_convertible<T, CT>::value, CT>()
+		// TODO: conversion operator (seems hard to define it correctly)
+		//template<typename CT, typename dummy = std::enable_if_t<std::is_convertible<T, CT>::value || std::is_convertible<to_ne_t<T>, CT>::value>> operator CT() const
 		//{
 		//	return get_ref();
 		//}
-
-		// temporarily, because SFINAE doesn't work for some reason:
 
 		operator to_ne_t<T>() const
 		{
 			return get_ref();
 		}
 
-		operator T() const
-		{
-			return get_ref();
-		}
+		//operator T() const
+		//{
+		//	return get_ref();
+		//}
 
 		// copy assignment operator
 		_ref_base& operator =(const _ref_base& right)

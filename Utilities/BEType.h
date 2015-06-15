@@ -695,7 +695,7 @@ public:
 		return *this;
 	}
 
-	//template<typename CT> operator std::enable_if_t<std::is_convertible<type, CT>::value, CT>() const
+	//template<typename CT, std::enable_if_t<std::is_convertible<type, CT>::value>> operator CT() const
 	//{
 	//	return value();
 	//}
