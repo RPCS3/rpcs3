@@ -418,49 +418,79 @@ void Emulator::SavePoints(const std::string& path)
 	u32 break_count = (u32)m_break_points.size();
 	u32 marked_count = (u32)m_marked_points.size();
 
-	f << bpdb_version << break_count << marked_count;
+	f.write((char*)(&bpdb_version), sizeof(bpdb_version));
+	f.write((char*)(&break_count), sizeof(break_count));
+	f.write((char*)(&marked_count), sizeof(marked_count));
 	
 	if (break_count)
 	{
-		f.write(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
+		f.write((char*)(m_break_points.data()), sizeof(u64) * break_count);
 	}
 
 	if (marked_count)
 	{
-		f.write(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
+		f.write((char*)(m_marked_points.data()), sizeof(u64) * marked_count);
 	}
 }
 
-void Emulator::LoadPoints(const std::string& path)
+bool Emulator::LoadPoints(const std::string& path)
 {
-	if (!fs::is_file(path)) return;
+	if (!fs::is_file(path)) return false;
 	std::ifstream f(path, std::ios::binary);
 	if (!f.is_open())
-		return;
+		return false;
 	f.seekg(0, std::ios::end);
-	int length = (int)f.tellg();
+	u64 length = (u64)f.tellg();
 	f.seekg(0, std::ios::beg);
-	u32 break_count, marked_count;
-	u16 version;
-	f >> version >> break_count >> marked_count;
 
-	if (version != bpdb_version || (sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != length)
+	u16 version;
+	u32 break_count, marked_count;
+
+	u64 expected_length = sizeof(bpdb_version) + sizeof(break_count) + sizeof(marked_count);
+
+	if (length < expected_length)
 	{
-		LOG_ERROR(LOADER, "'%s' is broken (version=0x%x, break_count=0x%x, marked_count=0x%x, length=0x%x)", path, version, break_count, marked_count, length);
-		return;
+		LOG_ERROR(LOADER,
+			"'%s' breakpoint db is broken (file is too short, length=0x%x)",
+			path, length);
+		return false;
+	}
+
+	f.read((char*)(&version), sizeof(version));
+
+	if (version != bpdb_version)
+	{
+		LOG_ERROR(LOADER,
+			"'%s' breakpoint db version is unsupported (version=0x%x, length=0x%x)",
+			path, version, length);
+		return false;
+	}
+
+	f.read((char*)(&break_count), sizeof(break_count));
+	f.read((char*)(&marked_count), sizeof(marked_count));
+	expected_length += break_count * sizeof(u64) + marked_count * sizeof(u64);
+
+	if (expected_length != length)
+	{
+		LOG_ERROR(LOADER,
+			"'%s' breakpoint db format is incorrect "
+			"(version=0x%x, break_count=0x%x, marked_count=0x%x, length=0x%x)",
+			path, version, break_count, marked_count, length);
+		return false;
 	}
 
 	if (break_count > 0)
 	{
 		m_break_points.resize(break_count);
-		f.read(reinterpret_cast<char*>(&m_break_points[0]), sizeof(u64) * break_count);
+		f.read((char*)(m_break_points.data()), sizeof(u64) * break_count);
 	}
 
 	if (marked_count > 0)
 	{
 		m_marked_points.resize(marked_count);
-		f.read(reinterpret_cast<char*>(&m_marked_points[0]), sizeof(u64) * marked_count);
+		f.read((char*)(m_marked_points.data()), sizeof(u64) * marked_count);
 	}
+	return true;
 }
 
 Emulator Emu;

@@ -188,7 +188,7 @@ public:
 	void Stop();
 
 	void SavePoints(const std::string& path);
-	void LoadPoints(const std::string& path);
+	bool LoadPoints(const std::string& path);
 
 	force_inline bool IsRunning() const { return m_status == Running; }
 	force_inline bool IsPaused()  const { return m_status == Paused; }
