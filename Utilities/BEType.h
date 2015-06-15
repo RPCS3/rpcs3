@@ -769,7 +769,7 @@ template<typename T> struct is_be_t<be_t<T>> : public std::integral_constant<boo
 // to_be_t helper struct
 template<typename T> struct to_be
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value, be_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, u128>::value, be_t<T>, T>;
 };
 
 // be_t<T> if possible, T otherwise
@@ -787,7 +787,6 @@ template<typename T> struct to_be<volatile T>
 	using type = volatile to_be_t<std::remove_volatile_t<T>>;
 };
 
-template<> struct to_be<u128> { using type = u128; };
 template<> struct to_be<void> { using type = void; };
 template<> struct to_be<bool> { using type = bool; };
 template<> struct to_be<char> { using type = char; };
@@ -898,7 +897,7 @@ template<typename T> struct is_le_t<le_t<T>> : public std::integral_constant<boo
 
 template<typename T> struct to_le
 {
-	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value, le_t<T>, T>;
+	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, u128>::value, le_t<T>, T>;
 };
 
 // le_t<T> if possible, T otherwise
@@ -916,7 +915,6 @@ template<typename T> struct to_le<volatile T>
 	using type = volatile to_le_t<std::remove_volatile_t<T>>;
 };
 
-template<> struct to_le<u128> { using type = u128; };
 template<> struct to_le<void> { using type = void; };
 template<> struct to_le<bool> { using type = bool; };
 template<> struct to_le<char> { using type = char; };
@@ -929,9 +927,6 @@ template<typename T> struct to_ne
 	using type = T;
 };
 
-// restore native endianness for T: returns T for be_t<T> or le_t<T>, T otherwise
-template<typename T> using to_ne_t = typename to_ne<T>::type;
-
 template<typename T> struct to_ne<be_t<T>>
 {
 	using type = T;
@@ -940,4 +935,19 @@ template<typename T> struct to_ne<be_t<T>>
 template<typename T> struct to_ne<le_t<T>>
 {
 	using type = T;
+};
+
+// restore native endianness for T: returns T for be_t<T> or le_t<T>, T otherwise
+template<typename T> using to_ne_t = typename to_ne<T>::type;
+
+template<typename T> struct to_ne<const T>
+{
+	// move const qualifier
+	using type = const to_ne_t<std::remove_const_t<T>>;
+};
+
+template<typename T> struct to_ne<volatile T>
+{
+	// move volatile qualifier
+	using type = volatile to_ne_t<std::remove_volatile_t<T>>;
 };
