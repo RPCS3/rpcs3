@@ -182,6 +182,19 @@ private:
 	// m_rootSignatures[N] is RS with N texture/sample
 	ID3D12RootSignature *m_rootSignatures[17];
 
+	struct Shader
+	{
+		ID3D12PipelineState *m_PSO;
+		ID3D12RootSignature *m_rootSignature;
+		ID3D12Resource *m_vertexBuffer;
+		ID3D12DescriptorHeap *m_textureDescriptorHeap;
+		ID3D12DescriptorHeap *m_samplerDescriptorHeap;
+		void Init(ID3D12Device *device);
+		void Release();
+	};
+	
+	Shader m_outputScalingPass;
+
 	ID3D12PipelineState *m_convertPSO;
 	ID3D12RootSignature *m_convertRootSignature;
 
