@@ -48,18 +48,21 @@ namespace vm
 			return get_ref();
 		}
 
-		// copy assignment operator
-		auto operator =(const _ref_base& right) -> decltype(std::declval<T&>() = std::declval<T>())
+		// copy assignment operator:
+		// returns T& by default, this may be wrong if called assignment operator has different return type
+		T& operator =(const _ref_base& right)
+		{
+			static_assert(!std::is_const<T>::value, "vm::_ref_base<> error: operator= is not available for const reference");
+
+			return get_ref() = right.get_ref();
+		}
+
+		template<typename CT, typename AT2> auto operator =(const _ref_base<CT, AT2>& right) const -> decltype(std::declval<T&>() = std::declval<CT>())
 		{
 			return get_ref() = right.get_ref();
 		}
 
-		template<typename CT, typename AT2> auto operator =(const _ref_base<CT, AT2>& right) -> decltype(std::declval<T&>() = std::declval<CT>()) const
-		{
-			return get_ref() = right.get_ref();
-		}
-
-		template<typename CT> auto operator =(const CT& right) -> decltype(std::declval<T&>() = std::declval<CT>()) const
+		template<typename CT> auto operator =(const CT& right) const -> decltype(std::declval<T&>() = std::declval<CT>())
 		{
 			return get_ref() = right;
 		}
