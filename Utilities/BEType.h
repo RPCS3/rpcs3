@@ -766,6 +766,14 @@ template<typename T> struct is_be_t<be_t<T>> : public std::integral_constant<boo
 {
 };
 
+template<typename T> struct is_be_t<const T> : public std::integral_constant<bool, is_be_t<T>::value>
+{
+};
+
+template<typename T> struct is_be_t<volatile T> : public std::integral_constant<bool, is_be_t<T>::value>
+{
+};
+
 // to_be_t helper struct
 template<typename T> struct to_be
 {
@@ -778,13 +786,13 @@ template<typename T> using to_be_t = typename to_be<T>::type;
 template<typename T> struct to_be<const T>
 {
 	// move const qualifier
-	using type = const to_be_t<std::remove_const_t<T>>;
+	using type = const to_be_t<T>;
 };
 
 template<typename T> struct to_be<volatile T>
 {
 	// move volatile qualifier
-	using type = volatile to_be_t<std::remove_volatile_t<T>>;
+	using type = volatile to_be_t<T>;
 };
 
 template<> struct to_be<void> { using type = void; };
@@ -895,6 +903,14 @@ template<typename T> struct is_le_t<le_t<T>> : public std::integral_constant<boo
 {
 };
 
+template<typename T> struct is_le_t<const T> : public std::integral_constant<bool, is_le_t<T>::value>
+{
+};
+
+template<typename T> struct is_le_t<volatile T> : public std::integral_constant<bool, is_le_t<T>::value>
+{
+};
+
 template<typename T> struct to_le
 {
 	using type = std::conditional_t<std::is_arithmetic<T>::value || std::is_enum<T>::value || std::is_same<T, u128>::value, le_t<T>, T>;
@@ -906,13 +922,13 @@ template<typename T> using to_le_t = typename to_le<T>::type;
 template<typename T> struct to_le<const T>
 {
 	// move const qualifier
-	using type = const to_le_t<std::remove_const_t<T>>;
+	using type = const to_le_t<T>;
 };
 
 template<typename T> struct to_le<volatile T>
 {
 	// move volatile qualifier
-	using type = volatile to_le_t<std::remove_volatile_t<T>>;
+	using type = volatile to_le_t<T>;
 };
 
 template<> struct to_le<void> { using type = void; };
@@ -943,11 +959,11 @@ template<typename T> using to_ne_t = typename to_ne<T>::type;
 template<typename T> struct to_ne<const T>
 {
 	// move const qualifier
-	using type = const to_ne_t<std::remove_const_t<T>>;
+	using type = const to_ne_t<T>;
 };
 
 template<typename T> struct to_ne<volatile T>
 {
 	// move volatile qualifier
-	using type = volatile to_ne_t<std::remove_volatile_t<T>>;
+	using type = volatile to_ne_t<T>;
 };
