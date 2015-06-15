@@ -27,17 +27,17 @@ s32 UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr
 		len = len + 1;
 
 		// validate character (TODO)
-		if (false)
-		{
-			utf16_len = utf16_len - i;
-			return SRCIllegal;
-		}
+		//if ()
+		//{
+		//	utf16_len -= i;
+		//	return SRCIllegal;
+		//}
 
 		if (utf8)
 		{
 			if (len > max_len)
 			{
-				utf16_len = utf16_len - i;
+				utf16_len -= i;
 				return DSTExhausted;
 			}
 

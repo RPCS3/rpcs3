@@ -190,42 +190,40 @@ public:
 	}
 };
 
-// Helper definitions
+template<typename T, typename T2 = T> using if_integral_le_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, le_t<T>>;
+template<typename T, typename T2 = T> using if_integral_be_t = std::enable_if_t<std::is_integral<T>::value && std::is_integral<T2>::value, be_t<T>>;
 
-template<typename T, typename T2 = T> using if_arithmetic_le_t = std::enable_if_t<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, le_t<T>>;
-template<typename T, typename T2 = T> using if_arithmetic_be_t = std::enable_if_t<std::is_arithmetic<T>::value && std::is_arithmetic<T2>::value, be_t<T>>;
-
-template<typename T> inline static if_arithmetic_le_t<T> operator ++(_atomic_base<le_t<T>>& left)
+template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1) + 1);
 }
 
-template<typename T> inline static if_arithmetic_le_t<T> operator --(_atomic_base<le_t<T>>& left)
+template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1) - 1);
 }
 
-template<typename T> inline static if_arithmetic_le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
+template<typename T> inline if_integral_le_t<T> operator ++(_atomic_base<le_t<T>>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, 1));
 }
 
-template<typename T> inline static if_arithmetic_le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
+template<typename T> inline if_integral_le_t<T> operator --(_atomic_base<le_t<T>>& left, int)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, 1));
 }
 
-template<typename T, typename T2> inline static if_arithmetic_le_t<T, T2> operator +=(_atomic_base<le_t<T>>& left, T2 right)
+template<typename T, typename T2> inline if_integral_le_t<T, T2> operator +=(_atomic_base<le_t<T>>& left, T2 right)
 {
 	return left.from_subtype(sync_fetch_and_add(&left.sub_data, right) + right);
 }
 
-template<typename T, typename T2> inline static if_arithmetic_le_t<T, T2> operator -=(_atomic_base<le_t<T>>& left, T2 right)
+template<typename T, typename T2> inline if_integral_le_t<T, T2> operator -=(_atomic_base<le_t<T>>& left, T2 right)
 {
 	return left.from_subtype(sync_fetch_and_sub(&left.sub_data, right) - right);
 }
 
-template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_base<be_t<T>>& left)
+template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left)
 {
 	be_t<T> result;
 
@@ -237,7 +235,7 @@ template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_bas
 	return result;
 }
 
-template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_base<be_t<T>>& left)
+template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left)
 {
 	be_t<T> result;
 
@@ -249,7 +247,7 @@ template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_bas
 	return result;
 }
 
-template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
+template<typename T> inline if_integral_be_t<T> operator ++(_atomic_base<be_t<T>>& left, int)
 {
 	be_t<T> result;
 
@@ -261,7 +259,7 @@ template<typename T> inline static if_arithmetic_be_t<T> operator ++(_atomic_bas
 	return result;
 }
 
-template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
+template<typename T> inline if_integral_be_t<T> operator --(_atomic_base<be_t<T>>& left, int)
 {
 	be_t<T> result;
 
@@ -273,7 +271,7 @@ template<typename T> inline static if_arithmetic_be_t<T> operator --(_atomic_bas
 	return result;
 }
 
-template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operator +=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2> inline if_integral_be_t<T, T2> operator +=(_atomic_base<be_t<T>>& left, T2 right)
 {
 	be_t<T> result;
 
@@ -285,7 +283,7 @@ template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operat
 	return result;
 }
 
-template<typename T, typename T2> inline static if_arithmetic_be_t<T, T2> operator -=(_atomic_base<be_t<T>>& left, T2 right)
+template<typename T, typename T2> inline if_integral_be_t<T, T2> operator -=(_atomic_base<be_t<T>>& left, T2 right)
 {
 	be_t<T> result;
 

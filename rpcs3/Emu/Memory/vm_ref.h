@@ -43,28 +43,25 @@ namespace vm
 			return get_ref();
 		}
 
-		//operator T() const
-		//{
-		//	return get_ref();
-		//}
+		explicit operator T&() const
+		{
+			return get_ref();
+		}
 
 		// copy assignment operator
-		_ref_base& operator =(const _ref_base& right)
+		auto operator =(const _ref_base& right) -> decltype(std::declval<T&>() = std::declval<T>())
 		{
-			get_ref() = right.get_ref();
-			return *this;
+			return get_ref() = right.get_ref();
 		}
 
-		template<typename CT, typename AT2> std::enable_if_t<std::is_assignable<T&, CT>::value, const _ref_base&> operator =(const _ref_base<CT, AT2>& right) const
+		template<typename CT, typename AT2> auto operator =(const _ref_base<CT, AT2>& right) -> decltype(std::declval<T&>() = std::declval<CT>()) const
 		{
-			get_ref() = right.get_ref();
-			return *this;
+			return get_ref() = right.get_ref();
 		}
 
-		template<typename CT> std::enable_if_t<std::is_assignable<T&, CT>::value, const _ref_base&> operator =(const CT& right) const
+		template<typename CT> auto operator =(const CT& right) -> decltype(std::declval<T&>() = std::declval<CT>()) const
 		{
-			get_ref() = right;
-			return *this;
+			return get_ref() = right;
 		}
 	};
 
@@ -106,6 +103,90 @@ namespace vm
 
 	//PS3 emulation is main now, so lets it be as default
 	using namespace ps3;
+}
+
+// postfix increment operator for vm::_ref_base
+template<typename T, typename AT> inline auto operator ++(const vm::_ref_base<T, AT>& ref, int) -> decltype(std::declval<T&>()++)
+{
+	return ref.get_ref()++;
+}
+
+// prefix increment operator for vm::_ref_base
+template<typename T, typename AT> inline auto operator ++(const vm::_ref_base<T, AT>& ref) -> decltype(++std::declval<T&>())
+{
+	return ++ref.get_ref();
+}
+
+// postfix decrement operator for vm::_ref_base
+template<typename T, typename AT> inline auto operator --(const vm::_ref_base<T, AT>& ref, int) -> decltype(std::declval<T&>()--)
+{
+	return ref.get_ref()--;
+}
+
+// prefix decrement operator for vm::_ref_base
+template<typename T, typename AT> inline auto operator --(const vm::_ref_base<T, AT>& ref) -> decltype(--std::declval<T&>())
+{
+	return --ref.get_ref();
+}
+
+// addition assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator +=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() += std::declval<T2>())
+{
+	return ref.get_ref() += right;
+}
+
+// subtraction assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator -=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() -= std::declval<T2>())
+{
+	return ref.get_ref() -= right;
+}
+
+// multiplication assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator *=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() *= std::declval<T2>())
+{
+	return ref.get_ref() *= right;
+}
+
+// division assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator /=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() /= std::declval<T2>())
+{
+	return ref.get_ref() /= right;
+}
+
+// modulo assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator %=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() %= std::declval<T2>())
+{
+	return ref.get_ref() %= right;
+}
+
+// bitwise AND assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator &=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() &= std::declval<T2>())
+{
+	return ref.get_ref() &= right;
+}
+
+// bitwise OR assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator |=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() |= std::declval<T2>())
+{
+	return ref.get_ref() |= right;
+}
+
+// bitwise XOR assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator ^=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() ^= std::declval<T2>())
+{
+	return ref.get_ref() ^= right;
+}
+
+// bitwise left shift assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator <<=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() <<= std::declval<T2>())
+{
+	return ref.get_ref() <<= right;
+}
+
+// bitwise right shift assignment operator for vm::_ref_base
+template<typename T, typename AT, typename T2> inline auto operator >>=(const vm::_ref_base<T, AT>& ref, const T2& right) -> decltype(std::declval<T&>() >>= std::declval<T2>())
+{
+	return ref.get_ref() >>= right;
 }
 
 // external specialization for is_be_t<> (true if AT's endianness is BE)
