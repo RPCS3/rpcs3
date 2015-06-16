@@ -850,8 +850,8 @@ void D3D12GSRender::ExecCMD()
 	{
 		0.f,
 		0.f,
-		(float)RSXThread::m_width,
-		(float)RSXThread::m_height,
+		(float)m_surface_clip_w,
+		(float)m_surface_clip_h,
 		-1.f,
 		1.f
 	};
@@ -861,8 +861,8 @@ void D3D12GSRender::ExecCMD()
 	{
 		0, 
 		0,
-		(LONG)RSXThread::m_width, 
-		(LONG)RSXThread::m_height,
+		(LONG)m_surface_clip_w,
+		(LONG)m_surface_clip_h,
 	};
 	commandList->RSSetScissorRects(1, &box);
 
