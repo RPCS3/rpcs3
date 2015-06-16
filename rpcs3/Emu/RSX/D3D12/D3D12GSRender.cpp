@@ -630,7 +630,7 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 {
 	assert(cmd == NV4097_CLEAR_SURFACE);
 
-	InitDrawBuffers();
+	PrepareRenderTargets();
 
 	ID3D12GraphicsCommandList *commandList;
 	check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
@@ -710,7 +710,7 @@ void D3D12GSRender::ExecCMD(u32 cmd)
 
 void D3D12GSRender::ExecCMD()
 {
-	InitDrawBuffers();
+	PrepareRenderTargets();
 
 	// Init vertex count
 	// TODO: Very hackish, clean this
@@ -743,7 +743,7 @@ void D3D12GSRender::ExecCMD()
 
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
-		const std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> &vertexIndexBufferViews = EnableVertexData(m_indexed_array.m_count ? true : false);
+		const std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> &vertexIndexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
 		commandList->IASetVertexBuffers(0, (UINT)vertexIndexBufferViews.first.size(), vertexIndexBufferViews.first.data());
 		if (m_forcedIndexBuffer || m_indexed_array.m_count)
 			commandList->IASetIndexBuffer(&vertexIndexBufferViews.second);

@@ -81,6 +81,14 @@ struct InitHeap<ID3D12Resource>
 	}
 };
 
+
+/**
+ * Wrapper around a ID3D12Resource or a ID3D12Heap.
+ * Acts as a ring buffer : hold a get and put pointers,
+ * put pointer is used as storage space offset
+ * and get is used as beginning of in use data space.
+ * This wrapper checks that put pointer doesn't cross get one.
+ */
 template<typename T, size_t Alignment>
 struct DataHeap
 {
@@ -154,6 +162,12 @@ struct DataHeap
 	}
 };
 
+
+/**
+ * Wrapper for a worker thread that executes lambda functions
+ * in the order they were submitted during its lifetime.
+ * Used mostly to release data that are not needed anymore.
+ */
 struct GarbageCollectionThread
 {
 	std::mutex m_mutex;
@@ -192,12 +206,25 @@ private:
 		void Init(ID3D12Device *device);
 		void Release();
 	};
-	
+
+	/**
+	 * Stores data related to the scaling pass that turns internal
+	 * render targets into presented buffers.
+	 */
 	Shader m_outputScalingPass;
 
+	/**
+	 * Data used when depth buffer is converted to uchar textures.
+	 */
 	ID3D12PipelineState *m_convertPSO;
 	ID3D12RootSignature *m_convertRootSignature;
 
+
+	/**
+	 * Stores data that are "ping ponged" between frame.
+	 * For instance command allocator : maintains 2 command allocators and
+	 * swap between them when frame is flipped.
+	 */
 	struct ResourceStorage
 	{
 		ID3D12Fence* m_frameFinishedFence;
@@ -296,29 +323,19 @@ private:
 	virtual void Close() override;
 
 	bool LoadProgram();
-	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> EnableVertexData(bool indexed_draw = false);
+	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> UploadVertexBuffers(bool indexed_draw = false);
 	void setScaleOffset();
 	void FillVertexShaderConstantsBuffer();
 	void FillPixelShaderConstantsBuffer();
 	/**
+	 * Upload textures to Data heap if necessary and create necessary descriptor in the per frame storage struct.
 	 * returns the number of texture uploaded
 	 */
 	size_t UploadTextures();
 	size_t GetMaxAniso(size_t aniso);
 	D3D12_TEXTURE_ADDRESS_MODE GetWrap(size_t wrap);
 
-	/*void DisableVertexData();
-
-		void WriteBuffers();
-		void WriteColorBuffers();
-		void WriteColorBufferA();
-		void WriteColorBufferB();
-		void WriteColorBufferC();
-		void WriteColorBufferD();
-
-		void DrawObjects();*/
-	void InitDrawBuffers();
-	void WriteDepthBuffer();
+	void PrepareRenderTargets();
 protected:
 	virtual void OnInit() override;
 	virtual void OnInitThread() override;

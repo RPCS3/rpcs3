@@ -264,7 +264,7 @@ ID3D12Resource *createVertexBuffer(const VertexBufferFormat &vbf, const RSXVerte
 	return vertexBuffer;
 }
 
-std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::EnableVertexData(bool indexed_draw)
+std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> D3D12GSRender::UploadVertexBuffers(bool indexed_draw)
 {
 	std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> result;
 	const std::vector<VertexBufferFormat> &vertexBufferFormat = FormatVertexData(m_vertex_data);

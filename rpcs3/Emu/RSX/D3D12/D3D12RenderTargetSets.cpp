@@ -12,7 +12,7 @@
 #include "D3D12.h"
 #include "D3D12GSRender.h"
 
-void D3D12GSRender::InitDrawBuffers()
+void D3D12GSRender::PrepareRenderTargets()
 {
 	// FBO location has changed, previous data might be copied
 	u32 address_a = GetAddress(m_surface_offset_a, m_context_dma_color_a - 0xfeed0000);
