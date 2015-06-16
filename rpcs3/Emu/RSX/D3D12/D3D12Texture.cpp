@@ -136,6 +136,14 @@ D3D12_FILTER getSamplerFilter(u32 minFilter, u32 magFilter)
 	return D3D12_ENCODE_BASIC_FILTER(min, mag, mip, D3D12_FILTER_REDUCTION_TYPE_STANDARD);
 }
 
+struct MipmapLevelInfo
+{
+	size_t offset;
+	size_t width;
+	size_t height;
+	size_t rowPitch;
+};
+
 /**
  * Create a texture residing in default heap and generate uploads commands in commandList,
  * using a temporary texture buffer.
@@ -302,7 +310,7 @@ ID3D12Resource *uploadSingleTexture(
 	size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
 
 	ID3D12Resource *Texture;
-	size_t textureSize = rowPitch * heightInBlocks;
+	size_t textureSize = rowPitch * heightInBlocks * 4; // * 3 for mipmap levels
 	assert(textureBuffersHeap.canAlloc(textureSize));
 	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
 
@@ -321,60 +329,85 @@ ID3D12Resource *uploadSingleTexture(
 	check(Texture->Map(0, nullptr, (void**)&textureData));
 
 	// Upload with correct rowpitch
-	for (unsigned row = 0; row < heightInBlocks; row++)
+	std::vector<MipmapLevelInfo> mipinfos;
+	size_t offsetInDst = 0, offsetInSrc = 0;
+	size_t currentHeight = heightInBlocks, currentWidth = widthInBlocks;
+
+	unsigned tmp = texture.GetMipmap();
+	if (tmp > 1)
+		printf("here");
+	for (unsigned mipLevel = 0; mipLevel < texture.GetMipmap(); mipLevel++)
 	{
-		switch (format)
+		MipmapLevelInfo currentMipmapLevelInfo = {};
+		currentMipmapLevelInfo.offset = offsetInDst;
+		currentMipmapLevelInfo.height = currentHeight;
+		currentMipmapLevelInfo.width = currentWidth;
+
+		for (unsigned row = 0; row < currentHeight; row++)
 		{
-		case CELL_GCM_TEXTURE_A8R8G8B8:
-		{
-			if (is_swizzled)
+			switch (format)
 			{
-				u32 *src, *dst;
-				u32 log2width, log2height;
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+			{
+				currentMipmapLevelInfo.rowPitch = powerOf2Align(currentWidth * blockSizeInByte, 256);
+				if (is_swizzled)
+				{
+					u32 *src, *dst;
+					u32 log2width, log2height;
 
-				src = (u32*)pixels;
-				dst = (u32*)textureData;
+					src = (u32*)pixels + offsetInSrc;
+					dst = (u32*)textureData + offsetInDst;
 
-				log2width = (u32)(logf((float)w) / logf(2.f));
-				log2height = (u32)(logf((float)h) / logf(2.f));
+					log2width = (u32)(logf((float)currentWidth) / logf(2.f));
+					log2height = (u32)(logf((float)currentHeight) / logf(2.f));
 
-				#pragma omp parallel for
+#pragma omp parallel for
+					for (int j = 0; j < w; j++)
+						dst[(row * currentMipmapLevelInfo.rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
+				}
+				else
+					memcpy((char*)textureData + offsetInDst + row * currentMipmapLevelInfo.rowPitch, (char*)pixels + offsetInSrc + row * currentWidth * blockSizeInByte, currentWidth * blockSizeInByte);
+				break;
+			}
+			case CELL_GCM_TEXTURE_A4R4G4B4:
+			case CELL_GCM_TEXTURE_R5G6B5:
+			{
+				currentMipmapLevelInfo.rowPitch = rowPitch;
+				unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
+
 				for (int j = 0; j < w; j++)
-					dst[(row * rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
+				{
+					u16 tmp = src[offsetInSrc / 2 + row * srcPitch / 2 + j];
+					dst[offsetInDst / 2 + row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
+				}
+				break;
 			}
-			else
-				streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * srcPitch, srcPitch);
-			break;
-		}
-		case CELL_GCM_TEXTURE_A4R4G4B4:
-		case CELL_GCM_TEXTURE_R5G6B5:
-		{
-			unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
-
-			for (int j = 0; j < w; j++)
+			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 			{
-				u16 tmp = src[row * srcPitch / 2 + j];
-				dst[row * rowPitch / 2 + j] = (tmp >> 8) | (tmp << 8);
-			}
-			break;
-		}
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		{
-			unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
+				currentMipmapLevelInfo.rowPitch = rowPitch;
+				unsigned short *dst = (unsigned short *)textureData, *src = (unsigned short *)pixels;
 
-			for (int j = 0; j < w * 4; j++)
-			{
-				unsigned short tmp = src[row * w * 4 + j];
-				dst[row * w  * 4 + j] = (tmp >> 8) | (tmp << 8);
+				for (int j = 0; j < w * 4; j++)
+				{
+					unsigned short tmp = src[offsetInSrc / 2 + row * w * 4 + j];
+					dst[offsetInDst / 2 + row * w * 4 + j] = (tmp >> 8) | (tmp << 8);
+				}
+				break;
 			}
-			break;
+			default:
+			{
+				currentMipmapLevelInfo.rowPitch = rowPitch;
+				streamBuffer((char*)textureData + offsetInDst + row * rowPitch, (char*)pixels + offsetInSrc + row * srcPitch, srcPitch);
+				break;
+			}
+			}
 		}
-		default:
-		{
-			streamBuffer((char*)textureData + row * rowPitch, (char*)pixels + row * srcPitch, srcPitch);
-			break;
-		}
-		}
+		offsetInDst += currentHeight * currentMipmapLevelInfo.rowPitch;
+		offsetInDst = powerOf2Align(offsetInDst, 256);
+		offsetInSrc += currentHeight * currentWidth * blockSizeInByte;
+		mipinfos.push_back(currentMipmapLevelInfo);
+		currentHeight /= 2;
+		currentWidth /= 2;
 	}
 	Texture->Unmap(0, nullptr);
 
@@ -387,25 +420,33 @@ ID3D12Resource *uploadSingleTexture(
 	check(device->CreatePlacedResource(
 		textureHeap.m_heap,
 		heapOffset2,
-		&getTexture2DResourceDesc(w, h, dxgiFormat),
+		&getTexture2DResourceDesc(w, h, dxgiFormat, texture.GetMipmap()),
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&vramTexture)
 		));
 	textureHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize, vramTexture));
 
-	D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
-	dst.pResource = vramTexture;
-	dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-	src.pResource = Texture;
-	src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-	src.PlacedFootprint.Footprint.Depth = 1;
-	src.PlacedFootprint.Footprint.Width = (UINT)w;
-	src.PlacedFootprint.Footprint.Height = (UINT)h;
-	src.PlacedFootprint.Footprint.RowPitch = (UINT)rowPitch;
-	src.PlacedFootprint.Footprint.Format = dxgiFormat;
 
-	commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+	size_t miplevel = 0;
+	for (const MipmapLevelInfo mli : mipinfos)
+	{
+		D3D12_TEXTURE_COPY_LOCATION dst = {}, src = {};
+		dst.pResource = vramTexture;
+		dst.SubresourceIndex = miplevel;
+		dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+		src.PlacedFootprint.Offset = mli.offset;
+		src.pResource = Texture;
+		src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+		src.PlacedFootprint.Footprint.Depth = 1;
+		src.PlacedFootprint.Footprint.Width = (UINT)mli.width;
+		src.PlacedFootprint.Footprint.Height = (UINT)mli.height;
+		src.PlacedFootprint.Footprint.RowPitch = (UINT)mli.rowPitch;
+		src.PlacedFootprint.Footprint.Format = dxgiFormat;
+
+		commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+		miplevel++;
+	}
 
 	D3D12_RESOURCE_BARRIER barrier = {};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -461,7 +502,7 @@ size_t D3D12GSRender::UploadTextures()
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = dxgiFormat;
-		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MipLevels = m_textures[i].GetMipmap();
 
 		switch (format)
 		{

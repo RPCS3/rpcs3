@@ -180,7 +180,7 @@ ID3D12Resource *RenderTargets::bindAddressAsRenderTargets(ID3D12Device *device, 
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat);
+		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat, 1);
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 		device->CreateCommittedResource(
@@ -235,7 +235,7 @@ ID3D12Resource * RenderTargets::bindAddressAsDepthStencil(ID3D12Device * device,
 		assert(0);
 		}
 
-		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat);
+		D3D12_RESOURCE_DESC resourceDesc = getTexture2DResourceDesc(width, height, dxgiFormat, 1);
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
 		device->CreateCommittedResource(

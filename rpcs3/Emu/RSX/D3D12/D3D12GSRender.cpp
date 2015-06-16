@@ -545,7 +545,7 @@ D3D12GSRender::D3D12GSRender()
 		m_device->CreateCommittedResource(
 			&hp,
 			D3D12_HEAP_FLAG_NONE,
-			&getTexture2DResourceDesc(2, 2, DXGI_FORMAT_R8G8B8A8_UNORM),
+			&getTexture2DResourceDesc(2, 2, DXGI_FORMAT_R8G8B8A8_UNORM, 1),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&m_dummyTexture))
@@ -1150,7 +1150,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	{
 		D3D12_HEAP_PROPERTIES heapProp = {};
 		heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(m_surface_clip_w, m_surface_clip_h, DXGI_FORMAT_R8_UNORM);
+		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(m_surface_clip_w, m_surface_clip_h, DXGI_FORMAT_R8_UNORM, 1);
 		resdesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h * 2;

@@ -88,7 +88,7 @@ D3D12_RESOURCE_DESC getBufferResourceDesc(size_t sizeInByte)
 }
 
 inline
-D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_FORMAT dxgiFormat)
+D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_FORMAT dxgiFormat, size_t mipmapLevels)
 {
 	D3D12_RESOURCE_DESC result;
 	result = {};
@@ -98,7 +98,7 @@ D3D12_RESOURCE_DESC getTexture2DResourceDesc(size_t width, size_t height, DXGI_F
 	result.Format = dxgiFormat;
 	result.DepthOrArraySize = 1;
 	result.SampleDesc.Count = 1;
-	result.MipLevels = 1;
+	result.MipLevels = mipmapLevels;
 	return result;
 }
 
