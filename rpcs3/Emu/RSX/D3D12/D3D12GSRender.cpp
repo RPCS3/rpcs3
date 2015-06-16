@@ -370,7 +370,7 @@ void D3D12GSRender::Shader::Init(ID3D12Device *device)
 	m_vertexBuffer->Unmap(0, nullptr);
 
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-	heapDesc.NumDescriptors = 1;
+	heapDesc.NumDescriptors = 2;
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
@@ -966,26 +966,38 @@ void D3D12GSRender::Flip()
 		commandList->RSSetScissorRects(1, &box);
 		commandList->SetGraphicsRootSignature(m_outputScalingPass.m_rootSignature);
 		commandList->SetPipelineState(m_outputScalingPass.m_PSO);
+		D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
+		CPUHandle = m_outputScalingPass.m_textureDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		CPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * m_swapChain->GetCurrentBackBufferIndex();
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		// FIXME: Not always true
 		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		m_device->CreateShaderResourceView(m_rtts.m_currentlyBoundRenderTargets[0], &srvDesc, m_outputScalingPass.m_textureDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		m_device->CreateShaderResourceView(m_rtts.m_currentlyBoundRenderTargets[0], &srvDesc, CPUHandle);
+
 		D3D12_SAMPLER_DESC samplerDesc = {};
 		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
 		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		m_device->CreateSampler(&samplerDesc, m_outputScalingPass.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_textureDescriptorHeap);
-		commandList->SetGraphicsRootDescriptorTable(0, m_outputScalingPass.m_textureDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_samplerDescriptorHeap);
-		commandList->SetGraphicsRootDescriptorTable(1, m_outputScalingPass.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		CPUHandle = m_outputScalingPass.m_samplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		CPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) * m_swapChain->GetCurrentBackBufferIndex();
+		m_device->CreateSampler(&samplerDesc, CPUHandle);
 
-		D3D12_CPU_DESCRIPTOR_HANDLE Handle = m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart();
-		commandList->OMSetRenderTargets(1, &Handle, true, nullptr);
+		D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle;
+		GPUHandle = m_outputScalingPass.m_textureDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+		GPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * m_swapChain->GetCurrentBackBufferIndex();
+		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_textureDescriptorHeap);
+		commandList->SetGraphicsRootDescriptorTable(0, GPUHandle);
+		GPUHandle = m_outputScalingPass.m_samplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+		GPUHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER) * m_swapChain->GetCurrentBackBufferIndex();
+		commandList->SetDescriptorHeaps(1, &m_outputScalingPass.m_samplerDescriptorHeap);
+		commandList->SetGraphicsRootDescriptorTable(1, GPUHandle);
+
+		CPUHandle = m_backbufferAsRendertarget[m_swapChain->GetCurrentBackBufferIndex()]->GetCPUDescriptorHandleForHeapStart();
+		commandList->OMSetRenderTargets(1, &CPUHandle, true, nullptr);
 		D3D12_VERTEX_BUFFER_VIEW vbv = {};
 		vbv.BufferLocation = m_outputScalingPass.m_vertexBuffer->GetGPUVirtualAddress();
 		vbv.StrideInBytes = 4 * sizeof(float);
