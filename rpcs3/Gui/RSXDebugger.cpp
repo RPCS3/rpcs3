@@ -1034,8 +1034,20 @@ wxString RSXDebugger::DisAsmCommand(u32 cmd, u32 count, u32 currentAddr, u32 ioA
 			break;
 
 		case NV4097_SET_VIEWPORT_HORIZONTAL:
-			DISASM("Set viewport horizontal");
+		{
+			u32 m_viewport_x = (u32)args[0] & 0xffff;
+			u32 m_viewport_w = (u32)args[0] >> 16;
+
+			if (count == 2)
+			{
+				u32 m_viewport_y = (u32)args[1] & 0xffff;
+				u32 m_viewport_h = (u32)args[1] >> 16;
+				DISASM("Set viewport horizontal %d %d", m_viewport_w, m_viewport_h);
+			}
+			else
+				DISASM("Set viewport horizontal %d", m_viewport_w);
 			break;
+		}
 
 		case NV4097_SET_CLIP_MIN:
 			DISASM("Set clip min");
