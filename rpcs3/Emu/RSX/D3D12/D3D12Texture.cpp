@@ -334,8 +334,6 @@ ID3D12Resource *uploadSingleTexture(
 	size_t currentHeight = heightInBlocks, currentWidth = widthInBlocks;
 
 	unsigned tmp = texture.GetMipmap();
-	if (tmp > 1)
-		printf("here");
 	for (unsigned mipLevel = 0; mipLevel < texture.GetMipmap(); mipLevel++)
 	{
 		MipmapLevelInfo currentMipmapLevelInfo = {};
@@ -366,7 +364,7 @@ ID3D12Resource *uploadSingleTexture(
 						dst[(row * currentMipmapLevelInfo.rowPitch / 4) + j] = src[LinearToSwizzleAddress(j, row, 0, log2width, log2height, 0)];
 				}
 				else
-					memcpy((char*)textureData + offsetInDst + row * currentMipmapLevelInfo.rowPitch, (char*)pixels + offsetInSrc + row * currentWidth * blockSizeInByte, currentWidth * blockSizeInByte);
+					memcpy((char*)textureData + offsetInDst + row * currentMipmapLevelInfo.rowPitch, (char*)pixels + offsetInSrc + row * widthInBlocks * blockSizeInByte, currentWidth * blockSizeInByte);
 				break;
 			}
 			case CELL_GCM_TEXTURE_A4R4G4B4:
@@ -404,7 +402,7 @@ ID3D12Resource *uploadSingleTexture(
 		}
 		offsetInDst += currentHeight * currentMipmapLevelInfo.rowPitch;
 		offsetInDst = powerOf2Align(offsetInDst, 256);
-		offsetInSrc += currentHeight * currentWidth * blockSizeInByte;
+		offsetInSrc += currentHeight * widthInBlocks * blockSizeInByte;
 		mipinfos.push_back(currentMipmapLevelInfo);
 		currentHeight /= 2;
 		currentWidth /= 2;
