@@ -494,7 +494,7 @@ ID3D12Resource *uploadSingleTexture(
 	size_t rowPitch = powerOf2Align(blockSizeInByte * widthInBlocks, 256);
 
 	ID3D12Resource *Texture;
-	size_t textureSize = rowPitch * heightInBlocks * 4; // * 4 for mipmap levels
+	size_t textureSize = rowPitch * heightInBlocks * 2; // * 4 for mipmap levels
 	assert(textureBuffersHeap.canAlloc(textureSize));
 	size_t heapOffset = textureBuffersHeap.alloc(textureSize);
 
