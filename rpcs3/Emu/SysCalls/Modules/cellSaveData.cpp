@@ -61,6 +61,11 @@ never_inline s32 savedata_op(
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
 
+	if (!userdata)
+	{
+		return CELL_SAVEDATA_ERROR_NODATA;
+	}
+	
 	// path of the specified user (00000001 by default)
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08d/savedata/", userId ? userId : 1u);
 
