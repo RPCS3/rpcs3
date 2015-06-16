@@ -160,6 +160,24 @@ struct DataHeap
 			SAFE_RELEASE(std::get<2>(tmp));
 		}
 	}
+
+	/**
+	 * Get a function that cleans heaps.
+	 * It's caller responsability to ensure data are not used when executed.
+	 */
+	std::function<void()> getCleaningFunction()
+	{
+		size_t& getPointer = m_getPos;
+		auto duplicatem_resourceStoredSinceLastSync = m_resourceStoredSinceLastSync;
+		m_resourceStoredSinceLastSync.clear();
+		return [=, &getPointer]() {
+			for (auto tmp : duplicatem_resourceStoredSinceLastSync)
+			{
+				SAFE_RELEASE(std::get<2>(tmp));
+				getPointer = std::get<0>(tmp);
+			}
+		};
+	}
 };
 
 

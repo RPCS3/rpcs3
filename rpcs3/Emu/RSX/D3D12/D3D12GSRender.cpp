@@ -1031,29 +1031,22 @@ void D3D12GSRender::Flip()
 	m_texturesCache.clear();
 	m_texturesRTTs.clear();
 
-	storage.m_inUseConstantsBuffers = m_constantsData.m_resourceStoredSinceLastSync;
-	m_constantsData.m_resourceStoredSinceLastSync.clear();
-	storage.m_inUseVertexIndexBuffers = m_vertexIndexData.m_resourceStoredSinceLastSync;
-	m_vertexIndexData.m_resourceStoredSinceLastSync.clear();
-	storage.m_inUseTextureUploadBuffers = m_textureUploadData.m_resourceStoredSinceLastSync;
-	m_textureUploadData.m_resourceStoredSinceLastSync.clear();
-	storage.m_inUseTexture2D = m_textureData.m_resourceStoredSinceLastSync;
-	m_textureData.m_resourceStoredSinceLastSync.clear();
+	std::vector<std::function<void()> >  cleaningFunction =
+	{
+		m_constantsData.getCleaningFunction(),
+		m_vertexIndexData.getCleaningFunction(),
+		m_textureUploadData.getCleaningFunction(),
+		m_textureData.getCleaningFunction()
+	};
 
-	m_GC.pushWork([&]()
+	m_GC.pushWork([&, cleaningFunction]()
 	{
 		WaitForSingleObject(storage.m_frameFinishedHandle, INFINITE);
 		CloseHandle(storage.m_frameFinishedHandle);
 		storage.m_frameFinishedFence->Release();
 
-		for (auto tmp : storage.m_inUseConstantsBuffers)
-			m_constantsData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : storage.m_inUseVertexIndexBuffers)
-			m_vertexIndexData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : storage.m_inUseTextureUploadBuffers)
-			m_textureUploadData.m_getPos = std::get<0>(tmp);
-		for (auto tmp : storage.m_inUseTexture2D)
-			m_textureData.m_getPos = std::get<0>(tmp);
+		for (unsigned i = 0; i < 4; i++)
+			cleaningFunction[i]();
 		storage.Reset();
 	});
 
