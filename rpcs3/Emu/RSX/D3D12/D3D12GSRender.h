@@ -286,24 +286,8 @@ private:
 	// Texture storage
 	DataHeap<ID3D12Heap, 65536> m_textureUploadData;
 	DataHeap<ID3D12Heap, 65536> m_textureData;
-
-	struct UAVHeap
-	{
-		ID3D12Heap *m_heap;
-		std::atomic<size_t> m_putPos, // Start of free space
-			m_getPos; // End of free space
-	};
-
-	UAVHeap m_UAVHeap;
-
-	struct ReadbackHeap
-	{
-		ID3D12Heap *m_heap;
-		std::atomic<size_t> m_putPos, // Start of free space
-			m_getPos; // End of free space
-	};
-
-	ReadbackHeap m_readbackResources;
+	DataHeap<ID3D12Heap, 65536> m_UAVHeap;
+	DataHeap<ID3D12Heap, 65536> m_readbackResources;
 
 	bool m_forcedIndexBuffer;
 	size_t indexCount;

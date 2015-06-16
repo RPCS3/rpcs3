@@ -551,19 +551,8 @@ D3D12GSRender::D3D12GSRender()
 			IID_PPV_ARGS(&m_dummyTexture))
 			);
 
-	D3D12_HEAP_DESC hd = {};
-	hd.SizeInBytes = 1024 * 1024 * 128;
-	hd.Properties.Type = D3D12_HEAP_TYPE_READBACK;
-	hd.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-	check(m_device->CreateHeap(&hd, IID_PPV_ARGS(&m_readbackResources.m_heap)));
-	m_readbackResources.m_putPos = 0;
-	m_readbackResources.m_getPos = 1024 * 1024 * 128 - 1;
-
-	hd.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	hd.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-	check(m_device->CreateHeap(&hd, IID_PPV_ARGS(&m_UAVHeap.m_heap)));
-	m_UAVHeap.m_putPos = 0;
-	m_UAVHeap.m_getPos = 1024 * 1024 * 128 - 1;
+	m_readbackResources.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_READBACK, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+	m_UAVHeap.Init(m_device, 1024 * 1024 * 128, D3D12_HEAP_TYPE_DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
 
 	m_rtts.Init(m_device);
 
@@ -1087,14 +1076,11 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 	heapProp.Type = D3D12_HEAP_TYPE_READBACK;
 	D3D12_RESOURCE_DESC resdesc = getBufferResourceDesc(rowPitch * h);
 
-	size_t heapOffset = powerOf2Align(m_readbackResources.m_putPos.load(), 65536);
 	size_t sizeInByte = rowPitch * h;
-
-	if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
-		heapOffset = 0;
+	assert(m_readbackResources.canAlloc(sizeInByte));
+	size_t heapOffset = m_readbackResources.alloc(sizeInByte);
 
 	resdesc = getBufferResourceDesc(sizeInByte);
-
 	check(
 		m_device->CreatePlacedResource(
 			m_readbackResources.m_heap,
@@ -1105,6 +1091,7 @@ ID3D12Resource * D3D12GSRender::writeColorBuffer(ID3D12Resource * RTT, ID3D12Gra
 			IID_PPV_ARGS(&Result)
 			)
 		);
+	m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, Result));
 
 	cmdlist->ResourceBarrier(1, &getResourceBarrierTransition(RTT, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE));
 
@@ -1166,11 +1153,9 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 		D3D12_RESOURCE_DESC resdesc = getTexture2DResourceDesc(m_surface_clip_w, m_surface_clip_h, DXGI_FORMAT_R8_UNORM);
 		resdesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-		size_t heapOffset = m_readbackResources.m_putPos.load();
-		heapOffset = powerOf2Align(heapOffset, 65536);
-		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h;
-		if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
-			heapOffset = 0;
+		size_t sizeInByte = m_surface_clip_w * m_surface_clip_h * 2;
+		assert(m_UAVHeap.canAlloc(sizeInByte));
+		size_t heapOffset = m_UAVHeap.alloc(sizeInByte);
 
 		check(
 			m_device->CreatePlacedResource(
@@ -1182,16 +1167,13 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				IID_PPV_ARGS(&depthConverted)
 				)
 			);
-		m_UAVHeap.m_putPos.store(heapOffset + sizeInByte);
+		m_UAVHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, depthConverted));
 
-		heapOffset = m_readbackResources.m_putPos.load();
-		heapOffset = powerOf2Align(heapOffset, 65536);
 		sizeInByte = depthRowPitch * m_surface_clip_h;
+		assert(m_readbackResources.canAlloc(sizeInByte));
+		heapOffset = m_readbackResources.alloc(sizeInByte);
 
-		if (heapOffset + sizeInByte >= 1024 * 1024 * 128) // If it will be stored past heap size
-			heapOffset = 0;
 		resdesc = getBufferResourceDesc(sizeInByte);
-
 		check(
 			m_device->CreatePlacedResource(
 				m_readbackResources.m_heap,
@@ -1202,7 +1184,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 				IID_PPV_ARGS(&writeDest)
 				)
 			);
-		m_readbackResources.m_putPos.store(heapOffset + sizeInByte);
+		m_readbackResources.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset, sizeInByte, writeDest));
 
 		check(
 			m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&convertCommandList))
@@ -1336,6 +1318,10 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 	//Wait for result
 	m_commandQueueGraphic->Signal(fence, 1);
 
+
+	auto depthUAVCleaning = m_UAVHeap.getCleaningFunction();
+	auto readbackCleaning = m_readbackResources.getCleaningFunction();
+
 	m_GC.pushWork([=]() {
 		WaitForSingleObject(handle, INFINITE);
 		CloseHandle(handle);
@@ -1364,6 +1350,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 			depthConverted->Release();
 			descriptorHeap->Release();
 			convertCommandList->Release();
+			depthUAVCleaning();
 		}
 
 		size_t srcPitch, dstPitch;
@@ -1448,6 +1435,7 @@ void D3D12GSRender::semaphorePGRAPHBackendRelease(u32 offset, u32 value)
 
 		if (needTransfer)
 			downloadCommandList->Release();
+		readbackCleaning();
 
 		vm::write32(m_label_addr + offset, value);
 	});
