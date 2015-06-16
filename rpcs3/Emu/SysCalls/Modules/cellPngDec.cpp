@@ -18,7 +18,7 @@ extern "C"
 extern Module cellPngDec;
 
 s32 pngDecCreate(
-	vm::ptr<u32> mainHandle,
+	vm::ptr<CellPngDecMainHandle> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> param,
 	vm::ptr<const CellPngDecExtThreadInParam> ext = vm::null)
 {
@@ -41,7 +41,7 @@ s32 pngDecCreate(
 	}
 	
 	// use virtual memory address as a handle
-	*mainHandle = dec.addr();
+	*mainHandle = dec;
 
 	return CELL_OK;
 }
@@ -58,7 +58,7 @@ s32 pngDecDestroy(CellPngDecMainHandle dec)
 
 s32 pngDecOpen(
 	CellPngDecMainHandle dec,
-	vm::ptr<u32> subHandle,
+	vm::ptr<CellPngDecSubHandle> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo,
 	vm::ptr<const CellPngDecCbCtrlStrm> cb = vm::null,
@@ -105,7 +105,7 @@ s32 pngDecOpen(
 	}
 
 	// use virtual memory address as a handle
-	*subHandle = stream.addr();
+	*subHandle = stream;
 
 	// set memory info
 	openInfo->initSpaceAllocated = 4096;
@@ -366,7 +366,10 @@ s32 pngDecodeData(
 	return CELL_OK;
 }
 
-s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInParam> threadInParam, vm::ptr<CellPngDecThreadOutParam> threadOutParam)
+s32 cellPngDecCreate(
+	vm::ptr<CellPngDecMainHandle> mainHandle,
+	vm::ptr<const CellPngDecThreadInParam> threadInParam,
+	vm::ptr<CellPngDecThreadOutParam> threadOutParam)
 {
 	cellPngDec.Warning("cellPngDecCreate(mainHandle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x)", mainHandle, threadInParam, threadOutParam);
 
@@ -380,7 +383,7 @@ s32 cellPngDecCreate(vm::ptr<u32> mainHandle, vm::ptr<const CellPngDecThreadInPa
 }
 
 s32 cellPngDecExtCreate(
-	vm::ptr<u32> mainHandle,
+	vm::ptr<CellPngDecMainHandle> mainHandle,
 	vm::ptr<const CellPngDecThreadInParam> threadInParam,
 	vm::ptr<CellPngDecThreadOutParam> threadOutParam,
 	vm::ptr<const CellPngDecExtThreadInParam> extThreadInParam,
@@ -410,7 +413,7 @@ s32 cellPngDecDestroy(CellPngDecMainHandle mainHandle)
 
 s32 cellPngDecOpen(
 	CellPngDecMainHandle mainHandle,
-	vm::ptr<u32> subHandle,
+	vm::ptr<CellPngDecSubHandle> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo)
 {
@@ -422,7 +425,7 @@ s32 cellPngDecOpen(
 
 s32 cellPngDecExtOpen(
 	CellPngDecMainHandle mainHandle,
-	vm::ptr<u32> subHandle,
+	vm::ptr<CellPngDecSubHandle> subHandle,
 	vm::ptr<const CellPngDecSrc> src,
 	vm::ptr<CellPngDecOpnInfo> openInfo,
 	vm::ptr<const CellPngDecCbCtrlStrm> cbCtrlStrm,
@@ -514,7 +517,7 @@ s32 cellPngDecExtDecodeData(
 s32 cellPngDecGetUnknownChunks(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
-	vm::ptr<vm::bptr<CellPngUnknownChunk>> unknownChunk,
+	vm::pptr<CellPngUnknownChunk> unknownChunk,
 	vm::ptr<u32> unknownChunkNumber)
 {
 	UNIMPLEMENTED_FUNC(cellPngDec);
@@ -615,7 +618,7 @@ s32 cellPngDecGetTextChunk(
 	CellPngDecMainHandle mainHandle,
 	CellPngDecSubHandle subHandle,
 	vm::ptr<u32> textInfoNum,
-	vm::ptr<vm::bptr<CellPngTextInfo>> textInfo)
+	vm::pptr<CellPngTextInfo> textInfo)
 {
 	UNIMPLEMENTED_FUNC(cellPngDec);
 	return CELL_OK;

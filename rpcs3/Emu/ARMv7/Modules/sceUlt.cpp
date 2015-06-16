@@ -536,7 +536,7 @@ s32 sceUltUlthreadTryJoin(vm::psv::ptr<SceUltUlthread> ulthread, vm::psv::ptr<s3
 	throw __FUNCTION__;
 }
 
-s32 sceUltUlthreadGetSelf(vm::psv::ptr<vm::psv::ptr<SceUltUlthread>> ulthread)
+s32 sceUltUlthreadGetSelf(vm::psv::pptr<SceUltUlthread> ulthread)
 {
 	throw __FUNCTION__;
 }

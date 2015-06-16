@@ -64,7 +64,7 @@ s32 sceGxmDisplayQueueFinish()
 	throw __FUNCTION__;
 }
 
-s32 sceGxmSyncObjectCreate(vm::psv::ptr<vm::psv::ptr<SceGxmSyncObject>> syncObject)
+s32 sceGxmSyncObjectCreate(vm::psv::pptr<SceGxmSyncObject> syncObject)
 {
 	throw __FUNCTION__;
 }
@@ -75,7 +75,7 @@ s32 sceGxmSyncObjectDestroy(vm::psv::ptr<SceGxmSyncObject> syncObject)
 }
 
 
-s32 sceGxmCreateContext(vm::psv::ptr<const SceGxmContextParams> params, vm::psv::ptr<vm::psv::ptr<SceGxmContext>> context)
+s32 sceGxmCreateContext(vm::psv::ptr<const SceGxmContextParams> params, vm::psv::pptr<SceGxmContext> context)
 {
 	throw __FUNCTION__;
 }
@@ -101,12 +101,12 @@ void sceGxmSetFragmentProgram(vm::psv::ptr<SceGxmContext> context, vm::psv::ptr<
 	throw __FUNCTION__;
 }
 
-s32 sceGxmReserveVertexDefaultUniformBuffer(vm::psv::ptr<SceGxmContext> context, vm::psv::ptr<vm::psv::ptr<void>> uniformBuffer)
+s32 sceGxmReserveVertexDefaultUniformBuffer(vm::psv::ptr<SceGxmContext> context, vm::psv::pptr<void> uniformBuffer)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmReserveFragmentDefaultUniformBuffer(vm::psv::ptr<SceGxmContext> context, vm::psv::ptr<vm::psv::ptr<void>> uniformBuffer)
+s32 sceGxmReserveFragmentDefaultUniformBuffer(vm::psv::ptr<SceGxmContext> context, vm::psv::pptr<void> uniformBuffer)
 {
 	throw __FUNCTION__;
 }
@@ -650,7 +650,7 @@ vm::psv::ptr<const SceGxmProgram> sceGxmVertexProgramGetProgram(vm::psv::ptr<con
 }
 
 
-s32 sceGxmShaderPatcherCreate(vm::psv::ptr<const SceGxmShaderPatcherParams> params, vm::psv::ptr<vm::psv::ptr<SceGxmShaderPatcher>> shaderPatcher)
+s32 sceGxmShaderPatcherCreate(vm::psv::ptr<const SceGxmShaderPatcherParams> params, vm::psv::pptr<SceGxmShaderPatcher> shaderPatcher)
 {
 	throw __FUNCTION__;
 }
@@ -690,12 +690,12 @@ s32 sceGxmShaderPatcherSetAuxiliarySurface(vm::psv::ptr<SceGxmShaderPatcher> sha
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherCreateVertexProgram(vm::psv::ptr<SceGxmShaderPatcher> shaderPatcher, SceGxmShaderPatcherId programId, vm::psv::ptr<const SceGxmVertexAttribute> attributes, u32 attributeCount, vm::psv::ptr<const SceGxmVertexStream> streams, u32 streamCount, vm::psv::ptr<vm::psv::ptr<SceGxmVertexProgram>> vertexProgram)
+s32 sceGxmShaderPatcherCreateVertexProgram(vm::psv::ptr<SceGxmShaderPatcher> shaderPatcher, SceGxmShaderPatcherId programId, vm::psv::ptr<const SceGxmVertexAttribute> attributes, u32 attributeCount, vm::psv::ptr<const SceGxmVertexStream> streams, u32 streamCount, vm::psv::pptr<SceGxmVertexProgram> vertexProgram)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmShaderPatcherCreateFragmentProgram(vm::psv::ptr<SceGxmShaderPatcher> shaderPatcher, SceGxmShaderPatcherId programId, SceGxmOutputRegisterFormat outputFormat, SceGxmMultisampleMode multisampleMode, vm::psv::ptr<const SceGxmBlendInfo> blendInfo, vm::psv::ptr<const SceGxmProgram> vertexProgram, vm::psv::ptr<vm::psv::ptr<SceGxmFragmentProgram>> fragmentProgram)
+s32 sceGxmShaderPatcherCreateFragmentProgram(vm::psv::ptr<SceGxmShaderPatcher> shaderPatcher, SceGxmShaderPatcherId programId, SceGxmOutputRegisterFormat outputFormat, SceGxmMultisampleMode multisampleMode, vm::psv::ptr<const SceGxmBlendInfo> blendInfo, vm::psv::ptr<const SceGxmProgram> vertexProgram, vm::psv::pptr<SceGxmFragmentProgram> fragmentProgram)
 {
 	throw __FUNCTION__;
 }
@@ -1041,12 +1041,12 @@ s32 sceGxmGetRenderTargetMemSizes(vm::psv::ptr<const SceGxmRenderTargetParams> p
 	throw __FUNCTION__;
 }
 
-s32 sceGxmCreateRenderTarget(vm::psv::ptr<const SceGxmRenderTargetParams> params, vm::psv::ptr<vm::psv::ptr<SceGxmRenderTarget>> renderTarget)
+s32 sceGxmCreateRenderTarget(vm::psv::ptr<const SceGxmRenderTargetParams> params, vm::psv::pptr<SceGxmRenderTarget> renderTarget)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceGxmRenderTargetGetHostMem(vm::psv::ptr<const SceGxmRenderTarget> renderTarget, vm::psv::ptr<vm::psv::ptr<void>> hostMem)
+s32 sceGxmRenderTargetGetHostMem(vm::psv::ptr<const SceGxmRenderTarget> renderTarget, vm::psv::pptr<void> hostMem)
 {
 	throw __FUNCTION__;
 }

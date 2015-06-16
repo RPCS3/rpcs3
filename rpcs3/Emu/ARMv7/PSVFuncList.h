@@ -307,7 +307,7 @@ namespace psv_func_detail
 	template <typename RT, typename F, typename Tuple>
 	force_inline RT call(F f, Tuple && t)
 	{
-		typedef typename std::decay<Tuple>::type ttype;
+		using ttype = std::decay_t<Tuple>;
 		return psv_func_detail::call_impl<RT, F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
 	}
 

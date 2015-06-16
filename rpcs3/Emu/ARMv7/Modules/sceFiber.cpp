@@ -65,7 +65,7 @@ s32 sceFiberSwitch(vm::psv::ptr<SceFiber> fiber, u32 argOnRunTo, vm::psv::ptr<u3
 	throw __FUNCTION__;
 }
 
-s32 sceFiberGetSelf(vm::psv::ptr<vm::psv::ptr<SceFiber>> fiber)
+s32 sceFiberGetSelf(vm::psv::pptr<SceFiber> fiber)
 {
 	throw __FUNCTION__;
 }

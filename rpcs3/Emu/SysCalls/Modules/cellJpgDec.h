@@ -71,8 +71,8 @@ struct CellJpgDecInParam
 	be_t<u32> method;           // CellJpgDecMethod
 	be_t<u32> outputMode;       // CellJpgDecOutputMode
 	be_t<u32> outputColorSpace; // CellJpgDecColorSpace
-	be_t<u8> outputColorAlpha;
-	be_t<u8> reserved[3];
+	u8 outputColorAlpha;
+	u8 reserved[3];
 };
 
 struct CellJpgDecOutParam

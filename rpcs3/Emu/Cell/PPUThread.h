@@ -845,16 +845,14 @@ struct cast_ppu_gpr
 {
 	static_assert(is_enum, "Invalid type for cast_ppu_gpr");
 
-	typedef typename std::underlying_type<T>::type underlying_type;
-
 	force_inline static u64 to_gpr(const T& value)
 	{
-		return cast_ppu_gpr<underlying_type>::to_gpr(static_cast<underlying_type>(value));
+		return cast_ppu_gpr<std::underlying_type_t<T>>::to_gpr(static_cast<std::underlying_type_t<T>>(value));
 	}
 
 	force_inline static T from_gpr(const u64 reg)
 	{
-		return static_cast<T>(cast_ppu_gpr<underlying_type>::from_gpr(reg));
+		return static_cast<T>(cast_ppu_gpr<std::underlying_type_t<T>>::from_gpr(reg));
 	}
 };
 

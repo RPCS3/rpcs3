@@ -126,7 +126,7 @@ struct SceAvcdecArrayPicture
 {
 	u32 numOfOutput;
 	u32 numOfElm;
-	vm::psv::ptr<vm::psv::ptr<SceAvcdecPicture>> pPicture;
+	vm::psv::lpptr<SceAvcdecPicture> pPicture;
 };
 
 

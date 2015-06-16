@@ -792,7 +792,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 	return CELL_OK;
 }
 
-s32 cellAdecGetPcmItem(u32 handle, vm::ptr<vm::bptr<CellAdecPcmItem>> pcmItem)
+s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 {
 	cellAdec.Log("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
@@ -821,7 +821,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::ptr<vm::bptr<CellAdecPcmItem>> pcmItem)
 	}
 
 	pcm->pcmHandle = 0; // ???
-	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + sizeof(CellAdecPcmItem);
+	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + sizeof32(CellAdecPcmItem);
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
@@ -833,7 +833,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::ptr<vm::bptr<CellAdecPcmItem>> pcmItem)
 
 	if (adecIsAtracX(adec->type))
 	{
-		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + sizeof(CellAdecPcmItem));
+		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + sizeof32(CellAdecPcmItem));
 
 		atx->samplingFreq = frame->sample_rate;
 		atx->nbytes = frame->nb_samples * sizeof(float);
@@ -861,7 +861,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::ptr<vm::bptr<CellAdecPcmItem>> pcmItem)
 	}
 	else if (adec->type == CELL_ADEC_TYPE_MP3)
 	{
-		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + sizeof(CellAdecPcmItem));
+		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + sizeof32(CellAdecPcmItem));
 
 		// TODO
 		memset(mp3.get_ptr(), 0, sizeof(CellAdecMP3Info));

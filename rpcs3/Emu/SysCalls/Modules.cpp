@@ -119,16 +119,19 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (old_last_syscall)
 			{
+				CPU.m_last_syscall = func->id;
 				throw "Unfortunately, this function cannot be called from the callback.";
 			}
 
 			if (!func->lle_func)
 			{
+				CPU.m_last_syscall = func->id;
 				throw "Wrong usage: LLE function not set.";
 			}
 
 			if (func->flags & MFF_FORCED_HLE)
 			{
+				CPU.m_last_syscall = func->id;
 				throw "Wrong usage: Forced HLE enabled.";
 			}
 
@@ -139,6 +142,7 @@ void execute_ppu_func_by_index(PPUThread& CPU, u32 index)
 
 			if (index & EIF_PERFORM_BLR)
 			{
+				CPU.m_last_syscall = func->id;
 				throw "TODO: Branch with link";
 				// CPU.LR = CPU.PC + 4;
 			}

@@ -388,8 +388,8 @@ struct CellSpurs
 		u8 unk0[0x20]; // 0x00 - SPU exceptionh handler 0x08 - SPU exception handler args
 		be_t<u64> sem; // 0x20
 		u8 unk1[0x8];
-		vm::bptr<CellSpursShutdownCompletionEventHook, 1, u64> hook; // 0x30
-		vm::bptr<void, 1, u64> hookArg; // 0x38
+		vm::bptr<CellSpursShutdownCompletionEventHook, u64> hook; // 0x30
+		vm::bptr<void, u64> hookArg; // 0x38
 		u8 unk2[0x40];
 	};
 
@@ -409,7 +409,7 @@ struct CellSpurs
 
 	struct WorkloadInfo
 	{
-		vm::bptr<const void, 1, u64> addr; // Address of the executable
+		vm::bptr<const void, u64> addr; // Address of the executable
 		be_t<u64> arg; // spu argument
 		be_t<u32> size;
 		atomic_be_t<u8> uniqueId; // The unique id is the same for all workloads with the same addr
@@ -423,8 +423,8 @@ struct CellSpurs
 	{
 		static const uint size = 0x10;
 
-		vm::bptr<const char, 1, u64> nameClass;
-		vm::bptr<const char, 1, u64> nameInstance;
+		vm::bptr<const char, u64> nameClass;
+		vm::bptr<const char, u64> nameInstance;
 	};
 
 	union
@@ -475,7 +475,7 @@ struct CellSpurs
 			u8 wklStatus2[0x10];                                // 0xE0
 			u8 wklEvent2[0x10];                                 // 0xF0
 			_sub_str1 wklF1[0x10];                              // 0x100
-			vm::bptr<CellSpursTraceInfo, 1, u64> traceBuffer;   // 0x900
+			vm::bptr<CellSpursTraceInfo, u64> traceBuffer;      // 0x900
 			be_t<u32> traceStartIndex[6];                       // 0x908
 			u8 unknown7[0x948 - 0x920];                         // 0x920
 			be_t<u64> traceDataSize;                            // 0x948
@@ -641,7 +641,7 @@ struct CellSpursTaskset
 	struct TaskInfo
 	{
 		CellSpursTaskArgument args;                         // 0x00
-		vm::bptr<u64, 1, u64> elf_addr;                     // 0x10
+		vm::bptr<u64, u64> elf_addr;                        // 0x10
 		be_t<u64> context_save_storage_and_alloc_ls_blocks; // 0x18 This is (context_save_storage_addr | allocated_ls_blocks)
 		CellSpursTaskLsPattern ls_pattern;                  // 0x20
 	};
@@ -662,7 +662,7 @@ struct CellSpursTaskset
 			be_t<u128> enabled;                          // 0x30
 			be_t<u128> signalled;                        // 0x40
 			be_t<u128> waiting;                          // 0x50
-			vm::bptr<CellSpurs, 1, u64> spurs;           // 0x60
+			vm::bptr<CellSpurs, u64> spurs;              // 0x60
 			be_t<u64> args;                              // 0x68
 			u8 enable_clear_ls;                          // 0x70
 			u8 x71;                                      // 0x71
@@ -671,8 +671,8 @@ struct CellSpursTaskset
 			be_t<u32> wid;                               // 0x74
 			be_t<u64> x78;                               // 0x78
 			TaskInfo task_info[128];                     // 0x80
-			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
-			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
+			vm::bptr<u64, u64> exception_handler;        // 0x1880
+			vm::bptr<u64, u64> exception_handler_arg;    // 0x1888
 			be_t<u32> size;                              // 0x1890
 			u32 unk2;                                    // 0x1894
 			u32 event_flag_id1;                          // 0x1898
@@ -750,8 +750,8 @@ struct CellSpursTaskset2
 	struct TaskInfo
 	{
 		CellSpursTaskArgument args;
-		vm::bptr<u64, 1, u64> elf_addr;
-		vm::bptr<u64, 1, u64> context_save_storage; // This is (context_save_storage_addr | allocated_ls_blocks)
+		vm::bptr<u64, u64> elf_addr;
+		vm::bptr<u64, u64> context_save_storage; // This is (context_save_storage_addr | allocated_ls_blocks)
 		CellSpursTaskLsPattern ls_pattern;
 	};
 
@@ -771,7 +771,7 @@ struct CellSpursTaskset2
 			be_t<u32> enabled_set[4];                    // 0x30
 			be_t<u32> signal_received_set[4];            // 0x40
 			be_t<u32> waiting_set[4];                    // 0x50
-			vm::bptr<CellSpurs, 1, u64> spurs;           // 0x60
+			vm::bptr<CellSpurs, u64> spurs;              // 0x60
 			be_t<u64> args;                              // 0x68
 			u8 enable_clear_ls;                          // 0x70
 			u8 x71;                                      // 0x71
@@ -780,8 +780,8 @@ struct CellSpursTaskset2
 			be_t<u32> wid;                               // 0x74
 			be_t<u64> x78;                               // 0x78
 			TaskInfo task_info[128];                     // 0x80
-			vm::bptr<u64, 1, u64> exception_handler;     // 0x1880
-			vm::bptr<u64, 1, u64> exception_handler_arg; // 0x1888
+			vm::bptr<u64, u64> exception_handler;        // 0x1880
+			vm::bptr<u64, u64> exception_handler_arg;    // 0x1888
 			be_t<u32> size;                              // 0x1890
 			u32 unk2;                                    // 0x1894
 			u32 event_flag_id1;                          // 0x1898
@@ -872,8 +872,8 @@ struct CellSpursTaskInfo
 	const be_t<u32> eaElf_addr; //void *eaElf
 	const be_t<u32> eaContext_addr; //void *eaContext
 	be_t<u32> sizeContext;
-	be_t<u8> state;
-	be_t<u8> hasSignal;
+	u8 state;
+	u8 hasSignal;
 	const be_t<u32> CellSpursTaskExitCode_addr;
 	u8 guid[8];
 	//be_t<u8> reserved[];
@@ -895,10 +895,10 @@ struct SpursKernelContext
 	u8 wklLocPendingContention[0x10];               // 0x190
 	u8 priority[0x10];                              // 0x1A0
 	u8 x1B0[0x10];                                  // 0x1B0
-	vm::bptr<CellSpurs, 1, u64> spurs;              // 0x1C0
+	vm::bptr<CellSpurs, u64> spurs;                 // 0x1C0
 	be_t<u32> spuNum;                               // 0x1C8
 	be_t<u32> dmaTagId;                             // 0x1CC
-	vm::bptr<const void, 1, u64> wklCurrentAddr;    // 0x1D0
+	vm::bptr<const void, u64> wklCurrentAddr;       // 0x1D0
 	be_t<u32> wklCurrentUniqueId;                   // 0x1D8
 	be_t<u32> wklCurrentId;                         // 0x1DC
 	be_t<u32> exitToKernelAddr;                     // 0x1E0
@@ -932,7 +932,7 @@ struct SpursTasksetContext
 	u8 tempAreaTaskset[0x80];                       // 0x2700
 	u8 tempAreaTaskInfo[0x30];                      // 0x2780
 	be_t<u64> x27B0;                                // 0x27B0
-	vm::bptr<CellSpursTaskset, 1, u64> taskset;     // 0x27B8
+	vm::bptr<CellSpursTaskset, u64> taskset;        // 0x27B8
 	be_t<u32> kernelMgmtAddr;                       // 0x27C0
 	be_t<u32> syscallAddr;                          // 0x27C4
 	be_t<u32> x27C8;                                // 0x27C8

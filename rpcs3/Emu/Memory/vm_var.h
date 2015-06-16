@@ -108,24 +108,24 @@ namespace vm
 		}
 		*/
 
-		template<typename AT> operator _ptr_base<T, 1, AT>() const
+		template<typename AT> operator _ptr_base<T, AT>() const
 		{
-			return _ptr_base<T, 1, AT>::make(m_addr);
+			return _ptr_base<T, AT>::make(m_addr);
 		}
 
-		template<typename AT> operator _ptr_base<const T, 1, AT>() const
+		template<typename AT> operator _ptr_base<const T, AT>() const
 		{
-			return _ptr_base<const T, 1, AT>::make(m_addr);
+			return _ptr_base<const T, AT>::make(m_addr);
 		}
 
-		template<typename AT> operator _ptr_base<void, 1, AT>() const
+		template<typename AT> operator _ptr_base<void, AT>() const
 		{
-			return _ptr_base<void, 1, AT>::make(m_addr);
+			return _ptr_base<void, AT>::make(m_addr);
 		}
 
-		template<typename AT> operator _ptr_base<const void, 1, AT>() const
+		template<typename AT> operator _ptr_base<const void, AT>() const
 		{
-			return _ptr_base<const void, 1, AT>::make(m_addr);
+			return _ptr_base<const void, AT>::make(m_addr);
 		}
 		
 		operator T&()
@@ -614,24 +614,24 @@ namespace vm
 		}
 		*/
 
-		template<typename AT> operator _ptr_base<T, 1, AT>() const
+		template<typename AT> operator _ptr_base<T, AT>() const
 		{
-			return _ptr_base<T, 1, AT>::make(m_data.addr);
+			return _ptr_base<T, AT>::make(m_data.addr);
 		}
 
-		template<typename AT> operator _ptr_base<const T, 1, AT>() const
+		template<typename AT> operator _ptr_base<const T, AT>() const
 		{
-			return _ptr_base<const T, 1, AT>::make(m_data.addr);
+			return _ptr_base<const T, AT>::make(m_data.addr);
 		}
 
-		template<typename AT> operator _ptr_base<void, 1, AT>() const
+		template<typename AT> operator _ptr_base<void, AT>() const
 		{
-			return _ptr_base<void, 1, AT>::make(m_data.addr);
+			return _ptr_base<void, AT>::make(m_data.addr);
 		}
 
-		template<typename AT> operator _ptr_base<const void, 1, AT>() const
+		template<typename AT> operator _ptr_base<const void, AT>() const
 		{
-			return _ptr_base<const void, 1, AT>::make(m_data.addr);
+			return _ptr_base<const void, AT>::make(m_data.addr);
 		}
 
 		operator T&()

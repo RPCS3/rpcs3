@@ -179,7 +179,7 @@ namespace fmt
 	template<typename T, bool is_enum = std::is_enum<T>::value>
 	struct unveil
 	{
-		typedef T result_type;
+		using result_type = T;
 
 		force_inline static result_type get_value(const T& arg)
 		{
@@ -190,7 +190,7 @@ namespace fmt
 	template<>
 	struct unveil<char*, false>
 	{
-		typedef const char* result_type;
+		using result_type = const char*;
 
 		force_inline static result_type get_value(const char* arg)
 		{
@@ -201,7 +201,7 @@ namespace fmt
 	template<size_t N>
 	struct unveil<const char[N], false>
 	{
-		typedef const char* result_type;
+		using result_type = const char*;
 
 		force_inline static result_type get_value(const char(&arg)[N])
 		{
@@ -212,7 +212,7 @@ namespace fmt
 	template<>
 	struct unveil<std::string, false>
 	{
-		typedef const char* result_type;
+		using result_type = const char*;
 
 		force_inline static result_type get_value(const std::string& arg)
 		{
@@ -223,7 +223,7 @@ namespace fmt
 	template<typename T>
 	struct unveil<T, true>
 	{
-		typedef typename std::underlying_type<T>::type result_type;
+		using result_type = std::underlying_type_t<T>;
 
 		force_inline static result_type get_value(const T& arg)
 		{
@@ -231,12 +231,12 @@ namespace fmt
 		}
 	};
 
-	template<typename T, typename T2>
-	struct unveil<be_t<T, T2>, false>
+	template<typename T>
+	struct unveil<be_t<T>, false>
 	{
-		typedef typename unveil<T>::result_type result_type;
+		using result_type = typename unveil<T>::result_type;
 
-		force_inline static result_type get_value(const be_t<T, T2>& arg)
+		force_inline static result_type get_value(const be_t<T>& arg)
 		{
 			return unveil<T>::get_value(arg.value());
 		}

@@ -2,44 +2,60 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/SysCalls/Modules.h"
 
-#include "cellL10n.h"
-#include <stdio.h>
-#include <stdlib.h>
-
 #ifdef _MSC_VER
 #include <windows.h>
-#include <wchar.h>
-#include <codecvt>
 #else
 #include <iconv.h>
 #endif
 
+//#include <codecvt>
+#include "cellL10n.h"
+
 extern Module cellL10n;
 
-int UTF16stoUTF8s(vm::lptrl<const char16_t> utf16, vm::ptr<u32> utf16_len, vm::ptr<char> utf8, vm::ptr<u32> utf8_len)
+s32 UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr<char> utf8, vm::ref<u32> utf8_len)
 {
-	cellL10n.Warning("UTF16stoUTF8s(utf16_addr=0x%x, utf16_len_addr=0x%x, utf8_addr=0x%x, utf8_len_addr=0x%x)",
-		utf16.addr(), utf16_len.addr(), utf8.addr(), utf8_len.addr());
+	cellL10n.Todo("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
-	std::u16string wstr = utf16.get_ptr(); // ???
-	wstr.resize(*utf16_len); // TODO: Is this really the role of utf16_len in this function?
-#ifdef _MSC_VER
-	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
-	std::string str = convert.to_bytes(wstr);
+	const u32 max_len = utf8_len; utf8_len = 0;
 
-	if (*utf8_len < str.size())
+	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
 	{
-		*utf8_len = str.size();
-		return DSTExhausted;
+		const char16_t ch = utf16[i];
+
+		// increase required length (TODO)
+		len = len + 1;
+
+		// validate character (TODO)
+		//if ()
+		//{
+		//	utf16_len -= i;
+		//	return SRCIllegal;
+		//}
+
+		if (utf8)
+		{
+			if (len > max_len)
+			{
+				utf16_len -= i;
+				return DSTExhausted;
+			}
+
+			if (ch <= 0x7f)
+			{
+				*utf8++ = static_cast<char>(ch);
+			}
+			else
+			{
+				*utf8++ = '?'; // TODO
+			}
+		}
 	}
 
-	*utf8_len = str.size();
-	memcpy(utf8.get_ptr(), str.c_str(), str.size());
-#endif
 	return ConversionOK;
 }
 
-int jstrchk(vm::ptr<const char> jstr)
+s32 jstrchk(vm::ptr<const char> jstr)
 {
 	cellL10n.Warning("jstrchk(jstr_addr=0x%x) -> utf8", jstr.addr());
 
@@ -48,7 +64,7 @@ int jstrchk(vm::ptr<const char> jstr)
 
 //translate code id to code name. some codepage may has another name.
 //If this makes your compilation fail, try replace the string code with one in "iconv -l"
-bool _L10nCodeParse(int code, std::string& retCode)
+bool _L10nCodeParse(s32 code, std::string& retCode)
 {
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
@@ -113,7 +129,7 @@ bool _L10nCodeParse(int code, std::string& retCode)
 
 //translate code id to code name.
 //If this makes your compilation fail, try replace the string code with one in "iconv -l"
-bool _L10nCodeParse(int code, unsigned int & retCode)
+bool _L10nCodeParse(s32 code, u32& retCode)
 {
 	retCode = 0;
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
@@ -182,10 +198,10 @@ bool _L10nCodeParse(int code, unsigned int & retCode)
 #ifdef _MSC_VER
 
 //Use code page to transform std::string to std::wstring.
-int _OEM2Wide(unsigned int oem_code, const std::string src, std::wstring& dst)
+s32 _OEM2Wide(u32 oem_code, const std::string src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
-	int length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
+	s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
 	wchar_t *store = new wchar_t[length]();
 
 	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
@@ -199,10 +215,10 @@ int _OEM2Wide(unsigned int oem_code, const std::string src, std::wstring& dst)
 }
 
 //Use Code page to transform std::wstring to std::string.
-int _Wide2OEM(unsigned int oem_code, const std::wstring src, std::string& dst)
+s32 _Wide2OEM(u32 oem_code, const std::wstring src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
-	int length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
+	s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
 	char *store = new char[length]();
 
 	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
@@ -216,7 +232,7 @@ int _Wide2OEM(unsigned int oem_code, const std::wstring src, std::string& dst)
 }
 
 //Convert Codepage to Codepage (all char*)
-std::string _OemToOem(unsigned int src_code, unsigned int dst_code, const std::string str)
+std::string _OemToOem(u32 src_code, u32 dst_code, const std::string str)
 {
 	std::wstring wide; std::string result;
 	_OEM2Wide(src_code, str, wide);
@@ -227,9 +243,9 @@ std::string _OemToOem(unsigned int src_code, unsigned int dst_code, const std::s
 /*
 //Original piece of code. and this is for windows using with _OEM2Wide,_Wide2OEM,_OemToOem.
 //The Char -> Char Execution of this function has already been tested using VS and CJK text with encoding.
-int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_code, void *dst, size_t * dst_len)
+s32 _L10nConvertStr(s32 src_code, const void *src, size_t * src_len, s32 dst_code, void *dst, size_t * dst_len)
 {
-	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
+	u32 srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
 
@@ -251,10 +267,10 @@ int _L10nConvertStr(int src_code, const void *src, size_t * src_len, int dst_cod
 }
 //This is the one used with iconv library for linux/mac. Also char->char.
 //I've tested the code with console apps using codeblocks.
-int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_code, void * dst, size_t * dst_len)
+s32 _L10nConvertStr(s32 src_code, const void* src, size_t * src_len, s32 dst_code, void * dst, size_t * dst_len)
 {
 	std::string srcCode, dstCode;
-	int retValue = ConversionOK;
+	s32 retValue = ConversionOK;
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
@@ -281,13 +297,13 @@ int _L10nConvertStr(int src_code, const void* src, size_t * src_len, int dst_cod
 #endif
 
 //TODO: Check the code in emulation. If support for UTF8/UTF16/UTF32/UCS2/UCS4 should use wider chars.. awful.
-int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<u32> src_len, int dst_code, vm::ptr<void> dst, vm::ptr<u32> dst_len)
+s32 L10nConvertStr(s32 src_code, vm::ptr<const void> src, vm::ptr<u32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
 	cellL10n.Error("L10nConvertStr(src_code=%d, srca_addr=0x%x, src_len_addr=0x%x, dst_code=%d, dst_addr=0x%x, dst_len_addr=0x%x)",
 		src_code, src.addr(), src_len.addr(), dst_code, dst.addr(), dst_len.addr());
 	//cellL10n.Todo("L10nConvertStr: 1st char at dst: 0x%x", *((char*)src.get_ptr()));
 #ifdef _MSC_VER
-	unsigned int srcCode = 0, dstCode = 0;	//OEM code pages
+	u32 srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
 	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
 
@@ -308,7 +324,7 @@ int L10nConvertStr(int src_code, vm::ptr<const void> src, vm::ptr<u32> src_len, 
 	return ConversionOK;
 #else
 	std::string srcCode, dstCode;
-	int retValue = ConversionOK;
+	s32 retValue = ConversionOK;
 	if ((_L10nCodeParse(src_code, srcCode)) && (_L10nCodeParse(dst_code, dstCode)))
 	{
 		iconv_t ict = iconv_open(srcCode.c_str(), dstCode.c_str());
@@ -490,7 +506,7 @@ Module cellL10n("cellL10n", []()
 	// REG_FUNC(cellL10n, UTF8stoHZs);
 	// REG_FUNC(cellL10n, eucjp2kuten);
 	// REG_FUNC(cellL10n, UTF8toBIG5);
-	// REG_FUNC(cellL10n, UTF16stoUTF8s);
+	REG_FUNC(cellL10n, UTF16stoUTF8s);
 	// REG_FUNC(cellL10n, JISstoUCS2s);
 	// REG_FUNC(cellL10n, GB18030toUTF8);
 	// REG_FUNC(cellL10n, UTF8toSJIS);

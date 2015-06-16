@@ -19,7 +19,7 @@ s32 sceSslGetMemoryPoolStats(vm::psv::ptr<SceSslMemoryPoolStats> currentStat)
 	throw __FUNCTION__;
 }
 
-s32 sceSslGetSerialNumber(vm::psv::ptr<SceSslCert> sslCert, vm::psv::ptr<vm::psv::ptr<const u8>> sboData, vm::psv::ptr<u32> sboLen)
+s32 sceSslGetSerialNumber(vm::psv::ptr<SceSslCert> sslCert, vm::psv::pptr<const u8> sboData, vm::psv::ptr<u32> sboLen)
 {
 	throw __FUNCTION__;
 }

@@ -57,6 +57,18 @@ template<typename T> force_inline T align(const T addr, int align)
 	return (addr + (align - 1)) & ~(align - 1);
 }
 
+template<typename T> struct sizeof32_t
+{
+	static const u32 value = static_cast<u32>(sizeof(T));
+
+	static_assert(value == sizeof(T), "sizeof32() error: sizeof() is too big");
+};
+
+// return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
+#define sizeof32(type) sizeof32_t<type>::value
+
+template<typename T> using func_def = T; // workaround for MSVC bug: `using X = func_def<void()>;` instead of `using X = void();`
+
 #include "Utilities/BEType.h"
 #include "Utilities/StrFmt.h"
 

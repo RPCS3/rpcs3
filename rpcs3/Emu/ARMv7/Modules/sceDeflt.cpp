@@ -9,7 +9,7 @@ s32 sceGzipIsValid(vm::psv::ptr<const void> pSrcGzip)
 	throw __FUNCTION__;
 }
 
-s32 sceGzipGetInfo(vm::psv::ptr<const void> pSrcGzip, vm::psv::ptr<vm::psv::ptr<const void>> ppvExtra, vm::psv::ptr<vm::psv::ptr<const char>> ppszName, vm::psv::ptr<vm::psv::ptr<const char>> ppszComment, vm::psv::ptr<u16> pusCrc, vm::psv::ptr<vm::psv::ptr<const void>> ppvData)
+s32 sceGzipGetInfo(vm::psv::ptr<const void> pSrcGzip, vm::psv::pptr<const void> ppvExtra, vm::psv::pptr<const char> ppszName, vm::psv::pptr<const char> ppszComment, vm::psv::ptr<u16> pusCrc, vm::psv::pptr<const void> ppvData)
 {
 	throw __FUNCTION__;
 }
@@ -39,7 +39,7 @@ s32 sceZlibIsValid(vm::psv::ptr<const void> pSrcZlib)
 	throw __FUNCTION__;
 }
 
-s32 sceZlibGetInfo(vm::psv::ptr<const void> pSrcZlib, vm::psv::ptr<u8> pbCmf, vm::psv::ptr<u8> pbFlg, vm::psv::ptr<u32> puiDictId, vm::psv::ptr<vm::psv::ptr<const void>> ppvData)
+s32 sceZlibGetInfo(vm::psv::ptr<const void> pSrcZlib, vm::psv::ptr<u8> pbCmf, vm::psv::ptr<u8> pbFlg, vm::psv::ptr<u32> puiDictId, vm::psv::pptr<const void> ppvData)
 {
 	throw __FUNCTION__;
 }
@@ -59,12 +59,12 @@ u32 sceZlibAdler32(u32 uiAdler, vm::psv::ptr<const u8> pSrc, u32 uiSize)
 	throw __FUNCTION__;
 }
 
-s32 sceDeflateDecompress(vm::psv::ptr<void> pDst, u32 uiBufSize, vm::psv::ptr<const void> pSrcDeflate, vm::psv::ptr<vm::psv::ptr<const void>> ppNext)
+s32 sceDeflateDecompress(vm::psv::ptr<void> pDst, u32 uiBufSize, vm::psv::ptr<const void> pSrcDeflate, vm::psv::pptr<const void> ppNext)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceZipGetInfo(vm::psv::ptr<const void> pSrc, vm::psv::ptr<vm::psv::ptr<const void>> ppvExtra, vm::psv::ptr<u32> puiCrc, vm::psv::ptr<vm::psv::ptr<const void>> ppvData)
+s32 sceZipGetInfo(vm::psv::ptr<const void> pSrc, vm::psv::pptr<const void> ppvExtra, vm::psv::ptr<u32> puiCrc, vm::psv::pptr<const void> ppvData)
 {
 	throw __FUNCTION__;
 }

@@ -162,7 +162,7 @@ struct CellPngPCAL
 	be_t<u32> equationType;
 	be_t<u32> numberOfParameters;
 	vm::bptr<char> unitName;
-	vm::bptr<char, 2> parameter;
+	vm::bpptr<char> parameter;
 };
 
 struct CellPngUnknownChunk
