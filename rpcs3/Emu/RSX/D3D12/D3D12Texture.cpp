@@ -366,12 +366,6 @@ ID3D12Resource *uploadSingleTexture(
 			{
 				unsigned short tmp = src[row * w * 4 + j];
 				dst[row * w  * 4 + j] = (tmp >> 8) | (tmp << 8);
-				tmp = src[row * w * 4 + j + 1];
-				dst[row * w * 4 + j + 1] = (tmp >> 8) | (tmp << 8);
-				tmp = src[row * w * 4 + j + 2];
-				dst[row * w * 4 + j + 2] = (tmp >> 8) | (tmp << 8);
-				tmp = src[row * w * 4 + j + 3];
-				dst[row * w * 4 + j + 3] = (tmp >> 8) | (tmp << 8);
 			}
 			break;
 		}
