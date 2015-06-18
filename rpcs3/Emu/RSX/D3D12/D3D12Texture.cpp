@@ -603,6 +603,7 @@ size_t D3D12GSRender::UploadTextures()
 	{
 		if (!m_textures[i].IsEnabled()) continue;
 		size_t w = m_textures[i].GetWidth(), h = m_textures[i].GetHeight();
+		if (!w || !h) continue;
 
 		const u32 texaddr = GetAddress(m_textures[i].GetOffset(), m_textures[i].GetLocation());
 
