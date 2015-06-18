@@ -71,7 +71,7 @@ namespace vm
 		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
-	template<typename AT, typename RT, typename ...T>
+	template<typename AT, typename RT, typename... T>
 	struct _ptr_base<RT(T...), AT>
 	{
 		AT m_addr;
@@ -102,17 +102,6 @@ namespace vm
 		// defined in CB_FUNC.h, call using current PPU thread context
 		RT operator()(T... args) const;
 
-		// conversion to function object
-		operator std::function<type>() const
-		{
-			const u32 addr = vm::cast(m_addr);
-
-			return [addr](T... args) -> RT
-			{
-				return _ptr_base<RT(T...)>{ addr }(args...);
-			};
-		}
-
 		// conversion to another function pointer
 		template<typename AT2> operator _ptr_base<type, AT2>() const
 		{
@@ -127,7 +116,7 @@ namespace vm
 		_ptr_base& operator =(const _ptr_base&) = default;
 	};
 
-	template<typename AT, typename RT, typename ...T>
+	template<typename AT, typename RT, typename... T>
 	struct _ptr_base<RT(*)(T...), AT>
 	{
 		AT m_addr;
@@ -166,6 +155,12 @@ namespace vm
 
 		// default pointer to pointer for PS3 HLE structures (BE pointer to BE pointer to BE data)
 		template<typename T, typename AT = u32, typename AT2 = u32> using bpptr = bptr<ptr<T, AT2>, AT>;
+
+		// native endianness pointer to const BE data
+		template<typename T, typename AT = u32> using cptr = ptr<const T, AT>;
+
+		// BE pointer to const BE data
+		template<typename T, typename AT = u32> using bcptr = bptr<const T, AT>;
 	}
 
 	namespace psv
@@ -181,6 +176,12 @@ namespace vm
 
 		// default pointer to pointer for PSV HLE structures (LE pointer to LE pointer to LE data)
 		template<typename T> using lpptr = lptr<ptr<T>>;
+
+		// native endianness pointer to const LE data
+		template<typename T> using cptr = ptr<const T>;
+
+		// LE pointer to const LE data
+		template<typename T> using lcptr = lptr<const T>;
 	}
 
 	// PS3 emulation is main now, so lets it be as default
@@ -310,9 +311,9 @@ template<typename T1, typename AT1, typename T2, typename AT2> inline std::enabl
 	!std::is_function<T1>::value &&
 	!std::is_function<T2>::value &&
 	std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value,
-	u32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+	s32> operator -(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
-	return static_cast<u32>((left.m_addr - right.m_addr) / sizeof32(T1));
+	return static_cast<s32>(left.m_addr - right.m_addr) / sizeof32(T1);
 }
 
 // comparison operator for vm::_ptr_base (pointer1 == pointer2)
