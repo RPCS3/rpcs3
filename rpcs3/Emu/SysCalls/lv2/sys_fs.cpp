@@ -68,6 +68,11 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		open_mode |= o_trunc;
 	}
 
+	if (flags & CELL_FS_O_APPEND)
+	{
+		open_mode |= o_append;
+	}
+
 	if (flags & CELL_FS_O_EXCL)
 	{
 		if (flags & CELL_FS_O_CREAT)
@@ -80,7 +85,7 @@ s32 sys_fs_open(vm::ptr<const char> path, s32 flags, vm::ptr<u32> fd, s32 mode, 
 		}
 	}
 
-	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_EXCL))
+	if (flags & ~(CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND | CELL_FS_O_EXCL))
 	{
 		open_mode = 0; // error
 	}

@@ -9,9 +9,9 @@
 
 static_assert(fs::file::null == intptr_t(INVALID_HANDLE_VALUE) && fs::dir::null == fs::file::null, "Check fs::file::null definition");
 
-std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
+std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
-	const size_t length = source.size() + 1; // size + null terminator
+	const auto length = source.size() + 1; // size + null terminator
 
 	const int size = source.size() < INT_MAX ? static_cast<int>(length) : throw std::length_error(__FUNCTION__);
 
@@ -26,15 +26,13 @@ std::unique_ptr<wchar_t[]> ConvertUTF8ToWChar(const std::string& source)
 	return buffer;
 }
 
-std::string ConvertWCharToUTF8(const wchar_t* source)
+void to_utf8(std::string& result, const wchar_t* source)
 {
 	const int length = lstrlenW(source); // source length
 
-	std::string result;
-
 	if (length == 0)
 	{
-		return result;
+		return result.clear();
 	}
 
 	const int size = WideCharToMultiByte(CP_UTF8, 0, source, length, NULL, 0, NULL, NULL); // output size
@@ -51,8 +49,6 @@ std::string ConvertWCharToUTF8(const wchar_t* source)
 	{
 		throw __FUNCTION__;
 	}
-
-	return result;
 }
 
 time_t to_time_t(const ULARGE_INTEGER& ft)
@@ -81,7 +77,7 @@ time_t to_time_t(const FILETIME& ft)
 bool truncate_file(const std::string& file, u64 length)
 {
 	// open the file
-	const auto handle = CreateFileW(ConvertUTF8ToWChar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(file).get(), GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -124,7 +120,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 {
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
-	if (!GetFileAttributesExW(ConvertUTF8ToWChar(path).get(), GetFileExInfoStandard, &attrs))
+	if (!GetFileAttributesExW(to_wchar(path).get(), GetFileExInfoStandard, &attrs))
 	{
 		return false;
 	}
@@ -156,7 +152,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 bool fs::exists(const std::string& path)
 {
 #ifdef _WIN32
-	return GetFileAttributesW(ConvertUTF8ToWChar(path).get()) != 0xFFFFFFFF;
+	return GetFileAttributesW(to_wchar(path).get()) != 0xFFFFFFFF;
 #else
 	struct stat buffer;
 	return stat(path.c_str(), &buffer) == 0;
@@ -167,7 +163,7 @@ bool fs::is_file(const std::string& file)
 {
 #ifdef _WIN32
 	DWORD attrs;
-	if ((attrs = GetFileAttributesW(ConvertUTF8ToWChar(file).get())) == INVALID_FILE_ATTRIBUTES)
+	if ((attrs = GetFileAttributesW(to_wchar(file).get())) == INVALID_FILE_ATTRIBUTES)
 	{
 		return false;
 	}
@@ -188,7 +184,7 @@ bool fs::is_dir(const std::string& dir)
 {
 #ifdef _WIN32
 	DWORD attrs;
-	if ((attrs = GetFileAttributesW(ConvertUTF8ToWChar(dir).get())) == INVALID_FILE_ATTRIBUTES)
+	if ((attrs = GetFileAttributesW(to_wchar(dir).get())) == INVALID_FILE_ATTRIBUTES)
 	{
 		return false;
 	}
@@ -208,7 +204,7 @@ bool fs::is_dir(const std::string& dir)
 bool fs::create_dir(const std::string& dir)
 {
 #ifdef _WIN32
-	if (!CreateDirectoryW(ConvertUTF8ToWChar(dir).get(), NULL))
+	if (!CreateDirectoryW(to_wchar(dir).get(), NULL))
 #else
 	if (mkdir(dir.c_str(), 0777))
 #endif
@@ -265,7 +261,7 @@ bool fs::create_path(const std::string& path)
 bool fs::remove_dir(const std::string& dir)
 {
 #ifdef _WIN32
-	if (!RemoveDirectoryW(ConvertUTF8ToWChar(dir).get()))
+	if (!RemoveDirectoryW(to_wchar(dir).get()))
 #else
 	if (rmdir(dir.c_str()))
 #endif
@@ -279,9 +275,8 @@ bool fs::remove_dir(const std::string& dir)
 
 bool fs::rename(const std::string& from, const std::string& to)
 {
-	// TODO: Deal with case-sensitivity
 #ifdef _WIN32
-	if (!MoveFileW(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get()))
+	if (!MoveFileW(to_wchar(from).get(), to_wchar(to).get()))
 #else
 	if (rename(from.c_str(), to.c_str()))
 #endif
@@ -332,7 +327,7 @@ int OSCopyFile(const char* source, const char* destination, bool overwrite)
 bool fs::copy_file(const std::string& from, const std::string& to, bool overwrite)
 {
 #ifdef _WIN32
-	if (!CopyFileW(ConvertUTF8ToWChar(from).get(), ConvertUTF8ToWChar(to).get(), !overwrite))
+	if (!CopyFileW(to_wchar(from).get(), to_wchar(to).get(), !overwrite))
 #else
 	if (OSCopyFile(from.c_str(), to.c_str(), overwrite))
 #endif
@@ -347,7 +342,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 bool fs::remove_file(const std::string& file)
 {
 #ifdef _WIN32
-	if (!DeleteFileW(ConvertUTF8ToWChar(file).get()))
+	if (!DeleteFileW(to_wchar(file).get()))
 #else
 	if (unlink(file.c_str()))
 #endif
@@ -388,7 +383,7 @@ fs::file::~file()
 
 bool fs::file::open(const std::string& filename, u32 mode)
 {
-	this->~file();
+	this->close();
 
 #ifdef _WIN32
 	DWORD access = 0;
@@ -424,7 +419,7 @@ bool fs::file::open(const std::string& filename, u32 mode)
 		return false;
 	}
 
-	m_fd = (intptr_t)CreateFileW(ConvertUTF8ToWChar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	m_fd = (intptr_t)CreateFileW(to_wchar(filename).get(), access, FILE_SHARE_READ, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 #else
 	int flags = 0;
 
@@ -537,31 +532,35 @@ bool fs::file::close()
 
 u64 fs::file::read(void* buffer, u64 count) const
 {
+	const int size = count <= INT_MAX ? static_cast<int>(count) : throw std::length_error(__FUNCTION__);
+
 #ifdef _WIN32
 	DWORD nread;
-	if (!ReadFile((HANDLE)m_fd, buffer, count, &nread, NULL))
+	if (!ReadFile((HANDLE)m_fd, buffer, size, &nread, NULL))
 	{
 		return -1;
 	}
 
 	return nread;
 #else
-	return ::read(m_fd, buffer, count);
+	return ::read(m_fd, buffer, size);
 #endif
 }
 
 u64 fs::file::write(const void* buffer, u64 count) const
 {
+	const int size = count <= INT_MAX ? static_cast<int>(count) : throw std::length_error(__FUNCTION__);
+
 #ifdef _WIN32
 	DWORD nwritten;
-	if (!WriteFile((HANDLE)m_fd, buffer, count, &nwritten, NULL))
+	if (!WriteFile((HANDLE)m_fd, buffer, size, &nwritten, NULL))
 	{
 		return -1;
 	}
 
 	return nwritten;
 #else
-	return ::write(m_fd, buffer, count);
+	return ::write(m_fd, buffer, size);
 #endif
 }
 
@@ -631,7 +630,7 @@ void fs::dir::import(handle_type dd, const std::string& path)
 	m_dd = dd;
 
 #ifdef _WIN32
-	m_path = ConvertUTF8ToWChar(path);
+	m_path = to_wchar(path);
 #else
 	m_path.reset(new char[path.size() + 1]);
 	memcpy(m_path.get(), path.c_str(), path.size() + 1);
@@ -659,7 +658,7 @@ bool fs::dir::open(const std::string& dirname)
 	}
 
 #ifdef _WIN32
-	m_path = ConvertUTF8ToWChar(dirname + "/*");
+	m_path = to_wchar(dirname + "/*");
 #else
 	m_path.reset(new char[dirname.size() + 1]);
 	memcpy(m_path.get(), dirname.c_str(), dirname.size() + 1);
@@ -723,7 +722,7 @@ bool fs::dir::get_first(std::string& name, stat_t& info)
 		return false;
 	}
 
-	name = ConvertWCharToUTF8(found.cFileName);
+	to_utf8(name, found.cFileName);
 
 	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
@@ -755,7 +754,7 @@ bool fs::dir::get_next(std::string& name, stat_t& info)
 		return false;
 	}
 
-	name = ConvertWCharToUTF8(found.cFileName);
+	to_utf8(name, found.cFileName);
 
 	info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 	info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
