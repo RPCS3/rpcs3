@@ -549,8 +549,8 @@ ID3D12Resource *uploadSingleTexture(
 	}
 	Texture->Unmap(0, nullptr);
 
-	size_t powerOf2Height = (size_t)log2f((float)heightInBlocks) + 1;
-	textureSize = rowPitch * (1i64 << powerOf2Height);
+	D3D12_RESOURCE_DESC texturedesc = getTexture2DResourceDesc(w, h, dxgiFormat, texture.GetMipmap());
+	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
 
 	assert(textureHeap.canAlloc(textureSize));
 	size_t heapOffset2 = textureHeap.alloc(textureSize);
@@ -558,7 +558,7 @@ ID3D12Resource *uploadSingleTexture(
 	check(device->CreatePlacedResource(
 		textureHeap.m_heap,
 		heapOffset2,
-		&getTexture2DResourceDesc(w, h, dxgiFormat, texture.GetMipmap()),
+		&texturedesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&vramTexture)
