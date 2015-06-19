@@ -582,21 +582,21 @@ public:
 	void halt();
 
 	u8 read8(u32 lsa) const { return vm::read8(lsa + offset); }
-	u16 read16(u32 lsa) const { return vm::read16(lsa + offset); }
-	u32 read32(u32 lsa) const { return vm::read32(lsa + offset); }
-	u64 read64(u32 lsa) const { return vm::read64(lsa + offset); }
-	u128 read128(u32 lsa) const { return vm::read128(lsa + offset); }
+	u16 read16(u32 lsa) const { return vm::ps3::read16(lsa + offset); }
+	u32 read32(u32 lsa) const { return vm::ps3::read32(lsa + offset); }
+	u64 read64(u32 lsa) const { return vm::ps3::read64(lsa + offset); }
+	u128 read128(u32 lsa) const { return vm::ps3::read128(lsa + offset); }
 
 	void write8(u32 lsa, u8 data) const { vm::write8(lsa + offset, data); }
-	void write16(u32 lsa, u16 data) const { vm::write16(lsa + offset, data); }
-	void write32(u32 lsa, u32 data) const { vm::write32(lsa + offset, data); }
-	void write64(u32 lsa, u64 data) const { vm::write64(lsa + offset, data); }
-	void write128(u32 lsa, u128 data) const { vm::write128(lsa + offset, data); }
+	void write16(u32 lsa, u16 data) const { vm::ps3::write16(lsa + offset, data); }
+	void write32(u32 lsa, u32 data) const { vm::ps3::write32(lsa + offset, data); }
+	void write64(u32 lsa, u64 data) const { vm::ps3::write64(lsa + offset, data); }
+	void write128(u32 lsa, u128 data) const { vm::ps3::write128(lsa + offset, data); }
 
-	void write16(u32 lsa, be_t<u16> data) const { vm::write16(lsa + offset, data); }
-	void write32(u32 lsa, be_t<u32> data) const { vm::write32(lsa + offset, data); }
-	void write64(u32 lsa, be_t<u64> data) const { vm::write64(lsa + offset, data); }
-	void write128(u32 lsa, be_t<u128> data) const { vm::write128(lsa + offset, data); }
+	void write16(u32 lsa, be_t<u16> data) const { vm::ps3::write16(lsa + offset, data); }
+	void write32(u32 lsa, be_t<u32> data) const { vm::ps3::write32(lsa + offset, data); }
+	void write64(u32 lsa, be_t<u64> data) const { vm::ps3::write64(lsa + offset, data); }
+	void write128(u32 lsa, be_t<u128> data) const { vm::ps3::write128(lsa + offset, data); }
 
 	void RegisterHleFunction(u32 addr, std::function<bool(SPUThread & SPU)> function)
 	{
@@ -702,35 +702,11 @@ SPUThread& GetCurrentSPUThread();
 
 class spu_thread : cpu_thread
 {
-	static const u32 stack_align = 0x10;
-	vm::ptr<u64> argv;
-	u32 argc;
-	vm::ptr<u64> envp;
-
 public:
 	spu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);
 
 	cpu_thread& args(std::initializer_list<std::string> values) override
 	{
-		if (!values.size())
-			return *this;
-
-		assert(argc == 0);
-
-		envp.set(Memory.MainMem.AllocAlign((u32)sizeof(envp), stack_align));
-		*envp = 0;
-		argv.set(Memory.MainMem.AllocAlign(u32(sizeof(argv)* values.size()), stack_align));
-
-		for (auto &arg : values)
-		{
-			u32 arg_size = align(u32(arg.size() + 1), stack_align);
-			u32 arg_addr = (u32)Memory.MainMem.AllocAlign(arg_size, stack_align);
-
-			std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
-
-			argv[argc++] = arg_addr;
-		}
-
 		return *this;
 	}
 
@@ -739,10 +715,6 @@ public:
 		auto& spu = static_cast<SPUThread&>(*thread);
 
 		spu.Run();
-
-		spu.GPR[3].from64(argc);
-		spu.GPR[4].from64(argv.addr());
-		spu.GPR[5].from64(envp.addr());
 
 		return *this;
 	}

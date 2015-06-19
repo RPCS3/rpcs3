@@ -1,5 +1,8 @@
 #pragma once
+
 #include "Utilities/Thread.h"
+
+namespace vm { using namespace ps3; }
 
 #pragma pack(push, 4)
 

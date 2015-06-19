@@ -103,9 +103,6 @@ namespace vm
 		// default reference for PSV HLE structures (LE reference to LE data)
 		template<typename T> using lref = lrefl<T>;
 	}
-
-	//PS3 emulation is main now, so lets it be as default
-	using namespace ps3;
 }
 
 // postfix increment operator for vm::_ref_base

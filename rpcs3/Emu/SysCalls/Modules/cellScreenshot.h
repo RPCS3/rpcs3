@@ -1,3 +1,7 @@
+#pragma once
+
+namespace vm { using namespace ps3; }
+
 // Return Codes
 enum
 {
@@ -11,7 +15,7 @@ enum
 
 struct CellScreenShotSetParam
 {
-	const char *photo_title;
-	const char *game_title;
-	const char *game_comment;
+	vm::bcptr<char> photo_title;
+	vm::bcptr<char> game_title;
+	vm::bcptr<char> game_comment;
 };

@@ -1,13 +1,18 @@
 #pragma once
+
 #include "Emu/Memory/Memory.h"
 #include "ARMv7Context.h"
 #include "Emu/SysCalls/LogBase.h"
 
+namespace vm { using namespace psv; }
+
 // PSV module class
 class psv_log_base : public LogBase
 {
+	using init_func_t = void(*)();
+
 	std::string m_name;
-	void(*m_init_func)();
+	init_func_t m_init;
 
 public:
 	std::function<void()> on_load;
@@ -15,15 +20,15 @@ public:
 	std::function<void()> on_stop;
 
 public:
-	psv_log_base(const std::string& name, void(*init_func)())
+	psv_log_base(const std::string& name, init_func_t init)
 		: m_name(name)
-		, m_init_func(init_func)
+		, m_init(init)
 	{
 	}
 
 	void Init()
 	{
-		m_init_func();
+		m_init();
 	}
 
 	virtual const std::string& GetName() const override
@@ -140,7 +145,7 @@ namespace psv_func_detail
 		force_inline static T get_arg(ARMv7Context& context)
 		{
 			// TODO: check
-			return cast_from_armv7_gpr<T>(vm::psv::read32(context.SP + sizeof(u32) * (g_count - 5)));
+			return cast_from_armv7_gpr<T>(vm::read32(context.SP + sizeof(u32) * (g_count - 5)));
 		}
 
 		force_inline static void put_arg(ARMv7Context& context, const T& arg)
@@ -149,7 +154,7 @@ namespace psv_func_detail
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
 
-			vm::psv::write32(context.SP + stack_pos, cast_to_armv7_gpr<T>(arg));
+			vm::write32(context.SP + stack_pos, cast_to_armv7_gpr<T>(arg));
 		}
 	};
 
@@ -159,7 +164,7 @@ namespace psv_func_detail
 		force_inline static u64 get_arg(ARMv7Context& context)
 		{
 			// TODO: check
-			return vm::psv::read64(context.SP + sizeof(u32) * (g_count - 5));
+			return vm::read64(context.SP + sizeof(u32) * (g_count - 5));
 		}
 
 		force_inline static void put_arg(ARMv7Context& context, u64 arg)
@@ -168,7 +173,7 @@ namespace psv_func_detail
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < -4, "TODO: Increase fixed stack frame size (arg count limit broken)");
 
-			vm::psv::write64(context.SP + stack_pos, arg);
+			vm::write64(context.SP + stack_pos, arg);
 		}
 	};
 
@@ -178,7 +183,7 @@ namespace psv_func_detail
 		force_inline static s64 get_arg(ARMv7Context& context)
 		{
 			// TODO: check
-			return vm::psv::read64(context.SP + sizeof(u32) * (g_count - 5));
+			return vm::read64(context.SP + sizeof(u32) * (g_count - 5));
 		}
 
 		force_inline static void put_arg(ARMv7Context& context, s64 arg)
@@ -187,7 +192,7 @@ namespace psv_func_detail
 			const int stack_pos = (g_count - 5) * 4 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < -4, "TODO: Increase fixed stack frame size (arg count limit broken)");
 
-			vm::psv::write64(context.SP + stack_pos, arg);
+			vm::write64(context.SP + stack_pos, arg);
 		}
 	};
 
@@ -619,27 +624,34 @@ enum psv_error_codes
 
 struct SceDateTime
 {
-	u16 year;
-	u16 month;
-	u16 day;
-	u16 hour;
-	u16 minute;
-	u16 second;
-	u32 microsecond;
+	le_t<u16> year;
+	le_t<u16> month;
+	le_t<u16> day;
+	le_t<u16> hour;
+	le_t<u16> minute;
+	le_t<u16> second;
+	le_t<u32> microsecond;
 };
 
 struct SceFVector3
 {
-	float x, y, z;
+	le_t<float> x, y, z;
 };
 
 struct SceFQuaternion
 {
-	float x, y, z, w;
+	le_t<float> x, y, z, w;
 };
 
 union SceUMatrix4
 {
-	float f[4][4];
-	s32 i[4][4];
+	struct
+	{
+		le_t<float> f[4][4];
+	};
+
+	struct
+	{
+		le_t<s32>   i[4][4];
+	};
 };

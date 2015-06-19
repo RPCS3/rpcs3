@@ -6,6 +6,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Emu/SysCalls/Modules.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/lv2/sys_prx.h"
 #include "Emu/Cell/PPUInstrTable.h"
@@ -622,29 +623,39 @@ namespace loader
 				{
 					if (phdr.p_filesz)
 					{
-						const sys_process_param& proc_param = *(sys_process_param*)phdr.p_vaddr.get_ptr();
+						struct process_param_t
+						{
+							be_t<u32> size;
+							be_t<u32> magic;
+							be_t<u32> version;
+							be_t<u32> sdk_version;
+							be_t<s32> primary_prio;
+							be_t<u32> primary_stacksize;
+							be_t<u32> malloc_pagesize;
+							be_t<u32> ppc_seg;
+							//be_t<u32> crash_dump_param_addr;
+						};
 
-						if (proc_param.size < sizeof(sys_process_param))
+						const auto& info = *(process_param_t*)phdr.p_vaddr.get_ptr();
+
+						if (info.size < sizeof(process_param_t))
 						{
-							LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
+							LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, sizeof32(process_param_t));
 						}
-						if (proc_param.magic != 0x13bcc5f6)
+						if (info.magic != 0x13bcc5f6)
 						{
-							LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", proc_param.magic);
+							LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", info.magic);
 						}
 						else
 						{
-							sys_process_param_info& info = Emu.GetInfo().GetProcParam();
-							/*
 							LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
 							LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
 							LOG_NOTICE(LOADER, "*** primary stacksize: 0x%x", info.primary_stacksize);
 							LOG_NOTICE(LOADER, "*** malloc pagesize: 0x%x", info.malloc_pagesize);
 							LOG_NOTICE(LOADER, "*** ppc seg: 0x%x", info.ppc_seg);
 							//LOG_NOTICE(LOADER, "*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
-							*/
 
-							info = proc_param.info;
+							Emu.SetParams(info.sdk_version, info.malloc_pagesize, info.primary_stacksize, info.primary_prio);
 						}
 					}
 					break;
@@ -703,6 +714,10 @@ namespace loader
 						}
 					}
 					break;
+				}
+				default:
+				{
+					LOG_ERROR(LOADER, "Unknown phdr type (0x%08x)", phdr.p_type);
 				}
 				}
 			}

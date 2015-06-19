@@ -10,12 +10,13 @@
 #include "rpcs3/Ini.h"
 #include "Emu/FS/vfsFile.h"
 #include "Loader/PSF.h"
-#include "Emu/Audio/sysutil_audio.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Emu/RSX/GSManager.h"
 #include "Emu/Audio/AudioManager.h"
 #include "Emu/FS/VFS.h"
 #include "cellMsgDialog.h"
+#include "cellAudioIn.h"
+#include "cellAudioOut.h"
 #include "cellSysutil.h"
 
 extern Module cellSysutil;
@@ -479,21 +480,21 @@ int cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutStat
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-		state->state = Emu.GetAudioManager().GetState();
-		state->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		state->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
-		state->soundMode.type = Emu.GetAudioManager().GetInfo().mode.type;
-		state->soundMode.channel = Emu.GetAudioManager().GetInfo().mode.channel;
-		state->soundMode.fs = Emu.GetAudioManager().GetInfo().mode.fs;
+		state->state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+		state->encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		state->downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+		state->soundMode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		state->soundMode.channel = CELL_AUDIO_OUT_CHNUM_8;
+		state->soundMode.fs = CELL_AUDIO_OUT_FS_48KHZ;
 		state->soundMode.reserved = 0;
-		state->soundMode.layout = Emu.GetAudioManager().GetInfo().mode.layout;
+		state->soundMode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
 
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_AUDIO_OUT_SECONDARY:
 		state->state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
 
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
@@ -509,20 +510,20 @@ int cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration> confi
 	case CELL_AUDIO_OUT_PRIMARY:
 		if (config->channel)
 		{
-			Emu.GetAudioManager().GetInfo().mode.channel = config->channel;
+			//Emu.GetAudioManager().GetInfo().mode.channel = config->channel;
 		}
 
-		Emu.GetAudioManager().GetInfo().mode.encoder = config->encoder;
+		//Emu.GetAudioManager().GetInfo().mode.encoder = config->encoder;
 
 		if(config->downMixer)
 		{
-			Emu.GetAudioManager().GetInfo().mode.downMixer = config->downMixer;
+			//Emu.GetAudioManager().GetInfo().mode.downMixer = config->downMixer;
 		}
 
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
@@ -538,15 +539,15 @@ int cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	switch(audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY:
-		config->channel = Emu.GetAudioManager().GetInfo().mode.channel;
-		config->encoder = Emu.GetAudioManager().GetInfo().mode.encoder;
-		config->downMixer = Emu.GetAudioManager().GetInfo().mode.downMixer;
+		config->channel = CELL_AUDIO_OUT_CHNUM_8;
+		config->encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+		config->downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 
 	case CELL_AUDIO_OUT_SECONDARY:
 
-		return CELL_AUDIO_OUT_SUCCEEDED;
+		return CELL_OK;
 	}
 
 	return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
@@ -580,7 +581,7 @@ int cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOu
 	info->availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
 	info->availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
 
-	return CELL_AUDIO_OUT_SUCCEEDED;
+	return CELL_OK;
 }
 
 int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
@@ -606,7 +607,7 @@ int cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 		default: return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	return CELL_AUDIO_OUT_SUCCEEDED;
+	return CELL_OK;
 }
 
 

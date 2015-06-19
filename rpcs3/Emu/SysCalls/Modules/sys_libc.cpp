@@ -4,6 +4,8 @@
 #include "Emu/SysCalls/Modules.h"
 #include "Emu/Cell/PPUInstrTable.h"
 
+namespace vm { using namespace ps3; }
+
 extern Module sys_libc;
 
 namespace sys_libc_func

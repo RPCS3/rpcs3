@@ -26,38 +26,20 @@ struct VFS;
 struct EmuInfo
 {
 private:
-	u32 tls_addr;
-	u32 tls_filesz;
-	u32 tls_memsz;
+	friend class Emulator;
 
-	sys_process_param_info proc_param;
+	u32 m_tls_addr = 0;
+	u32 m_tls_filesz = 0;
+	u32 m_tls_memsz = 0;
+	u32 m_sdk_version = 0x360001;
+	u32 m_malloc_pagesize = 0x100000;
+	u32 m_primary_stacksize = 0x100000;
+	u32 m_primary_prio = 0x50;
 
 public:
-	EmuInfo() { Reset(); }
-
-	sys_process_param_info& GetProcParam() { return proc_param; }
-
-	void Reset()
+	EmuInfo()
 	{
-		SetTLSData(0, 0, 0);
-		memset(&proc_param, 0, sizeof(sys_process_param_info));
-
-		proc_param.malloc_pagesize = be_t<u32>::make(0x100000);
-		proc_param.sdk_version = be_t<u32>::make(0x360001);
-		proc_param.primary_stacksize = be_t<u32>::make(0x100000);
-		proc_param.primary_prio = be_t<s32>::make(0x50);
 	}
-
-	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
-	{
-		tls_addr = addr;
-		tls_filesz = filesz;
-		tls_memsz = memsz;
-	}
-
-	u32 GetTLSAddr() const { return tls_addr; }
-	u32 GetTLSFilesz() const { return tls_filesz; }
-	u32 GetTLSMemsz() const { return tls_memsz; }
 };
 
 class Emulator
@@ -151,9 +133,25 @@ public:
 	EventManager&     GetEventManager()    { return *m_event_manager; }
 	ModuleManager&    GetModuleManager()   { return *m_module_manager; }
 
+	void ResetInfo()
+	{
+		m_info.~EmuInfo();
+		new (&m_info) EmuInfo();
+	}
+
 	void SetTLSData(u32 addr, u32 filesz, u32 memsz)
 	{
-		m_info.SetTLSData(addr, filesz, memsz);
+		m_info.m_tls_addr = addr;
+		m_info.m_tls_filesz = filesz;
+		m_info.m_tls_memsz = memsz;
+	}
+
+	void SetParams(u32 sdk_ver, u32 malloc_pagesz, u32 stacksz, u32 prio)
+	{
+		m_info.m_sdk_version = sdk_ver;
+		m_info.m_malloc_pagesize = malloc_pagesz;
+		m_info.m_primary_stacksize = stacksz;
+		m_info.m_primary_prio = prio;
 	}
 
 	void SetRSXCallback(u32 addr)
@@ -166,14 +164,14 @@ public:
 		m_cpu_thr_stop = addr;
 	}
 
-	EmuInfo& GetInfo() { return m_info; }
+	u32 GetTLSAddr() const { return m_info.m_tls_addr; }
+	u32 GetTLSFilesz() const { return m_info.m_tls_filesz; }
+	u32 GetTLSMemsz() const { return m_info.m_tls_memsz; }
 
-	u32 GetTLSAddr() const { return m_info.GetTLSAddr(); }
-	u32 GetTLSFilesz() const { return m_info.GetTLSFilesz(); }
-	u32 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
-
-	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
-	u32 GetSDKVersion() { return m_info.GetProcParam().sdk_version; }
+	u32 GetMallocPageSize() { return m_info.m_malloc_pagesize; }
+	u32 GetSDKVersion() { return m_info.m_sdk_version; }
+	u32 GetPrimaryStackSize() { return m_info.m_primary_stacksize; }
+	u32 GetPrimaryPrio() { return m_info.m_primary_prio; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
 	u32 GetCPUThreadStop() const { return m_cpu_thr_stop; }

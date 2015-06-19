@@ -7,6 +7,7 @@
 
 //#include "Emu/RSX/GCM.h"
 #include "Emu/RSX/GSManager.h"
+#include "Emu/RSX/GSRender.h"
 //#include "Emu/SysCalls/lv2/sys_process.h"
 #include "cellGcmSys.h"
 

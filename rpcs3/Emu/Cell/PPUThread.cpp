@@ -751,8 +751,8 @@ ppu_thread::ppu_thread(u32 entry, const std::string& name, u32 stack_size, u32 p
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
-	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
-	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetPrimaryStackSize());
+	thread->SetPrio(prio ? prio : Emu.GetPrimaryPrio());
 
 	argc = 0;
 }
@@ -764,14 +764,14 @@ cpu_thread& ppu_thread::args(std::initializer_list<std::string> values)
 
 	assert(argc == 0);
 
-	envp.set(vm::alloc(align((u32)sizeof(*envp), stack_align), vm::main));
+	envp.set(vm::alloc(align(sizeof32(u64), stack_align), vm::main));
 	*envp = 0;
-	argv.set(vm::alloc(sizeof(*argv) * values.size(), vm::main));
+	argv.set(vm::alloc(sizeof32(u64) * (u32)values.size(), vm::main));
 
 	for (auto &arg : values)
 	{
-		u32 arg_size = align(u32(arg.size() + 1), stack_align);
-		u32 arg_addr = vm::alloc(arg_size, vm::main);
+		const u32 arg_size = align(u32(arg.size() + 1), stack_align);
+		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::strcpy(vm::get_ptr<char>(arg_addr), arg.c_str());
 

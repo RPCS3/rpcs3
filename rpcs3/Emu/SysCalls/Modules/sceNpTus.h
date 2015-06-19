@@ -1,4 +1,7 @@
 #pragma once
+
+namespace vm { using namespace ps3; }
+
 #include "cellRtc.h"
 
 // Constants for TUS functions and structures

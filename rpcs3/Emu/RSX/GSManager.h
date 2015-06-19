@@ -1,5 +1,6 @@
 #pragma once
-#include "GSRender.h"
+
+struct GSRender;
 
 struct GSInfo
 {
@@ -13,7 +14,6 @@ struct GSInfo
 		u16 refreshRates;
 		u32 pitch;
 	} mode;
-	//CellVideoOutDisplayMode mode;
 
 	GSInfo()
 	{

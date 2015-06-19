@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum
 {
 	CELL_SYSUTIL_ERROR_TYPE   = 0x8002b101,
@@ -217,4 +219,40 @@ struct CellWebBrowserConfig2
 	CellWebBrowserRect rect;
 	be_t<float> resolution_factor;
 	be_t<s32> magic_number_;
+};
+
+enum CellSysutilBgmPlaybackStatusState
+{
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_PLAY = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP = 1
+};
+
+enum CellSysutilBgmPlaybackStatusEnabled
+{
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_ENABLE = 0,
+	CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE = 1
+};
+
+struct CellSysutilBgmPlaybackStatus
+{
+	u8 playerState;
+	u8 enableState;
+	char contentId[16];
+	u8 currentFadeRatio;
+	char reserved[13];
+};
+
+struct CellSysutilBgmPlaybackStatus2
+{
+	u8 playerState;
+	char reserved[7];
+};
+
+struct CellSysutilBgmPlaybackExtraParam
+{
+	be_t<s32> systemBgmFadeInTime;
+	be_t<s32> systemBgmFadeOutTime;
+	be_t<s32> gameBgmFadeInTime;
+	be_t<s32> gameBgmFadeOutTime;
+	char reserved[8];
 };

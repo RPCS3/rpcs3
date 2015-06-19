@@ -4,8 +4,6 @@
 #include "Emu/System.h"
 #include "Utilities/File.h"
 
-#include "Emu/SysCalls/lv2/sys_time.h"
-
 #include "SPUInstrTable.h"
 #include "SPUDisAsm.h"
 
@@ -19,6 +17,8 @@
 
 using namespace asmjit;
 using namespace asmjit::host;
+
+extern u64 get_system_time();
 
 SPURecompilerCore::SPURecompilerCore(SPUThread& cpu)
 	: m_enc(new SPURecompiler(cpu, *this))
@@ -95,7 +95,7 @@ void SPURecompilerCore::Compile(u16 pos)
 
 	while (true)
 	{
-		const u32 opcode = vm::read32(CPU.offset + pos * 4);
+		const u32 opcode = vm::ps3::read32(CPU.offset + pos * 4);
 		m_enc->do_finalize = false;
 		if (opcode)
 		{

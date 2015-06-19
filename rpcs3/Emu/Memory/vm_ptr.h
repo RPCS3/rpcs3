@@ -184,9 +184,6 @@ namespace vm
 		template<typename T> using lcptr = lptr<const T>;
 	}
 
-	// PS3 emulation is main now, so lets it be as default
-	using namespace ps3;
-
 	struct null_t
 	{
 		template<typename T, typename AT> operator _ptr_base<T, AT>() const

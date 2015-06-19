@@ -143,7 +143,6 @@
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp" />
-    <ClCompile Include="Emu\Cell\SPURSManager.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThreadManager.cpp" />
@@ -174,7 +173,6 @@
     <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\RSX\GSManager.cpp" />
     <ClCompile Include="Emu\RSX\GSRender.cpp" />
-    <ClCompile Include="Emu\RSX\RSXDMA.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
@@ -379,7 +377,6 @@
     <ClInclude Include="Emu\Cell\SPUInterpreter2.h" />
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\SPURecompiler.h" />
-    <ClInclude Include="Emu\Cell\SPURSManager.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
     <ClInclude Include="Emu\CPU\CPUDecoder.h" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
@@ -432,7 +429,6 @@
     <ClInclude Include="Emu\RSX\GSManager.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
-    <ClInclude Include="Emu\RSX\RSXDMA.h" />
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
     <ClInclude Include="Emu\RSX\RSXThread.h" />
@@ -474,6 +470,8 @@
     <ClInclude Include="Emu\SysCalls\Modules\cellAdec.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAtrac.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellAudio.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h" />
+    <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellCamera.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellDmux.h" />
     <ClInclude Include="Emu\SysCalls\Modules\cellFiber.h" />

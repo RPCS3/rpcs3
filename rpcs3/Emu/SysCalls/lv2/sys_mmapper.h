@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 #define SYS_MMAPPER_FIXED_ADDR              0xB0000000
 #define SYS_MMAPPER_FIXED_SIZE              0x10000000
 

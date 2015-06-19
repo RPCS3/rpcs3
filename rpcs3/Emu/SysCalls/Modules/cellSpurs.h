@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // Core return codes.
 enum
 {
@@ -292,11 +294,6 @@ struct CellSpursAttribute
 			be_t<u32> swlMaxSpu;   // 0x40
 			be_t<u32> swlIsPreem;  // 0x44
 		} m;
-
-		// alternative implementation
-		struct
-		{
-		} c;
 	};
 };
 
@@ -520,12 +517,6 @@ struct CellSpurs
 			_sub_str1 wklF2[0x10]; // 0x1200
 			_sub_str4 wklH2[0x10]; // 0x1A00
 		} m;
-
-		// alternative implementation
-		struct
-		{
-			SPURSManager *spurs;
-		} c;
 	};
 
 	force_inline atomic_be_t<u8>& wklState(const u32 wid)
@@ -614,8 +605,6 @@ struct CellSpursEventFlag
 			be_t<u32> eventPortId;               // 0x78
 			be_t<u32> eventQueueId;              // 0x7C
 		} m;
-
-		SPURSManagerEventFlag *eventFlag;
 	};
 };
 
@@ -679,8 +668,6 @@ struct CellSpursTaskset
 			u32 event_flag_id2;                          // 0x189C
 			u8 unk3[0x60];                               // 0x18A0
 		} m;
-
-		SPURSManagerTaskset *taskset;
 	};
 };
 

@@ -1219,8 +1219,6 @@ spu_thread::spu_thread(u32 entry, const std::string& name, u32 stack_size, u32 p
 
 	thread->SetName(name);
 	thread->SetEntry(entry);
-	thread->SetStackSize(stack_size ? stack_size : Emu.GetInfo().GetProcParam().primary_stacksize);
-	thread->SetPrio(prio ? prio : Emu.GetInfo().GetProcParam().primary_prio);
-
-	argc = 0;
+	thread->SetStackSize(stack_size ? stack_size : Emu.GetPrimaryStackSize());
+	thread->SetPrio(prio ? prio : Emu.GetPrimaryPrio());
 }

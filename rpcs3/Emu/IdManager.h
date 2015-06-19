@@ -63,7 +63,7 @@ public:
 	}
 
 	// must be called from the constructor called through make() to get further ID of current object
-	u32 get_cur_id()
+	u32 get_current_id()
 	{
 		// if called correctly from make(), the mutex is locked
 		// if called illegally, the mutex is unlocked with high probability (wrong ID is returned otherwise)

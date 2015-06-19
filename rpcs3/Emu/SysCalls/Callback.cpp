@@ -9,28 +9,24 @@
 
 void CallbackManager::Register(const std::function<s32(PPUThread& PPU)>& func)
 {
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
-		m_cb_list.push_back([=](CPUThread& CPU) -> s32
-		{
-			assert(CPU.GetType() == CPU_THREAD_PPU);
-			return func(static_cast<PPUThread&>(CPU));
-		});
-	}
+	m_cb_list.push_back([=](CPUThread& CPU) -> s32
+	{
+		assert(CPU.GetType() == CPU_THREAD_PPU);
+		return func(static_cast<PPUThread&>(CPU));
+	});
 }
 
 void CallbackManager::Async(const std::function<void(PPUThread& PPU)>& func)
 {
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
-		m_async_list.push_back([=](CPUThread& CPU)
-		{
-			assert(CPU.GetType() == CPU_THREAD_PPU);
-			func(static_cast<PPUThread&>(CPU));
-		});
-	}
+	m_async_list.push_back([=](CPUThread& CPU)
+	{
+		assert(CPU.GetType() == CPU_THREAD_PPU);
+		func(static_cast<PPUThread&>(CPU));
+	});
 
 	m_cv.notify_one();
 }

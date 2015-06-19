@@ -353,9 +353,6 @@
     <ClCompile Include="Emu\Cell\SPURecompilerCore.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\SPURSManager.cpp">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
       <Filter>Emu\CPU\Cell</Filter>
     </ClCompile>
@@ -573,9 +570,6 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXDMA.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
@@ -1162,9 +1156,6 @@
     <ClInclude Include="Emu\Cell\SPURecompiler.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\SPURSManager.h">
-      <Filter>Emu\CPU\Cell</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Cell\SPUThread.h">
       <Filter>Emu\CPU\Cell</Filter>
     </ClInclude>
@@ -1364,9 +1355,6 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSRender.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXDMA.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXFragmentProgram.h">
@@ -1572,6 +1560,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h">
       <Filter>Emu\GPU\RSX\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellAudioIn.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\Modules\cellAudioOut.h">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

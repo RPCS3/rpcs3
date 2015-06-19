@@ -33,7 +33,7 @@ s32 UTF16stoUTF8s(vm::ptr<const char16_t> utf16, vm::ref<u32> utf16_len, vm::ptr
 		//	return SRCIllegal;
 		//}
 
-		if (utf8)
+		if (utf8 != vm::null)
 		{
 			if (len > max_len)
 			{

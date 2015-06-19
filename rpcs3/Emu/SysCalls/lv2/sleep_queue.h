@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // attr_protocol (waiting scheduling policy)
 enum
 {

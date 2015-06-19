@@ -828,9 +828,9 @@ PPUThread& GetCurrentPPUThread();
 class ppu_thread : cpu_thread
 {
 	static const u32 stack_align = 0x10;
-	vm::ptr<u64> argv;
+	vm::_ptr_base<be_t<u64>> argv;
 	u32 argc;
-	vm::ptr<u64> envp;
+	vm::_ptr_base<be_t<u64>> envp;
 
 public:
 	ppu_thread(u32 entry, const std::string& name = "", u32 stack_size = 0, u32 prio = 0);

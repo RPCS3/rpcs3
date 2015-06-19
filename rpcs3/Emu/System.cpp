@@ -5,8 +5,6 @@
 #include "Emu/System.h"
 
 #include "Emu/GameInfo.h"
-#include "Emu/ARMv7/PSVFuncList.h"
-#include "Emu/ARMv7/PSVObjectList.h"
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -40,6 +38,9 @@ static const u16 bpdb_version = 0x1000;
 extern std::atomic<u32> g_thread_count;
 
 extern void finalize_ppu_exec_map();
+
+extern void finalize_psv_modules();
+extern void clear_all_psv_objects();
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -219,7 +220,7 @@ void Emulator::Load()
 	}
 
 	LOG_NOTICE(LOADER, "Loading '%s'...", m_path.c_str());
-	GetInfo().Reset();
+	ResetInfo();
 	GetVFS().Init(elf_dir);
 
 	// /dev_bdvd/ mounting

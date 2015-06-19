@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum : u32
 {
 	SYS_MEMORY_CONTAINER_ID_INVALID = 0xFFFFFFFF,

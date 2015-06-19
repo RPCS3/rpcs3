@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum
 {
 	SYS_SYNC_WAITER_SINGLE = 0x10000,

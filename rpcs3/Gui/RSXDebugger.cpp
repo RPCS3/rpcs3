@@ -8,6 +8,7 @@
 #include "RSXDebugger.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "Emu/RSX/GSManager.h"
+#include "Emu/RSX/GSRender.h"
 //#include "Emu/RSX/GCM.h"
 
 #include "MemoryViewer.h"

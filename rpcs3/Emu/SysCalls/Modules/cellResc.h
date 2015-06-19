@@ -3,6 +3,8 @@
 #define roundup(x,a) (((x)+(a)-1)&(~((a)-1)))
 #define SEVIRITY 80.f
 
+namespace vm { using namespace ps3; }
+
 #include "Emu/RSX/GCM.h"
 
 enum

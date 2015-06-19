@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Modules.h"
 #include "ModuleManager.h"
 
 extern Module cellAdec;

@@ -1,4 +1,7 @@
 #pragma once
+
+namespace vm { using namespace ps3; }
+
 #include "cellPng.h"
 
 enum : u32

@@ -15,7 +15,7 @@
 
 #define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 
-s32 sceKernelAllocMemBlock(vm::psv::ptr<const char> name, s32 type, u32 vsize, vm::psv::ptr<SceKernelAllocMemBlockOpt> pOpt)
+s32 sceKernelAllocMemBlock(vm::ptr<const char> name, s32 type, u32 vsize, vm::ptr<SceKernelAllocMemBlockOpt> pOpt)
 {
 	throw __FUNCTION__;
 }
@@ -25,24 +25,24 @@ s32 sceKernelFreeMemBlock(s32 uid)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetMemBlockBase(s32 uid, vm::psv::pptr<void> ppBase)
+s32 sceKernelGetMemBlockBase(s32 uid, vm::pptr<void> ppBase)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetMemBlockInfoByAddr(vm::psv::ptr<void> vbase, vm::psv::ptr<SceKernelMemBlockInfo> pInfo)
+s32 sceKernelGetMemBlockInfoByAddr(vm::ptr<void> vbase, vm::ptr<SceKernelMemBlockInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceKernelCreateThread(
-	vm::psv::ptr<const char> pName,
-	vm::psv::ptr<SceKernelThreadEntry> entry,
+	vm::ptr<const char> pName,
+	vm::ptr<SceKernelThreadEntry> entry,
 	s32 initPriority,
 	u32 stackSize,
 	u32 attr,
 	s32 cpuAffinityMask,
-	vm::psv::ptr<const SceKernelThreadOptParam> pOptParam)
+	vm::ptr<const SceKernelThreadOptParam> pOptParam)
 {
 	sceLibKernel.Warning("sceKernelCreateThread(pName=*0x%x, entry=*0x%x, initPriority=%d, stackSize=0x%x, attr=0x%x, cpuAffinityMask=0x%x, pOptParam=*0x%x)",
 		pName, entry, initPriority, stackSize, attr, cpuAffinityMask, pOptParam);
@@ -60,7 +60,7 @@ s32 sceKernelCreateThread(
 	return armv7.GetId();
 }
 
-s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::psv::ptr<const void> pArgBlock)
+s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::ptr<const void> pArgBlock)
 {
 	sceLibKernel.Warning("sceKernelStartThread(threadId=0x%x, argSize=0x%x, pArgBlock=*0x%x)", threadId, argSize, pArgBlock);
 
@@ -183,7 +183,7 @@ s32 sceKernelChangeCurrentThreadAttr(u32 clearAttr, u32 setAttr)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetThreadExitStatus(s32 threadId, vm::psv::ptr<s32> pExitStatus)
+s32 sceKernelGetThreadExitStatus(s32 threadId, vm::ptr<s32> pExitStatus)
 {
 	sceLibKernel.Todo("sceKernelGetThreadExitStatus(threadId=0x%x, pExitStatus=*0x%x)", threadId, pExitStatus);
 
@@ -204,21 +204,21 @@ s32 sceKernelCheckWaitableStatus()
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetThreadInfo(s32 threadId, vm::psv::ptr<SceKernelThreadInfo> pInfo)
+s32 sceKernelGetThreadInfo(s32 threadId, vm::ptr<SceKernelThreadInfo> pInfo)
 {
 	sceLibKernel.Todo("sceKernelGetThreadInfo(threadId=0x%x, pInfo=*0x%x)", threadId, pInfo);
 
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetThreadRunStatus(vm::psv::ptr<SceKernelThreadRunStatus> pStatus)
+s32 sceKernelGetThreadRunStatus(vm::ptr<SceKernelThreadRunStatus> pStatus)
 {
 	sceLibKernel.Todo("sceKernelGetThreadRunStatus(pStatus=*0x%x)", pStatus);
 
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetSystemInfo(vm::psv::ptr<SceKernelSystemInfo> pInfo)
+s32 sceKernelGetSystemInfo(vm::ptr<SceKernelSystemInfo> pInfo)
 {
 	sceLibKernel.Todo("sceKernelGetSystemInfo(pInfo=*0x%x)", pInfo);
 
@@ -260,7 +260,7 @@ s32 sceKernelDelayThreadCB(u32 usec)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.Warning("sceKernelWaitThreadEnd(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
@@ -295,7 +295,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv:
 	return SCE_OK;
 }
 
-s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitThreadEndCB(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.Todo("sceKernelWaitThreadEndCB(threadId=0x%x, pExitStatus=*0x%x, pTimeout=*0x%x)", threadId, pExitStatus, pTimeout);
 
@@ -304,7 +304,7 @@ s32 sceKernelWaitThreadEndCB(s32 threadId, vm::psv::ptr<s32> pExitStatus, vm::ps
 
 // Callback functions
 
-s32 sceKernelCreateCallback(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<SceKernelCallbackFunction> callbackFunc, vm::psv::ptr<void> pCommon)
+s32 sceKernelCreateCallback(vm::ptr<const char> pName, u32 attr, vm::ptr<SceKernelCallbackFunction> callbackFunc, vm::ptr<void> pCommon)
 {
 	throw __FUNCTION__;
 }
@@ -334,7 +334,7 @@ s32 sceKernelCheckCallback()
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetCallbackInfo(s32 callbackId, vm::psv::ptr<SceKernelCallbackInfo> pInfo)
+s32 sceKernelGetCallbackInfo(s32 callbackId, vm::ptr<SceKernelCallbackInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
@@ -356,44 +356,44 @@ s32 sceKernelUnregisterCallbackFromEventAll(s32 eventId)
 
 // Event functions
 
-s32 sceKernelWaitEvent(s32 eventId, u32 waitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitEvent(s32 eventId, u32 waitPattern, vm::ptr<u32> pResultPattern, vm::ptr<u64> pUserData, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitEventCB(s32 eventId, u32 waitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitEventCB(s32 eventId, u32 waitPattern, vm::ptr<u32> pResultPattern, vm::ptr<u64> pUserData, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelPollEvent(s32 eventId, u32 bitPattern, vm::psv::ptr<u32> pResultPattern, vm::psv::ptr<u64> pUserData)
+s32 sceKernelPollEvent(s32 eventId, u32 bitPattern, vm::ptr<u32> pResultPattern, vm::ptr<u64> pUserData)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelEvent(s32 eventId, vm::psv::ptr<s32> pNumWaitThreads)
+s32 sceKernelCancelEvent(s32 eventId, vm::ptr<s32> pNumWaitThreads)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetEventInfo(s32 eventId, vm::psv::ptr<SceKernelEventInfo> pInfo)
+s32 sceKernelGetEventInfo(s32 eventId, vm::ptr<SceKernelEventInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitMultipleEvents(vm::psv::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::psv::ptr<SceKernelResultEvent> pResultEventList, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitMultipleEvents(vm::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::ptr<SceKernelResultEvent> pResultEventList, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitMultipleEventsCB(vm::psv::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::psv::ptr<SceKernelResultEvent> pResultEventList, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitMultipleEventsCB(vm::ptr<SceKernelWaitEvent> pWaitEventList, s32 numEvents, u32 waitMode, vm::ptr<SceKernelResultEvent> pResultEventList, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
 // Event flag functions
 
-s32 sceKernelCreateEventFlag(vm::psv::ptr<const char> pName, u32 attr, u32 initPattern, vm::psv::ptr<const SceKernelEventFlagOptParam> pOptParam)
+s32 sceKernelCreateEventFlag(vm::ptr<const char> pName, u32 attr, u32 initPattern, vm::ptr<const SceKernelEventFlagOptParam> pOptParam)
 {
 	sceLibKernel.Error("sceKernelCreateEventFlag(pName=*0x%x, attr=0x%x, initPattern=0x%x, pOptParam=*0x%x)", pName, attr, initPattern, pOptParam);
 
@@ -410,7 +410,7 @@ s32 sceKernelDeleteEventFlag(s32 evfId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelOpenEventFlag(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenEventFlag(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -420,17 +420,17 @@ s32 sceKernelCloseEventFlag(s32 evfId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitEventFlagCB(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitEventFlagCB(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::psv::ptr<u32> pResultPat)
+s32 sceKernelPollEventFlag(s32 evfId, u32 bitPattern, u32 waitMode, vm::ptr<u32> pResultPat)
 {
 	throw __FUNCTION__;
 }
@@ -445,19 +445,19 @@ s32 sceKernelClearEventFlag(s32 evfId, u32 bitPattern)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::psv::ptr<s32> pNumWaitThreads)
+s32 sceKernelCancelEventFlag(s32 evfId, u32 setPattern, vm::ptr<s32> pNumWaitThreads)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetEventFlagInfo(s32 evfId, vm::psv::ptr<SceKernelEventFlagInfo> pInfo)
+s32 sceKernelGetEventFlagInfo(s32 evfId, vm::ptr<SceKernelEventFlagInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Semaphore functions
 
-s32 sceKernelCreateSema(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, s32 maxCount, vm::psv::ptr<const SceKernelSemaOptParam> pOptParam)
+s32 sceKernelCreateSema(vm::ptr<const char> pName, u32 attr, s32 initCount, s32 maxCount, vm::ptr<const SceKernelSemaOptParam> pOptParam)
 {
 	sceLibKernel.Error("sceKernelCreateSema(pName=*0x%x, attr=0x%x, initCount=%d, maxCount=%d, pOptParam=*0x%x)", pName, attr, initCount, maxCount, pOptParam);
 
@@ -488,7 +488,7 @@ s32 sceKernelDeleteSema(s32 semaId)
 	return SCE_OK;
 }
 
-s32 sceKernelOpenSema(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenSema(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -498,7 +498,7 @@ s32 sceKernelCloseSema(s32 semaId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 {
 	sceLibKernel.Error("sceKernelWaitSema(semaId=0x%x, needCount=%d, pTimeout=*0x%x)", semaId, needCount, pTimeout);
 
@@ -514,7 +514,7 @@ s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
 	return SCE_OK;
 }
 
-s32 sceKernelWaitSemaCB(s32 semaId, s32 needCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitSemaCB(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
@@ -529,19 +529,19 @@ s32 sceKernelSignalSema(s32 semaId, s32 signalCount)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelSema(s32 semaId, s32 setCount, vm::psv::ptr<s32> pNumWaitThreads)
+s32 sceKernelCancelSema(s32 semaId, s32 setCount, vm::ptr<s32> pNumWaitThreads)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetSemaInfo(s32 semaId, vm::psv::ptr<SceKernelSemaInfo> pInfo)
+s32 sceKernelGetSemaInfo(s32 semaId, vm::ptr<SceKernelSemaInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Mutex functions
 
-s32 sceKernelCreateMutex(vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelMutexOptParam> pOptParam)
+s32 sceKernelCreateMutex(vm::ptr<const char> pName, u32 attr, s32 initCount, vm::ptr<const SceKernelMutexOptParam> pOptParam)
 {
 	sceLibKernel.Error("sceKernelCreateMutex(pName=*0x%x, attr=0x%x, initCount=%d, pOptParam=*0x%x)", pName, attr, initCount, pOptParam);
 
@@ -558,7 +558,7 @@ s32 sceKernelDeleteMutex(s32 mutexId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelOpenMutex(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenMutex(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -568,12 +568,12 @@ s32 sceKernelCloseMutex(s32 mutexId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockMutex(s32 mutexId, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockMutex(s32 mutexId, s32 lockCount, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockMutexCB(s32 mutexId, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockMutexCB(s32 mutexId, s32 lockCount, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
@@ -588,61 +588,61 @@ s32 sceKernelUnlockMutex(s32 mutexId, s32 unlockCount)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelMutex(s32 mutexId, s32 newCount, vm::psv::ptr<s32> pNumWaitThreads)
+s32 sceKernelCancelMutex(s32 mutexId, s32 newCount, vm::ptr<s32> pNumWaitThreads)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetMutexInfo(s32 mutexId, vm::psv::ptr<SceKernelMutexInfo> pInfo)
+s32 sceKernelGetMutexInfo(s32 mutexId, vm::ptr<SceKernelMutexInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Lightweight mutex functions
 
-s32 sceKernelCreateLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, vm::psv::ptr<const char> pName, u32 attr, s32 initCount, vm::psv::ptr<const SceKernelLwMutexOptParam> pOptParam)
+s32 sceKernelCreateLwMutex(vm::ptr<SceKernelLwMutexWork> pWork, vm::ptr<const char> pName, u32 attr, s32 initCount, vm::ptr<const SceKernelLwMutexOptParam> pOptParam)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelDeleteLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork)
+s32 sceKernelDeleteLwMutex(vm::ptr<SceKernelLwMutexWork> pWork)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockLwMutex(vm::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockLwMutexCB(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockLwMutexCB(vm::ptr<SceKernelLwMutexWork> pWork, s32 lockCount, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelTryLockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 lockCount)
+s32 sceKernelTryLockLwMutex(vm::ptr<SceKernelLwMutexWork> pWork, s32 lockCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelUnlockLwMutex(vm::psv::ptr<SceKernelLwMutexWork> pWork, s32 unlockCount)
+s32 sceKernelUnlockLwMutex(vm::ptr<SceKernelLwMutexWork> pWork, s32 unlockCount)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetLwMutexInfo(vm::psv::ptr<SceKernelLwMutexWork> pWork, vm::psv::ptr<SceKernelLwMutexInfo> pInfo)
+s32 sceKernelGetLwMutexInfo(vm::ptr<SceKernelLwMutexWork> pWork, vm::ptr<SceKernelLwMutexInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::psv::ptr<SceKernelLwMutexInfo> pInfo)
+s32 sceKernelGetLwMutexInfoById(s32 lwMutexId, vm::ptr<SceKernelLwMutexInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Condition variable functions
 
-s32 sceKernelCreateCond(vm::psv::ptr<const char> pName, u32 attr, s32 mutexId, vm::psv::ptr<const SceKernelCondOptParam> pOptParam)
+s32 sceKernelCreateCond(vm::ptr<const char> pName, u32 attr, s32 mutexId, vm::ptr<const SceKernelCondOptParam> pOptParam)
 {
 	sceLibKernel.Error("sceKernelCreateCond(pName=*0x%x, attr=0x%x, mutexId=0x%x, pOptParam=*0x%x)", pName, attr, mutexId, pOptParam);
 
@@ -659,7 +659,7 @@ s32 sceKernelDeleteCond(s32 condId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelOpenCond(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenCond(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -669,12 +669,12 @@ s32 sceKernelCloseCond(s32 condId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitCond(s32 condId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitCond(s32 condId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitCondCB(s32 condId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitCondCB(s32 condId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
@@ -694,61 +694,61 @@ s32 sceKernelSignalCondTo(s32 condId, s32 threadId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetCondInfo(s32 condId, vm::psv::ptr<SceKernelCondInfo> pInfo)
+s32 sceKernelGetCondInfo(s32 condId, vm::ptr<SceKernelCondInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Lightweight condition variable functions
 
-s32 sceKernelCreateLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<SceKernelLwMutexWork> pLwMutex, vm::psv::ptr<const SceKernelLwCondOptParam> pOptParam)
+s32 sceKernelCreateLwCond(vm::ptr<SceKernelLwCondWork> pWork, vm::ptr<const char> pName, u32 attr, vm::ptr<SceKernelLwMutexWork> pLwMutex, vm::ptr<const SceKernelLwCondOptParam> pOptParam)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelDeleteLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork)
+s32 sceKernelDeleteLwCond(vm::ptr<SceKernelLwCondWork> pWork)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitLwCond(vm::ptr<SceKernelLwCondWork> pWork, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelWaitLwCondCB(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelWaitLwCondCB(vm::ptr<SceKernelLwCondWork> pWork, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelSignalLwCond(vm::psv::ptr<SceKernelLwCondWork> pWork)
+s32 sceKernelSignalLwCond(vm::ptr<SceKernelLwCondWork> pWork)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelSignalLwCondAll(vm::psv::ptr<SceKernelLwCondWork> pWork)
+s32 sceKernelSignalLwCondAll(vm::ptr<SceKernelLwCondWork> pWork)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelSignalLwCondTo(vm::psv::ptr<SceKernelLwCondWork> pWork, s32 threadId)
+s32 sceKernelSignalLwCondTo(vm::ptr<SceKernelLwCondWork> pWork, s32 threadId)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetLwCondInfo(vm::psv::ptr<SceKernelLwCondWork> pWork, vm::psv::ptr<SceKernelLwCondInfo> pInfo)
+s32 sceKernelGetLwCondInfo(vm::ptr<SceKernelLwCondWork> pWork, vm::ptr<SceKernelLwCondInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetLwCondInfoById(s32 lwCondId, vm::psv::ptr<SceKernelLwCondInfo> pInfo)
+s32 sceKernelGetLwCondInfoById(s32 lwCondId, vm::ptr<SceKernelLwCondInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Time functions
 
-s32 sceKernelGetSystemTime(vm::psv::ptr<SceKernelSysClock> pClock)
+s32 sceKernelGetSystemTime(vm::ptr<SceKernelSysClock> pClock)
 {
 	throw __FUNCTION__;
 }
@@ -765,7 +765,7 @@ u32 sceKernelGetSystemTimeLow()
 
 // Timer functions
 
-s32 sceKernelCreateTimer(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<const SceKernelTimerOptParam> pOptParam)
+s32 sceKernelCreateTimer(vm::ptr<const char> pName, u32 attr, vm::ptr<const SceKernelTimerOptParam> pOptParam)
 {
 	throw __FUNCTION__;
 }
@@ -775,7 +775,7 @@ s32 sceKernelDeleteTimer(s32 timerId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelOpenTimer(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenTimer(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -795,7 +795,7 @@ s32 sceKernelStopTimer(s32 timerId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetTimerBase(s32 timerId, vm::psv::ptr<SceKernelSysClock> pBase)
+s32 sceKernelGetTimerBase(s32 timerId, vm::ptr<SceKernelSysClock> pBase)
 {
 	throw __FUNCTION__;
 }
@@ -805,7 +805,7 @@ u64 sceKernelGetTimerBaseWide(s32 timerId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetTimerTime(s32 timerId, vm::psv::ptr<SceKernelSysClock> pClock)
+s32 sceKernelGetTimerTime(s32 timerId, vm::ptr<SceKernelSysClock> pClock)
 {
 	throw __FUNCTION__;
 }
@@ -815,7 +815,7 @@ u64 sceKernelGetTimerTimeWide(s32 timerId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelSetTimerTime(s32 timerId, vm::psv::ptr<SceKernelSysClock> pClock)
+s32 sceKernelSetTimerTime(s32 timerId, vm::ptr<SceKernelSysClock> pClock)
 {
 	throw __FUNCTION__;
 }
@@ -825,24 +825,24 @@ u64 sceKernelSetTimerTimeWide(s32 timerId, u64 clock)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelSetTimerEvent(s32 timerId, s32 type, vm::psv::ptr<SceKernelSysClock> pInterval, s32 fRepeat)
+s32 sceKernelSetTimerEvent(s32 timerId, s32 type, vm::ptr<SceKernelSysClock> pInterval, s32 fRepeat)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelTimer(s32 timerId, vm::psv::ptr<s32> pNumWaitThreads)
+s32 sceKernelCancelTimer(s32 timerId, vm::ptr<s32> pNumWaitThreads)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetTimerInfo(s32 timerId, vm::psv::ptr<SceKernelTimerInfo> pInfo)
+s32 sceKernelGetTimerInfo(s32 timerId, vm::ptr<SceKernelTimerInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // Reader/writer lock functions
 
-s32 sceKernelCreateRWLock(vm::psv::ptr<const char> pName, u32 attr, vm::psv::ptr<const SceKernelRWLockOptParam> pOptParam)
+s32 sceKernelCreateRWLock(vm::ptr<const char> pName, u32 attr, vm::ptr<const SceKernelRWLockOptParam> pOptParam)
 {
 	throw __FUNCTION__;
 }
@@ -852,7 +852,7 @@ s32 sceKernelDeleteRWLock(s32 rwLockId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelOpenRWLock(vm::psv::ptr<const char> pName)
+s32 sceKernelOpenRWLock(vm::ptr<const char> pName)
 {
 	throw __FUNCTION__;
 }
@@ -862,12 +862,12 @@ s32 sceKernelCloseRWLock(s32 rwLockId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockReadRWLock(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockReadRWLock(s32 rwLockId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockReadRWLockCB(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockReadRWLockCB(s32 rwLockId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
@@ -882,12 +882,12 @@ s32 sceKernelUnlockReadRWLock(s32 rwLockId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockWriteRWLock(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockWriteRWLock(s32 rwLockId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelLockWriteRWLockCB(s32 rwLockId, vm::psv::ptr<u32> pTimeout)
+s32 sceKernelLockWriteRWLockCB(s32 rwLockId, vm::ptr<u32> pTimeout)
 {
 	throw __FUNCTION__;
 }
@@ -902,49 +902,49 @@ s32 sceKernelUnlockWriteRWLock(s32 rwLockId)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelCancelRWLock(s32 rwLockId, vm::psv::ptr<s32> pNumReadWaitThreads, vm::psv::ptr<s32> pNumWriteWaitThreads, s32 flag)
+s32 sceKernelCancelRWLock(s32 rwLockId, vm::ptr<s32> pNumReadWaitThreads, vm::ptr<s32> pNumWriteWaitThreads, s32 flag)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelGetRWLockInfo(s32 rwLockId, vm::psv::ptr<SceKernelRWLockInfo> pInfo)
+s32 sceKernelGetRWLockInfo(s32 rwLockId, vm::ptr<SceKernelRWLockInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
 
 // IO/File functions
 
-s32 sceIoRemove(vm::psv::ptr<const char> filename)
+s32 sceIoRemove(vm::ptr<const char> filename)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoMkdir(vm::psv::ptr<const char> dirname, s32 mode)
+s32 sceIoMkdir(vm::ptr<const char> dirname, s32 mode)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoRmdir(vm::psv::ptr<const char> dirname)
+s32 sceIoRmdir(vm::ptr<const char> dirname)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoRename(vm::psv::ptr<const char> oldname, vm::psv::ptr<const char> newname)
+s32 sceIoRename(vm::ptr<const char> oldname, vm::ptr<const char> newname)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoDevctl(vm::psv::ptr<const char> devname, s32 cmd, vm::psv::ptr<const void> arg, u32 arglen, vm::psv::ptr<void> bufp, u32 buflen)
+s32 sceIoDevctl(vm::ptr<const char> devname, s32 cmd, vm::ptr<const void> arg, u32 arglen, vm::ptr<void> bufp, u32 buflen)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoSync(vm::psv::ptr<const char> devname, s32 flag)
+s32 sceIoSync(vm::ptr<const char> devname, s32 flag)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoOpen(vm::psv::ptr<const char> filename, s32 flag, s32 mode)
+s32 sceIoOpen(vm::ptr<const char> filename, s32 flag, s32 mode)
 {
 	throw __FUNCTION__;
 }
@@ -954,7 +954,7 @@ s32 sceIoClose(s32 fd)
 	throw __FUNCTION__;
 }
 
-s32 sceIoIoctl(s32 fd, s32 cmd, vm::psv::ptr<const void> argp, u32 arglen, vm::psv::ptr<void> bufp, u32 buflen)
+s32 sceIoIoctl(s32 fd, s32 cmd, vm::ptr<const void> argp, u32 arglen, vm::ptr<void> bufp, u32 buflen)
 {
 	throw __FUNCTION__;
 }
@@ -969,27 +969,27 @@ s32 sceIoLseek32(s32 fd, s32 offset, s32 whence)
 	throw __FUNCTION__;
 }
 
-s32 sceIoRead(s32 fd, vm::psv::ptr<void> buf, u32 nbyte)
+s32 sceIoRead(s32 fd, vm::ptr<void> buf, u32 nbyte)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoWrite(s32 fd, vm::psv::ptr<const void> buf, u32 nbyte)
+s32 sceIoWrite(s32 fd, vm::ptr<const void> buf, u32 nbyte)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoPread(s32 fd, vm::psv::ptr<void> buf, u32 nbyte, s64 offset)
+s32 sceIoPread(s32 fd, vm::ptr<void> buf, u32 nbyte, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoPwrite(s32 fd, vm::psv::ptr<const void> buf, u32 nbyte, s64 offset)
+s32 sceIoPwrite(s32 fd, vm::ptr<const void> buf, u32 nbyte, s64 offset)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoDopen(vm::psv::ptr<const char> dirname)
+s32 sceIoDopen(vm::ptr<const char> dirname)
 {
 	throw __FUNCTION__;
 }
@@ -999,17 +999,17 @@ s32 sceIoDclose(s32 fd)
 	throw __FUNCTION__;
 }
 
-s32 sceIoDread(s32 fd, vm::psv::ptr<SceIoDirent> buf)
+s32 sceIoDread(s32 fd, vm::ptr<SceIoDirent> buf)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoChstat(vm::psv::ptr<const char> name, vm::psv::ptr<const SceIoStat> buf, u32 cbit)
+s32 sceIoChstat(vm::ptr<const char> name, vm::ptr<const SceIoStat> buf, u32 cbit)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceIoGetstat(vm::psv::ptr<const char> name, vm::psv::ptr<SceIoStat> buf)
+s32 sceIoGetstat(vm::ptr<const char> name, vm::ptr<SceIoStat> buf)
 {
 	throw __FUNCTION__;
 }

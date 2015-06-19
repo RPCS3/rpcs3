@@ -4,18 +4,19 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
 #include "Emu/RSX/GSManager.h"
-#include "Emu/RSX/RSXDMA.h"
+#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/sysutil_video.h"
 #include "RSXThread.h"
 
 #include "Emu/SysCalls/Callback.h"
 #include "Emu/SysCalls/CB_FUNC.h"
-#include "Emu/SysCalls/lv2/sys_time.h"
 
 extern "C"
 {
 #include "libswscale/swscale.h"
 }
+
+extern u64 get_system_time();
 
 #define ARGS(x) (x >= count ? OutOfArgsCount(x, cmd, count, args.addr()) : args[x].value())
 #define CMD_DEBUG 0

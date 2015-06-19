@@ -1,3 +1,7 @@
+#pragma once
+
+namespace vm { using namespace ps3; }
+
 // Error Codes
 enum
 {
@@ -162,7 +166,7 @@ enum CellSearchEvent
 	CELL_SEARCH_EVENT_SCENESEARCH_RESULT,
 };
 
-typedef void(CellSearchSystemCallback)(CellSearchEvent event, s32 result, vm::ptr<const u32> param, vm::ptr<u32> userData);
+using CellSearchSystemCallback = func_def<void(CellSearchEvent event, s32 result, vm::cptr<u32> param, vm::ptr<u32> userData)>;
 
 struct CellSearchContentId
 {

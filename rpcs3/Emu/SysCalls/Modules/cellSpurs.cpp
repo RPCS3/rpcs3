@@ -17,7 +17,6 @@
 #include "Emu/SysCalls/lv2/sys_process.h"
 #include "Emu/SysCalls/lv2/sys_semaphore.h"
 #include "Emu/SysCalls/lv2/sys_event.h"
-#include "Emu/Cell/SPURSManager.h"
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
@@ -111,7 +110,7 @@ s32 spursInit(
 	u32 sem;
 	for (u32 i = 0; i < 0x10; i++)
 	{
-		sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+		sem = Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuWkl", 0);
 		assert(sem && ~sem); // should rollback if semaphore creation failed and return the error
 		spurs->m.wklF1[i].sem = sem;
 	}
@@ -119,12 +118,12 @@ s32 spursInit(
 	{
 		for (u32 i = 0; i < 0x10; i++)
 		{
-			sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuWkl");
+			sem = Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuWkl", 0);
 			assert(sem && ~sem);
 			spurs->m.wklF2[i].sem = sem;
 		}
 	}
-	sem = Emu.GetIdManager().make<lv2_sema_t>(0, 1, SYS_SYNC_PRIORITY, *(u64*)"_spuPrv");
+	sem = Emu.GetIdManager().make<lv2_sema_t>(SYS_SYNC_PRIORITY, 1, *(u64*)"_spuPrv", 0);
 	assert(sem && ~sem);
 	spurs->m.semPrv = sem;
 	spurs->m.unk11 = -1;
@@ -1556,7 +1555,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(vm::ptr<CellSpursEventFlag> eventFlag)
 	if (eventFlag->m.direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
 		vm::var<be_t<u32>> eventPortId;
-		rc = sys_event_port_create(vm::ptr<u32>::make(eventPortId.addr()), SYS_EVENT_PORT_LOCAL, 0);
+		rc = sys_event_port_create(vm::ref<u32>::make(eventPortId.addr()), SYS_EVENT_PORT_LOCAL, 0);
 		if (rc == CELL_OK)
 		{
 			rc = sys_event_port_connect_local(eventPortId.value(), eventQueueId);

@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 enum CELL_MOUSE_ERROR_CODE
 {
 	CELL_MOUSE_ERROR_FATAL = 0x80121201,

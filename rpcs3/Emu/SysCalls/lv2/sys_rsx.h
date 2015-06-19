@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 // SysCalls
 s32 sys_rsx_device_open();
 s32 sys_rsx_device_close();

@@ -1,5 +1,7 @@
 #pragma once
 
+namespace vm { using namespace ps3; }
+
 #include "sys_event.h"
 
 enum : s32

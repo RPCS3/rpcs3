@@ -142,19 +142,19 @@ namespace vm
 		return cast_ptr<T>::cast(addr, func);
 	}
 
+	static u8 read8(u32 addr)
+	{
+		return get_ref<u8>(addr);
+	}
+
+	static void write8(u32 addr, u8 value)
+	{
+		get_ref<u8>(addr) = value;
+	}
+
 	namespace ps3
 	{
 		void init();
-
-		static u8 read8(u32 addr)
-		{
-			return get_ref<u8>(addr);
-		}
-
-		static void write8(u32 addr, u8 value)
-		{
-			get_ref<u8>(addr) = value;
-		}
 
 		static u16 read16(u32 addr)
 		{
@@ -215,16 +215,6 @@ namespace vm
 	namespace psv
 	{
 		void init();
-
-		static u8 read8(u32 addr)
-		{
-			return get_ref<u8>(addr);
-		}
-
-		static void write8(u32 addr, u8 value)
-		{
-			get_ref<u8>(addr) = value;
-		}
 
 		static u16 read16(u32 addr)
 		{
@@ -298,15 +288,15 @@ namespace vm
 		u32 alloc_offset;
 
 		template<typename T = char>
-		ptr<T> alloc(u32 count = 1) const
+		_ptr_base<T> alloc(u32 count = 1) const
 		{
-			return ptr<T>::make(allocator(count * sizeof(T)));
+			return{ allocator(count * sizeof32(T)) };
 		}
 
 		template<typename T = char>
-		ptr<T> fixed_alloc(u32 addr, u32 count = 1) const
+		_ptr_base<T> fixed_alloc(u32 addr, u32 count = 1) const
 		{
-			return ptr<T>::make(fixed_allocator(addr, count * sizeof(T)));
+			return{ fixed_allocator(addr, count * sizeof32(T)) };
 		}
 	};
 

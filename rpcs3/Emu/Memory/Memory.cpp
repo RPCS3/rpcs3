@@ -436,7 +436,7 @@ bool VirtualMemoryBlock::Read32(const u32 addr, u32* value)
 	u32 realAddr;
 	if (!getRealAddr(addr, realAddr))
 		return false;
-	*value = vm::read32(realAddr);
+	*value = vm::ps3::read32(realAddr);
 	return true;
 }
 
@@ -445,7 +445,7 @@ bool VirtualMemoryBlock::Write32(const u32 addr, const u32 value)
 	u32 realAddr;
 	if (!getRealAddr(addr, realAddr))
 		return false;
-	vm::write32(realAddr, value);
+	vm::ps3::write32(realAddr, value);
 	return true;
 }
 

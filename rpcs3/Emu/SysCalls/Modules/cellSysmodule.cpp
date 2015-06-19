@@ -4,6 +4,8 @@
 #include "Emu/SysCalls/ModuleManager.h"
 #include "Emu/SysCalls/Modules.h"
 
+namespace vm { using namespace ps3; }
+
 extern Module cellSysmodule;
 
 enum

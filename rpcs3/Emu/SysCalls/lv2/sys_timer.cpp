@@ -12,46 +12,58 @@
 
 SysCallBase sys_timer("sys_timer");
 
-s32 sys_timer_create(vm::ptr<u32> timer_id)
+lv2_timer_t::lv2_timer_t()
+	: start(0)
+	, period(0)
+	, state(SYS_TIMER_STATE_STOP)
+	, thread(fmt::format("Timer[0x%x] Thread", Emu.GetIdManager().get_current_id()))
 {
-	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
-
-	std::shared_ptr<lv2_timer_t> timer(new lv2_timer_t);
-
-	thread_t(fmt::format("Timer[0x%x] Thread", (*timer_id = Emu.GetIdManager().add(timer))), [timer]() // TODO: call from the constructor
+	thread.start([this]()
 	{
 		LV2_LOCK;
 
-		while (!timer.unique() && !Emu.IsStopped())
+		while (thread.joinable() && !Emu.IsStopped())
 		{
-			if (timer->state == SYS_TIMER_STATE_RUN)
+			if (state == SYS_TIMER_STATE_RUN)
 			{
-				if (get_system_time() >= timer->start)
+				if (get_system_time() >= start)
 				{
-					const auto queue = timer->port.lock();
+					const auto queue = port.lock();
 
 					if (queue)
 					{
-						queue->push(lv2_lock, timer->source, timer->data1, timer->data2, timer->start);
+						queue->push(lv2_lock, source, data1, data2, start);
 					}
 
-					if (timer->period && queue)
+					if (period && queue)
 					{
-						timer->start += timer->period; // set next expiration time
+						start += period; // set next expiration time
 
 						continue; // hack: check again
 					}
 					else
 					{
-						timer->state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
+						state = SYS_TIMER_STATE_STOP; // stop if oneshot or the event port was disconnected (TODO: is it correct?)
 					}
 				}
 			}
 
-			timer->cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
+			cv.wait_for(lv2_lock, std::chrono::milliseconds(1));
 		}
+	});
+}
 
-	}).detach();
+lv2_timer_t::~lv2_timer_t()
+{
+	cv.notify_all();
+	thread.join();
+}
+
+s32 sys_timer_create(vm::ref<u32> timer_id)
+{
+	sys_timer.Warning("sys_timer_create(timer_id=*0x%x)", timer_id);
+
+	timer_id = Emu.GetIdManager().make<lv2_timer_t>();
 
 	return CELL_OK;
 }
@@ -60,14 +72,14 @@ s32 sys_timer_destroy(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
-	LV2_LOCK;
-
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	if (!timer->port.expired())
 	{
@@ -83,14 +95,14 @@ s32 sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> inf
 {
 	sys_timer.Warning("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
-	LV2_LOCK;
-	
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	info->next_expiration_time = timer->start;
 
@@ -106,14 +118,14 @@ s32 _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 
 	const u64 start_time = get_system_time();
 
-	LV2_LOCK;
-
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	if (timer->state != SYS_TIMER_STATE_STOP)
 	{
@@ -158,14 +170,14 @@ s32 sys_timer_stop(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_stop()");
 
-	LV2_LOCK;
-
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	timer->state = SYS_TIMER_STATE_STOP; // stop timer
 
@@ -176,8 +188,6 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 {
 	sys_timer.Warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
-	LV2_LOCK;
-
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 	const auto queue = Emu.GetIdManager().get<lv2_event_queue_t>(queue_id);
 
@@ -185,6 +195,8 @@ s32 sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	if (!timer->port.expired())
 	{
@@ -203,14 +215,14 @@ s32 sys_timer_disconnect_event_queue(u32 timer_id)
 {
 	sys_timer.Warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
-	LV2_LOCK;
-
 	const auto timer = Emu.GetIdManager().get<lv2_timer_t>(timer_id);
 
 	if (!timer)
 	{
 		return CELL_ESRCH;
 	}
+
+	LV2_LOCK;
 
 	if (timer->port.expired())
 	{

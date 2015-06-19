@@ -13,7 +13,7 @@
 
 SysCallBase sys_event("sys_event");
 
-s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
+s32 sys_event_queue_create(vm::ref<u32> equeue_id, vm::ptr<sys_event_queue_attr> attr, u64 event_queue_key, s32 size)
 {
 	sys_event.Warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
 
@@ -47,7 +47,7 @@ s32 sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attr>
 		return CELL_EEXIST;
 	}
 
-	*equeue_id = Emu.GetIdManager().add(std::move(queue));
+	equeue_id = Emu.GetIdManager().add(std::move(queue));
 	
 	return CELL_OK;
 }
@@ -91,7 +91,7 @@ s32 sys_event_queue_destroy(u32 equeue_id, s32 mode)
 	return CELL_OK;
 }
 
-s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
+s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ref<u32> number)
 {
 	sys_event.Log("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
@@ -124,7 +124,7 @@ s32 sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, 
 		queue->events.pop_front();
 	}
 
-	*number = count;
+	number = count;
 
 	return CELL_OK;
 }
@@ -206,7 +206,7 @@ s32 sys_event_queue_drain(u32 equeue_id)
 	return CELL_OK;
 }
 
-s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
+s32 sys_event_port_create(vm::ref<u32> eport_id, s32 port_type, u64 name)
 {
 	sys_event.Warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
@@ -216,7 +216,7 @@ s32 sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name)
 		return CELL_EINVAL;
 	}
 
-	*eport_id = Emu.GetIdManager().make<lv2_event_port_t>(port_type, name);
+	eport_id = Emu.GetIdManager().make<lv2_event_port_t>(port_type, name);
 
 	return CELL_OK;
 }

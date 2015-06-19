@@ -4,7 +4,7 @@
 #include "Utilities/AutoPause.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/System.h"
-#include "ModuleManager.h"
+#include "Modules.h"
 
 #include "lv2/sleep_queue.h"
 #include "lv2/sys_lwmutex.h"
