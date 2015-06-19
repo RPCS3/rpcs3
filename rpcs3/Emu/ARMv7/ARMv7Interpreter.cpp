@@ -2268,7 +2268,7 @@ void ARMv7_instrs::LDRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::psv::read8(addr));
+		context.write_gpr(t, vm::read8(addr));
 
 		if (wback)
 		{
@@ -2338,7 +2338,7 @@ void ARMv7_instrs::LDRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::psv::read8(addr));
+		context.write_gpr(t, vm::read8(addr));
 
 		if (wback)
 		{
@@ -2592,7 +2592,7 @@ void ARMv7_instrs::LDRSB_IMM(ARMv7Context& context, const ARMv7Code code, const 
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		const s8 value = vm::psv::read8(addr);
+		const s8 value = vm::read8(addr);
 		context.write_gpr(t, value); // sign-extend
 
 		if (wback)
@@ -4545,7 +4545,7 @@ void ARMv7_instrs::STRB_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write8(addr, (u8)context.read_gpr(t));
+		vm::write8(addr, (u8)context.read_gpr(t));
 
 		if (wback)
 		{
@@ -4605,7 +4605,7 @@ void ARMv7_instrs::STRB_REG(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write8(addr, (u8)context.read_gpr(t));
+		vm::write8(addr, (u8)context.read_gpr(t));
 
 		if (wback)
 		{

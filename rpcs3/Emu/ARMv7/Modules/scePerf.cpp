@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "Emu/SysCalls/lv2/sys_time.h"
+extern u64 get_system_time();
 
 #define RETURN_ERROR(code) { Emu.Pause(); scePerf.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
 

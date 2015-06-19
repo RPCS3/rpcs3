@@ -20,6 +20,7 @@
 #include <cstring>
 #include <cassert>
 #include <cstdint>
+#include <climits>
 #include <cmath>
 #include <atomic>
 #include <mutex>

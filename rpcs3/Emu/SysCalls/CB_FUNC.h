@@ -63,7 +63,7 @@ namespace cb_detail
 		{
 			const int stack_pos = (g_count - 9) * 8 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase fixed stack frame size (arg count limit broken)");
-			vm::write64(CPU.GPR[1] + stack_pos, cast_to_ppu_gpr<T>(arg));
+			vm::ps3::write64(CPU.GPR[1] + stack_pos, cast_to_ppu_gpr<T>(arg));
 		}
 	};
 
