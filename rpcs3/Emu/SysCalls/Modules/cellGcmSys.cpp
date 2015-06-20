@@ -316,6 +316,8 @@ void _cellGcmFunc15(vm::ptr<CellGcmContextData> context)
 	return;
 }
 
+size_t g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
+
 // Called by cellGcmInit
 s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
@@ -357,10 +359,13 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	current_config.memoryFrequency = 650000000;
 	current_config.coreFrequency = 500000000;
 
-	u32 ctx_begin = ioAddress/* + 0x1000*/;
-	u32 ctx_size = 0x6ffc;
-	current_context.begin = ctx_begin;
-	current_context.end = ctx_begin + ctx_size - 4;
+	// Create contexts
+
+	g_defaultCommandBufferBegin = ioAddress;
+	g_defaultCommandBufferFragmentCount = cmdSize / (32 * 1024);
+
+	current_context.begin = g_defaultCommandBufferBegin + 4096; // 4 kb reserved at the beginning
+	current_context.end = g_defaultCommandBufferBegin + 32 * 1024 - 4; // 4b at the end for jump
 	current_context.current = current_context.begin;
 	current_context.callback.set(be_t<u32>::make(Emu.GetRSXCallback() - 4));
 
@@ -386,7 +391,7 @@ s32 _cellGcmInitBody(vm::ptr<CellGcmContextData> context, u32 cmdSize, u32 ioSiz
 	render.m_gcm_current_buffer = 0;
 	render.m_main_mem_addr = 0;
 	render.m_label_addr = gcm_info.label_addr;
-	render.Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
+	render.Init(g_defaultCommandBufferBegin, cmdSize, gcm_info.control_addr, local_addr);
 
 	return CELL_OK;
 }
@@ -1151,6 +1156,45 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 //----------------------------------------------------------------------------
 
+
+/**
+ * Using current to determine what is the next useable command buffer.
+ * Caller may wait for RSX not to use the command buffer.
+ */
+static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
+{
+	size_t currentRange = (current - g_defaultCommandBufferBegin) / (32 * 1024);
+	if (currentRange >= g_defaultCommandBufferFragmentCount)
+		return std::make_pair(g_defaultCommandBufferBegin + 4096, g_defaultCommandBufferBegin + 32 * 1024 - 4);
+	return std::make_pair(g_defaultCommandBufferBegin + (currentRange + 1) * 32 * 1024,
+		g_defaultCommandBufferBegin + (currentRange + 2) * 32 * 1024 - 4);
+}
+
+static u32 getOffsetFromAddress(u32 address)
+{
+	const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
+	assert(upper != 0xFFFF);
+	return (upper << 20) | (address & 0xFFFFF);
+}
+
+/**
+ * Returns true if getPos is a valid position in command buffer and not between
+ * bufferBegin and bufferEnd which are absolute memory address
+ */
+static bool isInCommandBufferExcept(u32 getPos, u32 bufferBegin, u32 bufferEnd)
+{
+	// Is outside of default command buffer :
+	// It's in a call/return statement
+	// Conservatively return false here
+	if (getPos < getOffsetFromAddress(g_defaultCommandBufferBegin + 4096) &&
+		getPos > getOffsetFromAddress(g_defaultCommandBufferBegin + g_defaultCommandBufferFragmentCount * 32 * 1024))
+		return false;
+	if (getPos >= getOffsetFromAddress(bufferBegin) &&
+		getPos <= getOffsetFromAddress(bufferEnd))
+		return false;
+	return true;
+}
+
 // TODO: This function was originally located in lv2/SC_GCM and appears in RPCS3 as a lv2 syscall with id 1023,
 //       which according to lv2 dumps isn't the case. So, is this a proper place for this function?
 
@@ -1158,7 +1202,36 @@ s32 cellGcmCallback(vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys.Log("cellGcmCallback(context_addr=0x%x, count=0x%x)", context.addr(), count);
 
-	if (1)
+	auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
+	const std::chrono::time_point<std::chrono::system_clock> enterWait = std::chrono::system_clock::now();
+	// Flush command buffer (ie allow RSX to read up to context->current)
+	ctrl.put.exchange(be_t<u32>::make(getOffsetFromAddress(context->current)));
+
+	std::pair<u32, u32> newCommandBuffer = getNextCommandBufferBeginEnd(context->current);
+	u32 offset = getOffsetFromAddress(newCommandBuffer.first);
+	// Write jump instruction
+	vm::write32(context->current, CELL_GCM_METHOD_FLAG_JUMP | offset);
+	// Update current command buffer
+	context->begin = newCommandBuffer.first;
+	context->current = newCommandBuffer.first;
+	context->end = newCommandBuffer.second;
+
+	// Wait for rsx to "release" the new command buffer
+	while (true)
+	{
+		u32 getPos = ctrl.get.read_sync().value();
+		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
+			break;
+		std::chrono::time_point<std::chrono::system_clock> waitPoint = std::chrono::system_clock::now();
+		long long elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(waitPoint - enterWait).count();
+		if (elapsedTime > 0)
+			cellGcmSys.Error("Has wait for more than a second for command buffer to be released by RSX");
+		std::this_thread::yield();
+	}
+
+	return CELL_OK;
+
+	if (0)
 	{
 		auto& ctrl = vm::get_ref<CellGcmControl>(gcm_info.control_addr);
 		be_t<u32> res = be_t<u32>::make(context->current - context->begin - ctrl.put.read_relaxed());
