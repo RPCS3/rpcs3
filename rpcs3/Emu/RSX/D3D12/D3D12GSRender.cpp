@@ -730,6 +730,8 @@ void D3D12GSRender::ExecCMD()
 	m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
 	getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 
+
+	std::chrono::time_point<std::chrono::system_clock> startVertexTime = std::chrono::system_clock::now();
 	if (m_indexed_array.m_count || m_draw_array_count)
 	{
 		const std::pair<std::vector<D3D12_VERTEX_BUFFER_VIEW>, D3D12_INDEX_BUFFER_VIEW> &vertexIndexBufferViews = UploadVertexBuffers(m_indexed_array.m_count ? true : false);
@@ -737,6 +739,8 @@ void D3D12GSRender::ExecCMD()
 		if (m_forcedIndexBuffer || m_indexed_array.m_count)
 			commandList->IASetIndexBuffer(&vertexIndexBufferViews.second);
 	}
+	std::chrono::time_point<std::chrono::system_clock> endVertexTime = std::chrono::system_clock::now();
+	m_timers.m_vertexUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endVertexTime - startVertexTime).count();
 
 	if (!LoadProgram())
 	{
@@ -770,6 +774,7 @@ void D3D12GSRender::ExecCMD()
 
 	if (m_PSO->second > 0)
 	{
+		std::chrono::time_point<std::chrono::system_clock> startTextureTime = std::chrono::system_clock::now();
 		size_t usedTexture = UploadTextures();
 
 		// Fill empty slots
@@ -809,6 +814,8 @@ void D3D12GSRender::ExecCMD()
 		commandList->SetGraphicsRootDescriptorTable(3, Handle);
 
 		getCurrentResourceStorage().m_currentTextureIndex += usedTexture;
+		std::chrono::time_point<std::chrono::system_clock> endTextureTime = std::chrono::system_clock::now();
+		m_timers.m_textureUploadDuration += std::chrono::duration_cast<std::chrono::microseconds>(endTextureTime - startTextureTime).count();
 	}
 
 	size_t numRTT;
@@ -1042,6 +1049,14 @@ void D3D12GSRender::Flip()
 	while (getCurrentResourceStorage().m_frameFinishedHandle)
 		std::this_thread::yield();
 	m_frame->Flip(nullptr);
+
+	ResetTimer();
+}
+
+void D3D12GSRender::ResetTimer()
+{
+	m_timers.m_textureUploadDuration = 0;
+	m_timers.m_vertexUploadDuration = 0;
 }
 
 D3D12GSRender::ResourceStorage& D3D12GSRender::getCurrentResourceStorage()

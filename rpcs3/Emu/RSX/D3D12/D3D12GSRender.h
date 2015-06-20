@@ -214,6 +214,14 @@ private:
 	// m_rootSignatures[N] is RS with N texture/sample
 	ID3D12RootSignature *m_rootSignatures[17];
 
+	struct
+	{
+		size_t m_vertexUploadDuration;
+		size_t m_textureUploadDuration;
+	} m_timers;
+
+	void ResetTimer();
+
 	struct Shader
 	{
 		ID3D12PipelineState *m_PSO;
