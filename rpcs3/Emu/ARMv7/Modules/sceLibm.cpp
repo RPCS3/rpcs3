@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceLibm;
+#include "sceLibm.h"
 
 namespace sce_libm_func
 {
@@ -16,6 +16,7 @@ psv_log_base sceLibm("SceLibm", []()
 	sceLibm.on_load = nullptr;
 	sceLibm.on_unload = nullptr;
 	sceLibm.on_stop = nullptr;
+	sceLibm.on_error = nullptr;
 
 	//REG_FUNC(0xC73FE76D, _Exp);
 	//REG_FUNC(0xFF4EAE04, _FExp);

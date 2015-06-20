@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceSysmodule;
+#include "sceSysmodule.h"
 
 s32 sceSysmoduleLoadModule(u16 id)
 {
@@ -32,6 +32,7 @@ psv_log_base sceSysmodule("SceSysmodule", []()
 	sceSysmodule.on_load = nullptr;
 	sceSysmodule.on_unload = nullptr;
 	sceSysmodule.on_stop = nullptr;
+	sceSysmodule.on_error = nullptr;
 
 	REG_FUNC(0x79A0160A, sceSysmoduleLoadModule);
 	REG_FUNC(0x31D87805, sceSysmoduleUnloadModule);

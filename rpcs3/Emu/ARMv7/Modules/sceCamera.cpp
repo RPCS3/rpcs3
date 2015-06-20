@@ -2,46 +2,9 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceCamera;
+#include "sceCamera.h"
 
-struct SceCameraInfo
-{
-	u32 sizeThis;
-	u32 wPriority;
-	u32 wFormat;
-	u32 wResolution;
-	u32 wFramerate;
-	u32 wWidth;
-	u32 wHeight;
-	u32 wRange;
-	u32 _padding_0;
-	u32 sizeIBase;
-	u32 sizeUBase;
-	u32 sizeVBase;
-	vm::psv::ptr<void> pvIBase;
-	vm::psv::ptr<void> pvUBase;
-	vm::psv::ptr<void> pvVBase;
-	u32 wPitch;
-	u32 wBuffer;
-};
-
-struct SceCameraRead
-{
-	u32 sizeThis;
-	s32 dwMode;
-	s32 _padding_0;
-	s32 dwStatus;
-	u32 qwFrame;
-	u32 qwTimestamp;
-	u32 sizeIBase;
-	u32 sizeUBase;
-	u32 sizeVBase;
-	vm::psv::ptr<void> pvIBase;
-	vm::psv::ptr<void> pvUBase;
-	vm::psv::ptr<void> pvVBase;
-};
-
-s32 sceCameraOpen(s32 devnum, vm::psv::ptr<SceCameraInfo> pInfo)
+s32 sceCameraOpen(s32 devnum, vm::ptr<SceCameraInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
@@ -61,7 +24,7 @@ s32 sceCameraStop(s32 devnum)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraRead(s32 devnum, vm::psv::ptr<SceCameraRead> pRead)
+s32 sceCameraRead(s32 devnum, vm::ptr<SceCameraRead> pRead)
 {
 	throw __FUNCTION__;
 }
@@ -71,7 +34,7 @@ s32 sceCameraIsActive(s32 devnum)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetSaturation(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetSaturation(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -81,7 +44,7 @@ s32 sceCameraSetSaturation(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetBrightness(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetBrightness(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -91,7 +54,7 @@ s32 sceCameraSetBrightness(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetContrast(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetContrast(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -101,7 +64,7 @@ s32 sceCameraSetContrast(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetSharpness(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetSharpness(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -111,7 +74,7 @@ s32 sceCameraSetSharpness(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetReverse(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetReverse(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -121,7 +84,7 @@ s32 sceCameraSetReverse(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetEffect(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetEffect(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -131,7 +94,7 @@ s32 sceCameraSetEffect(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetEV(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetEV(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -141,7 +104,7 @@ s32 sceCameraSetEV(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetZoom(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetZoom(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -151,7 +114,7 @@ s32 sceCameraSetZoom(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetAntiFlicker(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetAntiFlicker(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -161,7 +124,7 @@ s32 sceCameraSetAntiFlicker(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetISO(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetISO(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -171,7 +134,7 @@ s32 sceCameraSetISO(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetGain(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetGain(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -181,7 +144,7 @@ s32 sceCameraSetGain(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetWhiteBalance(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetWhiteBalance(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -191,7 +154,7 @@ s32 sceCameraSetWhiteBalance(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetBacklight(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetBacklight(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -201,7 +164,7 @@ s32 sceCameraSetBacklight(s32 devnum, s32 mode)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetNightmode(s32 devnum, vm::psv::ptr<s32> pMode)
+s32 sceCameraGetNightmode(s32 devnum, vm::ptr<s32> pMode)
 {
 	throw __FUNCTION__;
 }
@@ -221,7 +184,7 @@ s32 sceCameraLedBlink(s32 devnum, s32 iOnCount, s32 iOffCount, s32 iBlinkCount)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetNoiseReductionForDebug(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetNoiseReductionForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -231,7 +194,7 @@ s32 sceCameraSetNoiseReductionForDebug(s32 devnum, s32 level)
 	throw __FUNCTION__;
 }
 
-s32 sceCameraGetSharpnessOffForDebug(s32 devnum, vm::psv::ptr<s32> pLevel)
+s32 sceCameraGetSharpnessOffForDebug(s32 devnum, vm::ptr<s32> pLevel)
 {
 	throw __FUNCTION__;
 }
@@ -254,6 +217,7 @@ psv_log_base sceCamera("SceCamera", []()
 	sceCamera.on_load = nullptr;
 	sceCamera.on_unload = nullptr;
 	sceCamera.on_stop = nullptr;
+	sceCamera.on_error = nullptr;
 
 	REG_FUNC(0xA462F801, sceCameraOpen);
 	REG_FUNC(0xCD6E1CFC, sceCameraClose);

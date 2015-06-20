@@ -2,29 +2,19 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceDisplay;
+#include "sceDisplay.h"
 
-struct SceDisplayFrameBuf
-{
-	u32 size;
-	vm::psv::ptr<void> base;
-	u32 pitch;
-	u32 pixelformat;
-	u32 width;
-	u32 height;
-};
-
-s32 sceDisplayGetRefreshRate(vm::psv::ptr<float> pFps)
+s32 sceDisplayGetRefreshRate(vm::ptr<float> pFps)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceDisplaySetFrameBuf(vm::psv::ptr<const SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
+s32 sceDisplaySetFrameBuf(vm::ptr<const SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceDisplayGetFrameBuf(vm::psv::ptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
+s32 sceDisplayGetFrameBuf(vm::ptr<SceDisplayFrameBuf> pFrameBuf, s32 iUpdateTimingMode)
 {
 	throw __FUNCTION__;
 }
@@ -92,6 +82,7 @@ psv_log_base sceDisplay("SceDisplay", []()
 	sceDisplay.on_load = nullptr;
 	sceDisplay.on_unload = nullptr;
 	sceDisplay.on_stop = nullptr;
+	sceDisplay.on_error = nullptr;
 
 	// SceDisplayUser
 	REG_FUNC(0x7A410B64, sceDisplaySetFrameBuf);

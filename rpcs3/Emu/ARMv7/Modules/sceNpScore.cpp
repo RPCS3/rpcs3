@@ -2,66 +2,9 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-#include "sceNpCommon.h"
+#include "sceNpScore.h"
 
-extern psv_log_base sceNpScore;
-
-typedef u32 SceNpScoreBoardId;
-typedef s64 SceNpScoreValue;
-typedef u32 SceNpScoreRankNumber;
-typedef s32 SceNpScorePcId;
-
-struct SceNpScoreGameInfo
-{
-	u32 infoSize;
-	u8 pad[4];
-	u8 data[192];
-};
-
-struct SceNpScoreComment
-{
-	char utf8Comment[64];
-};
-
-struct SceNpScoreRankData
-{
-	SceNpId npId;
-	u8 reserved[49];
-	u8 pad0[3];
-	SceNpScorePcId pcId;
-	SceNpScoreRankNumber serialRank;
-	SceNpScoreRankNumber rank;
-	SceNpScoreRankNumber highestRank;
-	s32 hasGameData;
-	u8 pad1[4];
-	SceNpScoreValue scoreValue;
-	u64 recordDate;
-};
-
-struct SceNpScorePlayerRankData
-{
-	s32 hasData;
-	u8 pad0[4];
-	SceNpScoreRankData rankData;
-};
-
-struct SceNpScoreBoardInfo
-{
-	u32 rankLimit;
-	u32 updateMode;
-	u32 sortMode;
-	u32 uploadNumLimit;
-	u32 uploadSizeLimit;
-};
-
-struct SceNpScoreNpIdPcId
-{
-	SceNpId npId;
-	SceNpScorePcId pcId;
-	u8 pad[4];
-};
-
-s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::psv::ptr<void> option)
+s32 sceNpScoreInit(s32 threadPriority, s32 cpuAffinityMask, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
@@ -71,7 +14,7 @@ s32 sceNpScoreTerm(ARMv7Context&)
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCreateTitleCtx(vm::psv::ptr<const SceNpCommunicationId> titleId, vm::psv::ptr<const SceNpCommunicationPassphrase> passphrase, vm::psv::ptr<const SceNpId> selfNpId)
+s32 sceNpScoreCreateTitleCtx(vm::ptr<const SceNpCommunicationId> titleId, vm::ptr<const SceNpCommunicationPassphrase> passphrase, vm::ptr<const SceNpId> selfNpId)
 {
 	throw __FUNCTION__;
 }
@@ -101,86 +44,86 @@ s32 sceNpScoreSetTimeout(s32 id, s32 resolveRetry, s32 resolveTimeout, s32 connT
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreSetPlayerCharacterId(s32 id, SceNpScorePcId pcId)
+s32 sceNpScoreSetPlayerCharacterId(s32 id, s32 pcId)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreGetBoardInfo(s32 reqId, SceNpScoreBoardId boardId, vm::psv::ptr<SceNpScoreBoardInfo> boardInfo, vm::psv::ptr<void> option)
+s32 sceNpScoreGetBoardInfo(s32 reqId, u32 boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreRecordScore(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreValue score,
-	vm::psv::ptr<const SceNpScoreComment> scoreComment,
-	vm::psv::ptr<const SceNpScoreGameInfo> gameInfo,
-	vm::psv::ptr<SceNpScoreRankNumber> tmpRank,
-	vm::psv::ptr<const u64> compareDate,
-	vm::psv::ptr<void> option)
+	u32 boardId,
+	s64 score,
+	vm::ptr<const SceNpScoreComment> scoreComment,
+	vm::ptr<const SceNpScoreGameInfo> gameInfo,
+	vm::ptr<u32> tmpRank,
+	vm::ptr<const u64> compareDate,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreRecordGameData(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreValue score,
+	u32 boardId,
+	s64 score,
 	u32 totalSize,
 	u32 sendSize,
-	vm::psv::ptr<const void> data,
-	vm::psv::ptr<void> option)
+	vm::ptr<const void> data,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetGameData(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpId> npId,
-	vm::psv::ptr<u32> totalSize,
+	u32 boardId,
+	vm::ptr<const SceNpId> npId,
+	vm::ptr<u32> totalSize,
 	u32 recvSize,
-	vm::psv::ptr<void> data,
-	vm::psv::ptr<void> option)
+	vm::ptr<void> data,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetRankingByNpId(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpId> npIdArray,
+	u32 boardId,
+	vm::ptr<const SceNpId> npIdArray,
 	u32 npIdArraySize,
-	vm::psv::ptr<SceNpScorePlayerRankData> rankArray,
+	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetRankingByRange(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreRankNumber startSerialRank,
-	vm::psv::ptr<SceNpScoreRankData> rankArray,
+	u32 boardId,
+	u32 startSerialRank,
+	vm::ptr<SceNpScoreRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
@@ -188,147 +131,147 @@ s32 sceNpScoreGetRankingByRange(
 
 s32 sceNpScoreGetRankingByNpIdPcId(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpScoreNpIdPcId> idArray,
+	u32 boardId,
+	vm::ptr<const SceNpScoreNpIdPcId> idArray,
 	u32 idArraySize,
-	vm::psv::ptr<SceNpScorePlayerRankData> rankArray,
+	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCensorComment(s32 reqId, vm::psv::ptr<const char> comment, vm::psv::ptr<void> option)
+s32 sceNpScoreCensorComment(s32 reqId, vm::ptr<const char> comment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreSanitizeComment(s32 reqId, vm::psv::ptr<const char> comment, vm::psv::ptr<char> sanitizedComment, vm::psv::ptr<void> option)
+s32 sceNpScoreSanitizeComment(s32 reqId, vm::ptr<const char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreWaitAsync(s32 id, vm::psv::ptr<s32> result)
+s32 sceNpScoreWaitAsync(s32 id, vm::ptr<s32> result)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScorePollAsync(s32 reqId, vm::psv::ptr<s32> result)
+s32 sceNpScorePollAsync(s32 reqId, vm::ptr<s32> result)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreGetBoardInfoAsync(s32 reqId, SceNpScoreBoardId boardId, vm::psv::ptr<SceNpScoreBoardInfo> boardInfo, vm::psv::ptr<void> option)
+s32 sceNpScoreGetBoardInfoAsync(s32 reqId, u32 boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreRecordScoreAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreValue score,
-	vm::psv::ptr<const SceNpScoreComment> scoreComment,
-	vm::psv::ptr<const SceNpScoreGameInfo> gameInfo,
-	vm::psv::ptr<SceNpScoreRankNumber> tmpRank,
-	vm::psv::ptr<const u64> compareDate,
-	vm::psv::ptr<void> option)
+	u32 boardId,
+	s64 score,
+	vm::ptr<const SceNpScoreComment> scoreComment,
+	vm::ptr<const SceNpScoreGameInfo> gameInfo,
+	vm::ptr<u32> tmpRank,
+	vm::ptr<const u64> compareDate,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreRecordGameDataAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreValue score,
+	u32 boardId,
+	s64 score,
 	u32 totalSize,
 	u32 sendSize,
-	vm::psv::ptr<const void> data,
-	vm::psv::ptr<void> option)
+	vm::ptr<const void> data,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetGameDataAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpId> npId,
-	vm::psv::ptr<u32> totalSize,
+	u32 boardId,
+	vm::ptr<const SceNpId> npId,
+	vm::ptr<u32> totalSize,
 	u32 recvSize,
-	vm::psv::ptr<void> data,
-	vm::psv::ptr<void> option)
+	vm::ptr<void> data,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetRankingByNpIdAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpId> npIdArray,
+	u32 boardId,
+	vm::ptr<const SceNpId> npIdArray,
 	u32 npIdArraySize,
-	vm::psv::ptr<SceNpScorePlayerRankData> rankArray,
+	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetRankingByRangeAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	SceNpScoreRankNumber startSerialRank,
-	vm::psv::ptr<SceNpScoreRankData> rankArray,
+	u32 boardId,
+	u32 startSerialRank,
+	vm::ptr<SceNpScoreRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
 s32 sceNpScoreGetRankingByNpIdPcIdAsync(
 	s32 reqId,
-	SceNpScoreBoardId boardId,
-	vm::psv::ptr<const SceNpScoreNpIdPcId> idArray,
+	u32 boardId,
+	vm::ptr<const SceNpScoreNpIdPcId> idArray,
 	u32 idArraySize,
-	vm::psv::ptr<SceNpScorePlayerRankData> rankArray,
+	vm::ptr<SceNpScorePlayerRankData> rankArray,
 	u32 rankArraySize,
-	vm::psv::ptr<SceNpScoreComment> commentArray,
+	vm::ptr<SceNpScoreComment> commentArray,
 	u32 commentArraySize,
-	vm::psv::ptr<SceNpScoreGameInfo> infoArray,
+	vm::ptr<SceNpScoreGameInfo> infoArray,
 	u32 infoArraySize,
 	u32 arrayNum,
-	vm::psv::ptr<u64> lastSortDate,
-	vm::psv::ptr<SceNpScoreRankNumber> totalRecord,
-	vm::psv::ptr<void> option)
+	vm::ptr<u64> lastSortDate,
+	vm::ptr<u32> totalRecord,
+	vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreCensorCommentAsync(s32 reqId, vm::psv::ptr<const char> comment, vm::psv::ptr<void> option)
+s32 sceNpScoreCensorCommentAsync(s32 reqId, vm::ptr<const char> comment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::psv::ptr<const char> comment, vm::psv::ptr<char> sanitizedComment, vm::psv::ptr<void> option)
+s32 sceNpScoreSanitizeCommentAsync(s32 reqId, vm::ptr<const char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
 	throw __FUNCTION__;
 }
@@ -340,6 +283,7 @@ psv_log_base sceNpScore("SceNpScore", []()
 	sceNpScore.on_load = nullptr;
 	sceNpScore.on_unload = nullptr;
 	sceNpScore.on_stop = nullptr;
+	sceNpScore.on_error = nullptr;
 
 	REG_FUNC(0x0433069F, sceNpScoreInit);
 	REG_FUNC(0x2050F98F, sceNpScoreTerm);

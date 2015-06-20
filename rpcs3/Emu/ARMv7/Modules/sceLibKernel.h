@@ -387,7 +387,7 @@ struct SceKernelCallbackInfo
 
 // Thread Manager definitions (events)
 
-using SceKernelThreadEventHandler = func_def<s32(s32 type, s32 threadId, s32 arg, vm::psv::ptr<void> pCommon)>;
+using SceKernelThreadEventHandler = func_def<s32(s32 type, s32 threadId, s32 arg, vm::ptr<void> pCommon)>;
 
 struct SceKernelEventInfo
 {

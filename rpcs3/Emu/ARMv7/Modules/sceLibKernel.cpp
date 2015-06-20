@@ -13,8 +13,6 @@
 #include "psv_mutex.h"
 #include "psv_cond.h"
 
-#define RETURN_ERROR(code) { Emu.Pause(); sceLibKernel.Error("%s() failed: %s", __FUNCTION__, #code); return code; }
-
 s32 sceKernelAllocMemBlock(vm::ptr<const char> name, s32 type, u32 vsize, vm::ptr<SceKernelAllocMemBlockOpt> pOpt)
 {
 	throw __FUNCTION__;
@@ -68,14 +66,14 @@ s32 sceKernelStartThread(s32 threadId, u32 argSize, vm::ptr<const void> pArgBloc
 
 	if (!t)
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	// thread should be in DORMANT state, but it's not possible to check it correctly atm
 
 	if (t->IsAlive())
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_NOT_DORMANT);
+		return SCE_KERNEL_ERROR_NOT_DORMANT;
 	}
 
 	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
@@ -110,14 +108,14 @@ s32 sceKernelDeleteThread(s32 threadId)
 
 	if (!t)
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	// thread should be in DORMANT state, but it's not possible to check it correctly atm
 
 	if (t->IsAlive())
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_NOT_DORMANT);
+		return SCE_KERNEL_ERROR_NOT_DORMANT;
 	}
 
 	Emu.GetCPU().RemoveThread(threadId);
@@ -268,7 +266,7 @@ s32 sceKernelWaitThreadEnd(s32 threadId, vm::ptr<s32> pExitStatus, vm::ptr<u32> 
 
 	if (!t)
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	ARMv7Thread& thread = static_cast<ARMv7Thread&>(*t);
@@ -402,7 +400,7 @@ s32 sceKernelCreateEventFlag(vm::ptr<const char> pName, u32 attr, u32 initPatter
 		return id;
 	}
 
-	RETURN_ERROR(SCE_KERNEL_ERROR_ERROR);
+	return SCE_KERNEL_ERROR_ERROR;
 }
 
 s32 sceKernelDeleteEventFlag(s32 evfId)
@@ -466,7 +464,7 @@ s32 sceKernelCreateSema(vm::ptr<const char> pName, u32 attr, s32 initCount, s32 
 		return id;
 	}
 
-	RETURN_ERROR(SCE_KERNEL_ERROR_ERROR);
+	return SCE_KERNEL_ERROR_ERROR;
 }
 
 s32 sceKernelDeleteSema(s32 semaId)
@@ -477,12 +475,12 @@ s32 sceKernelDeleteSema(s32 semaId)
 
 	if (!sema)
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	if (!g_psv_sema_list.remove(semaId))
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	return SCE_OK;
@@ -506,7 +504,7 @@ s32 sceKernelWaitSema(s32 semaId, s32 needCount, vm::ptr<u32> pTimeout)
 
 	if (!sema)
 	{
-		RETURN_ERROR(SCE_KERNEL_ERROR_INVALID_UID);
+		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 
 	sceLibKernel.Error("*** name = %s", sema->name);
@@ -550,7 +548,7 @@ s32 sceKernelCreateMutex(vm::ptr<const char> pName, u32 attr, s32 initCount, vm:
 		return id;
 	}
 
-	RETURN_ERROR(SCE_KERNEL_ERROR_ERROR);
+	return SCE_KERNEL_ERROR_ERROR;
 }
 
 s32 sceKernelDeleteMutex(s32 mutexId)
@@ -651,7 +649,7 @@ s32 sceKernelCreateCond(vm::ptr<const char> pName, u32 attr, s32 mutexId, vm::pt
 		return id;
 	}
 
-	RETURN_ERROR(SCE_KERNEL_ERROR_ERROR);
+	return SCE_KERNEL_ERROR_ERROR;
 }
 
 s32 sceKernelDeleteCond(s32 condId)
@@ -1022,6 +1020,7 @@ psv_log_base sceLibKernel("sceLibKernel", []()
 	sceLibKernel.on_load = nullptr;
 	sceLibKernel.on_unload = nullptr;
 	sceLibKernel.on_stop = nullptr;
+	//sceLibKernel.on_error = nullptr; // keep default error handler
 
 	// REG_FUNC(???, sceKernelGetEventInfo);
 

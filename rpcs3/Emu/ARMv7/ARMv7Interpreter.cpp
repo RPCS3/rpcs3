@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <map>
 #include "Utilities/Log.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
@@ -1969,7 +1968,7 @@ void ARMv7_instrs::LDM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		auto memory = vm::psv::ptr<u32>::make(context.read_gpr(n));
+		auto memory = vm::ptr<u32>::make(context.read_gpr(n));
 
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -2088,7 +2087,7 @@ void ARMv7_instrs::LDR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::psv::read32(addr));
+		context.write_gpr(t, vm::read32(addr));
 
 		if (wback)
 		{
@@ -2137,7 +2136,7 @@ void ARMv7_instrs::LDR_LIT(ARMv7Context& context, const ARMv7Code code, const AR
 
 	if (ConditionPassed(context, cond))
 	{
-		const u32 data = vm::psv::read32(addr);
+		const u32 data = vm::read32(addr);
 		context.write_gpr(t, data);
 	}
 }
@@ -2194,7 +2193,7 @@ void ARMv7_instrs::LDR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::psv::read32(addr));
+		context.write_gpr(t, vm::read32(addr));
 
 		if (wback)
 		{
@@ -2386,7 +2385,7 @@ void ARMv7_instrs::LDRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		const u64 value = vm::psv::read64(addr);
+		const u64 value = vm::read64(addr);
 		context.write_gpr(t, (u32)(value));
 		context.write_gpr(t2, (u32)(value >> 32));
 
@@ -2431,7 +2430,7 @@ void ARMv7_instrs::LDRD_LIT(ARMv7Context& context, const ARMv7Code code, const A
 
 	if (ConditionPassed(context, cond))
 	{
-		const u64 value = vm::psv::read64(addr);
+		const u64 value = vm::read64(addr);
 		context.write_gpr(t, (u32)(value));
 		context.write_gpr(t2, (u32)(value >> 32));
 	}
@@ -2511,7 +2510,7 @@ void ARMv7_instrs::LDRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		context.write_gpr(t, vm::psv::read16(addr));
+		context.write_gpr(t, vm::read16(addr));
 
 		if (wback)
 		{
@@ -3475,7 +3474,7 @@ void ARMv7_instrs::POP(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		auto stack = vm::psv::ptr<u32>::make(context.SP);
+		auto stack = vm::ptr<u32>::make(context.SP);
 
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -3546,7 +3545,7 @@ void ARMv7_instrs::PUSH(ARMv7Context& context, const ARMv7Code code, const ARMv7
 
 	if (ConditionPassed(context, cond))
 	{
-		auto memory = vm::psv::ptr<u32>::make(context.SP);
+		auto memory = vm::ptr<u32>::make(context.SP);
 
 		for (u32 i = 15; ~i; i--)
 		{
@@ -4296,7 +4295,7 @@ void ARMv7_instrs::STM(ARMv7Context& context, const ARMv7Code code, const ARMv7_
 
 	if (ConditionPassed(context, cond))
 	{
-		auto memory = vm::psv::ptr<u32>::make(context.read_gpr(n));
+		auto memory = vm::ptr<u32>::make(context.read_gpr(n));
 
 		for (u32 i = 0; i < 16; i++)
 		{
@@ -4414,7 +4413,7 @@ void ARMv7_instrs::STR_IMM(ARMv7Context& context, const ARMv7Code code, const AR
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write32(addr, context.read_gpr(t));
+		vm::write32(addr, context.read_gpr(t));
 
 		if (wback)
 		{
@@ -4474,7 +4473,7 @@ void ARMv7_instrs::STR_REG(ARMv7Context& context, const ARMv7Code code, const AR
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write32(addr, context.read_gpr(t));
+		vm::write32(addr, context.read_gpr(t));
 
 		if (wback)
 		{
@@ -4653,7 +4652,7 @@ void ARMv7_instrs::STRD_IMM(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 n_value = context.read_gpr(n);
 		const u32 offset = add ? n_value + imm32 : n_value - imm32;
 		const u32 addr = index ? offset : n_value;
-		vm::psv::write64(addr, (u64)context.read_gpr(t2) << 32 | (u64)context.read_gpr(t));
+		vm::write64(addr, (u64)context.read_gpr(t2) << 32 | (u64)context.read_gpr(t));
 
 		if (wback)
 		{
@@ -4733,7 +4732,7 @@ void ARMv7_instrs::STRH_IMM(ARMv7Context& context, const ARMv7Code code, const A
 	{
 		const u32 offset_addr = add ? context.read_gpr(n) + imm32 : context.read_gpr(n) - imm32;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write16(addr, (u16)context.read_gpr(t));
+		vm::write16(addr, (u16)context.read_gpr(t));
 
 		if (wback)
 		{
@@ -4793,7 +4792,7 @@ void ARMv7_instrs::STRH_REG(ARMv7Context& context, const ARMv7Code code, const A
 		const u32 offset = Shift(context.read_gpr(m), shift_t, shift_n, context.APSR.C);
 		const u32 offset_addr = add ? context.read_gpr(n) + offset : context.read_gpr(n) - offset;
 		const u32 addr = index ? offset_addr : context.read_gpr(n);
-		vm::psv::write16(addr, (u16)context.read_gpr(t));
+		vm::write16(addr, (u16)context.read_gpr(t));
 
 		if (wback)
 		{

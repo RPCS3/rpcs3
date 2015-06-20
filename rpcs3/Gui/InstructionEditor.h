@@ -73,7 +73,7 @@ InstructionEditorDialog::InstructionEditorDialog(wxPanel *parent, u64 _pc, CPUTh
 	s_panel_margin_x->AddSpacer(12);
 
 	this->Connect(wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InstructionEditorDialog::updatePreview));
-	t2_instr->SetValue(wxString::Format("%08x",	vm::ps3::read32(CPU->offset + pc)));
+	t2_instr->SetValue(wxString::Format("%08x",	vm::ps3::read32(CPU->offset + pc).value()));
 
 	this->SetSizerAndFit(s_panel_margin_x);
 

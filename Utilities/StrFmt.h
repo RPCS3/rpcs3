@@ -257,12 +257,8 @@ namespace fmt
 	be_t<> forced to .value() (fmt::unveil reverts byte order automatically)
 
 	External specializations for fmt::unveil (can be found in another headers):
-	vm::ps3::ptr (fmt::unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
-	vm::ps3::bptr (fmt::unveil) (vm_ptr.h)
-	vm::psv::ptr (fmt::unveil) (vm_ptr.h)
-	vm::ps3::ref (fmt::unveil) (vm_ref.h)
-	vm::ps3::bref (fmt::unveil) (vm_ref.h)
-	vm::psv::ref (fmt::unveil) (vm_ref.h)
+	vm::ptr, vm::bptr, ... (fmt::unveil) (vm_ptr.h) (with appropriate address type, using .addr() can be avoided)
+	vm::ref, vm::bref, ... (fmt::unveil) (vm_ref.h)
 	
 	*/
 	template<typename... Args> force_inline safe_buffers std::string format(const char* fmt, Args... args)

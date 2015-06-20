@@ -11,6 +11,7 @@ psv_log_base sceSfmt("SceSfmt", []()
 	sceSfmt.on_load = nullptr;
 	sceSfmt.on_unload = nullptr;
 	sceSfmt.on_stop = nullptr;
+	sceSfmt.on_error = nullptr;
 
 	//REG_FUNC(0x8FF464C9, sceSfmt11213InitGenRand);
 	//REG_FUNC(0xBAF5F058, sceSfmt11213InitByArray);

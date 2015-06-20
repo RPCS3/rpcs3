@@ -2,22 +2,14 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceScreenShot;
+#include "sceScreenShot.h"
 
-struct SceScreenShotParam
-{
-	vm::psv::ptr<const char> photoTitle;
-	vm::psv::ptr<const char> gameTitle;
-	vm::psv::ptr<const char> gameComment;
-	vm::psv::ptr<void> reserved;
-};
-
-s32 sceScreenShotSetParam(vm::psv::ptr<const SceScreenShotParam> param)
+s32 sceScreenShotSetParam(vm::ptr<const SceScreenShotParam> param)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceScreenShotSetOverlayImage(vm::psv::ptr<const char> filePath, s32 offsetX, s32 offsetY)
+s32 sceScreenShotSetOverlayImage(vm::ptr<const char> filePath, s32 offsetX, s32 offsetY)
 {
 	throw __FUNCTION__;
 }
@@ -40,6 +32,7 @@ psv_log_base sceScreenShot("SceScreenShot", []()
 	sceScreenShot.on_load = nullptr;
 	sceScreenShot.on_unload = nullptr;
 	sceScreenShot.on_stop = nullptr;
+	sceScreenShot.on_error = nullptr;
 
 	REG_FUNC(0x05DB59C7, sceScreenShotSetParam);
 	REG_FUNC(0x7061665B, sceScreenShotSetOverlayImage);

@@ -99,16 +99,16 @@ namespace loader
 					u32 size; // 0x0000001c
 					u32 unk1; // 0x00000000
 
-					vm::psv::ptr<u32> sceLibcHeapSize;
-					vm::psv::ptr<u32> sceLibcHeapSizeDefault;
-					vm::psv::ptr<u32> sceLibcHeapExtendedAlloc;
-					vm::psv::ptr<u32> sceLibcHeapDelayedAlloc;
+					vm::lptr<u32> sceLibcHeapSize;
+					vm::lptr<u32> sceLibcHeapSizeDefault;
+					vm::lptr<u32> sceLibcHeapExtendedAlloc;
+					vm::lptr<u32> sceLibcHeapDelayedAlloc;
 
 					u32 unk2;
 					u32 unk3;
 					
-					vm::psv::ptr<u32> __sce_libcmallocreplace;
-					vm::psv::ptr<u32> __sce_libcnewreplace;
+					vm::lptr<u32> __sce_libcmallocreplace;
+					vm::lptr<u32> __sce_libcnewreplace;
 				};
 
 				struct psv_process_param_t
@@ -118,20 +118,20 @@ namespace loader
 					u32 unk2; // 0x00000005
 					u32 unk3;
 
-					vm::psv::ptr<const char> sceUserMainThreadName;
-					vm::psv::ptr<s32>        sceUserMainThreadPriority;
-					vm::psv::ptr<u32>        sceUserMainThreadStackSize;
-					vm::psv::ptr<u32>        sceUserMainThreadAttribute;
-					vm::psv::ptr<const char> sceProcessName;
-					vm::psv::ptr<u32>        sce_process_preload_disabled;
-					vm::psv::ptr<u32>        sceUserMainThreadCpuAffinityMask;
+					vm::lcptr<char> sceUserMainThreadName;
+					vm::lptr<s32>   sceUserMainThreadPriority;
+					vm::lptr<u32>   sceUserMainThreadStackSize;
+					vm::lptr<u32>   sceUserMainThreadAttribute;
+					vm::lcptr<char> sceProcessName;
+					vm::lptr<u32>   sce_process_preload_disabled;
+					vm::lptr<u32>   sceUserMainThreadCpuAffinityMask;
 
-					vm::psv::ptr<psv_libc_param_t> __sce_libcparam;
+					vm::lptr<psv_libc_param_t> __sce_libcparam;
 				};
 
 				initialize_psv_modules();
 
-				auto armv7_thr_stop_data = vm::psv::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
+				auto armv7_thr_stop_data = vm::ptr<u32>::make(Memory.PSV.RAM.AllocAlign(3 * 4));
 				armv7_thr_stop_data[0] = 0xf870; // HACK instruction (Thumb)
 				armv7_thr_stop_data[1] = SFI_HLE_RETURN;
 				Emu.SetCPUThreadStop(armv7_thr_stop_data.addr());
@@ -143,12 +143,12 @@ namespace loader
 				u32 vnid_addr = 0;
 				std::unordered_map<u32, u32> vnid_list;
 
-				vm::psv::ptr<psv_process_param_t> proc_param = vm::null;
+				vm::ptr<psv_process_param_t> proc_param = vm::null;
 
 				for (auto& shdr : m_shdrs)
 				{
 					// get secton name
-					//auto name = vm::psv::ptr<const char>::make(sname_base + shdr.data_le.sh_name);
+					//auto name = vm::cptr<char>::make(sname_base + shdr.data_le.sh_name);
 
 					m_stream->Seek(handler::get_stream_offset() + m_shdrs[m_ehdr.data_le.e_shstrndx].data_le.sh_offset + shdr.data_le.sh_name);
 					std::string name;
@@ -169,8 +169,8 @@ namespace loader
 					{
 						LOG_NOTICE(LOADER, ".sceExport.rodata analysis...");
 
-						auto enid = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
-						auto edata = vm::psv::ptr<const u32>::make(enid.addr() + shdr.data_le.sh_size / 2);
+						auto enid = vm::cptr<u32>::make(shdr.data_le.sh_addr);
+						auto edata = vm::cptr<u32>::make(enid.addr() + shdr.data_le.sh_size / 2);
 
 						for (u32 j = 0; j < shdr.data_le.sh_size / 8; j++)
 						{
@@ -217,8 +217,8 @@ namespace loader
 							continue;
 						}
 
-						auto fnid = vm::psv::ptr<const u32>::make(fnid_addr);
-						auto fstub = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+						auto fnid = vm::cptr<u32>::make(fnid_addr);
+						auto fstub = vm::cptr<u32>::make(shdr.data_le.sh_addr);
 
 						for (u32 j = 0; j < shdr.data_le.sh_size / 4; j++)
 						{
@@ -270,8 +270,8 @@ namespace loader
 							continue;
 						}
 
-						auto vnid = vm::psv::ptr<const u32>::make(vnid_addr);
-						auto vstub = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr);
+						auto vnid = vm::cptr<u32>::make(vnid_addr);
+						auto vstub = vm::cptr<u32>::make(shdr.data_le.sh_addr);
 
 						for (u32 j = 0; j < shdr.data_le.sh_size / 4; j++)
 						{
@@ -299,7 +299,7 @@ namespace loader
 
 						u32 data = 0;
 
-						for (auto code = vm::psv::ptr<const u32>::make(shdr.data_le.sh_addr); code.addr() < shdr.data_le.sh_addr + shdr.data_le.sh_size; code++)
+						for (auto code = vm::ptr<const u32>::make(shdr.data_le.sh_addr); code.addr() < shdr.data_le.sh_addr + shdr.data_le.sh_size; code++)
 						{
 							switch (*code)
 							{

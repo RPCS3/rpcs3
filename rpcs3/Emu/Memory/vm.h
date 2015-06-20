@@ -137,6 +137,15 @@ namespace vm
 	};
 
 	template<typename T>
+	struct cast_ptr<le_t<T>>
+	{
+		force_inline static u32 cast(const le_t<T>& addr, const char* func)
+		{
+			return cast_ptr<T>::cast(addr.value(), func);
+		}
+	};
+
+	template<typename T>
 	force_inline static u32 cast(const T& addr, const char* func = "vm::cast")
 	{
 		return cast_ptr<T>::cast(addr, func);
@@ -156,57 +165,62 @@ namespace vm
 	{
 		void init();
 
-		static u16 read16(u32 addr)
+		inline const be_t<u16>& read16(u32 addr)
 		{
-			return get_ref<be_t<u16>>(addr);
+			return get_ref<const be_t<u16>>(addr);
 		}
 
-		static void write16(u32 addr, be_t<u16> value)
+		inline void write16(u32 addr, be_t<u16> value)
 		{
 			get_ref<be_t<u16>>(addr) = value;
 		}
 
-		static u32 read32(u32 addr)
+		inline void write16(u32 addr, u16 value)
 		{
-			return get_ref<be_t<u32>>(addr);
+			get_ref<be_t<u16>>(addr) = value;
 		}
 
-		static void write32(u32 addr, be_t<u32> value)
+		inline const be_t<u32>& read32(u32 addr)
+		{
+			return get_ref<const be_t<u32>>(addr);
+		}
+
+		inline void write32(u32 addr, be_t<u32> value)
 		{
 			get_ref<be_t<u32>>(addr) = value;
 		}
 
-		static u64 read64(u32 addr)
+		inline void write32(u32 addr, u32 value)
 		{
-			return get_ref<be_t<u64>>(addr);
+			get_ref<be_t<u32>>(addr) = value;
 		}
 
-		static void write64(u32 addr, be_t<u64> value)
+		inline const be_t<u64>& read64(u32 addr)
+		{
+			return get_ref<const be_t<u64>>(addr);
+		}
+
+		inline void write64(u32 addr, be_t<u64> value)
 		{
 			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		static void write16(u32 addr, u16 value)
+		inline void write64(u32 addr, u64 value)
 		{
-			write16(addr, be_t<u16>::make(value));
+			get_ref<be_t<u64>>(addr) = value;
 		}
 
-		static void write32(u32 addr, u32 value)
+		inline const be_t<u128>& read128(u32 addr)
 		{
-			write32(addr, be_t<u32>::make(value));
+			return get_ref<const be_t<u128>>(addr);
 		}
 
-		static void write64(u32 addr, u64 value)
+		inline void write128(u32 addr, be_t<u128> value)
 		{
-			write64(addr, be_t<u64>::make(value));
+			get_ref<be_t<u128>>(addr) = value;
 		}
 
-		static u128 read128(u32 addr)
-		{
-			return get_ref<be_t<u128>>(addr);
-		}
-
-		static void write128(u32 addr, u128 value)
+		inline void write128(u32 addr, u128 value)
 		{
 			get_ref<be_t<u128>>(addr) = value;
 		}
@@ -216,44 +230,64 @@ namespace vm
 	{
 		void init();
 
-		static u16 read16(u32 addr)
+		inline const le_t<u16>& read16(u32 addr)
 		{
-			return get_ref<u16>(addr);
+			return get_ref<const le_t<u16>>(addr);
 		}
 
-		static void write16(u32 addr, u16 value)
+		inline void write16(u32 addr, le_t<u16> value)
 		{
-			get_ref<u16>(addr) = value;
+			get_ref<le_t<u16>>(addr) = value;
 		}
 
-		static u32 read32(u32 addr)
+		inline void write16(u32 addr, u16 value)
 		{
-			return get_ref<u32>(addr);
+			get_ref<le_t<u16>>(addr) = value;
 		}
 
-		static void write32(u32 addr, u32 value)
+		inline const le_t<u32>& read32(u32 addr)
 		{
-			get_ref<u32>(addr) = value;
+			return get_ref<const le_t<u32>>(addr);
 		}
 
-		static u64 read64(u32 addr)
+		inline void write32(u32 addr, le_t<u32> value)
 		{
-			return get_ref<u64>(addr);
+			get_ref<le_t<u32>>(addr) = value;
 		}
 
-		static void write64(u32 addr, u64 value)
+		inline void write32(u32 addr, u32 value)
 		{
-			get_ref<u64>(addr) = value;
+			get_ref<le_t<u32>>(addr) = value;
 		}
 
-		static u128 read128(u32 addr)
+		inline const le_t<u64>& read64(u32 addr)
 		{
-			return get_ref<u128>(addr);
+			return get_ref<const le_t<u64>>(addr);
 		}
 
-		static void write128(u32 addr, u128 value)
+		inline void write64(u32 addr, le_t<u64> value)
 		{
-			get_ref<u128>(addr) = value;
+			get_ref<le_t<u64>>(addr) = value;
+		}
+
+		inline void write64(u32 addr, u64 value)
+		{
+			get_ref<le_t<u64>>(addr) = value;
+		}
+
+		inline const le_t<u128>& read128(u32 addr)
+		{
+			return get_ref<const le_t<u128>>(addr);
+		}
+
+		inline void write128(u32 addr, le_t<u128> value)
+		{
+			get_ref<le_t<u128>>(addr) = value;
+		}
+
+		inline void write128(u32 addr, u128 value)
+		{
+			get_ref<le_t<u128>>(addr) = value;
 		}
 	}
 

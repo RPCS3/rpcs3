@@ -2,24 +2,24 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceSas;
+#include "sceSas.h"
 
-s32 sceSasGetNeededMemorySize(vm::psv::ptr<const char> config, vm::psv::ptr<u32> outSize)
+s32 sceSasGetNeededMemorySize(vm::ptr<const char> config, vm::ptr<u32> outSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasInit(vm::psv::ptr<const char> config, vm::psv::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInit(vm::ptr<const char> config, vm::ptr<void> buffer, u32 bufferSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasInitWithGrain(vm::psv::ptr<const char> config, u32 grain, vm::psv::ptr<void> buffer, u32 bufferSize)
+s32 sceSasInitWithGrain(vm::ptr<const char> config, u32 grain, vm::ptr<void> buffer, u32 bufferSize)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasExit(vm::psv::pptr<void> outBuffer, vm::psv::ptr<u32> outBufferSize)
+s32 sceSasExit(vm::pptr<void> outBuffer, vm::ptr<u32> outBufferSize)
 {
 	throw __FUNCTION__;
 }
@@ -44,22 +44,22 @@ s32 sceSasGetOutputmode()
 	throw __FUNCTION__;
 }
 
-s32 sceSasCore(vm::psv::ptr<s16> out)
+s32 sceSasCore(vm::ptr<s16> out)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasCoreWithMix(vm::psv::ptr<s16> inOut, s32 lvol, s32 rvol)
+s32 sceSasCoreWithMix(vm::ptr<s16> inOut, s32 lvol, s32 rvol)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoice(s32 iVoiceNum, vm::psv::ptr<const void> vagBuf, u32 size, u32 loopflag)
+s32 sceSasSetVoice(s32 iVoiceNum, vm::ptr<const void> vagBuf, u32 size, u32 loopflag)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::psv::ptr<const void> pcmBuf, u32 size, s32 loopsize)
+s32 sceSasSetVoicePCM(s32 iVoiceNum, vm::ptr<const void> pcmBuf, u32 size, s32 loopsize)
 {
 	throw __FUNCTION__;
 }
@@ -157,6 +157,7 @@ psv_log_base sceSas("SceSas", []()
 	sceSas.on_load = nullptr;
 	sceSas.on_unload = nullptr;
 	sceSas.on_stop = nullptr;
+	sceSas.on_error = nullptr;
 
 	//REG_FUNC(0xA2209C58, sceAsSetRegisterReportHandler);
 	//REG_FUNC(0xBB635544, sceAsSetUnregisterReportHandler);

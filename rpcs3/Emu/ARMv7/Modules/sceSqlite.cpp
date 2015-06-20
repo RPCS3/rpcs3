@@ -2,7 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceSqlite;
+#include "sceSqlite.h"
 
 #define REG_FUNC(nid, name) reg_psv_func(nid, &sceSqlite, #name, name)
 
@@ -11,6 +11,7 @@ psv_log_base sceSqlite("SceSqlite", []()
 	sceSqlite.on_load = nullptr;
 	sceSqlite.on_unload = nullptr;
 	sceSqlite.on_stop = nullptr;
+	sceSqlite.on_error = nullptr;
 
 	//REG_FUNC(0x26E46324, sqlite3_libversion);
 	//REG_FUNC(0x4CCB58A2, sqlite3_sourceid);

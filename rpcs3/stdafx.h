@@ -41,32 +41,35 @@
 
 #include "Utilities/GNU.h"
 
-typedef unsigned int uint;
+using uint = unsigned int;
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
+using u8 = std::uint8_t;
+using u16 = std::uint16_t;
+using u32 = std::uint32_t;
+using u64 = std::uint64_t;
 
-typedef int8_t s8;
-typedef int16_t s16;
-typedef int32_t s32;
-typedef int64_t s64;
+using s8 = std::int8_t;
+using s16 = std::int16_t;
+using s32 = std::int32_t;
+using s64 = std::int64_t;
 
-template<typename T> force_inline T align(const T addr, int align)
+using f32 = float;
+using f64 = double;
+
+template<typename T, typename = std::enable_if_t<std::is_integral<T>::value>> inline T align(const T& value, u64 align)
 {
-	return (addr + (align - 1)) & ~(align - 1);
+	return static_cast<T>((value + (align - 1)) & ~(align - 1));
 }
 
-template<typename T> struct sizeof32_t
-{
-	static const u32 value = static_cast<u32>(sizeof(T));
-
-	static_assert(value == sizeof(T), "sizeof32() error: sizeof() is too big");
-};
-
 // return 32 bit sizeof() to avoid widening/narrowing conversions with size_t
-#define sizeof32(type) sizeof32_t<type>::value
+#define sizeof32(type) sizeof32_t<sizeof(type)>::value
+
+template<std::size_t Size> struct sizeof32_t
+{
+	static_assert(Size <= UINT32_MAX, "sizeof32() error: sizeof() is too big");
+
+	static const u32 value = static_cast<u32>(Size);
+};
 
 template<typename T> using func_def = T; // workaround for MSVC bug: `using X = func_def<void()>;` instead of `using X = void();`
 
@@ -78,6 +81,11 @@ template<typename T> using func_def = T; // workaround for MSVC bug: `using X = 
 template<typename T> struct ID_type;
 
 #define REG_ID_TYPE(t, id) template<> struct ID_type<t> { static const u32 type = id; }
+
+#define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
+#define CHECK_ALIGN(type, align) static_assert(__alignof(type) == align, "Invalid " #type " type alignment")
+#define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
+#define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.5"

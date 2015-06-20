@@ -2,9 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceJpegEnc;
-
-typedef vm::psv::ptr<void> SceJpegEncoderContext;
+#include "sceJpegEnc.h"
 
 s32 sceJpegEncoderGetContextSize()
 {
@@ -16,7 +14,7 @@ s32 sceJpegEncoderInit(
 	s32 iFrameWidth,
 	s32 iFrameHeight,
 	s32 pixelFormat,
-	vm::psv::ptr<void> pJpeg,
+	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
 	throw __FUNCTION__;
@@ -24,7 +22,7 @@ s32 sceJpegEncoderInit(
 
 s32 sceJpegEncoderEncode(
 	SceJpegEncoderContext context,
-	vm::psv::ptr<const void> pYCbCr)
+	vm::ptr<const void> pYCbCr)
 {
 	throw __FUNCTION__;
 }
@@ -58,7 +56,7 @@ s32 sceJpegEncoderSetHeaderMode(
 
 s32 sceJpegEncoderSetOutputAddr(
 	SceJpegEncoderContext context,
-	vm::psv::ptr<void> pJpeg,
+	vm::ptr<void> pJpeg,
 	u32 oJpegbufSize)
 {
 	throw __FUNCTION__;
@@ -66,8 +64,8 @@ s32 sceJpegEncoderSetOutputAddr(
 
 s32 sceJpegEncoderCsc(
 	SceJpegEncoderContext context,
-	vm::psv::ptr<void> pYCbCr,
-	vm::psv::ptr<const void> pRGBA,
+	vm::ptr<void> pYCbCr,
+	vm::ptr<const void> pRGBA,
 	s32 iFrameWidth,
 	s32 inputPixelFormat)
 {
@@ -82,6 +80,7 @@ psv_log_base sceJpegEnc("SceJpegEnc", []()
 	sceJpegEnc.on_load = nullptr;
 	sceJpegEnc.on_unload = nullptr;
 	sceJpegEnc.on_stop = nullptr;
+	sceJpegEnc.on_error = nullptr;
 
 	REG_FUNC(0x2B55844D, sceJpegEncoderGetContextSize);
 	REG_FUNC(0x88DA92B4, sceJpegEncoderInit);

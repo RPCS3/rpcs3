@@ -2,11 +2,9 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceDeci4p;
+#include "sceDeci4p.h"
 
-typedef vm::psv::ptr<s32(s32 notifyId, s32 notifyCount, s32 notifyArg, vm::psv::ptr<void> pCommon)> SceKernelDeci4pCallback;
-
-s32 sceKernelDeci4pOpen(vm::psv::ptr<const char> protoname, u32 protonum, u32 bufsize)
+s32 sceKernelDeci4pOpen(vm::ptr<const char> protoname, u32 protonum, u32 bufsize)
 {
 	throw __FUNCTION__;
 }
@@ -16,12 +14,12 @@ s32 sceKernelDeci4pClose(s32 socketid)
 	throw __FUNCTION__;
 }
 
-s32 sceKernelDeci4pRead(s32 socketid, vm::psv::ptr<void> buffer, u32 size, u32 reserved)
+s32 sceKernelDeci4pRead(s32 socketid, vm::ptr<void> buffer, u32 size, u32 reserved)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceKernelDeci4pWrite(s32 socketid, vm::psv::ptr<const void> buffer, u32 size, u32 reserved)
+s32 sceKernelDeci4pWrite(s32 socketid, vm::ptr<const void> buffer, u32 size, u32 reserved)
 {
 	throw __FUNCTION__;
 }
@@ -39,6 +37,7 @@ psv_log_base sceDeci4p("SceDeci4pUserp", []()
 	sceDeci4p.on_load = nullptr;
 	sceDeci4p.on_unload = nullptr;
 	sceDeci4p.on_stop = nullptr;
+	sceDeci4p.on_error = nullptr;
 
 	REG_FUNC(0x28578FE8, sceKernelDeci4pOpen);
 	REG_FUNC(0x63B0C50F, sceKernelDeci4pClose);

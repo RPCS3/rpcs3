@@ -1373,7 +1373,7 @@ void thread_t::set_name(const std::string& name)
 
 thread_t::~thread_t()
 {
-	if (m_state.exchange(TS_NON_EXISTENT) == TS_JOINABLE)
+	if (m_state == TS_JOINABLE)
 	{
 		if (m_autojoin)
 		{

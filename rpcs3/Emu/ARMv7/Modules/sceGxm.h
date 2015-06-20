@@ -29,15 +29,15 @@ enum
 	SCE_GXM_ERROR_DRIVER = 0x805B0017,
 };
 
-typedef void(SceGxmDisplayQueueCallback)(vm::psv::ptr<const void> callbackData);
+using SceGxmDisplayQueueCallback = func_def<void(vm::cptr<void> callbackData)>;
 
 struct SceGxmInitializeParams
 {
-	u32 flags;
-	u32 displayQueueMaxPendingCount;
-	vm::psv::ptr<SceGxmDisplayQueueCallback> displayQueueCallback;
-	u32 displayQueueCallbackDataSize;
-	s32 parameterBufferSize;
+	le_t<u32> flags;
+	le_t<u32> displayQueueMaxPendingCount;
+	vm::lptr<SceGxmDisplayQueueCallback> displayQueueCallback;
+	le_t<u32> displayQueueCallbackDataSize;
+	le_t<s32> parameterBufferSize;
 };
 
 enum SceGxmMemoryAttribFlags : u32
@@ -1002,13 +1002,13 @@ enum SceGxmColorMask : u8
 
 struct SceGxmBlendInfo
 {
-	SceGxmColorMask colorMask;
-	SceGxmBlendFunc colorFunc : 4;
-	SceGxmBlendFunc alphaFunc : 4;
-	SceGxmBlendFactor colorSrc : 4;
-	SceGxmBlendFactor colorDst : 4;
-	SceGxmBlendFactor alphaSrc : 4;
-	SceGxmBlendFactor alphaDst : 4;
+	u8 colorMask; // SceGxmColorMask
+	u8 colorFunc : 4; // SceGxmBlendFunc
+	u8 alphaFunc : 4; // SceGxmBlendFunc
+	u8 colorSrc : 4; // SceGxmBlendFactor
+	u8 colorDst : 4; // SceGxmBlendFactor
+	u8 alphaSrc : 4; // SceGxmBlendFactor
+	u8 alphaDst : 4; // SceGxmBlendFactor
 };
 
 struct SceGxmRenderTarget;
@@ -1017,63 +1017,63 @@ struct SceGxmSyncObject;
 
 struct SceGxmVertexAttribute
 {
-	u16 streamIndex;
-	u16 offset;
-	SceGxmAttributeFormat format;
+	le_t<u16> streamIndex;
+	le_t<u16> offset;
+	u8 format; // SceGxmAttributeFormat
 	u8 componentCount;
-	u16 regIndex;
+	le_t<u16> regIndex;
 };
 
 struct SceGxmVertexStream
 {
-	u16 stride;
-	u16 indexSource;
+	le_t<u16> stride;
+	le_t<u16> indexSource;
 };
 
 struct SceGxmTexture
 {
-	u32 controlWords[4];
+	le_t<u32> controlWords[4];
 };
 
 struct SceGxmColorSurface
 {
-	u32 pbeSidebandWord;
-	u32 pbeEmitWords[6];
-	u32 outputRegisterSize;
+	le_t<u32> pbeSidebandWord;
+	le_t<u32> pbeEmitWords[6];
+	le_t<u32> outputRegisterSize;
 	SceGxmTexture backgroundTex;
 };
 
 struct SceGxmDepthStencilSurface
 {
-	u32 zlsControl;
-	vm::psv::ptr<void> depthData;
-	vm::psv::ptr<void> stencilData;
-	float backgroundDepth;
-	u32 backgroundControl;
+	le_t<u32> zlsControl;
+	vm::lptr<void> depthData;
+	vm::lptr<void> stencilData;
+	le_t<float> backgroundDepth;
+	le_t<u32> backgroundControl;
 };
 
 struct SceGxmAuxiliarySurface
 {
-	SceGxmColorFormat colorFormat;
-	SceGxmColorSurfaceType type;
-	u32 width;
-	u32 height;
-	u32 stride;
-	vm::psv::ptr<void> data;
+	le_t<u32> colorFormat; // SceGxmColorFormat
+	le_t<u32> type; // SceGxmColorSurfaceType
+	le_t<u32> width;
+	le_t<u32> height;
+	le_t<u32> stride;
+	vm::lptr<void> data;
 };
 
 struct SceGxmNotification
 {
-	vm::psv::ptr<volatile u32> address;
-	u32 value;
+	vm::lptr<volatile u32> address;
+	le_t<u32> value;
 };
 
 struct SceGxmValidRegion
 {
-	u32 xMin;
-	u32 yMin;
-	u32 xMax;
-	u32 yMax;
+	le_t<u32> xMin;
+	le_t<u32> yMin;
+	le_t<u32> xMax;
+	le_t<u32> yMax;
 };
 
 struct SceGxmContext;
@@ -1089,17 +1089,17 @@ enum
 
 struct SceGxmContextParams
 {
-	vm::psv::ptr<void> hostMem;
-	u32 hostMemSize;
-	vm::psv::ptr<void> vdmRingBufferMem;
-	u32 vdmRingBufferMemSize;
-	vm::psv::ptr<void> vertexRingBufferMem;
-	u32 vertexRingBufferMemSize;
-	vm::psv::ptr<void> fragmentRingBufferMem;
-	u32 fragmentRingBufferMemSize;
-	vm::psv::ptr<void> fragmentUsseRingBufferMem;
-	u32 fragmentUsseRingBufferMemSize;
-	u32 fragmentUsseRingBufferOffset;
+	vm::lptr<void> hostMem;
+	le_t<u32> hostMemSize;
+	vm::lptr<void> vdmRingBufferMem;
+	le_t<u32> vdmRingBufferMemSize;
+	vm::lptr<void> vertexRingBufferMem;
+	le_t<u32> vertexRingBufferMemSize;
+	vm::lptr<void> fragmentRingBufferMem;
+	le_t<u32> fragmentRingBufferMemSize;
+	vm::lptr<void> fragmentUsseRingBufferMem;
+	le_t<u32> fragmentUsseRingBufferMemSize;
+	le_t<u32> fragmentUsseRingBufferOffset;
 };
 
 struct SceGxmVertexProgram;
@@ -1115,17 +1115,17 @@ enum
 
 struct SceGxmPrecomputedVertexState
 {
-	u32 data[SCE_GXM_PRECOMPUTED_VERTEX_STATE_WORD_COUNT];
+	le_t<u32> data[SCE_GXM_PRECOMPUTED_VERTEX_STATE_WORD_COUNT];
 };
 
 struct SceGxmPrecomputedFragmentState
 {
-	u32 data[SCE_GXM_PRECOMPUTED_FRAGMENT_STATE_WORD_COUNT];
+	le_t<u32> data[SCE_GXM_PRECOMPUTED_FRAGMENT_STATE_WORD_COUNT];
 };
 
 struct SceGxmPrecomputedDraw
 {
-	u32 data[SCE_GXM_PRECOMPUTED_DRAW_WORD_COUNT];
+	le_t<u32> data[SCE_GXM_PRECOMPUTED_DRAW_WORD_COUNT];
 };
 
 enum : u32
@@ -1193,34 +1193,32 @@ struct SceGxmShaderPatcher;
 
 struct SceGxmRegisteredProgram;
 
-typedef vm::psv::ptr<SceGxmRegisteredProgram> SceGxmShaderPatcherId;
-
-typedef vm::psv::ptr<void>(SceGxmShaderPatcherHostAllocCallback)(vm::psv::ptr<void> userData, u32 size);
-typedef void(SceGxmShaderPatcherHostFreeCallback)(vm::psv::ptr<void> userData, vm::psv::ptr<void> mem);
-typedef vm::psv::ptr<void>(SceGxmShaderPatcherBufferAllocCallback)(vm::psv::ptr<void> userData, u32 size);
-typedef void(SceGxmShaderPatcherBufferFreeCallback)(vm::psv::ptr<void> userData, vm::psv::ptr<void> mem);
-typedef vm::psv::ptr<void>(SceGxmShaderPatcherUsseAllocCallback)(vm::psv::ptr<void> userData, u32 size, vm::psv::ptr<u32> usseOffset);
-typedef void(SceGxmShaderPatcherUsseFreeCallback)(vm::psv::ptr<void> userData, vm::psv::ptr<void> mem);
+using SceGxmShaderPatcherHostAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size)>;
+using SceGxmShaderPatcherHostFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
+using SceGxmShaderPatcherBufferAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size)>;
+using SceGxmShaderPatcherBufferFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
+using SceGxmShaderPatcherUsseAllocCallback = func_def<vm::ptr<void>(vm::ptr<void> userData, u32 size, vm::ptr<u32> usseOffset)>;
+using SceGxmShaderPatcherUsseFreeCallback = func_def<void(vm::ptr<void> userData, vm::ptr<void> mem)>;
 
 struct SceGxmShaderPatcherParams
 {
-	vm::psv::ptr<void> userData;
-	vm::psv::ptr<SceGxmShaderPatcherHostAllocCallback> hostAllocCallback;
-	vm::psv::ptr<SceGxmShaderPatcherHostFreeCallback> hostFreeCallback;
-	vm::psv::ptr<SceGxmShaderPatcherBufferAllocCallback> bufferAllocCallback;
-	vm::psv::ptr<SceGxmShaderPatcherBufferFreeCallback> bufferFreeCallback;
-	vm::psv::ptr<void> bufferMem;
-	u32 bufferMemSize;
-	vm::psv::ptr<SceGxmShaderPatcherUsseAllocCallback> vertexUsseAllocCallback;
-	vm::psv::ptr<SceGxmShaderPatcherUsseFreeCallback> vertexUsseFreeCallback;
-	vm::psv::ptr<void> vertexUsseMem;
-	u32 vertexUsseMemSize;
-	u32 vertexUsseOffset;
-	vm::psv::ptr<SceGxmShaderPatcherUsseAllocCallback> fragmentUsseAllocCallback;
-	vm::psv::ptr<SceGxmShaderPatcherUsseFreeCallback> fragmentUsseFreeCallback;
-	vm::psv::ptr<void> fragmentUsseMem;
-	u32 fragmentUsseMemSize;
-	u32 fragmentUsseOffset;
+	vm::lptr<void> userData;
+	vm::lptr<SceGxmShaderPatcherHostAllocCallback> hostAllocCallback;
+	vm::lptr<SceGxmShaderPatcherHostFreeCallback> hostFreeCallback;
+	vm::lptr<SceGxmShaderPatcherBufferAllocCallback> bufferAllocCallback;
+	vm::lptr<SceGxmShaderPatcherBufferFreeCallback> bufferFreeCallback;
+	vm::lptr<void> bufferMem;
+	le_t<u32> bufferMemSize;
+	vm::lptr<SceGxmShaderPatcherUsseAllocCallback> vertexUsseAllocCallback;
+	vm::lptr<SceGxmShaderPatcherUsseFreeCallback> vertexUsseFreeCallback;
+	vm::lptr<void> vertexUsseMem;
+	le_t<u32> vertexUsseMemSize;
+	le_t<u32> vertexUsseOffset;
+	vm::lptr<SceGxmShaderPatcherUsseAllocCallback> fragmentUsseAllocCallback;
+	vm::lptr<SceGxmShaderPatcherUsseFreeCallback> fragmentUsseFreeCallback;
+	vm::lptr<void> fragmentUsseMem;
+	le_t<u32> fragmentUsseMemSize;
+	le_t<u32> fragmentUsseOffset;
 };
 
 enum SceGxmRenderTargetFlags : u32
@@ -1230,15 +1228,15 @@ enum SceGxmRenderTargetFlags : u32
 
 struct SceGxmRenderTargetParams
 {
-	SceGxmRenderTargetFlags flags;
-	u16 width;
-	u16 height;
-	u16 scenesPerFrame;
-	SceGxmMultisampleMode multisampleMode;
-	u32 multisampleLocations;
-	vm::psv::ptr<void> hostMem;
-	u32 hostMemSize;
-	s32 driverMemBlock;
+	le_t<u32> flags; // SceGxmRenderTargetFlags
+	le_t<u16> width;
+	le_t<u16> height;
+	le_t<u16> scenesPerFrame;
+	le_t<u16> multisampleMode; // SceGxmMultisampleMode
+	le_t<u32> multisampleLocations;
+	vm::lptr<void> hostMem;
+	le_t<u32> hostMemSize;
+	le_t<s32> driverMemBlock;
 };
 
 extern psv_log_base sceGxm;

@@ -18,13 +18,10 @@ public:
 	std::function<void()> on_load;
 	std::function<void()> on_unload;
 	std::function<void()> on_stop;
+	std::function<void(s32 error, struct psv_func* func)> on_error;
 
 public:
-	psv_log_base(const std::string& name, init_func_t init)
-		: m_name(name)
-		, m_init(init)
-	{
-	}
+	psv_log_base(const std::string& name, init_func_t init);
 
 	void Init()
 	{

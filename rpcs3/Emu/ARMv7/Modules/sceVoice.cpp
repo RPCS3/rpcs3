@@ -2,129 +2,9 @@
 #include "Emu/System.h"
 #include "Emu/ARMv7/PSVFuncList.h"
 
-extern psv_log_base sceVoice;
+#include "sceVoice.h"
 
-enum SceVoicePortType : s32
-{
-	SCEVOICE_PORTTYPE_NULL = -1,
-	SCEVOICE_PORTTYPE_IN_DEVICE = 0,
-	SCEVOICE_PORTTYPE_IN_PCMAUDIO = 1,
-	SCEVOICE_PORTTYPE_IN_VOICE = 2,
-	SCEVOICE_PORTTYPE_OUT_PCMAUDIO = 3,
-	SCEVOICE_PORTTYPE_OUT_VOICE = 4,
-	SCEVOICE_PORTTYPE_OUT_DEVICE = 5
-};
-
-enum SceVoicePortState : s32
-{
-	SCEVOICE_PORTSTATE_NULL = -1,
-	SCEVOICE_PORTSTATE_IDLE = 0,
-	SCEVOICE_PORTSTATE_READY = 1,
-	SCEVOICE_PORTSTATE_BUFFERING = 2,
-	SCEVOICE_PORTSTATE_RUNNING = 3
-};
-
-enum SceVoiceBitRate : s32
-{
-	SCEVOICE_BITRATE_NULL = -1,
-	SCEVOICE_BITRATE_3850 = 3850,
-	SCEVOICE_BITRATE_4650 = 4650,
-	SCEVOICE_BITRATE_5700 = 5700,
-	SCEVOICE_BITRATE_7300 = 7300
-};
-
-enum SceVoiceSamplingRate : s32
-{
-	SCEVOICE_SAMPLINGRATE_NULL = -1,
-	SCEVOICE_SAMPLINGRATE_16000 = 16000
-};
-
-enum SceVoicePcmDataType : s32
-{
-	SCEVOICE_PCM_NULL = -1,
-	SCEVOICE_PCM_SHORT_LITTLE_ENDIAN = 0
-};
-
-enum SceVoiceVersion : s32
-{
-	SCEVOICE_VERSION_100 = 100
-};
-
-enum SceVoiceAppType : s32
-{
-	SCEVOICE_APPTYPE_GAME = 1 << 29
-};
-
-struct SceVoicePCMFormat
-{
-	SceVoicePcmDataType dataType;
-	SceVoiceSamplingRate sampleRate;
-};
-
-struct SceVoiceResourceInfo
-{
-	u16 maxInVoicePort;
-	u16 maxOutVoicePort;
-	u16 maxInDevicePort;
-	u16 maxOutDevicePort;
-	u16 maxTotalPort;
-};
-
-struct SceVoiceBasePortInfo
-{
-	SceVoicePortType portType;
-	SceVoicePortState state;
-	vm::psv::ptr<u32> pEdge;
-	u32 numByte;
-	u32 frameSize;
-	u16 numEdge;
-	u16 reserved;
-};
-
-struct SceVoicePortParam
-{
-	SceVoicePortType portType;
-	u16 threshold;
-	u16 bMute;
-	float volume;
-
-	union
-	{
-		struct
-		{
-			SceVoiceBitRate bitrate;
-		} voice;
-
-		struct
-		{
-			u32 bufSize;
-			SceVoicePCMFormat format;
-		} pcmaudio;
-
-
-		struct
-		{
-			u32 playerId;
-		} device;
-	};
-};
-
-typedef vm::psv::ptr<void(vm::psv::ptr<void> event)> SceVoiceEventCallback;
-
-struct SceVoiceInitParam
-{
-	s32 appType;
-	SceVoiceEventCallback onEvent;
-	u8 reserved[24];
-};
-
-struct SceVoiceStartParam
-{
-	s32 container;
-	u8 reserved[28];
-};
-
-s32 sceVoiceInit(vm::psv::ptr<SceVoiceInitParam> pArg, SceVoiceVersion version)
+s32 sceVoiceInit(vm::ptr<SceVoiceInitParam> pArg, SceVoiceVersion version)
 {
 	throw __FUNCTION__;
 }
@@ -134,7 +14,7 @@ s32 sceVoiceEnd()
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceStart(vm::psv::ptr<SceVoiceStartParam> pArg)
+s32 sceVoiceStart(vm::ptr<SceVoiceStartParam> pArg)
 {
 	throw __FUNCTION__;
 }
@@ -149,12 +29,12 @@ s32 sceVoiceResetPort(u32 portId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceCreatePort(vm::psv::ptr<u32> portId, vm::psv::ptr<const SceVoicePortParam> pArg)
+s32 sceVoiceCreatePort(vm::ptr<u32> portId, vm::ptr<const SceVoicePortParam> pArg)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceUpdatePort(u32 portId, vm::psv::ptr<const SceVoicePortParam> pArg)
+s32 sceVoiceUpdatePort(u32 portId, vm::ptr<const SceVoicePortParam> pArg)
 {
 	throw __FUNCTION__;
 }
@@ -174,12 +54,12 @@ s32 sceVoiceDeletePort(u32 portId)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceWriteToIPort(u32 ips, vm::psv::ptr<const void> data, vm::psv::ptr<u32> size, s16 frameGaps)
+s32 sceVoiceWriteToIPort(u32 ips, vm::ptr<const void> data, vm::ptr<u32> size, s16 frameGaps)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceReadFromOPort(u32 ops, vm::psv::ptr<void> data, vm::psv::ptr<u32> size)
+s32 sceVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size)
 {
 	throw __FUNCTION__;
 }
@@ -194,7 +74,7 @@ s32 sceVoiceSetMuteFlag(u32 portId, u16 bMuted)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceGetMuteFlag(u32 portId, vm::psv::ptr<u16> bMuted)
+s32 sceVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 {
 	throw __FUNCTION__;
 }
@@ -204,7 +84,7 @@ s32 sceVoiceGetMuteFlag(u32 portId, vm::psv::ptr<u16> bMuted)
 //	throw __FUNCTION__;
 //}
 
-s32 sceVoiceGetVolume(u32 portId, vm::psv::ptr<float> volume)
+s32 sceVoiceGetVolume(u32 portId, vm::ptr<float> volume)
 {
 	throw __FUNCTION__;
 }
@@ -214,12 +94,12 @@ s32 sceVoiceSetBitRate(u32 portId, SceVoiceBitRate bitrate)
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceGetBitRate(u32 portId, vm::psv::ptr<u32> bitrate)
+s32 sceVoiceGetBitRate(u32 portId, vm::ptr<u32> bitrate)
 {
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceGetPortInfo(u32 portId, vm::psv::ptr<SceVoiceBasePortInfo> pInfo)
+s32 sceVoiceGetPortInfo(u32 portId, vm::ptr<SceVoiceBasePortInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
@@ -244,7 +124,7 @@ s32 sceVoiceResumePortAll()
 	throw __FUNCTION__;
 }
 
-s32 sceVoiceGetResourceInfo(vm::psv::ptr<SceVoiceResourceInfo> pInfo)
+s32 sceVoiceGetResourceInfo(vm::ptr<SceVoiceResourceInfo> pInfo)
 {
 	throw __FUNCTION__;
 }
@@ -257,6 +137,7 @@ psv_log_base sceVoice("SceVoice", []()
 	sceVoice.on_load = nullptr;
 	sceVoice.on_unload = nullptr;
 	sceVoice.on_stop = nullptr;
+	sceVoice.on_error = nullptr;
 
 	REG_FUNC(0xD02C00B4, sceVoiceGetBitRate);
 	REG_FUNC(0xC913F7E9, sceVoiceGetMuteFlag);
