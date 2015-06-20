@@ -392,9 +392,26 @@ void D3D12GSRender::Shader::Release()
 	m_samplerDescriptorHeap->Release();
 }
 
+extern std::function<bool(u32 addr)> gfxHandler;
+
 D3D12GSRender::D3D12GSRender()
 	: GSRender(), m_PSO(nullptr)
 {
+
+	gfxHandler = [this](u32 addr) {
+		LOG_ERROR(RSX, "CATCH SEGFAULT %x", addr);
+		for (auto tmp : texaddrs)
+		{
+			if (addr - tmp.first < tmp.second)
+			{
+				LOG_ERROR(RSX, "Modified %x range, starting again", tmp.first);
+				vm::page_protect(tmp.first, tmp.second, 0, vm::page_writable, 0);
+				return true;
+			}
+		}
+
+		return false;
+	};
 	loadD3D12FunctionPointers();
 	if (Ini.GSDebugOutputEnable.GetValue())
 	{

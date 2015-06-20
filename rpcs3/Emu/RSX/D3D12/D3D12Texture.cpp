@@ -636,6 +636,11 @@ size_t D3D12GSRender::UploadTextures()
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 			m_texturesCache[texaddr] = vramTexture;
+
+			size_t s = powerOf2Align(w * h * 4, 4096);
+			LOG_ERROR(RSX, "PROTECTING %x of size %d", powerOf2Align(texaddr, 4096), s);
+			texaddrs.push_back(std::make_pair(texaddr & ~0xfff, s));
+			vm::page_protect(texaddr & ~0xfff, s, 0, 0, vm::page_writable);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};

@@ -202,6 +202,7 @@ struct GarbageCollectionThread
 class D3D12GSRender : public GSRender
 {
 private:
+	std::vector <std::pair<u32, u32> > texaddrs; // Address, size
 	GarbageCollectionThread m_GC;
 	// Copy of RTT to be used as texture
 	std::unordered_map<u32, ID3D12Resource* > m_texturesRTTs;
