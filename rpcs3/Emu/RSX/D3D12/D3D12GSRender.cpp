@@ -414,7 +414,7 @@ D3D12GSRender::D3D12GSRender()
 				LOG_WARNING(RSX, "Modified %x, starting again", texadrr);
 				ID3D12Resource *texToErase = m_texturesCache[texadrr];
 				m_texturesCache.erase(texadrr);
-				m_Textoclean.push_back(texToErase);
+				m_texToClean.push_back(texToErase);
 
 				vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
 				m_protectedTextures.erase(currentIt);
@@ -613,6 +613,10 @@ D3D12GSRender::~D3D12GSRender()
 	m_rtts.Release();
 	for (unsigned i = 0; i < 17; i++)
 		m_rootSignatures[i]->Release();
+	for (auto tmp : m_texToClean)
+		tmp->Release();
+	for (auto tmp : m_texturesCache)
+		tmp.second->Release();
 	m_swapChain->Release();
 	m_outputScalingPass.Release();
 	m_device->Release();
@@ -1063,8 +1067,8 @@ void D3D12GSRender::Flip()
 	};
 
 	std::lock_guard<std::mutex> lock(mut);
-	std::vector<ID3D12Resource *> textoclean = m_Textoclean;
-	m_Textoclean.clear();
+	std::vector<ID3D12Resource *> textoclean = m_texToClean;
+	m_texToClean.clear();
 
 	m_GC.pushWork([&, cleaningFunction, textoclean]()
 	{
