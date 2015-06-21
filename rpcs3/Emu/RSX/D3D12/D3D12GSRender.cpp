@@ -399,18 +399,29 @@ D3D12GSRender::D3D12GSRender()
 {
 
 	gfxHandler = [this](u32 addr) {
-		LOG_ERROR(RSX, "CATCH SEGFAULT %x", addr);
-		for (auto tmp : texaddrs)
+		bool handled = false;
+		auto It = m_protectedTextures.begin(), E = m_protectedTextures.end();
+		for (; It != E;)
 		{
-			if (addr - tmp.first < tmp.second)
+			auto currentIt = It;
+			++It;
+			auto protectedTexture = *currentIt;
+			u32 protectedRangeStart = std::get<1>(protectedTexture), protectedRangeSize = std::get<2>(protectedTexture);
+			if (addr - protectedRangeStart < protectedRangeSize)
 			{
-				LOG_ERROR(RSX, "Modified %x range, starting again", tmp.first);
-				vm::page_protect(tmp.first, tmp.second, 0, vm::page_writable, 0);
-				return true;
+				std::lock_guard<std::mutex> lock(mut);
+				u32 texadrr = std::get<0>(protectedTexture);
+				LOG_WARNING(RSX, "Modified %x, starting again", texadrr);
+				ID3D12Resource *texToErase = m_texturesCache[texadrr];
+				m_texturesCache.erase(texadrr);
+				m_Textoclean.push_back(texToErase);
+
+				vm::page_protect(protectedRangeStart, protectedRangeSize, 0, vm::page_writable, 0);
+				m_protectedTextures.erase(currentIt);
+				handled = true;
 			}
 		}
-
-		return false;
+		return handled;
 	};
 	loadD3D12FunctionPointers();
 	if (Ini.GSDebugOutputEnable.GetValue())
@@ -1041,7 +1052,6 @@ void D3D12GSRender::Flip()
 	m_commandQueueGraphic->Signal(storage.m_frameFinishedFence, 1);
 
 	// Flush
-	m_texturesCache.clear();
 	m_texturesRTTs.clear();
 
 	std::vector<std::function<void()> >  cleaningFunction =
@@ -1052,7 +1062,11 @@ void D3D12GSRender::Flip()
 		m_textureData.getCleaningFunction()
 	};
 
-	m_GC.pushWork([&, cleaningFunction]()
+	std::lock_guard<std::mutex> lock(mut);
+	std::vector<ID3D12Resource *> textoclean = m_Textoclean;
+	m_Textoclean.clear();
+
+	m_GC.pushWork([&, cleaningFunction, textoclean]()
 	{
 		WaitForSingleObject(storage.m_frameFinishedHandle, INFINITE);
 		CloseHandle(storage.m_frameFinishedHandle);
@@ -1061,6 +1075,9 @@ void D3D12GSRender::Flip()
 		for (unsigned i = 0; i < 4; i++)
 			cleaningFunction[i]();
 		storage.Reset();
+
+		for (auto tmp : textoclean)
+			tmp->Release();
 	});
 
 	while (getCurrentResourceStorage().m_frameFinishedHandle)

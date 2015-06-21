@@ -337,8 +337,7 @@ ID3D12Resource *uploadSingleTexture(
 	const RSXTexture &texture,
 	ID3D12Device *device,
 	ID3D12GraphicsCommandList *commandList,
-	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap,
-	DataHeap<ID3D12Heap, 65536> &textureHeap)
+	DataHeap<ID3D12Heap, 65536> &textureBuffersHeap)
 {
 	ID3D12Resource *vramTexture;
 	size_t w = texture.GetWidth(), h = texture.GetHeight();
@@ -552,19 +551,17 @@ ID3D12Resource *uploadSingleTexture(
 	D3D12_RESOURCE_DESC texturedesc = getTexture2DResourceDesc(w, h, dxgiFormat, texture.GetMipmap());
 	textureSize = device->GetResourceAllocationInfo(0, 1, &texturedesc).SizeInBytes;
 
-	assert(textureHeap.canAlloc(textureSize));
-	size_t heapOffset2 = textureHeap.alloc(textureSize);
+	D3D12_HEAP_PROPERTIES heapProp = {};
+	heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
 
-	check(device->CreatePlacedResource(
-		textureHeap.m_heap,
-		heapOffset2,
+	check(device->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
 		&texturedesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&vramTexture)
 		));
-	textureHeap.m_resourceStoredSinceLastSync.push_back(std::make_tuple(heapOffset2, textureSize, vramTexture));
-
 
 	size_t miplevel = 0;
 	for (const MipmapLevelInfo mli : mipInfos)
@@ -597,6 +594,7 @@ ID3D12Resource *uploadSingleTexture(
 
 size_t D3D12GSRender::UploadTextures()
 {
+	std::lock_guard<std::mutex> lock(mut);
 	size_t usedTexture = 0;
 
 	for (u32 i = 0; i < m_textures_count; ++i)
@@ -630,17 +628,17 @@ size_t D3D12GSRender::UploadTextures()
 			ID3D12GraphicsCommandList *commandList;
 			check(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, getCurrentResourceStorage().m_textureUploadCommandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
 
-			vramTexture = uploadSingleTexture(m_textures[i], m_device, commandList, m_textureUploadData, m_textureData);
+			vramTexture = uploadSingleTexture(m_textures[i], m_device, commandList, m_textureUploadData);
 
 			commandList->Close();
 			m_commandQueueGraphic->ExecuteCommandLists(1, (ID3D12CommandList**)&commandList);
 			getCurrentResourceStorage().m_inflightCommandList.push_back(commandList);
 			m_texturesCache[texaddr] = vramTexture;
 
-			size_t s = powerOf2Align(w * h * 4, 4096);
-			LOG_ERROR(RSX, "PROTECTING %x of size %d", powerOf2Align(texaddr, 4096), s);
-			texaddrs.push_back(std::make_pair(texaddr & ~0xfff, s));
-			vm::page_protect(texaddr & ~0xfff, s, 0, 0, vm::page_writable);
+			u32 s = align(w * h * 4, 4096);
+			LOG_WARNING(RSX, "PROTECTING %x of size %d", align(texaddr, 4096), s);
+			m_protectedTextures.push_back(std::make_tuple(texaddr, align(texaddr, 4096), s));
+			vm::page_protect(align(texaddr, 4096), s, 0, 0, vm::page_writable);
 		}
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
