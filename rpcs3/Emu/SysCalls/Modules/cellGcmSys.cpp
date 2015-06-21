@@ -1164,7 +1164,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
 {
 	size_t currentRange = (current - g_defaultCommandBufferBegin) / (32 * 1024);
-	if (currentRange >= g_defaultCommandBufferFragmentCount)
+	if (currentRange >= g_defaultCommandBufferFragmentCount - 1)
 		return std::make_pair(g_defaultCommandBufferBegin + 4096, g_defaultCommandBufferBegin + 32 * 1024 - 4);
 	return std::make_pair(g_defaultCommandBufferBegin + (currentRange + 1) * 32 * 1024,
 		g_defaultCommandBufferBegin + (currentRange + 2) * 32 * 1024 - 4);
